@@ -12,6 +12,7 @@ use std::sync::Arc;
 use acl_manifest::RootAclManifestId;
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cacheblob::MemWritesKeyedBlobstore;
@@ -2236,6 +2237,225 @@ async fn test_direct_derivation_root_reuse_uses_expected_hg_node_id(
         "computed_node_id should preserve the content-derived hash",
     );
     compare_manifests(&ctx, &repo, forced_root, via_direct_path).await?;
+
+    Ok(())
+}
+
+async fn hg_manifest_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<HgManifestId> {
+    Ok(repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid())
+}
+
+async fn hg_tree_entry(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root: HgManifestId,
+    path: &str,
+) -> Result<HgManifestId> {
+    root.find_entry(
+        ctx.clone(),
+        repo.repo_blobstore().clone(),
+        MPath::new(path)?,
+    )
+    .await?
+    .and_then(Entry::into_tree)
+    .with_context(|| format!("root manifest must contain tree {path}"))
+}
+
+async fn upload_hg_tree(
+    ctx: &CoreContext,
+    repo: &Repo,
+    path: RepoPath,
+    contents: bytes::Bytes,
+    p1: Option<HgManifestId>,
+    p2: Option<HgManifestId>,
+) -> Result<HgManifestId> {
+    use mercurial_types::blobs::UploadHgNodeHash;
+    use mercurial_types::blobs::UploadHgTreeEntry;
+
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+    let (tree, upload) = UploadHgTreeEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents,
+        p1: p1.map(HgManifestId::into_nodehash),
+        p2: p2.map(HgManifestId::into_nodehash),
+        path,
+        computed_node_id: None,
+    }
+    .upload(ctx.clone(), blobstore)?;
+    upload.await?;
+    Ok(tree)
+}
+
+/// Regression guard for merge-rebuilt trees that are not changed directly.
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_uses_canonical_root_for_merge_rebuilt_unchanged_tree(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: `dir/` differs between merge parents, but the merge changes only an
+    // unrelated path. `derive_manifest` must still rebuild `dir/` to merge the
+    // parent trees.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/shared", "same")
+        .add_file("dir/p1_only", "from p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/shared", "same")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .add_file("unrelated/touched", "merge change")
+        .commit()
+        .await?;
+
+    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
+    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
+    let merge_root = hg_manifest_root(&ctx, &repo, merge).await?;
+    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
+    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
+    assert_ne!(
+        p1_dir, p2_dir,
+        "fixture requires differing parent tree ids so direct derivation rebuilds dir/",
+    );
+    assert_eq!(
+        hg_tree_entry(&ctx, &repo, merge_root, "dir").await?,
+        p1_dir,
+        "fixture mirrors the prod failure shape: the canonical merge tree reuses p1's dir/",
+    );
+
+    // When/Then: direct derivation can consult the canonical Hg root for the
+    // merge-rebuilt `dir/` tree and match the HgManifest-based path.
+    assert_dual_derive_agree_at_root(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2],
+        (Some(p1), Some(p2)),
+        Some(merge_root),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Regression guard for historical Mercurial merges that re-emit a directory
+/// manifest even though the final directory contents match p1, including when
+/// the non-root tree parent order differs from Bonsai parent order.
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_matches_reemitted_same_content_merge_tree_node(
+    fb: FacebookInit,
+) -> Result<()> {
+    use mercurial_types::blobs::fetch_manifest_envelope;
+
+    // Given: the merge keeps p1's file node, but the historical Hg manifest
+    // re-emits the containing `dir/` tree node with tree parents in the opposite
+    // order from the Bonsai parents.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "same")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "different")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+
+    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
+    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
+    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
+    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
+    let dir_contents = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), p1_dir)
+        .await?
+        .into_mut()
+        .contents;
+
+    let merge_dir = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::DirectoryPath(NonRootMPath::new("dir")?),
+        dir_contents,
+        Some(p2_dir),
+        Some(p1_dir),
+    )
+    .await?;
+    assert_ne!(merge_dir, p1_dir, "fixture must re-emit dir, not reuse p1");
+    let merge_dir_manifest = merge_dir.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        (merge_dir_manifest.p1(), merge_dir_manifest.p2()),
+        (Some(p2_dir.into_nodehash()), Some(p1_dir.into_nodehash())),
+        "fixture must reverse canonical dir/ parents relative to Bonsai parent order",
+    );
+
+    let merge_root = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::RootPath,
+        bytes::Bytes::from(format!("dir\0{}t\n", merge_dir.into_nodehash())),
+        Some(p1_root),
+        Some(p2_root),
+    )
+    .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .add_file("dir/file", "same")
+        .commit()
+        .await?;
+
+    // When: deriving directly from Bonsai with the historical Hg root as the
+    // canonical guide.
+    let direct_root = assert_dual_derive_agree_at_root(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2],
+        (Some(p1), Some(p2)),
+        Some(merge_root),
+    )
+    .await?;
+
+    // Then: direct derivation preserves the canonical non-root tree metadata,
+    // including parent order. The tree node hash alone is not enough because
+    // Mercurial hashes two parents order-insensitively.
+    let direct_dir = direct_root
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            MPath::new("dir")?,
+        )
+        .await?
+        .and_then(Entry::into_tree)
+        .context("direct augmented manifest must contain dir/")?;
+    let direct_dir_envelope = direct_dir.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        (
+            direct_dir_envelope.augmented_manifest.hg_node_id,
+            direct_dir_envelope.augmented_manifest.p1,
+            direct_dir_envelope.augmented_manifest.p2,
+            direct_dir_envelope.augmented_manifest.computed_node_id,
+        ),
+        (
+            merge_dir_manifest.node_id(),
+            merge_dir_manifest.p1(),
+            merge_dir_manifest.p2(),
+            merge_dir_manifest.computed_node_id(),
+        ),
+        "direct derivation should preserve canonical dir/ Hg manifest metadata",
+    );
 
     Ok(())
 }

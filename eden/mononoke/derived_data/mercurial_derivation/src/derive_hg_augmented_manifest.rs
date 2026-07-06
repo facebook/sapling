@@ -9,11 +9,13 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::ensure;
 use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
@@ -48,6 +50,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
@@ -614,6 +617,103 @@ pub fn normalize_acl_root(
     } else {
         Ok(Some(id))
     }
+}
+
+#[derive(Clone)]
+struct CanonicalHgManifestLookup {
+    manifests: Arc<Mutex<HashMap<MPath, Arc<HgBlobManifest>>>>,
+}
+
+impl CanonicalHgManifestLookup {
+    async fn from_root_hg_node_id_override(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn KeyedBlobstore>,
+        root_hg_node_id_override: Option<HgNodeHash>,
+    ) -> Result<Option<Self>> {
+        let Some(root) = root_hg_node_id_override.map(HgManifestId::new) else {
+            return Ok(None);
+        };
+        if root == HgManifestId::new(mercurial_types::NULL_HASH) {
+            return Ok(None);
+        }
+
+        let Some(root_manifest) = HgBlobManifest::load(ctx, blobstore, root).await? else {
+            return Ok(None);
+        };
+        let manifests = HashMap::from([(MPath::ROOT, Arc::new(root_manifest))]);
+        Ok(Some(Self {
+            manifests: Arc::new(Mutex::new(manifests)),
+        }))
+    }
+
+    fn cached_manifest(&self, path: &MPath) -> Result<Option<Arc<HgBlobManifest>>> {
+        Ok(self
+            .manifests
+            .lock()
+            .map_err(|_| anyhow!("canonical HgManifest guide cache poisoned while reading {path}"))?
+            .get(path)
+            .cloned())
+    }
+
+    fn cache_manifest(&self, path: MPath, manifest: Arc<HgBlobManifest>) -> Result<()> {
+        self.manifests
+            .lock()
+            .map_err(|_| anyhow!("canonical HgManifest guide cache poisoned while caching {path}"))?
+            .insert(path, manifest);
+        Ok(())
+    }
+
+    async fn manifest_for_path(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn KeyedBlobstore>,
+        path: &MPath,
+    ) -> Result<Option<Arc<HgBlobManifest>>> {
+        if let Some(cached) = self.cached_manifest(path)? {
+            return Ok(Some(cached));
+        }
+
+        let mut current_path = MPath::ROOT;
+        let Some(mut current_manifest) = self.cached_manifest(&current_path)? else {
+            return Ok(None);
+        };
+
+        for elem in path {
+            let child_path = current_path.join_element(Some(elem));
+            let child_manifest = match self.cached_manifest(&child_path)? {
+                Some(cached) => Some(cached),
+                None => match current_manifest.content().files.get(elem) {
+                    Some(Entry::Tree(tree_id)) => {
+                        let manifest =
+                            Arc::new(tree_id.load(ctx, blobstore).await.with_context(|| {
+                                format!("loading canonical Hg manifest for {child_path}")
+                            })?);
+                        self.cache_manifest(child_path.clone(), manifest.clone())?;
+                        Some(manifest)
+                    }
+                    Some(Entry::Leaf(_)) | None => None,
+                },
+            };
+
+            let Some(child_manifest) = child_manifest else {
+                return Ok(None);
+            };
+            current_path = child_path;
+            current_manifest = child_manifest;
+        }
+
+        Ok(Some(current_manifest))
+    }
+}
+
+fn hg_manifest_matches_augmented_manifest(
+    hg_manifest: &HgBlobManifest,
+    manifest: &ShardedHgAugmentedManifest,
+) -> bool {
+    hg_manifest.node_id() == manifest.hg_node_id
+        && hg_manifest.p1() == manifest.p1
+        && hg_manifest.p2() == manifest.p2
+        && hg_manifest.computed_node_id() == manifest.computed_node_id
 }
 
 /// Pre-resolve copy-from source filenodes from parent augmented manifests.
@@ -1567,6 +1667,7 @@ async fn finalize_envelope(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     root_hg_node_id_override: Option<HgNodeHash>,
+    canonical_hg_manifest_lookup: Option<&CanonicalHgManifestLookup>,
     tree_path: &MPath,
     parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
     subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
@@ -1581,6 +1682,17 @@ async fn finalize_envelope(
     if is_root {
         assert_root_acl_pointer_invariant(&dir_acl_id)?;
     }
+    let canonical_tree_manifest = match canonical_hg_manifest_lookup {
+        Some(lookup) => Some(
+            lookup
+                .manifest_for_path(ctx, blobstore, tree_path)
+                .await?
+                .with_context(|| {
+                    format!("canonical Hg manifest is missing expected tree entry at {tree_path}")
+                })?,
+        ),
+        None => None,
+    };
     // Select p1/p2 by original Bonsai parent index, not by position after
     // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
     // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
@@ -1590,17 +1702,18 @@ async fn finalize_envelope(
     let p2_hash = p2.map(HgAugmentedManifestId::into_nodehash);
 
     let own_parents = HgParents::new(p1_hash, p2_hash);
+    let hash_parents = canonical_tree_manifest
+        .as_ref()
+        .map_or(own_parents, |manifest| manifest.hg_parents());
 
     // Mirror `create_hg_manifest` parent reuse: if merged contents match an
     // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
-    // parent's envelope instead of minting `hash(merged contents, current
-    // parents)`. The guard uses the deduped parent count — a surviving p3
-    // can make reuse necessary even when only p1 is hg-relevant. At root, only
-    // reuse an envelope that can be returned without changing its node id.
+    // parent's envelope. With a canonical root, reuse only if it is exactly
+    // the historical tree envelope recorded at this path.
     let computed_node_id = if parents.len() > 1 {
         let ParentEnvelopeReuse {
             reusable_parent,
-            fresh_computed_node_id,
+            fresh_computed_node_id: computed_node_id,
         } = try_reuse_parent_envelope(
             ctx,
             blobstore,
@@ -1608,32 +1721,58 @@ async fn finalize_envelope(
             dir_acl_id,
             p1,
             p2,
-            own_parents,
+            hash_parents,
         )
         .await?;
 
-        if let Some(reused) = reusable_parent
-            && (!is_root
-                || root_envelope_can_be_returned_as_is(root_hg_node_id_override, &reused.envelope))
-        {
-            return Ok((
-                AugmentedDeriveContext::Directory {
-                    augmented_manifest_id: reused.envelope.augmented_manifest_id,
-                    augmented_manifest_size: reused.envelope.augmented_manifest_size,
-                },
-                Traced::generate(reused.id),
-            ));
+        if let Some(reused) = reusable_parent {
+            let matches_canonical_tree = canonical_tree_manifest.as_ref().is_none_or(|expected| {
+                hg_manifest_matches_augmented_manifest(
+                    expected,
+                    &reused.envelope.augmented_manifest,
+                )
+            });
+            let root_reuse_allowed = !is_root
+                || root_envelope_can_be_returned_as_is(root_hg_node_id_override, &reused.envelope);
+            if matches_canonical_tree && root_reuse_allowed {
+                return Ok((
+                    AugmentedDeriveContext::Directory {
+                        augmented_manifest_id: reused.envelope.augmented_manifest_id,
+                        augmented_manifest_size: reused.envelope.augmented_manifest_size,
+                    },
+                    Traced::generate(reused.id),
+                ));
+            }
         }
 
-        fresh_computed_node_id
+        computed_node_id
     } else {
-        compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
+        compute_hg_node_id(subentries.clone(), ctx, blobstore, &hash_parents).await?
     };
 
-    let hg_node_id = if is_root {
-        root_hg_node_id_override.unwrap_or(computed_node_id)
-    } else {
-        computed_node_id
+    let (hg_node_id, p1_hash, p2_hash, computed_node_id) = match canonical_tree_manifest {
+        Some(manifest) => {
+            ensure!(
+                computed_node_id == manifest.computed_node_id(),
+                "canonical Hg manifest computed node id mismatch at {tree_path}: direct={} canonical={}",
+                computed_node_id,
+                manifest.computed_node_id(),
+            );
+            (
+                manifest.node_id(),
+                manifest.p1(),
+                manifest.p2(),
+                manifest.computed_node_id(),
+            )
+        }
+        None => {
+            let hg_node_id = if is_root {
+                root_hg_node_id_override.unwrap_or(computed_node_id)
+            } else {
+                computed_node_id
+            };
+            (hg_node_id, p1_hash, p2_hash, computed_node_id)
+        }
     };
 
     let augmented_manifest = ShardedHgAugmentedManifest {
@@ -1698,6 +1837,7 @@ async fn create_augmented_tree(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
     root_hg_node_id_override: Option<HgNodeHash>,
+    canonical_hg_manifest_lookup: Option<CanonicalHgManifestLookup>,
     restricted_paths: ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
     acl_map: Arc<HashMap<MPath, AclManifestId>>,
@@ -1782,6 +1922,7 @@ async fn create_augmented_tree(
         &ctx,
         &blobstore,
         root_hg_node_id_override,
+        canonical_hg_manifest_lookup.as_ref(),
         &tree_info.path,
         &tree_info.parents,
         subentries,
@@ -1830,6 +1971,7 @@ async fn reemit_root_envelope(
     root_hg_node_id_override: Option<HgNodeHash>,
     root_parents: Vec<Traced<ParentIndex, HgAugmentedManifestId>>,
     envelope: HgAugmentedManifestEnvelope,
+    canonical_hg_manifest_lookup: Option<&CanonicalHgManifestLookup>,
     root_acl_id: Option<AclManifestId>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
@@ -1839,6 +1981,7 @@ async fn reemit_root_envelope(
         ctx,
         blobstore,
         root_hg_node_id_override,
+        canonical_hg_manifest_lookup,
         &MPath::ROOT,
         &parents,
         envelope.augmented_manifest.subentries,
@@ -1913,6 +2056,14 @@ where
         }
     };
 
+    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
+    let canonical_hg_manifest_lookup = CanonicalHgManifestLookup::from_root_hg_node_id_override(
+        ctx,
+        &blobstore_arc,
+        root_hg_node_id_override,
+    )
+    .await?;
+
     let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
         parent_bonsai_csids.0.zip(parents.first().copied()),
         parent_bonsai_csids.1.zip(parents.get(1).copied()),
@@ -1920,7 +2071,6 @@ where
     let copy_from_filenodes =
         resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?;
 
-    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
     let restricted_paths_arc = Arc::clone(restricted_paths);
@@ -1943,13 +2093,26 @@ where
         file_changes,
         subtree_replacements,
         {
-            cloned!(ctx, blobstore_arc, restricted_paths_arc, acl_map);
+            cloned!(
+                ctx,
+                blobstore_arc,
+                restricted_paths_arc,
+                acl_map,
+                canonical_hg_manifest_lookup
+            );
             move |tree_info| {
-                cloned!(ctx, blobstore_arc, restricted_paths_arc, acl_map);
+                cloned!(
+                    ctx,
+                    blobstore_arc,
+                    restricted_paths_arc,
+                    acl_map,
+                    canonical_hg_manifest_lookup
+                );
                 create_augmented_tree(
                     ctx,
                     blobstore_arc,
                     root_hg_node_id_override,
+                    canonical_hg_manifest_lookup,
                     restricted_paths_arc,
                     restricted_paths_enabled,
                     acl_map,
@@ -1998,6 +2161,7 @@ where
                         root_hg_node_id_override,
                         root_parents_traced,
                         candidate_envelope,
+                        canonical_hg_manifest_lookup.as_ref(),
                         acl_map.get(&MPath::ROOT).copied(),
                         &restricted_paths_arc,
                         restricted_paths_enabled,
@@ -2020,6 +2184,7 @@ where
                             root_hg_node_id_override,
                             root_parents_traced,
                             candidate_envelope,
+                            canonical_hg_manifest_lookup.as_ref(),
                             acl_map.get(&MPath::ROOT).copied(),
                             &restricted_paths_arc,
                             restricted_paths_enabled,
@@ -2040,6 +2205,7 @@ where
                 ctx.clone(),
                 blobstore_arc,
                 root_hg_node_id_override,
+                canonical_hg_manifest_lookup.clone(),
                 restricted_paths_arc,
                 restricted_paths_enabled,
                 acl_map,
