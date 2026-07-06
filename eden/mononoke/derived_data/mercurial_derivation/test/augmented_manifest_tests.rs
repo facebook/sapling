@@ -1027,13 +1027,17 @@ async fn derive_augmented_manifest_via_existing_path(
     cs_id: ChangesetId,
     parents: Vec<HgAugmentedManifestId>,
     acl_root_overlay: Option<AclManifestId>,
+    root_override: Option<HgManifestId>,
 ) -> Result<(HgManifestId, HgAugmentedManifestId)> {
-    let hg_manifest_id = repo
-        .derive_hg_changeset(ctx, cs_id)
-        .await?
-        .load(ctx, repo.repo_blobstore())
-        .await?
-        .manifestid();
+    let hg_manifest_id = match root_override {
+        Some(id) => id,
+        None => repo
+            .derive_hg_changeset(ctx, cs_id)
+            .await?
+            .load(ctx, repo.repo_blobstore())
+            .await?
+            .manifestid(),
+    };
     let restricted_paths_config = repo.restricted_paths().config_based();
     let augmented_manifest_id = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
         ctx,
@@ -1056,13 +1060,42 @@ async fn assert_direct_derive_matches_existing_path(
     augmented_parents: &[HgAugmentedManifestId],
     bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
 ) -> Result<HgAugmentedManifestId> {
+    assert_dual_derive_agree_at_root(ctx, repo, cs_id, augmented_parents, bonsai_parents, None)
+        .await
+}
+
+/// Derive the augmented manifest via both paths and assert they agree.
+async fn assert_dual_derive_agree(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    aug_parents: &[HgAugmentedManifestId],
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<HgAugmentedManifestId> {
+    assert_dual_derive_agree_at_root(ctx, repo, cs_id, aug_parents, bonsai_parents, None).await
+}
+
+/// Like `assert_dual_derive_agree`, but feeds an explicit root `HgManifestId` to
+/// both paths instead of the canonical one from the derived `HgChangeset`.
+/// `CreateCommitContext` only mints `Generate` roots (canonical == computed), so
+/// a `Some(root)` override is the only way to exercise a forced/Supplied root
+/// (e.g. a hybrid-mode root) whose id differs from the computed content hash.
+async fn assert_dual_derive_agree_at_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    aug_parents: &[HgAugmentedManifestId],
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+    root_override: Option<HgManifestId>,
+) -> Result<HgAugmentedManifestId> {
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
     let (hg_manifest_id, via_existing_path) = derive_augmented_manifest_via_existing_path(
         ctx,
         repo,
         cs_id,
-        augmented_parents.to_vec(),
+        aug_parents.to_vec(),
         acl_root_overlay,
+        root_override,
     )
     .await?;
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
@@ -1071,7 +1104,7 @@ async fn assert_direct_derive_matches_existing_path(
     let via_direct_path = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
         repo.repo_blobstore(),
-        augmented_parents.to_vec(),
+        aug_parents.to_vec(),
         file_changes,
         vec![],
         bonsai_parents,
@@ -1282,17 +1315,6 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_empty_manifest
     Ok(())
 }
 
-/// Derive the augmented manifest via both paths and assert they agree.
-async fn assert_dual_derive_agree(
-    ctx: &CoreContext,
-    repo: &Repo,
-    cs_id: ChangesetId,
-    aug_parents: &[HgAugmentedManifestId],
-    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
-) -> Result<HgAugmentedManifestId> {
-    assert_direct_derive_matches_existing_path(ctx, repo, cs_id, aug_parents, bonsai_parents).await
-}
-
 /// Helper to derive the parent's augmented manifest using the existing path
 /// so we have a parent input for the direct-derivation tests.
 async fn derive_parent_aug(
@@ -1301,11 +1323,16 @@ async fn derive_parent_aug(
     cs_id: ChangesetId,
 ) -> Result<HgAugmentedManifestId> {
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
-    Ok(
-        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, vec![], acl_root_overlay)
-            .await?
-            .1,
+    Ok(derive_augmented_manifest_via_existing_path(
+        ctx,
+        repo,
+        cs_id,
+        vec![],
+        acl_root_overlay,
+        None,
     )
+    .await?
+    .1)
 }
 
 /// Assert that a leaves-only conflict rejected by the existing HgManifest
@@ -1996,6 +2023,111 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
     Ok(())
 }
 
+/// Regression guard: a supplied root id must survive root-level
+/// `MergeResult::Reuse`, which bypasses `finalize_envelope`.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_root_reuse_uses_expected_hg_node_id(
+    fb: FacebookInit,
+) -> Result<()> {
+    use blobstore::KeyedBlobstore;
+    use mercurial_types::HgNodeHash;
+    use mercurial_types::blobs::UploadHgNodeHash;
+    use mercurial_types::blobs::UploadHgTreeEntry;
+    use mercurial_types::blobs::fetch_manifest_envelope;
+    use mononoke_types::RepoPath;
+    use mononoke_types::sha1_hash::Sha1 as NodeSha1;
+
+    // Given: a no-op merge whose parents have identical root manifests, plus a
+    // supplied root id for the merge result.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    assert_eq!(
+        aug_p1, aug_p2,
+        "fixture requires identical parent roots so derive_manifest reuses one",
+    );
+
+    let parent_root = repo
+        .derive_hg_changeset(&ctx, p1)
+        .await?
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    let contents = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), parent_root)
+        .await?
+        .into_mut()
+        .contents;
+    let forced_node_id = HgNodeHash::new(NodeSha1::from_byte_array([0xDC; 20]));
+    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+    let (forced_root, upload_fut) = UploadHgTreeEntry {
+        upload_node_id: UploadHgNodeHash::Supplied(forced_node_id),
+        contents,
+        p1: Some(parent_root.into_nodehash()),
+        p2: None,
+        path: RepoPath::RootPath,
+        computed_node_id: None,
+    }
+    .upload(ctx.clone(), blobstore_arc)?;
+    upload_fut.await?;
+    assert_eq!(forced_root.into_nodehash(), forced_node_id);
+    assert_ne!(forced_root, parent_root);
+
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .commit()
+        .await?;
+    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, merge).await?;
+    let file_changes = file_changes_from_bonsai(&ctx, &repo, merge).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
+
+    // When: deriving that merge through both the direct and HgManifest-based
+    // paths with the supplied root id.
+    let via_direct_path = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        vec![aug_p1, aug_p2],
+        file_changes,
+        vec![],
+        (Some(p1), Some(p2)),
+        &Default::default(),
+        forced_root.into_nodehash(),
+        restricted_paths_config,
+        acl_root_overlay,
+    )
+    .await?;
+    let direct_env = via_direct_path.load(&ctx, repo.repo_blobstore()).await?;
+    let (_, via_existing_path) = derive_augmented_manifest_via_existing_path(
+        &ctx,
+        &repo,
+        merge,
+        vec![aug_p1, aug_p2],
+        acl_root_overlay,
+        Some(forced_root),
+    )
+    .await?;
+
+    // Then: the reused root is re-emitted at the supplied id and still matches
+    // the existing derivation path.
+    assert_eq!(via_direct_path, via_existing_path);
+    assert_eq!(via_direct_path.into_nodehash(), forced_node_id);
+    assert_eq!(direct_env.augmented_manifest.hg_node_id, forced_node_id);
+    assert_ne!(
+        direct_env.augmented_manifest.computed_node_id, forced_node_id,
+        "computed_node_id should preserve the content-derived hash",
+    );
+    compare_manifests(&ctx, &repo, forced_root, via_direct_path).await?;
+
+    Ok(())
+}
+
 #[mononoke::fbinit_test]
 async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
     fb: FacebookInit,
@@ -2026,6 +2158,7 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 existing_parent,
                 vec![],
                 None,
+                None,
             )
             .await?;
             let (_, existing_child_augmented) = derive_augmented_manifest_via_existing_path(
@@ -2033,6 +2166,7 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 &existing_repo,
                 existing_child,
                 vec![existing_parent_augmented],
+                None,
                 None,
             )
             .await?;

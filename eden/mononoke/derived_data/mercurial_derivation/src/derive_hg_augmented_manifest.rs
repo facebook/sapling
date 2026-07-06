@@ -1791,6 +1791,16 @@ fn trace_subtree_replacements(
         .collect()
 }
 
+fn dedup_root_parents_for_reemit(
+    mut parents: Vec<Traced<ParentIndex, HgAugmentedManifestId>>,
+) -> Vec<Traced<ParentIndex, HgAugmentedManifestId>> {
+    // Match derive_manifest's parent deduplication: Traced equality ignores the
+    // parent index, while the retained value keeps the surviving index.
+    let mut seen = HashSet::new();
+    parents.retain(|p| seen.insert(p.clone()));
+    parents
+}
+
 /// Derive an augmented manifest directly from a bonsai changeset and parent
 /// augmented manifests, bypassing HgManifest construction entirely.
 pub async fn derive_augmented_manifest_from_bonsai<Store>(
@@ -1911,7 +1921,30 @@ where
     .await?;
 
     match root {
-        Some(traced_id) => Ok(traced_id.into_untraced()),
+        Some(traced_id) => {
+            let reused = traced_id.into_untraced();
+            if reused.into_nodehash() == expected_root_hg_node_id {
+                return Ok(reused);
+            }
+
+            // The framework reused a parent's root verbatim, skipping
+            // finalize_envelope, so re-emit the root envelope under the supplied id.
+            let env = reused.load(ctx, &blobstore_arc).await?;
+            let parents = dedup_root_parents_for_reemit(root_parents_traced);
+            let (_, final_id) = finalize_envelope(
+                ctx,
+                &blobstore_arc,
+                expected_root_hg_node_id,
+                &MPath::ROOT,
+                &parents,
+                env.augmented_manifest.subentries,
+                acl_map.get(&MPath::ROOT).copied(),
+                &restricted_paths_arc,
+                restricted_paths_enabled,
+            )
+            .await?;
+            Ok(final_id.into_untraced())
+        }
         None => {
             // Empty manifest — all files deleted. Create empty augmented manifest.
             let tree_info = TreeInfo {
