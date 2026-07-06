@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
@@ -14,7 +15,11 @@ use blobstore::Loadable;
 use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::FutureExt;
 use futures::stream::TryStreamExt;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs_async;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
@@ -26,13 +31,19 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
 use mercurial_types_mocks::nodehash::AS_HASH;
+use metaconfig_types::PathRestrictionMetadata;
+use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
+use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
 use restricted_paths::RestrictedPathsRef;
 use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::extend_from_dag_with_actions;
@@ -952,6 +963,7 @@ async fn assert_direct_derive_matches_existing_path(
         derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, augmented_parents.to_vec())
             .await?;
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
 
     let via_direct_path = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
@@ -961,6 +973,7 @@ async fn assert_direct_derive_matches_existing_path(
         bonsai_parents,
         &Default::default(),
         hg_manifest_id.into_nodehash(),
+        restricted_paths_config,
     )
     .await?;
 
@@ -987,6 +1000,112 @@ async fn assert_direct_derive_matches_existing_path(
     compare_manifests(ctx, repo, hg_manifest_id, via_direct_path).await?;
 
     Ok(via_direct_path)
+}
+
+fn restricted_paths_access_logging_knobs(enabled: bool) -> JustKnobsInMemory {
+    JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:enabled_restricted_paths_access_logging".to_string(),
+        KnobVal::Bool(enabled),
+    )]))
+}
+
+async fn build_repo_with_restricted_path_config(
+    fb: FacebookInit,
+    restricted_paths: Vec<NonRootMPath>,
+) -> Result<Repo> {
+    let path_restriction_metadata = restricted_paths
+        .into_iter()
+        .map(|path| {
+            (
+                path,
+                PathRestrictionMetadata {
+                    repo_region_acl: MononokeIdentity::from_legacy_type_data(
+                        "REPO_REGION",
+                        "test_acl",
+                    ),
+                    permission_request_group: None,
+                    read_only: false,
+                },
+            )
+        })
+        .collect();
+
+    let repo = test_repo_factory::TestRepoFactory::new(fb)?
+        .with_config_override(move |cfg| {
+            cfg.restricted_paths_config = RestrictedPathsConfig {
+                path_restriction_metadata,
+                ..Default::default()
+            };
+        })
+        .build()
+        .await?;
+    Ok(repo)
+}
+
+async fn create_restricted_path_test_stack(
+    ctx: &CoreContext,
+    repo: &Repo,
+) -> Result<(ChangesetId, ChangesetId)> {
+    let parent = CreateCommitContext::new_root(ctx, repo)
+        .add_file("restricted/secret.txt", "hidden")
+        .add_file("public/normal.txt", "visible")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(ctx, repo, vec![parent])
+        .add_file("restricted/secret.txt", "hidden v2")
+        .add_file("restricted/nested/deep.txt", "deeper")
+        .add_file("public/normal.txt", "visible v2")
+        .commit()
+        .await?;
+
+    Ok((parent, child))
+}
+
+async fn derive_augmented_manifest_directly_for_test(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    parents: Vec<HgAugmentedManifestId>,
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<HgAugmentedManifestId> {
+    let expected_root = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid()
+        .into_nodehash();
+    let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
+
+    derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        ctx,
+        repo.repo_blobstore(),
+        parents,
+        file_changes,
+        bonsai_parents,
+        &Default::default(),
+        expected_root,
+        restricted_paths_config,
+    )
+    .await
+}
+
+async fn hg_augmented_restricted_path_entries(
+    ctx: &CoreContext,
+    repo: &Repo,
+) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+    let mut entries: Vec<_> = repo
+        .restricted_paths()
+        .config_based()
+        .manifest_id_store()
+        .get_all_entries(ctx)
+        .await?
+        .into_iter()
+        .filter(|entry| entry.manifest_type == ManifestType::HgAugmented)
+        .collect();
+    entries.sort();
+    Ok(entries)
 }
 
 #[mononoke::fbinit_test]
@@ -1106,6 +1225,7 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
     );
 
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
     let direct = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
         repo.repo_blobstore(),
@@ -1114,6 +1234,7 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
         bonsai_parents,
         &Default::default(),
         AS_HASH,
+        restricted_paths_config,
     )
     .await;
     assert!(
@@ -1718,6 +1839,7 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
         .await?;
     let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xAB; 20]));
     let file_changes = file_changes_from_bonsai(&ctx, &repo, cs_id).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
 
     // When: deriving directly from Bonsai with the supplied root id.
     let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
@@ -1728,6 +1850,7 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
         (None, None),
         &Default::default(),
         supplied,
+        restricted_paths_config,
     )
     .await?;
 
@@ -1760,4 +1883,141 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
     );
 
     Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(true),
+        async move {
+            // Given: two equivalent repos with a two-commit stack, two configured
+            // restriction roots, and an unrestricted public directory.
+            let ctx = CoreContext::test_mock(fb);
+            let restricted_paths = vec![
+                NonRootMPath::new("restricted")?,
+                NonRootMPath::new("restricted/nested")?,
+            ];
+            let existing_repo =
+                build_repo_with_restricted_path_config(fb, restricted_paths.clone()).await?;
+            let direct_repo = build_repo_with_restricted_path_config(fb, restricted_paths).await?;
+            let (existing_parent, existing_child) =
+                create_restricted_path_test_stack(&ctx, &existing_repo).await?;
+            let (direct_parent, direct_child) =
+                create_restricted_path_test_stack(&ctx, &direct_repo).await?;
+
+            // When: deriving one repo through the existing HgManifest-based path and
+            // the other through the direct Bonsai-based path.
+            let (_, existing_parent_augmented) = derive_augmented_manifest_via_existing_path(
+                &ctx,
+                &existing_repo,
+                existing_parent,
+                vec![],
+            )
+            .await?;
+            let (_, existing_child_augmented) = derive_augmented_manifest_via_existing_path(
+                &ctx,
+                &existing_repo,
+                existing_child,
+                vec![existing_parent_augmented],
+            )
+            .await?;
+            let direct_parent_augmented = derive_augmented_manifest_directly_for_test(
+                &ctx,
+                &direct_repo,
+                direct_parent,
+                vec![],
+                (None, None),
+            )
+            .await?;
+            let direct_child_augmented = derive_augmented_manifest_directly_for_test(
+                &ctx,
+                &direct_repo,
+                direct_child,
+                vec![direct_parent_augmented],
+                (Some(direct_parent), None),
+            )
+            .await?;
+            let existing_entries =
+                hg_augmented_restricted_path_entries(&ctx, &existing_repo).await?;
+            let direct_entries = hg_augmented_restricted_path_entries(&ctx, &direct_repo).await?;
+
+            // Then: the direct path writes the same HgAugmented manifest-id entries as
+            // the existing path, and only for configured restricted directory roots.
+            assert_eq!(direct_parent_augmented, existing_parent_augmented);
+            assert_eq!(direct_child_augmented, existing_child_augmented);
+            assert_eq!(direct_entries, existing_entries);
+            assert_eq!(
+                direct_entries.len(),
+                3,
+                "expected parent restricted/ plus child restricted/ and restricted/nested entries, got: {:?}",
+                direct_entries,
+            );
+            let entry_paths: Vec<_> = direct_entries
+                .iter()
+                .map(|entry| entry.repo_path())
+                .collect::<Result<_>>()?;
+            assert!(entry_paths.contains(&RepoPath::dir("restricted")?));
+            assert!(entry_paths.contains(&RepoPath::dir("restricted/nested")?));
+            assert!(!entry_paths.contains(&RepoPath::dir("public")?));
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_does_not_track_restricted_paths_when_jk_disabled(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(false),
+        async move {
+            // Given: a repo with configured restriction roots but the access-logging
+            // JK disabled.
+            let ctx = CoreContext::test_mock(fb);
+            let repo = build_repo_with_restricted_path_config(
+                fb,
+                vec![
+                    NonRootMPath::new("restricted")?,
+                    NonRootMPath::new("restricted/nested")?,
+                ],
+            )
+            .await?;
+            let (parent, child) = create_restricted_path_test_stack(&ctx, &repo).await?;
+
+            // When: deriving the same two-commit stack through the direct path.
+            let parent_augmented = derive_augmented_manifest_directly_for_test(
+                &ctx,
+                &repo,
+                parent,
+                vec![],
+                (None, None),
+            )
+            .await?;
+            derive_augmented_manifest_directly_for_test(
+                &ctx,
+                &repo,
+                child,
+                vec![parent_augmented],
+                (Some(parent), None),
+            )
+            .await?;
+
+            // Then: no HgAugmented restricted-path entries are written.
+            let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
+            assert_eq!(
+                entries,
+                Vec::<RestrictedPathManifestIdEntry>::new(),
+                "restricted-path tracking should be gated entirely by the JK",
+            );
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
 }

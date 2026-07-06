@@ -72,6 +72,7 @@ use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestId;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use restricted_paths_common::ManifestType;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
@@ -1194,19 +1195,24 @@ async fn resolve_parent_lookups(
 
 /// Given the fully-merged subentries for one tree node, attempt parent reuse
 /// (mirroring `create_hg_manifest`) or otherwise compute a fresh `hg_node_id`
-/// and store the envelope. Returns the metadata to propagate through `Ctx`
-/// plus the resulting `HgAugmentedManifestId`.
+/// and store the envelope. Records the envelope's id in the restricted-paths
+/// manifest-id store when the JK is on and the path is a restriction root.
+/// Returns the metadata to propagate through `Ctx` plus the resulting
+/// `HgAugmentedManifestId`.
 async fn finalize_envelope(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     expected_root_hg_node_id: HgNodeHash,
-    is_root: bool,
+    tree_path: &MPath,
     parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
     subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    restricted_paths_enabled: bool,
 ) -> Result<(
     AugmentedDeriveContext,
     Traced<ParentIndex, HgAugmentedManifestId>,
 )> {
+    let is_root = tree_path.is_root();
     // Select p1/p2 by original Bonsai parent index, not by position after
     // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
     // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
@@ -1283,9 +1289,23 @@ async fn finalize_envelope(
 
     let hg_augmented_manifest_id = envelope.store(ctx, blobstore).await?;
 
-    // TODO: restricted-paths tracking for this envelope is added by
-    // "Add restricted-paths tracking to direct derivation" later in this
-    // stack.
+    if restricted_paths_enabled
+        && let Some(non_root_path) = tree_path.clone().into_optional_non_root_path()
+        && restricted_paths.should_record_manifest_id_entry(&non_root_path)
+    {
+        let entry = RestrictedPathManifestIdEntry::new(
+            ManifestType::HgAugmented,
+            hg_augmented_manifest_id.to_string().into(),
+            RepoPath::DirectoryPath(non_root_path),
+        )?;
+        if let Err(e) = restricted_paths
+            .manifest_id_store()
+            .add_entry(ctx, entry)
+            .await
+        {
+            warn!("Failed to track restricted path at {tree_path}: {e}");
+        }
+    }
 
     // Return this envelope's metadata through `Ctx` so a parent directory can
     // embed this child without loading it again.
@@ -1309,6 +1329,8 @@ async fn create_augmented_tree(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
     expected_root_hg_node_id: HgNodeHash,
+    restricted_paths: ArcRestrictedPathsConfigBased,
+    restricted_paths_enabled: bool,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgAugmentedManifestId>,
         Traced<ParentIndex, HgAugmentedFileLeafNode>,
@@ -1340,9 +1362,11 @@ async fn create_augmented_tree(
         &ctx,
         &blobstore,
         expected_root_hg_node_id,
-        tree_info.path.is_root(),
+        &tree_info.path,
         &tree_info.parents,
         subentries,
+        &restricted_paths,
+        restricted_paths_enabled,
     )
     .await
 }
@@ -1360,10 +1384,17 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     // (`UploadHgNodeHash::Supplied`) differ from the computed content hash;
     // the envelope must land at this key for client lookups to succeed.
     expected_root_hg_node_id: HgNodeHash,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
 ) -> Result<HgAugmentedManifestId>
 where
     Store: KeyedBlobstore + Clone + 'static,
 {
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None,
+        Some("hg_augmented_manifest_write"),
+    );
+
     let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
         parent_bonsai_csids.0.zip(parents.first().copied()),
         parent_bonsai_csids.1.zip(parents.get(1).copied()),
@@ -1374,6 +1405,7 @@ where
     let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
+    let restricted_paths_arc = Arc::clone(restricted_paths);
 
     let parents_traced: Vec<Traced<ParentIndex, HgAugmentedManifestId>> = parents
         .into_iter()
@@ -1390,10 +1422,17 @@ where
         file_changes,
         std::iter::empty(),
         {
-            cloned!(ctx, blobstore_arc);
+            cloned!(ctx, blobstore_arc, restricted_paths_arc);
             move |tree_info| {
-                cloned!(ctx, blobstore_arc);
-                create_augmented_tree(ctx, blobstore_arc, expected_root_hg_node_id, tree_info)
+                cloned!(ctx, blobstore_arc, restricted_paths_arc);
+                create_augmented_tree(
+                    ctx,
+                    blobstore_arc,
+                    expected_root_hg_node_id,
+                    restricted_paths_arc,
+                    restricted_paths_enabled,
+                    tree_info,
+                )
             }
         },
         {
@@ -1426,6 +1465,8 @@ where
                 ctx.clone(),
                 blobstore_arc,
                 expected_root_hg_node_id,
+                restricted_paths_arc,
+                restricted_paths_enabled,
                 tree_info,
             )
             .await?;
