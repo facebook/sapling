@@ -150,6 +150,9 @@ class basectx:
     def __iter__(self):
         return iter(self._manifest)
 
+    def visiblefiles(self, force=False):
+        return self.files()
+
     def buildstatusmanifest(self, status):
         """Builds a manifest that includes the given status results, if this is
         a working copy context. For non-working copy contexts, it just returns
@@ -606,8 +609,15 @@ class changectx(basectx):
             if git.isgitformat(self._repo) or subtreeutil.contains_shallow_copy(
                 self._repo, self.node()
             ):
-                files = sorted(self.manifest().diff(self.p1().manifest()).keys())
+                files = self.visiblefiles(force=True)
         return files
+
+    def visiblefiles(self, force=False):
+        if not force and not self._repo.ui.configbool(
+            "experimental", "slacl-visible-files", True
+        ):
+            return self.files()
+        return sorted(self.manifest().diff(self.p1().manifest()).keys())
 
     def description(self):
         return self._changeset.description

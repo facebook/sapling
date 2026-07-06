@@ -4398,7 +4398,7 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
             # slower repo.status() method
             files = {fn for st in repo.status(base, old)[:3] for fn in st}
         else:
-            files = set(old.files())
+            files = set(old.visiblefiles())
 
         # add/remove the files to the working copy if the "addremove" option
         # was specified.

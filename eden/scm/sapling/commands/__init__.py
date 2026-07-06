@@ -793,7 +793,7 @@ def _replayrenames(repo, node):
     status = wctx.p1().status()
 
     # For each file in the commit that's being backed out..
-    for origfile in origctx.files():
+    for origfile in origctx.visiblefiles():
         # ...if it wasn't a deletion...
         if origfile in origctx:
             origfilectx = origctx[origfile]

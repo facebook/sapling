@@ -101,7 +101,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
     """
     base = ctx.p1()
     # ctx
-    initialfiles = set(ctx.files())
+    initialfiles = set(ctx.visiblefiles())
     exclude = set(f for f in initialfiles if match(f))
 
     # No files matched commit, so nothing excluded

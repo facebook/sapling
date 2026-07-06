@@ -670,7 +670,7 @@ def collapse(repo, first, commitopts, skipprompt=False):
     # collect all files which might be affected
     all_files = set()
     for ctx in ctxs:
-        all_files.update(ctx.files())
+        all_files.update(ctx.visiblefiles())
 
     # Recompute copies (avoid recording a -> b -> a)
     copied = copies.pathcopies(base, last)

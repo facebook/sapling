@@ -263,18 +263,16 @@ Backout of a commit that touches restricted paths the user never had access to:
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should avoid leaving a partial backout. There is no per-file conflict to
-present here because the restricted file names are not visible.
   $ sl backout -r $B
   removing B
   reverting public.txt
-  abort: path 'restricted' is restricted by ACL 'some-acl'
-  [255]
+  changeset * backs out changeset * (glob)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
-  M public.txt
-  R B
   $ sl cat public.txt
-  public v2 (no-eol)
+  public v1 (no-eol)
 
 Amend of a commit that touches restricted paths the user never had access to:
 
@@ -304,10 +302,18 @@ Amend aborts before rewriting commits with restricted paths.
     'restricted' is restricted by ACL 'some-acl'
   (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
+
+The `slacl.mixed-commit-mode=warn` bypass permits rewriting visible paths and
+reports the restricted path warning.
+  $ sl amend --config slacl.mixed-commit-mode=warn
+  warning: rewriting commits with restricted paths (slacl.mixed-commit-mode=warn)
+    'restricted' is restricted by ACL 'some-acl'
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
-  M public.txt
   $ sl cat public.txt
-  public v2 (no-eol)
+  public v3
 
 Fold of commits when one touches restricted paths the user never had access to:
 
@@ -339,6 +345,17 @@ Fold aborts before rewriting commits with restricted paths.
     'restricted' is restricted by ACL 'some-acl'
   (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
+
+The `slacl.mixed-commit-mode=warn` bypass permits folding visible paths and
+reports the restricted path warning.
+  $ sl fold --from .^ -m folded --config slacl.mixed-commit-mode=warn
+  warning: rewriting commits with restricted paths (slacl.mixed-commit-mode=warn)
+    'restricted' is restricted by ACL 'some-acl'
+  2 changesets folded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
   $ sl cat public.txt
   public v3 (no-eol)
@@ -376,6 +393,18 @@ Histedit roll aborts before rewriting commits with restricted paths.
     'restricted' is restricted by ACL 'some-acl'
   (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
+
+The `slacl.mixed-commit-mode=warn` bypass permits rolling visible paths and
+reports the restricted path warning.
+  $ sl histedit $B --config slacl.mixed-commit-mode=warn --commands - << EOF
+  > pick $B
+  > roll $C
+  > EOF
+  warning: rewriting commits with restricted paths (slacl.mixed-commit-mode=warn)
+    'restricted' is restricted by ACL 'some-acl'
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
   $ sl cat public.txt
   public v3 (no-eol)
@@ -407,6 +436,16 @@ Partial uncommit aborts before rewriting commits with restricted paths.
     'restricted' is restricted by ACL 'some-acl'
   (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
+
+The `slacl.mixed-commit-mode=warn` bypass permits uncommitting visible paths
+and reports the restricted path warning.
+  $ sl uncommit public.txt --config slacl.mixed-commit-mode=warn
+  warning: rewriting commits with restricted paths (slacl.mixed-commit-mode=warn)
+    'restricted' is restricted by ACL 'some-acl'
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
+  M public.txt
   $ sl cat public.txt
-  public v2 (no-eol)
+  public v1 (no-eol)

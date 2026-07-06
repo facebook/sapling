@@ -142,9 +142,9 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
 
         # commit a new version of the old changeset, including the update
         # collect all files which might be affected
-        files = set(old.files())
+        files = set(old.visiblefiles())
         for u in updates:
-            files.update(u.files())
+            files.update(u.visiblefiles())
 
         # Recompute copies (avoid recording a -> b -> a)
         copied = copies.pathcopies(base, head)
