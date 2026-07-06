@@ -34,14 +34,18 @@ use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use futures::TryStreamExt;
 use futures::future;
+use futures::stream;
+use futures::stream::StreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
+use mononoke_types::FileChange;
 use mononoke_types::RepoPath;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use restricted_paths_common::ManifestType;
@@ -296,6 +300,16 @@ fn get_hg_changeset_derivation_options(
     }
 }
 
+/// Whether to derive augmented manifests directly from bonsai changesets
+/// and parent augmented manifests, bypassing HgManifest construction.
+fn should_use_direct_derivation(repo_name: &str) -> Result<bool> {
+    Ok(justknobs::eval(
+        "scm/mononoke:augmented_manifest_direct_derivation",
+        None,
+        Some(repo_name),
+    ))
+}
+
 pub(crate) async fn get_subtree_change_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -449,6 +463,123 @@ pub fn format_key(derivation_ctx: &DerivationContext, cs_id: ChangesetId) -> Str
     format!("{root_prefix}{key_prefix}{cs_id}")
 }
 
+/// If this Bonsai changeset is already mapped to a Mercurial changeset, use
+/// that changeset's root manifest id as the canonical augmented-manifest root.
+/// Bonsai-native changesets with no Hg mapping use the directly-computed root.
+async fn lookup_mapped_root_hg_node_ids(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    csids: Vec<ChangesetId>,
+) -> Result<HashMap<ChangesetId, HgNodeHash>> {
+    if csids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let mappings = derivation_ctx
+        .bonsai_hg_mapping()?
+        .get(ctx, csids.into())
+        .await?;
+    let blobstore = Arc::clone(derivation_ctx.blobstore());
+
+    stream::iter(mappings)
+        .map(|entry| {
+            let blobstore = Arc::clone(&blobstore);
+            async move {
+                let expected_root = entry
+                    .hg_cs_id
+                    .load(ctx, &blobstore)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed loading mapped HgChangeset {} for {}",
+                            entry.hg_cs_id, entry.bcs_id,
+                        )
+                    })?
+                    .manifestid()
+                    .into_nodehash();
+                Ok((entry.bcs_id, expected_root))
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect()
+        .await
+}
+
+async fn lookup_mapped_root_hg_node_id(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    csid: ChangesetId,
+) -> Result<Option<HgNodeHash>> {
+    Ok(
+        lookup_mapped_root_hg_node_ids(ctx, derivation_ctx, vec![csid])
+            .await?
+            .remove(&csid),
+    )
+}
+
+/// Derive an augmented manifest directly from a bonsai changeset and parent
+/// augmented manifests, without constructing HgManifests. Shared by
+/// `derive_single` and `derive_batch`.
+async fn derive_direct(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+    aug_parents: Vec<HgAugmentedManifestId>,
+    expected_root: Option<HgNodeHash>,
+) -> Result<HgAugmentedManifestId> {
+    let blobstore = derivation_ctx.blobstore();
+    let csid = bonsai.get_changeset_id();
+
+    let mut content_ids = HashSet::new();
+    let file_changes: Vec<_> = bonsai
+        .file_changes()
+        .map(|(path, fc)| {
+            Ok((
+                path.clone(),
+                match fc {
+                    FileChange::Change(tc) => {
+                        content_ids.insert(tc.content_id());
+                        Some(tc.clone())
+                    }
+                    FileChange::Deletion => None,
+                    FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
+                        bail!("Can't derive manifest for snapshot")
+                    }
+                },
+            ))
+        })
+        .collect::<Result<_>>()?;
+
+    let parent_csids = {
+        let mut p = bonsai.parents();
+        (p.next(), p.next())
+    };
+
+    let (content_metadata, acl_root) = future::try_join(
+        prefetch_content_metadata(ctx, blobstore, content_ids),
+        derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid),
+    )
+    .await?;
+
+    // `derive_augmented_manifest_from_bonsai` builds the ACL overlay map itself,
+    // scoped to the paths this changeset rebuilds (or a full walk for merges).
+    let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
+
+    crate::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        ctx,
+        blobstore,
+        aug_parents,
+        file_changes,
+        vec![],
+        parent_csids,
+        &content_metadata,
+        expected_root,
+        &derivation_ctx.restricted_paths(),
+        acl_root_overlay,
+    )
+    .await
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootHgAugmentedManifestId {
     const VARIANT: DerivableType = DerivableType::HgAugmentedManifests;
@@ -462,15 +593,27 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         parents: Vec<Self>,
         _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        let blobstore = derivation_ctx.blobstore();
+        let csid = bonsai.get_changeset_id();
 
+        if should_use_direct_derivation(derivation_ctx.repo_name())?
+            && bonsai.subtree_changes().is_empty()
+        {
+            let aug_parents = parents
+                .into_iter()
+                .map(|p| p.hg_augmented_manifest_id())
+                .collect();
+            let expected_root = lookup_mapped_root_hg_node_id(ctx, derivation_ctx, csid).await?;
+            let root =
+                derive_direct(ctx, derivation_ctx, &bonsai, aug_parents, expected_root).await?;
+            return Ok(Self(root));
+        }
+
+        let blobstore = derivation_ctx.blobstore();
         let content_ids = bonsai
             .file_changes()
             .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
             .collect::<HashSet<_>>();
         let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
-
-        let csid = bonsai.get_changeset_id();
 
         // Wrap the dependency fetch and envelope load into one future so the
         // manifest id is resolved concurrently with the content metadata and
@@ -520,6 +663,41 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
     ) -> Result<HashMap<ChangesetId, Self>> {
         let blobstore = derivation_ctx.blobstore();
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();
+
+        if should_use_direct_derivation(derivation_ctx.repo_name())?
+            && bonsais
+                .iter()
+                .all(|bonsai| bonsai.subtree_changes().is_empty())
+        {
+            let expected_roots = lookup_mapped_root_hg_node_ids(
+                ctx,
+                derivation_ctx,
+                bonsais
+                    .iter()
+                    .map(BonsaiChangeset::get_changeset_id)
+                    .collect(),
+            )
+            .await?;
+            for bonsai in &bonsais {
+                let csid = bonsai.get_changeset_id();
+                let aug_parents: Vec<_> = derivation_ctx
+                    .fetch_unknown_parents::<Self>(ctx, Some(&res), bonsai)
+                    .await?
+                    .into_iter()
+                    .map(|p| p.hg_augmented_manifest_id())
+                    .collect();
+                let root = derive_direct(
+                    ctx,
+                    derivation_ctx,
+                    bonsai,
+                    aug_parents,
+                    expected_roots.get(&csid).copied(),
+                )
+                .await?;
+                res.insert(csid, Self(root));
+            }
+            return Ok(res);
+        }
 
         for bonsai in &bonsais {
             let csid = bonsai.get_changeset_id();
@@ -680,10 +858,12 @@ impl DerivableUntopologically for RootHgAugmentedManifestId {
 
 #[cfg(test)]
 mod test {
+    use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use borrowed::borrowed;
+    use changesets_creation::save_changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
@@ -702,8 +882,14 @@ mod test {
     use fixtures::UnsharedMergeEven;
     use fixtures::UnsharedMergeUneven;
     use futures::Future;
+    use futures::FutureExt;
     use futures::TryStreamExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use mononoke_macros::mononoke;
+    use mononoke_types::MPath;
+    use mononoke_types::SubtreeChange;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
@@ -792,6 +978,361 @@ mod test {
         for (cs_id, hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
             println!("{} {} {:?}", cs_id, hg_cs_id, batch_derived.get(&cs_id));
             assert_eq!(batch_derived.get(&cs_id).map(|x| x.0), Some(hg_cs_id));
+        }
+
+        Ok(())
+    }
+
+    async fn save_bonsai_with_subtree_changes(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        parents: Vec<ChangesetId>,
+        subtree_changes: Vec<(MPath, SubtreeChange)>,
+    ) -> Result<ChangesetId> {
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([
+                (
+                    "scm/mononoke:enable_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+                (
+                    "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+            ])),
+            async move {
+                let mut bonsai = CreateCommitContext::new(ctx, repo, parents)
+                    .set_message("subtree change commit")
+                    .create_commit_object()
+                    .await?;
+                bonsai.subtree_changes = subtree_changes.into_iter().collect();
+                let bonsai = bonsai.freeze()?;
+                let cs_id = bonsai.get_changeset_id();
+                save_changesets(ctx, repo, vec![bonsai]).await?;
+                Ok(cs_id)
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    fn subtree_copy(
+        to_path: &str,
+        from_path: &str,
+        from_cs_id: ChangesetId,
+    ) -> Result<(MPath, SubtreeChange)> {
+        Ok((
+            MPath::new(to_path)?,
+            SubtreeChange::copy(MPath::new(from_path)?, from_cs_id),
+        ))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_direct_derive_single_uses_mapped_hg_root(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a child commit whose dependencies and parent augmented
+        // manifest are already derived.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("a.txt", "modified")
+            .commit()
+            .await?;
+        let csids = vec![root, child];
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![root], None)
+            .await?;
+        let parent_aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, root, None)
+            .await?
+            .context("Missing RootHgAugmentedManifestId for parent")?;
+        let bonsai = Loadable::load(&child, &ctx, &repo.repo_blobstore).await?;
+        let derivation_ctx = manager.derivation_context(None);
+
+        // When: invoking the direct derive_single implementation with the JK
+        // enabled.
+        let derived = with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                RootHgAugmentedManifestId::derive_single(
+                    &ctx,
+                    &derivation_ctx,
+                    bonsai,
+                    vec![parent_aug],
+                    None,
+                )
+                .await
+            }
+            .boxed(),
+        )
+        .await?;
+
+        // Then: derive_single returns a loadable augmented manifest using the
+        // canonical Hg root from the existing Bonsai-to-Hg mapping.
+        let aug_envelope = Loadable::load(
+            &derived.hg_augmented_manifest_id(),
+            &ctx,
+            &repo.repo_blobstore,
+        )
+        .await?;
+        let mapped_child = manager
+            .fetch_derived::<MappedHgChangesetId>(&ctx, child, None)
+            .await?
+            .context("Missing MappedHgChangesetId for child")?;
+        let expected_root =
+            Loadable::load(&mapped_child.hg_changeset_id(), &ctx, &repo.repo_blobstore)
+                .await?
+                .manifestid()
+                .into_nodehash();
+        assert_eq!(
+            aug_envelope.augmented_manifest.hg_node_id, expected_root,
+            "direct derive_single should use the mapped Hg root",
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_direct_derivation_jk_falls_back_for_subtree_changes(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a commit with manifest-altering subtree changes and all
+        // dependencies required by the legacy augmented-manifest path.
+        let source = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("src/a.txt", "copied content")
+            .commit()
+            .await?;
+        let child = save_bonsai_with_subtree_changes(
+            &ctx,
+            &repo,
+            vec![source],
+            vec![subtree_copy("dst", "src", source)?],
+        )
+        .await?;
+        let csids = vec![source, child];
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+            .await?;
+
+        // When: deriving through the manager with direct derivation enabled.
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                manager
+                    .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+                    .await
+            }
+            .boxed(),
+        )
+        .await?;
+
+        // Then: the subtree-copy result is present and matches the canonical
+        // Hg manifest, showing that the JK-gated direct path fell back to the
+        // legacy subtree-aware path.
+        let child_aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+            .await?
+            .context("Missing RootHgAugmentedManifestId for subtree child")?
+            .hg_augmented_manifest_id();
+        let mapped_child = manager
+            .fetch_derived::<MappedHgChangesetId>(&ctx, child, None)
+            .await?
+            .context("Missing MappedHgChangesetId for subtree child")?;
+        let expected_hg_manifest =
+            Loadable::load(&mapped_child.hg_changeset_id(), &ctx, &repo.repo_blobstore)
+                .await?
+                .manifestid();
+        let copied_path = MPath::new("dst/a.txt")?;
+        let aug_leaf = child_aug
+            .find_entry(
+                ctx.clone(),
+                repo.repo_blobstore.clone(),
+                copied_path.clone(),
+            )
+            .await?
+            .and_then(Entry::into_leaf)
+            .context("subtree copy should appear in the augmented manifest")?;
+        let hg_leaf = expected_hg_manifest
+            .find_entry(ctx.clone(), repo.repo_blobstore.clone(), copied_path)
+            .await?
+            .and_then(Entry::into_leaf)
+            .context("subtree copy should appear in the Hg manifest")?;
+        assert_eq!(aug_leaf.file_type, hg_leaf.0);
+        assert_eq!(aug_leaf.filenode, hg_leaf.1.into_nodehash());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_direct_derive_batch_via_manager_persists_blobs(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a linear stack whose dependencies are derived, so the manager
+        // can invoke the direct augmented-manifest path under its write-batched
+        // derivation context.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("a.txt", "modified")
+            .commit()
+            .await?;
+        let csids = vec![root, child];
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+            .await?;
+
+        // When: deriving augmented manifests through the manager with direct
+        // derivation enabled.
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                manager
+                    .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+                    .await
+            }
+            .boxed(),
+        )
+        .await?;
+
+        let derived = manager
+            .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+            .await?;
+        let mapped = manager
+            .fetch_derived_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+            .await?;
+
+        // Then: mappings point at augmented-manifest blobs that are loadable
+        // from the repo blobstore after the manager-owned flush.
+        for cs_id in &csids {
+            let aug = derived
+                .get(cs_id)
+                .with_context(|| format!("Missing RootHgAugmentedManifestId for {cs_id}"))?;
+            let aug_envelope =
+                Loadable::load(&aug.hg_augmented_manifest_id(), &ctx, &repo.repo_blobstore).await?;
+            let hg_cs_id = mapped
+                .get(cs_id)
+                .with_context(|| format!("Missing MappedHgChangesetId for {cs_id}"))?
+                .hg_changeset_id();
+            let expected_root = Loadable::load(&hg_cs_id, &ctx, &repo.repo_blobstore)
+                .await?
+                .manifestid()
+                .into_nodehash();
+            assert_eq!(
+                aug_envelope.augmented_manifest.hg_node_id, expected_root,
+                "direct derivation through the manager should persist the canonical root for {cs_id}",
+            );
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_direct_derive_batch_without_hgchangeset_mapping(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a linear stack with only the non-HgChangeset dependency
+        // prederived. MappedHgChangesetId is still a manager dependency in this
+        // stack, so call derive_batch directly below the manager dependency gate.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("a.txt", "modified")
+            .commit()
+            .await?;
+        let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+            .add_file("b.txt", "new file")
+            .commit()
+            .await?;
+        let csids = vec![root, child, grandchild];
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+            .await?;
+        for cs_id in &csids {
+            assert!(
+                manager
+                    .fetch_derived::<MappedHgChangesetId>(&ctx, *cs_id, None)
+                    .await?
+                    .is_none(),
+                "fixture should not prederive MappedHgChangesetId for {cs_id}",
+            );
+        }
+
+        let mut bonsais = Vec::new();
+        for cs_id in &csids {
+            bonsais.push(Loadable::load(cs_id, &ctx, &repo.repo_blobstore).await?);
+        }
+        let derivation_ctx = manager.derivation_context(None);
+
+        // When: invoking the direct derive_batch implementation with the JK
+        // enabled, bypassing manager dependency validation.
+        let derived = with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async { RootHgAugmentedManifestId::derive_batch(&ctx, &derivation_ctx, bonsais).await }
+                .boxed(),
+        )
+        .await?;
+
+        // Then: the direct path produces content-derived roots and does not
+        // create HgChangeset mappings as a side effect.
+        for cs_id in &csids {
+            let aug = derived
+                .get(cs_id)
+                .with_context(|| format!("Missing RootHgAugmentedManifestId for {cs_id}"))?;
+            let aug_envelope =
+                Loadable::load(&aug.hg_augmented_manifest_id(), &ctx, &repo.repo_blobstore).await?;
+            assert_eq!(
+                aug_envelope.augmented_manifest.hg_node_id,
+                aug_envelope.augmented_manifest.computed_node_id,
+                "no-Hg direct derivation should use content-derived root for {cs_id}",
+            );
+            assert!(
+                manager
+                    .fetch_derived::<MappedHgChangesetId>(&ctx, *cs_id, None)
+                    .await?
+                    .is_none(),
+                "direct derivation must not create MappedHgChangesetId for {cs_id}",
+            );
         }
 
         Ok(())
