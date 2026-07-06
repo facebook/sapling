@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -1076,8 +1077,23 @@ struct PartitionedSubentries {
 
 /// Walk `tree_info.subentries` and partition them into direct placements vs
 /// per-parent lookups, dispatching on `SubentryAction`.
+///
+/// ACL handling: freshly built children look up `acl_map` for their per-path
+/// ACL pointer; reused children keep the parent's stored ACL pointer. This is
+/// safe because a directory's `AclManifestId` is a pure function of its own
+/// subtree — see `acl_manifest::derive::create_acl_manifest`, where a node's
+/// content is its own `.slacl` restriction plus its children, with no
+/// inherited ancestor ACLs baked in. Therefore any path whose ACL pointer
+/// changes must have had a `.slacl` change *within its own subtree*, which
+/// surfaces as a `changes` entry on that path and forces `derive_manifest` to
+/// rebuild it rather than reuse it (blocking both `Either::Right` emission and
+/// `MergeResult::Reuse`; see `manifest::derive::merge_subentries`). Ancestor
+/// or sibling `.slacl` changes thus can never leave a reused subtree carrying
+/// a stale pointer.
 fn partition_subentries(
     subentries: AugmentedTreeCallbackSubentries,
+    tree_path: &MPath,
+    acl_map: &HashMap<MPath, AclManifestId>,
 ) -> Result<PartitionedSubentries> {
     let mut direct = AugmentedSubentriesMap::default();
     let mut lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>> = HashMap::new();
@@ -1104,16 +1120,17 @@ fn partition_subentries(
                 aug_id,
                 aug_size,
             } => {
+                // Stamp the per-path ACL pointer for the freshly built child.
+                let elem = MPathElement::from_smallvec(key)?;
+                let child_acl_id = acl_map.get(&tree_path.join_element(Some(&elem))).copied();
                 direct.insert(
-                    key,
+                    elem,
                     Either::Left(HgAugmentedManifestEntry::DirectoryNode(
                         HgAugmentedDirectoryNode {
                             treenode,
                             augmented_manifest_id: aug_id,
                             augmented_manifest_size: aug_size,
-                            // TODO: populated by "Add ACL overlay support to
-                            // direct derivation" later in this stack.
-                            acl_manifest_directory_id: None,
+                            acl_manifest_directory_id: child_acl_id,
                         },
                     )),
                 );
@@ -1206,6 +1223,7 @@ async fn finalize_envelope(
     tree_path: &MPath,
     parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
     subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+    dir_acl_id: Option<AclManifestId>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
 ) -> Result<(
@@ -1213,6 +1231,9 @@ async fn finalize_envelope(
     Traced<ParentIndex, HgAugmentedManifestId>,
 )> {
     let is_root = tree_path.is_root();
+    if is_root {
+        assert_root_acl_pointer_invariant(&dir_acl_id)?;
+    }
     // Select p1/p2 by original Bonsai parent index, not by position after
     // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
     // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
@@ -1224,37 +1245,37 @@ async fn finalize_envelope(
     let own_parents = HgParents::new(p1_hash, p2_hash);
 
     // Mirror `create_hg_manifest` parent reuse: if merged contents match an
-    // hg-relevant parent, reuse that parent's envelope instead of minting
-    // `hash(merged contents, current parents)`. The guard uses the deduped
-    // parent count — a surviving p3 can make reuse necessary even when only
-    // p1 is hg-relevant. At root, only reuse an envelope whose `hg_node_id`
-    // already matches the caller's canonical/supplied root id.
-    //
-    // TODO: when "Add ACL overlay support to direct derivation" lands later
-    // in this stack, this reuse must also verify the ACL pointer matches
-    // (currently both sides are unconditionally `None`).
-    let computed_node_id = if parents.len() > 1 {
-        match try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), p1, p2).await? {
-            ParentEnvelopeReuse::Reuse(reusable_parent)
-                if !is_root
-                    || reusable_parent.envelope.augmented_manifest.hg_node_id
-                        == expected_root_hg_node_id =>
-            {
-                return Ok((
-                    AugmentedDeriveContext::Directory {
-                        augmented_manifest_id: reusable_parent.envelope.augmented_manifest_id,
-                        augmented_manifest_size: reusable_parent.envelope.augmented_manifest_size,
-                    },
-                    Traced::generate(reusable_parent.id),
-                ));
-            }
-            ParentEnvelopeReuse::Reuse(_) => {
-                compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
-            }
-            ParentEnvelopeReuse::CreateFresh { computed_node_id } => computed_node_id,
-        }
+    // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
+    // parent's envelope instead of minting `hash(merged contents, current
+    // parents)`. The guard uses the deduped parent count — a surviving p3
+    // can make reuse necessary even when only p1 is hg-relevant. At root,
+    // only reuse an envelope whose `hg_node_id` already matches the
+    // caller's canonical/supplied root id.
+    let reuse = if parents.len() > 1 {
+        try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), dir_acl_id, p1, p2).await?
     } else {
-        compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
+        ParentEnvelopeReuse::CreateFresh {
+            computed_node_id: compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents)
+                .await?,
+        }
+    };
+    let computed_node_id = match reuse {
+        ParentEnvelopeReuse::Reuse(reused)
+            if !is_root
+                || reused.envelope.augmented_manifest.hg_node_id == expected_root_hg_node_id =>
+        {
+            return Ok((
+                AugmentedDeriveContext::Directory {
+                    augmented_manifest_id: reused.envelope.augmented_manifest_id,
+                    augmented_manifest_size: reused.envelope.augmented_manifest_size,
+                },
+                Traced::generate(reused.id),
+            ));
+        }
+        ParentEnvelopeReuse::Reuse(_) => {
+            compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
+        }
+        ParentEnvelopeReuse::CreateFresh { computed_node_id } => computed_node_id,
     };
 
     // Roots use the canonical id from `HgChangeset.manifestid()`; non-root
@@ -1271,9 +1292,7 @@ async fn finalize_envelope(
         p2: p2_hash,
         computed_node_id,
         subentries,
-        // TODO: populated by "Add ACL overlay support to direct derivation"
-        // later in this stack.
-        acl_manifest_directory_id: None,
+        acl_manifest_directory_id: dir_acl_id,
     };
 
     let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
@@ -1331,6 +1350,7 @@ async fn create_augmented_tree(
     expected_root_hg_node_id: HgNodeHash,
     restricted_paths: ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
+    acl_map: Arc<HashMap<MPath, AclManifestId>>,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgAugmentedManifestId>,
         Traced<ParentIndex, HgAugmentedFileLeafNode>,
@@ -1346,10 +1366,12 @@ async fn create_augmented_tree(
     AugmentedDeriveContext,
     Traced<ParentIndex, HgAugmentedManifestId>,
 )> {
+    let dir_acl_id = acl_map.get(&tree_info.path).copied();
+
     let PartitionedSubentries {
         mut direct,
         lookups_by_parent,
-    } = partition_subentries(tree_info.subentries)?;
+    } = partition_subentries(tree_info.subentries, &tree_info.path, &acl_map)?;
 
     let resolved =
         resolve_parent_lookups(&ctx, &blobstore, &tree_info.parents, lookups_by_parent).await?;
@@ -1365,6 +1387,7 @@ async fn create_augmented_tree(
         &tree_info.path,
         &tree_info.parents,
         subentries,
+        dir_acl_id,
         &restricted_paths,
         restricted_paths_enabled,
     )
@@ -1385,6 +1408,7 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     // the envelope must land at this key for client lookups to succeed.
     expected_root_hg_node_id: HgNodeHash,
     restricted_paths: &ArcRestrictedPathsConfigBased,
+    acl_root_overlay: Option<AclManifestId>,
 ) -> Result<HgAugmentedManifestId>
 where
     Store: KeyedBlobstore + Clone + 'static,
@@ -1394,6 +1418,27 @@ where
         None,
         Some("hg_augmented_manifest_write"),
     );
+
+    let acl_map = match acl_root_overlay {
+        None => Arc::new(HashMap::new()),
+        // A merge can rebuild a directory where its parents diverge even when no
+        // file change touches that path: `derive_manifest_inner`'s bonsai
+        // semantics recurse into and rebuild a tree when "all parents entries
+        // are trees" with no change on the path. Such directories are not
+        // reachable from `file_changes`, so the targeted descent below would
+        // miss their ACL pointers. Fall back to the full ACL-tree walk for
+        // merges; they are comparatively rare.
+        Some(root_id) if parents.len() >= 2 => {
+            Arc::new(pre_walk_acl_tree(ctx, blobstore, root_id).await?)
+        }
+        // Single-parent and root commits rebuild exactly the directories on the
+        // ancestor paths of `file_changes`. Scope the overlay load to that
+        // frontier so the cost is O(commit size), not O(total ACL tree size).
+        Some(root_id) => {
+            let target_dirs = changed_ancestor_dirs(&file_changes);
+            Arc::new(targeted_acl_overlay_map(ctx, blobstore, root_id, &target_dirs).await?)
+        }
+    };
 
     let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
         parent_bonsai_csids.0.zip(parents.first().copied()),
@@ -1422,15 +1467,16 @@ where
         file_changes,
         std::iter::empty(),
         {
-            cloned!(ctx, blobstore_arc, restricted_paths_arc);
+            cloned!(ctx, blobstore_arc, restricted_paths_arc, acl_map);
             move |tree_info| {
-                cloned!(ctx, blobstore_arc, restricted_paths_arc);
+                cloned!(ctx, blobstore_arc, restricted_paths_arc, acl_map);
                 create_augmented_tree(
                     ctx,
                     blobstore_arc,
                     expected_root_hg_node_id,
                     restricted_paths_arc,
                     restricted_paths_enabled,
+                    acl_map,
                     tree_info,
                 )
             }
@@ -1467,6 +1513,7 @@ where
                 expected_root_hg_node_id,
                 restricted_paths_arc,
                 restricted_paths_enabled,
+                acl_map,
                 tree_info,
             )
             .await?;
@@ -1491,6 +1538,7 @@ pub async fn try_reuse_parent_envelope(
     ctx: &CoreContext,
     blobstore: &impl KeyedBlobstore,
     merged_subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+    dir_acl_id: Option<AclManifestId>,
     p1: Option<HgAugmentedManifestId>,
     p2: Option<HgAugmentedManifestId>,
 ) -> Result<ParentEnvelopeReuse> {
@@ -1503,6 +1551,18 @@ pub async fn try_reuse_parent_envelope(
 
     for parent_id in [p1, p2].into_iter().flatten() {
         let parent_env = parent_id.load(ctx, blobstore).await?;
+        // The ACL pointer rides on the envelope but is part of neither the
+        // storage key (= `hg_node_id`) nor the content-addressed digest (see
+        // `ShardedHgAugmentedManifest::write_content_addressed_prefix`, which
+        // never serialises `acl_manifest_directory_id`). Content addressing
+        // therefore can't distinguish two envelopes that differ only in their
+        // ACL pointer, so we check it explicitly before reusing. In normal
+        // derivation content-match already implies ACL-match (ACL is a pure
+        // function of subtree content), so this is a safety net rather than a
+        // case seen in practice
+        if parent_env.augmented_manifest.acl_manifest_directory_id != dir_acl_id {
+            continue;
+        }
         hash_parent_sets.push(HgParents::new(
             parent_env.augmented_manifest.p1,
             parent_env.augmented_manifest.p2,
@@ -1672,6 +1732,119 @@ async fn load_acl_child_directory_map(
         .await
 }
 
+/// The set of directories `derive_manifest` rebuilds for a single-parent (or
+/// root) commit: every ancestor directory of every changed file path, plus the
+/// root. `create_augmented_tree` only ever looks up the ACL overlay for a
+/// rebuilt directory and that directory's immediate children, so this set bounds
+/// the part of the ACL tree that `targeted_acl_overlay_map` must cover.
+///
+/// NOT valid for merges: those can additionally rebuild directories where the
+/// parents diverge, which are not reachable from `file_changes` (see the merge
+/// fallback in `derive_augmented_manifest_from_bonsai`).
+fn changed_ancestor_dirs(
+    file_changes: &[(NonRootMPath, Option<TrackedFileChange>)],
+) -> HashSet<MPath> {
+    let mut dirs = HashSet::new();
+    dirs.insert(MPath::ROOT);
+    for (path, _change) in file_changes {
+        // `into_ancestors` yields the path itself then each ancestor directory
+        // up to the root; `skip(1)` drops the file leaf, leaving only its
+        // ancestor directories.
+        for dir in MPath::from(path.clone()).into_ancestors().skip(1) {
+            dirs.insert(dir);
+        }
+    }
+    dirs
+}
+
+/// Build the `MPath -> AclManifestId` overlay map, scoped to the ACL directories
+/// on the paths `derive_manifest` will rebuild (`target_dirs`).
+///
+/// Unlike [`pre_walk_acl_tree`], this descends only the branches that lead to a
+/// rebuilt directory, so its cost is O(changed paths) rather than O(total ACL
+/// tree size). For each visited (rebuilt) directory it records the directory's
+/// own pointer and every immediate child's pointer — exactly the entries
+/// `create_augmented_tree` queries (the directory itself at `:dir_acl_id`,
+/// freshly-built children in `partition_subentries`, and exact subtree-copy
+/// roots in `resolve_existing_directories`). Children outside `target_dirs` are
+/// recorded but not descended into. Directories in `target_dirs` that have no
+/// ACL node (no `.slacl` in their subtree) simply never surface as children and
+/// are correctly absent from the map (`acl_map.get` -> `None`).
+///
+/// Only correct when the rebuilt set is fully determined by `target_dirs` — i.e.
+/// single-parent or root commits, NOT merges (see the merge fallback in
+/// `derive_augmented_manifest_from_bonsai`).
+pub async fn targeted_acl_overlay_map(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    root_acl_id: AclManifestId,
+    target_dirs: &HashSet<MPath>,
+) -> Result<HashMap<MPath, AclManifestId>> {
+    let nested: Vec<Vec<(MPath, AclManifestId)>> = bounded_traversal::bounded_traversal_stream(
+        100,
+        std::iter::once((MPath::ROOT, root_acl_id)),
+        move |(path, acl_id): (MPath, AclManifestId)| {
+            async move {
+                let children = load_acl_child_directory_map(ctx, blobstore, &acl_id).await?;
+                let mut entries = Vec::with_capacity(children.len() + 1);
+                // The rebuilt directory's own ACL pointer.
+                entries.push((path.clone(), acl_id));
+                let mut to_descend = Vec::new();
+                for (name, child_id) in children {
+                    let child_path = path.join(std::iter::once(&name));
+                    // Record every immediate child: a rebuilt parent stamps an
+                    // `acl_manifest_directory_id` for each of its children.
+                    entries.push((child_path.clone(), child_id));
+                    // Descend only into children that are themselves rebuilt.
+                    if target_dirs.contains(&child_path) {
+                        to_descend.push((child_path, child_id));
+                    }
+                }
+                Ok::<_, anyhow::Error>((entries, to_descend))
+            }
+            .boxed()
+        },
+    )
+    .try_collect::<Vec<_>>()
+    .await?;
+    Ok(nested.into_iter().flatten().collect())
+}
+
+/// Walk the full ACL tree from the root and build a map of
+/// `MPath -> AclManifestId` for every directory node. ACL nodes within the
+/// walk are loaded concurrently via `bounded_traversal_stream`; sequential
+/// load-per-node would otherwise make the walk's wall time scale with
+/// `N * per-blob-latency`.
+///
+/// This loads the entire ACL tree regardless of commit size, so it is used only
+/// where the rebuilt-directory set cannot be derived from the changed paths up
+/// front — i.e. merge commits (see `derive_augmented_manifest_from_bonsai`).
+/// Single-parent and root commits use [`targeted_acl_overlay_map`], which costs
+/// O(commit size) instead.
+pub(crate) async fn pre_walk_acl_tree(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    root_acl_id: AclManifestId,
+) -> Result<HashMap<MPath, AclManifestId>> {
+    bounded_traversal::bounded_traversal_stream(
+        100,
+        std::iter::once((MPath::ROOT, root_acl_id)),
+        move |(path, acl_id): (MPath, AclManifestId)| {
+            async move {
+                let children = load_acl_child_directory_map(ctx, blobstore, &acl_id).await?;
+                let child_nodes: Vec<(MPath, AclManifestId)> = children
+                    .into_iter()
+                    .map(|(name, child_id)| (path.join(std::iter::once(&name)), child_id))
+                    .collect();
+                Ok::<_, anyhow::Error>(((path, acl_id), child_nodes))
+            }
+            .boxed()
+        },
+    )
+    .try_collect::<HashMap<_, _>>()
+    .await
+}
+
 /// Assert that the root ACL pointer invariant holds: the root pointer must
 /// never be `Some(canonical_empty_acl_manifest_id)`. Valid states are `None`
 /// (no restrictions) or `Some(non_empty_id)` (root is a waypoint or restriction root).
@@ -1723,6 +1896,46 @@ mod tests {
             LeafConflictResolution::MintFresh(leaf) => Ok(leaf),
             other => Err(anyhow!("expected MintFresh, got {other:?}")),
         }
+    }
+
+    /// `changed_ancestor_dirs` yields exactly the ancestor directories of every
+    /// changed file (plus the root) and never the file leaf itself — this is the
+    /// frontier the targeted ACL descent must cover for single-parent commits.
+    #[mononoke::test]
+    fn test_changed_ancestor_dirs() -> Result<()> {
+        let dir = |s: &str| -> Result<MPath> { Ok(MPath::from(NonRootMPath::new(s)?)) };
+        let change = |s: &str| -> Result<(NonRootMPath, Option<TrackedFileChange>)> {
+            Ok((NonRootMPath::new(s)?, None))
+        };
+
+        // Nested file: every ancestor directory, root included, but not the leaf.
+        let dirs = changed_ancestor_dirs(&[change("a/b/c.rs")?]);
+        assert_eq!(
+            dirs,
+            [MPath::ROOT, dir("a")?, dir("a/b")?]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
+        assert!(
+            !dirs.contains(&dir("a/b/c.rs")?),
+            "the changed file leaf must not be in the directory frontier"
+        );
+
+        // Root-level file: only the root is rebuilt.
+        let dirs = changed_ancestor_dirs(&[change("README")?]);
+        assert_eq!(dirs, [MPath::ROOT].into_iter().collect::<HashSet<_>>());
+
+        // Multiple files (including a deletion): union of all ancestor dirs.
+        let dirs =
+            changed_ancestor_dirs(&[change("a/b/c.rs")?, change("a/x.rs")?, change("d/e.rs")?]);
+        assert_eq!(
+            dirs,
+            [MPath::ROOT, dir("a")?, dir("a/b")?, dir("d")?]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
+
+        Ok(())
     }
 
     #[mononoke::test]

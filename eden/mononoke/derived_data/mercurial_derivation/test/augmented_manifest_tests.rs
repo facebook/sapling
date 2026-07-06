@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
@@ -39,6 +40,7 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::typed_hash::AclManifestId;
 use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -783,6 +785,7 @@ async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit)
         &ctx,
         repo.repo_blobstore(),
         p1_env.augmented_manifest.subentries.clone(),
+        None,
         Some(p1_aug_id),
         None,
     )
@@ -833,6 +836,7 @@ async fn test_try_reuse_parent_envelope_creates_fresh_for_different_content(
         &ctx,
         repo.repo_blobstore(),
         other_env.augmented_manifest.subentries.clone(),
+        None,
         Some(p1_aug_id),
         None,
     )
@@ -886,6 +890,7 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
         &ctx,
         repo.repo_blobstore(),
         p2_env.augmented_manifest.subentries.clone(),
+        None,
         Some(p1_aug_id),
         Some(p2_aug_id),
     )
@@ -906,6 +911,77 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
     Ok(())
 }
 
+#[mononoke::fbinit_test]
+async fn test_try_reuse_parent_envelope_returns_none_when_acl_pointer_differs(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: merged subentries match the parent content, but `dir_acl_id` differs
+    // from the parent's stored ACL pointer. This is a synthetic state — in real
+    // derivation content-match implies ACL-match — so we construct it explicitly
+    // to lock the `try_reuse_parent_envelope` ACL guard.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("alpha", "1")
+        .add_file("beta", "2")
+        .add_file("gamma", "3")
+        .commit()
+        .await?;
+    let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs]).await?;
+    let (p1_aug_id, p1_env) = manifests.pop().expect("derived one augmented manifest");
+    let p1_only_parents = HgParents::new(Some(p1_aug_id.into_nodehash()), None);
+
+    let acl_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "dir/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project\"\n",
+        )
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![acl_cs], None)
+        .await?;
+    let some_acl_id: AclManifestId = *manager
+        .fetch_derived::<RootAclManifestId>(&ctx, acl_cs, None)
+        .await?
+        .expect("derived just above")
+        .inner_id();
+
+    // When: probing reuse with matching content but a different ACL pointer.
+    let no_reuse_acl_mismatch = derive_hg_augmented_manifest::try_reuse_parent_envelope(
+        &ctx,
+        repo.repo_blobstore(),
+        p1_env.augmented_manifest.subentries.clone(),
+        Some(some_acl_id),
+        Some(p1_aug_id),
+        None,
+    )
+    .await?;
+
+    // Then: no parent is reused and the fresh-envelope hash is returned.
+    let expected_fresh_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
+        p1_env.augmented_manifest.subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &p1_only_parents,
+    )
+    .await?;
+    assert_eq!(
+        no_reuse_acl_mismatch,
+        derive_hg_augmented_manifest::ParentEnvelopeReuse::CreateFresh {
+            computed_node_id: expected_fresh_node_id,
+        },
+        "content matches but ACL pointer differs (Some vs parent's None); expected fresh envelope"
+    );
+
+    Ok(())
+}
+
+// -----------------------------------------------------------------------------
+// Generic tests for the direct augmented-manifest derivation entry point.
+// -----------------------------------------------------------------------------
+
 async fn file_changes_from_bonsai(
     ctx: &CoreContext,
     repo: &Repo,
@@ -925,11 +1001,31 @@ async fn file_changes_from_bonsai(
         .collect())
 }
 
+/// Derive `RootAclManifestId` for `cs_id` and normalize it into the
+/// `Option<AclManifestId>` overlay shape that the augmented-manifest
+/// derivation entry points expect. Idempotent on repeat calls.
+async fn derive_acl_overlay(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<Option<AclManifestId>> {
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(ctx, vec![cs_id], None)
+        .await?;
+    let acl_root = manager
+        .fetch_derived::<RootAclManifestId>(ctx, cs_id, None)
+        .await?
+        .unwrap_or_else(|| panic!("Missing RootAclManifestId for {cs_id}"));
+    derive_hg_augmented_manifest::normalize_acl_root(&acl_root)
+}
+
 async fn derive_augmented_manifest_via_existing_path(
     ctx: &CoreContext,
     repo: &Repo,
     cs_id: ChangesetId,
     parents: Vec<HgAugmentedManifestId>,
+    acl_root_overlay: Option<AclManifestId>,
 ) -> Result<(HgManifestId, HgAugmentedManifestId)> {
     let hg_manifest_id = repo
         .derive_hg_changeset(ctx, cs_id)
@@ -945,7 +1041,7 @@ async fn derive_augmented_manifest_via_existing_path(
         parents,
         &Default::default(),
         restricted_paths_config,
-        None,
+        acl_root_overlay,
     )
     .await?;
 
@@ -959,9 +1055,15 @@ async fn assert_direct_derive_matches_existing_path(
     augmented_parents: &[HgAugmentedManifestId],
     bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
 ) -> Result<HgAugmentedManifestId> {
-    let (hg_manifest_id, via_existing_path) =
-        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, augmented_parents.to_vec())
-            .await?;
+    let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
+    let (hg_manifest_id, via_existing_path) = derive_augmented_manifest_via_existing_path(
+        ctx,
+        repo,
+        cs_id,
+        augmented_parents.to_vec(),
+        acl_root_overlay,
+    )
+    .await?;
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
     let restricted_paths_config = repo.restricted_paths().config_based();
 
@@ -974,6 +1076,7 @@ async fn assert_direct_derive_matches_existing_path(
         &Default::default(),
         hg_manifest_id.into_nodehash(),
         restricted_paths_config,
+        acl_root_overlay,
     )
     .await?;
 
@@ -1087,6 +1190,7 @@ async fn derive_augmented_manifest_directly_for_test(
         &Default::default(),
         expected_root,
         restricted_paths_config,
+        None,
     )
     .await
 }
@@ -1146,8 +1250,7 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_empty_manifest
         .add_file("obsolete", "contents")
         .commit()
         .await?;
-    let (_, parent_augmented_manifest_id) =
-        derive_augmented_manifest_via_existing_path(&ctx, &repo, parent, vec![]).await?;
+    let parent_augmented_manifest_id = derive_parent_aug(&ctx, &repo, parent).await?;
     let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
         .delete_file("obsolete")
         .commit()
@@ -1194,8 +1297,9 @@ async fn derive_parent_aug(
     repo: &Repo,
     cs_id: ChangesetId,
 ) -> Result<HgAugmentedManifestId> {
+    let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
     Ok(
-        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, vec![])
+        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, vec![], acl_root_overlay)
             .await?
             .1,
     )
@@ -1235,6 +1339,7 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
         &Default::default(),
         AS_HASH,
         restricted_paths_config,
+        None,
     )
     .await;
     assert!(
@@ -1851,6 +1956,7 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
         &Default::default(),
         supplied,
         restricted_paths_config,
+        None,
     )
     .await?;
 
@@ -1914,6 +2020,7 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 &existing_repo,
                 existing_parent,
                 vec![],
+                None,
             )
             .await?;
             let (_, existing_child_augmented) = derive_augmented_manifest_via_existing_path(
@@ -1921,6 +2028,7 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 &existing_repo,
                 existing_child,
                 vec![existing_parent_augmented],
+                None,
             )
             .await?;
             let direct_parent_augmented = derive_augmented_manifest_directly_for_test(
@@ -2020,4 +2128,717 @@ async fn test_direct_derivation_does_not_track_restricted_paths_when_jk_disabled
         .boxed(),
     )
     .await
+}
+
+/// Recursively compare ACL pointers between two augmented manifests, reading
+/// each side from a distinct blobstore so the comparison is genuinely
+/// old-vs-new rather than self-vs-self.
+///
+/// The augmented manifest id IS the Hg node hash (see
+/// `HgAugmentedManifestEnvelope::store`), so old and new envelopes share the
+/// same blobstore key. To compare their ACL pointer fields we need to load
+/// each side from a blobstore that holds ITS write. Callers therefore route
+/// each path's writes to its own `MemWritesKeyedBlobstore` overlay and pass
+/// the two overlays here; each overlay serves its own write on a `load(...)`
+/// of the shared key, and only falls through to the main blobstore for
+/// unrelated content (HgManifest blobs, ACL manifest blobs, content blobs).
+///
+/// Checks the envelope's `acl_manifest_directory_id` AND each directory
+/// subentry's `acl_manifest_directory_id` at every level. Also asserts
+/// subentry count and per-position kind match, so a missing entry or a
+/// directory/leaf swap fails loudly instead of being silently skipped.
+async fn compare_augmented_manifests_acl_recursive(
+    ctx: &CoreContext,
+    old_blobstore: &(impl blobstore::KeyedBlobstore + 'static),
+    new_blobstore: &(impl blobstore::KeyedBlobstore + 'static),
+    old_id: HgAugmentedManifestId,
+    new_id: HgAugmentedManifestId,
+    path: mononoke_types::MPath,
+) -> Result<()> {
+    use mercurial_types::HgAugmentedManifestEntry;
+
+    let old_env = old_id.load(ctx, old_blobstore).await?;
+    let new_env = new_id.load(ctx, new_blobstore).await?;
+
+    assert_eq!(
+        old_env.augmented_manifest.acl_manifest_directory_id,
+        new_env.augmented_manifest.acl_manifest_directory_id,
+        "ACL pointer mismatch at path {path:?}",
+    );
+
+    let old_entries: Vec<_> = old_env
+        .augmented_manifest
+        .into_subentries(ctx, old_blobstore)
+        .try_collect()
+        .await?;
+    let new_entries: Vec<_> = new_env
+        .augmented_manifest
+        .into_subentries(ctx, new_blobstore)
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        old_entries.len(),
+        new_entries.len(),
+        "Subentry count mismatch at path {path:?}: old={}, new={}",
+        old_entries.len(),
+        new_entries.len(),
+    );
+
+    for ((old_name, old_entry), (new_name, new_entry)) in old_entries.iter().zip(new_entries.iter())
+    {
+        assert_eq!(old_name, new_name, "Subentry name mismatch at {path:?}");
+        match (old_entry, new_entry) {
+            (
+                HgAugmentedManifestEntry::DirectoryNode(old_dir),
+                HgAugmentedManifestEntry::DirectoryNode(new_dir),
+            ) => {
+                assert_eq!(
+                    old_dir.acl_manifest_directory_id, new_dir.acl_manifest_directory_id,
+                    "Child ACL pointer mismatch for {old_name:?} at {path:?}",
+                );
+                let child_path = path.join(std::iter::once(old_name));
+                Box::pin(compare_augmented_manifests_acl_recursive(
+                    ctx,
+                    old_blobstore,
+                    new_blobstore,
+                    HgAugmentedManifestId::new(old_dir.treenode),
+                    HgAugmentedManifestId::new(new_dir.treenode),
+                    child_path,
+                ))
+                .await?;
+            }
+            (HgAugmentedManifestEntry::FileNode(_), HgAugmentedManifestEntry::FileNode(_)) => {
+                // File leaves carry no ACL pointer; nothing to check here.
+            }
+            _ => panic!(
+                "Entry kind mismatch for {old_name:?} at {path:?}: old={old_entry:?} new={new_entry:?}",
+            ),
+        }
+    }
+
+    Ok(())
+}
+
+/// Derive `cs_id` via the new direct path into `overlay`. Pulls
+/// `expected_root_hg_node_id` from the already-derived HgChangeset and
+/// `acl_root_overlay` from RootAclManifestId. Used by the ACL parity test
+/// alongside `derive_existing_into_overlay` to keep each path's envelope
+/// writes in its own blobstore.
+async fn derive_into_overlay<B>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    overlay: &B,
+    cs_id: ChangesetId,
+    aug_parents: Vec<HgAugmentedManifestId>,
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<HgAugmentedManifestId>
+where
+    B: blobstore::KeyedBlobstore + Clone + 'static,
+{
+    let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
+    let expected_root = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid()
+        .into_nodehash();
+    let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        ctx,
+        overlay,
+        aug_parents,
+        file_changes,
+        bonsai_parents,
+        &Default::default(),
+        expected_root,
+        repo.restricted_paths().config_based(),
+        acl_root_overlay,
+    )
+    .await
+}
+
+/// Derive `cs_id` via the existing HgManifest-based path into `overlay`.
+/// Mirror of `derive_into_overlay` for the existing path. Used by the ACL
+/// parity test to keep the existing path's writes isolated from the direct
+/// path's so the comparison is genuinely existing-vs-direct (and doesn't
+/// rely on `PutBehaviour::IfAbsent` in the shared main blobstore, which
+/// would silently drop one side's writes on key collision).
+async fn derive_existing_into_overlay<B>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    overlay: &B,
+    cs_id: ChangesetId,
+    aug_parents: Vec<HgAugmentedManifestId>,
+) -> Result<HgAugmentedManifestId>
+where
+    B: blobstore::KeyedBlobstore + Clone + 'static,
+{
+    let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
+    let hg_manifest_id = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        ctx,
+        overlay,
+        hg_manifest_id,
+        aug_parents,
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        acl_root_overlay,
+    )
+    .await
+}
+
+async fn derive_acl_parity_pair<OldStore, NewStore>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    old_blobstore: &OldStore,
+    new_blobstore: &NewStore,
+    cs_id: ChangesetId,
+    old_parents: Vec<HgAugmentedManifestId>,
+    new_parents: Vec<HgAugmentedManifestId>,
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<(HgAugmentedManifestId, HgAugmentedManifestId)>
+where
+    OldStore: blobstore::KeyedBlobstore + Clone + 'static,
+    NewStore: blobstore::KeyedBlobstore + Clone + 'static,
+{
+    let old_id = derive_existing_into_overlay(ctx, repo, old_blobstore, cs_id, old_parents).await?;
+    let new_id =
+        derive_into_overlay(ctx, repo, new_blobstore, cs_id, new_parents, bonsai_parents).await?;
+    Ok((old_id, new_id))
+}
+
+async fn assert_augmented_manifest_acl_parity<OldStore, NewStore>(
+    ctx: &CoreContext,
+    old_blobstore: &OldStore,
+    new_blobstore: &NewStore,
+    old_id: HgAugmentedManifestId,
+    new_id: HgAugmentedManifestId,
+    case_name: &str,
+) -> Result<()>
+where
+    OldStore: blobstore::KeyedBlobstore + 'static,
+    NewStore: blobstore::KeyedBlobstore + 'static,
+{
+    assert_eq!(new_id, old_id, "{case_name}: augmented manifest id parity");
+    compare_augmented_manifests_acl_recursive(
+        ctx,
+        old_blobstore,
+        new_blobstore,
+        old_id,
+        new_id,
+        mononoke_types::MPath::ROOT,
+    )
+    .await
+}
+
+/// Root commits with nested restriction roots should match the existing path's
+/// ACL pointers at every directory envelope and directory subentry.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_matches_existing_acl_pointers_for_root_commit(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a root commit with a top-level restriction root and a nested one.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/code/secret.rs", "fn secret() {}")
+        .add_file(
+            "restricted/code/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n",
+        )
+        .add_file("restricted/code/inner/deep.rs", "fn deep() {}")
+        .add_file("public/readme.md", "hello")
+        .commit()
+        .await?;
+
+    // When: deriving that root commit through both augmented-manifest paths.
+    let (old_root, new_root) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        root,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+
+    // Then: the direct path matches the existing path, including recursive ACL pointers.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_root,
+        new_root,
+        "root commit with nested restrictions",
+    )
+    .await
+}
+
+/// Single-parent file additions under an existing restricted subtree should
+/// preserve the existing path's ACL pointers.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_matches_existing_acl_pointers_for_restricted_file_add(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: an already-derived restricted parent and a child that only adds a file inside it.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/code/secret.rs", "fn secret() {}")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("restricted/code/more.rs", "fn more() {}")
+        .commit()
+        .await?;
+    let (old_root, new_root) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        root,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+
+    // When: deriving the child commit through both augmented-manifest paths.
+    let (old_child, new_child) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        child,
+        vec![old_root],
+        vec![new_root],
+        (Some(root), None),
+    )
+    .await?;
+
+    // Then: the direct path matches the existing path, including recursive ACL pointers.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_child,
+        new_child,
+        "single-parent file add under restricted subtree",
+    )
+    .await
+}
+
+/// Deleting a `.slacl` file should make the direct path drop ACL pointers in
+/// the same places as the existing path.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_matches_existing_acl_pointers_for_slacl_delete(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: an already-derived chain where the target commit deletes a nested `.slacl`.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file(
+            "restricted/code/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n",
+        )
+        .add_file("restricted/code/inner/deep.rs", "fn deep() {}")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("restricted/code/more.rs", "fn more() {}")
+        .commit()
+        .await?;
+    let target = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .delete_file("restricted/code/inner/.slacl")
+        .commit()
+        .await?;
+    let (old_root, new_root) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        root,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+    let (old_child, new_child) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        child,
+        vec![old_root],
+        vec![new_root],
+        (Some(root), None),
+    )
+    .await?;
+
+    // When: deriving the `.slacl` deletion commit through both augmented-manifest paths.
+    let (old_target, new_target) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        target,
+        vec![old_child],
+        vec![new_child],
+        (Some(child), None),
+    )
+    .await?;
+
+    // Then: the direct path matches the existing path, including recursive ACL pointers.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_target,
+        new_target,
+        "nested .slacl deletion",
+    )
+    .await
+}
+
+/// Reused sibling subtrees should keep their parent-stored ACL pointer while a
+/// different sibling's `.slacl` changes.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_preserves_acl_pointer_for_reused_sibling_subtree(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: two sibling restriction roots and a child that deletes only one sibling's `.slacl`.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=top\"\n",
+        )
+        .add_file(
+            "restricted/keep/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=keep\"\n",
+        )
+        .add_file("restricted/keep/file.rs", "fn keep() {}")
+        .add_file(
+            "restricted/other/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=other\"\n",
+        )
+        .add_file("restricted/other/file.rs", "fn other() {}")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .delete_file("restricted/other/.slacl")
+        .commit()
+        .await?;
+    let (old_root, new_root) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        root,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+
+    // When: deriving the sibling `.slacl` deletion commit through both paths.
+    let (old_child, new_child) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        child,
+        vec![old_root],
+        vec![new_root],
+        (Some(root), None),
+    )
+    .await?;
+
+    // Then: the reused sibling subtree's ACL pointer still matches the existing path.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_child,
+        new_child,
+        "reused sibling subtree across .slacl deletion",
+    )
+    .await
+}
+
+/// Clean two-parent merges with ACL roots on both branches should match the
+/// existing path, including reused subtrees from the common base.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_matches_existing_acl_pointers_for_clean_acl_merge(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a merge whose two branches add independent restriction roots.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "shared/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=shared\"\n",
+        )
+        .add_file("shared/file.rs", "fn shared() {}")
+        .commit()
+        .await?;
+    let branch_a = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file(
+            "branch_a/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project_a\"\n",
+        )
+        .add_file("branch_a/a.rs", "fn a() {}")
+        .commit()
+        .await?;
+    let branch_b = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file(
+            "branch_b/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project_b\"\n",
+        )
+        .add_file("branch_b/b.rs", "fn b() {}")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![branch_a, branch_b])
+        .commit()
+        .await?;
+    let (old_base, new_base) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        base,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+    let (old_a, new_a) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        branch_a,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+    let (old_b, new_b) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        branch_b,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+
+    // When: deriving the merge commit through both augmented-manifest paths.
+    let (old_merge, new_merge) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        merge,
+        vec![old_a, old_b],
+        vec![new_a, new_b],
+        (Some(branch_a), Some(branch_b)),
+    )
+    .await?;
+
+    // Then: the direct path matches the existing path, including recursive ACL pointers.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_merge,
+        new_merge,
+        "clean ACL merge",
+    )
+    .await
+}
+
+/// Merges can rebuild restricted directories that are not reachable from
+/// `file_changes`; this locks the full ACL-walk fallback for merges.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_matches_existing_acl_pointers_for_merge_divergent_dir(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a merge where parent trees diverge under `proj/`, but the merge's
+    // changed-file frontier only includes an unrelated root file.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "proj/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=proj\"\n",
+        )
+        .add_file("proj/common.rs", "fn common() {}")
+        .commit()
+        .await?;
+    let branch_a = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("proj/extra.rs", "fn extra() {}")
+        .commit()
+        .await?;
+    let branch_b = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("unrelated.rs", "fn unrelated() {}")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![branch_a, branch_b])
+        .commit()
+        .await?;
+    let (old_base, new_base) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        base,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+    let (old_a, new_a) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        branch_a,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+    let (old_b, new_b) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        branch_b,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+
+    // When: deriving the merge commit through both augmented-manifest paths.
+    let (old_merge, new_merge) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &*new_blobstore,
+        merge,
+        vec![old_a, old_b],
+        vec![new_a, new_b],
+        (Some(branch_a), Some(branch_b)),
+    )
+    .await?;
+
+    // Then: the direct path's merge fallback preserves `proj/`'s ACL pointer.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &*new_blobstore,
+        old_merge,
+        new_merge,
+        "merge rebuild of parent-divergent restricted dir",
+    )
+    .await
+}
+
+/// `targeted_acl_overlay_map` should load the touched ACL branch and immediate
+/// sibling pointers, but not descend into untouched sibling subtrees.
+#[mononoke::fbinit_test]
+async fn test_targeted_acl_overlay_map_is_scoped_to_changed_frontier(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: two sibling ACL subtrees and a target frontier under only one sibling.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "a/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=a\"\n",
+        )
+        .add_file("a/inner/x.rs", "fn x() {}")
+        .add_file(
+            "b/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=b\"\n",
+        )
+        .add_file("b/inner/y.rs", "fn y() {}")
+        .commit()
+        .await?;
+    let root_acl_id = derive_acl_overlay(&ctx, &repo, cs_id)
+        .await?
+        .expect("repo has .slacl files, so the overlay root must be Some");
+    let dir = |s: &str| -> Result<MPath> { Ok(MPath::from(NonRootMPath::new(s)?)) };
+    let target_dirs: HashSet<MPath> = [MPath::ROOT, dir("a")?, dir("a/inner")?]
+        .into_iter()
+        .collect();
+
+    // When: loading the targeted ACL overlay map for that frontier.
+    let map = derive_hg_augmented_manifest::targeted_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        root_acl_id,
+        &target_dirs,
+    )
+    .await?;
+
+    // Then: the touched branch and immediate sibling pointer are present, but
+    // the untouched sibling subtree is not loaded.
+    assert!(map.contains_key(&MPath::ROOT), "root pointer recorded");
+    assert!(map.contains_key(&dir("a")?), "a/ descended");
+    assert!(
+        map.contains_key(&dir("a/inner")?),
+        "a/inner restriction root recorded"
+    );
+    assert!(
+        map.contains_key(&dir("b")?),
+        "b/ recorded as an immediate child of the rebuilt root"
+    );
+    assert!(
+        !map.contains_key(&dir("b/inner")?),
+        "b/inner must NOT be loaded: it is outside the target frontier"
+    );
+
+    Ok(())
 }
