@@ -21,6 +21,7 @@ use blobstore::Storable;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::prefetch_content_metadata;
 use either::Either;
 use filestore::FetchKey;
 use futures::future;
@@ -63,6 +64,7 @@ use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
@@ -2118,7 +2120,70 @@ async fn reemit_root_envelope(
     Ok(final_id.into_untraced())
 }
 
-/// Derive an augmented manifest directly from a bonsai changeset and parent
+/// Prepare the Bonsai-specific inputs and derive an augmented manifest directly,
+/// bypassing HgManifest construction entirely.
+pub async fn derive_augmented_manifest_from_bonsai_changeset<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    bonsai: &mononoke_types::BonsaiChangeset,
+    parents: Vec<HgAugmentedManifestId>,
+    source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
+    root_hg_node_id_override: Option<HgNodeHash>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    acl_root_overlay: Option<AclManifestId>,
+    full_acl_overlay_cache: &mut AclOverlayCache,
+) -> Result<HgAugmentedManifestId>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    let mut content_ids = HashSet::<ContentId>::new();
+    let file_changes = bonsai
+        .file_changes()
+        .map(|(path, file_change)| {
+            Ok((
+                path.clone(),
+                match file_change {
+                    FileChange::Change(change) => {
+                        content_ids.insert(change.content_id());
+                        Some(change.clone())
+                    }
+                    FileChange::Deletion => None,
+                    FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
+                        bail!("Can't derive manifest for snapshot")
+                    }
+                },
+            ))
+        })
+        .collect::<Result<Vec<(NonRootMPath, Option<TrackedFileChange>)>>>()?;
+
+    let parent_bonsai_csids = {
+        let mut parents = bonsai.parents();
+        (parents.next(), parents.next())
+    };
+
+    let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
+    let subtree_replacements_fut =
+        build_augmented_subtree_replacements(ctx, blobstore, bonsai, source_aug_roots);
+    let (content_metadata, subtree_replacements) =
+        future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
+
+    derive_augmented_manifest_from_bonsai(
+        ctx,
+        blobstore,
+        parents,
+        file_changes,
+        subtree_replacements,
+        parent_bonsai_csids,
+        &content_metadata,
+        root_hg_node_id_override,
+        restricted_paths,
+        acl_root_overlay,
+        full_acl_overlay_cache,
+    )
+    .await
+}
+
+/// Derive an augmented manifest directly from prepared Bonsai inputs and parent
 /// augmented manifests, bypassing HgManifest construction entirely. The caller
 /// supplies a cache for full ACL overlay maps; it is only used for merge commits,
 /// where derivation must materialise the full ACL tree.

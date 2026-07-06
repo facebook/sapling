@@ -155,6 +155,75 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     fn repo_id(&self) -> RepositoryId;
 }
 
+/// Restricted-path manifest-id store for read-only derivation callers.
+///
+/// This lets verification/re-derivation code reuse production derivation paths
+/// without writing manifest-id entries as a side effect.
+pub struct NoopRestrictedPathsManifestIdStore {
+    repo_id: RepositoryId,
+}
+
+impl NoopRestrictedPathsManifestIdStore {
+    pub fn new(repo_id: RepositoryId) -> Self {
+        Self { repo_id }
+    }
+}
+
+#[async_trait]
+impl RestrictedPathsManifestIdStore for NoopRestrictedPathsManifestIdStore {
+    async fn add_entry(
+        &self,
+        _ctx: &CoreContext,
+        _entry: RestrictedPathManifestIdEntry,
+    ) -> Result<bool> {
+        Ok(false)
+    }
+
+    async fn add_entries(
+        &self,
+        _ctx: &CoreContext,
+        _entries: &[RestrictedPathManifestIdEntry],
+    ) -> Result<bool> {
+        Ok(false)
+    }
+
+    async fn get_paths_by_manifest_id(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_id: &RestrictedManifestId,
+        _manifest_type: &ManifestType,
+    ) -> Result<Vec<NonRootMPath>> {
+        Ok(vec![])
+    }
+
+    async fn get_all_entries(
+        &self,
+        _ctx: &CoreContext,
+    ) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+        Ok(vec![])
+    }
+
+    async fn get_all_paths_by_manifest_id(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_id: &RestrictedManifestId,
+    ) -> Result<Vec<(ManifestType, NonRootMPath)>> {
+        Ok(vec![])
+    }
+
+    async fn delete_by_manifest_id(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_id: &RestrictedManifestId,
+    ) -> Result<u64> {
+        Ok(0)
+    }
+
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+}
+
 mononoke_queries! {
     write InsertManifestIds(values: (
         repo_id: RepositoryId,

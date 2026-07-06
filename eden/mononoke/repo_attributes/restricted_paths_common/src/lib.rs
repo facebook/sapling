@@ -24,6 +24,7 @@ pub use config_based::RestrictedPathsConfigBasedArc;
 pub use config_based::RestrictedPathsConfigBasedRef;
 pub use manifest_id_store::ArcRestrictedPathsManifestIdStore;
 pub use manifest_id_store::ManifestType;
+pub use manifest_id_store::NoopRestrictedPathsManifestIdStore;
 pub use manifest_id_store::RestrictedManifestId;
 pub use manifest_id_store::RestrictedPathManifestIdEntry;
 pub use manifest_id_store::RestrictedPathsManifestIdStore;

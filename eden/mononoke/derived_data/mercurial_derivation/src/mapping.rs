@@ -45,7 +45,6 @@ use mercurial_types::HgNodeHash;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
-use mononoke_types::FileChange;
 use mononoke_types::RepoPath;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use restricted_paths_common::ManifestType;
@@ -583,60 +582,23 @@ async fn derive_direct(
     let blobstore = derivation_ctx.blobstore();
     let csid = bonsai.get_changeset_id();
 
-    let mut content_ids = HashSet::new();
-    let file_changes: Vec<_> = bonsai
-        .file_changes()
-        .map(|(path, fc)| {
-            Ok((
-                path.clone(),
-                match fc {
-                    FileChange::Change(tc) => {
-                        content_ids.insert(tc.content_id());
-                        Some(tc.clone())
-                    }
-                    FileChange::Deletion => None,
-                    FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
-                        bail!("Can't derive manifest for snapshot")
-                    }
-                },
-            ))
-        })
-        .collect::<Result<_>>()?;
-
-    let parent_csids = {
-        let mut p = bonsai.parents();
-        (p.next(), p.next())
-    };
-
-    let (content_metadata, acl_root) = future::try_join(
-        prefetch_content_metadata(ctx, blobstore, content_ids),
+    let (acl_root, source_aug_roots) = future::try_join(
         derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid),
+        get_subtree_source_aug_roots(ctx, derivation_ctx, bonsai, known_aug_roots),
     )
     .await?;
 
-    // `derive_augmented_manifest_from_bonsai` builds the ACL overlay map itself,
-    // scoped to the paths this changeset rebuilds (or a full walk for merges).
+    // `derive_augmented_manifest_from_bonsai_changeset` builds the ACL overlay
+    // map itself, scoped to the paths this changeset rebuilds (or a full walk
+    // for merges).
     let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
 
-    let source_aug_roots =
-        get_subtree_source_aug_roots(ctx, derivation_ctx, bonsai, known_aug_roots).await?;
-    let subtree_replacements =
-        crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements(
-            ctx,
-            blobstore,
-            bonsai,
-            &source_aug_roots,
-        )
-        .await?;
-
-    crate::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+    crate::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai_changeset(
         ctx,
         blobstore,
+        bonsai,
         aug_parents,
-        file_changes,
-        subtree_replacements,
-        parent_csids,
-        &content_metadata,
+        &source_aug_roots,
         expected_root,
         &derivation_ctx.restricted_paths(),
         acl_root_overlay,
