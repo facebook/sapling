@@ -14,7 +14,17 @@
 # GNU General Public License version 2 or any later version.
 
 
-from sapling import commands, error, hg, identity, node, phases, registrar, scmutil
+from sapling import (
+    commands,
+    error,
+    hg,
+    identity,
+    node,
+    phases,
+    registrar,
+    rewriteutil,
+    scmutil,
+)
 from sapling.i18n import _
 
 from . import common
@@ -124,6 +134,7 @@ def fold(ui, repo, *revs, **opts):
         with repo.transaction("fold") as tr:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
+            rewriteutil.precheck(repo, revs, "fold")
             targetphase = max(c.phase() for c in allctx)
 
             if (

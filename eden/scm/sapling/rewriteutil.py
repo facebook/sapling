@@ -18,7 +18,7 @@ from .i18n import _
 from .node import short
 
 
-def precheck(repo, revs, action="rewrite"):
+def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
     """check if revs can be rewritten
     action is used to control the error message.
 
@@ -30,7 +30,7 @@ def precheck(repo, revs, action="rewrite"):
         raise error.Abort(msg, hint=hint)
 
     publicrevs = repo.revs("%ld and public()", revs)
-    if len(repo.working_parent_nodes()) > 1:
+    if checkmerge and len(repo.working_parent_nodes()) > 1:
         raise error.Abort(_("cannot %s while merging") % action)
 
     if publicrevs:
@@ -39,7 +39,8 @@ def precheck(repo, revs, action="rewrite"):
         raise error.Abort(msg, hint=hint)
 
     if (
-        mutation.enabled(repo)
+        checkobsolete
+        and mutation.enabled(repo)
         and not repo.ui.plain()
         and repo.ui.configbool("commit", "reject-modifying-obsolete", True)
     ):

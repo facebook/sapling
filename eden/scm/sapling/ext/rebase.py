@@ -46,6 +46,7 @@ from sapling import (
     progress,
     registrar,
     revsetlang,
+    rewriteutil,
     scmutil,
     simplemerge,
     smartset,
@@ -533,6 +534,26 @@ class rebaseruntime:
         # Calculate self.obsoletenotrebased
         obsrevs = _filterobsoleterevs(self.repo, self.state)
         self._handleskippingobsolete(obsrevs, self.destmap)
+        if not self.keepf and not self.contf:
+            # Rebase has its own obsolete skipping and divergence handling; only
+            # run the shared precheck on revisions this operation will rewrite.
+            precheckrevs = {
+                rev for rev, state in self.state.items() if state == revtodo
+            }
+            precheckrevs.difference_update(self.obsoletenotrebased)
+            if not ui.configbool("experimental", "evolution.allowdivergence"):
+                precheckrevs.difference_update(
+                    repo.revs(
+                        "descendants(%ld)", self.obsoletewithoutsuccessorindestination
+                    )
+                )
+            rewriteutil.precheck(
+                repo,
+                precheckrevs,
+                "rebase",
+                checkobsolete=False,
+                checkmerge=False,
+            )
 
         # Keep track of the active bookmarks in order to reset them later
         self.activebookmark = self.activebookmark or repo._activebookmark

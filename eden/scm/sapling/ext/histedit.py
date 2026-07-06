@@ -257,6 +257,7 @@ from sapling import (
     progress,
     registrar,
     repair,
+    rewriteutil,
     scmutil,
     util,
     visibility,
@@ -1385,6 +1386,8 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
         rules = _readfile(ui, rules)
     actions = parserules(rules, state)
     warnverifyactions(ui, repo, actions, state, ctxs)
+    if not state.keep:
+        rewriteutil.precheck(repo, [ctx.rev() for ctx in ctxs], "histedit")
 
     parentctxnode = repo[root].p1().node()
 
