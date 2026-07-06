@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
+use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use cacheblob::MemWritesKeyedBlobstore;
@@ -24,9 +25,11 @@ use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
+use mercurial_types_mocks::nodehash::AS_HASH;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -1050,6 +1053,577 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_empty_manifest
         .try_collect()
         .await?;
     assert!(entries.is_empty(), "empty manifest should have no entries");
+
+    Ok(())
+}
+
+/// Derive the augmented manifest via both paths and assert they agree.
+async fn assert_dual_derive_agree(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    aug_parents: &[HgAugmentedManifestId],
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<HgAugmentedManifestId> {
+    assert_direct_derive_matches_existing_path(ctx, repo, cs_id, aug_parents, bonsai_parents).await
+}
+
+/// Helper to derive the parent's augmented manifest using the existing path
+/// so we have a parent input for the direct-derivation tests.
+async fn derive_parent_aug(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<HgAugmentedManifestId> {
+    Ok(
+        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, vec![])
+            .await?
+            .1,
+    )
+}
+
+/// Assert that a leaves-only conflict rejected by the existing HgManifest
+/// derivation is also rejected by direct augmented-manifest derivation.
+///
+/// This helper intentionally does not use `assert_dual_derive_agree`: in the
+/// disagreement case the legacy path should fail before it can provide the
+/// canonical root `HgManifestId`. The supplied root hash below is therefore
+/// arbitrary; the direct path is expected to fail in the leaf callback before
+/// root finalization can use it.
+async fn assert_legacy_and_direct_reject_leaf_conflict(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    aug_parents: &[HgAugmentedManifestId],
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<()> {
+    let legacy = repo.derive_hg_changeset(ctx, cs_id).await;
+    let legacy_err = legacy.expect_err("legacy HgManifest derivation must reject the conflict");
+    let legacy_msg = format!("{legacy_err:#}");
+    assert!(
+        legacy_msg.contains("Unresolved"),
+        "expected legacy unresolved-conflict error, got: {legacy_msg}"
+    );
+
+    let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    let direct = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        ctx,
+        repo.repo_blobstore(),
+        aug_parents.to_vec(),
+        file_changes,
+        bonsai_parents,
+        &Default::default(),
+        AS_HASH,
+    )
+    .await;
+    assert!(
+        direct.is_err(),
+        "direct derivation must reject the same leaf conflict as legacy derivation, got: {direct:?}"
+    );
+
+    Ok(())
+}
+
+/// Octopus merge with three roots that each introduce disjoint top-level
+/// files. p1.tree, p2.tree, p3.tree all differ at the root; this is the
+/// "ordinary" octopus case that does NOT exercise the positional-indexing
+/// regression. It's here as a baseline: if this fails the test scaffolding
+/// is broken, not the (X, X, Y) fix.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_distinct_parents(fb: FacebookInit) -> Result<()> {
+    // Given: three independent parents with disjoint root-level files.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "foo_p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("bar", "bar_p2")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("qux", "qux_p3")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+
+    // When: creating an octopus merge with no additional file changes.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: the direct derivation agrees with the existing path.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus merge where p1.tree == p2.tree but p3.tree differs. This is the
+/// shape that reproduces the regression: with positional indexing, the
+/// duplicate (p1, p2) survives `derive_manifest`'s value-only dedup as a
+/// single entry and the p3 tree slips into the hg-parents window, producing
+/// `HgParents::Two(p1, p3)` instead of the correct `HgParents::One(p1)`.
+///
+/// We reproduce "p1.tree == p2.tree" by giving p1 and p2 *identical content
+/// at every path*. That means at the root, and at every subdirectory, the
+/// two HgManifestId values are bit-identical. p3 then introduces a top-level
+/// file that breaks the equality at the root.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_p1_eq_p2_p3_differs(fb: FacebookInit) -> Result<()> {
+    // Given: p1 and p2 have identical trees, while p3 has a distinct tree.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .add_file("extra", "only_in_p3")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+    assert_eq!(
+        aug_p1, aug_p2,
+        "Test setup invariant violated: expected p1 and p2 to have identical augmented manifest ids",
+    );
+    assert_ne!(
+        aug_p1, aug_p3,
+        "Test setup invariant violated: expected p3 to differ from p1",
+    );
+
+    // When: deriving an octopus merge over the (X, X, Y) parents.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both derivation paths agree despite value-deduped parent entries.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Same regression, but at a non-root path. We want to make sure the fix
+/// applies to every tree in the recursion, not just the root.
+///
+/// Setup: all three parents have the same `dir/inner/file`, so
+/// `dir/inner` collapses to identical tree ids in p1 and p2; p3 additionally
+/// adds a sibling under `dir/inner`, breaking the tree-id equality at the
+/// `dir/inner` level. The merge then reads a value at
+/// `dir/inner/different` from p3, forcing `dir/inner` to be re-derived.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_p1_eq_p2_p3_differs_subdir(fb: FacebookInit) -> Result<()> {
+    // Given: the same (X, X, Y) parent shape appears below the root.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/inner/shared", "same")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/inner/shared", "same")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/inner/shared", "same")
+        .add_file("dir/inner/different", "p3_only")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+    assert_eq!(aug_p1, aug_p2, "p1 and p2 must have identical roots");
+
+    // When: deriving an octopus merge that forces the nested directory to be re-derived.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both derivation paths agree at the root and throughout the tree.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus merge where (p2, p3) are equal and p1 differs. Symmetric
+/// counterpart: with positional indexing the survivor of dedup is
+/// `[Traced(0, X), Traced(1, Y)]` (because the dup is between indices 1
+/// and 2, not 0 and 1) so this case happens to compute the *correct*
+/// (p1, p2) even with the buggy code. We test it anyway as a regression
+/// guard against "fixing" the bug by introducing an *opposite* bug.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_p2_eq_p3_p1_differs(fb: FacebookInit) -> Result<()> {
+    // Given: p2 and p3 have identical trees while p1 differs.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .add_file("extra", "only_in_p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+    assert_eq!(aug_p2, aug_p3);
+
+    // When: deriving the symmetric octopus merge.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both derivation paths agree, guarding against an opposite-direction bug.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus merge with leaves-only conflict at p3+: a single file is
+/// present at all three parents with identical content but with three
+/// different filenodes (because of differing ancestry). `derive_manifest`
+/// invokes the leaf callback with `change: None`, and the leaf path used
+/// to bail with "only supports two-parent merges". The fix routes the
+/// resolution through `hg_parents` and reuses the first hg-relevant
+/// parent's leaf, matching the existing HgManifest-based path.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_leaves_only_conflict(fb: FacebookInit) -> Result<()> {
+    // Given: three parents contain the same file content at `foo`, but each has a distinct filenode.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "same_content")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "same_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+
+    // When: deriving an octopus merge with no bonsai change for `foo`.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both paths resolve the leaves-only conflict identically.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus leaves-only conflict where p1 and p2 agree on content, but p3
+/// carries different content at the same path. The legacy HgManifest resolver
+/// checks every deduped parent before choosing a reusable filenode, so this is
+/// unresolved; direct derivation must not silently ignore p3 just because p1
+/// and p2 are the only Mercurial filenode parents.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_hg_parents_agree_step_parent_disagrees(fb: FacebookInit) -> Result<()> {
+    // Given: p1 and p2 carry identical `foo` contents, but p3 disagrees.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "same_content")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "different_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+
+    // When: deriving an octopus merge with no bonsai change for `foo`.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both derivation paths reject the unresolved leaf conflict.
+    assert_legacy_and_direct_reject_leaf_conflict(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus leaves-only conflict where only p1 and p3 carry the path, and they
+/// disagree on content. This covers the minimal `(p1, p3)` disagreement shape:
+/// the direct path must not reuse p1 merely because p2 is absent.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_p1_and_step_parent_disagree(fb: FacebookInit) -> Result<()> {
+    // Given: p1 carries `foo`, p2 does not, and p3 carries conflicting `foo` content.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "p1_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("bar", "p2_content")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "p3_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+
+    // When: deriving an octopus merge with no bonsai change for `foo`.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .commit()
+        .await?;
+
+    // Then: both derivation paths reject the unresolved leaf conflict.
+    assert_legacy_and_direct_reject_leaf_conflict(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Octopus merge that mirrors the existing HgManifest test
+/// `derive_hg_manifest test/main.rs::octopus_merges::test_basic_filenode_parents`.
+/// Three parents, each contributing one distinct top-level file; the merge
+/// modifies all three. This exercises the leaf-side `(p1, p2)` filenode
+/// selection (via `hg_parents`) for files that exist only in a single
+/// parent: the fix must yield the same filenode parentage as the existing
+/// path — in particular `qux` must end up with `(None, None)` because it
+/// only existed in p3, which is invisible to Mercurial filenode parentage.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_filenode_parents_match_existing_path(fb: FacebookInit) -> Result<()> {
+    // Given: three parents each contribute one distinct top-level file.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "foo")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("bar", "bar")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("qux", "qux")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+
+    // When: deriving a merge that modifies files from p1, p2, and p3.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .add_file("foo", "foo2")
+        .add_file("bar", "bar2")
+        .add_file("qux", "qux2")
+        .commit()
+        .await?;
+
+    // Then: the direct path matches the existing path's filenode-parent choices.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Two-parent merge where the two parents have identical trees. This is
+/// the boundary case: `derive_manifest`'s value-only dedup collapses
+/// `[Traced(0, X), Traced(1, X)]` to `[Traced(0, X)]`. With both positional
+/// and index-based filtering this yields `(p1=X, p2=None)`, so this case
+/// happens to be safe under both implementations — we test it as a
+/// no-regression guard.
+#[mononoke::fbinit_test]
+async fn test_two_parent_merge_identical_trees(fb: FacebookInit) -> Result<()> {
+    // Given: two parents have identical trees.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    assert_eq!(aug_p1, aug_p2);
+
+    // When: deriving a two-parent merge with no additional changes.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .commit()
+        .await?;
+
+    // Then: both paths agree on the boundary dedup case.
+    assert_dual_derive_agree(&ctx, &repo, merge, &[aug_p1, aug_p2], (Some(p1), Some(p2))).await?;
+
+    Ok(())
+}
+
+/// Octopus merge where a file (`foo`) lives ONLY in the step-parents (p3/p4),
+/// with byte-identical content but different filenodes, and is absent from p1
+/// and p2. Both derivation paths must agree, and the only way to agree is to
+/// mint a fresh parentless filenode for `foo`: Mercurial filenodes encode only
+/// (p1, p2) parentage, so a step-parent's filenode — whose linknode is not a
+/// Mercurial ancestor of the merge — cannot be reused.
+///
+/// p3 and p4 reach `foo = "shared"` from different ancestors (a3/a4), so their
+/// `foo` filenodes differ even though the final content is identical. That is
+/// what makes this a genuine leaves-only conflict: identical filenodes would
+/// otherwise dedup to one entry and never reach the leaf callback.
+#[mononoke::fbinit_test]
+async fn test_octopus_step_parent_only_file_parity(fb: FacebookInit) -> Result<()> {
+    // Given: p1 and p2 do not contain `foo`, while p3 and p4 contain byte-identical `foo` through different filenodes.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("bar", "bar_p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("baz", "baz_p2")
+        .commit()
+        .await?;
+    let a3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "ancestor_three")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new(&ctx, &repo, vec![a3])
+        .add_file("foo", "shared")
+        .commit()
+        .await?;
+    let a4 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "ancestor_four")
+        .commit()
+        .await?;
+    let p4 = CreateCommitContext::new(&ctx, &repo, vec![a4])
+        .add_file("foo", "shared")
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![a3, a4], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![p1, p2, p3, p4], None)
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+    let aug_p4 = derive_parent_aug(&ctx, &repo, p4).await?;
+    let foo = MPath::new("foo")?;
+    let leaf_p3 = aug_p3
+        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), foo.clone())
+        .await?
+        .and_then(Entry::into_leaf)
+        .context("p3 must contain foo as a leaf")?;
+    let leaf_p4 = aug_p4
+        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), foo.clone())
+        .await?
+        .and_then(Entry::into_leaf)
+        .context("p4 must contain foo as a leaf")?;
+    assert_ne!(
+        leaf_p3.filenode, leaf_p4.filenode,
+        "test setup: p3 and p4 must carry foo with DIFFERENT filenodes",
+    );
+    assert_eq!(
+        (leaf_p3.content_sha1, leaf_p3.total_size),
+        (leaf_p4.content_sha1, leaf_p4.total_size),
+        "test setup: p3 and p4 must carry foo with IDENTICAL content",
+    );
+
+    // When: deriving a 4-parent octopus merge with no bonsai change for `foo`.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3, p4])
+        .commit()
+        .await?;
+
+    // Then: both paths agree, which requires minting the same fresh parentless filenode for `foo`.
+    assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3, aug_p4],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
 
     Ok(())
 }
