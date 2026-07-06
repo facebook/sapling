@@ -6,13 +6,15 @@
 
 # pyre-unsafe
 
+import errno
 import os
 import re
 import shutil
 import subprocess
 import sys
+import unittest
 from pathlib import Path
-from typing import Optional, Set
+from typing import Dict, List, Optional, Set
 
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor import check_stale_mounts
@@ -477,3 +479,82 @@ class MountTest(testcase.EdenRepoTest):
             self.assertTrue(
                 len(errored_mount_list) == 0, f"errored mounts: {errored_mount_list}"
             )
+
+
+@testcase.eden_repo_test(run_on_nfs=False)
+@unittest.skipIf(sys.platform != "linux", "FUSE connection abort is Linux-only")
+class FuseIoUringMountTest(testcase.EdenRepoTest):
+    git_test_supported: bool = False
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config()
+        if configs is None:
+            configs = {}
+        configs.setdefault("fuse", []).extend(
+            [
+                "use-io-uring = true",
+                'io-uring-kernel-release-regex = ".*"',
+            ]
+        )
+        return configs
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    async def test_aborted_io_uring_connection_leaves_mount_running(self) -> None:
+        async with self.eden.get_async_thrift_client() as client:
+            mounts = await client.listMounts()
+            mount = self._find_mount(mounts)
+            self.assertIsNotNone(mount)
+            if mount.fuseTransport != "io_uring":
+                self.skipTest(
+                    f"FUSE io_uring was not negotiated: {mount.fuseTransport!r}"
+                )
+
+        connection_id = os.lstat(self.mount).st_dev
+        abort_path = Path("/sys/fs/fuse/connections") / str(connection_id) / "abort"
+        if not abort_path.exists():
+            self.skipTest(f"FUSE abort file does not exist: {abort_path}")
+        if not os.access(abort_path, os.W_OK):
+            self.skipTest(f"FUSE abort file is not writable: {abort_path}")
+
+        self.addCleanup(self._cleanup_aborted_mount)
+        abort_path.write_text("1\n")
+        self._assert_mount_io_fails_with_enotconn()
+
+        async with self.eden.get_async_thrift_client() as client:
+            self.assertIsNotNone(self._find_mount(await client.listMounts()))
+
+            async def mount_removed() -> Optional[bool]:
+                if self._find_mount(await client.listMounts()) is None:
+                    return True
+                return None
+
+            with self.assertRaises(TimeoutError):
+                await poll_until_async(mount_removed, timeout=5)
+
+    def _assert_mount_io_fails_with_enotconn(self) -> None:
+        with self.assertRaises(OSError) as context:
+            os.listdir(self.mount)
+        self.assertEqual(errno.ENOTCONN, context.exception.errno)
+
+    def _find_mount(self, mounts):
+        for mount in mounts:
+            if Path(os.fsdecode(mount.mountPoint)) == self.mount_path:
+                return mount
+        return None
+
+    def _cleanup_aborted_mount(self) -> None:
+        with open(os.devnull, "wb") as devnull:
+            subprocess.call(
+                ["/bin/umount", "-lf", self.mount],
+                stdout=devnull,
+                stderr=devnull,
+            )
+            if self.eden.in_proc_mounts(self.mount):
+                subprocess.call(
+                    ["sudo", "-n", "/bin/umount", "-lf", self.mount],
+                    stdout=devnull,
+                    stderr=devnull,
+                )
