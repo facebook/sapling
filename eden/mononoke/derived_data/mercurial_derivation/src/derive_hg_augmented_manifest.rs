@@ -50,6 +50,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::File;
 use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
@@ -979,6 +980,51 @@ enum AugmentedDeriveContext {
     },
 }
 
+fn expected_hg_copy_from(
+    copy_from_filenodes: &HashMap<(NonRootMPath, ChangesetId), HgFileNodeId>,
+    parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
+    change: &TrackedFileChange,
+) -> Option<(NonRootMPath, HgFileNodeId)> {
+    let is_parent = |csid: &ChangesetId| {
+        parent_bonsai_csids.0.as_ref() == Some(csid) || parent_bonsai_csids.1.as_ref() == Some(csid)
+    };
+
+    change
+        .copy_from()
+        .filter(|(_, copy_csid)| is_parent(copy_csid))
+        .and_then(|(copy_path, copy_csid)| {
+            copy_from_filenodes
+                .get(&(copy_path.clone(), *copy_csid))
+                .copied()
+                .map(|filenode_id| (copy_path.clone(), filenode_id))
+        })
+}
+
+fn canonical_copy_from_matches_expected(
+    canonical_copy_from: &Option<(NonRootMPath, HgFileNodeId)>,
+    expected_copy_from: &Option<(NonRootMPath, HgFileNodeId)>,
+    change: &TrackedFileChange,
+    parents: &[Traced<ParentIndex, HgAugmentedFileLeafNode>],
+    filenode_id: HgFileNodeId,
+) -> bool {
+    if canonical_copy_from == expected_copy_from {
+        return true;
+    }
+    if canonical_copy_from.is_none() || expected_copy_from.is_some() || change.copy_from().is_some()
+    {
+        return false;
+    }
+
+    // A mode-only change can reuse a parent filenode whose filelog metadata
+    // records an earlier copy; Bonsai copy_from describes the current change.
+    let filenode = filenode_id.into_nodehash();
+    let (p1_leaf, p2_leaf) = hg_parents(parents);
+    [p1_leaf, p2_leaf]
+        .into_iter()
+        .flatten()
+        .any(|parent| parent.filenode == filenode)
+}
+
 /// Leaf callback for derive_manifest: creates an HgAugmentedFileLeafNode
 /// for a new or changed file.
 ///
@@ -992,11 +1038,100 @@ async fn create_augmented_leaf(
     content_metadata_cache: Arc<HashMap<ContentId, ContentMetadataV2>>,
     copy_from_filenodes: Arc<HashMap<(NonRootMPath, ChangesetId), HgFileNodeId>>,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
+    canonical_hg_manifest_lookup: Option<CanonicalHgManifestLookup>,
     leaf_info: LeafInfo<Traced<ParentIndex, HgAugmentedFileLeafNode>, TrackedFileChange>,
 ) -> Result<(
     AugmentedDeriveContext,
     Traced<ParentIndex, HgAugmentedFileLeafNode>,
 )> {
+    if let Some(lookup) = canonical_hg_manifest_lookup.as_ref() {
+        let (dirname, basename) = leaf_info.path.split_dirname();
+        let dirname = dirname.map(MPath::from).unwrap_or(MPath::ROOT);
+        let (file_type, filenode_id) = lookup
+            .manifest_for_path(&ctx, &blobstore, &dirname)
+            .await?
+            .and_then(|manifest| manifest.content().files.get(basename).copied())
+            .and_then(Entry::into_leaf)
+            .with_context(|| {
+                format!(
+                    "canonical Hg manifest is missing expected file entry at {}",
+                    leaf_info.path
+                )
+            })?;
+        let filenode = filenode_id.load(&ctx, &blobstore).await?;
+        // For leaves-only parent conflicts (`change == None`), preserve the
+        // canonical Hg filenode exactly. This mirrors the old augmented-manifest
+        // path, which derives from an already-resolved HgManifest and treats it
+        // as the source of truth; Bonsai conflict validation happened when that
+        // HgManifest was produced. Explicit Bonsai file changes are still
+        // validated below because they provide content and copy metadata.
+        if let Some(change) = leaf_info.change.as_ref() {
+            ensure!(
+                file_type == change.file_type(),
+                "canonical Hg manifest file type mismatch at {}: manifest={file_type:?} bonsai={:?}",
+                leaf_info.path,
+                change.file_type(),
+            );
+            ensure!(
+                filenode.content_id() == change.content_id(),
+                "canonical Hg manifest content id mismatch at {}: manifest={} bonsai={}",
+                leaf_info.path,
+                filenode.content_id(),
+                change.content_id(),
+            );
+            ensure!(
+                filenode.content_size() == change.size(),
+                "canonical Hg manifest content size mismatch at {}: manifest={} bonsai={}",
+                leaf_info.path,
+                filenode.content_size(),
+                change.size(),
+            );
+            let canonical_copy_from =
+                File::extract_copied_from(filenode.metadata()).with_context(|| {
+                    format!(
+                        "extracting copy metadata from canonical Hg filenode at {}",
+                        leaf_info.path
+                    )
+                })?;
+            let expected_copy_from =
+                expected_hg_copy_from(copy_from_filenodes.as_ref(), parent_bonsai_csids, change);
+            ensure!(
+                canonical_copy_from_matches_expected(
+                    &canonical_copy_from,
+                    &expected_copy_from,
+                    change,
+                    &leaf_info.parents,
+                    filenode_id,
+                ),
+                "canonical Hg manifest copy metadata mismatch at {}: manifest={:?} expected={:?}",
+                leaf_info.path,
+                canonical_copy_from,
+                expected_copy_from,
+            );
+        }
+        let metadata = get_metadata(
+            &ctx,
+            &blobstore,
+            content_metadata_cache.as_ref(),
+            filenode.content_id(),
+        )
+        .await?;
+        let file_header_metadata = if filenode.metadata().is_empty() {
+            None
+        } else {
+            Some(filenode.metadata().clone())
+        };
+        let leaf = HgAugmentedFileLeafNode {
+            file_type,
+            filenode: filenode_id.into_nodehash(),
+            content_blake3: metadata.seeded_blake3,
+            content_sha1: metadata.sha1,
+            total_size: metadata.total_size,
+            file_header_metadata,
+        };
+        return Ok((AugmentedDeriveContext::Leaf, Traced::generate(leaf)));
+    }
+
     let change = match leaf_info.change {
         Some(change) => change,
         None => {
@@ -1024,18 +1159,8 @@ async fn create_augmented_leaf(
     let p1 = p1_leaf.map(|p| HgFileNodeId::new(p.filenode));
     let p2 = p2_leaf.map(|p| HgFileNodeId::new(p.filenode));
 
-    let is_parent = |csid: &ChangesetId| {
-        parent_bonsai_csids.0.as_ref() == Some(csid) || parent_bonsai_csids.1.as_ref() == Some(csid)
-    };
-
-    let copy_from = change
-        .copy_from()
-        .filter(|(_, copy_csid)| is_parent(copy_csid))
-        .and_then(|(copy_path, copy_csid)| {
-            copy_from_filenodes
-                .get(&(copy_path.clone(), *copy_csid))
-                .map(|filenode_id| (copy_path.clone(), *filenode_id))
-        });
+    let copy_from =
+        expected_hg_copy_from(copy_from_filenodes.as_ref(), parent_bonsai_csids, &change);
 
     // store_file_change is independent of get_metadata (the latter only
     // needs change.content_id()), so run them concurrently. store_file_change
@@ -2064,12 +2189,21 @@ where
     )
     .await?;
 
-    let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
-        parent_bonsai_csids.0.zip(parents.first().copied()),
-        parent_bonsai_csids.1.zip(parents.get(1).copied()),
-    ];
-    let copy_from_filenodes =
-        resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?;
+    let needs_copy_from_filenodes = canonical_hg_manifest_lookup.is_none()
+        || file_changes.iter().any(|(_, change)| {
+            change
+                .as_ref()
+                .is_some_and(|change| change.copy_from().is_some())
+        });
+    let copy_from_filenodes = if needs_copy_from_filenodes {
+        let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
+            parent_bonsai_csids.0.zip(parents.first().copied()),
+            parent_bonsai_csids.1.zip(parents.get(1).copied()),
+        ];
+        resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?
+    } else {
+        HashMap::new()
+    };
 
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
@@ -2122,15 +2256,28 @@ where
             }
         },
         {
-            cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
+            cloned!(
+                ctx,
+                blobstore_arc,
+                content_metadata_arc,
+                copy_from_arc,
+                canonical_hg_manifest_lookup
+            );
             move |leaf_info| {
-                cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
+                cloned!(
+                    ctx,
+                    blobstore_arc,
+                    content_metadata_arc,
+                    copy_from_arc,
+                    canonical_hg_manifest_lookup
+                );
                 create_augmented_leaf(
                     ctx,
                     blobstore_arc,
                     content_metadata_arc,
                     copy_from_arc,
                     parent_bonsai_csids,
+                    canonical_hg_manifest_lookup,
                     leaf_info,
                 )
             }

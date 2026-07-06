@@ -32,6 +32,7 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
 use mercurial_types_mocks::nodehash::AS_HASH;
@@ -2270,6 +2271,23 @@ async fn hg_tree_entry(
     .with_context(|| format!("root manifest must contain tree {path}"))
 }
 
+async fn hg_file_entry(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root: HgManifestId,
+    path: &str,
+) -> Result<HgFileNodeId> {
+    root.find_entry(
+        ctx.clone(),
+        repo.repo_blobstore().clone(),
+        MPath::new(path)?,
+    )
+    .await?
+    .and_then(Entry::into_leaf)
+    .map(|(_, file)| file)
+    .with_context(|| format!("root manifest must contain file {path}"))
+}
+
 async fn upload_hg_tree(
     ctx: &CoreContext,
     repo: &Repo,
@@ -2455,6 +2473,263 @@ async fn test_direct_augmented_manifest_matches_reemitted_same_content_merge_tre
             merge_dir_manifest.computed_node_id(),
         ),
         "direct derivation should preserve canonical dir/ Hg manifest metadata",
+    );
+
+    Ok(())
+}
+
+/// Regression guard for historical Mercurial merges that re-emit a file node
+/// even though the file bytes match p1.
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_matches_reemitted_same_content_merge_file_node(
+    fb: FacebookInit,
+) -> Result<()> {
+    use mercurial_types::blobs::ContentBlobMeta;
+    use mercurial_types::blobs::UploadHgFileContents;
+    use mercurial_types::blobs::UploadHgFileEntry;
+    use mercurial_types::blobs::UploadHgNodeHash;
+
+    // Given: the merge bytes for `dir/file` match p1, but the historical Hg
+    // manifest points at a fresh merge filenode with p1/p2 file parents.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "same")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "different")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+
+    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
+    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
+    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
+    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
+    let p1_file = hg_file_entry(&ctx, &repo, p1_root, "dir/file").await?;
+    let p2_file = hg_file_entry(&ctx, &repo, p2_root, "dir/file").await?;
+
+    let p1_file_envelope = p1_file.load(&ctx, repo.repo_blobstore()).await?;
+    let merge_file_path = NonRootMPath::new("dir/file")?;
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+    let merge_file = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
+            id: p1_file_envelope.content_id(),
+            size: p1_file_envelope.content_size(),
+            copy_from: None,
+        }),
+        p1: Some(p1_file),
+        p2: Some(p2_file),
+    }
+    .upload(ctx.clone(), blobstore, Some(&merge_file_path))
+    .await?;
+    assert_ne!(
+        merge_file, p1_file,
+        "fixture must re-emit the file node, not reuse p1"
+    );
+
+    let merge_dir = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::DirectoryPath(NonRootMPath::new("dir")?),
+        bytes::Bytes::from(format!("file\0{}\n", merge_file.into_nodehash())),
+        Some(p1_dir),
+        Some(p2_dir),
+    )
+    .await?;
+    let merge_root = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::RootPath,
+        bytes::Bytes::from(format!("dir\0{}t\n", merge_dir.into_nodehash())),
+        Some(p1_root),
+        Some(p2_root),
+    )
+    .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .add_file("dir/file", "same")
+        .commit()
+        .await?;
+
+    // When/Then: direct derivation preserves the re-emitted file node and
+    // matches the HgManifest-based path.
+    assert_dual_derive_agree_at_root(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2],
+        (Some(p1), Some(p2)),
+        Some(merge_root),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Regression guard for mode-only changes that preserve a reused file node
+/// whose metadata records an earlier copy.
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_matches_mode_only_change_reusing_copied_file_node(
+    fb: FacebookInit,
+) -> Result<()> {
+    use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
+
+    // Given: `dst` was copied from `src` in the parent, then the child changes
+    // only the manifest file type from executable to regular. Historical Hg can
+    // represent that by reusing the copied file node and changing only the
+    // manifest flag, so the current Bonsai change has no copy metadata while the
+    // canonical file node still does.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src", "content")
+        .commit()
+        .await?;
+    let source_aug = derive_parent_aug(&ctx, &repo, source).await?;
+    let parent = CreateCommitContext::new(&ctx, &repo, vec![source])
+        .add_file_with_copy_info_and_type(
+            "dst",
+            "content",
+            (source, "src"),
+            FileType::Executable,
+            GitLfs::FullContent,
+        )
+        .commit()
+        .await?;
+    let parent_acl_root = derive_acl_overlay(&ctx, &repo, parent).await?;
+    let (_, aug_parent) = derive_augmented_manifest_via_existing_path(
+        &ctx,
+        &repo,
+        parent,
+        vec![source_aug],
+        parent_acl_root,
+        None,
+    )
+    .await?;
+
+    let parent_root = hg_manifest_root(&ctx, &repo, parent).await?;
+    let dst_file = hg_file_entry(&ctx, &repo, parent_root, "dst").await?;
+    let src_file = hg_file_entry(&ctx, &repo, parent_root, "src").await?;
+    let child_root = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::RootPath,
+        bytes::Bytes::from(format!(
+            "dst\0{}\nsrc\0{}\n",
+            dst_file.into_nodehash(),
+            src_file.into_nodehash(),
+        )),
+        Some(parent_root),
+        None,
+    )
+    .await?;
+
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file_with_type("dst", "content", FileType::Regular)
+        .commit()
+        .await?;
+
+    // When: direct derivation is compared against the HgManifest-based path.
+    let result = assert_dual_derive_agree_at_root(
+        &ctx,
+        &repo,
+        child,
+        &[aug_parent],
+        (Some(parent), None),
+        Some(child_root),
+    )
+    .await;
+
+    // Then: both paths agree even though the reused canonical file node has
+    // historical copy metadata.
+    result?;
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_rejects_canonical_copy_metadata_mismatch(
+    fb: FacebookInit,
+) -> Result<()> {
+    use mercurial_types::blobs::ContentBlobMeta;
+    use mercurial_types::blobs::UploadHgFileContents;
+    use mercurial_types::blobs::UploadHgFileEntry;
+    use mercurial_types::blobs::UploadHgNodeHash;
+
+    // Given: Bonsai records `copied_file` as a copy, but the supplied
+    // canonical Hg root points at a filenode with matching content and no copy
+    // metadata.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("original_file", "content")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file_with_copy_info("copied_file", "content", (root, "original_file"))
+        .commit()
+        .await?;
+
+    let aug_root = derive_parent_aug(&ctx, &repo, root).await?;
+    let root_hg_manifest = hg_manifest_root(&ctx, &repo, root).await?;
+    let original_file = hg_file_entry(&ctx, &repo, root_hg_manifest, "original_file").await?;
+    let original_file_envelope = original_file.load(&ctx, repo.repo_blobstore()).await?;
+    let copied_file_path = NonRootMPath::new("copied_file")?;
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+    let bad_copied_file = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
+            id: original_file_envelope.content_id(),
+            size: original_file_envelope.content_size(),
+            copy_from: None,
+        }),
+        p1: None,
+        p2: None,
+    }
+    .upload(ctx.clone(), blobstore, Some(&copied_file_path))
+    .await?;
+    let bad_root = upload_hg_tree(
+        &ctx,
+        &repo,
+        RepoPath::RootPath,
+        bytes::Bytes::from(format!(
+            "copied_file\0{}\noriginal_file\0{}\n",
+            bad_copied_file.into_nodehash(),
+            original_file.into_nodehash(),
+        )),
+        Some(root_hg_manifest),
+        None,
+    )
+    .await?;
+
+    // When: direct derivation is asked to preserve that canonical root.
+    let file_changes = file_changes_from_bonsai(&ctx, &repo, child).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
+    let result = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        vec![aug_root],
+        file_changes,
+        vec![],
+        (Some(root), None),
+        &Default::default(),
+        Some(bad_root.into_nodehash()),
+        restricted_paths_config,
+        None,
+        &mut HashMap::new(),
+    )
+    .await;
+
+    // Then: the mismatched canonical copy metadata is rejected instead of being
+    // silently inherited by the augmented leaf.
+    let err = result.expect_err("copy metadata mismatch must be rejected");
+    let msg = format!("{err:#}");
+    assert!(
+        msg.contains("canonical Hg manifest copy metadata mismatch at copied_file"),
+        "expected copy metadata mismatch error, got: {msg}"
     );
 
     Ok(())
