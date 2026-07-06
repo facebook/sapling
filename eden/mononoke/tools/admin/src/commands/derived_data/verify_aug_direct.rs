@@ -28,7 +28,7 @@ use derived_data_manager::DerivedDataManager;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
-use futures::stream;
+use futures::stream::BoxStream;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest::cached_acl_overlay_map;
@@ -502,8 +502,9 @@ async fn compare_acl_path_pointers(
     Ok(None)
 }
 
+const DEFAULT_VERIFY_AUG_DIRECT_BATCH_SIZE: u64 = 100;
+const MAX_VERIFY_AUG_DIRECT_BATCH_SIZE: u64 = 10_000;
 const MAX_VERIFY_AUG_DIRECT_CONCURRENCY: u64 = 100;
-const VERIFY_AUG_DIRECT_PROGRESS_INTERVAL: u64 = 1000;
 
 #[derive(Args)]
 pub(super) struct VerifyAugDirectArgs {
@@ -521,7 +522,15 @@ pub(super) struct VerifyAugDirectArgs {
     #[clap(long, value_parser = clap::value_parser!(u64).range(1..))]
     last: u64,
 
-    /// Number of verifier chunks to process concurrently. Maximum: 100.
+    /// Number of changesets to select per verifier batch. Default: 100. Maximum: 10000.
+    #[clap(
+        long,
+        default_value_t = DEFAULT_VERIFY_AUG_DIRECT_BATCH_SIZE,
+        value_parser = clap::value_parser!(u64).range(1..=MAX_VERIFY_AUG_DIRECT_BATCH_SIZE),
+    )]
+    batch_size: u64,
+
+    /// Number of verifier batches to process concurrently. Maximum: 100.
     #[clap(long, default_value_t = 10, value_parser = clap::value_parser!(u64).range(1..=MAX_VERIFY_AUG_DIRECT_CONCURRENCY))]
     concurrency: u64,
 }
@@ -547,34 +556,67 @@ async fn resolve_end_id(
     }
 }
 
+struct VerifyBatch {
+    index: u64,
+    cs_ids: Vec<ChangesetId>,
+}
+
+fn batch_changeset_stream(
+    cs_ids: BoxStream<'static, Result<ChangesetId>>,
+    batch_size: u64,
+) -> Result<BoxStream<'static, Result<VerifyBatch>>> {
+    let batch_size =
+        usize::try_from(batch_size).context("--batch-size value does not fit in usize")?;
+    Ok(cs_ids
+        .try_chunks(batch_size)
+        .enumerate()
+        .map(|(index, batch)| match batch {
+            Ok(cs_ids) => Ok(VerifyBatch {
+                index: index as u64 + 1,
+                cs_ids,
+            }),
+            Err(err) => Err(err.1),
+        })
+        .boxed())
+}
+
 async fn select_last_changesets(
     ctx: &CoreContext,
     repo: &Repo,
     end_id: ChangesetId,
     count: u64,
-) -> Result<Vec<ChangesetId>> {
+) -> Result<BoxStream<'static, Result<ChangesetId>>> {
     let count = usize::try_from(count).context("--last value does not fit in usize")?;
-    let mut cs_ids: Vec<ChangesetId> = repo
+    Ok(repo
         .commit_graph()
         .ancestors_difference_stream(ctx, vec![end_id], vec![])
         .await?
         .take(count)
-        .try_collect()
-        .await?;
-    cs_ids.reverse();
-    Ok(cs_ids)
+        .boxed())
 }
 
-async fn verify_aug_direct_chunk(
+async fn select_last_changeset_batches(
+    ctx: &CoreContext,
+    repo: &Repo,
+    end_id: ChangesetId,
+    count: u64,
+    batch_size: u64,
+) -> Result<BoxStream<'static, Result<VerifyBatch>>> {
+    let cs_ids = select_last_changesets(ctx, repo, end_id, count).await?;
+    batch_changeset_stream(cs_ids, batch_size)
+}
+
+async fn verify_aug_direct_batch(
     ctx: &CoreContext,
     repo: &Repo,
     manager: &DerivedDataManager,
-    cs_ids: Vec<ChangesetId>,
-) -> Result<u64> {
+    batch: VerifyBatch,
+) -> Result<(u64, u64)> {
+    let index = batch.index;
+    let size = u64::try_from(batch.cs_ids.len()).context("batch size does not fit in u64")?;
     let mut verifier = Verifier::new(ctx, repo, manager);
-    let mut processed = 0;
 
-    for cs_id in cs_ids {
+    for cs_id in batch.cs_ids {
         if let Some(m) = verifier.verify_one(cs_id).await? {
             return Err(anyhow!(
                 "MISMATCH at {}: {} diverges: computed={} expected={}",
@@ -584,10 +626,9 @@ async fn verify_aug_direct_chunk(
                 m.expected,
             ));
         }
-        processed += 1;
     }
 
-    Ok(processed)
+    Ok((index, size))
 }
 
 pub(super) async fn verify_aug_direct(
@@ -597,26 +638,21 @@ pub(super) async fn verify_aug_direct(
     args: VerifyAugDirectArgs,
 ) -> Result<()> {
     let end_id = resolve_end_id(ctx, repo, args.end_id, args.bookmark).await?;
-    let cs_ids = select_last_changesets(ctx, repo, end_id, args.last).await?;
+    let batches =
+        select_last_changeset_batches(ctx, repo, end_id, args.last, args.batch_size).await?;
 
-    info!("verifying {} changesets", cs_ids.len());
+    info!("verifying up to {} changesets", args.last);
 
     let concurrency =
         usize::try_from(args.concurrency).context("--concurrency value does not fit in usize")?;
-    let chunk_size = cs_ids.len().max(1).div_ceil(concurrency);
     let mut processed = 0;
-    let mut next_progress = VERIFY_AUG_DIRECT_PROGRESS_INTERVAL;
 
-    stream::iter(cs_ids.chunks(chunk_size).map(|chunk| chunk.to_vec()))
-        .map(|chunk| verify_aug_direct_chunk(ctx, repo, manager, chunk))
-        .buffer_unordered(concurrency)
-        .try_for_each(|chunk_processed| {
-            processed += chunk_processed;
-            if processed >= next_progress {
-                info!("progress: processed={processed}");
-                next_progress = (processed / VERIFY_AUG_DIRECT_PROGRESS_INTERVAL + 1)
-                    * VERIFY_AUG_DIRECT_PROGRESS_INTERVAL;
-            }
+    batches
+        .map_ok(|batch| verify_aug_direct_batch(ctx, repo, manager, batch))
+        .try_buffer_unordered(concurrency)
+        .try_for_each(|(batch_index, batch_size)| {
+            processed += batch_size;
+            info!("progress: batch={batch_index} size={batch_size} processed={processed}");
             future::ready(Ok(()))
         })
         .await?;
@@ -641,6 +677,7 @@ mod tests {
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
+    use futures::TryStreamExt;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::override_just_knobs;
@@ -784,10 +821,10 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn select_last_changesets_keeps_tail_in_oldest_to_newest_order(
+    async fn select_last_changeset_batches_groups_selected_changesets_into_bounded_batches(
         fb: FacebookInit,
     ) -> Result<()> {
-        // Given a linear repository history with four changesets.
+        // Given a linear repository history with five changesets.
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let root = CreateCommitContext::new_root(&ctx, &repo)
@@ -806,12 +843,23 @@ mod tests {
             .add_file("file.txt", b"four")
             .commit()
             .await?;
+        let fifth = CreateCommitContext::new(&ctx, &repo, vec![fourth])
+            .add_file("file.txt", b"five")
+            .commit()
+            .await?;
 
-        // When selecting the last two changesets ending at the fourth changeset.
-        let selected = select_last_changesets(&ctx, &repo.repo, fourth, 2).await?;
+        // When selecting the last five changesets in batches of two.
+        let batches = select_last_changeset_batches(&ctx, &repo.repo, fifth, 5, 2)
+            .await?
+            .map_ok(|batch| batch.cs_ids)
+            .try_collect::<Vec<_>>()
+            .await?;
 
-        // Then the selected changesets are verified oldest-to-newest within the tail.
-        assert_eq!(selected, vec![third, fourth]);
+        // Then the selected changesets are emitted in bounded batches.
+        assert_eq!(
+            batches,
+            vec![vec![fifth, fourth], vec![third, second], vec![root]]
+        );
         Ok(())
     }
 
