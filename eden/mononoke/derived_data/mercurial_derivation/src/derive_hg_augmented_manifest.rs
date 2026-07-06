@@ -34,6 +34,7 @@ use manifest::Span;
 use manifest::Traced;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
+use manifest::derive_manifest;
 use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
@@ -643,7 +644,11 @@ where
         }
     }
 
-    stream::iter(paths_by_parent.into_iter().zip(parents.iter()))
+    // `.copied()` yields owned `Option<(ChangesetId, HgAugmentedManifestId)>`
+    // (both are `Copy`) so the async closure doesn't borrow across the await
+    // boundary — required for the `derive_single`/`derive_batch` trait bounds
+    // to accept it.
+    stream::iter(paths_by_parent.into_iter().zip(parents.iter().copied()))
         .map(|(paths, parent)| async move {
             let Some((cs_id, parent_aug_manifest_id)) = parent else {
                 return Ok::<HashMap<_, _>, anyhow::Error>(HashMap::new());
@@ -664,7 +669,7 @@ where
                         Entry::Leaf(leaf) => {
                             let non_root = NonRootMPath::try_from(path)
                                 .map_err(|_| anyhow!("Expected non-root path in manifest"))?;
-                            Ok(Some(((non_root, *cs_id), HgFileNodeId::new(leaf.filenode))))
+                            Ok(Some(((non_root, cs_id), HgFileNodeId::new(leaf.filenode))))
                         }
                         Entry::Tree(_) => Ok(None),
                     }
@@ -832,10 +837,6 @@ enum AugmentedDeriveContext {
 /// original bonsai parent index after `derive_manifest`'s value-only dedup. We
 /// only feed p1/p2 filenodes to `store_file_change` because Mercurial
 /// filenodes only encode (p1, p2) parentage; p3+ are ignored.
-#[expect(
-    dead_code,
-    reason = "wired into derive_augmented_manifest_from_bonsai in a subsequent commit"
-)]
 async fn create_augmented_leaf(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
@@ -1304,10 +1305,6 @@ async fn finalize_envelope(
 /// carry `Traced<ParentIndex, _>` so we can still identify the original Bonsai
 /// p1/p2 when computing Mercurial manifest parents; p3+ do not participate
 /// because Hg manifest nodes record at most two parents.
-#[expect(
-    dead_code,
-    reason = "wired into derive_augmented_manifest_from_bonsai in a subsequent commit"
-)]
 async fn create_augmented_tree(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
@@ -1348,6 +1345,93 @@ async fn create_augmented_tree(
         subentries,
     )
     .await
+}
+
+/// Derive an augmented manifest directly from a bonsai changeset and parent
+/// augmented manifests, bypassing HgManifest construction entirely.
+pub async fn derive_augmented_manifest_from_bonsai<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    parents: Vec<HgAugmentedManifestId>,
+    file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
+    parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
+    content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
+    // Canonical root id from `HgChangeset.manifestid()`. Forced-hash roots
+    // (`UploadHgNodeHash::Supplied`) differ from the computed content hash;
+    // the envelope must land at this key for client lookups to succeed.
+    expected_root_hg_node_id: HgNodeHash,
+) -> Result<HgAugmentedManifestId>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
+        parent_bonsai_csids.0.zip(parents.first().copied()),
+        parent_bonsai_csids.1.zip(parents.get(1).copied()),
+    ];
+    let copy_from_filenodes =
+        resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?;
+
+    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
+    let content_metadata_arc = Arc::new(content_metadata_cache.clone());
+    let copy_from_arc = Arc::new(copy_from_filenodes);
+
+    let parents_traced: Vec<Traced<ParentIndex, HgAugmentedManifestId>> = parents
+        .into_iter()
+        .enumerate()
+        .map(|(i, m)| Traced::assign(ParentIndex(i), m))
+        .collect();
+
+    let root_parents_traced = parents_traced.clone();
+
+    let root = derive_manifest(
+        ctx.clone(),
+        blobstore.clone(),
+        parents_traced,
+        file_changes,
+        std::iter::empty(),
+        {
+            cloned!(ctx, blobstore_arc);
+            move |tree_info| {
+                cloned!(ctx, blobstore_arc);
+                create_augmented_tree(ctx, blobstore_arc, expected_root_hg_node_id, tree_info)
+            }
+        },
+        {
+            cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
+            move |leaf_info| {
+                cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
+                create_augmented_leaf(
+                    ctx,
+                    blobstore_arc,
+                    content_metadata_arc,
+                    copy_from_arc,
+                    parent_bonsai_csids,
+                    leaf_info,
+                )
+            }
+        },
+    )
+    .await?;
+
+    match root {
+        Some(traced_id) => Ok(traced_id.into_untraced()),
+        None => {
+            // Empty manifest — all files deleted. Create empty augmented manifest.
+            let tree_info = TreeInfo {
+                path: MPath::ROOT,
+                parents: root_parents_traced,
+                subentries: Default::default(),
+            };
+            let (_, traced_id) = create_augmented_tree(
+                ctx.clone(),
+                blobstore_arc,
+                expected_root_hg_node_id,
+                tree_info,
+            )
+            .await?;
+            Ok(traced_id.into_untraced())
+        }
+    }
 }
 
 /// Try to reuse a parent's augmented-manifest envelope if its subentries

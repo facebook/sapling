@@ -891,3 +891,165 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
 
     Ok(())
 }
+
+async fn file_changes_from_bonsai(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<Vec<(NonRootMPath, Option<mononoke_types::TrackedFileChange>)>> {
+    let bonsai: mononoke_types::BonsaiChangeset = cs_id.load(ctx, repo.repo_blobstore()).await?;
+    Ok(bonsai
+        .file_changes()
+        .map(|(path, file_change)| {
+            let tracked_change = match file_change {
+                FileChange::Change(tracked_change) => Some(tracked_change.clone()),
+                FileChange::Deletion => None,
+                _ => None,
+            };
+            (path.clone(), tracked_change)
+        })
+        .collect())
+}
+
+async fn derive_augmented_manifest_via_existing_path(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    parents: Vec<HgAugmentedManifestId>,
+) -> Result<(HgManifestId, HgAugmentedManifestId)> {
+    let hg_manifest_id = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    let restricted_paths_config = repo.restricted_paths().config_based();
+    let augmented_manifest_id = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        ctx,
+        repo.repo_blobstore(),
+        hg_manifest_id,
+        parents,
+        &Default::default(),
+        restricted_paths_config,
+        None,
+    )
+    .await?;
+
+    Ok((hg_manifest_id, augmented_manifest_id))
+}
+
+async fn assert_direct_derive_matches_existing_path(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    augmented_parents: &[HgAugmentedManifestId],
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+) -> Result<HgAugmentedManifestId> {
+    let (hg_manifest_id, via_existing_path) =
+        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, augmented_parents.to_vec())
+            .await?;
+    let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+
+    let via_direct_path = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        ctx,
+        repo.repo_blobstore(),
+        augmented_parents.to_vec(),
+        file_changes,
+        bonsai_parents,
+        &Default::default(),
+        hg_manifest_id.into_nodehash(),
+    )
+    .await?;
+
+    assert_eq!(
+        via_direct_path, via_existing_path,
+        "direct augmented-manifest derivation should match existing HgManifest-based derivation for {cs_id}",
+    );
+
+    let direct_envelope = via_direct_path.load(ctx, repo.repo_blobstore()).await?;
+    let existing_envelope = via_existing_path.load(ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        direct_envelope.augmented_manifest.hg_node_id,
+        existing_envelope.augmented_manifest.hg_node_id,
+        "root hg_node_id should match for {cs_id}",
+    );
+    assert_eq!(
+        direct_envelope.augmented_manifest.p1, existing_envelope.augmented_manifest.p1,
+        "root p1 should match for {cs_id}",
+    );
+    assert_eq!(
+        direct_envelope.augmented_manifest.p2, existing_envelope.augmented_manifest.p2,
+        "root p2 should match for {cs_id}",
+    );
+    compare_manifests(ctx, repo, hg_manifest_id, via_direct_path).await?;
+
+    Ok(via_direct_path)
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_matches_existing_path_for_root_commit(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a root commit with both file and directory entries.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("README.md", "hello")
+        .add_file("src/lib.rs", "pub fn value() -> u8 { 1 }")
+        .commit()
+        .await?;
+
+    // When: deriving its augmented manifest directly from Bonsai.
+    let direct_id =
+        assert_direct_derive_matches_existing_path(&ctx, &repo, commit, &[], (None, None)).await?;
+
+    // Then: the direct path produces the same root augmented manifest as the
+    // existing HgManifest-based path.
+    assert!(
+        direct_id.load(&ctx, repo.repo_blobstore()).await.is_ok(),
+        "directly derived root envelope should be loadable",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_matches_existing_path_for_empty_manifest(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a parent commit with one file and a child commit that deletes it.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("obsolete", "contents")
+        .commit()
+        .await?;
+    let (_, parent_augmented_manifest_id) =
+        derive_augmented_manifest_via_existing_path(&ctx, &repo, parent, vec![]).await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .delete_file("obsolete")
+        .commit()
+        .await?;
+
+    // When: deriving the child directly from Bonsai.
+    let direct_id = assert_direct_derive_matches_existing_path(
+        &ctx,
+        &repo,
+        child,
+        &[parent_augmented_manifest_id],
+        (Some(parent), None),
+    )
+    .await?;
+
+    // Then: the explicit empty-root path still matches the existing derivation.
+    let direct_envelope = direct_id.load(&ctx, repo.repo_blobstore()).await?;
+    let entries: Vec<_> = direct_envelope
+        .augmented_manifest
+        .subentries
+        .into_entries(&ctx, repo.repo_blobstore())
+        .try_collect()
+        .await?;
+    assert!(entries.is_empty(), "empty manifest should have no entries");
+
+    Ok(())
+}
