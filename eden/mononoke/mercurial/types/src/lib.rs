@@ -79,6 +79,7 @@ pub use crate::blobnode::HgBlobNode;
 pub use crate::blobnode::HgParents;
 pub use crate::blobnode::calculate_hg_node_id;
 pub use crate::blobnode::calculate_hg_node_id_stream;
+pub use crate::blobnode::calculate_hg_node_ids_multi;
 pub use crate::blobs::HgBlobEnvelope;
 pub use crate::blobs::fetch_manifest_envelope;
 pub use crate::blobs::fetch_manifest_envelope_opt;

@@ -184,6 +184,28 @@ pub async fn calculate_hg_node_id_stream(
     Ok(HgNodeHash(ctxt.finish()))
 }
 
+/// Compute several Hg Node IDs from parents and a single stream of data.
+///
+/// `results[i]` is equivalent to calling [`calculate_hg_node_id_stream`] over
+/// the same stream contents with `parents[i]`, but the stream is consumed only
+/// once.
+pub async fn calculate_hg_node_ids_multi(
+    stream: impl Stream<Item = Result<Bytes>>,
+    parents: &[HgParents],
+) -> Result<Vec<HgNodeHash>> {
+    let mut ctxts: Vec<Context> = parents.iter().map(hg_node_id_hash_context).collect();
+    pin_mut!(stream);
+    while let Some(bytes) = stream.try_next().await? {
+        for ctxt in &mut ctxts {
+            ctxt.update(&bytes);
+        }
+    }
+    Ok(ctxts
+        .into_iter()
+        .map(|ctxt| HgNodeHash(ctxt.finish()))
+        .collect())
+}
+
 #[cfg(test)]
 mod test {
     use bytes::BytesMut;
@@ -277,5 +299,30 @@ mod test {
             .unwrap();
 
         out_inplace == out_stream
+    }
+
+    // Verify that computing several Node IDs in a single streaming pass is
+    // consistent with computing each seed independently.
+    #[mononoke::quickcheck_test]
+    async fn test_multi_node_consistency(input: Vec<Vec<u8>>, hg_parents: Vec<HgParents>) -> bool {
+        let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
+        let stream = stream::iter(input.clone().into_iter().map(Ok));
+
+        let bytes = input
+            .iter()
+            .fold(BytesMut::new(), |mut bytes, chunk| {
+                bytes.extend_from_slice(chunk);
+                bytes
+            })
+            .freeze();
+
+        let out_multi = calculate_hg_node_ids_multi(stream, &hg_parents)
+            .await
+            .unwrap();
+        out_multi.len() == hg_parents.len()
+            && out_multi
+                .iter()
+                .zip(hg_parents.iter())
+                .all(|(out, parents)| *out == calculate_hg_node_id(bytes.as_ref(), parents))
     }
 }
