@@ -957,6 +957,8 @@ mod test {
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::with_just_knobs_async;
+    use mercurial_types::HgAugmentedManifestEnvelope;
+    use mercurial_types::HgManifestId;
     use mononoke_macros::mononoke;
     use mononoke_types::MPath;
     use mononoke_types::SubtreeChange;
@@ -991,6 +993,8 @@ mod test {
         repo_identity: RepoIdentity,
     }
 
+    mod direct_augmented_manifest;
+
     async fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,
         repo: TestRepo,
@@ -1014,6 +1018,20 @@ mod test {
             })
             .try_collect()
             .await
+    }
+
+    async fn assert_hgmanifest_blob_absent(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        manifest_id: HgManifestId,
+        cs_id: ChangesetId,
+    ) -> Result<()> {
+        let key = manifest_id.blobstore_key();
+        assert!(
+            repo.repo_blobstore().get(ctx, &key).await?.is_none(),
+            "HgManifest blob {key} should not be persisted for {cs_id}",
+        );
+        Ok(())
     }
 
     async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
@@ -1397,6 +1415,13 @@ mod test {
                 aug_envelope.augmented_manifest.computed_node_id,
                 "no-Hg direct derivation should use content-derived root for {cs_id}",
             );
+            assert_hgmanifest_blob_absent(
+                &ctx,
+                &repo,
+                HgManifestId::new(aug_envelope.augmented_manifest.hg_node_id),
+                *cs_id,
+            )
+            .await?;
             assert!(
                 manager
                     .fetch_derived::<MappedHgChangesetId>(&ctx, *cs_id, None)
@@ -1404,73 +1429,6 @@ mod test {
                     .is_none(),
                 "direct derivation must not create MappedHgChangesetId for {cs_id}",
             );
-        }
-
-        Ok(())
-    }
-
-    /// Like `verify_repo`, but derives `RootHgAugmentedManifestId`.
-    /// When the skip-writes knob is active, this exercises the
-    /// write-skipping path and verifies that HgManifest blobs can
-    /// still be read through the reconstruction layer.
-    async fn verify_repo_aug<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
-    where
-        F: Fn() -> Fut,
-        Fut: Future<Output = TestRepo>,
-    {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = repo_func().await;
-        println!("Processing {} (augmented)", repo.repo_identity.name());
-        borrowed!(ctx, repo);
-
-        let commits_desc_to_anc =
-            all_commits_descendants_to_ancestors(ctx.clone(), repo.clone()).await?;
-
-        // Recreate repo from scratch and derive augmented manifests.
-        let repo = repo_func().await;
-        let csids = commits_desc_to_anc
-            .clone()
-            .into_iter()
-            .rev()
-            .map(|(cs_id, _)| cs_id)
-            .collect::<Vec<_>>();
-        let manager = repo.repo_derived_data().manager();
-
-        // Pre-derive HgChangesets for the old HgManifest-based augmented path.
-        manager
-            .derive_exactly_batch::<MappedHgChangesetId>(ctx, csids.clone(), None)
-            .await?;
-
-        // RootAclManifestId is a batch dependency of RootHgAugmentedManifestId
-        manager
-            .derive_exactly_batch::<RootAclManifestId>(ctx, csids.clone(), None)
-            .await?;
-
-        manager
-            .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, csids.clone(), None)
-            .await?;
-
-        // Verify HgChangesets match the expected values and that manifests
-        // are readable through the reconstruction layer.
-        let hg_cs_derived = manager
-            .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
-            .await?;
-        for (cs_id, expected_hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
-            let hg_cs = hg_cs_derived
-                .get(&cs_id)
-                .unwrap_or_else(|| panic!("HgChangeset not derived for {cs_id}"));
-            assert_eq!(
-                hg_cs.hg_changeset_id(),
-                expected_hg_cs_id,
-                "HgChangeset mismatch for {cs_id}",
-            );
-
-            // Load the manifest — goes through reconstruction when blobs
-            // were skipped.
-            let hg_changeset =
-                Loadable::load(&hg_cs.hg_changeset_id(), ctx, repo.repo_blobstore()).await?;
-            let _manifest =
-                Loadable::load(&hg_changeset.manifestid(), ctx, repo.repo_blobstore()).await?;
         }
 
         Ok(())
