@@ -80,6 +80,7 @@ use dbbookmarks::SqlBookmarks;
 use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
+use enabled_derived_data_types::EnabledDerivedDataTypes;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
@@ -316,6 +317,9 @@ pub struct Repo {
 
     #[facet]
     pub git_source_of_truth_config: dyn GitSourceOfTruthConfig,
+
+    #[facet]
+    pub enabled_derived_data_types: dyn EnabledDerivedDataTypes,
 
     #[facet]
     pub filenodes: dyn Filenodes,

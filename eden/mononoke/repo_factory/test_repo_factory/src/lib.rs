@@ -50,6 +50,8 @@ use commit_rate_limit_config::build_commit_rate_limit;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
+use enabled_derived_data_types::ArcEnabledDerivedDataTypes;
+use enabled_derived_data_types::SqlEnabledDerivedDataTypesBuilder;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
 use fbinit::FacebookInit;
@@ -632,6 +634,15 @@ impl TestRepoFactory {
     pub fn git_source_of_truth_config(&self) -> Result<ArcGitSourceOfTruthConfig> {
         Ok(Arc::new(
             SqlGitSourceOfTruthConfigBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(),
+        ))
+    }
+
+    /// Construct the enabled-derived-data-types facet using the in-memory
+    /// metadata database.
+    pub fn enabled_derived_data_types(&self) -> Result<ArcEnabledDerivedDataTypes> {
+        Ok(Arc::new(
+            SqlEnabledDerivedDataTypesBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(),
         ))
     }

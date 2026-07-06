@@ -104,6 +104,8 @@ use deletion_log::SqlDeletionLog;
 use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
+use enabled_derived_data_types::ArcEnabledDerivedDataTypes;
+use enabled_derived_data_types::SqlEnabledDerivedDataTypesBuilder;
 #[cfg(fbcode_build)]
 use environment::BookmarkCacheAddress;
 use environment::BookmarkCacheDerivedData;
@@ -771,6 +773,9 @@ pub enum RepoFactoryError {
     #[error("Error opening git-push-redirect-config")]
     GitSourceOfTruthConfig,
 
+    #[error("Error opening enabled-derived-data-types")]
+    EnabledDerivedDataTypes,
+
     #[error("Error opening pushrebase mutation mapping")]
     PushrebaseMutationMapping,
 
@@ -1145,6 +1150,18 @@ impl RepoFactory {
             .context(RepoFactoryError::GitSourceOfTruthConfig)?
             .build();
         Ok(Arc::new(git_source_of_truth_config))
+    }
+
+    pub async fn enabled_derived_data_types(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcEnabledDerivedDataTypes> {
+        let enabled_derived_data_types = self
+            .open_sql::<SqlEnabledDerivedDataTypesBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::EnabledDerivedDataTypes)?
+            .build();
+        Ok(Arc::new(enabled_derived_data_types))
     }
 
     pub async fn pushrebase_mutation_mapping(
