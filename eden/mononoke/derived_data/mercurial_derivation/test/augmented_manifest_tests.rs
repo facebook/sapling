@@ -2842,3 +2842,148 @@ async fn test_targeted_acl_overlay_map_is_scoped_to_changed_frontier(
 
     Ok(())
 }
+
+/// Derive both paths over a sequence of changesets in topological order and
+/// compare the results. Each path writes into its own `MemWritesKeyedBlobstore`
+/// overlay for proper isolation (augmented manifest IDs are Hg node hashes, so
+/// both paths write the same blobstore key — without separate overlays,
+/// `IfAbsent` semantics would mask divergent envelopes).
+async fn assert_direct_derivation_parity(
+    ctx: &CoreContext,
+    repo: &Repo,
+    topo_csids: &[ChangesetId],
+) -> Result<()> {
+    let old_bs = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_bs = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+
+    let mut old_augs: HashMap<ChangesetId, HgAugmentedManifestId> = HashMap::new();
+    let mut new_augs: HashMap<ChangesetId, HgAugmentedManifestId> = HashMap::new();
+
+    for cs_id in topo_csids {
+        let bonsai: mononoke_types::BonsaiChangeset =
+            cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let old_parents: Vec<_> = bonsai
+            .parents()
+            .map(|p| {
+                *old_augs
+                    .get(&p)
+                    .unwrap_or_else(|| panic!("Parent {p} not in topo_csids or out of order"))
+            })
+            .collect();
+        let new_parents: Vec<_> = bonsai
+            .parents()
+            .map(|p| {
+                *new_augs
+                    .get(&p)
+                    .unwrap_or_else(|| panic!("Parent {p} not in topo_csids or out of order"))
+            })
+            .collect();
+        let mut parents = bonsai.parents();
+        let bonsai_parents = (parents.next(), parents.next());
+
+        let old_id = derive_existing_into_overlay(ctx, repo, &*old_bs, *cs_id, old_parents).await?;
+        let new_id =
+            derive_into_overlay(ctx, repo, &*new_bs, *cs_id, new_parents, bonsai_parents).await?;
+
+        assert_eq!(old_id, new_id, "Root ID mismatch for {cs_id}");
+
+        let old_env = old_id.load(ctx, &*old_bs).await?;
+        let new_env = new_id.load(ctx, &*new_bs).await?;
+        assert_eq!(
+            old_env.augmented_manifest_id, new_env.augmented_manifest_id,
+            "Blake3 digest mismatch for {cs_id}"
+        );
+
+        compare_augmented_manifests_acl_recursive(
+            ctx,
+            &*old_bs,
+            &*new_bs,
+            old_id,
+            new_id,
+            mononoke_types::MPath::ROOT,
+        )
+        .await
+        .with_context(|| format!("ACL parity failure at {cs_id}"))?;
+
+        old_augs.insert(*cs_id, old_id);
+        new_augs.insert(*cs_id, new_id);
+    }
+
+    Ok(())
+}
+
+/// Octopus copy-from from the two Mercurial-visible parents should preserve
+/// Bonsai parent order when matching copy sources to augmented-manifest parents.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_octopus_copy_from_respects_hg_parent_order(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: three independent parents ordered reverse by ChangesetId, so a
+    // bug that sorted parents by id would swap p1/p2 copy-from source slots.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root_a = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_a", "content_a")
+        .commit()
+        .await?;
+    let root_b = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_b", "content_b")
+        .commit()
+        .await?;
+    let root_c = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_c", "content_c")
+        .commit()
+        .await?;
+    let mut roots = [
+        (root_a, "src_a", "content_a"),
+        (root_b, "src_b", "content_b"),
+        (root_c, "src_c", "content_c"),
+    ];
+    roots.sort_by_key(|(cs, _, _)| *cs);
+    roots.reverse();
+    let [(p1, s1, c1), (p2, s2, c2), (p3, _, _)] = roots;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .add_file_with_copy_info("dst_from_p1", c1, (p1, s1))
+        .add_file_with_copy_info("dst_from_p2", c2, (p2, s2))
+        .commit()
+        .await?;
+
+    // When: deriving the octopus merge through both augmented-manifest paths.
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[p1, p2, p3, merge]).await;
+
+    // Then: direct derivation matches the existing path's p1/p2 copy-from parentage.
+    result
+}
+
+/// Octopus copy-from from a step-parent should be ignored, matching Mercurial's
+/// two-parent filenode model and the existing HgManifest-based path.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_octopus_copy_from_ignores_step_parent(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a three-parent merge whose only copied file names p3 as its source.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_p1", "content_p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_p2", "content_p2")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_p3", "content_p3")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .add_file_with_copy_info("dst_from_p3", "content_p3", (p3, "src_p3"))
+        .commit()
+        .await?;
+
+    // When: deriving the octopus merge through both augmented-manifest paths.
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[p1, p2, p3, merge]).await;
+
+    // Then: direct derivation matches the existing path, which drops p3 copy-from metadata.
+    result
+}
