@@ -1031,10 +1031,15 @@ pub struct PushrebaseFlags {
     pub merge_resolution_override: MergeResolutionOverride,
     /// Per-request Sandcastle land instance id (`LAND_INSTANCE_ID` pushvar); stamped on Scuba to group a land's attempts. Observability only.
     pub land_instance_id: Option<String>,
+    /// Per-request Phabricator diff FBID (`PHAB_DIFF_ID` pushvar); the QE bucketing key, stamped on Scuba for per-diff dedup. Observability only.
+    pub phab_diff_id: Option<String>,
 }
 
 /// Pushvar key for the Sandcastle land instance id (see `PushrebaseFlags::land_instance_id`).
 pub const LAND_INSTANCE_ID_PUSHVAR_KEY: &str = "LAND_INSTANCE_ID";
+
+/// Pushvar key for the Phabricator diff FBID (see `PushrebaseFlags::phab_diff_id`).
+pub const PHAB_DIFF_ID_PUSHVAR_KEY: &str = "PHAB_DIFF_ID";
 
 /// Per-request override for the `pushrebase_enable_merge_resolution` JustKnob.
 ///
@@ -1171,6 +1176,7 @@ impl Default for PushrebaseFlags {
             pessimistic_locking_bookmarks: Vec::new(),
             merge_resolution_override: MergeResolutionOverride::UseJk,
             land_instance_id: None,
+            phab_diff_id: None,
         }
     }
 }

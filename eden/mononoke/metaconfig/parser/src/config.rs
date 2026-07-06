@@ -1493,6 +1493,7 @@ mod test {
                         pessimistic_locking_bookmarks: Vec::new(),
                         merge_resolution_override: MergeResolutionOverride::UseJk,
                         land_instance_id: None,
+                        phab_diff_id: None,
                     },
                     block_merges: false,
                     emit_obsmarkers: false,

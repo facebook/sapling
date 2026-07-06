@@ -18,6 +18,7 @@ use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use metaconfig_types::LAND_INSTANCE_ID_PUSHVAR_KEY;
 use metaconfig_types::MergeResolutionOverride;
+use metaconfig_types::PHAB_DIFF_ID_PUSHVAR_KEY;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
@@ -135,6 +136,12 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         flags.land_instance_id = self
             .pushvars
             .and_then(|p| p.get(LAND_INSTANCE_ID_PUSHVAR_KEY))
+            .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
+            .map(str::to_owned);
+        // QE bucketing key (Phabricator diff FBID) for per-diff dedup in the readout.
+        flags.phab_diff_id = self
+            .pushvars
+            .and_then(|p| p.get(PHAB_DIFF_ID_PUSHVAR_KEY))
             .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
             .map(str::to_owned);
 

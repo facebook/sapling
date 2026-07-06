@@ -337,6 +337,10 @@ pub async fn do_pushrebase_bonsai(
         if let Some(land_instance_id) = config.land_instance_id.as_deref() {
             scuba.add("land_instance_id", land_instance_id);
         }
+        // QE bucketing key for per-diff dedup in the readout.
+        if let Some(phab_diff_id) = config.phab_diff_id.as_deref() {
+            scuba.add("phab_diff_id", phab_diff_id);
+        }
         scuba
     });
     let ctx = &ctx;
