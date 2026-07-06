@@ -31,6 +31,8 @@ use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
+use manifest::ManifestParentReplacement;
+use manifest::PathOrPrefix;
 use manifest::Span;
 use manifest::Traced;
 use manifest::TreeInfo;
@@ -684,6 +686,48 @@ where
         .await
 }
 
+/// Build manifest replacements for `SubtreeCopy` entries using already-derived
+/// source augmented roots. Other subtree-change variants are metadata-only for
+/// manifests, matching `HgSubtreeChanges::to_manifest_replacements`.
+pub async fn build_augmented_subtree_replacements<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    bonsai: &mononoke_types::BonsaiChangeset,
+    source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
+) -> Result<AugmentedSubtreeReplacements>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    let mut replacements = Vec::new();
+    for (dest_path, change) in bonsai.subtree_changes() {
+        let Some((from_cs_id, from_path)) = change.copy_source() else {
+            continue;
+        };
+        let source_aug_root = source_aug_roots.get(&from_cs_id).copied().ok_or_else(|| {
+            anyhow!(
+                "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
+                 it must be derived before the changeset that copies from it",
+            )
+        })?;
+
+        let entry = source_aug_root
+            .find_entry(ctx.clone(), blobstore.clone(), from_path.clone())
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Subtree copy source {from_cs_id}:{from_path} not found in augmented manifest"
+                )
+            })?;
+
+        replacements.push(ManifestParentReplacement {
+            path: dest_path.clone(),
+            replacements: vec![entry],
+        });
+    }
+
+    Ok(replacements)
+}
+
 /// Decision for a leaves-only merge conflict.
 #[derive(Debug)]
 pub(crate) enum LeafConflictResolution {
@@ -945,6 +989,10 @@ type AugmentedEntry = Entry<AugmentedTree, AugmentedLeaf>;
 type RawAugmentedSubentry =
     Either<(Option<AugmentedDeriveContext>, AugmentedEntry), SortedVectorTrieMap<AugmentedEntry>>;
 
+/// Subtree replacements resolved from source augmented manifests.
+pub type AugmentedSubtreeReplacements =
+    Vec<ManifestParentReplacement<HgAugmentedManifestId, HgAugmentedFileLeafNode>>;
+
 /// Shape of `tree_info.subentries` for the augmented-manifest tree callback.
 type AugmentedTreeCallbackSubentries = TreeInfoSubentries<
     AugmentedTree,
@@ -994,11 +1042,23 @@ enum SubentryAction {
     /// Reused subtree: splice the parent's partial map straight into the new
     /// sharded map, with no per-child loads.
     LookupSubtree { parent: ParentIndex },
+    /// Exact copied manifest tree placement at a destination path.
+    PlaceCopiedTree { id: HgAugmentedManifestId },
+}
+
+fn is_subtree_replacement_parent(
+    parent: ParentIndex,
+    first_subtree_replacement_parent: ParentIndex,
+) -> bool {
+    parent.0 >= first_subtree_replacement_parent.0
 }
 
 impl SubentryAction {
     /// Classify one `tree_info.subentries` value into the action it needs.
-    fn classify(value: AugmentedTreeSubentry) -> Result<Self> {
+    fn classify(
+        value: AugmentedTreeSubentry,
+        first_subtree_replacement_parent: ParentIndex,
+    ) -> Result<Self> {
         match value {
             AugmentedTreeSubentry::Entry {
                 ctx,
@@ -1031,7 +1091,13 @@ impl SubentryAction {
                         .id()
                         .copied()
                         .context("Reused single child should carry a ParentIndex")?;
-                    Ok(Self::LookupSingle { parent })
+                    if is_subtree_replacement_parent(parent, first_subtree_replacement_parent) {
+                        Ok(Self::PlaceCopiedTree {
+                            id: traced_id.into_untraced(),
+                        })
+                    } else {
+                        Ok(Self::LookupSingle { parent })
+                    }
                 }
             },
             AugmentedTreeSubentry::ReusedSubtree(trie_map) => {
@@ -1070,9 +1136,15 @@ fn entry_parent_index(entry: &AugmentedEntry) -> Option<ParentIndex> {
 /// * `direct` entries can be inserted into the new sharded map immediately.
 /// * `lookups_by_parent` need one batched fetch per originating parent before
 ///   they can be merged into `direct`.
+/// * `copied_tree_placements` are exact subtree-copy roots to place directly.
+/// * `reused_copied_subtree_prefixes` are partial maps reused from a subtree-copy
+///   source (synthetic parent) — `(reused prefix, source parent index)` — used to
+///   track restriction roots inside a copy destination that was rebuilt.
 struct PartitionedSubentries {
     direct: AugmentedSubentriesMap,
     lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>>,
+    copied_tree_placements: Vec<(MPathElement, HgAugmentedManifestId)>,
+    reused_copied_subtree_prefixes: Vec<(Vec<u8>, ParentIndex)>,
 }
 
 /// Walk `tree_info.subentries` and partition them into direct placements vs
@@ -1094,12 +1166,18 @@ fn partition_subentries(
     subentries: AugmentedTreeCallbackSubentries,
     tree_path: &MPath,
     acl_map: &HashMap<MPath, AclManifestId>,
+    first_subtree_replacement_parent: ParentIndex,
 ) -> Result<PartitionedSubentries> {
     let mut direct = AugmentedSubentriesMap::default();
     let mut lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>> = HashMap::new();
+    let mut copied_tree_placements: Vec<(MPathElement, HgAugmentedManifestId)> = Vec::new();
+    let mut reused_copied_subtree_prefixes: Vec<(Vec<u8>, ParentIndex)> = Vec::new();
 
     for (key, value) in subentries {
-        let action = SubentryAction::classify(AugmentedTreeSubentry::from(value))?;
+        let action = SubentryAction::classify(
+            AugmentedTreeSubentry::from(value),
+            first_subtree_replacement_parent,
+        )?;
         // Mercurial's manifest format uses '\n' as line terminator and
         // '\x01' as the metadata delimiter, so neither byte may appear in
         // a path element. The legacy `create_hg_manifest` rejects these
@@ -1145,10 +1223,21 @@ fn partition_subentries(
                     .insert(key, LookupKind::Entry);
             }
             SubentryAction::LookupSubtree { parent } => {
+                // Reuse from a synthetic parent is a subtree copy whose
+                // destination is being rebuilt: record the reused prefix so its
+                // restriction roots get tracked (real-parent reuse keeps the
+                // same path and already has rows from the parent commit).
+                if is_subtree_replacement_parent(parent, first_subtree_replacement_parent) {
+                    reused_copied_subtree_prefixes.push((key.to_vec(), parent));
+                }
                 lookups_by_parent
                     .entry(parent)
                     .or_default()
                     .insert(key, LookupKind::PartialMap);
+            }
+            SubentryAction::PlaceCopiedTree { id } => {
+                let elem = MPathElement::from_smallvec(key)?;
+                copied_tree_placements.push((elem, id));
             }
         }
     }
@@ -1156,6 +1245,8 @@ fn partition_subentries(
     Ok(PartitionedSubentries {
         direct,
         lookups_by_parent,
+        copied_tree_placements,
+        reused_copied_subtree_prefixes,
     })
 }
 
@@ -1208,6 +1299,242 @@ async fn resolve_parent_lookups(
         .await?;
 
     Ok(resolved.into_iter().flatten().collect())
+}
+
+enum CopiedRestrictedPathCandidate {
+    Root {
+        path: NonRootMPath,
+    },
+    Descendant {
+        path: NonRootMPath,
+        relative_path: NonRootMPath,
+    },
+}
+
+fn copied_restricted_path_candidate(
+    destination_path: &NonRootMPath,
+    restricted_path: &NonRootMPath,
+    reused_shard_prefix: Option<&[u8]>,
+) -> Option<CopiedRestrictedPathCandidate> {
+    if reused_shard_prefix.is_none() && restricted_path == destination_path {
+        return Some(CopiedRestrictedPathCandidate::Root {
+            path: restricted_path.clone(),
+        });
+    }
+
+    let relative_path = restricted_path.remove_prefix_component(destination_path)?;
+    if let Some(prefix) = reused_shard_prefix
+        && !relative_path.split_first().0.as_ref().starts_with(prefix)
+    {
+        return None;
+    }
+
+    Some(CopiedRestrictedPathCandidate::Descendant {
+        path: restricted_path.clone(),
+        relative_path,
+    })
+}
+
+fn collect_copied_restricted_path_candidates(
+    destination_path: &NonRootMPath,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    reused_shard_prefix: Option<&[u8]>,
+) -> Vec<CopiedRestrictedPathCandidate> {
+    restricted_paths
+        .config()
+        .path_restriction_metadata
+        .iter()
+        .filter(|(_, metadata)| !metadata.read_only)
+        .filter_map(|(restricted_path, _)| {
+            copied_restricted_path_candidate(destination_path, restricted_path, reused_shard_prefix)
+        })
+        .collect()
+}
+
+fn restricted_path_manifest_id_entry(
+    path: NonRootMPath,
+    id: HgAugmentedManifestId,
+) -> Result<RestrictedPathManifestIdEntry> {
+    RestrictedPathManifestIdEntry::new(
+        ManifestType::HgAugmented,
+        id.to_string().into(),
+        RepoPath::DirectoryPath(path),
+    )
+}
+
+async fn resolve_copied_restricted_path_entries(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    root_id: HgAugmentedManifestId,
+    destination_path: &NonRootMPath,
+    candidates: Vec<CopiedRestrictedPathCandidate>,
+) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+    let mut entries = Vec::new();
+    let mut descendants = HashMap::new();
+    for candidate in candidates {
+        match candidate {
+            CopiedRestrictedPathCandidate::Root { path } => {
+                entries.push(restricted_path_manifest_id_entry(path, root_id)?);
+            }
+            CopiedRestrictedPathCandidate::Descendant {
+                path,
+                relative_path,
+            } => {
+                descendants.insert(MPath::from(relative_path), path);
+            }
+        }
+    }
+
+    if descendants.is_empty() {
+        return Ok(entries);
+    }
+
+    let lookup_paths: Vec<_> = descendants
+        .keys()
+        .cloned()
+        .map(PathOrPrefix::Path)
+        .collect();
+    let found_entries: Vec<_> = root_id
+        .find_entries(ctx.clone(), Arc::clone(blobstore), lookup_paths)
+        .try_collect()
+        .await?;
+    for (relative_path, entry) in found_entries {
+        let Some(path) = descendants.get(&relative_path).cloned() else {
+            continue;
+        };
+        match entry {
+            Entry::Tree(id) => {
+                entries.push(restricted_path_manifest_id_entry(path, id)?);
+            }
+            Entry::Leaf(_) => {
+                warn!(
+                    "Restricted path {path} under copied subtree {destination_path} is a file, not a directory"
+                );
+            }
+        }
+    }
+
+    Ok(entries)
+}
+
+async fn add_copied_restricted_path_entries(
+    ctx: &CoreContext,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    destination_path: &NonRootMPath,
+    entries: Vec<RestrictedPathManifestIdEntry>,
+) {
+    if entries.is_empty() {
+        return;
+    }
+
+    if let Err(e) = restricted_paths
+        .manifest_id_store()
+        .add_entries(ctx, &entries)
+        .await
+    {
+        warn!("Failed to track restricted paths for copied subtree at {destination_path}: {e}");
+    }
+}
+
+/// Track restricted-path entries for a copied subtree placed at a new
+/// destination. `reused_shard_prefix` limits tracking to a single partial map
+/// reused from the copy source (the rebuilt-destination case); `None` covers an
+/// exact whole-dir copy. Scoping by the reused prefix keeps parity with the
+/// legacy walk: a rebuilt sibling is never under a reused prefix, so its stale
+/// source id is never tracked.
+async fn track_restricted_paths_for_existing_directory(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    root_id: HgAugmentedManifestId,
+    destination_path: &MPath,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    reused_shard_prefix: Option<&[u8]>,
+) -> Result<()> {
+    let Some(destination_path) = destination_path.clone().into_optional_non_root_path() else {
+        return Ok(());
+    };
+
+    let candidates = collect_copied_restricted_path_candidates(
+        &destination_path,
+        restricted_paths,
+        reused_shard_prefix,
+    );
+    let entries = resolve_copied_restricted_path_entries(
+        ctx,
+        blobstore,
+        root_id,
+        &destination_path,
+        candidates,
+    )
+    .await?;
+    add_copied_restricted_path_entries(ctx, restricted_paths, &destination_path, entries).await;
+
+    Ok(())
+}
+
+/// Insert exact copied manifest trees after loading their envelope metadata.
+async fn resolve_copied_tree_placements(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    copied_tree_placements: Vec<(MPathElement, HgAugmentedManifestId)>,
+    tree_path: &MPath,
+    acl_map: &HashMap<MPath, AclManifestId>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    restricted_paths_enabled: bool,
+    direct: &mut AugmentedSubentriesMap,
+) -> Result<()> {
+    let resolved_copied_trees: Vec<_> = stream::iter(copied_tree_placements)
+        .map(|(elem, id)| {
+            let ctx = ctx.clone();
+            let blobstore = Arc::clone(blobstore);
+            let child_path = tree_path.join_element(Some(&elem));
+            let child_acl_id = acl_map.get(&child_path).copied();
+            async move {
+                let env = id.load(&ctx, &blobstore).await?;
+                Ok::<_, anyhow::Error>((
+                    elem,
+                    id,
+                    child_path,
+                    child_acl_id,
+                    env.augmented_manifest_id,
+                    env.augmented_manifest_size,
+                ))
+            }
+        })
+        .buffered(4)
+        .try_collect()
+        .await?;
+
+    for (elem, id, child_path, child_acl_id, augmented_manifest_id, augmented_manifest_size) in
+        resolved_copied_trees
+    {
+        direct.insert(
+            elem,
+            Either::Left(HgAugmentedManifestEntry::DirectoryNode(
+                HgAugmentedDirectoryNode {
+                    treenode: id.into_nodehash(),
+                    augmented_manifest_id,
+                    augmented_manifest_size,
+                    acl_manifest_directory_id: child_acl_id,
+                },
+            )),
+        );
+
+        if restricted_paths_enabled
+            && let Err(e) = track_restricted_paths_for_existing_directory(
+                ctx,
+                blobstore,
+                id,
+                &child_path,
+                restricted_paths,
+                None,
+            )
+            .await
+        {
+            warn!("Failed to track restricted paths for copied subtree at {child_path}: {e}");
+        }
+    }
+    Ok(())
 }
 
 /// Given the fully-merged subentries for one tree node, attempt parent reuse
@@ -1351,6 +1678,7 @@ async fn create_augmented_tree(
     restricted_paths: ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
     acl_map: Arc<HashMap<MPath, AclManifestId>>,
+    first_subtree_replacement_parent: ParentIndex,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgAugmentedManifestId>,
         Traced<ParentIndex, HgAugmentedFileLeafNode>,
@@ -1371,11 +1699,58 @@ async fn create_augmented_tree(
     let PartitionedSubentries {
         mut direct,
         lookups_by_parent,
-    } = partition_subentries(tree_info.subentries, &tree_info.path, &acl_map)?;
+        copied_tree_placements,
+        reused_copied_subtree_prefixes,
+    } = partition_subentries(
+        tree_info.subentries,
+        &tree_info.path,
+        &acl_map,
+        first_subtree_replacement_parent,
+    )?;
 
     let resolved =
         resolve_parent_lookups(&ctx, &blobstore, &tree_info.parents, lookups_by_parent).await?;
     direct.extend(resolved);
+
+    resolve_copied_tree_placements(
+        &ctx,
+        &blobstore,
+        copied_tree_placements,
+        &tree_info.path,
+        &acl_map,
+        &restricted_paths,
+        restricted_paths_enabled,
+        &mut direct,
+    )
+    .await?;
+
+    // A copied subtree whose destination is rebuilt comes back as partial maps
+    // reused from the copy source (spliced above); track the restriction roots
+    // inside each, reusing the exact-copy tracker scoped to the reused prefix.
+    if restricted_paths_enabled {
+        for (prefix, parent) in &reused_copied_subtree_prefixes {
+            if let Some(source_root) = tree_info
+                .parents
+                .iter()
+                .find(|p| p.id() == Some(parent))
+                .map(|p| *p.untraced())
+                && let Err(e) = track_restricted_paths_for_existing_directory(
+                    &ctx,
+                    &blobstore,
+                    source_root,
+                    &tree_info.path,
+                    &restricted_paths,
+                    Some(prefix.as_slice()),
+                )
+                .await
+            {
+                warn!(
+                    "Failed to track restricted paths for reused subtree copy at {}: {e}",
+                    tree_info.path
+                );
+            }
+        }
+    }
 
     let subentries =
         ShardedMapV2Node::from_entries_and_partial_maps(&ctx, &blobstore, direct).await?;
@@ -1394,6 +1769,28 @@ async fn create_augmented_tree(
     .await
 }
 
+fn trace_subtree_replacements(
+    replacements: AugmentedSubtreeReplacements,
+    first_subtree_replacement_parent: ParentIndex,
+) -> Vec<
+    ManifestParentReplacement<
+        Traced<ParentIndex, HgAugmentedManifestId>,
+        Traced<ParentIndex, HgAugmentedFileLeafNode>,
+    >,
+> {
+    replacements
+        .into_iter()
+        .enumerate()
+        .map(|(i, replacement)| {
+            let synthetic_parent = ParentIndex(first_subtree_replacement_parent.0 + i);
+            replacement.map(
+                |id| Traced::assign(synthetic_parent, id),
+                |leaf| Traced::assign(synthetic_parent, leaf),
+            )
+        })
+        .collect()
+}
+
 /// Derive an augmented manifest directly from a bonsai changeset and parent
 /// augmented manifests, bypassing HgManifest construction entirely.
 pub async fn derive_augmented_manifest_from_bonsai<Store>(
@@ -1401,6 +1798,7 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     blobstore: &Store,
     parents: Vec<HgAugmentedManifestId>,
     file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
+    subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
     // Canonical root id from `HgChangeset.manifestid()`. Forced-hash roots
@@ -1432,10 +1830,20 @@ where
             Arc::new(pre_walk_acl_tree(ctx, blobstore, root_id).await?)
         }
         // Single-parent and root commits rebuild exactly the directories on the
-        // ancestor paths of `file_changes`. Scope the overlay load to that
-        // frontier so the cost is O(commit size), not O(total ACL tree size).
+        // ancestor paths of `file_changes`, plus — for a subtree copy — the path
+        // down to each replacement destination (its copied root is placed as a
+        // directory subentry whose ACL pointer is looked up). Scope the overlay
+        // load to that frontier so the cost is O(commit size), not O(total ACL
+        // tree size). The copied subtree's interior is reused from the source
+        // envelope and never consulted, so the destination's own ACL node is
+        // included but we do not need to walk beneath it.
         Some(root_id) => {
-            let target_dirs = changed_ancestor_dirs(&file_changes);
+            let mut target_dirs = changed_ancestor_dirs(&file_changes);
+            for replacement in &subtree_replacements {
+                for dir in replacement.path.clone().into_ancestors() {
+                    target_dirs.insert(dir);
+                }
+            }
             Arc::new(targeted_acl_overlay_map(ctx, blobstore, root_id, &target_dirs).await?)
         }
     };
@@ -1459,13 +1867,16 @@ where
         .collect();
 
     let root_parents_traced = parents_traced.clone();
+    let first_subtree_replacement_parent = ParentIndex(parents_traced.len().max(2));
+    let subtree_replacements =
+        trace_subtree_replacements(subtree_replacements, first_subtree_replacement_parent);
 
     let root = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents_traced,
         file_changes,
-        std::iter::empty(),
+        subtree_replacements,
         {
             cloned!(ctx, blobstore_arc, restricted_paths_arc, acl_map);
             move |tree_info| {
@@ -1477,6 +1888,7 @@ where
                     restricted_paths_arc,
                     restricted_paths_enabled,
                     acl_map,
+                    first_subtree_replacement_parent,
                     tree_info,
                 )
             }
@@ -1514,6 +1926,7 @@ where
                 restricted_paths_arc,
                 restricted_paths_enabled,
                 acl_map,
+                first_subtree_replacement_parent,
                 tree_info,
             )
             .await?;
@@ -1766,7 +2179,7 @@ fn changed_ancestor_dirs(
 /// own pointer and every immediate child's pointer — exactly the entries
 /// `create_augmented_tree` queries (the directory itself at `:dir_acl_id`,
 /// freshly-built children in `partition_subentries`, and exact subtree-copy
-/// roots in `resolve_existing_directories`). Children outside `target_dirs` are
+/// roots in `resolve_copied_tree_placements`). Children outside `target_dirs` are
 /// recorded but not descended into. Directories in `target_dirs` that have no
 /// ACL node (no `.slacl` in their subtree) simply never surface as children and
 /// are correctly absent from the map (`acl_map.get` -> `None`).

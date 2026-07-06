@@ -40,6 +40,7 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::SubtreeChange;
 use mononoke_types::typed_hash::AclManifestId;
 use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
@@ -1072,6 +1073,7 @@ async fn assert_direct_derive_matches_existing_path(
         repo.repo_blobstore(),
         augmented_parents.to_vec(),
         file_changes,
+        vec![],
         bonsai_parents,
         &Default::default(),
         hg_manifest_id.into_nodehash(),
@@ -1186,6 +1188,7 @@ async fn derive_augmented_manifest_directly_for_test(
         repo.repo_blobstore(),
         parents,
         file_changes,
+        vec![],
         bonsai_parents,
         &Default::default(),
         expected_root,
@@ -1335,6 +1338,7 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
         repo.repo_blobstore(),
         aug_parents.to_vec(),
         file_changes,
+        vec![],
         bonsai_parents,
         &Default::default(),
         AS_HASH,
@@ -1952,6 +1956,7 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
         repo.repo_blobstore(),
         vec![],
         file_changes,
+        vec![],
         (None, None),
         &Default::default(),
         supplied,
@@ -2059,8 +2064,7 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
             assert_eq!(
                 direct_entries.len(),
                 3,
-                "expected parent restricted/ plus child restricted/ and restricted/nested entries, got: {:?}",
-                direct_entries,
+                "expected parent restricted/ plus child restricted/ and restricted/nested entries, got: {direct_entries:?}",
             );
             let entry_paths: Vec<_> = direct_entries
                 .iter()
@@ -2236,7 +2240,32 @@ async fn derive_into_overlay<B>(
 where
     B: blobstore::KeyedBlobstore + Clone + 'static,
 {
+    derive_into_overlay_with_subtrees(
+        ctx,
+        repo,
+        overlay,
+        cs_id,
+        aug_parents,
+        bonsai_parents,
+        &HashMap::new(),
+    )
+    .await
+}
+
+async fn derive_into_overlay_with_subtrees<B>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    overlay: &B,
+    cs_id: ChangesetId,
+    aug_parents: Vec<HgAugmentedManifestId>,
+    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
+    subtree_source_augs: &HashMap<ChangesetId, HgAugmentedManifestId>,
+) -> Result<HgAugmentedManifestId>
+where
+    B: blobstore::KeyedBlobstore + Clone + 'static,
+{
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
+    let bonsai: mononoke_types::BonsaiChangeset = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let expected_root = repo
         .derive_hg_changeset(ctx, cs_id)
         .await?
@@ -2245,11 +2274,19 @@ where
         .manifestid()
         .into_nodehash();
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
+    let subtree_replacements = derive_hg_augmented_manifest::build_augmented_subtree_replacements(
+        ctx,
+        overlay,
+        &bonsai,
+        subtree_source_augs,
+    )
+    .await?;
     derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
         overlay,
         aug_parents,
         file_changes,
+        subtree_replacements,
         bonsai_parents,
         &Default::default(),
         expected_root,
@@ -2882,8 +2919,16 @@ async fn assert_direct_derivation_parity(
         let bonsai_parents = (parents.next(), parents.next());
 
         let old_id = derive_existing_into_overlay(ctx, repo, &*old_bs, *cs_id, old_parents).await?;
-        let new_id =
-            derive_into_overlay(ctx, repo, &*new_bs, *cs_id, new_parents, bonsai_parents).await?;
+        let new_id = derive_into_overlay_with_subtrees(
+            ctx,
+            repo,
+            &*new_bs,
+            *cs_id,
+            new_parents,
+            bonsai_parents,
+            &new_augs,
+        )
+        .await?;
 
         assert_eq!(old_id, new_id, "Root ID mismatch for {cs_id}");
 
@@ -2986,4 +3031,353 @@ async fn test_direct_derivation_octopus_copy_from_ignores_step_parent(
 
     // Then: direct derivation matches the existing path, which drops p3 copy-from metadata.
     result
+}
+
+// Subtree-copy parity tests.
+
+/// Create and save a bonsai with `subtree_changes`.
+async fn save_bonsai_with_subtree_changes(
+    ctx: &CoreContext,
+    repo: &Repo,
+    parents: Vec<ChangesetId>,
+    subtree_changes: Vec<(MPath, SubtreeChange)>,
+    file_changes: Vec<(&str, Option<&str>)>,
+) -> Result<ChangesetId> {
+    use changesets_creation::save_changesets;
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([
+            (
+                "scm/mononoke:enable_subtree_changes".to_string(),
+                KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                KnobVal::Bool(true),
+            ),
+        ])),
+        async move {
+            let mut builder =
+                CreateCommitContext::new(ctx, repo, parents).set_message("subtree change commit");
+            for (path, content) in file_changes {
+                builder = match content {
+                    Some(content) => builder.add_file(path, content),
+                    None => builder.delete_file(path),
+                };
+            }
+
+            let mut bonsai = builder.create_commit_object().await?;
+            bonsai.subtree_changes = subtree_changes.into_iter().collect();
+            let bonsai = bonsai.freeze()?;
+            let cs_id = bonsai.get_changeset_id();
+            save_changesets(ctx, repo, vec![bonsai]).await?;
+            Ok(cs_id)
+        }
+        .boxed(),
+    )
+    .await
+}
+
+fn subtree_copy(
+    to_path: &str,
+    from_path: &str,
+    from_cs_id: ChangesetId,
+) -> Result<(MPath, SubtreeChange)> {
+    Ok((
+        MPath::new(to_path)?,
+        SubtreeChange::copy(MPath::new(from_path)?, from_cs_id),
+    ))
+}
+
+/// Exact directory subtree copy.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_exact_directory_copy_matches_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a source commit with a directory subtree, including ACL metadata.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "src/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=outer\"\n",
+        )
+        .add_file("src/code.rs", "fn outer() {}")
+        .add_file(
+            "src/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=inner\"\n",
+        )
+        .add_file("src/inner/deep.rs", "fn inner() {}")
+        .commit()
+        .await?;
+
+    // When: a child copies that directory to a new destination path.
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![subtree_copy("dst", "src", source)?],
+        vec![],
+    )
+    .await?;
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[source, child]).await;
+
+    // Then: direct derivation matches the existing HgManifest-based path.
+    result
+}
+
+/// Exact file subtree copy.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_exact_file_copy_matches_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a source commit with one file that will be copied as a subtree change.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/file.rs", "fn source() {}")
+        .commit()
+        .await?;
+
+    // When: a child copies that file to a new destination path.
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![subtree_copy("copied.rs", "src/file.rs", source)?],
+        vec![],
+    )
+    .await?;
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[source, child]).await;
+
+    // Then: direct derivation matches the existing HgManifest-based path.
+    result
+}
+
+/// Multiple subtree copies in one commit.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_multiple_subtree_copies_match_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a source commit with two independent source directories.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src_a/a.txt", "a")
+        .add_file("src_b/b.txt", "b")
+        .commit()
+        .await?;
+
+    // When: a child performs two subtree copies, requiring two synthetic parents.
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![
+            subtree_copy("dst_a", "src_a", source)?,
+            subtree_copy("dst_b", "src_b", source)?,
+        ],
+        vec![],
+    )
+    .await?;
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[source, child]).await;
+
+    // Then: direct derivation matches the existing HgManifest-based path.
+    result
+}
+
+/// Subtree copy from a changeset that is not a parent of the copying commit.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_copy_from_non_parent_source_matches_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: an unrelated source commit and a separate base commit for the child.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/lib.rs", "fn from_source() {}")
+        .add_file("src/data.txt", "source data")
+        .commit()
+        .await?;
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base/readme.txt", "base")
+        .commit()
+        .await?;
+
+    // When: the child copies a subtree from `source`, even though its real parent is `base`.
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![base],
+        vec![subtree_copy("dst", "src", source)?],
+        vec![],
+    )
+    .await?;
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[source, base, child]).await;
+
+    // Then: direct derivation resolves the non-parent source and matches the existing path.
+    result
+}
+
+/// Directory copy with normal file changes layered on the copied baseline.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_copy_with_modify_and_delete_matches_existing_path(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a source directory with files that can be modified or deleted after copy.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/a.txt", "old a")
+        .add_file("src/b.txt", "old b")
+        .add_file("src/c.txt", "old c")
+        .commit()
+        .await?;
+
+    // When: a child copies the directory and overlays a modify plus a delete.
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![root],
+        vec![subtree_copy("dst", "src", root)?],
+        vec![("dst/a.txt", Some("new a")), ("dst/b.txt", None)],
+    )
+    .await?;
+    let result = assert_direct_derivation_parity(&ctx, &repo, &[root, child]).await;
+
+    // Then: direct derivation matches the existing HgManifest-based path.
+    result
+}
+
+/// Exact subtree copy into restricted destination paths.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_copy_tracks_restricted_destination(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(true),
+        async move {
+            // Given: restricted-path logging is enabled for the copied destination and its child.
+            let ctx = CoreContext::test_mock(fb);
+            let repo = build_repo_with_restricted_path_config(
+                fb,
+                vec![NonRootMPath::new("dst")?, NonRootMPath::new("dst/inner")?],
+            )
+            .await?;
+            let source = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("src/secret.txt", "secret")
+                .add_file("src/inner/deep.txt", "deep secret")
+                .commit()
+                .await?;
+            let child = save_bonsai_with_subtree_changes(
+                &ctx,
+                &repo,
+                vec![source],
+                vec![subtree_copy("dst", "src", source)?],
+                vec![],
+            )
+            .await?;
+
+            // When: deriving the exact subtree copy through the direct path.
+            let overlay = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+            let source_aug =
+                derive_into_overlay(&ctx, &repo, &overlay, source, vec![], (None, None)).await?;
+            let subtree_source_augs = HashMap::from([(source, source_aug)]);
+            derive_into_overlay_with_subtrees(
+                &ctx,
+                &repo,
+                &overlay,
+                child,
+                vec![source_aug],
+                (Some(source), None),
+                &subtree_source_augs,
+            )
+            .await?;
+
+            // Then: both destination restriction roots are tracked for HgAugmented manifests.
+            let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
+            for expected_path in [RepoPath::dir("dst")?, RepoPath::dir("dst/inner")?] {
+                assert!(
+                    entries
+                        .iter()
+                        .any(|entry| entry.repo_path().is_ok_and(|path| path == expected_path)),
+                    "expected an HgAugmented restricted-path entry for {expected_path:?}, got {entries:?}",
+                );
+            }
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// Reproduces restricted-paths tracking gap `new-restricted-paths-tracking-1`.
+///
+/// An exact whole-directory subtree copy tracks nested restriction roots via
+/// `track_restricted_paths_for_existing_directory`. When the copy destination
+/// also carries overlapping file changes, `dst/` is rebuilt and an unchanged
+/// restriction root below it is spliced in as a reused partial map
+/// (`LookupSubtree`). The direct path must still track the destination path,
+/// matching the legacy HgManifest path that walks the rebuilt `dst/` as `New`.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restricted(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(true),
+        async move {
+            // Given: only the nested directory `dst/inner` is a restriction root.
+            let ctx = CoreContext::test_mock(fb);
+            let repo = build_repo_with_restricted_path_config(
+                fb,
+                vec![NonRootMPath::new("dst/inner")?],
+            )
+            .await?;
+            let source = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("src/a.txt", "old a")
+                .add_file("src/b.txt", "old b")
+                .add_file("src/inner/deep.txt", "deep secret")
+                .commit()
+                .await?;
+
+            // When: a child copies `src` to `dst` and overlays file changes that rebuild `dst/`.
+            let child = save_bonsai_with_subtree_changes(
+                &ctx,
+                &repo,
+                vec![source],
+                vec![subtree_copy("dst", "src", source)?],
+                vec![("dst/a.txt", Some("new a")), ("dst/b.txt", None)],
+            )
+            .await?;
+            let overlay = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+            let source_aug =
+                derive_into_overlay(&ctx, &repo, &overlay, source, vec![], (None, None)).await?;
+            let subtree_source_augs = HashMap::from([(source, source_aug)]);
+            derive_into_overlay_with_subtrees(
+                &ctx,
+                &repo,
+                &overlay,
+                child,
+                vec![source_aug],
+                (Some(source), None),
+                &subtree_source_augs,
+            )
+            .await?;
+
+            // Then: the reused copied partial map still records the destination restriction root.
+            let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
+            let expected_path = RepoPath::dir("dst/inner")?;
+            assert!(
+                entries
+                    .iter()
+                    .any(|entry| entry.repo_path().is_ok_and(|path| path == expected_path)),
+                "expected an HgAugmented restricted-path entry for {expected_path:?}, got {entries:?}",
+            );
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
 }
