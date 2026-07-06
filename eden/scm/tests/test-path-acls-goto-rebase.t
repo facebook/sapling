@@ -167,10 +167,14 @@ Rebase: mixed visible and restricted source changes with no restricted conflict
 
   $ cd
   $ newclientrepo client6 server6
+#if eden
+  $ sl --config slacl.mixed-commit-mode=ignore go -q $B
+#else
   $ sl go -q $B
-  warning: results may be incomplete due to path ACLs (no-eden !)
-    'restricted' is restricted by ACL 'some-acl' (no-eden !)
-  [1] (no-eden !)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+#endif
   $ HGPLAIN=1 sl rebase -q -r $B -d $C
   abort: cannot rewrite commits with restricted paths
     'restricted' is restricted by ACL 'some-acl'
@@ -202,10 +206,14 @@ Rebase: mixed visible and restricted source changes with an unseen restricted co
 
   $ cd
   $ newclientrepo client7 server7
+#if eden
+  $ sl --config slacl.mixed-commit-mode=ignore go -q $B
+#else
   $ sl go -q $B
-  warning: results may be incomplete due to path ACLs (no-eden !)
-    'restricted' is restricted by ACL 'some-acl' (no-eden !)
-  [1] (no-eden !)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+#endif
   $ HGPLAIN=1 sl rebase -q -r $B -d $C
   abort: cannot rewrite commits with restricted paths
     'restricted' is restricted by ACL 'some-acl'
@@ -262,9 +270,7 @@ Rebase currently fetches a restricted sibling even when the rebased commit does 
   $ newclientrepo client9 server9
   $ setconfig rebase.experimental.inmemory=True
   $ sl go -q $B
-  $ HGPLAIN=1 sl rebase -r $B -d $C
-  pulling 'a116d452f6f62b9b5d16ef671076f296b39f9e81' from 'test:server9'
-  rebasing 3bf8492ead1a "B"
+  $ HGPLAIN=1 sl rebase -q -r $B -d $C
   $ sl log -r . -T '{files}\n'
   users/active_user/note.txt
 #endif
