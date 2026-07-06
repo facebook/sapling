@@ -24,6 +24,7 @@ pub use crate::config::configerator_repo_spec_handle;
 pub use crate::config::load_common_config;
 pub use crate::config::load_empty_repo_configs;
 pub use crate::config::load_repo_configs;
+pub use crate::config::load_repo_configs_from_manifest;
 pub use crate::config::load_storage_configs;
 pub use crate::config::parse_raw_repo_config;
 pub use crate::config::parse_repo_spec;

@@ -117,6 +117,51 @@ pub fn load_repo_configs(
     load_configs_from_raw(raw_config).map(|(repo_configs, _)| repo_configs)
 }
 
+/// Load repo configs for a `tier` by following its `TierManifest` to each
+/// per-repo `RepoSpec`, resolving tier overrides.
+///
+/// This is the split-loading counterpart of [`load_repo_configs`] for callers
+/// whose `config_store` points at a manifest + per-repo `RepoSpec` layout (for
+/// example a file-backed store over a local `materialized_configs/` tree) rather
+/// than the legacy monolithic `RawRepoConfigs` blob. The manifest is read from
+/// `scm/mononoke/repos/tiers/{tier}_manifest`; each entry's `config_path` is
+/// loaded as a `RepoSpec` and parsed for `tier`, with `common` and `storage`
+/// taken from the manifest itself.
+pub fn load_repo_configs_from_manifest(
+    tier: &str,
+    config_store: &ConfigStore,
+) -> Result<RepoConfigs> {
+    let manifest_path = format!("scm/mononoke/repos/tiers/{tier}_manifest");
+    let manifest = configerator_manifest_handle(&manifest_path, config_store)
+        .with_context(|| format!("Failed to load tier manifest at {manifest_path}"))?
+        .get();
+
+    let repos = manifest
+        .repos
+        .iter()
+        .map(|entry| {
+            let repo_spec = configerator_repo_spec_handle(&entry.config_path, config_store)
+                .with_context(|| {
+                    format!(
+                        "Failed to load RepoSpec for repo {} at {}",
+                        entry.repo_name, entry.config_path
+                    )
+                })?
+                .get();
+            let repo_config = parse_repo_spec((*repo_spec).clone(), tier, &manifest.storage)
+                .with_context(|| {
+                    format!("Failed to parse RepoSpec for repo {}", entry.repo_name)
+                })?;
+            Ok((entry.repo_name.clone(), repo_config))
+        })
+        .collect::<Result<HashMap<String, RepoConfig>>>()?;
+
+    let common = parse_common_config(manifest.common.clone(), &manifest.storage)
+        .context("Failed to parse common config from tier manifest")?;
+
+    Ok(RepoConfigs::new(repos, common))
+}
+
 /// Empty repo configs useful for testing purposes
 pub fn load_empty_repo_configs() -> RepoConfigs {
     RepoConfigs::new(HashMap::new(), CommonConfig::default())
@@ -2373,6 +2418,96 @@ mod test {
 
         let repo_config = repo_config_handle.get();
         assert_eq!(repo_config.storage_config, Some("main_storage".to_string()));
+    }
+
+    #[mononoke::test]
+    fn test_load_repo_configs_from_manifest() {
+        use cached_config::ModificationTime;
+
+        // A TierManifest listing one repo, with a named storage config the
+        // repo's RepoSpec references (so parse_repo_spec can resolve storage).
+        let manifest_json = r#"{
+            "repos": [
+                {
+                    "repo_name": "test/repo",
+                    "repo_id": 42,
+                    "config_path": "scm/mononoke/repos/git/00/test_repo",
+                    "is_deep_sharded": false
+                }
+            ],
+            "common": {
+                "internal_identity": {
+                    "identity_type": "SERVICE_IDENTITY",
+                    "identity_data": "internal"
+                },
+                "redaction_config": {
+                    "blobstore": "test_storage",
+                    "redaction_sets_location": "loc"
+                }
+            },
+            "storage": {
+                "test_storage": {
+                    "metadata": {"local": {"local_db_path": "/tmp/test_db"}},
+                    "blobstore": {"disabled": {}},
+                    "mutable_blobstore": {"disabled": {}}
+                }
+            }
+        }"#;
+
+        // The per-repo RepoSpec, with a tier override for "test_tier".
+        let repo_spec_json = r#"{
+            "repo_id": 42,
+            "repo_name": "test/repo",
+            "hipster_acl": "acl.test.repo",
+            "enabled": true,
+            "readonly": false,
+            "default_commit_identity_scheme": 3,
+            "repo_config": {
+                "storage_config": "test_storage",
+                "phabricator_callsign": "BASE"
+            },
+            "tier_overrides": {
+                "test_tier": {"phabricator_callsign": "OVERRIDE"}
+            }
+        }"#;
+
+        let test_source = Arc::new(TestSource::new());
+        test_source.insert_config(
+            "scm/mononoke/repos/tiers/test_tier_manifest",
+            manifest_json,
+            ModificationTime::UnixTimestamp(1),
+        );
+        test_source.insert_config(
+            "scm/mononoke/repos/git/00/test_repo",
+            repo_spec_json,
+            ModificationTime::UnixTimestamp(1),
+        );
+        let config_store = ConfigStore::new(test_source, None, None);
+
+        let repo_configs = load_repo_configs_from_manifest("test_tier", &config_store)
+            .expect("load_repo_configs_from_manifest should succeed");
+
+        // Regression guard for the silent "0 repos" Layer-3 failure: the loader
+        // must return the repos the manifest lists.
+        assert_eq!(
+            repo_configs.repos.len(),
+            1,
+            "Should load exactly the one repo listed in the manifest"
+        );
+
+        let repo = repo_configs
+            .repos
+            .get("test/repo")
+            .expect("test/repo should be present");
+        assert_eq!(repo.repoid, RepositoryId::new(42));
+
+        // The tier name must be threaded through so tier_overrides resolve:
+        // the "test_tier" override must win over the base callsign.
+        assert_eq!(
+            repo.phabricator_callsign,
+            Some("OVERRIDE".to_string()),
+            "tier_overrides for the requested tier should be applied"
+        );
     }
 
     /// Helper to construct a minimal valid RawStorageConfig for tests.
