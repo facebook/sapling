@@ -55,6 +55,16 @@ pub trait EnabledDerivedDataTypes: Send + Sync {
         root_request_id: Option<u64>,
     ) -> Result<()>;
 
+    /// Idempotently record that `derived_data_type` is disabled for `repo_id` by
+    /// deleting its row (presence = enabled). Deleting an absent row is a no-op
+    /// success.
+    async fn mark_disabled(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        derived_data_type: DerivableType,
+    ) -> Result<()>;
+
     /// Return the set of derived data types enabled for `repo_id`.
     async fn get_enabled_types(
         &self,
@@ -97,6 +107,19 @@ impl EnabledDerivedDataTypes for TestEnabledDerivedDataTypes {
                 derived_data_type,
                 root_request_id,
             });
+        Ok(())
+    }
+
+    async fn mark_disabled(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        derived_data_type: DerivableType,
+    ) -> Result<()> {
+        self.entries
+            .lock()
+            .expect("poisoned lock")
+            .remove(&(repo_id, derived_data_type));
         Ok(())
     }
 

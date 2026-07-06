@@ -11,6 +11,7 @@ mod backfill_status;
 mod count_underived;
 mod derive;
 mod derive_slice;
+mod enabled_types;
 mod exists;
 mod fetch;
 mod find_derivation_gaps;
@@ -31,6 +32,7 @@ use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
+use enabled_derived_data_types::EnabledDerivedDataTypes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use mononoke_app::MononokeApp;
@@ -57,6 +59,8 @@ use self::derive::DeriveArgs;
 use self::derive::derive;
 use self::derive_slice::DeriveSliceArgs;
 use self::derive_slice::derive_slice;
+use self::enabled_types::EnabledTypesArgs;
+use self::enabled_types::enabled_types;
 use self::exists::ExistsArgs;
 use self::exists::exists;
 use self::fetch::FetchArgs;
@@ -78,6 +82,8 @@ struct Repo {
     repo_identity: RepoIdentity,
     #[facet]
     repo_derived_data: RepoDerivedData,
+    #[facet]
+    enabled_derived_data_types: dyn EnabledDerivedDataTypes,
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
     #[facet]
@@ -160,6 +166,8 @@ enum DerivedDataSubcommand {
     Derive(DeriveArgs),
     /// Derive data for a slice of commits
     DeriveSlice(DeriveSliceArgs),
+    /// Inspect and manage the enabled_derived_data_types table
+    EnabledTypes(EnabledTypesArgs),
     /// Check if derived data has been generated
     Exists(ExistsArgs),
     /// Fetch previously derived data for the given commits
@@ -186,6 +194,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // BackfillAbort doesn't require opening a repo
     if let DerivedDataSubcommand::BackfillAbort(backfill_abort_args) = args.subcommand {
         return backfill_abort(ctx, &app, backfill_abort_args).await;
+    }
+
+    // EnabledTypes opens its own repo per action (from its own -R flag) and
+    // ignores the top-level repo args.
+    if let DerivedDataSubcommand::EnabledTypes(enabled_types_args) = args.subcommand {
+        return enabled_types(&ctx, &app, enabled_types_args).await;
     }
 
     let repo_arg_list = args.repo.ids_or_names();
@@ -270,7 +284,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let repo: Repo = match &args.subcommand {
         DerivedDataSubcommand::BackfillAbort(_)
         | DerivedDataSubcommand::BackfillEnqueue(_)
-        | DerivedDataSubcommand::BackfillStatus(_) => {
+        | DerivedDataSubcommand::BackfillStatus(_)
+        | DerivedDataSubcommand::EnabledTypes(_) => {
             unreachable!("handled above")
         }
         DerivedDataSubcommand::Exists(_)
@@ -321,7 +336,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         DerivedDataSubcommand::BackfillAbort(_)
         | DerivedDataSubcommand::BackfillEnqueue(_)
-        | DerivedDataSubcommand::BackfillStatus(_) => {
+        | DerivedDataSubcommand::BackfillStatus(_)
+        | DerivedDataSubcommand::EnabledTypes(_) => {
             unreachable!("handled above")
         }
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, &manager, args).await?,

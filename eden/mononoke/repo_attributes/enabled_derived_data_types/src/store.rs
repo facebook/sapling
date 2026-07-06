@@ -57,6 +57,13 @@ mononoke_queries! {
         mysql("INSERT INTO enabled_derived_data_types (repo_id, derived_data_type, root_request_id) VALUES ({repo_id}, {derived_data_type}, {root_request_id}) ON DUPLICATE KEY UPDATE repo_id = repo_id")
         sqlite("INSERT OR IGNORE INTO enabled_derived_data_types (repo_id, derived_data_type, root_request_id) VALUES ({repo_id}, {derived_data_type}, {root_request_id})")
     }
+
+    // Idempotent delete: removing an absent row affects zero rows and succeeds.
+    write MarkDisabled(repo_id: RepositoryId, derived_data_type: SqlDerivableType) {
+        none,
+        "DELETE FROM enabled_derived_data_types
+         WHERE repo_id = {repo_id} AND derived_data_type = {derived_data_type}"
+    }
 }
 
 fn row_to_entry(row: (RepositoryId, SqlDerivableType, Option<u64>)) -> EnabledDerivedDataTypeEntry {
@@ -132,6 +139,22 @@ impl EnabledDerivedDataTypes for SqlEnabledDerivedDataTypes {
             &repo_id,
             &SqlDerivableType(derived_data_type),
             &root_request_id,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn mark_disabled(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        derived_data_type: DerivableType,
+    ) -> Result<()> {
+        MarkDisabled::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &SqlDerivableType(derived_data_type),
         )
         .await?;
         Ok(())
@@ -218,6 +241,38 @@ mod test {
             Some(42),
             "the original root_request_id must be preserved on idempotent re-mark"
         );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_mark_disabled(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let store = SqlEnabledDerivedDataTypesBuilder::with_sqlite_in_memory()?.build();
+
+        let repo_id = RepositoryId::new(1);
+        let ddt = DerivableType::GitDeltaManifestsV3;
+        let other = DerivableType::Unodes;
+
+        // Disabling an absent row is a no-op success.
+        store.mark_disabled(&ctx, repo_id, ddt).await?;
+
+        store.mark_enabled(&ctx, repo_id, ddt, Some(42)).await?;
+        store.mark_enabled(&ctx, repo_id, other, None).await?;
+
+        store.mark_disabled(&ctx, repo_id, ddt).await?;
+
+        let enabled = store
+            .get_enabled_types(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
+        assert_eq!(
+            enabled,
+            vec![other],
+            "only the disabled type should be removed; the other remains"
+        );
+
+        // Disabling the same row again is still a no-op success.
+        store.mark_disabled(&ctx, repo_id, ddt).await?;
 
         Ok(())
     }
