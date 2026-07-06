@@ -1627,3 +1627,70 @@ async fn test_octopus_step_parent_only_file_parity(fb: FacebookInit) -> Result<(
 
     Ok(())
 }
+
+/// Octopus merge where a Bonsai delete cancels the step-parent's only
+/// distinct contribution, making the merged tree equal to p1.
+///
+/// This is the reuse case not covered by the previous octopus tests: those
+/// leave p3's distinct contribution in the merge, so both paths create fresh
+/// envelopes and can agree even with a too-tight reuse guard.
+#[mononoke::fbinit_test]
+async fn test_octopus_merge_bonsai_delete_cancels_step_parent_subdir(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: p1 and p2 have identical `dir/` trees, while p3 differs only by
+    // adding `dir/extra`. After parent dedup, the directory parents are the
+    // shape `[Traced(0, X_dir), Traced(2, Y_dir)]`: more than one parent is
+    // present, but only p1 is hg-relevant.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "a")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "a")
+        .commit()
+        .await?;
+    let p3 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "a")
+        .add_file("dir/extra", "b")
+        .commit()
+        .await?;
+    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
+    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
+    let aug_p3 = derive_parent_aug(&ctx, &repo, p3).await?;
+    assert_eq!(
+        aug_p1, aug_p2,
+        "Test setup invariant: p1 and p2 must have identical augmented manifest ids",
+    );
+    assert_ne!(
+        aug_p1, aug_p3,
+        "Test setup invariant: p3 must differ from p1",
+    );
+
+    // When: the merge deletes `dir/extra`, cancelling p3's distinct
+    // contribution and making the merged `dir/` content equal to p1.
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+        .delete_file("dir/extra")
+        .commit()
+        .await?;
+
+    // Then: direct derivation matches the existing path and reuses p1's root
+    // augmented manifest. A guard like `p1.is_some() && p2.is_some()` would
+    // skip reuse here and produce a fresh divergent manifest id.
+    let derived = assert_dual_derive_agree(
+        &ctx,
+        &repo,
+        merge,
+        &[aug_p1, aug_p2, aug_p3],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+    assert_eq!(
+        derived, aug_p1,
+        "delete-cancelled merge should reuse p1's augmented manifest",
+    );
+
+    Ok(())
+}
