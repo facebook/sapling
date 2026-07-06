@@ -54,6 +54,13 @@ impl CoreRepo {
         }
     }
 
+    pub fn set_permission_denied_paths(&mut self, paths: context::PermissionDeniedPaths) {
+        match self {
+            CoreRepo::Disk(repo) => repo.set_permission_denied_paths(paths),
+            CoreRepo::Slapi(repo) => repo.set_permission_denied_paths(paths),
+        }
+    }
+
     /// Get the tree resolver.
     pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
         match self {

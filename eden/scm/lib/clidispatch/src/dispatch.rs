@@ -418,8 +418,8 @@ impl Dispatcher {
             let permission_denied_paths: context::PermissionDeniedPaths = Default::default();
 
             // Set permission denied paths on repo so tree store can record them.
-            if let Some(repo) = self.repo_mut_optional() {
-                repo.set_permission_denied_paths(permission_denied_paths.clone());
+            if let Some(core_repo) = self.core_repo_mut_optional() {
+                core_repo.set_permission_denied_paths(permission_denied_paths.clone());
             }
 
             let res = match handler.func() {
@@ -477,9 +477,9 @@ impl Dispatcher {
         (Some(handler), res)
     }
 
-    fn repo_mut_optional(&mut self) -> Option<&mut Repo> {
+    fn core_repo_mut_optional(&mut self) -> Option<&mut CoreRepo> {
         match &mut self.optional_repo {
-            OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) => Some(repo),
+            OptionalRepo::CoreRepo(core_repo) => Some(core_repo),
             _ => None,
         }
     }

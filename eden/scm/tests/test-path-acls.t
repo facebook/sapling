@@ -97,9 +97,12 @@ Rust commands also warn about restricted paths:
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-Current behavior: repoless cat does not warn when a traversal skips restricted paths.
+Repoless cat warns when a traversal skips restricted paths.
   $ sl cat -R test:server -r $A 'glob:**.txt'
   regular content
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
 
 Matcher-scoped BFS should not check ACLs under directories it will not visit:
 

@@ -50,6 +50,7 @@ pub struct SlapiRepo {
     file_store: OnceLock<Arc<dyn FileStore>>,
     tree_store: OnceLock<Arc<dyn TreeStore>>,
     tree_resolver: OnceLock<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    permission_denied_paths: Option<context::PermissionDeniedPaths>,
 }
 
 impl SlapiRepo {
@@ -77,6 +78,7 @@ impl SlapiRepo {
             file_store: Default::default(),
             tree_store: Default::default(),
             tree_resolver: Default::default(),
+            permission_denied_paths: None,
         })
     }
 
@@ -121,11 +123,20 @@ impl SlapiRepo {
                 .downcast_ref::<ArcFileStore>()
                 .map(|fs| fs.0.clone())
         });
-        let ts = build_scm_tree_store(self, fs, None)?;
+        let ts = build_scm_tree_store(self, fs, self.permission_denied_paths.clone())?;
         let ts: Arc<dyn TreeStore> = ts;
         let _ = self.tree_store.set(ts.clone());
 
         Ok(ts)
+    }
+
+    pub fn set_permission_denied_paths(&mut self, paths: context::PermissionDeniedPaths) {
+        if self.tree_store.get().is_some() {
+            tracing::warn!(
+                "setting permission denied paths after SLAPI tree store initialization; path ACL warnings may be incomplete"
+            );
+        }
+        self.permission_denied_paths = Some(paths);
     }
 
     /// Get the tree resolver, constructing it if necessary.
