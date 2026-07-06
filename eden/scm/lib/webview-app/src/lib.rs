@@ -111,6 +111,9 @@ pub struct ISLSpawnOptions {
     pub tls_cert: Option<String>,
     /// Path to a TLS key file, to serve over HTTPS. Set together with `tls_cert`.
     pub tls_key: Option<String>,
+    /// Keep the server running when all clients have disconnected, instead of exiting when idle.
+    #[serde(default)]
+    pub persist: bool,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -163,6 +166,9 @@ impl ISLSpawnOptions {
         }
         if let Some(key) = &self.tls_key {
             cmd.args(["--key", key]);
+        }
+        if self.persist {
+            cmd.arg("--persist");
         }
         cmd.stdin(Stdio::null());
         if pipe_stdout {

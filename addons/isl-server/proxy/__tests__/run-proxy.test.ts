@@ -96,6 +96,7 @@ describe('run-proxy', () => {
     bind: 'localhost',
     tlsCert: undefined,
     tlsKey: undefined,
+    persist: false,
   };
 
   it('spawns a server', async () => {
@@ -259,6 +260,30 @@ describe('run-proxy', () => {
     );
   });
 
+  it('forces a fresh server if --persist is requested and the existing server is not persistent', async () => {
+    jest
+      .spyOn(startServer, 'startServer')
+      .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}))
+      .mockImplementationOnce(() => Promise.resolve({type: 'addressInUse'}))
+      .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1001}));
+
+    jest.spyOn(lifecycle, 'checkIfServerIsAliveAndIsISL').mockImplementation(() => {
+      return Promise.resolve(1000);
+    });
+
+    await runProxyMain(defaultArgs);
+    resetStdout();
+
+    await runProxyMain({...defaultArgs, persist: true, json: true});
+
+    expect(killMock).toHaveBeenCalled();
+    expect(JSON.parse(allConsoleStdout())).toEqual(
+      expect.objectContaining({
+        wasServerReused: false,
+      }),
+    );
+  });
+
   it('can kill a server', async () => {
     const startServerSpy = jest
       .spyOn(startServer, 'startServer')
@@ -368,6 +393,19 @@ describe('argument parsing', () => {
     expect(parseArgs(['--bind', '0.0.0.0'])).toEqual(
       expect.objectContaining({
         bind: '0.0.0.0',
+      }),
+    );
+  });
+
+  it('--persist is parsed', () => {
+    expect(parseArgs(['--persist'])).toEqual(
+      expect.objectContaining({
+        persist: true,
+      }),
+    );
+    expect(parseArgs([])).toEqual(
+      expect.objectContaining({
+        persist: false,
       }),
     );
   });

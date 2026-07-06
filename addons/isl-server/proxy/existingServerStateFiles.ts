@@ -30,6 +30,8 @@ export type ExistingServerInfo = {
   tlsCert?: string;
   /** Path to TLS key file. Optional for backwards compat. */
   tlsKey?: string;
+  /** Whether the server keeps running when idle. Optional for backwards compat. */
+  persist?: boolean;
 };
 
 const cacheDir =

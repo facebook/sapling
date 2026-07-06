@@ -36,6 +36,8 @@ export type StartServerArgs = {
   bind: string;
   tlsCert?: string;
   tlsKey?: string;
+  /** Keep running when all clients have disconnected, instead of exiting after an idle minute. */
+  persist: boolean;
 };
 
 export type StartServerResult =
@@ -61,6 +63,7 @@ export function startServer({
   bind,
   tlsCert,
   tlsKey,
+  persist,
 }: StartServerArgs): Promise<StartServerResult> {
   const originalProcessCwd = process.cwd();
   const serverRoot = path.isAbsolute(ossSmartlogDir)
@@ -261,7 +264,7 @@ export function startServer({
         // This way, we only reuse servers if you keep the tab open.
         // Note: since we trigger this cleanup on dispose, if you start a server with `--no-open`,
         // it won't clean itself up until you connect at least once.
-        if (!foreground) {
+        if (!foreground && !persist) {
           // We do this on a 1-minute delay in case you close a tab and quickly re-open it.
           setTimeout(() => {
             checkIfServerShouldCleanItselfUp();

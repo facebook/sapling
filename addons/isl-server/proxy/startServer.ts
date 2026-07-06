@@ -48,6 +48,8 @@ optional arguments:
   --session id     Provide a specific ID for this session used in analytics.
   --bind host      Hostname or IP to bind to (default: localhost).
                    Use 'all' to bind to :: (IPv6 dual-stack, accepts both IPv4 and IPv6).
+  --persist        Keep the server running after the last client disconnects,
+                   instead of shutting down after a minute of being idle.
   --cert path      Path to TLS certificate file. Must be used together with --key.
   --key path       Path to TLS key file. Must be used together with --cert.
 `;
@@ -92,6 +94,7 @@ type Args = {
   bind: string | undefined;
   tlsCert: string | undefined;
   tlsKey: string | undefined;
+  persist: boolean;
 };
 
 // Rudimentary arg parser to avoid the need for a third-party dependency.
@@ -119,6 +122,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
   let bind: string | undefined = undefined;
   let tlsCert: string | undefined = undefined;
   let tlsKey: string | undefined = undefined;
+  let persist = false;
   let i = 0;
   function consumeArgValue(arg: string) {
     if (i >= len) {
@@ -212,6 +216,10 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
         tlsKey = consumeArgValue(arg);
         break;
       }
+      case '--persist': {
+        persist = true;
+        break;
+      }
       case '--help':
       case '-h': {
         help = true;
@@ -262,6 +270,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
     bind,
     tlsCert,
     tlsKey,
+    persist,
   };
 }
 
@@ -389,6 +398,7 @@ export async function runProxyMain(args: Args) {
     bind,
     tlsCert,
     tlsKey,
+    persist,
   } = args;
   if (help) {
     errorAndExit(HELP_MESSAGE, 0);
@@ -520,6 +530,7 @@ export async function runProxyMain(args: Args) {
     bind: bind ?? 'localhost',
     tlsCert,
     tlsKey,
+    persist,
   });
 
   if (result.type === 'addressInUse' && !force) {
@@ -582,6 +593,11 @@ export async function runProxyMain(args: Args) {
         'warning: Starting a fresh server to use the requested TLS configuration (existing server uses a different one).',
       );
       killAndSpawnAgain = true;
+    } else if (persist && !(existingServerInfo.persist ?? false)) {
+      info(
+        'warning: Starting a fresh server because --persist was requested (existing server shuts down when idle).',
+      );
+      killAndSpawnAgain = true;
     }
 
     if (killAndSpawnAgain) {
@@ -638,6 +654,7 @@ export async function runProxyMain(args: Args) {
         bind: bind ?? 'localhost',
         tlsCert,
         tlsKey,
+        persist,
       });
     } catch (error) {
       info(

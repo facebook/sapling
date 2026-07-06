@@ -121,6 +121,15 @@ DEFAULT_PORT = 3011
                 "specified. (ADVANCED)"
             ),
         ),
+        (
+            "",
+            "persist",
+            False,
+            _(
+                "keep the server running after the last client disconnects, "
+                "instead of shutting down when idle (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, **opts):
@@ -183,6 +192,7 @@ def isl_cmd(ui, repo, **opts):
     bind = opts.get("bind")
     cert = opts.get("cert")
     key = opts.get("key")
+    persist = opts.get("persist")
     if bool(cert) != bool(key):
         raise error.Abort(_("--cert and --key must be used together"))
     if bind and not (cert and key):
@@ -219,6 +229,7 @@ def isl_cmd(ui, repo, **opts):
             "bind": bind or None,
             "tlsCert": cert or None,
             "tlsKey": key or None,
+            "persist": bool(persist),
             "chromelike_user_data_dir": repo.ui.config(
                 "isl", "chromelike-user-data-dir"
             ),
