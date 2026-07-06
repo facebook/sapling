@@ -3844,15 +3844,16 @@ async fn test_direct_derivation_rebuilt_subtree_copy_reuses_nested_directory_wit
     .await
 }
 
-/// Exact subtree copy into restricted destination paths.
+/// Exact subtree copy reuses the source subtree, so destination restricted paths are not recorded.
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_subtree_copy_tracks_restricted_destination(
+async fn test_direct_derivation_subtree_copy_reuses_restricted_destination_without_rows(
     fb: FacebookInit,
 ) -> Result<()> {
     with_just_knobs_async(
         restricted_paths_access_logging_knobs(true),
         async move {
-            // Given: restricted-path logging is enabled for the copied destination and its child.
+            // Given: restricted-path logging is enabled for copied destination roots
+            // that are not present at the source path.
             let ctx = CoreContext::test_mock(fb);
             let repo = build_repo_with_restricted_path_config(
                 fb,
@@ -3889,16 +3890,13 @@ async fn test_direct_derivation_subtree_copy_tracks_restricted_destination(
             )
             .await?;
 
-            // Then: both destination restriction roots are tracked for HgAugmented manifests.
+            // Then: no destination restriction rows are recorded because the copied
+            // subtree is reused rather than rebuilt.
             let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
-            for expected_path in [RepoPath::dir("dst")?, RepoPath::dir("dst/inner")?] {
-                assert!(
-                    entries
-                        .iter()
-                        .any(|entry| entry.repo_path().is_ok_and(|path| path == expected_path)),
-                    "expected an HgAugmented restricted-path entry for {expected_path:?}, got {entries:?}",
-                );
-            }
+            assert!(
+                entries.is_empty(),
+                "exact copied subtree should not record destination restricted-path rows, got {entries:?}",
+            );
 
             Ok(())
         }
@@ -3907,16 +3905,15 @@ async fn test_direct_derivation_subtree_copy_tracks_restricted_destination(
     .await
 }
 
-/// Reproduces restricted-paths tracking gap `new-restricted-paths-tracking-1`.
+/// Rebuilt copy destinations do not walk reused copied partial maps for nested restriction roots.
 ///
-/// An exact whole-directory subtree copy tracks nested restriction roots via
-/// `track_restricted_paths_for_existing_directory`. When the copy destination
-/// also carries overlapping file changes, `dst/` is rebuilt and an unchanged
-/// restriction root below it is spliced in as a reused partial map
-/// (`LookupSubtree`). The direct path must still track the destination path,
-/// matching the legacy HgManifest path that walks the rebuilt `dst/` as `New`.
+/// When a copy destination also carries overlapping file changes, `dst/` is
+/// rebuilt but an unchanged restriction root below it is spliced in as a reused
+/// partial map. Matching `create_hg_manifest`, direct derivation records only
+/// rebuilt directories and does not record nested rows that arrive via reused
+/// copied subtrees.
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restricted(
+async fn test_direct_derivation_subtree_copy_rebuilt_dest_skips_nested_reused_restricted(
     fb: FacebookInit,
 ) -> Result<()> {
     with_just_knobs_async(
@@ -3924,11 +3921,9 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
         async move {
             // Given: only the nested directory `dst/inner` is a restriction root.
             let ctx = CoreContext::test_mock(fb);
-            let repo = build_repo_with_restricted_path_config(
-                fb,
-                vec![NonRootMPath::new("dst/inner")?],
-            )
-            .await?;
+            let repo =
+                build_repo_with_restricted_path_config(fb, vec![NonRootMPath::new("dst/inner")?])
+                    .await?;
             let source = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("src/a.txt", "old a")
                 .add_file("src/b.txt", "old b")
@@ -3960,14 +3955,15 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
             )
             .await?;
 
-            // Then: the reused copied partial map still records the destination restriction root.
+            // Then: the nested reused copied partial map does not record a
+            // destination restriction row.
             let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
             let expected_path = RepoPath::dir("dst/inner")?;
             assert!(
-                entries
+                !entries
                     .iter()
                     .any(|entry| entry.repo_path().is_ok_and(|path| path == expected_path)),
-                "expected an HgAugmented restricted-path entry for {expected_path:?}, got {entries:?}",
+                "reused copied child {expected_path:?} should not be recorded, got {entries:?}",
             );
 
             Ok(())
@@ -3977,33 +3973,25 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
     .await
 }
 
-/// Restricted-path tracking for copied destinations runs after derivation and
-/// walks the final root to find restriction roots below the copy. That walk can
-/// need a reused nested copied envelope that derivation itself intentionally
-/// never loaded. Such an optional access-logging lookup must not fail the whole
-/// augmented-manifest derivation; tracking is best-effort and logs on failure.
+/// Bonsai-direct copied-destination restricted-path rows match `create_hg_manifest` behavior.
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_copied_restricted_tracking_survives_denied_nested_envelope(
+async fn test_direct_derivation_subtree_copy_restricted_destination_rows_match_hg_manifest(
     fb: FacebookInit,
 ) -> Result<()> {
     with_just_knobs_async(
         restricted_paths_access_logging_knobs(true),
         async move {
-            // Given: `dst/inner/deeper` is a restriction root two levels under the
-            // copy destination, a source whose `src/inner` subtree the rebuilt copy
-            // reuses without loading, and a blobstore that denies loads of that
-            // reused nested envelope — the exact envelope the post-derivation
-            // tracking walk must traverse to reach `dst/inner/deeper`.
+            // Given: config restricted paths protect only the subtree-copy destination
+            // and its nested child, not the source.
             let ctx = CoreContext::test_mock(fb);
             let repo = build_repo_with_restricted_path_config(
                 fb,
-                vec![NonRootMPath::new("dst/inner/deeper")?],
+                vec![NonRootMPath::new("dst")?, NonRootMPath::new("dst/inner")?],
             )
             .await?;
             let source = CreateCommitContext::new_root(&ctx, &repo)
-                .add_file("src/a.txt", "old a")
-                .add_file("src/b.txt", "old b")
-                .add_file("src/inner/deeper/deep.txt", "deep secret")
+                .add_file("src/secret.txt", "secret")
+                .add_file("src/inner/deep.txt", "deep secret")
                 .commit()
                 .await?;
             let child = save_bonsai_with_subtree_changes(
@@ -4011,51 +3999,56 @@ async fn test_direct_derivation_copied_restricted_tracking_survives_denied_neste
                 &repo,
                 vec![source],
                 vec![subtree_copy("dst", "src", source)?],
-                vec![("dst/a.txt", Some("new a")), ("dst/b.txt", None)],
+                vec![],
             )
             .await?;
-            let blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
-            let source_aug =
-                derive_into_overlay(&ctx, &repo, &blobstore, source, vec![], (None, None)).await?;
-            let denied_key = match source_aug
-                .find_entry(ctx.clone(), blobstore.clone(), MPath::new("src/inner")?)
-                .await?
-                .context("source fixture must contain src/inner")?
-            {
-                Entry::Tree(inner_id) => inner_id.blobstore_key(),
-                Entry::Leaf(_) => panic!("src/inner must be a directory"),
-            };
-            let denying_blobstore =
-                DenyGetKeyedBlobstore::new(blobstore.clone(), denied_key.clone());
-            let subtree_source_augs = HashMap::from([(source, source_aug)]);
 
-            // When: deriving the rebuilt copy destination while the tracking walk
-            // would have to load the denied nested envelope.
-            let result = derive_into_overlay_with_subtrees(
+            // When: deriving the copied child through HgManifest and through
+            // Bonsai-direct augmented derivation.
+            repo.derive_hg_changeset(&ctx, source).await?;
+            repo.derive_hg_changeset(&ctx, child).await?;
+            let overlay = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+            let source_aug =
+                derive_into_overlay(&ctx, &repo, &overlay, source, vec![], (None, None)).await?;
+            let subtree_source_augs = HashMap::from([(source, source_aug)]);
+            derive_into_overlay_with_subtrees(
                 &ctx,
                 &repo,
-                &denying_blobstore,
+                &overlay,
                 child,
                 vec![source_aug],
                 (Some(source), None),
                 &subtree_source_augs,
             )
-            .await;
+            .await?;
 
-            // Then: derivation succeeds, and the restriction root whose lookup
-            // failed is skipped rather than fatally propagated.
-            assert!(
-                result.is_ok(),
-                "copied restricted-path tracking must be best-effort; a denied nested envelope should not fail derivation, got {result:?}",
-            );
-            let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
-            let denied_path = RepoPath::dir("dst/inner/deeper")?;
-            assert!(
-                !entries
-                    .iter()
-                    .any(|entry| entry.repo_path().is_ok_and(|path| path == denied_path)),
-                "restriction root {denied_path:?} whose tracking lookup was denied should be skipped, got {entries:?}",
-            );
+            // Then: both paths skip destination rows for reused copied subtrees.
+            let entries = repo
+                .restricted_paths()
+                .config_based()
+                .manifest_id_store()
+                .get_all_entries(&ctx)
+                .await?;
+            let hg_paths: Vec<_> = entries
+                .iter()
+                .filter(|entry| entry.manifest_type == ManifestType::Hg)
+                .map(|entry| entry.repo_path())
+                .collect::<Result<_>>()?;
+            let direct_entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
+            let direct_paths: Vec<_> = direct_entries
+                .iter()
+                .map(|entry| entry.repo_path())
+                .collect::<Result<_>>()?;
+            for expected_path in [RepoPath::dir("dst")?, RepoPath::dir("dst/inner")?] {
+                assert!(
+                    !hg_paths.contains(&expected_path),
+                    "HgManifest should not record reused copied destination row {expected_path:?}, got {entries:?}",
+                );
+                assert!(
+                    !direct_paths.contains(&expected_path),
+                    "Bonsai-direct should match HgManifest and not record reused copied destination row {expected_path:?}, got {direct_entries:?}",
+                );
+            }
 
             Ok(())
         }

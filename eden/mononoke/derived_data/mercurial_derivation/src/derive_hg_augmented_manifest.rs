@@ -33,7 +33,6 @@ use manifest::LeafInfo;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
-use manifest::PathOrPrefix;
 use manifest::Span;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
@@ -1139,150 +1138,6 @@ fn collect_augmented_subentries(
     Ok(direct)
 }
 
-fn restricted_paths_under_copied_destination(
-    destination_path: &NonRootMPath,
-    restricted_paths: &ArcRestrictedPathsConfigBased,
-) -> Vec<NonRootMPath> {
-    restricted_paths
-        .config()
-        .path_restriction_metadata
-        .iter()
-        .filter_map(|(restricted_path, metadata)| {
-            if metadata.read_only {
-                return None;
-            }
-            if restricted_path == destination_path
-                || restricted_path
-                    .remove_prefix_component(destination_path)
-                    .is_some()
-            {
-                Some(restricted_path.clone())
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-fn restricted_path_manifest_id_entry(
-    path: NonRootMPath,
-    id: HgAugmentedManifestId,
-) -> Result<RestrictedPathManifestIdEntry> {
-    RestrictedPathManifestIdEntry::new(
-        ManifestType::HgAugmented,
-        id.to_string().into(),
-        RepoPath::DirectoryPath(path),
-    )
-}
-
-async fn resolve_copied_restricted_path_entries(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    final_root_id: HgAugmentedManifestId,
-    destination_path: &NonRootMPath,
-    restricted_config: &ArcRestrictedPathsConfigBased,
-) -> Result<Vec<RestrictedPathManifestIdEntry>> {
-    let restricted_paths =
-        restricted_paths_under_copied_destination(destination_path, restricted_config);
-    if restricted_paths.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let lookup_paths_by_restricted_path: HashMap<_, _> = restricted_paths
-        .into_iter()
-        .map(|path| (MPath::from(path.clone()), path))
-        .collect();
-    let lookup_paths: Vec<_> = lookup_paths_by_restricted_path
-        .keys()
-        .cloned()
-        .map(PathOrPrefix::Path)
-        .collect();
-    let found_entries: Vec<_> = final_root_id
-        .find_entries(ctx.clone(), Arc::clone(blobstore), lookup_paths)
-        .try_collect()
-        .await?;
-
-    let mut entries = Vec::new();
-    for (lookup_path, entry) in found_entries {
-        let Some(path) = lookup_paths_by_restricted_path.get(&lookup_path).cloned() else {
-            continue;
-        };
-        match entry {
-            Entry::Tree(id) => {
-                entries.push(restricted_path_manifest_id_entry(path, id)?);
-            }
-            Entry::Leaf(_) => {
-                warn!(
-                    "Restricted path {path} under copied subtree {destination_path} is a file, not a directory"
-                );
-            }
-        }
-    }
-
-    Ok(entries)
-}
-
-async fn add_copied_restricted_path_entries(
-    ctx: &CoreContext,
-    restricted_paths: &ArcRestrictedPathsConfigBased,
-    destination_path: &NonRootMPath,
-    entries: Vec<RestrictedPathManifestIdEntry>,
-) {
-    if entries.is_empty() {
-        return;
-    }
-
-    if let Err(e) = restricted_paths
-        .manifest_id_store()
-        .add_entries(ctx, &entries)
-        .await
-    {
-        warn!("Failed to track restricted paths for copied subtree at {destination_path}: {e}");
-    }
-}
-
-/// Track restricted-path entries for subtree-copy destinations after the final
-/// root is known, so reused and rebuilt copied paths both record the id that is
-/// actually present at the destination.
-async fn track_restricted_paths_for_copied_destinations(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    final_root_id: HgAugmentedManifestId,
-    destination_paths: &[MPath],
-    restricted_paths: &ArcRestrictedPathsConfigBased,
-) -> Result<()> {
-    for destination_path in destination_paths {
-        let Some(destination_path) = destination_path.clone().into_optional_non_root_path() else {
-            continue;
-        };
-        // Restricted-path tracking is best-effort access logging, not part of
-        // the derived data. Resolving a destination can require loading a reused
-        // nested copied envelope that derivation itself never loaded, so a
-        // missing/denied envelope here must not fail derivation; log and skip,
-        // matching `add_copied_restricted_path_entries`' store-write behavior.
-        let entries = match resolve_copied_restricted_path_entries(
-            ctx,
-            blobstore,
-            final_root_id,
-            &destination_path,
-            restricted_paths,
-        )
-        .await
-        {
-            Ok(entries) => entries,
-            Err(e) => {
-                warn!(
-                    "Failed to resolve restricted paths for copied subtree at {destination_path}: {e}"
-                );
-                continue;
-            }
-        };
-        add_copied_restricted_path_entries(ctx, restricted_paths, &destination_path, entries).await;
-    }
-
-    Ok(())
-}
-
 fn root_envelope_is_content_derived(envelope: &HgAugmentedManifestEnvelope) -> bool {
     envelope.augmented_manifest.hg_node_id == envelope.augmented_manifest.computed_node_id
 }
@@ -1618,10 +1473,6 @@ where
         .await?;
     let root_parents_indexed = parents_indexed.clone();
 
-    let copied_subtree_destination_paths: Vec<_> = subtree_replacements
-        .iter()
-        .map(|replacement| replacement.path.clone())
-        .collect();
     let subtree_replacements =
         index_augmented_subtree_replacements(ctx, blobstore, subtree_replacements).await?;
 
@@ -1731,17 +1582,6 @@ where
             indexed_augmented_manifest_id(&root_dir)
         }
     };
-
-    if restricted_paths_enabled {
-        track_restricted_paths_for_copied_destinations(
-            ctx,
-            &blobstore_arc,
-            final_root_id,
-            &copied_subtree_destination_paths,
-            &restricted_paths_arc,
-        )
-        .await?;
-    }
 
     Ok(final_root_id)
 }
