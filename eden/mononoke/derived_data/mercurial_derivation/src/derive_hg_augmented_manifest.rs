@@ -32,6 +32,8 @@ use manifest::ManifestComparison;
 use manifest::ManifestOps;
 use manifest::Span;
 use manifest::Traced;
+use manifest::TreeInfo;
+use manifest::TreeInfoSubentries;
 use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
@@ -59,11 +61,13 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrackedFileChange;
 use mononoke_types::TrieMap;
 use mononoke_types::acl_manifest::AclManifest;
 use mononoke_types::acl_manifest::AclManifestEntry;
 use mononoke_types::hash::Blake3;
+use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestId;
@@ -813,6 +817,12 @@ enum AugmentedDeriveContext {
     /// A leaf was freshly created or resolved. The leaf value itself carries all
     /// data the parent tree needs, so there is no extra directory metadata.
     Leaf,
+    /// A directory was freshly created or re-emitted. Propagate the envelope
+    /// metadata so the parent tree can embed it without reloading the child.
+    Directory {
+        augmented_manifest_id: Blake3,
+        augmented_manifest_size: u64,
+    },
 }
 
 /// Leaf callback for derive_manifest: creates an HgAugmentedFileLeafNode
@@ -912,6 +922,432 @@ async fn create_augmented_leaf(
     // Newly created leaf: no parent index. The context tells the parent tree
     // callback this entry came from the leaf callback.
     Ok((AugmentedDeriveContext::Leaf, Traced::generate(leaf)))
+}
+
+// ---------------------------------------------------------------------------
+// Tree callback: types and helpers
+// ---------------------------------------------------------------------------
+
+/// Augmented subentries built up inside `create_augmented_tree`: either a
+/// directly-placed entry (`Left`) or a reused parent subtree to be spliced in
+/// by `ShardedMapV2Node::from_entries_and_partial_maps` (`Right`).
+type AugmentedSubentriesMap =
+    TrieMap<Either<HgAugmentedManifestEntry, LoadableShardedMapV2Node<HgAugmentedManifestEntry>>>;
+
+type AugmentedTree = Traced<ParentIndex, HgAugmentedManifestId>;
+type AugmentedLeaf = Traced<ParentIndex, HgAugmentedFileLeafNode>;
+type AugmentedEntry = Entry<AugmentedTree, AugmentedLeaf>;
+
+/// Raw shape emitted by `derive_manifest` for one tree subentry.
+type RawAugmentedSubentry =
+    Either<(Option<AugmentedDeriveContext>, AugmentedEntry), SortedVectorTrieMap<AugmentedEntry>>;
+
+/// Shape of `tree_info.subentries` for the augmented-manifest tree callback.
+type AugmentedTreeCallbackSubentries = TreeInfoSubentries<
+    AugmentedTree,
+    AugmentedLeaf,
+    AugmentedDeriveContext,
+    SortedVectorTrieMap<AugmentedEntry>,
+>;
+
+/// Semantic wrapper for the raw `derive_manifest` subentry shape.
+enum AugmentedTreeSubentry {
+    /// One child entry, with optional callback context if it was freshly
+    /// produced by a child callback.
+    Entry {
+        ctx: Option<AugmentedDeriveContext>,
+        entry: AugmentedEntry,
+    },
+    /// Whole parent subtree reused by `manifest::derive::merge_subentries`.
+    ReusedSubtree(SortedVectorTrieMap<AugmentedEntry>),
+}
+
+impl From<RawAugmentedSubentry> for AugmentedTreeSubentry {
+    fn from(value: RawAugmentedSubentry) -> Self {
+        match value {
+            Either::Left((ctx, entry)) => Self::Entry { ctx, entry },
+            Either::Right(entries) => Self::ReusedSubtree(entries),
+        }
+    }
+}
+
+/// What `create_augmented_tree` needs to do with one entry handed to it by
+/// `derive_manifest`.
+#[derive(Debug)]
+enum SubentryAction {
+    /// Freshly built child directory: embed using metadata propagated via
+    /// `Ctx` from the inner `create_augmented_tree` invocation.
+    PlaceFreshDirectory {
+        treenode: HgNodeHash,
+        aug_id: Blake3,
+        aug_size: u64,
+    },
+    /// Any leaf — fresh or reused. The framework's leaf type already carries
+    /// the full `HgAugmentedFileLeafNode`, so we just embed it.
+    PlaceLeaf(HgAugmentedFileLeafNode),
+    /// Reused single child (`MergeResult::Reuse`): fetch the rich entry from
+    /// the originating parent's sharded map.
+    LookupSingle { parent: ParentIndex },
+    /// Reused subtree: splice the parent's partial map straight into the new
+    /// sharded map, with no per-child loads.
+    LookupSubtree { parent: ParentIndex },
+}
+
+impl SubentryAction {
+    /// Classify one `tree_info.subentries` value into the action it needs.
+    fn classify(value: AugmentedTreeSubentry) -> Result<Self> {
+        match value {
+            AugmentedTreeSubentry::Entry {
+                ctx,
+                entry: Entry::Leaf(traced_leaf),
+            } => match ctx {
+                Some(AugmentedDeriveContext::Directory { .. }) => {
+                    bail!("directory derive context attached to leaf entry")
+                }
+                Some(AugmentedDeriveContext::Leaf) | None => {
+                    Ok(Self::PlaceLeaf(traced_leaf.into_untraced()))
+                }
+            },
+            AugmentedTreeSubentry::Entry {
+                ctx,
+                entry: Entry::Tree(traced_id),
+            } => match ctx {
+                Some(AugmentedDeriveContext::Directory {
+                    augmented_manifest_id,
+                    augmented_manifest_size,
+                }) => Ok(Self::PlaceFreshDirectory {
+                    treenode: traced_id.into_untraced().into_nodehash(),
+                    aug_id: augmented_manifest_id,
+                    aug_size: augmented_manifest_size,
+                }),
+                Some(AugmentedDeriveContext::Leaf) => {
+                    bail!("leaf derive context attached to tree entry")
+                }
+                None => {
+                    let parent = traced_id
+                        .id()
+                        .copied()
+                        .context("Reused single child should carry a ParentIndex")?;
+                    Ok(Self::LookupSingle { parent })
+                }
+            },
+            AugmentedTreeSubentry::ReusedSubtree(trie_map) => {
+                // `manifest::derive::merge_subentries` only emits a reused subtree
+                // when `parents.len() <= 1` at the prefix, so every `Traced`
+                // entry inside agrees on the parent index. Sample the first.
+                // The rest-agree check is `debug_assert!` only — walking the
+                // whole subtree on every call costs O(children) on the hot
+                // path, and the invariant is the framework's responsibility
+                // to uphold.
+                let mut entries = trie_map.into_iter();
+                let Some((_, first)) = entries.next() else {
+                    bail!("manifest::derive should not emit an empty reused subtree");
+                };
+                let parent = entry_parent_index(&first)
+                    .context("Reused subtree entry should carry a ParentIndex")?;
+                debug_assert!(
+                    entries.all(|(_, e)| entry_parent_index(&e) == Some(parent)),
+                    "single-parent invariant violated for reused subtree (see manifest::derive::merge_subentries)",
+                );
+                Ok(Self::LookupSubtree { parent })
+            }
+        }
+    }
+}
+
+/// Extract the originating parent index from a `Traced`-wrapped entry.
+fn entry_parent_index(entry: &AugmentedEntry) -> Option<ParentIndex> {
+    match entry {
+        Entry::Tree(t) => t.id().copied(),
+        Entry::Leaf(l) => l.id().copied(),
+    }
+}
+
+/// Result of partitioning `tree_info.subentries`:
+/// * `direct` entries can be inserted into the new sharded map immediately.
+/// * `lookups_by_parent` need one batched fetch per originating parent before
+///   they can be merged into `direct`.
+struct PartitionedSubentries {
+    direct: AugmentedSubentriesMap,
+    lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>>,
+}
+
+/// Walk `tree_info.subentries` and partition them into direct placements vs
+/// per-parent lookups, dispatching on `SubentryAction`.
+fn partition_subentries(
+    subentries: AugmentedTreeCallbackSubentries,
+) -> Result<PartitionedSubentries> {
+    let mut direct = AugmentedSubentriesMap::default();
+    let mut lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>> = HashMap::new();
+
+    for (key, value) in subentries {
+        let action = SubentryAction::classify(AugmentedTreeSubentry::from(value))?;
+        // Mercurial's manifest format uses '\n' as line terminator and
+        // '\x01' as the metadata delimiter, so neither byte may appear in
+        // a path element. The legacy `create_hg_manifest` rejects these
+        // explicitly; we mirror that here for any element name we'd
+        // newly place. `LookupSubtree`'s key is a sharded-map prefix, not
+        // an element name, and the names inside were already validated
+        // when the parent was derived — skip the check there.
+        if !matches!(action, SubentryAction::LookupSubtree { .. })
+            && (key.contains(&b'\n') || key.contains(&b'\x01'))
+        {
+            bail!(
+                "Cannot derive Hg augmented manifest for a path element containing newline ('\\n') or the '\\x01' control code"
+            );
+        }
+        match action {
+            SubentryAction::PlaceFreshDirectory {
+                treenode,
+                aug_id,
+                aug_size,
+            } => {
+                direct.insert(
+                    key,
+                    Either::Left(HgAugmentedManifestEntry::DirectoryNode(
+                        HgAugmentedDirectoryNode {
+                            treenode,
+                            augmented_manifest_id: aug_id,
+                            augmented_manifest_size: aug_size,
+                            // TODO: populated by "Add ACL overlay support to
+                            // direct derivation" later in this stack.
+                            acl_manifest_directory_id: None,
+                        },
+                    )),
+                );
+            }
+            SubentryAction::PlaceLeaf(leaf) => {
+                direct.insert(key, Either::Left(HgAugmentedManifestEntry::FileNode(leaf)));
+            }
+            SubentryAction::LookupSingle { parent } => {
+                lookups_by_parent
+                    .entry(parent)
+                    .or_default()
+                    .insert(key, LookupKind::Entry);
+            }
+            SubentryAction::LookupSubtree { parent } => {
+                lookups_by_parent
+                    .entry(parent)
+                    .or_default()
+                    .insert(key, LookupKind::PartialMap);
+            }
+        }
+    }
+
+    Ok(PartitionedSubentries {
+        direct,
+        lookups_by_parent,
+    })
+}
+
+/// Resolve per-parent lookups in parallel. Loads each contributing parent's
+/// envelope once and issues one batched `get_entries_and_partial_maps` against
+/// its sharded map — the same primitive `derive_from_hg_manifest_and_parents`
+/// uses. Returns the resolved entries ready to merge into `PartitionedSubentries::direct`.
+async fn resolve_parent_lookups(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
+    lookups_by_parent: HashMap<ParentIndex, TrieMap<LookupKind>>,
+) -> Result<AugmentedSubentriesMap> {
+    if lookups_by_parent.is_empty() {
+        return Ok(AugmentedSubentriesMap::default());
+    }
+
+    // `parents` is the deduped per-directory parent list;
+    // `Traced::id()` retains each entry's original Bonsai parent index.
+    let parents_by_idx: HashMap<ParentIndex, HgAugmentedManifestId> = parents
+        .iter()
+        .filter_map(|p| Some((p.id().copied()?, *p.untraced())))
+        .collect();
+
+    let resolved: Vec<TrieMap<_>> = stream::iter(lookups_by_parent)
+        .map(|(parent_idx, lookup_keys)| {
+            // Resolve the parent id synchronously (borrowing `parents_by_idx`)
+            // so the async block only captures the `Copy` result, not the
+            // map itself — required for the `FnMut` closure to be reentrant.
+            let parent_id = parents_by_idx
+                .get(&parent_idx)
+                .copied()
+                .with_context(|| format!("Parent {parent_idx:?} missing from tree_info.parents"));
+            async move {
+                let parent_id = parent_id?;
+                // Note: `finalize_envelope`'s `try_reuse_parent_envelope` may
+                // reload p1/p2 envelopes already loaded here. The cacheblob
+                // layer typically serves the second read from memory, but
+                // it's not free — ser/deser still happens. If profiling
+                // flags this, pass pre-loaded envelopes down instead.
+                let env = parent_id.load(ctx, blobstore).await?;
+                env.augmented_manifest
+                    .subentries
+                    .get_entries_and_partial_maps(ctx, blobstore, lookup_keys, 100)
+                    .await
+            }
+        })
+        .buffer_unordered(4)
+        .try_collect()
+        .await?;
+
+    Ok(resolved.into_iter().flatten().collect())
+}
+
+/// Given the fully-merged subentries for one tree node, attempt parent reuse
+/// (mirroring `create_hg_manifest`) or otherwise compute a fresh `hg_node_id`
+/// and store the envelope. Returns the metadata to propagate through `Ctx`
+/// plus the resulting `HgAugmentedManifestId`.
+async fn finalize_envelope(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    expected_root_hg_node_id: HgNodeHash,
+    is_root: bool,
+    parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
+    subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+) -> Result<(
+    AugmentedDeriveContext,
+    Traced<ParentIndex, HgAugmentedManifestId>,
+)> {
+    // Select p1/p2 by original Bonsai parent index, not by position after
+    // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
+    // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
+    // incorrectly treat p3 as Mercurial p2.
+    let (p1, p2) = hg_parents(parents);
+    let p1_hash = p1.map(HgAugmentedManifestId::into_nodehash);
+    let p2_hash = p2.map(HgAugmentedManifestId::into_nodehash);
+
+    let own_parents = HgParents::new(p1_hash, p2_hash);
+
+    // Mirror `create_hg_manifest` parent reuse: if merged contents match an
+    // hg-relevant parent, reuse that parent's envelope instead of minting
+    // `hash(merged contents, current parents)`. The guard uses the deduped
+    // parent count — a surviving p3 can make reuse necessary even when only
+    // p1 is hg-relevant. At root, only reuse an envelope whose `hg_node_id`
+    // already matches the caller's canonical/supplied root id.
+    //
+    // TODO: when "Add ACL overlay support to direct derivation" lands later
+    // in this stack, this reuse must also verify the ACL pointer matches
+    // (currently both sides are unconditionally `None`).
+    let computed_node_id = if parents.len() > 1 {
+        match try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), p1, p2).await? {
+            ParentEnvelopeReuse::Reuse(reusable_parent)
+                if !is_root
+                    || reusable_parent.envelope.augmented_manifest.hg_node_id
+                        == expected_root_hg_node_id =>
+            {
+                return Ok((
+                    AugmentedDeriveContext::Directory {
+                        augmented_manifest_id: reusable_parent.envelope.augmented_manifest_id,
+                        augmented_manifest_size: reusable_parent.envelope.augmented_manifest_size,
+                    },
+                    Traced::generate(reusable_parent.id),
+                ));
+            }
+            ParentEnvelopeReuse::Reuse(_) => {
+                compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
+            }
+            ParentEnvelopeReuse::CreateFresh { computed_node_id } => computed_node_id,
+        }
+    } else {
+        compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
+    };
+
+    // Roots use the canonical id from `HgChangeset.manifestid()`; non-root
+    // trees use the freshly computed manifest hash.
+    let hg_node_id = if is_root {
+        expected_root_hg_node_id
+    } else {
+        computed_node_id
+    };
+
+    let augmented_manifest = ShardedHgAugmentedManifest {
+        hg_node_id,
+        p1: p1_hash,
+        p2: p2_hash,
+        computed_node_id,
+        subentries,
+        // TODO: populated by "Add ACL overlay support to direct derivation"
+        // later in this stack.
+        acl_manifest_directory_id: None,
+    };
+
+    let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
+        .clone()
+        .compute_content_addressed_digest(ctx, blobstore)
+        .await?;
+
+    let envelope = HgAugmentedManifestEnvelope {
+        augmented_manifest_id,
+        augmented_manifest_size,
+        augmented_manifest,
+    };
+
+    let hg_augmented_manifest_id = envelope.store(ctx, blobstore).await?;
+
+    // TODO: restricted-paths tracking for this envelope is added by
+    // "Add restricted-paths tracking to direct derivation" later in this
+    // stack.
+
+    // Return this envelope's metadata through `Ctx` so a parent directory can
+    // embed this child without loading it again.
+    Ok((
+        AugmentedDeriveContext::Directory {
+            augmented_manifest_id,
+            augmented_manifest_size,
+        },
+        Traced::generate(hg_augmented_manifest_id),
+    ))
+}
+
+/// Tree callback for `derive_manifest`: build and store one augmented-manifest
+/// directory.
+///
+/// `derive_manifest` may deduplicate equal parent entries. Parents therefore
+/// carry `Traced<ParentIndex, _>` so we can still identify the original Bonsai
+/// p1/p2 when computing Mercurial manifest parents; p3+ do not participate
+/// because Hg manifest nodes record at most two parents.
+#[expect(
+    dead_code,
+    reason = "wired into derive_augmented_manifest_from_bonsai in a subsequent commit"
+)]
+async fn create_augmented_tree(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+    expected_root_hg_node_id: HgNodeHash,
+    tree_info: TreeInfo<
+        Traced<ParentIndex, HgAugmentedManifestId>,
+        Traced<ParentIndex, HgAugmentedFileLeafNode>,
+        AugmentedDeriveContext,
+        SortedVectorTrieMap<
+            Entry<
+                Traced<ParentIndex, HgAugmentedManifestId>,
+                Traced<ParentIndex, HgAugmentedFileLeafNode>,
+            >,
+        >,
+    >,
+) -> Result<(
+    AugmentedDeriveContext,
+    Traced<ParentIndex, HgAugmentedManifestId>,
+)> {
+    let PartitionedSubentries {
+        mut direct,
+        lookups_by_parent,
+    } = partition_subentries(tree_info.subentries)?;
+
+    let resolved =
+        resolve_parent_lookups(&ctx, &blobstore, &tree_info.parents, lookups_by_parent).await?;
+    direct.extend(resolved);
+
+    let subentries =
+        ShardedMapV2Node::from_entries_and_partial_maps(&ctx, &blobstore, direct).await?;
+
+    finalize_envelope(
+        &ctx,
+        &blobstore,
+        expected_root_hg_node_id,
+        tree_info.path.is_root(),
+        &tree_info.parents,
+        subentries,
+    )
+    .await
 }
 
 /// Try to reuse a parent's augmented-manifest envelope if its subentries
