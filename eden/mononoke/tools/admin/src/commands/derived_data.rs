@@ -17,6 +17,8 @@ mod fetch;
 mod find_derivation_gaps;
 mod list_manifest;
 mod slice;
+#[cfg(test)]
+mod verify_aug_direct;
 mod verify_manifests;
 mod verify_stage_output;
 
