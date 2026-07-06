@@ -9,9 +9,9 @@
 
   $ newserver server
   $ drawdag << 'EOS'
-  > A  # A/regular/file.txt = regular content
-  >    # A/restricted/.slacl = acl config
+  > A  # A/restricted/.slacl = acl config
   >    # A/restricted/secret.txt = secret content
+  >    # A/regular/file.txt = regular content\n
   > EOS
 
   $ sl clone --config clone.use-rust=True --config format.use-eager-repo=false --config format.use-remotefilelog=true --config remotefilelog.reponame=client -q "test:server" "$TESTTMP/client"
@@ -19,16 +19,16 @@
 
   $ sl debugmanifestdirs -qr $A
   19d1f9c4aa6e6b299fa6a863b253889df872ae0f restricted
-  7336b5d3a2867d97ff2b64af2b848b76ac7e7f39 regular
-  7ebc6a0e1746ead2f3778301c440cde7eec58620 /
+  48ce1df7933d0a1ad2493f30a53389eeab2394f9 regular
+  636776545d9d741d0fcea98bd36478a343b43a8f /
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
 Don't attempt to fetch 19d1f9c4 - it is restricted
   $ LOG=tree_fetches=trace sl go -q $A
-  TRACE tree_fetches: attrs=["content"] keys=["@7ebc6a0e"]
-  TRACE tree_fetches: attrs=["content"] keys=["@7336b5d3"]
+  TRACE tree_fetches: attrs=["content"] keys=["@63677654"]
+  TRACE tree_fetches: attrs=["content"] keys=["@48ce1df7"]
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]
@@ -96,6 +96,10 @@ Rust commands also warn about restricted paths:
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]
+
+Current behavior: repoless cat does not warn when a traversal skips restricted paths.
+  $ sl cat -R test:server -r $A 'glob:**.txt'
+  regular content
 
 Matcher-scoped BFS should not check ACLs under directories it will not visit:
 
