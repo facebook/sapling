@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -21,7 +22,9 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use cacheblob::MemWritesKeyedBlobstore;
+use clap::ArgGroup;
 use clap::Args;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
@@ -507,6 +510,11 @@ const MAX_VERIFY_AUG_DIRECT_BATCH_SIZE: u64 = 10_000;
 const MAX_VERIFY_AUG_DIRECT_CONCURRENCY: u64 = 100;
 
 #[derive(Args)]
+#[clap(group(
+    ArgGroup::new("changeset_range")
+        .required(true)
+        .args(&["first", "last"]),
+))]
 pub(super) struct VerifyAugDirectArgs {
     /// Inclusive upper bound changeset (hex bonsai changeset ID).
     /// Mutually exclusive with --bookmark.
@@ -518,9 +526,18 @@ pub(super) struct VerifyAugDirectArgs {
     #[clap(long, short = 'B', conflicts_with = "end_id")]
     bookmark: Option<BookmarkKey>,
 
+    /// Optional inclusive lower bound for --first. When omitted, --first starts
+    /// at the first-parent root reachable from --end-id/--bookmark.
+    #[clap(long, requires = "first")]
+    start_id: Option<ChangesetId>,
+
+    /// Number of oldest changesets to validate in the selected ancestor subgraph.
+    #[clap(long, value_parser = clap::value_parser!(u64).range(1..))]
+    first: Option<u64>,
+
     /// Number of most recent changesets to validate, ending at --end-id/--bookmark.
     #[clap(long, value_parser = clap::value_parser!(u64).range(1..))]
-    last: u64,
+    last: Option<u64>,
 
     /// Number of changesets to select per verifier batch. Default: 100. Maximum: 10000.
     #[clap(
@@ -606,6 +623,106 @@ async fn select_last_changeset_batches(
     batch_changeset_stream(cs_ids, batch_size)
 }
 
+async fn first_parent_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    end_id: ChangesetId,
+) -> Result<ChangesetId> {
+    repo.commit_graph()
+        .p1_linear_graph()
+        .skip_tree_level_ancestor(ctx, end_id, 0)
+        .await
+        .with_context(|| format!("finding first-parent root for {end_id}"))?
+        .map(|node| node.cs_id)
+        .ok_or_else(|| anyhow!("no first-parent root found for {end_id}"))
+}
+
+async fn select_first_changesets(
+    ctx: &CoreContext,
+    repo: &Repo,
+    start_id: ChangesetId,
+    end_id: ChangesetId,
+    count: u64,
+) -> Result<BoxStream<'static, Result<ChangesetId>>> {
+    if !repo
+        .commit_graph()
+        .is_ancestor(ctx, start_id, end_id)
+        .await
+        .with_context(|| format!("checking whether {start_id} is an ancestor of {end_id}"))?
+    {
+        bail!("start changeset {start_id} is not an ancestor of end changeset {end_id}");
+    }
+
+    let commit_graph = repo.commit_graph_arc();
+    let ctx = ctx.clone();
+    Ok(async_stream::try_stream! {
+        let start_generation = commit_graph
+            .changeset_generation(&ctx, start_id)
+            .await
+            .with_context(|| format!("loading generation for start changeset {start_id}"))?;
+        let mut frontier = BTreeMap::new();
+        frontier
+            .entry(start_generation)
+            .or_insert_with(BTreeSet::new)
+            .insert(start_id);
+        let mut seen = HashSet::from([start_id]);
+        let mut selected = 0_u64;
+
+        while selected < count {
+            let Some((_generation, cs_ids)) = frontier.pop_first() else {
+                break;
+            };
+            for cs_id in cs_ids {
+                yield cs_id;
+                selected += 1;
+                if selected == count {
+                    break;
+                }
+
+                let children = commit_graph
+                    .changeset_children(&ctx, cs_id)
+                    .await
+                    .with_context(|| format!("loading children of {cs_id}"))?;
+                let children = commit_graph
+                    .filter_ancestors(&ctx, end_id, children)
+                    .await
+                    .with_context(|| {
+                        format!("filtering children of {cs_id} to ancestors of {end_id}")
+                    })?;
+                let generations = commit_graph
+                    .many_changeset_generations(&ctx, &children)
+                    .await
+                    .with_context(|| format!("loading child generations for {cs_id}"))?;
+                for child in children {
+                    if seen.insert(child) {
+                        let generation = generations
+                            .get(&child)
+                            .copied()
+                            .ok_or_else(|| anyhow!("missing generation for child changeset {child}"))?;
+                        frontier
+                            .entry(generation)
+                            .or_insert_with(BTreeSet::new)
+                            .insert(child);
+                    }
+                }
+            }
+        }
+    }
+    .boxed())
+}
+
+async fn select_first_changeset_batches(
+    ctx: &CoreContext,
+    repo: &Repo,
+    start_id: ChangesetId,
+    end_id: ChangesetId,
+    count: u64,
+    batch_size: u64,
+) -> Result<BoxStream<'static, Result<VerifyBatch>>> {
+    let cs_ids = select_first_changesets(ctx, repo, start_id, end_id, count).await?;
+    batch_changeset_stream(cs_ids, batch_size)
+}
+
 async fn verify_aug_direct_batch(
     ctx: &CoreContext,
     repo: &Repo,
@@ -638,10 +755,26 @@ pub(super) async fn verify_aug_direct(
     args: VerifyAugDirectArgs,
 ) -> Result<()> {
     let end_id = resolve_end_id(ctx, repo, args.end_id, args.bookmark).await?;
-    let batches =
-        select_last_changeset_batches(ctx, repo, end_id, args.last, args.batch_size).await?;
+    let (requested_count, batches) = match (args.first, args.last) {
+        (Some(count), None) => {
+            let start_id = match args.start_id {
+                Some(start_id) => start_id,
+                None => first_parent_root(ctx, repo, end_id).await?,
+            };
+            let batches =
+                select_first_changeset_batches(ctx, repo, start_id, end_id, count, args.batch_size)
+                    .await?;
+            println!("start-id={start_id}");
+            (count, batches)
+        }
+        (None, Some(count)) => (
+            count,
+            select_last_changeset_batches(ctx, repo, end_id, count, args.batch_size).await?,
+        ),
+        _ => unreachable!("clap requires exactly one of --first or --last"),
+    };
 
-    info!("verifying up to {} changesets", args.last);
+    info!("verifying up to {} changesets", requested_count);
 
     let concurrency =
         usize::try_from(args.concurrency).context("--concurrency value does not fit in usize")?;
@@ -860,6 +993,84 @@ mod tests {
             batches,
             vec![vec![fifth, fourth], vec![third, second], vec![root]]
         );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn select_first_changeset_batches_starts_from_discovered_first_parent_root(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a linear repository history with five changesets.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file.txt", b"two")
+            .commit()
+            .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .add_file("file.txt", b"three")
+            .commit()
+            .await?;
+        let fourth = CreateCommitContext::new(&ctx, &repo, vec![third])
+            .add_file("file.txt", b"four")
+            .commit()
+            .await?;
+        let fifth = CreateCommitContext::new(&ctx, &repo, vec![fourth])
+            .add_file("file.txt", b"five")
+            .commit()
+            .await?;
+
+        // When selecting the first five changesets from the discovered first-parent root in batches of two.
+        let start_id = first_parent_root(&ctx, &repo.repo, fifth).await?;
+        let batches = select_first_changeset_batches(&ctx, &repo.repo, start_id, fifth, 5, 2)
+            .await?
+            .map_ok(|batch| batch.cs_ids)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        // Then selection starts from the root and emits progress-sized oldest-to-newest batches.
+        assert_eq!(
+            batches,
+            vec![vec![root, second], vec![third, fourth], vec![fifth]]
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn select_first_changeset_batches_uses_start_id_override(fb: FacebookInit) -> Result<()> {
+        // Given a linear repository history with four changesets.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file.txt", b"two")
+            .commit()
+            .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .add_file("file.txt", b"three")
+            .commit()
+            .await?;
+        let fourth = CreateCommitContext::new(&ctx, &repo, vec![third])
+            .add_file("file.txt", b"four")
+            .commit()
+            .await?;
+
+        // When selecting from an explicit resume start id in batches of two.
+        let batches = select_first_changeset_batches(&ctx, &repo.repo, second, fourth, 3, 2)
+            .await?
+            .map_ok(|batch| batch.cs_ids)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        // Then selection starts from the override instead of rediscovering the root.
+        assert_eq!(batches, vec![vec![second, third], vec![fourth]]);
         Ok(())
     }
 

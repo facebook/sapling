@@ -38,6 +38,16 @@ Then all selected commits validate successfully and progress is reported per bat
   done: processed=3
   success
 
+When verifying the first 2 commits using the default master bookmark in single-commit batches
+Then the root-side commits validate successfully and the reusable start id is printed
+  $ mononoke_admin derived-data -R repo verify-aug-direct --first 2 --batch-size 1 --concurrency 1 && echo success || echo failure
+  start-id=* (glob)
+  [INFO] verifying up to 2 changesets
+  [INFO] progress: batch=1 size=1 processed=1
+  [INFO] progress: batch=2 size=1 processed=2
+  done: processed=2
+  success
+
 When verifying a single commit by end-id
 Then the selected commit validates successfully
   $ mononoke_admin derived-data -R repo verify-aug-direct --end-id $B --last 1 && echo success || echo failure
