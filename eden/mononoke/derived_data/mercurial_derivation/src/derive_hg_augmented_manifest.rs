@@ -85,6 +85,9 @@ use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_manifest::ParentIndex;
 use crate::derive_hg_manifest::hg_parents;
 
+/// Batch-local cache for full ACL overlay maps, keyed by ACL root id.
+pub type AclOverlayCache = HashMap<AclManifestId, Arc<HashMap<MPath, AclManifestId>>>;
+
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 ///
 /// Canonical wrapper around [`derive_from_hg_manifest_and_parents_staged`]:
@@ -1845,7 +1848,9 @@ async fn reemit_root_envelope(
 }
 
 /// Derive an augmented manifest directly from a bonsai changeset and parent
-/// augmented manifests, bypassing HgManifest construction entirely.
+/// augmented manifests, bypassing HgManifest construction entirely. The caller
+/// supplies a cache for full ACL overlay maps; it is only used for merge commits,
+/// where derivation must materialise the full ACL tree.
 pub async fn derive_augmented_manifest_from_bonsai<Store>(
     ctx: &CoreContext,
     blobstore: &Store,
@@ -1862,6 +1867,7 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     root_hg_node_id_override: Option<HgNodeHash>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
+    full_acl_overlay_cache: &mut AclOverlayCache,
 ) -> Result<HgAugmentedManifestId>
 where
     Store: KeyedBlobstore + Clone + 'static,
@@ -1879,10 +1885,11 @@ where
         // semantics recurse into and rebuild a tree when "all parents entries
         // are trees" with no change on the path. Such directories are not
         // reachable from `file_changes`, so the targeted descent below would
-        // miss their ACL pointers. Fall back to the full ACL-tree walk for
-        // merges; they are comparatively rare.
+        // miss their ACL pointers. Use a full ACL-tree map for merges; batch
+        // callers share `full_acl_overlay_cache` so repeated merge commits with
+        // the same ACL root do not re-walk the tree.
         Some(root_id) if parents.len() >= 2 => {
-            Arc::new(pre_walk_acl_tree(ctx, blobstore, root_id).await?)
+            cached_acl_overlay_map(ctx, blobstore, Some(root_id), full_acl_overlay_cache).await?
         }
         // Single-parent and root commits rebuild exactly the directories on the
         // ancestor paths of `file_changes`, plus — for a subtree copy — the path
@@ -2330,6 +2337,31 @@ pub async fn targeted_acl_overlay_map(
     Ok(nested.into_iter().flatten().collect())
 }
 
+/// Get-or-walk the *full* ACL overlay map for a changeset, memoised on
+/// `AclManifestId`. Pass the same `cache` across a batch to dedupe walks for
+/// changesets whose `RootAclManifestId` resolves to the same node. Unlike
+/// [`targeted_acl_overlay_map`], this materialises every directory in the ACL
+/// tree, so callers that genuinely need the complete `MPath -> AclManifestId`
+/// map (e.g. the `verify-aug-direct` admin tool, which enumerates all ACL paths
+/// to compare against) use this rather than the path-scoped descent that
+/// `derive_augmented_manifest_from_bonsai` uses internally.
+pub async fn cached_acl_overlay_map(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    acl_root: Option<AclManifestId>,
+    cache: &mut HashMap<AclManifestId, Arc<HashMap<MPath, AclManifestId>>>,
+) -> Result<Arc<HashMap<MPath, AclManifestId>>> {
+    let Some(root_id) = acl_root else {
+        return Ok(Arc::new(HashMap::new()));
+    };
+    if let Some(cached) = cache.get(&root_id) {
+        return Ok(cached.clone());
+    }
+    let map = Arc::new(pre_walk_acl_tree(ctx, blobstore, root_id).await?);
+    cache.insert(root_id, map.clone());
+    Ok(map)
+}
+
 /// Walk the full ACL tree from the root and build a map of
 /// `MPath -> AclManifestId` for every directory node. ACL nodes within the
 /// walk are loaded concurrently via `bounded_traversal_stream`; sequential
@@ -2338,7 +2370,8 @@ pub async fn targeted_acl_overlay_map(
 ///
 /// This loads the entire ACL tree regardless of commit size, so it is used only
 /// where the rebuilt-directory set cannot be derived from the changed paths up
-/// front — i.e. merge commits (see `derive_augmented_manifest_from_bonsai`).
+/// front — i.e. merge commits (see `derive_augmented_manifest_from_bonsai`) and
+/// callers that need the complete map (via [`cached_acl_overlay_map`]).
 /// Single-parent and root commits use [`targeted_acl_overlay_map`], which costs
 /// O(commit size) instead.
 pub(crate) async fn pre_walk_acl_tree(

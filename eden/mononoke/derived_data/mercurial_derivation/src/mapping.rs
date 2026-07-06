@@ -61,6 +61,8 @@ define_stats! {
 
 use derived_data_service_if as thrift;
 
+use crate::derive_hg_augmented_manifest::AclOverlayCache;
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(HgChangesetId);
 
@@ -195,7 +197,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         derivation_ctx.restricted_paths(),
                     )
                     .await
-                    .with_context(|| format!("failed deriving stack of {first:?} to {last:?}",))?;
+                    .with_context(|| format!("failed deriving stack of {first:?} to {last:?}"))?;
 
                 // This pattern is used to convert a ref to tuple into a tuple of refs.
                 #[allow(clippy::map_identity)]
@@ -576,6 +578,7 @@ async fn derive_direct(
     aug_parents: Vec<HgAugmentedManifestId>,
     known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestId>>,
     expected_root: Option<HgNodeHash>,
+    acl_overlay_cache: &mut AclOverlayCache,
 ) -> Result<HgAugmentedManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let csid = bonsai.get_changeset_id();
@@ -637,6 +640,7 @@ async fn derive_direct(
         expected_root,
         &derivation_ctx.restricted_paths(),
         acl_root_overlay,
+        acl_overlay_cache,
     )
     .await
 }
@@ -662,6 +666,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                 .map(|p| p.hg_augmented_manifest_id())
                 .collect();
             let expected_root = lookup_mapped_root_hg_node_id(ctx, derivation_ctx, csid).await?;
+            let mut acl_overlay_cache = HashMap::new();
             let root = derive_direct(
                 ctx,
                 derivation_ctx,
@@ -669,6 +674,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                 aug_parents,
                 None,
                 expected_root,
+                &mut acl_overlay_cache,
             )
             .await?;
             return Ok(Self(root));
@@ -740,6 +746,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                     .collect(),
             )
             .await?;
+            let mut acl_overlay_cache = HashMap::new();
             for bonsai in &bonsais {
                 let csid = bonsai.get_changeset_id();
                 let aug_parents: Vec<_> = derivation_ctx
@@ -755,6 +762,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                     aug_parents,
                     Some(&res),
                     expected_roots.get(&csid).copied(),
+                    &mut acl_overlay_cache,
                 )
                 .await?;
                 res.insert(csid, Self(root));
@@ -764,7 +772,6 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
 
         for bonsai in &bonsais {
             let csid = bonsai.get_changeset_id();
-
             let content_ids = bonsai
                 .file_changes()
                 .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
@@ -954,6 +961,7 @@ mod test {
     use mononoke_types::MPath;
     use mononoke_types::SubtreeChange;
     use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
@@ -1396,6 +1404,73 @@ mod test {
                     .is_none(),
                 "direct derivation must not create MappedHgChangesetId for {cs_id}",
             );
+        }
+
+        Ok(())
+    }
+
+    /// Like `verify_repo`, but derives `RootHgAugmentedManifestId`.
+    /// When the skip-writes knob is active, this exercises the
+    /// write-skipping path and verifies that HgManifest blobs can
+    /// still be read through the reconstruction layer.
+    async fn verify_repo_aug<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
+    where
+        F: Fn() -> Fut,
+        Fut: Future<Output = TestRepo>,
+    {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = repo_func().await;
+        println!("Processing {} (augmented)", repo.repo_identity.name());
+        borrowed!(ctx, repo);
+
+        let commits_desc_to_anc =
+            all_commits_descendants_to_ancestors(ctx.clone(), repo.clone()).await?;
+
+        // Recreate repo from scratch and derive augmented manifests.
+        let repo = repo_func().await;
+        let csids = commits_desc_to_anc
+            .clone()
+            .into_iter()
+            .rev()
+            .map(|(cs_id, _)| cs_id)
+            .collect::<Vec<_>>();
+        let manager = repo.repo_derived_data().manager();
+
+        // Pre-derive HgChangesets for the old HgManifest-based augmented path.
+        manager
+            .derive_exactly_batch::<MappedHgChangesetId>(ctx, csids.clone(), None)
+            .await?;
+
+        // RootAclManifestId is a batch dependency of RootHgAugmentedManifestId
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(ctx, csids.clone(), None)
+            .await?;
+
+        manager
+            .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, csids.clone(), None)
+            .await?;
+
+        // Verify HgChangesets match the expected values and that manifests
+        // are readable through the reconstruction layer.
+        let hg_cs_derived = manager
+            .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
+            .await?;
+        for (cs_id, expected_hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
+            let hg_cs = hg_cs_derived
+                .get(&cs_id)
+                .unwrap_or_else(|| panic!("HgChangeset not derived for {cs_id}"));
+            assert_eq!(
+                hg_cs.hg_changeset_id(),
+                expected_hg_cs_id,
+                "HgChangeset mismatch for {cs_id}",
+            );
+
+            // Load the manifest — goes through reconstruction when blobs
+            // were skipped.
+            let hg_changeset =
+                Loadable::load(&hg_cs.hg_changeset_id(), ctx, repo.repo_blobstore()).await?;
+            let _manifest =
+                Loadable::load(&hg_changeset.manifestid(), ctx, repo.repo_blobstore()).await?;
         }
 
         Ok(())

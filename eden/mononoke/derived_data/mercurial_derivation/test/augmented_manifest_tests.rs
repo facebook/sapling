@@ -21,6 +21,7 @@ use futures::FutureExt;
 use futures::stream::TryStreamExt;
 use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::override_just_knobs;
 use justknobs::test_helpers::with_just_knobs_async;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -74,7 +75,7 @@ async fn test_augmented_manifest_hg_blobs_loadable(fb: FacebookInit) -> Result<(
 
     let manager = repo.repo_derived_data().manager();
 
-    // HgChangesets must be derived first (dependency of RootHgAugmentedManifestId).
+    // Pre-derive HgChangesets for the old HgManifest-based augmented path.
     manager
         .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root, child], None)
         .await?;
@@ -420,6 +421,84 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that augmented manifest derivation works correctly when
+/// hgmanifest_skip_writes=true, verifying that HgManifest blobs remain
+/// loadable and augmented manifests match.
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
+    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:hgmanifest_skip_writes".to_string(),
+        KnobVal::Bool(true),
+    )])));
+
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file_a", "content_a")
+        .add_file("dir/file_b", "content_b")
+        .add_file("other/file_c", "content_c")
+        .commit()
+        .await?;
+
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("dir/file_a", "updated_a")
+        .add_file("new/file_d", "content_d")
+        .commit()
+        .await?;
+
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .add_file("other/file_c", "updated_c")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+
+    // Pre-derive HgChangesets for the old HgManifest-based augmented path.
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root, child, grandchild], None)
+        .await?;
+
+    // Pre-derive RootAclManifestId (batch dependency of RootHgAugmentedManifestId)
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![root, child, grandchild], None)
+        .await?;
+
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(
+            &ctx,
+            vec![root, child, grandchild],
+            None,
+        )
+        .await?;
+
+    for cs_id in [root, child, grandchild] {
+        let aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
+            .await?
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"));
+
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
+        let hg_manifest_id = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+
+        // HgManifest blobs are loadable via the reconstruction layer.
+        let _root_mf = hg_manifest_id.load(&ctx, repo.repo_blobstore()).await?;
+
+        let entries: Vec<_> = hg_manifest_id
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_collect()
+            .await?;
+        assert!(!entries.is_empty());
+
+        compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
+    }
+
+    Ok(())
+}
+
 /// Test that augmented manifest derivation produces identical results
 /// from both the parent-aware and full derivation paths when the repo
 /// has .slacl files (non-empty AclManifest).
@@ -480,7 +559,7 @@ async fn test_resolve_copy_from_filenodes(fb: FacebookInit) -> Result<()> {
     // Derive HgChangesets and augmented manifests for the root (parent)
     let manager = repo.repo_derived_data().manager();
 
-    // HgChangesets must be derived first (dependency of RootHgAugmentedManifestId).
+    // Pre-derive HgChangesets for the old HgManifest-based augmented path.
     manager
         .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root], None)
         .await?;
@@ -1113,6 +1192,7 @@ async fn assert_dual_derive_agree_at_root(
         Some(hg_manifest_id.into_nodehash()),
         restricted_paths_config,
         acl_root_overlay,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -1235,6 +1315,7 @@ async fn derive_augmented_manifest_directly_for_test(
         Some(expected_root),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await
 }
@@ -1378,7 +1459,8 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
         &Default::default(),
         Some(AS_HASH),
         restricted_paths_config,
-        None,
+        Default::default(),
+        &mut HashMap::new(),
     )
     .await;
     assert!(
@@ -1997,6 +2079,7 @@ async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) 
         Some(supplied),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -2109,6 +2192,7 @@ async fn test_direct_derivation_root_reuse_uses_expected_hg_node_id(
         Some(forced_root.into_nodehash()),
         restricted_paths_config,
         acl_root_overlay,
+        &mut HashMap::new(),
     )
     .await?;
     let direct_env = via_direct_path.load(&ctx, repo.repo_blobstore()).await?;
@@ -2172,6 +2256,7 @@ async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Res
         None,
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -2208,6 +2293,7 @@ async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Res
         Some(canonical_root),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -2255,6 +2341,7 @@ async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
         Some(supplied),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
     let p2_canonical = derive_parent_aug(&ctx, &repo, p2).await?;
@@ -2279,6 +2366,7 @@ async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
         None,
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -2331,6 +2419,7 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
         Some(supplied),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
     let p2_forced = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
@@ -2344,6 +2433,7 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
         Some(supplied),
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
     assert_eq!(p1_forced, p2_forced, "fixture should force root reuse");
@@ -2363,6 +2453,7 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
         None,
         restricted_paths_config,
         None,
+        &mut HashMap::new(),
     )
     .await?;
 
@@ -2683,6 +2774,7 @@ where
         Some(expected_root),
         repo.restricted_paths().config_based(),
         acl_root_overlay,
+        &mut HashMap::new(),
     )
     .await
 }
@@ -3907,4 +3999,220 @@ async fn test_direct_derivation_subtree_batch_local_source_with_jk(fb: FacebookI
         .await?
         .manifestid();
     compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_batch_handles_repeated_merge_acl_root_with_jk(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: one direct-derivation batch with two merge commits that share the
+    // same non-empty ACL overlay root.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/base.rs", "fn base() {}")
+        .commit()
+        .await?;
+    let left1 = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("left1.rs", "fn left1() {}")
+        .commit()
+        .await?;
+    let right1 = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("right1.rs", "fn right1() {}")
+        .commit()
+        .await?;
+    let merge1 = CreateCommitContext::new(&ctx, &repo, vec![left1, right1])
+        .commit()
+        .await?;
+    let left2 = CreateCommitContext::new(&ctx, &repo, vec![merge1])
+        .add_file("left2.rs", "fn left2() {}")
+        .commit()
+        .await?;
+    let right2 = CreateCommitContext::new(&ctx, &repo, vec![merge1])
+        .add_file("right2.rs", "fn right2() {}")
+        .commit()
+        .await?;
+    let merge2 = CreateCommitContext::new(&ctx, &repo, vec![left2, right2])
+        .commit()
+        .await?;
+    let csids = vec![base, left1, right1, merge1, left2, right2, merge2];
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+        .await?;
+    let acl_roots = manager
+        .fetch_derived_batch::<RootAclManifestId>(&ctx, vec![merge1, merge2], None)
+        .await?;
+    let merge1_acl = derive_hg_augmented_manifest::normalize_acl_root(
+        acl_roots.get(&merge1).expect("derived above"),
+    )?;
+    let merge2_acl = derive_hg_augmented_manifest::normalize_acl_root(
+        acl_roots.get(&merge2).expect("derived above"),
+    )?;
+    assert!(merge1_acl.is_some(), "fixture must have an ACL overlay");
+    assert_eq!(merge1_acl, merge2_acl, "fixture must share one ACL root");
+
+    // When: deriving the batch through the direct manager path.
+    with_just_knobs_async(
+        direct_derivation_knobs(true),
+        async {
+            manager
+                .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids, None)
+                .await
+        }
+        .boxed(),
+    )
+    .await?;
+
+    // Then: both merge commits derived through the cached full-ACL-map path
+    // still match the Hg manifests.
+    for merge in [merge1, merge2] {
+        let aug_id = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, merge, None)
+            .await?
+            .expect("derived above")
+            .hg_augmented_manifest_id();
+        let hg_manifest_id = repo
+            .derive_hg_changeset(&ctx, merge)
+            .await?
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+        compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await?;
+    }
+
+    Ok(())
+}
+
+/// Verify the full ACL overlay-map cache helper: repeated calls to
+/// `cached_acl_overlay_map` with the same `AclManifestId` must reuse the cached
+/// `Arc<HashMap<...>>`, not re-walk the tree. This helper is for callers that
+/// need a complete ACL path map (for example, later validation tooling); the
+/// direct derivation path itself still uses path-scoped overlay loading for
+/// non-merge commits.
+#[mononoke::fbinit_test]
+async fn test_cached_acl_overlay_map_dedupes_within_batch(fb: FacebookInit) -> Result<()> {
+    // Given: a non-trivial ACL tree and an initially empty full-overlay cache.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file(
+            "restricted/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n",
+        )
+        .add_file("restricted/inner/file.rs", "fn x() {}")
+        .add_file("public/readme.md", "hi")
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![cs], None)
+        .await?;
+    let acl_root = manager
+        .fetch_derived::<RootAclManifestId>(&ctx, cs, None)
+        .await?
+        .expect("derived above");
+    let acl_root_overlay = derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
+    assert!(
+        acl_root_overlay.is_some(),
+        "Test fixture must produce a non-trivial ACL overlay so the cache \
+         hit path is actually exercised.",
+    );
+    let mut cache = HashMap::new();
+
+    // When: asking for the same full ACL overlay map twice.
+    let m1 = derive_hg_augmented_manifest::cached_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        acl_root_overlay,
+        &mut cache,
+    )
+    .await?;
+    let m2 = derive_hg_augmented_manifest::cached_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        acl_root_overlay,
+        &mut cache,
+    )
+    .await?;
+
+    // Then: the second call returns the cached Arc and does not add another entry.
+    assert!(
+        Arc::ptr_eq(&m1, &m2),
+        "Repeated calls with the same AclManifestId must return the cached \
+         Arc, not a fresh pre-walked map. Cache had {} entries; if the cache \
+         were broken the second call would still complete but produce a \
+         distinct Arc with the same contents.",
+        cache.len(),
+    );
+    assert_eq!(
+        cache.len(),
+        1,
+        "Cache must contain exactly one entry after two calls with the same root.",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_cached_acl_overlay_map_none_does_not_mutate_cache(fb: FacebookInit) -> Result<()> {
+    // Given: an existing full-overlay cache entry and a missing ACL root.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/file.rs", "fn x() {}")
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![cs], None)
+        .await?;
+    let acl_root = manager
+        .fetch_derived::<RootAclManifestId>(&ctx, cs, None)
+        .await?
+        .expect("derived above");
+    let acl_root_overlay = derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
+    let mut cache = HashMap::new();
+    derive_hg_augmented_manifest::cached_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        acl_root_overlay,
+        &mut cache,
+    )
+    .await?;
+    assert_eq!(
+        cache.len(),
+        1,
+        "fixture should seed exactly one cache entry"
+    );
+
+    // When: asking for a missing ACL root.
+    let m_empty = derive_hg_augmented_manifest::cached_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        None,
+        &mut cache,
+    )
+    .await?;
+
+    // Then: the helper returns an empty map without mutating the cache.
+    assert!(m_empty.is_empty());
+    assert_eq!(cache.len(), 1, "None must not add a cache entry.");
+
+    Ok(())
 }
