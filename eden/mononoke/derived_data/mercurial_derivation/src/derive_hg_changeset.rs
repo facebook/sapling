@@ -78,7 +78,7 @@ async fn can_reuse_filenode(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parent: HgFileNodeId,
     change: &TrackedFileChange,
-) -> Result<Option<HgFileNodeId>, Error> {
+) -> Result<Option<(HgFileNodeId, Bytes)>, Error> {
     let parent_envelope = parent.load(ctx, blobstore).await?;
     let parent_copyfrom_path = File::extract_copied_from(parent_envelope.metadata())?.map(|t| t.0);
     let parent_content_id = parent_envelope.content_id();
@@ -86,7 +86,9 @@ async fn can_reuse_filenode(
     if parent_content_id == change.content_id()
         && change.copy_from().map(|t| &t.0) == parent_copyfrom_path.as_ref()
     {
-        Ok(Some(parent))
+        // Return the parent's metadata along with the filenode so callers
+        // don't need to re-load the envelope just to read it.
+        Ok(Some((parent, parent_envelope.metadata().clone())))
     } else {
         Ok(None)
     }
@@ -100,7 +102,7 @@ pub(crate) async fn store_file_change<'a>(
     path: &'a NonRootMPath,
     change: &'a TrackedFileChange,
     copy_from: Option<(NonRootMPath, HgFileNodeId)>,
-) -> Result<(FileType, HgFileNodeId), Error> {
+) -> Result<(FileType, HgFileNodeId, Bytes), Error> {
     // If we produced a hg change that has copy info, then the Bonsai should have copy info
     // too. However, we could have Bonsai copy info without having copy info in the hg change
     // if we stripped it out to produce a hg changeset for an Octopus merge and the copy info
@@ -141,8 +143,8 @@ pub(crate) async fn store_file_change<'a>(
         (None, None) => None,
     };
 
-    let filenode_id = match maybe_filenode {
-        Some(filenode) => filenode,
+    let (filenode_id, metadata) = match maybe_filenode {
+        Some((filenode, metadata)) => (filenode, metadata),
         None => {
             let p1 = if p1.is_some()
                 && p2.is_none()
@@ -176,11 +178,19 @@ pub(crate) async fn store_file_change<'a>(
                 p2,
             };
 
-            upload_entry.upload(ctx, blobstore, Some(path)).await?
+            // UploadHgFileEntry::upload doesn't expose the metadata it computes,
+            // so we re-load the envelope to extract it. Eliminating this read
+            // would require changing the public upload() return type and it's
+            // probably not worth it, since it will be in the cache anyway.
+            let filenode_id = upload_entry
+                .upload(ctx.clone(), blobstore.clone(), Some(path))
+                .await?;
+            let envelope = filenode_id.load(&ctx, &blobstore).await?;
+            (filenode_id, envelope.metadata().clone())
         }
     };
 
-    Ok((change.file_type(), filenode_id))
+    Ok((change.file_type(), filenode_id, metadata))
 }
 
 async fn resolve_paths(
@@ -432,7 +442,7 @@ pub async fn get_manifest_entry_from_bonsai(
                     };
                     cloned!(ctx, blobstore);
                     let spawned = mononoke::spawn_task(async move {
-                        let entry = store_file_change(
+                        let (file_type, filenode_id, _metadata) = store_file_change(
                             ctx,
                             blobstore,
                             p1,
@@ -442,7 +452,7 @@ pub async fn get_manifest_entry_from_bonsai(
                             copy_from,
                         )
                         .await?;
-                        Ok((path, Some(entry)))
+                        Ok((path, Some((file_type, filenode_id))))
                     });
                     async move { spawned.await? }.boxed().right_future()
                 }

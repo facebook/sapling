@@ -27,6 +27,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
+use manifest::LeafInfo;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
 use manifest::Span;
@@ -40,6 +41,10 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
+use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::calculate_hg_node_id_stream;
 use mercurial_types::calculate_hg_node_ids_multi;
 use mercurial_types::preloaded_augmented_manifest::serialize_manifest_entry;
@@ -669,13 +674,6 @@ where
 }
 
 /// Decision for a leaves-only merge conflict.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by create_augmented_leaf in the next stack commit"
-    )
-)]
 #[derive(Debug)]
 pub(crate) enum LeafConflictResolution {
     /// Reuse an hg-relevant parent's leaf (p1/p2).
@@ -690,13 +688,6 @@ pub(crate) enum LeafConflictResolution {
 /// All contributing parents must agree on file type and content. Only p1/p2 can
 /// provide reusable Mercurial filenode parentage; step-parent-only files require
 /// minting a parentless filenode.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "called from create_augmented_leaf in a subsequent commit in the stack"
-    )
-)]
 pub(crate) fn check_content_identical_at_parents(
     path: &NonRootMPath,
     parents: &[Traced<ParentIndex, HgAugmentedFileLeafNode>],
@@ -727,6 +718,54 @@ pub(crate) fn check_content_identical_at_parents(
             Ok(LeafConflictResolution::MintFresh(representative.clone()))
         }
     }
+}
+
+/// Mint a fresh parentless Mercurial filenode for a file that appears only in
+/// the step-parents (p3+) of an octopus merge, and build the augmented leaf for
+/// it. Mirrors `resolve_conflict`'s no-reusable-filenode branch in
+/// `derive_hg_manifest.rs`: a filenode with `p1 = p2 = None` and no copy
+/// metadata is uploaded for the (already content-identical) data, so both the
+/// direct and reference paths produce the same filenode and thus the same
+/// augmented manifest.
+async fn mint_parentless_leaf(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    path: &NonRootMPath,
+    src: &HgAugmentedFileLeafNode,
+) -> Result<HgAugmentedFileLeafNode> {
+    // The augmented leaf carries content hashes but not a `ContentId`, so
+    // recover it (and the canonical content size) from the source step-parent's
+    // filenode envelope — the same envelope `resolve_conflict` loads to read
+    // content identity.
+    let envelope = HgFileNodeId::new(src.filenode)
+        .load(ctx, blobstore)
+        .await
+        .with_context(|| format!("loading step-parent filenode envelope for {path}"))?;
+
+    let contents = ContentBlobMeta {
+        id: envelope.content_id(),
+        size: envelope.content_size(),
+        copy_from: None,
+    };
+    let (filenode_id, _) = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(contents),
+        p1: None,
+        p2: None,
+    }
+    .upload_with_path(ctx.clone(), blobstore.clone(), path.clone())
+    .await?;
+
+    Ok(HgAugmentedFileLeafNode {
+        file_type: src.file_type,
+        filenode: filenode_id.into_nodehash(),
+        content_blake3: src.content_blake3,
+        content_sha1: src.content_sha1,
+        total_size: src.total_size,
+        // Fresh parentless filenode with no copy metadata — no header bytes,
+        // matching what `resolve_conflict` produces on the reference path.
+        file_header_metadata: None,
+    })
 }
 
 /// Compute the Mercurial node id for an augmented-manifest directory by
@@ -765,6 +804,114 @@ pub struct ReusableParentEnvelope {
 pub enum ParentEnvelopeReuse {
     Reuse(ReusableParentEnvelope),
     CreateFresh { computed_node_id: HgNodeHash },
+}
+
+/// Transient context propagated by `derive_manifest` from callbacks to their
+/// parent tree callback.
+#[derive(Debug)]
+enum AugmentedDeriveContext {
+    /// A leaf was freshly created or resolved. The leaf value itself carries all
+    /// data the parent tree needs, so there is no extra directory metadata.
+    Leaf,
+}
+
+/// Leaf callback for derive_manifest: creates an HgAugmentedFileLeafNode
+/// for a new or changed file.
+///
+/// Parents are wrapped in `Traced<ParentIndex, _>` so we can recover the
+/// original bonsai parent index after `derive_manifest`'s value-only dedup. We
+/// only feed p1/p2 filenodes to `store_file_change` because Mercurial
+/// filenodes only encode (p1, p2) parentage; p3+ are ignored.
+#[expect(
+    dead_code,
+    reason = "wired into derive_augmented_manifest_from_bonsai in a subsequent commit"
+)]
+async fn create_augmented_leaf(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+    content_metadata_cache: Arc<HashMap<ContentId, ContentMetadataV2>>,
+    copy_from_filenodes: Arc<HashMap<(NonRootMPath, ChangesetId), HgFileNodeId>>,
+    parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
+    leaf_info: LeafInfo<Traced<ParentIndex, HgAugmentedFileLeafNode>, TrackedFileChange>,
+) -> Result<(
+    AugmentedDeriveContext,
+    Traced<ParentIndex, HgAugmentedFileLeafNode>,
+)> {
+    let change = match leaf_info.change {
+        Some(change) => change,
+        None => {
+            // Leaves-only conflict: parents have the same file with identical
+            // content but different filenodes. The resolver itself reads no
+            // blobstore; only the step-parent-only case needs a write, to mint
+            // a fresh parentless filenode (mirroring `resolve_conflict`).
+            let leaf =
+                match check_content_identical_at_parents(&leaf_info.path, &leaf_info.parents)? {
+                    LeafConflictResolution::Reuse(leaf) => leaf,
+                    LeafConflictResolution::MintFresh(src) => {
+                        mint_parentless_leaf(&ctx, &blobstore, &leaf_info.path, &src).await?
+                    }
+                };
+            return Ok((AugmentedDeriveContext::Leaf, Traced::generate(leaf)));
+        }
+    };
+
+    // Pick the (p1, p2) parents using the index-aware filter, not positional
+    // indexing: after `derive_manifest`'s value-only dedup the surviving entry
+    // for an octopus merge can be the wrong parent positionally (e.g. (X, X, Y)
+    // collapses to [Traced(0,X), Traced(2,Y)], which is `(X, None)` for hg —
+    // not `(X, Y)`).
+    let (p1_leaf, p2_leaf) = hg_parents(&leaf_info.parents);
+    let p1 = p1_leaf.map(|p| HgFileNodeId::new(p.filenode));
+    let p2 = p2_leaf.map(|p| HgFileNodeId::new(p.filenode));
+
+    let is_parent = |csid: &ChangesetId| {
+        parent_bonsai_csids.0.as_ref() == Some(csid) || parent_bonsai_csids.1.as_ref() == Some(csid)
+    };
+
+    let copy_from = change
+        .copy_from()
+        .filter(|(_, copy_csid)| is_parent(copy_csid))
+        .and_then(|(copy_path, copy_csid)| {
+            copy_from_filenodes
+                .get(&(copy_path.clone(), *copy_csid))
+                .map(|filenode_id| (copy_path.clone(), *filenode_id))
+        });
+
+    // store_file_change is independent of get_metadata (the latter only
+    // needs change.content_id()), so run them concurrently. store_file_change
+    // also returns the file header metadata so we don't have to re-load the
+    // freshly-stored filenode just to read it back.
+    let store_fut = crate::derive_hg_changeset::store_file_change(
+        ctx.clone(),
+        blobstore.clone(),
+        p1,
+        p2,
+        &leaf_info.path,
+        &change,
+        copy_from,
+    );
+    let metadata_fut = get_metadata(
+        &ctx,
+        &blobstore,
+        &content_metadata_cache,
+        change.content_id(),
+    );
+    let ((file_type, filenode_id, file_header_metadata), metadata) =
+        future::try_join(store_fut, metadata_fut).await?;
+    let is_metadata_present = !file_header_metadata.is_empty();
+
+    let leaf = HgAugmentedFileLeafNode {
+        file_type,
+        filenode: filenode_id.into_nodehash(),
+        content_blake3: metadata.seeded_blake3,
+        content_sha1: metadata.sha1,
+        total_size: metadata.total_size,
+        file_header_metadata: is_metadata_present.then_some(file_header_metadata),
+    };
+
+    // Newly created leaf: no parent index. The context tells the parent tree
+    // callback this entry came from the leaf callback.
+    Ok((AugmentedDeriveContext::Leaf, Traced::generate(leaf)))
 }
 
 /// Try to reuse a parent's augmented-manifest envelope if its subentries

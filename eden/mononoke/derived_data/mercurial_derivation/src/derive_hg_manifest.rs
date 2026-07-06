@@ -116,7 +116,9 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                                 &change,
                                 None, // copy_from should be empty
                             )
-                            .map_ok(|res| ((), Traced::generate(res)))
+                            .map_ok(|(file_type, filenode_id, _metadata)| {
+                                ((), Traced::generate((file_type, filenode_id)))
+                            })
                             .await
                         }
                         None => {
