@@ -451,8 +451,11 @@ impl Dispatcher {
                     self.config(),
                 ) {
                     Ok(acl_result) => {
-                        for warning in &acl_result.warnings {
+                        if let Some(warning) = &acl_result.warning_message {
                             let _ = io.write_err(warning);
+                            for detail in &acl_result.acl_details {
+                                let _ = io.write_err(detail);
+                            }
                         }
                         if acl_result.exit_nonzero {
                             if let Ok(code) = &mut res {

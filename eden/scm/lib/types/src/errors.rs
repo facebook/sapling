@@ -5,6 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+
 use anyhow::Error;
 use thiserror::Error;
 
@@ -34,6 +41,35 @@ pub struct PermissionDenied {
     pub hgid: crate::HgId,
     pub request_acl: String,
 }
+
+#[derive(Default)]
+pub struct PermissionDeniedRecords {
+    paths: Mutex<VecDeque<PermissionDenied>>,
+    // Monotonic total of recorded errors. `paths` is a bounded recent-error
+    // queue, so this is intentionally not the current queue length.
+    count: AtomicU64,
+}
+
+impl PermissionDeniedRecords {
+    pub fn record(&self, err: PermissionDenied) {
+        self.count.fetch_add(1, Ordering::Relaxed);
+        let mut paths = self.lock();
+        if paths.len() >= 1000 {
+            paths.pop_front();
+        }
+        paths.push_back(err);
+    }
+
+    pub fn count(&self) -> u64 {
+        self.count.load(Ordering::Relaxed)
+    }
+
+    pub fn lock(&self) -> MutexGuard<'_, VecDeque<PermissionDenied>> {
+        self.paths.lock().expect("permission denied paths poisoned")
+    }
+}
+
+pub type PermissionDeniedPaths = Arc<PermissionDeniedRecords>;
 
 /// NetworkError is a wrapper/tagging error meant for libraries to use
 /// to mark errors that may imply a network problem.

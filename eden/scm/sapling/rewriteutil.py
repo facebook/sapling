@@ -13,7 +13,7 @@
 
 from bindings import agentdetect
 
-from . import error, mutation, node
+from . import error, mutation, node, slacl
 from .i18n import _
 from .node import short
 
@@ -37,6 +37,8 @@ def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
         msg = _("cannot %s public changesets") % action
         hint = _("see '@prog@ help phases' for details")
         raise error.Abort(msg, hint=hint)
+
+    slacl.abort_if_restricted(repo, (repo[rev] for rev in revs))
 
     if (
         checkobsolete

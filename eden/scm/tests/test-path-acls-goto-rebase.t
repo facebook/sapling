@@ -148,9 +148,78 @@ Rebase: two commits where only the second touches a restricted path
     'dir' is restricted by ACL 'some-acl'
   [1]
 
-Rebase: ACL checks are repeated for the same restricted tree
+Rebase: mixed visible and restricted source changes with no restricted conflict
 
   $ newserver server6
+  $ drawdag << 'EOS'
+  > C B
+  > |/
+  > A
+  >   # A/public.txt = public v1
+  >   # A/other.txt = other v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  >   # C/other.txt = other v2
+  >   # drawdag.defaultfiles=false
+  > EOS
+
+  $ cd
+  $ newclientrepo client6 server6
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs (no-eden !)
+    'restricted' is restricted by ACL 'some-acl' (no-eden !)
+  [1] (no-eden !)
+  $ HGPLAIN=1 sl rebase -q -r $B -d $C
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
+  [255]
+  $ sl status
+  $ sl log -r . -T '{files}\n'
+  public.txt restricted/secret.txt
+  $ sl cat public.txt
+  public v2 (no-eol)
+  $ sl cat other.txt
+  other v1 (no-eol)
+
+Rebase: mixed visible and restricted source changes with an unseen restricted conflict
+
+  $ newserver server7
+  $ drawdag << 'EOS'
+  > C B
+  > |/
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = source secret v2
+  >   # C/restricted/secret.txt = dest secret v2
+  >   # drawdag.defaultfiles=false
+  > EOS
+
+  $ cd
+  $ newclientrepo client7 server7
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs (no-eden !)
+    'restricted' is restricted by ACL 'some-acl' (no-eden !)
+  [1] (no-eden !)
+  $ HGPLAIN=1 sl rebase -q -r $B -d $C
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
+  [255]
+  $ sl status
+  $ sl log -r . -T '{files}\n'
+  public.txt restricted/secret.txt
+  $ sl cat public.txt
+  public v2 (no-eol)
+
+Rebase: ACL checks are repeated for the same restricted tree
+
+  $ newserver server8
   $ drawdag << 'EOS'
   > E  # E/dir/.slacl = acl config
   >    # E/dir/file.txt = destination content
@@ -167,7 +236,7 @@ Rebase: ACL checks are repeated for the same restricted tree
   > EOS
 
   $ cd
-  $ newclientrepo client6 server6
+  $ newclientrepo client8 server8
   $ sl go -q $D
 
 EdenFS rebase does not check the destination-only restricted tree; non-Eden checkout does.
@@ -177,7 +246,7 @@ EdenFS rebase does not check the destination-only restricted tree; non-Eden chec
 #if eden
 Rebase currently fetches a restricted sibling even when the rebased commit does not touch it
 
-  $ newserver server7
+  $ newserver server9
   $ drawdag << 'EOS'
   > C B
   > |/
@@ -190,11 +259,11 @@ Rebase currently fetches a restricted sibling even when the rebased commit does 
   > EOS
 
   $ cd
-  $ newclientrepo client7 server7
+  $ newclientrepo client9 server9
   $ setconfig rebase.experimental.inmemory=True
   $ sl go -q $B
   $ HGPLAIN=1 sl rebase -r $B -d $C
-  pulling 'a116d452f6f62b9b5d16ef671076f296b39f9e81' from 'test:server7'
+  pulling 'a116d452f6f62b9b5d16ef671076f296b39f9e81' from 'test:server9'
   rebasing 3bf8492ead1a "B"
   $ sl log -r . -T '{files}\n'
   users/active_user/note.txt

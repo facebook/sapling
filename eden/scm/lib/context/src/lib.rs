@@ -5,16 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::VecDeque;
 use std::sync::Arc;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
-use parking_lot::Mutex;
 use termlogger::TermLogger;
 
-pub type PermissionDeniedPaths = Arc<Mutex<VecDeque<types::errors::PermissionDenied>>>;
+pub type PermissionDeniedPaths = types::errors::PermissionDeniedPaths;
 
 /// Context is a container for common facilities intended to be
 /// passed into upper level library code.

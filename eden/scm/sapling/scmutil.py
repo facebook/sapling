@@ -288,6 +288,8 @@ def callcatch(ui, req, func):
         inst.printcontext(ui)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint, label="ui.hint")
+        if req and getattr(inst, "permission_denied_handled", False):
+            req._permission_denied_handled = True
         return inst.exitcode
     except (error.IndexedLogError, error.MetaLogError) as inst:
         ui.warn(_("internal storage is corrupted\n"), error=_("abort"))

@@ -7,7 +7,6 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -191,8 +190,7 @@ pub struct TreeStore {
 
     pub(crate) acl_check_cache: AclCheckCache,
 
-    pub(crate) permission_denied_paths:
-        Option<Arc<parking_lot::Mutex<VecDeque<::types::errors::PermissionDenied>>>>,
+    pub(crate) permission_denied_paths: Option<::types::errors::PermissionDeniedPaths>,
 
     // Bounds the number of items this store can deliver across the lifetime of
     // the process. When exceeded, every subsequent item becomes an error,
@@ -1308,11 +1306,7 @@ impl storemodel::TreeStore for TreeStore {
 
     fn record_permission_denied(&self, err: ::types::errors::PermissionDenied) {
         if let Some(paths) = &self.permission_denied_paths {
-            let mut denied = paths.lock();
-            if denied.len() >= 1000 {
-                denied.pop_front();
-            }
-            denied.push_back(err);
+            paths.record(err);
         }
     }
 }

@@ -378,8 +378,7 @@ pub struct TreeStoreBuilder<'a> {
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
     format: Option<SerializationFormat>,
-    permission_denied_paths:
-        Option<Arc<Mutex<std::collections::VecDeque<types::errors::PermissionDenied>>>>,
+    permission_denied_paths: Option<types::errors::PermissionDeniedPaths>,
     max_fetch_count: MaxFetchCount,
 }
 
@@ -406,10 +405,7 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
-    pub fn permission_denied_paths(
-        mut self,
-        paths: Arc<Mutex<std::collections::VecDeque<types::errors::PermissionDenied>>>,
-    ) -> Self {
+    pub fn permission_denied_paths(mut self, paths: types::errors::PermissionDeniedPaths) -> Self {
         self.permission_denied_paths = Some(paths);
         self
     }

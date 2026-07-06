@@ -209,13 +209,6 @@ def _preimportmodules():
         except (ImportError, AttributeError):
             # some modules might fail to import due to incompatible OS.
             pass
-    # Modules below are optional - expected to cause ImportError
-    # in some build modes.
-    optional_modnames = [
-        # Cannot be imported if edenfs Thrift logic is not present
-        # (ex. in `make oss` build).
-        "sapling.eden_dirstate"
-    ]
     for extname in extmods:
         try:
             extensions.preimport(extname)
@@ -273,9 +266,11 @@ def _check_permission_denied_paths(req, ret):
     if rctx is None:
         return ret
 
-    warnings, exit_nonzero = bindings.context.check_permission_denied(rctx)
-    for warning in warnings:
+    warning, acl_details, exit_nonzero = bindings.context.check_permission_denied(rctx)
+    if warning is not None:
         req.ui.warn(warning)
+        for detail in acl_details:
+            req.ui.warn(detail)
 
     if exit_nonzero:
         return ret if ret else 1

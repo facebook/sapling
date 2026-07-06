@@ -298,9 +298,11 @@ Amend of a commit that touches restricted paths the user never had access to:
   [1]
   $ echo public v3 > public.txt
 
-FIXME: should preserve inaccessible committed files while amending visible changes.
+Amend aborts before rewriting commits with restricted paths.
   $ sl amend
-  abort: path 'restricted' is restricted by ACL 'some-acl'
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
   $ sl status
   M public.txt
@@ -331,9 +333,11 @@ Fold of commits when one touches restricted paths the user never had access to:
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should fold visible changes while preserving inaccessible committed files.
+Fold aborts before rewriting commits with restricted paths.
   $ sl fold --from .^ -m folded
-  abort: path 'restricted' is restricted by ACL 'some-acl'
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
   $ sl status
   $ sl cat public.txt
@@ -363,18 +367,18 @@ Histedit roll when one commit touches restricted paths the user never had access
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should roll visible changes while preserving inaccessible committed files.
+Histedit roll aborts before rewriting commits with restricted paths.
   $ sl histedit $B --commands - << EOF
   > pick $B
   > roll $C
   > EOF
-  abort: path 'restricted' is restricted by ACL 'some-acl'
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
   $ sl status
-  M public.txt
-  A C
   $ sl cat public.txt
-  public v2 (no-eol)
+  public v3 (no-eol)
 
 Partial uncommit when preserving restricted paths the user never had access to:
 
@@ -397,9 +401,11 @@ Partial uncommit when preserving restricted paths the user never had access to:
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should uncommit visible paths while preserving inaccessible committed files.
+Partial uncommit aborts before rewriting commits with restricted paths.
   $ sl uncommit public.txt
-  abort: path 'restricted' is restricted by ACL 'some-acl'
+  abort: cannot rewrite commits with restricted paths
+    'restricted' is restricted by ACL 'some-acl'
+  (use '--config slacl.mixed-commit-mode=warn' to bypass)
   [255]
   $ sl status
   $ sl cat public.txt

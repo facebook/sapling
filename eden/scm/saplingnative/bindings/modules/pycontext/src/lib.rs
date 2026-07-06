@@ -26,10 +26,10 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
 
     m.add_class::<context>(py)?;
-    m.add(py, "check_permission_denied", py_fn!(py, check_permission_denied(ctx: ImplInto<CoreContext>) -> PyResult<(Vec<String>, bool)> {
+    m.add(py, "check_permission_denied", py_fn!(py, check_permission_denied(ctx: ImplInto<CoreContext>) -> PyResult<(Option<String>, Vec<String>, bool)> {
         let ctx: CoreContext = ctx.into();
         let result = acl::check_permission_denied_paths(&ctx.permission_denied_paths, &ctx.config).map_pyerr(py)?;
-        Ok((result.warnings, result.exit_nonzero))
+        Ok((result.warning_message, result.acl_details, result.exit_nonzero))
     }))?;
     m.add(
         py,
@@ -95,6 +95,12 @@ py_class!(pub class context |py| {
             })
             .collect())
     }
+
+    def permission_denied_count(&self) -> PyResult<u64> {
+        let ctx = self.ctx(py);
+        Ok(ctx.permission_denied_paths.count())
+    }
+
 });
 
 impl context {

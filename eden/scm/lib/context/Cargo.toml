@@ -13,7 +13,6 @@ license = "MIT"
 name = "context"
 
 [dependencies]
-parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-io = { version = "0.1.0", path = "../io" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
