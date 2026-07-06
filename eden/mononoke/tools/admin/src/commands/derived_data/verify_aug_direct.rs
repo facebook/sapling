@@ -17,9 +17,18 @@ use anyhow::anyhow;
 use anyhow::bail;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarksRef;
+use bookmarks::Freshness;
 use cacheblob::MemWritesKeyedBlobstore;
+use clap::Args;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::future;
+use futures::stream;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest::cached_acl_overlay_map;
@@ -35,6 +44,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use restricted_paths_common::NoopRestrictedPathsManifestIdStore;
 use restricted_paths_common::RestrictedPathsConfigBased;
+use tracing::info;
 
 use super::Repo;
 
@@ -492,6 +502,129 @@ async fn compare_acl_path_pointers(
     Ok(None)
 }
 
+const MAX_VERIFY_AUG_DIRECT_CONCURRENCY: u64 = 100;
+const VERIFY_AUG_DIRECT_PROGRESS_INTERVAL: u64 = 1000;
+
+#[derive(Args)]
+pub(super) struct VerifyAugDirectArgs {
+    /// Inclusive upper bound changeset (hex bonsai changeset ID).
+    /// Mutually exclusive with --bookmark.
+    #[clap(long, conflicts_with = "bookmark")]
+    end_id: Option<ChangesetId>,
+
+    /// Resolve upper bound from a bookmark (e.g. master).
+    /// Mutually exclusive with --end-id. Defaults to 'master' when neither is set.
+    #[clap(long, short = 'B', conflicts_with = "end_id")]
+    bookmark: Option<BookmarkKey>,
+
+    /// Number of most recent changesets to validate, ending at --end-id/--bookmark.
+    #[clap(long, value_parser = clap::value_parser!(u64).range(1..))]
+    last: u64,
+
+    /// Number of verifier chunks to process concurrently. Maximum: 100.
+    #[clap(long, default_value_t = 10, value_parser = clap::value_parser!(u64).range(1..=MAX_VERIFY_AUG_DIRECT_CONCURRENCY))]
+    concurrency: u64,
+}
+
+async fn resolve_end_id(
+    ctx: &CoreContext,
+    repo: &Repo,
+    end_id: Option<ChangesetId>,
+    bookmark: Option<BookmarkKey>,
+) -> Result<ChangesetId> {
+    match end_id {
+        Some(end_id) => Ok(end_id),
+        None => {
+            let bookmark = match bookmark {
+                Some(bookmark) => bookmark,
+                None => BookmarkKey::new("master")?,
+            };
+            repo.bookmarks()
+                .get(ctx.clone(), &bookmark, Freshness::MostRecent)
+                .await?
+                .ok_or_else(|| anyhow!("bookmark '{bookmark}' not found"))
+        }
+    }
+}
+
+async fn select_last_changesets(
+    ctx: &CoreContext,
+    repo: &Repo,
+    end_id: ChangesetId,
+    count: u64,
+) -> Result<Vec<ChangesetId>> {
+    let count = usize::try_from(count).context("--last value does not fit in usize")?;
+    let mut cs_ids: Vec<ChangesetId> = repo
+        .commit_graph()
+        .ancestors_difference_stream(ctx, vec![end_id], vec![])
+        .await?
+        .take(count)
+        .try_collect()
+        .await?;
+    cs_ids.reverse();
+    Ok(cs_ids)
+}
+
+async fn verify_aug_direct_chunk(
+    ctx: &CoreContext,
+    repo: &Repo,
+    manager: &DerivedDataManager,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<u64> {
+    let mut verifier = Verifier::new(ctx, repo, manager);
+    let mut processed = 0;
+
+    for cs_id in cs_ids {
+        if let Some(m) = verifier.verify_one(cs_id).await? {
+            return Err(anyhow!(
+                "MISMATCH at {}: {} diverges: computed={} expected={}",
+                m.cs_id,
+                m.field,
+                m.computed,
+                m.expected,
+            ));
+        }
+        processed += 1;
+    }
+
+    Ok(processed)
+}
+
+pub(super) async fn verify_aug_direct(
+    ctx: &CoreContext,
+    repo: &Repo,
+    manager: &DerivedDataManager,
+    args: VerifyAugDirectArgs,
+) -> Result<()> {
+    let end_id = resolve_end_id(ctx, repo, args.end_id, args.bookmark).await?;
+    let cs_ids = select_last_changesets(ctx, repo, end_id, args.last).await?;
+
+    info!("verifying {} changesets", cs_ids.len());
+
+    let concurrency =
+        usize::try_from(args.concurrency).context("--concurrency value does not fit in usize")?;
+    let chunk_size = cs_ids.len().max(1).div_ceil(concurrency);
+    let mut processed = 0;
+    let mut next_progress = VERIFY_AUG_DIRECT_PROGRESS_INTERVAL;
+
+    stream::iter(cs_ids.chunks(chunk_size).map(|chunk| chunk.to_vec()))
+        .map(|chunk| verify_aug_direct_chunk(ctx, repo, manager, chunk))
+        .buffer_unordered(concurrency)
+        .try_for_each(|chunk_processed| {
+            processed += chunk_processed;
+            if processed >= next_progress {
+                info!("progress: processed={processed}");
+                next_progress = (processed / VERIFY_AUG_DIRECT_PROGRESS_INTERVAL + 1)
+                    * VERIFY_AUG_DIRECT_PROGRESS_INTERVAL;
+            }
+            future::ready(Ok(()))
+        })
+        .await?;
+
+    println!("done: processed={processed}");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -502,6 +635,7 @@ mod tests {
     use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
     use bookmarks::Bookmarks;
     use changesets_creation::save_changesets;
+    use clap::Parser;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
@@ -617,6 +751,68 @@ mod tests {
             total_size: byte as u64,
             file_header_metadata: None,
         })
+    }
+
+    #[derive(Parser)]
+    struct VerifyAugDirectArgsParser {
+        #[clap(flatten)]
+        _args: VerifyAugDirectArgs,
+    }
+
+    #[mononoke::test]
+    fn verify_aug_direct_args_rejects_excessive_concurrency() {
+        // Given a concurrency value above the operational safety cap.
+        let excessive_concurrency = (MAX_VERIFY_AUG_DIRECT_CONCURRENCY + 1).to_string();
+
+        // When parsing the verifier arguments.
+        let error = match VerifyAugDirectArgsParser::try_parse_from([
+            "verify-aug-direct",
+            "--last",
+            "1",
+            "--concurrency",
+            excessive_concurrency.as_str(),
+        ]) {
+            Ok(_) => panic!("concurrency above the cap should be rejected"),
+            Err(error) => error,
+        };
+
+        // Then clap rejects the value before any verification work can fan out.
+        assert_eq!(error.kind(), clap::error::ErrorKind::ValueValidation);
+        assert!(error.to_string().contains(&format!(
+            "is not in 1..={MAX_VERIFY_AUG_DIRECT_CONCURRENCY}"
+        )));
+    }
+
+    #[mononoke::fbinit_test]
+    async fn select_last_changesets_keeps_tail_in_oldest_to_newest_order(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a linear repository history with four changesets.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file.txt", b"two")
+            .commit()
+            .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .add_file("file.txt", b"three")
+            .commit()
+            .await?;
+        let fourth = CreateCommitContext::new(&ctx, &repo, vec![third])
+            .add_file("file.txt", b"four")
+            .commit()
+            .await?;
+
+        // When selecting the last two changesets ending at the fourth changeset.
+        let selected = select_last_changesets(&ctx, &repo.repo, fourth, 2).await?;
+
+        // Then the selected changesets are verified oldest-to-newest within the tail.
+        assert_eq!(selected, vec![third, fourth]);
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

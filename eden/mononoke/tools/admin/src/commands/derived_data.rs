@@ -17,7 +17,6 @@ mod fetch;
 mod find_derivation_gaps;
 mod list_manifest;
 mod slice;
-#[cfg(test)]
 mod verify_aug_direct;
 mod verify_manifests;
 mod verify_stage_output;
@@ -73,6 +72,8 @@ use self::list_manifest::ListManifestArgs;
 use self::list_manifest::list_manifest;
 use self::slice::SliceArgs;
 use self::slice::slice;
+use self::verify_aug_direct::VerifyAugDirectArgs;
+use self::verify_aug_direct::verify_aug_direct;
 use self::verify_manifests::VerifyManifestsArgs;
 use self::verify_manifests::verify_manifests;
 use self::verify_stage_output::VerifyStageOutputArgs;
@@ -181,6 +182,8 @@ enum DerivedDataSubcommand {
     ListManifest(ListManifestArgs),
     /// Slice underived ancestors of given commits
     Slice(SliceArgs),
+    /// Validate direct augmented-manifest derivation against stored data
+    VerifyAugDirect(VerifyAugDirectArgs),
     /// Compare different manifest types to ensure they are equivalent
     VerifyManifests(VerifyManifestsArgs),
     /// Verify stage derivation output matches normal derivation output
@@ -294,6 +297,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         | DerivedDataSubcommand::Fetch(_)
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::FindDerivationGaps(_)
+        | DerivedDataSubcommand::VerifyAugDirect(_)
         | DerivedDataSubcommand::VerifyManifests(_)
         | DerivedDataSubcommand::VerifyStageOutput(_)
         | DerivedDataSubcommand::ListManifest(_)
@@ -324,6 +328,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             | DerivedDataSubcommand::FindDerivationGaps(_)
             | DerivedDataSubcommand::ListManifest(_)
             | DerivedDataSubcommand::Slice(_)
+            | DerivedDataSubcommand::VerifyAugDirect(_)
             | DerivedDataSubcommand::VerifyStageOutput(_)
     );
 
@@ -349,6 +354,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         DerivedDataSubcommand::FindDerivationGaps(args) => {
             find_derivation_gaps(&ctx, &repo, &manager, args).await?
+        }
+        DerivedDataSubcommand::VerifyAugDirect(args) => {
+            verify_aug_direct(&ctx, &repo, &manager, args).await?
         }
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
         DerivedDataSubcommand::ListManifest(args) => {
