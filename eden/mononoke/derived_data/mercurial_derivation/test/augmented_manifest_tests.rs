@@ -1141,6 +1141,13 @@ async fn assert_dual_derive_agree_at_root(
     Ok(via_direct_path)
 }
 
+fn direct_derivation_knobs(enabled: bool) -> JustKnobsInMemory {
+    JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+        KnobVal::Bool(enabled),
+    )]))
+}
+
 fn restricted_paths_access_logging_knobs(enabled: bool) -> JustKnobsInMemory {
     JustKnobsInMemory::new(HashMap::from([(
         "scm/mononoke:enabled_restricted_paths_access_logging".to_string(),
@@ -3764,4 +3771,140 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
         .boxed(),
     )
     .await
+}
+
+/// Direct manager derivation with a subtree copy whose source was already
+/// persisted must resolve that source from stored `RootHgAugmentedManifestId`
+/// data when the direct-derivation JustKnob is enabled.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_persisted_source_with_jk(fb: FacebookInit) -> Result<()> {
+    // Given: a subtree-copy source whose augmented root is already persisted,
+    // and a later child batch that does not include that source in its local `res` map.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("lib/mod.rs", "pub mod foo;")
+        .add_file("lib/foo.rs", "fn foo() {}")
+        .commit()
+        .await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("readme.md", "hello")
+        .commit()
+        .await?;
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![parent],
+        vec![subtree_copy("vendor/lib", "lib", source)?],
+        vec![],
+    )
+    .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![source, parent, child], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![source, parent, child], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![source, parent], None)
+        .await?;
+
+    // When: deriving only the copying child with direct derivation enabled.
+    with_just_knobs_async(
+        direct_derivation_knobs(true),
+        async {
+            manager
+                .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![child], None)
+                .await
+        }
+        .boxed(),
+    )
+    .await?;
+
+    // Then: the direct manager result matches the Hg manifest for the subtree-copy commit.
+    let aug_id = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+        .await?
+        .expect("derived above")
+        .hg_augmented_manifest_id();
+    let hg_manifest_id = repo
+        .derive_hg_changeset(&ctx, child)
+        .await?
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await
+}
+
+/// Direct manager batch derivation must use the batch-local augmented-root map
+/// for subtree-copy sources that are derived earlier in the same batch but have
+/// not yet been persisted by the manager.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_subtree_batch_local_source_with_jk(fb: FacebookInit) -> Result<()> {
+    // Given: a single direct-derivation batch containing both a subtree-copy
+    // source and the later changeset that copies from it.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("lib/mod.rs", "pub mod foo;")
+        .add_file("lib/foo.rs", "fn foo() {}")
+        .commit()
+        .await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("readme.md", "hello")
+        .commit()
+        .await?;
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![parent],
+        vec![subtree_copy("vendor/lib", "lib", source)?],
+        vec![],
+    )
+    .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![source, parent, child], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![source, parent, child], None)
+        .await?;
+    assert!(
+        manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, source, None)
+            .await?
+            .is_none(),
+        "source augmented root must not be persisted before the direct batch",
+    );
+
+    // When: deriving the source, parent, and subtree-copy child in one JK-on batch.
+    with_just_knobs_async(
+        direct_derivation_knobs(true),
+        async {
+            manager
+                .derive_exactly_batch::<RootHgAugmentedManifestId>(
+                    &ctx,
+                    vec![source, parent, child],
+                    None,
+                )
+                .await
+        }
+        .boxed(),
+    )
+    .await?;
+
+    // Then: the child resolves its source from the batch-local map and matches the Hg manifest.
+    let aug_id = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+        .await?
+        .expect("derived above")
+        .hg_augmented_manifest_id();
+    let hg_manifest_id = repo
+        .derive_hg_changeset(&ctx, child)
+        .await?
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await
 }

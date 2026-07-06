@@ -463,6 +463,55 @@ pub fn format_key(derivation_ctx: &DerivationContext, cs_id: ChangesetId) -> Str
     format!("{root_prefix}{key_prefix}{cs_id}")
 }
 
+/// Resolve subtree-copy source augmented manifest roots for a bonsai.
+///
+/// For each `SubtreeCopy` in the bonsai's `subtree_changes`, finds the
+/// source changeset's `RootHgAugmentedManifestId`. Checks `known_aug_roots`
+/// first (batch-local cache) then falls back to persisted mappings.
+async fn get_subtree_source_aug_roots(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+    known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestId>>,
+) -> Result<HashMap<ChangesetId, mercurial_types::HgAugmentedManifestId>> {
+    let mut sources = HashMap::new();
+    let mut missing_sources = Vec::new();
+    let mut seen_missing_sources = HashSet::new();
+
+    for (_dest, change) in bonsai.subtree_changes() {
+        let Some((from_cs_id, _from_path)) = change.copy_source() else {
+            continue;
+        };
+        if sources.contains_key(&from_cs_id) || seen_missing_sources.contains(&from_cs_id) {
+            continue;
+        }
+        if let Some(aug) = known_aug_roots.and_then(|m| m.get(&from_cs_id)) {
+            sources.insert(from_cs_id, aug.hg_augmented_manifest_id());
+        } else {
+            missing_sources.push(from_cs_id);
+            seen_missing_sources.insert(from_cs_id);
+        }
+    }
+
+    if !missing_sources.is_empty() {
+        let fetched_sources = derivation_ctx
+            .fetch_derived_batch::<RootHgAugmentedManifestId>(ctx, missing_sources.clone())
+            .await?;
+        for from_cs_id in missing_sources {
+            if let Some(aug) = fetched_sources.get(&from_cs_id) {
+                sources.insert(from_cs_id, aug.hg_augmented_manifest_id());
+            } else {
+                anyhow::bail!(
+                    "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
+                     it must be derived before the changeset that copies from it",
+                );
+            }
+        }
+    }
+
+    Ok(sources)
+}
+
 /// If this Bonsai changeset is already mapped to a Mercurial changeset, use
 /// that changeset's root manifest id as the canonical augmented-manifest root.
 /// Bonsai-native changesets with no Hg mapping use the directly-computed root.
@@ -525,6 +574,7 @@ async fn derive_direct(
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
     aug_parents: Vec<HgAugmentedManifestId>,
+    known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestId>>,
     expected_root: Option<HgNodeHash>,
 ) -> Result<HgAugmentedManifestId> {
     let blobstore = derivation_ctx.blobstore();
@@ -565,12 +615,23 @@ async fn derive_direct(
     // scoped to the paths this changeset rebuilds (or a full walk for merges).
     let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
 
+    let source_aug_roots =
+        get_subtree_source_aug_roots(ctx, derivation_ctx, bonsai, known_aug_roots).await?;
+    let subtree_replacements =
+        crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements(
+            ctx,
+            blobstore,
+            bonsai,
+            &source_aug_roots,
+        )
+        .await?;
+
     crate::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
         blobstore,
         aug_parents,
         file_changes,
-        vec![],
+        subtree_replacements,
         parent_csids,
         &content_metadata,
         expected_root,
@@ -595,16 +656,21 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
     ) -> Result<Self> {
         let csid = bonsai.get_changeset_id();
 
-        if should_use_direct_derivation(derivation_ctx.repo_name())?
-            && bonsai.subtree_changes().is_empty()
-        {
+        if should_use_direct_derivation(derivation_ctx.repo_name())? {
             let aug_parents = parents
                 .into_iter()
                 .map(|p| p.hg_augmented_manifest_id())
                 .collect();
             let expected_root = lookup_mapped_root_hg_node_id(ctx, derivation_ctx, csid).await?;
-            let root =
-                derive_direct(ctx, derivation_ctx, &bonsai, aug_parents, expected_root).await?;
+            let root = derive_direct(
+                ctx,
+                derivation_ctx,
+                &bonsai,
+                aug_parents,
+                None,
+                expected_root,
+            )
+            .await?;
             return Ok(Self(root));
         }
 
@@ -664,11 +730,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         let blobstore = derivation_ctx.blobstore();
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();
 
-        if should_use_direct_derivation(derivation_ctx.repo_name())?
-            && bonsais
-                .iter()
-                .all(|bonsai| bonsai.subtree_changes().is_empty())
-        {
+        if should_use_direct_derivation(derivation_ctx.repo_name())? {
             let expected_roots = lookup_mapped_root_hg_node_ids(
                 ctx,
                 derivation_ctx,
@@ -691,6 +753,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                     derivation_ctx,
                     bonsai,
                     aug_parents,
+                    Some(&res),
                     expected_roots.get(&csid).copied(),
                 )
                 .await?;
