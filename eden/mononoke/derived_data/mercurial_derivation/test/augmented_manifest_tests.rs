@@ -20,8 +20,10 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest;
+use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
+use mercurial_types::HgParents;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -713,6 +715,178 @@ async fn test_compute_hg_node_id_matches_materialised(fb: FacebookInit) -> Resul
         streaming,
         hg_manifest_id.into_nodehash(),
         "streaming compute_hg_node_id must match HgManifest derivation"
+    );
+
+    Ok(())
+}
+
+async fn derive_augmented_manifests(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<Vec<(HgAugmentedManifestId, HgAugmentedManifestEnvelope)>> {
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(ctx, cs_ids.clone(), None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(ctx, cs_ids.clone(), None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, cs_ids.clone(), None)
+        .await?;
+
+    let mut manifests = Vec::new();
+    for cs_id in cs_ids {
+        let aug_id = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(ctx, cs_id, None)
+            .await?
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"))
+            .hg_augmented_manifest_id();
+        let envelope = aug_id.load(ctx, repo.repo_blobstore()).await?;
+        manifests.push((aug_id, envelope));
+    }
+
+    Ok(manifests)
+}
+
+#[mononoke::fbinit_test]
+async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit) -> Result<()> {
+    // Given: merged subentries serialise to the same content as the parent.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("alpha", "1")
+        .add_file("beta", "2")
+        .add_file("gamma", "3")
+        .commit()
+        .await?;
+    let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs]).await?;
+    let (p1_aug_id, p1_env) = manifests.pop().expect("derived one augmented manifest");
+
+    // When: probing parent-envelope reuse with the matching parent as p1.
+    let reuse = derive_hg_augmented_manifest::try_reuse_parent_envelope(
+        &ctx,
+        repo.repo_blobstore(),
+        p1_env.augmented_manifest.subentries.clone(),
+        Some(p1_aug_id),
+        None,
+    )
+    .await?;
+
+    // Then: p1 is reused.
+    assert_eq!(
+        reuse,
+        derive_hg_augmented_manifest::ParentEnvelopeReuse::Reuse(
+            derive_hg_augmented_manifest::ReusableParentEnvelope {
+                id: p1_aug_id,
+                envelope: p1_env,
+            }
+        ),
+        "should reuse the matching parent"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_try_reuse_parent_envelope_creates_fresh_for_different_content(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a candidate parent and merged subentries from unrelated content.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("alpha", "1")
+        .add_file("beta", "2")
+        .add_file("gamma", "3")
+        .commit()
+        .await?;
+    let other_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("delta", "4")
+        .add_file("epsilon", "5")
+        .commit()
+        .await?;
+    let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs, other_cs])
+        .await?
+        .into_iter();
+    let (p1_aug_id, _p1_env) = manifests.next().expect("derived p1 augmented manifest");
+    let (_other_aug_id, other_env) = manifests.next().expect("derived other augmented manifest");
+    let p1_only_parents = HgParents::new(Some(p1_aug_id.into_nodehash()), None);
+
+    // When: probing reuse for subentries that do not match the candidate parent.
+    let reuse = derive_hg_augmented_manifest::try_reuse_parent_envelope(
+        &ctx,
+        repo.repo_blobstore(),
+        other_env.augmented_manifest.subentries.clone(),
+        Some(p1_aug_id),
+        None,
+    )
+    .await?;
+
+    // Then: no parent is reused and the fresh-envelope hash is returned.
+    let expected_fresh_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
+        other_env.augmented_manifest.subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &p1_only_parents,
+    )
+    .await?;
+    assert_eq!(
+        reuse,
+        derive_hg_augmented_manifest::ParentEnvelopeReuse::CreateFresh {
+            computed_node_id: expected_fresh_node_id,
+        },
+        "merged subentries differ from parent; expected fresh envelope"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not_match(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: two candidate parents where only p2 matches the merged subentries.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("alpha", "1")
+        .add_file("beta", "2")
+        .add_file("gamma", "3")
+        .commit()
+        .await?;
+    let p2_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("delta", "4")
+        .add_file("epsilon", "5")
+        .commit()
+        .await?;
+    let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs, p2_cs])
+        .await?
+        .into_iter();
+    let (p1_aug_id, _p1_env) = manifests.next().expect("derived p1 augmented manifest");
+    let (p2_aug_id, p2_env) = manifests.next().expect("derived p2 augmented manifest");
+
+    // When: probing reuse for subentries that match only p2.
+    let reuse = derive_hg_augmented_manifest::try_reuse_parent_envelope(
+        &ctx,
+        repo.repo_blobstore(),
+        p2_env.augmented_manifest.subentries.clone(),
+        Some(p1_aug_id),
+        Some(p2_aug_id),
+    )
+    .await?;
+
+    // Then: p2 is reused.
+    assert_eq!(
+        reuse,
+        derive_hg_augmented_manifest::ParentEnvelopeReuse::Reuse(
+            derive_hg_augmented_manifest::ReusableParentEnvelope {
+                id: p2_aug_id,
+                envelope: p2_env,
+            }
+        ),
+        "should reuse the second parent that matches"
     );
 
     Ok(())

@@ -41,6 +41,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::calculate_hg_node_id_stream;
+use mercurial_types::calculate_hg_node_ids_multi;
 use mercurial_types::preloaded_augmented_manifest::serialize_manifest_entry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
@@ -749,6 +750,90 @@ pub async fn compute_hg_node_id(
             serialize_manifest_entry(&path, &entry)
         });
     calculate_hg_node_id_stream(lines, parents).await
+}
+
+/// A reusable parent envelope for a merged directory.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ReusableParentEnvelope {
+    pub id: HgAugmentedManifestId,
+    pub envelope: HgAugmentedManifestEnvelope,
+}
+
+/// Decision for a merged directory's augmented-manifest envelope.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ParentEnvelopeReuse {
+    Reuse(ReusableParentEnvelope),
+    CreateFresh { computed_node_id: HgNodeHash },
+}
+
+/// Try to reuse a parent's augmented-manifest envelope if its subentries
+/// match `merged_subentries`. Checks `p1` first, then `p2`; the first parent
+/// whose content matches wins (Mercurial's first-parent-wins convention).
+///
+/// Mirrors `derive_hg_manifest.rs::create_hg_manifest`'s reuse logic. The
+/// content-equality test is done by streaming `merged_subentries` under the
+/// candidate parent's own `(p1, p2)`: if that hash equals the parent's stored
+/// `computed_node_id`, then the merged content serialises identically to the
+/// parent's content and we can reuse the parent's envelope wholesale.
+///
+/// Computes the fresh-envelope node id in the same stream pass as the reuse
+/// checks, so `CreateFresh` does not need a second sharded-map traversal.
+pub async fn try_reuse_parent_envelope(
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    merged_subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+    p1: Option<HgAugmentedManifestId>,
+    p2: Option<HgAugmentedManifestId>,
+) -> Result<ParentEnvelopeReuse> {
+    let fallback_node_parents = HgParents::new(
+        p1.map(HgAugmentedManifestId::into_nodehash),
+        p2.map(HgAugmentedManifestId::into_nodehash),
+    );
+    let mut reuse_candidates = Vec::new();
+    let mut hash_parent_sets = Vec::new();
+
+    for parent_id in [p1, p2].into_iter().flatten() {
+        let parent_env = parent_id.load(ctx, blobstore).await?;
+        hash_parent_sets.push(HgParents::new(
+            parent_env.augmented_manifest.p1,
+            parent_env.augmented_manifest.p2,
+        ));
+        reuse_candidates.push((parent_id, parent_env));
+    }
+    hash_parent_sets.push(fallback_node_parents);
+
+    let lines =
+        merged_subentries
+            .into_entries(ctx, blobstore)
+            .and_then(|(path, entry)| async move {
+                let path = MPathElement::from_smallvec(path)?;
+                serialize_manifest_entry(&path, &entry)
+            });
+    let mut node_ids_by_parent_set = calculate_hg_node_ids_multi(lines, &hash_parent_sets).await?;
+    let fallback_computed_node_id = node_ids_by_parent_set
+        .pop()
+        .context("missing fallback hg node-id hash")?;
+
+    let reusable_parent = reuse_candidates
+        .into_iter()
+        .zip(node_ids_by_parent_set)
+        .find_map(|((parent_id, parent_env), candidate_node_id)| {
+            if candidate_node_id == parent_env.augmented_manifest.computed_node_id {
+                Some(ReusableParentEnvelope {
+                    id: parent_id,
+                    envelope: parent_env,
+                })
+            } else {
+                None
+            }
+        });
+
+    Ok(match reusable_parent {
+        Some(reusable_parent) => ParentEnvelopeReuse::Reuse(reusable_parent),
+        None => ParentEnvelopeReuse::CreateFresh {
+            computed_node_id: fallback_computed_node_id,
+        },
+    })
 }
 
 pub async fn derive_from_full_hg_manifest(
