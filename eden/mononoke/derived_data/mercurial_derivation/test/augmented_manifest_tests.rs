@@ -1694,3 +1694,70 @@ async fn test_octopus_merge_bonsai_delete_cancels_step_parent_subdir(
 
     Ok(())
 }
+
+/// Forced-hash root parity: when the canonical Mercurial root id differs from
+/// the computed content hash, the direct path must store the envelope at the
+/// canonical key so client lookups by `HgChangeset.rootnode` succeed.
+///
+/// `CreateCommitContext` only produces generated roots where canonical and
+/// computed ids match, so the test uses a fabricated supplied id to cover this
+/// otherwise-unreachable path.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) -> Result<()> {
+    use mercurial_types::HgNodeHash;
+    use mononoke_types::sha1_hash::Sha1 as NodeSha1;
+
+    // Given: a root commit and a supplied root id that differs from the natural
+    // computed manifest hash.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("foo", "bar")
+        .add_file("baz/qux", "quux")
+        .commit()
+        .await?;
+    let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xAB; 20]));
+    let file_changes = file_changes_from_bonsai(&ctx, &repo, cs_id).await?;
+
+    // When: deriving directly from Bonsai with the supplied root id.
+    let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        vec![],
+        file_changes,
+        (None, None),
+        &Default::default(),
+        supplied,
+    )
+    .await?;
+
+    // Then: the envelope is stored and identified by the supplied root id,
+    // while `computed_node_id` still records the natural content hash.
+    assert_eq!(
+        aug_id.into_nodehash(),
+        supplied,
+        "envelope must be stored at the supplied root key, not the computed key",
+    );
+    let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        env.augmented_manifest.hg_node_id, supplied,
+        "envelope.hg_node_id must equal the supplied root id",
+    );
+    let expected_computed_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
+        env.augmented_manifest.subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &HgParents::new(None, None),
+    )
+    .await?;
+    assert_eq!(
+        env.augmented_manifest.computed_node_id, expected_computed_node_id,
+        "computed_node_id must reflect the actual content hash",
+    );
+    assert_ne!(
+        env.augmented_manifest.computed_node_id, supplied,
+        "computed_node_id must differ from the supplied root id in this fixture",
+    );
+
+    Ok(())
+}
