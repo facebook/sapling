@@ -64,7 +64,7 @@ Short help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   
@@ -134,7 +134,7 @@ Short help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   
@@ -204,7 +204,7 @@ Short help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   
@@ -274,7 +274,7 @@ Short help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   
@@ -958,7 +958,7 @@ Test that default list of commands omits extension commands
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   

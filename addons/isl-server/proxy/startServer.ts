@@ -88,7 +88,8 @@ type Args = {
   cwd: string | undefined;
   extraCwds: string[];
   sessionId: string | undefined;
-  bind: string;
+  /** Hostname/IP to bind to. undefined means --bind was not passed (the server binds localhost). */
+  bind: string | undefined;
   tlsCert: string | undefined;
   tlsKey: string | undefined;
 };
@@ -115,7 +116,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
   let slVersion = '(dev)';
   let platform: string | undefined = undefined;
   let sessionId: string | undefined = undefined;
-  let bind = 'localhost';
+  let bind: string | undefined = undefined;
   let tlsCert: string | undefined = undefined;
   let tlsKey: string | undefined = undefined;
   let i = 0;
@@ -455,7 +456,16 @@ export async function runProxyMain(args: Args) {
    * off as an argument to another process, we must take great care when
    * constructing this argument.
    */
-  function getURL(port: number, token: string, cwd: string): URL {
+  function getURL(
+    port: number,
+    token: string,
+    cwd: string,
+    serverConfig: {bind: string; tlsCert?: string; tlsKey?: string} = {
+      bind: bind ?? 'localhost',
+      tlsCert,
+      tlsKey,
+    },
+  ): URL {
     // Although `port` is where our server is actually hosting from,
     // in dev mode Vite will start on 3000 and proxy requests to the server.
     // We only get the source build by opening from port 3000.
@@ -477,9 +487,16 @@ export async function runProxyMain(args: Args) {
     if (sessionId) {
       urlArgs.sessionId = encodeURIComponent(sessionId);
     }
-    const protocol = tlsCert && tlsKey ? 'https' : 'http';
-    // '::' and '0.0.0.0' are wildcard addresses — use localhost in the URL.
-    const urlHost = bind === '::' || bind === '0.0.0.0' ? 'localhost' : bind;
+    const protocol = serverConfig.tlsCert && serverConfig.tlsKey ? 'https' : 'http';
+    // '::' and '0.0.0.0' are wildcard addresses. For HTTPS, use the OS hostname in the
+    // URL so the link also works from other machines (the certificate is typically
+    // issued for the hostname). Plain HTTP wildcard servers keep localhost.
+    const isWildcardBind = serverConfig.bind === '::' || serverConfig.bind === '0.0.0.0';
+    const urlHost = isWildcardBind
+      ? protocol === 'https'
+        ? os.hostname()
+        : 'localhost'
+      : serverConfig.bind;
     const platformPath = getPlatformIndexHtmlPath(platform);
     const params = Object.entries(urlArgs)
       .map(([key, value]) => `${key}=${value}`)
@@ -500,7 +517,7 @@ export async function runProxyMain(args: Args) {
     logInfo: info,
     command,
     slVersion,
-    bind,
+    bind: bind ?? 'localhost',
     tlsCert,
     tlsKey,
   });
@@ -550,6 +567,21 @@ export async function runProxyMain(args: Args) {
         `warning: sl version has changed since last server was started. Starting a fresh server to use latest version '${slVersion}'.`,
       );
       killAndSpawnAgain = true;
+    } else if (bind != null && bind !== (existingServerInfo.bind ?? 'localhost')) {
+      info(
+        `warning: Starting a fresh server to bind to '${bind}' (existing server is bound to '${
+          existingServerInfo.bind ?? 'localhost'
+        }').`,
+      );
+      killAndSpawnAgain = true;
+    } else if (
+      (tlsCert != null || tlsKey != null) &&
+      (tlsCert !== existingServerInfo.tlsCert || tlsKey !== existingServerInfo.tlsKey)
+    ) {
+      info(
+        'warning: Starting a fresh server to use the requested TLS configuration (existing server uses a different one).',
+      );
+      killAndSpawnAgain = true;
     }
 
     if (killAndSpawnAgain) {
@@ -566,7 +598,11 @@ export async function runProxyMain(args: Args) {
       return;
     }
 
-    const url = getURL(port as number, existingServerInfo.sensitiveToken, cwd);
+    const url = getURL(port as number, existingServerInfo.sensitiveToken, cwd, {
+      bind: existingServerInfo.bind ?? 'localhost',
+      tlsCert: existingServerInfo.tlsCert,
+      tlsKey: existingServerInfo.tlsKey,
+    });
     info('re-used existing Sapling Web server');
     info('\naccess Sapling Web with this link:');
     info(String(url));
@@ -599,7 +635,7 @@ export async function runProxyMain(args: Args) {
         logFileLocation,
         command,
         slVersion,
-        bind,
+        bind: bind ?? 'localhost',
         tlsCert,
         tlsKey,
       });

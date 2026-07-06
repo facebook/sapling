@@ -105,6 +105,12 @@ pub struct ISLSpawnOptions {
     pub dev: bool,
     pub session: Option<String>,
     pub chromelike_user_data_dir: Option<PathBuf>,
+    /// Hostname or IP for the server to bind to. None uses the server default (localhost).
+    pub bind: Option<String>,
+    /// Path to a TLS certificate file, to serve over HTTPS. Set together with `tls_key`.
+    pub tls_cert: Option<String>,
+    /// Path to a TLS key file, to serve over HTTPS. Set together with `tls_cert`.
+    pub tls_key: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -148,6 +154,15 @@ impl ISLSpawnOptions {
         }
         if let Some(session) = &self.session {
             cmd.args(["--session", session]);
+        }
+        if let Some(bind) = &self.bind {
+            cmd.args(["--bind", bind]);
+        }
+        if let Some(cert) = &self.tls_cert {
+            cmd.args(["--cert", cert]);
+        }
+        if let Some(key) = &self.tls_key {
+            cmd.args(["--key", key]);
         }
         cmd.stdin(Stdio::null());
         if pipe_stdout {

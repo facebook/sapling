@@ -331,7 +331,7 @@ Testing -h/--help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   
@@ -402,7 +402,7 @@ Testing -h/--help:
    config        show config settings
    doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files
-   web           launch Sapling Web GUI on localhost
+   web           launch Sapling Web GUI on localhost or a bound address
   
   Additional help topics:
   

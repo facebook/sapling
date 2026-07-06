@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import os from 'node:os';
 import * as util from 'node:util';
 import {readExistingServerFile} from '../existingServerStateFiles';
 import * as startServer from '../server';
@@ -191,6 +192,71 @@ describe('run-proxy', () => {
       }),
     );
     expect(exitMock).toHaveBeenCalledWith(0);
+  });
+
+  it('prints an https hostname URL when reusing an https server', async () => {
+    jest
+      .spyOn(startServer, 'startServer')
+      .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}))
+      .mockImplementationOnce(() => Promise.resolve({type: 'addressInUse'}));
+
+    jest.spyOn(lifecycle, 'checkIfServerIsAliveAndIsISL').mockImplementation(() => {
+      return Promise.resolve(1000);
+    });
+
+    await runProxyMain({
+      ...defaultArgs,
+      bind: '::',
+      tlsCert: '/path/to/cert',
+      tlsKey: '/path/to/key',
+    });
+    resetStdout();
+
+    // even a plain invocation without --bind/--cert/--key reuses the https server,
+    // and the printed URL reflects the server's actual protocol and host
+    await expect(() => runProxyMain({...defaultArgs, bind: undefined, json: true})).rejects.toEqual(
+      new Error('exited'),
+    );
+
+    expect(JSON.parse(allConsoleStdout())).toEqual(
+      expect.objectContaining({
+        url: expect.stringContaining(`https://${os.hostname()}:3011/`),
+        wasServerReused: true,
+      }),
+    );
+  });
+
+  it('forces a fresh server if explicitly requested bind or TLS config differs', async () => {
+    jest
+      .spyOn(startServer, 'startServer')
+      .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}))
+      .mockImplementationOnce(() => Promise.resolve({type: 'addressInUse'}))
+      .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1001}));
+
+    jest.spyOn(lifecycle, 'checkIfServerIsAliveAndIsISL').mockImplementation(() => {
+      return Promise.resolve(1000);
+    });
+
+    // plain http localhost server
+    await runProxyMain({...defaultArgs, bind: undefined});
+    resetStdout();
+
+    // now explicitly ask for https on all interfaces
+    await runProxyMain({
+      ...defaultArgs,
+      bind: '::',
+      tlsCert: '/path/to/cert',
+      tlsKey: '/path/to/key',
+      json: true,
+    });
+
+    expect(killMock).toHaveBeenCalled();
+    expect(JSON.parse(allConsoleStdout())).toEqual(
+      expect.objectContaining({
+        url: expect.stringContaining(`https://${os.hostname()}:3011/`),
+        wasServerReused: false,
+      }),
+    );
   });
 
   it('can kill a server', async () => {

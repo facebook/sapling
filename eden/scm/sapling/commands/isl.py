@@ -90,16 +90,49 @@ DEFAULT_PORT = 3011
                 "Provide a specific ID for this ISL session used in analytics. (ADVANCED)"
             ),
         ),
+        (
+            "",
+            "bind",
+            "",
+            _(
+                "hostname or IP for the server to bind to, allowing access from "
+                "other machines. Use 'all' to accept connections on all "
+                "interfaces. Requires --cert and --key so the auth token is "
+                "not sent in plain text. (default: localhost) (ADVANCED)"
+            ),
+        ),
+        (
+            "",
+            "cert",
+            "",
+            _(
+                "path to a TLS certificate file, to serve over HTTPS. "
+                "Must be used together with --key. Required when --bind is "
+                "specified. (ADVANCED)"
+            ),
+        ),
+        (
+            "",
+            "key",
+            "",
+            _(
+                "path to a TLS key file, to serve over HTTPS. "
+                "Must be used together with --cert. Required when --bind is "
+                "specified. (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, **opts):
-    """launch Sapling Web GUI on localhost
+    """launch Sapling Web GUI on localhost or a bound address
 
     Sapling Web is a collection of web-based tools including Interactive Smartlog,
     which is a GUI that facilitates source control operations such as creating,
     reordering, or rebasing commits.
     Running this command launches a web server that makes Sapling Web and
     Interactive Smartlog available in a local web browser.
+    With ``--bind`` (plus ``--cert`` and ``--key``), the server serves HTTPS
+    and can be reached from other machines.
     When possible, this command opens a separate OS window,
     either using a webview or a Chrome-like browser with --app.
 
@@ -110,6 +143,11 @@ def isl_cmd(ui, repo, **opts):
         $ @prog@ web --port 8081
         Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling
         Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log
+
+    Serve other machines over HTTPS with ``--bind`` (requires ``--cert`` and ``--key``)::
+
+        $ @prog@ web --port 8081 --bind all --cert cert.pem --key key.pem
+        Listening on https://devbox1234.example.com:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling
 
     Using the ``--json`` option to get the current status of Sapling Web::
 
@@ -142,6 +180,18 @@ def isl_cmd(ui, repo, **opts):
         app = "web" not in sys.argv
     dev = opts.get("dev")
     session = opts.get("session")
+    bind = opts.get("bind")
+    cert = opts.get("cert")
+    key = opts.get("key")
+    if bool(cert) != bool(key):
+        raise error.Abort(_("--cert and --key must be used together"))
+    if bind and not (cert and key):
+        raise error.Abort(
+            _(
+                "--bind requires --cert and --key, so the auth token is not "
+                "sent in plain text to other hosts"
+            )
+        )
 
     force_no_app = ui.configbool("web", "force-no-app")
 
@@ -166,6 +216,9 @@ def isl_cmd(ui, repo, **opts):
             "noApp": force_no_app or not app,
             "dev": dev,
             "session": session,
+            "bind": bind or None,
+            "tlsCert": cert or None,
+            "tlsKey": key or None,
             "chromelike_user_data_dir": repo.ui.config(
                 "isl", "chromelike-user-data-dir"
             ),
