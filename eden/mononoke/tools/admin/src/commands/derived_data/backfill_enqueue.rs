@@ -11,6 +11,7 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::types::Token;
 use clap::Args;
 use context::CoreContext;
+use metaconfig_types::CommitIdentityScheme;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
@@ -51,6 +52,13 @@ pub(super) struct BackfillEnqueueArgs {
     /// Whether to compute slices as if all commits were underived
     #[clap(long)]
     reslice: bool,
+
+    /// Enqueue a backfill for every enabled git repo in the loaded config/tier
+    /// (run with `--git-config` so the git tier's manifest is loaded). Mutually
+    /// exclusive with `-R`/`--repo-id`; combine with `--repo-concurrency` to
+    /// bound how many repos derive at once.
+    #[clap(long)]
+    all_git_repos: bool,
 }
 
 pub(super) async fn backfill_enqueue(
@@ -63,19 +71,51 @@ pub(super) async fn backfill_enqueue(
     bypass_redaction: bool,
 ) -> Result<()> {
     anyhow::ensure!(
-        !repo_args.is_empty(),
-        "--repo-id or --repo-name is required"
+        args.all_git_repos || !repo_args.is_empty(),
+        "one of --repo-id / --repo-name or --all-git-repos is required"
+    );
+    anyhow::ensure!(
+        !args.all_git_repos || repo_args.is_empty(),
+        "--all-git-repos cannot be combined with --repo-id / --repo-name"
     );
 
     let derived_data_type = args.derived_data_args.resolve_type()?;
 
+    // Resolve the set of repos to backfill. `--all-git-repos` enumerates every
+    // enabled git repo in the loaded config/tier (so it must be run with
+    // `--git-config`); otherwise use the explicitly-requested repos. Both
+    // paths converge on the same per-repo open + resolve loop below.
+    let repo_targets: Vec<RepoArgs> = if args.all_git_repos {
+        let targets: Vec<RepoArgs> = app
+            .configs()
+            .load_all_repo_configs()
+            .context("Failed to load repo configs for --all-git-repos")?
+            .into_iter()
+            .filter(|(_, config)| {
+                config.enabled && config.default_commit_identity_scheme == CommitIdentityScheme::GIT
+            })
+            .map(|(name, _)| RepoArgs::from_repo_name(name))
+            .collect();
+        anyhow::ensure!(
+            !targets.is_empty(),
+            "--all-git-repos found no enabled git repos in the loaded config \
+             (did you pass --git-config?)"
+        );
+        info!("--all-git-repos: enqueueing {} git repos", targets.len());
+        targets
+    } else {
+        repo_args
+            .iter()
+            .map(|repo_arg| match repo_arg {
+                RepoArg::Id(id) => RepoArgs::from_repo_id(id.id()),
+                RepoArg::Name(name) => RepoArgs::from_repo_name(name.clone()),
+            })
+            .collect()
+    };
+
     let mut repo_entries: Vec<thrift::DeriveBackfillRepoEntry> = Vec::new();
-    for repo_arg in repo_args {
-        let repo_arg = match repo_arg {
-            RepoArg::Id(id) => RepoArgs::from_repo_id(id.id()),
-            RepoArg::Name(name) => RepoArgs::from_repo_name(name.clone()),
-        };
-        let repo: Repo = super::open_repo_for_derive(app, &repo_arg, false, bypass_redaction)
+    for repo_arg in &repo_targets {
+        let repo: Repo = super::open_repo_for_derive(app, repo_arg, false, bypass_redaction)
             .await
             .context("Failed to open repo")?;
         let cs_ids = args.changeset_args.resolve_changesets(ctx, &repo).await?;
