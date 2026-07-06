@@ -69,6 +69,7 @@ use tracing::warn;
 
 use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_manifest::ParentIndex;
+use crate::derive_hg_manifest::hg_parents;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 ///
@@ -667,19 +668,28 @@ where
         .await
 }
 
-/// Resolve a leaves-only conflict for augmented manifest derivation.
+/// Decision for a leaves-only merge conflict.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "consumed by create_augmented_leaf in the next stack commit"
+    )
+)]
+#[derive(Debug)]
+pub(crate) enum LeafConflictResolution {
+    /// Reuse an hg-relevant parent's leaf (p1/p2).
+    Reuse(HgAugmentedFileLeafNode),
+    /// No hg-relevant parent has the file; caller must mint a parentless
+    /// filenode using this representative content.
+    MintFresh(HgAugmentedFileLeafNode),
+}
+
+/// Resolve a leaves-only conflict to match the HgManifest path.
 ///
-/// When two parents in a merge have the same file at the same path with different
-/// filenodes but identical content, `derive_manifest` calls the leaf callback with
-/// `change: None`. We verify content identity using fields already present on the
-/// augmented leaf nodes (no blobstore reads), then reuse the first hg-relevant
-/// parent's leaf — matching `resolve_conflict` in `derive_hg_manifest.rs`.
-///
-/// Octopus merges (>2 parents) are supported: parents are tagged with their bonsai
-/// `ParentIndex`, and we only consult those tagged as p1/p2 here. This matches what
-/// `derive_hg_manifest.rs::hg_parents` does, and is required because Mercurial
-/// filenodes only encode (p1, p2) parentage. Step-parents (p3+) are intentionally
-/// ignored.
+/// All contributing parents must agree on file type and content. Only p1/p2 can
+/// provide reusable Mercurial filenode parentage; step-parent-only files require
+/// minting a parentless filenode.
 #[cfg_attr(
     not(test),
     expect(
@@ -690,42 +700,33 @@ where
 pub(crate) fn check_content_identical_at_parents(
     path: &NonRootMPath,
     parents: &[Traced<ParentIndex, HgAugmentedFileLeafNode>],
-) -> Result<HgAugmentedFileLeafNode> {
+) -> Result<LeafConflictResolution> {
     use crate::derive_hg_manifest::unique_or_nothing;
 
-    // Restrict to hg-relevant parents (indices 0 and 1 in the bonsai parent list).
-    // p3+ parents are invisible to Mercurial filenode parentage, so they must not
-    // affect the result.
-    let hg_relevant: Vec<&HgAugmentedFileLeafNode> = parents
-        .iter()
-        .filter_map(|t| match t.id() {
-            Some(ParentIndex(0)) | Some(ParentIndex(1)) => Some(t.untraced()),
-            _ => None,
-        })
-        .collect();
+    let Some(representative) = parents.first().map(|t| t.untraced()) else {
+        bail!("Unresolved leaf conflict at {path}: no contributing parents");
+    };
 
-    if hg_relevant.is_empty() {
-        // No p1 or p2 contained this path. We cannot reuse a filenode whose
-        // linknode is not a Mercurial ancestor of the changeset, so this is an
-        // unresolved conflict.
-        bail!(
-            "Unresolved leaf conflict at {path}: file is present only in step-parents (p3+) of an octopus merge",
-        );
-    }
-
-    unique_or_nothing(hg_relevant.iter().map(|p| p.file_type))
+    unique_or_nothing(parents.iter().map(|t| t.untraced().file_type))
         .with_context(|| format!("Unresolved file type conflict at {path}"))?;
 
-    // Compare on content_sha1 to match the legacy HgManifest derivation path,
-    // which identifies content via the sha1 filenode-equivalent. total_size is
-    // included as a cheap second guard.
-    unique_or_nothing(hg_relevant.iter().map(|p| (p.content_sha1, p.total_size)))
-        .with_context(|| format!("Unresolved content conflict at {path}"))?;
+    // Match the legacy HgManifest resolver's content identity check.
+    unique_or_nothing(
+        parents
+            .iter()
+            .map(|t| (t.untraced().content_sha1, t.untraced().total_size)),
+    )
+    .with_context(|| format!("Unresolved content conflict at {path}"))?;
 
-    // Content is identical across hg-relevant parents. Reuse the first
-    // hg-relevant parent's complete leaf (filenode, content hashes, metadata) —
-    // same choice as resolve_conflict's hg_parents() returning p1's filenode.
-    Ok(hg_relevant[0].clone())
+    // Step-parents affect conflict detection but cannot be filenode parents.
+    let (maybe_reuse_leaf, _) = hg_parents(parents);
+    match maybe_reuse_leaf {
+        Some(leaf) => Ok(LeafConflictResolution::Reuse(leaf)),
+        None => {
+            // Content matches, but no reusable hg parent exists.
+            Ok(LeafConflictResolution::MintFresh(representative.clone()))
+        }
+    }
 }
 
 /// Compute the Mercurial node id for an augmented-manifest directory by
@@ -1002,12 +1003,23 @@ mod tests {
         }
     }
 
-    /// p1 and p2 carry the same content with different filenodes (e.g. different
-    /// linknodes from independent branches). The resolver should accept and
-    /// return the first hg-relevant parent's leaf — matching `resolve_conflict`
-    /// in `derive_hg_manifest.rs::hg_parents` returning p1's filenode.
+    fn expect_reuse(resolution: LeafConflictResolution) -> Result<HgAugmentedFileLeafNode> {
+        match resolution {
+            LeafConflictResolution::Reuse(leaf) => Ok(leaf),
+            other => Err(anyhow!("expected Reuse, got {other:?}")),
+        }
+    }
+
+    fn expect_mint_fresh(resolution: LeafConflictResolution) -> Result<HgAugmentedFileLeafNode> {
+        match resolution {
+            LeafConflictResolution::MintFresh(leaf) => Ok(leaf),
+            other => Err(anyhow!("expected MintFresh, got {other:?}")),
+        }
+    }
+
     #[mononoke::test]
     fn test_identical_content_returns_first_parent() -> Result<()> {
+        // Given: p1 and p2 have the same content with different filenodes.
         let path = NonRootMPath::new("foo")?;
         let p1 = leaf(FileType::Regular, 0xAA, 0x42, 100);
         let p2 = leaf(FileType::Regular, 0xBB, 0x42, 100);
@@ -1015,24 +1027,31 @@ mod tests {
             Traced::assign(ParentIndex(0), p1.clone()),
             Traced::assign(ParentIndex(1), p2),
         ];
-        let resolved = check_content_identical_at_parents(&path, &parents)?;
+
+        // When: resolving the leaves-only conflict.
+        let resolved = expect_reuse(check_content_identical_at_parents(&path, &parents)?)?;
+
+        // Then: the first hg-relevant parent leaf is reused.
         assert_eq!(resolved.filenode, p1.filenode, "should reuse p1's filenode");
         assert_eq!(resolved.content_blake3, p1.content_blake3);
         Ok(())
     }
 
-    /// Different `content_sha1` between p1 and p2 is an unresolved conflict —
-    /// we cannot pick a winner without a bonsai change to disambiguate.
     #[mononoke::test]
     fn test_different_content_bails() -> Result<()> {
+        // Given: p1 and p2 disagree on content.
         let path = NonRootMPath::new("foo")?;
         let parents = vec![
             Traced::assign(ParentIndex(0), leaf(FileType::Regular, 0xAA, 0x42, 100)),
             Traced::assign(ParentIndex(1), leaf(FileType::Regular, 0xBB, 0x99, 100)),
         ];
+
+        // When: resolving the leaves-only conflict.
         let err = check_content_identical_at_parents(&path, &parents)
             .expect_err("different content must be unresolved");
         let msg = format!("{err:#}");
+
+        // Then: the resolver rejects the content conflict.
         assert!(
             msg.contains("content conflict"),
             "expected content-conflict error, got: {msg}"
@@ -1040,18 +1059,21 @@ mod tests {
         Ok(())
     }
 
-    /// Same content but different `file_type` is also unresolved — Mercurial
-    /// stores file type in the manifest entry, so the result is observable.
     #[mononoke::test]
     fn test_different_file_type_bails() -> Result<()> {
+        // Given: parents have the same content but different file types.
         let path = NonRootMPath::new("foo")?;
         let parents = vec![
             Traced::assign(ParentIndex(0), leaf(FileType::Regular, 0xAA, 0x42, 100)),
             Traced::assign(ParentIndex(1), leaf(FileType::Executable, 0xBB, 0x42, 100)),
         ];
+
+        // When: resolving the leaves-only conflict.
         let err = check_content_identical_at_parents(&path, &parents)
             .expect_err("different file_type must be unresolved");
         let msg = format!("{err:#}");
+
+        // Then: the resolver rejects the observable manifest-entry conflict.
         assert!(
             msg.contains("file type conflict"),
             "expected file-type-conflict error, got: {msg}"
@@ -1059,53 +1081,87 @@ mod tests {
         Ok(())
     }
 
-    /// Only p2 contains the file. The resolver should return p2's leaf —
-    /// `hg_parents`' filter accepts indices 0 and 1, so p2 alone is enough.
     #[mononoke::test]
     fn test_only_p2_present_returns_p2_leaf() -> Result<()> {
+        // Given: only p2 contains the file.
         let path = NonRootMPath::new("foo")?;
         let p2 = leaf(FileType::Regular, 0xBB, 0x42, 100);
         let parents = vec![Traced::assign(ParentIndex(1), p2.clone())];
-        let resolved = check_content_identical_at_parents(&path, &parents)?;
+
+        // When: resolving the leaves-only conflict.
+        let resolved = expect_reuse(check_content_identical_at_parents(&path, &parents)?)?;
+
+        // Then: p2 is still an hg-relevant parent and can be reused.
         assert_eq!(resolved.filenode, p2.filenode);
         Ok(())
     }
 
-    /// Only a step-parent (p3+) carries the file: there is no Mercurial
-    /// filenode whose linknode is an ancestor of the merge changeset, so we
-    /// must bail rather than reuse the step-parent's filenode.
     #[mononoke::test]
-    fn test_only_step_parent_bails() -> Result<()> {
+    fn test_only_step_parents_mint_fresh() -> Result<()> {
+        // Given: only step-parents carry the path, and their file content matches.
         let path = NonRootMPath::new("foo")?;
-        let parents = vec![Traced::assign(
-            ParentIndex(2),
-            leaf(FileType::Regular, 0xCC, 0x42, 100),
-        )];
+        let sp3 = leaf(FileType::Regular, 0xCC, 0x42, 100);
+        let sp4 = leaf(FileType::Regular, 0xDD, 0x42, 100);
+        let parents = vec![
+            Traced::assign(ParentIndex(2), sp3.clone()),
+            Traced::assign(ParentIndex(3), sp4),
+        ];
+
+        // When: resolving the leaves-only conflict.
+        let src = expect_mint_fresh(check_content_identical_at_parents(&path, &parents)?)?;
+
+        // Then: the caller is told to mint a parentless filenode using the
+        // step-parent content as the source.
+        assert_eq!(
+            src.content_sha1, sp3.content_sha1,
+            "minted leaf must carry the step-parent content"
+        );
+        assert_eq!(src.file_type, sp3.file_type);
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_step_parents_disagree_bails() -> Result<()> {
+        // Given: only step-parents carry the path, but they disagree on content.
+        let path = NonRootMPath::new("foo")?;
+        let parents = vec![
+            Traced::assign(ParentIndex(2), leaf(FileType::Regular, 0xCC, 0x42, 100)),
+            Traced::assign(ParentIndex(3), leaf(FileType::Regular, 0xDD, 0x99, 100)),
+        ];
+
+        // When: resolving the leaves-only conflict.
         let err = check_content_identical_at_parents(&path, &parents)
-            .expect_err("step-parent-only file must be unresolved");
+            .expect_err("step-parents with differing content must be unresolved");
         let msg = format!("{err:#}");
+
+        // Then: the resolver rejects the content conflict instead of minting.
         assert!(
-            msg.contains("step-parents"),
-            "expected step-parents error, got: {msg}"
+            msg.contains("content conflict"),
+            "expected content-conflict error, got: {msg}"
         );
         Ok(())
     }
 
-    /// p1 and p2 agree on content while a step-parent (p3) carries different
-    /// content — the resolver must ignore p3 and accept p1's leaf, otherwise
-    /// the (X, X, Y) octopus shape would falsely report a conflict.
     #[mononoke::test]
-    fn test_step_parent_disagreement_ignored() -> Result<()> {
+    fn test_step_parent_disagreement_bails() -> Result<()> {
+        // Given: p1 and p2 agree on content, but a step-parent disagrees.
         let path = NonRootMPath::new("foo")?;
-        let p1 = leaf(FileType::Regular, 0xAA, 0x42, 100);
         let parents = vec![
-            Traced::assign(ParentIndex(0), p1.clone()),
+            Traced::assign(ParentIndex(0), leaf(FileType::Regular, 0xAA, 0x42, 100)),
             Traced::assign(ParentIndex(1), leaf(FileType::Regular, 0xBB, 0x42, 100)),
-            // p3 carries different content; must be ignored.
             Traced::assign(ParentIndex(2), leaf(FileType::Regular, 0xCC, 0x99, 200)),
         ];
-        let resolved = check_content_identical_at_parents(&path, &parents)?;
-        assert_eq!(resolved.filenode, p1.filenode);
+
+        // When: resolving the leaves-only conflict.
+        let err = check_content_identical_at_parents(&path, &parents)
+            .expect_err("step-parent disagreement must be unresolved");
+        let msg = format!("{err:#}");
+
+        // Then: the resolver checks all contributing parents before reusing p1.
+        assert!(
+            msg.contains("content conflict"),
+            "expected content-conflict error, got: {msg}"
+        );
         Ok(())
     }
 }
