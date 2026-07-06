@@ -389,17 +389,21 @@ TEST_F(FuseChannelTest, ioUringCqeErrorPolicy) {
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EINTR));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EOPNOTSUPP));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EAGAIN));
-  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN));
+  EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN));
   EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED));
   EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-EIO));
 
   EXPECT_TRUE(
       IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(-ECANCELED));
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(-ENOTCONN));
   EXPECT_FALSE(
       IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(-EINTR));
 
   EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED, false));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED, true));
+  EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN, false));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN, true));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EINTR, false));
 }
 #endif

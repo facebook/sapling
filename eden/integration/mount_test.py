@@ -502,7 +502,7 @@ class FuseIoUringMountTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
 
-    async def test_aborted_io_uring_connection_leaves_mount_running(self) -> None:
+    async def test_aborted_io_uring_connection_stops_mount(self) -> None:
         async with self.eden.get_async_thrift_client() as client:
             mounts = await client.listMounts()
             mount = self._find_mount(mounts)
@@ -524,15 +524,13 @@ class FuseIoUringMountTest(testcase.EdenRepoTest):
         self._assert_mount_io_fails_with_enotconn()
 
         async with self.eden.get_async_thrift_client() as client:
-            self.assertIsNotNone(self._find_mount(await client.listMounts()))
 
             async def mount_removed() -> Optional[bool]:
                 if self._find_mount(await client.listMounts()) is None:
                     return True
                 return None
 
-            with self.assertRaises(TimeoutError):
-                await poll_until_async(mount_removed, timeout=5)
+            await poll_until_async(mount_removed, timeout=60)
 
     def _assert_mount_io_fails_with_enotconn(self) -> None:
         with self.assertRaises(OSError) as context:

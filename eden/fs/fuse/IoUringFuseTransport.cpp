@@ -490,6 +490,11 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
       }
     }
 
+    if (cqe.res == -ENOTCONN && !stopRequested) {
+      return {
+          .action = CqeResult::Action::StopRequested, .request = std::nullopt};
+    }
+
     if (shouldIgnoreCqeError(cqe.res, stopRequested)) {
       return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
     }
@@ -772,12 +777,11 @@ bool IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(
 }
 
 bool IoUringFuseTransport::shouldIgnoreCqeError(int result) {
-  return result == -EINTR || result == -EOPNOTSUPP || result == -EAGAIN ||
-      result == -ENOTCONN;
+  return result == -EINTR || result == -EOPNOTSUPP || result == -EAGAIN;
 }
 
 bool IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(int result) {
-  return result == -ECANCELED;
+  return result == -ECANCELED || result == -ENOTCONN;
 }
 
 bool IoUringFuseTransport::shouldIgnoreCqeError(
