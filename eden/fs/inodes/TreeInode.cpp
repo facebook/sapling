@@ -157,13 +157,6 @@ std::optional<bool> preferKnownAclState(
   return preferred.has_value() ? preferred : fallback;
 }
 
-bool aclStatesConflict(std::optional<bool> lhs, std::optional<bool> rhs) {
-  if (!lhs.has_value() || !rhs.has_value()) {
-    return false;
-  }
-  return *lhs != *rhs;
-}
-
 bool aclRootStateRequiresCheckoutWalk(
     AclRootState current,
     AclRootState target) {
@@ -174,12 +167,13 @@ bool aclRootStateRequiresCheckoutWalk(
 bool dirEntryMatchesTreeEntry(
     const DirEntry& dirEntry,
     const TreeEntry& treeEntry) {
-  return dirEntry.getInitialMode() ==
-      modeFromTreeEntryType(treeEntry.getType()) &&
-      dirEntry.isRestricted() == treeEntry.isRestricted() &&
-      !aclStatesConflict(dirEntry.hasACL(), treeEntry.hasACL()) &&
-      dirEntry.getObjectIdPtr() != nullptr &&
-      dirEntry.getObjectId().bytesEqual(treeEntry.getObjectId());
+  // Runs per entry on the inode-load path, so only cheap in-memory checks: a
+  // proper object id comparison isn't cheap under FilteredFS (it can hit disk).
+  return compareTreeEntryType(
+             treeEntryTypeFromMode(dirEntry.getInitialMode()),
+             treeEntry.getType()) &&
+      !aclRootStateRequiresCheckoutWalk(
+             dirEntry.aclRootState(), treeEntry.aclRootState());
 }
 
 } // namespace

@@ -114,7 +114,33 @@ TEST(TreeInode, findEntryDifferencesIgnoresUnknownAclState) {
   EXPECT_FALSE(findEntryDifferences(dir, aclTree));
 }
 
-TEST(TreeInode, findEntryDifferencesReportsKnownAclMismatch) {
+TEST(TreeInode, findEntryDifferencesReportsRestrictedMismatch) {
+  DirContents dir(CaseSensitivity::Sensitive);
+  dir.emplace(
+      "one"_pc,
+      DirEntry{
+          S_IFREG | 0644,
+          1_ino,
+          ObjectId{},
+          /*isRestricted=*/false,
+          /*hasACL=*/false});
+  Tree::container entries{CaseSensitivity::Sensitive};
+  entries.emplace(
+      "one"_pc,
+      ObjectId{},
+      TreeEntryType::REGULAR_FILE,
+      /*isRestricted=*/true,
+      /*hasACL=*/true);
+  Tree tree{std::move(entries), testId};
+
+  auto differences = findEntryDifferences(dir, tree);
+  EXPECT_TRUE(differences);
+  EXPECT_EQ((std::vector<std::string>{"~ one"}), *differences);
+}
+
+TEST(TreeInode, findEntryDifferencesIgnoresNonRestrictedAclChange) {
+  // NoAcl vs AclRoot is a non-restricted ACL-root metadata change. Checkout
+  // does not reconcile it, so the diagnostic must not report it either.
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace(
       "one"_pc,
@@ -131,6 +157,50 @@ TEST(TreeInode, findEntryDifferencesReportsKnownAclMismatch) {
       TreeEntryType::REGULAR_FILE,
       /*isRestricted=*/false,
       /*hasACL=*/true);
+  Tree tree{std::move(entries), testId};
+  EXPECT_FALSE(findEntryDifferences(dir, tree));
+}
+
+TEST(TreeInode, findEntryDifferencesIgnoresObjectIdDifference) {
+  // Object ids are intentionally not compared: filtered ids for the same
+  // underlying object differ byte-wise across filter changes.
+  DirContents dir(CaseSensitivity::Sensitive);
+  dir.emplace(
+      "one"_pc,
+      DirEntry{
+          S_IFREG | 0644,
+          1_ino,
+          ObjectId("aaa"),
+          /*isRestricted=*/false,
+          /*hasACL=*/false});
+  Tree::container entries{CaseSensitivity::Sensitive};
+  entries.emplace(
+      "one"_pc,
+      ObjectId("bbb"),
+      TreeEntryType::REGULAR_FILE,
+      /*isRestricted=*/false,
+      /*hasACL=*/false);
+  Tree tree{std::move(entries), testId};
+  EXPECT_FALSE(findEntryDifferences(dir, tree));
+}
+
+TEST(TreeInode, findEntryDifferencesReportsTypeChange) {
+  DirContents dir(CaseSensitivity::Sensitive);
+  dir.emplace(
+      "one"_pc,
+      DirEntry{
+          S_IFREG | 0644,
+          1_ino,
+          ObjectId{},
+          /*isRestricted=*/false,
+          /*hasACL=*/false});
+  Tree::container entries{CaseSensitivity::Sensitive};
+  entries.emplace(
+      "one"_pc,
+      ObjectId{},
+      TreeEntryType::TREE,
+      /*isRestricted=*/false,
+      /*hasACL=*/false);
   Tree tree{std::move(entries), testId};
 
   auto differences = findEntryDifferences(dir, tree);
