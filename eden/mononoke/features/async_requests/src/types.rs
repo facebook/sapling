@@ -893,7 +893,7 @@ impl AsynchronousRequestParams {
         matches!(
             &self.thrift,
             ThriftAsynchronousRequestParams::derive_backfill_params(params)
-                if params.repo_concurrency > 0
+                if params.repo_concurrency.unwrap_or(0) > 0
         )
     }
 

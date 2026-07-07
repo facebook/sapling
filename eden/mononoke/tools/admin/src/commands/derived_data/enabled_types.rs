@@ -14,7 +14,9 @@ use anyhow::Result;
 use clap::Args;
 use clap::Subcommand;
 use context::CoreContext;
+use enabled_derived_data_types::EnabledDerivedDataTypes;
 use mononoke_app::MononokeApp;
+use repo_identity::RepoIdentity;
 
 use self::list::ListArgs;
 use self::list::list;
@@ -24,6 +26,21 @@ use self::show::ShowArgs;
 use self::show::show;
 use self::unset::UnsetArgs;
 use self::unset::unset;
+
+/// Minimal repo container for the enabled-types subcommands.
+///
+/// Deliberately holds only the facets these commands touch: opening the heavy
+/// `derived-data` container (many metadata-sqlite facets) overlaps a read on the
+/// read-only handle with a write on the read-write handle of the same on-disk,
+/// non-WAL sqlite file, producing `database is locked`.
+#[facet::container]
+pub(super) struct EnabledTypesRepo {
+    #[facet]
+    pub(super) repo_identity: RepoIdentity,
+
+    #[facet]
+    pub(super) enabled_derived_data_types: dyn EnabledDerivedDataTypes,
+}
 
 /// Inspect and manage the `enabled_derived_data_types` table via the
 /// `EnabledDerivedDataTypes` facet.

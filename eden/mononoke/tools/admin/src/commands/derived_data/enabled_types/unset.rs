@@ -15,7 +15,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_types::DerivableType;
 use repo_identity::RepoIdentityRef;
 
-use super::super::Repo;
+use super::EnabledTypesRepo;
 
 #[derive(Args)]
 pub(super) struct UnsetArgs {
@@ -40,7 +40,7 @@ pub(super) async fn unset(ctx: &CoreContext, app: &MononokeApp, args: UnsetArgs)
     }
 
     let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
-    let repo: Repo = app.open_repo(&args.repo).await?;
+    let repo: EnabledTypesRepo = app.open_repo(&args.repo).await?;
     let repo_id = repo.repo_identity().id();
 
     repo.enabled_derived_data_types()

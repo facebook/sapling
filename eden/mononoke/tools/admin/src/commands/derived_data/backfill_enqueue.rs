@@ -59,6 +59,11 @@ pub(super) struct BackfillEnqueueArgs {
     /// bound how many repos derive at once.
     #[clap(long)]
     all_git_repos: bool,
+
+    /// Enqueue a MarkTypeEnabled node per repo that records the type as enabled
+    /// in the enabled_derived_data_types table once the repo's backfill succeeds.
+    #[clap(long)]
+    auto_enable: bool,
 }
 
 pub(super) async fn backfill_enqueue(
@@ -141,8 +146,9 @@ pub(super) async fn backfill_enqueue(
         boundaries_concurrency: args.boundaries_concurrency,
         num_boundary_requests: args.num_boundary_requests as i32,
         reslice: args.reslice,
+        auto_enable: Some(args.auto_enable),
         config_name: config_name.map(|s| s.to_string()),
-        repo_concurrency: args.repo_concurrency as i32,
+        repo_concurrency: Some(args.repo_concurrency as i32),
         ..Default::default()
     };
 

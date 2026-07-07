@@ -14,7 +14,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_identity::RepoIdentityRef;
 
-use super::super::Repo;
+use super::EnabledTypesRepo;
 
 #[derive(Args)]
 pub(super) struct ShowArgs {
@@ -23,7 +23,7 @@ pub(super) struct ShowArgs {
 }
 
 pub(super) async fn show(ctx: &CoreContext, app: &MononokeApp, args: ShowArgs) -> Result<()> {
-    let repo: Repo = app.open_repo(&args.repo).await?;
+    let repo: EnabledTypesRepo = app.open_repo(&args.repo).await?;
     let repo_id = repo.repo_identity().id();
 
     let mut types = repo

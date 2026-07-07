@@ -437,7 +437,7 @@ pub(crate) async fn compute_derive_backfill_repo(
 
     let slice_size = params.slice_size.max(1) as u64;
 
-    let total_sub_requests = process_repo_backfill(
+    let enqueued_row_ids = process_repo_backfill(
         ctx,
         &repo,
         queue,
@@ -453,6 +453,42 @@ pub(crate) async fn compute_derive_backfill_repo(
         created_by.as_deref(),
     )
     .await?;
+
+    let total_sub_requests = enqueued_row_ids.len() as i64;
+
+    // If auto-enable is requested, enqueue a MarkTypeEnabled node that depends on
+    // the union of this repo's boundary + slice leaves. It runs (a trivial DB
+    // write recording the type as enabled) only once every leaf succeeds; a
+    // failed leaf cascades to it, leaving the repo unenabled. Empty deps (repo
+    // had nothing to derive) => immediately eligible, so enablement is still
+    // recorded. Uses the same IfAbsent enqueue path as slices
+    // (`enqueue_with_dependencies_and_root`, keyed on
+    // (root_request_id, request_type, repo_id, args_blobstore_key)), so a
+    // re-enqueue under the same campaign is an idempotent no-op.
+    if params.auto_enable {
+        let mark_params = thrift::MarkTypeEnabledParams {
+            repo_id: params.repo_id,
+            derived_data_type: params.derived_data_type.clone(),
+            ..Default::default()
+        };
+        queue
+            .enqueue_with_dependencies_and_root(
+                ctx,
+                Some(&repo_id),
+                mark_params,
+                &enqueued_row_ids,
+                &root_request_id,
+                created_by.as_deref(),
+            )
+            .await
+            .map_err(AsyncRequestsError::internal)?;
+        tracing::debug!(
+            "Enqueued MarkTypeEnabled for repo {} type {:?} depending on {} leaves",
+            repo_id.id(),
+            derived_data_type,
+            enqueued_row_ids.len(),
+        );
+    }
 
     Ok(thrift::DeriveBackfillRepoResponse {
         total_sub_requests,
@@ -494,6 +530,7 @@ pub(crate) async fn enqueue_repo_backfill(
         num_boundary_requests: params.num_boundary_requests,
         config_name: params.config_name.clone(),
         reslice: params.reslice,
+        auto_enable: params.auto_enable.unwrap_or(false),
         ..Default::default()
     };
 
@@ -607,12 +644,12 @@ pub(crate) async fn compute_derive_backfill(
     let total_sub_requests = params.repo_entries.len() as i64;
     let created_by = created_by.as_deref();
 
-    if params.repo_concurrency > 0 && (params.repo_concurrency as usize) < params.repo_entries.len()
-    {
+    let repo_concurrency = params.repo_concurrency.unwrap_or(0);
+    if repo_concurrency > 0 && (repo_concurrency as usize) < params.repo_entries.len() {
         info!(
             "DeriveBackfill scheduling {} repos with repo_concurrency={}",
             params.repo_entries.len(),
-            params.repo_concurrency,
+            repo_concurrency,
         );
         crate::backfill_scheduler::schedule_repo_backfills(
             ctx,
@@ -620,7 +657,7 @@ pub(crate) async fn compute_derive_backfill(
             &params,
             &root_request_id,
             created_by,
-            params.repo_concurrency as usize,
+            repo_concurrency as usize,
         )
         .await?;
     } else {
@@ -753,7 +790,7 @@ async fn enqueue_boundary_and_slice_requests(
     repo_id: &RepositoryId,
     root_request_id: &RowId,
     created_by: Option<&str>,
-) -> Result<i64, AsyncRequestsError> {
+) -> Result<Vec<RowId>, AsyncRequestsError> {
     let serial_slices = requires_serial_slice_processing(derived_data_type);
     let total_boundaries: usize = slices.iter().map(|s| s.boundaries.len()).sum();
 
@@ -832,6 +869,7 @@ async fn enqueue_boundary_and_slice_requests(
     // Serial types: each slice depends on the previous (topological order).
     // Parallel types: each slice depends only on the boundary requests containing its boundaries.
     let mut prev_slice_row_id: Option<RowId> = None;
+    let mut slice_row_ids: Vec<RowId> = Vec::with_capacity(slices.len());
     for slice_with_boundaries in slices.iter() {
         let segments: Vec<thrift::DeriveSliceSegment> = slice_with_boundaries
             .slice
@@ -877,21 +915,33 @@ async fn enqueue_boundary_and_slice_requests(
             )
             .await
             .map_err(AsyncRequestsError::internal)?;
-        prev_slice_row_id = Some(slice_token.id());
+        let slice_row_id = slice_token.id();
+        slice_row_ids.push(slice_row_id);
+        prev_slice_row_id = Some(slice_row_id);
     }
 
-    // Count unique boundary requests
-    let boundary_count = boundary_to_request.values().collect::<HashSet<_>>().len() as i64;
-    let total = boundary_count + slices.len() as i64;
+    // The union of all boundary + slice RowIds enqueued for this repo. A
+    // downstream MarkTypeEnabled node depends on this whole set: GDMV3 is
+    // parallel/untopological, so a failed boundary with no dependent slice must
+    // still cascade (design C3). Boundary RowIds are the unique request ids from
+    // the boundary map; slice RowIds are collected above.
+    let unique_boundary_row_ids: Vec<RowId> = boundary_to_request
+        .values()
+        .cloned()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
     info!(
         "Enqueued {} sub-requests for repo {} ({} boundary + {} slices)",
-        total,
+        unique_boundary_row_ids.len() + slice_row_ids.len(),
         repo_id.id(),
-        boundary_count,
-        slices.len(),
+        unique_boundary_row_ids.len(),
+        slice_row_ids.len(),
     );
 
-    Ok(total)
+    let mut enqueued_row_ids = unique_boundary_row_ids;
+    enqueued_row_ids.extend(slice_row_ids);
+    Ok(enqueued_row_ids)
 }
 
 /// Process backfill for a single repo by computing slices and enqueueing sub-requests.
@@ -915,7 +965,7 @@ async fn process_repo_backfill(
     repo_id: &RepositoryId,
     root_request_id: &RowId,
     created_by: Option<&str>,
-) -> Result<i64, AsyncRequestsError> {
+) -> Result<Vec<RowId>, AsyncRequestsError> {
     let inner_repo = repo.repo();
     let manager = resolve_manager(inner_repo.repo_derived_data(), config_name)?;
     let manager = with_type_enabled(manager, derived_data_type);
@@ -943,7 +993,7 @@ async fn process_repo_backfill(
 
     if slices.is_empty() {
         info!("Nothing to enqueue for repo {}", repo_id.id());
-        return Ok(0);
+        return Ok(vec![]);
     }
 
     // Phase 2: Enqueue boundary and slice requests with proper dependencies

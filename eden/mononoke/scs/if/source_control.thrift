@@ -3107,9 +3107,12 @@ struct DeriveBackfillParams {
   8: i32 num_boundary_requests;
   /// Maximum number of repos to derive concurrently. The worker keeps at most
   /// this many repos in flight at a time and schedules a new one as each repo's
-  /// derivation finishes. 0 (the default) means no limit: schedule all repos at
-  /// once, preserving the previous behavior.
-  9: i32 repo_concurrency;
+  /// derivation finishes. Unset/0 (the default) means no limit: schedule all
+  /// repos at once, preserving the previous behavior.
+  9: optional i32 repo_concurrency;
+  /// Whether to enqueue a MarkTypeEnabled node per repo (cascade-dependent on the
+  /// repo's backfill leaves) that records the type as enabled once backfill succeeds.
+  10: optional bool auto_enable;
 }
 
 /// Result for derive_backfill request
@@ -3148,6 +3151,9 @@ struct DeriveBackfillRepoParams {
   /// Number of separate boundary derivation requests to create for parallelization
   /// (forwarded from DeriveBackfillParams).
   9: i32 num_boundary_requests;
+  /// Whether to enqueue a MarkTypeEnabled node (cascade-dependent on this repo's
+  /// backfill leaves) that records the type as enabled once backfill succeeds.
+  10: bool auto_enable;
 }
 
 /// Result for derive_backfill_repo request

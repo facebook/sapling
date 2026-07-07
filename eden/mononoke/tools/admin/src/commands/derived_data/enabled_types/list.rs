@@ -16,7 +16,7 @@ use mononoke_types::DerivableType;
 use prettytable::Table;
 use prettytable::row;
 
-use super::super::Repo;
+use super::EnabledTypesRepo;
 
 #[derive(Args)]
 pub(super) struct ListArgs {
@@ -34,7 +34,7 @@ pub(super) async fn list(ctx: &CoreContext, app: &MononokeApp, args: ListArgs) -
     // The enabled_derived_data_types table is global; we only need any repo
     // handle to reach the facet. Open the one named by -R if given, else the
     // first configured repo.
-    let repo: Repo = match args.repo.as_repo_arg() {
+    let repo: EnabledTypesRepo = match args.repo.as_repo_arg() {
         Some(repo_arg) => app.open_repo(repo_arg).await?,
         None => {
             let (_name, config) = app

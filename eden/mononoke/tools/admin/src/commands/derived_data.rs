@@ -33,7 +33,6 @@ use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
-use enabled_derived_data_types::EnabledDerivedDataTypes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use mononoke_app::MononokeApp;
@@ -85,8 +84,6 @@ struct Repo {
     repo_identity: RepoIdentity,
     #[facet]
     repo_derived_data: RepoDerivedData,
-    #[facet]
-    enabled_derived_data_types: dyn EnabledDerivedDataTypes,
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
     #[facet]
