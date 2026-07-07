@@ -547,8 +547,8 @@ Hash32 FileInodeState::MaterializedState::getBlake3(
 }
 
 uint64_t FileInodeState::MaterializedState::getSize(FileInode& inode) {
-  if (size_ != FileInodeState::kUnknownSize) {
-    return size_;
+  if (auto cached = getCachedSize()) {
+    return *cached;
   }
 
 #ifdef _WIN32
@@ -559,6 +559,14 @@ uint64_t FileInodeState::MaterializedState::getSize(FileInode& inode) {
 
   size_ = size;
   return size;
+}
+
+std::optional<uint64_t> FileInodeState::MaterializedState::getCachedSize()
+    const {
+  if (size_ == FileInodeState::kUnknownSize) {
+    return std::nullopt;
+  }
+  return size_;
 }
 
 void FileInodeState::MaterializedState::invalidate() {
@@ -1078,48 +1086,23 @@ ImmediateFuture<struct stat> FileInode::stat(
   notifyParentOfStat(/*isFile=*/true, *context);
   logAccess(*context);
 
-  auto st = getMount()->initStatData();
-  st.st_nlink = 1; // Eden does not support hard links yet.
-  st.st_ino = getNodeId().get();
-  // NOTE: we don't set rdev to anything special here because we
-  // don't support committing special device nodes.
-
-  auto state = LockedState{this};
-
-#ifndef _WIN32
-  getMetadataLocked(*state).applyToStat(st);
-#endif
-
-  if (state->isMaterialized()) {
-    st.st_size = state->materializedState.getSize(*this);
-    updateBlockCount(st);
-    return st;
-  } else {
-    if (state->nonMaterializedState.size != FileInodeState::kUnknownSize) {
-      st.st_size = state->nonMaterializedState.size;
-      updateBlockCount(st);
-      return st;
-    }
-
-    // While getBlobSize will sometimes need to fetch a blob to compute the
-    // size, if it's already known, return the cached size. This is especially
-    // a win after restarting Eden - size can be loaded from the local cache
-    // more cheaply than deserializing an entire blob.
-    auto sizeFut =
-        getObjectStore().getBlobSize(state->nonMaterializedState.id, context);
-    state.unlock();
-
-    return std::move(sizeFut).thenValue(
-        [self = inodePtrFromThis(), st](const uint64_t size) mutable {
-          if (auto lockedState = LockedState{self};
-              !lockedState->isMaterialized()) {
-            lockedState->nonMaterializedState.size = size;
-          }
-          st.st_size = size;
-          updateBlockCount(st);
-          return st;
-        });
+  auto built = buildStatUnderLock(false);
+  if (!built.needsBlobSize.has_value()) {
+    return built.partialStat;
   }
+
+  // ObjectId snapshotted under the lock; dispatch without re-holding.
+  auto sizeFut = getObjectStore().getBlobSize(*built.needsBlobSize, context);
+  return std::move(sizeFut).thenValue([self = inodePtrFromThis(),
+                                       st = built.partialStat](
+                                          const uint64_t size) mutable {
+    if (auto lockedState = LockedState{self}; !lockedState->isMaterialized()) {
+      lockedState->nonMaterializedState.size = size;
+    }
+    st.st_size = size;
+    self->updateBlockCount(st);
+    return st;
+  });
 }
 
 folly::coro::now_task<struct stat> FileInode::co_stat(
@@ -1129,42 +1112,51 @@ folly::coro::now_task<struct stat> FileInode::co_stat(
   notifyParentOfStat(/*isFile=*/true, *context);
   logAccess(*context);
 
-  auto st = getMount()->initStatData();
-  st.st_nlink = 1;
-  st.st_ino = getNodeId().get();
-
-  auto state = LockedState{this};
-
-#ifndef _WIN32
-  getMetadataLocked(*state).applyToStat(st);
-#endif
-
-  if (state->isMaterialized()) {
-    st.st_size = state->materializedState.getSize(*this);
-    updateBlockCount(st);
-    co_return st;
+  auto built = buildStatUnderLock(false);
+  if (!built.needsBlobSize.has_value()) {
+    co_return built.partialStat;
   }
 
-  if (state->nonMaterializedState.size != FileInodeState::kUnknownSize) {
-    st.st_size = state->nonMaterializedState.size;
-    updateBlockCount(st);
-    co_return st;
-  }
-
-  // Async fetch needed — extract id and unlock before co_await.
-  auto objectId = state->nonMaterializedState.id;
-  state.unlock();
-
-  // Mirror FileInode::stat()'s use of getBlobSize() (the lighter fast path
-  // that avoids fetching SHA1/Blake3 when only size is needed).
-  auto size = co_await getObjectStore().co_getBlobSize(objectId, context);
+  auto size =
+      co_await getObjectStore().co_getBlobSize(*built.needsBlobSize, context);
 
   if (auto lockedState = LockedState{this}; !lockedState->isMaterialized()) {
     lockedState->nonMaterializedState.size = size;
   }
-  st.st_size = size;
-  updateBlockCount(st);
-  co_return st;
+  built.partialStat.st_size = size;
+  updateBlockCount(built.partialStat);
+  co_return built.partialStat;
+}
+
+FileInode::BuiltStat FileInode::buildStatUnderLock(bool peekOnly) {
+  BuiltStat result;
+  result.partialStat = getMount()->initStatData();
+  result.partialStat.st_nlink = 1;
+  result.partialStat.st_ino = getNodeId().get();
+  auto state = LockedState{this};
+#ifndef _WIN32
+  getMetadataLocked(*state).applyToStat(result.partialStat);
+#endif
+  if (state->isMaterialized()) {
+    auto size = peekOnly
+        ? state->materializedState.getCachedSize()
+        : std::optional{state->materializedState.getSize(*this)};
+    if (!size.has_value()) {
+      result.materializedSizeMissing = true;
+      return result;
+    }
+    result.partialStat.st_size = *size;
+    updateBlockCount(result.partialStat);
+    return result;
+  }
+  if (state->nonMaterializedState.size != FileInodeState::kUnknownSize) {
+    result.partialStat.st_size = state->nonMaterializedState.size;
+    updateBlockCount(result.partialStat);
+    return result;
+  }
+  // Snapshot under the lock so callers don't need to re-acquire.
+  result.needsBlobSize = state->nonMaterializedState.id;
+  return result;
 }
 
 void FileInode::updateBlockCount([[maybe_unused]] struct stat& st) {

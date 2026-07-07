@@ -135,6 +135,8 @@ struct FileInodeState {
      */
     uint64_t getSize(FileInode& inode);
 
+    std::optional<uint64_t> getCachedSize() const;
+
     /**
      * Reset the cached sha1 and size.
      *
@@ -424,6 +426,21 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
  private:
   using State = FileInodeState;
   class LockedState;
+
+  struct BuiltStat {
+    struct stat partialStat{};
+    /// Set when non-materialized cache miss — caller dispatches
+    /// getBlobSize(*needsBlobSize) to fill in st_size.
+    std::optional<ObjectId> needsBlobSize;
+    /// Set when materialized but uncached AND peekOnly was true.
+    bool materializedSizeMissing = false;
+  };
+
+  /// Build a stat from in-memory state under a single lock acquisition.
+  /// peekOnly=true: never blocks on overlay I/O; sets
+  ///   materializedSizeMissing instead of syscalling.
+  /// peekOnly=false: may syscall to compute a missing materialized size.
+  BuiltStat buildStatUnderLock(bool peekOnly);
 
   /**
    * Run a function with the FileInode data loaded.
