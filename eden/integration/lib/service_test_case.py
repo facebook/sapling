@@ -16,7 +16,6 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from . import edenclient, testcase
 from .fake_edenfs import FakeEdenFS
-from .find_executables import FindExe
 from .testcase import test_replicator
 
 
