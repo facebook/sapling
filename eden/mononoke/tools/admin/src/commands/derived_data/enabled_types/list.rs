@@ -11,7 +11,6 @@ use clap::Args;
 use context::CoreContext;
 use enabled_derived_data_types::EnabledDerivedDataTypesRef;
 use mononoke_app::MononokeApp;
-use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::OptRepoArgs;
 use mononoke_types::DerivableType;
 use prettytable::Table;
