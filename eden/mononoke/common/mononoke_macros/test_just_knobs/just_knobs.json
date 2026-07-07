@@ -1,5 +1,6 @@
 {
   "bools": {
+    "scm/artillery:handle_http_requests_with_rctx": true,
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,
     "scs/mononoke:defer_to_backsyncer_for_backsync": true,
     "scm/mononoke:dbcm_read_from_manifest": true,

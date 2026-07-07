@@ -29,6 +29,9 @@ use hyper::body::Incoming;
 use tower_service::Service;
 
 use crate::middleware::Middleware;
+use crate::middleware::artillery::ArtilleryTracingEnabled;
+use crate::middleware::artillery::artillery_http_tracing_enabled;
+use crate::middleware::artillery::has_artillery_trace_header;
 use crate::socket_data::TlsSocketData;
 
 #[derive(StateData, Clone, PartialEq, Copy, Debug)]
@@ -107,6 +110,10 @@ async fn run_middleware(
 // has finished executing.
 impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
     fn handle(self, mut state: State) -> Pin<Box<HandlerFuture>> {
+        let tracing_enabled = artillery_http_tracing_enabled();
+        state.put(ArtilleryTracingEnabled(tracing_enabled));
+        let trace_request = tracing_enabled && has_artillery_trace_header(&state);
+
         let fut = async move {
             // On request, middleware is called in order, then called the other way around on
             // response (this is what regular Router middleware in Gotham would do).
@@ -138,7 +145,11 @@ impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
             Ok((state, response))
         };
 
-        fut.boxed()
+        if trace_request {
+            request_context_ext::with_fresh_request_context(fut).boxed()
+        } else {
+            fut.boxed()
+        }
     }
 }
 

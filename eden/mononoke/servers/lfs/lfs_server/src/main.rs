@@ -32,6 +32,7 @@ use futures::channel::oneshot;
 use futures::future::try_select;
 use futures::pin_mut;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ArtilleryMiddleware;
 use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
@@ -357,6 +358,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     enforce_authentication,
                     args.readonly.readonly,
                 ))
+                .add(ArtilleryMiddleware::new(fb))
                 .add(LoadMiddleware::new())
                 .add(log_middleware)
                 .add(ServerIdentityMiddleware::new(HeaderValue::from_static(

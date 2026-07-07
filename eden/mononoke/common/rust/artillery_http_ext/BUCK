@@ -1,0 +1,14 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_treehugger")
+
+rust_library(
+    name = "artillery_http_ext",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "tracer": "//artillery/artillery2/api/rust:tracer",
+    },
+    deps = [
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)

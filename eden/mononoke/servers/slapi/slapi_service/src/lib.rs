@@ -24,6 +24,7 @@ use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ArtilleryMiddleware;
 use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
@@ -121,6 +122,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             rate_limiter,
             readonly,
         ))
+        .add(ArtilleryMiddleware::new(fb))
         .add(RequestDumperMiddleware::new(
             fb,
             common_config.edenapi_dumper_scuba_table.clone(),

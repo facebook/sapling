@@ -168,6 +168,7 @@ members = [
   "common/reloader",
   "common/rendezvous",
   "common/running",
+  "common/rust/artillery_http_ext",
   "common/rust/caching_ext",
   "common/rust/justknobs_ext",
   "common/rust/request_context_ext",

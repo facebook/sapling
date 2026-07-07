@@ -28,3 +28,9 @@ impl CapturedRequestContext {
 
 /// No-op in OSS builds — there is no `folly::RequestContext` to propagate.
 pub fn install_request_context_hooks(_builder: &mut tokio::runtime::Builder) {}
+
+pub fn with_fresh_request_context<F: std::future::Future>(
+    fut: F,
+) -> impl std::future::Future<Output = F::Output> {
+    fut
+}

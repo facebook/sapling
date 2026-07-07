@@ -39,6 +39,7 @@ use futures::channel::oneshot;
 use futures::future::try_select;
 use futures::pin_mut;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ArtilleryMiddleware;
 use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
@@ -436,6 +437,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     None,
                     args.readonly.readonly,
                 ))
+                .add(ArtilleryMiddleware::new(fb))
                 .add(UploadPackRateLimitingMiddleware::new(
                     scuba.clone(),
                     rate_limiter,

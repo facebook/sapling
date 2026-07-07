@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::future::Future;
+
 use request_context::RequestContext;
+use request_context_future::FutureExt as _;
 
 /// A snapshot of the calling thread's `folly::RequestContext`, captured so it can
 /// be re-installed around blocking work that executes on a different thread.
@@ -32,10 +35,19 @@ impl CapturedRequestContext {
 }
 
 /// Install tokio runtime hooks that propagate the ambient `folly::RequestContext`
-/// across `tokio::spawn` boundaries, so Artillery trace context survives task
-/// hops on the async runtime. Delegates to the shared `request_context_tokio`
+/// across `tokio::spawn` boundaries. Delegates to the shared `request_context_tokio`
 /// hooks; call once on the `tokio::runtime::Builder` before `build()`.
 pub fn install_request_context_hooks(builder: &mut tokio::runtime::Builder) {
     use request_context_tokio::BuilderExt;
     builder.install_request_context_hooks();
+}
+
+/// Runs `fut` with a freshly created `folly::RequestContext` installed on the current thread,
+/// then swaps the previous context back before returning so callers are not affected.
+pub fn with_fresh_request_context<F: Future>(fut: F) -> impl Future<Output = F::Output> {
+    let prev = RequestContext::try_get_current();
+    RequestContext::create();
+    let ctx = RequestContext::get_current();
+    RequestContext::swap_current(prev.as_ref());
+    fut.with_rctx(ctx)
 }

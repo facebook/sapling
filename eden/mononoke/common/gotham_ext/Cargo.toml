@@ -9,8 +9,10 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.103"
+artillery_http_ext = { version = "0.1.0", path = "../rust/artillery_http_ext" }
 async-compression = { version = "0.4.42", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-trait = "0.1.86"
+base64 = { version = "0.22.1", features = ["alloc"] }
 bytes = { version = "1.12.0", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cats = { version = "0.1.0", path = "../cats" }
@@ -42,6 +44,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "1.1.13"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
+request_context_ext = { version = "0.1.0", path = "../rust/request_context_ext" }
 sapling-cats-constants = { version = "0.1.0", path = "../../../scm/lib/cats/constants" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scopeguard = "1.2.0"
