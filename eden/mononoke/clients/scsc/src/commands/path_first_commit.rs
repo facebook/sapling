@@ -43,6 +43,11 @@ pub(super) struct CommandArgs {
     commit_id_args: CommitIdArgs,
     #[clap(flatten)]
     path_args: PathArgs,
+    #[clap(long)]
+    /// Track history across deletion i.e. if a path was deleted then added back,
+    /// report the commit that originally introduced it rather than the one that
+    /// re-added it
+    history_across_deletions: bool,
 }
 
 #[derive(Serialize)]
@@ -90,6 +95,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let params = thrift::CommitPathFirstChangedParams {
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
+        follow_history_across_deletions: args.history_across_deletions,
         ..Default::default()
     };
     let response = conn

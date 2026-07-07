@@ -1841,6 +1841,11 @@ struct CommitPathLastChangedParams {
 struct CommitPathFirstChangedParams {
   /// Commit identity schemes to return.
   1: set<CommitIdentityScheme> identity_schemes;
+
+  /// Follow history across deletions: if the path was deleted and later
+  /// re-added, return the commit that *originally* introduced it rather than the
+  /// commit that re-added it.
+  2: bool follow_history_across_deletions;
 }
 
 struct CommitMultiplePathLastChangedParams {

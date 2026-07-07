@@ -623,10 +623,15 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     /// Returns the first (oldest) changeset that introduced this path.
     ///
     /// We don't need to walk every changeset - we can just walk along the
-    /// fastlog batches to find the first changeset.  This finds the oldest
-    /// changeset of the path's current contiguous history (it does not follow
-    /// deletions).
-    pub async fn first_modified(&self) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+    /// fastlog batches to find the first changeset.  By default this finds the
+    /// oldest changeset of the path's current contiguous history; with
+    /// `follow_history_across_deletions` it crosses deletion boundaries to find
+    /// the very first time the path ever existed (rather than the changeset that
+    /// most recently re-added it).
+    pub async fn first_modified(
+        &self,
+        follow_history_across_deletions: bool,
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         if self.unode_id().await?.is_none() {
             return Err(MononokeError::InvalidRequest(format!(
                 "path '{}' does not exist in changeset {}",
@@ -635,11 +640,17 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             )));
         }
 
+        let history_across_deletions = if follow_history_across_deletions {
+            history_traversal::HistoryAcrossDeletions::Track
+        } else {
+            history_traversal::HistoryAcrossDeletions::DontTrack
+        };
         let first = history_traversal::fetch_path_first_changeset(
             self.changeset.ctx(),
             self.repo_ctx().repo(),
             self.changeset.id(),
             self.path.clone(),
+            history_across_deletions,
         )
         .await
         .map_err(|error| MononokeError::from(Error::from(error)))?;

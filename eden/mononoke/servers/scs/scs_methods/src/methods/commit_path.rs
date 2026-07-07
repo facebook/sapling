@@ -654,7 +654,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathFirstChangedResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path_with_history(&commit_path.path).await?;
-        let first_commit = match path.first_modified().await? {
+        let first_commit = match path
+            .first_modified(params.follow_history_across_deletions)
+            .await?
+        {
             Some(first_modified) => {
                 Some(map_commit_identity(&first_modified, &params.identity_schemes).await?)
             }

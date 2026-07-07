@@ -418,14 +418,20 @@ pub async fn list_file_history<'a>(
 /// out. The oldest root (smallest generation number, with the changeset id as a
 /// stable tie-break) is returned.
 ///
-/// Note: fastlog stores neither deletions nor history across them, so "first"
-/// means the oldest changeset of the path's *current contiguous existence* — not
-/// necessarily the very first time the path ever existed.
+/// Fastlog stores neither deletions nor history across them, so a root is only
+/// the oldest changeset of the path's *current contiguous existence*. With
+/// `history_across_deletions == Track`, each root is checked against the deleted
+/// manifest of its ancestry: if the path was deleted earlier the root is a
+/// re-introduction, and the walk hops to the tip(s) of the previous existence
+/// and continues — so "first" becomes the very first time the path ever
+/// existed. With `DontTrack`, a re-added path reports the changeset that re-added
+/// it.
 pub async fn fetch_path_first_changeset(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
     path: MPath,
+    history_across_deletions: HistoryAcrossDeletions,
 ) -> Result<Option<ChangesetId>, FastlogError> {
     // BFS over the fastlog batches: `frontier` holds changesets whose batch we
     // still need to fetch, `visited` guards against re-fetching (and against
@@ -447,14 +453,40 @@ pub async fn fetch_path_first_changeset(
             .try_collect::<Vec<_>>()
             .await?;
 
+        // A changeset with empty parents bottoms the fastlog out — it is a root
+        // candidate. A changeset with an `Unknown` parent continues past the
+        // batch boundary and is re-fetched next round.
+        let mut candidates = Vec::new();
         for (csid, parents) in batches.into_iter().flatten() {
             if parents.is_empty() {
-                // No parents in the path's history: this changeset introduced it.
-                roots.push(csid);
+                candidates.push(csid);
             } else if parents.iter().any(|p| matches!(p, FastlogParent::Unknown)) {
-                // The walk hit a batch boundary on at least one branch; re-fetch
-                // this changeset's batch to resolve the `Unknown` parent(s).
                 frontier.push(csid);
+            }
+        }
+
+        if history_across_deletions == HistoryAcrossDeletions::DontTrack {
+            roots.append(&mut candidates);
+            continue;
+        }
+
+        // Following deletions: for each candidate, check whether the path was
+        // deleted earlier in its ancestry. If so it is a re-introduction — hop to
+        // the tip(s) of the previous contiguous existence and keep walking.
+        // Otherwise it is a genuine first introduction.
+        let resolved = stream::iter(candidates)
+            .map(|csid| async move {
+                let tips = tips_before_deletion(ctx, repo, csid, path).await?;
+                Ok::<_, FastlogError>((csid, tips))
+            })
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+        for (csid, tips) in resolved {
+            if tips.is_empty() {
+                roots.push(csid);
+            } else {
+                frontier.extend(tips);
             }
         }
     }
@@ -474,6 +506,39 @@ pub async fn fetch_path_first_changeset(
         .into_iter()
         .min();
     Ok(oldest.map(|(_, csid)| csid))
+}
+
+/// A root changeset (no parents in the fastlog) may be a genuine introduction of
+/// `path`, or a re-introduction after the path was deleted (fastlog does not
+/// span deletions). Consult the deleted manifest of `cs_id`'s ancestry: if the
+/// path was deleted earlier, return the tip(s) of the previous contiguous
+/// existence — the changesets that last touched `path` before it was deleted —
+/// so the caller can continue walking. Returns empty if `cs_id` is a genuine
+/// introduction.
+async fn tips_before_deletion(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    path: &MPath,
+) -> Result<Vec<ChangesetId>, FastlogError> {
+    let deletion_nodes = find_where_file_was_deleted(ctx, repo, cs_id, path).await?;
+    stream::iter(deletion_nodes)
+        .map(|(_deleted_linknode, last_unode_entry)| async move {
+            let linknode = match last_unode_entry {
+                Entry::Tree(mf_unode_id) => *mf_unode_id
+                    .load(ctx, repo.repo_blobstore())
+                    .await?
+                    .linknode(),
+                Entry::Leaf(file_unode_id) => *file_unode_id
+                    .load(ctx, repo.repo_blobstore())
+                    .await?
+                    .linknode(),
+            };
+            Ok::<_, FastlogError>(linknode)
+        })
+        .buffer_unordered(10)
+        .try_collect()
+        .await
 }
 
 #[async_trait]
@@ -1461,12 +1526,377 @@ mod test {
             .derive::<RootFastlog>(ctx, merge, DerivationPriority::LOW)
             .await?;
 
-        let first = fetch_path_first_changeset(ctx, &repo, merge, path(filename)?).await?;
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            merge,
+            path(filename)?,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
         assert_eq!(
             first,
             Some(long_intro),
             "first changeset should be the older introduction on the long branch \
              (generation 2), not the short branch's more recent introduction"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_fetch_path_first_changeset_across_deletions(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        // `f` is introduced, deleted, then re-added. Without tracking deletions
+        // the first changeset is the re-add; with tracking it is the original
+        // introduction.
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+
+        let filename = "f";
+
+        let intro = CreateCommitContext::new_root(ctx, &repo)
+            .add_file(filename, "0")
+            .commit()
+            .await?;
+        let modified = CreateCommitContext::new(ctx, &repo, vec![intro])
+            .add_file(filename, "1")
+            .commit()
+            .await?;
+        let deleted = CreateCommitContext::new(ctx, &repo, vec![modified])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        // An unrelated commit between the deletion and the re-add, so the re-add
+        // is a genuine fastlog root (no `f` in its parent).
+        let unrelated = CreateCommitContext::new(ctx, &repo, vec![deleted])
+            .add_file("other", "x")
+            .commit()
+            .await?;
+        let readd = CreateCommitContext::new(ctx, &repo, vec![unrelated])
+            .add_file(filename, "2")
+            .commit()
+            .await?;
+        let top = CreateCommitContext::new(ctx, &repo, vec![readd])
+            .add_file(filename, "3")
+            .commit()
+            .await?;
+
+        repo.repo_derived_data()
+            .derive::<RootFastlog>(ctx, top, DerivationPriority::LOW)
+            .await?;
+        repo.repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, top, DerivationPriority::LOW)
+            .await?;
+
+        // Without tracking deletions: the re-add is the first changeset.
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            top,
+            path(filename)?,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(readd),
+            "without tracking deletions, first should be the commit that re-added the path"
+        );
+
+        // Tracking deletions: cross the deletion back to the original introduction.
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            top,
+            path(filename)?,
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(intro),
+            "tracking deletions, first should be the original introduction"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_fetch_path_first_changeset_deletions_converge(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        // `f` is introduced once, deleted, then independently re-added on two
+        // branches that merge. Following deletions, *both* re-adds trace back
+        // through the same deletion to the same original introduction, so that
+        // changeset lands in the frontier twice and must be de-duplicated
+        // against `visited` rather than re-fetched. The result is still the
+        // single original introduction.
+        //
+        //     a  add "f"      <- original introduction (oldest)
+        //     |
+        //     b  delete "f"
+        //     |
+        //     c  (unrelated)
+        //    / \
+        //   d   e  re-add "f" on two branches
+        //    \ /
+        //     merge
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+
+        let filename = "f";
+
+        let a = CreateCommitContext::new_root(ctx, &repo)
+            .add_file(filename, "1")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(ctx, &repo, vec![a])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(ctx, &repo, vec![b])
+            .add_file("other", "x")
+            .commit()
+            .await?;
+        let d = CreateCommitContext::new(ctx, &repo, vec![c])
+            .add_file(filename, "d")
+            .commit()
+            .await?;
+        let e = CreateCommitContext::new(ctx, &repo, vec![c])
+            .add_file(filename, "e")
+            .commit()
+            .await?;
+        let merge = CreateCommitContext::new(ctx, &repo, vec![d, e])
+            .add_file(filename, "merged")
+            .commit()
+            .await?;
+
+        repo.repo_derived_data()
+            .derive::<RootFastlog>(ctx, merge, DerivationPriority::LOW)
+            .await?;
+        repo.repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, merge, DerivationPriority::LOW)
+            .await?;
+
+        // Without tracking deletions, the two independent re-adds are the roots.
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            merge,
+            path(filename)?,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
+        assert!(
+            first == Some(d) || first == Some(e),
+            "without tracking deletions, first should be one of the two re-adds, got {first:?}"
+        );
+
+        // Tracking deletions, both branches converge on the single original
+        // introduction (the shared changeset is de-duplicated, not re-fetched).
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            merge,
+            path(filename)?,
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(a),
+            "tracking deletions, both branches should converge on the original introduction"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_fetch_path_first_changeset_independent_introductions(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        // `f` is introduced *independently* on two separate branches — each branch
+        // adds then deletes its own copy — and the branches then merge and re-add
+        // `f`. Unlike the converge case there is no single shared introduction:
+        // following deletions bottoms out at two distinct genuine introductions,
+        // one per branch. Selection is `min` over `(Generation, ChangesetId)`, so
+        // the introduction with the lower generation wins. The short branch's
+        // introduction (`a1`, generation 1) is older than the long branch's
+        // (`b3`, generation 3), so the result is deterministic and generation-driven.
+        //
+        //   a1 add "f"   (gen 1)      b1 (unrelated)        <- two independent roots
+        //   |                         |
+        //   a2 delete "f"             b2 (unrelated)
+        //    \                        |
+        //     \                       b3 add "f"  (gen 3)
+        //      \                      |
+        //       \                     b4 delete "f"
+        //        \                   /
+        //         merge  (f absent in both parents)
+        //         |
+        //         readd add "f"
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+
+        let filename = "f";
+
+        let a1 = CreateCommitContext::new_root(ctx, &repo)
+            .add_file(filename, "1")
+            .commit()
+            .await?;
+        let a2 = CreateCommitContext::new(ctx, &repo, vec![a1])
+            .delete_file(filename)
+            .commit()
+            .await?;
+
+        let b1 = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("other", "x")
+            .commit()
+            .await?;
+        let b2 = CreateCommitContext::new(ctx, &repo, vec![b1])
+            .add_file("other", "y")
+            .commit()
+            .await?;
+        let b3 = CreateCommitContext::new(ctx, &repo, vec![b2])
+            .add_file(filename, "2")
+            .commit()
+            .await?;
+        let b4 = CreateCommitContext::new(ctx, &repo, vec![b3])
+            .delete_file(filename)
+            .commit()
+            .await?;
+
+        let merge = CreateCommitContext::new(ctx, &repo, vec![a2, b4])
+            .add_file("other2", "z")
+            .commit()
+            .await?;
+        let readd = CreateCommitContext::new(ctx, &repo, vec![merge])
+            .add_file(filename, "3")
+            .commit()
+            .await?;
+
+        repo.repo_derived_data()
+            .derive::<RootFastlog>(ctx, readd, DerivationPriority::LOW)
+            .await?;
+        repo.repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, readd, DerivationPriority::LOW)
+            .await?;
+
+        // Without tracking deletions, the current existence starts at the re-add.
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            readd,
+            path(filename)?,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(readd),
+            "without tracking deletions, first should be the commit that re-added the path"
+        );
+
+        // Tracking deletions, both independent introductions are roots; the one
+        // with the lower generation (`a1`) is selected.
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            readd,
+            path(filename)?,
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(a1),
+            "tracking deletions, first should be the lower-generation introduction"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_fetch_path_first_changeset_multiple_deletions(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        // `f` is introduced, deleted, re-added, deleted again, then re-added a
+        // second time. Following deletions must walk back across *both* deletion
+        // boundaries (over several BFS rounds) to reach the original
+        // introduction; without tracking it stops at the most recent re-add.
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+
+        let filename = "f";
+
+        let intro = CreateCommitContext::new_root(ctx, &repo)
+            .add_file(filename, "0")
+            .commit()
+            .await?;
+        let del1 = CreateCommitContext::new(ctx, &repo, vec![intro])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        let gap1 = CreateCommitContext::new(ctx, &repo, vec![del1])
+            .add_file("other", "1")
+            .commit()
+            .await?;
+        let readd1 = CreateCommitContext::new(ctx, &repo, vec![gap1])
+            .add_file(filename, "2")
+            .commit()
+            .await?;
+        let del2 = CreateCommitContext::new(ctx, &repo, vec![readd1])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        let gap2 = CreateCommitContext::new(ctx, &repo, vec![del2])
+            .add_file("other", "2")
+            .commit()
+            .await?;
+        let readd2 = CreateCommitContext::new(ctx, &repo, vec![gap2])
+            .add_file(filename, "3")
+            .commit()
+            .await?;
+
+        repo.repo_derived_data()
+            .derive::<RootFastlog>(ctx, readd2, DerivationPriority::LOW)
+            .await?;
+        repo.repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, readd2, DerivationPriority::LOW)
+            .await?;
+
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            readd2,
+            path(filename)?,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(readd2),
+            "without tracking deletions, first should be the most recent re-add"
+        );
+
+        let first = fetch_path_first_changeset(
+            ctx,
+            &repo,
+            readd2,
+            path(filename)?,
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
+        assert_eq!(
+            first,
+            Some(intro),
+            "tracking deletions across both boundaries should reach the original introduction"
         );
 
         Ok(())
