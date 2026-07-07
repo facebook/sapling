@@ -323,15 +323,23 @@ class ObjectStore : public IObjectStore,
       bool blake3Needed = false) const;
 
   /**
-   * Get aux data about a Blob from EdenFS's in memory BlobAuxData cache.
+   * Sync peek of the BlobAuxData in-memory cache.
    *
-   * This returns an ImmediateFuture object that will produce the BlobAuxData
-   * when it is ready.  It may result in a std::domain_error if the specified
-   * blob does not exist, or possibly other exceptions on error.
+   * Reads the cache directly. On a satisfying hit, registers didFetch +
+   * updateProcessFetch on `context` and returns the value. On bail
+   * (cache miss, or blake3-missing when blake3Required=true) returns
+   * nullopt with zero side effects, so a subsequent caller invoking
+   * getBlobAuxData() records the fetch exactly once.
+   *
+   * blake3Required=false matches the historical behavior used by the
+   * async getBlobAuxData / co_getBlobAuxData fast paths. blake3Required=true
+   * is used by sync peek callers that need to bail when the cached entry
+   * lacks a blake3 hash.
    */
   std::optional<BlobAuxData> getBlobAuxDataFromInMemoryCache(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context) const;
+      const ObjectFetchContextPtr& context,
+      bool blake3Required = false) const;
 
   /**
    * Returns the size of the contents of the blob with the given ID.

@@ -556,6 +556,36 @@ ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
       });
 }
 
+std::optional<BlobAuxData> VirtualInode::tryGetCachedBlobAuxData(
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext,
+    bool blake3Required) const {
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update tryGetCachedBlobAuxData");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    // TreeInode-backed InodePtrs have no blob aux.
+    if ((*inode)->getType() == dtype_t::Dir) {
+      return std::nullopt;
+    }
+    return inode->asFilePtr()->tryGetCachedBlobAuxData(
+        fetchContext, blake3Required);
+  } else if (
+      auto* entry =
+          std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+    return objectStore->getBlobAuxDataFromInMemoryCache(
+        entry->getObjectId(), fetchContext, blake3Required);
+  } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+    if (auto inlineAux = treeEntry->tryGetInlineBlobAuxData(blake3Required)) {
+      return inlineAux;
+    }
+    return objectStore->getBlobAuxDataFromInMemoryCache(
+        treeEntry->getObjectId(), fetchContext, blake3Required);
+  }
+  // TreePtr or unexpected: no blob aux available.
+  return std::nullopt;
+}
+
 ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
@@ -1199,18 +1229,33 @@ std::optional<EntryAttributes> VirtualInode::tryGetEntryAttributesSync(
         dispatch->errorContext);
   }
 
-  // Regular file. This sync path resolves SCT/object-id only; stat and
-  // blob-aux requests fall back to async.
-  if (requestedAttributes.containsAnyOf(
-          ENTRY_ATTRIBUTES_FROM_STAT | ENTRY_ATTRIBUTES_FROM_BLOB_AUX)) {
+  // Regular file. This sync path does not resolve stat; stat requests fall
+  // back to async.
+  if (shouldRequestStatForEntry(requestedAttributes)) {
     return std::nullopt;
+  }
+
+  std::optional<folly::Try<BlobAuxData>> blobAuxTry;
+  if (shouldRequestBlobAuxDataForEntry(requestedAttributes)) {
+    bool blake3Required = requestedAttributes.containsAnyOf(
+        ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH);
+    // All-or-nothing per attribute class: if blake3 is required but the
+    // cached entry lacks it, bail to async even if other attribute classes
+    // (e.g. stat, which only needs size) could be filled. Partial sync
+    // resolution would complicate the orchestrator without a measured win.
+    auto blobAux =
+        tryGetCachedBlobAuxData(objectStore, fetchContext, blake3Required);
+    if (!blobAux) {
+      return std::nullopt;
+    }
+    blobAuxTry = folly::Try<BlobAuxData>{*blobAux};
   }
 
   return assembleRegularFileAttributes(
       requestedAttributes,
       folly::Try<std::optional<TreeEntryType>>{tryGetTreeEntryType()},
       folly::Try<std::optional<ObjectId>>{getObjectId()},
-      std::nullopt,
+      std::move(blobAuxTry),
       std::nullopt,
       isUnderAcl(),
       shouldPopulateLocalAclAttributes(objectStore));

@@ -253,6 +253,14 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const ObjectFetchContextPtr& fetchContext,
       bool blake3Required = false);
 
+  /// Sync peek: returns blob aux only if the in-memory cache has a hit
+  /// satisfying blake3Required. Returns nullopt for: cache miss,
+  /// materialized inodes (defer to async to avoid overlay I/O), or
+  /// blake3-missing hits when blake3Required is true.
+  std::optional<BlobAuxData> tryGetCachedBlobAuxData(
+      const ObjectFetchContextPtr& context,
+      bool blake3Required);
+
   /**
    * Check to see if the file has the same contents as the specified blob
    * and the same tree entry type.

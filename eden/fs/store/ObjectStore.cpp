@@ -628,18 +628,16 @@ folly::coro::now_task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
 
 std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(
     const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
-  auto ret = blobAuxDataCache_.get(id);
-  if (ret) {
-    context->didFetch(
-        ObjectFetchContext::BlobAuxData,
-        id,
-        ObjectFetchContext::FromMemoryCache);
-
-    updateProcessFetch(*context);
+    const ObjectFetchContextPtr& context,
+    bool blake3Required) const {
+  auto cached = blobAuxDataCache_.get(id);
+  if (!cached || (blake3Required && !cached->blake3)) {
+    return std::nullopt;
   }
-
-  return ret;
+  context->didFetch(
+      ObjectFetchContext::BlobAuxData, id, ObjectFetchContext::FromMemoryCache);
+  updateProcessFetch(*context);
+  return cached;
 }
 
 // TODO: This code is "identical" to the blob code. Though it is small today, it

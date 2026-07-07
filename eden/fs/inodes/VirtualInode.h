@@ -309,6 +309,11 @@ class VirtualInode {
 
   void inheritAclFromAncestor(std::optional<bool> ancestorUnderAcl);
 
+  std::optional<BlobAuxData> tryGetCachedBlobAuxData(
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext,
+      bool blake3Required) const;
+
  private:
   /**
    * Helper function for getChildrenAttributes

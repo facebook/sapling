@@ -17,6 +17,7 @@
 
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ObjectId.h"
 
@@ -245,6 +246,17 @@ class TreeEntry {
 
   const std::optional<Hash32>& getContentBlake3() const {
     return contentBlake3_;
+  }
+
+  std::optional<BlobAuxData> tryGetInlineBlobAuxData(
+      bool blake3Required) const {
+    if (!size_.has_value() || !contentSha1_.has_value()) {
+      return std::nullopt;
+    }
+    if (blake3Required && !contentBlake3_.has_value()) {
+      return std::nullopt;
+    }
+    return BlobAuxData{*contentSha1_, contentBlake3_, *size_};
   }
 
   bool isRestricted() const {

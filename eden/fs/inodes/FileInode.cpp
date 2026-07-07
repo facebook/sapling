@@ -1035,7 +1035,6 @@ ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
     const ObjectFetchContextPtr& fetchContext,
     bool blake3Required) {
   auto state = LockedState{this};
-
   logAccess(*fetchContext);
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
@@ -1053,6 +1052,24 @@ ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
       });
   }
 
+  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
+}
+
+std::optional<BlobAuxData> FileInode::tryGetCachedBlobAuxData(
+    const ObjectFetchContextPtr& context,
+    bool blake3Required) {
+  // Pure peek: no logAccess. Callers log at entry.
+  auto state = LockedState{this};
+  switch (state->tag) {
+    case State::BLOB_NOT_LOADING:
+    case State::BLOB_LOADING: {
+      return getObjectStore().getBlobAuxDataFromInMemoryCache(
+          state->nonMaterializedState.id, context, blake3Required);
+    }
+    case State::MATERIALIZED_IN_OVERLAY:
+      // Materialized blob aux may block on overlay I/O — defer to async.
+      return std::nullopt;
+  }
   XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
 }
 
