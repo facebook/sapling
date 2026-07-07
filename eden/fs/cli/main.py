@@ -17,7 +17,6 @@ import json
 import os
 import platform
 import shlex
-import shutil
 import signal
 import subprocess
 import sys
