@@ -36,7 +36,7 @@ thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-ctor = "1.0.7"
+ctor = "1.0.8"
 quickcheck = "1.1"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-renderdag = { version = "0.1.0", path = "../renderdag" }
