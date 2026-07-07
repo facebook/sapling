@@ -649,6 +649,19 @@ async fn reserve_repos_ids(
                         match (ids.next(), ids.next()) {
                             (Some(mutation_id), None) => {
                                 // Exactly one distinct in-flight mutation: attach.
+                                let repo_names = repo_ids_and_requests
+                                    .iter()
+                                    .map(|(_id, request)| request.repo_name.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                let mut scuba = ctx.scuba().clone();
+                                scuba.add("action", "create_repos_attach");
+                                scuba.add("attached_mutation_id", *mutation_id);
+                                scuba.add("repo_names", repo_names);
+                                scuba.log_with_msg(
+                                    "create_repos attached to in-flight mutation",
+                                    None,
+                                );
                                 return Ok(ReserveOutcome::AttachedToInflight {
                                     mutation_id: *mutation_id,
                                 });
