@@ -111,9 +111,7 @@ class VirtualInode {
       RelativePathPiece path,
       const ObjectFetchContextPtr& fetchContext) const;
 
-  folly::coro::now_task<std::optional<TreeEntryType>> co_getTreeEntryType(
-      RelativePathPiece path,
-      const ObjectFetchContextPtr& fetchContext) const;
+  std::optional<TreeEntryType> tryGetTreeEntryType() const;
 
   /**
    * Get the VirtualInode object for a child of this directory.
@@ -196,6 +194,21 @@ class VirtualInode {
       const ObjectFetchContextPtr& fetchContext) const;
 
   folly::coro::now_task<EntryAttributes> co_getEntryAttributes(
+      EntryAttributeFlags requestedAttributes,
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
+      const ObjectFetchContextPtr& fetchContext) const;
+
+  /**
+   * Sync peek: build a complete EntryAttributes value from in-memory state,
+   * returning nullopt if any requested attribute needs an async fetch.
+   *
+   * Pure peek: no logAccess / notifyParentOfStat side effects — an
+   * intentional trade-off vs the async path to keep the cache-hot
+   * children-attributes fanout cheap. The async fallback still logs.
+   */
+  std::optional<EntryAttributes> tryGetEntryAttributesSync(
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,

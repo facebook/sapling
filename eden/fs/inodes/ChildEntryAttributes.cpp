@@ -22,8 +22,17 @@ folly::coro::Task<EntryAttributes> coFetchEntryAttributesFromVI(
     std::shared_ptr<ObjectStore> store,
     timespec checkoutTime,
     ObjectFetchContextPtr ctx) {
-  co_await folly::coro::co_reschedule_on_current_executor;
+  // ACL state must be set before the sync fast path, which reads
+  // isUnderAcl() to populate the ACL attributes.
   v.inheritAclFromAncestor(ancestorUnderAcl);
+  // Sync fast path: resolve from cached state without any coroutine
+  // suspension when possible (HALO-friendly — no Task allocation on
+  // hit). On miss, fall back to the async path which logs at entry.
+  if (auto sync = v.tryGetEntryAttributesSync(
+          reqAttrs, sub, store, checkoutTime, ctx)) {
+    co_return std::move(*sync);
+  }
+  co_await folly::coro::co_reschedule_on_current_executor;
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }
@@ -43,6 +52,10 @@ folly::coro::Task<EntryAttributes> coFetchTreeEntryAttributes(
   VirtualInode v{std::move(t), mode};
   v.setHasACL(hasACL);
   v.inheritAclFromAncestor(ancestorUnderAcl);
+  if (auto sync = v.tryGetEntryAttributesSync(
+          reqAttrs, sub, store, checkoutTime, ctx)) {
+    co_return std::move(*sync);
+  }
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }
@@ -58,6 +71,10 @@ folly::coro::Task<EntryAttributes> coFetchLoadedInodeEntryAttributes(
   auto inode = co_await std::move(loadFut);
   VirtualInode v{std::move(inode)};
   v.inheritAclFromAncestor(ancestorUnderAcl);
+  if (auto sync = v.tryGetEntryAttributesSync(
+          reqAttrs, sub, store, checkoutTime, ctx)) {
+    co_return std::move(*sync);
+  }
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }

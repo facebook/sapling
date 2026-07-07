@@ -504,37 +504,37 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       [&](const TreeEntry& entry) -> R { return entry.getType(); });
 }
 
-folly::coro::now_task<std::optional<TreeEntryType>>
-VirtualInode::co_getTreeEntryType(
-    RelativePathPiece path,
-    const ObjectFetchContextPtr& fetchContext) const {
-  // std::get_if is used instead of match because coroutine lambda captures are
-  // stored in the lambda object, not the coroutine frame. If the coroutine
-  // suspends, match destroys the lambda temporaries, and resuming accesses
-  // dangling captures.
+std::optional<TreeEntryType> VirtualInode::tryGetTreeEntryType() const {
   static_assert(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
-      "New variant type added to VariantVirtualInode - update co_getTreeEntryType");
+      "New variant type added to VariantVirtualInode - update tryGetTreeEntryType");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    if ((*inode)->getType() == dtype_t::Dir) {
+      return TreeEntryType::TREE;
+    }
 #ifdef _WIN32
-    (void)fetchContext;
-    co_return treeEntryTypeFromMode((*inode)->getInitialMode());
+    return treeEntryTypeFromMode((*inode)->getInitialMode());
 #else
-    (void)path;
-    auto st = co_await (*inode)->co_stat(fetchContext);
-    co_return treeEntryTypeFromMode(st.st_mode);
+    if (auto filePtr = inode->asFilePtrOrNull()) {
+      // getMode() picks up chmod-updated executable bits.
+      return treeEntryTypeFromMode(filePtr->getMode());
+    }
+    // Non-Dir InodePtr must be a FileInode; reaching here would indicate
+    // a new InodePtr subtype not handled above.
+    XLOG_EVERY_MS(DFATAL, 60'000)
+        << "VirtualInode::tryGetTreeEntryType: non-Dir InodePtr without FilePtr";
+    return std::nullopt;
 #endif
   } else if (
       auto* entry =
           std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
-    co_return treeEntryTypeFromMode(entry->getInitialMode());
+    return treeEntryTypeFromMode(entry->getInitialMode());
   } else if (std::holds_alternative<TreePtr>(variant_)) {
-    co_return TreeEntryType::TREE;
+    return TreeEntryType::TREE;
   } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
-    co_return treeEntry->getType();
+    return treeEntry->getType();
   }
-  co_yield folly::coro::co_error(
-      std::runtime_error("VirtualInode: unexpected variant type"));
+  return std::nullopt;
 }
 
 ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
@@ -812,6 +812,38 @@ folly::coro::now_task<EntryAttributes> co_getEntryAttributesForNonFile(
   co_return attributes;
 }
 
+/**
+ * Sync version of getEntryAttributesForNonFile. Mirrors the dispatch of
+ * co_getEntryAttributesForNonFile but resolves entirely from cached
+ * state. Returns nullopt if any requested attribute would need an async
+ * fetch.
+ */
+std::optional<EntryAttributes> tryGetEntryAttributesForNonFileSync(
+    const VirtualInode& vi,
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec /*lastCheckoutTime*/,
+    const ObjectFetchContextPtr& /*fetchContext*/,
+    std::optional<TreeEntryType> entryType,
+    int errorCode,
+    std::string_view additionalErrorContext) {
+  if (shouldRequestStatForEntry(requestedAttributes)) {
+    return std::nullopt;
+  }
+  auto [attributes, isMat] = setupNonFileAttributes(
+      vi,
+      requestedAttributes,
+      path,
+      objectStore,
+      entryType,
+      errorCode,
+      additionalErrorContext);
+  if (shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, isMat)) {
+    return std::nullopt;
+  }
+  return attributes;
+}
 } // namespace
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
@@ -1090,14 +1122,8 @@ folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
   std::vector<folly::coro::Task<void>> tasks;
 
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    tasks.emplace_back(
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [this, &entryTypeTry, path, fetchContext = fetchContext.copy()]()
-                -> folly::coro::Task<void> {
-              entryTypeTry =
-                  co_await co_awaitTry(co_getTreeEntryType(path, fetchContext));
-            }));
+    entryTypeTry =
+        folly::Try<std::optional<TreeEntryType>>{tryGetTreeEntryType()};
   }
 
   if (shouldRequestBlobAuxDataForEntry(requestedAttributes)) {
@@ -1150,6 +1176,42 @@ folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
       folly::Try<std::optional<ObjectId>>{std::move(objectId)},
       std::move(blobAuxTry),
       std::move(statTry),
+      isUnderAcl(),
+      shouldPopulateLocalAclAttributes(objectStore));
+}
+
+std::optional<EntryAttributes> VirtualInode::tryGetEntryAttributesSync(
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& fetchContext) const {
+  if (auto dispatch = getNonRegularDtypeDispatch(getDtype())) {
+    return tryGetEntryAttributesForNonFileSync(
+        *this,
+        requestedAttributes,
+        path,
+        objectStore,
+        lastCheckoutTime,
+        fetchContext,
+        dispatch->entryType,
+        dispatch->errorCode,
+        dispatch->errorContext);
+  }
+
+  // Regular file. This sync path resolves SCT/object-id only; stat and
+  // blob-aux requests fall back to async.
+  if (requestedAttributes.containsAnyOf(
+          ENTRY_ATTRIBUTES_FROM_STAT | ENTRY_ATTRIBUTES_FROM_BLOB_AUX)) {
+    return std::nullopt;
+  }
+
+  return assembleRegularFileAttributes(
+      requestedAttributes,
+      folly::Try<std::optional<TreeEntryType>>{tryGetTreeEntryType()},
+      folly::Try<std::optional<ObjectId>>{getObjectId()},
+      std::nullopt,
+      std::nullopt,
       isUnderAcl(),
       shouldPopulateLocalAclAttributes(objectStore));
 }
