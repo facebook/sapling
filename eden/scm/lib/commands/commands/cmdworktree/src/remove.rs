@@ -105,7 +105,7 @@ fn remove_and_update_registry(
         with_worktree_path_op_lock(&current_group.shared_store_path, target, || {
             pre_hooks.run_hooks(
                 Some(repo),
-                true,
+                false,
                 Some(&HashMap::from([(
                     "path".to_string(),
                     target.display().to_string(),
@@ -166,7 +166,7 @@ fn run_remove_all(
         for path in &linked_paths {
             pre_hooks.run_hooks(
                 Some(repo),
-                true,
+                false,
                 Some(&HashMap::from([(
                     "path".to_string(),
                     path.display().to_string(),

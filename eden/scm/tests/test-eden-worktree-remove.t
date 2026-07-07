@@ -111,45 +111,42 @@ test worktree remove - pre-worktree-remove hook fires with correct env vars
   removed $TESTTMP/pre_hook_rm1
 #endif
 
-test worktree remove - pre-worktree-remove hook failure aborts single remove
+test worktree remove - pre-worktree-remove hook failure is best effort for single remove
 
   $ sl worktree add $TESTTMP/pre_hook_blocked
   created linked worktree at $TESTTMP/pre_hook_blocked
 #if windows
   $ setconfig "hooks.pre-worktree-remove=cmd /c exit 1"
-  $ sl worktree remove $TESTTMP/pre_hook_blocked -y
-  abort: pre-worktree-remove hook exited with status 1
-  [255]
 #else
   $ setconfig hooks.pre-worktree-remove=false
-  $ sl worktree remove $TESTTMP/pre_hook_blocked -y
-  abort: pre-worktree-remove hook exited with status 1
-  [255]
 #endif
+  $ sl worktree remove $TESTTMP/pre_hook_blocked -y
+  removed $TESTTMP/pre_hook_blocked
   $ test -d $TESTTMP/pre_hook_blocked
+  [1]
 
-test worktree remove - pre-worktree-remove hook failure in --all mode aborts before any removal
+test worktree remove - pre-worktree-remove hook failure in --all mode still removes worktree
 
   $ sl worktree add $TESTTMP/pre_hook_all1
   created linked worktree at $TESTTMP/pre_hook_all1
 #if windows
   $ setconfig "hooks.pre-worktree-remove=cmd /c exit 1"
-  $ sl worktree remove --all -y
-  abort: pre-worktree-remove hook exited with status 1
-  [255]
 #else
   $ setconfig hooks.pre-worktree-remove=false
-  $ sl worktree remove --all -y
-  abort: pre-worktree-remove hook exited with status 1
-  [255]
 #endif
-  $ test -d $TESTTMP/pre_hook_blocked
+  $ sl worktree remove --all -y
+  removed $TESTTMP/pre_hook_all1
   $ test -d $TESTTMP/pre_hook_all1
+  [1]
+  $ sl worktree list
+  this worktree is not part of a group
 
 test worktree remove - pre-worktree-remove hook does not fire when user declines confirmation
 
+  $ sl worktree add $TESTTMP/pre_hook_decline
+  created linked worktree at $TESTTMP/pre_hook_decline
   $ setconfig hooks.pre-worktree-remove="echo HOOK_FIRED"
-  $ echo n | sl worktree remove $TESTTMP/pre_hook_all1
+  $ echo n | sl worktree remove $TESTTMP/pre_hook_decline
   abort: running non-interactively, use -y instead
   [255]
-  $ test -d $TESTTMP/pre_hook_all1
+  $ test -d $TESTTMP/pre_hook_decline
