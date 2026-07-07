@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -26,6 +27,7 @@
 #include <gtest/gtest_prod.h>
 
 #include "eden/fs/fuse/FuseFeatures.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 #if EDEN_HAVE_FUSE_IO_URING
 #include <liburing.h>
@@ -108,6 +110,7 @@ class IoUringFuseTransport final : public FuseTransport {
     size_t queueId{0};
     int eventFd{-1};
     size_t requestHeaderSize{sizeof(fuse_uring_req_header)};
+    std::thread::id ownerThreadId;
     io_uring ring{};
     bool ringInitialized{false};
     std::vector<RingEntry> entries;
@@ -174,7 +177,7 @@ class IoUringFuseTransport final : public FuseTransport {
       const io_uring_cqe& cqe,
       bool stopRequested,
       void* userData) const;
-  void queueCommitAndFetch(RingEntry& entry) const;
+  void queueCommitAndFetch(RingEntry& entry, const EdenStatsPtr& stats) const;
   void processPendingCommits(RingQueue& queue) const;
   bool hasPendingCommits(const RingQueue& queue) const;
   bool shouldExitWorkerLoop(const FuseChannel& channel, const RingQueue& queue)
@@ -194,7 +197,9 @@ class IoUringFuseTransport final : public FuseTransport {
       const io_uring_cqe& cqe,
       bool stopRequested) const;
   CqeResult handleWakeEventCqe(RingQueue& queue) const;
-  void rejectDecodedRequestAfterStop(const DecodedRequest& request) const;
+  void rejectDecodedRequestAfterStop(
+      const DecodedRequest& request,
+      const EdenStatsPtr& stats) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
   void prepareCommitAndFetchSqe(RingQueue& queue, RingEntry& entry) const;

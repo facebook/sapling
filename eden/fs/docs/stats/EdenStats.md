@@ -195,6 +195,8 @@ The list of all the EdenStats Counter/Duration are as follows:
   Counter dispatchGetxattrDeferred{"fuse.dispatch_getxattr_deferred"}
   Counter dispatchReadlinkImmediate{"fuse.dispatch_readlink_immediate"}
   Counter dispatchReadlinkDeferred{"fuse.dispatch_readlink_deferred"}
+  Counter ioUringReplySameThread{"fuse.io_uring_reply_same_thread"}
+  Counter ioUringReplyCrossThread{"fuse.io_uring_reply_cross_thread"}
   ```
 
 - NfsStats

@@ -377,6 +377,9 @@ class FuseChannel final : public FsChannel {
   size_t getTransportWorkerThreadCount() const {
     return configuredWorkerThreadCount_;
   }
+  const EdenStatsPtr& getStats() const {
+    return dispatcher_->getStats();
+  }
   int getFuseDeviceFd() const {
     return fuseDevice_.fd();
   }

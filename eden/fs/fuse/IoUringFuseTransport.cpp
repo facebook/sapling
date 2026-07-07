@@ -238,6 +238,7 @@ IoUringFuseTransport::RingQueue::RingQueue(RingQueue&& other) noexcept
       queueId{other.queueId},
       eventFd{other.eventFd},
       requestHeaderSize{other.requestHeaderSize},
+      ownerThreadId{other.ownerThreadId},
       ring{other.ring},
       ringInitialized{other.ringInitialized},
       entries{std::move(other.entries)},
@@ -257,6 +258,7 @@ IoUringFuseTransport::RingQueue& IoUringFuseTransport::RingQueue::operator=(
   queueId = other.queueId;
   eventFd = other.eventFd;
   requestHeaderSize = other.requestHeaderSize;
+  ownerThreadId = other.ownerThreadId;
   ring = other.ring;
   ringInitialized = other.ringInitialized;
   entries = std::move(other.entries);
@@ -272,6 +274,7 @@ void IoUringFuseTransport::RingQueue::resetMovedFrom() noexcept {
   queueId = 0;
   eventFd = -1;
   requestHeaderSize = sizeof(fuse_uring_req_header);
+  ownerThreadId = {};
   ring = {};
   ring.ring_fd = -1;
   ringInitialized = false;
@@ -599,7 +602,8 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleWakeEventCqe(
 }
 
 void IoUringFuseTransport::rejectDecodedRequestAfterStop(
-    const DecodedRequest& request) const {
+    const DecodedRequest& request,
+    const EdenStatsPtr& stats) const {
   auto& entry = *request.entry;
   auto& out = getReplyHeader(entry);
   auto& ringInOut = getRingEntryInOut(entry);
@@ -609,7 +613,7 @@ void IoUringFuseTransport::rejectDecodedRequestAfterStop(
   out.len = 0;
   ringInOut.payload_sz = 0;
 
-  queueCommitAndFetch(entry);
+  queueCommitAndFetch(entry, stats);
 }
 
 void IoUringFuseTransport::registerOutstandingEntry(
@@ -638,8 +642,15 @@ IoUringFuseTransport::RingEntry& IoUringFuseTransport::takeOutstandingEntry(
   return *entry;
 }
 
-void IoUringFuseTransport::queueCommitAndFetch(RingEntry& entry) const {
+void IoUringFuseTransport::queueCommitAndFetch(
+    RingEntry& entry,
+    const EdenStatsPtr& stats) const {
   auto& queue = entry.pool->queues.at(entry.queueId);
+  if (std::this_thread::get_id() == queue.ownerThreadId) {
+    stats->increment(&FuseStats::ioUringReplySameThread);
+  } else {
+    stats->increment(&FuseStats::ioUringReplyCrossThread);
+  }
   {
     auto pendingCommits = queue.pendingCommits->wlock();
     pendingCommits->push_back(&entry);
@@ -965,6 +976,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
   }
 
   auto& queue = ringPool_->queues[queueId];
+  queue.ownerThreadId = std::this_thread::get_id();
   const auto myPid = getpid();
   const auto configuredCpuCount = get_nprocs_conf();
   XLOGF(
@@ -1026,7 +1038,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
             // COMMIT_AND_FETCH can return another request while shutdown is
             // draining. Recycle it with an error instead of dispatching new
             // work into FuseChannel after stop was requested.
-            rejectDecodedRequestAfterStop(request);
+            rejectDecodedRequestAfterStop(request, channel.getStats());
             break;
           }
           registerOutstandingEntry(request.header.unique, *request.entry);
@@ -1058,7 +1070,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
 }
 
 void IoUringFuseTransport::replyError(
-    FuseChannel& /* channel */,
+    FuseChannel& channel,
     const fuse_in_header& request,
     int errorCode) const {
 #if EDEN_HAVE_FUSE_IO_URING
@@ -1071,8 +1083,9 @@ void IoUringFuseTransport::replyError(
   out.len = 0;
   ringInOut.payload_sz = 0;
 
-  queueCommitAndFetch(entry);
+  queueCommitAndFetch(entry, channel.getStats());
 #else
+  (void)channel;
   (void)request;
   (void)errorCode;
   throwIoUringNotImplemented("replyError", queueDepth_);
@@ -1080,7 +1093,7 @@ void IoUringFuseTransport::replyError(
 }
 
 void IoUringFuseTransport::sendRawReply(
-    FuseChannel& /* channel */,
+    FuseChannel& channel,
     const iovec iov[],
     size_t count) const {
 #if EDEN_HAVE_FUSE_IO_URING
@@ -1132,8 +1145,9 @@ void IoUringFuseTransport::sendRawReply(
   out.len = payloadLength32;
   ringInOut.payload_sz = payloadLength32;
 
-  queueCommitAndFetch(entry);
+  queueCommitAndFetch(entry, channel.getStats());
 #else
+  (void)channel;
   (void)iov;
   (void)count;
   throwIoUringNotImplemented("sendRawReply", queueDepth_);
