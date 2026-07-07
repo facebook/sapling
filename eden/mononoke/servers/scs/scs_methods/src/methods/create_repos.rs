@@ -71,6 +71,10 @@ use crate::source_control_impl::SourceControlServiceImpl;
 const DIFF_AUTHOR: &str = "scm_server_infra";
 const REPO_SPEC_THRIFT_TYPE: &str = "RepoSpec";
 const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
+/// JustKnob gating the attach-to-in-flight-mutation idempotency path in
+/// `reserve_repos_ids`. Shared by the production call site and the tests so
+/// the two can never drift.
+const ATTACH_JK: &str = "scm/mononoke:create_repos_attach_to_inflight_mutation";
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -466,12 +470,23 @@ async fn update_repos_acls(
     Ok(())
 }
 
+/// Outcome of reserving repo ids for a `create_repos` batch.
+#[cfg(fbcode_build)]
+#[derive(Debug)]
+enum ReserveOutcome {
+    /// Repos were freshly reserved; caller must prepare + land a mutation.
+    Reserved(Vec<(RepositoryId, thrift::RepoCreationRequest)>),
+    /// All requested repos were already `reserved` under a single in-flight
+    /// mutation; caller should attach to it and return the token unchanged.
+    AttachedToInflight { mutation_id: i64 },
+}
+
 #[cfg(fbcode_build)]
 async fn reserve_repos_ids(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
-) -> Result<Vec<(RepositoryId, thrift::RepoCreationRequest)>, scs_errors::ServiceError> {
+) -> Result<ReserveOutcome, scs_errors::ServiceError> {
     let max_id = git_source_of_truth_config
         .get_max_id(&ctx)
         .await
@@ -502,7 +517,7 @@ async fn reserve_repos_ids(
             )
             .await;
         match result {
-            Ok(_) => Ok(repo_ids_and_requests),
+            Ok(_) => Ok(ReserveOutcome::Reserved(repo_ids_and_requests)),
             Err(e) => {
                 let error_trace = format!("{e:#}");
                 // Match both SQLite ("UNIQUE constraint failed") and MySQL
@@ -512,13 +527,19 @@ async fn reserve_repos_ids(
                     || (error_trace.contains("Duplicate entry")
                         && error_trace.contains("repo_name_idx"));
                 if is_duplicate {
+                    // Look up every requested repo's current row so we can both
+                    // build human-readable `details` (today's behavior) and, when
+                    // the attach knob is enabled, classify whether this is a
+                    // duplicate request for a single in-flight mutation we can
+                    // safely attach to.
                     let mut details = Vec::new();
+                    let mut lookups = Vec::with_capacity(repo_ids_and_requests.len());
                     for (_id, request) in &repo_ids_and_requests {
                         let repo_name = RepositoryName(request.repo_name.clone());
-                        match git_source_of_truth_config
+                        let lookup = git_source_of_truth_config
                             .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
-                            .await
-                        {
+                            .await;
+                        match &lookup {
                             Ok(Some(entry)) => match entry.source_of_truth {
                                 GitSourceOfTruth::Reserved => {
                                     details.push(format!(
@@ -551,7 +572,111 @@ async fn reserve_repos_ids(
                                 ));
                             }
                         }
+                        lookups.push(lookup);
                     }
+
+                    let attach_enabled = justknobs::eval(ATTACH_JK, None, None);
+
+                    if attach_enabled {
+                        // A lookup `Err` is a transient DB/query failure, NOT a
+                        // client-side invalid request. Surface it as an internal
+                        // error (mapped to `ServiceError::Internal`) so the retry
+                        // loop in `create_repos_in_mononoke` retries it, instead
+                        // of masking a retryable failure as `invalid_request`.
+                        let lookup_errors = lookups
+                            .iter()
+                            .filter_map(|lookup| lookup.as_ref().err())
+                            .map(|e| format!("{e:#}"))
+                            .collect::<Vec<_>>();
+                        if !lookup_errors.is_empty() {
+                            return Err(scs_errors::internal_error(format!(
+                                "Failed to look up reserved repos while classifying a duplicate \
+                                 creation request: {}",
+                                lookup_errors.join("; ")
+                            ))
+                            .into());
+                        }
+
+                        // Only attach when every requested repo resolved to a
+                        // `Reserved` row stamped with the SAME mutation_id.
+                        let all_reserved_entries = lookups
+                            .iter()
+                            .map(|lookup| match lookup {
+                                Ok(Some(entry))
+                                    if entry.source_of_truth == GitSourceOfTruth::Reserved =>
+                                {
+                                    entry.mutation_id
+                                }
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>();
+
+                        // All lookups are `Ok` here (errors returned above), so a
+                        // non-reserved entry is a genuine split-brain / missing-row
+                        // case, not a transient failure.
+                        let any_non_reserved = lookups.iter().any(|lookup| {
+                            !matches!(
+                                lookup,
+                                Ok(Some(entry)) if entry.source_of_truth == GitSourceOfTruth::Reserved
+                            )
+                        });
+
+                        if any_non_reserved {
+                            // At least one row is not `Reserved` (or lookup
+                            // failed / returned None). If any row is present but
+                            // in a non-reserved state, this is the split-brain
+                            // case and `details` already carries the DANGER
+                            // message. Fall through to the shared error below.
+                            return Err(scs_errors::invalid_request(details.join("\n")).into());
+                        }
+
+                        // Every row is `Reserved`. Decide based on stamping.
+                        if all_reserved_entries.iter().any(Option::is_none) {
+                            return Err(scs_errors::invalid_request(format!(
+                                "Repo creation is already in progress but not yet trackable \
+                                 (a reserved row has no mutation_id stamped yet); retry shortly, \
+                                 or delete the stale reserved row if the original attempt died.\n{}",
+                                details.join("\n")
+                            ))
+                            .into());
+                        }
+
+                        let mutation_ids = all_reserved_entries
+                            .iter()
+                            .filter_map(|id| *id)
+                            .collect::<std::collections::BTreeSet<_>>();
+                        let mut ids = mutation_ids.iter();
+                        match (ids.next(), ids.next()) {
+                            (Some(mutation_id), None) => {
+                                // Exactly one distinct in-flight mutation: attach.
+                                return Ok(ReserveOutcome::AttachedToInflight {
+                                    mutation_id: *mutation_id,
+                                });
+                            }
+                            (None, _) => {
+                                // Defensive: no mutation ids collected. Unreachable
+                                // in practice — the all-Some guard above ensures
+                                // every reserved repo has a stamped id; reachable
+                                // only for an empty batch, which cannot hit the
+                                // duplicate path.
+                                return Err(scs_errors::invalid_request(format!(
+                                    "No reserved repos to attach to.\n{}",
+                                    details.join("\n")
+                                ))
+                                .into());
+                            }
+                            (Some(_), Some(_)) => {
+                                // More than one distinct in-flight mutation.
+                                return Err(scs_errors::invalid_request(format!(
+                                    "Repo creation request is not idempotent: the reserved repos \
+                                     span multiple in-flight mutations; resolve manually.\n{}",
+                                    details.join("\n")
+                                ))
+                                .into());
+                            }
+                        }
+                    }
+
                     Err(scs_errors::invalid_request(details.join("\n")).into())
                 } else {
                     Err(scs_errors::internal_error(format!(
@@ -817,7 +942,7 @@ async fn create_repos_in_mononoke(
     //   repositories. At this point, the repos were created and empty, so it's OK for their Source
     //   Of Truth to be in Mononoke already, ahead of creating them in Metagit and allowing pushes.
 
-    let (repo_ids_and_requests, _attempts) = retry(
+    let (outcome, _attempts) = retry(
         |_| reserve_repos_ids(ctx.clone(), git_source_of_truth_config.as_ref(), params),
         Duration::from_millis(1_000),
     )
@@ -831,6 +956,14 @@ async fn create_repos_in_mononoke(
         _ => true,
     })
     .await?;
+
+    let repo_ids_and_requests = match outcome {
+        ReserveOutcome::Reserved(repos) => repos,
+        // A concurrent/duplicate request already reserved these repos under a
+        // single in-flight mutation. Attach to it and return its token so the
+        // caller can poll it to completion.
+        ReserveOutcome::AttachedToInflight { mutation_id } => return Ok(Some(mutation_id)),
+    };
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
@@ -1547,5 +1680,398 @@ mod tests {
             spec.hipster_acl, "repos/git/fairinternal/occhi",
             "Repos with custom_acl should use the full-path ACL"
         );
+    }
+}
+
+#[cfg(all(fbcode_build, test))]
+mod attach_tests {
+    use std::collections::HashMap;
+
+    use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use git_source_of_truth::GitSourceOfTruth;
+    use git_source_of_truth::RepositoryName;
+    use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use mononoke_macros::mononoke;
+    use sql_construct::SqlConstruct;
+
+    use super::*;
+
+    fn params_for(names: &[&str]) -> thrift::CreateReposParams {
+        thrift::CreateReposParams {
+            repos: names
+                .iter()
+                .map(|n| thrift::RepoCreationRequest {
+                    repo_name: (*n).to_string(),
+                    scm_type: thrift::RepoScmType::GIT,
+                    size_bucket: thrift::RepoSizeBucket::SMALL,
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn attach_happy_path(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/a".to_string())],
+                4242,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let outcome = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect("reserve_repos_ids should succeed and attach");
+                match outcome {
+                    ReserveOutcome::AttachedToInflight { mutation_id } => {
+                        assert_eq!(mutation_id, 4242);
+                    }
+                    ReserveOutcome::Reserved(_) => {
+                        panic!("expected AttachedToInflight, got Reserved")
+                    }
+                }
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn null_mutation_window(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+
+        let params = params_for(&["repo/a"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect_err("expected an error for a null-mutation reserved repo");
+                match &err {
+                    scs_errors::ServiceError::Request(req) => {
+                        assert!(
+                            format!("{req:?}").contains("in progress"),
+                            "message should mention 'in progress', got: {req:?}"
+                        );
+                    }
+                    other => panic!("expected Request error, got: {other:?}"),
+                }
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn split_brain_guard(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // Insert reserved, stamp a mutation id, then flip it to Mononoke.
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/a".to_string())],
+                7,
+            )
+            .await?;
+        config
+            .update_source_of_truth_by_mutation_id(&ctx, GitSourceOfTruth::Mononoke, 7)
+            .await?;
+
+        let params = params_for(&["repo/a"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect_err("expected an error for a non-reserved (mononoke) repo");
+                match &err {
+                    scs_errors::ServiceError::Request(req) => {
+                        assert!(
+                            format!("{req:?}").contains("DANGER"),
+                            "message should mention 'DANGER', got: {req:?}"
+                        );
+                    }
+                    other => panic!("expected Request error, got: {other:?}"),
+                }
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn mixed_batch(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[
+                    (
+                        RepositoryId::new(1),
+                        RepositoryName("repo/a".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                    (
+                        RepositoryId::new(2),
+                        RepositoryName("repo/b".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                ],
+            )
+            .await?;
+        // Stamp the two reserved repos with DIFFERENT mutation ids.
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/a".to_string())],
+                100,
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/b".to_string())],
+                200,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a", "repo/b"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect_err("expected an error for a batch spanning multiple mutations");
+                match &err {
+                    scs_errors::ServiceError::Request(req) => {
+                        assert!(
+                            format!("{req:?}").contains("multiple in-flight mutations"),
+                            "message should mention 'multiple in-flight mutations', got: {req:?}"
+                        );
+                    }
+                    other => panic!("expected Request error, got: {other:?}"),
+                }
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn jk_off(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/a".to_string())],
+                4242,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(false),
+            )])),
+            async {
+                let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect_err("expected today's behavior (error) when the knob is off");
+                assert!(
+                    matches!(err, scs_errors::ServiceError::Request(_)),
+                    "expected Request error, got: {err:?}"
+                );
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn attach_happy_path_multi_repo(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // Two reserved repos both stamped with the SAME mutation id: a
+        // duplicate multi-repo request should dedup to one mutation and attach.
+        config
+            .insert_repos(
+                &ctx,
+                &[
+                    (
+                        RepositoryId::new(1),
+                        RepositoryName("repo/a".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                    (
+                        RepositoryId::new(2),
+                        RepositoryName("repo/b".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                ],
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[
+                    RepositoryName("repo/a".to_string()),
+                    RepositoryName("repo/b".to_string()),
+                ],
+                4242,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a", "repo/b"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let outcome = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect("reserve_repos_ids should succeed and attach for multi-repo");
+                match outcome {
+                    ReserveOutcome::AttachedToInflight { mutation_id } => {
+                        assert_eq!(mutation_id, 4242);
+                    }
+                    ReserveOutcome::Reserved(_) => {
+                        panic!("expected AttachedToInflight, got Reserved")
+                    }
+                }
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn attach_lookup_none(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // Only one of the two requested repos has a seeded (reserved+stamped)
+        // row; the other has NO row at all. The absent repo makes the batch
+        // non-attachable (lookup returns None => `any_non_reserved`), so the
+        // whole request must fail closed rather than attaching to the single
+        // reserved mutation.
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[RepositoryName("repo/a".to_string())],
+                4242,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a", "repo/absent"]);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                ATTACH_JK.to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async {
+                let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                    .await
+                    .expect_err("expected an error when a requested repo has no row");
+                assert!(
+                    matches!(err, scs_errors::ServiceError::Request(_)),
+                    "expected Request error, got: {err:?}"
+                );
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok(())
     }
 }

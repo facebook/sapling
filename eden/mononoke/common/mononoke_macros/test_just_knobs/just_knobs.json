@@ -48,6 +48,7 @@
     "scm/mononoke:rendezvous_bonsai_git_mapping" : true,
     "scm/mononoke:create_changeset_stack_noop_file_changes_check": true,
     "scm/mononoke:spawn_mutation_polling_task": true,
+    "scm/mononoke:create_repos_attach_to_inflight_mutation": false,
     "scm/mononoke:create_changeset_stack_empty_changeset_check": true,
     "scm/mononoke:create_commit_bypass_config_enforce": false,
     "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
