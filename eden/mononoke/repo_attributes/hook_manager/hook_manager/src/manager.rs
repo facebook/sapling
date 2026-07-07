@@ -49,6 +49,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::debug;
 
 use crate::BookmarkHook;
+use crate::BypassDecision;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
@@ -230,6 +231,49 @@ impl HookManager {
         );
     }
 
+    /// Compute the bypass decision for a single surviving `(hook, changeset)`
+    /// pair, eagerly (before the hook runs).
+    ///
+    /// A group-less bypass is never seen here — those are skipped pre-run via
+    /// `unconditional_bypass_reason` — so this only runs when the hook has a
+    /// permission group.
+    async fn compute_bypass_decision(
+        &self,
+        hook: &Hook,
+        ctx: &CoreContext,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cs_msg: Option<&str>,
+        changeset_author: Option<&str>,
+    ) -> Result<BypassDecision> {
+        let permission_group = hook.get_bypass_permission_group();
+        if permission_group.is_none() {
+            return Ok(BypassDecision::NoBypass);
+        }
+
+        // Cheap synchronous trigger check first: no trigger => no ACL call.
+        let bypass = hook.get_config().bypass.as_ref();
+        let triggered = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
+            .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)))
+            .is_some();
+        if !triggered {
+            return Ok(BypassDecision::NoBypass);
+        }
+
+        let decision = self
+            .check_bypass_authorization(hook, ctx, maybe_pushvars, cs_msg, changeset_author)
+            .await?;
+        Ok(match decision {
+            BypassAuthorizationResult::NoBypass => BypassDecision::NoBypass,
+            BypassAuthorizationResult::Bypassed(reason) => BypassDecision::Authorized {
+                reason,
+                permission_group: permission_group.map(|g| g.to_string()),
+            },
+            BypassAuthorizationResult::Unauthorized(group) => {
+                BypassDecision::Unauthorized { group }
+            }
+        })
+    }
+
     /// Check if a bypass is authorized given the permission group restriction.
     ///
     /// When `changeset_author` is provided (e.g., "Alice <alice@fb.com>"),
@@ -245,7 +289,6 @@ impl HookManager {
     ) -> Result<BypassAuthorizationResult> {
         let bypass = hook.get_config().bypass.as_ref();
 
-        // First check if there's a pushvar bypass
         let bypass_reason = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
             .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)));
 
@@ -291,9 +334,9 @@ impl HookManager {
     /// group and map the result to a BypassAuthorizationResult.
     ///
     /// If the hook has no bypass permission checker configured, the bypass is
-    /// allowed unconditionally (preserves pre-permission-group behavior). An
-    /// empty `identity_set` fails closed: a real membership checker returns
-    /// `false`, so the result is `Unauthorized` and the hook runs normally.
+    /// allowed unconditionally. An empty `identity_set` fails closed: a real
+    /// membership checker returns `false`, so the result is `Unauthorized` and
+    /// the hook runs normally.
     async fn check_bypass_group_membership(
         &self,
         hook: &Hook,
@@ -519,13 +562,19 @@ impl HookManager {
             scuba.add("to", to.get_changeset_id().to_string());
 
             // A bypass with no permission group is honored without running the hook
-            // (bookmark hooks honor the pushvar bypass only). Group-gated bypasses
-            // run and are resolved afterwards in `apply_bypasses`.
+            // (bookmark hooks honor the pushvar bypass only), skipped pre-run.
             if let Some(bypass_reason) = unconditional_bypass_reason(hook, maybe_pushvars, None) {
                 scuba.add("type", "bookmark");
                 log_skipped_hook(&scuba, to, &bypass_reason);
                 continue;
             }
+
+            // For a surviving hook, decide any group-gated bypass eagerly so the
+            // hook's row is logged once with its final outcome. Bookmark hooks
+            // honor the pushvar bypass only, so `cs_msg` is `None`.
+            let bypass = self
+                .compute_bypass_decision(hook, ctx, maybe_pushvars, None, Some(to.author()))
+                .await?;
 
             for future in hook.get_futures_for_bookmark_hooks(
                 ctx,
@@ -537,20 +586,13 @@ impl HookManager {
                 cross_repo_push_source,
                 push_authored_by,
                 hook.get_config().log_only,
+                bypass,
             ) {
                 futs.push(future.boxed());
             }
         }
         let outcomes: Vec<HookOutcome> = futs.try_collect().await?;
-        self.apply_bypasses(
-            ctx,
-            outcomes,
-            std::slice::from_ref(to),
-            maybe_pushvars,
-            &scuba,
-            false,
-        )
-        .await
+        Ok(outcomes)
     }
 
     pub async fn run_changesets_hooks_for_bookmark(
@@ -591,13 +633,13 @@ impl HookManager {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        // Skip, before running, any (hook, changeset) bypassed unconditionally (a
-        // pushvar/commit-message bypass with no permission group). Group-gated
-        // bypasses run and are resolved afterwards in `apply_bypasses`.
-        let hooks_with_changesets: Vec<_> = resolved_hooks
+        // Drop each (hook, changeset) that is unconditionally bypassed (a
+        // pushvar/commit-message bypass with no permission group), logging it as
+        // skipped.
+        let surviving: Vec<(&str, &Hook, Vec<&BonsaiChangeset>)> = resolved_hooks
             .into_iter()
             .map(|(hook_name, hook)| {
-                let changesets: Vec<&BonsaiChangeset> = changesets
+                let css = changesets
                     .iter()
                     .filter(|cs| {
                         match unconditional_bypass_reason(hook, maybe_pushvars, Some(cs.message()))
@@ -613,13 +655,55 @@ impl HookManager {
                         }
                     })
                     .collect();
-                (hook_name, hook, changesets)
+                (hook_name, hook, css)
+            })
+            .collect();
+
+        // Resolve each survivor's group-gated bypass decision eagerly, with bounded
+        // concurrency: most pairs are cheap (no bypass token means no ACL call), but
+        // a fired token costs one membership RPC we don't want to serialize on the
+        // push critical path.
+        const BYPASS_DECISION_CONCURRENCY: usize = 10;
+        let decision_futs: Vec<BoxFuture<Result<(usize, ChangesetId, BypassDecision)>>> = surviving
+            .iter()
+            .enumerate()
+            .flat_map(|(idx, (_, hook, css))| {
+                css.iter().map(move |cs| {
+                    let cs_id = cs.get_changeset_id();
+                    self.compute_bypass_decision(
+                        hook,
+                        ctx,
+                        maybe_pushvars,
+                        Some(cs.message()),
+                        Some(cs.author()),
+                    )
+                    .map(move |res| res.map(|bypass| (idx, cs_id, bypass)))
+                    .boxed()
+                })
+            })
+            .collect();
+        let decisions: Vec<(usize, ChangesetId, BypassDecision)> =
+            futures::stream::iter(decision_futs)
+                .buffer_unordered(BYPASS_DECISION_CONCURRENCY)
+                .try_collect()
+                .await?;
+
+        let mut bypass_maps: Vec<HashMap<ChangesetId, BypassDecision>> =
+            surviving.iter().map(|_| HashMap::new()).collect();
+        for (idx, cs_id, bypass) in decisions {
+            bypass_maps[idx].insert(cs_id, bypass);
+        }
+        let hooks_with_changesets: Vec<_> = surviving
+            .into_iter()
+            .zip(bypass_maps)
+            .map(|((hook_name, hook, css), bypass_by_cs)| {
+                (hook_name, hook, css, Arc::new(bypass_by_cs))
             })
             .collect();
 
         let (batched, individual) = hooks_with_changesets
             .into_iter()
-            .map(|(hook_name, hook, changesets)| {
+            .map(|(hook_name, hook, changesets, bypass_by_cs)| {
                 cloned!(mut scuba);
                 scuba.add("hook", hook_name.to_string());
                 hook.get_futures_for_changeset_or_file_hooks(
@@ -632,6 +716,7 @@ impl HookManager {
                     cross_repo_push_source,
                     push_authored_by,
                     hook.get_config().log_only,
+                    bypass_by_cs,
                 )
             })
             .partition::<Vec<_>, _>(HooksOutcome::is_batched);
@@ -663,91 +748,16 @@ impl HookManager {
 
         let (individual_res, batched_res) = futures::try_join!(individual_fut, batched_fut)?;
         let outcomes: Vec<HookOutcome> = individual_res.into_iter().chain(batched_res).collect();
-        self.apply_bypasses(ctx, outcomes, changesets, maybe_pushvars, &scuba, true)
-            .await
-    }
-
-    /// Apply bypasses to hook rejections via `check_bypass_authorization`. The
-    /// permission group is consulted only here, so a push whose hooks pass never
-    /// hits the group: an authorized (or group-less) bypass drops the rejection, an
-    /// unauthorized one keeps the hook's own rejection, annotated with a note.
-    async fn apply_bypasses(
-        &self,
-        ctx: &CoreContext,
-        outcomes: Vec<HookOutcome>,
-        changesets: &[BonsaiChangeset],
-        maybe_pushvars: Option<&HashMap<String, Bytes>>,
-        scuba: &MononokeScubaSampleBuilder,
-        // Bookmark hooks only honor pushvar/author-group bypasses, not the commit
-        // message; pass `false` to keep that narrower surface.
-        use_commit_message: bool,
-    ) -> Result<Vec<HookOutcome>> {
-        let cs_by_id: HashMap<ChangesetId, &BonsaiChangeset> = changesets
-            .iter()
-            .map(|cs| (cs.get_changeset_id(), cs))
-            .collect();
-
-        // Resolve each (hook, changeset) at most once: a file hook can reject many
-        // paths of one changeset and the membership check is an ACL RPC.
-        let mut checked: HashMap<(String, ChangesetId), BypassAuthorizationResult> = HashMap::new();
-        let mut result = Vec::with_capacity(outcomes.len());
-        for outcome in outcomes {
-            if !outcome.is_rejection() {
-                result.push(outcome);
-                continue;
-            }
-            let key = (
-                outcome.get_hook_name().to_string(),
-                outcome.get_changeset_id(),
-            );
-            // First rejection seen for this (hook, changeset): resolve the bypass
-            // (one ACL check), log a honored bypass, and emit any unauthorized
-            // rejection just once even if the hook rejects many paths.
-            let first_rejection = !checked.contains_key(&key);
-            if first_rejection {
-                let hook = self
-                    .hooks
-                    .get(&key.0)
-                    .ok_or_else(|| HookManagerError::NoSuchHook(key.0.clone()))?;
-                let cs = cs_by_id.get(&key.1).copied();
-                let cs_msg = if use_commit_message {
-                    cs.map(|cs| cs.message())
-                } else {
-                    None
-                };
-                let decision = self
-                    .check_bypass_authorization(
-                        hook,
-                        ctx,
-                        maybe_pushvars,
-                        cs_msg,
-                        cs.map(|cs| cs.author()),
-                    )
-                    .await?;
-                if let (BypassAuthorizationResult::Bypassed(reason), Some(cs)) = (&decision, cs) {
-                    let mut scuba = scuba.clone();
-                    scuba.add("hook", key.0.clone());
-                    log_bypassed_changeset(&scuba, cs, reason, hook.get_bypass_permission_group());
-                }
-                checked.insert(key.clone(), decision);
-            }
-            match checked.get(&key) {
-                Some(BypassAuthorizationResult::Bypassed(_)) => {}
-                Some(BypassAuthorizationResult::Unauthorized(group)) => {
-                    if first_rejection {
-                        result.push(annotate_unauthorized_rejection(outcome, group));
-                    }
-                }
-                _ => result.push(outcome),
-            }
-        }
-        Ok(result)
+        Ok(outcomes)
     }
 }
 
 /// Append a note to a rejection telling the pusher their bypass was ignored
 /// because they are not in the permission group. The hook's own reason is kept.
-fn annotate_unauthorized_rejection(mut outcome: HookOutcome, group_name: &str) -> HookOutcome {
+pub(crate) fn annotate_unauthorized_rejection(
+    mut outcome: HookOutcome,
+    group_name: &str,
+) -> HookOutcome {
     if let Some(info) = outcome.get_execution().rejection_info() {
         let mut info = info.clone();
         info.long_description = format!(
@@ -820,27 +830,12 @@ fn log_skipped_hook(scuba: &MononokeScubaSampleBuilder, cs: &BonsaiChangeset, by
     scuba.log();
 }
 
-fn log_bypassed_changeset(
-    scuba: &MononokeScubaSampleBuilder,
-    cs: &BonsaiChangeset,
-    bypass_reason: &str,
-    bypass_permission_group: Option<&str>,
-) {
-    cloned!(mut scuba);
-    scuba.add("hash", cs.get_changeset_id().to_string());
-    scuba.add("bypass_reason", bypass_reason.to_string());
-    if let Some(group) = bypass_permission_group {
-        scuba.add("bypass_permission_group", group.to_string());
-    }
-    scuba.log();
-}
-
 /// Reason a hook is bypassed unconditionally (pushvar or commit-message bypass with
 /// no permission group), so it can be skipped before it runs. Group-gated bypasses
-/// return `None` here -- they need the hook's result and are resolved afterwards in
-/// `apply_bypasses`. Skipping pre-run is also what keeps a bypass able to rescue a
-/// hook that would otherwise error (its `Err` would abort the push before bypass
-/// resolution).
+/// return `None` here -- they are decided eagerly by `compute_bypass_decision` and
+/// carried into the hook-run path. Skipping pre-run is also what keeps a group-less
+/// bypass able to rescue a hook that would otherwise error (its `Err` would abort
+/// the push before its outcome is logged).
 fn unconditional_bypass_reason(
     hook: &Hook,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
@@ -944,6 +939,7 @@ impl<'a> HookInstance<'a> {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
+        bypass_by_cs: Arc<HashMap<ChangesetId, BypassDecision>>,
     ) -> HooksOutcome<'a> {
         match self {
             Self::Bookmark(..) | Self::File(..) => {
@@ -963,6 +959,7 @@ impl<'a> HookInstance<'a> {
                 hook_name,
                 scuba,
                 log_only,
+                bypass_by_cs,
             ),
         }
     }
@@ -977,6 +974,7 @@ impl<'a> HookInstance<'a> {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
+        bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
         let cs_id = cs.get_changeset_id();
         match self {
@@ -990,6 +988,7 @@ impl<'a> HookInstance<'a> {
                 hook_name,
                 scuba,
                 log_only,
+                bypass,
             ),
             Self::Changeset(hook) => hook.run_hook(
                 ctx,
@@ -1001,6 +1000,7 @@ impl<'a> HookInstance<'a> {
                 hook_name,
                 scuba,
                 log_only,
+                bypass,
             ),
             Self::File(hook, path, change) => hook.run_hook(
                 ctx,
@@ -1013,6 +1013,7 @@ impl<'a> HookInstance<'a> {
                 hook_name,
                 scuba,
                 log_only,
+                bypass,
             ),
         }
         .await
@@ -1091,6 +1092,7 @@ impl Hook {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
+        bypass: BypassDecision,
     ) -> Vec<impl Future<Output = Result<HookOutcome, Error>> + 'cs> {
         let mut futures = Vec::new();
 
@@ -1105,6 +1107,7 @@ impl Hook {
                 cross_repo_push_source,
                 push_authored_by,
                 log_only,
+                bypass,
             )),
             Self::Changeset(..) | Self::File(..) =>
                 /* Not a bookmark hook */
@@ -1124,6 +1127,7 @@ impl Hook {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
+        bypass_by_cs: Arc<HashMap<ChangesetId, BypassDecision>>,
     ) -> HooksOutcome<'cs> {
         match self {
             Self::Changeset(hook, _, _) => HookInstance::Changeset(&**hook)
@@ -1137,12 +1141,19 @@ impl Hook {
                     cross_repo_push_source,
                     push_authored_by,
                     log_only,
+                    bypass_by_cs,
                 ),
             Self::File(hook, _, _) => HooksOutcome::Individual(
                 changesets
                     .iter()
                     .flat_map(|cs| {
                         cloned!(mut scuba);
+                        // One changeset's decision is reused across all of its
+                        // per-path file-hook rows.
+                        let bypass = bypass_by_cs
+                            .get(&cs.get_changeset_id())
+                            .cloned()
+                            .unwrap_or_default();
                         cs.simplified_file_changes()
                             .map(move |(path, change)| {
                                 HookInstance::File(&**hook, path, change)
@@ -1156,6 +1167,7 @@ impl Hook {
                                         cross_repo_push_source,
                                         push_authored_by,
                                         log_only,
+                                        bypass.clone(),
                                     )
                                     .boxed()
                             })

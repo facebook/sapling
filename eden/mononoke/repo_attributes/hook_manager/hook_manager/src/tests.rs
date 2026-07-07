@@ -691,8 +691,6 @@ fn bypass_permission_groups_jk(
 }
 
 /// Build a `CoreContext` carrying explicit client identities (as `USER:<id>`).
-/// Uses `from_legacy_type_data("USER", id)` to match the existing author tests
-/// and avoid a parsing-format dependency.
 fn ctx_with_identities(fb: FacebookInit, ids: &[&str]) -> CoreContext {
     let identities: MononokeIdentitySet = ids
         .iter()
@@ -746,9 +744,7 @@ fn pushvar_bypass_config_with_group() -> HookConfig {
     }
 }
 
-/// What it tests: with no permission group configured, a bypass string still
-/// bypasses the hook (preserves pre-permission-group behavior).
-/// Expected: bypassed.
+/// With no permission group configured, a bypass string still bypasses the hook.
 #[mononoke::fbinit_test]
 async fn test_bypass_no_group_preserves_behavior(fb: FacebookInit) {
     let res = BypassScenario {
@@ -757,12 +753,10 @@ async fn test_bypass_no_group_preserves_behavior(fb: FacebookInit) {
     }
     .run(fb)
     .await;
-    assert_bypassed(&res);
+    assert_skipped_pre_run(&res);
 }
 
-/// What it tests: no permission group configured and no bypass string → the
-/// hook runs normally (preserves pre-permission-group behavior).
-/// Expected: hook runs (rejected).
+/// With no permission group and no bypass string, the hook runs normally.
 #[mononoke::fbinit_test]
 async fn test_bypass_no_group_no_string_runs_hook(fb: FacebookInit) {
     let res = BypassScenario {
@@ -775,8 +769,7 @@ async fn test_bypass_no_group_no_string_runs_hook(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
-/// What it tests: group configured + bypass string + user in group → bypassed.
-/// Expected: bypassed.
+/// Group configured, bypass string present, user in group: bypassed.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_group_authorized_user(fb: FacebookInit) {
     let res = BypassScenario {
@@ -788,9 +781,8 @@ async fn test_bypass_with_group_authorized_user(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: group configured + bypass string + user NOT in group → the
-/// bypass is ignored and the hook runs.
-/// Expected: hook runs (rejected).
+/// Group configured, bypass string present, user not in group: the bypass is
+/// ignored and the hook runs.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
     let res = BypassScenario {
@@ -802,8 +794,7 @@ async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
-/// What it tests: group configured but no bypass string → the hook runs.
-/// Expected: hook runs (rejected).
+/// Group configured but no bypass string: the hook runs.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_group_no_bypass_string(fb: FacebookInit) {
     let res = BypassScenario {
@@ -816,8 +807,7 @@ async fn test_bypass_with_group_no_bypass_string(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
-/// What it tests: group configured + pushvar bypass + user in group → bypassed.
-/// Expected: bypassed.
+/// Group configured, pushvar bypass, user in group: bypassed.
 #[mononoke::fbinit_test]
 async fn test_pushvar_bypass_with_group_authorized(fb: FacebookInit) {
     let res = BypassScenario {
@@ -832,9 +822,8 @@ async fn test_pushvar_bypass_with_group_authorized(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: group configured + pushvar bypass + user NOT in group → the
-/// bypass is ignored and the hook runs.
-/// Expected: hook runs (rejected).
+/// Group configured, pushvar bypass, user not in group: the bypass is ignored
+/// and the hook runs.
 #[mononoke::fbinit_test]
 async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
     let res = BypassScenario {
@@ -849,10 +838,8 @@ async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
-/// What it tests: an unauthorized user attempts a bypass on a commit that the
-/// hook would have ACCEPTED. The bypass is moot (nothing to bypass), so the hook
-/// runs and the push succeeds rather than being rejected for the bypass attempt.
-/// Expected: accepted.
+/// An unauthorized bypass on a commit the hook would accept is moot: the hook
+/// runs and the push succeeds.
 #[mononoke::fbinit_test]
 async fn test_unauthorized_bypass_with_accepting_hook(fb: FacebookInit) {
     let res = BypassScenario {
@@ -865,12 +852,12 @@ async fn test_unauthorized_bypass_with_accepting_hook(fb: FacebookInit) {
     assert_hook_accepted(&res);
 }
 
-/// What it tests: when a hook accepts, the bypass permission group is never
-/// consulted even though a bypass token is present -- the membership check is
-/// reserved for hooks that actually reject.
-/// Expected: accepted, and the membership checker is consulted zero times.
+/// A present bypass token makes the permission group consulted even for an
+/// accepting hook (the decision is eager), but the accept still wins. The
+/// membership checker is consulted twice for the one (hook, changeset): once for
+/// the client identity, once for the author fallback.
 #[mononoke::fbinit_test]
-async fn test_accepting_hook_with_bypass_skips_group_check(fb: FacebookInit) {
+async fn test_accepting_hook_with_bypass_checks_group_once(fb: FacebookInit) {
     let (checker, calls) = CountingMember::new(false);
     let res = BypassScenario {
         hook: always_accepting_changeset_hook(),
@@ -882,18 +869,17 @@ async fn test_accepting_hook_with_bypass_skips_group_check(fb: FacebookInit) {
     assert_hook_accepted(&res);
     assert_eq!(
         calls.load(Ordering::SeqCst),
-        0,
-        "permission group must not be consulted when the hook accepts",
+        2,
+        "the eager bypass decision consults the permission group once per (hook, \
+         changeset) for the client identity plus once for the author fallback (2 total)",
     );
 }
 
-/// What it tests: a file hook that rejects several paths of one changeset under an
-/// unauthorized bypass resolves the bypass once per (hook, changeset) -- not once
-/// per rejected path -- and emits exactly ONE rejection. On the client-identities
-/// path that single resolution consults the group twice: once for the client
-/// identity and once for the author fallback.
+/// A file hook rejecting several paths of one changeset under an unauthorized
+/// bypass checks the permission group once per (hook, changeset), not per path,
+/// while emitting one annotated rejection per rejected path.
 #[mononoke::fbinit_test]
-async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookInit) {
+async fn test_unauthorized_bypass_file_hook_annotates_each_path(fb: FacebookInit) {
     let ctx = ctx_with_identities(fb, &[]);
     let (checker, calls) = CountingMember::new(false);
     let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
@@ -922,10 +908,15 @@ async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookI
     .unwrap();
     assert_eq!(
         res.len(),
-        1,
-        "expected one unauthorized rejection per (hook, changeset), got {res:?}",
+        3,
+        "expected one annotated rejection per rejected path, got {res:?}",
     );
-    assert!(res[0].get_execution().is_rejected());
+    assert!(res.iter().all(|o| o.get_execution().is_rejected()));
+    assert!(res.iter().all(|o| {
+        o.get_execution()
+            .rejection_info()
+            .is_some_and(|info| info.long_description.contains("not a member of group"))
+    }));
     assert_eq!(
         calls.load(Ordering::SeqCst),
         2,
@@ -935,10 +926,9 @@ async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookI
     );
 }
 
-/// What it tests: an unauthorized user attempts a bypass on a commit the hook
-/// REJECTS. The hook's own rejection stands, annotated with a note that the
-/// bypass was ignored for lack of group membership.
-/// Expected: rejected, message carries both the hook reason and the bypass note.
+/// An unauthorized bypass on a commit the hook rejects: the hook's rejection
+/// stands, annotated with a note that the bypass was ignored for lack of group
+/// membership.
 #[mononoke::fbinit_test]
 async fn test_unauthorized_bypass_with_rejecting_hook_is_annotated(fb: FacebookInit) {
     let res = BypassScenario {
@@ -966,9 +956,8 @@ async fn test_unauthorized_bypass_with_rejecting_hook_is_annotated(fb: FacebookI
     );
 }
 
-/// What it tests: when no bypass is attempted (no bypass string in the commit),
-/// a plain hook rejection is NOT annotated with the bypass note.
-/// Expected: rejected, no bypass note.
+/// When no bypass is attempted, a plain hook rejection is not annotated with the
+/// bypass note.
 #[mononoke::fbinit_test]
 async fn test_no_bypass_rejection_is_not_annotated(fb: FacebookInit) {
     let res = BypassScenario {
@@ -997,9 +986,7 @@ async fn test_no_bypass_rejection_is_not_annotated(fb: FacebookInit) {
 // identity (USER:<unixname>), not the pusher's TLS cert identity.
 // =========================================================================
 
-/// What it tests: on the changeset-author path, the author ("test") is in the
-/// allowlist.
-/// Expected: bypassed.
+/// On the changeset-author path, an author in the allowlist is bypassed.
 #[mononoke::fbinit_test]
 async fn test_bypass_checks_commit_author_not_pusher(fb: FacebookInit) {
     let res = BypassScenario {
@@ -1012,9 +999,8 @@ async fn test_bypass_checks_commit_author_not_pusher(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: on the changeset-author path, an author ("test") not in the
-/// allowlist is denied.
-/// Expected: hook runs (rejected).
+/// On the changeset-author path, an author not in the allowlist is denied and
+/// the hook runs.
 #[mononoke::fbinit_test]
 async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
     let res = BypassScenario {
@@ -1035,9 +1021,8 @@ async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
 // author when the client identities are not in the group.
 // =========================================================================
 
-/// What it tests: the client identity ("client_user") is in the allowlist while
-/// the author ("test") is NOT, so the bypass is granted via the client identity.
-/// Expected: bypassed.
+/// The client identity is in the allowlist while the author is not, so the
+/// bypass is granted via the client identity.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_client_identities_authorized(fb: FacebookInit) {
     let res = BypassScenario {
@@ -1050,10 +1035,8 @@ async fn test_bypass_with_client_identities_authorized(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: the client identity ("client_user") is NOT in the allowlist but
-/// the author's unixname ("test") is, so the client-identities path falls back to
-/// the changeset author and honors the bypass.
-/// Expected: bypassed.
+/// The client identity is not in the allowlist but the author's unixname is, so
+/// the client-identities path falls back to the author and honors the bypass.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_client_identities_falls_back_to_author(fb: FacebookInit) {
     let res = BypassScenario {
@@ -1066,9 +1049,8 @@ async fn test_bypass_with_client_identities_falls_back_to_author(fb: FacebookIni
     assert_bypassed(&res);
 }
 
-/// What it tests: neither the client identity ("client_user") nor the author
-/// ("test") is in the allowlist, so the fallback to the author also fails.
-/// Expected: hook runs (rejected).
+/// Neither the client identity nor the author is in the allowlist, so the
+/// fallback to the author also fails and the hook runs.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_client_identities_and_author_both_unauthorized_fails_closed(
     fb: FacebookInit,
@@ -1083,10 +1065,9 @@ async fn test_bypass_with_client_identities_and_author_both_unauthorized_fails_c
     assert_hook_rejected(&res);
 }
 
-/// What it tests: on the client-identities path, a request with no client
-/// identities fails the first check and then falls back to the author ("test"),
-/// who is also not in the (empty) allowlist, so the bypass fails closed.
-/// Expected: hook runs (rejected).
+/// On the client-identities path, a request with no client identities falls back
+/// to the author, who is also not in the empty allowlist, so the bypass fails
+/// closed.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_empty_client_identities_fails_closed(fb: FacebookInit) {
     let res = BypassScenario {
@@ -1146,11 +1127,28 @@ fn allowlist(unixnames: &[&str]) -> ArcMembershipChecker {
     MemberAllowlist::new(identities).into()
 }
 
-/// Assert the bypass was honored: the always-rejecting hook did not run.
+/// Assert an authorized (group-gated) bypass was honored: the hook ran and
+/// rejected, but the rejection was folded into a single accepted outcome (so the
+/// push proceeds).
 fn assert_bypassed(outcomes: &[HookOutcome]) {
+    assert_eq!(
+        outcomes.len(),
+        1,
+        "expected one folded outcome for the authorized bypass, got {outcomes:?}",
+    );
+    assert!(
+        outcomes[0].get_execution().is_accepted(),
+        "expected the authorized bypass to fold into an accepted outcome, got {:?}",
+        outcomes[0].get_execution(),
+    );
+}
+
+/// Assert a group-less bypass was honored by skipping the hook before it ran:
+/// the hook never produced an outcome, so the outcome list is empty.
+fn assert_skipped_pre_run(outcomes: &[HookOutcome]) {
     assert!(
         outcomes.is_empty(),
-        "expected the bypass to be honored (hook skipped), got: {outcomes:?}",
+        "expected the group-less bypass to skip the hook pre-run, got: {outcomes:?}",
     );
 }
 
@@ -1250,7 +1248,7 @@ impl BypassScenario {
     }
 }
 
-/// The end-to-end scenario this stack exists for: an author whose commit email
+/// End-to-end: an author whose commit email
 /// local-part (`jdoe`) differs from their unixname (`johndoe`) can bypass a
 /// group-gated hook when they are in the bypass group under their unixname,
 /// because the EmployeeService resolves the author email to the canonical

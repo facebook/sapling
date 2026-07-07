@@ -16,9 +16,11 @@ pub mod repo;
 mod tests;
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::str;
+use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -41,6 +43,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 pub use crate::errors::HookManagerError;
 pub use crate::manager::HookManager;
 use crate::manager::HooksOutcome;
+use crate::manager::annotate_unauthorized_rejection;
 pub use crate::repo::HookRepo;
 
 /// Whether changesets were created by a user or a service.
@@ -123,12 +126,36 @@ pub enum TagType {
     AnnotatedTag(GitSha1),
 }
 
+/// A bypass decision computed eagerly (before the hook runs) for a single
+/// `(hook, changeset)` pair, and carried into the hook-run path.
+///
+/// The reason a bypass fired and the hook's permission-group name are bundled
+/// here because the trait side (`run_hook`) cannot see the `Hook` enum that
+/// holds the config.
+#[derive(Clone, Debug, Default)]
+pub enum BypassDecision {
+    /// No bypass was attempted (or none applies) — the hook's own result stands.
+    #[default]
+    NoBypass,
+    /// A bypass fired and the pusher is authorized — the rejection is folded
+    /// into a single `accepted_via_bypass` row. Carries the bypass reason and
+    /// the restricting permission group (if any).
+    Authorized {
+        reason: String,
+        permission_group: Option<String>,
+    },
+    /// A bypass fired but the pusher is not in the required group — the
+    /// rejection stands, annotated with a "not a member" note.
+    Unauthorized { group: String },
+}
+
 fn log_execution_stats(
     ctx: &CoreContext,
     mut scuba: MononokeScubaSampleBuilder,
     stats: FutureStats,
     result: &mut Result<HookOutcome>,
     log_only: bool,
+    bypass: &BypassDecision,
 ) {
     let mut errorcode = 0;
     let mut failed_hooks = 0;
@@ -153,12 +180,27 @@ fn log_execution_stats(
                 let extra_logs = outcome.get_execution().extra_logs.clone();
                 outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
             }
-            HookResult::Rejected(info) => {
-                outcome_kind = "rejected";
-                failed_hooks = 1;
-                errorcode = 1;
-                stderr = Some(info.long_description.clone());
-            }
+            HookResult::Rejected(info) => match bypass {
+                // An authorized bypass folds the rejection into a single
+                // `accepted_via_bypass` row: it did not block the push, so it is
+                // not counted as a failure.
+                BypassDecision::Authorized {
+                    reason,
+                    permission_group,
+                } => {
+                    outcome_kind = "accepted_via_bypass";
+                    scuba.add("bypass_reason", reason.clone());
+                    if let Some(group) = permission_group {
+                        scuba.add("bypass_permission_group", group.clone());
+                    }
+                }
+                BypassDecision::NoBypass | BypassDecision::Unauthorized { .. } => {
+                    outcome_kind = "rejected";
+                    failed_hooks = 1;
+                    errorcode = 1;
+                    stderr = Some(info.long_description.clone());
+                }
+            },
         },
         Err(e) => {
             outcome_kind = "error";
@@ -190,6 +232,33 @@ fn log_execution_stats(
         .log();
 }
 
+/// Fold a bypass decision into the final `HookOutcome` after the hook has run.
+///
+/// An authorized bypass turns a rejection into an accepted execution (so the
+/// push is not blocked), preserving any `extra_logs`. An unauthorized bypass
+/// keeps the rejection, annotated with a "not a member" note. `NoBypass` leaves
+/// the outcome unchanged. Accepted outcomes are always returned as-is.
+fn finalize_outcome_with_bypass(
+    result: Result<HookOutcome>,
+    bypass: &BypassDecision,
+) -> Result<HookOutcome> {
+    let mut outcome = match result {
+        Ok(outcome) if outcome.get_execution().is_rejected() => outcome,
+        other => return other,
+    };
+    match bypass {
+        BypassDecision::NoBypass => Ok(outcome),
+        BypassDecision::Authorized { .. } => {
+            let extra_logs = outcome.get_execution().extra_logs.clone();
+            outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
+            Ok(outcome)
+        }
+        BypassDecision::Unauthorized { group } => {
+            Ok(annotate_unauthorized_rejection(outcome, group))
+        }
+    }
+}
+
 /// Trait to be implemented by bookmarks hooks.
 ///
 /// Changeset hooks run once per bookmark movement, and primarily concern themselves
@@ -217,6 +286,7 @@ pub trait BookmarkHook: Send + Sync {
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
+        bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
             .run(
@@ -244,7 +314,8 @@ pub trait BookmarkHook: Send + Sync {
         scuba.add("type", "bookmark");
         scuba.add("push_authored_by", format!("{push_authored_by:?}"));
 
-        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only, &bypass);
+        let result = finalize_outcome_with_bypass(result, &bypass);
         result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 }
@@ -277,6 +348,7 @@ pub trait ChangesetHook: Send + Sync {
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
+        bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
             .run(
@@ -305,7 +377,8 @@ pub trait ChangesetHook: Send + Sync {
         scuba.add("type", "changeset");
         scuba.add("push_authored_by", format!("{push_authored_by:?}"));
 
-        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only, &bypass);
+        let result = finalize_outcome_with_bypass(result, &bypass);
         result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 
@@ -320,11 +393,16 @@ pub trait ChangesetHook: Send + Sync {
         hook_name: &'cs str,
         scuba: MononokeScubaSampleBuilder,
         log_only: bool,
+        bypass_by_cs: Arc<HashMap<ChangesetId, BypassDecision>>,
     ) -> HooksOutcome<'cs> {
         HooksOutcome::Individual(
             changesets
                 .into_iter()
                 .map(|cs| {
+                    let bypass = bypass_by_cs
+                        .get(&cs.get_changeset_id())
+                        .cloned()
+                        .unwrap_or_default();
                     self.run_hook(
                         ctx,
                         repo,
@@ -335,6 +413,7 @@ pub trait ChangesetHook: Send + Sync {
                         hook_name,
                         scuba.clone(),
                         log_only,
+                        bypass,
                     )
                     .boxed()
                 })
@@ -371,6 +450,7 @@ pub trait FileHook: Send + Sync {
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
+        bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
             .run(
@@ -395,7 +475,8 @@ pub trait FileHook: Send + Sync {
             .await;
         scuba.add("changeset_id", cs_id.to_string());
         scuba.add("type", "file");
-        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only, &bypass);
+        let result = finalize_outcome_with_bypass(result, &bypass);
         result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 }
@@ -556,7 +637,7 @@ pub struct HookRejection {
     pub reason: HookRejectionInfo,
 }
 
-/// Result of executing a hook (renamed from the old `HookExecution` enum).
+/// Result of executing a hook.
 #[derive(Clone, Debug, PartialEq)]
 pub enum HookResult {
     Accepted,
@@ -653,13 +734,13 @@ impl fmt::Display for HookResult {
 impl fmt::Display for HookExecution {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // `extra_logs` are intentionally not shown; user-facing output is the
-        // result only (unchanged from before this struct existed).
+        // result only.
         write!(f, "{}", self.result)
     }
 }
 
 /// Build the `extra_logs` Scuba value, or `None` when there are no logs.
-/// Always a normvector (list) — never a joined string (see design §D4).
+/// Always a normvector (list), never a joined string.
 pub(crate) fn extra_logs_scuba_value(logs: &[String]) -> Option<ScubaValue> {
     if logs.is_empty() {
         None
