@@ -423,6 +423,13 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::coro::now_task<struct stat> co_stat(
       const ObjectFetchContextPtr& context) override;
 
+  /// Sync peek: returns the stat if fully resolvable from in-memory
+  /// state, else nullopt. No logging side effects.
+  ///
+  /// Not const: takes the inode state lock via LockedState, which
+  /// mutates the Synchronized<> wrapper.
+  std::optional<struct stat> tryGetCachedStat();
+
  private:
   using State = FileInodeState;
   class LockedState;

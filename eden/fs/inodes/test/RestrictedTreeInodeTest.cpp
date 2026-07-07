@@ -758,6 +758,56 @@ CO_TEST(
   EXPECT_TRUE(sawRestricted);
 }
 
+TEST(RestrictedTreeInode, isRestricted_reflectsVariant) {
+  FakeTreeBuilder builder;
+  builder.setFile("normal/file.txt", "ok");
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  // Unloaded directories (TreePtr variant).
+  EXPECT_TRUE(testMount.getVirtualInode("restricted"_relpath).isRestricted());
+  EXPECT_FALSE(testMount.getVirtualInode("normal"_relpath).isRestricted());
+
+  // Loaded directories (InodePtr variant).
+  auto restrictedInode = makeRestrictedInode(testMount, "loaded_restricted"_pc);
+  EXPECT_TRUE(VirtualInode{InodePtr{restrictedInode}}.isRestricted());
+  auto normalInode = testMount.getTreeInode("normal"_relpath);
+  EXPECT_FALSE(VirtualInode{InodePtr{normalInode}}.isRestricted());
+}
+
+TEST(RestrictedTreeInode, tryGetEntryAttributesSync_restrictedDirWithholdsAux) {
+  FakeTreeBuilder builder;
+  builder.setFile("normal/file.txt", "ok");
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto context = ObjectFetchContext::getNullContext();
+  auto checkoutTime = edenMount->getLastCheckoutTime().toTimespec();
+  auto attrs = ENTRY_ATTRIBUTE_DIGEST_HASH | ENTRY_ATTRIBUTE_DIGEST_SIZE;
+
+  auto restrictedVi = testMount.getVirtualInode("restricted"_relpath);
+  EXPECT_TRUE(restrictedVi.isRestricted());
+  auto restrictedResult = restrictedVi.tryGetEntryAttributesSync(
+      attrs, "restricted"_relpath, objectStore, checkoutTime, context);
+  EXPECT_TRUE(restrictedResult.has_value());
+  if (restrictedResult.has_value()) {
+    EXPECT_FALSE(restrictedResult->digestHash.has_value());
+    EXPECT_FALSE(restrictedResult->digestSize.has_value());
+  }
+
+  auto normalVi = testMount.getVirtualInode("normal"_relpath);
+  EXPECT_FALSE(normalVi.isRestricted());
+  auto normalResult = normalVi.tryGetEntryAttributesSync(
+      attrs, "normal"_relpath, objectStore, checkoutTime, context);
+  if (normalResult.has_value()) {
+    EXPECT_TRUE(normalResult->digestHash.has_value());
+  }
+}
+
 // ============================================================================
 // Coroutine readdir ACL parity (regression for TreeInode coro recheck gate).
 // Mirrors the futures-side gate in TreeInode::getChildren

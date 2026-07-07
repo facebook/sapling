@@ -195,6 +195,18 @@ bool VirtualInode::isMaterialized() const {
       [](const TreeEntry&) { return false; });
 }
 
+bool VirtualInode::isRestricted() const {
+  return match(
+      variant_,
+      [](const InodePtr& inode) {
+        auto tree = inode.asTreePtrOrNull();
+        return tree ? tree->isRestricted() : false;
+      },
+      [](const TreePtr& tree) { return tree->isRestricted(); },
+      [](const UnmaterializedUnloadedBlobDirEntry&) { return false; },
+      [](const TreeEntry& entry) { return entry.isRestricted(); });
+}
+
 VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
   return match(
       variant_,
@@ -628,6 +640,40 @@ VirtualInode::co_getTreeAuxData(
 }
 
 namespace {
+
+struct stat makeStatFromModeAndSize(
+    mode_t mode,
+    uint64_t size,
+    struct timespec lastCheckoutTime) {
+  struct stat st = {};
+#ifndef _WIN32
+  st.st_mode = static_cast<decltype(st.st_mode)>(mode);
+  stMtime(st, lastCheckoutTime);
+#else
+  // Windows returns zero for st_mode and mtime; intentionally discard.
+  (void)mode;
+  (void)lastCheckoutTime;
+#endif
+  st.st_size = static_cast<decltype(st.st_size)>(size);
+  return st;
+}
+
+struct BlobAuxBackedAttrs {
+  ObjectId id;
+  mode_t mode;
+};
+std::optional<BlobAuxBackedAttrs> getBlobAuxBackedAttrs(
+    const detail::VariantVirtualInode& v) {
+  if (auto* entry = std::get_if<UnmaterializedUnloadedBlobDirEntry>(&v)) {
+    return BlobAuxBackedAttrs{entry->getObjectId(), entry->getInitialMode()};
+  }
+  if (auto* treeEntry = std::get_if<TreeEntry>(&v)) {
+    return BlobAuxBackedAttrs{
+        treeEntry->getObjectId(), modeFromTreeEntryType(treeEntry->getType())};
+  }
+  return std::nullopt;
+}
+
 bool shouldRequestTreeAuxDataForEntry(
     const std::optional<TreeEntryType>& entryType,
     EntryAttributeFlags entryAttributes,
@@ -853,14 +899,11 @@ std::optional<EntryAttributes> tryGetEntryAttributesForNonFileSync(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
-    timespec /*lastCheckoutTime*/,
-    const ObjectFetchContextPtr& /*fetchContext*/,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& fetchContext,
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string_view additionalErrorContext) {
-  if (shouldRequestStatForEntry(requestedAttributes)) {
-    return std::nullopt;
-  }
   auto [attributes, isMat] = setupNonFileAttributes(
       vi,
       requestedAttributes,
@@ -869,9 +912,34 @@ std::optional<EntryAttributes> tryGetEntryAttributesForNonFileSync(
       entryType,
       errorCode,
       additionalErrorContext);
-  if (shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, isMat)) {
-    return std::nullopt;
+
+  if (shouldRequestStatForEntry(requestedAttributes)) {
+    auto statOpt =
+        vi.tryGetCachedStat(lastCheckoutTime, objectStore, fetchContext);
+    if (!statOpt) {
+      return std::nullopt;
+    }
+    folly::Try<struct stat> statTry{*statOpt};
+    populateStatAttributes(attributes, requestedAttributes, statTry);
   }
+
+  if (shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, isMat) &&
+      !vi.isRestricted()) {
+    // Sync peek the ObjectStore in-memory cache for tree aux data. If the
+    // entry has no ObjectId or the cache is cold, bail.
+    auto oid = vi.getObjectId();
+    if (!oid) {
+      return std::nullopt;
+    }
+    auto treeAux =
+        objectStore->getTreeAuxDataFromInMemoryCache(*oid, fetchContext);
+    if (!treeAux) {
+      return std::nullopt;
+    }
+    folly::Try<std::optional<TreeAuxData>> treeAuxTry{std::move(treeAux)};
+    populateTreeAuxAttributes(attributes, requestedAttributes, treeAuxTry);
+  }
+
   return attributes;
 }
 } // namespace
@@ -1229,13 +1297,11 @@ std::optional<EntryAttributes> VirtualInode::tryGetEntryAttributesSync(
         dispatch->errorContext);
   }
 
-  // Regular file. This sync path does not resolve stat; stat requests fall
-  // back to async.
-  if (shouldRequestStatForEntry(requestedAttributes)) {
-    return std::nullopt;
-  }
-
+  // Regular file path.
   std::optional<folly::Try<BlobAuxData>> blobAuxTry;
+  // Cache the blob aux peek so stat synthesis below can reuse it instead
+  // of peeking the same variant twice.
+  std::optional<BlobAuxData> blobAuxHint;
   if (shouldRequestBlobAuxDataForEntry(requestedAttributes)) {
     bool blake3Required = requestedAttributes.containsAnyOf(
         ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH);
@@ -1243,12 +1309,22 @@ std::optional<EntryAttributes> VirtualInode::tryGetEntryAttributesSync(
     // cached entry lacks it, bail to async even if other attribute classes
     // (e.g. stat, which only needs size) could be filled. Partial sync
     // resolution would complicate the orchestrator without a measured win.
-    auto blobAux =
+    blobAuxHint =
         tryGetCachedBlobAuxData(objectStore, fetchContext, blake3Required);
-    if (!blobAux) {
+    if (!blobAuxHint) {
       return std::nullopt;
     }
-    blobAuxTry = folly::Try<BlobAuxData>{*blobAux};
+    blobAuxTry = folly::Try<BlobAuxData>{*blobAuxHint};
+  }
+
+  std::optional<folly::Try<struct stat>> statTry;
+  if (shouldRequestStatForEntry(requestedAttributes)) {
+    auto st = tryGetCachedStat(
+        lastCheckoutTime, objectStore, fetchContext, blobAuxHint);
+    if (!st) {
+      return std::nullopt;
+    }
+    statTry = folly::Try<struct stat>{*st};
   }
 
   return assembleRegularFileAttributes(
@@ -1256,7 +1332,7 @@ std::optional<EntryAttributes> VirtualInode::tryGetEntryAttributesSync(
       folly::Try<std::optional<TreeEntryType>>{tryGetTreeEntryType()},
       folly::Try<std::optional<ObjectId>>{getObjectId()},
       std::move(blobAuxTry),
-      std::nullopt,
+      std::move(statTry),
       isUnderAcl(),
       shouldPopulateLocalAclAttributes(objectStore));
 }
@@ -1303,19 +1379,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           mode = arg.getInitialMode();
           // fallthrough
         } else if constexpr (std::is_same_v<T, TreePtr>) {
-          struct stat st = {};
-          st.st_mode = static_cast<decltype(st.st_mode)>(treeMode_);
-          stMtime(st, lastCheckoutTime);
-#ifdef _WIN32
-          // Windows returns zero for st_mode and mtime
-          st.st_mode = static_cast<decltype(st.st_mode)>(0);
-          {
-            struct timespec ts0{};
-            stMtime(st, ts0);
-          }
-#endif
-          st.st_size = 0U;
-          return st;
+          return makeStatFromModeAndSize(treeMode_, 0U, lastCheckoutTime);
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           objectId = arg.getObjectId();
           mode = modeFromTreeEntryType(arg.getType());
@@ -1325,19 +1389,8 @@ ImmediateFuture<struct stat> VirtualInode::stat(
         }
         return objectStore->getBlobAuxData(objectId, fetchContext)
             .thenValue([mode, lastCheckoutTime](const BlobAuxData& auxData) {
-              struct stat st = {};
-              st.st_mode = static_cast<decltype(st.st_mode)>(mode);
-              stMtime(st, lastCheckoutTime);
-#ifdef _WIN32
-              // Windows returns zero for st_mode and mtime
-              st.st_mode = static_cast<decltype(st.st_mode)>(0);
-              {
-                struct timespec ts0{};
-                stMtime(st, ts0);
-              }
-#endif
-              st.st_size = static_cast<decltype(st.st_size)>(auxData.size);
-              return st;
+              return makeStatFromModeAndSize(
+                  mode, auxData.size, lastCheckoutTime);
             });
       },
       variant_);
@@ -1350,52 +1403,66 @@ folly::coro::now_task<struct stat> VirtualInode::co_stat(
   static_assert(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_stat");
+  // Route InodePtr through the child inode's co_stat to preserve
+  // logAccess + notifyParentOfStat side effects.
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
     co_return co_await (*inode)->co_stat(fetchContext);
-  } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
-    (void)tree;
-    struct stat st = {};
-    st.st_mode = static_cast<decltype(st.st_mode)>(treeMode_);
-    stMtime(st, lastCheckoutTime);
-#ifdef _WIN32
-    st.st_mode = static_cast<decltype(st.st_mode)>(0);
-    {
-      struct timespec ts0{};
-      stMtime(st, ts0);
-    }
-#endif
-    st.st_size = 0U;
-    co_return st;
-  } else {
-    // UnmaterializedUnloadedBlobDirEntry or TreeEntry
-    ObjectId objectId;
-    mode_t mode;
-    if (auto* entry =
-            std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
-      objectId = entry->getObjectId();
-      mode = entry->getInitialMode();
-    } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
-      objectId = treeEntry->getObjectId();
-      mode = modeFromTreeEntryType(treeEntry->getType());
-    } else {
-      co_yield folly::coro::co_error(
-          std::runtime_error("VirtualInode: unexpected variant type"));
-    }
-    auto auxData =
-        co_await objectStore->co_getBlobAuxData(objectId, fetchContext);
-    struct stat st = {};
-    st.st_mode = static_cast<decltype(st.st_mode)>(mode);
-    stMtime(st, lastCheckoutTime);
-#ifdef _WIN32
-    st.st_mode = static_cast<decltype(st.st_mode)>(0);
-    {
-      struct timespec ts0{};
-      stMtime(st, ts0);
-    }
-#endif
-    st.st_size = static_cast<decltype(st.st_size)>(auxData.size);
-    co_return st;
   }
+  if (auto sync =
+          tryGetCachedStat(lastCheckoutTime, objectStore, fetchContext)) {
+    co_return *sync;
+  }
+  auto info = getBlobAuxBackedAttrs(variant_);
+  if (!info) {
+    co_yield folly::coro::co_error(
+        std::runtime_error("VirtualInode: unexpected variant type"));
+  }
+  auto auxData =
+      co_await objectStore->co_getBlobAuxData(info->id, fetchContext);
+  co_return makeStatFromModeAndSize(info->mode, auxData.size, lastCheckoutTime);
+}
+
+std::optional<struct stat> VirtualInode::tryGetCachedStat(
+    const struct timespec& lastCheckoutTime,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext,
+    const std::optional<BlobAuxData>& blobAuxHint) const {
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update tryGetCachedStat");
+
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    if ((*inode)->getType() != dtype_t::Regular &&
+        (*inode)->getType() != dtype_t::Symlink) {
+      return std::nullopt;
+    }
+    return inode->asFilePtr()->tryGetCachedStat();
+  }
+
+  if (auto* tree = std::get_if<TreePtr>(&variant_)) {
+    (void)tree;
+    return makeStatFromModeAndSize(treeMode_, 0U, lastCheckoutTime);
+  }
+
+  std::optional<BlobAuxData> blobAux = blobAuxHint;
+  if (!blobAux) {
+    blobAux = tryGetCachedBlobAuxData(
+        objectStore, fetchContext, /*blake3Required=*/false);
+  }
+  if (!blobAux) {
+    return std::nullopt;
+  }
+  // At this point variant_ must be UnmaterializedUnloadedBlobDirEntry
+  // or TreeEntry (InodePtr + TreePtr handled above; static_assert at the
+  // tryGetCachedBlobAuxData call site pins the variant set to 4).
+  auto info = getBlobAuxBackedAttrs(variant_);
+  XDCHECK(info.has_value())
+      << "VirtualInode::tryGetCachedStat: variant fell through to blob-aux-backed "
+         "branch but getBlobAuxBackedAttrs returned nullopt";
+  if (!info) {
+    return std::nullopt;
+  }
+  return makeStatFromModeAndSize(info->mode, blobAux->size, lastCheckoutTime);
 }
 
 namespace {

@@ -86,6 +86,8 @@ class VirtualInode {
 
   bool isMaterialized() const;
 
+  bool isRestricted() const;
+
   /**
    * Discover the contained data type.
    *
@@ -232,6 +234,12 @@ class VirtualInode {
       const struct timespec& lastCheckoutTime,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
+
+  std::optional<struct stat> tryGetCachedStat(
+      const struct timespec& lastCheckoutTime,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext,
+      const std::optional<BlobAuxData>& blobAuxHint = std::nullopt) const;
 
   /**
    * Retrieves VirtualInode for each of the children of this

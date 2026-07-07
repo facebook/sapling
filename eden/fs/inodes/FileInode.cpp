@@ -1128,6 +1128,14 @@ folly::coro::now_task<struct stat> FileInode::co_stat(
   co_return built.partialStat;
 }
 
+std::optional<struct stat> FileInode::tryGetCachedStat() {
+  auto built = buildStatUnderLock(true);
+  if (built.needsBlobSize.has_value() || built.materializedSizeMissing) {
+    return std::nullopt;
+  }
+  return built.partialStat;
+}
+
 FileInode::BuiltStat FileInode::buildStatUnderLock(bool peekOnly) {
   BuiltStat result;
   result.partialStat = getMount()->initStatData();
