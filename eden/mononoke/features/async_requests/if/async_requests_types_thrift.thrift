@@ -69,6 +69,10 @@ typedef id.Id DeriveBackfillResultId
 typedef id.Id DeriveBackfillRepoParamsId
 @rust.NewType
 typedef id.Id DeriveBackfillRepoResultId
+@rust.NewType
+typedef id.Id MarkTypeEnabledParamsId
+@rust.NewType
+typedef id.Id MarkTypeEnabledResultId
 
 @rust.NewType
 typedef id.Id AsynchronousRequestResultId
@@ -86,6 +90,7 @@ union AsynchronousRequestResult {
   11: source_control.DeriveSliceResponse derive_slice_result;
   12: source_control.DeriveBackfillResponse derive_backfill_result;
   13: source_control.DeriveBackfillRepoResponse derive_backfill_repo_result;
+  14: source_control.MarkTypeEnabledResponse mark_type_enabled_result;
 }
 
 @rust.NewType
@@ -103,4 +108,5 @@ union AsynchronousRequestParams {
   10: source_control.DeriveSliceParams derive_slice_params;
   11: source_control.DeriveBackfillParams derive_backfill_params;
   12: source_control.DeriveBackfillRepoParams derive_backfill_repo_params;
+  13: source_control.MarkTypeEnabledParams mark_type_enabled_params;
 }

@@ -3163,6 +3163,34 @@ union DeriveBackfillRepoPollResponse {
   2: DeriveBackfillRepoResponse response;
 }
 
+/// Token for mark_type_enabled async request
+struct MarkTypeEnabledToken {
+  1: i64 id;
+}
+
+/// Request to mark a derived data type as enabled for a single repository.
+/// Enqueued (cascade-dependent on a repo's backfill leaves) so that on full
+/// success of the backfill it performs a trivial DB write recording that the
+/// type is now enabled for the repo.
+struct MarkTypeEnabledParams {
+  1: i64 repo_id;
+  2: string derived_data_type;
+}
+
+/// Result for mark_type_enabled request
+struct MarkTypeEnabledResponse {
+  1: i64 repo_id;
+  2: string derived_data_type;
+  3: bool enabled;
+  4: optional string error_message;
+}
+
+@hack.MigrationBlockingLegacyJSONSerialization
+union MarkTypeEnabledPollResponse {
+  1: PollPending poll_pending;
+  2: MarkTypeEnabledResponse response;
+}
+
 /// Exceptions
 
 enum RequestErrorKind {

@@ -86,6 +86,11 @@ impl RequestTypeName for DeriveBackfillRepo {
     const NAME: &'static str = "derive_backfill_repo";
 }
 
+pub struct MarkTypeEnabled;
+impl RequestTypeName for MarkTypeEnabled {
+    const NAME: &'static str = "mark_type_enabled";
+}
+
 // -- Collected constants --
 
 /// All known async request type names.
@@ -102,6 +107,7 @@ pub const ALL_REQUEST_TYPE_NAMES: &[&str] = &[
     DeriveSlice::NAME,
     DeriveBackfill::NAME,
     DeriveBackfillRepo::NAME,
+    MarkTypeEnabled::NAME,
 ];
 
 /// Request types that are part of the derived data backfill system.
@@ -110,4 +116,5 @@ pub const BACKFILL_REQUEST_TYPES: &[&str] = &[
     DeriveSlice::NAME,
     DeriveBackfill::NAME,
     DeriveBackfillRepo::NAME,
+    MarkTypeEnabled::NAME,
 ];

@@ -19,6 +19,7 @@ pub use async_requests_types::DeriveBackfill;
 pub use async_requests_types::DeriveBackfillRepo;
 pub use async_requests_types::DeriveBoundaries;
 pub use async_requests_types::DeriveSlice;
+pub use async_requests_types::MarkTypeEnabled;
 pub use async_requests_types::MegarepoAddBranchingSyncTarget;
 pub use async_requests_types::MegarepoAddSyncTarget;
 pub use async_requests_types::MegarepoChangeTargetConfig;
@@ -827,6 +828,26 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for mark_type_enabled
+
+impl_async_svc_method_types! {
+    request_struct => MarkTypeEnabled,
+
+    params_value_thrift_type => MarkTypeEnabledParams,
+    params_union_variant => mark_type_enabled_params,
+
+    response_type => MarkTypeEnabledResponse,
+    result_union_variant => mark_type_enabled_result,
+
+    poll_response_type => MarkTypeEnabledPollResponse,
+    token_type => MarkTypeEnabledToken,
+    token_thrift_type => MarkTypeEnabledToken,
+
+    fn target(&self: ThriftParams) -> String {
+        format!("repo_id: {}, type: {}", self.repo_id, self.derived_data_type)
+    }
+}
+
 impl_async_svc_stored_type! {
     handle_type => AsynchronousRequestParamsId,
     handle_thrift_type => ThriftAsynchronousRequestParamsId,
@@ -906,6 +927,9 @@ impl AsynchronousRequestParams {
             ThriftAsynchronousRequestParams::derive_slice_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::derive_backfill_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::derive_backfill_repo_params(params) => {
+                Ok(params.target())
+            }
+            ThriftAsynchronousRequestParams::mark_type_enabled_params(params) => {
                 Ok(params.target())
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {

@@ -383,6 +383,18 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 )
             ))
         }
+        async_requests_types_thrift::AsynchronousRequestParams::mark_type_enabled_params(params) => {
+            let effective_root = root_request_id.unwrap_or_else(|| request_row_id.clone());
+            Ok(AsynchronousRequestResult::from_thrift(
+                ThriftAsynchronousRequestResult::mark_type_enabled_result(
+                    crate::backfill::compute_mark_type_enabled(ctx, mononoke, queue, params, effective_root, created_by.clone())
+                        .watched()
+                        .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                        .with_label("mark_type_enabled")
+                        .await?
+                )
+            ))
+        }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
                 "this type of request (AsynchronousRequestParams tag {union_tag}) not supported by this worker!"

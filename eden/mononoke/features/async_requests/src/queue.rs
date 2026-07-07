@@ -92,6 +92,14 @@ const JK_MAX_CONCURRENT: &str = "scm/mononoke:async_requests_max_concurrent";
 /// concurrency limiting. Grouped types share a switch and count across
 /// all members; ungrouped types use their own name.
 fn concurrency_key(request_type: &str) -> (&str, Vec<&str>) {
+    // NOTE (C1): `mark_type_enabled` is deliberately NOT a member of this group.
+    // It is the campaign's per-repo completion signal (a trivial DB write that
+    // runs only once all of a repo's backfill leaves succeed). Grouping it here
+    // would make it compete for the same `derive_backfill` concurrency slots as
+    // the derivation leaves it depends on, throttling completion against the
+    // very work it waits for -- stalling the scheduler's pacing and termination
+    // detection. It must stay ungrouped (its own name as switch). See design
+    // sections 5.4 and 6 (C1).
     const DERIVE_BACKFILL: &[&str] = &[
         DeriveBoundaries::NAME,
         DeriveSlice::NAME,
