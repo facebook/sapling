@@ -15,3 +15,7 @@ pub fn continue_trace_from_context(
 ) -> Option<ArtilleryTraceGuard> {
     None
 }
+
+pub fn current_trace_id() -> Option<String> {
+    None
+}

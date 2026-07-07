@@ -14,7 +14,11 @@ mod oss;
 pub use facebook::ArtilleryTraceGuard;
 #[cfg(fbcode_build)]
 pub use facebook::continue_trace_from_context;
+#[cfg(fbcode_build)]
+pub use facebook::current_trace_id;
 #[cfg(not(fbcode_build))]
 pub use oss::ArtilleryTraceGuard;
 #[cfg(not(fbcode_build))]
 pub use oss::continue_trace_from_context;
+#[cfg(not(fbcode_build))]
+pub use oss::current_trace_id;

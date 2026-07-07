@@ -6,6 +6,7 @@ rust_library(
     name = "artillery_http_ext",
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
+        "service_tracing": "//artillery/artillery2/api/rust:service_tracing",
         "tracer": "//artillery/artillery2/api/rust:tracer",
     },
     deps = [

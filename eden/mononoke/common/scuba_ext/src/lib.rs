@@ -149,6 +149,10 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("client_correlator", client_info.correlator.as_str());
 
+        if let Some(trace_id) = artillery_http_ext::current_trace_id() {
+            self.inner.add("artillery_trace_id", trace_id);
+        }
+
         // Needs the config from the context; without one there is nothing to log.
         if let Some(jks) = self
             .observability_context()

@@ -32,3 +32,12 @@ pub fn continue_trace_from_context(
         .ok()
         .map(ArtilleryTraceGuard)
 }
+
+pub fn current_trace_id() -> Option<String> {
+    let trace_id = service_tracing::get_trace_id();
+    if trace_id.is_empty() {
+        None
+    } else {
+        Some(trace_id)
+    }
+}
