@@ -181,6 +181,20 @@ The list of all the EdenStats Counter/Duration are as follows:
   ```
   Counter dispatchImmediate{"fuse.dispatch_immediate"}
   Counter dispatchDeferred{"fuse.dispatch_deferred"}
+  Counter dispatchLookupImmediate{"fuse.dispatch_lookup_immediate"}
+  Counter dispatchLookupDeferred{"fuse.dispatch_lookup_deferred"}
+  Counter dispatchGetattrImmediate{"fuse.dispatch_getattr_immediate"}
+  Counter dispatchGetattrDeferred{"fuse.dispatch_getattr_deferred"}
+  Counter dispatchOpenImmediate{"fuse.dispatch_open_immediate"}
+  Counter dispatchOpenDeferred{"fuse.dispatch_open_deferred"}
+  Counter dispatchReadImmediate{"fuse.dispatch_read_immediate"}
+  Counter dispatchReadDeferred{"fuse.dispatch_read_deferred"}
+  Counter dispatchReaddirImmediate{"fuse.dispatch_readdir_immediate"}
+  Counter dispatchReaddirDeferred{"fuse.dispatch_readdir_deferred"}
+  Counter dispatchGetxattrImmediate{"fuse.dispatch_getxattr_immediate"}
+  Counter dispatchGetxattrDeferred{"fuse.dispatch_getxattr_deferred"}
+  Counter dispatchReadlinkImmediate{"fuse.dispatch_readlink_immediate"}
+  Counter dispatchReadlinkDeferred{"fuse.dispatch_readlink_deferred"}
   ```
 
 - NfsStats

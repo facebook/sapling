@@ -263,7 +263,9 @@ struct HandlerEntry {
       FuseStats::CounterPtr cS,
       FuseStats::CounterPtr cF,
       AccessType at = AccessType::FsChannelOther,
-      SamplingGroup samplingGroup = SamplingGroup::DropAll)
+      SamplingGroup samplingGroup = SamplingGroup::DropAll,
+      FuseStats::CounterPtr dispatchImmediateCounter = nullptr,
+      FuseStats::CounterPtr dispatchDeferredCounter = nullptr)
       : name{n},
         handler{h},
         argRenderer{r},
@@ -271,7 +273,9 @@ struct HandlerEntry {
         countSuccessful{cS},
         countFailure{cF},
         samplingGroup{samplingGroup},
-        accessType{at} {}
+        accessType{at},
+        dispatchImmediate{dispatchImmediateCounter},
+        dispatchDeferred{dispatchDeferredCounter} {}
 
   std::string getShortName() const {
     if (name.startsWith("FUSE_")) {
@@ -300,6 +304,8 @@ struct HandlerEntry {
   FuseStats::CounterPtr countFailure = nullptr;
   SamplingGroup samplingGroup = SamplingGroup::DropAll;
   AccessType accessType = AccessType::FsChannelOther;
+  FuseStats::CounterPtr dispatchImmediate = nullptr;
+  FuseStats::CounterPtr dispatchDeferred = nullptr;
 };
 
 constexpr auto kFuseHandlers = [] {
@@ -317,7 +323,9 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::lookupSuccessful,
       &FuseStats::lookupFailure,
       Read,
-      SamplingGroup::Four};
+      SamplingGroup::Four,
+      &FuseStats::dispatchLookupImmediate,
+      &FuseStats::dispatchLookupDeferred};
   handlers[FUSE_FORGET] = {
       "FUSE_FORGET",
       &FuseChannel::fuseForget,
@@ -333,7 +341,9 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::getattrSuccessful,
       &FuseStats::getattrFailure,
       Read,
-      SamplingGroup::Three};
+      SamplingGroup::Three,
+      &FuseStats::dispatchGetattrImmediate,
+      &FuseStats::dispatchGetattrDeferred};
   handlers[FUSE_SETATTR] = {
       "FUSE_SETATTR",
       &FuseChannel::fuseSetAttr,
@@ -350,7 +360,10 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::readlink,
       &FuseStats::readlinkSuccessful,
       &FuseStats::readlinkFailure,
-      Read};
+      Read,
+      SamplingGroup::DropAll,
+      &FuseStats::dispatchReadlinkImmediate,
+      &FuseStats::dispatchReadlinkDeferred};
   handlers[FUSE_SYMLINK] = {
       "FUSE_SYMLINK",
       &FuseChannel::fuseSymlink,
@@ -416,7 +429,11 @@ constexpr auto kFuseHandlers = [] {
       &argrender::open,
       &FuseStats::open,
       &FuseStats::openSuccessful,
-      &FuseStats::openFailure};
+      &FuseStats::openFailure,
+      AccessType::FsChannelOther,
+      SamplingGroup::DropAll,
+      &FuseStats::dispatchOpenImmediate,
+      &FuseStats::dispatchOpenDeferred};
   handlers[FUSE_READ] = {
       "FUSE_READ",
       &FuseChannel::fuseRead,
@@ -425,7 +442,9 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::readSuccessful,
       &FuseStats::readFailure,
       Read,
-      SamplingGroup::Three};
+      SamplingGroup::Three,
+      &FuseStats::dispatchReadImmediate,
+      &FuseStats::dispatchReadDeferred};
   handlers[FUSE_WRITE] = {
       "FUSE_WRITE",
       &FuseChannel::fuseWrite,
@@ -474,7 +493,9 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::getxattrSuccessful,
       &FuseStats::getxattrFailure,
       Read,
-      SamplingGroup::Three};
+      SamplingGroup::Three,
+      &FuseStats::dispatchGetxattrImmediate,
+      &FuseStats::dispatchGetxattrDeferred};
   handlers[FUSE_LISTXATTR] = {
       "FUSE_LISTXATTR",
       &FuseChannel::fuseListXAttr,
@@ -515,7 +536,9 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::readdirSuccessful,
       &FuseStats::readdirFailure,
       Read,
-      SamplingGroup::Three};
+      SamplingGroup::Three,
+      &FuseStats::dispatchReaddirImmediate,
+      &FuseStats::dispatchReaddirDeferred};
   handlers[FUSE_RELEASEDIR] = {
       "FUSE_RELEASEDIR",
       &FuseChannel::fuseReleaseDir,
@@ -2356,14 +2379,27 @@ void FuseChannel::dispatchRequest(
                       *(liveRequestWatches_.get()));
                   auto fut = (this->*handlerEntry->handler)(
                       *request, request->getReq(), arg);
+                  auto incrementDispatchCounter =
+                      [&stats](
+                          FuseStats::CounterPtr aggregateCounter,
+                          FuseStats::CounterPtr opcodeCounter) {
+                        stats->increment(aggregateCounter);
+                        if (opcodeCounter) {
+                          stats->increment(opcodeCounter);
+                        }
+                      };
                   if (fut.isReady()) {
-                    stats->increment(&FuseStats::dispatchImmediate);
+                    incrementDispatchCounter(
+                        &FuseStats::dispatchImmediate,
+                        handlerEntry->dispatchImmediate);
                     // In the case where the handler executed immediately,
                     // let's avoid an expensive context switch by simply
                     // extracting the value from the future.
                     return folly::makeFuture<folly::Unit>(std::move(fut).get());
                   } else {
-                    stats->increment(&FuseStats::dispatchDeferred);
+                    incrementDispatchCounter(
+                        &FuseStats::dispatchDeferred,
+                        handlerEntry->dispatchDeferred);
                     return std::move(fut).semi().via(threadPool_.get());
                   }
                 }).ensure([request] {
