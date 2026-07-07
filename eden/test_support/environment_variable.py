@@ -6,10 +6,9 @@
 
 # pyre-strict
 
-import abc
 import contextlib
 import os
-from typing import Any, Callable, Generator, Mapping, Optional
+from typing import Generator, Optional
 
 
 def _setenv(name: str, value: Optional[str]) -> None:
