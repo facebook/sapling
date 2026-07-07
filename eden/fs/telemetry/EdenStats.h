@@ -285,6 +285,9 @@ struct FuseStats : StatsGroup<FuseStats> {
   Duration fallocate{"fuse.fallocate_us"};
   Counter fallocateSuccessful{"fuse.fallocate_successful"};
   Counter fallocateFailure{"fuse.fallocate_failure"};
+
+  Counter dispatchImmediate{"fuse.dispatch_immediate"};
+  Counter dispatchDeferred{"fuse.dispatch_deferred"};
 };
 
 struct NfsStats : StatsGroup<NfsStats> {

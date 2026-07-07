@@ -2349,18 +2349,21 @@ void FuseChannel::dispatchRequest(
         request
             ->catchErrors(
                 folly::makeFutureWith([&] {
+                  auto stats = dispatcher_->getStats().copy();
                   request->startRequest(
-                      dispatcher_->getStats().copy(),
+                      stats.copy(),
                       handlerEntry->duration,
                       *(liveRequestWatches_.get()));
                   auto fut = (this->*handlerEntry->handler)(
                       *request, request->getReq(), arg);
                   if (fut.isReady()) {
+                    stats->increment(&FuseStats::dispatchImmediate);
                     // In the case where the handler executed immediately,
                     // let's avoid an expensive context switch by simply
                     // extracting the value from the future.
                     return folly::makeFuture<folly::Unit>(std::move(fut).get());
                   } else {
+                    stats->increment(&FuseStats::dispatchDeferred);
                     return std::move(fut).semi().via(threadPool_.get());
                   }
                 }).ensure([request] {

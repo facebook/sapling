@@ -178,6 +178,11 @@ The list of all the EdenStats Counter/Duration are as follows:
   Duration fallocate{"fuse.fallocate_us"}
   ```
 
+  ```
+  Counter dispatchImmediate{"fuse.dispatch_immediate"}
+  Counter dispatchDeferred{"fuse.dispatch_deferred"}
+  ```
+
 - NfsStats
   - In NFS the following ODS Durations record the duration of each NFS command
     in microseconds. Also, we have counters for all of these duration for
