@@ -703,6 +703,47 @@ void populateStatAttributes(
   }
 }
 
+struct NonFileAttributePreamble {
+  EntryAttributes attributes;
+  bool isMaterialized{};
+};
+
+NonFileAttributePreamble setupNonFileAttributes(
+    const VirtualInode& vi,
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    std::optional<TreeEntryType> entryType,
+    int errorCode,
+    std::string_view additionalErrorContext) {
+  NonFileAttributePreamble result;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    result.attributes.type =
+        folly::Try<std::optional<TreeEntryType>>{entryType};
+  }
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    result.attributes.objectId =
+        folly::Try<std::optional<ObjectId>>{vi.getObjectId()};
+    result.isMaterialized =
+        !result.attributes.objectId.value().value().has_value();
+  } else {
+    result.isMaterialized = vi.isMaterialized();
+  }
+  populateLocalAclAttributes(
+      result.attributes,
+      requestedAttributes,
+      vi.isUnderAcl(),
+      shouldPopulateLocalAclAttributes(objectStore));
+  populateInvalidNonFileAttributes(
+      result.attributes,
+      requestedAttributes,
+      errorCode,
+      path,
+      entryType,
+      additionalErrorContext);
+  return result;
+}
+
 /**
  * Coroutine version of getEntryAttributesForNonFile.
  */
@@ -716,33 +757,13 @@ folly::coro::now_task<EntryAttributes> co_getEntryAttributesForNonFile(
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string_view additionalErrorContext) {
-  auto attributes = EntryAttributes{};
-
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    attributes.type = folly::Try<std::optional<TreeEntryType>>{entryType};
-  }
-
-  auto isMat = false;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    attributes.objectId = folly::Try<std::optional<ObjectId>>{vi.getObjectId()};
-    isMat = !attributes.objectId.value().value().has_value();
-  } else {
-    isMat = vi.isMaterialized();
-  }
-
-  auto underAcl = vi.isUnderAcl();
-  populateLocalAclAttributes(
-      attributes,
+  auto [attributes, isMat] = setupNonFileAttributes(
+      vi,
       requestedAttributes,
-      underAcl,
-      shouldPopulateLocalAclAttributes(objectStore));
-
-  populateInvalidNonFileAttributes(
-      attributes,
-      requestedAttributes,
-      errorCode,
       path,
+      objectStore,
       entryType,
+      errorCode,
       additionalErrorContext);
 
   std::optional<folly::Try<struct stat>> statTry;
@@ -790,6 +811,7 @@ folly::coro::now_task<EntryAttributes> co_getEntryAttributesForNonFile(
 
   co_return attributes;
 }
+
 } // namespace
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
@@ -801,35 +823,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string_view additionalErrorContext) const {
-  EntryAttributes attributes = EntryAttributes{};
-
-  // The entry's type and ObjectID are used to fetch other attributes.
-  // Compute/fill them immediately.
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    attributes.type = folly::Try<std::optional<TreeEntryType>>{entryType};
-  }
-
-  auto isMat = false;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    attributes.objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
-    isMat = !attributes.objectId.value().value().has_value();
-  } else {
-    isMat = isMaterialized();
-  }
-
-  populateLocalAclAttributes(
-      attributes,
+  auto [attributes, isMat] = setupNonFileAttributes(
+      *this,
       requestedAttributes,
-      isUnderAcl(),
-      shouldPopulateLocalAclAttributes(objectStore));
-
-  // Fill in any attributes that may be invalid for NonFile types
-  populateInvalidNonFileAttributes(
-      attributes,
-      requestedAttributes,
-      errorCode,
       path,
+      objectStore,
       entryType,
+      errorCode,
       additionalErrorContext);
 
   auto statFuture = ImmediateFuture<struct stat>::makeEmpty();
@@ -913,6 +913,76 @@ void populateBlobAuxAttributes(
 bool shouldRequestBlobAuxDataForEntry(EntryAttributeFlags entryAttributes) {
   return entryAttributes.containsAnyOf(ENTRY_ATTRIBUTES_FROM_BLOB_AUX);
 }
+
+// Dispatch info for non-Regular dtypes — what to pass to the per-arm
+// NonFile helper (futures / coro / sync). Returns nullopt for Regular.
+struct NonRegularDispatch {
+  std::optional<TreeEntryType> entryType;
+  int errorCode;
+  std::string errorContext;
+};
+
+std::optional<NonRegularDispatch> getNonRegularDtypeDispatch(dtype_t dtype) {
+  auto nonSourceControl = [&] {
+    return NonRegularDispatch{
+        std::nullopt,
+        EINVAL,
+        fmt::format(
+            "file is a non-source-control type: {}",
+            folly::to_underlying(dtype))};
+  };
+  switch (dtype) {
+    case dtype_t::Regular:
+      return std::nullopt;
+    case dtype_t::Dir:
+      return NonRegularDispatch{TreeEntryType::TREE, EISDIR, {}};
+    case dtype_t::Symlink:
+      return NonRegularDispatch{
+          TreeEntryType::SYMLINK, EINVAL, "file is a symlink"};
+    case dtype_t::Unknown:
+    case dtype_t::Fifo:
+    case dtype_t::Char:
+    case dtype_t::Socket:
+#ifndef _WIN32
+    case dtype_t::Block:
+    case dtype_t::Whiteout:
+#endif
+      return nonSourceControl();
+  }
+  // Unreachable: the switch enumerates every dtype_t. Defensive fallback in
+  // case a new enum value is added.
+  return nonSourceControl();
+}
+
+// Shared regular-file attribute assembly. Each fetch path (futures, coro,
+// sync) computes its own per-attribute Try values; this helper applies
+// them to a fresh EntryAttributes, filtered by requestedAttributes. Pass
+// nullopt for blobAuxTry / statTry to skip those attribute classes.
+EntryAttributes assembleRegularFileAttributes(
+    EntryAttributeFlags requestedAttributes,
+    folly::Try<std::optional<TreeEntryType>> entryTypeTry,
+    folly::Try<std::optional<ObjectId>> objectIdTry,
+    std::optional<folly::Try<BlobAuxData>> blobAuxTry,
+    std::optional<folly::Try<struct stat>> statTry,
+    std::optional<bool> underAcl,
+    bool populateAcl) {
+  auto attributes = EntryAttributes{};
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    attributes.type = std::move(entryTypeTry);
+  }
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    attributes.objectId = std::move(objectIdTry);
+  }
+  populateLocalAclAttributes(
+      attributes, requestedAttributes, underAcl, populateAcl);
+  if (blobAuxTry.has_value()) {
+    populateBlobAuxAttributes(attributes, requestedAttributes, *blobAuxTry);
+  }
+  if (statTry.has_value()) {
+    populateStatAttributes(attributes, requestedAttributes, *statTry);
+  }
+  return attributes;
+}
 } // namespace
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
@@ -923,48 +993,19 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     const ObjectFetchContextPtr& fetchContext) const {
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
-  auto dtype = getDtype();
-  switch (dtype) {
-    case dtype_t::Regular:
-      break;
-    case dtype_t::Dir:
-      return getEntryAttributesForNonFile(
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          TreeEntryType::TREE,
-          EISDIR,
-          {});
-    case dtype_t::Symlink:
-      return getEntryAttributesForNonFile(
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          TreeEntryType::SYMLINK,
-          EINVAL,
-          "file is a symlink");
-    default:
-      return getEntryAttributesForNonFile(
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          std::nullopt,
-          EINVAL,
-          fmt::format(
-              "file is a non-source-control type: {}",
-              folly::to_underlying(dtype)));
+  if (auto dispatch = getNonRegularDtypeDispatch(getDtype())) {
+    return getEntryAttributesForNonFile(
+        requestedAttributes,
+        path,
+        objectStore,
+        lastCheckoutTime,
+        fetchContext,
+        dispatch->entryType,
+        dispatch->errorCode,
+        dispatch->errorContext);
   }
 
-  // This is now guaranteed to be a dtype_t::Regular file. This
-  // means there's no need for a Tree case, as Trees are always
-  // directories. It's included to check that the visitor here is
-  // exhaustive.
+  // getNonRegularDtypeDispatch returned nullopt, so this is a regular file.
   auto entryTypeFuture =
       ImmediateFuture<std::optional<TreeEntryType>>::makeEmpty();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
@@ -1009,36 +1050,17 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   std::optional<folly::Try<BlobAuxData>>,
                   std::optional<folly::Try<struct stat>>>
                   rawAttributeData) mutable -> EntryAttributes {
-            auto attributes = EntryAttributes{};
             auto& [entryTypeTry, blobAuxTry, statTry] = rawAttributeData;
-
-            if (requestedAttributes.contains(
-                    ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-              attributes.type = std::move(entryTypeTry);
-            }
-
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-              attributes.objectId =
-                  folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
-            }
-
-            populateLocalAclAttributes(
-                attributes,
+            return assembleRegularFileAttributes(
                 requestedAttributes,
+                entryTypeTry.has_value()
+                    ? std::move(*entryTypeTry)
+                    : folly::Try<std::optional<TreeEntryType>>{std::nullopt},
+                folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)},
+                std::move(blobAuxTry),
+                std::move(statTry),
                 underAcl,
                 enableLocalUnderAclComputation);
-
-            if (blobAuxTry.has_value()) {
-              populateBlobAuxAttributes(
-                  attributes, requestedAttributes, blobAuxTry.value());
-            }
-
-            if (statTry.has_value()) {
-              populateStatAttributes(
-                  attributes, requestedAttributes, statTry.value());
-            }
-
-            return attributes;
           });
 }
 
@@ -1048,48 +1070,18 @@ folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
     const std::shared_ptr<ObjectStore>& objectStore,
     timespec lastCheckoutTime,
     const ObjectFetchContextPtr& fetchContext) const {
-  auto dtype = getDtype();
-  switch (dtype) {
-    case dtype_t::Regular:
-      break;
-    case dtype_t::Dir:
-      co_return co_await co_getEntryAttributesForNonFile(
-          *this,
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          TreeEntryType::TREE,
-          EISDIR,
-          {});
-    case dtype_t::Symlink:
-      co_return co_await co_getEntryAttributesForNonFile(
-          *this,
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          TreeEntryType::SYMLINK,
-          EINVAL,
-          "file is a symlink");
-    default:
-      co_return co_await co_getEntryAttributesForNonFile(
-          *this,
-          requestedAttributes,
-          path,
-          objectStore,
-          lastCheckoutTime,
-          fetchContext,
-          std::nullopt,
-          EINVAL,
-          fmt::format(
-              "file is a non-source-control type: {}",
-              folly::to_underlying(dtype)));
+  if (auto dispatch = getNonRegularDtypeDispatch(getDtype())) {
+    co_return co_await co_getEntryAttributesForNonFile(
+        *this,
+        requestedAttributes,
+        path,
+        objectStore,
+        lastCheckoutTime,
+        fetchContext,
+        dispatch->entryType,
+        dispatch->errorCode,
+        dispatch->errorContext);
   }
-
-  auto attributes = EntryAttributes{};
 
   std::optional<folly::Try<std::optional<TreeEntryType>>> entryTypeTry;
   std::optional<folly::Try<BlobAuxData>> blobAuxTry;
@@ -1145,29 +1137,21 @@ folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
     co_await folly::coro::collectAllRange(std::move(tasks));
   }
 
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    attributes.type = std::move(entryTypeTry);
-  }
-
+  std::optional<ObjectId> objectId;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    attributes.objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
+    objectId = getObjectId();
   }
 
-  populateLocalAclAttributes(
-      attributes,
+  co_return assembleRegularFileAttributes(
       requestedAttributes,
+      entryTypeTry.has_value()
+          ? std::move(*entryTypeTry)
+          : folly::Try<std::optional<TreeEntryType>>{std::nullopt},
+      folly::Try<std::optional<ObjectId>>{std::move(objectId)},
+      std::move(blobAuxTry),
+      std::move(statTry),
       isUnderAcl(),
       shouldPopulateLocalAclAttributes(objectStore));
-
-  if (blobAuxTry.has_value()) {
-    populateBlobAuxAttributes(attributes, requestedAttributes, *blobAuxTry);
-  }
-
-  if (statTry.has_value()) {
-    populateStatAttributes(attributes, requestedAttributes, *statTry);
-  }
-
-  co_return attributes;
 }
 
 // Returns a subset of `struct stat` required by
