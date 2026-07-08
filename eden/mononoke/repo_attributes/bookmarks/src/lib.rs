@@ -21,6 +21,7 @@ use mononoke_types::ChangesetId;
 
 mod cache;
 mod log;
+pub mod saturation;
 mod subscription;
 mod transaction;
 
