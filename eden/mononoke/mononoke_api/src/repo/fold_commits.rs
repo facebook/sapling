@@ -15,6 +15,7 @@ use commit_graph::CommitGraphRef;
 use filestore::FilestoreConfigRef;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use futures_stats::TimedFutureExt;
 use manifest::PathTree;
 use maplit::btreemap;
@@ -364,17 +365,20 @@ impl<R: MononokeRepo> RepoContext<R> {
         // changes (handles implicit deletes) and regular insert for deletions
         let mut stack_changes: PathTree<CreateChangeType> = PathTree::default();
 
-        // Apply each changeset in topological order
-        for cs_id in stack {
-            let curr_ctx = self
-                .changeset(ChangesetSpecifier::Bonsai(cs_id))
-                .await?
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!("changeset {cs_id} not found"))
-                })?;
+        // Load all bonsai changesets concurrently — blobstore fetches are independent.
+        // Application must remain sequential: topological order is load-bearing for
+        // insert_and_prune, copy_chain resolution, and copy_sources tracking.
+        let all_file_changes: Vec<SortedVectorMap<NonRootMPath, FileChange>> =
+            stream::iter(stack.iter().copied())
+                .map(|cs_id| {
+                    let cs_ctx = self.changeset_from_existing_id(cs_id);
+                    async move { cs_ctx.file_changes().await }
+                })
+                .buffered(100)
+                .try_collect()
+                .await?;
 
-            let file_changes = curr_ctx.file_changes().await?;
-
+        for file_changes in all_file_changes {
             for (path, change) in &file_changes {
                 let mpath = MPath::from(path.clone());
                 match change {
