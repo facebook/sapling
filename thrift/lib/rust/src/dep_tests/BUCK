@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load(
     "@fbsource//xplat/thrift:defs.bzl",
     "thrift_cxx_test",
@@ -86,6 +87,8 @@ thrift_cxx_test(
         "cpp_compat_test.cpp",
     ],
     fbcode_only = True,
+    # Also run on native-ARM (A1) for the ARM CI migration.
+    labels = ci.labels(ci.linux(ci.migration_only_linux_aarch64_host())),
     deps = [
         "fbcode//common/gtest:gtest",
         "fbcode//thrift/lib/cpp/util:enum_utils",
