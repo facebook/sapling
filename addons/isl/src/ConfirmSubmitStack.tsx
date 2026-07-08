@@ -34,8 +34,7 @@ export const confirmShouldSubmitEnabledAtom = configBackedAtom<boolean>(
 );
 
 export type SubmitConfirmationReponse =
-  | {submitAsDraft: boolean; updateMessage?: string; publishWhenReady?: boolean}
-  | undefined;
+  {submitAsDraft: boolean; updateMessage?: string; publishWhenReady?: boolean} | undefined;
 
 type SubmitType = 'submit' | 'submit-all' | 'resubmit';
 

@@ -203,8 +203,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
 
     const pr = response?.resource as
-      | (PullRequestCommentsQueryData['resource'] & {__typename: 'PullRequest'})
-      | undefined;
+      (PullRequestCommentsQueryData['resource'] & {__typename: 'PullRequest'}) | undefined;
 
     const comments = pr?.comments.nodes ?? [];
 

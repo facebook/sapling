@@ -741,14 +741,11 @@ export type Diagnostic = {
 };
 
 export type DiagnosticAllowlistValue =
-  | {block: Set<string>; allow?: undefined}
-  | {allow: Set<string>; block?: undefined};
+  {block: Set<string>; allow?: undefined} | {allow: Set<string>; block?: undefined};
 export type DiagnosticAllowlist = Map<'warning' | 'error', Map<string, DiagnosticAllowlistValue>>;
 
 export type CodeReviewScope =
-  | 'uncommitted changes'
-  | 'current commit'
-  | 'current commit and uncommitted changes';
+  'uncommitted changes' | 'current commit' | 'current commit and uncommitted changes';
 
 /* protocol */
 
@@ -895,12 +892,10 @@ export type PlatformSpecificServerToClientMessages =
     };
 
 export type CodeReviewProviderSpecificClientToServerMessages =
-  | never
-  | InternalTypes['PhabricatorClientToServerMessages'];
+  never | InternalTypes['PhabricatorClientToServerMessages'];
 
 export type CodeReviewProviderSpecificServerToClientMessages =
-  | never
-  | InternalTypes['PhabricatorServerToClientMessages'];
+  never | InternalTypes['PhabricatorServerToClientMessages'];
 
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 

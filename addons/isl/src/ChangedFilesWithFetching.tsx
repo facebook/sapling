@@ -76,14 +76,12 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
     <ChangedFiles
       filesSubset={
         fetchedAllFiles?.filesSample ??
-        commit.filePathsSample.map(
-          (filePath): ChangedFile => ({
-            path: filePath,
-            // default to 'modified' as a best guess.
-            // TODO: should this be a special loading status that shows a spinner?
-            status: 'M' as const,
-          }),
-        )
+        commit.filePathsSample.map((filePath): ChangedFile => ({
+          path: filePath,
+          // default to 'modified' as a best guess.
+          // TODO: should this be a special loading status that shows a spinner?
+          status: 'M' as const,
+        }))
       }
       totalFiles={fetchedAllFiles?.totalFileCount ?? commit.totalFileCount}
       comparison={

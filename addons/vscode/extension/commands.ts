@@ -104,9 +104,7 @@ export const vscodeCommands = {
  * Handle both defensively.
  */
 type MultiDiffResourceArg =
-  | vscode.Uri
-  | [vscode.Uri | undefined, vscode.Uri | undefined]
-  | undefined;
+  vscode.Uri | [vscode.Uri | undefined, vscode.Uri | undefined] | undefined;
 
 function modifiedUriFromMultiDiffArg(arg: MultiDiffResourceArg): vscode.Uri | undefined {
   if (arg == null) {

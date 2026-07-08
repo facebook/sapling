@@ -478,16 +478,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
               postMessage({
                 type: 'platform/gotAIReviewComments',
                 comments: {
-                  value: comments.map(
-                    (comment): CodeReviewIssue => ({
-                      issueID: comment.comment.id,
-                      filepath: comment.comment.filename,
-                      startLine: comment.comment.line,
-                      endLine: comment.comment.line, // TODO: get actual end line
-                      description: comment.comment.html,
-                      severity: 'medium', // TODO: get severity from comment
-                    }),
-                  ),
+                  value: comments.map((comment): CodeReviewIssue => ({
+                    issueID: comment.comment.id,
+                    filepath: comment.comment.filename,
+                    startLine: comment.comment.line,
+                    endLine: comment.comment.line, // TODO: get actual end line
+                    description: comment.comment.html,
+                    severity: 'medium', // TODO: get severity from comment
+                  })),
                 },
               });
             },

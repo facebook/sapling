@@ -37,22 +37,20 @@ export const workspace = proxyMissingFieldsWithJestFn({
   getConfiguration: () => ({get: jest.fn()}),
 });
 export const scm = proxyMissingFieldsWithJestFn({
-  createSourceControl: jest.fn(
-    (): vscode.SourceControl => ({
-      inputBox: {value: '', placeholder: '', enabled: true, visible: true},
-      createResourceGroup: jest.fn(() => ({
-        hideWhenEmpty: false,
-        resourceStates: [],
-        id: '',
-        label: '',
-        dispose: jest.fn(),
-      })),
+  createSourceControl: jest.fn((): vscode.SourceControl => ({
+    inputBox: {value: '', placeholder: '', enabled: true, visible: true},
+    createResourceGroup: jest.fn(() => ({
+      hideWhenEmpty: false,
+      resourceStates: [],
       id: '',
-      dispose: jest.fn(),
       label: '',
-      rootUri: Uri.file(''),
-    }),
-  ),
+      dispose: jest.fn(),
+    })),
+    id: '',
+    dispose: jest.fn(),
+    label: '',
+    rootUri: Uri.file(''),
+  })),
 });
 
 export class ThemeColor {

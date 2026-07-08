@@ -27,8 +27,7 @@ type LiteLanguageConfiguration = {
 };
 
 export type GrammarSource =
-  | {type: 'json'; definition: Record<string, unknown>}
-  | {type: 'plist'; definition: string};
+  {type: 'json'; definition: Record<string, unknown>} | {type: 'plist'; definition: string};
 
 export type GrammarContribution = {
   language?: string | null;

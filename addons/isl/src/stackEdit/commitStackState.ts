@@ -229,15 +229,13 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /** Find the first "Rev" that satisfy the condition. */
   findRev(predicate: (commit: CommitState, rev: CommitRev) => boolean): CommitRev | undefined {
     return this.stack.findIndex(predicate as (commit: CommitState, rev: number) => boolean) as
-      | CommitRev
-      | undefined;
+      CommitRev | undefined;
   }
 
   /** Find the last "Rev" that satisfy the condition. */
   findLastRev(predicate: (commit: CommitState, rev: CommitRev) => boolean): CommitRev | undefined {
     return this.stack.findLastIndex(predicate as (commit: CommitState, rev: number) => boolean) as
-      | CommitRev
-      | undefined;
+      CommitRev | undefined;
   }
 
   /**

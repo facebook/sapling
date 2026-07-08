@@ -186,8 +186,7 @@ function SettingsDropdown({
             ])}
             onChange={event => {
               const value = (event as React.FormEvent<HTMLSelectElement>).currentTarget.value as
-                | PreferredSubmitCommand
-                | 'not set';
+                PreferredSubmitCommand | 'not set';
               if (value === 'not set') {
                 return;
               }

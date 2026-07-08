@@ -43,10 +43,7 @@ export function OperationDisabledButton({
 }: {
   contextKey: string;
   runOperation: () =>
-    | Operation
-    | Array<Operation>
-    | undefined
-    | Promise<Operation | Array<Operation> | undefined>;
+    Operation | Array<Operation> | undefined | Promise<Operation | Array<Operation> | undefined>;
   children?: React.ReactNode;
   disabled?: boolean;
   icon?: React.ReactNode;

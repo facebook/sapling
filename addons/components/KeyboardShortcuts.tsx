@@ -75,14 +75,16 @@ function isTargetTextInputElement(event: KeyboardEvent): boolean {
   );
 }
 
-class CommandDispatcher<CommandName extends string> extends (
-  window as {
-    EventTarget: {
-      new (): EventTarget;
-      prototype: EventTarget;
-    };
-  }
-).EventTarget {
+class CommandDispatcher<CommandName extends string>
+  extends (
+    window as {
+      EventTarget: {
+        new (): EventTarget;
+        prototype: EventTarget;
+      };
+    }
+  ).EventTarget
+{
   private keydownListener: (event: KeyboardEvent) => void;
   /** Current command -> key binding map. May be swapped at runtime via {@link updateCommands}. */
   private commands: CommandMap<CommandName>;

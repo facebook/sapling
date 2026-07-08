@@ -23,13 +23,7 @@ export type Serializable =
   | ReadonlyArray<Serializable>;
 
 export type Serialized =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Array<Serialized>
-  | CustomSerialized;
+  string | number | boolean | null | undefined | Array<Serialized> | CustomSerialized;
 
 export type CustomSerialized =
   | {__rpcType: 'undefined'}

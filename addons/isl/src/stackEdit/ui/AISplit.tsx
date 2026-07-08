@@ -41,9 +41,7 @@ type AISplitButtonProps = {
 };
 
 type AISplitButtonLoadingState =
-  | {type: 'READY'}
-  | {type: 'LOADING'; id: string}
-  | {type: 'ERROR'; error: Error};
+  {type: 'READY'} | {type: 'LOADING'; id: string} | {type: 'ERROR'; error: Error};
 
 export function AISplitButton({
   stackEdit,

@@ -14,8 +14,7 @@ import {tryJsonParse} from 'shared/utils';
 // VS Code requires a restart if you change the configured language,
 // thus we can globally load this value on startup.
 const nlsConfig = tryJsonParse(process.env.VSCODE_NLS_CONFIG as string) as
-  | {locale: string}
-  | undefined;
+  {locale: string} | undefined;
 export const locale = validateLocale(nlsConfig?.locale) ?? 'en';
 
 /** The locale will be inserted into the HTML of the webview as a JS variable,

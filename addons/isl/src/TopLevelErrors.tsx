@@ -62,8 +62,7 @@ function computeTopLevelError(
     };
   } else if (diffFetchError) {
     const internalResult = Internal.findInternalError?.(diffFetchError) as
-      | TopLevelErrorInfo
-      | undefined;
+      TopLevelErrorInfo | undefined;
     if (internalResult != null) {
       return internalResult;
     } else if (repoInfo?.type === 'success' && repoInfo.codeReviewSystem.type === 'github') {
