@@ -622,7 +622,9 @@ impl<R: CommitGraphRef + Clone> ChangesetContext<R> {
     }
 }
 
-impl<R: BonsaiHgMappingRef + RepoDerivedDataRef + RepoDerivedDataArc> ChangesetContext<R> {
+impl<R: BonsaiHgMappingRef + RepoDerivedDataRef + RepoDerivedDataArc + RepoIdentityRef>
+    ChangesetContext<R>
+{
     /// The Mercurial ID for the changeset.
     pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
         let maybe_hg_id = self
@@ -631,11 +633,21 @@ impl<R: BonsaiHgMappingRef + RepoDerivedDataRef + RepoDerivedDataArc> ChangesetC
             .bonsai_hg_mapping()
             .get_hg_from_bonsai(self.ctx(), self.id)
             .await?;
-        if maybe_hg_id.is_none() && self.repo_ctx().derive_hgchangesets_enabled() {
+        let hg_id = if maybe_hg_id.is_none() && self.repo_ctx().derive_hgchangesets_enabled() {
             let mapped_hg_id = self.derive::<MappedHgChangesetId>().await?;
-            return Ok(Some(mapped_hg_id.hg_changeset_id()));
+            Some(mapped_hg_id.hg_changeset_id())
+        } else {
+            maybe_hg_id
+        };
+        // Materialize the augmented manifest for the imminent `trees` fetch
+        // (covers both the mapping-hit and derive-on-miss paths above). Skipped
+        // when there's no hg changeset to derive one from.
+        if hg_id.is_some() {
+            self.repo_ctx()
+                .ensure_hg_augmented_manifests_derived(Some(self.id))
+                .await?;
         }
-        Ok(maybe_hg_id)
+        Ok(hg_id)
     }
 }
 

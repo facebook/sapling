@@ -114,6 +114,7 @@ use hook_manager::manager::HookManagerArc;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::RepoConfig;
@@ -950,6 +951,87 @@ impl<R: RepoDerivedDataRef> RepoContext<R> {
     }
 }
 
+impl<R: RepoDerivedDataRef + RepoIdentityRef> RepoContext<R> {
+    /// On-demand derivation of `HgAugmentedManifest` at serve-time, gated by both
+    /// the derived-data config and a per-repo JustKnob for gradual rollout.
+    fn derive_hg_augmented_manifests_enabled(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(RootHgAugmentedManifestId::VARIANT)
+            && justknobs::eval(
+                "scm/mononoke:derive_hg_augmented_manifest_on_demand",
+                self.ctx
+                    .metadata()
+                    .client_request_info()
+                    .map(|c| c.correlator.as_str()),
+                Some(self.name()),
+            )
+    }
+
+    /// Derive the `HgAugmentedManifest` for a client-influenced batch of
+    /// changesets, with bounded concurrency. No-op when disabled for the repo.
+    ///
+    /// Blocks the caller until every derivation completes — the manifests must
+    /// exist before the imminent `trees` fetch, so a fire-and-forget warm-up would
+    /// reintroduce the fail-closed race. When the hard failure JK is enabled, a
+    /// derivation failure is surfaced to the caller; otherwise failures are logged
+    /// and swallowed.
+    pub async fn ensure_hg_augmented_manifests_derived(
+        &self,
+        cs_ids: impl IntoIterator<Item = ChangesetId>,
+    ) -> Result<(), MononokeError> {
+        if !self.derive_hg_augmented_manifests_enabled() {
+            return Ok(());
+        }
+        let cs_ids: Vec<ChangesetId> = cs_ids.into_iter().collect();
+        let results: Vec<Result<(), MononokeError>> = stream::iter(cs_ids)
+            .map(|cs_id| self.derive_hg_augmented_manifest(cs_id))
+            .buffer_unordered(100)
+            .collect()
+            .await;
+        if justknobs::eval(
+            "scm/mononoke:fail_hard_on_derive_hg_augmented_manifest_on_demand",
+            self.ctx
+                .metadata()
+                .client_request_info()
+                .map(|c| c.correlator.as_str()),
+            Some(self.name()),
+        ) {
+            results.into_iter().collect::<Result<Vec<_>, _>>()?;
+        }
+        Ok(())
+    }
+
+    /// Derive the `HgAugmentedManifest` for `cs_id`, logging on failure.
+    /// Skips bubble/ephemeral commits, whose bubble-scoped derived-data
+    /// manager lacks the deps to derive an augmented manifest.
+    async fn derive_hg_augmented_manifest(&self, cs_id: ChangesetId) -> Result<(), MononokeError> {
+        if self
+            .repo()
+            .repo_derived_data()
+            .manager()
+            .bubble_id()
+            .is_some()
+        {
+            return Ok(());
+        }
+        if let Err(err) = self
+            .repo()
+            .repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&self.ctx, cs_id, DerivationPriority::LOW)
+            .await
+        {
+            self.ctx.scuba().clone().log_with_msg(
+                "HgAugmentedManifest derivation failed",
+                Some(format!("cs_id: {cs_id:?}, err: {err:?}")),
+            );
+            return Err(err.into());
+        }
+        Ok(())
+    }
+}
+
 impl<R: CommitGraphRef> RepoContext<R> {
     pub fn commit_graph(&self) -> &CommitGraph {
         self.repo.commit_graph()
@@ -1448,13 +1530,15 @@ impl<R: MononokeRepo> RepoContext<R> {
         &self,
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, MononokeError> {
-        let mapping = self
+        let mapping: Vec<(ChangesetId, HgChangesetId)> = self
             .repo()
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
             .await?
             .into_iter()
             .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
             .collect();
+        self.ensure_hg_augmented_manifests_derived(mapping.iter().map(|(cs_id, _)| *cs_id))
+            .await?;
         Ok(mapping)
     }
 

@@ -76,9 +76,9 @@ Try again and fail because reads for all blobstores will be disabled
   $ mononoke --scuba-log-file "$TESTTMP/log.json"
   $ wait_for_mononoke
 
-  $ hg clone -q mono:repo repo-clone
-  abort: cannot resolve [523cda1e6192b3b1e4208793ee19bd67125c6a93] remotely
-  [255]
+Clone fails at bookmark resolution: resolving the bookmark's hg id now also derives its augmented manifest on demand, which can't read its deps while reads are disabled and so fails closed.
+  $ hg clone -q mono:repo repo-clone 2>&1 | grep 'SaplingRemoteAPI server returned an error'
+  *Failed to fetch HgId for bookmark:*master_bookmark*All blobstores failed:* (glob)
   $ jq . $TESTTMP/log.json | quiet_grep "disabled_reads_blobstore_ids"
 
 

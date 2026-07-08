@@ -443,7 +443,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         &self,
         cs_id: ChangesetId,
     ) -> Result<HgChangesetId, MononokeError> {
-        Ok(self.repo().derive_hg_changeset(self.ctx(), cs_id).await?)
+        let hg_cs_id = self.repo().derive_hg_changeset(self.ctx(), cs_id).await?;
+        self.repo_ctx()
+            .ensure_hg_augmented_manifests_derived(Some(cs_id))
+            .await?;
+        Ok(hg_cs_id)
     }
 
     /// This provides the same functionality as
@@ -474,10 +478,15 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .await?;
         stream::iter(result_csids)
             .map(|bcs_id| async move {
-                self.repo()
+                let hg_cs_id = self
+                    .repo()
                     .derive_hg_changeset(self.ctx(), bcs_id)
                     .await
-                    .map_err(MononokeError::from)
+                    .map_err(MononokeError::from)?;
+                self.repo_ctx()
+                    .ensure_hg_augmented_manifests_derived(Some(bcs_id))
+                    .await?;
+                Ok(hg_cs_id)
             })
             .buffered(100)
             .try_collect()
@@ -522,6 +531,14 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .iter()
             .filter_map(|hg_id| hg_to_bonsai.get(hg_id).cloned())
             .collect::<Vec<ChangesetId>>();
+
+        // `hash_to_location` resolves a commit by raw hash (checkout/pull of a
+        // commit not on a bookmark, or a snapshot parent during restore), bypassing
+        // the other resolution chokepoints, so materialize the augmented manifest
+        // here too — otherwise the subsequent `trees` fetch fails closed.
+        self.repo_ctx()
+            .ensure_hg_augmented_manifests_derived(cs_ids.iter().copied())
+            .await?;
 
         let cs_to_blocations = self
             .repo_ctx()

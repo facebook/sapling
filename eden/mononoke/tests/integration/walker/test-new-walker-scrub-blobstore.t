@@ -49,7 +49,7 @@ Check that multi repo runs for all repos specified
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  46
+  50
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
