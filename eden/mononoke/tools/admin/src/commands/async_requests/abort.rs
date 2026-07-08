@@ -104,35 +104,38 @@ pub async fn abort_by_root_id(
 ) -> Result<(), Error> {
     let root_row_id = RowId(root_id);
 
-    // Batch-fail all 'new' requests with this root.
-    let failed_count = queue
-        .fail_new_requests_by_root_id(ctx, &root_row_id)
+    // Abort the root request itself first. For a multi-repo backfill scheduler
+    // (repo_concurrency > 0) the root is long-lived and keeps scheduling repos;
+    // it polls its own status each iteration and stops once it is no longer
+    // in-progress, so failing it here is what actually halts further scheduling.
+    // Short-lived (fan-out) roots have already completed by the time an abort
+    // runs, so the in-progress guard skips them.
+    match queue
+        .get_request_by_id(ctx, &root_row_id)
         .await
-        .context("batch-failing new requests")?;
-    println!("{failed_count} pending requests failed");
-
-    // Get remaining requests for this root to abort in-progress ones.
-    let entries = queue
-        .get_requests_by_root_id(ctx, &root_row_id)
-        .await
-        .context("fetching requests by root id")?;
-
-    let mut aborted = 0u64;
-    let mut skipped = 0u64;
-    for (request_id, entry, params, maybe_result) in entries {
-        if maybe_result.is_some() || entry.status != RequestStatus::InProgress {
-            skipped += 1;
-            continue;
+        .context("fetching root request")?
+    {
+        Some((request_id, entry, params, maybe_result)) => {
+            if maybe_result.is_none() && entry.status == RequestStatus::InProgress {
+                abort_single_request(ctx, queue, &request_id, &params).await?;
+                println!("root request {root_id} aborted");
+            }
         }
-
-        if abort_single_request(ctx, queue, &request_id, &params).await? {
-            aborted += 1;
-        } else {
-            // Request was completed by a worker between our SELECT and UPDATE.
-            skipped += 1;
+        None => {
+            // `root_id` is used purely as a grouping key for children here; there
+            // is no request row with this id (e.g. a synthetic/legacy root id).
+            // Nothing to abort at the root -- fall through to the child cleanup.
         }
     }
 
+    // Abort all child requests ('new' -> failed, in-progress -> error result).
+    // This is shared with the backfill scheduler (which runs the same cleanup when
+    // it notices its root was aborted) so both paths behave identically.
+    let (failed_count, aborted, skipped) = queue
+        .abort_children_by_root_id(ctx, &root_row_id)
+        .await
+        .context("aborting child requests")?;
+    println!("{failed_count} pending requests failed");
     println!("{aborted} in-progress requests aborted, {skipped} already completed (skipped)");
 
     Ok(())

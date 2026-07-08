@@ -471,6 +471,7 @@ impl AsyncMethodRequestWorker {
         let repos_mgr_for_cleanup = self.repos_mgr.clone();
         // Do the actual work.
         STATS::requested.add_value(1);
+        let is_long_running = params.is_long_running();
         let work_fut = megarepo_async_request_compute(
             &ctx,
             self.mononoke,
@@ -552,12 +553,31 @@ impl AsyncMethodRequestWorker {
                 }
             }
             Either::Right((_, _)) => {
-                // We haven't completed the request, and failed to update
-                // inprogress timestamp. Most likely it means that other
-                // worker has completed it
-
+                // We haven't completed the request, and failed to update inprogress
+                // timestamp. Most likely another worker completed it, or an abort
+                // marked it done.
                 STATS::process_aborted.add_value(1);
                 info!("[{}] was completed by other worker, stopping", &req_id.0);
+
+                // If this is the long-lived backfill scheduler, being dropped here
+                // means the root was aborted (an abort marks it ready, which is what
+                // ended the keep-alive loop). Since a dropped future can't run its
+                // own async cleanup, re-run the child abort here so any repos the
+                // scheduler enqueued in a race with the abort are aborted too. This
+                // is identical to the CLI `backfill-abort` child pass and is
+                // idempotent if the CLI already cleaned them up.
+                if is_long_running {
+                    match self.queue.abort_children_by_root_id(&ctx, &req_id.0).await {
+                        Ok((failed, aborted, skipped)) => info!(
+                            "[{}] aborted backfill scheduler: cleaned up children ({} failed, {} aborted, {} skipped)",
+                            &req_id.0, failed, aborted, skipped,
+                        ),
+                        Err(err) => error!(
+                            "[{}] failed to clean up children of aborted backfill scheduler: {:?}",
+                            &req_id.0, err,
+                        ),
+                    }
+                }
             }
         }
 

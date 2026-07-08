@@ -49,6 +49,7 @@ use crate::types::DeriveBackfillRepo;
 use crate::types::DeriveBoundaries;
 use crate::types::DeriveSlice;
 use crate::types::Request;
+use crate::types::ThriftAsynchronousRequestResult;
 use crate::types::ThriftParams;
 use crate::types::Token;
 
@@ -844,6 +845,48 @@ impl AsyncMethodRequestQueue {
         self.table
             .fail_new_requests_by_root_id(ctx, root_request_id)
             .await
+    }
+
+    /// Abort every child request of a backfill root (all rows sharing
+    /// `root_request_id`): 'new' children are batch-failed, and each in-progress
+    /// child is completed with an error result. This is the child-cleanup half of
+    /// the CLI `backfill-abort`; the backfill scheduler calls this same path when
+    /// it notices its root was aborted, so a batch enqueued in a mid-iteration race
+    /// is cleaned up identically. Returns (new_failed, in_progress_aborted,
+    /// skipped). Note: this only updates the queue rows — derivation already
+    /// running in a worker is not interrupted.
+    pub async fn abort_children_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<(u64, u64, u64), Error> {
+        let failed = self
+            .fail_new_requests_by_root_id(ctx, root_request_id)
+            .await?;
+
+        let entries = self.get_requests_by_root_id(ctx, root_request_id).await?;
+        let mut aborted = 0u64;
+        let mut skipped = 0u64;
+        for (request_id, entry, _params, maybe_result) in entries {
+            // Skip anything already completed or not currently running; 'new' rows
+            // were handled by the batch fail above.
+            if maybe_result.is_some() || entry.status != RequestStatus::InProgress {
+                skipped += 1;
+                continue;
+            }
+            let result =
+                AsynchronousRequestResult::from_thrift(ThriftAsynchronousRequestResult::error(
+                    AsyncRequestsError::internal(anyhow::anyhow!("request aborted")).into(),
+                ));
+            // `complete` returns false if a worker finished the request between our
+            // read and the write (race) — count it as skipped, not aborted.
+            if self.complete(ctx, &request_id, result).await? {
+                aborted += 1;
+            } else {
+                skipped += 1;
+            }
+        }
+        Ok((failed, aborted, skipped))
     }
 
     /// Aggregate the child requests of a backfill (all rows sharing
