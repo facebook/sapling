@@ -7,6 +7,8 @@
 
 #![feature(trait_alias)]
 
+use std::time::Instant;
+
 use ::repo_lock::RepoLockRef;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -291,7 +293,22 @@ impl BookmarkInfoTransaction {
         ctx: &CoreContext,
         repo: &impl Repo,
     ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
-        let log_id = self.transaction.commit().await?;
+        let emit_saturation = repo
+            .repo_config()
+            .pushrebase
+            .flags
+            .monitoring_bookmark
+            .is_some();
+        let start = Instant::now();
+        let result = self.transaction.commit().await;
+        if emit_saturation {
+            bookmarks::saturation::record_bookmark_move(
+                repo.repo_identity().name(),
+                start.elapsed().as_nanos() as i64,
+                result.is_ok(),
+            );
+        }
+        let log_id = result?;
         self.info_data.log(ctx, repo).await;
         Ok(log_id)
     }
