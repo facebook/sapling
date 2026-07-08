@@ -32,3 +32,24 @@ thrift_rust_library(
         "//thrift/lib/thrift:type_system-rust",
     ],
 )
+
+thrift_rust_library(
+    name = "service_catalog_digest",
+    srcs = glob(["service_catalog_digest/**/*.rs"]),
+    allow_oss_build = False,
+    autocargo = {"cargo_toml_dir": "service_catalog_digest"},
+    crate_root = "service_catalog_digest/lib.rs",
+    test_deps = [
+        "//thrift/lib/cpp2/dynamic/test:service_catalog_digest_expected_values-rust",
+    ]
+    if is_fbcode()
+    else [],
+    unittests = is_fbcode(),
+    deps = [
+        "//thrift/lib/rust/dynamic:type_system_digest",
+        "//thrift/lib/thrift:record-rust",
+        "//thrift/lib/thrift:service_catalog-rust",
+        "//thrift/lib/thrift:type_id-rust",
+        "//thrift/lib/thrift:type_system-rust",
+    ],
+)
