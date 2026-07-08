@@ -17,7 +17,7 @@
 namespace facebook::eden {
 
 namespace {
-constexpr size_t kUploadPoolSize = 1;
+constexpr size_t kUploadPoolSize = 4;
 
 constexpr uint32_t kMaxQueuedUploads = 10;
 
