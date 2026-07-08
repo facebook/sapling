@@ -288,6 +288,10 @@ impl Metadata {
                 .client_request_info()
                 .and_then(|cri| cri.main_id.clone()),
             category: self.identities.client_category(),
+            ci_purpose: self.ci_purpose().map(str::to_owned),
+            atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
+            atlas_rl: self.clientinfo_atlas_rl(),
+            faas_job_name: self.clientinfo_faas_job_name().map(str::to_owned),
         }
     }
 

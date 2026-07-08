@@ -257,6 +257,10 @@ impl ClientCategory {
 pub struct TenantInfo {
     pub client_id: Option<String>,
     pub category: ClientCategory,
+    pub ci_purpose: Option<String>,
+    pub atlas_env_id: Option<String>,
+    pub atlas_rl: Option<bool>,
+    pub faas_job_name: Option<String>,
 }
 
 impl TenantInfo {
