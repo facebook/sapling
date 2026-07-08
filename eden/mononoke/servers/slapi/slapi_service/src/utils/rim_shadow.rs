@@ -17,6 +17,7 @@ use std::time::Duration;
 
 use backend_if::RimBackend;
 use context::CoreContext;
+use permission_checker::TenantInfo;
 use rim_ligen::RimThinClient;
 use tokio::time::timeout;
 use tracing::debug;
@@ -52,20 +53,15 @@ pub fn init() {
 /// scuba quota bounded; the common allow path is silent. The "ratelim
 /// reject, RIM allow" comparison is covered by ratelim's own existing
 /// rejection log.
-pub async fn shadow_check(ctx: &CoreContext, client_category: &str, client_main_id: &str) {
-    let tenancy_path = vec![
-        "root".to_string(),
-        client_category.to_string(),
-        client_main_id.to_string(),
-    ];
+pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo) {
+    let Some(tenancy_path) = tenant.tenancy_path() else {
+        return;
+    };
     let requirements = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
 
     let log = |tag: &str, detail: String| {
         let mut scuba = ctx.scuba().clone();
-        scuba.add(
-            "rim_tenancy_path",
-            format!("root/{client_category}/{client_main_id}"),
-        );
+        scuba.add("rim_tenancy_path", tenant.to_string());
         scuba.log_with_msg(tag, detail);
     };
 
@@ -91,20 +87,15 @@ pub async fn shadow_check(ctx: &CoreContext, client_category: &str, client_main_
     }
 }
 
-pub async fn report_qps(ctx: &CoreContext, client_category: &str, client_main_id: &str) {
-    let tenancy_path = vec![
-        "root".to_string(),
-        client_category.to_string(),
-        client_main_id.to_string(),
-    ];
+pub async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo) {
+    let Some(tenancy_path) = tenant.tenancy_path() else {
+        return;
+    };
     let usage = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
 
     let log = |tag: &str, detail: String| {
         let mut scuba = ctx.scuba().clone();
-        scuba.add(
-            "rim_tenancy_path",
-            format!("root/{client_category}/{client_main_id}"),
-        );
+        scuba.add("rim_tenancy_path", tenant.to_string());
         scuba.log_with_msg(tag, detail);
     };
 

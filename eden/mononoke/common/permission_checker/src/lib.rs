@@ -28,6 +28,7 @@ pub use identity::ClientCategory;
 pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;
+pub use identity::TenantInfo;
 pub use internal::Acl;
 pub use internal::Acls;
 pub use internal::InternalAclProvider;

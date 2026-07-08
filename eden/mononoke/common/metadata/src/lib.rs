@@ -19,6 +19,7 @@ use hickory_resolver::TokioResolver;
 use hickory_resolver::proto::rr::RData;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
+use permission_checker::TenantInfo;
 use session_id::SessionId;
 use session_id::generate_session_id;
 use tokio::time::timeout;
@@ -279,6 +280,15 @@ impl Metadata {
         self.client_info
             .as_ref()
             .and_then(|ci| ci.request_info.as_ref())
+    }
+
+    pub fn tenant_info(&self) -> TenantInfo {
+        TenantInfo {
+            client_id: self
+                .client_request_info()
+                .and_then(|cri| cri.main_id.clone()),
+            category: self.identities.client_category(),
+        }
     }
 
     pub fn clientinfo_tw_job(&self) -> Option<&str> {

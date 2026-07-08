@@ -17,7 +17,6 @@ use http::Response;
 use http::StatusCode;
 use http::Uri;
 use maplit::hashmap;
-use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
 use tracing::debug;
@@ -52,39 +51,32 @@ impl Middleware for ThrottleMiddleware {
         let rctx: RequestContext = RequestContext::borrow_from(state).clone();
         let ctx: CoreContext = rctx.ctx;
 
-        let client_request_info = state
-            .try_borrow::<MetadataState>()?
-            .metadata()
-            .client_request_info()
-            .or_else(|| {
-                debug!("No client request info found");
-                None
-            })?;
-        // Retrieve client main id
-        let client_main_id = client_request_info.main_id.clone().or_else(|| {
-            debug!("No main client id found");
-            None
-        })?;
         // Retrieve rate limiter
         let rate_limiter = ctx.session().rate_limiter().or_else(|| {
             debug!("No rate_limiter info found");
             None
         })?;
 
-        let identities = state.try_borrow::<MetadataState>()?.metadata().identities();
-        let client_category = identities.client_category().as_str();
         let metadata = state.try_borrow::<MetadataState>()?.metadata();
+        let tenant = metadata.tenant_info();
+        // No main id -> this request can't be attributed to a client, so it
+        // isn't subject to per-client throttling.
+        let Some(client_main_id) = tenant.client_id.as_deref() else {
+            debug!("No main client id found");
+            return None;
+        };
+        let identities = metadata.identities();
         let atlas = metadata.clientinfo_atlas();
 
         #[cfg(fbcode_build)]
         if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
-            crate::utils::rim_shadow::shadow_check(&ctx, client_category, &client_main_id).await;
+            crate::utils::rim_shadow::shadow_check(&ctx, &tenant).await;
         }
 
         let limit = rate_limiter.find_rate_limit(
             Metric::EdenApiQps,
             Some(identities.clone()),
-            Some(&client_main_id),
+            Some(client_main_id),
             atlas,
         )?;
 
@@ -96,7 +88,7 @@ impl Middleware for ThrottleMiddleware {
         };
 
         let category = rate_limiter.category();
-        let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &client_main_id);
+        let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, client_main_id);
 
         match counter_check_and_bump(
             &ctx,
@@ -105,8 +97,8 @@ impl Middleware for ThrottleMiddleware {
             limit,
             enforced,
             hashmap! {
-                "client_main_id" => client_main_id.as_str(),
-                "client_category" => client_category,
+                "client_main_id" => client_main_id,
+                "client_category" => tenant.category.as_str(),
             },
         )
         .await
@@ -114,8 +106,7 @@ impl Middleware for ThrottleMiddleware {
             Ok(_) => {
                 #[cfg(fbcode_build)]
                 if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
-                    crate::utils::rim_shadow::report_qps(&ctx, client_category, &client_main_id)
-                        .await;
+                    crate::utils::rim_shadow::report_qps(&ctx, &tenant).await;
                 }
                 None
             }

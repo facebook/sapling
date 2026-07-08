@@ -251,6 +251,33 @@ impl ClientCategory {
     }
 }
 
+/// A request's tenancy dimensions, used for RIM attribution and rate-limit
+/// policy.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TenantInfo {
+    pub client_id: Option<String>,
+    pub category: ClientCategory,
+}
+
+impl TenantInfo {
+    /// RIM tenancy hierarchy path: root -> category -> client id. `None` when
+    /// there is no `client_id` to attribute to (no meaningful RIM path).
+    pub fn tenancy_path(&self) -> Option<Vec<String>> {
+        let client_id = self.client_id.clone()?;
+        Some(vec![
+            "root".to_string(),
+            self.category.as_str().to_string(),
+            client_id,
+        ])
+    }
+}
+
+impl fmt::Display for TenantInfo {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{}", self.tenancy_path().unwrap_or_default().join("/"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use mononoke_macros::mononoke;
