@@ -74,14 +74,10 @@
       "time": * (glob)
     },
     "normal": {
-      "ci_purpose": null,
       "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
-      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -147,14 +143,10 @@
       "time": * (glob)
     },
     "normal": {
-      "ci_purpose": null,
       "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
-      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -226,14 +218,10 @@
     },
     "normal": {
       "batch_order": "*", (glob)
-      "ci_purpose": null,
       "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
-      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -305,14 +293,10 @@
       "time": * (glob)
     },
     "normal": {
-      "ci_purpose": null,
       "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
-      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -373,14 +357,10 @@
       "time": * (glob)
     },
     "normal": {
-      "ci_purpose": null,
       "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "curl_test",
-      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)

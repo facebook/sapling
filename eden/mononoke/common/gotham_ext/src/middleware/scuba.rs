@@ -22,7 +22,6 @@ use http::header;
 use http::header::AsHeaderName;
 use http::header::HeaderMap;
 use permission_checker::ClientCategory;
-use permission_checker::MononokeIdentitySetExt;
 use scopeguard::ScopeGuard;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
@@ -350,14 +349,14 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             scuba.add_client_request_info(client_info);
         }
         let identities = metadata.identities();
-        scuba.add(
-            HttpScubaKey::ClientCategory,
-            identities.client_category().as_str(),
-        );
         let identities_typed: Vec<_> = identities.iter().map(|i| i.to_typed_string()).collect();
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
         scuba.add(HttpScubaKey::ClientIdentities, identities);
         scuba.add(HttpScubaKey::ClientIdentitiesTyped, identities_typed);
+
+        // Tenancy-relevant columns (client_category, ci_purpose, atlas_*, faas)
+        // are logged in one place, shared with the wireproto path.
+        scuba.add_tenant_info(&metadata.tenant_info());
 
         // The EdenAPI path does not call MononokeScubaSampleBuilder::add_metadata,
         // so the metadata-derived columns below are populated here by hand to
@@ -378,20 +377,8 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         let sandcastle_vcs = metadata.sandcastle_vcs();
         scuba.add(HttpScubaKey::SandcastleVCS, sandcastle_vcs);
 
-        let ci_purpose = metadata.ci_purpose();
-        scuba.add(HttpScubaKey::CiPurpose, ci_purpose);
-
         let client_atlas = metadata.clientinfo_atlas();
         scuba.add(HttpScubaKey::ClientAtlas, client_atlas);
-
-        let client_atlas_env_id = metadata.clientinfo_atlas_env_id();
-        scuba.add(HttpScubaKey::ClientAtlasEnvId, client_atlas_env_id);
-
-        let client_atlas_rl = metadata.clientinfo_atlas_rl();
-        scuba.add(HttpScubaKey::ClientAtlasRl, client_atlas_rl);
-
-        let client_faas_job_name = metadata.clientinfo_faas_job_name();
-        scuba.add(HttpScubaKey::ClientFaasJobName, client_faas_job_name);
 
         let client_tw_job = metadata.clientinfo_tw_job();
         scuba.add(HttpScubaKey::ClientTwJob, client_tw_job);

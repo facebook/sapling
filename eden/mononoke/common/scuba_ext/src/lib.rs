@@ -24,6 +24,7 @@ use metadata::Metadata;
 use observability::ObservabilityContext;
 use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
+use permission_checker::TenantInfo;
 pub use sampling::Sampling;
 #[cfg(fbcode_build)]
 pub use schematized_logging::CommonMetadata;
@@ -164,6 +165,19 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
+    /// Log the tenancy-relevant client fields to Scuba
+    pub fn add_tenant_info(&mut self, tenant: &TenantInfo) -> &mut Self {
+        self.inner.add("client_category", tenant.category.as_str());
+        self.inner
+            .add_opt("ci_purpose", tenant.ci_purpose.as_deref());
+        self.inner
+            .add_opt("client_atlas_env_id", tenant.atlas_env_id.as_deref());
+        self.inner.add_opt("client_atlas_rl", tenant.atlas_rl);
+        self.inner
+            .add_opt("client_faas_job_name", tenant.faas_job_name.as_deref());
+        self
+    }
+
     pub fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self {
         self.inner
             .add("session_uuid", metadata.session_id().to_string());
@@ -206,7 +220,6 @@ impl MononokeScubaSampleBuilder {
             .add_opt("sandcastle_alias", metadata.sandcastle_alias());
         self.inner
             .add_opt("sandcastle_vcs", metadata.sandcastle_vcs());
-        self.inner.add_opt("ci_purpose", metadata.ci_purpose());
         self.inner
             .add_opt("revproxy_region", metadata.revproxy_region().as_deref());
         self.inner
@@ -217,12 +230,8 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_tw_task", metadata.clientinfo_tw_task());
         self.inner
             .add_opt("client_atlas", metadata.clientinfo_atlas());
-        self.inner
-            .add_opt("client_atlas_env_id", metadata.clientinfo_atlas_env_id());
-        self.inner
-            .add_opt("client_atlas_rl", metadata.clientinfo_atlas_rl());
-        self.inner
-            .add_opt("client_faas_job_name", metadata.clientinfo_faas_job_name());
+
+        self.add_tenant_info(&metadata.tenant_info());
 
         self.inner.add_opt("fetch_cause", metadata.fetch_cause());
         self.inner.add(
