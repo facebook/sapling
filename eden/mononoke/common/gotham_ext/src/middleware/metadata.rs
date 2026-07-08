@@ -223,6 +223,13 @@ impl Middleware for MetadataMiddleware {
             metadata = metadata.set_fetch_from_cas_attempted(
                 headers.get(FETCH_FROM_CAS_ATTEMPTED_HEADER).is_some(),
             );
+
+            let user_agent: Option<String> = headers
+                .get(http::header::USER_AGENT)
+                .and_then(|h| h.to_str().ok())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_owned());
+            metadata = metadata.set_user_agent(user_agent);
         }
 
         // For the IP, we can fallback to the peer IP

@@ -44,6 +44,7 @@ pub struct Metadata {
     fetch_cause: Option<String>,
     fetch_from_cas_attempted: bool,
     upstream_client_id: Option<String>,
+    user_agent: Option<String>,
 }
 
 impl Metadata {
@@ -91,6 +92,7 @@ impl Metadata {
             fetch_cause: None,
             fetch_from_cas_attempted: false,
             upstream_client_id: None,
+            user_agent: None,
         }
     }
 
@@ -322,6 +324,15 @@ impl Metadata {
 
     pub fn upstream_client_id(&self) -> Option<&str> {
         self.upstream_client_id.as_deref()
+    }
+
+    pub fn set_user_agent(mut self, user_agent: Option<String>) -> Self {
+        self.user_agent = user_agent;
+        self
+    }
+
+    pub fn user_agent(&self) -> Option<&str> {
+        self.user_agent.as_deref()
     }
 
     pub fn machine_tier(&self) -> Option<&str> {

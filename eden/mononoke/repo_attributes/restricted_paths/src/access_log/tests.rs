@@ -7,13 +7,16 @@
 
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use metaconfig_types::AclManifestMode;
+use metadata::Metadata;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -38,6 +41,7 @@ use crate::restriction_info::ManifestRestrictionInfo;
 use crate::restriction_info::PathRestrictionInfo;
 
 struct ShadowComparisonFieldFixture<T: SourceRestrictionCheck> {
+    fb: FacebookInit,
     ctx: CoreContext,
     repo_id: RepositoryId,
     acl_manifest_mode: AclManifestMode,
@@ -60,6 +64,7 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
         let scuba = MononokeScubaSampleBuilder::with_discard().with_log_file(&log_path)?;
 
         Ok(Self {
+            fb,
             ctx: CoreContext::test_mock(fb),
             repo_id: RepositoryId::new(1),
             acl_manifest_mode: AclManifestMode::Shadow,
@@ -76,6 +81,13 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
             acl_manifest_mode,
             ..self
         }
+    }
+
+    /// Rebuilds the fixture context so its requests carry the given client
+    /// User-Agent, which `log_access_to_scuba` records as `http_user_agent`.
+    fn with_user_agent(self, user_agent: &str) -> Self {
+        let ctx = ctx_with_user_agent(self.fb, user_agent);
+        Self { ctx, ..self }
     }
 
     fn log_with(
@@ -108,6 +120,7 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
         ) -> Result<()>,
     ) -> Result<(Result<()>, Vec<serde_json::Map<String, Value>>)> {
         let Self {
+            fb: _,
             ctx,
             repo_id,
             acl_manifest_mode,
@@ -546,6 +559,71 @@ async fn test_shadow_unrestricted_sources_do_not_log_rows(fb: FacebookInit) -> R
 
     assert_eq!(samples, Vec::<serde_json::Map<String, Value>>::new());
     Ok(())
+}
+
+// What it tests: the client User-Agent is recorded as `http_user_agent` on the
+// restricted-path access row when present in the request metadata.
+// Expected: the emitted row carries `http_user_agent` equal to the client UA.
+#[mononoke::fbinit_test]
+async fn test_client_user_agent_is_logged(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            true,
+            true,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .with_user_agent("Sapling/1.2.3")
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        sample_field(&samples[0], "http_user_agent"),
+        Some("Sapling/1.2.3".to_string()),
+        "restricted-path row should carry the client User-Agent"
+    );
+    Ok(())
+}
+
+// What it tests: no `http_user_agent` column is emitted when the request carries
+// no User-Agent in its metadata.
+// Expected: the emitted row omits `http_user_agent` entirely.
+#[mononoke::fbinit_test]
+async fn test_missing_user_agent_is_not_logged(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            true,
+            true,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        sample_field(&samples[0], "http_user_agent"),
+        None,
+        "row should omit http_user_agent when no User-Agent is present"
+    );
+    Ok(())
+}
+
+/// Builds a test `CoreContext` whose request metadata carries `user_agent`, so
+/// tests can exercise the `http_user_agent` logging path.
+fn ctx_with_user_agent(fb: FacebookInit, user_agent: &str) -> CoreContext {
+    let metadata = Metadata::default().set_user_agent(Some(user_agent.to_string()));
+    let session = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
+    session.new_context(MononokeScubaSampleBuilder::with_discard())
 }
 
 fn restricted_path_result(

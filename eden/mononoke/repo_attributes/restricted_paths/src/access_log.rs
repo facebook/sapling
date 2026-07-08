@@ -1104,6 +1104,10 @@ fn log_access_to_scuba(
 ) -> Result<()> {
     scuba.add_metadata(ctx.metadata());
 
+    if let Some(user_agent) = ctx.metadata().user_agent() {
+        scuba.add("http_user_agent", user_agent);
+    }
+
     scuba.add_common_server_data();
 
     // We want to log all samples
