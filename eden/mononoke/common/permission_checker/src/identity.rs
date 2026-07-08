@@ -274,6 +274,17 @@ impl TenantInfo {
             client_id,
         ])
     }
+
+    pub fn subcategory(&self) -> Option<String> {
+        match self.category {
+            ClientCategory::CiSandcastle => self.ci_purpose.clone(),
+            ClientCategory::HealthCheck
+            | ClientCategory::InteractiveDev
+            | ClientCategory::DevEnv
+            | ClientCategory::Automation
+            | ClientCategory::Unknown => None,
+        }
+    }
 }
 
 impl fmt::Display for TenantInfo {
@@ -292,6 +303,27 @@ mod tests {
     fn test_ipv6_identity() {
         let id = MononokeIdentity::from_str("MACHINE:2621:10d:c1a8:12c9::1162").unwrap();
         assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
+    }
+
+    #[mononoke::test]
+    fn test_subcategory() {
+        let sandcastle = TenantInfo {
+            client_id: Some("client".to_string()),
+            category: ClientCategory::CiSandcastle,
+            ci_purpose: Some("continuous".to_string()),
+            atlas_env_id: None,
+            atlas_rl: None,
+            faas_job_name: None,
+        };
+        // Sandcastle's subcategory is its ci_purpose.
+        assert_eq!(sandcastle.subcategory().as_deref(), Some("continuous"));
+
+        // A category with no subcategory logic yet.
+        let dev = TenantInfo {
+            category: ClientCategory::InteractiveDev,
+            ..sandcastle
+        };
+        assert_eq!(dev.subcategory(), None);
     }
 
     #[mononoke::test]
