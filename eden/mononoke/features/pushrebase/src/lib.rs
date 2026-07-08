@@ -472,6 +472,9 @@ pub async fn do_batched_pushrebase(
     }
 
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
+    // Parallel all-bookmarks saturation counters: fire for EVERY bookmark's
+    // land, but only in repos already tracked in ODS (monitoring_bookmark set).
+    let emit_all_bookmarks = config.monitoring_bookmark.is_some();
     let reponame = repo.repo_identity().name();
     let repo_args = (reponame.to_string(),);
     let start_critical_section = Instant::now();
@@ -699,6 +702,14 @@ pub async fn do_batched_pushrebase(
     match move_result {
         Ok(Some((_head, log_id, all_rebased_pairs))) => {
             // CAS succeeded — build per-stack outcomes and send via oneshot.
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_success(
+                    repo.repo_identity().name(),
+                    critical_section_duration_us,
+                    None,
+                    all_rebased_pairs.len() as i64,
+                );
+            }
             if should_log {
                 STATS::critical_section_success_duration_us
                     .add_value(critical_section_duration_us, repo_args.clone());
@@ -706,6 +717,14 @@ pub async fn do_batched_pushrebase(
             }
 
             for p in pending {
+                // Per-request: the batch success sample above is per-batch, so
+                // record each landed request's retries-until-success separately.
+                if emit_all_bookmarks {
+                    bookmarks::saturation::record_pushrebase_retries(
+                        repo.repo_identity().name(),
+                        p.request.retry_num.0 as i64,
+                    );
+                }
                 let stack_pairs: Vec<PushrebaseChangesetPair> = all_rebased_pairs
                     .iter()
                     .filter(|pair| {
@@ -742,6 +761,12 @@ pub async fn do_batched_pushrebase(
         }
         Ok(None) => {
             // CAS failed — update conflict_check_base and return for re-queue.
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_failure(
+                    repo.repo_identity().name(),
+                    critical_section_duration_us,
+                );
+            }
             if should_log {
                 STATS::critical_section_failure_duration_us
                     .add_value(critical_section_duration_us, repo_args);
@@ -1257,6 +1282,8 @@ async fn batched_rebase_with_lock(
     }
 
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
+    // Parallel all-bookmarks saturation counters (see do_batched_pushrebase).
+    let emit_all_bookmarks = config.monitoring_bookmark.is_some();
     let repo_args = (repo.repo_identity().name().to_string(),);
     let overall_start = Instant::now();
     let batch_size = requests.len();
@@ -1298,6 +1325,9 @@ async fn batched_rebase_with_lock(
         }
     };
     let lock_wait_ms = lock_start.elapsed().as_millis() as i64;
+    // Saturation measures only the serialized (under-lock) window; the
+    // speculative conflict check runs before the lock, so start timing here.
+    let lock_hold_start = Instant::now();
     let auth_value = locked_txn.current_value();
 
     // Phase 3: Run hooks under lock.
@@ -1306,6 +1336,12 @@ async fn batched_rebase_with_lock(
     let mut commit_hooks = match run_batch_hooks(ctx, &requests_slice, auth_value).await {
         Ok(h) => h,
         Err(e) => {
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_failure(
+                    repo.repo_identity().name(),
+                    lock_hold_start.elapsed().as_nanos() as i64,
+                );
+            }
             let shared = SharedError::from(e);
             log_pessimistic_batch_failure(ctx, "hooks", &shared);
             for c in checked_requests {
@@ -1331,6 +1367,12 @@ async fn batched_rebase_with_lock(
     let state = match rebase_result {
         Ok(state) => state,
         Err((requeued, e)) => {
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_failure(
+                    repo.repo_identity().name(),
+                    lock_hold_start.elapsed().as_nanos() as i64,
+                );
+            }
             log_pessimistic_batch_failure(
                 ctx,
                 "rebase",
@@ -1357,6 +1399,22 @@ async fn batched_rebase_with_lock(
 
     match result {
         Ok((log_id, all_rebased_pairs, pending)) => {
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_success(
+                    repo.repo_identity().name(),
+                    lock_hold_start.elapsed().as_nanos() as i64,
+                    None,
+                    all_rebased_pairs.len() as i64,
+                );
+                // Per-request: the batch sample above is per-batch, so record
+                // each landed request's retries-until-success separately.
+                for p in &pending {
+                    bookmarks::saturation::record_pushrebase_retries(
+                        repo.repo_identity().name(),
+                        p.request.retry_num.0 as i64,
+                    );
+                }
+            }
             if should_log {
                 STATS::critical_section_success_duration_us
                     .add_value(critical_section_duration_us, repo_args.clone());
@@ -1379,6 +1437,12 @@ async fn batched_rebase_with_lock(
             vec![]
         }
         Err((pending, e)) => {
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_failure(
+                    repo.repo_identity().name(),
+                    lock_hold_start.elapsed().as_nanos() as i64,
+                );
+            }
             if should_log {
                 STATS::critical_section_failure_duration_us
                     .add_value(critical_section_duration_us, repo_args);
@@ -1761,6 +1825,8 @@ async fn rebase_in_loop(
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
+    // Parallel all-bookmarks saturation counters (see do_batched_pushrebase).
+    let emit_all_bookmarks = config.monitoring_bookmark.is_some();
     let mut any_attempt_resolved_conflicts = false;
     let repo_args = (repo.repo_identity().name().to_string(),);
     let mut latest_rebase_attempt = root;
@@ -1871,6 +1937,14 @@ async fn rebase_in_loop(
             .try_into()
             .unwrap_or(i64::MAX);
         if let Some((head, log_id, rebased_changesets)) = rebase_outcome {
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_success(
+                    repo.repo_identity().name(),
+                    critical_section_duration_us,
+                    Some(retry_num.0 as i64),
+                    rebased_changesets.len() as i64,
+                );
+            }
             if should_log {
                 STATS::critical_section_success_duration_us
                     .add_value(critical_section_duration_us, repo_args.clone());
@@ -1906,11 +1980,23 @@ async fn rebase_in_loop(
             // CAS failed — carry forward merge info for next attempt
             carried_merge_file_info = reconciled_overrides.unwrap_or_default();
             latest_rebase_attempt = old_bookmark_value.unwrap_or(root);
+            if emit_all_bookmarks {
+                bookmarks::saturation::record_pushrebase_failure(
+                    repo.repo_identity().name(),
+                    critical_section_duration_us,
+                );
+            }
             if should_log {
                 STATS::critical_section_failure_duration_us
                     .add_value(critical_section_duration_us, repo_args.clone());
             }
         }
+    }
+    if emit_all_bookmarks {
+        bookmarks::saturation::record_pushrebase_retries(
+            repo.repo_identity().name(),
+            MAX_REBASE_ATTEMPTS as i64,
+        );
     }
     if should_log {
         STATS::critical_section_retries_failed.add_value(MAX_REBASE_ATTEMPTS as i64, repo_args);
