@@ -165,8 +165,25 @@ impl io::Write for DumbTty {
 }
 
 fn caps() -> Result<Capabilities> {
-    let hints = termwiz::caps::ProbeHints::new_from_env().mouse_reporting(Some(false));
+    let hints = termwiz::caps::ProbeHints::new_from_env()
+        .mouse_reporting(Some(false))
+        .force_terminfo_render_to_use_ansi_sgr(Some(enable_compat_mode()));
     termwiz::caps::Capabilities::new_with_hints(hints)
+}
+
+/// Whether to render text attributes (color, intensity, reset, etc.) with
+/// portable ANSI SGR escapes instead of the terminal's terminfo capabilities,
+/// via termwiz's `force_terminfo_render_to_use_ansi_sgr`.
+///
+/// This matters chiefly for the reset sequence: many terminfo entries (notably
+/// `screen`/`tmux`) define `sgr0` with a trailing `rmacs` (`^O`, byte 0x0F),
+/// which leaks a stray "Shift In" byte into styled output; ANSI SGR (reset =
+/// `\x1b[0m`) avoids it. Enabled unless `SL_DISABLE_TERMINFO_COMPAT` is set.
+///
+/// Shared by the progress renderer (`caps`) and the general text styler
+/// (`termstyle`).
+pub fn enable_compat_mode() -> bool {
+    std::env::var("SL_DISABLE_TERMINFO_COMPAT").is_err()
 }
 
 pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {

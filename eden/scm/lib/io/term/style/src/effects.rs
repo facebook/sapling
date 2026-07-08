@@ -8,6 +8,8 @@
 use std::io;
 use std::io::Write;
 
+// Leading `::` disambiguates the `io` crate from the `std::io` import above.
+use ::io::enable_compat_mode;
 use termwiz::caps::Capabilities;
 pub use termwiz::caps::ColorLevel;
 use termwiz::caps::ProbeHints;
@@ -106,10 +108,6 @@ impl RenderedStyle {
     pub fn suffix(&self) -> &[u8] {
         &self.suffix
     }
-}
-
-fn enable_compat_mode() -> bool {
-    std::env::var("SL_DISABLE_TERMINFO_COMPAT").is_err()
 }
 
 impl Styler {

@@ -38,6 +38,7 @@ use term::DEFAULT_TERM_WIDTH;
 use term::DumbTerm;
 use term::DumbTty;
 use term::Term;
+pub use term::enable_compat_mode;
 use term::make_real_term;
 use termwiz::surface::Change;
 use termwiz::surface::change::ChangeSequence;
