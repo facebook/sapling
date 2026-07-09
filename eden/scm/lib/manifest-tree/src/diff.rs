@@ -10,9 +10,6 @@ use std::mem;
 use std::sync::Arc;
 
 use anyhow::Result;
-use flume::Receiver;
-use flume::Sender;
-use flume::bounded;
 use manifest::DiffEntry;
 use manifest::DiffType;
 use manifest::DirDiffEntry;
@@ -58,18 +55,18 @@ enum DiffWork {
 }
 
 impl DiffWork {
-    fn process(
+    fn process<T: DiffOutput>(
         self,
         store: &InnerStore,
         matcher: &dyn Matcher,
         work: &mut Vec<DiffWork>,
-        result: &ResultSender,
+        results: &mut Vec<T>,
     ) -> Result<()> {
         match self {
             DiffWork::Single(dir, side, path_conflict) => {
-                diff_single(dir, side, path_conflict, store, matcher, work, result)
+                diff_single(dir, side, path_conflict, store, matcher, work, results)
             }
-            DiffWork::Changed(left, right) => diff_dirs(left, right, store, matcher, work, result),
+            DiffWork::Changed(left, right) => diff_dirs(left, right, store, matcher, work, results),
         }
     }
 
@@ -81,81 +78,55 @@ impl DiffWork {
     }
 }
 
-#[derive(Clone)]
-pub(crate) enum ResultSender {
-    File(Sender<Result<DiffEntry>>),
-    Dir(Sender<Result<DirDiffEntry>>),
+pub(crate) trait DiffOutput: Send + Sized + 'static {
+    fn need_file_diff() -> bool;
+    fn need_dir_diff() -> bool;
+    fn push_file_diff(results: &mut Vec<Self>, diff: DiffEntry);
+    fn push_dir_diff(results: &mut Vec<Self>, diff: DirDiffEntry);
 }
 
-impl ResultSender {
-    fn send_file_diff(&self, diff: DiffEntry) -> Result<()> {
-        if let Self::File(sender) = self {
-            sender.send(Ok(diff))?;
-        }
-        Ok(())
+impl DiffOutput for DiffEntry {
+    fn need_file_diff() -> bool {
+        true
     }
 
-    fn send_dir_diff(&self, diff: DirDiffEntry) -> Result<()> {
-        if let Self::Dir(sender) = self {
-            sender.send(Ok(diff))?;
-        }
-        Ok(())
+    fn need_dir_diff() -> bool {
+        false
     }
 
-    fn send_error(&self, err: anyhow::Error) -> Result<()> {
-        match self {
-            Self::File(sender) => sender.send(Err(err))?,
-            Self::Dir(sender) => sender.send(Err(err))?,
-        }
-        Ok(())
+    fn push_file_diff(results: &mut Vec<Self>, diff: DiffEntry) {
+        results.push(diff);
     }
 
-    fn need_file_diff(&self) -> bool {
-        matches!(self, Self::File(_))
-    }
-
-    fn need_dir_diff(&self) -> bool {
-        matches!(self, Self::Dir(_))
-    }
-
-    fn is_disconnected(&self) -> bool {
-        match self {
-            Self::File(sender) => sender.is_disconnected(),
-            Self::Dir(sender) => sender.is_disconnected(),
-        }
-    }
+    fn push_dir_diff(_results: &mut Vec<Self>, _diff: DirDiffEntry) {}
 }
 
-impl From<Sender<Result<DiffEntry>>> for ResultSender {
-    fn from(sender: Sender<Result<DiffEntry>>) -> Self {
-        Self::File(sender)
+impl DiffOutput for DirDiffEntry {
+    fn need_file_diff() -> bool {
+        false
     }
-}
 
-impl From<Sender<Result<DirDiffEntry>>> for ResultSender {
-    fn from(sender: Sender<Result<DirDiffEntry>>) -> Self {
-        Self::Dir(sender)
+    fn need_dir_diff() -> bool {
+        true
+    }
+
+    fn push_file_diff(_results: &mut Vec<Self>, _diff: DiffEntry) {}
+
+    fn push_dir_diff(results: &mut Vec<Self>, diff: DirDiffEntry) {
+        results.push(diff);
     }
 }
 
 #[derive(Clone)]
 struct DiffContext {
-    result_send: ResultSender,
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
     progress_bar: Arc<ProgressBar>,
 }
 
-impl DiffContext {
-    fn canceled(&self) -> bool {
-        self.result_send.is_disconnected()
-    }
-}
-
 // Balance between large remote fetch batches and parallelism for CPU-intensive
 // tree deserialization. 1000 was faster than 100 and 5000 in testing.
 const BATCH_SIZE: usize = 1000;
-const RESULT_QUEUE_SIZE: usize = BATCH_SIZE;
 
 /// A parallel iterator over two trees.
 ///
@@ -166,8 +137,7 @@ pub(crate) fn diff<'a, T>(
     matcher: Arc<dyn Matcher + Send + Sync>,
 ) -> Box<dyn Iterator<Item = Result<T>>>
 where
-    ResultSender: From<Sender<Result<T>>>,
-    T: Send + 'static,
+    T: DiffOutput,
 {
     let pairs: Vec<_> = pairs
         .into_iter()
@@ -197,111 +167,70 @@ where
         })
         .collect();
 
-    let (result_send, result_recv) = bounded::<Result<T>>(RESULT_QUEUE_SIZE);
-
     let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
     let registry = Registry::main();
     registry.register_progress_bar(&progress_bar);
 
     let ctx = DiffContext {
-        result_send: ResultSender::from(result_send.clone()),
         matcher,
         store: pairs[0][0].store.clone(),
         progress_bar: progress_bar.clone(),
     };
 
     let input: Items<DiffWork, anyhow::Error> = Items::ready(input);
-    let drain_result_send = ctx.result_send.clone();
-    std::thread::spawn(move || {
-        let result = Work::run(
-            WorkOptions::new()
-                .max_workers(bfs::num_workers())
-                .inline_items(BATCH_SIZE),
-            input,
-            WorkShape::batch(move |batch, scope| run_diff_worker(batch, scope, &ctx)),
-        )
-        .drain();
-        if let Err(err) = result {
-            let _ = drain_result_send.send_error(err);
-        }
-    });
+    let items = Work::run(
+        WorkOptions::new()
+            .max_workers(bfs::num_workers())
+            .inline_items(BATCH_SIZE),
+        input,
+        WorkShape::batch(move |batch, scope| run_diff_worker(batch, scope, &ctx)),
+    );
 
     Box::new(DiffIter {
-        result_recv,
+        items: Box::new(items.into_iter()),
         progress_bar: ProgressBar::push_active(progress_bar, registry),
     })
 }
 
-fn run_diff_worker(
+fn run_diff_worker<T: DiffOutput>(
     work: Result<Vec<DiffWork>>,
-    scope: &mut WorkScope<'_, DiffWork, (), anyhow::Error>,
+    scope: &mut WorkScope<'_, DiffWork, T, anyhow::Error>,
     ctx: &DiffContext,
 ) -> Result<()> {
     let work = match work {
         Ok(work) => work,
         Err(err) => {
-            let _ = ctx.result_send.send_error(err);
+            let _ = scope.send_error(err);
             return Ok(());
         }
     };
 
-    if ctx.canceled() {
+    if scope.is_canceled() {
         return Ok(());
     }
 
-    let durable_entries: Vec<_> = work
+    let mut durable_entry_count = 0;
+    let durable_entries = work
         .iter()
-        .flat_map(|item| match item {
-            DiffWork::Single(dir, _, _) => {
-                let mut v = Vec::new();
-                if let Durable(entry) = dir.link.as_ref() {
-                    if !entry.links_initialized() && !entry.is_permission_denied() {
-                        v.push(bfs::PrefetchTree {
-                            path: dir.path.as_repo_path(),
-                            entry,
-                            subtree_matches_everything: false,
-                        });
-                    }
-                }
-                v
-            }
-            DiffWork::Changed(left, right) => {
-                let mut v = Vec::new();
-                if let Durable(entry) = left.link.as_ref() {
-                    if !entry.links_initialized() && !entry.is_permission_denied() {
-                        v.push(bfs::PrefetchTree {
-                            path: left.path.as_repo_path(),
-                            entry,
-                            subtree_matches_everything: false,
-                        });
-                    }
-                }
-                if let Durable(entry) = right.link.as_ref() {
-                    if !entry.links_initialized() && !entry.is_permission_denied() {
-                        v.push(bfs::PrefetchTree {
-                            path: right.path.as_repo_path(),
-                            entry,
-                            subtree_matches_everything: false,
-                        });
-                    }
-                }
-                v
-            }
-        })
-        .collect();
-    ctx.progress_bar
-        .increase_position(durable_entries.len() as u64);
+        .flat_map(diff_work_prefetch_trees)
+        .inspect(|_| durable_entry_count += 1);
     if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
-        let _ = ctx.result_send.send_error(err);
+        let _ = scope.send_error(err);
         return Ok(());
     }
+    ctx.progress_bar.increase_position(durable_entry_count);
 
     let mut to_send = Vec::new();
+    let mut results = Vec::new();
     for item in work {
-        if let Err(err) = item.process(&ctx.store, &ctx.matcher, &mut to_send, &ctx.result_send) {
-            if ctx.result_send.send_error(err).is_err() {
+        if let Err(err) = item.process(&ctx.store, &ctx.matcher, &mut to_send, &mut results) {
+            if !scope.send_error(err) {
                 return Ok(());
             }
+        }
+
+        if !results.is_empty() && !scope.send_result(mem::take(&mut results)) {
+            return Ok(());
         }
 
         if !to_send.is_empty() && !scope.submit_work(mem::take(&mut to_send)) {
@@ -312,8 +241,32 @@ fn run_diff_worker(
     Ok(())
 }
 
+fn diff_work_prefetch_trees(item: &DiffWork) -> impl Iterator<Item = bfs::PrefetchTree<'_>> {
+    let entries = match item {
+        DiffWork::Single(dir, _, _) => [durable_link_prefetch(&dir.path, &dir.link), None],
+        DiffWork::Changed(left, right) => [
+            durable_link_prefetch(&left.path, &left.link),
+            durable_link_prefetch(&right.path, &right.link),
+        ],
+    };
+    entries.into_iter().flatten()
+}
+
+fn durable_link_prefetch<'a>(path: &'a RepoPath, link: &'a Link) -> Option<bfs::PrefetchTree<'a>> {
+    match link.as_ref() {
+        Durable(entry) if !entry.links_initialized() && !entry.is_permission_denied() => {
+            Some(bfs::PrefetchTree {
+                path,
+                entry,
+                subtree_matches_everything: false,
+            })
+        }
+        _ => None,
+    }
+}
+
 struct DiffIter<T: Send + 'static = DiffEntry> {
-    result_recv: Receiver<Result<T>>,
+    items: Box<dyn Iterator<Item = Result<T>>>,
     #[allow(unused)]
     progress_bar: ActiveProgressBar,
 }
@@ -322,20 +275,20 @@ impl<T: Send + 'static> Iterator for DiffIter<T> {
     type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.result_recv.recv().ok()
+        self.items.next()
     }
 }
 
 /// Process a directory that is only present on one side of the diff.
-/// Sends diff entries to `result` and adds more work items to `work`.
-fn diff_single(
+/// Adds diff entries to `results` and more work items to `work`.
+fn diff_single<T: DiffOutput>(
     dir: DirLink,
     side: Side,
     path_conflict: bool,
     store: &InnerStore,
     matcher: &dyn Matcher,
     work: &mut Vec<DiffWork>,
-    result: &ResultSender,
+    results: &mut Vec<T>,
 ) -> Result<()> {
     if let Some(err) = dir.permission_denied_error() {
         tracing::debug!(path = %dir.path, "skipping permission-denied tree in diff_single");
@@ -347,12 +300,15 @@ fn diff_single(
 
     let (files, dirs) = dir.list(store)?;
 
-    if result.need_dir_diff() {
-        result.send_dir_diff(DirDiffEntry {
-            path: dir.path,
-            left: side == Side::Left,
-            right: side == Side::Right,
-        })?;
+    if T::need_dir_diff() {
+        T::push_dir_diff(
+            results,
+            DirDiffEntry {
+                path: dir.path,
+                left: side == Side::Left,
+                right: side == Side::Right,
+            },
+        );
     }
 
     for d in dirs.into_iter() {
@@ -366,12 +322,12 @@ fn diff_single(
             continue;
         }
 
-        if result.need_file_diff() && matcher.matches_file(&f.path)? {
+        if T::need_file_diff() && matcher.matches_file(&f.path)? {
             let entry = match side {
                 Side::Left => DiffEntry::left(f),
                 Side::Right => DiffEntry::right(f),
             };
-            result.send_file_diff(entry)?;
+            T::push_file_diff(results, entry);
         }
     }
 
@@ -381,14 +337,14 @@ fn diff_single(
 /// Diff two directories.
 ///
 /// The directories should correspond to the same path on either side of the
-/// diff. Sends diff entries to `result` and adds more work items to `work`.
-fn diff_dirs(
+/// diff. Adds diff entries to `results` and more work items to `work`.
+fn diff_dirs<T: DiffOutput>(
     left: DirLink,
     right: DirLink,
     store: &InnerStore,
     matcher: &dyn Matcher,
     work: &mut Vec<DiffWork>,
-    result: &ResultSender,
+    results: &mut Vec<T>,
 ) -> Result<()> {
     let left_denied = if let Some(err) = left.permission_denied_error() {
         tracing::debug!(path = %left.path, "skipping permission-denied left tree in diff_dirs");
@@ -412,10 +368,10 @@ fn diff_dirs(
         return Ok(());
     }
     if left_denied {
-        return diff_single(right, Side::Right, false, store, matcher, work, result);
+        return diff_single(right, Side::Right, false, store, matcher, work, results);
     }
     if right_denied {
-        return diff_single(left, Side::Left, false, store, matcher, work, result);
+        return diff_single(left, Side::Left, false, store, matcher, work, results);
     }
 
     // Returns whether the parent directory is considered as modified:
@@ -431,17 +387,17 @@ fn diff_dirs(
 
         let (file_diff, dir_diff) = diff_links(&left.path, l, r);
 
-        let dir_changed = result.need_dir_diff()
+        let dir_changed = T::need_dir_diff()
             && match (l, r) {
                 (Some(..), None) | (None, Some(..)) => true,
                 (None, None) => false,
                 (Some((_, llink)), Some((_, rlink))) => llink.is_leaf() != rlink.is_leaf(),
             };
 
-        if result.need_file_diff() {
+        if T::need_file_diff() {
             if let Some(file_diff) = file_diff {
                 if matcher.matches_file(&file_diff.path)? {
-                    result.send_file_diff(file_diff)?;
+                    T::push_file_diff(results, file_diff);
                 }
             }
         }
@@ -472,12 +428,15 @@ fn diff_dirs(
         dir_changed = dir_changed || item_changed
     }
 
-    if result.need_dir_diff() && dir_changed {
-        result.send_dir_diff(DirDiffEntry {
-            path: left.path.clone(),
-            left: true,
-            right: true,
-        })?;
+    if T::need_dir_diff() && dir_changed {
+        T::push_dir_diff(
+            results,
+            DirDiffEntry {
+                path: left.path.clone(),
+                left: true,
+                right: true,
+            },
+        );
     }
 
     Ok(())
@@ -626,9 +585,8 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let tree = make_tree_manifest(store, &[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
-        let (sender, receiver) = bounded::<Result<DiffEntry>>(RESULT_QUEUE_SIZE);
         let mut work = Vec::new();
-        let sender = ResultSender::from(sender);
+        let mut results: Vec<DiffEntry> = Vec::new();
 
         let matcher = AlwaysMatcher::new();
         diff_single(
@@ -638,11 +596,9 @@ mod tests {
             &tree.store,
             &matcher,
             &mut work,
-            &sender,
+            &mut results,
         )
         .unwrap();
-
-        drop(sender);
 
         let expected_entries = vec![
             DiffEntry::new(
@@ -654,10 +610,7 @@ mod tests {
                 DiffType::LeftOnly(FileMetadata::new(hgid("3"), FileType::Regular)),
             ),
         ];
-        assert_eq!(
-            receiver.into_iter().collect::<Result<Vec<_>>>().unwrap(),
-            expected_entries
-        );
+        assert_eq!(results, expected_entries);
 
         let dummy = Link::ephemeral();
         let expected_next = vec![
