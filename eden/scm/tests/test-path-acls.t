@@ -276,6 +276,200 @@ restricted files.
   public v1 (no-eol)
   $ test ! -e restricted/secret.txt || echo BUG: restricted path leaked
 
+Subtree copy/merge with .slacl paths:
+
+  $ cd
+  $ setconfig subtree.allow-any-source-commit=True
+  $ setconfig subtree.min-path-depth=1
+  $ newserver server_subtree_acl
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/subdir/secret.txt = secret v1
+  >   # A/public/file.txt = public
+  >   # A/public/copied-subdir/secret.txt = secret v1
+  >   # B/restricted/subdir/secret.txt = secret v2
+  > EOS
+
+Current behavior: users with access can use subtree copy and merge to copy
+restricted data to unrestricted paths without warning.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=disabled
+  $ setconfig slacl.server-acl-enforcement=false
+  $ newclientrepo client_subtree_acl_access server_subtree_acl
+  $ sl go -q $A
+  $ sl subtree copy --from-path restricted/subdir --to-path public/access-copied-subdir -m "copy restricted subdir"
+  copying restricted/subdir to public/access-copied-subdir
+  $ sl cat public/access-copied-subdir/secret.txt
+  secret v1 (no-eol)
+  $ sl subtree merge -r $B --from-path restricted/subdir --to-path public/access-copied-subdir
+  pulling '57ca17e287bf46953d8daa9b20a45ce411862a87' from 'test:server_subtree_acl'
+  searching for merge base ...
+  found the last subtree copy commit a00c251d2596
+  merge base: 2a5a3c105427
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ cat public/access-copied-subdir/secret.txt
+  secret v2 (no-eol)
+
+Users with access can use subtree copy within the restricted tree.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=disabled
+  $ setconfig slacl.server-acl-enforcement=false
+  $ newclientrepo client_subtree_acl_access_self server_subtree_acl
+  $ sl go -q $A
+  $ sl subtree copy --from-path restricted/subdir --to-path restricted/copied-subdir -m "copy restricted subdir within restricted tree"
+  copying restricted/subdir to restricted/copied-subdir
+  $ sl cat restricted/copied-subdir/secret.txt
+  secret v1 (no-eol)
+
+Current behavior: subtree copy and merge can copy restricted .slacl data to
+unrestricted paths for users without access.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_no_access server_subtree_acl
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree copy --from-path restricted --to-path public/copied-restricted
+  copying restricted to public/copied-restricted
+  $ test ! -e public/copied-restricted/subdir/secret.txt || echo BUG: restricted path leaked
+  BUG: restricted path leaked
+  $ sl subtree merge -r $B --from-path restricted/subdir --to-path public/copied-subdir
+  pulling '57ca17e287bf46953d8daa9b20a45ce411862a87' from 'test:server_subtree_acl'
+  searching for merge base ...
+  merge base: 2a5a3c105427
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ test "$(cat public/copied-subdir/secret.txt)" != "secret v2" || echo BUG: restricted merge leaked
+  BUG: restricted merge leaked
+
+Subtree copy filters a restricted child directory from child and parent sources,
+but aborts when the source is a restricted file.
+  $ cd
+  $ newserver server_subtree_acl_restricted_child
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A  # A/parent/public.txt = visible
+  >    # A/parent/restricted/.slacl = acl config
+  >    # A/parent/restricted/secret.txt = secret
+  >    # B/parent/public.txt = visible v2
+  >    # B/parent/restricted/secret.txt = secret v2
+  > EOS
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_restricted_child_no_access server_subtree_acl_restricted_child
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree copy --from-path parent/restricted --to-path public/copied-restricted-child -m "copy restricted child"
+  copying parent/restricted to public/copied-restricted-child
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ test ! -e public/copied-restricted-child/secret.txt || echo BUG: restricted path leaked
+
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_restricted_file_no_access server_subtree_acl_restricted_child
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree copy --from-path parent/restricted/secret.txt --to-path public/copied-secret.txt -m "copy restricted file"
+  abort: path 'parent/restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ test ! -e public/copied-secret.txt || echo BUG: restricted path leaked
+
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_parent_no_access server_subtree_acl_restricted_child
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree copy --from-path parent --to-path public/copied-parent -m "copy parent"
+  copying parent to public/copied-parent
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ cat public/copied-parent/public.txt
+  visible (no-eol)
+  $ test ! -e public/copied-parent/restricted/secret.txt || echo BUG: restricted path leaked
+  $ sl subtree merge -r $B --from-path parent --to-path public/copied-parent
+  pulling 'fb7a80340b81d303bc6588780dbc64b9e8f98c7a' from 'test:server_subtree_acl_restricted_child'
+  searching for merge base ...
+  found the last subtree copy commit 8562d37d3e20
+  merge base: 45e0dd9b6199
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' [and 1 more] are restricted by ACL 'some-acl'
+  [1]
+  $ cat public/copied-parent/public.txt
+  visible v2 (no-eol)
+  $ test ! -e public/copied-parent/restricted/secret.txt || echo BUG: restricted merge leaked
+
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_parent_graft_no_access server_subtree_acl_restricted_child
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree copy -r $A --from-path parent --to-path public/copied-parent -m "copy parent"
+  copying parent to public/copied-parent
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree graft -r $B --from-path parent --to-path public/copied-parent
+  pulling '*' from 'test:server_subtree_acl_restricted_child' (glob)
+  grafting * "B" (glob)
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted'*restricted by ACL 'some-acl' (glob)
+  [1]
+  $ cat public/copied-parent/public.txt
+  visible v2 (no-eol)
+  $ test ! -e public/copied-parent/restricted/secret.txt || echo BUG: restricted graft leaked
+
+Subtree merge filters a restricted file source from an unrestricted path.
+  $ cd
+  $ newserver server_subtree_acl_restricted_file_merge
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A  # A/parent/restricted/.slacl = acl config
+  >    # A/parent/restricted/secret.txt = secret
+  >    # A/public/copied-secret.txt = secret
+  >    # B/parent/restricted/secret.txt = secret v2
+  > EOS
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_subtree_acl_restricted_file_merge_no_access server_subtree_acl_restricted_file_merge
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl subtree merge -r $B --from-path parent/restricted/secret.txt --to-path public/copied-secret.txt
+  pulling '*' from 'test:server_subtree_acl_restricted_file_merge' (glob)
+  abort: path 'parent/restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ test "$(cat public/copied-secret.txt)" != "secret v2" || echo BUG: restricted file merge leaked
+
 Diff stat from restricted to unrestricted currently aborts instead of filtering
 the restricted side.
 
