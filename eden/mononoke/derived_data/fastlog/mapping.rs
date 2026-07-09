@@ -27,6 +27,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::typed_hash::HistoryManifestDirectoryId;
+use mononoke_types::typed_hash::HistoryManifestFileId;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
@@ -49,6 +51,8 @@ pub enum ErrorKind {
     InvalidThrift(String, String),
     #[error("Fastlog batch for {0:?} unode not found")]
     NotFound(Entry<ManifestUnodeId, FileUnodeId>),
+    #[error("Fastlog batch for {0:?} history manifest entry not found")]
+    HmNotFound(Entry<HistoryManifestDirectoryId, HistoryManifestFileId>),
     #[error("Failed to deserialize FastlogBatch for {0}: {1}")]
     DeserializationError(String, String),
 }

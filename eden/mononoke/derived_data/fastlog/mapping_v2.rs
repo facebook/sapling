@@ -24,6 +24,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::HistoryManifestDirectoryId;
 
+use crate::derive_v2::derive_fastlog_v2;
+
 const FASTLOG_V2_VERSION: i32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,7 +61,7 @@ impl BonsaiDerivable for RootFastlogV2 {
         let root_manifest = derivation_ctx
             .fetch_dependency::<RootHistoryManifestDirectoryId>(ctx, csid)
             .await?;
-        // Stub: real derivation logic added in a follow-up diff.
+        derive_fastlog_v2(ctx, derivation_ctx, bonsai, root_manifest).await?;
         Ok(RootFastlogV2 {
             csid,
             root_manifest,

@@ -68,6 +68,32 @@ pub(crate) async fn create_new_batch_with_prefix(
     }))
     .await?;
 
+    merge_parent_batches(ctx, blobstore, parent_batches, linknode).await
+}
+
+pub(crate) async fn create_new_batch_v2(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    hm_parents: Vec<Entry<HistoryManifestDirectoryId, HistoryManifestFileId>>,
+    linknode: ChangesetId,
+) -> Result<FastlogBatch, Error> {
+    let parent_batches = try_join_all(hm_parents.into_iter().map({
+        move |entry| async move {
+            let maybe_batch = fetch_fastlog_batch_by_hm_id(ctx, blobstore, &entry).await?;
+            maybe_batch.ok_or_else(|| Error::from(ErrorKind::HmNotFound(entry)))
+        }
+    }))
+    .await?;
+
+    merge_parent_batches(ctx, blobstore, parent_batches, linknode).await
+}
+
+async fn merge_parent_batches(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    parent_batches: Vec<FastlogBatch>,
+    linknode: ChangesetId,
+) -> Result<FastlogBatch, Error> {
     if parent_batches.len() < 2 {
         match parent_batches.first() {
             Some(parent_batch) => {
@@ -296,7 +322,6 @@ pub async fn fetch_fastlog_batch_by_hm_id<B: KeyedBlobstore>(
     }
 }
 
-#[allow(dead_code)]
 pub(crate) async fn save_fastlog_batch_by_hm_id<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,

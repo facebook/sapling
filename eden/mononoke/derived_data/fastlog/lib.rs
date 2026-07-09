@@ -22,6 +22,7 @@
 ///
 /// RootFastlog is a derived data which derives FastlogBatch for each unode
 /// that was created or modified in this commit.
+mod derive_v2;
 mod fastlog_impl;
 mod mapping;
 mod mapping_v2;
