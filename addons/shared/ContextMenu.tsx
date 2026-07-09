@@ -60,6 +60,65 @@ export type ContextMenuItem =
 
 export const contextMenuState = atom<null | ContextMenuData>(null);
 
+/**
+ * Compute the absolute placement for the context menu overlay from the click
+ * point, the window size, and the zoom level. The menu anchors to whichever
+ * viewport quadrant the click is in and grows toward the center; the `maxHeight`
+ * / `maxWidth` clamps keep it inside the viewport so it never spills off an edge
+ * (e.g. off the left of a narrow pane). Exported for unit testing.
+ */
+export function computeContextMenuStyle(
+  state: {x: number; y: number},
+  windowSize: {innerWidth: number; innerHeight: number},
+  zoom: number,
+): {
+  position: React.CSSProperties;
+  topOrBottom: 'top' | 'bottom';
+  leftOrRight: 'left' | 'right';
+} {
+  const topOrBottom = state.y > windowSize.innerHeight / zoom / 2 ? 'bottom' : 'top';
+  const leftOrRight = state.x > windowSize.innerWidth / zoom / 2 ? 'right' : 'left';
+  const yOffset = 10;
+  const xOffset = -10; // var(--pad)
+  let position: React.CSSProperties;
+  if (topOrBottom === 'top') {
+    if (leftOrRight === 'left') {
+      position = {top: state.y + yOffset, left: state.x + xOffset};
+    } else {
+      position = {
+        top: state.y + yOffset,
+        right: windowSize.innerWidth / zoom - (state.x - xOffset),
+      };
+    }
+  } else {
+    if (leftOrRight === 'left') {
+      position = {
+        bottom: windowSize.innerHeight / zoom - (state.y - yOffset),
+        left: state.x + xOffset,
+      };
+    } else {
+      position = {
+        bottom: windowSize.innerHeight / zoom - (state.y - yOffset),
+        right: windowSize.innerWidth / zoom - (state.x - xOffset),
+      };
+    }
+  }
+  position.maxHeight =
+    windowSize.innerHeight / zoom -
+    ((position.top as number | null) ?? 0) -
+    ((position.bottom as number | null) ?? 0);
+  // Clamp width the same way as maxHeight so a menu anchored near one edge cannot
+  // grow off the opposite edge in a narrow pane; keep the 500px cap (matching
+  // .context-menu-container in ContextMenu.css) when the viewport has room.
+  position.maxWidth = Math.min(
+    500,
+    windowSize.innerWidth / zoom -
+      ((position.left as number | null) ?? 0) -
+      ((position.right as number | null) ?? 0),
+  );
+  return {position, topOrBottom, leftOrRight};
+}
+
 export function ContextMenus() {
   const [state, setState] = useAtom(contextMenuState);
 
@@ -99,31 +158,7 @@ export function ContextMenus() {
   }
 
   const zoom = getZoomLevel();
-  const topOrBottom = state.y > window.innerHeight / zoom / 2 ? 'bottom' : 'top';
-  const leftOrRight = state.x > window.innerWidth / zoom / 2 ? 'right' : 'left';
-  const yOffset = 10;
-  const xOffset = -10; // var(--pad)
-  let position: React.CSSProperties;
-  if (topOrBottom === 'top') {
-    if (leftOrRight === 'left') {
-      position = {top: state.y + yOffset, left: state.x + xOffset};
-    } else {
-      position = {top: state.y + yOffset, right: window.innerWidth / zoom - (state.x - xOffset)};
-    }
-  } else {
-    if (leftOrRight === 'left') {
-      position = {bottom: window.innerHeight / zoom - (state.y - yOffset), left: state.x + xOffset};
-    } else {
-      position = {
-        bottom: window.innerHeight / zoom - (state.y - yOffset),
-        right: window.innerWidth / zoom - (state.x - xOffset),
-      };
-    }
-  }
-  position.maxHeight =
-    window.innerHeight / zoom -
-    ((position.top as number | null) ?? 0) -
-    ((position.bottom as number | null) ?? 0);
+  const {position, topOrBottom, leftOrRight} = computeContextMenuStyle(state, window, zoom);
 
   return (
     <div
