@@ -24,6 +24,7 @@ pub(crate) mod acl_evaluator;
 /// Supporting libraries.
 pub(crate) mod internalconfig;
 pub(crate) mod internalconfigs;
+pub(crate) mod routing;
 pub(crate) mod thrift_types;
 
 mod hooks;
@@ -35,3 +36,5 @@ pub use dynamic_system::get_http_config;
 pub use internalconfig::Domain;
 pub use internalconfig::get_domain;
 pub use mode::FbConfigMode;
+// Re-exports for cross-crate consumers (EdenFS).
+pub use routing::ClientNetwork;
