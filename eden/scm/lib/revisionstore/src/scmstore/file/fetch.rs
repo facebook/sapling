@@ -53,6 +53,7 @@ use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::KeyFetchError;
+use crate::scmstore::fetch::fan_out_cloned;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::metrics::StoreLocation;
@@ -134,8 +135,8 @@ impl FetchState {
         self.common.pending_len()
     }
 
-    pub(crate) fn all_keys(&self) -> Vec<Key> {
-        self.common.all_keys()
+    pub(crate) fn unique_keys(&self) -> Vec<Key> {
+        self.common.unique_keys()
     }
 
     pub(crate) fn format(&self) -> SerializationFormat {
@@ -904,10 +905,12 @@ impl FetchState {
             return;
         }
 
-        self.common.pending.retain(|key, value| {
+        let progress_bar = self.common.progress_bar();
+        self.common.pending.retain(|key, pending| {
             let span = tracing::debug_span!("checking derivations", %key);
             let _guard = span.enter();
 
+            let value = &mut pending.value;
             let existing_attrs = value.attrs();
             let missing = self.common.request_attrs - existing_attrs;
             let actionable = existing_attrs.with_computable() & missing;
@@ -925,7 +928,10 @@ impl FetchState {
                     if new.attrs().has(self.common.request_attrs) {
                         tracing::debug!("marking complete");
 
-                        self.metrics.aux.store(StoreLocation::Cache).computed(1);
+                        self.metrics
+                            .aux
+                            .store(StoreLocation::Cache)
+                            .computed(pending.count);
 
                         if let Some(aux_cache) = aux_cache {
                             if let Some(ref aux_data) = new.aux_data {
@@ -934,10 +940,12 @@ impl FetchState {
                         }
 
                         let new = new.mask(self.common.request_attrs);
-
                         if !self.fctx.mode().ignore_result() {
-                            let _ = self.common.found_tx.send(Ok((key.clone(), new)));
+                            fan_out_cloned((key.clone(), new), pending.count, |(key, new)| {
+                                let _ = self.common.found_tx.send(Ok((key, new)));
+                            });
                         }
+                        progress_bar.increase_position(pending.count as u64);
 
                         // Remove this entry from `pending`.
                         return false;

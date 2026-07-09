@@ -31,6 +31,40 @@ impl KeyError {
 #[error("{0}: {1:#}")]
 pub struct KeyedError(pub Key, #[source] pub Error);
 
+#[derive(Clone)]
+pub struct SharedError(Arc<Error>);
+
+impl SharedError {
+    pub fn new(err: Error) -> Self {
+        Self(Arc::new(err))
+    }
+
+    pub fn into_anyhow(self) -> Error {
+        match Arc::try_unwrap(self.0) {
+            Ok(err) => err,
+            Err(err) => Self(err).into(),
+        }
+    }
+}
+
+impl std::error::Error for SharedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.0.as_ref().as_ref())
+    }
+}
+
+impl std::fmt::Display for SharedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self.0.as_ref(), f)
+    }
+}
+
+impl std::fmt::Debug for SharedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self.0.as_ref(), f)
+    }
+}
+
 /// Error indicating that access to a tree was denied by a path ACL.
 #[derive(Debug, Clone, PartialEq, Error)]
 #[error(

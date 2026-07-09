@@ -224,7 +224,7 @@ impl FileStore {
             .flatten()
             .collect::<Vec<_>>();
 
-            let mut keys = state.all_keys();
+            let mut keys = state.unique_keys();
             keys.sort();
             let keys: Vec<_> = keys.into_iter().map(|key| key.path.into_string()).collect();
 
@@ -262,7 +262,7 @@ impl FileStore {
 
             // Only copy keys for activity logger if we have an activity logger;
             let activity_logger_keys: Vec<Key> = if activity_logger.is_some() {
-                state.all_keys()
+                state.unique_keys()
             } else {
                 Vec::new()
             };

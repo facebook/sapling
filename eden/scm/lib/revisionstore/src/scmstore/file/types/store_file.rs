@@ -20,7 +20,7 @@ use crate::scmstore::FileAuxData;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct StoreFile {
     // TODO(meyer): We'll probably eventually need a better "canonical lazy file" abstraction, since SaplingRemoteApi FileEntry won't always carry content
     pub(crate) content: Option<LazyFile>,

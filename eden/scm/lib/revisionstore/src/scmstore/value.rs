@@ -9,7 +9,7 @@ use std::ops::BitOr;
 
 use crate::scmstore::attrs::StoreAttrs;
 
-pub trait StoreValue: BitOr<Output = Self> + Default + Sized {
+pub trait StoreValue: BitOr<Output = Self> + Clone + Default + Sized {
     type Attrs: StoreAttrs;
 
     /// Returns the attributes present in the value.

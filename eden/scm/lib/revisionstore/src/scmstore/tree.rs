@@ -394,7 +394,7 @@ impl TreeStore {
             .flatten()
             .collect::<Vec<_>>();
 
-            let mut keys = state.common.all_keys();
+            let mut keys = state.common.unique_keys();
             keys.sort();
             let keys: Vec<_> = keys
                 .into_iter()

@@ -23,6 +23,7 @@ use crate::scmstore::file::FileAuxData;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)
+#[derive(Clone)]
 pub(crate) enum LazyFile {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry, SerializationFormat),

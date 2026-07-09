@@ -17,7 +17,7 @@ use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::scmstore::value::StoreValue;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct StoreTree {
     pub(crate) content: Option<LazyTree>,
     pub(crate) parents: Option<Parents>,

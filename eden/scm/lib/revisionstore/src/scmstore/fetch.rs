@@ -19,9 +19,15 @@ use progress_model::ProgressBar;
 use types::FetchContext;
 use types::Key;
 use types::errors::KeyedError;
+use types::errors::SharedError;
 
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
+
+pub(crate) struct PendingValue<T> {
+    pub(crate) value: T,
+    pub(crate) count: usize,
+}
 
 /// Per-store counter that bounds the number of items a store can deliver across
 /// the lifetime of the process. Once the limit is exceeded, every subsequent
@@ -67,9 +73,17 @@ impl MaxFetchCount {
     }
 }
 
+pub(crate) fn fan_out_cloned<T: Clone>(value: T, count: usize, mut cb: impl FnMut(T)) {
+    debug_assert!(count > 0);
+    for value in std::iter::repeat_with(|| value.clone()).take(count - 1) {
+        cb(value);
+    }
+    cb(value);
+}
+
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
-    pub pending: HashMap<Key, T>,
+    pub pending: HashMap<Key, PendingValue<T>>,
 
     /// Which attributes were requested
     pub request_attrs: T::Attrs,
@@ -92,18 +106,28 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         bar: Arc<ProgressBar>,
         max_fetch_count: MaxFetchCount,
     ) -> Self {
+        let keys = keys.into_iter();
+        let (lower_bound, upper_bound) = keys.size_hint();
+        let mut pending =
+            HashMap::<Key, PendingValue<T>>::with_capacity(upper_bound.unwrap_or(lower_bound));
+        for key in keys {
+            pending
+                .entry(key)
+                .and_modify(|pending| pending.count += 1)
+                .or_insert_with(|| PendingValue {
+                    value: T::default(),
+                    count: 1,
+                });
+        }
+
         Self {
-            pending: keys.into_iter().map(|key| (key, T::default())).collect(),
+            pending,
             request_attrs: attrs,
             found_tx,
             fctx,
             bar,
             max_fetch_count,
         }
-    }
-
-    fn send_found(&self, key: Key, value: T) {
-        Self::send_found_impl(&self.max_fetch_count, &self.found_tx, key, value);
     }
 
     fn send_found_impl(
@@ -119,12 +143,28 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         let _ = found_tx.send(result);
     }
 
-    pub(crate) fn all_keys(&self) -> Vec<Key> {
+    fn fan_out_found(
+        max_fetch_count: &MaxFetchCount,
+        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        key: Key,
+        value: T,
+        count: usize,
+    ) {
+        fan_out_cloned((key, value), count, |(key, value)| {
+            Self::send_found_impl(max_fetch_count, found_tx, key, value);
+        });
+    }
+
+    pub(crate) fn unique_keys(&self) -> Vec<Key> {
         self.pending.keys().cloned().collect()
     }
 
     pub(crate) fn pending_len(&self) -> usize {
-        self.pending.len()
+        self.pending.values().map(|pending| pending.count).sum()
+    }
+
+    pub(crate) fn progress_bar(&self) -> Arc<ProgressBar> {
+        Arc::clone(&self.bar)
     }
 
     pub(crate) fn pending<'a>(
@@ -132,10 +172,10 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         fetchable: T::Attrs,
         with_computable: bool,
     ) -> impl Iterator<Item = (&'a Key, &'a T)> + 'a {
-        self.pending.iter().filter_map(move |(key, store_item)| {
+        self.pending.iter().filter_map(move |(key, pending)| {
             let actionable = self.actionable(key, fetchable, with_computable);
             if actionable.any() {
-                Some((key, store_item))
+                Some((key, &pending.value))
             } else {
                 None
             }
@@ -154,30 +194,36 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         let ignore_result = self.fctx.mode().ignore_result();
         let max_fetch_count = &self.max_fetch_count;
         let found_tx = &self.found_tx;
-        self.pending.retain(|key, available| {
+        self.pending.retain(|key, pending| {
             let actionable = Self::actionable_attrs(
                 request_attrs,
-                available.attrs(),
+                pending.value.attrs(),
                 fetchable,
                 with_computable,
             );
 
             if actionable.any() {
                 if let Some(value) = cb(key) {
-                    let new = value | std::mem::take(available);
+                    let new = value | std::mem::take(&mut pending.value);
 
                     // Check if the newly fetched attributes fulfill all what was originally requested.
                     if new.attrs().has(request_attrs) {
                         if !ignore_result {
                             let new = new.mask(request_attrs);
-                            Self::send_found_impl(max_fetch_count, found_tx, key.clone(), new);
+                            Self::fan_out_found(
+                                max_fetch_count,
+                                found_tx,
+                                key.clone(),
+                                new,
+                                pending.count,
+                            );
                         }
 
-                        // This item has been fulfilled - don't retain it.
+                        // This key has been fulfilled - don't retain it.
                         return false;
                     } else {
                         // Not fulfilled yet - update value with new attributes.
-                        *available = new;
+                        pending.value = new;
                     }
                 }
             }
@@ -188,23 +234,24 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
     }
 
     pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
-        if let Some(available) = self.pending.get_mut(&key) {
+        if let Some(pending) = self.pending.get_mut(&key) {
             // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
             // if applicable (so that we can reuse this function to replace in-memory files with mmap-ed files)
-            let new = value | std::mem::take(available);
+            let new = value | std::mem::take(&mut pending.value);
 
             if new.attrs().has(self.request_attrs) {
+                let count = pending.count;
                 self.pending.remove(&key);
 
                 if !self.fctx.mode().ignore_result() {
                     let new = new.mask(self.request_attrs);
-                    self.send_found(key, new);
+                    Self::fan_out_found(&self.max_fetch_count, &self.found_tx, key, new, count);
                 }
-                self.bar.increase_position(1);
+                self.bar.increase_position(count as u64);
 
                 return true;
             } else {
-                *available = new;
+                pending.value = new;
             }
         } else {
             tracing::warn!(?key, "found something but key is already done");
@@ -223,31 +270,52 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         // fetching it from SLAPI. In that case, `fetch_errors` contains the CAS error, but the
         // requested item won't be in `pending` since it was satisfied via SLAPI.
         let mut incomplete = errors.fetch_errors;
-        for (key, _value) in self.pending.drain() {
-            let err = match incomplete.remove(&key) {
-                Some(err) => KeyFetchError::KeyedError(KeyedError(key, err)),
+        for (key, pending) in self.pending.drain() {
+            let count = pending.count;
+            match incomplete.remove(&key) {
+                Some(err) => {
+                    Self::fan_out_keyed_error(&self.found_tx, key, err, count);
+                    continue;
+                }
                 None => {
                     if !report_missing {
                         continue;
                     }
 
                     if self.fctx.mode().is_local() {
-                        KeyFetchError::NotFoundLocally(key)
+                        fan_out_cloned(key, count, |key| {
+                            let _ = self.found_tx.send(Err(KeyFetchError::NotFoundLocally(key)));
+                        });
                     } else {
                         // Should not happen normally since `incomplete` should contain the specific error we got from server.
-                        KeyFetchError::KeyedError(KeyedError(
-                            key,
-                            anyhow!("server did not provide content"),
-                        ))
+                        fan_out_cloned(key, count, |key| {
+                            let _ = self.found_tx.send(Err(KeyFetchError::KeyedError(KeyedError(
+                                key,
+                                anyhow!("server did not provide content"),
+                            ))));
+                        });
                     }
                 }
-            };
-            let _ = self.found_tx.send(Err(err));
+            }
         }
 
         for err in errors.other_errors {
             let _ = self.found_tx.send(Err(KeyFetchError::Other(err)));
         }
+    }
+
+    fn fan_out_keyed_error(
+        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        key: Key,
+        err: SharedError,
+        count: usize,
+    ) {
+        fan_out_cloned((key, err), count, |(key, err)| {
+            let _ = found_tx.send(Err(KeyFetchError::KeyedError(KeyedError(
+                key,
+                err.into_anyhow(),
+            ))));
+        });
     }
 
     pub(crate) fn actionable(
@@ -260,9 +328,14 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
             return T::Attrs::NONE;
         }
 
-        let available = self.pending.get(key).map_or(T::Attrs::NONE, |f| f.attrs());
-
-        Self::actionable_attrs(self.request_attrs, available, fetchable, with_computable)
+        self.pending.get(key).map_or(T::Attrs::NONE, |pending| {
+            Self::actionable_attrs(
+                self.request_attrs,
+                pending.value.attrs(),
+                fetchable,
+                with_computable,
+            )
+        })
     }
 
     fn actionable_attrs(
@@ -328,7 +401,7 @@ impl fmt::Display for KeyFetchError {
 #[derive(Default, Debug)]
 pub(crate) struct FetchErrors {
     /// Errors encountered for specific keys
-    pub(crate) fetch_errors: HashMap<Key, Error>,
+    pub(crate) fetch_errors: HashMap<Key, SharedError>,
 
     /// Errors encountered that don't apply to a single key
     pub(crate) other_errors: Vec<Error>,
@@ -343,7 +416,9 @@ impl FetchErrors {
     }
 
     pub(crate) fn keyed_error(&mut self, key: Key, err: Error) {
-        self.fetch_errors.entry(key).or_insert(err);
+        self.fetch_errors
+            .entry(key)
+            .or_insert_with(|| SharedError::new(err));
     }
 
     pub(crate) fn other_error(&mut self, err: Error) {
@@ -448,10 +523,222 @@ impl<T> FetchResults<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::BitAnd;
+    use std::ops::BitOr;
+    use std::ops::Not;
+    use std::ops::Sub;
+
     use ::types::errors::NetworkError;
+    use ::types::fetch_mode::FetchMode;
+    use ::types::testutil::key;
     use anyhow::anyhow;
+    use flume::Receiver;
+    use progress_model::ProgressBar;
 
     use super::*;
+
+    #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+    struct TestAttrs(u8);
+
+    impl TestAttrs {
+        const CONTENT: Self = Self(1);
+    }
+
+    impl BitAnd for TestAttrs {
+        type Output = Self;
+
+        fn bitand(self, rhs: Self) -> Self::Output {
+            Self(self.0 & rhs.0)
+        }
+    }
+
+    impl BitOr for TestAttrs {
+        type Output = Self;
+
+        fn bitor(self, rhs: Self) -> Self::Output {
+            Self(self.0 | rhs.0)
+        }
+    }
+
+    impl Not for TestAttrs {
+        type Output = Self;
+
+        fn not(self) -> Self::Output {
+            Self(!self.0 & Self::CONTENT.0)
+        }
+    }
+
+    impl Sub for TestAttrs {
+        type Output = Self;
+
+        fn sub(self, rhs: Self) -> Self::Output {
+            self & !rhs
+        }
+    }
+
+    impl StoreAttrs for TestAttrs {
+        const NONE: Self = Self(0);
+
+        fn with_computable(&self) -> Self {
+            *self
+        }
+    }
+
+    #[derive(Clone, Debug, Default)]
+    struct TestValue {
+        attrs: TestAttrs,
+        value: u8,
+    }
+
+    impl TestValue {
+        fn content(value: u8) -> Self {
+            Self {
+                attrs: TestAttrs::CONTENT,
+                value,
+            }
+        }
+    }
+
+    impl BitOr for TestValue {
+        type Output = Self;
+
+        fn bitor(self, rhs: Self) -> Self::Output {
+            Self {
+                attrs: self.attrs | rhs.attrs,
+                value: self.value.max(rhs.value),
+            }
+        }
+    }
+
+    impl StoreValue for TestValue {
+        type Attrs = TestAttrs;
+
+        fn attrs(&self) -> Self::Attrs {
+            self.attrs
+        }
+
+        fn mask(self, attrs: Self::Attrs) -> Self {
+            Self {
+                attrs: self.attrs & attrs,
+                value: self.value,
+            }
+        }
+    }
+
+    fn new_test_state(
+        keys: Vec<Key>,
+    ) -> (
+        CommonFetchState<TestValue>,
+        Receiver<Result<(Key, TestValue), KeyFetchError>>,
+    ) {
+        let (tx, rx) = flume::unbounded();
+        (
+            CommonFetchState::new(
+                keys,
+                TestAttrs::CONTENT,
+                tx,
+                FetchContext::new(FetchMode::LocalOnly),
+                ProgressBar::new("test", 0, "items"),
+                MaxFetchCount::default(),
+            ),
+            rx,
+        )
+    }
+
+    #[test]
+    fn test_duplicate_pending_deduplicates_requests() {
+        let duplicate = key("a", "1");
+        let other = key("b", "2");
+        let (state, _rx) =
+            new_test_state(vec![duplicate.clone(), duplicate.clone(), other.clone()]);
+
+        let keys = state
+            .pending(TestAttrs::CONTENT, false)
+            .map(|(key, _)| key.clone())
+            .collect::<Vec<_>>();
+
+        assert_eq!(state.pending_len(), 3);
+        assert_eq!(keys.len(), 2);
+        assert!(keys.contains(&duplicate));
+        assert!(keys.contains(&other));
+    }
+
+    #[test]
+    fn test_iter_pending_preserves_duplicate_results() {
+        let duplicate = key("a", "1");
+        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+
+        let mut calls = 0;
+        state.iter_pending(TestAttrs::CONTENT, false, |_| {
+            calls += 1;
+            Some(TestValue::content(7))
+        });
+        assert_eq!(calls, 1);
+        assert_eq!(state.pending_len(), 0);
+        drop(state);
+
+        let results = rx.try_iter().collect::<Vec<_>>();
+        assert_eq!(results.len(), 2);
+        for result in results {
+            let (key, value) = result.unwrap();
+            assert_eq!(key, duplicate);
+            assert_eq!(value.value, 7);
+        }
+    }
+
+    #[test]
+    fn test_found_preserves_duplicate_results() {
+        let duplicate = key("a", "1");
+        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+
+        assert!(state.found(duplicate.clone(), TestValue::content(9)));
+        assert_eq!(state.pending_len(), 0);
+        drop(state);
+
+        let results = rx.try_iter().collect::<Vec<_>>();
+        assert_eq!(results.len(), 2);
+        for result in results {
+            let (key, value) = result.unwrap();
+            assert_eq!(key, duplicate);
+            assert_eq!(value.value, 9);
+        }
+    }
+
+    #[test]
+    fn test_results_preserves_duplicate_local_misses() {
+        let duplicate = key("a", "1");
+        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+
+        state.results(FetchErrors::new(), true);
+        drop(state);
+
+        let results = rx.try_iter().collect::<Vec<_>>();
+        assert_eq!(results.len(), 2);
+        for result in results {
+            match result.unwrap_err() {
+                KeyFetchError::NotFoundLocally(key) => assert_eq!(key, duplicate),
+                err => panic!("unexpected error: {err:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_results_preserves_duplicate_keyed_error_tags() {
+        let duplicate = key("a", "1");
+        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+        let mut errors = FetchErrors::new();
+        errors.keyed_error(duplicate.clone(), NetworkError::wrap(anyhow!("boom")));
+
+        state.results(errors, true);
+        drop(state);
+
+        let results = rx.try_iter().collect::<Vec<_>>();
+        assert_eq!(results.len(), 2);
+        for result in results {
+            let err: anyhow::Error = result.unwrap_err().into();
+            assert!(::types::errors::is_network_error(&err));
+        }
+    }
 
     #[test]
     fn test_error_chain() {
