@@ -42,6 +42,7 @@ base_app::subcommands! {
     mod repo_info;
     mod repos;
     mod run_hooks;
+    mod scmqueryclient_test if "SCSC_SCMQUERY_TEST_ENABLED";
     mod sparse_profile_delta;
     mod sparse_profile_size;
     mod update_submodule_expansion;

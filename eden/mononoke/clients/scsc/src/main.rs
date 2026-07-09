@@ -9,6 +9,12 @@
 
 //! Command-line client for the Source Control Service.
 
+// The test-support build of the scmquery client is a separate crate
+// (`scmqueryclient_rust_test_support`) so it can coexist with the prod crate in
+// one build graph without a name collision; alias it back to the canonical
+// `scmqueryclient_rust::` path so submodules don't care which is linked.
+extern crate scmqueryclient_rust_test_support as scmqueryclient_rust;
+
 use std::env;
 use std::io::IsTerminal;
 use std::io::stderr;
@@ -75,6 +81,10 @@ pub(crate) struct ScscApp {
 }
 
 impl ScscApp {
+    pub(crate) fn scs_host(&self) -> Option<&str> {
+        self.connection_args.host()
+    }
+
     async fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<ScsClient> {
         let conn = self.connection_args.get_connection(self.fb, repo).await?;
         if self.print_correlator {
@@ -106,8 +116,25 @@ struct ScscArgs {
     #[clap(long, global = true)]
     json: bool,
 
+    /// Path to a JustKnobs override config (JSON) to load via cached_config.
+    /// Hidden: used by integration tests to flip knobs (e.g.
+    /// `scm/scmquery:direct_scs`) through `merge_just_knobs`.
+    #[clap(long, hide = true)]
+    just_knobs_config_path: Option<String>,
+
     #[clap(flatten)]
     connection_args: ConnectionArgs,
+}
+
+async fn init_just_knobs_from_config_path(path: &str) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let config_json = tokio::fs::read_to_string(path)
+        .await
+        .with_context(|| format!("reading just-knobs config from {path}"))?;
+    let config_handle = cached_config::ConfigHandle::from_json(&config_json)
+        .context("parsing just-knobs config")?;
+    justknobs::init_cached_config_just_knobs(&(), &config_handle)
+        .context("initializing cached_config JustKnobs")
 }
 
 async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
@@ -124,6 +151,9 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
         .arg_required_else_help(true);
     let matches = app.get_matches();
     let common_args = ScscArgs::from_arg_matches(&matches)?;
+    if let Some(just_knobs_config_path) = &common_args.just_knobs_config_path {
+        init_just_knobs_from_config_path(just_knobs_config_path).await?;
+    }
     let connection_args = common_args.connection_args;
     let target = if common_args.json {
         OutputFormat::Json

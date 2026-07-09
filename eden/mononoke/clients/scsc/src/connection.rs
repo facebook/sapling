@@ -108,6 +108,10 @@ fn client_correlator_override() -> Option<String> {
 }
 
 impl ConnectionArgs {
+    pub(super) fn host(&self) -> Option<&str> {
+        self.host.as_deref()
+    }
+
     pub async fn get_connection(
         &self,
         fb: FacebookInit,

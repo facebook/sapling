@@ -976,6 +976,31 @@ function scsc {
   scsc_as client0 "$@"
 }
 
+function scsc_scmquery_test {
+  local jk_args=()
+  if [[ -n "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" ]]; then
+    jk_args=(--just-knobs-config-path "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH")
+  fi
+  SCSC_SCMQUERY_TEST_ENABLED=1 scsc \
+    "${jk_args[@]}" \
+    scmqueryclient-test "$@"
+}
+
+# Forces scmqueryclient-rust onto the SCS-direct path by enabling the
+# scm/scmquery:direct_scs JustKnob in the per-test override file.
+# Also defines support_bonsai_input (off) so that commit_id_from_rev's
+# cached_config lookup does not error on a missing key.
+function enable_scmquery_scs_direct {
+  merge_just_knobs <<EOF
+{
+  "bools": {
+    "scm/scmquery:direct_scs": true,
+    "scm/scmquery:support_bonsai_input": false
+  }
+}
+EOF
+}
+
 function lfs_health {
   local poll proto bound_addr_file
   poll="$1"; shift

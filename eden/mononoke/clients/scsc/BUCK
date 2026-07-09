@@ -37,7 +37,9 @@ rust_binary(
         "fbsource//third-party/rust:unicode-width",
         "//common/rust/cpp_log_spew:cpp_log_spew",
         "//common/rust/gflags:gflags",
+        "//common/rust/identity:identity",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
+        "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
@@ -45,9 +47,12 @@ rust_binary(
         "//eden/mononoke/clients/scsc/raw_client_lib:scs_client_raw",
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/cmdlib/commit_id_types:commit_id_types",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",
+        "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+        "//scm/scmquery/client:scmqueryclient-rust-test-support",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
