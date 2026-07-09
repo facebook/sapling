@@ -41,6 +41,11 @@ const WORKSET_ITEMS: [usize; 3] = [256, 4096, 32768];
 const WORKSET_WORKERS: [usize; 3] = [1, 4, 8];
 const WORKSET_SPAWN_BATCHES: [usize; 5] = [1, 2, 4, 8, 16];
 const WORKSET_SPAWN_WORKERS: [usize; 3] = [1, 4, 8];
+const WORKSET_BURST_BATCH_ITEMS: [usize; 2] = [16, 4_000];
+const WORKSET_BURST_WORKERS: [usize; 2] = [8, 32];
+const WORKSET_BURST_TARGET_ITEMS: usize = 2_000_000;
+const WORKSET_BURST_MIN_BATCHES: usize = 512;
+const WORKSET_BURST_MAX_BATCHES: usize = 8_192;
 const WORKSET_TRANSITION_ITEMS: [usize; 9] = [1, 2, 4, 8, 16, 32, 64, 256, 1024];
 const QUEUE_THROUGHPUT_ITEMS: usize = 1_000_000;
 const QUEUE_THROUGHPUT_CAPACITIES: [usize; 3] = [1, 100, 1024];
@@ -1274,6 +1279,59 @@ fn bench_workset_small_batch_spawn() {
     }
 }
 
+fn workset_burst_batches(batch_items: usize) -> usize {
+    (WORKSET_BURST_TARGET_ITEMS / batch_items)
+        .clamp(WORKSET_BURST_MIN_BATCHES, WORKSET_BURST_MAX_BATCHES)
+}
+
+fn run_workset_streaming_burst(workers: usize, batch_items: usize, batches: usize) -> usize {
+    let completed = Arc::new(AtomicUsize::new(0));
+    let completed_worker = Arc::clone(&completed);
+
+    let input = (0..batches).map(move |batch| {
+        let start = batch * batch_items;
+        Ok((start..start + batch_items).collect::<Vec<_>>())
+    });
+
+    Work::run(
+        WorkOptions::new()
+            .max_workers(workers)
+            .inline_items(0)
+            .work_chunk_items(batch_items),
+        Items::stream(input),
+        WorkShape::batch(
+            move |batch: Result<Vec<usize>, ()>, _scope: &mut WorkScope<'_, usize, (), ()>| {
+                let batch = batch?;
+                completed_worker.fetch_add(batch.len(), Ordering::Relaxed);
+                black_box(batch.len());
+                Ok(())
+            },
+        ),
+    )
+    .drain()
+    .unwrap();
+
+    completed.load(Ordering::Relaxed)
+}
+
+fn bench_workset_streaming_burst() {
+    for workers in WORKSET_BURST_WORKERS {
+        for batch_items in WORKSET_BURST_BATCH_ITEMS {
+            let batches = workset_burst_batches(batch_items);
+            bench(
+                format!(
+                    "workset streaming-burst workers={workers} batch_items={batch_items} batches={batches}"
+                ),
+                || {
+                    elapsed(|| {
+                        black_box(run_workset_streaming_burst(workers, batch_items, batches));
+                    })
+                },
+            );
+        }
+    }
+}
+
 fn run_workset_fanout(target: usize, inline_items: usize, expensive: bool) -> usize {
     let submitted = Arc::new(AtomicUsize::new(1));
     let completed = Arc::new(AtomicUsize::new(0));
@@ -1372,5 +1430,6 @@ fn main() {
     bench_bytes();
     bench_workset_coordination();
     bench_workset_small_batch_spawn();
+    bench_workset_streaming_burst();
     bench_workset_transition();
 }

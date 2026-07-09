@@ -1306,7 +1306,7 @@ fn work_spawner() -> &'static crate::LimitedSpawner {
 }
 
 fn work_queue_throttle_limit(max_workers: usize) -> usize {
-    const PER_WORKER: usize = 16;
+    const PER_WORKER: usize = 2;
 
     max_workers.max(1).saturating_mul(PER_WORKER)
 }

@@ -32,8 +32,8 @@ use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 
-const FETCH_BATCH_SIZE: usize = 1000;
-const CONCURRENT_FETCHES: usize = 10;
+const FETCH_BATCH_SIZE: usize = 4000;
+const CONCURRENT_FETCHES: usize = 32;
 const MAX_CONCURRENT_FETCHES: usize = 128;
 const RESULT_QUEUE_SIZE_PER_WORKER: usize = 8;
 
