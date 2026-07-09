@@ -42,6 +42,7 @@ use progress_model::ProgressBar;
 use redacted::redact_if_needed;
 use repo::repo::Repo;
 use serde::Deserialize;
+use slex::Items;
 use storemodel::FileStore;
 use tracing::debug;
 use tracing::instrument;
@@ -64,6 +65,7 @@ use types::hgid::MF_UNTRACKED_NODE_ID;
 use util::fs_err as fs;
 use vfs::UpdateFlag;
 use vfs::VFS;
+use vfs::VfsBatchError;
 use vfs::Work;
 use workingcopy::sparse;
 use workingcopy::workingcopy::LockedWorkingCopy;
@@ -271,12 +273,11 @@ impl CheckoutPlan {
             .iter()
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()))
             .collect();
+        let actions = Arc::new(actions);
         let fetch_data_iter = store.get_content_iter(
             FetchContext::new_with_cause(FetchCause::SaplingCheckout),
             keys,
         )?;
-
-        const WORK_QUEUE_SIZE: usize = 10_000;
 
         // On Ctrl+C or error, write the "progress" file to help resume.
         let progress = self.progress.clone();
@@ -296,59 +297,42 @@ impl CheckoutPlan {
             }),
         );
 
-        // Use vfs.batch() for parallel VFS writes.
-        let n = self.vfs_worker_count(total);
-        let (work_tx, result_rx) = vfs.batch(n, WORK_QUEUE_SIZE);
-
-        // Send work items to the batch.
-        for path in &self.remove {
-            work_tx
-                .send(Work::Remove(path.to_owned()))
-                .map_err(|_| anyhow!("remove send failed"))?;
-        }
-        for action in &self.update_meta {
-            work_tx
-                .send(Work::SetExecutable(
-                    action.path.to_owned(),
-                    action.set_x_flag,
-                ))
-                .map_err(|_| anyhow!("update_meta send failed"))?;
-        }
-        for entry in fetch_data_iter {
-            let (key, data) = match entry {
-                Err(e) => {
-                    stats.fetch_failed.push((
-                        e.chain()
-                            .filter_map(|err| err.downcast_ref::<KeyedError>())
-                            .next()
-                            .map(|ke| ke.0.path.clone())
-                            .unwrap_or_default(),
-                        e,
-                    ));
-                    // Keep going.
-                    continue;
+        let mut ready_work = Vec::with_capacity(self.remove.len() + self.update_meta.len());
+        ready_work.extend(self.remove.iter().cloned().map(Work::Remove));
+        ready_work.extend(
+            self.update_meta
+                .iter()
+                .map(|action| Work::SetExecutable(action.path.to_owned(), action.set_x_flag)),
+        );
+        let ready_work_items = if ready_work.is_empty() {
+            Items::empty()
+        } else {
+            Items::ready(ready_work)
+        };
+        let fetch_work_items = fetch_data_iter
+            .map_batch(|batch| batch.map_err(VfsBatchError::Batch))
+            .try_map_item({
+                let actions = Arc::clone(&actions);
+                move |(key, data)| {
+                    let data = redact_if_needed(data);
+                    let Some(action) = actions.get(&key.path) else {
+                        return Err(VfsBatchError::Batch(format_err!(
+                            "Storage returned unknown key {key}"
+                        )));
+                    };
+                    let flag = type_to_flag(&action.file_type);
+                    Ok(Work::Write(
+                        key.path.clone(),
+                        data,
+                        flag,
+                        action.from_file_type.as_ref().map(type_to_flag),
+                    ))
                 }
-                Ok(v) => v,
-            };
+            });
 
-            let data = redact_if_needed(data);
-
-            let action = actions
-                .get(&key.path)
-                .ok_or_else(|| format_err!("Storage returned unknown key {key}"))?;
-            let flag = type_to_flag(&action.file_type);
-
-            work_tx
-                .send(Work::Write(
-                    key.path.clone(),
-                    data,
-                    flag,
-                    action.from_file_type.as_ref().map(type_to_flag),
-                ))
-                .map_err(|_| anyhow!("write send failed"))?;
-        }
-        // Close work channel - workers will exit when they finish processing.
-        drop(work_tx);
+        // Use slex for parallel VFS writes.
+        let n = self.vfs_worker_count(total);
+        let result_items = vfs.batch_items(n, ready_work_items.chain(fetch_work_items));
 
         // Error.
         if fail::eval("checkout-post-progress", |_| ()).is_some() {
@@ -357,22 +341,32 @@ impl CheckoutPlan {
             ));
         }
 
-        // Collect results. The result channel closes when all workers exit.
-        while let Ok(result) = result_rx.recv() {
-            match result {
-                Ok(work) => {
-                    // Only record successful writes to progress.
-                    if let Work::Write(path, ..) = work {
-                        if let Some(action) = actions.get(&path) {
-                            let _ = progress_tx.send((action.content_hgid, path));
+        // Collect results. The result stream closes when all workers exit.
+        for result_batch in result_items.into_batches() {
+            match result_batch {
+                Ok(result_batch) => {
+                    for work in result_batch {
+                        // Only record successful writes to progress.
+                        if let Work::Write(path, ..) = work {
+                            if let Some(action) = actions.get(&path) {
+                                let _ = progress_tx.send((action.content_hgid, path));
+                            }
                         }
                     }
                 }
-                Err((work, err)) => match work {
-                    Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
-                    Some(Work::SetExecutable(path, _)) => stats.set_exec_failed.push((path, err)),
-                    Some(Work::Write(path, ..)) => stats.write_failed.push((path, err)),
-                    Some(Work::Batch(_)) => unreachable!(),
+                Err(VfsBatchError::Work(work, err)) => match work {
+                    Work::Remove(path) => stats.remove_failed.push((path, err)),
+                    Work::SetExecutable(path, _) => stats.set_exec_failed.push((path, err)),
+                    Work::Write(path, ..) => stats.write_failed.push((path, err)),
+                    Work::Batch(_) => unreachable!(),
+                },
+                Err(VfsBatchError::Batch(err)) => match err
+                    .chain()
+                    .filter_map(|err| err.downcast_ref::<KeyedError>())
+                    .next()
+                    .map(|ke| ke.0.path.clone())
+                {
+                    Some(path) => stats.fetch_failed.push((path, err)),
                     None => stats.other_failed.push(err),
                 },
             }
