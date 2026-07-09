@@ -81,6 +81,7 @@ impl<S: Subscriber> Filter<S> for SamplingFilter {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::io::Write;
 
     use tempfile::tempdir;
     use tracing_subscriber::Registry;
@@ -123,6 +124,15 @@ mod tests {
 
             // Should also be collected.
             tracing::info!(target: "orange", pi = 123);
+
+            TEST_CONFIG
+                .get()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .file()
+                .flush()
+                .unwrap();
         }
 
         assert_eq!(

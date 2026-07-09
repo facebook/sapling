@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::BufWriter;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -59,7 +60,7 @@ where
 #[derive(Debug)]
 pub struct SamplingConfig {
     keys: HashMap<String, String>,
-    file: Mutex<File>,
+    file: Mutex<BufWriter<File>>,
 }
 
 impl SamplingConfig {
@@ -90,7 +91,7 @@ impl SamplingConfig {
                 Ok(file) => {
                     return Some(Self {
                         keys: sample_categories,
-                        file: Mutex::new(file),
+                        file: Mutex::new(BufWriter::new(file)),
                     });
                 }
                 Err(err) => {
@@ -111,7 +112,7 @@ impl SamplingConfig {
         self.keys.get(key).map(|c| &**c)
     }
 
-    pub fn file(&self) -> MutexGuard<'_, File> {
+    pub fn file(&self) -> MutexGuard<'_, BufWriter<File>> {
         self.file.lock()
     }
 
@@ -120,7 +121,7 @@ impl SamplingConfig {
         V: ?Sized + Serialize,
     {
         let mut file = self.file();
-        let mut serializer = JsonSerializer::new(&*file);
+        let mut serializer = JsonSerializer::new(&mut *file);
 
         let mut serializer = serializer.serialize_map(None)?;
         serializer.serialize_entry("category", category)?;
