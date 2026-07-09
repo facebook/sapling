@@ -15,13 +15,8 @@ name = "metrics"
 [dependencies]
 anyhow = "1.0.103"
 fastrand = "2.4.1"
-fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
-stats_traits = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 
 [features]
 default = []
-ods = ["fbinit", "stats", "stats_traits"]

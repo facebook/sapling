@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#![feature(once_cell_try)]
-
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
@@ -16,11 +15,18 @@ use std::sync::atomic::Ordering;
 use futures::Future;
 use parking_lot::RwLock;
 
-#[cfg_attr(not(feature = "ods"), path = "dummy_ods.rs")]
-pub mod ods;
+pub trait Sink: Send + Sync {
+    fn increment(&self, name: &'static str, value: i64);
+}
 
-// In-memory counter that transparently syncs to ODS.
-// ODS is updated 0.1% of the time, and otherwise every 60s via EdenFS backingstore flush task.
+static SINK: OnceLock<Arc<dyn Sink>> = OnceLock::new();
+
+pub fn install_sink(sink: Arc<dyn Sink>) -> anyhow::Result<()> {
+    SINK.set(sink)
+        .map_err(|_| anyhow::anyhow!("metrics sink already initialized"))
+}
+
+// In-memory counter that can sync to an optional external sink.
 pub struct Counter {
     name: &'static str,
     counter: OnceLock<Inner>,
@@ -30,10 +36,8 @@ pub struct Counter {
 struct Inner {
     // In-memory counter value we increment eagerly.
     counter: AtomicUsize,
-    // Last counter value we synced to ODS.
+    // Last counter value we synced to the external sink.
     last_sync: AtomicUsize,
-    // ODS counter.
-    ods: ods::Counter,
 }
 
 impl Counter {
@@ -84,20 +88,16 @@ impl Counter {
         self.gauge
     }
 
-    // Sync to ODS 0.1% of time.
+    // Sync to the external sink 0.1% of the time.
     fn maybe_sync(&'static self) {
         if fastrand::f64() < 0.001 {
             self.sync();
         }
     }
 
-    // Sync current counter value to ODS, if necessary.
+    // Sync current counter value to the external sink, if necessary.
     fn sync(&'static self) {
-        let Inner {
-            counter,
-            last_sync,
-            ods,
-        } = self.counter();
+        let Inner { counter, last_sync } = self.counter();
 
         loop {
             let current = counter.load(Ordering::Acquire);
@@ -113,7 +113,9 @@ impl Counter {
 
             let delta = (current as i64) - (last as i64);
             if delta != 0 {
-                ods::increment(ods, self.name, delta);
+                if let Some(sink) = SINK.get() {
+                    sink.increment(self.name, delta);
+                }
             }
             break;
         }
@@ -125,7 +127,6 @@ impl Counter {
             Inner {
                 counter: AtomicUsize::new(0),
                 last_sync: AtomicUsize::new(0),
-                ods: ods::new_counter(self.name),
             }
         })
     }
@@ -178,7 +179,7 @@ impl Registry {
         }
     }
 
-    // Sync all counters to ODS.
+    // Sync all counters to the external sink.
     pub fn sync(&self) {
         for counter in self.counters.read().values() {
             counter.sync();

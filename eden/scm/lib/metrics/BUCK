@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -8,14 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "features": {
-                "default": [],
-                "ods": [
-                    "fbinit",
-                    "stats",
-                    "stats_traits",
-                ],
-            },
+            "features": {"default": []},
             "lib": {"name": "metrics"},
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -27,22 +19,30 @@ rust_library(
         },
     },
     crate_root = "src/lib.rs",
-    features = [] + ([] if rust_oss.is_oss_build() else ["ods"]),
+    features = [],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fastrand",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:parking_lot",
-    ]
-    + (
-        []
-        if rust_oss.is_oss_build()
-        else [
-            "//common/rust/shed/fbinit:fbinit",
-            "//common/rust/monitoring:obc_lib",
-            "//common/rust/shed/stats:stats",
-            "//common/rust/shed/stats:stats_traits",
-            "//eden/scm/lib/util/sysutil:sysutil",
-        ]
-    ),
+    ],
+)
+
+rust_library(
+    name = "metrics_fb",
+    srcs = ["src/fb_sink.rs"],
+    autocargo = {"ignore_rule": True},
+    crate = "metrics_fb",
+    crate_root = "src/fb_sink.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/monitoring:obc_lib",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/shed/stats:stats_traits",
+        "//eden/scm/lib/metrics:metrics",
+        "//eden/scm/lib/util/sysutil:sysutil",
+    ],
 )

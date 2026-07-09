@@ -104,6 +104,7 @@ rust_library(
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metrics:metrics",
+        "//eden/scm/lib/metrics:metrics_fb",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/repo:repo",

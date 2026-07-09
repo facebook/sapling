@@ -30,7 +30,8 @@ use edenapi::configmodel::ConfigExt;
 use edenapi::configmodel::config::ContentHash;
 use edenapi::types::CommitId;
 use log::warn;
-use metrics::ods;
+#[cfg(fbcode_build)]
+use metrics_fb::install as install_metrics_sink;
 use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
@@ -256,10 +257,11 @@ impl BackingStore {
 
         let config = repo.config().clone();
 
-        let is_obc_enabled = config.get_or::<bool>("scmstore", "enable-obc", || false)?;
-        if is_obc_enabled {
-            if let Err(err) = ods::initialize_obc_client() {
-                tracing::warn!(?err, "error creating OBC client");
+        #[cfg(fbcode_build)]
+        {
+            let is_obc_enabled = config.get_or::<bool>("scmstore", "enable-obc", || false)?;
+            if let Err(err) = install_metrics_sink(is_obc_enabled) {
+                tracing::warn!(?err, "error creating metrics sink");
             }
         }
 
