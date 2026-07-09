@@ -119,6 +119,163 @@ Matcher-scoped BFS should not check ACLs under directories it will not visit:
 No permission check is needed for `some_dir/secret` when only listing `some_dir/public.txt`.
   $ SL_LOG=eagerepo::api=debug sl files -r $A some_dir/public.txt 2>&1 | grep check_manifest_permission || true
 
+Copy/move with .slacl paths:
+
+  $ newserver server_path_acl_copy_move
+  $ drawdag << 'EOS'
+  > A  # A/restricted/.slacl = acl config
+  >    # A/restricted/subdir/secret.txt = secret v1
+  >    # A/parent/public.txt = visible
+  >    # A/parent/restricted/.slacl = acl config
+  >    # A/parent/restricted/secret.txt = secret v1
+  >    # A/public/file.txt = public
+  > EOS
+
+Current behavior: users with access can copy and move restricted files to
+unrestricted paths without warning.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=disabled
+  $ setconfig slacl.server-acl-enforcement=false
+  $ newclientrepo client_path_acl_access server_path_acl_copy_move
+  $ sl go -q $A
+  $ sl cp restricted/subdir/secret.txt public/copied-secret.txt
+  $ cat public/copied-secret.txt
+  secret v1 (no-eol)
+  $ sl mv restricted/subdir/secret.txt public/moved-secret.txt
+  $ cat public/moved-secret.txt
+  secret v1 (no-eol)
+  $ sl status
+  A public/copied-secret.txt
+  A public/moved-secret.txt
+  R restricted/subdir/secret.txt
+
+Users with access can copy and move restricted files within the restricted tree.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=disabled
+  $ setconfig slacl.server-acl-enforcement=false
+  $ newclientrepo client_path_acl_access_self server_path_acl_copy_move
+  $ sl go -q $A
+  $ sl cp restricted/subdir/secret.txt restricted/subdir/copied-secret.txt
+  $ cat restricted/subdir/copied-secret.txt
+  secret v1 (no-eol)
+  $ sl mv restricted/subdir/secret.txt restricted/subdir/moved-secret.txt
+  $ cat restricted/subdir/moved-secret.txt
+  secret v1 (no-eol)
+  $ sl status
+  A restricted/subdir/copied-secret.txt
+  A restricted/subdir/moved-secret.txt
+  R restricted/subdir/secret.txt
+
+People without access cannot copy or move a restricted file to an unrestricted path.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_path_acl_no_access server_path_acl_copy_move
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' [and 1 more] are restricted by ACL 'some-acl'
+  [1]
+  $ sl cp restricted/subdir/secret.txt public/copied-secret.txt
+  restricted/subdir/secret.txt: $ENOENT$ (no-windows !)
+  restricted\subdir\secret.txt: $ENOTDIR$ (windows !)
+  abort: no files to copy
+  (use '--amend --mark' if you want to amend the current commit)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl mv restricted/subdir/secret.txt public/moved-secret.txt
+  restricted/subdir/secret.txt: $ENOENT$ (no-windows !)
+  restricted\subdir\secret.txt: $ENOTDIR$ (windows !)
+  abort: no files to copy
+  (use '--amend --mark' if you want to amend the current commit)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [255]
+
+People without access can copy or move the unrestricted files under a parent that contains restricted paths.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_path_acl_parent_no_access server_path_acl_copy_move
+  $ sl go -q $A
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' [and 1 more] are restricted by ACL 'some-acl'
+  [1]
+  $ sl cp parent public/copied-parent
+  copying parent/public.txt to public/copied-parent/public.txt
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ cat public/copied-parent/public.txt
+  visible (no-eol)
+  $ test ! -e public/copied-parent/restricted/secret.txt || echo BUG: restricted path leaked
+  $ sl mv parent public/moved-parent
+  moving parent/public.txt to public/moved-parent/public.txt
+  warning: results may be incomplete due to path ACLs
+    'parent/restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ cat public/moved-parent/public.txt
+  visible (no-eol)
+  $ test ! -e public/moved-parent/restricted/secret.txt || echo BUG: restricted path leaked
+
+Graft and backout of commits that also touch restricted .slacl paths:
+
+  $ newserver server_path_acl_graft_backout
+  $ drawdag << 'EOS'
+  > C B
+  > |/
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  >   # C/other.txt = other
+  >   # drawdag.defaultfiles=false
+  > EOS
+
+People without access can graft the visible changes after dropping the
+restricted side.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_path_acl_graft_no_access server_path_acl_graft_backout
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl graft $B
+  pulling '*' from 'test:server_path_acl_graft_backout' (glob)
+  grafting * "B" (glob)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl status
+  $ sl cat public.txt
+  public v2 (no-eol)
+  $ test ! -e restricted/secret.txt || echo BUG: restricted path leaked
+
+People without access can back out the visible changes without materializing
+restricted files.
+  $ cd
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ newclientrepo client_path_acl_backout_no_access server_path_acl_graft_backout
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl backout -r $B
+  reverting public.txt
+  changeset * backs out changeset * (glob)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl status
+  $ sl cat public.txt
+  public v1 (no-eol)
+  $ test ! -e restricted/secret.txt || echo BUG: restricted path leaked
+
 Diff stat from restricted to unrestricted currently aborts instead of filtering
 the restricted side.
 
