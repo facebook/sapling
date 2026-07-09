@@ -11,6 +11,9 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::types::Token;
 use clap::Args;
 use context::CoreContext;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
@@ -118,26 +121,37 @@ pub(super) async fn backfill_enqueue(
             .collect()
     };
 
-    let mut repo_entries: Vec<thrift::DeriveBackfillRepoEntry> = Vec::new();
-    for repo_arg in &repo_targets {
-        let repo: Repo = super::open_repo_for_derive(app, repo_arg, false, bypass_redaction)
-            .await
-            .context("Failed to open repo")?;
-        let cs_ids = args.changeset_args.resolve_changesets(ctx, &repo).await?;
-        let repo_id = repo.repo_identity().id();
-        let cs_id_bytes: Vec<Vec<u8>> = cs_ids.iter().map(|cs| cs.as_ref().to_vec()).collect();
-        info!(
-            "Resolved {} changesets for repo {} ({})",
-            cs_ids.len(),
-            repo_id,
-            repo.repo_identity().name(),
-        );
-        repo_entries.push(thrift::DeriveBackfillRepoEntry {
-            repo_id: repo_id.id() as i64,
-            cs_ids: cs_id_bytes,
-            ..Default::default()
-        });
-    }
+    // Open each repo and resolve its changesets concurrently (bounded) rather than
+    // one at a time -- with `--all-git-repos` this spans thousands of independent
+    // repo opens + bookmark-head resolutions, so a sequential loop dominates
+    // enqueue latency. Run with `--skip-preloading-commit-graph` so each open is a
+    // light SQL handle (enqueue only needs bookmark heads, never the graph). Order
+    // of `repo_entries` is not significant to the scheduler.
+    const ENQUEUE_RESOLVE_CONCURRENCY: usize = 100;
+    let changeset_args = &args.changeset_args;
+    let repo_entries: Vec<thrift::DeriveBackfillRepoEntry> = stream::iter(&repo_targets)
+        .map(|repo_arg| async move {
+            let repo: Repo = super::open_repo_for_derive(app, repo_arg, false, bypass_redaction)
+                .await
+                .context("Failed to open repo")?;
+            let cs_ids = changeset_args.resolve_changesets(ctx, &repo).await?;
+            let repo_id = repo.repo_identity().id();
+            let cs_id_bytes: Vec<Vec<u8>> = cs_ids.iter().map(|cs| cs.as_ref().to_vec()).collect();
+            info!(
+                "Resolved {} changesets for repo {} ({})",
+                cs_ids.len(),
+                repo_id,
+                repo.repo_identity().name(),
+            );
+            anyhow::Ok(thrift::DeriveBackfillRepoEntry {
+                repo_id: repo_id.id() as i64,
+                cs_ids: cs_id_bytes,
+                ..Default::default()
+            })
+        })
+        .buffer_unordered(ENQUEUE_RESOLVE_CONCURRENCY)
+        .try_collect()
+        .await?;
 
     let params = thrift::DeriveBackfillParams {
         derived_data_type: derived_data_type.name().to_string(),
