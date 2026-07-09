@@ -319,6 +319,10 @@ impl repo {
     pub fn from_native(py: Python, repo: Repo) -> PyResult<Self> {
         Self::create_instance(py, RwLock::new(repo), Default::default(), PyDict::new(py))
     }
+
+    pub fn read_repo<'a>(&'a self, py: Python<'a>) -> parking_lot::RwLockReadGuard<'a, Repo> {
+        self.inner(py).read()
+    }
 }
 
 py_class!(pub class repolock |py| {

@@ -64,6 +64,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             error,
             exchange,
             fail,
+            filewalk,
             formatutil,
             fs,
             gitcompat,

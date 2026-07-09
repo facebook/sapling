@@ -35,6 +35,7 @@ pyedenfsassertedstates = { version = "0.1.0", path = "modules/pyedenfsassertedst
 pyerror = { version = "0.1.0", path = "modules/pyerror" }
 pyexchange = { version = "0.1.0", path = "modules/pyexchange" }
 pyfail = { version = "0.1.0", path = "modules/pyfail" }
+pyfilewalk = { version = "0.1.0", path = "modules/pyfilewalk" }
 pyformatutil = { version = "0.1.0", path = "modules/pyformatutil" }
 pyfs = { version = "0.1.0", path = "modules/pyfs" }
 pygitcompat = { version = "0.1.0", path = "modules/pygitcompat" }

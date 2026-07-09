@@ -267,6 +267,7 @@ members = [
   "saplingnative/bindings/modules/pyerror",
   "saplingnative/bindings/modules/pyexchange",
   "saplingnative/bindings/modules/pyfail",
+  "saplingnative/bindings/modules/pyfilewalk",
   "saplingnative/bindings/modules/pyformatutil",
   "saplingnative/bindings/modules/pyfs",
   "saplingnative/bindings/modules/pygitcompat",
