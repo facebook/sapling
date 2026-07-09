@@ -81,6 +81,11 @@ pub enum ScopedItems<'a, T, E = Infallible> {
     /// This is used when results are generated over time, often by background work or remote I/O,
     /// and preserves batching across pipeline stages.
     Stream(Box<dyn Iterator<Item = Result<Batch<T>, E>> + Send + 'a>),
+    /// A producer-backed stream of fallible individual items.
+    ///
+    /// Item iteration stays item-at-a-time, while [`Items::into_batches`] coalesces adjacent
+    /// successes for batch-oriented consumers like `slex::Work`.
+    ItemStream(Box<dyn Iterator<Item = Result<T, E>> + Send + 'a>),
 }
 
 /// Ready-or-stream transport for owned/static batched APIs.
@@ -114,15 +119,17 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
         Self::Stream(Box::new(iter.map(|batch| batch.map(Into::into))))
     }
 
-    /// Construct a stream of fallible individual items.
+    /// Construct a stream from a fallible item-at-a-time source.
     ///
-    /// New code should prefer [`Items::ready`] or [`Items::stream`] so batching is preserved.
+    /// The adapter batches adjacent successful items so legacy item iterators do not force
+    /// downstream pipelines to process one-item batches. New code should still prefer
+    /// [`Items::ready`] or [`Items::stream`] when the producer already has batches.
     pub fn item_stream(iter: impl Iterator<Item = Result<T, E>> + Send + 'a) -> Self
     where
-        T: 'a,
-        E: 'a,
+        T: Send + 'a,
+        E: Send + 'a,
     {
-        Self::Stream(Box::new(iter.map(|item| item.map(|item| [item].into()))))
+        Self::ItemStream(Box::new(iter))
     }
 
     /// Consume this value as fallible batches.
@@ -136,6 +143,7 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
         match self {
             Self::Ready(items) => ItemsBatches::Ready(items.into_iter()),
             Self::Stream(iter) => ItemsBatches::Stream(iter),
+            Self::ItemStream(iter) => ItemsBatches::Stream(Box::new(ItemStreamBatcher::new(iter))),
         }
     }
 
@@ -194,6 +202,10 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
                 ScopedItems::Ready(mapped)
             }
             Self::Stream(iter) => ScopedItems::Stream(Box::new(FlatMapBatchStream::new(iter, f))),
+            Self::ItemStream(iter) => ScopedItems::Stream(Box::new(FlatMapBatchStream::new(
+                Box::new(ItemStreamBatcher::new(iter)),
+                f,
+            ))),
         }
     }
 
@@ -258,6 +270,65 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
             batch?;
         }
         Ok(())
+    }
+}
+
+const ITEM_STREAM_BATCH_ITEMS: usize = 128;
+
+struct ItemStreamBatcher<I, T, E> {
+    iter: I,
+    batch: Vec<T>,
+    pending_error: Option<E>,
+}
+
+impl<I, T, E> ItemStreamBatcher<I, T, E> {
+    fn new(iter: I) -> Self {
+        Self {
+            iter,
+            batch: Vec::with_capacity(ITEM_STREAM_BATCH_ITEMS),
+            pending_error: None,
+        }
+    }
+
+    fn take_batch(&mut self) -> Batch<T> {
+        std::mem::replace(&mut self.batch, Vec::with_capacity(ITEM_STREAM_BATCH_ITEMS)).into()
+    }
+}
+
+impl<I, T, E> Iterator for ItemStreamBatcher<I, T, E>
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    type Item = Result<Batch<T>, E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(err) = self.pending_error.take() {
+            return Some(Err(err));
+        }
+
+        for item in self.iter.by_ref() {
+            match item {
+                Ok(item) => {
+                    self.batch.push(item);
+                    if self.batch.len() >= ITEM_STREAM_BATCH_ITEMS {
+                        return Some(Ok(self.take_batch()));
+                    }
+                }
+                Err(err) => {
+                    if self.batch.is_empty() {
+                        return Some(Err(err));
+                    }
+                    self.pending_error = Some(err);
+                    return Some(Ok(self.take_batch()));
+                }
+            }
+        }
+
+        if self.batch.is_empty() {
+            None
+        } else {
+            Some(Ok(self.take_batch()))
+        }
     }
 }
 
@@ -331,28 +402,38 @@ where
 
 /// Compatibility iterator that flattens [`Items`] into individual fallible items.
 pub struct ItemsIntoIter<'a, T, E = Infallible> {
-    batches: ItemsBatches<'a, T, E>,
-    current: Option<smallvec::IntoIter<[T; 1]>>,
+    kind: ItemsIntoIterKind<'a, T, E>,
+}
+
+enum ItemsIntoIterKind<'a, T, E = Infallible> {
+    Batches {
+        batches: ItemsBatches<'a, T, E>,
+        current: Option<smallvec::IntoIter<[T; 1]>>,
+    },
+    Items(Box<dyn Iterator<Item = Result<T, E>> + Send + 'a>),
 }
 
 impl<T, E> Iterator for ItemsIntoIter<'_, T, E> {
     type Item = Result<T, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(current) = &mut self.current {
-                if let Some(item) = current.next() {
-                    return Some(Ok(item));
+        match &mut self.kind {
+            ItemsIntoIterKind::Items(iter) => iter.next(),
+            ItemsIntoIterKind::Batches { batches, current } => loop {
+                if let Some(items) = current {
+                    if let Some(item) = items.next() {
+                        return Some(Ok(item));
+                    }
+                    *current = None;
                 }
-                self.current = None;
-            }
 
-            match self.batches.next()? {
-                Ok(batch) => {
-                    self.current = Some(batch.into_iter());
+                match batches.next()? {
+                    Ok(batch) => {
+                        *current = Some(batch.into_iter());
+                    }
+                    Err(err) => return Some(Err(err)),
                 }
-                Err(err) => return Some(Err(err)),
-            }
+            },
         }
     }
 }
@@ -366,10 +447,14 @@ where
     type Item = Result<T, E>;
 
     fn into_iter(self) -> Self::IntoIter {
-        ItemsIntoIter {
-            batches: self.into_batches(),
-            current: None,
-        }
+        let kind = match self {
+            Self::ItemStream(iter) => ItemsIntoIterKind::Items(iter),
+            items => ItemsIntoIterKind::Batches {
+                batches: items.into_batches(),
+                current: None,
+            },
+        };
+        ItemsIntoIter { kind }
     }
 }
 
@@ -411,6 +496,46 @@ mod tests {
             items.into_iter().collect::<Result<Vec<_>, _>>().unwrap(),
             vec![1, 2, 3, 4]
         );
+    }
+
+    #[test]
+    fn item_stream_batches_successes() {
+        let items: Items<usize, &'static str> =
+            Items::item_stream((0..130).map(Ok::<_, &'static str>));
+        let batches = items.into_batches().collect::<Result<Vec<_>, _>>().unwrap();
+
+        assert_eq!(batches.len(), 2);
+        assert_eq!(batches[0].len(), ITEM_STREAM_BATCH_ITEMS);
+        assert_eq!(batches[1].as_slice(), &[128, 129]);
+    }
+
+    #[test]
+    fn item_stream_into_iter_stays_item_lazy() {
+        let pulled = Arc::new(AtomicUsize::new(0));
+        let pulled_in_iter = Arc::clone(&pulled);
+        let items: Items<usize, &'static str> = Items::item_stream((0..130).map(move |item| {
+            pulled_in_iter.fetch_add(1, Ordering::SeqCst);
+            Ok(item)
+        }));
+        let mut iter = items.into_iter();
+
+        assert_eq!(pulled.load(Ordering::SeqCst), 0);
+        assert_eq!(iter.next(), Some(Ok(0)));
+        assert_eq!(pulled.load(Ordering::SeqCst), 1);
+        assert_eq!(iter.next(), Some(Ok(1)));
+        assert_eq!(pulled.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn item_stream_flushes_before_error() {
+        let items: Items<usize, &'static str> =
+            Items::item_stream([Ok(1), Ok(2), Err("bad"), Ok(3)].into_iter());
+        let batches = items.into_batches().collect::<Vec<_>>();
+
+        assert_eq!(batches.len(), 3);
+        assert_eq!(batches[0].as_ref().unwrap().as_slice(), &[1, 2]);
+        assert_eq!(batches[1], Err("bad"));
+        assert_eq!(batches[2].as_ref().unwrap().as_slice(), &[3]);
     }
 
     #[test]

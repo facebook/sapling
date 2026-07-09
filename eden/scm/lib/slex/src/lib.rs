@@ -549,14 +549,12 @@ mod tests {
     }
 
     #[test]
-    fn item_stream_into_batches_yields_single_item_batches() {
+    fn item_stream_into_batches_coalesces_successful_items() {
         let batch: Items<i32> = Items::item_stream((0..3).map(Ok));
         let batches = batch.into_batches().collect::<Result<Vec<_>, _>>().unwrap();
 
-        assert_eq!(batches.len(), 3);
-        assert_eq!(batches[0].as_slice(), &[0]);
-        assert_eq!(batches[1].as_slice(), &[1]);
-        assert_eq!(batches[2].as_slice(), &[2]);
+        assert_eq!(batches.len(), 1);
+        assert_eq!(batches[0].as_slice(), &[0, 1, 2]);
     }
 
     #[test]
@@ -565,8 +563,7 @@ mod tests {
             Items::item_stream(vec![Ok(1), Ok(2), Err("boom"), Ok(3)].into_iter());
         let mut batches = batch.into_batches();
 
-        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[1]);
-        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[2]);
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[1, 2]);
         assert_eq!(batches.next(), Some(Err("boom")));
         assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[3]);
     }
