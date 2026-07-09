@@ -10,9 +10,6 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::thread;
 
 use anyhow::Context;
 use anyhow::anyhow;
@@ -157,10 +154,29 @@ impl Outputter {
         }
     }
 
-    fn fs_results(&self) -> Option<flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>> {
+    fn finish(self) -> anyhow::Result<()> {
         match self {
-            Outputter::Disk { vfs_result_rx, .. } => Some(vfs_result_rx.clone()),
-            Outputter::Io(_) | Outputter::Tar { .. } => None,
+            Outputter::Disk {
+                work_tx,
+                vfs_result_rx,
+                ..
+            } => {
+                drop(work_tx);
+                while let Ok(result) = vfs_result_rx.recv() {
+                    if let Err((_, err)) = result {
+                        return Err(err);
+                    }
+                }
+                Ok(())
+            }
+            Outputter::Io(io) => {
+                io.lock().output().flush()?;
+                Ok(())
+            }
+            Outputter::Tar { builder, .. } => {
+                builder.lock().finish()?;
+                Ok(())
+            }
         }
     }
 
@@ -177,8 +193,15 @@ impl Outputter {
                 commit_id,
                 repo_name,
                 work_tx,
+                vfs_result_rx,
                 ..
             } => {
+                while let Ok(result) = vfs_result_rx.try_recv() {
+                    if let Err((_, err)) = result {
+                        return Err(err);
+                    }
+                }
+
                 let update_flag = match file_type {
                     FileType::Regular => UpdateFlag::Regular,
                     FileType::Executable => UpdateFlag::Executable,
@@ -210,20 +233,6 @@ impl Outputter {
                     make_output_filename(output_template, commit_id, path, repo_name.as_deref())?;
                 let mut builder = builder.lock();
                 append_tar_entry(&mut builder, path, &tar_path, hgid, data, file_type)?;
-                Ok(())
-            }
-        }
-    }
-
-    fn finish(&self) -> anyhow::Result<()> {
-        match self {
-            Outputter::Disk { .. } => Ok(()),
-            Outputter::Io(io) => {
-                io.lock().output().flush()?;
-                Ok(())
-            }
-            Outputter::Tar { builder, .. } => {
-                builder.lock().finish()?;
                 Ok(())
             }
         }
@@ -317,78 +326,28 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     outputter: Outputter,
     binary_file_size_threshold: Option<usize>,
 ) -> Result<usize> {
-    let output_count = Arc::new(AtomicUsize::new(0));
+    let file_items = walk_and_fetch(manifest, matcher, file_store);
+    let mut output_count = 0;
 
-    let (file_rx, first_error) = walk_and_fetch(manifest, matcher, file_store);
-
-    let mut handles: Vec<thread::JoinHandle<()>> = Vec::new();
-
-    // Spawn VFS error forwarder thread (only for Disk output)
-    if let Some(rx) = outputter.fs_results() {
-        let first_error = first_error.clone();
-        handles.push(thread::spawn(move || {
-            while let Ok(result) = rx.recv() {
-                if let Err((_, err)) = result {
-                    first_error.send_error(err);
-                    break;
-                }
-            }
-        }));
-    }
-
-    // Spawn output thread
-    {
-        let first_error = first_error.clone();
-        let output_count = output_count.clone();
-        handles.push(thread::spawn(move || {
-            let run = || -> anyhow::Result<()> {
-                while let Ok(file_batch) = file_rx.recv() {
-                    if first_error.has_error() {
-                        return Ok(());
-                    }
-
-                    for file_result in file_batch {
-                        if first_error.has_error() {
-                            return Ok(());
-                        }
-
-                        let FileResult {
-                            path,
-                            hgid,
-                            data,
-                            file_type,
-                        } = file_result;
-                        let (data, file_type) = filter_binary_file(
-                            &path,
-                            hgid,
-                            data,
-                            file_type,
-                            binary_file_size_threshold,
-                        )?;
-                        outputter.output_file(&path, hgid, data, file_type)?;
-                        output_count.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-                outputter.finish()?;
-                Ok(())
-            };
-
-            if let Err(e) = run() {
-                first_error.send_error(e);
-            }
-        }));
-    }
-
-    // Wait for all threads
-    for handle in handles {
-        if let Err(e) = handle.join() {
-            std::panic::resume_unwind(e);
+    for file_batch in file_items.into_batches() {
+        let file_batch = file_batch?;
+        for file_result in file_batch {
+            let FileResult {
+                path,
+                hgid,
+                data,
+                file_type,
+            } = file_result;
+            let (data, file_type) =
+                filter_binary_file(&path, hgid, data, file_type, binary_file_size_threshold)?;
+            outputter.output_file(&path, hgid, data, file_type)?;
+            output_count += 1;
         }
     }
 
-    first_error.wait()?;
+    outputter.finish()?;
 
-    Ok(output_count.load(Ordering::Relaxed))
+    Ok(output_count)
 }
 
 fn filter_binary_file(

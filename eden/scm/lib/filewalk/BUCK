@@ -20,11 +20,11 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:flume",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/slex:slex",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
     ],

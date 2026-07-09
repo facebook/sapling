@@ -25,7 +25,6 @@ rust_library(
     crate_root = "src/lib.rs",
     features = ["fb"],
     deps = [
-        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:grep",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",

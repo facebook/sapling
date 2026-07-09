@@ -12,9 +12,9 @@ license = "GPL-2.0-only"
 [dependencies]
 anyhow = "1.0.103"
 blob = { version = "0.1.0", path = "../blob" }
-flume = "0.11.1"
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
+slex = { version = "0.1.0", path = "../slex" }
