@@ -39,7 +39,9 @@ namespace facebook::eden {
 
 class IoUringFuseTransport final : public FuseTransport {
  public:
-  explicit IoUringFuseTransport(uint32_t queueDepth);
+  explicit IoUringFuseTransport(
+      uint32_t queueDepth,
+      bool disableIoWait = false);
   ~IoUringFuseTransport() override;
   IoUringFuseTransport(const IoUringFuseTransport&) = delete;
   IoUringFuseTransport& operator=(const IoUringFuseTransport&) = delete;
@@ -71,6 +73,8 @@ class IoUringFuseTransport final : public FuseTransport {
 #if EDEN_HAVE_FUSE_IO_URING
   FRIEND_TEST(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy);
   FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
+  FRIEND_TEST(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait);
+  FRIEND_TEST(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait);
 
   struct RingPool;
 
@@ -212,6 +216,12 @@ class IoUringFuseTransport final : public FuseTransport {
       outstandingEntries_;
   mutable folly::once_flag sessionInitFlag_;
   mutable std::atomic<size_t> nextQueueId_{0};
+  // When true, pass IORING_ENTER_NO_IOWAIT on io_uring_enter so that a worker
+  // parked waiting for completions is not charged as iowait, which otherwise
+  // inflates /proc/stat iowait and cgroup io.pressure (PSI) even when no real
+  // FUSE I/O is outstanding. Only honored on kernels with
+  // IORING_FEAT_NO_IOWAIT.
+  bool disableIoWait_{false};
 #endif
   uint32_t queueDepth_;
 };

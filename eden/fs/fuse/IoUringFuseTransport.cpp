@@ -212,8 +212,16 @@ std::optional<QueueSetupError> setupQueue(
 
 } // namespace
 
-IoUringFuseTransport::IoUringFuseTransport(uint32_t queueDepth)
-    : queueDepth_{queueDepth} {}
+IoUringFuseTransport::IoUringFuseTransport(
+    uint32_t queueDepth,
+    bool disableIoWait)
+    : queueDepth_{queueDepth} {
+#if EDEN_HAVE_FUSE_IO_URING
+  disableIoWait_ = disableIoWait;
+#else
+  (void)disableIoWait;
+#endif
+}
 
 IoUringFuseTransport::~IoUringFuseTransport() {
 #if EDEN_HAVE_FUSE_IO_URING
@@ -359,6 +367,21 @@ void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
       queueDepth_, fuseFd, queue.eventFd, queue.ring, queue.ringInitialized);
   if (maybeSetupError.has_value()) {
     throwIoUringSetupError(*maybeSetupError, queue.queueId);
+  }
+
+  if (disableIoWait_) {
+    // io_uring can't tell an idle-parked wait from one blocked on real I/O, so
+    // this opts the whole ring out of iowait accounting. -EOPNOTSUPP means the
+    // kernel lacks IORING_FEAT_NO_IOWAIT; leave iowait charging on in that
+    // case.
+    auto rc = ::io_uring_set_iowait(&queue.ring, false);
+    if (rc && rc != -EOPNOTSUPP) {
+      XLOGF(
+          ERR,
+          "io_uring_set_iowait failed for queue {}: {}",
+          queue.queueId,
+          folly::errnoStr(-rc));
+    }
   }
 }
 

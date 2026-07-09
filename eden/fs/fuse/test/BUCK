@@ -21,6 +21,7 @@ cpp_unittest(
         "//eden/fs/telemetry/test:capturing_scribe_logger",
         "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:test_dispatcher",
+        "//folly:file",
         "//folly:random",
         "//folly/executors:global_executor",
         "//folly/test:test_utils",

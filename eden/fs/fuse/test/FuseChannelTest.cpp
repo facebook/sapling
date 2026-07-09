@@ -14,6 +14,8 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #if EDEN_HAVE_FUSE_IO_URING
+#include <fcntl.h>
+#include <folly/File.h>
 #include <sys/utsname.h>
 #endif
 #include <cerrno>
@@ -405,6 +407,39 @@ TEST_F(FuseChannelTest, ioUringCqeErrorPolicy) {
   EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN, false));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN, true));
   EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EINTR, false));
+}
+
+// Any valid registrable fd works for these tests; the ring never issues real
+// FUSE commands, so /dev/null stands in for the /dev/fuse device.
+TEST_F(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait) {
+  folly::File devNull{"/dev/null", O_RDWR};
+  constexpr uint32_t kQueueDepth = 4;
+  if (IoUringFuseTransport::getMaybeSetupError(kQueueDepth, devNull.fd())) {
+    GTEST_SKIP() << "io_uring setup unavailable in this environment";
+  }
+
+  IoUringFuseTransport transport{kQueueDepth, /*disableIoWait=*/true};
+  IoUringFuseTransport::RingQueue queue;
+  transport.initializeQueue(queue, devNull.fd());
+
+  if (!(queue.ring.features & IORING_FEAT_NO_IOWAIT)) {
+    GTEST_SKIP() << "kernel lacks IORING_FEAT_NO_IOWAIT";
+  }
+  EXPECT_TRUE(queue.ring.int_flags & IORING_ENTER_NO_IOWAIT);
+}
+
+TEST_F(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait) {
+  folly::File devNull{"/dev/null", O_RDWR};
+  constexpr uint32_t kQueueDepth = 4;
+  if (IoUringFuseTransport::getMaybeSetupError(kQueueDepth, devNull.fd())) {
+    GTEST_SKIP() << "io_uring setup unavailable in this environment";
+  }
+
+  IoUringFuseTransport transport{kQueueDepth};
+  IoUringFuseTransport::RingQueue queue;
+  transport.initializeQueue(queue, devNull.fd());
+
+  EXPECT_FALSE(queue.ring.int_flags & IORING_ENTER_NO_IOWAIT);
 }
 #endif
 

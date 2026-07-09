@@ -339,7 +339,8 @@ class FuseChannel final : public FsChannel {
       uint32_t fuseMaxPages = 0,
       bool useIoUring = false,
       std::string ioUringKernelReleaseRegex = {},
-      uint32_t ioUringQueueDepth = 8);
+      uint32_t ioUringQueueDepth = 8,
+      bool ioUringDisableIoWait = true);
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -1004,6 +1005,7 @@ class FuseChannel final : public FsChannel {
   bool useIoUring_{false};
   std::string ioUringKernelReleaseRegex_;
   uint32_t ioUringQueueDepth_{8};
+  bool ioUringDisableIoWait_{true};
 #if EDEN_HAVE_FUSE_IO_URING
   mutable folly::once_flag ioUringTransportAvailabilityInitFlag_;
   mutable bool ioUringTransportAvailable_{false};

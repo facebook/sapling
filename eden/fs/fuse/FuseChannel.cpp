@@ -1015,7 +1015,8 @@ FuseChannel::FuseChannel(
     uint32_t fuseMaxPages,
     bool useIoUring,
     std::string ioUringKernelReleaseRegex,
-    uint32_t ioUringQueueDepth)
+    uint32_t ioUringQueueDepth,
+    bool ioUringDisableIoWait)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
       // the larger requests we'll negotiate during FUSE_INIT. This is
@@ -1048,6 +1049,7 @@ FuseChannel::FuseChannel(
       useIoUring_{useIoUring},
       ioUringKernelReleaseRegex_{std::move(ioUringKernelReleaseRegex)},
       ioUringQueueDepth_{ioUringQueueDepth},
+      ioUringDisableIoWait_{ioUringDisableIoWait},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
@@ -1231,7 +1233,8 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   takeoverReadinessStarted_.store(true, std::memory_order_release);
   connInfo_ = connInfo;
   if (negotiatedIoUringTransport(connInfo)) {
-    transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
+    transport_ = std::make_unique<IoUringFuseTransport>(
+        ioUringQueueDepth_, ioUringDisableIoWait_);
   }
   updateEffectiveWorkerThreadCount();
   dispatcher_->initConnection(connInfo);
@@ -2085,7 +2088,8 @@ void FuseChannel::readInitPacket() {
         mountPath_,
         transport_->getName(),
         ioUringQueueDepth_);
-    transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
+    transport_ = std::make_unique<IoUringFuseTransport>(
+        ioUringQueueDepth_, ioUringDisableIoWait_);
   }
   updateEffectiveWorkerThreadCount();
 
