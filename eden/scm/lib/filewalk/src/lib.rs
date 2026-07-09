@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! Crate for walking a manifest and fetching file contents in parallel.
+//! Crate for walking manifests and fetching file contents in parallel.
 //!
-//! The main entry point is [`walk_and_fetch`], which returns batches of file results.
+//! [`walk_and_fetch`] streams fetched file contents. [`prefetch`] walks the same
+//! input but only populates caches and returns [`FileStats`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -108,43 +109,85 @@ impl FileResult {
 type FetchWork = (RepoPathBuf, FsNodeMetadata);
 pub type FileItems = Items<FileResult, anyhow::Error>;
 
+/// Starting point for a file walk.
+pub enum WalkInput {
+    /// Walk files reachable from a single manifest.
+    Manifest(TreeManifest),
+}
+
+/// Counts of file content fetches performed by a prefetch walk.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct FileStats {
+    /// File contents satisfied locally according to the drained `FetchContext`.
+    pub local_files: u64,
+    /// File contents fetched remotely according to the drained `FetchContext`.
+    pub remote_files: u64,
+}
+
 /// Walk the manifest matching the given matcher and fetch file contents in parallel.
 ///
 /// The returned iterator owns the pipeline. Dropping it cancels pending work.
 pub fn walk_and_fetch(
-    manifest: TreeManifest,
-    matcher: DynMatcher,
-    file_store: &Arc<dyn FileStore>,
-) -> FileItems {
-    walk_and_fetch_with_options(manifest, matcher, file_store, WalkOptions::default())
-}
-
-/// Walk the manifest and fetch file contents with caller-provided tuning options.
-///
-/// `options` controls the fetch batch size and maximum fetch worker count.
-/// The returned iterator owns the pipeline. Dropping it cancels pending work.
-pub fn walk_and_fetch_with_options(
-    manifest: TreeManifest,
+    input: WalkInput,
     matcher: DynMatcher,
     file_store: &Arc<dyn FileStore>,
     options: WalkOptions,
 ) -> FileItems {
     let options = options.normalized();
     let file_store = file_store.clone();
+    let file_nodes = manifest_items(input, matcher);
     Work::run(
-        WorkOptions::new()
-            .max_workers(options.concurrent_fetches)
-            .inline_items(options.batch_size)
-            .result_queue_size(options.concurrent_fetches * RESULT_QUEUE_SIZE_PER_WORKER),
-        manifest.iter(matcher),
-        WorkShape::batch(move |batch, scope| fetch_files(batch?, scope, &file_store)),
+        work_options(options),
+        file_nodes,
+        WorkShape::batch(move |batch, scope| {
+            fetch_files(batch?, scope, &file_store, FetchContext::sapling_default())
+        }),
     )
 }
 
+/// Walk matching files and prefetch their contents into the backing cache.
+///
+/// Unlike [`walk_and_fetch`], this is cache-only: it uses `FetchContext::sapling_prefetch()`,
+/// discards file contents, and waits for the pipeline to drain before returning [`FileStats`].
+/// The returned counters are read from that fetch context after draining, so they describe the
+/// number of file contents satisfied locally vs fetched remotely by this prefetch operation.
+pub fn prefetch(
+    input: WalkInput,
+    matcher: DynMatcher,
+    file_store: &Arc<dyn FileStore>,
+    options: WalkOptions,
+) -> anyhow::Result<FileStats> {
+    let fctx = FetchContext::sapling_prefetch();
+    let stats_fctx = fctx.clone();
+    let options = options.normalized();
+    let file_store = file_store.clone();
+    let file_nodes = manifest_items(input, matcher);
+    Work::run(
+        work_options(options),
+        file_nodes,
+        WorkShape::batch(move |batch, scope| cache_files(batch?, scope, &file_store, fctx.clone())),
+    )
+    .drain()?;
+    Ok(FileStats::from_fetch_context(&stats_fctx))
+}
+
+fn work_options(options: WalkOptions) -> WorkOptions {
+    WorkOptions::new()
+        .max_workers(options.concurrent_fetches)
+        .inline_items(options.batch_size)
+        .result_queue_size(options.concurrent_fetches * RESULT_QUEUE_SIZE_PER_WORKER)
+}
+
+fn manifest_items(input: WalkInput, matcher: DynMatcher) -> Items<FetchWork, anyhow::Error> {
+    match input {
+        WalkInput::Manifest(manifest) => manifest.iter(matcher),
+    }
+}
 fn fetch_files(
     work: Vec<FetchWork>,
     scope: &mut WorkScope<'_, FetchWork, FileResult, anyhow::Error>,
     file_store: &Arc<dyn FileStore>,
+    fctx: FetchContext,
 ) -> anyhow::Result<()> {
     let mut file_info = HashMap::with_capacity(work.len());
     let mut keys = Vec::new();
@@ -160,7 +203,7 @@ fn fetch_files(
         return Ok(());
     }
 
-    let content_items = file_store.get_content_iter(FetchContext::sapling_default(), keys)?;
+    let content_items = file_store.get_content_iter(fctx.clone(), keys)?;
 
     for batch in content_items.into_batches() {
         if scope.is_canceled() {
@@ -187,6 +230,55 @@ fn fetch_files(
     }
 
     Ok(())
+}
+
+fn cache_files(
+    work: Vec<FetchWork>,
+    scope: &mut WorkScope<'_, FetchWork, (), anyhow::Error>,
+    file_store: &Arc<dyn FileStore>,
+    fctx: FetchContext,
+) -> anyhow::Result<()> {
+    let keys = work
+        .into_iter()
+        .filter_map(|(path, metadata)| match metadata {
+            FsNodeMetadata::File(meta) => Some(Key::new(path, meta.hgid)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    if keys.is_empty() || scope.is_canceled() {
+        return Ok(());
+    }
+
+    let content_items = match file_store.get_content_iter(fctx, keys) {
+        Ok(items) => items,
+        Err(err) => {
+            scope.send_error(err);
+            return Ok(());
+        }
+    };
+
+    for batch in content_items.into_batches() {
+        if scope.is_canceled() {
+            return Ok(());
+        }
+        if let Err(err) = batch {
+            if !scope.send_error(err) {
+                return Ok(());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+impl FileStats {
+    fn from_fetch_context(fctx: &FetchContext) -> Self {
+        Self {
+            local_files: fctx.local_fetch_count(),
+            remote_files: fctx.remote_fetch_count(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -237,5 +329,20 @@ mod tests {
             MAX_CONCURRENT_FETCHES
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_file_stats_from_fetch_context() {
+        let fctx = FetchContext::sapling_prefetch();
+        fctx.inc_local(3);
+        fctx.inc_remote(5);
+
+        assert_eq!(
+            FileStats::from_fetch_context(&fctx),
+            FileStats {
+                local_files: 3,
+                remote_files: 5,
+            }
+        );
     }
 }

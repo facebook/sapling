@@ -25,6 +25,8 @@ use cmdutil::Result;
 use cmdutil::WalkOpts;
 use cmdutil::define_flags;
 use filewalk::FileResult;
+use filewalk::WalkInput;
+use filewalk::WalkOptions;
 use filewalk::walk_and_fetch;
 use manifest::FileType;
 use manifest_tree::TreeManifest;
@@ -237,6 +239,7 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
             &file_store,
             Outputter::new_tar(ctx.io().output(), output_template, commit_id, repo_name),
             binary_file_size_threshold,
+            WalkOptions::from_config(repo.config())?,
         )?
     } else if let Some(output_template) = output.filter(|t| t != "-") {
         let repo_name = repo.repo_name().map(|s| s.to_string());
@@ -257,6 +260,7 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
             commit_id,
             repo_name,
             binary_file_size_threshold,
+            WalkOptions::from_config(repo.config())?,
         )?
     } else {
         ctx.maybe_start_pager(repo.config())?;
@@ -266,6 +270,7 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
             &file_store,
             Outputter::new_io(ctx.io().clone()),
             binary_file_size_threshold,
+            WalkOptions::from_config(repo.config())?,
         )?
     };
 
@@ -278,8 +283,9 @@ fn fetch_and_output(
     file_store: &Arc<dyn FileStore>,
     mut outputter: Outputter,
     binary_file_size_threshold: Option<usize>,
+    options: WalkOptions,
 ) -> Result<usize> {
-    let file_items = walk_and_fetch(manifest, matcher, file_store);
+    let file_items = walk_and_fetch(WalkInput::Manifest(manifest), matcher, file_store, options);
     let mut output_count = 0;
 
     'output: for file_batch in file_items.into_batches() {
@@ -330,8 +336,9 @@ fn fetch_and_output_disk(
     commit_id: HgId,
     repo_name: Option<String>,
     binary_file_size_threshold: Option<usize>,
+    options: WalkOptions,
 ) -> Result<usize> {
-    let file_items = walk_and_fetch(manifest, matcher, file_store);
+    let file_items = walk_and_fetch(WalkInput::Manifest(manifest), matcher, file_store, options);
     let work_items = file_items
         .map_batch(|batch| batch.map_err(VfsBatchError::Batch))
         .try_map_item(move |file_result| {

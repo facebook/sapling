@@ -29,6 +29,8 @@ use cmdutil::WalkOpts;
 use cmdutil::define_flags;
 use configmodel::Config;
 use configmodel::Text;
+use filewalk::WalkInput;
+use filewalk::WalkOptions;
 use filewalk::walk_and_fetch;
 use grep::matcher::Match;
 use grep::matcher::Matcher;
@@ -935,7 +937,12 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
 
     ctx.maybe_start_pager(repo.config())?;
 
-    let file_items = walk_and_fetch(manifest, matcher, &file_store);
+    let file_items = walk_and_fetch(
+        WalkInput::Manifest(manifest),
+        matcher,
+        &file_store,
+        WalkOptions::from_config(repo.config())?,
+    );
 
     // Handle JSON output modes
     if let Some(mut json_out) = json_out {
