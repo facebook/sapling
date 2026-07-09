@@ -234,6 +234,7 @@ pub enum ClientCategory {
     InteractiveDev,
     DevEnv,
     CiSandcastle,
+    FaaS,
     Automation,
     Unknown,
 }
@@ -245,6 +246,7 @@ impl ClientCategory {
             Self::InteractiveDev => "interactive_dev",
             Self::DevEnv => "dev_env",
             Self::CiSandcastle => "ci_sandcastle",
+            Self::FaaS => "faas",
             Self::Automation => "automation",
             Self::Unknown => "unknown",
         }
@@ -278,7 +280,8 @@ impl TenantInfo {
     pub fn subcategory(&self) -> Option<String> {
         match self.category {
             ClientCategory::CiSandcastle => self.ci_purpose.clone(),
-            ClientCategory::HealthCheck
+            ClientCategory::FaaS
+            | ClientCategory::HealthCheck
             | ClientCategory::InteractiveDev
             | ClientCategory::DevEnv
             | ClientCategory::Automation
