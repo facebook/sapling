@@ -63,6 +63,9 @@ use smallvec::SmallVec;
 /// while larger batches can spill to the heap and preserve their existing `Vec` allocation.
 pub type Batch<T> = SmallVec<[T; 1]>;
 
+/// Default item count for input batches passed between `Items` producers and consumers.
+pub const DEFAULT_INPUT_BATCH_SIZE: usize = 16;
+
 /// Lifetime-scoped ready-or-stream transport for batched APIs.
 ///
 /// Ready mode avoids channel and worker overhead for small/local work. Stream mode yields batches
@@ -273,8 +276,6 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
     }
 }
 
-const ITEM_STREAM_BATCH_ITEMS: usize = 128;
-
 struct ItemStreamBatcher<I, T, E> {
     iter: I,
     batch: Vec<T>,
@@ -285,13 +286,17 @@ impl<I, T, E> ItemStreamBatcher<I, T, E> {
     fn new(iter: I) -> Self {
         Self {
             iter,
-            batch: Vec::with_capacity(ITEM_STREAM_BATCH_ITEMS),
+            batch: Vec::with_capacity(DEFAULT_INPUT_BATCH_SIZE),
             pending_error: None,
         }
     }
 
     fn take_batch(&mut self) -> Batch<T> {
-        std::mem::replace(&mut self.batch, Vec::with_capacity(ITEM_STREAM_BATCH_ITEMS)).into()
+        std::mem::replace(
+            &mut self.batch,
+            Vec::with_capacity(DEFAULT_INPUT_BATCH_SIZE),
+        )
+        .into()
     }
 }
 
@@ -310,7 +315,7 @@ where
             match item {
                 Ok(item) => {
                     self.batch.push(item);
-                    if self.batch.len() >= ITEM_STREAM_BATCH_ITEMS {
+                    if self.batch.len() >= DEFAULT_INPUT_BATCH_SIZE {
                         return Some(Ok(self.take_batch()));
                     }
                 }
@@ -501,12 +506,15 @@ mod tests {
     #[test]
     fn item_stream_batches_successes() {
         let items: Items<usize, &'static str> =
-            Items::item_stream((0..130).map(Ok::<_, &'static str>));
+            Items::item_stream((0..DEFAULT_INPUT_BATCH_SIZE + 2).map(Ok::<_, &'static str>));
         let batches = items.into_batches().collect::<Result<Vec<_>, _>>().unwrap();
 
         assert_eq!(batches.len(), 2);
-        assert_eq!(batches[0].len(), ITEM_STREAM_BATCH_ITEMS);
-        assert_eq!(batches[1].as_slice(), &[128, 129]);
+        assert_eq!(batches[0].len(), DEFAULT_INPUT_BATCH_SIZE);
+        assert_eq!(
+            batches[1].as_slice(),
+            &[DEFAULT_INPUT_BATCH_SIZE, DEFAULT_INPUT_BATCH_SIZE + 1]
+        );
     }
 
     #[test]

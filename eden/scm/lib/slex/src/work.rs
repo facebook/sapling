@@ -83,6 +83,7 @@ use std::sync::atomic::Ordering;
 use parking_lot::Condvar;
 use parking_lot::Mutex;
 use slex_items::Batch as ItemsBatch;
+use slex_items::DEFAULT_INPUT_BATCH_SIZE;
 use tokio::task::JoinHandle;
 
 use crate::Items;
@@ -169,7 +170,7 @@ pub struct WorkOptions {
 }
 
 impl WorkOptions {
-    const DEFAULT_INLINE_ITEMS: usize = 16;
+    const DEFAULT_INLINE_ITEMS: usize = DEFAULT_INPUT_BATCH_SIZE;
     const DEFAULT_INLINE_RESULT_ITEMS: usize = 1024;
     const DEFAULT_RESULT_BATCH_ITEMS: usize = 128;
     const DEFAULT_RESULT_QUEUE_SIZE: usize = 8;

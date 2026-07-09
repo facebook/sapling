@@ -85,6 +85,7 @@ pub use items_writer::ItemsWriter;
 pub use items_writer::ItemsWriterOptions;
 use parking_lot::Mutex;
 pub use slex_items::Batch;
+pub use slex_items::DEFAULT_INPUT_BATCH_SIZE;
 pub use slex_items::Items;
 pub use slex_items::ItemsBatches;
 pub use slex_items::ScopedItems;
@@ -549,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn item_stream_into_batches_coalesces_successful_items() {
+    fn item_stream_into_batches_coalesces_items() {
         let batch: Items<i32> = Items::item_stream((0..3).map(Ok));
         let batches = batch.into_batches().collect::<Result<Vec<_>, _>>().unwrap();
 
