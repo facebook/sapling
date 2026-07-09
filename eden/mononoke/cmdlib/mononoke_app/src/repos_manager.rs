@@ -401,6 +401,14 @@ fn filter_repos_with_changed_config(
         .collect()
 }
 
+/// Whether a single-repo config update should rebuild the repo on this host.
+/// Skips disabled repos and repos not currently served here — per-repo watchers
+/// fire for every manifest repo, but a host only builds its own shard's repos
+/// (a newly-assigned shard is built by `add_repo`).
+fn should_reload_single_repo(enabled: bool, currently_served: bool) -> bool {
+    enabled && currently_served
+}
+
 impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     fn new(
         repos: Arc<MononokeRepos<Repo>>,
@@ -590,8 +598,17 @@ where
             Arc::new(snapshot)
         });
 
-        // Skip disabled or non-reloadable repos
-        if !repo_config.enabled {
+        // Skip disabled repos, and repos not served on this host: an unserved
+        // repo has no applied_configs entry, so it would fall through the dedup
+        // below and rebuild a repo we don't serve. Mirrors compute_reloadable_repos.
+        if !should_reload_single_repo(
+            repo_config.enabled,
+            self.repos.get_by_name(repo_name).is_some(),
+        ) {
+            debug!(
+                "Skipping single-repo reload for {} (disabled or unserved)",
+                repo_name
+            );
             return Ok(());
         }
 
@@ -653,6 +670,7 @@ mod test {
 
     use super::compute_reloadable_repos;
     use super::filter_repos_with_changed_config;
+    use super::should_reload_single_repo;
 
     /// Helper to create a RepoConfig with the specified enabled state and sharding config
     fn make_repo_config(
@@ -927,5 +945,17 @@ mod test {
         assert!(!names.contains(&"unchanged"));
         assert!(names.contains(&"changed"));
         assert!(names.contains(&"brand_new"));
+    }
+
+    #[mononoke::test]
+    fn test_should_reload_single_repo() {
+        // Enabled + served -> rebuild.
+        assert!(should_reload_single_repo(true, true));
+        // Not served on this host -> skip (don't rebuild a repo we don't serve
+        // even though a per-repo watcher fired for it).
+        assert!(!should_reload_single_repo(true, false));
+        // Disabled -> skip regardless of serving.
+        assert!(!should_reload_single_repo(false, true));
+        assert!(!should_reload_single_repo(false, false));
     }
 }

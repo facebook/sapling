@@ -98,6 +98,15 @@ fn content_changed<T: PartialEq>(prev: &Option<Arc<T>>, current: &Option<Arc<T>>
     }
 }
 
+/// Per-repo analogue of [`content_changed`]: did the `RepoSpec` change from the
+/// last-applied content? `None` (nothing recorded yet) counts as changed.
+fn spec_content_changed(prev: Option<&Arc<RepoSpec>>, current: &RepoSpec) -> bool {
+    match prev {
+        Some(p) => **p != *current,
+        None => true,
+    }
+}
+
 /// Awaits the next update on a `ConfigUpdateWatcher`, parking forever if no
 /// watcher is configured. Used to keep the blob/manifest arms of `select!`
 /// valid when only one of the two is active.
@@ -146,6 +155,26 @@ async fn wait_one(
 ) -> PerRepoWaitResult {
     let result = watcher.wait_for_next().await;
     (repo_name, result, watcher)
+}
+
+/// Register a per-repo watcher, seeding `prev_specs` with the repo's current
+/// content so even a one-shot spurious version bump is deduped on its first fire.
+fn push_per_repo_watcher(
+    name: String,
+    watcher: ConfigUpdateWatcher<RepoSpec>,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
+    prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
+    per_repo_wait_futures: &mut FuturesUnordered<PerRepoFuture>,
+) {
+    match repo_handles.read() {
+        Ok(handles) => {
+            if let Some(handle) = handles.get(&name) {
+                prev_specs.insert(name.clone(), handle.get());
+            }
+        }
+        Err(e) => error!("repo_handles lock poisoned seeding prev_spec for {name}: {e}"),
+    }
+    per_repo_wait_futures.push(Box::pin(wait_one(name, watcher)));
 }
 
 /// Free function (not an inline async block) so the compiler infers a concrete
@@ -255,6 +284,10 @@ pub(crate) async fn unified_config_watcher(
     let mut prev_manifest: Option<Arc<TierManifest>> = None;
     let mut cached_parsed: Option<RepoConfigs> = None;
 
+    // Last-applied RepoSpec per repo; lets the per-repo arm skip spurious
+    // identical-content reloads. Seeded at registration.
+    let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
+
     // Per-repo watcher set. Populated entirely through the control-channel
     // arm — `MononokeConfigs::new` enqueues `Added` events for pre-loaded
     // handles before the watcher task starts, and `load_repo_config_handle`
@@ -281,7 +314,13 @@ pub(crate) async fn unified_config_watcher(
                 match event {
                     Some(RepoHandleEvent::Added(name, watcher)) => {
                         debug!("Registering per-repo watcher for {name}");
-                        per_repo_wait_futures.push(Box::pin(wait_one(name, watcher)));
+                        push_per_repo_watcher(
+                            name,
+                            watcher,
+                            &repo_handles,
+                            &mut prev_specs,
+                            &mut per_repo_wait_futures,
+                        );
                     }
                     None => {
                         // Sender side dropped — disable this arm so wait_for_event parks.
@@ -301,6 +340,7 @@ pub(crate) async fn unified_config_watcher(
                     &repo_configs,
                     &update_receivers,
                     &mut per_repo_wait_futures,
+                    &mut prev_specs,
                 ).await;
                 continue;
             }
@@ -353,7 +393,13 @@ pub(crate) async fn unified_config_watcher(
                         // per-repo content changes for them propagate without
                         // waiting for the next bulk reload.
                         for (name, watcher) in new_watchers {
-                            per_repo_wait_futures.push(Box::pin(wait_one(name, watcher)));
+                            push_per_repo_watcher(
+                                name,
+                                watcher,
+                                &repo_handles,
+                                &mut prev_specs,
+                                &mut per_repo_wait_futures,
+                            );
                         }
                     }
                     Err(e) => {
@@ -459,6 +505,7 @@ async fn handle_per_repo_fire(
     repo_configs: &Swappable<RepoConfigs>,
     update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     per_repo_wait_futures: &mut FuturesUnordered<PerRepoFuture>,
+    prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
 ) {
     // Handle removed concurrently by remove_repo_config_handle (which drops
     // the ConfigHandle, closing the watcher channel). Don't re-push.
@@ -472,6 +519,7 @@ async fn handle_per_repo_fire(
     };
     if !still_present {
         debug!("Per-repo watcher fired for absent repo {name}, dropping");
+        prev_specs.remove(&name);
         return;
     }
 
@@ -480,9 +528,22 @@ async fn handle_per_repo_fire(
         Err(e) => {
             // Sender closed: handle dropped. Don't re-push.
             debug!("Per-repo watcher for {name} closed: {e:?}");
+            prev_specs.remove(&name);
             return;
         }
     };
+
+    // Skip spurious version bumps: identical RepoSpec content -> no parse/rebuild
+    // (repo_factory::build re-preloads the commit graph). Raw compare.
+    if !spec_content_changed(prev_specs.get(&name), &spec) {
+        STATS::spurious_reload_suppressed.add_value(1);
+        debug!("Per-repo config content unchanged for {name}, skipping reload");
+        // Repoint at the new Arc (same content) to release the old allocation
+        // and keep sharing storage with the live handle instead of pinning a dup.
+        prev_specs.insert(name.clone(), spec);
+        per_repo_wait_futures.push(Box::pin(wait_one(name, watcher)));
+        return;
+    }
 
     let Some(tier) = tier_name else {
         error!("Per-repo watcher fired without tier_name set (repo {name}); skipping");
@@ -501,6 +562,8 @@ async fn handle_per_repo_fire(
         return;
     };
 
+    // Cheap Arc clone; parse_repo_spec consumes the original below.
+    let applied_spec = spec.clone();
     let new_config = match parse_repo_spec(
         Arc::unwrap_or_clone(spec),
         tier,
@@ -519,6 +582,13 @@ async fn handle_per_repo_fire(
     let succeeded = apply_per_repo_update(&name, new_config, repo_configs, update_receivers).await;
     if succeeded {
         STATS::per_repo_refresh_count.add_value(1);
+        // Record applied content for dedup, but only once a receiver exists to act
+        // on it. The watcher runs before receivers register at startup; advancing
+        // then would dedup away the healing reload that fires once they do, leaving
+        // the repo on stale config. Failures don't advance either, so they retry.
+        if !update_receivers.load().is_empty() {
+            prev_specs.insert(name.clone(), applied_spec);
+        }
     } else {
         STATS::per_repo_refresh_failure_count.add_value(1);
     }
@@ -961,6 +1031,7 @@ mod tests {
         let configs = empty_repo_configs();
         let receivers = empty_receivers();
         let mut futs: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+        let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
 
         handle_per_repo_fire(
             "removed_repo".to_string(),
@@ -972,6 +1043,7 @@ mod tests {
             &configs,
             &receivers,
             &mut futs,
+            &mut prev_specs,
         )
         .await;
 
@@ -992,6 +1064,7 @@ mod tests {
         let configs = empty_repo_configs();
         let receivers = empty_receivers();
         let mut futs: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+        let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
 
         handle_per_repo_fire(
             "foo".to_string(),
@@ -1003,6 +1076,7 @@ mod tests {
             &configs,
             &receivers,
             &mut futs,
+            &mut prev_specs,
         )
         .await;
 
@@ -1024,6 +1098,7 @@ mod tests {
         let configs = empty_repo_configs();
         let receivers = empty_receivers();
         let mut futs: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+        let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
 
         handle_per_repo_fire(
             "foo".to_string(),
@@ -1035,6 +1110,7 @@ mod tests {
             &configs,
             &receivers,
             &mut futs,
+            &mut prev_specs,
         )
         .await;
 
@@ -1052,6 +1128,7 @@ mod tests {
         let configs = empty_repo_configs();
         let receivers = empty_receivers();
         let mut futs: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+        let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
 
         handle_per_repo_fire(
             "foo".to_string(),
@@ -1063,6 +1140,7 @@ mod tests {
             &configs,
             &receivers,
             &mut futs,
+            &mut prev_specs,
         )
         .await;
 
@@ -1070,6 +1148,81 @@ mod tests {
             futs.len(),
             1,
             "must re-push watcher when manifest is missing so future fires are observed",
+        );
+    }
+
+    // None -> changed (first fire applies); identical -> unchanged; differing -> changed.
+    #[mononoke::test]
+    fn test_spec_content_changed() {
+        let prev = Arc::new(RepoSpec::default());
+        let identical = RepoSpec::default();
+        let different = RepoSpec {
+            repo_id: 42,
+            ..Default::default()
+        };
+
+        assert!(
+            spec_content_changed(None, &identical),
+            "no recorded spec must be treated as changed so the first fire applies",
+        );
+        assert!(
+            !spec_content_changed(Some(&prev), &identical),
+            "identical RepoSpec content is a spurious version bump, not a change",
+        );
+        assert!(
+            spec_content_changed(Some(&prev), &different),
+            "a differing RepoSpec must be treated as changed",
+        );
+    }
+
+    // Identical content -> no apply (no receiver call, bulk untouched), watcher
+    // still re-pushed. tier+manifest present so only the dedup can short-circuit.
+    #[mononoke::test]
+    async fn test_handle_per_repo_fire_skips_unchanged_spec() {
+        let handles = make_repo_handles(&["foo"]);
+        let configs = empty_repo_configs();
+        let receiver = Arc::new(RecordingReceiver {
+            repo_configs: configs.clone(),
+            calls: tokio::sync::Mutex::new(Vec::new()),
+        });
+        let receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>> =
+            Arc::new(ArcSwap::from_pointee(vec![
+                receiver.clone() as Arc<dyn ConfigUpdateReceiver>
+            ]));
+        let mut futs: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+
+        let spec = Arc::new(RepoSpec::default());
+        let mut prev_specs: HashMap<String, Arc<RepoSpec>> = HashMap::new();
+        prev_specs.insert("foo".to_string(), spec.clone());
+        let manifest = manifest_with(vec![tier_entry("foo", false)]);
+
+        handle_per_repo_fire(
+            "foo".to_string(),
+            Ok(spec.clone()), // identical content to the seeded prev_spec
+            fresh_watcher(),
+            &handles,
+            Some("test_tier"),
+            Some(&manifest),
+            &configs,
+            &receivers,
+            &mut futs,
+            &mut prev_specs,
+        )
+        .await;
+
+        assert_eq!(
+            receiver.calls.lock().await.len(),
+            0,
+            "identical content must not trigger a per-repo apply/rebuild",
+        );
+        assert!(
+            !configs.load().repos.contains_key("foo"),
+            "bulk Arc must not be patched when content is unchanged",
+        );
+        assert_eq!(
+            futs.len(),
+            1,
+            "watcher must be re-pushed so future real changes are still observed",
         );
     }
 }
