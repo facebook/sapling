@@ -18,6 +18,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use pathmatcher::DynMatcher;
 use slex::Items;
@@ -113,6 +114,14 @@ pub type FileItems = Items<FileResult, anyhow::Error>;
 pub enum WalkInput {
     /// Walk files reachable from a single manifest.
     Manifest(TreeManifest),
+    /// Walk files changed between two manifests.
+    ///
+    /// `manifest` is the target side and `base_manifest` is the base side. Only file nodes from
+    /// `manifest` are yielded to downstream fetchers.
+    Diff {
+        manifest: TreeManifest,
+        base_manifest: TreeManifest,
+    },
 }
 
 /// Counts of file content fetches performed by a prefetch walk.
@@ -181,8 +190,34 @@ fn work_options(options: WalkOptions) -> WorkOptions {
 fn manifest_items(input: WalkInput, matcher: DynMatcher) -> Items<FetchWork, anyhow::Error> {
     match input {
         WalkInput::Manifest(manifest) => manifest.iter(matcher),
+        WalkInput::Diff {
+            manifest,
+            base_manifest,
+        } => diff_manifest_items(manifest, base_manifest, matcher),
     }
 }
+
+fn diff_manifest_items(
+    manifest: TreeManifest,
+    base_manifest: TreeManifest,
+    matcher: DynMatcher,
+) -> Items<FetchWork, anyhow::Error> {
+    match manifest.diff(&base_manifest, matcher) {
+        Ok(items) => items.map_batch(|batch| {
+            Ok(batch?
+                .into_iter()
+                .filter_map(|diff_entry| {
+                    diff_entry
+                        .diff_type
+                        .left()
+                        .map(|file_meta| (diff_entry.path, FsNodeMetadata::File(file_meta)))
+                })
+                .collect::<Vec<_>>())
+        }),
+        Err(err) => Items::error(err),
+    }
+}
+
 fn fetch_files(
     work: Vec<FetchWork>,
     scope: &mut WorkScope<'_, FetchWork, FileResult, anyhow::Error>,
