@@ -59,6 +59,7 @@ rust_library(
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
+        "//common/rust/zippydb/zippydb-thrift:zippydb_thrift",
         "//configerator/structs/infrasec/if:acl-rust",
         "//crypto/keychain_service:if-rust",
         "//crypto/keychain_service:if-rust-srclients",
