@@ -12,10 +12,10 @@ license = "GPL-2.0-only"
 [dependencies]
 anyhow = "1.0.103"
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-rayon = "1.11.0"
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-manifest = { version = "0.1.0", path = "../../../manifest" }
 sapling-pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
 sha1 = "0.10.5"
+slex = { version = "0.1.0", path = "../../../slex" }

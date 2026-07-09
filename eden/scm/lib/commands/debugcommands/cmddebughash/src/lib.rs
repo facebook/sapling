@@ -24,10 +24,12 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
-use rayon::prelude::*;
 use repo::CoreRepo;
 use sha1::Digest;
 use sha1::Sha1;
+use slex::FoldScope;
+use slex::Work;
+use slex::WorkOptions;
 use types::HgId;
 use types::RepoPathBuf;
 use types::hgid::NULL_ID;
@@ -125,8 +127,7 @@ pub fn run(ctx: ReqCtx<DebugHashOpts>, repo: &CoreRepo) -> CmdResult<u8> {
         matcher
     };
 
-    let res = compute_hash(&manifest, RepoPathBuf::new(), &*matcher)?;
-    let hash = res.map(|(_, hgid)| hgid).unwrap_or(NULL_ID);
+    let hash = compute_hash(Arc::new(manifest), matcher)?;
 
     let mut out = ctx.io().output();
     write!(out, "{}\n", hash.to_hex())?;
@@ -134,70 +135,97 @@ pub fn run(ctx: ReqCtx<DebugHashOpts>, repo: &CoreRepo) -> CmdResult<u8> {
     Ok(0)
 }
 
-/// Recursively compute a hash over matching manifest entries.
-///
-/// At each directory:
-/// - `Everything`: use the directory's tree hash directly (avoids recursion)
-/// - `ShouldTraverse`: recurse into the directory
-/// - `Nothing`: skip entirely
-///
-/// At each level, collected HgIds are sorted and SHA1'd together.
-fn compute_hash(
-    manifest: &(impl Manifest + Sync),
+#[derive(Debug)]
+struct HashWork {
     path: RepoPathBuf,
+    subtree_matches_everything: bool,
+}
+
+type HashEntry = (RepoPathBuf, HgId);
+type FoldHashEntry = Option<HashEntry>;
+
+/// Compute a hash over matching manifest entries.
+///
+/// Fully-matched durable directories collapse to their tree hash. Other directories are folded
+/// postorder, so only active DFS lanes and unreduced ancestors stay in memory.
+fn compute_hash(
+    manifest: Arc<impl Manifest + Send + Sync + 'static>,
+    matcher: DynMatcher,
+) -> Result<HgId> {
+    let root = HashWork {
+        path: RepoPathBuf::new(),
+        subtree_matches_everything: false,
+    };
+    let hgid = Work::fold_tree(
+        WorkOptions::new(),
+        root,
+        move |work, scope| list_hash_work(&*manifest, &*matcher, work, scope),
+        |work, entries| Ok(hash_directory_entries(work.path.clone(), entries)),
+    )?;
+    Ok(hgid.map(|(_, hgid)| hgid).unwrap_or(NULL_ID))
+}
+
+fn list_hash_work(
+    manifest: &(impl Manifest + Sync),
     matcher: &(dyn Matcher + Sync),
-) -> Result<Option<(RepoPathBuf, HgId)>> {
-    let entries = match manifest.list(&path)? {
-        List::NotFound => return Ok(None),
-        List::File => return Ok(None),
+    work: &HashWork,
+    scope: &mut FoldScope<HashWork, FoldHashEntry>,
+) -> Result<()> {
+    let entries = match manifest.list(&work.path)? {
+        List::NotFound | List::File => return Ok(()),
         List::Directory(entries) => entries,
     };
 
-    let mut entries_to_hash: Vec<(RepoPathBuf, HgId)> = Vec::new();
-    let mut to_recurse: Vec<RepoPathBuf> = Vec::new();
-    let mut child_path = path.to_owned();
-
+    let mut child_path = work.path.clone();
     for (name, metadata) in entries {
         child_path.push(&name);
-
         match metadata {
             FsNodeMetadata::File(file_meta) => {
-                if matcher.matches_file(&child_path)? {
-                    entries_to_hash.push((child_path.clone(), file_meta.hgid));
+                if work.subtree_matches_everything || matcher.matches_file(&child_path)? {
+                    scope.resolve_child(Some((child_path.clone(), file_meta.hgid)));
                 }
             }
-            FsNodeMetadata::Directory(dir_hgid) => match matcher.matches_directory(&child_path)? {
-                DirectoryMatch::Everything => {
-                    if let Some(hgid) = dir_hgid {
-                        entries_to_hash.push((child_path.clone(), hgid));
-                    } else {
-                        to_recurse.push(child_path.clone());
+            FsNodeMetadata::Directory(hgid) => {
+                if work.subtree_matches_everything {
+                    add_directory_hash_work(scope, child_path.clone(), hgid, true);
+                } else {
+                    match matcher.matches_directory(&child_path)? {
+                        DirectoryMatch::Nothing => {}
+                        DirectoryMatch::ShouldTraverse => {
+                            add_directory_hash_work(scope, child_path.clone(), hgid, false);
+                        }
+                        DirectoryMatch::Everything => {
+                            add_directory_hash_work(scope, child_path.clone(), hgid, true);
+                        }
                     }
                 }
-                DirectoryMatch::ShouldTraverse => {
-                    to_recurse.push(child_path.clone());
-                }
-                DirectoryMatch::Nothing => {}
-            },
+            }
         }
-
         child_path.pop();
     }
 
-    // Recurse into subdirectories in parallel.
-    let sub_results: Vec<Result<Option<(RepoPathBuf, HgId)>>> = to_recurse
-        .into_par_iter()
-        .map(|child_path| compute_hash(manifest, child_path, matcher))
-        .collect();
+    Ok(())
+}
 
-    for result in sub_results {
-        if let Some(h) = result? {
-            entries_to_hash.push(h);
-        }
+fn add_directory_hash_work(
+    scope: &mut FoldScope<HashWork, FoldHashEntry>,
+    path: RepoPathBuf,
+    hgid: Option<HgId>,
+    subtree_matches_everything: bool,
+) {
+    match hgid {
+        Some(hgid) if subtree_matches_everything => scope.resolve_child(Some((path, hgid))),
+        _ => scope.submit_child(HashWork {
+            path,
+            subtree_matches_everything,
+        }),
     }
+}
 
+fn hash_directory_entries(path: RepoPathBuf, entries_to_hash: Vec<FoldHashEntry>) -> FoldHashEntry {
+    let mut entries_to_hash: Vec<_> = entries_to_hash.into_iter().flatten().collect();
     if entries_to_hash.is_empty() {
-        return Ok(None);
+        return None;
     }
 
     entries_to_hash.sort();
@@ -209,7 +237,7 @@ fn compute_hash(
     }
     let result: [u8; 20] = hasher.finalize().into();
 
-    Ok(Some((path, HgId::from_byte_array(result))))
+    Some((path, HgId::from_byte_array(result)))
 }
 
 pub fn aliases() -> &'static str {
