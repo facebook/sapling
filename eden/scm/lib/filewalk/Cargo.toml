@@ -12,6 +12,7 @@ license = "GPL-2.0-only"
 [dependencies]
 anyhow = "1.0.103"
 blob = { version = "0.1.0", path = "../blob" }
+sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }

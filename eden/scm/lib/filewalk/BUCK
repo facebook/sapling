@@ -21,6 +21,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/blob:blob",
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/pathmatcher:pathmatcher",
