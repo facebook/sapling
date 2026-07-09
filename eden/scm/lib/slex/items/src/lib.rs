@@ -139,20 +139,31 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
         }
     }
 
-    /// Map each batch, preserving ready-vs-stream shape.
+    /// Map each fallible batch, preserving ready-vs-stream shape.
     ///
     /// This is the batch-level equivalent of `Iterator::map` for fallible transforms. Unlike
     /// `Items::stream(items.into_batches().map(...))`, ready inputs remain ready and do not pay for
     /// a boxed stream.
-    pub fn map_batch<U, E2, F>(self, mut f: F) -> ScopedItems<'a, U, E2>
+    pub fn map_batch<U, E2, B, F>(self, mut f: F) -> ScopedItems<'a, U, E2>
     where
         T: Send + 'a,
         U: Send + 'a,
-        E: Into<E2> + Send + 'a,
+        E: Send + 'a,
         E2: Send + 'a,
-        F: FnMut(Batch<T>) -> Result<Vec<U>, E2> + Send + 'a,
+        B: Into<Batch<U>>,
+        F: FnMut(Result<Batch<T>, E>) -> Result<B, E2> + Send + 'a,
     {
-        self.flat_map_batch(move |batch| [f(batch)])
+        match self.into_batches() {
+            ItemsBatches::Ready(batches) => ScopedItems::Ready(
+                batches
+                    .into_iter()
+                    .map(|batch| f(batch).map(Into::into))
+                    .collect(),
+            ),
+            ItemsBatches::Stream(iter) => {
+                ScopedItems::Stream(Box::new(iter.map(move |batch| f(batch).map(Into::into))))
+            }
+        }
     }
 
     /// Map each input batch to zero or more output batches or errors.
@@ -405,8 +416,8 @@ mod tests {
     #[test]
     fn map_batch_preserves_ready() {
         let items: Items<i32, Infallible> = Items::ready(vec![1, 2]);
-        let mapped: Items<i32, Infallible> =
-            items.map_batch(|batch| Ok(batch.into_iter().map(|item| item * 2).collect()));
+        let mapped: Items<i32, Infallible> = items
+            .map_batch(|batch| Ok(batch?.into_iter().map(|item| item * 2).collect::<Vec<_>>()));
 
         assert!(matches!(mapped.into_batches(), ItemsBatches::Ready(_)));
     }
@@ -419,7 +430,7 @@ mod tests {
             Items::stream([Ok(vec![1, 2]), Ok(vec![3])].into_iter());
         let mapped: Items<i32, Infallible> = items.map_batch(move |batch| {
             mapped_batches_in_map.fetch_add(1, Ordering::SeqCst);
-            Ok(batch.into_iter().map(|item| item * 2).collect())
+            Ok(batch?.into_iter().map(|item| item * 2).collect::<Vec<_>>())
         });
 
         assert_eq!(mapped_batches.load(Ordering::SeqCst), 0);

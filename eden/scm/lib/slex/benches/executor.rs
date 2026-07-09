@@ -1242,7 +1242,8 @@ fn run_workset_small_batches(workers: usize, batches: usize) -> usize {
             .result_batch_items(16),
         Items::stream(input.into_iter().map(Ok)),
         WorkShape::batch(
-            move |batch: Vec<usize>, scope: &mut WorkScope<'_, usize, usize, ()>| {
+            move |batch: Result<Vec<usize>, ()>, scope: &mut WorkScope<'_, usize, usize, ()>| {
+                let batch = batch?;
                 completed_worker.fetch_add(batch.len(), Ordering::Relaxed);
                 scope.send_result(batch.into_iter().inspect(|&item| {
                     black_box(tiny_work(item as u64));
@@ -1283,7 +1284,8 @@ fn run_workset_fanout(target: usize, inline_items: usize, expensive: bool) -> us
         WorkOptions::new().max_workers(8).inline_items(inline_items),
         Items::ready(vec![0usize]),
         WorkShape::batch(
-            move |batch: Vec<usize>, scope: &mut WorkScope<'_, usize, (), ()>| {
+            move |batch: Result<Vec<usize>, ()>, scope: &mut WorkScope<'_, usize, (), ()>| {
+                let batch = batch?;
                 for item in batch {
                     if expensive {
                         black_box(cpu_work(item as u64));

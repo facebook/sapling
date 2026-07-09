@@ -102,20 +102,20 @@ impl ResultSender {
         Ok(())
     }
 
+    fn send_error(&self, err: anyhow::Error) -> Result<()> {
+        match self {
+            Self::File(sender) => sender.send(Err(err))?,
+            Self::Dir(sender) => sender.send(Err(err))?,
+        }
+        Ok(())
+    }
+
     fn need_file_diff(&self) -> bool {
         matches!(self, Self::File(_))
     }
 
     fn need_dir_diff(&self) -> bool {
         matches!(self, Self::Dir(_))
-    }
-
-    fn send_error(&self, error: anyhow::Error) -> Result<()> {
-        match self {
-            Self::File(sender) => sender.send(Err(error))?,
-            Self::Dir(sender) => sender.send(Err(error))?,
-        }
-        Ok(())
     }
 
     fn is_disconnected(&self) -> bool {
@@ -204,13 +204,14 @@ where
     registry.register_progress_bar(&progress_bar);
 
     let ctx = DiffContext {
-        result_send: ResultSender::from(result_send),
+        result_send: ResultSender::from(result_send.clone()),
         matcher,
         store: pairs[0][0].store.clone(),
         progress_bar: progress_bar.clone(),
     };
 
     let input: Items<DiffWork, anyhow::Error> = Items::ready(input);
+    let drain_result_send = ctx.result_send.clone();
     std::thread::spawn(move || {
         let result = Work::run(
             WorkOptions::new()
@@ -221,7 +222,7 @@ where
         )
         .drain();
         if let Err(err) = result {
-            tracing::debug!(?err, "diff work set exited with error");
+            let _ = drain_result_send.send_error(err);
         }
     });
 
@@ -232,12 +233,19 @@ where
 }
 
 fn run_diff_worker(
-    work: Vec<DiffWork>,
+    work: Result<Vec<DiffWork>>,
     scope: &mut WorkScope<'_, DiffWork, (), anyhow::Error>,
     ctx: &DiffContext,
 ) -> Result<()> {
+    let work = match work {
+        Ok(work) => work,
+        Err(err) => {
+            let _ = ctx.result_send.send_error(err);
+            return Ok(());
+        }
+    };
+
     if ctx.canceled() {
-        scope.cancel();
         return Ok(());
     }
 
@@ -284,18 +292,14 @@ fn run_diff_worker(
     ctx.progress_bar
         .increase_position(durable_entries.len() as u64);
     if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
-        if ctx.result_send.send_error(err).is_err() {
-            scope.cancel();
-        }
+        let _ = ctx.result_send.send_error(err);
         return Ok(());
     }
 
     let mut to_send = Vec::new();
     for item in work {
-        let res = item.process(&ctx.store, &ctx.matcher, &mut to_send, &ctx.result_send);
-        if let Err(err) = res {
+        if let Err(err) = item.process(&ctx.store, &ctx.matcher, &mut to_send, &ctx.result_send) {
             if ctx.result_send.send_error(err).is_err() {
-                scope.cancel();
                 return Ok(());
             }
         }

@@ -55,15 +55,17 @@
 //! let _results = Work::run(
 //!     WorkOptions::new(),
 //!     roots,
-//!     WorkShape::batch(|batch: Vec<i32>, scope: &mut WorkScope<'_, i32, i32, ()>| {
-//!         for item in batch {
-//!             scope.send_result([item]);
-//!             if item < 3 {
-//!                 scope.submit_work(item + 1);
+//!     WorkShape::batch(
+//!         |batch: Result<Vec<i32>, ()>, scope: &mut WorkScope<'_, i32, i32, ()>| {
+//!             for item in batch? {
+//!                 scope.send_result([item]);
+//!                 if item < 3 {
+//!                     scope.submit_work(item + 1);
+//!                 }
 //!             }
-//!         }
-//!         Ok(())
-//!     }),
+//!             Ok(())
+//!         },
+//!     ),
 //! );
 //! ```
 
@@ -581,8 +583,7 @@ mod tests {
     #[test]
     fn items_writer_stream_flushes_batches() {
         let options = ItemsWriterOptions::new().batch_items(2).queue_size(2);
-        let (mut writer, items) =
-            ItemsWriter::<i32>::stream_with_options::<std::convert::Infallible>(options);
+        let (mut writer, items) = ItemsWriter::<i32>::stream_with_options(options);
 
         assert!(writer.push_item(1));
         assert!(writer.push_item(2));
@@ -596,8 +597,39 @@ mod tests {
     }
 
     #[test]
+    fn items_writer_inline_can_emit_errors_between_batches() {
+        let mut writer = ItemsWriter::<i32, &'static str>::inline();
+        assert!(writer.push_item(1));
+        assert!(writer.push_error("boom"));
+        assert!(writer.push_item(2));
+
+        let mut batches = writer.finish().into_batches();
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[1]);
+        assert_eq!(batches.next(), Some(Err("boom")));
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[2]);
+        assert_eq!(batches.next(), None);
+    }
+
+    #[test]
+    fn items_writer_stream_can_emit_errors_between_batches() {
+        let options = ItemsWriterOptions::new().batch_items(2).queue_size(3);
+        let (mut writer, items) = ItemsWriter::<i32, &'static str>::stream_with_options(options);
+
+        assert!(writer.push_item(1));
+        assert!(writer.push_error("boom"));
+        assert!(writer.push_item(2));
+        assert!(writer.close());
+
+        let mut batches = items.into_batches();
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[1]);
+        assert_eq!(batches.next(), Some(Err("boom")));
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[2]);
+        assert_eq!(batches.next(), None);
+    }
+
+    #[test]
     fn items_from_process_inline_returns_ready_items() {
-        let items = ItemsWriter::from_process(false, |writer| {
+        let items: Items<i32> = ItemsWriter::from_process(false, |writer| {
             assert!(writer.push_item(1));
             assert!(writer.push_item(2));
         });
@@ -607,7 +639,7 @@ mod tests {
 
     #[test]
     fn items_from_process_inline_returns_expected_items() {
-        let items = ItemsWriter::from_process(false, |writer| {
+        let items: Items<i32> = ItemsWriter::from_process(false, |writer| {
             assert!(writer.push_item(1));
             assert!(writer.push_item(2));
         });
@@ -621,7 +653,7 @@ mod tests {
     #[test]
     fn items_from_process_spawn_returns_stream() {
         let caller = thread::current().id();
-        let items = ItemsWriter::from_process(true, move |writer| {
+        let items: Items<thread::ThreadId> = ItemsWriter::from_process(true, move |writer| {
             assert!(writer.push_item(thread::current().id()));
         });
 

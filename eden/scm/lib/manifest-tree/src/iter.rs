@@ -67,12 +67,13 @@ struct IterContext {
 }
 
 fn run_worker(
-    work: Vec<IterWork>,
+    work: Result<Vec<IterWork>>,
     scope: &mut WorkScope<'_, IterWork, IterResult, Error>,
     ctx: &IterContext,
 ) -> Result<()> {
+    let work = work?;
+
     if scope.is_canceled() {
-        scope.cancel();
         return Ok(());
     }
 

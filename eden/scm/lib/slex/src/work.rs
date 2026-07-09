@@ -33,6 +33,7 @@
 //!     WorkOptions::new(),
 //!     input,
 //!     WorkShape::batch(|batch, scope| -> Result<(), ()> {
+//!         let batch = batch?;
 //!         for item in batch {
 //!             scope.send_result([item]);
 //!             if item < 3 {
@@ -55,7 +56,8 @@
 //!     input,
 //!     WorkShape::batch_finalize(
 //!         || 0usize,
-//!         |batch: Vec<usize>, scope: &mut WorkScope<'_, usize, String, (), usize>| {
+//!         |batch: Result<Vec<usize>, ()>, scope: &mut WorkScope<'_, usize, String, (), usize>| {
+//!             let batch = batch?;
 //!             let even_count = batch.iter().filter(|item| **item % 2 == 0).count();
 //!             *scope.local_mut() += even_count;
 //!
@@ -84,6 +86,7 @@ use slex_items::Batch as ItemsBatch;
 use tokio::task::JoinHandle;
 
 use crate::Items;
+use crate::ItemsWriter;
 use crate::join_blocking;
 
 /// Dynamically discovered work that starts inline and promotes on fan-out.
@@ -102,9 +105,10 @@ impl Work {
     /// The returned [`Items`] is ready if all work stayed inline. If the work promotes, it is a
     /// stream; dropping that stream cancels unfinished work, while consuming it joins workers.
     ///
-    /// Upstream input errors and worker callback errors are fatal: they cancel remaining work and
-    /// are emitted as the returned `Items` error. In-band per-item errors should be modeled inside
-    /// `Out`, for example `Out = Result<T, InnerError>`.
+    /// Worker callback errors are fatal: they cancel remaining work and are emitted as the returned
+    /// `Items` error. Upstream input errors are passed to batch workers as `Err`, so workers can
+    /// either propagate them with `?` for fail-fast behavior or forward them with
+    /// [`WorkScope::send_error`] for collect-all pipelines.
     pub fn run<W, Out, E, K>(options: WorkOptions, input: Items<W, E>, worker: K) -> Items<Out, E>
     where
         W: Send + 'static,
@@ -279,7 +283,7 @@ impl WorkShape {
     /// more work as they run.
     pub fn batch<W, Out, E, F>(f: F) -> Batch<W, Out, E, F>
     where
-        F: for<'a> Fn(Vec<W>, &mut WorkScope<'a, W, Out, E>) -> Result<(), E>
+        F: for<'a> Fn(Result<Vec<W>, E>, &mut WorkScope<'a, W, Out, E>) -> Result<(), E>
             + Send
             + Sync
             + 'static,
@@ -303,7 +307,7 @@ impl WorkShape {
     where
         Init: Fn() -> Local + Send + Sync + 'static,
         Local: Send + 'static,
-        F: for<'a> Fn(Vec<W>, &mut WorkScope<'a, W, Out, E, Local>) -> Result<(), E>
+        F: for<'a> Fn(Result<Vec<W>, E>, &mut WorkScope<'a, W, Out, E, Local>) -> Result<(), E>
             + Send
             + Sync
             + 'static,
@@ -342,7 +346,7 @@ where
     /// Process one batch of work.
     fn process(
         &self,
-        batch: Vec<W>,
+        batch: Result<Vec<W>, E>,
         scope: &mut WorkScope<'_, W, Out, E, Self::Local>,
     ) -> Result<(), E>;
 
@@ -367,7 +371,12 @@ where
         Ok(Ok(work.into_iter().map(&self.0).collect()))
     }
 
-    fn process(&self, batch: Vec<W>, scope: &mut WorkScope<'_, W, Out, E, ()>) -> Result<(), E> {
+    fn process(
+        &self,
+        batch: Result<Vec<W>, E>,
+        scope: &mut WorkScope<'_, W, Out, E, ()>,
+    ) -> Result<(), E> {
+        let batch = batch?;
         scope.send_result(batch.into_iter().map(&self.0));
         Ok(())
     }
@@ -392,7 +401,12 @@ where
         Ok(Ok(results))
     }
 
-    fn process(&self, batch: Vec<W>, scope: &mut WorkScope<'_, W, Out, E, ()>) -> Result<(), E> {
+    fn process(
+        &self,
+        batch: Result<Vec<W>, E>,
+        scope: &mut WorkScope<'_, W, Out, E, ()>,
+    ) -> Result<(), E> {
+        let batch = batch?;
         let mut results = Vec::with_capacity(batch.len());
         for item in batch {
             results.push((self.0)(item)?);
@@ -407,13 +421,20 @@ where
     W: Send + 'static,
     Out: Send + 'static,
     E: Send + 'static,
-    F: for<'a> Fn(Vec<W>, &mut WorkScope<'a, W, Out, E>) -> Result<(), E> + Send + Sync + 'static,
+    F: for<'a> Fn(Result<Vec<W>, E>, &mut WorkScope<'a, W, Out, E>) -> Result<(), E>
+        + Send
+        + Sync
+        + 'static,
 {
     type Local = ();
 
     fn init(&self) -> Self::Local {}
 
-    fn process(&self, batch: Vec<W>, scope: &mut WorkScope<'_, W, Out, E, ()>) -> Result<(), E> {
+    fn process(
+        &self,
+        batch: Result<Vec<W>, E>,
+        scope: &mut WorkScope<'_, W, Out, E, ()>,
+    ) -> Result<(), E> {
         (self.f)(batch, scope)
     }
 }
@@ -426,7 +447,7 @@ where
     E: Send + 'static,
     Local: Send + 'static,
     Init: Fn() -> Local + Send + Sync + 'static,
-    F: for<'a> Fn(Vec<W>, &mut WorkScope<'a, W, Out, E, Local>) -> Result<(), E>
+    F: for<'a> Fn(Result<Vec<W>, E>, &mut WorkScope<'a, W, Out, E, Local>) -> Result<(), E>
         + Send
         + Sync
         + 'static,
@@ -438,7 +459,11 @@ where
         (self.init)()
     }
 
-    fn process(&self, batch: Vec<W>, scope: &mut WorkScope<'_, W, Out, E, Local>) -> Result<(), E> {
+    fn process(
+        &self,
+        batch: Result<Vec<W>, E>,
+        scope: &mut WorkScope<'_, W, Out, E, Local>,
+    ) -> Result<(), E> {
         (self.f)(batch, scope)
     }
 
@@ -495,8 +520,8 @@ impl<W> IntoWorkItems<W> for std::vec::IntoIter<W> {
 /// Scope passed to batch workers.
 ///
 /// The scope is the only way batch workers communicate with Work: publish output with
-/// [`WorkScope::send_result`], add more work with [`WorkScope::submit_work`], or stop the
-/// pipeline with [`WorkScope::cancel`].
+/// [`WorkScope::send_result`] or add more work with [`WorkScope::submit_work`].
+/// Return `Err` from the worker callback to stop the pipeline with an observable error.
 pub struct WorkScope<'a, W, Out: Send + 'static, E: Send + 'static, Local = ()> {
     backend: &'a mut dyn ScopeBackend<W, Out, E>,
     local: &'a mut Local,
@@ -537,6 +562,13 @@ where
         }
     }
 
+    fn submit_input_error(&mut self, err: E) -> bool {
+        if self.is_canceled() || !self.flush_work(true) {
+            return false;
+        }
+        self.backend.submit_error(err)
+    }
+
     /// Publish results. In inline mode this appends to the ready result buffer; after promotion it
     /// sends batches to the bounded result channel.
     pub fn send_result<I>(&mut self, items: I) -> bool
@@ -550,9 +582,16 @@ where
         self.flush_ready_results()
     }
 
-    /// Cancel the work set. Already running work is allowed to finish.
-    pub fn cancel(&mut self) {
-        self.backend.cancel();
+    /// Publish a nonfatal error event and continue processing.
+    ///
+    /// Use callback `Err` for fatal worker failures that should cancel the work. Use this for
+    /// result-level errors where the consumer decides whether to keep draining or stop early.
+    /// Returns `false` if buffered results or the error could not be published.
+    pub fn send_error(&mut self, err: E) -> bool {
+        if self.is_canceled() || !self.flush_results(true) {
+            return false;
+        }
+        self.backend.send_error(err)
     }
 
     /// Whether this work set has been canceled.
@@ -612,6 +651,7 @@ type ResultSender<Out, E> = crate::channel::Sender<Result<Vec<Out>, E>>;
 type ResultReceiver<Out, E> = crate::channel::Receiver<Result<Vec<Out>, E>>;
 
 struct WorkIter<Out: Send + 'static, E: Send + 'static> {
+    pending: VecDeque<Result<Vec<Out>, E>>,
     rx: Option<ResultReceiver<Out, E>>,
     cancel: Option<Box<dyn Fn() + Send + Sync>>,
     handles: Vec<JoinHandle<()>>,
@@ -624,11 +664,13 @@ where
     E: Send + 'static,
 {
     fn new(
+        pending: VecDeque<Result<Vec<Out>, E>>,
         rx: ResultReceiver<Out, E>,
         cancel: Box<dyn Fn() + Send + Sync>,
         handles: Vec<JoinHandle<()>>,
     ) -> Self {
         Self {
+            pending,
             rx: Some(rx),
             cancel: Some(cancel),
             handles,
@@ -673,6 +715,9 @@ where
     type Item = Result<Vec<Out>, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(event) = self.pending.pop_front() {
+            return Some(event);
+        }
         let rx = self.rx.as_ref()?;
         match rx.recv() {
             Ok(batch) => Some(batch),
@@ -764,8 +809,9 @@ impl WorkQueueThrottle {
 
 trait ScopeBackend<W, Out, E> {
     fn submit_work(&mut self, batch: Vec<W>) -> bool;
+    fn submit_error(&mut self, err: E) -> bool;
     fn send_result_batch(&mut self, batch: Vec<Out>) -> bool;
-    fn cancel(&mut self);
+    fn send_error(&mut self, err: E) -> bool;
     fn is_canceled(&self) -> bool;
     fn retain_scope_buffers(&self) -> bool;
 }
@@ -791,7 +837,7 @@ where
                     Ok(Err(work)) => run_inline(options, [Ok(work)], worker),
                     Err(err) => Items::error(err),
                 },
-                Err(err) => Items::error(err),
+                Err(err) => run_inline(options, [Err(err)], worker),
             }
         }
         crate::ItemsBatches::Ready(work) => run_inline(
@@ -815,15 +861,7 @@ where
 {
     let mut inline = InlineState::new();
     for batch in initial {
-        match batch {
-            Ok(batch) => {
-                inline.submit_work(batch, options.work_chunk_items);
-            }
-            Err(err) => {
-                inline.cancel_with_error(err);
-                break;
-            }
-        }
+        inline.submit_input(batch, options.work_chunk_items);
     }
     let mut local = worker.init();
 
@@ -877,29 +915,37 @@ where
     }
 }
 
-type RawWorkSender<W> = crossfire::MTx<crossfire::mpmc::List<QueuedWork<W>>>;
-type WorkReceiver<W> = crossfire::MRx<crossfire::mpmc::List<QueuedWork<W>>>;
+type RawWorkSender<W, E> = crossfire::MTx<crossfire::mpmc::List<QueuedWork<W, E>>>;
+type WorkReceiver<W, E> = crossfire::MRx<crossfire::mpmc::List<QueuedWork<W, E>>>;
 type WorkGuard = crossfire::waitgroup::WaitGroupGuard<()>;
 type SpawnRestFn = Arc<dyn Fn(usize) + Send + Sync + 'static>;
 
-trait WorkSubmitter<W>: Send + Sync {
-    fn send_queued(&self, work: QueuedWork<W>) -> Result<(), ()>;
+trait WorkSubmitter<W, E>: Send + Sync {
+    fn send_queued(&self, work: QueuedWork<W, E>) -> Result<(), ()>;
 }
 
-struct WorkSender<W>(Arc<dyn WorkSubmitter<W>>);
+struct WorkSender<W, E>(Arc<dyn WorkSubmitter<W, E>>);
 
-impl<W> Clone for WorkSender<W> {
+impl<W, E> Clone for WorkSender<W, E> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
 }
 
-impl<W: Send + 'static> WorkSender<W> {
-    fn new(sender: RawWorkSender<W>) -> Self {
+impl<W: Send + 'static, E: Send + 'static> WorkSender<W, E> {
+    fn new(sender: RawWorkSender<W, E>) -> Self {
         Self(Arc::new(CrossfireWorkSubmitter { sender }))
     }
 
     fn send(&self, batch: Vec<W>, guard: WorkGuard) -> Result<(), ()> {
+        self.send_result(Ok(batch), guard)
+    }
+
+    fn send_error(&self, err: E, guard: WorkGuard) -> Result<(), ()> {
+        self.send_result(Err(err), guard)
+    }
+
+    fn send_result(&self, batch: Result<Vec<W>, E>, guard: WorkGuard) -> Result<(), ()> {
         self.0.send_queued(QueuedWork {
             batch,
             guard,
@@ -908,12 +954,12 @@ impl<W: Send + 'static> WorkSender<W> {
     }
 }
 
-struct CrossfireWorkSubmitter<W: Send + 'static> {
-    sender: RawWorkSender<W>,
+struct CrossfireWorkSubmitter<W: Send + 'static, E: Send + 'static> {
+    sender: RawWorkSender<W, E>,
 }
 
-impl<W: Send + 'static> WorkSubmitter<W> for CrossfireWorkSubmitter<W> {
-    fn send_queued(&self, work: QueuedWork<W>) -> Result<(), ()> {
+impl<W: Send + 'static, E: Send + 'static> WorkSubmitter<W, E> for CrossfireWorkSubmitter<W, E> {
+    fn send_queued(&self, work: QueuedWork<W, E>) -> Result<(), ()> {
         self.sender.send(work).map_err(|_| ())
     }
 }
@@ -1001,12 +1047,10 @@ where
     for queued in inline.queue.drain(..) {
         state.work_queue_throttle.track_unthrottled();
         work_tx
-            .send(queued, wait.add_guard())
+            .send_result(queued, wait.add_guard())
             .expect("promoted inline work receiver should be alive");
     }
-    if !inline.output.is_empty() {
-        let _ = state.result_tx.send(Ok(std::mem::take(&mut inline.output)));
-    }
+    let pending_events = inline.take_output_events().into_iter().collect();
 
     debug_assert!(
         has_work,
@@ -1044,6 +1088,7 @@ where
     )];
 
     WorkIter::new(
+        pending_events,
         result_rx,
         cancel_closure(
             Arc::clone(&state.canceled),
@@ -1108,31 +1153,24 @@ where
     let producer_work_tx = work_tx.clone();
     let producer_handle = work_spawner()
         .maybe_spawn_one(1, move || {
-            let result = {
-                let mut backend = ParallelBackend {
-                    work_tx: &producer_work_tx,
-                    guard: &producer_guard,
-                    state: producer_state.clone(),
-                    throttle_producer: true,
-                    spawn_rest,
-                };
-                let mut local = ();
-                let mut scope: WorkScope<'_, W, Out, E> = WorkScope {
-                    backend: &mut backend,
-                    local: &mut local,
-                    pending_work: scope_buffer(producer_state.work_chunk_items),
-                    result_buffer: scope_buffer(producer_state.result_batch_items),
-                    work_chunk_items: producer_state.work_chunk_items,
-                    result_batch_items: producer_state.result_batch_items,
-                };
-                let result = produce_input_work(input, &mut scope);
-                if result.is_ok() {
-                    scope.finish();
-                }
-                result
+            let mut backend = ParallelBackend {
+                work_tx: &producer_work_tx,
+                guard: &producer_guard,
+                state: producer_state.clone(),
+                throttle_producer: true,
+                spawn_rest,
             };
-            if let Err(err) = result {
-                producer_state.cancel_with_error(err);
+            let mut local = ();
+            let mut scope: WorkScope<'_, W, Out, E> = WorkScope {
+                backend: &mut backend,
+                local: &mut local,
+                pending_work: scope_buffer(producer_state.work_chunk_items),
+                result_buffer: scope_buffer(producer_state.result_batch_items),
+                work_chunk_items: producer_state.work_chunk_items,
+                result_batch_items: producer_state.result_batch_items,
+            };
+            if produce_input_work(input, &mut scope) {
+                scope.finish();
             }
         })
         .expect("streaming Work producer should spawn");
@@ -1147,6 +1185,7 @@ where
     );
 
     WorkIter::new(
+        VecDeque::new(),
         result_rx,
         cancel_closure(
             Arc::clone(&state.canceled),
@@ -1159,7 +1198,7 @@ where
 fn produce_input_work<W, Out, E>(
     input: crate::ItemsBatches<'static, W, E>,
     scope: &mut WorkScope<'_, W, Out, E>,
-) -> Result<(), E>
+) -> bool
 where
     W: Send + 'static,
     Out: Send + 'static,
@@ -1169,20 +1208,24 @@ where
         match batch {
             Ok(batch) => {
                 if !scope.submit_work(batch) {
-                    return Ok(());
+                    return false;
                 }
             }
-            Err(err) => return Err(err),
+            Err(err) => {
+                if !scope.submit_input_error(err) {
+                    return false;
+                }
+            }
         }
     }
 
-    Ok(())
+    true
 }
 
 fn spawn_workers<W, Out, E, K, MakeSpawnRest>(
     min_workers: usize,
     max_workers: usize,
-    work_rx: WorkReceiver<W>,
+    work_rx: WorkReceiver<W, E>,
     state: ParallelState<W, Out, E, K>,
     make_spawn_rest: MakeSpawnRest,
 ) -> (Vec<JoinHandle<K::Local>>, Option<SpawnRestFn>)
@@ -1275,7 +1318,7 @@ fn make_spawn_rest<W, Out, E, K>(
     initial_workers: usize,
     initial_submitted_chunks: usize,
     max_workers: usize,
-    work_rx: WorkReceiver<W>,
+    work_rx: WorkReceiver<W, E>,
     state: ParallelState<W, Out, E, K>,
     handles: Arc<Mutex<Vec<JoinHandle<K::Local>>>>,
 ) -> Option<SpawnRestFn>
@@ -1314,7 +1357,7 @@ where
 
 fn spawn_coordinator<W, Out, E, K>(
     wait: crossfire::waitgroup::WaitGroup<()>,
-    work_tx: WorkSender<W>,
+    work_tx: WorkSender<W, E>,
     initial_locals: Vec<K::Local>,
     worker_handles: Vec<JoinHandle<K::Local>>,
     late_worker_handles: Option<Arc<Mutex<Vec<JoinHandle<K::Local>>>>>,
@@ -1368,11 +1411,11 @@ fn scope_buffer<T>(target_items: usize) -> Vec<T> {
 }
 
 struct InlineState<W, Out: Send + 'static, E: Send + 'static> {
-    queue: VecDeque<Vec<W>>,
+    queue: VecDeque<Result<Vec<W>, E>>,
     queued_items: usize,
     canceled: bool,
-    output: Vec<Out>,
-    error: Option<E>,
+    output: ItemsWriter<Out, E>,
+    output_items: usize,
     output_should_stream: bool,
 }
 
@@ -1386,9 +1429,16 @@ where
             queue: VecDeque::new(),
             queued_items: 0,
             canceled: false,
-            output: Vec::new(),
-            error: None,
+            output: ItemsWriter::inline(),
+            output_items: 0,
             output_should_stream: false,
+        }
+    }
+
+    fn submit_input(&mut self, batch: Result<Vec<W>, E>, work_chunk_items: usize) -> bool {
+        match batch {
+            Ok(batch) => self.submit_work(batch, work_chunk_items),
+            Err(err) => self.submit_error(err),
         }
     }
 
@@ -1403,9 +1453,18 @@ where
         for_each_work_chunk(batch, work_chunk_items, |batch| {
             let items = batch.len();
             self.queued_items += items;
-            self.queue.push_back(batch);
+            self.queue.push_back(Ok(batch));
             true
         })
+    }
+
+    fn submit_error(&mut self, err: E) -> bool {
+        if self.canceled {
+            return false;
+        }
+        self.queued_items += 1;
+        self.queue.push_back(Err(err));
+        true
     }
 
     fn send_result_batch(&mut self, batch: Vec<Out>, inline_result_items: usize) -> bool {
@@ -1416,22 +1475,37 @@ where
             return false;
         }
 
-        self.output.extend(batch);
-        if self.output.len() > inline_result_items {
+        self.note_output_items(batch.len(), inline_result_items);
+        self.output.push_batch(batch)
+    }
+
+    fn send_error(&mut self, err: E, inline_result_items: usize) -> bool {
+        if self.canceled {
+            return false;
+        }
+        self.note_output_items(1, inline_result_items);
+        self.push_error(err)
+    }
+
+    fn push_error(&mut self, err: E) -> bool {
+        if self.canceled {
+            return false;
+        }
+        self.output.push_error(err)
+    }
+
+    fn note_output_items(&mut self, items: usize, inline_result_items: usize) {
+        self.output_items += items;
+        if self.output_items > inline_result_items {
             self.output_should_stream = true;
         }
-        true
     }
 
     fn cancel_with_error(&mut self, err: E) {
         if !self.canceled {
+            let _ = self.push_error(err);
             self.canceled = true;
-            self.error = Some(err);
         }
-    }
-
-    fn cancel(&mut self) {
-        self.canceled = true;
     }
 
     fn is_canceled(&self) -> bool {
@@ -1446,27 +1520,23 @@ where
         !self.queue.is_empty()
     }
 
-    fn try_pop(&mut self) -> Option<Vec<W>> {
+    fn try_pop(&mut self) -> Option<Result<Vec<W>, E>> {
         if self.canceled {
             return None;
         }
         let batch = self.queue.pop_front()?;
-        self.queued_items = self.queued_items.saturating_sub(batch.len());
+        self.queued_items = self
+            .queued_items
+            .saturating_sub(batch.as_ref().map_or(1, Vec::len));
         Some(batch)
     }
 
-    fn finish(mut self) -> Items<Out, E> {
-        if let Some(err) = self.error.take() {
-            return if self.output.is_empty() {
-                Items::error(err)
-            } else {
-                let mut items = Vec::with_capacity(2);
-                items.push(Ok(self.output.into()));
-                items.push(Err(err));
-                Items::Ready(items.into())
-            };
-        }
-        Items::ready(self.output)
+    fn take_output_events(&mut self) -> smallvec::SmallVec<[Result<Vec<Out>, E>; 1]> {
+        self.output.take_events()
+    }
+
+    fn finish(self) -> Items<Out, E> {
+        self.output.finish()
     }
 }
 
@@ -1485,13 +1555,17 @@ where
         self.inline.submit_work(batch, self.work_chunk_items)
     }
 
+    fn submit_error(&mut self, err: E) -> bool {
+        self.inline.submit_error(err)
+    }
+
     fn send_result_batch(&mut self, batch: Vec<Out>) -> bool {
         self.inline
             .send_result_batch(batch, self.inline_result_items)
     }
 
-    fn cancel(&mut self) {
-        self.inline.cancel();
+    fn send_error(&mut self, err: E) -> bool {
+        self.inline.send_error(err, self.inline_result_items)
     }
 
     fn is_canceled(&self) -> bool {
@@ -1504,7 +1578,7 @@ where
 }
 
 struct ParallelBackend<'a, W: Send + 'static, Out: Send + 'static, E: Send + 'static, K> {
-    work_tx: &'a WorkSender<W>,
+    work_tx: &'a WorkSender<W, E>,
     guard: &'a WorkGuard,
     state: ParallelState<W, Out, E, K>,
     throttle_producer: bool,
@@ -1556,6 +1630,31 @@ where
         true
     }
 
+    fn submit_error(&mut self, err: E) -> bool {
+        if self.is_canceled() {
+            return false;
+        }
+        let can_submit = if self.throttle_producer {
+            self.state
+                .work_queue_throttle
+                .maybe_throttle(&self.state.canceled)
+        } else {
+            self.state.work_queue_throttle.track_unthrottled();
+            true
+        };
+        if !can_submit {
+            return false;
+        }
+        if self.work_tx.send_error(err, self.guard.clone()).is_err() {
+            self.state.work_queue_throttle.unthrottle();
+            return false;
+        }
+        if let Some(spawn_rest) = &self.spawn_rest {
+            spawn_rest(1);
+        }
+        true
+    }
+
     fn send_result_batch(&mut self, batch: Vec<Out>) -> bool {
         if batch.is_empty() {
             return true;
@@ -1564,14 +1663,21 @@ where
             return false;
         }
         if self.state.result_tx.send(Ok(batch)).is_err() {
-            self.cancel();
+            self.state.cancel();
             return false;
         }
         true
     }
 
-    fn cancel(&mut self) {
-        self.state.cancel();
+    fn send_error(&mut self, err: E) -> bool {
+        if self.is_canceled() {
+            return false;
+        }
+        if self.state.result_tx.send(Err(err)).is_err() {
+            self.state.cancel();
+            return false;
+        }
+        true
     }
 
     fn is_canceled(&self) -> bool {
@@ -1583,10 +1689,10 @@ where
     }
 }
 
-struct QueuedWork<W: 'static> {
-    batch: Vec<W>,
+struct QueuedWork<W: 'static, E: 'static> {
+    batch: Result<Vec<W>, E>,
     guard: WorkGuard,
-    work_tx: WorkSender<W>,
+    work_tx: WorkSender<W, E>,
 }
 
 fn for_each_work_chunk<W>(
@@ -1616,6 +1722,7 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::Ordering;
     use std::thread;
+    use std::time::Duration;
 
     use parking_lot::Mutex;
 
@@ -1696,6 +1803,7 @@ mod tests {
             WorkOptions::new().inline_items(10),
             Items::ready(vec![0usize]),
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 seen_worker.lock().push(thread::current().id());
                 if batch[0] < 3 {
                     scope.submit_work(batch[0] + 1);
@@ -1808,6 +1916,7 @@ mod tests {
                 .max_workers(4),
             input,
             WorkShape::batch(move |batch, scope| {
+                let batch = batch?;
                 seen_worker.lock().push(thread::current().id());
                 scope.send_result(batch.into_iter().map(|item| item * 2));
                 Ok(())
@@ -1834,6 +1943,7 @@ mod tests {
             WorkOptions::new().inline_items(1).max_workers(4),
             first,
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 scope.send_result(batch.into_iter().map(|item| item * 2));
                 Ok(())
             }),
@@ -1858,6 +1968,7 @@ mod tests {
             WorkOptions::new().inline_items(10),
             first,
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 scope.send_result(batch);
                 Ok(())
             }),
@@ -1865,6 +1976,101 @@ mod tests {
         .drain_until_error();
 
         assert_eq!(result, Err("bad"));
+    }
+
+    #[test]
+    fn batch_worker_can_emit_nonfatal_errors() {
+        let items = Work::run(
+            WorkOptions::new().inline_items(10),
+            Items::ready(vec![1usize, 2, 3]),
+            WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
+                for item in batch {
+                    if item == 2 {
+                        scope.send_error("bad");
+                    } else {
+                        scope.send_result([item]);
+                    }
+                }
+                Ok(())
+            }),
+        );
+
+        let events = items.into_batches().collect::<Vec<_>>();
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0].as_ref().unwrap().as_slice(), &[1]);
+        assert_eq!(events[1], Err("bad"));
+        assert_eq!(events[2].as_ref().unwrap().as_slice(), &[3]);
+    }
+
+    #[test]
+    fn inline_error_threshold_promotes_when_work_remains() {
+        let items = Work::run(
+            WorkOptions::new()
+                .inline_items(100)
+                .inline_result_items(1)
+                .max_workers(2),
+            Items::ready(vec![0usize]),
+            WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
+                for item in batch {
+                    if item == 0 {
+                        scope.send_error("first");
+                        scope.send_error("second");
+                        scope.submit_work(1);
+                    } else {
+                        scope.send_result([item]);
+                    }
+                }
+                Ok(())
+            }),
+        );
+
+        let crate::ItemsBatches::Stream(stream) = items.into_batches() else {
+            panic!("error output above inline threshold should promote while work remains");
+        };
+        let events = stream.collect::<Vec<_>>();
+
+        assert_eq!(events[0], Err("first"));
+        assert_eq!(events[1], Err("second"));
+        assert_eq!(events[2].as_ref().unwrap().as_slice(), &[1]);
+    }
+
+    #[test]
+    fn promoted_batch_worker_can_emit_nonfatal_errors() {
+        let caller = thread::current().id();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let seen_worker = Arc::clone(&seen);
+        let items = Work::run(
+            WorkOptions::new().inline_items(1).max_workers(2),
+            Items::ready((0..8usize).collect::<Vec<_>>()),
+            WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
+                seen_worker.lock().push(thread::current().id());
+                for item in batch {
+                    if item == 2 {
+                        scope.send_error("bad");
+                    } else {
+                        scope.send_result([item]);
+                    }
+                }
+                Ok(())
+            }),
+        );
+
+        let mut values = Vec::new();
+        let mut errors = Vec::new();
+        for event in items.into_batches() {
+            match event {
+                Ok(batch) => values.extend(batch),
+                Err(err) => errors.push(err),
+            }
+        }
+
+        values.sort_unstable();
+        assert_eq!(values, vec![0, 1, 3, 4, 5, 6, 7]);
+        assert_eq!(errors, vec!["bad"]);
+        assert!(seen.lock().iter().any(|id| *id != caller));
     }
 
     #[test]
@@ -1876,6 +2082,7 @@ mod tests {
             WorkOptions::new().inline_items(4).max_workers(4),
             Items::ready(vec![0usize]),
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 seen_worker.lock().push(thread::current().id());
                 if batch[0] == 0 {
                     (1..16).for_each(|item| {
@@ -1911,6 +2118,94 @@ mod tests {
     }
 
     #[test]
+    fn single_ready_error_is_processed_by_batch_worker() {
+        let result = Work::run(
+            WorkOptions::new(),
+            Items::<usize, &'static str>::error("input"),
+            WorkShape::batch(|batch, scope| -> Result<(), &'static str> {
+                match batch {
+                    Ok(_) => panic!("expected input error"),
+                    Err(err) => {
+                        scope.send_result([err.len()]);
+                        Ok(())
+                    }
+                }
+            }),
+        )
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>();
+
+        assert_eq!(result, Ok(vec![5]));
+    }
+
+    #[test]
+    fn streaming_input_error_flushes_pending_work_first() {
+        let input: Items<usize, &'static str> =
+            Items::stream([Ok(vec![1]), Err("bad")].into_iter());
+        let result = Work::run::<usize, &'static str, &'static str, _>(
+            WorkOptions::new()
+                .inline_items(1)
+                .work_chunk_items(16)
+                .max_workers(1),
+            input,
+            WorkShape::batch(
+                |batch: Result<Vec<usize>, &'static str>,
+                 scope: &mut WorkScope<'_, usize, &'static str, &'static str>|
+                 -> Result<(), &'static str> {
+                    match batch {
+                        Ok(batch) => {
+                            scope.send_result(batch.into_iter().map(|_| "work"));
+                        }
+                        Err(err) => {
+                            assert_eq!(err, "bad");
+                            scope.send_result(["error"]);
+                        }
+                    }
+                    Ok(())
+                },
+            ),
+        )
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>();
+
+        assert_eq!(result, Ok(vec!["work", "error"]));
+    }
+
+    #[test]
+    fn pre_promotion_errors_do_not_block_on_result_queue() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        thread::spawn(move || {
+            let result = Work::run::<_, (), _, _>(
+                WorkOptions::new()
+                    .inline_items(4)
+                    .result_queue_size(1)
+                    .result_batch_items(1),
+                Items::ready(vec![0usize]),
+                WorkShape::batch(|batch, scope| -> Result<(), usize> {
+                    let batch = batch?;
+                    for item in batch {
+                        if item == 0 {
+                            for err in 0..4 {
+                                scope.send_error(err);
+                            }
+                            scope.submit_work((1..32).collect::<Vec<_>>());
+                        }
+                    }
+                    Ok(())
+                }),
+            )
+            .drain_until_error();
+            tx.send(result).unwrap();
+        });
+
+        assert_eq!(
+            rx.recv_timeout(Duration::from_secs(5)),
+            Ok(Err(0)),
+            "Work::run blocked before returning a drainable result stream"
+        );
+    }
+
+    #[test]
     fn try_map_returns_first_error() {
         let result = Work::try_map(
             WorkOptions::new().inline_items(1),
@@ -1931,6 +2226,7 @@ mod tests {
             WorkOptions::new().inline_items(10),
             Items::ready(vec![1usize, 2]),
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 scope.send_result(batch.into_iter().map(|item| item * 2).collect::<Vec<_>>());
                 Ok(())
             }),
@@ -1982,6 +2278,7 @@ mod tests {
                 .result_queue_size(2),
             Items::ready(vec![1usize, 2, 3]),
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 scope.send_result(batch);
                 Ok(())
             }),
@@ -2005,6 +2302,7 @@ mod tests {
                 .result_queue_size(2),
             Items::ready(vec![1usize]),
             WorkShape::batch(move |batch, scope| -> Result<(), &'static str> {
+                let batch = batch?;
                 for item in batch {
                     scope.send_result([item, item + 1, item + 2]);
                     if item == 1 {
@@ -2042,8 +2340,9 @@ mod tests {
             Items::ready((0..16).collect::<Vec<_>>()),
             WorkShape::batch_finalize(
                 Vec::<usize>::new,
-                |batch: Vec<usize>,
+                |batch: Result<Vec<usize>, &'static str>,
                  scope: &mut WorkScope<'_, usize, usize, &'static str, Vec<usize>>| {
+                    let batch = batch?;
                     scope.local_mut().extend(batch.iter().copied());
                     scope.send_result(batch);
                     Ok(())

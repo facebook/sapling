@@ -34,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:crossfire",
         "fbsource//third-party/rust:num_cpus",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/slex/items:slex_items",
