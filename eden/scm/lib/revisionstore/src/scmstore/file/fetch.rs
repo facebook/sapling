@@ -18,7 +18,6 @@ use blob::Blob;
 use edenapi::SaplingRemoteApiError;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
-use flume::Sender;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use minibytes::Bytes;
@@ -47,12 +46,12 @@ use crate::lfs::LfsStore;
 use crate::lfs::LfsStoreEntry;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
-use crate::scmstore::FileStore;
 use crate::scmstore::StoreFile;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::fetch::KeyFetchError;
+use crate::scmstore::fetch::FetchItemsWriter;
+use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::fetch::fan_out_cloned;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
@@ -65,8 +64,8 @@ const FILE_CACHE_THRESHOLD: usize = 100;
 const EDENAPI_PROCESS_BATCH_SIZE: usize = 32;
 const EDENAPI_PROCESS_CONCURRENCY: usize = 4;
 
-pub struct FetchState {
-    common: CommonFetchState<StoreFile>,
+pub struct FetchState<'a> {
+    common: CommonFetchState<'a, StoreFile>,
 
     /// Errors encountered during fetching.
     errors: FetchErrors,
@@ -91,27 +90,22 @@ pub struct FetchState {
     files_to_cache: Vec<(HgId, Entry)>,
 }
 
-impl FetchState {
+impl<'a> FetchState<'a> {
     pub(crate) fn new(
         keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
-        file_store: &FileStore,
-        found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
+        results: &'a mut FetchItemsWriter<StoreFile>,
+        compute_aux_data: bool,
         lfs_enabled: bool,
         verify_hash: bool,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
+        format: SerializationFormat,
         file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+        max_fetch_count: MaxFetchCount,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(
-                keys,
-                attrs,
-                found_tx,
-                fctx.clone(),
-                bar,
-                file_store.max_fetch_count.clone(),
-            ),
+            common: CommonFetchState::new(keys, attrs, results, fctx.clone(), bar, max_fetch_count),
             errors: FetchErrors::new(),
             metrics: if fctx.cause().is_prefetch() {
                 &metrics::FILE_STORE_PREFETCH_METRICS
@@ -121,10 +115,10 @@ impl FetchState {
 
             lfs_pointers: HashMap::new(),
 
-            compute_aux_data: file_store.compute_aux_data,
+            compute_aux_data,
             lfs_enabled,
             verify_hash,
-            format: file_store.format(),
+            format,
             fctx,
             file_cache,
             files_to_cache: Vec::new(),
@@ -906,13 +900,15 @@ impl FetchState {
         }
 
         let progress_bar = self.common.progress_bar();
+        let request_attrs = self.common.request_attrs;
+        let results = &mut self.common.results;
         self.common.pending.retain(|key, pending| {
             let span = tracing::debug_span!("checking derivations", %key);
             let _guard = span.enter();
 
             let value = &mut pending.value;
             let existing_attrs = value.attrs();
-            let missing = self.common.request_attrs - existing_attrs;
+            let missing = request_attrs - existing_attrs;
             let actionable = existing_attrs.with_computable() & missing;
 
             if actionable.aux_data {
@@ -920,12 +916,13 @@ impl FetchState {
 
                 tracing::debug!("computing aux data");
                 if let Err(err) = new.compute_aux_data() {
+                    *value = new;
                     self.errors.keyed_error(key.clone(), err);
                 } else {
                     tracing::debug!("computed aux data");
 
                     // mark complete if applicable
-                    if new.attrs().has(self.common.request_attrs) {
+                    if new.attrs().has(request_attrs) {
                         tracing::debug!("marking complete");
 
                         self.metrics
@@ -939,12 +936,10 @@ impl FetchState {
                             }
                         }
 
-                        let new = new.mask(self.common.request_attrs);
-                        if !self.fctx.mode().ignore_result() {
-                            fan_out_cloned((key.clone(), new), pending.count, |(key, new)| {
-                                let _ = self.common.found_tx.send(Ok((key, new)));
-                            });
-                        }
+                        let new = new.mask(request_attrs);
+                        fan_out_cloned((key.clone(), new), pending.count, |(key, new)| {
+                            results.push_item((key, new));
+                        });
                         progress_bar.increase_position(pending.count as u64);
 
                         // Remove this entry from `pending`.
@@ -968,7 +963,7 @@ fn sapling_remote_api_error_key(err: &SaplingRemoteApiError) -> Option<Key> {
     }
 }
 
-impl FetchState {
+impl FetchState<'_> {
     // Flush pending files to indexedlog file cache. This appends to the indexedlog in-memory
     // buffer, but will not necessarily sync the logs to disk.
     fn flush_to_indexedlog(&mut self) {
@@ -987,7 +982,7 @@ impl FetchState {
     }
 }
 
-impl Drop for FetchState {
+impl Drop for FetchState<'_> {
     fn drop(&mut self) {
         self.flush_to_indexedlog();
 

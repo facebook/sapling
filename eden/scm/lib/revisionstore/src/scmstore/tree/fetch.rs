@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
-use flume::Sender;
 use progress_model::ProgressBar;
 use storemodel::FileAuxData;
 use storemodel::SerializationFormat;
@@ -33,9 +32,9 @@ use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiTreeStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
-use crate::scmstore::KeyFetchError;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchItemsWriter;
 use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
@@ -44,8 +43,8 @@ const FILE_AUX_BATCH_THRESHOLD: usize = 1000;
 const TREE_AUX_BATCH_THRESHOLD: usize = 1000;
 const TREE_BATCH_THRESHOLD: usize = 100;
 
-pub struct FetchState {
-    pub(crate) common: CommonFetchState<StoreTree>,
+pub struct FetchState<'a> {
+    pub(crate) common: CommonFetchState<'a, StoreTree>,
 
     /// Errors encountered during fetching.
     pub(crate) errors: FetchErrors,
@@ -64,7 +63,7 @@ pub struct FetchState {
     pub(crate) trees_to_cache: Vec<(HgId, Entry)>,
 }
 
-impl Drop for FetchState {
+impl Drop for FetchState<'_> {
     fn drop(&mut self) {
         self.flush_file_aux();
         self.flush_tree_aux();
@@ -74,11 +73,11 @@ impl Drop for FetchState {
     }
 }
 
-impl FetchState {
+impl<'a> FetchState<'a> {
     pub(crate) fn new(
         keys: impl IntoIterator<Item = Key>,
         attrs: TreeAttributes,
-        found_tx: Sender<Result<(Key, StoreTree), KeyFetchError>>,
+        results: &'a mut FetchItemsWriter<StoreTree>,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
         tree_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -88,7 +87,7 @@ impl FetchState {
     ) -> Self {
         let cause = fctx.cause();
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fctx, bar, max_fetch_count),
+            common: CommonFetchState::new(keys, attrs, results, fctx, bar, max_fetch_count),
             errors: FetchErrors::new(),
             metrics: if cause.is_prefetch() {
                 &TREE_STORE_PREFETCH_METRICS

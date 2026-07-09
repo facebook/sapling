@@ -14,8 +14,10 @@ use std::sync::atomic::Ordering;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use flume::Sender;
 use progress_model::ProgressBar;
+use progress_model::Registry;
+use slex::Items;
+use slex::ItemsWriter;
 use types::FetchContext;
 use types::Key;
 use types::errors::KeyedError;
@@ -28,7 +30,6 @@ pub(crate) struct PendingValue<T> {
     pub(crate) value: T,
     pub(crate) count: usize,
 }
-
 /// Per-store counter that bounds the number of items a store can deliver across
 /// the lifetime of the process. Once the limit is exceeded, every subsequent
 /// item delivered through `CommonFetchState` is converted to an error so the
@@ -81,14 +82,17 @@ pub(crate) fn fan_out_cloned<T: Clone>(value: T, count: usize, mut cb: impl FnMu
     cb(value);
 }
 
-pub(crate) struct CommonFetchState<T: StoreValue> {
+pub(crate) type FetchItems<T> = Items<(Key, T), KeyFetchError>;
+pub(crate) type FetchItemsWriter<T> = ItemsWriter<(Key, T), KeyFetchError>;
+
+pub(crate) struct CommonFetchState<'a, T: StoreValue + Send + 'static> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashMap<Key, PendingValue<T>>,
 
     /// Which attributes were requested
     pub request_attrs: T::Attrs,
 
-    pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
+    pub results: &'a mut FetchItemsWriter<T>,
 
     pub fctx: FetchContext,
 
@@ -97,11 +101,11 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     max_fetch_count: MaxFetchCount,
 }
 
-impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
+impl<'a, T: StoreValue + Send + 'static + std::fmt::Debug> CommonFetchState<'a, T> {
     pub(crate) fn new(
         keys: impl IntoIterator<Item = Key>,
         attrs: T::Attrs,
-        found_tx: Sender<Result<(Key, T), KeyFetchError>>,
+        results: &'a mut FetchItemsWriter<T>,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
         max_fetch_count: MaxFetchCount,
@@ -123,7 +127,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         Self {
             pending,
             request_attrs: attrs,
-            found_tx,
+            results,
             fctx,
             bar,
             max_fetch_count,
@@ -132,26 +136,29 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
     fn send_found_impl(
         max_fetch_count: &MaxFetchCount,
-        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        results: &mut FetchItemsWriter<T>,
         key: Key,
         value: T,
     ) {
-        let result = match max_fetch_count.try_increment() {
-            Ok(()) => Ok((key, value)),
-            Err(message) => Err(KeyFetchError::MaxFetchCountExceeded(message)),
-        };
-        let _ = found_tx.send(result);
+        match max_fetch_count.try_increment() {
+            Ok(()) => {
+                results.push_item((key, value));
+            }
+            Err(message) => {
+                results.push_error(KeyFetchError::MaxFetchCountExceeded(message));
+            }
+        }
     }
 
     fn fan_out_found(
         max_fetch_count: &MaxFetchCount,
-        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        results: &mut FetchItemsWriter<T>,
         key: Key,
         value: T,
         count: usize,
     ) {
         fan_out_cloned((key, value), count, |(key, value)| {
-            Self::send_found_impl(max_fetch_count, found_tx, key, value);
+            Self::send_found_impl(max_fetch_count, results, key, value);
         });
     }
 
@@ -167,11 +174,11 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         Arc::clone(&self.bar)
     }
 
-    pub(crate) fn pending<'a>(
-        &'a self,
+    pub(crate) fn pending<'b>(
+        &'b self,
         fetchable: T::Attrs,
         with_computable: bool,
-    ) -> impl Iterator<Item = (&'a Key, &'a T)> + 'a {
+    ) -> impl Iterator<Item = (&'b Key, &'b T)> + 'b {
         self.pending.iter().filter_map(move |(key, pending)| {
             let actionable = self.actionable(key, fetchable, with_computable);
             if actionable.any() {
@@ -193,7 +200,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         let request_attrs = self.request_attrs;
         let ignore_result = self.fctx.mode().ignore_result();
         let max_fetch_count = &self.max_fetch_count;
-        let found_tx = &self.found_tx;
+        let results = &mut *self.results;
         self.pending.retain(|key, pending| {
             let actionable = Self::actionable_attrs(
                 request_attrs,
@@ -212,7 +219,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
                             let new = new.mask(request_attrs);
                             Self::fan_out_found(
                                 max_fetch_count,
-                                found_tx,
+                                results,
                                 key.clone(),
                                 new,
                                 pending.count,
@@ -245,7 +252,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
                 if !self.fctx.mode().ignore_result() {
                     let new = new.mask(self.request_attrs);
-                    Self::fan_out_found(&self.max_fetch_count, &self.found_tx, key, new, count);
+                    Self::fan_out_found(&self.max_fetch_count, self.results, key, new, count);
                 }
                 self.bar.increase_position(count as u64);
 
@@ -274,7 +281,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
             let count = pending.count;
             match incomplete.remove(&key) {
                 Some(err) => {
-                    Self::fan_out_keyed_error(&self.found_tx, key, err, count);
+                    Self::fan_out_keyed_error(self.results, key, err, count);
                     continue;
                 }
                 None => {
@@ -284,15 +291,16 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
                     if self.fctx.mode().is_local() {
                         fan_out_cloned(key, count, |key| {
-                            let _ = self.found_tx.send(Err(KeyFetchError::NotFoundLocally(key)));
+                            self.results.push_error(KeyFetchError::NotFoundLocally(key));
                         });
                     } else {
                         // Should not happen normally since `incomplete` should contain the specific error we got from server.
                         fan_out_cloned(key, count, |key| {
-                            let _ = self.found_tx.send(Err(KeyFetchError::KeyedError(KeyedError(
-                                key,
-                                anyhow!("server did not provide content"),
-                            ))));
+                            self.results
+                                .push_error(KeyFetchError::KeyedError(KeyedError(
+                                    key,
+                                    anyhow!("server did not provide content"),
+                                )));
                         });
                     }
                 }
@@ -300,21 +308,21 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         }
 
         for err in errors.other_errors {
-            let _ = self.found_tx.send(Err(KeyFetchError::Other(err)));
+            self.results.push_error(KeyFetchError::Other(err));
         }
     }
 
     fn fan_out_keyed_error(
-        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        results: &mut FetchItemsWriter<T>,
         key: Key,
         err: SharedError,
         count: usize,
     ) {
         fan_out_cloned((key, err), count, |(key, err)| {
-            let _ = found_tx.send(Err(KeyFetchError::KeyedError(KeyedError(
+            results.push_error(KeyFetchError::KeyedError(KeyedError(
                 key,
                 err.into_anyhow(),
-            ))));
+            )));
         });
     }
 
@@ -426,22 +434,42 @@ impl FetchErrors {
     }
 }
 
-pub struct FetchResults<T> {
-    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>,
+pub struct FetchResults<T: Send + 'static> {
+    items: FetchItems<T>,
 }
 
-impl<T> IntoIterator for FetchResults<T> {
+impl<T: Send + 'static> IntoIterator for FetchResults<T> {
     type Item = Result<(Key, T), KeyFetchError>;
     type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iterator
+        Box::new(self.items.into_iter())
     }
 }
 
-impl<T> FetchResults<T> {
+impl<T: Send + 'static> FetchResults<T> {
     pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>) -> Self {
-        FetchResults { iterator }
+        Self::from_items(Items::item_stream(iterator))
+    }
+
+    pub(crate) fn empty() -> Self {
+        Self::from_items(Items::empty())
+    }
+
+    pub(crate) fn from_items(items: FetchItems<T>) -> Self {
+        FetchResults { items }
+    }
+
+    pub(crate) fn from_process(
+        should_spawn: bool,
+        process: impl FnOnce(&mut FetchItemsWriter<T>) + Send + 'static,
+    ) -> Self {
+        let active_bar = Registry::main().get_active_progress_bar();
+        let items = ItemsWriter::from_process(should_spawn, move |writer| {
+            Registry::main().set_active_progress_bar(active_bar);
+            process(writer);
+        });
+        Self::from_items(items)
     }
 
     pub fn consume(self) -> (HashMap<Key, T>, HashMap<Key, Error>, Vec<Error>) {
@@ -532,7 +560,6 @@ mod tests {
     use ::types::fetch_mode::FetchMode;
     use ::types::testutil::key;
     use anyhow::anyhow;
-    use flume::Receiver;
     use progress_model::ProgressBar;
 
     use super::*;
@@ -625,23 +652,17 @@ mod tests {
         }
     }
 
-    fn new_test_state(
+    fn new_test_state<'a>(
         keys: Vec<Key>,
-    ) -> (
-        CommonFetchState<TestValue>,
-        Receiver<Result<(Key, TestValue), KeyFetchError>>,
-    ) {
-        let (tx, rx) = flume::unbounded();
-        (
-            CommonFetchState::new(
-                keys,
-                TestAttrs::CONTENT,
-                tx,
-                FetchContext::new(FetchMode::LocalOnly),
-                ProgressBar::new("test", 0, "items"),
-                MaxFetchCount::default(),
-            ),
-            rx,
+        writer: &'a mut FetchItemsWriter<TestValue>,
+    ) -> CommonFetchState<'a, TestValue> {
+        CommonFetchState::new(
+            keys,
+            TestAttrs::CONTENT,
+            writer,
+            FetchContext::new(FetchMode::LocalOnly),
+            ProgressBar::new("test", 0, "items"),
+            MaxFetchCount::default(),
         )
     }
 
@@ -649,8 +670,11 @@ mod tests {
     fn test_duplicate_pending_deduplicates_requests() {
         let duplicate = key("a", "1");
         let other = key("b", "2");
-        let (state, _rx) =
-            new_test_state(vec![duplicate.clone(), duplicate.clone(), other.clone()]);
+        let mut writer = ItemsWriter::inline();
+        let state = new_test_state(
+            vec![duplicate.clone(), duplicate.clone(), other.clone()],
+            &mut writer,
+        );
 
         let keys = state
             .pending(TestAttrs::CONTENT, false)
@@ -666,18 +690,20 @@ mod tests {
     #[test]
     fn test_iter_pending_preserves_duplicate_results() {
         let duplicate = key("a", "1");
-        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+        let mut writer = ItemsWriter::inline();
+        {
+            let mut state = new_test_state(vec![duplicate.clone(), duplicate.clone()], &mut writer);
 
-        let mut calls = 0;
-        state.iter_pending(TestAttrs::CONTENT, false, |_| {
-            calls += 1;
-            Some(TestValue::content(7))
-        });
-        assert_eq!(calls, 1);
-        assert_eq!(state.pending_len(), 0);
-        drop(state);
+            let mut calls = 0;
+            state.iter_pending(TestAttrs::CONTENT, false, |_| {
+                calls += 1;
+                Some(TestValue::content(7))
+            });
+            assert_eq!(calls, 1);
+            assert_eq!(state.pending_len(), 0);
+        }
 
-        let results = rx.try_iter().collect::<Vec<_>>();
+        let results = writer.finish().into_iter().collect::<Vec<_>>();
         assert_eq!(results.len(), 2);
         for result in results {
             let (key, value) = result.unwrap();
@@ -689,13 +715,14 @@ mod tests {
     #[test]
     fn test_found_preserves_duplicate_results() {
         let duplicate = key("a", "1");
-        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+        let mut writer = ItemsWriter::inline();
+        {
+            let mut state = new_test_state(vec![duplicate.clone(), duplicate.clone()], &mut writer);
+            assert!(state.found(duplicate.clone(), TestValue::content(9)));
+            assert_eq!(state.pending_len(), 0);
+        }
 
-        assert!(state.found(duplicate.clone(), TestValue::content(9)));
-        assert_eq!(state.pending_len(), 0);
-        drop(state);
-
-        let results = rx.try_iter().collect::<Vec<_>>();
+        let results = writer.finish().into_iter().collect::<Vec<_>>();
         assert_eq!(results.len(), 2);
         for result in results {
             let (key, value) = result.unwrap();
@@ -707,12 +734,13 @@ mod tests {
     #[test]
     fn test_results_preserves_duplicate_local_misses() {
         let duplicate = key("a", "1");
-        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
+        let mut writer = ItemsWriter::inline();
+        {
+            let mut state = new_test_state(vec![duplicate.clone(), duplicate.clone()], &mut writer);
+            state.results(FetchErrors::new(), true);
+        }
 
-        state.results(FetchErrors::new(), true);
-        drop(state);
-
-        let results = rx.try_iter().collect::<Vec<_>>();
+        let results = writer.finish().into_iter().collect::<Vec<_>>();
         assert_eq!(results.len(), 2);
         for result in results {
             match result.unwrap_err() {
@@ -725,14 +753,16 @@ mod tests {
     #[test]
     fn test_results_preserves_duplicate_keyed_error_tags() {
         let duplicate = key("a", "1");
-        let (mut state, rx) = new_test_state(vec![duplicate.clone(), duplicate.clone()]);
-        let mut errors = FetchErrors::new();
-        errors.keyed_error(duplicate.clone(), NetworkError::wrap(anyhow!("boom")));
+        let mut writer = ItemsWriter::inline();
+        {
+            let mut state = new_test_state(vec![duplicate.clone(), duplicate.clone()], &mut writer);
+            let mut errors = FetchErrors::new();
+            errors.keyed_error(duplicate.clone(), NetworkError::wrap(anyhow!("boom")));
 
-        state.results(errors, true);
-        drop(state);
+            state.results(errors, true);
+        }
 
-        let results = rx.try_iter().collect::<Vec<_>>();
+        let results = writer.finish().into_iter().collect::<Vec<_>>();
         assert_eq!(results.len(), 2);
         for result in results {
             let err: anyhow::Error = result.unwrap_err().into();

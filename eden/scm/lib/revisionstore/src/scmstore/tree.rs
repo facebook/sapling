@@ -36,7 +36,6 @@ use edenapi_types::CheckPathPermissionRequest;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use fetch::FetchState;
-use flume::bounded;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use moka::sync::Cache;
@@ -350,63 +349,17 @@ impl TreeStore {
         reqs: impl Iterator<Item = Key>,
         attrs: TreeAttributes,
     ) -> FetchResults<StoreTree> {
-        let mut reqs = reqs.peekable();
-        if reqs.peek().is_none() {
-            return FetchResults::new(Box::new(std::iter::empty()));
+        let reqs: Vec<_> = reqs.collect();
+        if reqs.is_empty() {
+            return FetchResults::empty();
         }
 
-        // Unscientifically picked to be small enough to not use "all" the memory with a
-        // full queue of (small) trees, but still generous enough to keep the pipeline
-        // full of work for downstream consumers. The important thing is it is less than
-        // infinity.
-        const RESULT_QUEUE_SIZE: usize = 100_000;
-
         let bar = self.progress_bar.create_or_extend_local(0);
-
-        // Bound channel size so we don't use unlimited memory queueing up file content
-        // when the consumer is consuming slower than we are fetching.
-        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
         let tree_aux_store = self.tree_aux_store.clone();
-
-        let found_tx2 = found_tx.clone();
-        let mut state = FetchState::new(
-            reqs,
-            attrs,
-            found_tx,
-            fctx.clone(),
-            bar.clone(),
-            indexedlog_cache.clone(),
-            aux_cache,
-            tree_aux_store.clone(),
-            self.max_fetch_count.clone(),
-        );
-
-        if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
-            let attrs = [
-                attrs.content.then_some("content"),
-                attrs.parents.then_some("parents"),
-                attrs.aux_data.then_some("aux"),
-            ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
-
-            let mut keys = state.common.unique_keys();
-            keys.sort();
-            let keys: Vec<_> = keys
-                .into_iter()
-                .map(|key| format!("{}@{}", key.path, &key.hgid.to_hex()[..8]))
-                .collect();
-
-            tracing::trace!(target: "tree_fetches", ?attrs, ?keys);
-        }
-
-        let keys_len = state.common.pending_len();
-
-        bar.increase_total(keys_len as u64);
+        let keys_len = reqs.len();
 
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
@@ -440,211 +393,239 @@ impl TreeStore {
 
         let verify_hash = self.verify_hash;
         let format = self.format();
-        let process_func = move || -> Result<()> {
-            // We might be in a different thread than when `bar` was created - set bar as
-            // active here as well.
-            let _bar = ProgressBar::push_active(bar, Registry::main());
+        let max_fetch_count = self.max_fetch_count.clone();
+        FetchResults::from_process(sync_mode.should_spawn(keys_len), move |results| {
+            let mut state = FetchState::new(
+                reqs,
+                attrs,
+                results,
+                fctx.clone(),
+                bar.clone(),
+                indexedlog_cache.clone(),
+                aux_cache,
+                tree_aux_store.clone(),
+                max_fetch_count,
+            );
 
-            // Handle queries for null tree id (with null content response). scmstore is
-            // the end of the line, so if we consistently handle null id then callers at
-            // any level can confidently assume null tree ids are handled.
-            state
-                .common
-                .iter_pending(TreeAttributes::CONTENT, false, |key| {
-                    if key.hgid.is_null() {
-                        Some(StoreTree {
-                            content: Some(LazyTree::Null),
-                            parents: Some(Parents::None),
-                            aux_data: None,
-                        })
-                    } else {
-                        None
-                    }
-                });
+            if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
+                let attrs = [
+                    attrs.content.then_some("content"),
+                    attrs.parents.then_some("parents"),
+                    attrs.aux_data.then_some("aux"),
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
 
-            if fetch_local {
-                if let Some(tree_aux_store) = &tree_aux_store {
-                    let (mut found, mut miss, mut errors) = (0, 0, 0);
-                    state
-                        .common
-                        .iter_pending(TreeAttributes::AUX_DATA, false, |key| match tree_aux_store
-                            .get(&key.hgid)
-                        {
-                            Ok(Some(entry)) => {
-                                found += 1;
+                let mut keys = state.common.unique_keys();
+                keys.sort();
+                let keys: Vec<_> = keys
+                    .into_iter()
+                    .map(|key| format!("{}@{}", key.path, &key.hgid.to_hex()[..8]))
+                    .collect();
 
-                                tracing::trace!(?key, ?entry, "found tree aux entry in cache");
-                                Some(StoreTree {
-                                    content: None,
-                                    parents: None,
-                                    aux_data: Some(entry),
-                                })
-                            }
-                            Ok(None) => {
-                                miss += 1;
-                                None
-                            }
-                            Err(err) => {
-                                errors += 1;
-                                state.errors.keyed_error(key.clone(), err);
-                                None
-                            }
-                        });
-                    state.metrics.aux.cache.hit(found);
-                    state.metrics.aux.cache.miss(miss);
-                    state.metrics.aux.cache.err(errors);
-                }
+                tracing::trace!(target: "tree_fetches", ?attrs, ?keys);
             }
 
-            let process_local = |state: &mut FetchState,
-                                 log: &Option<Arc<IndexedLogHgIdDataStore>>,
-                                 location|
-             -> Result<()> {
-                if let Some(log) = log {
-                    let start_time = Instant::now();
+            let keys_len = state.common.pending_len();
+            bar.increase_total(keys_len as u64);
 
-                    let bar = ProgressBar::new_adhoc("IndexedLog", 0, "trees");
+            let process_result = (|| -> Result<()> {
+                // We might be in a different thread than when `bar` was created - set bar as
+                // active here as well.
+                let _bar = ProgressBar::push_active(bar, Registry::main());
 
-                    let store_metrics = state.metrics.indexedlog.store(location);
+                // Handle queries for null tree id (with null content response). scmstore is
+                // the end of the line, so if we consistently handle null id then callers at
+                // any level can confidently assume null tree ids are handled.
+                state
+                    .common
+                    .iter_pending(TreeAttributes::CONTENT, false, |key| {
+                        if key.hgid.is_null() {
+                            Some(StoreTree {
+                                content: Some(LazyTree::Null),
+                                parents: Some(Parents::None),
+                                aux_data: None,
+                            })
+                        } else {
+                            None
+                        }
+                    });
 
-                    let mut fetch_count: usize = 0;
-                    let mut found_count: usize = 0;
-                    let mut errors_count: usize = 0;
-                    state
-                        .common
-                        .iter_pending(TreeAttributes::CONTENT, false, |key| {
-                            fetch_count += 1;
-                            bar.increase_position(1);
-                            match log.get_entry(&key.hgid) {
-                                Ok(Some(entry)) => {
-                                    tracing::trace!("{:?} found in {:?}", key, location);
-                                    found_count += 1;
-                                    Some(
-                                        LazyTree::IndexedLog(
-                                            TreeEntryWithAux {
-                                                entry,
-                                                tree_aux: None,
-                                            },
-                                            format,
-                                        )
-                                        .into(),
-                                    )
-                                }
-                                Ok(None) => None,
-                                Err(err) => {
-                                    errors_count += 1;
-                                    state.errors.keyed_error(key.clone(), err);
-                                    None
-                                }
-                            }
-                        });
-
-                    store_metrics.fetch(fetch_count);
-                    store_metrics.hit(found_count);
-                    store_metrics.miss(fetch_count - found_count);
-                    store_metrics.err(errors_count);
-                    let _ = store_metrics.time_from_duration(start_time.elapsed());
-                }
-
-                Ok(())
-            };
-
-            if fetch_local {
-                // Fetch from cache first then local (hit rate in cache is typically much higher).
-                process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
-                process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
-
-                for (name, log) in [
-                    ("cache", &historystore_cache),
-                    ("local", &historystore_local),
-                ] {
-                    if let Some(log) = log {
+                if fetch_local {
+                    if let Some(tree_aux_store) = &tree_aux_store {
+                        let (mut found, mut miss, mut errors) = (0, 0, 0);
                         state
                             .common
-                            .iter_pending(TreeAttributes::PARENTS, false, |key| {
-                                match log.get_node_info(key) {
+                            .iter_pending(TreeAttributes::AUX_DATA, false, |key| {
+                                match tree_aux_store.get(&key.hgid) {
                                     Ok(Some(entry)) => {
-                                        tracing::trace!("{:?} found parents in {name}", key);
+                                        found += 1;
+
+                                        tracing::trace!(
+                                            ?key,
+                                            ?entry,
+                                            "found tree aux entry in cache"
+                                        );
                                         Some(StoreTree {
                                             content: None,
-                                            parents: Some(Parents::new(
-                                                entry.parents[0].hgid,
-                                                entry.parents[1].hgid,
-                                            )),
-                                            aux_data: None,
+                                            parents: None,
+                                            aux_data: Some(entry),
                                         })
                                     }
-                                    Ok(None) => None,
+                                    Ok(None) => {
+                                        miss += 1;
+                                        None
+                                    }
                                     Err(err) => {
+                                        errors += 1;
                                         state.errors.keyed_error(key.clone(), err);
                                         None
                                     }
                                 }
                             });
+                        state.metrics.aux.cache.hit(found);
+                        state.metrics.aux.cache.miss(miss);
+                        state.metrics.aux.cache.err(errors);
                     }
                 }
-            }
 
-            if fetch_remote {
-                if let Some(edenapi) = &edenapi {
-                    let attributes = edenapi_types::TreeAttributes {
-                        manifest_blob: true,
-                        // We use parents to check hash integrity.
-                        parents: true,
-                        // Include file and tree aux data for entries, if available (tree aux data requires augmented_trees=true).
-                        child_metadata: fetch_children_metadata,
-                        // Use pre-derived "augmented" tree data, which includes tree aux data.
-                        augmented_trees: fetch_tree_aux_data,
-                    };
+                let process_local = |state: &mut FetchState,
+                                     log: &Option<Arc<IndexedLogHgIdDataStore>>,
+                                     location|
+                 -> Result<()> {
+                    if let Some(log) = log {
+                        let start_time = Instant::now();
 
-                    state.fetch_edenapi(
-                        edenapi,
-                        attributes,
-                        if cache_to_local_cache {
-                            indexedlog_cache.as_deref()
-                        } else {
-                            None
-                        },
-                        if fetch_parents {
-                            historystore_cache.as_deref()
-                        } else {
-                            None
-                        },
-                        verify_hash,
-                        format,
-                    )?;
-                } else {
-                    tracing::debug!("no SaplingRemoteApi associated with TreeStore");
+                        let bar = ProgressBar::new_adhoc("IndexedLog", 0, "trees");
+
+                        let store_metrics = state.metrics.indexedlog.store(location);
+
+                        let mut fetch_count: usize = 0;
+                        let mut found_count: usize = 0;
+                        let mut errors_count: usize = 0;
+                        state
+                            .common
+                            .iter_pending(TreeAttributes::CONTENT, false, |key| {
+                                fetch_count += 1;
+                                bar.increase_position(1);
+                                match log.get_entry(&key.hgid) {
+                                    Ok(Some(entry)) => {
+                                        tracing::trace!("{:?} found in {:?}", key, location);
+                                        found_count += 1;
+                                        Some(
+                                            LazyTree::IndexedLog(
+                                                TreeEntryWithAux {
+                                                    entry,
+                                                    tree_aux: None,
+                                                },
+                                                format,
+                                            )
+                                            .into(),
+                                        )
+                                    }
+                                    Ok(None) => None,
+                                    Err(err) => {
+                                        errors_count += 1;
+                                        state.errors.keyed_error(key.clone(), err);
+                                        None
+                                    }
+                                }
+                            });
+
+                        store_metrics.fetch(fetch_count);
+                        store_metrics.hit(found_count);
+                        store_metrics.miss(fetch_count - found_count);
+                        store_metrics.err(errors_count);
+                        let _ = store_metrics.time_from_duration(start_time.elapsed());
+                    }
+
+                    Ok(())
+                };
+
+                if fetch_local {
+                    // Fetch from cache first then local (hit rate in cache is typically much higher).
+                    process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
+                    process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
+
+                    for (name, log) in [
+                        ("cache", &historystore_cache),
+                        ("local", &historystore_local),
+                    ] {
+                        if let Some(log) = log {
+                            state
+                                .common
+                                .iter_pending(TreeAttributes::PARENTS, false, |key| {
+                                    match log.get_node_info(key) {
+                                        Ok(Some(entry)) => {
+                                            tracing::trace!("{:?} found parents in {name}", key);
+                                            Some(StoreTree {
+                                                content: None,
+                                                parents: Some(Parents::new(
+                                                    entry.parents[0].hgid,
+                                                    entry.parents[1].hgid,
+                                                )),
+                                                aux_data: None,
+                                            })
+                                        }
+                                        Ok(None) => None,
+                                        Err(err) => {
+                                            state.errors.keyed_error(key.clone(), err);
+                                            None
+                                        }
+                                    }
+                                });
+                        }
+                    }
                 }
+
+                if fetch_remote {
+                    if let Some(edenapi) = &edenapi {
+                        let attributes = edenapi_types::TreeAttributes {
+                            manifest_blob: true,
+                            // We use parents to check hash integrity.
+                            parents: true,
+                            // Include file and tree aux data for entries, if available (tree aux data requires augmented_trees=true).
+                            child_metadata: fetch_children_metadata,
+                            // Use pre-derived "augmented" tree data, which includes tree aux data.
+                            augmented_trees: fetch_tree_aux_data,
+                        };
+
+                        state.fetch_edenapi(
+                            edenapi,
+                            attributes,
+                            if cache_to_local_cache {
+                                indexedlog_cache.as_deref()
+                            } else {
+                                None
+                            },
+                            if fetch_parents {
+                                historystore_cache.as_deref()
+                            } else {
+                                None
+                            },
+                            verify_hash,
+                            format,
+                        )?;
+                    } else {
+                        tracing::debug!("no SaplingRemoteApi associated with TreeStore");
+                    }
+                }
+
+                // We made it to the end with no overall errors - report_missing=true so we report errors
+                // for any items we unexpectedly didn't get results for.
+                state
+                    .common
+                    .results(std::mem::take(&mut state.errors), true);
+
+                Ok(())
+            })();
+
+            if let Err(err) = process_result {
+                drop(state);
+                results.push_error(KeyFetchError::Other(err));
             }
-
-            // We made it to the end with no overall errors - report_missing=true so we report errors
-            // for any items we unexpectedly didn't get results for.
-            state
-                .common
-                .results(std::mem::take(&mut state.errors), true);
-
-            Ok(())
-        };
-        let process_func_errors = move || {
-            if let Err(err) = process_func() {
-                let _ = found_tx2.send(Err(KeyFetchError::Other(err)));
-            }
-        };
-
-        // Only kick off a thread if there's a substantial amount of work.
-        if sync_mode.should_spawn(keys_len) {
-            let active_bar = Registry::main().get_active_progress_bar();
-            std::thread::spawn(move || {
-                // Propagate parent progress bar into the thread so things nest well.
-                Registry::main().set_active_progress_bar(active_bar);
-                process_func_errors();
-            });
-        } else {
-            process_func_errors();
-        }
-
-        FetchResults::new(Box::new(found_rx.into_iter()))
+        })
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {

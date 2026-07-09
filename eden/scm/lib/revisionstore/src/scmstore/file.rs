@@ -24,7 +24,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use blob::Blob;
-use flume::bounded;
 use metrics::FILE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -178,67 +177,15 @@ impl FileStore {
         keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
     ) -> FetchResults<StoreFile> {
-        let mut keys = keys.into_iter().peekable();
-        if keys.peek().is_none() {
-            return FetchResults::new(Box::new(std::iter::empty()));
+        let keys: Vec<_> = keys.into_iter().collect();
+        if keys.is_empty() {
+            return FetchResults::empty();
         }
-
-        // Unscientifically picked to be small enough to not use "all" the memory with a
-        // full queue of files of decent size, but still generous enough to keep the
-        // pipeline full of work for downstream consumers. The important thing is it is
-        // less than infinity.
-        const RESULT_QUEUE_SIZE: usize = 10_000;
 
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        // Bound channel size so we don't use unlimited memory queueing up file content
-        // when the consumer is consuming slower than we are fetching.
-        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
-
         let indexedlog_cache = self.indexedlog_cache.clone();
-
-        let mut state = FetchState::new(
-            keys,
-            attrs,
-            self,
-            found_tx,
-            self.lfs_threshold_bytes.is_some(),
-            self.verify_hash,
-            fctx.clone(),
-            bar.clone(),
-            indexedlog_cache.clone(),
-        );
-
-        // When ignoring results, we won't advance the progress bar, so update the "total".
-        if !fctx.mode().ignore_result() {
-            bar.increase_total(state.pending_len() as u64);
-        }
-
-        if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
-            let attrs = [
-                attrs.pure_content.then_some("content"),
-                attrs.content_header.then_some("header"),
-                attrs.aux_data.then_some("aux"),
-            ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
-
-            let mut keys = state.unique_keys();
-            keys.sort();
-            let keys: Vec<_> = keys.into_iter().map(|key| key.path.into_string()).collect();
-
-            tracing::trace!(target: "file_fetches", ?attrs, ?keys);
-        }
-
-        debug!(
-            ?attrs,
-            ?fctx,
-            num_keys = state.pending_len(),
-            first_keys = "fetching"
-        );
-
-        let keys_len = state.pending_len();
+        let keys_len = keys.len();
 
         let aux_cache = self.aux_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
@@ -252,8 +199,55 @@ impl FileStore {
         let sync_mode = fctx.sync_mode();
 
         let lfs_buffer_in_memory = self.lfs_buffer_in_memory;
+        let lfs_enabled = self.lfs_threshold_bytes.is_some();
+        let verify_hash = self.verify_hash;
+        let compute_aux_data = self.compute_aux_data;
+        let max_fetch_count = self.max_fetch_count.clone();
 
-        let process_func = move || {
+        FetchResults::from_process(sync_mode.should_spawn(keys_len), move |results| {
+            let mut state = FetchState::new(
+                keys,
+                attrs,
+                results,
+                compute_aux_data,
+                lfs_enabled,
+                verify_hash,
+                fctx.clone(),
+                bar.clone(),
+                format,
+                indexedlog_cache.clone(),
+                max_fetch_count,
+            );
+
+            // When ignoring results, we won't advance the progress bar, so update the "total".
+            if !fctx.mode().ignore_result() {
+                bar.increase_total(state.pending_len() as u64);
+            }
+
+            if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
+                let attrs = [
+                    attrs.pure_content.then_some("content"),
+                    attrs.content_header.then_some("header"),
+                    attrs.aux_data.then_some("aux"),
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
+
+                let mut keys = state.unique_keys();
+                keys.sort();
+                let keys: Vec<_> = keys.into_iter().map(|key| key.path.into_string()).collect();
+
+                tracing::trace!(target: "file_fetches", ?attrs, ?keys);
+            }
+
+            debug!(
+                ?attrs,
+                ?fctx,
+                num_keys = state.pending_len(),
+                first_keys = "fetching"
+            );
+
             // Set bar as this thread's active bar. We don't do it when we create the bar
             // since we might be in a different thread now.
             let _bar = ProgressBar::push_active(bar, Registry::main());
@@ -355,25 +349,7 @@ impl FileStore {
                     tracing::error!("Error writing activity log: {}", err);
                 }
             }
-        };
-
-        // Only kick off a thread if there's a substantial amount of work.
-        //
-        // NB: callers such as backingstore::prefetch assume asynchronous behavior when fetching
-        // more than 1k keys. If you change how this works, consider callers' expectations
-        // carefully.
-        if sync_mode.should_spawn(keys_len) {
-            let active_bar = Registry::main().get_active_progress_bar();
-            std::thread::spawn(move || {
-                // Propagate parent progress bar into the thread so things nest well.
-                Registry::main().set_active_progress_bar(active_bar);
-                process_func();
-            });
-        } else {
-            process_func();
-        }
-
-        FetchResults::new(Box::new(found_rx.into_iter()))
+        })
     }
 
     pub(crate) fn write_lfsptr(&self, key: Key, bytes: Bytes) -> Result<()> {
