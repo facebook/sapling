@@ -290,6 +290,12 @@ impl TreeStore {
 
     /// Fetch a tree from the local caches. If the tree is not found, return None.
     pub fn get_local_tree_direct(&self, node: HgId) -> anyhow::Result<Option<Arc<dyn TreeEntry>>> {
+        if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
+            let attrs = ["content"];
+            let keys = [format!("@{}", &node.to_hex()[..8])];
+            tracing::trace!(target: "tree_fetches", ?attrs, ?keys);
+        }
+
         if node.is_null() {
             return Ok(Some(basic_parse_tree(Bytes::default(), self.format())?));
         }
@@ -1216,7 +1222,13 @@ impl storemodel::TreeStore for TreeStore {
         _path: &RepoPath,
         id: HgId,
     ) -> anyhow::Result<Option<Arc<dyn TreeEntry>>> {
-        self.get_local_tree_direct(id)
+        let tree = self.get_local_tree_direct(id)?;
+        if tree.is_some() {
+            self.max_fetch_count
+                .try_increment()
+                .map_err(KeyFetchError::MaxFetchCountExceeded)?;
+        }
+        Ok(tree)
     }
 
     fn get_tree_iter(&self, fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {

@@ -671,6 +671,7 @@ mod test {
     use std::time::Duration;
 
     use anyhow::anyhow;
+    use blob::Blob;
     use manifest::FileMetadata;
     use manifest_tree::TreeManifest;
     use manifest_tree::testutil;
@@ -679,6 +680,10 @@ mod test {
     use rand_chacha::ChaChaRng;
     use rand_chacha::rand_core::SeedableRng;
     use storemodel::KeyStore;
+    use storemodel::SerializationFormat;
+    use storemodel::TreeEntry;
+    use storemodel::TreeFetchItems;
+    use storemodel::TreeStore;
 
     use super::*;
 
@@ -867,7 +872,7 @@ mod test {
         let excludeme_hgid = testutil::get_hgid(&mf, &excludeme_path);
 
         // Create a fresh durable manifest from the root hgid to ensure fetches happen
-        let mf = TreeManifest::durable(store.clone(), root_hgid);
+        let mf = remote_tree_manifest(store.clone(), root_hgid);
 
         let detector = walkdetector::Detector::new();
         let rules = ["**", "!excludeme/**"];
@@ -900,14 +905,17 @@ mod test {
             store
                 .fetches()
                 .into_iter()
-                .flatten()
-                .map(|k| k.hgid)
-                .collect::<Vec<HgId>>(),
-            vec![root_hgid, dir_hgid]
+                .map(|batch| {
+                    let mut hgids = batch.into_iter().map(|k| k.hgid).collect::<Vec<HgId>>();
+                    hgids.sort();
+                    hgids
+                })
+                .collect::<Vec<Vec<HgId>>>(),
+            vec![vec![root_hgid], vec![dir_hgid]]
         );
 
         // Create a fresh durable manifest for the retry (without sparse profile)
-        let mf = TreeManifest::durable(store.clone(), root_hgid);
+        let mf = remote_tree_manifest(store.clone(), root_hgid);
 
         // Retry prefetch without sparse profile
         let handle = prefetch(
@@ -929,10 +937,17 @@ mod test {
             store
                 .fetches()
                 .into_iter()
-                .flatten()
-                .map(|k| k.hgid)
-                .collect::<Vec<HgId>>(),
-            vec![root_hgid, dir_hgid, root_hgid, dir_hgid, excludeme_hgid]
+                .map(|batch| {
+                    let mut hgids = batch.into_iter().map(|k| k.hgid).collect::<Vec<HgId>>();
+                    hgids.sort();
+                    hgids
+                })
+                .collect::<Vec<Vec<HgId>>>(),
+            vec![vec![root_hgid], vec![dir_hgid], vec![root_hgid], {
+                let mut v = vec![dir_hgid, excludeme_hgid];
+                v.sort();
+                v
+            }]
         );
 
         Ok(())
@@ -942,6 +957,74 @@ mod test {
         let rules = ["**", "!excludeme/**"];
         let sparse_matcher = TreeMatcher::from_rules(rules.iter(), true)?;
         Ok(Some(Arc::new(sparse_matcher)))
+    }
+
+    #[derive(Clone)]
+    struct RemoteTreeTestStore {
+        inner: Arc<TestStore>,
+    }
+
+    impl RemoteTreeTestStore {
+        fn new(inner: Arc<TestStore>) -> Self {
+            Self { inner }
+        }
+    }
+
+    impl KeyStore for RemoteTreeTestStore {
+        fn get_content_iter(
+            &self,
+            fctx: FetchContext,
+            keys: Vec<Key>,
+        ) -> anyhow::Result<storemodel::BoxIterator<anyhow::Result<(Key, Blob)>>> {
+            self.inner.get_content_iter(fctx, keys)
+        }
+
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            self.inner.get_local_content(path, hgid)
+        }
+
+        fn insert_data(
+            &self,
+            opts: storemodel::InsertOpts,
+            path: &RepoPath,
+            data: Blob,
+        ) -> anyhow::Result<HgId> {
+            self.inner.insert_data(opts, path, data)
+        }
+
+        fn format(&self) -> SerializationFormat {
+            self.inner.format()
+        }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl TreeStore for RemoteTreeTestStore {
+        fn get_tree_iter(
+            &self,
+            fctx: FetchContext,
+            keys: Vec<Key>,
+        ) -> anyhow::Result<TreeFetchItems> {
+            self.inner.get_tree_iter(fctx, keys)
+        }
+
+        fn get_local_tree(
+            &self,
+            _path: &RepoPath,
+            _hgid: HgId,
+        ) -> anyhow::Result<Option<Arc<dyn TreeEntry>>> {
+            Ok(None)
+        }
+
+        fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+            Box::new(self.clone())
+        }
+    }
+
+    fn remote_tree_manifest(store: Arc<TestStore>, root_hgid: HgId) -> TreeManifest {
+        TreeManifest::durable(Arc::new(RemoteTreeTestStore::new(store)), root_hgid)
     }
 
     struct TestTreeResolver {
@@ -967,7 +1050,7 @@ mod test {
                 .root_hgids
                 .get(commit_id)
                 .ok_or(anyhow!("no manifest for {commit_id}"))?;
-            Ok(TreeManifest::durable(self.store.clone(), *root_hgid))
+            Ok(remote_tree_manifest(self.store.clone(), *root_hgid))
         }
 
         fn get_root_id(&self, _commit_id: &HgId) -> anyhow::Result<HgId> {

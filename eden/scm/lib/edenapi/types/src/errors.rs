@@ -55,14 +55,15 @@ impl From<types::hash::HexError> for ServerError {
     }
 }
 
-pub fn find_permission_denied(err: &anyhow::Error) -> Option<&crate::SaplingRemoteApiServerError> {
+pub fn find_permission_denied(err: &anyhow::Error) -> Option<(crate::HgId, Option<String>)> {
     for err in err.chain() {
         if let Some(slapi_err) = err.downcast_ref::<crate::SaplingRemoteApiServerError>() {
-            if matches!(
-                slapi_err.err,
-                crate::SaplingRemoteApiServerErrorKind::PermissionDenied { .. }
-            ) {
-                return Some(slapi_err);
+            if let crate::SaplingRemoteApiServerErrorKind::PermissionDenied {
+                tree_id,
+                request_acl,
+            } = &slapi_err.err
+            {
+                return Some((*tree_id, Some(request_acl.clone())));
             }
         }
     }

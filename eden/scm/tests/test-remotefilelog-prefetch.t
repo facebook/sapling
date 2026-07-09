@@ -52,7 +52,7 @@ Prefetch (and also check we get counters):
   scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.local.keys: 1
   scmstore.tree.fetch.indexedlog.local.misses: 1
-  scmstore.tree.fetch.indexedlog.local.requests: 2
+  scmstore.tree.fetch.indexedlog.local.requests: 1
   scmstore.tree.fetch.indexedlog.local.singles: 1
   scmstore.tree.fetch.indexedlog.local.time: * (glob) (?)
   scmstore.tree.flush: * (glob) (?)

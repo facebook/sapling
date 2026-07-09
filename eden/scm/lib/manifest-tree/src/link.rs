@@ -401,13 +401,6 @@ impl DirLink {
         Ok(links.iter())
     }
 
-    pub fn is_permission_denied(&self) -> bool {
-        match self.link.as_ref() {
-            Durable(entry) => entry.is_permission_denied(),
-            _ => false,
-        }
-    }
-
     pub fn permission_denied_error(&self) -> Option<&types::errors::PermissionDenied> {
         match self.link.as_ref() {
             Durable(entry) => entry.permission_denied_error(),

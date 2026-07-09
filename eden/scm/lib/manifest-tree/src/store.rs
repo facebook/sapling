@@ -93,20 +93,14 @@ impl InnerStore {
 }
 
 fn convert_permission_denied(err: anyhow::Error, path: &RepoPath) -> anyhow::Error {
-    if let Some(slapi_err) = edenapi_types::errors::find_permission_denied(&err) {
-        if let edenapi_types::SaplingRemoteApiServerErrorKind::PermissionDenied {
-            tree_id,
-            request_acl,
-        } = &slapi_err.err
-        {
-            crate::acl_metrics::ACL_DENIED.increment();
-            return types::errors::PermissionDenied {
-                path: path.to_owned(),
-                hgid: *tree_id,
-                request_acl: request_acl.clone(),
-            }
-            .into();
+    if let Some((hgid, request_acl)) = edenapi_types::errors::find_permission_denied(&err) {
+        crate::acl_metrics::ACL_DENIED.increment();
+        return types::errors::PermissionDenied {
+            path: path.to_owned(),
+            hgid,
+            request_acl: request_acl.unwrap_or_default(),
         }
+        .into();
     }
     err
 }
@@ -680,7 +674,7 @@ mod tests {
         let component = PathComponentBuf::from_string(String::from("c")).unwrap();
         let hgid = HgId::from_hex(b"2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
         let flag = Flag::Directory;
-        let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196et";
+        let byte_slice = b"c\0\x32e31d52f551e445002a6e6690700ce2ac31f196et";
         let element = Element::new(component, hgid, flag);
         assert_eq!(Element::from_byte_slice_hg(byte_slice).unwrap(), element);
         let buffer = element.to_byte_vec_hg();
