@@ -20,7 +20,6 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tar",
         "//eden/scm/lib/blob:blob",

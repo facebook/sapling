@@ -38,6 +38,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::UpdateFlag;
 use vfs::VFS;
+use vfs::VfsBatchError;
 use vfs::Work;
 
 define_flags! {
@@ -68,76 +69,27 @@ define_flags! {
 }
 
 const VFS_WORKERS: usize = 16;
-const VFS_QUEUE_SIZE: usize = 1000;
 
 enum Outputter {
-    Disk {
-        output_template: String,
-        commit_id: HgId,
-        repo_name: Option<String>,
-        work_tx: flume::Sender<Work>,
-        vfs_result_rx: flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>,
+    Io {
+        io: Arc<Mutex<IO>>,
+        error: Option<anyhow::Error>,
     },
-    Io(Arc<Mutex<IO>>),
     Tar {
         output_template: String,
         commit_id: HgId,
         repo_name: Option<String>,
         builder: Arc<Mutex<tar::Builder<Box<dyn Write + Send>>>>,
+        error: Option<anyhow::Error>,
     },
 }
 
-impl Clone for Outputter {
-    fn clone(&self) -> Self {
-        match self {
-            Outputter::Disk {
-                output_template,
-                commit_id,
-                repo_name,
-                work_tx,
-                vfs_result_rx,
-            } => Outputter::Disk {
-                output_template: output_template.clone(),
-                commit_id: *commit_id,
-                repo_name: repo_name.clone(),
-                work_tx: work_tx.clone(),
-                vfs_result_rx: vfs_result_rx.clone(),
-            },
-            Outputter::Io(io) => Outputter::Io(io.clone()),
-            Outputter::Tar {
-                output_template,
-                commit_id,
-                repo_name,
-                builder,
-            } => Outputter::Tar {
-                output_template: output_template.clone(),
-                commit_id: *commit_id,
-                repo_name: repo_name.clone(),
-                builder: builder.clone(),
-            },
-        }
-    }
-}
-
 impl Outputter {
-    fn new_disk(
-        vfs: &VFS,
-        output_template: String,
-        commit_id: HgId,
-        repo_name: Option<String>,
-    ) -> Self {
-        let (work_tx, vfs_result_rx) = vfs.batch(VFS_WORKERS, VFS_QUEUE_SIZE);
-        Outputter::Disk {
-            output_template,
-            commit_id,
-            repo_name,
-            work_tx,
-            vfs_result_rx,
-        }
-    }
-
     fn new_io(io: IO) -> Self {
-        Outputter::Io(Arc::new(Mutex::new(io)))
+        Outputter::Io {
+            io: Arc::new(Mutex::new(io)),
+            error: None,
+        }
     }
 
     fn new_tar(
@@ -151,89 +103,77 @@ impl Outputter {
             commit_id,
             repo_name,
             builder: Arc::new(Mutex::new(tar::Builder::new(Box::new(writer)))),
+            error: None,
         }
     }
 
     fn finish(self) -> anyhow::Result<()> {
         match self {
-            Outputter::Disk {
-                work_tx,
-                vfs_result_rx,
-                ..
-            } => {
-                drop(work_tx);
-                while let Ok(result) = vfs_result_rx.recv() {
-                    if let Err((_, err)) = result {
-                        return Err(err);
-                    }
+            Outputter::Io { io, error } => {
+                let finish_result = io.lock().output().flush().map_err(Into::into);
+                error.map_or(finish_result, Err)
+            }
+            Outputter::Tar { builder, error, .. } => {
+                let finish_result = builder.lock().finish().map_err(Into::into);
+                error.map_or(finish_result, Err)
+            }
+        }
+    }
+
+    fn set_error(&mut self, err: anyhow::Error) {
+        match self {
+            Outputter::Io { error, .. } | Outputter::Tar { error, .. } => {
+                if error.is_none() {
+                    *error = Some(err);
                 }
-                Ok(())
-            }
-            Outputter::Io(io) => {
-                io.lock().output().flush()?;
-                Ok(())
-            }
-            Outputter::Tar { builder, .. } => {
-                builder.lock().finish()?;
-                Ok(())
             }
         }
     }
 
     fn output_file(
-        &self,
+        &mut self,
         path: &RepoPath,
         hgid: HgId,
         data: Blob,
         file_type: FileType,
-    ) -> anyhow::Result<()> {
+    ) -> bool {
         match self {
-            Outputter::Disk {
-                output_template,
-                commit_id,
-                repo_name,
-                work_tx,
-                vfs_result_rx,
-                ..
-            } => {
-                while let Ok(result) = vfs_result_rx.try_recv() {
-                    if let Err((_, err)) = result {
-                        return Err(err);
-                    }
-                }
-
-                let update_flag = match file_type {
-                    FileType::Regular => UpdateFlag::Regular,
-                    FileType::Executable => UpdateFlag::Executable,
-                    FileType::Symlink => UpdateFlag::Symlink,
-                    FileType::GitSubmodule => return Ok(()),
-                };
-
-                let filename =
-                    make_output_filename(output_template, commit_id, path, repo_name.as_deref())?;
-                let repo_path = RepoPathBuf::from_string(filename)?;
-                work_tx
-                    .send(Work::Write(repo_path, data, update_flag, None))
-                    .map_err(|_| anyhow!("vfs worker channel closed"))?;
-                Ok(())
-            }
-            Outputter::Io(io) => {
+            Outputter::Io { io, error } => {
                 let io = io.lock();
                 let mut out = io.output();
-                data.each_chunk(|chunk| out.write_all(chunk))?;
-                Ok(())
+                if let Err(err) = data.each_chunk(|chunk| out.write_all(chunk)) {
+                    *error = Some(err.into());
+                    return false;
+                }
+                true
             }
             Outputter::Tar {
                 output_template,
                 commit_id,
                 repo_name,
                 builder,
+                error,
             } => {
-                let tar_path =
-                    make_output_filename(output_template, commit_id, path, repo_name.as_deref())?;
+                let tar_path = match make_output_filename(
+                    output_template,
+                    commit_id,
+                    path,
+                    repo_name.as_deref(),
+                ) {
+                    Ok(tar_path) => tar_path,
+                    Err(err) => {
+                        *error = Some(err);
+                        return false;
+                    }
+                };
                 let mut builder = builder.lock();
-                append_tar_entry(&mut builder, path, &tar_path, hgid, data, file_type)?;
-                Ok(())
+                if let Err(err) =
+                    append_tar_entry(&mut builder, path, &tar_path, hgid, data, file_type)
+                {
+                    *error = Some(err);
+                    return false;
+                }
+                true
             }
         }
     }
@@ -278,12 +218,26 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]));
     }
 
-    let outputter = if ctx.opts.tar {
+    let binary_file_size_threshold = match ctx.opts.binary_file_size_threshold {
+        Some(threshold) if threshold < 0 => {
+            abort!("--binary-file-size-threshold must be non-negative");
+        }
+        Some(threshold) => Some(threshold as usize),
+        None => None,
+    };
+
+    let count = if ctx.opts.tar {
         let output_template = output
             .filter(|t| t != "-")
             .unwrap_or_else(|| "%p".to_string());
         let repo_name = repo.repo_name().map(|s| s.to_string());
-        Outputter::new_tar(ctx.io().output(), output_template, commit_id, repo_name)
+        fetch_and_output(
+            manifest,
+            matcher,
+            &file_store,
+            Outputter::new_tar(ctx.io().output(), output_template, commit_id, repo_name),
+            binary_file_size_threshold,
+        )?
     } else if let Some(output_template) = output.filter(|t| t != "-") {
         let repo_name = repo.repo_name().map(|s| s.to_string());
 
@@ -294,27 +248,26 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         create_dir_all(&vfs_path)?;
         let vfs = VFS::new(vfs_path)?;
 
-        Outputter::new_disk(&vfs, relative_template, commit_id, repo_name)
+        fetch_and_output_disk(
+            manifest,
+            matcher,
+            &file_store,
+            &vfs,
+            relative_template,
+            commit_id,
+            repo_name,
+            binary_file_size_threshold,
+        )?
     } else {
         ctx.maybe_start_pager(repo.config())?;
-        Outputter::new_io(ctx.io().clone())
+        fetch_and_output(
+            manifest,
+            matcher,
+            &file_store,
+            Outputter::new_io(ctx.io().clone()),
+            binary_file_size_threshold,
+        )?
     };
-
-    let binary_file_size_threshold = match ctx.opts.binary_file_size_threshold {
-        Some(threshold) if threshold < 0 => {
-            abort!("--binary-file-size-threshold must be non-negative");
-        }
-        Some(threshold) => Some(threshold as usize),
-        None => None,
-    };
-
-    let count = fetch_and_output(
-        manifest,
-        matcher,
-        &file_store,
-        outputter,
-        binary_file_size_threshold,
-    )?;
 
     Ok(if count > 0 { 0 } else { 1 })
 }
@@ -323,14 +276,20 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     manifest: TreeManifest,
     matcher: M,
     file_store: &Arc<dyn FileStore>,
-    outputter: Outputter,
+    mut outputter: Outputter,
     binary_file_size_threshold: Option<usize>,
 ) -> Result<usize> {
     let file_items = walk_and_fetch(manifest, matcher, file_store);
     let mut output_count = 0;
 
-    for file_batch in file_items.into_batches() {
-        let file_batch = file_batch?;
+    'output: for file_batch in file_items.into_batches() {
+        let file_batch = match file_batch {
+            Ok(file_batch) => file_batch,
+            Err(err) => {
+                outputter.set_error(err);
+                break 'output;
+            }
+        };
         for file_result in file_batch {
             let FileResult {
                 path,
@@ -338,16 +297,99 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
                 data,
                 file_type,
             } = file_result;
-            let (data, file_type) =
-                filter_binary_file(&path, hgid, data, file_type, binary_file_size_threshold)?;
-            outputter.output_file(&path, hgid, data, file_type)?;
+            let (data, file_type) = match filter_binary_file(
+                &path,
+                hgid,
+                data,
+                file_type,
+                binary_file_size_threshold,
+            ) {
+                Ok(file) => file,
+                Err(err) => {
+                    outputter.set_error(err);
+                    break 'output;
+                }
+            };
+            if !outputter.output_file(&path, hgid, data, file_type) {
+                break 'output;
+            }
             output_count += 1;
         }
     }
 
     outputter.finish()?;
-
     Ok(output_count)
+}
+
+fn fetch_and_output_disk<M: 'static + pathmatcher::Matcher + Sync + Send>(
+    manifest: TreeManifest,
+    matcher: M,
+    file_store: &Arc<dyn FileStore>,
+    vfs: &VFS,
+    output_template: String,
+    commit_id: HgId,
+    repo_name: Option<String>,
+    binary_file_size_threshold: Option<usize>,
+) -> Result<usize> {
+    let file_items = walk_and_fetch(manifest, matcher, file_store);
+    let work_items = file_items
+        .map_batch(|batch| batch.map_err(VfsBatchError::Batch))
+        .try_map_item(move |file_result| {
+            file_result_to_work(
+                &output_template,
+                commit_id,
+                repo_name.as_deref(),
+                file_result,
+                binary_file_size_threshold,
+            )
+        })
+        .map_batch(|batch| Ok(batch?.into_iter().flatten().collect::<Vec<_>>()));
+
+    let mut output_count = 0;
+    let mut first_error = None;
+    for result_batch in vfs.batch_items(VFS_WORKERS, work_items).into_batches() {
+        match result_batch {
+            Ok(batch) => output_count += batch.len(),
+            Err(err) => {
+                if first_error.is_none() {
+                    first_error = Some(err.into_error());
+                }
+            }
+        }
+    }
+    match first_error {
+        Some(err) => Err(err),
+        None => Ok(output_count),
+    }
+}
+
+fn file_result_to_work(
+    output_template: &str,
+    commit_id: HgId,
+    repo_name: Option<&str>,
+    file_result: FileResult,
+    binary_file_size_threshold: Option<usize>,
+) -> std::result::Result<Option<Work>, VfsBatchError> {
+    let FileResult {
+        path,
+        hgid,
+        data,
+        file_type,
+    } = file_result;
+    let (data, file_type) =
+        filter_binary_file(&path, hgid, data, file_type, binary_file_size_threshold)
+            .map_err(VfsBatchError::Batch)?;
+    let update_flag = match file_type {
+        FileType::Regular => UpdateFlag::Regular,
+        FileType::Executable => UpdateFlag::Executable,
+        FileType::Symlink => UpdateFlag::Symlink,
+        FileType::GitSubmodule => return Ok(None),
+    };
+    let filename = make_output_filename(output_template, &commit_id, &path, repo_name)
+        .map_err(VfsBatchError::Batch)?;
+    let repo_path =
+        RepoPathBuf::from_string(filename).map_err(|err| VfsBatchError::Batch(err.into()))?;
+    Ok(Some(Work::Write(repo_path, data, update_flag, None)))
 }
 
 fn filter_binary_file(
