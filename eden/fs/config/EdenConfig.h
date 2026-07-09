@@ -866,6 +866,20 @@ class EdenConfig : private ConfigSettingManager {
       8,
       this};
 
+  /**
+   * When the FUSE io_uring transport is enabled, pass IORING_ENTER_NO_IOWAIT so
+   * that io_uring worker threads parked waiting for the next FUSE request are
+   * not charged as iowait. Without this, idle-parked workers inflate
+   * `/proc/stat` iowait and cgroup io.pressure (PSI) even when no real I/O is
+   * outstanding. Requires a kernel with IORING_FEAT_NO_IOWAIT; otherwise it is
+   * a no-op. Disabling iowait is all-or-nothing per ring, so genuine FUSE I/O
+   * waits stop being accounted too.
+   */
+  ConfigSetting<bool> fuseIoUringDisableIoWait{
+      "fuse:io-uring-disable-iowait",
+      true,
+      this};
+
   // [nfs]
 
   /**
