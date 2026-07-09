@@ -227,6 +227,7 @@ pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
         xdb_mapping_shard_ids: hashmap! {
             DerivableType::HistoryManifests => 0,
             DerivableType::BlameV3 => 0,
+            DerivableType::FastlogV2 => 0,
         },
         ..Default::default()
     }

@@ -101,6 +101,7 @@ union DerivedData {
   26: DerivedDataAclManifest acl_manifest;
   27: DerivedDataHistoryManifest history_manifest;
   28: DerivedDataBlame blame_v3;
+  29: DerivedDataFastlog fastlog_v2;
 }
 
 union DerivedDataFsnode {
@@ -123,6 +124,13 @@ struct DerivedDataFilenodePresent {
 
 union DerivedDataFastlog {
   1: id.ChangesetId root_fastlog_id;
+  2: DerivedDataRootFastlogV2 root_fastlog_v2;
+}
+
+@rust.Exhaustive
+struct DerivedDataRootFastlogV2 {
+  1: id.ChangesetId changeset_id;
+  2: DerivedDataHistoryManifest history_manifest;
 }
 
 union DerivedDataBlame {

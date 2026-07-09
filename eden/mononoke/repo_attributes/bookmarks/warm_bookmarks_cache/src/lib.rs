@@ -62,6 +62,7 @@ use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
 use enum_map::EnumMap;
 use fastlog::RootFastlog;
+use fastlog::RootFastlogV2;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
 use futures::channel::oneshot;
@@ -432,6 +433,11 @@ impl WarmBookmarksCacheBuilder {
                 vec![WarmerTag::Hg, WarmerTag::Git],
             )),
             DerivableType::Fastlog => Some(create_derived_data_warmer::<RootFastlog>(
+                &self.ctx,
+                repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
+            )),
+            DerivableType::FastlogV2 => Some(create_derived_data_warmer::<RootFastlogV2>(
                 &self.ctx,
                 repo_derived_data.clone(),
                 vec![WarmerTag::Hg, WarmerTag::Git],

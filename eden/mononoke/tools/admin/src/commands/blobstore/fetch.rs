@@ -161,6 +161,7 @@ impl DecodeAs {
                 ("fileunode.", DecodeAs::FileUnode),
                 ("manifestunode.", DecodeAs::ManifestUnode),
                 ("fastlogbatch.", DecodeAs::FastlogBatch),
+                ("fastlogbatchv2.", DecodeAs::FastlogBatch),
                 (
                     "deletedmanifest2.mapnode.",
                     DecodeAs::DeletedManifestV2MapNode,

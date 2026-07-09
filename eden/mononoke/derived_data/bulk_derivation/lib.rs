@@ -37,6 +37,7 @@ use derived_data_manager::VisitedDerivableTypesMapStatic;
 use derived_data_manager::derivable::DerivationDependencies;
 use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
 use fastlog::RootFastlog;
+use fastlog::RootFastlogV2;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
 use futures::StreamExt;
@@ -441,6 +442,7 @@ fn manager_for_type(
         >::new(manager)),
         DerivableType::Fsnodes => Arc::new(SingleTypeManager::<RootFsnodeId>::new(manager)),
         DerivableType::Fastlog => Arc::new(SingleTypeManager::<RootFastlog>::new(manager)),
+        DerivableType::FastlogV2 => Arc::new(SingleTypeManager::<RootFastlogV2>::new(manager)),
         DerivableType::DeletedManifests => {
             Arc::new(SingleTypeManager::<RootDeletedManifestV2Id>::new(manager))
         }

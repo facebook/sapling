@@ -23,6 +23,8 @@ use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fastlog_batch::ParentOffset;
+use mononoke_types::typed_hash::HistoryManifestDirectoryId;
+use mononoke_types::typed_hash::HistoryManifestFileId;
 
 use crate::ErrorKind;
 use crate::FastlogParent;
@@ -277,6 +279,50 @@ pub(crate) async fn fetch_unode_parents<B: KeyedBlobstore>(
         }
     };
     Ok(res)
+}
+
+pub async fn fetch_fastlog_batch_by_hm_id<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    hm_entry: &Entry<HistoryManifestDirectoryId, HistoryManifestFileId>,
+) -> Result<Option<FastlogBatch>, Error> {
+    let fastlog_batch_key = hm_entry_to_fastlog_batch_key(hm_entry);
+
+    let maybe_bytes = blobstore.get(ctx, &fastlog_batch_key).await?;
+
+    match maybe_bytes {
+        Some(serialized) => FastlogBatch::from_bytes(serialized.as_raw_bytes()).map(Some),
+        None => Ok(None),
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) async fn save_fastlog_batch_by_hm_id<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    hm_entry: Entry<HistoryManifestDirectoryId, HistoryManifestFileId>,
+    batch: FastlogBatch,
+) -> Result<(), Error> {
+    let fastlog_batch_key = hm_entry_to_fastlog_batch_key(&hm_entry);
+    let serialized = batch.into_bytes();
+
+    blobstore
+        .put(
+            ctx,
+            fastlog_batch_key,
+            BlobstoreBytes::from_bytes(serialized),
+        )
+        .await
+}
+
+pub fn hm_entry_to_fastlog_batch_key(
+    hm_entry: &Entry<HistoryManifestDirectoryId, HistoryManifestFileId>,
+) -> String {
+    let key_part = match hm_entry {
+        Entry::Leaf(hm_file_id) => format!("hmfile.{hm_file_id}"),
+        Entry::Tree(hm_dir_id) => format!("hmdir.{hm_dir_id}"),
+    };
+    format!("fastlogbatchv2.{key_part}")
 }
 
 pub async fn fetch_flattened<B: KeyedBlobstore>(

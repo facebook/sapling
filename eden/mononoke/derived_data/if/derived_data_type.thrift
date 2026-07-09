@@ -48,4 +48,5 @@ enum DerivedDataType {
   HISTORY_MANIFEST = 27,
   BLAME_V3 = 28,
   HG_AUGMENTED_MANIFEST_V2 = 29,
+  FASTLOG_V2 = 30,
 }
