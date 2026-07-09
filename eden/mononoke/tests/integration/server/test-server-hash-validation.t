@@ -63,4 +63,5 @@ Prefetch should fail with corruption error
   pulling from mono:repo
 
   $ LOG=revisionstore=debug hg prefetch -r ":" 2>&1 | grep "Invalid hash"
-  * Errors = 1, Error = Some("0eb86721b74ed44cf176ee48b5e95f0192dc2824 : Invalid hash: 0eb86721b74ed44cf176ee48b5e95f0192dc2824 (expected) != 07c0d950fdeb8c7d82ae7f15b6d1cb7f330da8a7 (computed)") (glob)
+  * Errors = 1, Error = Some("0eb86721b74ed44cf176ee48b5e95f0192dc2824 file2: Invalid hash: 0eb86721b74ed44cf176ee48b5e95f0192dc2824 (expected) != 07c0d950fdeb8c7d82ae7f15b6d1cb7f330da8a7 (computed)") (glob)
+  error.FetchError: 'key fetch failed 0eb86721b74ed44cf176ee48b5e95f0192dc2824 file2: Network Error: Invalid hash: 0eb86721b74ed44cf176ee48b5e95f0192dc2824 (expected) != 07c0d950fdeb8c7d82ae7f15b6d1cb7f330da8a7 (computed)\n\nCaused by:\n    Invalid hash: 0eb86721b74ed44cf176ee48b5e95f0192dc2824 (expected) != 07c0d950fdeb8c7d82ae7f15b6d1cb7f330da8a7 (computed)'

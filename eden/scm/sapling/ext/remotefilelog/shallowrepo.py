@@ -6,13 +6,22 @@
 # shallowrepo.py - shallow repository that uses remote filelogs
 
 
+import bindings
 from sapling import match as matchmod, progress, util
 from sapling.i18n import _
-from sapling.scmutil import walkfiles
 
 from . import fileserverclient, remotefilectx, remotefilelog
 
 requirement = "remotefilelog"
+
+
+def _prefetch_matcher(repo, rev, matcher=None):
+    sparse_matcher = repo.maybesparsematch(rev)
+    if matcher is None:
+        return sparse_matcher or matchmod.always(repo.root, repo.getcwd())
+    if sparse_matcher is None:
+        return matcher
+    return matchmod.intersectmatchers(matcher, sparse_matcher)
 
 
 def wraprepo(repo) -> None:
@@ -94,57 +103,28 @@ def wraprepo(repo) -> None:
                 self._prefetch(revs, base, matcher)
 
         def _prefetch(self, revs, base=None, matcher=None):
-            # Copy the skip set to start large and avoid constant resizing,
-            # and since it's likely to be very similar to the prefetch set.
-
-            if len(revs) > 1:
-                files = set()
-            else:
-                files = []
+            base_manifest = self[base].manifest() if base is not None else None
 
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
                     ctx = self[rev]
-                    sparse_matcher = self.maybesparsematch(rev)
-                    current_matcher = matcher
-                    if current_matcher is None:
-                        current_matcher = sparse_matcher
-                    elif sparse_matcher is not None:
-                        # Intersect user-provided matcher with sparse matcher to
-                        # ensure we don't prefetch files outside the sparse profile
-                        current_matcher = matchmod.intersectmatchers(
-                            current_matcher, sparse_matcher
-                        )
-
-                    # Don't store millions of file paths in memory unnecessarily. It maybe
-                    # be useful to turn paths back on to get more info for file specific
-                    # errors.
-                    omit_paths = self.ui.configbool(
-                        "experimental", "prefetch-omit-paths", True
-                    )
-
-                    with progress.spinner(self.ui, _("computing files")):
-                        walked = walkfiles(
-                            repo, ctx, current_matcher, base, nodes_only=omit_paths
+                    current_matcher = _prefetch_matcher(self, rev, matcher)
+                    with progress.spinner(self.ui, _("ensuring files fetched")):
+                        stats = bindings.filewalk.walkandcache(
+                            self._rsrepo,
+                            [ctx.manifest()],
+                            current_matcher,
+                            self.ui._rcfg,
+                            base_manifest,
                         )
                         if self.ui.configbool(
                             "experimental", "print-prefetch-count", False
                         ):
+                            count = stats["local"] + stats["remote"]
                             self.ui.status(
-                                _("prefetch: rev %s has %d files\n")
-                                % (rev, len(walked))
+                                _("prefetch: rev %s has %d files\n") % (rev, count)
                             )
-                        if type(files) is set:
-                            files.update(walked)
-                        elif type(files) is list:
-                            # we know len(revs) == 1, so avoid copy and assign
-                            files = walked
-
                     prog.value += 1
-
-            if files:
-                with progress.spinner(self.ui, _("ensuring files fetched")):
-                    self.fileservice.prefetch(files, fetchhistory=False)
 
     repo.__class__ = shallowrepository
 
