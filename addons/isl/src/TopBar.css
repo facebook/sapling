@@ -8,9 +8,8 @@
 .top-bar {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  flex-wrap: nowrap;
   padding: var(--pad);
   background-color: var(--background);
   margin-left: var(--halfpad);
@@ -21,12 +20,28 @@
   z-index: 11;
 }
 
+/* The two button groups sit side by side and each wraps WITHIN its own half so
+   the bar never scrolls horizontally: the left group stays left-aligned and the
+   right group stays right-aligned, each wrapping to a new line as needed. */
 .top-bar .button-group {
   display: flex;
   gap: var(--pad);
   align-items: center;
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   flex-wrap: wrap;
+}
+
+.top-bar .button-group:first-child {
+  justify-content: flex-start;
+}
+
+/* Right group: anchored to the right with flex-end, kept in natural DOM order so
+   keyboard tab order matches the visual order (row-reverse would reverse the tab
+   order — an accessibility pitfall). When it runs out of room the trailing icons
+   wrap to the next line, still flush right. */
+.top-bar .button-group:last-child {
+  justify-content: flex-end;
 }
 
 .fetching-data-indicator {

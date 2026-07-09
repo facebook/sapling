@@ -6,7 +6,6 @@
  */
 
 import {Button} from 'isl-components/Button';
-import {FlexSpacer} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
@@ -52,7 +51,6 @@ export function TopBar() {
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
-        <FlexSpacer />
         <DebugToolsButton />
         <CommitTreeSearchFilterButton />
         <FocusModeToggle />
