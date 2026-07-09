@@ -17,6 +17,8 @@ pub use util::no_follow::NoFollowRoot;
 pub use util::no_follow::OpenFlags;
 
 pub use crate::async_vfs::AsyncVfsWriter;
+pub use crate::async_vfs::VfsBatchError;
+pub use crate::async_vfs::VfsBatchItems;
 pub use crate::async_vfs::Work;
 pub use crate::pathauditor::AuditError;
 pub use crate::pathauditor::FsFeatures;

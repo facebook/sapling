@@ -33,6 +33,7 @@ rust_library(
         "//eden/scm/lib/fsinfo:fsinfo",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/slex:slex",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
     ],

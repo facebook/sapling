@@ -191,7 +191,7 @@ impl<T: Send + 'static, E: Send + 'static> ItemsWriter<T, E> {
         }
     }
 
-    /// Flush the current buffered batch in streaming mode.
+    /// Flush the current buffered batches in streaming mode.
     pub fn flush(&mut self) -> bool {
         self.flush_retain()
     }

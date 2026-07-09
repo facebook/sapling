@@ -11,6 +11,11 @@ use std::thread::JoinHandle;
 use anyhow::Error;
 use anyhow::Result;
 use blob::Blob;
+use slex::Items;
+use slex::Work as SlexWork;
+use slex::WorkOptions;
+use slex::WorkScope;
+use slex::WorkShape;
 use tokio::sync::oneshot;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -36,6 +41,29 @@ pub enum Work {
     SetExecutable(RepoPathBuf, bool),
     Batch(Vec<Work>),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum VfsBatchError {
+    /// A specific VFS operation failed; callers can use the `Work` to classify by action/path.
+    #[error("VFS operation failed for {0:?}: {1}")]
+    Work(Work, Error),
+    /// The producer or batch finalizer failed outside a single VFS operation.
+    #[error("VFS batch failed: {0}")]
+    Batch(Error),
+}
+
+impl VfsBatchError {
+    pub fn into_error(self) -> Error {
+        match self {
+            Self::Work(_, err) | Self::Batch(err) => err,
+        }
+    }
+}
+
+/// VFS batch results use the same item type as input: successful results echo completed work.
+pub type VfsBatchItems = Items<Work, VfsBatchError>;
+
+const VFS_WORK_BATCH_ITEMS: usize = 32;
 
 impl Work {
     pub fn path(&self) -> &RepoPath {
@@ -179,13 +207,43 @@ impl Drop for AsyncVfsWriter {
 }
 
 impl VFS {
+    /// Process VFS work with `slex`.
+    ///
+    /// Per-work failures are reported as `Items` errors with the failed work attached. Producer
+    /// and finalization errors use the same error channel without an attached work item.
+    pub fn batch_items(&self, workers: usize, input: VfsBatchItems) -> VfsBatchItems {
+        let vfs = self.clone();
+        SlexWork::run(
+            WorkOptions::new()
+                .max_workers(workers)
+                .inline_items(1)
+                .work_chunk_items(VFS_WORK_BATCH_ITEMS)
+                .result_batch_items(VFS_WORK_BATCH_ITEMS),
+            input,
+            WorkShape::batch_finalize(
+                Vec::<RepoPathBuf>::new,
+                move |batch, scope| match batch {
+                    Ok(batch) => execute_batch_work(&vfs, batch, scope),
+                    Err(err) => {
+                        scope.send_error(err);
+                        Ok(())
+                    }
+                },
+                {
+                    let vfs = self.clone();
+                    move |locals| finish_batch_work(&vfs, locals)
+                },
+            ),
+        )
+    }
+
     /// Open a batch writing session with bounded channels.
     ///
     /// Returns:
     /// - `work_sender`: Send `Work` items to be processed by worker threads
     /// - `result_receiver`: Receive results from worker threads. `Ok(work)` for success,
-    ///   `Err((Some(work), error))` for failure, or `Err((None, error))` for out-of-band
-    ///   errors (e.g., Windows symlink fixup errors).
+    ///   `Err(VfsBatchError::Work(work, error))` for per-work failure, or
+    ///   `Err(VfsBatchError::Batch(error))` for batch-level errors.
     ///
     /// The work channel is bounded to `queue_size` to limit memory usage.
     ///
@@ -228,6 +286,78 @@ impl VFS {
     }
 }
 
+fn execute_batch_work(
+    vfs: &VFS,
+    batch: Vec<Work>,
+    scope: &mut WorkScope<'_, Work, Work, VfsBatchError, Vec<RepoPathBuf>>,
+) -> Result<(), VfsBatchError> {
+    for work in batch {
+        if let Work::Write(path, _, UpdateFlag::Symlink, _) = &work {
+            scope.local_mut().push(path.clone());
+        }
+
+        match execute_batch_item(vfs, work) {
+            Ok(work) => {
+                if !scope.send_result([work]) {
+                    return Ok(());
+                }
+            }
+            Err(err) => {
+                if !scope.send_error(err) {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn execute_batch_item(vfs: &VFS, work: Work) -> Result<Work, VfsBatchError> {
+    let result = match &work {
+        Work::Write(path, data, flag, from_flag) => {
+            if matches!(from_flag, Some(UpdateFlag::Symlink)) {
+                vfs.rewrite_symlink(path, data.clone(), *flag).map(|_| ())
+            } else {
+                vfs.write(path, data.clone(), *flag).map(|_| ())
+            }
+        }
+        Work::SetExecutable(path, exec) => vfs.set_executable(path, *exec).map(|_| ()),
+        Work::Remove(path) => vfs.remove(path, remove_options()),
+        // Don't support batch for now - doesn't really make sense anyway since it precludes
+        // parallelism.
+        Work::Batch(_) => Err(anyhow::anyhow!("Work::Batch not supported")),
+    };
+
+    match result {
+        Ok(()) => Ok(work),
+        Err(err) => Err(VfsBatchError::Work(work, err)),
+    }
+}
+
+fn finish_batch_work(
+    vfs: &VFS,
+    locals: Vec<Vec<RepoPathBuf>>,
+) -> Result<Option<Vec<Work>>, VfsBatchError> {
+    #[cfg(windows)]
+    {
+        let local_symlinks: Vec<_> = locals.into_iter().flatten().collect();
+        if vfs.supports_symlinks() && !local_symlinks.is_empty() {
+            let path_refs: Vec<&types::RepoPath> =
+                local_symlinks.iter().map(|p| p.as_ref()).collect();
+            vfs.reconcile_symlinks(&path_refs)
+                .map_err(VfsBatchError::Batch)?;
+        }
+        Ok(None)
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = (vfs, locals);
+        Ok(None)
+    }
+}
+
 fn batch_worker(
     vfs: &VFS,
     work_rx: flume::Receiver<Work>,
@@ -244,25 +374,10 @@ fn batch_worker(
             local_symlinks.push(path.clone());
         }
 
-        let result = match &work {
-            Work::Write(path, data, flag, from_flag) => {
-                if matches!(from_flag, Some(UpdateFlag::Symlink)) {
-                    vfs.rewrite_symlink(path, data.clone(), *flag).map(|_| ())
-                } else {
-                    vfs.write(path, data.clone(), *flag).map(|_| ())
-                }
-            }
-            Work::SetExecutable(path, exec) => vfs.set_executable(path, *exec).map(|_| ()),
-            Work::Remove(path) => vfs.remove(path, remove_options()),
-            // Don't support batch for now - doesn't really make sense anyway since it precludes
-            // parallelism.
-            Work::Batch(_) => Err(anyhow::anyhow!("Work::Batch not supported")),
-        };
-        let batch_result = match result {
-            Ok(()) => Ok(work),
-            Err(e) => Err((Some(work), e)),
-        };
-        if result_tx.send(batch_result).is_err() {
+        if result_tx
+            .send(legacy_batch_result(execute_batch_item(vfs, work)))
+            .is_err()
+        {
             break;
         }
     }
@@ -284,5 +399,13 @@ fn batch_worker(
                 let _ = result_tx.send(Err((None, e)));
             }
         }
+    }
+}
+
+fn legacy_batch_result(result: Result<Work, VfsBatchError>) -> Result<Work, (Option<Work>, Error)> {
+    match result {
+        Ok(work) => Ok(work),
+        Err(VfsBatchError::Work(work, err)) => Err((Some(work), err)),
+        Err(VfsBatchError::Batch(err)) => Err((None, err)),
     }
 }
