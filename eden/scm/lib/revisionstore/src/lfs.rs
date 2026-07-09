@@ -71,7 +71,6 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use lfs_protocol::Sha256 as LfsSha256;
 use mincode::deserialize;
-use mincode::serialize;
 use mincode::serialize_into;
 use minibytes::Bytes;
 use redacted::is_redacted;
@@ -2146,6 +2145,7 @@ impl PoolHandle {
 mod tests {
     use std::str::FromStr;
 
+    use mincode::serialize;
     use parking_lot::Mutex;
     use quickcheck::quickcheck;
     use storemodel::SerializationFormat;

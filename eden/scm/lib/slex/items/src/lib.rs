@@ -177,6 +177,22 @@ impl<'a, T, E> ScopedItems<'a, T, E> {
         }
     }
 
+    /// Map each item, preserving ready-vs-stream shape and batch success fast paths.
+    ///
+    /// Successful items stay grouped with their input batch. If a mapped item fails, successful
+    /// items before the error are emitted as one batch, then the error is emitted, then later
+    /// successful items can form another batch.
+    pub fn try_map_item<U, E2, F>(self, mut f: F) -> ScopedItems<'a, U, E2>
+    where
+        T: Send + 'a,
+        U: Send + 'a,
+        E: Into<E2> + Send + 'a,
+        E2: Send + 'a,
+        F: FnMut(T) -> Result<U, E2> + Send + 'a,
+    {
+        self.flat_map_batch(move |batch| try_map_item_batch(batch, &mut f))
+    }
+
     /// Map each input batch to zero or more output batches or errors.
     ///
     /// This is useful for adapters that receive a batch containing mixed successes and failures
@@ -335,6 +351,29 @@ where
             Some(Ok(self.take_batch()))
         }
     }
+}
+
+fn try_map_item_batch<T, U, E, F>(batch: Batch<T>, f: &mut F) -> SmallVec<[Result<Vec<U>, E>; 1]>
+where
+    F: FnMut(T) -> Result<U, E>,
+{
+    let mut events = SmallVec::new();
+    let mut success = Vec::with_capacity(batch.len());
+    for item in batch {
+        match f(item) {
+            Ok(item) => success.push(item),
+            Err(err) => {
+                if !success.is_empty() {
+                    events.push(Ok(std::mem::take(&mut success)));
+                }
+                events.push(Err(err));
+            }
+        }
+    }
+    if !success.is_empty() || events.is_empty() {
+        events.push(Ok(success));
+    }
+    events
 }
 
 /// Lowered batch iterator from [`Items`].
@@ -571,6 +610,44 @@ mod tests {
         assert_eq!(mapped_batches.load(Ordering::SeqCst), 0);
         assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[2, 4]);
         assert_eq!(mapped_batches.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn try_map_item_preserves_success_batch() {
+        let items: Items<i32, &'static str> = Items::ready(vec![1, 2, 3]);
+        let mapped: Items<i32, &'static str> = items.try_map_item(|item| Ok(item * 2));
+        let batches = mapped
+            .into_batches()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(batches.len(), 1);
+        assert_eq!(batches[0].as_slice(), &[2, 4, 6]);
+    }
+
+    #[test]
+    fn try_map_item_preserves_empty_batch() {
+        let items: Items<i32, &'static str> = Items::ready(vec![]);
+        let mapped: Items<i32, &'static str> = items.try_map_item(|item| Ok(item * 2));
+        let batches = mapped
+            .into_batches()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(batches.len(), 1);
+        assert!(batches[0].is_empty());
+    }
+
+    #[test]
+    fn try_map_item_splits_errors_from_successes() {
+        let items: Items<i32, &'static str> = Items::ready(vec![1, 2, 3]);
+        let mapped = items.try_map_item(|item| if item == 2 { Err("bad") } else { Ok(item * 2) });
+        let batches = mapped.into_batches().collect::<Vec<_>>();
+
+        assert_eq!(batches.len(), 3);
+        assert_eq!(batches[0].as_ref().unwrap().as_slice(), &[2]);
+        assert_eq!(batches[1], Err("bad"));
+        assert_eq!(batches[2].as_ref().unwrap().as_slice(), &[6]);
     }
 
     #[test]

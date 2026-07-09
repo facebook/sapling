@@ -460,6 +460,10 @@ impl<T: Send + 'static> FetchResults<T> {
         FetchResults { items }
     }
 
+    pub(crate) fn into_items(self) -> FetchItems<T> {
+        self.items
+    }
+
     pub(crate) fn from_process(
         should_spawn: bool,
         process: impl FnOnce(&mut FetchItemsWriter<T>) + Send + 'static,

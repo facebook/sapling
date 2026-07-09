@@ -1234,21 +1234,19 @@ impl storemodel::TreeStore for TreeStore {
     fn get_tree_iter(&self, fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {
         // TreeAttributes::CONTENT means at least the content attribute is requested.
         // In practice, files/trees aux data may be requested as well, but we don't know that here as it depends on the configs.
-        let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let acl_checker = self.create_acl_checker();
-        let iter =
-            fetched
-                .into_iter()
-                .map(move |entry| -> anyhow::Result<(Key, Arc<dyn TreeEntry>)> {
-                    let (key, store_tree) = entry?;
-                    let tree: LazyTree = store_tree
-                        .content
-                        .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                    let mut scm_entry: ScmStoreTreeEntry = tree.into();
-                    scm_entry.acl_checker = acl_checker.clone();
-                    Ok((key, Arc::new(scm_entry) as Arc<dyn TreeEntry>))
-                });
-        Ok(TreeFetchItems::item_stream(iter))
+        Ok(self
+            .fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT)
+            .into_items()
+            .try_map_item(move |item| {
+                let (key, store_tree) = item;
+                let tree: LazyTree = store_tree
+                    .content
+                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
+                let mut scm_entry: ScmStoreTreeEntry = tree.into();
+                scm_entry.acl_checker = acl_checker.clone();
+                Ok((key, Arc::new(scm_entry) as Arc<dyn TreeEntry>))
+            }))
     }
 
     fn get_tree_aux_data_iter(
