@@ -236,54 +236,6 @@ impl VFS {
             ),
         )
     }
-
-    /// Open a batch writing session with bounded channels.
-    ///
-    /// Returns:
-    /// - `work_sender`: Send `Work` items to be processed by worker threads
-    /// - `result_receiver`: Receive results from worker threads. `Ok(work)` for success,
-    ///   `Err(VfsBatchError::Work(work, error))` for per-work failure, or
-    ///   `Err(VfsBatchError::Batch(error))` for batch-level errors.
-    ///
-    /// The work channel is bounded to `queue_size` to limit memory usage.
-    ///
-    /// Workers exit when the work sender is dropped (channel closes).
-    /// The result receiver closes when all workers have exited.
-    ///
-    /// On Windows, workers track symlink writes and call `update_symlinks` after
-    /// all workers have finished processing.
-    pub fn batch(
-        &self,
-        workers: usize,
-        queue_size: usize,
-    ) -> (
-        flume::Sender<Work>,
-        flume::Receiver<Result<Work, (Option<Work>, Error)>>,
-    ) {
-        let (work_tx, work_rx) = flume::bounded::<Work>(queue_size);
-        let (result_tx, result_rx) = flume::unbounded();
-
-        // Channel for worker synchronization. Workers drop their sender when done,
-        // then wait for the receiver to close (all senders dropped).
-        // This handles panics gracefully since the sender is dropped during unwinding.
-        let (done_tx, done_rx) = flume::unbounded::<()>();
-
-        for _ in 0..workers {
-            let vfs = self.clone();
-            let work_rx = work_rx.clone();
-            let result_tx = result_tx.clone();
-            let done_tx = done_tx.clone();
-            let done_rx = done_rx.clone();
-            thread::spawn(move || {
-                batch_worker(&vfs, work_rx, result_tx, done_tx, done_rx);
-            });
-        }
-
-        // Drop the original done_tx so only worker clones remain.
-        drop(done_tx);
-
-        (work_tx, result_rx)
-    }
 }
 
 fn execute_batch_work(
@@ -355,57 +307,5 @@ fn finish_batch_work(
     {
         let _ = (vfs, locals);
         Ok(None)
-    }
-}
-
-fn batch_worker(
-    vfs: &VFS,
-    work_rx: flume::Receiver<Work>,
-    result_tx: flume::Sender<Result<Work, (Option<Work>, Error)>>,
-    done_tx: flume::Sender<()>,
-    done_rx: flume::Receiver<()>,
-) {
-    // Track symlinks locally for this worker
-    let mut local_symlinks: Vec<RepoPathBuf> = Vec::new();
-
-    while let Ok(work) = work_rx.recv() {
-        // Track symlink writes for Windows symlink fixing
-        if let Work::Write(path, _, UpdateFlag::Symlink, _) = &work {
-            local_symlinks.push(path.clone());
-        }
-
-        if result_tx
-            .send(legacy_batch_result(execute_batch_item(vfs, work)))
-            .is_err()
-        {
-            break;
-        }
-    }
-
-    // Signal we're done processing work. When all workers have dropped their
-    // done_tx (including due to panic), done_rx will close.
-    drop(done_tx);
-
-    // Wait for all workers to finish (blocks until done_rx closes).
-    let _ = done_rx.recv();
-
-    // Now run symlink fixes on Windows (each worker processes its own symlinks)
-    #[cfg(windows)]
-    {
-        if vfs.supports_symlinks() && !local_symlinks.is_empty() {
-            let path_refs: Vec<&types::RepoPath> =
-                local_symlinks.iter().map(|p| p.as_ref()).collect();
-            if let Err(e) = vfs.reconcile_symlinks(&path_refs) {
-                let _ = result_tx.send(Err((None, e)));
-            }
-        }
-    }
-}
-
-fn legacy_batch_result(result: Result<Work, VfsBatchError>) -> Result<Work, (Option<Work>, Error)> {
-    match result {
-        Ok(work) => Ok(work),
-        Err(VfsBatchError::Work(work, err)) => Err((Some(work), err)),
-        Err(VfsBatchError::Batch(err)) => Err((None, err)),
     }
 }
