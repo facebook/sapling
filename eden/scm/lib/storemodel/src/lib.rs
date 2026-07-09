@@ -61,6 +61,8 @@ pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;
 /// Boxed dynamic iterator with lifetime.
 pub type BoxRefIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
 
+pub type ContentFetch = (Key, Blob);
+pub type ContentFetchItems = Items<ContentFetch, anyhow::Error>;
 pub type TreeFetch = (Key, Arc<dyn TreeEntry>);
 pub type TreeFetchItems = Items<TreeFetch, anyhow::Error>;
 
@@ -79,7 +81,7 @@ pub trait KeyStore: Send + Sync {
         &self,
         _fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
+    ) -> anyhow::Result<ContentFetchItems> {
         let store = self.clone_key_store();
         let iter = keys
             .into_iter()
@@ -92,7 +94,7 @@ pub trait KeyStore: Send + Sync {
                 )),
                 Ok(Some(data)) => Ok((k, data)),
             });
-        Ok(Box::new(iter))
+        Ok(ContentFetchItems::item_stream(iter))
     }
 
     /// Read the content of the specified file without connecting to a remote server.
@@ -113,7 +115,7 @@ pub trait KeyStore: Send + Sync {
         }
 
         let key = Key::new(path.to_owned(), hgid);
-        match self.get_content_iter(fctx, vec![key])?.next() {
+        match self.get_content_iter(fctx, vec![key])?.into_iter().next() {
             None => Err(anyhow::format_err!("{path}@{hgid}: not found remotely")),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, data))) => Ok(data),
@@ -225,10 +227,13 @@ pub trait FileStore: KeyStore + 'static {
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let iter = self.get_content_iter(fctx, keys)?.map(|entry| match entry {
-            Err(e) => Err(e),
-            Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
-        });
+        let iter = self
+            .get_content_iter(fctx, keys)?
+            .into_iter()
+            .map(|entry| match entry {
+                Err(e) => Err(e),
+                Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
+            });
         Ok(Box::new(iter))
     }
 

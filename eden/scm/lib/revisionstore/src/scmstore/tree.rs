@@ -44,12 +44,14 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use storemodel::BoxIterator;
 use storemodel::BoxRefIterator;
+use storemodel::ContentFetchItems;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::PathAclEntry;
 use storemodel::PathAclInfo;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use storemodel::TreeFetch;
 use storemodel::TreeFetchItems;
 use storemodel::basic_parse_tree;
 use types::AuxData;
@@ -996,18 +998,11 @@ impl storemodel::KeyStore for TreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
-        let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
-        let iter = fetched
-            .into_iter()
-            .map(|entry| -> anyhow::Result<(Key, Blob)> {
-                let (key, store_tree) = entry?;
-                let content = store_tree
-                    .content
-                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                Ok((key, Blob::Bytes(content.hg_content()?)))
-            });
-        Ok(Box::new(iter))
+    ) -> anyhow::Result<ContentFetchItems> {
+        Ok(self
+            .fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT)
+            .into_items()
+            .try_map_item(tree_content_fetch_item))
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -1138,6 +1133,25 @@ impl From<LazyTree> for ScmStoreTreeEntry {
     }
 }
 
+fn tree_fetch_item(
+    (key, store_tree): (Key, StoreTree),
+    acl_checker: Option<AclChecker>,
+) -> anyhow::Result<TreeFetch> {
+    let tree: LazyTree = store_tree
+        .content
+        .ok_or_else(|| anyhow::format_err!("no content available"))?;
+    let mut scm_entry: ScmStoreTreeEntry = tree.into();
+    scm_entry.acl_checker = acl_checker;
+    Ok((key, Arc::new(scm_entry) as Arc<dyn TreeEntry>))
+}
+
+fn tree_content_fetch_item((key, store_tree): (Key, StoreTree)) -> anyhow::Result<(Key, Blob)> {
+    let content = store_tree
+        .content
+        .ok_or_else(|| anyhow::format_err!("no content available"))?;
+    Ok((key, Blob::Bytes(content.hg_content()?)))
+}
+
 impl TreeEntry for ScmStoreTreeEntry {
     fn iter<'a>(
         &'a self,
@@ -1238,15 +1252,7 @@ impl storemodel::TreeStore for TreeStore {
         Ok(self
             .fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT)
             .into_items()
-            .try_map_item(move |item| {
-                let (key, store_tree) = item;
-                let tree: LazyTree = store_tree
-                    .content
-                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                let mut scm_entry: ScmStoreTreeEntry = tree.into();
-                scm_entry.acl_checker = acl_checker.clone();
-                Ok((key, Arc::new(scm_entry) as Arc<dyn TreeEntry>))
-            }))
+            .try_map_item(move |item| tree_fetch_item(item, acl_checker.clone())))
     }
 
     fn get_tree_aux_data_iter(

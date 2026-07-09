@@ -9,7 +9,7 @@
 
 use async_trait::async_trait;
 use blob::Blob;
-use storemodel::BoxIterator;
+use storemodel::ContentFetchItems;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -46,14 +46,14 @@ impl KeyStore for GitStore {
         &self,
         fctx: FetchContext,
         keys: Vec<types::Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, Blob)>>> {
+    ) -> anyhow::Result<ContentFetchItems> {
         let fetch_mode = fctx.mode();
         if self.has_fetch_url() && fetch_mode.contains(FetchMode::REMOTE) {
             let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
             self.fetch_objs(&ids)?
         }
         if fetch_mode.contains(FetchMode::IGNORE_RESULT) {
-            return Ok(Box::new(std::iter::empty()));
+            return Ok(ContentFetchItems::empty());
         }
         let store = self.clone();
         let iter = keys.into_iter().map(move |k| {
@@ -61,7 +61,7 @@ impl KeyStore for GitStore {
             let data = store.read_obj(k.hgid, ObjectType::Any, FetchMode::LocalOnly)?;
             Ok((k, Blob::Bytes(data.into())))
         });
-        Ok(Box::new(iter))
+        Ok(ContentFetchItems::item_stream(iter))
     }
 
     // This is an old API but still critical for BFS tree fetching.

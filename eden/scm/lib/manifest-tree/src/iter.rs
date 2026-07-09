@@ -378,7 +378,7 @@ mod tests {
     use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
-    use storemodel::BoxIterator;
+    use storemodel::ContentFetchItems;
     use storemodel::KeyStore;
     use storemodel::SerializationFormat;
     use storemodel::TreeEntry;
@@ -402,7 +402,7 @@ mod tests {
             &self,
             fctx: FetchContext,
             keys: Vec<Key>,
-        ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
+        ) -> anyhow::Result<ContentFetchItems> {
             self.0.get_content_iter(fctx, keys)
         }
 

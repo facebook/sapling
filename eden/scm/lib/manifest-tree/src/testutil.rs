@@ -18,6 +18,7 @@ use minibytes::Bytes;
 use parking_lot::RwLock;
 use storemodel::BoxIterator;
 use storemodel::BoxRefIterator;
+use storemodel::ContentFetchItems;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -182,7 +183,7 @@ impl KeyStore for TestStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
+    ) -> anyhow::Result<ContentFetchItems> {
         let mut inner = self.inner.write();
         inner
             .key_fetch_count
@@ -201,7 +202,7 @@ impl KeyStore for TestStore {
                     k.hgid
                 )),
             });
-        Ok(Box::new(iter))
+        Ok(ContentFetchItems::item_stream(iter))
     }
 
     fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {

@@ -12,6 +12,7 @@ use cpython_ext::PyIter;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
+use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
@@ -58,6 +59,7 @@ py_class!(pub class KeyStore |py| {
         let inner = self.inner(py);
         let fctx = FetchContext::new(fetch_mode.0);
         let iter = inner.get_content_iter(fctx, keys.0.into_keys()).map_pyerr(py)?;
+        let iter: BoxIterator<_> = Box::new(iter.into_iter());
         let iter = iter.into_compact_key();
         let iter = iter.map(|r| r.map(|(k, v)| (k, v.into_bytes())));
         let iter = PyIter::new(py, iter)?;

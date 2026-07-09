@@ -16,6 +16,8 @@ use edenapi_types::FileAuxData;
 use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use storemodel::BoxIterator;
+use storemodel::ContentFetch;
+use storemodel::ContentFetchItems;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
@@ -31,26 +33,28 @@ use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileStore;
+use crate::scmstore::StoreFile;
 
 // Wrapper types to workaround Rust's orphan rule.
 #[derive(Clone)]
 pub struct ArcFileStore(pub Arc<FileStore>);
+
+fn file_content_fetch_item((key, store_file): (Key, StoreFile)) -> anyhow::Result<ContentFetch> {
+    let content = store_file.file_content()?;
+    Ok((key, content))
+}
 
 impl storemodel::KeyStore for ArcFileStore {
     fn get_content_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
-        let fetched = self.0.fetch(fctx, keys, FileAttributes::PURE_CONTENT);
-        let iter = fetched
-            .into_iter()
-            .map(|result| -> anyhow::Result<(Key, Blob)> {
-                let (key, store_file) = result?;
-                let content = store_file.file_content()?;
-                Ok((key, content))
-            });
-        Ok(Box::new(iter))
+    ) -> anyhow::Result<ContentFetchItems> {
+        Ok(self
+            .0
+            .fetch(fctx, keys, FileAttributes::PURE_CONTENT)
+            .into_items()
+            .try_map_item(file_content_fetch_item))
     }
 
     fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {

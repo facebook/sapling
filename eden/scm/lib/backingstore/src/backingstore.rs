@@ -986,7 +986,7 @@ impl LocalRemoteImpl<Blob> for Arc<dyn FileStore> {
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Blob)>>> {
-        Ok(Box::new(self.get_content_iter(fctx, keys)?))
+        Ok(Box::new(self.get_content_iter(fctx, keys)?.into_iter()))
     }
 }
 

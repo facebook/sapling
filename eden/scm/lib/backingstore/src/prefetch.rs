@@ -489,15 +489,14 @@ fn prefetch(
             )
             .with_skip_lfs(config.skip_lfs);
 
-            // An important implementation detail for us: the scmstore FileStore spawns a thread
-            // when you fetch more than 1_000 keys (i.e. this method will operate asynchronously if
-            // we fetch more than 1k files). If that assumption changes, we will need to change what
-            // we do here.
+            // An important implementation detail for us: the scmstore FileStore operates
+            // asynchronously when you fetch more than 1_000 keys. If that assumption changes, we
+            // will need to change what we do here.
             let fetch_res = file_store.get_content_iter(fctx.clone(), mem::take(batch));
 
             match fetch_res {
                 Ok(iter) => {
-                    file_fetches.push_back((fctx, iter));
+                    file_fetches.push_back((fctx, Box::new(iter.into_iter())));
                 }
                 Err(err) => {
                     tracing::error!(?err, "error prefetching file content");
@@ -975,7 +974,7 @@ mod test {
             &self,
             fctx: FetchContext,
             keys: Vec<Key>,
-        ) -> anyhow::Result<storemodel::BoxIterator<anyhow::Result<(Key, Blob)>>> {
+        ) -> anyhow::Result<storemodel::ContentFetchItems> {
             self.inner.get_content_iter(fctx, keys)
         }
 
