@@ -18,7 +18,7 @@ use configmodel::ConfigExt;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest_tree::TreeManifest;
-use pathmatcher::Matcher;
+use pathmatcher::DynMatcher;
 use slex::Items;
 use slex::Work;
 use slex::WorkOptions;
@@ -111,9 +111,9 @@ pub type FileItems = Items<FileResult, anyhow::Error>;
 /// Walk the manifest matching the given matcher and fetch file contents in parallel.
 ///
 /// The returned iterator owns the pipeline. Dropping it cancels pending work.
-pub fn walk_and_fetch<M: 'static + Matcher + Sync + Send>(
+pub fn walk_and_fetch(
     manifest: TreeManifest,
-    matcher: M,
+    matcher: DynMatcher,
     file_store: &Arc<dyn FileStore>,
 ) -> FileItems {
     walk_and_fetch_with_options(manifest, matcher, file_store, WalkOptions::default())
@@ -123,9 +123,9 @@ pub fn walk_and_fetch<M: 'static + Matcher + Sync + Send>(
 ///
 /// `options` controls the fetch batch size and maximum fetch worker count.
 /// The returned iterator owns the pipeline. Dropping it cancels pending work.
-pub fn walk_and_fetch_with_options<M: 'static + Matcher + Sync + Send>(
+pub fn walk_and_fetch_with_options(
     manifest: TreeManifest,
-    matcher: M,
+    matcher: DynMatcher,
     file_store: &Arc<dyn FileStore>,
     options: WalkOptions,
 ) -> FileItems {

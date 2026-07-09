@@ -272,9 +272,9 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
     Ok(if count > 0 { 0 } else { 1 })
 }
 
-fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
+fn fetch_and_output(
     manifest: TreeManifest,
-    matcher: M,
+    matcher: DynMatcher,
     file_store: &Arc<dyn FileStore>,
     mut outputter: Outputter,
     binary_file_size_threshold: Option<usize>,
@@ -321,9 +321,9 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     Ok(output_count)
 }
 
-fn fetch_and_output_disk<M: 'static + pathmatcher::Matcher + Sync + Send>(
+fn fetch_and_output_disk(
     manifest: TreeManifest,
-    matcher: M,
+    matcher: DynMatcher,
     file_store: &Arc<dyn FileStore>,
     vfs: &VFS,
     output_template: String,
