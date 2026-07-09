@@ -21,7 +21,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
-        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/clidispatch:clidispatch",
@@ -35,6 +34,7 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/slex:slex",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/status:status",
         "//eden/scm/lib/treestate:treestate",

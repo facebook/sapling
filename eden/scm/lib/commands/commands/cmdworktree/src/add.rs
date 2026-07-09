@@ -23,6 +23,9 @@ use cmdutil::Result;
 use encoding::shell_output_bytes_to_path;
 use fs_err as fs;
 use repo::repo::Repo;
+use slex::Items;
+use slex::Work as SlexWork;
+use slex::WorkOptions;
 use spawn_ext::CommandExt;
 use workingcopy::workingcopy::WorkingCopy;
 use worktree::Group;
@@ -466,7 +469,6 @@ fn display_path_bytes(bytes: &[u8]) -> String {
 
 const DEFAULT_CONCURRENCY: usize = 16;
 const VFS_BATCH_SIZE: usize = 128;
-const WORK_QUEUE_SIZE: usize = 10_000;
 
 fn snapshot_with_direct_workingcopy_patch(
     ctx: &ReqCtx<WorktreeOpts>,
@@ -510,19 +512,12 @@ fn restore_clean_state(dest: &Path, logger: &TermLogger) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn prepare_batch_workers(
-    dst_vfs: &vfs::VFS,
-    total: usize,
-) -> (
-    flume::Sender<vfs::Work>,
-    flume::Receiver<Result<vfs::Work, (Option<vfs::Work>, anyhow::Error)>>,
-) {
-    let workers = match std::thread::available_parallelism() {
+fn batch_workers(total: usize) -> usize {
+    match std::thread::available_parallelism() {
         Ok(v) => v.get().min(DEFAULT_CONCURRENCY).min(total / VFS_BATCH_SIZE),
         Err(_) => 1,
     }
-    .max(1);
-    dst_vfs.batch(workers, WORK_QUEUE_SIZE)
+    .max(1)
 }
 
 /// Remove deleted/removed files from `dst_vfs` in parallel.
@@ -535,14 +530,12 @@ fn remove_items(
     if paths.is_empty() {
         return Ok(());
     }
-    let (work_tx, result_rx) = prepare_batch_workers(dst_vfs, paths.len());
-    for path in paths {
-        if work_tx.send(vfs::Work::Remove(path.to_owned())).is_err() {
-            bail!("batch workers stopped unexpectedly");
-        }
-    }
-    drop(work_tx);
-    drain_workers(result_rx, logger)
+    let work: Vec<_> = paths
+        .into_iter()
+        .map(|path| vfs::Work::Remove(path.to_owned()))
+        .collect();
+    let result_items = dst_vfs.batch_items(batch_workers(work.len()), Items::ready(work));
+    drain_workers(result_items, logger)
 }
 
 /// Read modified/added/untracked files from `src_vfs` and write them to
@@ -557,47 +550,54 @@ fn copy_items(
         .modified()
         .chain(status.added())
         .chain(status.unknown())
+        .map(|path| path.to_owned())
         .collect();
     if paths.is_empty() {
         return Ok(());
     }
-    let (work_tx, result_rx) = prepare_batch_workers(dst_vfs, paths.len());
-    for path in paths {
-        let (data, metadata) = src_vfs
-            .read_with_metadata(path)
-            .with_context(|| format!("reading {path}"))?;
-        let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(src_vfs);
-        if work_tx
-            .send(vfs::Work::Write(path.to_owned(), data.into(), flag, None))
-            .is_err()
-        {
-            bail!("batch workers stopped unexpectedly");
-        }
-    }
-    drop(work_tx);
-    drain_workers(result_rx, logger)
+    let workers = batch_workers(paths.len());
+    let src_vfs = src_vfs.clone();
+    let read_items = SlexWork::try_map(
+        WorkOptions::new().max_workers(workers).inline_items(1),
+        Items::ready(paths),
+        move |path| {
+            let (data, metadata) = src_vfs
+                .read_with_metadata(&path)
+                .with_context(|| format!("reading {path}"))
+                .map_err(vfs::VfsBatchError::Batch)?;
+            let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(&src_vfs);
+            Ok(vfs::Work::Write(path, data.into(), flag, None))
+        },
+    );
+    let result_items = dst_vfs.batch_items(workers, read_items);
+    drain_workers(result_items, logger)
 }
 
-fn drain_workers(
-    result_rx: flume::Receiver<Result<vfs::Work, (Option<vfs::Work>, anyhow::Error)>>,
-    logger: &TermLogger,
-) -> anyhow::Result<()> {
+fn drain_workers(result_items: vfs::VfsBatchItems, logger: &TermLogger) -> anyhow::Result<()> {
     let mut errors: Vec<(String, types::RepoPathBuf, anyhow::Error)> = Vec::new();
-    while let Ok(result) = result_rx.recv() {
-        if let Err((work, err)) = result {
-            let (action, path) = match work {
-                Some(vfs::Work::Remove(p)) => ("removing", p),
-                Some(vfs::Work::Write(p, ..)) => ("writing", p),
-                Some(vfs::Work::SetExecutable(p, ..)) => ("setting executable", p),
-                _ => ("applying", types::RepoPathBuf::new()),
-            };
-            errors.push((action.to_owned(), path, err));
+    let mut result = Ok(());
+    for result_batch in result_items.into_batches() {
+        match result_batch {
+            Ok(_) => {}
+            Err(vfs::VfsBatchError::Work(work, err)) => {
+                let (action, path) = match work {
+                    vfs::Work::Remove(p) => ("removing", p),
+                    vfs::Work::Write(p, ..) => ("writing", p),
+                    vfs::Work::SetExecutable(p, ..) => ("setting executable", p),
+                    _ => ("applying", types::RepoPathBuf::new()),
+                };
+                errors.push((action.to_owned(), path, err));
+            }
+            Err(vfs::VfsBatchError::Batch(err)) if result.is_ok() => result = Err(err),
+            Err(vfs::VfsBatchError::Batch(_)) => {}
         }
     }
 
     for (action, path, err) in &errors {
         logger.warn(format!("failed {action} {path}: {err:#}"));
     }
+
+    result?;
 
     if !errors.is_empty() {
         bail!("{} file(s) failed during apply", errors.len());
