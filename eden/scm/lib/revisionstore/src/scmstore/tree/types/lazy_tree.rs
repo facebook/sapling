@@ -117,11 +117,11 @@ impl LazyTree {
         }
     }
 
-    pub(crate) fn aux_data(&self) -> Option<TreeAuxData> {
+    pub(crate) fn aux_data(&self) -> Result<Option<TreeAuxData>> {
         match &self {
-            Self::IndexedLog(entry_with_aux, ..) => entry_with_aux.tree_aux.clone(),
-            Self::SaplingRemoteApi(entry, ..) => entry.tree_aux_data.clone(),
-            _ => None,
+            Self::IndexedLog(entry_with_aux, ..) => entry_with_aux.aux_data(),
+            Self::SaplingRemoteApi(entry, ..) => Ok(entry.tree_aux_data.clone()),
+            _ => Ok(None),
         }
     }
 
@@ -129,8 +129,8 @@ impl LazyTree {
         use LazyTree::*;
         match self {
             SaplingRemoteApi(entry, ..) => {
-                entry.children.as_ref().map_or_else(Vec::new, |childrens| {
-                    childrens
+                entry.children.as_ref().map_or_else(Vec::new, |children| {
+                    children
                         .iter()
                         .filter_map(|entry| {
                             let child_entry = entry

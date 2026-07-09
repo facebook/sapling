@@ -168,9 +168,10 @@ impl<'a> FetchState<'a> {
             let entry = LazyTree::SaplingRemoteApi(entry, verify_hash, format);
 
             self.cache_child_aux_data(&entry);
+            let aux_data = entry.aux_data()?;
 
             if self.tree_aux_cache.is_some() {
-                if let Some(aux_data) = entry.aux_data() {
+                if let Some(aux_data) = aux_data.clone() {
                     tracing::trace!(
                         hgid = %key.hgid,
                         "writing self to tree aux store"
@@ -210,7 +211,14 @@ impl<'a> FetchState<'a> {
                 }
             }
 
-            self.common.found(key, entry.into());
+            self.common.found(
+                key,
+                StoreTree {
+                    parents: entry.parents(),
+                    content: Some(entry),
+                    aux_data,
+                },
+            );
         }
 
         crate::util::record_edenapi_stats(&span, &response.stats);

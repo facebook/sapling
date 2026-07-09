@@ -32,9 +32,14 @@ impl StoreTree {
             .manifest_tree_entry()
     }
 
-    pub fn aux_data(&self) -> Option<TreeAuxData> {
-        self.aux_data
-            .or_else(|| self.content.as_ref().and_then(|c| c.aux_data()))
+    pub fn aux_data(&self) -> Result<Option<TreeAuxData>> {
+        match self.aux_data {
+            Some(ref aux_data) => Ok(Some(aux_data.clone())),
+            None => match self.content.as_ref() {
+                Some(content) => content.aux_data(),
+                None => Ok(None),
+            },
+        }
     }
 }
 
@@ -75,11 +80,10 @@ impl BitOr for StoreTree {
 impl From<LazyTree> for StoreTree {
     fn from(v: LazyTree) -> Self {
         let parents = v.parents();
-        let aux_data = v.aux_data();
         StoreTree {
             content: Some(v),
             parents,
-            aux_data,
+            aux_data: None,
         }
     }
 }

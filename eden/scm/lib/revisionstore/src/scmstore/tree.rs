@@ -123,19 +123,56 @@ pub(crate) fn new_acl_check_cache() -> AclCheckCache {
         .build()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TreeEntryWithAux {
     entry: Entry,
-    tree_aux: Option<TreeAuxData>,
+    tree_aux: Arc<OnceLock<Option<TreeAuxData>>>,
+    tree_aux_store: Option<Arc<TreeAuxStore>>,
 }
 
 impl TreeEntryWithAux {
+    pub fn new(
+        entry: Entry,
+        tree_aux: Option<TreeAuxData>,
+        tree_aux_store: Option<Arc<TreeAuxStore>>,
+    ) -> Self {
+        let cell = OnceLock::new();
+        if let Some(tree_aux) = tree_aux {
+            cell.set(Some(tree_aux))
+                .expect("freshly constructed OnceLock cannot be already set");
+        }
+        Self {
+            entry,
+            tree_aux: Arc::new(cell),
+            tree_aux_store,
+        }
+    }
+
     pub fn content(&self) -> Result<Bytes> {
         self.entry.content()
     }
 
     pub fn node(&self) -> HgId {
         self.entry.node()
+    }
+
+    pub fn aux_data(&self) -> Result<Option<TreeAuxData>> {
+        let node = self.node();
+        let tree_aux_store = self.tree_aux_store.clone();
+        Ok(self
+            .tree_aux
+            .get_or_try_init(|| get_local_aux_direct(tree_aux_store.as_deref(), &node))?
+            .clone())
+    }
+}
+
+impl std::fmt::Debug for TreeEntryWithAux {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TreeEntryWithAux")
+            .field("entry", &self.entry)
+            .field("tree_aux_loaded", &self.tree_aux.get().is_some())
+            .field("has_tree_aux_store", &self.tree_aux_store.is_some())
+            .finish()
     }
 }
 
@@ -206,6 +243,32 @@ impl Drop for TreeStore {
     }
 }
 
+fn get_local_aux_direct(
+    tree_aux_store: Option<&TreeAuxStore>,
+    id: &HgId,
+) -> Result<Option<TreeAuxData>> {
+    let m = &TREE_STORE_FETCH_METRICS.aux.cache;
+    if let Some(store) = tree_aux_store {
+        m.requests.increment();
+        m.keys.increment();
+        m.singles.increment();
+        match store.get(id) {
+            Ok(None) => {
+                m.misses.increment();
+            }
+            Ok(Some(data)) => {
+                m.hits.increment();
+                return Ok(Some(data));
+            }
+            Err(err) => {
+                m.errors.increment();
+                return Err(err);
+            }
+        }
+    }
+    Ok(None)
+}
+
 impl TreeStore {
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
@@ -236,10 +299,7 @@ impl TreeStore {
             Some(entry) => {
                 let res: Arc<ScmStoreTreeEntry> = Arc::new(ScmStoreTreeEntry {
                     tree: LazyTree::IndexedLog(
-                        TreeEntryWithAux {
-                            entry,
-                            tree_aux: self.get_local_aux_direct(&node)?,
-                        },
+                        TreeEntryWithAux::new(entry, None, self.tree_aux_store.clone()),
                         self.format(),
                     ),
                     basic_tree_entry: OnceLock::new(),
@@ -251,26 +311,7 @@ impl TreeStore {
     }
 
     pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<TreeAuxData>> {
-        let m = &TREE_STORE_FETCH_METRICS.aux.cache;
-        if let Some(store) = &self.tree_aux_store {
-            m.requests.increment();
-            m.keys.increment();
-            m.singles.increment();
-            match store.get(id) {
-                Ok(None) => {
-                    m.misses.increment();
-                }
-                Ok(Some(data)) => {
-                    m.hits.increment();
-                    return Ok(Some(data));
-                }
-                Err(err) => {
-                    m.errors.increment();
-                    return Err(err);
-                }
-            }
-        }
-        Ok(None)
+        get_local_aux_direct(self.tree_aux_store.as_deref(), id)
     }
 
     /// Create a deferred ACL checker closure that captures the edenapi client.
@@ -515,10 +556,13 @@ impl TreeStore {
                                         found_count += 1;
                                         Some(
                                             LazyTree::IndexedLog(
-                                                TreeEntryWithAux {
+                                                TreeEntryWithAux::new(
                                                     entry,
-                                                    tree_aux: None,
-                                                },
+                                                    None,
+                                                    fetch_tree_aux_data
+                                                        .then(|| tree_aux_store.clone())
+                                                        .flatten(),
+                                                ),
                                                 format,
                                             )
                                             .into(),
@@ -1131,7 +1175,7 @@ impl TreeEntry for ScmStoreTreeEntry {
 
     /// Get the directory aux data of the tree.
     fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
-        Ok(self.tree.aux_data())
+        self.tree.aux_data()
     }
 
     fn filter_permission_denied(
@@ -1206,7 +1250,7 @@ impl storemodel::TreeStore for TreeStore {
             .map(|entry| -> anyhow::Result<(Key, TreeAuxData)> {
                 let (key, store_tree) = entry?;
                 let aux = store_tree
-                    .aux_data()
+                    .aux_data()?
                     .ok_or_else(|| anyhow::anyhow!("aux data is missing from store tree"))?;
                 Ok((key, aux))
             });
