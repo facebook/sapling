@@ -356,11 +356,11 @@ mod tests {
             unimplemented!()
         }
 
-        fn diff<'a, M: Matcher>(
-            &'a self,
-            other: &'a Self,
+        fn diff<M: 'static + Matcher + Sync + Send>(
+            &self,
+            other: &Self,
             matcher: M,
-        ) -> Result<Box<dyn Iterator<Item = Result<manifest::DiffEntry>> + 'a>> {
+        ) -> Result<slex::Items<manifest::DiffEntry, anyhow::Error>> {
             unimplemented!()
         }
     }

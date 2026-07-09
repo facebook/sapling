@@ -41,6 +41,7 @@ use manifest::PersistOpts;
 use minibytes::Bytes;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
+use slex::Items;
 pub use store::Flag;
 use storemodel::InsertOpts;
 use storemodel::Kind;
@@ -382,22 +383,22 @@ impl Manifest for TreeManifest {
         Box::new(dirs)
     }
 
-    fn diff<'a, M: 'static + Matcher + Sync + Send>(
-        &'a self,
-        other: &'a Self,
+    fn diff<M: 'static + Matcher + Sync + Send>(
+        &self,
+        other: &Self,
         matcher: M,
-    ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
-        match self.path_translator {
+    ) -> Result<Items<DiffEntry, anyhow::Error>> {
+        match &self.path_translator {
             None => Ok(diff::diff([(self, other)], Arc::new(matcher))),
-            Some(_) => {
+            Some(translator) => {
                 let matcher = self.maybe_wrap_matcher(matcher);
-                let iter = diff::diff([(self, other)], matcher);
-                Ok(Box::new(iter.map(move |result: Result<DiffEntry>| {
-                    result.and_then(|entry| {
-                        let path = self.maybe_decode_path(entry.path)?;
+                let translator = translator.clone();
+                Ok(
+                    diff::diff([(self, other)], matcher).try_map_item(move |entry: DiffEntry| {
+                        let path = translator.decode_file(&entry.path)?;
                         Ok(DiffEntry::new(path, entry.diff_type))
-                    })
-                })))
+                    }),
+                )
             }
         }
     }
@@ -407,7 +408,9 @@ impl Manifest for TreeManifest {
         other: &'a Self,
         matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
-        Ok(diff::diff([(self, other)], Arc::new(matcher)))
+        Ok(Box::new(
+            diff::diff([(self, other)], Arc::new(matcher)).into_iter(),
+        ))
     }
 }
 
@@ -2024,6 +2027,7 @@ mod tests {
         let mut files = a
             .diff(&b, AlwaysMatcher::new())
             .unwrap()
+            .into_iter()
             .map(|e| Ok(e?.path.into_string()))
             .collect::<Result<Vec<_>>>()
             .unwrap();
@@ -2485,6 +2489,7 @@ mod tests {
         let mut entries: Vec<_> = left
             .diff(&right, AlwaysMatcher::new())
             .unwrap()
+            .into_iter()
             .collect::<anyhow::Result<Vec<_>>>()
             .unwrap();
         entries.sort_by(|a, b| a.path.cmp(&b.path));
@@ -2520,6 +2525,7 @@ mod tests {
         let entries: Vec<_> = left
             .diff(&right, matcher)
             .unwrap()
+            .into_iter()
             .collect::<anyhow::Result<Vec<_>>>()
             .unwrap();
         assert_eq!(entries.len(), 1);

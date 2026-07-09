@@ -54,9 +54,9 @@ impl Merge {
     ) -> Result<MergeResult<M>> {
         let matcher = AlwaysMatcher::new();
         let diff = base.diff(dest, matcher.clone())?;
-        let dest_actions = ActionMap::from_diff(diff)?;
+        let dest_actions = ActionMap::from_diff(diff.into_iter())?;
         let diff = base.diff(src, matcher)?;
-        let src_actions = ActionMap::from_diff(diff)?;
+        let src_actions = ActionMap::from_diff(diff.into_iter())?;
         let dest_files: HashSet<_> = dest_actions.keys().collect();
         let src_files = src_actions.keys().collect();
         let union = dest_files.union(&src_files);

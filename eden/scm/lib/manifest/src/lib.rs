@@ -20,6 +20,7 @@ use std::borrow::Cow;
 use anyhow::Result;
 use anyhow::bail;
 use pathmatcher::Matcher;
+use slex_items::Items;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -142,11 +143,11 @@ pub trait Manifest {
     /// Returns an iterator of all the differences in files between two Manifest instances of the
     /// same type.
     // TODO: add default implementation
-    fn diff<'a, M: 'static + Matcher + Sync + Send>(
-        &'a self,
-        other: &'a Self,
+    fn diff<M: 'static + Matcher + Sync + Send>(
+        &self,
+        other: &Self,
         matcher: M,
-    ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
+    ) -> Result<Items<DiffEntry, anyhow::Error>>;
 
     /// Calculates modified directories between two Manifests.
     /// Also reports whether the directories were added or removed.

@@ -15,8 +15,8 @@ use manifest::DiffType;
 use manifest::DirDiffEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
-use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
+use progress_model::ProgressBarBuilder;
 use progress_model::Registry;
 use slex::Items;
 use slex::Work;
@@ -135,7 +135,7 @@ const BATCH_SIZE: usize = 1000;
 pub(crate) fn diff<'a, T>(
     pairs: impl IntoIterator<Item = (&'a TreeManifest, &'a TreeManifest)>,
     matcher: Arc<dyn Matcher + Send + Sync>,
-) -> Box<dyn Iterator<Item = Result<T>>>
+) -> Items<T, anyhow::Error>
 where
     T: DiffOutput,
 {
@@ -155,7 +155,7 @@ where
         .collect();
 
     if pairs.is_empty() {
-        return Box::new(std::iter::empty());
+        return Items::empty();
     }
 
     let input: Vec<_> = pairs
@@ -167,9 +167,12 @@ where
         })
         .collect();
 
-    let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
-    let registry = Registry::main();
-    registry.register_progress_bar(&progress_bar);
+    let progress_bar = ProgressBarBuilder::new()
+        .topic("diffing manifest")
+        .unit("trees")
+        .shared(true)
+        .thread_local_parent()
+        .pending();
 
     let ctx = DiffContext {
         matcher,
@@ -178,18 +181,13 @@ where
     };
 
     let input: Items<DiffWork, anyhow::Error> = Items::ready(input);
-    let items = Work::run(
+    Work::run(
         WorkOptions::new()
             .max_workers(bfs::num_workers())
             .inline_items(BATCH_SIZE),
         input,
         WorkShape::batch(move |batch, scope| run_diff_worker(batch, scope, &ctx)),
-    );
-
-    Box::new(DiffIter {
-        items: Box::new(items.into_iter()),
-        progress_bar: ProgressBar::push_active(progress_bar, registry),
-    })
+    )
 }
 
 fn run_diff_worker<T: DiffOutput>(
@@ -197,6 +195,8 @@ fn run_diff_worker<T: DiffOutput>(
     scope: &mut WorkScope<'_, DiffWork, T, anyhow::Error>,
     ctx: &DiffContext,
 ) -> Result<()> {
+    let _active = ProgressBar::push_active(ctx.progress_bar.clone(), Registry::main());
+
     let work = match work {
         Ok(work) => work,
         Err(err) => {
@@ -262,20 +262,6 @@ fn durable_link_prefetch<'a>(path: &'a RepoPath, link: &'a Link) -> Option<bfs::
             })
         }
         _ => None,
-    }
-}
-
-struct DiffIter<T: Send + 'static = DiffEntry> {
-    items: Box<dyn Iterator<Item = Result<T>>>,
-    #[allow(unused)]
-    progress_bar: ActiveProgressBar,
-}
-
-impl<T: Send + 'static> Iterator for DiffIter<T> {
-    type Item = Result<T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.items.next()
     }
 }
 
@@ -664,6 +650,7 @@ mod tests {
         let matcher = AlwaysMatcher::new();
         let diff = ltree.diff(&rtree, matcher).unwrap();
         let entries = diff
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap()
             .into_iter()
@@ -719,6 +706,7 @@ mod tests {
         let matcher = TreeMatcher::from_rules(["d1/**"].iter(), true).unwrap();
         let diff = ltree.diff(&rtree, matcher).unwrap();
         let entries = diff
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap()
             .into_iter()
@@ -748,6 +736,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -772,6 +761,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -800,6 +790,7 @@ mod tests {
         assert!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .next()
                 .is_none()
         );
@@ -813,6 +804,7 @@ mod tests {
         assert!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .next()
                 .is_none()
         );
@@ -821,6 +813,7 @@ mod tests {
         assert!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .next()
                 .unwrap()
                 .is_err()
@@ -843,6 +836,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -866,6 +860,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -887,6 +882,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -921,6 +917,7 @@ mod tests {
                 TreeMatcher::from_rules(["a1/b1/**"].iter(), true).unwrap()
             )
             .unwrap()
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
@@ -934,6 +931,7 @@ mod tests {
                 TreeMatcher::from_rules(["a1/b2"].iter(), true).unwrap()
             )
             .unwrap()
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
@@ -947,6 +945,7 @@ mod tests {
                 TreeMatcher::from_rules(["a2/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(DiffEntry::new(
@@ -960,6 +959,7 @@ mod tests {
                 TreeMatcher::from_rules(["*/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
+            .into_iter()
             .collect::<Result<Vec<_>>>()
             .unwrap(),
             vec!(
@@ -979,6 +979,7 @@ mod tests {
                 TreeMatcher::from_rules(["a3/**"].iter(), true).unwrap()
             )
             .unwrap()
+            .into_iter()
             .next()
             .is_none()
         );
@@ -999,6 +1000,7 @@ mod tests {
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
+                .into_iter()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec![DiffEntry::new(
@@ -1091,6 +1093,7 @@ mod tests {
         let right = make_tree_manifest(store.clone(), &[("foo/tracked", "1")]);
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())?
+                .into_iter()
                 .collect::<Result<Vec<_>>>()?,
             vec![DiffEntry::new(
                 repo_path_buf("foo/tracked"),
@@ -1104,6 +1107,7 @@ mod tests {
         let right = make_tree_manifest(store.clone(), &[("foo/untracked", "1")]);
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())?
+                .into_iter()
                 .collect::<Result<Vec<_>>>()?,
             vec![DiffEntry::new(
                 repo_path_buf("foo/untracked"),
@@ -1115,6 +1119,7 @@ mod tests {
         let right = make_tree_manifest(store.clone(), &[("foo", "1")]);
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())?
+                .into_iter()
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 DiffEntry::new(repo_path_buf("foo"), DiffType::RightOnly(make_meta("1"))),
@@ -1129,6 +1134,7 @@ mod tests {
         let right = make_tree_manifest(store.clone(), &[("foo/untracked/bar", "1")]);
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())?
+                .into_iter()
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 DiffEntry::new(
@@ -1146,6 +1152,7 @@ mod tests {
         let right = make_tree_manifest(store, &[]);
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())?
+                .into_iter()
                 .collect::<Result<Vec<_>>>()?,
             vec![],
         );

@@ -377,7 +377,7 @@ impl RenameFinderInner {
         let mut deleted_files = Vec::new();
         let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
         let diff = old_tree.diff(new_tree, matcher)?;
-        for entry in diff {
+        for entry in diff.into_iter() {
             let entry = entry?;
             match entry.diff_type {
                 DiffType::RightOnly(file_metadata) => {

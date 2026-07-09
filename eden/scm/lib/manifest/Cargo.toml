@@ -17,6 +17,7 @@ anyhow = "1.0.103"
 quickcheck = { version = "1.1", optional = true }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-types = { version = "0.1.0", path = "../types" }
+slex-items = { version = "0.1.0", path = "../slex/items" }
 
 [dev-dependencies]
 quickcheck = "1.1"

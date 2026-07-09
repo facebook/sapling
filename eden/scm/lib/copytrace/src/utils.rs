@@ -128,7 +128,7 @@ pub(crate) fn compute_missing_files(
     if limit == 0 {
         return Ok(missing);
     }
-    for entry in diff_entries {
+    for entry in diff_entries.into_iter() {
         let entry = entry?;
         if let DiffType::RightOnly(_) = entry.diff_type {
             missing.push(entry.path);

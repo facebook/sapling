@@ -497,7 +497,10 @@ fn compute_changed_files(
     // LeftOnly = in corpus but not in target = removed (exclude)
     // RightOnly = in target but not in corpus = added (grep)
     // Changed = in both but different = modified (grep)
-    for diff_result in corpus_manifest.diff(&target_manifest, matcher.clone())? {
+    for diff_result in corpus_manifest
+        .diff(&target_manifest, matcher.clone())?
+        .into_iter()
+    {
         let entry = diff_result?;
         match entry.diff_type {
             DiffType::LeftOnly(_) => {

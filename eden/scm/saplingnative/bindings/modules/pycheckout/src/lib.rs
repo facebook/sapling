@@ -100,7 +100,7 @@ py_class!(class checkoutplan |py| {
             let target = target.read();
             let current = current.read();
             let diff = current.diff(&target, matcher)?;
-            ActionMap::from_diff(diff)
+            ActionMap::from_diff(diff.into_iter())
         }).map_pyerr(py)?;
 
         let current_lock = current_manifest.get_underlying(py);

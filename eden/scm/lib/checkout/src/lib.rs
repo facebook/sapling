@@ -1575,7 +1575,7 @@ fn create_plan(
     progress_path: Option<PathBuf>,
 ) -> Result<CheckoutPlan> {
     let diff = current_mf.diff(target_mf, matcher)?;
-    let mut actions = ActionMap::from_diff(diff)?;
+    let mut actions = ActionMap::from_diff(diff.into_iter())?;
 
     if let Some((old_sparse, new_sparse)) = sparse_change {
         actions =
@@ -1807,8 +1807,9 @@ mod test {
         let diff = left_tree.diff(&right_tree, matcher).unwrap();
         let vfs = VFS::new_destructive(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);
-        let plan = checkout
-            .plan_action_map(ActionMap::from_diff(diff).context("Plan construction failed")?);
+        let plan = checkout.plan_action_map(
+            ActionMap::from_diff(diff.into_iter()).context("Plan construction failed")?,
+        );
 
         // Use clean vfs for test
         plan.apply_store(&DummyFileContentStore)

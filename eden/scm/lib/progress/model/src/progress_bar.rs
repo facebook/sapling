@@ -409,6 +409,12 @@ impl ProgressBar {
     }
 }
 
+impl Drop for ProgressBar {
+    fn drop(&mut self) {
+        self.finish();
+    }
+}
+
 impl fmt::Debug for ProgressBar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (pos, total) = self.position_total();

@@ -522,12 +522,11 @@ inc
             unimplemented!()
         }
 
-        fn diff<'a, M: pathmatcher::Matcher>(
-            &'a self,
-            other: &'a Self,
+        fn diff<M: 'static + pathmatcher::Matcher + Sync + Send>(
+            &self,
+            other: &Self,
             matcher: M,
-        ) -> anyhow::Result<Box<dyn Iterator<Item = anyhow::Result<manifest::DiffEntry>> + 'a>>
-        {
+        ) -> anyhow::Result<slex::Items<manifest::DiffEntry, anyhow::Error>> {
             unimplemented!()
         }
     }
