@@ -146,6 +146,101 @@ impl Work {
     {
         Self::run(options, input, WorkShape::try_flat(f))
     }
+
+    /// Fold tree-shaped work with depth-first execution and bounded parallel lanes.
+    ///
+    /// `process` lists one node, resolving direct child values and submitting child nodes to the
+    /// [`FoldScope`].
+    /// `reduce` runs after the node and all recursive children complete. Child reducer outputs are
+    /// resolved into the parent. The root reducer output is returned directly.
+    pub fn fold_tree<W, V, Process, Reduce>(
+        options: WorkOptions,
+        root: W,
+        process: Process,
+        reduce: Reduce,
+    ) -> anyhow::Result<V>
+    where
+        W: Send + Sync + 'static,
+        V: Send + 'static,
+        Process: Fn(&W, &mut FoldScope<W, V>) -> anyhow::Result<()> + Send + Sync + 'static,
+        Reduce: Fn(&W, Vec<V>) -> anyhow::Result<V> + Send + Sync + 'static,
+    {
+        let max_lanes = options.max_workers.max(1);
+        let active_lanes = Arc::new(AtomicUsize::new(0));
+        let root = Arc::new(FoldNode::new(root, None));
+        active_lanes.store(1, Ordering::Release);
+        let root_permit = FoldLanePermit {
+            active_lanes: Arc::clone(&active_lanes),
+        };
+        let worker = Arc::new(FoldWorker {
+            process,
+            reduce,
+            active_lanes,
+            max_lanes,
+            _types: PhantomData,
+        });
+
+        // Fold work items are DFS lanes, not individual user nodes. Keep the lane queue chunked at
+        // one so extra lanes can promote immediately once there is parallel work.
+        let lane_options = options.inline_items(1).work_chunk_items(1);
+        let results = Self::run(
+            lane_options,
+            Items::ready(vec![FoldLane::new(root, root_permit)]),
+            WorkShape::batch(move |lanes, scope| -> anyhow::Result<()> {
+                let lanes = lanes?;
+                for lane in lanes {
+                    worker.run_lane(lane, scope)?;
+                }
+                Ok(())
+            }),
+        );
+
+        let mut result = None;
+        for batch in results.into_batches() {
+            for value in batch? {
+                debug_assert!(
+                    result.is_none(),
+                    "fold_tree should emit exactly one root value"
+                );
+                result = Some(value);
+            }
+        }
+        result.ok_or_else(|| anyhow::anyhow!("fold_tree completed without a root value"))
+    }
+}
+
+/// Scope passed to [`Work::fold_tree`] processors.
+///
+/// Processors resolve already-known child values for the current node and submit unresolved
+/// recursive child nodes. The fold engine decides whether each submitted child becomes a parallel
+/// DFS lane or stays on the current lane.
+pub struct FoldScope<W, V> {
+    resolved_children: Vec<V>,
+    children: Vec<W>,
+}
+
+impl<W, V> FoldScope<W, V> {
+    fn new() -> Self {
+        Self {
+            resolved_children: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+
+    fn clear(&mut self) {
+        self.resolved_children.clear();
+        self.children.clear();
+    }
+
+    /// Resolve a child contribution for the current node.
+    pub fn resolve_child(&mut self, value: V) {
+        self.resolved_children.push(value);
+    }
+
+    /// Submit a recursive child node.
+    pub fn submit_child(&mut self, child: W) {
+        self.children.push(child);
+    }
 }
 
 /// Scheduling options for [`Work`].
@@ -1223,6 +1318,209 @@ where
     true
 }
 
+// Shared state for one `fold_tree` call. The callbacks are immutable and may be used by multiple
+// DFS lanes concurrently.
+struct FoldWorker<W, V, Process, Reduce> {
+    process: Process,
+    reduce: Reduce,
+    // Running or queued DFS lanes. This bounds parallelism independently from node count.
+    active_lanes: Arc<AtomicUsize>,
+    max_lanes: usize,
+    _types: PhantomData<fn(W, V)>,
+}
+
+// One depth-first lane. A lane owns both an explicit DFS stack and one active-lane permit.
+struct FoldLane<W, V> {
+    // Nodes waiting to be visited by this lane. Splitting this stack is how idle lanes steal work
+    // without turning traversal into breadth-first fanout.
+    stack: Vec<Arc<FoldNode<W, V>>>,
+    _permit: FoldLanePermit,
+}
+
+impl<W, V> FoldLane<W, V> {
+    fn new(root: Arc<FoldNode<W, V>>, permit: FoldLanePermit) -> Self {
+        Self {
+            stack: vec![root],
+            _permit: permit,
+        }
+    }
+}
+
+struct FoldNode<W, V> {
+    work: W,
+    // A child keeps its parent alive until it reduces. The parent never stores child Arcs, so this
+    // strong link does not create a cycle.
+    parent: Option<Arc<FoldNode<W, V>>>,
+    // Starts at one for the node's own visit. Each submitted child adds one. The transition to zero
+    // triggers the postorder reducer.
+    pending: AtomicUsize,
+    // Direct values plus reduced child values. Multiple child lanes can finish concurrently.
+    values: Mutex<Vec<V>>,
+}
+
+impl<W, V> FoldNode<W, V> {
+    fn new(work: W, parent: Option<Arc<FoldNode<W, V>>>) -> Self {
+        Self {
+            work,
+            parent,
+            // The node starts with a self-sentinel. Processing the node completes that sentinel;
+            // children add their own pending counts before they are submitted.
+            pending: AtomicUsize::new(1),
+            values: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl<W, V, Process, Reduce> FoldWorker<W, V, Process, Reduce>
+where
+    W: Send + Sync + 'static,
+    V: Send + 'static,
+    Process: Fn(&W, &mut FoldScope<W, V>) -> anyhow::Result<()> + Send + Sync + 'static,
+    Reduce: Fn(&W, Vec<V>) -> anyhow::Result<V> + Send + Sync + 'static,
+{
+    fn run_lane(
+        &self,
+        lane: FoldLane<W, V>,
+        scope: &mut WorkScope<'_, FoldLane<W, V>, V, anyhow::Error>,
+    ) -> anyhow::Result<()> {
+        let FoldLane { mut stack, _permit } = lane;
+        let mut fold_scope = FoldScope::new();
+        let mut inline_children = Vec::new();
+
+        while let Some(node) = stack.pop() {
+            if scope.is_canceled() {
+                return Ok(());
+            }
+
+            fold_scope.clear();
+            (self.process)(&node.work, &mut fold_scope)?;
+            if !fold_scope.resolved_children.is_empty() {
+                node.values
+                    .lock()
+                    .extend(fold_scope.resolved_children.drain(..));
+            }
+
+            node.pending
+                .fetch_add(fold_scope.children.len(), Ordering::AcqRel);
+
+            // Create parallel lanes while capacity is available. Extra children stay on this
+            // lane's stack, preserving DFS behavior and bounded memory.
+            inline_children.clear();
+            let mut submitted_parallel_child = false;
+            for child in fold_scope.children.drain(..) {
+                let child = Arc::new(FoldNode::new(child, Some(Arc::clone(&node))));
+                if let Some(permit) = self.try_claim_lane() {
+                    if !scope.submit_work(FoldLane::new(Arc::clone(&child), permit)) {
+                        return Ok(());
+                    }
+                    submitted_parallel_child = true;
+                } else {
+                    inline_children.push(child);
+                }
+            }
+
+            self.visit_node(node, scope)?;
+
+            stack.extend(inline_children.drain(..).rev());
+            if submitted_parallel_child && !stack.is_empty() {
+                // Requeue this lane's continuation so normal Work promotion can run the newly
+                // submitted lanes in parallel instead of continuing inline forever.
+                if !scope.submit_work(FoldLane { stack, _permit }) {
+                    return Ok(());
+                }
+                return Ok(());
+            }
+            self.split_stack_if_possible(&mut stack, scope);
+        }
+
+        Ok(())
+    }
+
+    /// Finish the preorder visit for `node`.
+    ///
+    /// If this node still has pending children, the last child to reduce will continue the
+    /// postorder cascade later. If this was the final pending event, reduce this node now and keep
+    /// cascading through ancestors that also become complete.
+    fn visit_node(
+        &self,
+        mut node: Arc<FoldNode<W, V>>,
+        scope: &mut WorkScope<'_, FoldLane<W, V>, V, anyhow::Error>,
+    ) -> anyhow::Result<()> {
+        loop {
+            let old = node.pending.fetch_sub(1, Ordering::AcqRel);
+            debug_assert!(old > 0, "fold node pending count underflow");
+            if old != 1 {
+                return Ok(());
+            }
+
+            let values = std::mem::take(&mut *node.values.lock());
+            let reduced = (self.reduce)(&node.work, values)?;
+            let Some(parent) = node.parent.as_ref().map(Arc::clone) else {
+                scope.send_result([reduced]);
+                return Ok(());
+            };
+
+            parent.values.lock().push(reduced);
+            node = parent;
+        }
+    }
+
+    /// Split accumulated DFS continuation work after lane capacity becomes available.
+    fn split_stack_if_possible(
+        &self,
+        stack: &mut Vec<Arc<FoldNode<W, V>>>,
+        scope: &mut WorkScope<'_, FoldLane<W, V>, V, anyhow::Error>,
+    ) {
+        if stack.len() <= 1 {
+            return;
+        }
+        let Some(permit) = self.try_claim_lane() else {
+            return;
+        };
+        let split_stack = stack.split_off(stack.len() / 2);
+        if !scope.submit_work(FoldLane {
+            stack: split_stack,
+            _permit: permit,
+        }) {
+            stack.clear();
+        }
+    }
+
+    fn try_claim_lane(&self) -> Option<FoldLanePermit> {
+        FoldLanePermit::claim(&self.active_lanes, self.max_lanes)
+    }
+}
+
+// Releasing a lane permit on drop ties capacity to queued/running lane data, so continuations can
+// move through queues without separate bookkeeping.
+struct FoldLanePermit {
+    active_lanes: Arc<AtomicUsize>,
+}
+
+impl FoldLanePermit {
+    /// Claim one DFS lane if this fold has not reached its lane limit.
+    fn claim(active_lanes: &Arc<AtomicUsize>, max_lanes: usize) -> Option<Self> {
+        active_lanes
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |active| {
+                if active < max_lanes {
+                    Some(active + 1)
+                } else {
+                    None
+                }
+            })
+            .is_ok()
+            .then(|| Self {
+                active_lanes: Arc::clone(active_lanes),
+            })
+    }
+}
+
+impl Drop for FoldLanePermit {
+    fn drop(&mut self) {
+        self.active_lanes.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
 fn spawn_workers<W, Out, E, K, MakeSpawnRest>(
     min_workers: usize,
     max_workers: usize,
@@ -2219,6 +2517,147 @@ mod tests {
         .drain_until_error();
 
         assert_eq!(result, Err("boom"));
+    }
+
+    #[test]
+    fn fold_tree_reduces_leaf() {
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(4),
+            7usize,
+            |item, scope| -> anyhow::Result<()> {
+                scope.resolve_child(*item);
+                Ok(())
+            },
+            |item, values| Ok(item + values.into_iter().sum::<usize>()),
+        );
+
+        assert_eq!(result.unwrap(), 14);
+    }
+
+    #[test]
+    fn fold_tree_reduces_children_before_parent() {
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(1),
+            1usize,
+            |item, scope| -> anyhow::Result<()> {
+                scope.resolve_child(*item);
+                if *item < 4 {
+                    scope.submit_child(item * 2);
+                    scope.submit_child(item * 2 + 1);
+                }
+                Ok(())
+            },
+            |_item, values| Ok(values.into_iter().sum::<usize>()),
+        );
+
+        assert_eq!(result.unwrap(), 28);
+    }
+
+    #[test]
+    fn fold_tree_can_use_parallel_lanes() {
+        let caller = thread::current().id();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let seen_worker = Arc::clone(&seen);
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(4),
+            1usize,
+            move |item, scope| -> anyhow::Result<()> {
+                seen_worker.lock().push(thread::current().id());
+                scope.resolve_child(*item);
+                if *item < 8 {
+                    scope.submit_child(item * 2);
+                    scope.submit_child(item * 2 + 1);
+                }
+                Ok(())
+            },
+            |_item, values| Ok(values.into_iter().sum::<usize>()),
+        );
+
+        assert_eq!(result.unwrap(), (1..16).sum());
+        assert!(seen.lock().iter().any(|id| *id != caller));
+    }
+
+    #[test]
+    fn fold_tree_process_error_cancels_work() {
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(4),
+            1usize,
+            |item, scope| -> anyhow::Result<()> {
+                if *item == 5 {
+                    anyhow::bail!("process error");
+                }
+                if *item < 8 {
+                    scope.submit_child(item * 2);
+                    scope.submit_child(item * 2 + 1);
+                }
+                Ok(())
+            },
+            |_item, values| Ok(values.into_iter().sum::<usize>()),
+        );
+
+        assert_eq!(result.unwrap_err().to_string(), "process error");
+    }
+
+    #[test]
+    fn fold_tree_reduce_error_cancels_work() {
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(4),
+            1usize,
+            |item, scope| -> anyhow::Result<()> {
+                scope.resolve_child(*item);
+                if *item < 4 {
+                    scope.submit_child(item * 2);
+                    scope.submit_child(item * 2 + 1);
+                }
+                Ok(())
+            },
+            |item, values| {
+                if *item == 3 {
+                    anyhow::bail!("reduce error");
+                } else {
+                    Ok(values.into_iter().sum::<usize>())
+                }
+            },
+        );
+
+        assert_eq!(result.unwrap_err().to_string(), "reduce error");
+    }
+
+    #[test]
+    fn fold_tree_respects_max_lanes() {
+        let active = Arc::new(AtomicUsize::new(0));
+        let max_seen = Arc::new(AtomicUsize::new(0));
+        let active_worker = Arc::clone(&active);
+        let max_seen_worker = Arc::clone(&max_seen);
+        let max_lanes = 3;
+
+        let result = Work::fold_tree(
+            WorkOptions::new().max_workers(max_lanes),
+            1usize,
+            move |item, scope| -> anyhow::Result<()> {
+                let active = active_worker.fetch_add(1, Ordering::AcqRel) + 1;
+                max_seen_worker
+                    .fetch_update(Ordering::AcqRel, Ordering::Acquire, |max_seen| {
+                        Some(max_seen.max(active))
+                    })
+                    .expect("max update should not fail");
+
+                if *item < 32 {
+                    scope.submit_child(item * 2);
+                    scope.submit_child(item * 2 + 1);
+                }
+                thread::sleep(Duration::from_millis(2));
+                active_worker.fetch_sub(1, Ordering::AcqRel);
+                Ok(())
+            },
+            |_item, values| Ok(values.into_iter().sum::<usize>()),
+        );
+
+        assert_eq!(result.unwrap(), 0);
+        assert!(
+            max_seen.load(Ordering::Acquire) <= max_lanes,
+            "fold_tree exceeded max lanes"
+        );
     }
 
     #[test]

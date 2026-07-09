@@ -90,6 +90,7 @@ pub use slex_items::Items;
 pub use slex_items::ItemsBatches;
 pub use slex_items::ScopedItems;
 use tokio::task::JoinHandle;
+pub use work::FoldScope;
 pub use work::Work;
 pub use work::WorkOptions;
 pub use work::WorkScope;

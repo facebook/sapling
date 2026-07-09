@@ -18,6 +18,7 @@ name = "executor_benches"
 path = "benches/executor.rs"
 
 [dependencies]
+anyhow = "1.0.103"
 crossfire = "3.1.18"
 num_cpus = "1.16"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
