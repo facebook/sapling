@@ -263,7 +263,7 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `StoreKey`.
     fn entry(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
-        let log = self.0.read();
+        let log = self.0.read()?;
         let mut iter = match key {
             StoreKey::HgId(key) => log.lookup(Self::INDEX_NODE, key.hgid)?,
             StoreKey::Content(hash, _) => match hash {
@@ -281,7 +281,7 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `HgId`.
     fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
-        let log = self.0.read();
+        let log = self.0.read()?;
         let mut iter = log.lookup(Self::INDEX_NODE, hgid)?;
         let buf = match iter.next() {
             None => return Ok(None),
@@ -350,7 +350,7 @@ impl LfsIndexedLogBlobsStore {
     }
 
     pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Blob>> {
-        let log = self.inner.read();
+        let log = self.inner.read()?;
         let chunks_iter = log.lookup(0, hash)?.map(|data| {
             let data: Bytes = log.slice_to_bytes(data?);
             let deserialized: LfsIndexedLogBlobsEntry =
@@ -421,7 +421,7 @@ impl LfsIndexedLogBlobsStore {
     /// Test whether a blob is in the store. It returns true if at least one chunk is present, and
     /// thus it is possible that one of the chunk is missing.
     pub fn contains(&self, hash: &Sha256) -> Result<bool> {
-        Ok(!self.inner.read().lookup(0, hash)?.is_empty()?)
+        Ok(!self.inner.read()?.lookup(0, hash)?.is_empty()?)
     }
 
     fn chunk(mut data: Bytes, chunk_size: usize) -> impl Iterator<Item = (Range<usize>, Bytes)> {
@@ -612,10 +612,10 @@ impl LfsBlobsStore {
         }
     }
 
-    pub(crate) fn with_consistent_reads(&self) -> Option<ConsistentReadGuard> {
+    pub(crate) fn with_consistent_reads(&self) -> Result<Option<ConsistentReadGuard>> {
         match self {
-            LfsBlobsStore::IndexedLog(store) => store.inner.write().with_consistent_reads(),
-            LfsBlobsStore::Loose(_, _) => None,
+            LfsBlobsStore::IndexedLog(store) => Ok(store.inner.write()?.with_consistent_reads()),
+            LfsBlobsStore::Loose(_, _) => Ok(None),
             // Store writes only go to the first/primary, so we only need consistent reads on that one.
             LfsBlobsStore::Union(primary, _) => primary.with_consistent_reads(),
         }
@@ -856,7 +856,7 @@ impl LfsStore {
 
     /// Open a critical section where cache writes are guaranteed to be present on subsequent read
     /// (if underlying store is indexedlog RotateLog).
-    pub(crate) fn with_consistent_reads(&self) -> Option<ConsistentReadGuard> {
+    pub(crate) fn with_consistent_reads(&self) -> Result<Option<ConsistentReadGuard>> {
         self.blobs.with_consistent_reads()
     }
 

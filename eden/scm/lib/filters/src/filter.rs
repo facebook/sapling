@@ -162,7 +162,7 @@ impl FilterGenerator {
     /// Check if a filter hash already exists in the store
     fn filter_exists(&self, filter_index: &[u8]) -> anyhow::Result<bool> {
         if let Some(filter_store) = &self.filter_store {
-            let store = filter_store.read();
+            let store = filter_store.read()?;
             let lookup_iter = store
                 .lookup(0, filter_index)
                 .with_context(|| anyhow::anyhow!("Failed to lookup filter hash in store"))?;
@@ -225,7 +225,7 @@ impl FilterGenerator {
     /// Get stored Filter content using a FilterID
     fn get_filter_from_storage(&self, id: &FilterId) -> anyhow::Result<Filter> {
         if let Some(filter_store) = &self.filter_store {
-            let store = filter_store.read();
+            let store = filter_store.read()?;
 
             let mut lookup_iter = store.lookup(0, id.index()).with_context(|| {
                 anyhow::anyhow!("Failed to find filter with index {:?}", id.index())

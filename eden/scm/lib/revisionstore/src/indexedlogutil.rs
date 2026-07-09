@@ -34,17 +34,32 @@ use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
 use parking_lot::RwLockUpgradableReadGuard;
 use parking_lot::RwLockWriteGuard;
+use slex::Background;
 use tracing::debug;
+use types::errors::SharedError;
 
 /// Simple wrapper around either an `IndexedLog` or a `RotateLog`. This abstracts whether a store
 /// is permanent (`IndexedLog`) or rotated (`RotateLog`) so that higher level stores don't have to deal
 /// with the subtle differences.
+///
+/// The underlying log is opened eagerly in the background and forced on first access.
 pub struct Store {
-    inner: RwLock<Inner>,
+    inner: Background<OpenResult>,
     auto_sync_count: AtomicU64,
-    // Configured by scmstore.sync-logs-if-changed-on-disk (defaults to disabled if not configured).
     sync_if_changed_on_disk: bool,
     should_compress: bool,
+    store_type: StoreType,
+}
+
+type OpenResult = std::result::Result<RwLock<Inner>, SharedError>;
+
+enum Opener {
+    Permanent(log::OpenOptions, PathBuf),
+    Rotated {
+        opts: rotate::OpenOptions,
+        path: PathBuf,
+        cleanup_chance: f64,
+    },
 }
 
 pub enum Inner {
@@ -58,50 +73,85 @@ pub enum StoreType {
     Rotated,
 }
 
+impl Opener {
+    fn open(&self) -> Result<RwLock<Inner>> {
+        match self {
+            Opener::Permanent(opts, path) => {
+                let log = opts.clone().open_with_repair(path)?;
+                Ok(RwLock::new(Inner::Permanent(log)))
+            }
+            Opener::Rotated {
+                opts,
+                path,
+                cleanup_chance,
+            } => {
+                let mut rotate_log = opts.clone().open_with_repair(path)?;
+                if rand::random_bool(*cleanup_chance) {
+                    let res = rotate_log.remove_old_logs();
+                    if let Err(err) = res {
+                        debug!("Unable to remove old indexedlogutil logs: {:?}", err);
+                    }
+                }
+                Ok(RwLock::new(Inner::Rotated(rotate_log)))
+            }
+        }
+    }
+}
+
+fn background_open(opener: Opener) -> Background<OpenResult> {
+    slex::background("indexedlog open", move || {
+        opener.open().map_err(SharedError::new)
+    })
+}
+
 impl Store {
-    pub fn read(&self) -> RwLockReadGuard<'_, Inner> {
-        self.sync_if_changed_on_disk()
+    fn ensure_open(&self) -> Result<&RwLock<Inner>> {
+        match self.inner.get() {
+            Ok(inner) => Ok(inner),
+            Err(err) => Err(err.clone().into_anyhow()),
+        }
     }
 
-    pub fn write(&self) -> RwLockWriteGuard<'_, Inner> {
-        self.inner.write()
+    pub fn read(&self) -> Result<RwLockReadGuard<'_, Inner>> {
+        let lock = self.ensure_open()?;
+        Ok(self.sync_if_changed_on_disk(lock))
+    }
+
+    pub fn write(&self) -> Result<RwLockWriteGuard<'_, Inner>> {
+        Ok(self.ensure_open()?.write())
     }
 
     pub fn is_permanent(&self) -> bool {
-        self.read().is_permanent()
+        self.store_type == StoreType::Permanent
     }
 
     /// Add data to the store.
     pub fn append(&self, data: impl Appendable) -> Result<()> {
-        self.write().append(data)
+        self.write()?.append(data)
     }
 
-    /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
-    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
-        self.read().slice_to_bytes(slice)
+    /// Attempt to make `Bytes` backed by the mmap buffer to avoid heap allocation.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Result<Bytes> {
+        Ok(self.read()?.slice_to_bytes(slice))
     }
 
     pub fn should_compress(&self) -> bool {
         self.should_compress
     }
 
-    /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
-    /// lot when there is multi-threaded contention. `items` is not consumed so that the caller can re-use storage.
     pub fn append_batch<K: AsRef<[u8]> + Copy, V>(
         &self,
         items: &mut Vec<(K, V)>,
         serialize: impl Fn(&K, &V, &mut dyn Write) -> Result<()>,
-        // Filter out items already present in the store before inserting.
         read_before_write: bool,
     ) -> Result<()> {
         if items.is_empty() {
             return Ok(());
         }
 
-        // If requested, filter out items that are already in the store.
         if read_before_write {
             let mut insert_idx = 0;
-            let log = self.read();
+            let log = self.read()?;
             for read_idx in 0..items.len() {
                 if log.lookup(0, items[read_idx].0.as_ref())?.is_empty()? {
                     items.swap(insert_idx, read_idx);
@@ -114,7 +164,7 @@ impl Store {
             items.truncate(insert_idx);
         }
 
-        let mut log = self.write();
+        let mut log = self.write()?;
 
         for (k, v) in items {
             log.append(|buf: &mut dyn ExtendWrite| serialize(k, v, buf))?;
@@ -124,15 +174,26 @@ impl Store {
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.inner.read().is_dirty()
+        if !self.inner.is_ready() {
+            return false;
+        }
+
+        match self.inner.get() {
+            Ok(lock) => lock.read().is_dirty(),
+            Err(err) => {
+                tracing::warn!(?err, "error opening indexedlog for dirty check");
+                false
+            }
+        }
     }
 
     pub fn flush(&self) -> Result<()> {
-        self.write().flush()
+        self.write()?.flush()?;
+        Ok(())
     }
 
-    fn sync_if_changed_on_disk(&self) -> RwLockReadGuard<'_, Inner> {
-        let log = self.inner.read();
+    fn sync_if_changed_on_disk<'a>(&self, lock: &'a RwLock<Inner>) -> RwLockReadGuard<'a, Inner> {
+        let log = lock.read();
 
         if !self.sync_if_changed_on_disk {
             return log;
@@ -141,7 +202,7 @@ impl Store {
         if log.is_changed_on_disk() {
             drop(log);
 
-            let mut log = self.inner.upgradable_read();
+            let mut log = lock.upgradable_read();
             if log.is_changed_on_disk() {
                 tracing::debug!("auto-syncing indexedlog because it changed on disk");
                 self.auto_sync_count.fetch_add(1, atomic::Ordering::Relaxed);
@@ -377,19 +438,22 @@ impl StoreOpenOptions {
 
     /// Create a permanent `Store`.
     ///
-    /// Data added to the store will never be rotated out.
+    /// Data added to the store will never be rotated out. The underlying log is opened eagerly in
+    /// the background and forced on first access.
     pub fn permanent(self, path: impl AsRef<Path>) -> Result<Store> {
+        let path = path.as_ref().to_path_buf();
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
-        let should_compress = self.should_compress(path.as_ref())?;
+        let should_compress = self.should_compress(&path)?;
+        let opts = self
+            .into_permanent_open_options()
+            .btrfs_compression(!should_compress);
+        let opener = Opener::Permanent(opts, path);
         Ok(Store {
-            inner: RwLock::new(Inner::Permanent(
-                self.into_permanent_open_options()
-                    .btrfs_compression(!should_compress)
-                    .open_with_repair(path.as_ref())?,
-            )),
+            inner: background_open(opener),
             auto_sync_count: AtomicU64::new(0),
             sync_if_changed_on_disk,
             should_compress,
+            store_type: StoreType::Permanent,
         })
     }
 
@@ -416,30 +480,27 @@ impl StoreOpenOptions {
     /// Create a rotated `Store`
     ///
     /// Data added to a rotated store will be rotated out depending on the values of `max_log_count`
-    /// and `max_bytes_per_log`.
+    /// and `max_bytes_per_log`. The underlying log is opened eagerly in the background and forced
+    /// on first access.
     pub fn rotated(self, path: impl AsRef<Path>) -> Result<Store> {
+        let path = path.as_ref().to_path_buf();
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
-        let should_compress = self.should_compress(path.as_ref())?;
+        let should_compress = self.should_compress(&path)?;
         let cleanup_chance = self.cleanup_old_logs_chance;
         let opts = self
             .into_rotated_open_options()
             .btrfs_compression(!should_compress);
-        let mut rotate_log = opts.open_with_repair(path.as_ref())?;
-
-        if rand::random_bool(cleanup_chance) {
-            // Attempt to clean up old logs that might be left around. On Windows, other
-            // Mercurial processes that have the store opened might prevent their removal.
-            let res = rotate_log.remove_old_logs();
-            if let Err(err) = res {
-                debug!("Unable to remove old indexedlogutil logs: {:?}", err);
-            }
-        }
-
+        let opener = Opener::Rotated {
+            opts,
+            path,
+            cleanup_chance,
+        };
         Ok(Store {
-            inner: RwLock::new(Inner::Rotated(rotate_log)),
+            inner: background_open(opener),
             auto_sync_count: AtomicU64::new(0),
             sync_if_changed_on_disk,
             should_compress,
+            store_type: StoreType::Rotated,
         })
     }
 
@@ -502,7 +563,10 @@ mod tests {
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.read().lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
+            store
+                .read()?
+                .lookup(0, b"aa")?
+                .collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -519,7 +583,10 @@ mod tests {
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.read().lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
+            store
+                .read()?
+                .lookup(0, b"aa")?
+                .collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -542,7 +609,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.read().lookup(0, b"aa")?.count(), 1);
+        assert_eq!(store.read()?.lookup(0, b"aa")?.count(), 1);
         Ok(())
     }
 
@@ -563,7 +630,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.read().lookup(0, b"aa")?.count(), 0);
+        assert_eq!(store.read()?.lookup(0, b"aa")?.count(), 0);
         Ok(())
     }
 
@@ -582,13 +649,17 @@ mod tests {
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .permanent(&dir)?;
 
+        // Force store2 to open before store1 writes so this test exercises the on-disk change
+        // detection path rather than a fresh open seeing the already-flushed data.
+        assert!(store2.read()?.lookup(0, b"aa")?.is_empty()?);
+
         store1.append(b"aabcd")?;
         store1.flush()?;
 
         // store2 sees the write immediately
         assert_eq!(
             store2
-                .read()
+                .read()?
                 .lookup(0, b"aa")?
                 .collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
@@ -597,7 +668,7 @@ mod tests {
         store2.append(b"abcd")?;
         assert_eq!(
             store2
-                .read()
+                .read()?
                 .lookup(0, b"ab")?
                 .collect::<Result<Vec<_>>>()?,
             vec![b"abcd"]
@@ -621,13 +692,15 @@ mod tests {
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .permanent(&dir)?;
 
+        assert!(store2.read()?.lookup(0, b"aa")?.is_empty()?);
+
         store1.append(b"aabcd")?;
         store1.flush()?;
 
         // store2 doesn't see the write.
         assert!(
             store2
-                .read()
+                .read()?
                 .lookup(0, b"aa")?
                 .collect::<Result<Vec<_>>>()?
                 .is_empty()

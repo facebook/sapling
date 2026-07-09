@@ -194,7 +194,7 @@ impl AuxStore {
     }
 
     pub fn get(&self, hgid: &HgId) -> Result<Option<FileAuxData>> {
-        let log = self.0.read();
+        let log = self.0.read()?;
         let mut entries = log.lookup(0, hgid)?;
 
         let slice = match entries.next() {
@@ -208,7 +208,7 @@ impl AuxStore {
     }
 
     pub fn contains(&self, hgid: HgId) -> Result<bool> {
-        let log = self.0.read();
+        let log = self.0.read()?;
         Ok(!log.lookup(0, hgid)?.is_empty()?)
     }
 
@@ -237,7 +237,7 @@ impl AuxStore {
 
     #[cfg(test)]
     pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
-        let log = self.0.read();
+        let log = self.0.read()?;
         Ok(log
             .iter()
             .map(|slice| {

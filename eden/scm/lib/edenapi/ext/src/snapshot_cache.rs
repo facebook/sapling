@@ -272,7 +272,7 @@ impl SnapshotFileCache {
 
     /// Check if content exists in the cache by ContentId (without reading the content)
     pub fn contains(&self, content_id: &ContentId) -> Result<bool> {
-        let store_read = self.store.read();
+        let store_read = self.store.read()?;
         store_read
             .contains(0, content_id.as_ref())
             .with_context(|| format!("Failed to check if ContentId {content_id} exists in cache"))
@@ -280,7 +280,7 @@ impl SnapshotFileCache {
 
     /// Retrieve cache item from the cache by ContentId
     pub fn get(&self, content_id: &ContentId) -> Result<Option<Bytes>> {
-        let store_read = self.store.read();
+        let store_read = self.store.read()?;
         let lookup_result = store_read
             .lookup(0, content_id.as_ref())
             .with_context(|| format!("Failed to lookup ContentId {content_id} in cache"))?;

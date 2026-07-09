@@ -141,7 +141,7 @@ impl Entry {
 
     /// Read an entry from the IndexedLog and deserialize it.
     pub(crate) fn from_log(id: &[u8], log: &Store) -> Result<Option<Self>> {
-        let locked_log = log.read();
+        let locked_log = log.read()?;
         let mut log_entry = locked_log.lookup(0, id)?;
         let buf = match log_entry.next() {
             None => return Ok(None),
@@ -157,7 +157,7 @@ impl Entry {
     pub fn write_to_log(self, log: &Store) -> Result<()> {
         let mut buf = Vec::new();
         self.serialize(&mut buf, log.should_compress())?;
-        log.write().append(buf)
+        log.write()?.append(buf)
     }
 
     fn serialize(&self, buf: &mut dyn Write, should_compress: bool) -> Result<()> {
@@ -320,7 +320,7 @@ impl IndexedLogHgIdDataStore {
 
     /// Return whether the store contains the given id.
     pub(crate) fn contains(&self, id: &HgId) -> Result<bool> {
-        self.store.read().contains(0, id.as_ref())
+        self.store.read()?.contains(0, id.as_ref())
     }
 
     /// Directly get the local content. Do not ask remote servers.
@@ -352,7 +352,7 @@ impl IndexedLogHgIdDataStore {
 
     /// Flush the underlying IndexedLog
     pub fn flush_log(&self) -> Result<()> {
-        self.store.write().flush()?;
+        self.store.write()?.flush()?;
         Ok(())
     }
 
@@ -464,7 +464,10 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
 
 impl ToKeys for IndexedLogHgIdDataStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        let log = self.store.read();
+        let log = match self.store.read() {
+            Ok(log) => log,
+            Err(e) => return vec![Err(e)],
+        };
         log.iter()
             .map(|entry| {
                 let bytes = log.slice_to_bytes(entry?);

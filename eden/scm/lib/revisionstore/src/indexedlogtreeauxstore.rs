@@ -105,11 +105,11 @@ impl TreeAuxStore {
     }
 
     pub fn contains(&self, hgid: HgId) -> Result<bool> {
-        self.store.read().contains(0, hgid)
+        self.store.read()?.contains(0, hgid)
     }
 
     pub fn get(&self, hgid: &HgId) -> Result<Option<TreeAuxData>> {
-        let locked_log = self.store.read();
+        let locked_log = self.store.read()?;
         let mut log_entry = locked_log.lookup(0, hgid)?;
         let buf = match log_entry.next() {
             None => return Ok(None),
@@ -123,7 +123,7 @@ impl TreeAuxStore {
 
     pub fn put(&self, hgid: HgId, tree_aux_data: &TreeAuxData) -> Result<()> {
         let bytes = serialize(hgid, tree_aux_data)?;
-        self.store.write().append(bytes)
+        self.store.write()?.append(bytes)
     }
 
     pub fn put_batch(&self, items: &mut Vec<(HgId, TreeAuxData)>) -> Result<()> {

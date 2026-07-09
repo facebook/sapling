@@ -143,7 +143,7 @@ impl Entry {
     pub fn from_log(key: &Key, log: &Store) -> Result<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
 
-        let log = log.read();
+        let log = log.read()?;
         let mut log_entry = log.lookup(0, index_key)?;
         let buf = match log_entry.next() {
             None => return Ok(None),
@@ -239,7 +239,7 @@ impl IndexedLogHgIdHistoryStore {
     /// Check whether index contains `key`.
     pub fn contains(&self, key: &Key) -> Result<bool> {
         let index_key = Entry::key_to_index_key(key);
-        let log = self.log.read();
+        let log = self.log.read()?;
         log.contains(0, index_key)
     }
 
@@ -292,7 +292,10 @@ impl HgIdMutableHistoryStore for IndexedLogHgIdHistoryStore {
 
 impl ToKeys for IndexedLogHgIdHistoryStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        let log = self.log.read();
+        let log = match self.log.read() {
+            Ok(log) => log,
+            Err(e) => return vec![Err(e)],
+        };
         log.iter()
             .map(|entry| {
                 let bytes = log.slice_to_bytes(entry?);
