@@ -315,13 +315,11 @@ fn export_tree_entry(
     casefold: Casefold,
 ) -> Result<Option<ExportItem>> {
     Ok(match (entry.name, entry.info) {
-        (name, thrift::EntryInfo::tree(info)) => {
+        (name, thrift::EntryInfo::tree(_info)) => {
             filter
                 .matches_dir(&casefold.of(&name))
                 .map(|subfilter| ExportItem::Tree {
                     path: join_path(path, &name),
-                    id: info.id,
-                    id_type: info.id_type,
                     tx,
                     destination: destination.join(&name),
                     filter: subfilter,
@@ -346,10 +344,8 @@ fn export_tree_entry(
 
 async fn export_tree(
     connection: ScsClient,
-    repo: thrift::RepoSpecifier,
+    commit: thrift::CommitSpecifier,
     path: String,
-    id: Vec<u8>,
-    id_type: Option<thrift::TreeIdType>,
     tx: FileSender,
     destination: PathBuf,
     mut filter: PathFilter,
@@ -359,10 +355,9 @@ async fn export_tree(
     if create_dirs == CreateDirs::Yes {
         tokio::fs::create_dir(&destination).await?;
     }
-    let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
-        repo: repo.clone(),
-        id,
-        id_type,
+    let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
+        commit: commit.clone(),
+        path: path.clone(),
         ..Default::default()
     });
     let params = thrift::TreeListParams {
@@ -377,13 +372,13 @@ async fn export_tree(
         async |client, tree, params| client.tree_list(tree, params).await,
     )
     .await
-    .map_err(|e| e.handle_selection_error(&repo))?;
+    .map_err(|e| e.handle_selection_error(&commit.repo))?;
     let count = response.count;
     let other_tree_chunks =
         stream::iter((TREE_CHUNK_SIZE..count).step_by(TREE_CHUNK_SIZE as usize))
             .map({
                 |offset| {
-                    cloned!(repo);
+                    cloned!(commit);
                     // Request subsequent chunks of the directory listing.
                     let connection = connection.clone();
                     let tree = tree.clone();
@@ -401,7 +396,7 @@ async fn export_tree(
                                 async |client, tree, params| client.tree_list(tree, params).await,
                             )
                             .await
-                            .map_err(|e| e.handle_selection_error(&repo))?
+                            .map_err(|e| e.handle_selection_error(&commit.repo))?
                             .entries,
                         )
                     }
@@ -542,7 +537,7 @@ async fn export_file(
 
 async fn export_item(
     connection: ScsClient,
-    repo: thrift::RepoSpecifier,
+    commit: thrift::CommitSpecifier,
     item: ExportItem,
     casefold: Casefold,
     create_dirs: CreateDirs,
@@ -552,18 +547,14 @@ async fn export_item(
     match item {
         ExportItem::Tree {
             path,
-            id,
-            id_type,
             tx,
             destination,
             filter,
         } => {
             let items = export_tree(
                 connection,
-                repo,
+                commit,
                 path,
-                id,
-                id_type,
                 tx,
                 destination,
                 filter,
@@ -580,7 +571,16 @@ async fn export_item(
             destination,
             type_,
         } => {
-            export_file(connection, repo, file, tx, destination, type_, file_filter).await?;
+            export_file(
+                connection,
+                commit.repo,
+                file,
+                tx,
+                destination,
+                type_,
+                file_filter,
+            )
+            .await?;
             files_written.fetch_add(1, Ordering::Relaxed);
             Ok((Some(path), Vec::new()))
         }
@@ -590,8 +590,6 @@ async fn export_item(
 enum ExportItem {
     Tree {
         path: String,
-        id: Vec<u8>,
-        id_type: Option<thrift::TreeIdType>,
         tx: FileSender,
         destination: PathBuf,
         filter: PathFilter,
@@ -939,6 +937,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         response
     };
 
+    // Use the path that `commit_path_info` resolved above: with
+    // `--case-insensitive`, `commit_path.path` may have been corrected to the
+    // real on-disk casing. `export_tree` lists via `by_commit_path`, which
+    // resolves paths case-sensitively, so the recursion must start from the
+    // corrected path (the previous `by_id` traversal got this implicitly from
+    // the manifest id in the response).
+    let path = commit_path.path;
+
     if !response.exists {
         bail!("'{path}' does not exist in {commit_id}");
     }
@@ -989,8 +995,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             total_size = info.descendant_files_total_size as u64;
             ExportItem::Tree {
                 path,
-                id: info.id,
-                id_type: info.id_type,
                 tx,
                 destination: root,
                 filter: path_filter,
@@ -1023,7 +1027,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         move |item| {
             export_item(
                 conn.clone(),
-                repo.clone(),
+                commit.clone(),
                 item,
                 casefold,
                 create_dirs,
