@@ -7,7 +7,11 @@
 
 #ifndef _WIN32
 
+#include <cerrno>
 #include <chrono>
+#include <cstring>
+#include <system_error>
+#include <thread>
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -35,6 +39,28 @@ namespace {
  * testing), so wait for 10 seconds.
  */
 constexpr std::chrono::seconds kWaitTimeout = 10s;
+
+FakeFuse::Response recvResponseAndDrain(
+    TestMount& testMount,
+    const std::shared_ptr<FakeFuse>& fuse) {
+  fuse->setTimeout(10ms);
+
+  auto deadline = std::chrono::steady_clock::now() + kWaitTimeout;
+  while (true) {
+    testMount.drainServerExecutor();
+    try {
+      return fuse->recvResponse();
+    } catch (const std::system_error& ex) {
+      if (ex.code().value() != EAGAIN && ex.code().value() != EWOULDBLOCK) {
+        throw;
+      }
+      if (std::chrono::steady_clock::now() > deadline) {
+        throw;
+      }
+      std::this_thread::sleep_for(10ms);
+    }
+  }
+}
 
 } // namespace
 
@@ -92,6 +118,44 @@ TEST(FuseTest, initMount) {
   // Since we closed the FUSE device from the "kernel" side the returned
   // MountInfo should not contain a valid FUSE device any more.
   EXPECT_FALSE(mountInfo.fd);
+}
+
+TEST(FuseTest, restrictedTreeLookupUsesAclTtl) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret content");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+  testMount.updateEdenConfig({{"acl:restricted-tree-ttl-seconds", "84"}});
+
+  auto fuse = make_shared<FakeFuse>();
+  testMount.startFuseAndWait(fuse);
+
+  auto reqID = fuse->sendLookup(FUSE_ROOT_ID, "restricted");
+  auto response = recvResponseAndDrain(testMount, fuse);
+
+  EXPECT_EQ(reqID, response.header.unique);
+  EXPECT_EQ(0, response.header.error);
+  ASSERT_EQ(sizeof(fuse_entry_out), response.body.size());
+
+  fuse_entry_out entry{};
+  std::memcpy(&entry, response.body.data(), sizeof(entry));
+  EXPECT_TRUE(S_ISDIR(entry.attr.mode));
+  EXPECT_EQ(entry.attr.mode & 07777, 0);
+  EXPECT_EQ(42, entry.attr_valid);
+  EXPECT_EQ(0, entry.attr_valid_nsec);
+  EXPECT_EQ(42, entry.entry_valid);
+  EXPECT_EQ(0, entry.entry_valid_nsec);
+
+  fuse->close();
+  auto fuseCompletionFuture =
+      testMount.getEdenMount()->getFsChannelCompletionFuture();
+  auto deadline = std::chrono::steady_clock::now() + kWaitTimeout;
+  do {
+    if (std::chrono::steady_clock::now() > deadline) {
+      FAIL() << "fuse completion future not ready within timeout";
+    }
+    testMount.drainServerExecutor();
+  } while (!fuseCompletionFuture.isReady());
 }
 
 // Test destroying the EdenMount object while FUSE initialization is still

@@ -134,6 +134,17 @@ class FuseDispatcherImpl : public FuseDispatcher {
   uint64_t computeTtl() const;
 
   /**
+   * Compute the FUSE cache TTL for the 000-mode stat returned for restricted
+   * source-control ACL directories.
+   */
+  uint64_t computeRestrictedTreeTtl() const;
+
+  /**
+   * Compute the FUSE cache TTL for a specific stat result.
+   */
+  uint64_t computeTtlForStat(const struct stat& st) const;
+
+  /**
    * Compute the TTL for negative dentry cache entries returned from ENOENT
    * lookups.
    */

@@ -55,6 +55,10 @@ FuseDispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
   return FuseDispatcher::Attr{st, kBrokenInodeCacheSeconds};
 }
 
+bool isRestrictedTreeStat(const struct stat& st) {
+  return S_ISDIR(st.st_mode) && (st.st_mode & 07777) == 0;
+}
+
 } // namespace
 
 FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
@@ -70,6 +74,17 @@ uint64_t FuseDispatcherImpl::computeTtl() const {
   auto policy = mount_->getInodePressurePolicy();
   auto inodeCount = inodeMap_->getTotalInodeCountFast();
   return static_cast<uint64_t>(policy->getFuseTtl(inodeCount).count());
+}
+
+uint64_t FuseDispatcherImpl::computeRestrictedTreeTtl() const {
+  return mount_->getEdenConfig()->restrictedTreeTtlSeconds.getValue() / 2;
+}
+
+uint64_t FuseDispatcherImpl::computeTtlForStat(const struct stat& st) const {
+  if (isRestrictedTreeStat(st)) {
+    return computeRestrictedTreeTtl();
+  }
+  return computeTtl();
 }
 
 uint64_t FuseDispatcherImpl::computeNegativeEntryTtl() const {
@@ -106,14 +121,13 @@ uint64_t FuseDispatcherImpl::computeNegativeEntryTtl() const {
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     const ObjectFetchContextPtr& context) {
-  auto ttl = computeTtl();
   return inodeMap_->lookupInode(ino)
       .thenValue([context = context.copy()](const InodePtr& inode) {
         inode->updateLastFsRequestTime();
         return inode->stat(context);
       })
-      .thenValue([ttl](const struct stat& st) {
-        return FuseDispatcher::Attr{st, ttl};
+      .thenValue([this](const struct stat& st) {
+        return FuseDispatcher::Attr{st, computeTtlForStat(st)};
       });
 }
 
@@ -150,13 +164,13 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
       })
       .thenValue([this, context = context.copy()](const InodePtr& inode) {
         inode->updateLastFsRequestTime();
-        auto ttl = computeTtl();
         return makeImmediateFutureWith([&]() { return inode->stat(context); })
-            .thenTry([inode, ttl](folly::Try<struct stat> maybeStat) {
+            .thenTry([this, inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
                 inode->incFsRefcount();
+                const auto& st = maybeStat.value();
                 return computeEntryParam(
-                    FuseDispatcher::Attr{maybeStat.value(), ttl});
+                    FuseDispatcher::Attr{st, computeTtlForStat(st)});
               } else {
                 // The most common case for stat() failing is if this file is
                 // materialized but the data for it in the overlay is missing
