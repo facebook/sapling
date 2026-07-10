@@ -1,6 +1,6 @@
 ---
 oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*(\.rs|TARGETS|BUCK)$'
+apply_to_regex: 'eden/mononoke/.*(\.rs|BUCK)$'
 ---
 
 # Mononoke Architecture & Filesystem Layout
@@ -10,7 +10,7 @@ apply_to_regex: 'eden/mononoke/.*(\.rs|TARGETS|BUCK)$'
 ## What to Look For
 
 - Code that violates the layered architecture (lower layers importing higher layers)
-- Crates placed at the wrong directory depth or missing their own TARGETS file
+- Crates placed at the wrong directory depth or missing their own BUCK file
 - Features that hold mutable state instead of delegating to repo attributes
 - Server binaries with business logic instead of delegating to `mononoke_api`
 - Overly large `lib.rs` files that should be split into modules
@@ -26,7 +26,7 @@ apply_to_regex: 'eden/mononoke/.*(\.rs|TARGETS|BUCK)$'
 - A feature crate stores mutable state (e.g., owns a `Mutex`, `RwLock`, or mutable singleton) instead of reading/writing state through a repo attribute
 - A server binary (under `servers/`) contains domain logic that should live in `mononoke_api` or a feature crate
 - A new crate is created at the top level of `eden/mononoke/` instead of nested under the appropriate layer directory
-- A new crate lacks its own TARGETS file or does not keep source files in `src/`
+- A new crate lacks its own BUCK file or does not keep source files in `src/`
 - A crate name is ambiguous (e.g., `fsnodes` when `fsnodes_derivation` is more precise)
 - A module uses `foo/mod.rs` instead of `foo.rs`
 - `lib.rs` contains substantial implementation logic instead of re-exports and glue
@@ -71,7 +71,7 @@ fn resolve_bookmark(&self, ctx: &CoreContext, repo: &RepoContext, bookmark: &str
 
 **BAD (vague crate name):**
 ```python
-# TARGETS
+# BUCK
 rust_library(
     name = "fsnodes",  # too ambiguous -- is this types? derivation? validation?
 )
@@ -79,7 +79,7 @@ rust_library(
 
 **GOOD (precise crate name):**
 ```python
-# TARGETS
+# BUCK
 rust_library(
     name = "fsnodes_derivation",  # clearly scoped purpose
 )
@@ -103,4 +103,4 @@ src/
 
 ## Recommendation
 
-Mononoke follows a strict layered architecture. From bottom to top: **Elements** (pure data types) -> **Repo Attributes** (per-repo state/storage) -> **Features** (stateless business logic) -> **API** (`mononoke_api`, the unified interface) -> **Tools/Servers/Jobs** (thin entry points). Each layer may only depend on layers below it. Features must be stateless -- all mutable state belongs in repo attributes. Server binaries must be thin wrappers that delegate to `mononoke_api`. Every crate lives 2+ directory levels deep, has its own TARGETS file, keeps source in `src/`, and uses a globally unique, precise name. Prefer `foo.rs` over `foo/mod.rs` for module files, and keep `lib.rs` small by splitting implementation into dedicated modules. Facebook-only code goes in a `facebook/` subdirectory mirroring the open-source hierarchy.
+Mononoke follows a strict layered architecture. From bottom to top: **Elements** (pure data types) -> **Repo Attributes** (per-repo state/storage) -> **Features** (stateless business logic) -> **API** (`mononoke_api`, the unified interface) -> **Tools/Servers/Jobs** (thin entry points). Each layer may only depend on layers below it. Features must be stateless -- all mutable state belongs in repo attributes. Server binaries must be thin wrappers that delegate to `mononoke_api`. Every crate lives 2+ directory levels deep, has its own BUCK file, keeps source in `src/`, and uses a globally unique, precise name. Prefer `foo.rs` over `foo/mod.rs` for module files, and keep `lib.rs` small by splitting implementation into dedicated modules. Facebook-only code goes in a `facebook/` subdirectory mirroring the open-source hierarchy.
