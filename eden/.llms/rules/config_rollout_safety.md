@@ -31,7 +31,7 @@ apply_to_content: 'config|ConfigValue|tunables|justknobs|JustKnobs|rate.limit|Ra
 - Environment variables for local development settings
 - Configs with explicit defaults documented in the config schema
 - New validation on brand-new API methods (no existing clients to break)
-- **JustKnobs reads using `?` without a fallback** — for `justknobs::eval()` / `justknobs::get()` / `justknobs::get_as()`, propagating the error via `?` is the correct pattern. Do NOT suggest `.unwrap_or(default)` — that hides misconfiguration and is expensive for non-existent knobs. Defaults belong in `just_knobs.json`. See D92827579.
+- **JustKnobs reads using .expect()/.unwrap() without a fallback** — for `justknobs::eval()` / `justknobs::get()` / `justknobs::get_as()`, crashing the process is the correct pattern. Do NOT suggest `.unwrap_or(default)` — that hides misconfiguration and is expensive for non-existent knobs. See D106467432.
 
 ## Examples
 
