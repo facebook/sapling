@@ -921,6 +921,223 @@ async fn process_subtree_copies(
     Ok((additional_changes, replacement_paths))
 }
 
+/// Derive the history manifest entry at an arbitrary subtree path.
+///
+/// Derives only the subtree rooted at `prefix`. Parent entries are at the
+/// stage level (the entry at `prefix` in each parent commit, not the root).
+///
+/// `known_entries` maps absolute paths to pre-computed entries from
+/// dependency stages — used to short-circuit recursion.
+pub(crate) async fn derive_history_manifest_entry(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    cs_id: ChangesetId,
+    bonsai: &BonsaiChangeset,
+    parent_entries: Vec<(ChangesetId, HistoryManifestEntry)>,
+    prefix: MPath,
+    known_entries: HashMap<MPath, Option<HistoryManifestEntry>>,
+) -> Result<Option<HistoryManifestEntry>> {
+    let blobstore = derivation_ctx.blobstore();
+
+    // 1. Collect ALL file changes (unfiltered) — process_subtree_copies
+    //    needs the full set to correctly detect overlaps and replacements.
+    let all_file_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = bonsai
+        .file_changes()
+        .map(|(path, change)| {
+            (
+                path.clone(),
+                match change {
+                    FileChange::Change(tc) => Some((tc.content_id(), tc.file_type())),
+                    FileChange::UntrackedChange(uc) => Some((uc.content_id(), uc.file_type())),
+                    FileChange::Deletion | FileChange::UntrackedDeletion => None,
+                },
+            )
+        })
+        .collect();
+
+    // 2. Process subtree copies with the full file changes, then scope
+    //    everything to the prefix.
+    let (additional_changes, replacement_paths) =
+        process_subtree_copies(ctx, derivation_ctx, None, bonsai, &all_file_changes).await?;
+
+    let mut file_changes: Vec<_> = all_file_changes
+        .into_iter()
+        .filter(|(path, _)| prefix.is_prefix_of(path.as_mpath()))
+        .collect();
+    let additional_changes: Vec<_> = additional_changes
+        .into_iter()
+        .filter(|(path, _)| prefix.is_prefix_of(path.as_mpath()))
+        .collect();
+    file_changes.extend(additional_changes);
+
+    let replacement_paths: BTreeSet<MPath> = replacement_paths
+        .into_iter()
+        .filter(|path| prefix.is_prefix_of(path) || path.is_prefix_of(&prefix))
+        .collect();
+
+    // 3. Build PathTree from scoped file changes and navigate to prefix.
+    let changes: PathTree<Option<Option<(ContentId, FileType)>>> = PathTree::from_iter(
+        file_changes
+            .into_iter()
+            .map(|(path, change)| (path, Some(change))),
+    );
+
+    let subtree = {
+        let mut tree = changes;
+        for elem in prefix.clone().into_iter() {
+            let (_, children) = tree.deconstruct();
+            tree = children
+                .into_iter()
+                .find(|(name, _)| name == &elem)
+                .map(|(_, child)| child)
+                .unwrap_or_default();
+        }
+        tree
+    };
+
+    // 4. Load parent directories from stage-level parent entries.
+    let parent_dirs: Vec<(ChangesetId, HistoryManifestDirectory)> = future::try_join_all(
+        parent_entries
+            .iter()
+            .filter_map(|(cs_id, entry)| match entry {
+                HistoryManifestEntry::Directory(dir_id) => {
+                    let cs_id = *cs_id;
+                    let dir_id = *dir_id;
+                    Some(async move {
+                        let dir: HistoryManifestDirectory = dir_id.load(ctx, blobstore).await?;
+                        anyhow::Ok((cs_id, dir))
+                    })
+                }
+                _ => None,
+            }),
+    )
+    .await?;
+
+    let (change, children) = subtree.deconstruct();
+    let has_changes = change.is_some() || !children.is_empty();
+
+    // If the prefix (or an ancestor) is a subtree-copy destination, the
+    // subtree is rebuilt from scratch: the parent entries no longer apply, so
+    // clear them before any parent-based short-circuit. Without this, a stage
+    // under a copy destination that the copy removed (e.g. `top1/sub` when
+    // `top1` is replaced by a `top2` that has no `sub`) would wrongly reuse
+    // the pre-copy parent entry instead of resolving to "removed".
+    let is_replacement = replacement_paths
+        .iter()
+        .any(|rp| rp.is_prefix_of(&prefix) || *rp == prefix);
+    let (parent_dirs, parent_entries) = if is_replacement {
+        (vec![], vec![])
+    } else {
+        (parent_dirs, parent_entries)
+    };
+
+    // 5. No changes, no parents, no live known entries at this prefix → doesn't exist.
+    //    known_entries with all-None values (dependency stages where the path
+    //    doesn't exist) are treated as empty.
+    let has_live_known = known_entries.values().any(|v| v.is_some());
+    if !has_changes && parent_entries.is_empty() && !has_live_known && !prefix.is_root() {
+        return Ok(None);
+    }
+
+    // 6. No changes, no live known entries, all parents agree → reuse parent entry.
+    if !has_changes && !has_live_known && !prefix.is_root() && !parent_entries.is_empty() {
+        let all_same = parent_entries.windows(2).all(|w| w[0].1 == w[1].1);
+        if all_same {
+            return Ok(Some(parent_entries[0].1.clone()));
+        }
+    }
+
+    // 7. Keep the full known-entry map, including paths a dependency stage
+    //    computed as empty (`None`). A `Some` entry short-circuits the
+    //    traversal by reuse; a `None` entry means the path is empty, so we
+    //    drop it from its parent's children rather than recursing into it
+    //    again.
+    let known_entry_map: HashMap<MPath, Option<HistoryManifestEntry>> = known_entries;
+
+    // 8. Run bounded_traversal from the prefix node. `parent_dirs` /
+    //    `parent_entries` were already cleared above if this is a replacement.
+    let root_node = UnfoldNode {
+        path_element: prefix.basename().cloned(),
+        path: prefix.clone(),
+        change,
+        children,
+        parent_dirs: parent_dirs.clone(),
+        parent_entries: parent_entries.clone(),
+        implicit_deletion: false,
+    };
+
+    let ctx_ref = ctx;
+    cloned!(ctx, blobstore);
+    let traversal_handle = mononoke::spawn_task(async move {
+        borrowed!(ctx, blobstore, replacement_paths, known_entry_map);
+
+        let result: (Option<MPathElement>, HistoryManifestEntry) = bounded_traversal(
+            256,
+            root_node,
+            // unfold: short-circuit at known entry paths
+            {
+                move |node: UnfoldNode| {
+                    async move {
+                        // A dependency stage already derived this exact path;
+                        // reuse its entry instead of recursing.
+                        if let Some(Some(entry)) = known_entry_map.get(&node.path) {
+                            let action = UnfoldAction::Reuse(entry.clone());
+                            return Ok(((node.path_element, action, node.path), vec![]));
+                        }
+                        let (info, children) =
+                            do_unfold(ctx, blobstore, cs_id, node, replacement_paths).await?;
+                        // Drop children a dependency stage computed as empty
+                        // (`None`) so we neither recurse into them nor add
+                        // them to this directory's subentries.
+                        let children: Vec<UnfoldNode> = children
+                            .into_iter()
+                            .filter(|child| !matches!(known_entry_map.get(&child.path), Some(None)))
+                            .collect();
+                        anyhow::Ok((info, children))
+                    }
+                    .boxed()
+                }
+            },
+            // fold
+            move |(path_element, action, path): (Option<MPathElement>, UnfoldAction, MPath),
+                  subentries_iter| {
+                async move {
+                    let result =
+                        do_fold(ctx, blobstore, cs_id, &path, action, subentries_iter).await?;
+                    Ok((path_element, result))
+                }
+                .boxed()
+            },
+        )
+        .await?;
+
+        let (_path_element, entry) = result;
+        anyhow::Ok(entry)
+    });
+
+    let entry = traversal_handle.await??;
+
+    // Post-traversal reuse: if the traversal produced a directory whose
+    // subentries match a single parent's subentries exactly, the subtree
+    // is effectively unchanged — reuse the parent entry. This matches
+    // canonical derivation where merge_subtrees at the root level
+    // detects unchanged subtrees and puts them in `reused`.
+    if !prefix.is_root() && parent_entries.len() == 1 {
+        if let HistoryManifestEntry::Directory(new_dir_id) = &entry {
+            if let (_, HistoryManifestEntry::Directory(parent_dir_id)) = &parent_entries[0] {
+                let bs = derivation_ctx.blobstore();
+                let new_dir: HistoryManifestDirectory = new_dir_id.load(ctx_ref, bs).await?;
+                let parent_dir: HistoryManifestDirectory = parent_dir_id.load(ctx_ref, bs).await?;
+                if new_dir.subentries == parent_dir.subentries {
+                    return Ok(Some(parent_entries[0].1.clone()));
+                }
+            }
+        }
+    }
+
+    Ok(Some(entry))
+}
+
 pub(crate) async fn derive_history_manifest(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,

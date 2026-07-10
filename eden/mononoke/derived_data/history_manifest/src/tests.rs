@@ -2343,3 +2343,231 @@ async fn test_empty_commit_chain(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+/// derive_history_manifest_entry at a non-root prefix returns the same
+/// entry as deriving the full tree and extracting at that path.
+#[mononoke::fbinit_test]
+async fn test_derive_entry_matches_canonical_at_prefix(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+
+    let cs_a = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir_a/file1.txt", "content1")
+        .add_file("dir_a/file2.txt", "content2")
+        .add_file("dir_b/file3.txt", "content3")
+        .commit()
+        .await?;
+
+    let cs_b = CreateCommitContext::new(&ctx, &repo, vec![cs_a])
+        .add_file("dir_a/file1.txt", "content1_v2")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+
+    let root_a = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_a, DerivationPriority::LOW)
+        .await?;
+    let root_b = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_b, DerivationPriority::LOW)
+        .await?;
+
+    let blobstore = repo.repo_blobstore();
+    let bonsai_b = cs_b.load(&ctx, blobstore).await?;
+
+    let prefix = MPath::new("dir_a")?;
+
+    // Look up the stage-level parent entry (dir_a in parent commit A).
+    let parent_root_dir: HistoryManifestDirectory = root_a.0.load(&ctx, blobstore).await?;
+    let parent_dir_a_entry = parent_root_dir
+        .subentries
+        .lookup(&ctx, blobstore, b"dir_a")
+        .await?;
+    let parent_entries: Vec<(ChangesetId, HistoryManifestEntry)> = parent_dir_a_entry
+        .into_iter()
+        .map(|entry| (cs_a, entry))
+        .collect();
+
+    let pipeline_result = crate::derive::derive_history_manifest_entry(
+        &ctx,
+        &derivation_ctx,
+        cs_b,
+        &bonsai_b,
+        parent_entries,
+        prefix.clone(),
+        HashMap::new(),
+    )
+    .await?;
+
+    let canonical_root_dir: HistoryManifestDirectory = root_b.0.load(&ctx, blobstore).await?;
+    let canonical_result = canonical_root_dir
+        .subentries
+        .lookup(&ctx, blobstore, b"dir_a")
+        .await?;
+
+    assert_eq!(
+        pipeline_result, canonical_result,
+        "pipeline entry at prefix should match canonical"
+    );
+    assert!(
+        matches!(pipeline_result, Some(HistoryManifestEntry::Directory(_))),
+        "dir_a should be a Directory entry"
+    );
+
+    Ok(())
+}
+
+/// derive_history_manifest_entry returns None for a path that never existed.
+#[mononoke::fbinit_test]
+async fn test_derive_entry_nonexistent_path(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+
+    let cs_a = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir_a/file1.txt", "content")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+
+    let _root_a = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_a, DerivationPriority::LOW)
+        .await?;
+
+    let blobstore = repo.repo_blobstore();
+    let bonsai_a = cs_a.load(&ctx, blobstore).await?;
+
+    let prefix = MPath::new("nonexistent")?;
+    let result = crate::derive::derive_history_manifest_entry(
+        &ctx,
+        &derivation_ctx,
+        cs_a,
+        &bonsai_a,
+        vec![],
+        prefix,
+        HashMap::new(),
+    )
+    .await?;
+
+    assert_eq!(result, None, "nonexistent path should return None");
+
+    Ok(())
+}
+
+/// derive_history_manifest_entry returns a DeletedNode for a deleted path.
+#[mononoke::fbinit_test]
+async fn test_derive_entry_deleted_path(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+
+    let cs_a = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir_a/file1.txt", "content")
+        .add_file("dir_b/file2.txt", "content")
+        .commit()
+        .await?;
+
+    let cs_b = CreateCommitContext::new(&ctx, &repo, vec![cs_a])
+        .delete_file("dir_a/file1.txt")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+
+    let root_a = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_a, DerivationPriority::LOW)
+        .await?;
+    let root_b = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_b, DerivationPriority::LOW)
+        .await?;
+
+    let blobstore = repo.repo_blobstore();
+    let bonsai_b = cs_b.load(&ctx, blobstore).await?;
+
+    let prefix = MPath::new("dir_a")?;
+
+    let parent_root_dir: HistoryManifestDirectory = root_a.0.load(&ctx, blobstore).await?;
+    let parent_dir_a_entry = parent_root_dir
+        .subentries
+        .lookup(&ctx, blobstore, b"dir_a")
+        .await?;
+    let parent_entries: Vec<(ChangesetId, HistoryManifestEntry)> = parent_dir_a_entry
+        .into_iter()
+        .map(|entry| (cs_a, entry))
+        .collect();
+
+    let result = crate::derive::derive_history_manifest_entry(
+        &ctx,
+        &derivation_ctx,
+        cs_b,
+        &bonsai_b,
+        parent_entries,
+        prefix,
+        HashMap::new(),
+    )
+    .await?;
+
+    let canonical_root_dir: HistoryManifestDirectory = root_b.0.load(&ctx, blobstore).await?;
+    let canonical_result = canonical_root_dir
+        .subentries
+        .lookup(&ctx, blobstore, b"dir_a")
+        .await?;
+
+    assert_eq!(result, canonical_result);
+    assert!(
+        matches!(result, Some(HistoryManifestEntry::DeletedNode(_))),
+        "dir_a should be a DeletedNode after its only file was deleted"
+    );
+
+    Ok(())
+}
+
+/// derive_history_manifest_entry at root returns the same directory as
+/// derive_history_manifest.
+#[mononoke::fbinit_test]
+async fn test_derive_entry_at_root_matches_canonical(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+
+    let cs_a = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file.txt", "content")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+
+    let canonical = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(&ctx, cs_a, DerivationPriority::LOW)
+        .await?;
+
+    let blobstore = repo.repo_blobstore();
+    let bonsai_a = cs_a.load(&ctx, blobstore).await?;
+
+    let result = crate::derive::derive_history_manifest_entry(
+        &ctx,
+        &derivation_ctx,
+        cs_a,
+        &bonsai_a,
+        vec![],
+        MPath::ROOT,
+        HashMap::new(),
+    )
+    .await?;
+
+    assert_eq!(
+        result,
+        Some(HistoryManifestEntry::Directory(canonical.0)),
+        "root prefix should return the same directory as canonical derivation"
+    );
+
+    Ok(())
+}
