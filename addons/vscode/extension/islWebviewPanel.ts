@@ -189,6 +189,11 @@ function replaceExistingOrphanedISLWindows(
   platform: VSCodeServerPlatform,
   logger: Logger,
 ) {
+  // `tabGroups` is window-global, but in Basecamp one window hosts many extension hosts -- so this
+  // would reclaim another host's ISL tab. Basecamp drives ISL lifecycle itself, so skip recovery.
+  if (Internal.isBasecamp?.()) {
+    return;
+  }
   const orphanedTabs = vscode.window.tabGroups.all
     .flatMap(tabGroup => tabGroup.tabs)
     .filter(tab => (tab.input as vscode.TabInputWebview)?.viewType?.includes(islViewType));
