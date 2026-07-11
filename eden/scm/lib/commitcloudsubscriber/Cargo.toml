@@ -32,7 +32,7 @@ hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 log = { version = "0.4.33", features = ["kv_unstable", "kv_unstable_std"] }
 mime = "0.3.14"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-regex = "1.12.4"
+regex = "1.13.0"
 reqwest = { version = "0.13.2", features = ["blocking", "brotli", "charset", "cookies", "deflate", "gzip", "http2", "json", "multipart", "native-tls", "rustls", "socks", "stream", "system-proxy", "zstd"], default-features = false }
 sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-identity = { version = "0.1.0", path = "../identity" }

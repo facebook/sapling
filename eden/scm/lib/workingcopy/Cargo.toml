@@ -18,7 +18,7 @@ bitflags = { version = "2.11.1", features = ["serde", "std"], default-features =
 crossbeam = "0.8"
 fs-err = { version = "3.3.1", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-regex = "1.12.4"
+regex = "1.13.0"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", features = ["convert-path"] }
 sapling-context = { version = "0.1.0", path = "../context" }
