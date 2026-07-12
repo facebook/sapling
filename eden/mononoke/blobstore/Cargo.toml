@@ -16,7 +16,7 @@ anyhow = "1.0.103"
 async-trait = "0.1.86"
 auto_impl = "1.3.0"
 bincode = { version = "2", features = ["serde"] }
-bytes = { version = "1.12.0", features = ["serde"] }
+bytes = { version = "1.12.1", features = ["serde"] }
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 either = "1.16.0"
