@@ -19,7 +19,7 @@ path = "benches/executor.rs"
 
 [dependencies]
 anyhow = "1.0.103"
-crossfire = "3.1.18"
+crossfire = "3.1.19"
 num_cpus = "1.16"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
