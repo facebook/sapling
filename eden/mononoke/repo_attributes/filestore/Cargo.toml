@@ -24,7 +24,7 @@ mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pin-project = "1.1.13"
 sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
-sha1 = "0.10.5"
+sha1 = "0.10.7"
 sha2 = "0.10.6"
 strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.18"

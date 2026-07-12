@@ -25,5 +25,5 @@ sapling-progress-model = { version = "0.1.0", path = "../../../../lib/progress/m
 sapling-repourl = { version = "0.1.0", path = "../../../../lib/repo/url" }
 sapling-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
-sha1 = "0.10.5"
+sha1 = "0.10.7"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

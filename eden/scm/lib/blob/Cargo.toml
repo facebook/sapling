@@ -14,4 +14,4 @@ blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] }
 bytes = { version = "1.12.1", features = ["serde"] }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sha1 = "0.10.5"
+sha1 = "0.10.7"

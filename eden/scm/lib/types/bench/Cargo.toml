@@ -14,4 +14,4 @@ criterion = { version = "0.5.1", features = ["async_tokio", "csv_output"] }
 faster-hex = "0.6.1"
 hex = { version = "0.4.3", features = ["alloc"] }
 sapling-types = { version = "0.1.0", path = ".." }
-sha1 = "0.10.5"
+sha1 = "0.10.7"

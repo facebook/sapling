@@ -19,5 +19,5 @@ sapling-hgtime = { version = "0.1.0", path = "../../hgtime" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-sha1 = "0.10.5"
+sha1 = "0.10.7"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
