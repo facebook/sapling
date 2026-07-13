@@ -77,6 +77,7 @@ thrift_rust_unittest(
         ":test_deprecated_optional_with_default_is_some_if-rust",
         ":test_if-rust",
         ":test_if-rust-clients",
+        ":test_if-rust-services",
         "//thrift/lib/rust:fbthrift",
     ],
 )
