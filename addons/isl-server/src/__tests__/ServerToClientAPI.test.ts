@@ -10,8 +10,11 @@ import type {ClientConnection} from '..';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
 
-import {serializeToString} from 'isl/src/serialize';
+import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {mockLogger, nextTick} from 'shared/testUtils';
+import {Internal} from '../Internal';
+import {Repository} from '../Repository';
+import {repositoryCache} from '../RepositoryCache';
 import ServerToClientAPI from '../ServerToClientAPI';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 
@@ -154,5 +157,66 @@ describe('ServerToClientAPI disposable scoping', () => {
     api.dispose();
 
     expect(connectionDispose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ServerToClientAPI QE flags without an Internal implementation (OSS)', () => {
+  let platform: ServerPlatform;
+  let connection: ReturnType<typeof createMockConnection>;
+  let api: ServerToClientAPI;
+
+  beforeEach(async () => {
+    platform = {
+      platformName: 'test',
+      handleMessageFromClient: jest.fn(),
+    };
+
+    // `fetchQeFlag` is only handled once the connection has an active repo, which
+    // requires the resolved value to pass `instanceof Repository`. Give a plain object
+    // Repository's prototype so the connection reaches the "repo" state.
+    const repo = Object.assign(Object.create(Repository.prototype), {
+      info: mockRepoInfo,
+      initialConnectionContext: {logger: mockLogger},
+      codeReviewProvider: null,
+      ref: jest.fn(),
+      unref: jest.fn(),
+      dispose: jest.fn(),
+      fetchAndSetRecommendedBookmarks: jest.fn(),
+      fetchAndSetHiddenMasterConfig: jest.fn(),
+      pullFetchedDiffs: jest.fn().mockResolvedValue(undefined),
+    });
+    (repositoryCache.getOrCreate as jest.Mock).mockReturnValue({
+      promise: Promise.resolve(repo),
+      unref: jest.fn(),
+    });
+
+    connection = createMockConnection();
+    api = new ServerToClientAPI(platform, connection, mockTracker, mockLogger);
+    api.setActiveRepoForCwd('/path/to/repo/cwd');
+    await nextTick();
+  });
+
+  afterEach(() => {
+    api.dispose();
+    jest.clearAllMocks();
+  });
+
+  function responsesOfType(type: string): Array<Record<string, unknown>> {
+    return (connection.postMessage as jest.Mock).mock.calls
+      .map(([str]) => deserializeFromString(str as string) as Record<string, unknown>)
+      .filter(msg => msg.type === type);
+  }
+
+  it('replies to fetchQeFlag with passes=false when Internal.fetchQeFlag is unavailable', async () => {
+    // OSS builds have no Internal.fetchQeFlag; the server must still answer,
+    // otherwise the client (e.g. gotoAction) awaits a reply that never comes.
+    expect(Internal.fetchQeFlag).toBeUndefined();
+
+    connection.triggerMessage({type: 'fetchQeFlag', name: 'isl_rebase_onto_warm_button'});
+    await nextTick();
+
+    expect(responsesOfType('fetchedQeFlag')).toEqual([
+      {type: 'fetchedQeFlag', name: 'isl_rebase_onto_warm_button', passes: false},
+    ]);
   });
 });

@@ -1010,7 +1010,11 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchQeFlag': {
-        Internal.fetchQeFlag?.(repo.initialConnectionContext, data.name).then((passes: boolean) => {
+        // In OSS there is no Internal.fetchQeFlag, so default to `false`. We must always
+        // reply: the client awaits `fetchedQeFlag` and hangs forever without a response.
+        (
+          Internal.fetchQeFlag?.(repo.initialConnectionContext, data.name) ?? Promise.resolve(false)
+        ).then((passes: boolean) => {
           this.logger.info(`qe flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
           this.postMessage({type: 'fetchedQeFlag', name: data.name, passes});
         });
