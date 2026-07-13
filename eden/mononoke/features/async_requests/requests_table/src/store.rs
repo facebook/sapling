@@ -2405,7 +2405,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 None,
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2441,7 +2441,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&RepositoryId::new(0)),
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2489,7 +2489,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 None,
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2538,7 +2538,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2637,7 +2637,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2691,7 +2691,7 @@ mod test {
         let _ = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -2862,7 +2862,7 @@ mod test {
         let parent_id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("parent_key".to_string()),
                 None,
@@ -2918,7 +2918,10 @@ mod test {
         assert!(claimed.is_none());
 
         // Complete the parent (mark as ready)
-        let parent_req_id = RequestId(parent_id, RequestType("async_ping".to_string()));
+        let parent_req_id = RequestId(
+            parent_id,
+            RequestType("megarepo_sync_changeset".to_string()),
+        );
         queue
             .mark_ready(&ctx, &parent_req_id, BlobstoreKey("result_key".to_string()))
             .await?;
@@ -2949,7 +2952,7 @@ mod test {
         let parent_id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("parent_key".to_string()),
                 None,
@@ -3318,7 +3321,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
                 None,
@@ -3371,7 +3374,7 @@ mod test {
         let id = queue
             .add_request(
                 &ctx,
-                &RequestType("async_ping".to_string()),
+                &RequestType("megarepo_sync_changeset".to_string()),
                 Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
                 None,

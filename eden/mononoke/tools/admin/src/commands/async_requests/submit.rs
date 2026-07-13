@@ -78,11 +78,6 @@ pub async fn submit_request(
             enqueue::<thrift::MegarepoRemergeSourceParams>(&ctx, queue, Some(&repo_id), params)
                 .await
         }
-        "ping" => {
-            let params: thrift::AsyncPingParams =
-                serde_json::from_str(&params).context("parsing params")?;
-            enqueue::<thrift::AsyncPingParams>(&ctx, queue, None, params).await
-        }
         "commit_sparse_profile_size" => {
             let params: thrift::CommitSparseProfileSizeParamsV2 =
                 serde_json::from_str(&params).context("parsing params")?;

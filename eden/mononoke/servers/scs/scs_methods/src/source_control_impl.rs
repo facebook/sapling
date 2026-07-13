@@ -1779,14 +1779,6 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CloudWorkspaceSmartlogParams,
         ) -> Result<thrift::CloudWorkspaceSmartlogResponse, service::CloudWorkspaceSmartlogExn>;
 
-        async fn async_ping(
-            params: thrift::AsyncPingParams,
-        ) -> Result<thrift::AsyncPingToken, service::AsyncPingExn>;
-
-        async fn async_ping_poll(
-            params: thrift::AsyncPingToken,
-        ) -> Result<thrift::AsyncPingPollResponse, service::AsyncPingPollExn>;
-
     }
 
     impl_thrift_stream_methods! {

@@ -796,18 +796,6 @@ impl AddScubaParams for thrift::CloudWorkspaceSmartlogParams {
     }
 }
 
-impl AddScubaParams for thrift::AsyncPingParams {
-    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_payload", self.payload.clone());
-    }
-}
-
-impl AddScubaParams for thrift::AsyncPingToken {
-    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("token", self.id.to_string());
-    }
-}
-
 impl AddScubaParams for thrift::RepoTagInfoRequest {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_tag_count", self.tag_to_hash_map.len());

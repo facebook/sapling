@@ -490,8 +490,6 @@ impl_into_thrift_error!(service::RepoTagInfoExn);
 impl_into_thrift_error!(service::CloudWorkspaceInfoExn);
 impl_into_thrift_error!(service::CloudUserWorkspacesExn);
 impl_into_thrift_error!(service::CloudWorkspaceSmartlogExn);
-impl_into_thrift_error!(service::AsyncPingExn);
-impl_into_thrift_error!(poll service::AsyncPingPollExn);
 
 pub fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {

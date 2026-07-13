@@ -7,7 +7,6 @@
 
 use faster_hex::hex_string;
 use scuba_ext::MononokeScubaSampleBuilder;
-use source_control::AsyncPingResponse;
 use source_control::{self as thrift};
 
 /// A trait for logging a thrift `Response` struct to scuba.
@@ -362,33 +361,6 @@ impl AddScubaResponse for thrift::RepoUploadPackfileBaseItemResponse {}
 impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("response_bundle_handle", self.everstore_handle.as_ref());
-    }
-}
-
-impl AddScubaResponse for thrift::AsyncPingToken {
-    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("token", self.id.to_string());
-    }
-}
-
-impl AddScubaResponse for thrift::AsyncPingPollResponse {
-    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        match &self {
-            thrift::AsyncPingPollResponse::poll_pending(_) => {
-                scuba.add("response_ready", false);
-            }
-            thrift::AsyncPingPollResponse::response(response) => {
-                scuba.add("response_ready", true);
-                <AsyncPingResponse as AddScubaResponse>::add_scuba_response(response, scuba);
-            }
-            thrift::AsyncPingPollResponse::UnknownField(_) => {}
-        }
-    }
-}
-
-impl AddScubaResponse for thrift::AsyncPingResponse {
-    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("response_payload", self.payload.clone());
     }
 }
 

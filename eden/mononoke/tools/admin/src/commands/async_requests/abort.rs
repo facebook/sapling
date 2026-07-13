@@ -78,7 +78,6 @@ async fn abort_single_request(
         }
         ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(_) => default_err,
         ThriftAsynchronousRequestParams::commit_sparse_profile_delta_params(_) => default_err,
-        ThriftAsynchronousRequestParams::async_ping_params(_) => default_err,
         ThriftAsynchronousRequestParams::derive_boundaries_params(_) => default_err,
         ThriftAsynchronousRequestParams::derive_slice_params(_) => default_err,
         ThriftAsynchronousRequestParams::derive_backfill_params(_) => default_err,

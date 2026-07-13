@@ -306,12 +306,6 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .map_err(|e| e.into())
                 .into())
         }
-        async_requests_types_thrift::AsynchronousRequestParams::async_ping_params(params) => {
-            Ok(Ok(thrift::AsyncPingResponse {
-                payload: params.payload,
-                ..Default::default()
-            }).into())
-        }
         #[cfg(fbcode_build)]
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
             Ok(commit_sparse_profile_size(ctx, mononoke, params)

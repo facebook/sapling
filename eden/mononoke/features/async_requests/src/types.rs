@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-pub use async_requests_types::AsyncPing;
 pub use async_requests_types::CommitSparseProfileDelta;
 pub use async_requests_types::CommitSparseProfileSize;
 pub use async_requests_types::DeriveBackfill;
@@ -662,26 +661,6 @@ impl_async_svc_method_types_legacy! {
     }
 }
 
-// Params and result types for async_ping
-
-impl_async_svc_method_types! {
-    request_struct => AsyncPing,
-
-    params_value_thrift_type => AsyncPingParams,
-    params_union_variant => async_ping_params,
-
-    response_type => AsyncPingResponse,
-    result_union_variant => async_ping_result,
-
-    poll_response_type => AsyncPingPollResponse,
-    token_type => AsyncPingToken,
-    token_thrift_type => AsyncPingToken,
-
-    fn target(&self: ThriftParams) -> String {
-        "".to_string()
-    }
-}
-
 // Params and result types for commit_sparse_profile_size_async
 
 impl_async_svc_method_types! {
@@ -914,7 +893,6 @@ impl AsynchronousRequestParams {
             ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
                 Ok(params.target())
             }
-            ThriftAsynchronousRequestParams::async_ping_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
                 Ok(params.target())
             }

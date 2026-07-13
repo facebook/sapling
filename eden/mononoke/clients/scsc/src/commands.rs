@@ -9,7 +9,6 @@ use crate::ScscApp;
 
 base_app::subcommands! {
     type App = ScscApp;
-    mod async_requests_ping if "SCSC_ADMIN_ENABLED";
     mod cat;
     mod blame;
     mod commit_fingerprint;

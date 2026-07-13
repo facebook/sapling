@@ -49,11 +49,6 @@ impl RequestTypeName for MegarepoRemergeSource {
 
 // -- Other request types --
 
-pub struct AsyncPing;
-impl RequestTypeName for AsyncPing {
-    const NAME: &'static str = "async_ping";
-}
-
 pub struct CommitSparseProfileSize;
 impl RequestTypeName for CommitSparseProfileSize {
     const NAME: &'static str = "commit_sparse_profile_size_async";
@@ -100,7 +95,6 @@ pub const ALL_REQUEST_TYPE_NAMES: &[&str] = &[
     MegarepoChangeTargetConfig::NAME,
     MegarepoSyncChangeset::NAME,
     MegarepoRemergeSource::NAME,
-    AsyncPing::NAME,
     CommitSparseProfileSize::NAME,
     CommitSparseProfileDelta::NAME,
     DeriveBoundaries::NAME,

@@ -3001,26 +3001,6 @@ struct CloudWorkspaceSmartlogResponse {
   1: SmartlogData smartlog;
 }
 
-// Note that this method has no repo nor commit specifier–that is intentional, tests depend on that.
-struct AsyncPingParams {
-  /// The request payload, which will be echoed back into the response.
-  1: string payload;
-}
-
-struct AsyncPingToken {
-  1: i64 id;
-}
-
-struct AsyncPingResponse {
-  1: string payload;
-}
-
-@hack.MigrationBlockingLegacyJSONSerialization
-union AsyncPingPollResponse {
-  1: PollPending poll_pending;
-  2: AsyncPingResponse response;
-}
-
 /// Token for derive_boundaries async request
 struct DeriveBoundariesToken {
   1: i64 id;
@@ -4295,22 +4275,5 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
-  );
-
-  /// Test support methods
-  /// ==================
-
-  AsyncPingToken async_ping(1: AsyncPingParams params) throws (
-    1: RequestError request_error,
-    2: InternalError internal_error,
-    3: OverloadError overload_error,
-  );
-
-  //// Poll the execution of async_ping request
-  AsyncPingPollResponse async_ping_poll(1: AsyncPingToken token) throws (
-    1: RequestError request_error,
-    2: InternalError internal_error,
-    3: OverloadError overload_error,
-    4: PollError poll_error,
   );
 }
