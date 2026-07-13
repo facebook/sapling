@@ -23,7 +23,7 @@ import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
-import {useCallback, useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {usePrevious} from 'shared/hooks';
@@ -180,6 +180,16 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   );
 }
 
+/**
+ * CommitInfoDetails can be unmounted and remounted while ISL stays open (e.g. on
+ * VS Code tab switch / window focus). That remount resets the scroll
+ * position of the main content container. Persist the last scroll offset at module
+ * scope so it survives remounts. We only remember the most recently viewed commit's
+ * offset (tracked via `savedScrollKey`); selecting a different commit resets to top.
+ */
+let savedScrollTop = 0;
+let savedScrollKey: string | undefined;
+
 function useFetchActiveDiffDetails(diffId?: string) {
   useEffect(() => {
     if (diffId != null) {
@@ -278,6 +288,36 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     selection.isFullyOrPartiallySelected(f.path),
   );
   const selectedFilesLength = selectedFiles.length;
+
+  // Persist/restore the main content scroll position across remounts. A remount
+  // for the same commit restores the offset; selecting a different commit resets
+  // to the top.
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  const handleMainContentScroll = useCallback(() => {
+    const el = mainContentRef.current;
+    if (el != null) {
+      savedScrollTop = el.scrollTop;
+      savedScrollKey = hashOrHead;
+    }
+  }, [hashOrHead]);
+
+  useLayoutEffect(() => {
+    const el = mainContentRef.current;
+    if (el == null) {
+      return;
+    }
+    if (savedScrollKey === hashOrHead) {
+      // Same commit remounting (e.g. tab switch): restore the saved offset.
+      el.scrollTop = savedScrollTop;
+    } else {
+      // Different commit selected: start at the top.
+      savedScrollKey = hashOrHead;
+      savedScrollTop = 0;
+      el.scrollTop = 0;
+    }
+  }, [hashOrHead]);
+
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
       {!commit.isDot ? null : (
@@ -302,6 +342,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
       {isCommitMode && <FillCommitMessage commit={commit} mode={mode} />}
       <div
         className="commit-info-view-main-content"
+        ref={mainContentRef}
+        onScroll={handleMainContentScroll}
         // remount this if we change to commit mode
         key={mode}>
         {schema
