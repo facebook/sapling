@@ -7,6 +7,7 @@ oncall("scm_client_infra")
 cpp_unittest(
     name = "chrono",
     srcs = ["ChronoTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -18,6 +19,7 @@ cpp_unittest(
 cpp_unittest(
     name = "chrono_unit",
     srcs = ["ChronoUnitTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -28,6 +30,7 @@ cpp_unittest(
 cpp_unittest(
     name = "eden_error_test",
     srcs = ["EdenErrorTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -46,6 +49,7 @@ cpp_unittest(
     env = {
         "TEST_DATA": "$(location //eden/fs/utils/test/test-data:test-data)",
     },
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -58,6 +62,7 @@ cpp_unittest(
 cpp_unittest(
     name = "process_access_log",
     srcs = ["ProcessAccessLogTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -70,6 +75,7 @@ cpp_unittest(
 cpp_unittest(
     name = "ring_buffer",
     srcs = ["RingBufferTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -81,6 +87,7 @@ cpp_unittest(
 cpp_unittest(
     name = "source_location",
     srcs = ["SourceLocationTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
@@ -93,6 +100,7 @@ cpp_unittest(
 cpp_unittest(
     name = "sharded_lru_cache",
     srcs = ["ShardedLruCacheTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -105,6 +113,7 @@ cpp_unittest(
 cpp_unittest(
     name = "glob_test",
     srcs = ["GlobMatcherTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
@@ -116,6 +125,7 @@ cpp_unittest(
 cpp_unittest(
     name = "request_permit_vendor_test",
     srcs = ["RequestPermitVendorTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -126,6 +136,7 @@ cpp_unittest(
 cpp_unittest(
     name = "filter_utils_test",
     srcs = ["FilterUtilsTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/store:filtered_backing_store",
@@ -137,6 +148,7 @@ cpp_unittest(
 cpp_unittest(
     name = "mini_tracer_test",
     srcs = ["MiniTracerTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/utils:mini_tracer",

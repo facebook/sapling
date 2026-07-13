@@ -1,6 +1,7 @@
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -17,6 +18,7 @@ cpp_unittest(
     srcs = [
         "TaskTraceTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -30,6 +32,7 @@ cpp_unittest(
     srcs = [
         "ActivityBufferTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -111,6 +114,7 @@ cpp_unittest(
     srcs = [
         "ThrowTraceCaptureTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -124,6 +128,7 @@ cpp_unittest(
     srcs = [
         "StackTraceUploaderTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -136,6 +141,7 @@ cpp_unittest(
     srcs = [
         "EdenErrorInfoBuilderTest.cpp",
     ],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
@@ -161,6 +167,7 @@ cpp_unittest(
     srcs = [
         "EdenStructuredLoggerTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -177,6 +184,7 @@ cpp_unittest(
     srcs = [
         "EdenFsEventsLoggerTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",

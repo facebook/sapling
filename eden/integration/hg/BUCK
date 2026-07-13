@@ -1,6 +1,7 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -10,6 +11,7 @@ python_unittest(
     name = "absorb",
     srcs = ["absorb_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -32,6 +34,7 @@ python_unittest(
     name = "commit",
     srcs = ["commit_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -43,6 +46,7 @@ python_unittest(
     name = "copy",
     srcs = ["copy_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",

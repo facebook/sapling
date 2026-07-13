@@ -1,10 +1,12 @@
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
 cpp_unittest(
     name = "fake_backing_store_test",
     srcs = ["FakeBackingStoreTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -22,6 +24,7 @@ cpp_unittest(
 cpp_unittest(
     name = "fake_object_store_test",
     srcs = ["FakeObjectStoreTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -37,6 +40,7 @@ cpp_unittest(
 cpp_unittest(
     name = "test_mount_test",
     srcs = ["TestMountTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -51,6 +55,7 @@ cpp_unittest(
 cpp_unittest(
     name = "test_server_test",
     srcs = ["TestServerTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -64,6 +69,7 @@ cpp_unittest(
 cpp_unittest(
     name = "test_util_test",
     srcs = ["TestUtilTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",

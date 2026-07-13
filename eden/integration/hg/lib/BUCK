@@ -1,6 +1,7 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -24,6 +25,7 @@ python_unittest(
         "hg_extension_test_base_test.py",
     ],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":testutil",
