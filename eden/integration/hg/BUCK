@@ -58,6 +58,7 @@ python_unittest(
     name = "debug_get_parents",
     srcs = ["debug_get_parents.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -69,6 +70,7 @@ python_unittest(
     name = "debug_hg_dirstate",
     srcs = ["debug_hg_dirstate_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -80,6 +82,7 @@ python_unittest(
     name = "diff",
     srcs = ["diff_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -91,6 +94,7 @@ python_unittest(
     name = "doctor",
     srcs = ["doctor_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -102,6 +106,7 @@ python_unittest(
     name = "eden_journal",
     srcs = ["eden_journal_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/service:thrift-python-types",
@@ -117,6 +122,7 @@ python_unittest(
     name = "files",
     srcs = ["files_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -139,6 +145,7 @@ python_unittest(
     name = "filteredhg_clone",
     srcs = ["filteredhg_clone_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -151,6 +158,7 @@ python_unittest(
     name = "fold",
     srcs = ["fold_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -162,6 +170,7 @@ python_unittest(
     name = "graft",
     srcs = ["graft_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -173,6 +182,7 @@ python_unittest(
     name = "grep",
     srcs = ["grep_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -184,6 +194,7 @@ python_unittest(
     name = "histedit",
     srcs = ["histedit_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -195,6 +206,7 @@ python_unittest(
     name = "journal",
     srcs = ["journal_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -206,6 +218,7 @@ python_unittest(
     name = "merge",
     srcs = ["merge_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -217,6 +230,7 @@ python_unittest(
     name = "move",
     srcs = ["move_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -228,6 +242,7 @@ python_unittest(
     name = "negative_caching",
     srcs = ["negative_caching_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -239,6 +254,7 @@ python_unittest(
     name = "non_eden_operation",
     srcs = ["non_eden_operation_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -250,6 +266,7 @@ python_unittest(
     name = "post_clone",
     srcs = ["post_clone_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -261,6 +278,7 @@ python_unittest(
     name = "pull",
     srcs = ["pull_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -272,6 +290,7 @@ python_unittest(
     name = "rebase",
     srcs = ["rebase_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -304,6 +323,7 @@ python_unittest(
     name = "revert",
     srcs = ["revert_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -315,6 +335,7 @@ python_unittest(
     name = "rm",
     srcs = ["rm_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -326,6 +347,7 @@ python_unittest(
     name = "rollback",
     srcs = ["rollback_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -337,6 +359,7 @@ python_unittest(
     name = "shelve",
     srcs = ["shelve_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -348,6 +371,7 @@ python_unittest(
     name = "sparse",
     srcs = ["sparse_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -359,6 +383,7 @@ python_unittest(
     name = "split",
     srcs = ["split_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -370,6 +395,7 @@ python_unittest(
     name = "status_deadlock",
     srcs = ["status_deadlock_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -408,6 +434,7 @@ python_unittest(
     name = "undo",
     srcs = ["undo_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -432,6 +459,7 @@ python_unittest(
     name = "uncommit",
     srcs = ["uncommit_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/hg/lib:testutil",
@@ -444,6 +472,7 @@ python_unittest(
     srcs = ["filteredhg_migration_test.py"],
     env = artifacts["env"],
     labels = ["autodeps2_generated"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
