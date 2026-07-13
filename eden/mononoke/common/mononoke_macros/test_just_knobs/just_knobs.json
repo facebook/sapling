@@ -6,6 +6,7 @@
     "scm/mononoke:dbcm_read_from_manifest": true,
     "scm/mononoke:derived_data_backfill_opportunistic_boundary_completion": true,
     "scm/mononoke:derived_data_disable_derivation_workers": false,
+    "scm/mononoke:derivation_worker_nack_backoff_enabled": false,
     "scm/mononoke:derived_data_disable_remote_derivation": false,
     "scm/mononoke:derived_data_use_streaming_derivation": true,
     "scm/mononoke:derived_data_use_content_manifests": true,
