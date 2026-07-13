@@ -988,14 +988,11 @@ function scsc_scmquery_test {
 
 # Forces scmqueryclient-rust onto the SCS-direct path by enabling the
 # scm/scmquery:direct_scs JustKnob in the per-test override file.
-# Also defines support_bonsai_input (off) so that commit_id_from_rev's
-# cached_config lookup does not error on a missing key.
 function enable_scmquery_scs_direct {
   merge_just_knobs <<EOF
 {
   "bools": {
     "scm/scmquery:direct_scs": true,
-    "scm/scmquery:support_bonsai_input": false
   }
 }
 EOF
