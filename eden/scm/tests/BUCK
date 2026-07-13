@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 load("//antlir/fbpkg/fetch:defs.bzl", "fbpkg_fetch")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 load(
@@ -97,6 +98,7 @@ run_tests_target(
     eden = True,
     included = TRINITY_TEST_LIST,
     mononoke = True,
+    network_access = network_access_utils.all(),
     watchman = True,
 )
 

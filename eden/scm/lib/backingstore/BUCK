@@ -1,6 +1,7 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("sapling")
 
@@ -121,6 +122,7 @@ cpp_unittest(
     srcs = [
         "test/TreeBuilderTest.cpp",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
