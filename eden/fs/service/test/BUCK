@@ -120,6 +120,7 @@ cpp_unittest(
     name = "eden_server_test",
     srcs = ["EdenServerTest.cpp"],
     labels = ["autodeps2_generated"],
+    network_access = network_access_utils.all(),
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:fault_injector",

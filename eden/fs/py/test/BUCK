@@ -1,10 +1,12 @@
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
 python_unittest(
     name = "test",
     srcs = glob(["*.py"]),
+    network_access = network_access_utils.none(),
     deps = [
         "//eden/fs/py/eden:dirstate",
     ],

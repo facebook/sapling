@@ -2,12 +2,14 @@ load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
 cpp_unittest(
     name = "checkout",
     srcs = ["CheckoutTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -40,6 +42,7 @@ cpp_unittest(
 cpp_unittest(
     name = "checkout_cancellation",
     srcs = ["CheckoutCancellationTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -64,6 +67,7 @@ cpp_unittest(
 cpp_unittest(
     name = "dematerialize",
     srcs = ["DematerializeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -79,6 +83,7 @@ cpp_unittest(
 cpp_unittest(
     name = "diff",
     srcs = ["DiffTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -103,6 +108,7 @@ cpp_unittest(
 cpp_unittest(
     name = "eden_dispatcher",
     srcs = ["EdenDispatcherTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -127,6 +133,7 @@ cpp_unittest(
         "ovr_config//os:linux",
         "ovr_config//os:windows",
     ],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -157,6 +164,7 @@ cpp_unittest(
 cpp_unittest(
     name = "file_inode",
     srcs = ["FileInodeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
@@ -181,6 +189,7 @@ cpp_unittest(
     compatible_with = [
         "ovr_config//os:linux",
     ],
+    network_access = network_access_utils.none(),
     deps = [
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
@@ -199,6 +208,7 @@ cpp_unittest(
 cpp_unittest(
     name = "glob_node",
     srcs = ["GlobNodeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -220,6 +230,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_base",
     srcs = ["InodeBaseTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -233,6 +244,7 @@ cpp_unittest(
 cpp_unittest(
     name = "virtual_inode_loader",
     srcs = ["VirtualInodeLoaderTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -249,6 +261,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_map",
     srcs = ["InodeMapTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -270,6 +283,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_ptr",
     srcs = ["InodePtrTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -283,6 +297,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_table",
     srcs = ["InodeTableTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -297,6 +312,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_pressure_policy",
     srcs = ["InodePressurePolicyTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -307,6 +323,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_timestamps",
     srcs = ["InodeTimestampsTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -319,6 +336,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_metadata",
     srcs = ["InodeMetadataTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -329,6 +347,7 @@ cpp_unittest(
 cpp_unittest(
     name = "journal_update",
     srcs = ["JournalUpdateTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -360,6 +379,7 @@ cpp_unittest(
     env = {
         "RESOURCE_OVERLAY_V2": "$(location //eden/test-data:overlay-v2)/overlay-v2.tgz",
     },
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -394,6 +414,7 @@ cpp_unittest(
 cpp_unittest(
     name = "overlay_file",
     srcs = ["OverlayFileTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
@@ -416,6 +437,7 @@ cpp_unittest(
 cpp_unittest(
     name = "remove",
     srcs = ["RemoveTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -430,6 +452,7 @@ cpp_unittest(
 cpp_unittest(
     name = "rename",
     srcs = ["RenameTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -446,6 +469,7 @@ cpp_unittest(
 cpp_unittest(
     name = "symlink",
     srcs = ["SymlinkTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -462,6 +486,7 @@ cpp_unittest(
 cpp_unittest(
     name = "traverse",
     srcs = ["TraverseTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -474,6 +499,7 @@ cpp_unittest(
 cpp_unittest(
     name = "tree_inode",
     srcs = ["TreeInodeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -501,6 +527,7 @@ cpp_unittest(
 cpp_unittest(
     name = "virtual_inode",
     srcs = ["VirtualInodeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -532,6 +559,7 @@ cpp_unittest(
 cpp_unittest(
     name = "unload",
     srcs = ["UnloadTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -548,6 +576,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_access_logging",
     srcs = ["InodeAccessLoggingTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gmock",
@@ -567,6 +596,7 @@ cpp_unittest(
 cpp_unittest(
     name = "inode_access_logger_dual_write",
     srcs = ["InodeAccessLoggerDualWriteTest.cpp"],
+    network_access = network_access_utils.none(),
     deps = [
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger",
@@ -672,6 +702,7 @@ cpp_benchmark(
 cpp_unittest(
     name = "restricted_tree_inode",
     srcs = ["RestrictedTreeInodeTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
@@ -689,6 +720,7 @@ cpp_unittest(
 cpp_unittest(
     name = "restricted_tree_caching",
     srcs = ["RestrictedTreeCachingTest.cpp"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
