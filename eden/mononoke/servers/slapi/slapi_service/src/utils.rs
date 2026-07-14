@@ -64,13 +64,35 @@ pub async fn get_repo<R: MononokeRepo>(
     }
 
     let name = name.as_ref();
-    sctx.mononoke_api()
+    let repo = sctx
+        .mononoke_api()
         .repo(rctx.ctx.with_mutated_scuba(|_| scuba), name)
         .await
-        .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?
-        .with_context(|| ErrorKind::RepoDoesNotExist(name.to_string()))
-        .map_err(HttpError::e404)?
-        .build()
+        .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?;
+
+    let repo = match repo {
+        Some(repo) => repo,
+        None => {
+            // The repo is not loaded on this task. In a sharded deployment it may
+            // still exist tier-wide but be assigned to a different shard, so return
+            // a retriable 503 in that case and reserve 404 for repos that are truly
+            // unknown to the tier.
+            return if sctx
+                .mononoke_api()
+                .repo_names_in_tier
+                .load()
+                .contains_key(name)
+            {
+                Err(HttpError::e503(ErrorKind::RepoNotLoaded(name.to_string())))
+            } else {
+                Err(HttpError::e404(ErrorKind::RepoDoesNotExist(
+                    name.to_string(),
+                )))
+            };
+        }
+    };
+
+    repo.build()
         .await
         .map(|repo| repo.hg())
         .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))

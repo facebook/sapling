@@ -40,6 +40,8 @@ pub enum ErrorKind {
     InvalidContentLength,
     #[error("Repository does not exist: {0}")]
     RepoDoesNotExist(String),
+    #[error("Repository not available on this server: {0}")]
+    RepoNotLoaded(String),
     #[error("Failed to load repository: {0}")]
     RepoLoadFailed(String),
     #[error("Key does not exist: {0:?}")]
