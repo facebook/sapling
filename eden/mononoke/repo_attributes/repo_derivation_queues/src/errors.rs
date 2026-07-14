@@ -56,10 +56,12 @@ impl From<zeus_client::ZeusError> for InternalError {
             zeus_client::ZeusError::RuntimeError {
                 message: msg,
                 exception_type: ZelosExceptionType::ZNONODE,
+                is_throttled: _,
             } => InternalError::ItemDeleted(msg),
             zeus_client::ZeusError::RuntimeError {
                 message: msg,
                 exception_type: ZelosExceptionType::ZCONNECTIONLOSS,
+                is_throttled: _,
             } => InternalError::TransientZeusError(msg),
             _ => InternalError::Other(e.into()),
         }
