@@ -345,6 +345,70 @@ fn test_describe_ins_del_stacks_between_new_old() {
 }
 
 #[test]
+fn test_example_merge() {
+    // Demonstrate how to do a merge, and the linelog internals of the merge.
+    // 0-{1,2}-3. 1 and 2 both inserts and deletes something.
+    let mut log = LineLog::default();
+    log = record_text(log, "b\nc\nd\n", 0, 0);
+    // Left side: delete "d", insert "a".
+    log = record_text(log, "a\nb\nc\n", 0, 1);
+    // Right side: delete "b", append "e".
+    log = record_text(log, "c\nd\ne\n", 0, 2);
+    // Create edges for the merge first, so merge has one rev (3) to be edited on.
+    log = log.with_dag_edge(2, 3).with_dag_edge(1, 3);
+    // The merge changes "c" (not modified by both sides) to "C".
+    log = record_text(log, "a\nC\ne\n", 3, 3);
+    // Note the linelog internals, the merge itself does not re-create the edits
+    // made by either side.
+    assert_eq!(
+        log.describe_ins_del_stacks(),
+        [
+            "╭────Insert (rev 1)        ",
+            "│    Line:  a              ",
+            "╰────                      ",
+            "╭────Insert (rev 0)        ",
+            "│    Delete (rev 2)    ───╮",
+            "│    Line:  b             │",
+            "│                      ───╯",
+            "│╭───Insert (rev 3)        ",
+            "││   Line:  C              ",
+            "│╰───                      ",
+            "│    Delete (rev 3)    ───╮",
+            "│    Line:  c             │",
+            "│                      ───╯",
+            "│    Delete (rev 1)    ───╮",
+            "│    Line:  d             │",
+            "╰────                     │",
+            "                       ───╯",
+            "╭────Insert (rev 2)        ",
+            "│    Line:  e              ",
+            "╰────                      "
+        ]
+    );
+
+    // CheckoutRev differences.
+    let revs = SmallRevs::from_range(1..=2);
+    // CheckoutRev::Merge respects the deletion on each side.
+    assert_eq!(
+        log.checkout_text(CheckoutRev::Merge(revs.clone())),
+        r#"a
+c
+e
+"#
+    );
+    // CheckoutRev::Range keeps the deleted lines, since they exist in the other side.
+    assert_eq!(
+        log.checkout_text(CheckoutRev::Range(revs.clone())),
+        r#"a
+b
+c
+d
+e
+"#
+    );
+}
+
+#[test]
 fn test_remap_revs() {
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
     assert_eq!(log.checkout_text(1), "b\n");
