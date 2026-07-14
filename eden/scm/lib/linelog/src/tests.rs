@@ -13,6 +13,7 @@ use im::Vector as ImVec;
 use rand_chacha::ChaChaRng;
 use rand_core::Rng as _;
 use rand_core::SeedableRng as _;
+use smallvec::SmallVec;
 
 use crate::AbstractLineLog;
 use crate::CheckoutRev;
@@ -504,6 +505,51 @@ fn test_fold_revs() {
     assert_eq!(folded.checkout_text(2), "");
     assert_eq!(folded.checkout_text(3), "");
     assert_eq!(folded.checkout_text(4), log.checkout_text(4));
+}
+
+#[test]
+fn test_topo_remap_revs() {
+    fn parents(parents: &[&[Rev]]) -> Vec<SmallVec<[Rev; 1]>> {
+        parents
+            .iter()
+            .map(|parents| parents.iter().copied().collect())
+            .collect()
+    }
+
+    let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
+    assert_eq!(log.nanodag().to_string(), "0-1-2-3");
+
+    // Reorder append-only revs: old 0-1-2-3, proposed old edges
+    // 0-1-3-2. The returned log is renumbered back to 0-1-2-3, with
+    // old rev 3 becoming new rev 2.
+    let (remapped, old_to_new) = log
+        .clone()
+        .topo_remap(parents(&[&[], &[0], &[3], &[1]]))
+        .expect("append-only revs can be reordered");
+    assert_eq!(old_to_new, vec![0, 1, 3, 2]);
+    assert_eq!(remapped.nanodag().to_string(), "0-1-2-3");
+    assert_eq!(remapped.checkout_text(1), "a\n");
+    assert_eq!(remapped.checkout_text(2), "a\nc\n");
+    assert_eq!(remapped.checkout_text(3), "a\nb\nc\n");
+
+    // Split 0-1-2-3 into 0-2 and 1-3. Since these append-only revs have no
+    // textual dependencies on each other, dep_dag allows the split.
+    let (split, old_to_new) = log
+        .clone()
+        .topo_remap(parents(&[&[], &[], &[0], &[1]]))
+        .expect("independent revs can be split into disjoint chains");
+    assert_eq!(old_to_new, vec![0, 1, 2, 3]);
+    assert_eq!(split.nanodag().to_string(), "{0-2,1-3}");
+    assert_eq!(split.checkout_text(2), "b\n");
+    assert_eq!(split.checkout_text(3), "a\nc\n");
+
+    // Join the split chains back into a linear history.
+    let (joined, old_to_new) = split
+        .topo_remap(parents(&[&[], &[0], &[1], &[2]]))
+        .expect("split chains can be joined back");
+    assert_eq!(old_to_new, vec![0, 1, 2, 3]);
+    assert_eq!(joined.nanodag().to_string(), "0-1-2-3");
+    assert_eq!(joined.checkout_text(3), "a\nb\nc\n");
 }
 
 #[test]

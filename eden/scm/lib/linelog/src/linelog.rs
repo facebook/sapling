@@ -15,6 +15,7 @@ use std::sync::atomic::Ordering;
 
 use bitflags::bitflags;
 use im::Vector as ImVec;
+use smallvec::SmallVec;
 
 use crate::maybe_mut::MaybeMut;
 use crate::nanodag::NanoDag;
@@ -793,6 +794,30 @@ impl<T> AbstractLineLog<T> {
         let dag = self.dag.clone().fold(revs)?;
         let result = self.remap_revs(&|r| if revs.contains(r) { start } else { r });
         Ok(Self { dag, ..result })
+    }
+
+    /// Remap revs according to a proposed DAG.
+    ///
+    /// `new_parents` uses the existing rev ids. See [`NanoDag::topo_remap`].
+    /// It is only a proposal, and does not specify exactly which `rev` is
+    /// changed to which other `rev`.
+    ///
+    /// Example use cases:
+    /// - Reorder revs (similar to histedit reorder)
+    /// - Break or restore dependencies (e.g. turn one stack into two stacks,
+    ///   or back to one stack).
+    ///
+    /// Returns the remapped linelog and the old-to-new rev mapping.
+    /// Returns an error if the textual dependencies ([`Self::dep_dag`]) cannot
+    /// be preserved.
+    pub fn topo_remap(
+        self,
+        new_parents: Vec<SmallVec<[Rev; 1]>>,
+    ) -> Result<(Self, Vec<Rev>), String> {
+        let dep_dag = self.dep_dag().clone();
+        let (dag, old_to_new) = self.dag.topo_remap(new_parents, &dep_dag)?;
+        let result = self.remap_revs(&|r| old_to_new[r]);
+        Ok((Self { dag, ..result }, old_to_new))
     }
 
     /// Truncate linelog. Drop revs >= the given `rev`.

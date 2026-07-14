@@ -23,5 +23,8 @@ pub use crate::stacks::FlattenLine;
 /// LineLog with string line content.
 pub type LineLog = AbstractLineLog<String>;
 
+// Re-export
+pub use smallvec;
+
 #[cfg(test)]
 mod tests;
