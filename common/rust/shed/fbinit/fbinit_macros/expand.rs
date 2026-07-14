@@ -126,13 +126,31 @@ pub fn expand(mode: Mode, args: Args, mut function: ItemFn) -> Result<TokenStrea
         }
     };
 
+    // Tests get NO DestroyGuard: `perform_destroy` tears down process-global
+    // C++ state (folly singletons, the global IO executor), and a test binary
+    // may run many test cases in one process (tpx `run_as_bundle`, or invoking
+    // the test binary directly) — the first finishing test's guard would
+    // destroy that state under every still-running sibling, and `perform_init`
+    // is a `Once`, so nothing can ever bring it back. The per-test guard only
+    // ever appeared safe because tpx's default one-process-per-case isolation
+    // made "end of test" and "end of program" coincide. Tests exit right after
+    // the last case, so skipping the destructor changes nothing observable;
+    // the init stays reachable from a static, so leak checkers report it as
+    // still-reachable, not leaked.
+    let destroy_guard = match mode {
+        Mode::Main => quote! {
+            let destroy_guard = unsafe { fbinit::DestroyGuard::new() };
+        },
+        Mode::Test | Mode::NestedTest => quote! {},
+    };
+
     function.block = parse_quote!({
         #guard
         #set_vars
         #assignment unsafe {
             #perform_init
         };
-        let destroy_guard = unsafe { fbinit::DestroyGuard::new() };
+        #destroy_guard
         #body
     });
 
