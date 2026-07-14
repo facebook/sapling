@@ -997,6 +997,26 @@ fn test_dep_dag() {
     );
 }
 
+#[test]
+fn test_dep_dag_multiple_entries() {
+    let (log, e1) = LineLog::default().add_entry();
+    let log = log
+        .edit_chunk(E0, 0, 0, 0, 1, lines("a\n"), Default::default())
+        .edit_chunk(E0, 1, 0, 1, 2, lines("b\n"), Default::default())
+        .edit_chunk(e1, 0, 0, 0, 3, lines("x\n"), Default::default())
+        .edit_chunk(e1, 3, 0, 1, 4, lines("y\n"), Default::default());
+
+    let deps0 = log.entry_dep_dag(E0);
+    assert_eq!(deps0.to_string(), "{0,1-2,3,4}");
+
+    let deps1 = log.entry_dep_dag(e1);
+    assert_eq!(deps1.to_string(), "{0,1,2,3-4}");
+
+    // Overall deps. Union of the above.
+    let deps = log.dep_dag();
+    assert_eq!(deps.to_string(), "{0,1-2,3-4}");
+}
+
 fn lines(s: &str) -> Vec<String> {
     s.lines().map(|s| format!("{s}\n")).collect()
 }

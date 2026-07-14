@@ -940,6 +940,11 @@ impl<T, M> AbstractLineLog<T, M> {
         &self.dag
     }
 
+    /// Get the dependency dag for a single entry.
+    pub fn entry_dep_dag(&self, entry: EntryId) -> NanoDag {
+        self.calculate_entry_dep_dag(entry)
+    }
+
     /// Get the dependency dag. If `rev1` has parent `rev2`, then `rev1`
     /// textually depend on `rev2` and cannot be moved to an ancestor of `rev2`.
     ///

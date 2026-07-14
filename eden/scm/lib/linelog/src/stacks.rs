@@ -213,7 +213,7 @@ impl<T, M> AbstractLineLog<T, M> {
     /// for performance considerations). So this function does not double check
     /// if the edge is present in `self.dag` to report the linelog internal
     /// dependencies honestly.
-    pub(crate) fn calculate_dep_dag(&self) -> NanoDag {
+    pub(crate) fn calculate_entry_dep_dag(&self, entry: EntryId) -> NanoDag {
         // With the insertion and deletion stacks (see explanation in
         // visit_with_ins_del_stacks), when we see a new insertion block, or deletion
         // block, we add two dependencies:
@@ -278,8 +278,26 @@ impl<T, M> AbstractLineLog<T, M> {
         }
 
         let mut visitor = DepMapVisitor(NanoDag::default().truncate(self.dag.len()));
-        self.visit_with_ins_del_stacks(EntryId(0), &mut visitor);
+        self.visit_with_ins_del_stacks(entry, &mut visitor);
         visitor.0
+    }
+
+    pub(crate) fn calculate_dep_dag(&self) -> NanoDag {
+        self.entries
+            .iter()
+            .enumerate()
+            .map(|(entry, _)| self.calculate_entry_dep_dag(EntryId(entry)))
+            .fold(
+                NanoDag::default().truncate(self.dag.len()),
+                |mut result, dep| {
+                    for (child, parents) in dep.iter() {
+                        for parent in parents {
+                            result = result.with_edge(*parent, child);
+                        }
+                    }
+                    result
+                },
+            )
     }
 
     /// Visit (execute) instructions with the insertion and deletion stacks
