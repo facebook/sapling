@@ -477,6 +477,36 @@ fn test_remap_revs() {
 }
 
 #[test]
+fn test_fold_revs() {
+    let mut log = LineLog::default();
+    log = record_text(log, "b\n", 0, 0);
+    log = record_text(log, "b\nc\n", 0, 1);
+    log = record_text(log, "b\nC\n", 1, 2);
+    log = record_text(log, "d\nb\n", 0, 3);
+    log = log.with_dag_edge(3, 4).with_dag_edge(2, 4);
+    log = record_text(log, "d\nb\nC\n", 4, 4);
+
+    assert_eq!(log.nanodag().to_string(), "0-{1-2,3}-4");
+    assert_eq!(log.checkout_text(1), "b\nc\n");
+    assert_eq!(log.checkout_text(2), "b\nC\n");
+    assert_eq!(log.checkout_text(3), "d\nb\n");
+    assert_eq!(log.checkout_text(4), "d\nb\nC\n");
+
+    // Fold {1-2,3}, two branches into one rev.
+    let folded = log.clone().fold(&SmallRevs::from_range(1..=3)).unwrap();
+
+    assert_eq!(folded.nanodag().to_string(), "{0-1-4,2,3}");
+
+    assert_eq!(
+        folded.checkout_text(1),
+        log.checkout_text(CheckoutRev::Merge(SmallRevs::from_range(2..=3)))
+    );
+    assert_eq!(folded.checkout_text(2), "");
+    assert_eq!(folded.checkout_text(3), "");
+    assert_eq!(folded.checkout_text(4), log.checkout_text(4));
+}
+
+#[test]
 fn test_remap_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 

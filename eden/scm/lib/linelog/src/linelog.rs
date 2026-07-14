@@ -781,6 +781,20 @@ impl<T> AbstractLineLog<T> {
         Self { dag, ..result }
     }
 
+    /// Fold revs into the smallest rev in `revs`.
+    ///
+    /// Folded revs other than the smallest rev become isolated in the dag.
+    /// LineLog instruction references to any folded rev are rewritten to the
+    /// smallest rev.
+    pub fn fold(self, revs: &SmallRevs) -> Result<Self, &'static str> {
+        let Some(start) = revs.iter().next() else {
+            return Ok(self);
+        };
+        let dag = self.dag.clone().fold(revs)?;
+        let result = self.remap_revs(&|r| if revs.contains(r) { start } else { r });
+        Ok(Self { dag, ..result })
+    }
+
     /// Truncate linelog. Drop revs >= the given `rev`.
     pub fn truncate(self, rev: Rev) -> Self {
         let code = self
