@@ -300,6 +300,70 @@ fn test_a_lines_cache_effectiveness() {
 }
 
 #[test]
+fn test_edit_chunk_inline_same_rev_own_lines() {
+    let log1 = log_from_texts(&["a\nb\nc\n".into()]);
+    let log2 = record_text(log1.clone(), "a\nx\ny\n", 1, 1);
+
+    assert_eq!(log1.code.len(), log2.code.len());
+    assert_eq!(
+        log1.describe_instructions(),
+        [
+            "0: J 1",
+            "1: JL 1 5",
+            "2: LINE 1 \"a\"",
+            "3: LINE 1 \"b\"",
+            "4: LINE 1 \"c\"",
+            "5: END"
+        ]
+    );
+
+    // Instructions are updated inline without patching.
+    assert_eq!(
+        log2.describe_instructions(),
+        [
+            "0: J 1",
+            "1: JL 1 5",
+            "2: LINE 1 \"a\"",
+            "3: LINE 1 \"x\"",
+            "4: LINE 1 \"y\"",
+            "5: END"
+        ]
+    );
+}
+
+#[test]
+fn test_edit_chunk_inline_can_be_disabled() {
+    let log1 = log_from_texts(&["a\nb\nc\n".into()]);
+    let flags = EditFlags::default() - EditFlags::INLINE_EDIT;
+    let log2 = log1
+        .clone()
+        .edit_chunk(E0, 1, 1, 3, 1, lines("x\ny\n"), flags);
+
+    assert_eq!(log2.checkout_text(E0, R(1)), "a\nx\ny\n");
+    assert!(log2.code.len() > log1.code.len());
+}
+
+#[test]
+fn test_edit_chunk_inline_old_rev_own_lines() {
+    let log1 = log_from_texts(&["a\nb\n".into(), "a\nb\nc\n".into()]);
+    let log2 = record_text(log1.clone(), "x\nb\nc\n", 2, 1);
+
+    assert_eq!(log2.checkout_text(E0, R(1)), "x\nb\n");
+    assert_eq!(log2.checkout_text(E0, R(2)), "x\nb\nc\n");
+    assert_eq!(log1.code.len(), log2.code.len());
+}
+
+#[test]
+fn test_edit_chunk_inline_skips_ancestor_lines() {
+    let log1 = log_from_texts(&["a\n".into(), "a\nb\n".into()]);
+    let log2 = record_text(log1.clone(), "x\nb\n", 2, 2);
+
+    assert_eq!(log2.checkout_text(E0, R(1)), "a\n");
+    assert_eq!(log2.checkout_text(E0, R(2)), "x\nb\n");
+    assert!(log2.code.len() > log1.code.len());
+}
+
+#[test]
 fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
     let stats = Arc::new(PerfStats::default());
     let log = LineLog::default().with_perf_stats(Some(stats.clone()));

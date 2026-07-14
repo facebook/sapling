@@ -225,12 +225,14 @@ bitflags! {
         const BLOCK_SHIFT = 0b00000001;
         /// When editing rev_a -> rev_b, try to add an edge in the dag.
         const ADD_EDGE = 0b00000010;
+        /// When replacing lines introduced by rev_b, edit LINE instructions in-place.
+        const INLINE_EDIT = 0b00000100;
     }
 }
 
 impl Default for EditFlags {
     fn default() -> Self {
-        Self::BLOCK_SHIFT | Self::ADD_EDGE
+        Self::BLOCK_SHIFT | Self::ADD_EDGE | Self::INLINE_EDIT
     }
 }
 
@@ -287,7 +289,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 );
             };
             debug_assert!(this.dag.all().contains(b_rev));
-            this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
+            this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut, flags)
         })
     }
 
@@ -551,12 +553,13 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
 
     // private because of `a_lines`.
     fn edit_chunk_internal(
-        self,
+        mut self,
         a1: LineIdx,
         a2: LineIdx,
         b_rev: Rev,
         b_lines: VecDeque<Arc<T>>,
         mut a_lines: MaybeMut<ImVec<LineInfo<T>>>,
+        flags: EditFlags,
     ) -> Self {
         assert!(a1 <= a2);
         assert!(a2 <= a_lines.len());
@@ -566,6 +569,12 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 dag: self.dag.with_edge(b_rev, b_rev),
                 ..self
             };
+        }
+
+        if flags.contains(EditFlags::INLINE_EDIT)
+            && self.try_edit_chunk_inline(a1, a2, b_rev, &b_lines, &mut a_lines)
+        {
+            return self;
         }
 
         let start = self.code.len();
@@ -709,6 +718,49 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
             deps_map_cache: Default::default(),
             ..self
         }
+    }
+
+    /// When editing the lines introduced by the same rev
+    /// (every `a_lines[a1..a2]` has `.rev` == b_rev`), and the chunk size is
+    /// the same (`a2 - a1 == len(b_lines)`), attempt to edit inline by
+    /// replacing related LINE instructions directly, without patching.
+    fn try_edit_chunk_inline(
+        &mut self,
+        a1: LineIdx,
+        a2: LineIdx,
+        b_rev: Rev,
+        b_lines: &VecDeque<Arc<T>>,
+        a_lines: &mut MaybeMut<ImVec<LineInfo<T>>>,
+    ) -> bool {
+        let line_count = a2 - a1;
+        if line_count == 0 || b_lines.len() != line_count {
+            return false;
+        }
+
+        let mut pcs = Vec::with_capacity(line_count);
+        for line in a_lines.iter().skip(a1).take(line_count) {
+            if line.rev != b_rev {
+                return false;
+            }
+            match self.code.get(line.pc) {
+                Some(Inst::LINE(rev, _)) if *rev == b_rev => pcs.push(line.pc),
+                _ => return false,
+            }
+        }
+
+        for (pc, line) in pcs.into_iter().zip(b_lines.iter()) {
+            self.code.set(pc, Inst::LINE(b_rev, line.clone()));
+        }
+
+        if let Some(a_lines_mut) = a_lines.get_mut() {
+            for (i, line) in (a1..a2).zip(b_lines.iter()) {
+                a_lines_mut[i].data = line.clone();
+            }
+        }
+
+        self.a_lines_cache = None;
+        self.deps_map_cache = Default::default();
+        true
     }
 
     // private, no caching.
