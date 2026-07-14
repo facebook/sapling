@@ -256,6 +256,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     /// Panics if `a_rev` > `max_rev`.
     pub fn edit_chunk(
         mut self,
+        entry: EntryId,
         a_rev: Rev,
         mut a1: LineIdx,
         mut a2: LineIdx,
@@ -274,7 +275,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
             self.dag = self.dag.with_edge(a_rev, b_rev);
         };
         let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
-        self.with_a_lines_cache(a_rev, b_rev, old_max_rev, |this: Self, maybe_mut| {
+        self.with_a_lines_cache(entry, a_rev, b_rev, old_max_rev, |this: Self, maybe_mut| {
             if flags.contains(EditFlags::BLOCK_SHIFT) {
                 const DEFAULT_SHIFT_THRESHOLD: usize = 5;
                 this.try_block_shift(
@@ -500,6 +501,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     /// hit the cache.
     fn with_a_lines_cache(
         mut self,
+        entry: EntryId,
         a_rev: Rev,
         b_rev: Rev,
         old_max_rev: Rev,
@@ -509,7 +511,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
 
         // Reuse or rebuild cache.
         let mut a_lines: ImVec<LineInfo<T>> = (match cache {
-            Some((entry, rev, a_lines)) if entry == EntryId(0) && rev == a_rev => {
+            Some((cache_entry, rev, a_lines)) if cache_entry == entry && rev == a_rev => {
                 if let Some(stats) = self.perf_stats.as_ref() {
                     stats.cache_hit.fetch_add(1, Ordering::Release);
                 }
@@ -517,7 +519,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
             }
             _ => None,
         })
-        .unwrap_or_else(|| self.execute(EntryId(0), a_rev));
+        .unwrap_or_else(|| self.execute(entry, a_rev));
 
         // Can only update cache if there are no possible edits between a_rev and b_rev.
         // It could be a_rev == b_rev, or parents(b_rev) == [a_rev] && a_rev >= max_rev
@@ -536,13 +538,10 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
         if can_update_cache {
             #[cfg(debug_assertions)]
             {
-                let fresh_lines = result
-                    .clone()
-                    .with_perf_stats(None)
-                    .execute(EntryId(0), b_rev);
+                let fresh_lines = result.clone().with_perf_stats(None).execute(entry, b_rev);
                 assert!(fresh_lines == a_lines);
             }
-            result.a_lines_cache = Some((EntryId(0), b_rev, a_lines));
+            result.a_lines_cache = Some((entry, b_rev, a_lines));
         } else {
             result.a_lines_cache = None;
         }
