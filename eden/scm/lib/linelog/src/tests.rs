@@ -666,6 +666,41 @@ fn test_topo_remap_revs() {
 }
 
 #[test]
+fn test_stack_wide_rewrites_multiple_entries() {
+    let (log, other) = multi_entry_text_log();
+
+    let inserted = log.clone().insert_shift(1);
+    assert_eq!(inserted.checkout_text(E0, R(1)), "a\n");
+    assert_eq!(inserted.checkout_text(E0, R(3)), "a\nb\n");
+    assert_eq!(inserted.checkout_text(other, R(1)), "x\n");
+    assert_eq!(inserted.checkout_text(other, R(3)), "x\ny\n");
+
+    let folded = log.clone().fold(&SmallRevs::from_range(1..=2)).unwrap();
+    assert_eq!(folded.checkout_text(E0, R(1)), "a\nb\n");
+    assert_eq!(folded.checkout_text(other, R(1)), "x\ny\n");
+    assert_eq!(folded.checkout_text(E0, R(2)), "");
+    assert_eq!(folded.checkout_text(other, R(2)), "");
+
+    let parents = vec![
+        SmallVec::new(),
+        SmallVec::from_buf([2]),
+        SmallVec::from_buf([0]),
+    ];
+    let (remapped, old_to_new) = log.clone().topo_remap(parents).unwrap();
+    assert_eq!(old_to_new, vec![0, 2, 1]);
+    assert_eq!(remapped.checkout_text(E0, R(1)), "b\n");
+    assert_eq!(remapped.checkout_text(E0, R(2)), "a\nb\n");
+    assert_eq!(remapped.checkout_text(other, R(1)), "y\n");
+    assert_eq!(remapped.checkout_text(other, R(2)), "x\ny\n");
+
+    let truncated = log.truncate(2);
+    assert_eq!(truncated.checkout_text(E0, R(1)), "a\n");
+    assert_eq!(truncated.checkout_text(other, R(1)), "x\n");
+    assert_eq!(truncated.checkout_text(E0, R(2)), "");
+    assert_eq!(truncated.checkout_text(other, R(2)), "");
+}
+
+#[test]
 fn test_remap_code_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 
@@ -1019,6 +1054,16 @@ fn test_dep_dag_multiple_entries() {
 
 fn lines(s: &str) -> Vec<String> {
     s.lines().map(|s| format!("{s}\n")).collect()
+}
+
+fn multi_entry_text_log() -> (LineLog, E) {
+    let (log, other) = LineLog::default().add_entry();
+    let log = log
+        .edit_chunk(E0, 0, 0, 0, 1, lines("a\n"), Default::default())
+        .edit_chunk(other, 0, 0, 0, 1, lines("x\n"), Default::default())
+        .edit_chunk(E0, 1, 1, 1, 2, lines("b\n"), Default::default())
+        .edit_chunk(other, 1, 1, 1, 2, lines("y\n"), Default::default());
+    (log, other)
 }
 
 /// Build a LineLog by appending texts as successive revisions.
