@@ -41,6 +41,31 @@ pub(crate) struct PerfStats {
     pub dag_cache: AtomicUsize,
 }
 
+/// Input parameter used by `checkout_lines`.
+pub enum CheckoutRev {
+    /// Checkout a single rev.
+    Single(Rev),
+    /// Checkout multiple revs intended as a preview of merging.
+    /// None of the returned lines have deleted set to `true`.
+    Merge(SmallRevs),
+    /// Checkout a range of revs to show a "history" view.
+    /// All lines that are ever existed in the revs are returned.
+    /// Only lines present in the head revs are present.
+    /// Others have `deleted` set to true.
+    ///
+    /// This is different from `Merge`. Example: 2 revs `{a,b}`,
+    /// line deleted by `a` and unchanged by `b`. `Merge` respects
+    /// the deletion. `Range` keeps the line because it exists
+    /// in `b`.
+    Range(SmallRevs),
+}
+
+impl From<Rev> for CheckoutRev {
+    fn from(value: Rev) -> Self {
+        CheckoutRev::Single(value)
+    }
+}
+
 impl<T> Clone for AbstractLineLog<T> {
     fn clone(&self) -> Self {
         Self {
@@ -341,48 +366,57 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
     }
 
     /// Checkout the lines of the given revision `rev`.
-    pub fn checkout_lines(&self, rev: Rev) -> ImVec<LineInfo<T>> {
-        if let Some((a_rev, cache)) = self.a_lines_cache.as_ref() {
-            if *a_rev == rev {
-                if let Some(stats) = self.perf_stats.as_ref() {
-                    stats.cache_hit.fetch_add(1, Ordering::Release);
+    /// See [`CheckoutRev`] docstring for details.
+    pub fn checkout_lines(&self, rev: impl Into<CheckoutRev>) -> ImVec<LineInfo<T>> {
+        let rev: CheckoutRev = rev.into();
+        match rev {
+            CheckoutRev::Single(rev) => {
+                if let Some((a_rev, cache)) = self.a_lines_cache.as_ref() {
+                    if *a_rev == rev {
+                        if let Some(stats) = self.perf_stats.as_ref() {
+                            stats.cache_hit.fetch_add(1, Ordering::Release);
+                        }
+                        return cache.clone();
+                    }
                 }
-                return cache.clone();
+                self.execute(rev)
+            }
+            CheckoutRev::Merge(revs) => {
+                let mut ancestor_revs = SmallRevs::empty();
+                for rev in revs.iter() {
+                    ancestor_revs.union_with(self.dag.ancestors(rev));
+                }
+                self.execute_advanced(&ancestor_revs, &ancestor_revs, None)
+            }
+            CheckoutRev::Range(revs) => {
+                let get_insert_and_delete_revs = |revs: &SmallRevs| -> (SmallRevs, SmallRevs) {
+                    // A line inserted in any target rev should be included, but a deletion
+                    // only hides the line if it is effective in every target rev.
+                    let mut insert_revs = SmallRevs::empty();
+                    let mut delete_revs: Option<SmallRevs> = None;
+                    for target_rev in revs.iter() {
+                        let ancestors = self.dag.ancestors(target_rev);
+                        insert_revs.union_with(ancestors);
+                        match delete_revs.as_mut() {
+                            Some(delete_revs) => delete_revs.intersect_with(ancestors),
+                            None => delete_revs = Some(ancestors.clone()),
+                        }
+                    }
+                    let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
+                    (insert_revs, delete_revs)
+                };
+                let is_present = {
+                    let head_revs = self.dag.heads(&revs);
+                    let (insert_revs, delete_revs) = get_insert_and_delete_revs(&head_revs);
+                    let lines = self.execute_advanced(&insert_revs, &delete_revs, None);
+                    let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
+                    move |pc| present_pc_set.contains(&pc)
+                };
+
+                let (insert_revs, delete_revs) = get_insert_and_delete_revs(&revs);
+                self.execute_advanced(&insert_revs, &delete_revs, Some(Box::new(is_present)))
             }
         }
-
-        self.execute(rev)
-    }
-
-    /// Checkout the lines that are visible in any of the given target revisions.
-    pub fn checkout_revs_lines(&self, target_revs: &SmallRevs) -> ImVec<LineInfo<T>> {
-        let get_insert_and_delete_revs = |target_revs: &SmallRevs| -> (SmallRevs, SmallRevs) {
-            // A line inserted in any target rev should be included, but a deletion
-            // only hides the line if it is effective in every target rev.
-            let mut insert_revs = SmallRevs::empty();
-            let mut delete_revs: Option<SmallRevs> = None;
-            for target_rev in target_revs.iter() {
-                let ancestors = self.dag.ancestors(target_rev);
-                insert_revs.union_with(ancestors);
-                match delete_revs.as_mut() {
-                    Some(delete_revs) => delete_revs.intersect_with(ancestors),
-                    None => delete_revs = Some(ancestors.clone()),
-                }
-            }
-            let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
-            (insert_revs, delete_revs)
-        };
-
-        let is_present = {
-            let head_revs = self.dag.heads(target_revs);
-            let (insert_revs, delete_revs) = get_insert_and_delete_revs(&head_revs);
-            let lines = self.execute_advanced(&insert_revs, &delete_revs, None);
-            let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
-            move |pc| present_pc_set.contains(&pc)
-        };
-
-        let (insert_revs, delete_revs) = get_insert_and_delete_revs(target_revs);
-        self.execute_advanced(&insert_revs, &delete_revs, Some(Box::new(is_present)))
     }
 
     /// Prepare and update a_lines_cache for edit_chunk_internal
@@ -794,7 +828,7 @@ impl<T> AbstractLineLog<T> {
 
 impl<T: AsRef<str> + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// Checkout the text of the given `rev`.
-    pub fn checkout_text(&self, rev: Rev) -> String {
+    pub fn checkout_text(&self, rev: impl Into<CheckoutRev>) -> String {
         let lines = self.checkout_lines(rev);
         let mut text =
             String::with_capacity(lines.iter().map(|l| l.data.as_ref().as_ref().len()).sum());

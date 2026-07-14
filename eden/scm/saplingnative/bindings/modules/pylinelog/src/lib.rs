@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use ::linelog::CheckoutRev;
 use ::linelog::EditFlags;
 use ::linelog::NanoDag as NativeNanoDag;
 use ::linelog::SmallRevs as NativeSmallRevs;
@@ -188,7 +189,7 @@ py_class!(class IntLineLog |py| {
     /// Includes a dummy "end" line at the end.
     def checkout_revs_lines(&self, revs: SmallRevs) -> PyResult<Vec<(usize, usize, usize, bool)>> {
         let inner = self.inner(py);
-        let lines = inner.checkout_revs_lines(revs.inner(py));
+        let lines = inner.checkout_lines(CheckoutRev::Range(revs.inner(py).clone()));
         let lines: Vec<_> = lines.into_iter().map(|l| (l.rev, *l.data.as_ref(), l.pc, l.deleted)).collect();
         Ok(lines)
     }
