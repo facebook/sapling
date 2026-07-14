@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use crate::SmallRevs;
 use crate::linelog::AbstractLineLog;
+use crate::linelog::EntryId;
 use crate::linelog::Inst;
 use crate::linelog::Rev;
 use crate::nanodag::NanoDag;
@@ -29,7 +30,7 @@ impl<T: fmt::Display, M> AbstractLineLog<T, M> {
     }
 
     /// Dump lines with ASCII annotated insertions and deletions stacks.
-    pub fn describe_ins_del_stacks(&self) -> Vec<String> {
+    pub fn describe_ins_del_stacks(&self, entry: EntryId) -> Vec<String> {
         // 1st Pass: Figure out the max stack depth, line length for padding.
         struct MeasureVisitor {
             max_ins_depth: usize,
@@ -60,7 +61,7 @@ impl<T: fmt::Display, M> AbstractLineLog<T, M> {
             max_del_depth: 0,
             max_line_len: "Insert (rev 1000) ".len(),
         };
-        self.visit_with_ins_del_stacks(&mut measure);
+        self.visit_with_ins_del_stacks(entry, &mut measure);
 
         // 2nd Pass: Render the instructions.
         struct RenderVisitor {
@@ -161,7 +162,7 @@ impl<T: fmt::Display, M> AbstractLineLog<T, M> {
             max_del_depth: measure.max_del_depth,
             max_line_len: measure.max_line_len,
         };
-        self.visit_with_ins_del_stacks(&mut render);
+        self.visit_with_ins_del_stacks(entry, &mut render);
         render.result
     }
 }

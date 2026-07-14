@@ -362,7 +362,7 @@ fn test_describe_ins_del_stacks_interleaved() {
             .collect::<Vec<_>>(),
     );
     assert_eq!(
-        log.describe_ins_del_stacks(),
+        log.describe_ins_del_stacks(E0),
         vec![
             "╭────Insert (rev 1)         ",
             "│    Delete (rev 4)    ────╮",
@@ -393,7 +393,7 @@ fn test_describe_ins_del_stacks_not_nested() {
             .collect::<Vec<_>>(),
     );
     assert_eq!(
-        log.describe_ins_del_stacks(),
+        log.describe_ins_del_stacks(E0),
         vec![
             "╭───Insert (rev 2)       ",
             "│   Line:  a             ",
@@ -418,7 +418,7 @@ fn test_describe_ins_del_stacks_between_old_new() {
             .collect::<Vec<_>>(),
     );
     assert_eq!(
-        log.describe_ins_del_stacks(),
+        log.describe_ins_del_stacks(E0),
         vec![
             "╭───Insert (rev 1)       ",
             "│   Line:  a             ",
@@ -443,7 +443,7 @@ fn test_describe_ins_del_stacks_between_new_old() {
             .collect::<Vec<_>>(),
     );
     assert_eq!(
-        log.describe_ins_del_stacks(),
+        log.describe_ins_del_stacks(E0),
         vec![
             "╭───Insert (rev 2)       ",
             "│   Line:  a             ",
@@ -475,7 +475,7 @@ fn test_example_merge() {
     // Note the linelog internals, the merge itself does not re-create the edits
     // made by either side.
     assert_eq!(
-        log.describe_ins_del_stacks(),
+        log.describe_ins_del_stacks(E0),
         [
             "╭────Insert (rev 1)        ",
             "│    Line:  a              ",
@@ -522,7 +522,7 @@ e
     );
 
     // Flatten view
-    let flat = log.flatten();
+    let flat = log.flatten(E0);
     let show: Vec<String> = flat
         .iter()
         .map(|l| format!("{} {:?}", l.data.trim_end(), l.revs))
@@ -895,7 +895,7 @@ fn test_flatten() {
     assert_eq!(log.checkout_text(E0, R(2)), "b\nc\nd\ne\n");
     assert_eq!(log.checkout_text(E0, R(3)), "a\nc\nd\nf\n");
 
-    let flat = log.flatten();
+    let flat = log.flatten(E0);
     let show: Vec<(&str, Vec<usize>)> = flat
         .iter()
         .map(|l| (l.data.trim_end(), l.revs.iter().collect()))

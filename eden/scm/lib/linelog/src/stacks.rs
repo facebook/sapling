@@ -12,6 +12,7 @@ use std::mem::take;
 use std::sync::Arc;
 
 use crate::linelog::AbstractLineLog;
+use crate::linelog::EntryId;
 use crate::linelog::Inst;
 use crate::linelog::Pc;
 use crate::linelog::Rev;
@@ -66,7 +67,7 @@ impl<T, M> AbstractLineLog<T, M> {
     /// Useful for figuring out file contents after reordering or folding
     /// commits, or providing a view similar to `absorb -e FILE` to edit
     /// all versions of a file in a single view.
-    pub fn flatten(&self) -> Vec<FlattenLine<T>> {
+    pub fn flatten(&self, entry: EntryId) -> Vec<FlattenLine<T>> {
         // See the comments in visit_with_ins_del_stacks for what the stacks mean.
         //
         // The flatten algorithm works as follows:
@@ -188,7 +189,7 @@ impl<T, M> AbstractLineLog<T, M> {
             current_revs: self.dag.all(),
             dag: &self.dag,
         };
-        self.visit_with_ins_del_stacks(&mut visitor);
+        self.visit_with_ins_del_stacks(entry, &mut visitor);
         visitor.result
     }
 
@@ -277,7 +278,7 @@ impl<T, M> AbstractLineLog<T, M> {
         }
 
         let mut visitor = DepMapVisitor(NanoDag::default().truncate(self.dag.len()));
-        self.visit_with_ins_del_stacks(&mut visitor);
+        self.visit_with_ins_del_stacks(EntryId(0), &mut visitor);
         visitor.0
     }
 
@@ -321,7 +322,11 @@ impl<T, M> AbstractLineLog<T, M> {
     ///
     /// Typical use-cases include features that need to scan all (ever existed)
     /// lines like flatten() and calculate_dep_dag().
-    pub(crate) fn visit_with_ins_del_stacks(&self, visitor: &mut impl StackVisitor<T>) {
+    pub(crate) fn visit_with_ins_del_stacks(
+        &self,
+        entry: EntryId,
+        visitor: &mut impl StackVisitor<T>,
+    ) {
         // How does it work? First, insertions and deletions in linelog form
         // tree structures. For example:
         //
@@ -391,7 +396,7 @@ impl<T, M> AbstractLineLog<T, M> {
         // the JL rev, to deal with merges while maintaining a linear history.
         let mut ins_stack = vec![Frame::ROOT];
         let mut del_stack: Vec<Frame> = Vec::new();
-        let mut pc = 0;
+        let mut pc = self.entries[entry.0];
         let mut patience = self.code.len() * 2;
 
         while patience > 0 {
