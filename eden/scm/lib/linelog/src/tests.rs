@@ -406,6 +406,24 @@ d
 e
 "#
     );
+
+    // Flatten view
+    let flat = log.flatten();
+    let show: Vec<String> = flat
+        .iter()
+        .map(|l| format!("{} {:?}", l.data.trim_end(), l.revs))
+        .collect();
+    assert_eq!(
+        show,
+        [
+            "a {1, 3}",
+            "b {0, 1}",
+            "C {3}",
+            "c {0, 1, 2}",
+            "d {0, 2}",
+            "e {2, 3}"
+        ],
+    );
 }
 
 #[test]

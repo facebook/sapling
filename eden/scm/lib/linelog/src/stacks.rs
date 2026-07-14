@@ -87,23 +87,84 @@ impl<T> AbstractLineLog<T> {
         //    - For interleaved insertion and deletions, insertion rev and deletion
         //      rev are tracked separately so their calculations are independent
         //      from each other.
-        // - Linelog tracks linear history, so (insRev, delRev) can be converted to
-        //   `Revs`.
-        struct FlattenVisitor<T> {
+        // - In linear history, (insRev, delRev) can be converted to `Revs` trivially.
+        // - In DAG history, insRev .. delRev is generalized to `Revs` based on visibility.
+        //   See the `cumulative_` fields below.
+        struct FlattenVisitor<'a, T> {
             result: Vec<FlattenLine<T>>,
+            // Cumulative revs where every active insertion frame is visible.
+            //
+            // For DAG `0-{1,2}-3`, if `ins_stack` is `[ROOT, rev 0, rev 1]`,
+            // then `cumulative_ins_stack` is:
+            // - all revs:       {0, 1, 2, 3}   # [ROOT]
+            // - descendants(0): {0, 1, 2, 3}   # [ROOT, rev 0]
+            // - descendants(1): {1, 3}         # [ROOT, rev 0, rev 1]
+            cumulative_ins_stack: Vec<SmallRevs>,
+            // Cumulative revs where any active deletion frame is visible.
+            // For example, active deletion frames `[rev 1, rev 2]` produce
+            // descendants(1) union descendants(2): {1, 2, 3}.
+            cumulative_del_stack: Vec<SmallRevs>,
+            // Current line visibility: insertion visibility minus deletion visibility.
             current_revs: SmallRevs,
-            max_del_rev: usize,
+            dag: &'a NanoDag,
         }
 
-        impl<T> StackVisitor<T> for FlattenVisitor<T> {
-            fn on_stack_push(&mut self, _is_ins: bool, ins_stack: &[Frame], del_stack: &[Frame]) {
-                let ins_rev = ins_stack.last().map_or(0, |f| f.rev);
-                let del_rev = del_stack.last().map_or(self.max_del_rev, |f| f.rev);
-                self.current_revs = SmallRevs::from_range(ins_rev..del_rev);
+        impl<T> FlattenVisitor<'_, T> {
+            fn refresh_current_revs(&mut self) {
+                self.current_revs = self
+                    .cumulative_ins_stack
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(SmallRevs::empty);
+                if let Some(del_revs) = self.cumulative_del_stack.last() {
+                    self.current_revs.difference_with(del_revs);
+                }
             }
 
-            fn on_stack_pop(&mut self, is_ins: bool, ins_stack: &[Frame], del_stack: &[Frame]) {
-                self.on_stack_push(is_ins, ins_stack, del_stack);
+            fn push_ins_revs(&mut self, frame: Option<Frame>) {
+                let mut revs = self
+                    .cumulative_ins_stack
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(SmallRevs::empty);
+                if let Some(frame) = frame {
+                    if !frame.is_root() {
+                        revs.intersect_with(self.dag.descendants(frame.rev));
+                    }
+                }
+                self.cumulative_ins_stack.push(revs);
+            }
+
+            fn push_del_revs(&mut self, frame: Option<Frame>) {
+                let mut revs = self
+                    .cumulative_del_stack
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(SmallRevs::empty);
+                if let Some(frame) = frame {
+                    revs.union_with(self.dag.descendants(frame.rev));
+                }
+                self.cumulative_del_stack.push(revs);
+            }
+        }
+
+        impl<T> StackVisitor<T> for FlattenVisitor<'_, T> {
+            fn on_stack_push(&mut self, is_ins: bool, ins_stack: &[Frame], del_stack: &[Frame]) {
+                if is_ins {
+                    self.push_ins_revs(ins_stack.last().copied());
+                } else {
+                    self.push_del_revs(del_stack.last().copied());
+                }
+                self.refresh_current_revs();
+            }
+
+            fn on_stack_pop(&mut self, is_ins: bool, _ins_stack: &[Frame], _del_stack: &[Frame]) {
+                if is_ins {
+                    self.cumulative_ins_stack.pop();
+                } else {
+                    self.cumulative_del_stack.pop();
+                }
+                self.refresh_current_revs();
             }
 
             fn on_line(
@@ -120,11 +181,12 @@ impl<T> AbstractLineLog<T> {
             }
         }
 
-        let max_del_rev = self.max_rev() + 1;
         let mut visitor = FlattenVisitor {
             result: Vec::new(),
-            current_revs: SmallRevs::from_range(0..max_del_rev),
-            max_del_rev,
+            cumulative_ins_stack: vec![self.dag.all()],
+            cumulative_del_stack: vec![],
+            current_revs: self.dag.all(),
+            dag: &self.dag,
         };
         self.visit_with_ins_del_stacks(&mut visitor);
         visitor.result
