@@ -17,7 +17,7 @@ use crate::nanodag::NanoDag;
 use crate::stacks::Frame;
 use crate::stacks::StackVisitor;
 
-impl<T: fmt::Display> AbstractLineLog<T> {
+impl<T: fmt::Display, M> AbstractLineLog<T, M> {
     /// Dump instructions in a human readable format. Useful for debugging.
     /// Note: This exposes internal details which might change in the future.
     pub fn describe_instructions(&self) -> Vec<String> {

@@ -22,9 +22,10 @@ use crate::nanodag::NanoDag;
 use crate::small_revs::SmallRevs;
 
 /// See https://sapling-scm.com/docs/internals/linelog for details.
-pub struct AbstractLineLog<T> {
+pub struct AbstractLineLog<T, M = ()> {
     pub(crate) code: ImVec<Inst<T>>,
     pub(crate) dag: NanoDag,
+    rev_states: ImVec<Option<Arc<M>>>,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
     deps_map_cache: OnceLock<Arc<NanoDag>>,
@@ -67,11 +68,12 @@ impl From<Rev> for CheckoutRev {
     }
 }
 
-impl<T> Clone for AbstractLineLog<T> {
+impl<T, M> Clone for AbstractLineLog<T, M> {
     fn clone(&self) -> Self {
         Self {
             code: self.code.clone(),
             dag: self.dag.clone(),
+            rev_states: self.rev_states.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
             deps_map_cache: self.deps_map_cache.clone(),
             perf_stats: self.perf_stats.clone(),
@@ -129,7 +131,7 @@ impl<T> Clone for Inst<T> {
     }
 }
 
-impl<T> Default for AbstractLineLog<T> {
+impl<T, M> Default for AbstractLineLog<T, M> {
     fn default() -> Self {
         Self {
             code: {
@@ -138,6 +140,11 @@ impl<T> Default for AbstractLineLog<T> {
                 v
             },
             dag: NanoDag::default().with_edge(0, 0),
+            rev_states: {
+                let mut v = ImVec::new();
+                v.push_back(None);
+                v
+            },
             a_lines_cache: None,
             deps_map_cache: OnceLock::new(),
             perf_stats: None,
@@ -145,10 +152,34 @@ impl<T> Default for AbstractLineLog<T> {
     }
 }
 
-impl<T> AbstractLineLog<T> {
+impl<T, M> AbstractLineLog<T, M> {
     /// Get the maximum rev (inclusive).
     pub fn max_rev(&self) -> Rev {
         self.dag.len().saturating_sub(1)
+    }
+
+    /// Get the state associated with `rev`.
+    pub fn rev_state(&self, rev: Rev) -> Option<&Arc<M>> {
+        if rev >= self.dag.len() {
+            return None;
+        }
+        self.rev_states.get(rev).and_then(Option::as_ref)
+    }
+
+    /// Set the state associated with `rev`.
+    ///
+    /// Practically, the state could be something similar to `debugexportstack`
+    /// output (e.g. commit date, author, message, files changed, file flags,
+    /// renamed from, etc), but without the actual file contents.
+    ///
+    /// Panics if `rev` is not present in the dag.
+    pub fn with_rev_state(mut self, rev: Rev, state: Option<Arc<M>>) -> Self {
+        assert!(rev < self.dag.len(), "rev {rev} must be present in the dag");
+        while self.rev_states.len() < self.dag.len() {
+            self.rev_states.push_back(None);
+        }
+        self.rev_states.set(rev, state);
+        self
     }
 
     /// Attach a `PerfStats` struct to analyse cache statistics.
@@ -178,7 +209,7 @@ impl Default for EditFlags {
     }
 }
 
-impl<T: Default + PartialEq> AbstractLineLog<T> {
+impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     /// Edit chunk. Replace lines from `a1` (inclusive) to `a2` (exclusive) in rev
     /// `a_rev` with `b_lines`. `b_lines` are considered introduced by `b_rev`.
     /// If `b_lines` is empty, the edit is a deletion. If `a1` equals to `a2`,
@@ -733,7 +764,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
     }
 }
 
-impl<T> AbstractLineLog<T> {
+impl<T, M> AbstractLineLog<T, M> {
     /// Rewrite `rev` references in code instructions.
     ///
     /// This is intended to be an internal building block for higher-level
@@ -780,7 +811,11 @@ impl<T> AbstractLineLog<T> {
     /// instructions and the dag.
     pub fn insert_shift(self, rev: Rev) -> Self {
         let dag = self.dag.clone().insert_shift(rev);
-        let result = self.remap_code_revs(&|r| if r > rev { r + 1 } else { r });
+        let mut result = self.remap_code_revs(&|r| if r > rev { r + 1 } else { r });
+        let inserted_rev = rev + 1;
+        if inserted_rev < result.rev_states.len() {
+            result.rev_states.insert(inserted_rev, None);
+        }
         Self { dag, ..result }
     }
 
@@ -789,6 +824,9 @@ impl<T> AbstractLineLog<T> {
     /// Folded revs other than the smallest rev become isolated in the dag.
     /// LineLog instruction references to any folded rev are rewritten to the
     /// smallest rev.
+    ///
+    /// `rev_states` are not merged; callers that want squash metadata should
+    /// update the folded rev states separately.
     pub fn fold(self, revs: &SmallRevs) -> Result<Self, &'static str> {
         let Some(start) = revs.iter().next() else {
             return Ok(self);
@@ -818,7 +856,17 @@ impl<T> AbstractLineLog<T> {
     ) -> Result<(Self, Vec<Rev>), String> {
         let dep_dag = self.dep_dag().clone();
         let (dag, old_to_new) = self.dag.topo_remap(new_parents, &dep_dag)?;
-        let result = self.remap_code_revs(&|r| old_to_new[r]);
+        let mut result = self.remap_code_revs(&|r| old_to_new[r]);
+        result.rev_states = {
+            let old_rev_states = &result.rev_states;
+            let mut rev_states = vec![None; dag.len()];
+            for (old_rev, new_rev) in old_to_new.iter().copied().enumerate() {
+                if let Some(state) = old_rev_states.get(old_rev).cloned() {
+                    rev_states[new_rev] = state;
+                }
+            }
+            rev_states.into_iter().collect()
+        };
         Ok((Self { dag, ..result }, old_to_new))
     }
 
@@ -835,10 +883,15 @@ impl<T> AbstractLineLog<T> {
             })
             .collect();
         let dag = self.dag.truncate(rev);
+        let mut rev_states = self.rev_states;
+        if rev < rev_states.len() {
+            rev_states.truncate(rev);
+        }
 
         Self {
             code,
             dag,
+            rev_states,
             a_lines_cache: None,
             deps_map_cache: Default::default(),
             ..self
@@ -867,7 +920,7 @@ impl<T> AbstractLineLog<T> {
     }
 }
 
-impl<T: AsRef<str> + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
+impl<T: AsRef<str> + Default + PartialEq + fmt::Debug, M> AbstractLineLog<T, M> {
     /// Checkout the text of the given `rev`.
     pub fn checkout_text(&self, rev: impl Into<CheckoutRev>) -> String {
         let lines = self.checkout_lines(rev);

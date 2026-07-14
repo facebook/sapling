@@ -59,7 +59,7 @@ pub(crate) trait StackVisitor<T> {
     fn on_stack_pop(&mut self, _is_ins: bool, _ins_stack: &[Frame], _del_stack: &[Frame]) {}
 }
 
-impl<T> AbstractLineLog<T> {
+impl<T, M> AbstractLineLog<T, M> {
     /// Returns all lines that ever existed, including deleted lines,
     /// each annotated with the set of revisions containing it.
     ///

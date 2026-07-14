@@ -33,6 +33,71 @@ fn test_empty() {
 }
 
 #[test]
+fn test_rev_state() {
+    struct RevState(String);
+    fn get(log: &AbstractLineLog<String, RevState>, rev: Rev) -> Option<&str> {
+        log.rev_state(rev).map(|state| state.as_ref().0.as_str())
+    }
+    fn set(log: AbstractLineLog<String, RevState>, rev: Rev) -> AbstractLineLog<String, RevState> {
+        log.with_rev_state(rev, Some(Arc::new(RevState(format!("s{rev}")))))
+    }
+    fn state_list(
+        log: &AbstractLineLog<String, RevState>,
+        revs: impl Iterator<Item = Rev>,
+    ) -> Vec<Option<&str>> {
+        revs.map(|rev| get(log, rev)).collect()
+    }
+
+    let state = Arc::new(RevState("root".into()));
+    let log = AbstractLineLog::<String, RevState>::default();
+    assert!(log.rev_state(0).is_none());
+    assert!(log.rev_state(1).is_none());
+
+    let log = log.with_rev_state(0, Some(state.clone()));
+    assert_eq!(get(&log, 0), Some("root"));
+    assert!(Arc::ptr_eq(log.rev_state(0).unwrap(), &state));
+
+    let log = log.with_rev_state(0, None);
+    assert!(log.rev_state(0).is_none());
+
+    let log = AbstractLineLog::<String, RevState>::default()
+        .edit_chunk(0, 0, 0, 1, lines("a\n"), Default::default())
+        .edit_chunk(1, 1, 1, 2, lines("b\n"), Default::default())
+        .edit_chunk(2, 2, 2, 3, lines("c\n"), Default::default());
+    let log = (0..=3).fold(log, set);
+
+    // insert_shift keeps old states on their shifted revs and leaves the new rev empty.
+    let inserted = log.clone().insert_shift(1);
+    assert_eq!(
+        state_list(&inserted, 0..=4),
+        [Some("s0"), Some("s1"), None, Some("s2"), Some("s3")]
+    );
+
+    // topo_remap moves states according to the returned old-to-new mapping.
+    let (remapped, old_to_new) = log
+        .clone()
+        .topo_remap(vec![
+            SmallVec::new(),
+            SmallVec::from_buf([0]),
+            SmallVec::from_buf([3]),
+            SmallVec::from_buf([1]),
+        ])
+        .unwrap();
+    assert_eq!(old_to_new, vec![0, 1, 3, 2]);
+    assert_eq!(
+        state_list(&remapped, 0..=3),
+        [Some("s0"), Some("s1"), Some("s3"), Some("s2")]
+    );
+
+    // truncate drops states for the truncated suffix.
+    let truncated = log.truncate(2);
+    assert_eq!(
+        state_list(&truncated, 0..=2),
+        [Some("s0"), Some("s1"), None]
+    );
+}
+
+#[test]
 fn test_edit_single() {
     let log = LineLog::default();
     let log = log.edit_chunk(0, 0, 0, 1, lines("c\nd\ne\n"), Default::default());
@@ -723,7 +788,7 @@ fn test_truncate() {
 fn test_non_linear_skipped_rev() {
     let flags = EditFlags::default();
     // rev 0 has content, rev 1 is skipped (not depend on rev 0), rev 2 depends on rev 1.
-    let log = AbstractLineLog::default()
+    let log = AbstractLineLog::<&str>::default()
         .edit_chunk(0, 0, 0, 0, vec!["a", "c"], flags)
         .edit_chunk(0, 1, 1, 2, vec!["b"], flags);
     assert_eq!(log.nanodag().to_string(), "{0-2,1}");
@@ -740,7 +805,7 @@ fn test_non_linear_merged_rev() {
     // rev 0: c                  --> rev 3 --> x
     // rev 0: d ----> rev 2: e e ------------> e
     // rev 0: f
-    let log = AbstractLineLog::default()
+    let log = AbstractLineLog::<&str>::default()
         .with_dag_edge(3, 3)
         .edit_chunk(0, 0, 0, 0, vec!["a", "c", "d", "f"], flags)
         .edit_chunk(0, 0, 1, 1, vec!["b", "b"], flags)
