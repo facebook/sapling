@@ -552,8 +552,22 @@ impl Convert for RawDerivedDataTypesConfig {
         let types = self
             .types
             .into_iter()
-            .map(|ty| DerivableType::from_name(&ty))
-            .collect::<Result<_>>()?;
+            .filter_map(|ty| match DerivableType::from_name(&ty) {
+                Ok(dt) => Some(dt),
+                // A config can enable a derived data type that this (older)
+                // binary doesn't know yet while a new type is rolling out. Drop
+                // it instead of failing to load the whole config: this binary
+                // can't derive a type it doesn't know about, and the type will
+                // start being derived once the binary is updated to know it.
+                Err(_) => {
+                    tracing::error!(
+                        "Ignoring enabled derived data type {:?}: unknown to this binary",
+                        ty
+                    );
+                    None
+                }
+            })
+            .collect();
         let ephemeral_bubbles_disabled_types = self
             .ephemeral_bubbles_disabled_types
             .unwrap_or_default()
@@ -617,11 +631,22 @@ impl Convert for RawDerivedDataTypesConfig {
             .xdb_mapping_shard_ids
             .unwrap_or_default()
             .into_iter()
-            .map(|(k, v)| {
-                let dt = DerivableType::from_name(&k)?;
-                let shard_id: usize = v.try_into()?;
-                Ok((dt, shard_id))
+            .filter_map(|(k, v)| match DerivableType::from_name(&k) {
+                Ok(dt) => Some((dt, v)),
+                // A config can name a derived data type that this (older) binary
+                // doesn't know yet while a new type is rolling out. Drop the
+                // entry instead of failing to load the whole config: the shard
+                // id is only ever read when that type is actually derived, and
+                // this binary can't derive a type it doesn't know about.
+                Err(_) => {
+                    tracing::error!(
+                        "Ignoring xdb_mapping_shard_ids entry for unknown derived data type {:?}",
+                        k
+                    );
+                    None
+                }
             })
+            .map(|(dt, v)| Ok((dt, v.try_into()?)))
             .collect::<Result<_>>()?;
 
         Ok(DerivedDataTypesConfig {
@@ -1589,6 +1614,51 @@ mod tests {
                 && msg.contains("configure hg_augmented_manifests instead"),
             "expected v2 augmented-manifest prefix rejection, got: {msg}",
         );
+    }
+
+    #[mononoke::test]
+    fn test_parse_xdb_mapping_shard_ids_drops_unknown_types() {
+        // Given a shard-id config that names one type this binary knows and one
+        // it does not (e.g. a type still rolling out to all binaries).
+        let raw = RawDerivedDataTypesConfig {
+            xdb_mapping_shard_ids: Some(std::collections::BTreeMap::from([
+                ("blame_v3".to_string(), 0),
+                ("totally_unknown_derived_data_type".to_string(), 7),
+            ])),
+            ..Default::default()
+        };
+
+        // When converting the raw config into Mononoke's typed config.
+        let config: DerivedDataTypesConfig = raw.convert().unwrap();
+
+        // Then the unknown type is dropped rather than failing the whole config
+        // load, while the known type is preserved.
+        assert_eq!(config.xdb_mapping_shard_ids.len(), 1);
+        assert_eq!(
+            config.xdb_mapping_shard_ids.get(&DerivableType::BlameV3),
+            Some(&0usize),
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_enabled_types_drops_unknown_types() {
+        // Given an enabled-types list naming one type this binary knows and one
+        // it does not (e.g. a type still rolling out to all binaries).
+        let raw = RawDerivedDataTypesConfig {
+            types: std::collections::BTreeSet::from([
+                "fastlog".to_string(),
+                "totally_unknown_derived_data_type".to_string(),
+            ]),
+            ..Default::default()
+        };
+
+        // When converting the raw config into Mononoke's typed config.
+        let config: DerivedDataTypesConfig = raw.convert().unwrap();
+
+        // Then the unknown type is dropped rather than failing the whole config
+        // load, while the known type stays enabled.
+        assert_eq!(config.types.len(), 1);
+        assert!(config.types.contains(&DerivableType::Fastlog));
     }
 
     #[mononoke::test]
