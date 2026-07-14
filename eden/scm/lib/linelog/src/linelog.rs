@@ -88,6 +88,8 @@ impl<T, M> Clone for AbstractLineLog<T, M> {
 pub struct LineInfo<T> {
     /// Line content.
     pub data: Arc<T>,
+    /// Entry that introduced the line.
+    pub entry: EntryId,
     /// Introduced rev.
     pub rev: Rev,
     /// Introduced instruction index.
@@ -100,6 +102,7 @@ impl<T> Clone for LineInfo<T> {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
+            entry: self.entry,
             rev: self.rev,
             pc: self.pc,
             deleted: self.deleted,
@@ -117,11 +120,22 @@ pub struct EntryId(pub usize);
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub(crate) enum Inst<T> {
+    /// Unconditional jump.
+    ///
+    /// Control-flow jumps are entry-local. Cross-entry jumps are not allowed
+    /// (prevented at instruction edit time). Cross-entry references are
+    /// allowed via dedicated non-jump instructions.
     J(Pc),
     END,
+    /// Jump if the checkout rev is greater than or equal to the instruction rev.
+    ///
+    /// Like `J`, the target should stay within the same entry.
     JGE(Rev, Pc),
+    /// Jump if the checkout rev is less than the instruction rev.
+    ///
+    /// Like `J`, the target should stay within the same entry.
     JL(Rev, Pc),
-    LINE(Rev, Arc<T>),
+    LINE(EntryId, Rev, Arc<T>),
 }
 
 impl<T> Clone for Inst<T> {
@@ -131,7 +145,7 @@ impl<T> Clone for Inst<T> {
             Self::END => Self::END,
             Self::JGE(rev, pc) => Self::JGE(*rev, *pc),
             Self::JL(rev, pc) => Self::JL(*rev, *pc),
-            Self::LINE(rev, line) => Self::LINE(*rev, line.clone()),
+            Self::LINE(entry, rev, line) => Self::LINE(*entry, *rev, line.clone()),
         }
     }
 }
@@ -289,7 +303,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 );
             };
             debug_assert!(this.dag.all().contains(b_rev));
-            this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut, flags)
+            this.edit_chunk_internal(entry, a1, a2, b_rev, b_lines, maybe_mut, flags)
         })
     }
 
@@ -554,6 +568,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     // private because of `a_lines`.
     fn edit_chunk_internal(
         mut self,
+        entry: EntryId,
         a1: LineIdx,
         a2: LineIdx,
         b_rev: Rev,
@@ -640,6 +655,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 .enumerate()
                 .map(|(i, line)| LineInfo {
                     data: line.clone(),
+                    entry,
                     rev: b_rev,
                     pc: start + i + 1,
                     deleted: false,
@@ -666,7 +682,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
             let b2_pc = start + b_lines.len() + 1;
             code.push_back(Inst::JL(b_rev, b2_pc));
             for line in b_lines {
-                code.push_back(Inst::LINE(b_rev, line));
+                code.push_back(Inst::LINE(entry, b_rev, line));
             }
             debug_assert_eq!(b2_pc, code.len());
         }
@@ -743,13 +759,15 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 return false;
             }
             match self.code.get(line.pc) {
-                Some(Inst::LINE(rev, _)) if *rev == b_rev => pcs.push(line.pc),
+                Some(Inst::LINE(entry, rev, _)) if *entry == line.entry && *rev == b_rev => {
+                    pcs.push((line.pc, *entry));
+                }
                 _ => return false,
             }
         }
 
-        for (pc, line) in pcs.into_iter().zip(b_lines.iter()) {
-            self.code.set(pc, Inst::LINE(b_rev, line.clone()));
+        for ((pc, entry), line) in pcs.into_iter().zip(b_lines.iter()) {
+            self.code.set(pc, Inst::LINE(entry, b_rev, line.clone()));
         }
 
         if let Some(a_lines_mut) = a_lines.get_mut() {
@@ -816,6 +834,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 Inst::END => {
                     lines.push_back(LineInfo {
                         data: Arc::new(Default::default()),
+                        entry,
                         rev: 0,
                         deleted: true,
                         pc,
@@ -836,9 +855,10 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                         pc += 1;
                     }
                 }
-                Inst::LINE(rev, data) => {
+                Inst::LINE(entry, rev, data) => {
                     lines.push_back(LineInfo {
                         data: data.clone(),
+                        entry: *entry,
                         rev: *rev,
                         deleted: is_deleted(pc),
                         pc,
@@ -875,10 +895,10 @@ impl<T, M> AbstractLineLog<T, M> {
                 let mapped = match inst {
                     Inst::JGE(rev, pc) => Inst::JGE(rev_map(rev), pc),
                     Inst::JL(rev, pc) => Inst::JL(rev_map(rev), pc),
-                    Inst::LINE(rev, data) => Inst::LINE(rev_map(rev), data),
+                    Inst::LINE(entry, rev, data) => Inst::LINE(entry, rev_map(rev), data),
                     other => other,
                 };
-                if let Inst::JGE(rev, _) | Inst::JL(rev, _) | Inst::LINE(rev, _) = &mapped {
+                if let Inst::JGE(rev, _) | Inst::JL(rev, _) | Inst::LINE(_, rev, _) = &mapped {
                     max_rev = max_rev.max(*rev);
                 }
                 mapped
@@ -966,7 +986,7 @@ impl<T, M> AbstractLineLog<T, M> {
             .into_iter()
             .enumerate()
             .map(|(pc, inst)| match inst {
-                Inst::JGE(r, _) | Inst::LINE(r, _) if r >= rev => Inst::J(pc + 1),
+                Inst::JGE(r, _) | Inst::LINE(_, r, _) if r >= rev => Inst::J(pc + 1),
                 Inst::JL(r, target) if r >= rev => Inst::J(target),
                 other => other,
             })

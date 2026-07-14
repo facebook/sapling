@@ -428,7 +428,7 @@ impl<T, M> AbstractLineLog<T, M> {
             }
 
             match &self.code[pc] {
-                Inst::LINE(rev, data) => {
+                Inst::LINE(_entry, rev, data) => {
                     visitor.on_line(data, *rev, &ins_stack, &del_stack);
                     pc += 1;
                 }

@@ -172,10 +172,10 @@ fn describe_inst<T: fmt::Display>(inst: &Inst<T>) -> String {
         Inst::J(pc) => format!("J {pc}"),
         Inst::JGE(rev, pc) => format!("JGE {rev} {pc}"),
         Inst::JL(rev, pc) => format!("JL {rev} {pc}"),
-        Inst::LINE(rev, data) => {
+        Inst::LINE(entry, rev, data) => {
             let trimmed = data.to_string();
             let trimmed = trimmed.trim_end();
-            format!("LINE {rev} {trimmed:?}")
+            format!("LINE E{} {rev} {trimmed:?}", entry.0)
         }
         Inst::END => "END".to_string(),
     }

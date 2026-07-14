@@ -62,6 +62,15 @@ fn test_edit_multiple_entries() {
     assert_eq!(log.checkout_text(e1, R(1)), "b\n");
     assert_eq!(log.checkout_text(E0, R(0)), "");
     assert_eq!(log.checkout_text(e1, R(0)), "");
+
+    let entries = |entry| {
+        log.checkout_lines(entry, R(1))
+            .into_iter()
+            .map(|line| line.entry)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(entries(E0), vec![E0, E0]);
+    assert_eq!(entries(e1), vec![e1, e1]);
 }
 
 #[test]
@@ -310,9 +319,9 @@ fn test_edit_chunk_inline_same_rev_own_lines() {
         [
             "0: J 1",
             "1: JL 1 5",
-            "2: LINE 1 \"a\"",
-            "3: LINE 1 \"b\"",
-            "4: LINE 1 \"c\"",
+            "2: LINE E0 1 \"a\"",
+            "3: LINE E0 1 \"b\"",
+            "4: LINE E0 1 \"c\"",
             "5: END"
         ]
     );
@@ -323,9 +332,9 @@ fn test_edit_chunk_inline_same_rev_own_lines() {
         [
             "0: J 1",
             "1: JL 1 5",
-            "2: LINE 1 \"a\"",
-            "3: LINE 1 \"x\"",
-            "4: LINE 1 \"y\"",
+            "2: LINE E0 1 \"a\"",
+            "3: LINE E0 1 \"x\"",
+            "4: LINE E0 1 \"y\"",
             "5: END"
         ]
     );
@@ -408,9 +417,9 @@ fn test_describe_instructions() {
             "2: J 4",
             "3: END",
             "4: JL 2 6",
-            "5: LINE 2 \"b\"",
+            "5: LINE E0 2 \"b\"",
             "6: JGE 2 3",
-            "7: LINE 1 \"a\"",
+            "7: LINE E0 1 \"a\"",
             "8: J 3",
         ]
     );
