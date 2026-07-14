@@ -363,7 +363,7 @@ impl NanoDag {
     ///
     /// Returns the new topo-numbered DAG and an old-to-new rev mapping. Callers
     /// that only want a dry run can use this method and ignore the successful
-    /// value. Callers that want to reoder revs that should match the nanodag
+    /// value. Callers that want to reorder revs that should match the nanodag
     /// revs, for example, `LineLog`, should apply the old-to-new rev mapping
     /// to their own internal states.
     ///

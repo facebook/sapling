@@ -843,7 +843,7 @@ fn test_dep_dag() {
     }
 
     // Deletions.
-    // rev 2, 3, 4 each delects one character from "abcd", rev 1.
+    // rev 2, 3, 4 each deletes one character from "abcd", rev 1.
     // rev 2, 3, 4 do not depend on each other, but all depend on rev 1.
     assert_eq!(
         deps(&["abcd", "abd", "ad", "a"]).to_string(),
