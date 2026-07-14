@@ -18,8 +18,10 @@ use smallvec::SmallVec;
 use crate::AbstractLineLog;
 use crate::CheckoutRev;
 use crate::EditFlags;
+use crate::EntryId as E;
 use crate::LineLog;
 use crate::SmallRevs;
+use crate::linelog::Inst;
 use crate::linelog::PerfStats;
 use crate::linelog::Rev;
 use crate::nanodag::NanoDag;
@@ -28,8 +30,22 @@ use crate::nanodag::NanoDag;
 fn test_empty() {
     let log = LineLog::default();
     assert_eq!(log.max_rev(), 0);
+    assert_eq!(log.entry_len(), 1);
     assert_eq!(log.checkout_text(0), "");
     assert_eq!(log.checkout_text(1), "");
+}
+
+#[test]
+fn test_add_entry() {
+    let log = LineLog::default();
+    let (log, a) = log.add_entry();
+    let (log, b) = log.add_entry();
+
+    assert_eq!(a, E(1));
+    assert_eq!(b, E(2));
+    assert_eq!(log.entry_len(), 3);
+    assert_eq!(log.entries, [0, 1, 2].into_iter().collect());
+    assert!(log.code.iter().all(|inst| matches!(inst, Inst::END)));
 }
 
 #[test]

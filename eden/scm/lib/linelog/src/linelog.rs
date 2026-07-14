@@ -24,6 +24,7 @@ use crate::small_revs::SmallRevs;
 /// See https://sapling-scm.com/docs/internals/linelog for details.
 pub struct AbstractLineLog<T, M = ()> {
     pub(crate) code: ImVec<Inst<T>>,
+    pub(crate) entries: ImVec<Pc>,
     pub(crate) dag: NanoDag,
     rev_states: ImVec<Option<Arc<M>>>,
 
@@ -72,6 +73,7 @@ impl<T, M> Clone for AbstractLineLog<T, M> {
     fn clone(&self) -> Self {
         Self {
             code: self.code.clone(),
+            entries: self.entries.clone(),
             dag: self.dag.clone(),
             rev_states: self.rev_states.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
@@ -109,6 +111,9 @@ pub(crate) type Pc = usize;
 pub(crate) type Rev = usize;
 type LineIdx = usize;
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct EntryId(pub usize);
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub(crate) enum Inst<T> {
@@ -139,6 +144,11 @@ impl<T, M> Default for AbstractLineLog<T, M> {
                 v.push_back(Inst::END);
                 v
             },
+            entries: {
+                let mut v = ImVec::new();
+                v.push_back(0);
+                v
+            },
             dag: NanoDag::default().with_edge(0, 0),
             rev_states: {
                 let mut v = ImVec::new();
@@ -153,6 +163,21 @@ impl<T, M> Default for AbstractLineLog<T, M> {
 }
 
 impl<T, M> AbstractLineLog<T, M> {
+    /// Add a new empty entry.
+    /// All entries of this `LineLog` share a same `dag` and `rev_states`.
+    /// Different entries can have different contents for the same `rev`.
+    pub fn add_entry(mut self) -> (Self, EntryId) {
+        let entry = EntryId(self.entries.len());
+        self.entries.push_back(self.code.len());
+        self.code.push_back(Inst::END);
+        (self, entry)
+    }
+
+    /// Get the number of entries.
+    pub fn entry_len(&self) -> usize {
+        self.entries.len()
+    }
+
     /// Get the maximum rev (inclusive).
     pub fn max_rev(&self) -> Rev {
         self.dag.len().saturating_sub(1)
