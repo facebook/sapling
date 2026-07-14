@@ -28,7 +28,7 @@ pub struct AbstractLineLog<T, M = ()> {
     pub(crate) dag: NanoDag,
     rev_states: ImVec<Option<Arc<M>>>,
 
-    a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
+    a_lines_cache: Option<(EntryId, Rev, ImVec<LineInfo<T>>)>,
     deps_map_cache: OnceLock<Arc<NanoDag>>,
     perf_stats: Option<Arc<PerfStats>>,
 }
@@ -297,7 +297,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     pub fn with_dag_edge(self, a_rev: Rev, b_rev: Rev) -> Self {
         let mut a_lines_cache = self.a_lines_cache;
         let new_dag = self.dag.with_edge(a_rev, b_rev);
-        if let Some((cached_rev, _)) = &a_lines_cache {
+        if let Some((_, cached_rev, _)) = &a_lines_cache {
             if new_dag.is_ancestor(b_rev, *cached_rev) {
                 // The new edge affects content. Invalidates a_lines_cache.
                 a_lines_cache = None;
@@ -424,26 +424,30 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
 
     /// Checkout the lines of the given revision `rev`.
     /// See [`CheckoutRev`] docstring for details.
-    pub fn checkout_lines(&self, rev: impl Into<CheckoutRev>) -> ImVec<LineInfo<T>> {
+    pub fn checkout_lines(
+        &self,
+        entry: EntryId,
+        rev: impl Into<CheckoutRev>,
+    ) -> ImVec<LineInfo<T>> {
         let rev: CheckoutRev = rev.into();
         match rev {
             CheckoutRev::Single(rev) => {
-                if let Some((a_rev, cache)) = self.a_lines_cache.as_ref() {
-                    if *a_rev == rev {
+                if let Some((cache_entry, a_rev, cache)) = self.a_lines_cache.as_ref() {
+                    if *cache_entry == entry && *a_rev == rev {
                         if let Some(stats) = self.perf_stats.as_ref() {
                             stats.cache_hit.fetch_add(1, Ordering::Release);
                         }
                         return cache.clone();
                     }
                 }
-                self.execute(rev)
+                self.execute(entry, rev)
             }
             CheckoutRev::Merge(revs) => {
                 let mut ancestor_revs = SmallRevs::empty();
                 for rev in revs.iter() {
                     ancestor_revs.union_with(self.dag.ancestors(rev));
                 }
-                self.execute_advanced(&ancestor_revs, &ancestor_revs, None)
+                self.execute_advanced(entry, &ancestor_revs, &ancestor_revs, None)
             }
             CheckoutRev::Range(revs) => {
                 let get_insert_and_delete_revs = |revs: &SmallRevs| -> (SmallRevs, SmallRevs) {
@@ -465,13 +469,18 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
                 let is_present = {
                     let head_revs = self.dag.heads(&revs);
                     let (insert_revs, delete_revs) = get_insert_and_delete_revs(&head_revs);
-                    let lines = self.execute_advanced(&insert_revs, &delete_revs, None);
+                    let lines = self.execute_advanced(entry, &insert_revs, &delete_revs, None);
                     let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
                     move |pc| present_pc_set.contains(&pc)
                 };
 
                 let (insert_revs, delete_revs) = get_insert_and_delete_revs(&revs);
-                self.execute_advanced(&insert_revs, &delete_revs, Some(Box::new(is_present)))
+                self.execute_advanced(
+                    entry,
+                    &insert_revs,
+                    &delete_revs,
+                    Some(Box::new(is_present)),
+                )
             }
         }
     }
@@ -500,7 +509,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
 
         // Reuse or rebuild cache.
         let mut a_lines: ImVec<LineInfo<T>> = (match cache {
-            Some((rev, a_lines)) if rev == a_rev => {
+            Some((entry, rev, a_lines)) if entry == EntryId(0) && rev == a_rev => {
                 if let Some(stats) = self.perf_stats.as_ref() {
                     stats.cache_hit.fetch_add(1, Ordering::Release);
                 }
@@ -508,7 +517,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
             }
             _ => None,
         })
-        .unwrap_or_else(|| self.execute(a_rev));
+        .unwrap_or_else(|| self.execute(EntryId(0), a_rev));
 
         // Can only update cache if there are no possible edits between a_rev and b_rev.
         // It could be a_rev == b_rev, or parents(b_rev) == [a_rev] && a_rev >= max_rev
@@ -527,10 +536,13 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
         if can_update_cache {
             #[cfg(debug_assertions)]
             {
-                let fresh_lines = result.clone().with_perf_stats(None).execute(b_rev);
+                let fresh_lines = result
+                    .clone()
+                    .with_perf_stats(None)
+                    .execute(EntryId(0), b_rev);
                 assert!(fresh_lines == a_lines);
             }
-            result.a_lines_cache = Some((b_rev, a_lines));
+            result.a_lines_cache = Some((EntryId(0), b_rev, a_lines));
         } else {
             result.a_lines_cache = None;
         }
@@ -701,9 +713,9 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     }
 
     // private, no caching.
-    fn execute(&self, rev: Rev) -> ImVec<LineInfo<T>> {
+    fn execute(&self, entry: EntryId, rev: Rev) -> ImVec<LineInfo<T>> {
         let revs = self.dag.ancestors(rev);
-        self.execute_advanced(revs, revs, None)
+        self.execute_advanced(entry, revs, revs, None)
     }
 
     /// Advanced version of `execute` that takes insert_revs and delete_revs
@@ -727,6 +739,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
     /// for example, showing lines that ever existed in a range.
     fn execute_advanced(
         &self,
+        entry: EntryId,
         insert_revs: &SmallRevs,
         delete_revs: &SmallRevs,
         present: Option<Box<dyn Fn(Pc) -> bool>>,
@@ -736,7 +749,7 @@ impl<T: Default + PartialEq, M> AbstractLineLog<T, M> {
         }
 
         let mut lines = ImVec::<LineInfo<T>>::new();
-        let mut pc = 0;
+        let mut pc = self.entries[entry.0];
         // Each instructions should be executed at most once. There is no loop.
         let mut patience = self.code.len() + 1;
         let is_deleted = |pc: Pc| match present.as_deref() {
@@ -947,8 +960,8 @@ impl<T, M> AbstractLineLog<T, M> {
 
 impl<T: AsRef<str> + Default + PartialEq + fmt::Debug, M> AbstractLineLog<T, M> {
     /// Checkout the text of the given `rev`.
-    pub fn checkout_text(&self, rev: impl Into<CheckoutRev>) -> String {
-        let lines = self.checkout_lines(rev);
+    pub fn checkout_text(&self, entry: EntryId, rev: impl Into<CheckoutRev>) -> String {
+        let lines = self.checkout_lines(entry, rev);
         let mut text =
             String::with_capacity(lines.iter().map(|l| l.data.as_ref().as_ref().len()).sum());
         for line in lines {

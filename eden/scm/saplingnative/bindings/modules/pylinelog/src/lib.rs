@@ -7,6 +7,7 @@
 
 use ::linelog::CheckoutRev;
 use ::linelog::EditFlags;
+use ::linelog::EntryId;
 use ::linelog::NanoDag as NativeNanoDag;
 use ::linelog::SmallRevs as NativeSmallRevs;
 use cpython::*;
@@ -178,18 +179,18 @@ py_class!(class IntLineLog |py| {
 
     /// Get the lines. rev -> [(rev, line_no, pc, deleted)].
     /// Includes a dummy "end" line at the end.
-    def checkout_lines(&self, rev: usize) -> PyResult<Vec<(usize, usize, usize, bool)>> {
+    def checkout_lines(&self, rev: usize, entry: usize = 0) -> PyResult<Vec<(usize, usize, usize, bool)>> {
         let inner = self.inner(py);
-        let lines = inner.checkout_lines(rev);
+        let lines = inner.checkout_lines(EntryId(entry), rev);
         let lines: Vec<_> = lines.into_iter().map(|l| (l.rev, *l.data.as_ref(), l.pc, l.deleted)).collect();
         Ok(lines)
     }
 
     /// Get the lines visible in the revs set. revs -> [(rev, line_no, pc, deleted)].
     /// Includes a dummy "end" line at the end.
-    def checkout_revs_lines(&self, revs: SmallRevs) -> PyResult<Vec<(usize, usize, usize, bool)>> {
+    def checkout_revs_lines(&self, revs: SmallRevs, entry: usize = 0) -> PyResult<Vec<(usize, usize, usize, bool)>> {
         let inner = self.inner(py);
-        let lines = inner.checkout_lines(CheckoutRev::Range(revs.inner(py).clone()));
+        let lines = inner.checkout_lines(EntryId(entry), CheckoutRev::Range(revs.inner(py).clone()));
         let lines: Vec<_> = lines.into_iter().map(|l| (l.rev, *l.data.as_ref(), l.pc, l.deleted)).collect();
         Ok(lines)
     }

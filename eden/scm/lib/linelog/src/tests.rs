@@ -17,6 +17,7 @@ use smallvec::SmallVec;
 
 use crate::AbstractLineLog;
 use crate::CheckoutRev;
+use crate::CheckoutRev::Single as R;
 use crate::EditFlags;
 use crate::EntryId as E;
 use crate::LineLog;
@@ -26,13 +27,15 @@ use crate::linelog::PerfStats;
 use crate::linelog::Rev;
 use crate::nanodag::NanoDag;
 
+const E0: E = E(0);
+
 #[test]
 fn test_empty() {
     let log = LineLog::default();
     assert_eq!(log.max_rev(), 0);
     assert_eq!(log.entry_len(), 1);
-    assert_eq!(log.checkout_text(0), "");
-    assert_eq!(log.checkout_text(1), "");
+    assert_eq!(log.checkout_text(E0, R(0)), "");
+    assert_eq!(log.checkout_text(E0, R(1)), "");
 }
 
 #[test]
@@ -117,8 +120,8 @@ fn test_rev_state() {
 fn test_edit_single() {
     let log = LineLog::default();
     let log = log.edit_chunk(0, 0, 0, 1, lines("c\nd\ne\n"), Default::default());
-    assert_eq!(log.checkout_text(0), "");
-    assert_eq!(log.checkout_text(1), "c\nd\ne\n");
+    assert_eq!(log.checkout_text(E0, R(0)), "");
+    assert_eq!(log.checkout_text(E0, R(1)), "c\nd\ne\n");
     assert_eq!(log.show(1), ["1:c", "1:d", "1:e", "0:"]);
 }
 
@@ -126,14 +129,14 @@ fn test_edit_single() {
 fn test_edit_rev0() {
     let log = LineLog::default();
     let log = log.edit_chunk(0, 0, 0, 0, lines("c\n"), Default::default());
-    assert_eq!(log.checkout_text(0), "c\n");
+    assert_eq!(log.checkout_text(E0, R(0)), "c\n");
     let log = log.edit_chunk(0, 1, 1, 1, lines("d\n"), Default::default());
-    assert_eq!(log.checkout_text(0), "c\n");
-    assert_eq!(log.checkout_text(1), "c\nd\n");
+    assert_eq!(log.checkout_text(E0, R(0)), "c\n");
+    assert_eq!(log.checkout_text(E0, R(1)), "c\nd\n");
     assert_eq!(log.show(1), ["0:c", "1:d", "0:"]);
     // Edit an old version.
     let log = log.edit_chunk(0, 0, 0, 0, lines("b\n"), Default::default());
-    assert_eq!(log.checkout_text(1), "b\nc\nd\n");
+    assert_eq!(log.checkout_text(E0, R(1)), "b\nc\nd\n");
     assert_eq!(log.show(1), ["0:b", "0:c", "1:d", "0:"]);
     // Try deletion.
     let log = log.edit_chunk(1, 1, 3, 2, lines("k\n"), Default::default());
@@ -209,7 +212,7 @@ fn test_random_cases() {
             log = log.edit_chunk(a_rev, *a1, *a2, *b_rev, b_lines.clone(), Default::default());
             line_count += *b2 - *b1;
             line_count -= *a2 - *a1;
-            assert_eq!(log.checkout_lines(*b_rev).len(), line_count);
+            assert_eq!(log.checkout_lines(E0, R(*b_rev)).len(), line_count);
         }
 
         // execute prepares ancestor revsets once, then reuses the dag cache.
@@ -219,7 +222,7 @@ fn test_random_cases() {
 
         for (lines, b_rev, _a1, _a2, _b1, _b2, _b_lines) in cases {
             let text = lines.into_iter().collect::<Vec<String>>().concat();
-            assert_eq!(log.checkout_text(b_rev), text);
+            assert_eq!(log.checkout_text(E0, R(b_rev)), text);
         }
     }
 }
@@ -260,7 +263,7 @@ fn test_a_lines_cache_effectiveness() {
     check("after rev 3 insert", 3, 1);
 
     // Verify the content is correct despite heavy caching, and checkout hits cache too.
-    assert_eq!(log.checkout_text(3), "x\nd\nb\nc\n");
+    assert_eq!(log.checkout_text(E0, R(3)), "x\nd\nb\nc\n");
     check("after checkout", 4, 1);
 
     // Verify the dag cache (for ancestors and descendants) only gets built O(1) times.
@@ -283,7 +286,7 @@ fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
     // skipped (checked dag), so the rev 1 insertion inside rev 0 chunk is
     // skipped too, becomes invisible.
     let cache_hit_before = stats.cache_hit.load(Ordering::Acquire);
-    assert_eq!(log.checkout_text(1), "");
+    assert_eq!(log.checkout_text(E0, R(1)), "");
     let cache_hit_after = stats.cache_hit.load(Ordering::Acquire);
 
     // No cache hit during checkout: edit_chunk cannot prepare the cache without
@@ -472,7 +475,7 @@ fn test_example_merge() {
     let revs = SmallRevs::from_range(1..=2);
     // CheckoutRev::Merge respects the deletion on each side.
     assert_eq!(
-        log.checkout_text(CheckoutRev::Merge(revs.clone())),
+        log.checkout_text(E0, CheckoutRev::Merge(revs.clone())),
         r#"a
 c
 e
@@ -480,7 +483,7 @@ e
     );
     // CheckoutRev::Range keeps the deleted lines, since they exist in the other side.
     assert_eq!(
-        log.checkout_text(CheckoutRev::Range(revs.clone())),
+        log.checkout_text(E0, CheckoutRev::Range(revs.clone())),
         r#"a
 b
 c
@@ -511,9 +514,9 @@ e
 #[test]
 fn test_remap_code_revs() {
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
-    assert_eq!(log.checkout_text(1), "b\n");
-    assert_eq!(log.checkout_text(2), "b\nc\n");
-    assert_eq!(log.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(log.checkout_text(E0, R(1)), "b\n");
+    assert_eq!(log.checkout_text(E0, R(2)), "b\nc\n");
+    assert_eq!(log.checkout_text(E0, R(3)), "a\nb\nc\n");
 
     // Swap rev 2 and 3.
     let swapped = log.clone().remap_code_revs(&|r| match r {
@@ -522,7 +525,7 @@ fn test_remap_code_revs() {
         other => other,
     });
     assert_eq!(swapped.max_rev(), 3);
-    assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(swapped.checkout_text(E0, R(3)), "a\nb\nc\n");
 
     // Updates max_rev up.
     let mapped = log_from_texts(&["a\n".into(), "b\n".into()])
@@ -536,8 +539,8 @@ fn test_remap_code_revs() {
 
     // Merge changes.
     let merged = log.clone().remap_code_revs(&|r| if r == 2 { 1 } else { r });
-    assert_eq!(merged.checkout_text(1), "b\nc\n");
-    assert_eq!(merged.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(merged.checkout_text(E0, R(1)), "b\nc\n");
+    assert_eq!(merged.checkout_text(E0, R(3)), "a\nb\nc\n");
 
     // Can insert changes by shifting revs to make room, then recording at the gap.
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into()]);
@@ -545,7 +548,7 @@ fn test_remap_code_revs() {
     let inserted = log.insert_shift(1);
     assert_eq!(inserted.max_rev(), 3);
     let inserted = record_text(inserted, "a\nb\n", 1, 2);
-    assert_eq!(inserted.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(inserted.checkout_text(E0, R(3)), "a\nb\nc\n");
 
     // Raw code remapping does not update the dag or validate dependencies.
     let log = log_from_texts(&["a\nc\n".into(), "a\nb\nc\n".into()]);
@@ -554,8 +557,8 @@ fn test_remap_code_revs() {
         2 => 1,
         other => other,
     });
-    assert_eq!(bad_swap.checkout_text(1), "");
-    assert_eq!(bad_swap.checkout_text(2), "a\nb\nc\n");
+    assert_eq!(bad_swap.checkout_text(E0, R(1)), "");
+    assert_eq!(bad_swap.checkout_text(E0, R(2)), "a\nb\nc\n");
 }
 
 #[test]
@@ -569,10 +572,10 @@ fn test_fold_revs() {
     log = record_text(log, "d\nb\nC\n", 4, 4);
 
     assert_eq!(log.nanodag().to_string(), "0-{1-2,3}-4");
-    assert_eq!(log.checkout_text(1), "b\nc\n");
-    assert_eq!(log.checkout_text(2), "b\nC\n");
-    assert_eq!(log.checkout_text(3), "d\nb\n");
-    assert_eq!(log.checkout_text(4), "d\nb\nC\n");
+    assert_eq!(log.checkout_text(E0, R(1)), "b\nc\n");
+    assert_eq!(log.checkout_text(E0, R(2)), "b\nC\n");
+    assert_eq!(log.checkout_text(E0, R(3)), "d\nb\n");
+    assert_eq!(log.checkout_text(E0, R(4)), "d\nb\nC\n");
 
     // Fold {1-2,3}, two branches into one rev.
     let folded = log.clone().fold(&SmallRevs::from_range(1..=3)).unwrap();
@@ -580,12 +583,12 @@ fn test_fold_revs() {
     assert_eq!(folded.nanodag().to_string(), "{0-1-4,2,3}");
 
     assert_eq!(
-        folded.checkout_text(1),
-        log.checkout_text(CheckoutRev::Merge(SmallRevs::from_range(2..=3)))
+        folded.checkout_text(E0, R(1)),
+        log.checkout_text(E0, CheckoutRev::Merge(SmallRevs::from_range(2..=3)))
     );
-    assert_eq!(folded.checkout_text(2), "");
-    assert_eq!(folded.checkout_text(3), "");
-    assert_eq!(folded.checkout_text(4), log.checkout_text(4));
+    assert_eq!(folded.checkout_text(E0, R(2)), "");
+    assert_eq!(folded.checkout_text(E0, R(3)), "");
+    assert_eq!(folded.checkout_text(E0, R(4)), log.checkout_text(E0, R(4)));
 }
 
 #[test]
@@ -609,9 +612,9 @@ fn test_topo_remap_revs() {
         .expect("append-only revs can be reordered");
     assert_eq!(old_to_new, vec![0, 1, 3, 2]);
     assert_eq!(remapped.nanodag().to_string(), "0-1-2-3");
-    assert_eq!(remapped.checkout_text(1), "a\n");
-    assert_eq!(remapped.checkout_text(2), "a\nc\n");
-    assert_eq!(remapped.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(remapped.checkout_text(E0, R(1)), "a\n");
+    assert_eq!(remapped.checkout_text(E0, R(2)), "a\nc\n");
+    assert_eq!(remapped.checkout_text(E0, R(3)), "a\nb\nc\n");
 
     // Split 0-1-2-3 into 0-2 and 1-3. Since these append-only revs have no
     // textual dependencies on each other, dep_dag allows the split.
@@ -621,8 +624,8 @@ fn test_topo_remap_revs() {
         .expect("independent revs can be split into disjoint chains");
     assert_eq!(old_to_new, vec![0, 1, 2, 3]);
     assert_eq!(split.nanodag().to_string(), "{0-2,1-3}");
-    assert_eq!(split.checkout_text(2), "b\n");
-    assert_eq!(split.checkout_text(3), "a\nc\n");
+    assert_eq!(split.checkout_text(E0, R(2)), "b\n");
+    assert_eq!(split.checkout_text(E0, R(3)), "a\nc\n");
 
     // Join the split chains back into a linear history.
     let (joined, old_to_new) = split
@@ -630,7 +633,7 @@ fn test_topo_remap_revs() {
         .expect("split chains can be joined back");
     assert_eq!(old_to_new, vec![0, 1, 2, 3]);
     assert_eq!(joined.nanodag().to_string(), "0-1-2-3");
-    assert_eq!(joined.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(joined.checkout_text(E0, R(3)), "a\nb\nc\n");
 }
 
 #[test]
@@ -650,7 +653,7 @@ fn test_remap_code_revs_reorder_insertions() {
         3 => 2,
         other => other,
     });
-    assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
+    assert_eq!(swapped.checkout_text(E0, R(3)), "a\nb\nc\n");
 }
 
 /// Port of D52514621: test reordering for all insertion permutations.
@@ -731,7 +734,7 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     let expected_texts = build_texts(lines, line_added_order, &swapped_revs);
     for &rev in &revs {
         assert_eq!(
-            swapped.checkout_text(rev),
+            swapped.checkout_text(E0, R(rev)),
             expected_texts[rev - 1],
             "order={line_added_order:?}, rev={rev}"
         );
@@ -778,7 +781,7 @@ fn test_truncate() {
             }
         );
         for rev in 0..texts.len() {
-            let text = truncated.checkout_text(rev);
+            let text = truncated.checkout_text(E0, R(rev));
             if rev < truncate_rev {
                 let expected = if rev < 1 { "" } else { &texts[rev - 1] };
                 assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
@@ -786,16 +789,22 @@ fn test_truncate() {
                 let expected = "";
                 assert_eq!(
                     text,
-                    truncated.checkout_text(rev),
+                    truncated.checkout_text(E0, R(rev)),
                     "truncate={truncate_rev}, rev={rev}"
                 );
                 assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
             }
         }
         let appended = append_text(truncated.clone(), "a\nc\ne\n");
-        assert_eq!(appended.checkout_text(appended.max_rev()), "a\nc\ne\n");
+        assert_eq!(
+            appended.checkout_text(E0, R(appended.max_rev())),
+            "a\nc\ne\n"
+        );
         for rev in 0..truncate_rev {
-            assert_eq!(appended.checkout_text(rev), log.checkout_text(rev));
+            assert_eq!(
+                appended.checkout_text(E0, R(rev)),
+                log.checkout_text(E0, R(rev))
+            );
         }
     }
 }
@@ -809,9 +818,9 @@ fn test_non_linear_skipped_rev() {
         .edit_chunk(0, 1, 1, 2, vec!["b"], flags);
     assert_eq!(log.nanodag().to_string(), "{0-2,1}");
     assert_eq!(log.dep_dag().to_string(), "{0-2,1}");
-    assert_eq!(log.checkout_text(0), "ac");
-    assert_eq!(log.checkout_text(1), "");
-    assert_eq!(log.checkout_text(2), "abc");
+    assert_eq!(log.checkout_text(E0, R(0)), "ac");
+    assert_eq!(log.checkout_text(E0, R(1)), "");
+    assert_eq!(log.checkout_text(E0, R(2)), "abc");
 }
 
 #[test]
@@ -830,14 +839,14 @@ fn test_non_linear_merged_rev() {
         .with_dag_edge(1, 3);
     assert_eq!(log.nanodag().to_string(), "0-{1,2}-3");
     assert_eq!(log.dep_dag().to_string(), "{0-{1,2},3}");
-    assert_eq!(log.checkout_text(0), "acdf"); // rev 0, orig content
-    assert_eq!(log.checkout_text(1), "bbcdf"); // rev 1 replaced "a" with "bb"
-    assert_eq!(log.checkout_text(2), "aceef"); // rev 2 replaced "d" with "ee", without rev 1 "bb"
-    assert_eq!(log.checkout_text(3), "bbceef"); // rev 3 is a (unchanged) merge, with both "bb" and "ee"
+    assert_eq!(log.checkout_text(E0, R(0)), "acdf"); // rev 0, orig content
+    assert_eq!(log.checkout_text(E0, R(1)), "bbcdf"); // rev 1 replaced "a" with "bb"
+    assert_eq!(log.checkout_text(E0, R(2)), "aceef"); // rev 2 replaced "d" with "ee", without rev 1 "bb"
+    assert_eq!(log.checkout_text(E0, R(3)), "bbceef"); // rev 3 is a (unchanged) merge, with both "bb" and "ee"
 
     // changes on the default merge result
     let log = log.edit_chunk(3, 1, 4, 3, vec!["x"], flags);
-    assert_eq!(log.checkout_text(3), "bxef"); // rev 3 replaced the middle "bce" with "x"
+    assert_eq!(log.checkout_text(E0, R(3)), "bxef"); // rev 3 replaced the middle "bce" with "x"
 }
 
 #[test]
@@ -853,9 +862,9 @@ fn test_flatten() {
         .edit_chunk(2, 3, 4, 3, lines("f\n"), Default::default())
         .edit_chunk(2, 0, 1, 3, lines("a\n"), Default::default());
 
-    assert_eq!(log.checkout_text(1), "a\nb\nc\n");
-    assert_eq!(log.checkout_text(2), "b\nc\nd\ne\n");
-    assert_eq!(log.checkout_text(3), "a\nc\nd\nf\n");
+    assert_eq!(log.checkout_text(E0, R(1)), "a\nb\nc\n");
+    assert_eq!(log.checkout_text(E0, R(2)), "b\nc\nd\ne\n");
+    assert_eq!(log.checkout_text(E0, R(3)), "a\nc\nd\nf\n");
 
     let flat = log.flatten();
     let show: Vec<(&str, Vec<usize>)> = flat
@@ -981,7 +990,7 @@ fn append_text(log: LineLog, text: &str) -> LineLog {
 /// `a_rev == b_rev` is valid for editing a revision that already exists. Callers
 /// that create a new revision should pass the actual parent as `a_rev`.
 fn record_text(mut log: LineLog, text: &str, a_rev: usize, b_rev: usize) -> LineLog {
-    let a_lines_info = log.checkout_lines(a_rev);
+    let a_lines_info = log.checkout_lines(E0, R(a_rev));
     let a_text: Vec<String> = a_lines_info
         .iter()
         .take(a_lines_info.len() - 1)
@@ -1001,7 +1010,7 @@ fn record_text(mut log: LineLog, text: &str, a_rev: usize, b_rev: usize) -> Line
         );
     }
     if log.max_rev() < b_rev {
-        let n = log.checkout_lines(a_rev).len();
+        let n = log.checkout_lines(E0, R(a_rev)).len();
         log = log.edit_chunk(a_rev, n - 1, n - 1, b_rev, vec![], Default::default());
     }
     log
@@ -1111,7 +1120,7 @@ fn test_block_shift_effectiveness() {
         for a1 in 0..=(2 * n) {
             let lines = expected_rev3_lines[a1..a1 + n].to_vec();
             let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
-            assert_eq!(log.checkout_text(3), expected_rev3_text);
+            assert_eq!(log.checkout_text(E0, R(3)), expected_rev3_text);
             let dep = log.dep_dag();
             let dep = format!("DepMap({dep})");
             grouped.entry(dep).or_default().push(a1);
@@ -1207,7 +1216,7 @@ fn test_debug_nanodag() {
 
 impl LineLog {
     fn show(&self, rev: usize) -> Vec<String> {
-        self.checkout_lines(rev)
+        self.checkout_lines(E0, R(rev))
             .into_iter()
             .map(|l| format!("{}:{}", l.rev, l.data.trim_end()))
             .collect()
@@ -1215,7 +1224,7 @@ impl LineLog {
 
     fn show_range(&self, start: usize, end: usize) -> Vec<String> {
         let target_revs = SmallRevs::from_range(start..=end);
-        self.checkout_lines(CheckoutRev::Range(target_revs))
+        self.checkout_lines(E0, CheckoutRev::Range(target_revs))
             .into_iter()
             .map(|l| {
                 format!(
