@@ -197,9 +197,10 @@ impl<T> AbstractLineLog<T> {
     /// For example, `{5: {3, 1}}` means rev 5 depends on rev 3 and rev 1.
     ///
     /// Based on LineLog instruction nesting, which could be different from
-    /// traditional textual context-line dependencies. LineLog dependency is
-    /// to prevent "malformed cases" when nested blocks (insertions or
-    /// deletions) might be skipped incorrectly after `remap_revs`.
+    /// traditional textual context-line dependencies. LineLog dependencies
+    /// help prevent "malformed cases" when nested blocks (insertions or
+    /// deletions) might be skipped incorrectly. Example use case is the
+    /// check in `topo_remap` to ensure the remap result is still sane.
     /// Practically, LineLog might allow reorder cases that would be disallowed
     /// by traditional context-line dependencies.
     ///

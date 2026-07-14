@@ -428,14 +428,14 @@ e
 }
 
 #[test]
-fn test_remap_revs() {
+fn test_remap_code_revs() {
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
     assert_eq!(log.checkout_text(1), "b\n");
     assert_eq!(log.checkout_text(2), "b\nc\n");
     assert_eq!(log.checkout_text(3), "a\nb\nc\n");
 
     // Swap rev 2 and 3.
-    let swapped = log.clone().remap_revs(&|r| match r {
+    let swapped = log.clone().remap_code_revs(&|r| match r {
         2 => 3,
         3 => 2,
         other => other,
@@ -444,17 +444,17 @@ fn test_remap_revs() {
     assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
 
     // Updates max_rev up.
-    let mapped =
-        log_from_texts(&["a\n".into(), "b\n".into()]).remap_revs(&|r| if r == 1 { 10 } else { r });
+    let mapped = log_from_texts(&["a\n".into(), "b\n".into()])
+        .remap_code_revs(&|r| if r == 1 { 10 } else { r });
     assert_eq!(mapped.max_rev(), 10);
 
     // Updates max_rev down.
-    let mapped =
-        log_from_texts(&["a\n".into(), "b\n".into()]).remap_revs(&|r| if r == 2 { 1 } else { r });
+    let mapped = log_from_texts(&["a\n".into(), "b\n".into()])
+        .remap_code_revs(&|r| if r == 2 { 1 } else { r });
     assert_eq!(mapped.max_rev(), 1);
 
     // Merge changes.
-    let merged = log.clone().remap_revs(&|r| if r == 2 { 1 } else { r });
+    let merged = log.clone().remap_code_revs(&|r| if r == 2 { 1 } else { r });
     assert_eq!(merged.checkout_text(1), "b\nc\n");
     assert_eq!(merged.checkout_text(3), "a\nb\nc\n");
 
@@ -466,9 +466,9 @@ fn test_remap_revs() {
     let inserted = record_text(inserted, "a\nb\n", 1, 2);
     assert_eq!(inserted.checkout_text(3), "a\nb\nc\n");
 
-    // Does not check dependencies or conflicts.
+    // Raw code remapping does not update the dag or validate dependencies.
     let log = log_from_texts(&["a\nc\n".into(), "a\nb\nc\n".into()]);
-    let bad_swap = log.remap_revs(&|r| match r {
+    let bad_swap = log.remap_code_revs(&|r| match r {
         1 => 2,
         2 => 1,
         other => other,
@@ -553,7 +553,7 @@ fn test_topo_remap_revs() {
 }
 
 #[test]
-fn test_remap_revs_reorder_insertions() {
+fn test_remap_code_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 
     let dep_dag = log.dep_dag();
@@ -564,7 +564,7 @@ fn test_remap_revs_reorder_insertions() {
         assert_eq!(dep_dag.parents(rev), [], "rev={rev}");
     }
 
-    let swapped = log.remap_revs(&|r| match r {
+    let swapped = log.remap_code_revs(&|r| match r {
         2 => 3,
         3 => 2,
         other => other,
@@ -643,7 +643,7 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
         3 => 2,
         other => other,
     };
-    let swapped = log.remap_revs(&swap);
+    let swapped = log.remap_code_revs(&swap);
 
     // Expected texts after swap.
     let swapped_revs: Vec<usize> = revs.iter().map(|&r| swap(r)).collect();

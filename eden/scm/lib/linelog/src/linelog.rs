@@ -734,17 +734,19 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
 }
 
 impl<T> AbstractLineLog<T> {
-    /// Rewrite `rev` references in all instructions.
-    /// This can be useful for reordering, folding, or inserting revisions.
+    /// Rewrite `rev` references in code instructions.
     ///
-    /// The edges in the DAG are *unchanged*. If larger revs are introduced,
-    /// the dag will resize to make sure all revs are present in the dag.
+    /// This is intended to be an internal building block for higher-level
+    /// remapping helpers. It only rewrites the code and resizes the dag for
+    /// larger revs. The edges in the DAG are *unchanged*. Callers are
+    /// responsible for updating the dag shape responsibly, to avoid troublesome
+    /// remaps, like moving a change to before its dependency.
     ///
-    /// Note: There are no checks about whether the reordering is meaningful.
-    /// The callsite should use `can_reorder` to check dependencies
-    /// and avoid troublesome reorders, like moving a change to before its
-    /// dependency.
-    pub fn remap_revs(self, rev_map: &dyn Fn(Rev) -> Rev) -> Self {
+    /// For compatibility reasons, this API is public to external users.
+    /// External users should consider switching to higher-level helpers
+    /// such as [`Self::insert_shift`], [`Self::fold`], [`Self::topo_remap`],
+    /// or [`Self::truncate`].
+    pub fn remap_code_revs(self, rev_map: &dyn Fn(Rev) -> Rev) -> Self {
         let mut max_rev = 0;
         let code = self
             .code
@@ -778,7 +780,7 @@ impl<T> AbstractLineLog<T> {
     /// instructions and the dag.
     pub fn insert_shift(self, rev: Rev) -> Self {
         let dag = self.dag.clone().insert_shift(rev);
-        let result = self.remap_revs(&|r| if r > rev { r + 1 } else { r });
+        let result = self.remap_code_revs(&|r| if r > rev { r + 1 } else { r });
         Self { dag, ..result }
     }
 
@@ -792,7 +794,7 @@ impl<T> AbstractLineLog<T> {
             return Ok(self);
         };
         let dag = self.dag.clone().fold(revs)?;
-        let result = self.remap_revs(&|r| if revs.contains(r) { start } else { r });
+        let result = self.remap_code_revs(&|r| if revs.contains(r) { start } else { r });
         Ok(Self { dag, ..result })
     }
 
@@ -816,7 +818,7 @@ impl<T> AbstractLineLog<T> {
     ) -> Result<(Self, Vec<Rev>), String> {
         let dep_dag = self.dep_dag().clone();
         let (dag, old_to_new) = self.dag.topo_remap(new_parents, &dep_dag)?;
-        let result = self.remap_revs(&|r| old_to_new[r]);
+        let result = self.remap_code_revs(&|r| old_to_new[r]);
         Ok((Self { dag, ..result }, old_to_new))
     }
 
