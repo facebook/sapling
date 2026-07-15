@@ -711,7 +711,7 @@ class EdenServiceHandler
       requestCancellationStore_;
 
   const std::vector<std::string> originalCommandLine_;
-  EdenServer* const server_;
+  EdenServer* const FOLLY_NONNULL server_;
 
   std::unique_ptr<UsageService> usageService_;
 

@@ -75,6 +75,7 @@ TEST(StatsFetchContextTest, CopyConstructorPreservesBytes) {
   ObjectId id = makeTestId("1234567890123456789012345678901234567890");
   ctx1.didFetch(
       ObjectFetchContext::Blob, id, ObjectFetchContext::FromNetworkFetch, 1000);
+  ctx1.addPrefetchedBlobSize(64);
 
   StatsFetchContext ctx2(ctx1);
 
@@ -86,6 +87,7 @@ TEST(StatsFetchContextTest, CopyConstructorPreservesBytes) {
       1000,
       ctx2.countBytesFetchedOfTypeAndOrigin(
           ObjectFetchContext::Blob, ObjectFetchContext::FromNetworkFetch));
+  EXPECT_EQ(64, ctx2.getPrefetchedBlobBytes());
 }
 
 TEST(StatsFetchContextTest, MergeAddsBytes) {
@@ -97,6 +99,8 @@ TEST(StatsFetchContextTest, MergeAddsBytes) {
       ObjectFetchContext::Tree, id1, ObjectFetchContext::FromDiskCache, 500);
   ctx2.didFetch(
       ObjectFetchContext::Tree, id2, ObjectFetchContext::FromDiskCache, 700);
+  ctx1.addPrefetchedBlobSize(10);
+  ctx2.addPrefetchedBlobSize(30);
 
   ctx1.merge(ctx2);
 
@@ -108,6 +112,7 @@ TEST(StatsFetchContextTest, MergeAddsBytes) {
       1200,
       ctx1.countBytesFetchedOfTypeAndOrigin(
           ObjectFetchContext::Tree, ObjectFetchContext::FromDiskCache));
+  EXPECT_EQ(40, ctx1.getPrefetchedBlobBytes());
 }
 
 TEST(StatsFetchContextTest, DidFetchWithoutBytesStillWorks) {

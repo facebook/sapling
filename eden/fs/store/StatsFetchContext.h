@@ -87,6 +87,14 @@ class StatsFetchContext : public ObjectFetchContext {
    */
   void merge(const StatsFetchContext& other);
 
+  void addPrefetchedBlobSize(uint64_t bytes) override {
+    prefetchedBlobBytes_.fetch_add(bytes, std::memory_order_relaxed);
+  }
+
+  uint64_t getPrefetchedBlobBytes() const {
+    return prefetchedBlobBytes_.load(std::memory_order_relaxed);
+  }
+
   const std::unordered_map<std::string, std::string>* getRequestInfo()
       const override {
     return &requestInfo_;
@@ -98,6 +106,7 @@ class StatsFetchContext : public ObjectFetchContext {
   std::atomic<uint64_t> bytes_[ObjectFetchContext::kObjectTypeEnumMax]
                               [ObjectFetchContext::kOriginEnumMax] = {};
   std::atomic<uint64_t> failures_[ObjectFetchContext::kObjectTypeEnumMax] = {};
+  std::atomic<uint64_t> prefetchedBlobBytes_{0};
   OptionalProcessId clientPid_;
   Cause cause_ = Cause::Unknown;
   std::optional<std::string_view> causeDetail_;

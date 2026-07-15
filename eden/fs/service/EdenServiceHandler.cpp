@@ -9,6 +9,7 @@
 
 #include <sys/types.h>
 #include <algorithm>
+#include <chrono>
 #include <optional>
 #include <stdexcept>
 #include <system_error>
@@ -93,6 +94,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/store/filter/GlobFilter.h"
@@ -457,36 +459,23 @@ class ThriftFetchContext : public ObjectFetchContext {
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 
-class PrefetchFetchContext : public ObjectFetchContext {
+class PrefetchFetchContext : public StatsFetchContext {
  public:
   explicit PrefetchFetchContext(
       OptionalProcessId pid,
       std::string_view endpoint)
-      : pid_(pid), endpoint_(endpoint) {}
+      : StatsFetchContext(
+            pid,
+            ObjectFetchContext::Cause::Prefetch,
+            endpoint,
+            nullptr),
+        endpoint_(endpoint) {}
 
-  OptionalProcessId getClientPid() const override {
-    return pid_;
-  }
-
-  Cause getCause() const override {
-    return ObjectFetchContext::Cause::Prefetch;
-  }
-
-  std::optional<std::string_view> getCauseDetail() const override {
-    return endpoint_;
-  }
-
-  virtual ImportPriority getPriority() const override {
+  ImportPriority getPriority() const override {
     return kThriftPrefetchPriority;
   }
 
-  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
-  getRequestInfo() const override {
-    return nullptr;
-  }
-
  private:
-  OptionalProcessId pid_;
   std::string_view endpoint_;
 };
 
@@ -6036,6 +6025,103 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
   return serialDetachIfBackgrounded(std::move(globFut), server_, isBackground);
 }
 
+namespace {
+
+PrefetchStats populatePrefetchStats(
+    const PrefetchFetchContext& ctx,
+    int64_t durationMs) {
+  PrefetchStats stats;
+
+  using ObjectType = ObjectFetchContext::ObjectType;
+  using Origin = ObjectFetchContext::Origin;
+
+  // Tree stats (counts)
+  stats.treesFromMemoryCache() = ctx.countFetchesOfTypeAndOrigin(
+      ObjectType::Tree, Origin::FromMemoryCache);
+  stats.treesFromDiskCache() =
+      ctx.countFetchesOfTypeAndOrigin(ObjectType::Tree, Origin::FromDiskCache);
+  stats.treesFromNetwork() = ctx.countFetchesOfTypeAndOrigin(
+      ObjectType::Tree, Origin::FromNetworkFetch);
+
+  // Blob stats (counts)
+  stats.blobsFromMemoryCache() = ctx.countFetchesOfTypeAndOrigin(
+      ObjectType::Blob, Origin::FromMemoryCache);
+  stats.blobsFromDiskCache() =
+      ctx.countFetchesOfTypeAndOrigin(ObjectType::Blob, Origin::FromDiskCache);
+  stats.blobsFromNetwork() = ctx.countFetchesOfTypeAndOrigin(
+      ObjectType::Blob, Origin::FromNetworkFetch);
+
+  // Tree stats (bytes)
+  stats.treeBytesFromMemoryCache() = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Tree, Origin::FromMemoryCache);
+  stats.treeBytesFromDiskCache() = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Tree, Origin::FromDiskCache);
+  stats.treeBytesFromNetwork() = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Tree, Origin::FromNetworkFetch);
+
+  // Blob stats (bytes)
+  // First try per-origin byte tracking from the fetch pipeline.
+  int64_t blobBytesMemory = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Blob, Origin::FromMemoryCache);
+  int64_t blobBytesDisk = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Blob, Origin::FromDiskCache);
+  int64_t blobBytesNetwork = ctx.countBytesFetchedOfTypeAndOrigin(
+      ObjectType::Blob, Origin::FromNetworkFetch);
+
+  // Defense-in-depth: if per-origin blob byte tracking is broken (e.g.
+  // IGNORE_RESULT discards content before bytes are recorded), fall back
+  // to tree-entry file sizes from the glob walk, distributed proportionally
+  // across origins based on blob counts.
+  //
+  // Note: totalBlobs can be non-zero even when bytes are zero because
+  // the backing store can report per-origin blob counts (via
+  // didFetchBatch) without corresponding byte amounts.
+  if (blobBytesMemory + blobBytesDisk + blobBytesNetwork == 0) {
+    uint64_t prefetchedBytes = ctx.getPrefetchedBlobBytes();
+    int64_t totalBlobs = *stats.blobsFromMemoryCache() +
+        *stats.blobsFromDiskCache() + *stats.blobsFromNetwork();
+    if (prefetchedBytes > 0 && totalBlobs > 0) {
+      blobBytesMemory = static_cast<int64_t>(
+          prefetchedBytes * *stats.blobsFromMemoryCache() / totalBlobs);
+      blobBytesDisk = static_cast<int64_t>(
+          prefetchedBytes * *stats.blobsFromDiskCache() / totalBlobs);
+      blobBytesNetwork = static_cast<int64_t>(
+          prefetchedBytes - blobBytesMemory - blobBytesDisk);
+    }
+  }
+
+  stats.blobBytesFromMemoryCache() = blobBytesMemory;
+  stats.blobBytesFromDiskCache() = blobBytesDisk;
+  stats.blobBytesFromNetwork() = blobBytesNetwork;
+
+  // Timing
+  stats.totalDurationMs() = durationMs;
+
+  // Cache hit rate: (memory + disk) / total
+  int64_t totalCacheHits = *stats.treesFromMemoryCache() +
+      *stats.treesFromDiskCache() + *stats.blobsFromMemoryCache() +
+      *stats.blobsFromDiskCache();
+  int64_t totalAccesses = *stats.treesFromMemoryCache() +
+      *stats.treesFromDiskCache() + *stats.treesFromNetwork() +
+      *stats.blobsFromMemoryCache() + *stats.blobsFromDiskCache() +
+      *stats.blobsFromNetwork();
+  if (totalAccesses > 0) {
+    stats.cacheHitRate() = 100.0 * static_cast<double>(totalCacheHits) /
+        static_cast<double>(totalAccesses);
+  } else {
+    stats.cacheHitRate() = 0.0;
+  }
+
+  // Summary info
+  stats.filesPrefetched() = *stats.blobsFromMemoryCache() +
+      *stats.blobsFromDiskCache() + *stats.blobsFromNetwork();
+  stats.filesFailed() = ctx.getFailureCount(ObjectFetchContext::Blob);
+
+  return stats;
+}
+
+} // namespace
+
 folly::SemiFuture<std::unique_ptr<PrefetchResult>>
 EdenServiceHandler::semifuture_prefetchFilesV2Impl(
     std::unique_ptr<PrefetchParams> params) {
@@ -6074,36 +6160,71 @@ EdenServiceHandler::semifuture_prefetchFilesV2Impl(
       context,
       server_->getServerState());
 
+  // Capture start time for stats
+  auto startTime = std::chrono::steady_clock::now();
+
+  // Get a copy of the prefetch context for stats tracking
+  auto prefetchContext = helper->getPrefetchFetchContext().copy();
+
   auto globFut =
       std::move(backgroundFuture)
-          .thenValue([mountHandle,
-                      serverState = server_->getServerState(),
-                      globs = std::move(*params->globs()),
-                      globber = std::move(globber),
-                      context = helper->getPrefetchFetchContext().copy()](
-                         auto&&) mutable {
-            return globber.glob(
-                mountHandle.getEdenMountPtr(),
-                serverState,
-                std::move(globs),
-                context);
-          });
+          .thenValue(
+              [mountHandle,
+               serverState = server_->getServerState(),
+               globs = std::move(*params->globs()),
+               globber = std::move(globber),
+               prefetchContext = prefetchContext.copy()](auto&&) mutable {
+                return globber
+                    .glob(
+                        mountHandle.getEdenMountPtr(),
+                        std::move(serverState),
+                        std::move(globs),
+                        prefetchContext)
+                    .thenValue([prefetchContext = prefetchContext.copy()](
+                                   std::unique_ptr<Glob> glob) mutable {
+                      return std::make_pair(
+                          std::move(glob), std::move(prefetchContext));
+                    });
+              });
 
   // If returnPrefetchedFiles is set then return the list of globs
-  auto prefetchResult = std::move(globFut)
-                            .thenValue([returnPrefetchedFiles](
-                                           std::unique_ptr<Glob> glob) mutable {
-                              std::unique_ptr<PrefetchResult> result =
-                                  std::make_unique<PrefetchResult>();
-                              if (!returnPrefetchedFiles) {
-                                return result;
-                              }
-                              result->prefetchedFiles() = std::move(*glob);
-                              return result;
-                            })
-                            .ensure([mountHandle,
-                                     helper = std::move(helper),
-                                     params = std::move(params)] {});
+  // Also collect stats from the prefetch context
+  auto prefetchResult =
+      std::move(globFut)
+          .thenValue(
+              [returnPrefetchedFiles, startTime](
+                  std::pair<std::unique_ptr<Glob>, ObjectFetchContextPtr>&&
+                      globAndContext) mutable {
+                auto& [glob, fetchContext] = globAndContext;
+                auto endTime = std::chrono::steady_clock::now();
+                auto durationMs =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        endTime - startTime)
+                        .count();
+
+                std::unique_ptr<PrefetchResult> result =
+                    std::make_unique<PrefetchResult>();
+
+                // Collect stats from the prefetch context
+                auto* statsContext =
+                    dynamic_cast<PrefetchFetchContext*>(fetchContext.get());
+                if (statsContext) {
+                  result->stats() =
+                      populatePrefetchStats(*statsContext, durationMs);
+                } else {
+                  XLOGF(
+                      ERR,
+                      "prefetch stats unavailable: unexpected fetch context");
+                }
+
+                if (returnPrefetchedFiles) {
+                  result->prefetchedFiles() = std::move(*glob);
+                }
+                return result;
+              })
+          .ensure([mountHandle,
+                   helper = std::move(helper),
+                   params = std::move(params)] {});
 
   // If using a dedicated executor, don't use serial executor since that
   // precludes parallelism.

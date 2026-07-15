@@ -202,6 +202,12 @@ class ObjectFetchContext : public RefCounted {
   virtual void deprioritize(uint64_t) {}
 
   /**
+   * Record the expected size of a blob about to be prefetched.
+   * Called during tree traversal when file sizes are known from tree entries.
+   */
+  virtual void addPrefetchedBlobSize(uint64_t /* bytes */) {}
+
+  /**
    * Return a no-op fetch context suitable when no tracking is desired.
    */
   static ObjectFetchContextPtr getNullContext();

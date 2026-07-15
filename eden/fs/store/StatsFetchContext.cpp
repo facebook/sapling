@@ -34,6 +34,7 @@ StatsFetchContext::StatsFetchContext(const StatsFetchContext& other)
     }
     failures_[y] = other.failures_[y].load();
   }
+  prefetchedBlobBytes_ = other.prefetchedBlobBytes_.load();
 }
 
 StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
@@ -49,6 +50,7 @@ StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
     }
     failures_[y] = other.failures_[y].load();
   }
+  prefetchedBlobBytes_ = other.prefetchedBlobBytes_.load();
 }
 
 StatsFetchContext& StatsFetchContext::operator=(
@@ -65,6 +67,7 @@ StatsFetchContext& StatsFetchContext::operator=(
     }
     failures_[y] = other.failures_[y].load();
   }
+  prefetchedBlobBytes_ = other.prefetchedBlobBytes_.load();
   return *this;
 }
 
@@ -127,6 +130,7 @@ void StatsFetchContext::merge(const StatsFetchContext& other) {
     }
     failures_[type] += other.failures_[type];
   }
+  prefetchedBlobBytes_ += other.prefetchedBlobBytes_;
 }
 
 uint64_t StatsFetchContext::countFetchesOfTypeAndOrigin(

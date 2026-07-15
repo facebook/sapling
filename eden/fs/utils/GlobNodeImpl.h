@@ -190,6 +190,11 @@ class GlobNodeImpl {
             }
             if (fileBlobsToPrefetch &&
                 root.entryShouldPrefetch(&entry.second)) {
+              if constexpr (requires { entry.second.getSize(); }) {
+                if (auto size = entry.second.getSize()) {
+                  context->addPrefetchedBlobSize(*size);
+                }
+              }
               if (prefetchOptimizations_) {
                 localFileBlobsToPrefetch.emplace_back(
                     store->stripObjectId(entry.second.getObjectId()));
@@ -400,6 +405,11 @@ class GlobNodeImpl {
 
               if (fileBlobsToPrefetch &&
                   root.entryShouldPrefetch(&entry->second)) {
+                if constexpr (requires { entry->second.getSize(); }) {
+                  if (auto size = entry->second.getSize()) {
+                    context->addPrefetchedBlobSize(*size);
+                  }
+                }
                 if (prefetchOptimizations_) {
                   localFileBlobsToPrefetch.emplace_back(
                       store->stripObjectId(entry->second.getObjectId()));
@@ -430,6 +440,11 @@ class GlobNodeImpl {
                 }
                 if (fileBlobsToPrefetch &&
                     root.entryShouldPrefetch(&entry.second)) {
+                  if constexpr (requires { entry.second.getSize(); }) {
+                    if (auto size = entry.second.getSize()) {
+                      context->addPrefetchedBlobSize(*size);
+                    }
+                  }
                   if (prefetchOptimizations_) {
                     localFileBlobsToPrefetch.emplace_back(
                         store->stripObjectId(entry.second.getObjectId()));
