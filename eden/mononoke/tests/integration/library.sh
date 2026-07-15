@@ -992,7 +992,7 @@ function enable_scmquery_scs_direct {
   merge_just_knobs <<EOF
 {
   "bools": {
-    "scm/scmquery:direct_scs": true,
+    "scm/scmquery:direct_scs": true
   }
 }
 EOF
@@ -1787,7 +1787,10 @@ function sqlite3() {
 
 function merge_just_knobs() {
   local new
-  new="$(jq -s '.[0] * .[1]' "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" -)"
+  new="$(jq -s '.[0] * .[1]' "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" -)" || {
+    echo "merge_just_knobs: jq failed to merge JustKnobs overrides" >&2
+    return 1
+  }
   printf "%s" "$new" > "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 }
 

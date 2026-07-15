@@ -12,19 +12,19 @@
 //! doesn't appear in normal `scsc --help` output and isn't accessible in
 //! production CLI usage.
 //!
-//! This file ships as scaffolding only — each subsequent diff in the
-//! `scmquery_client: SCS-direct <method>` stack adds:
-//! 1. a `Method::<Method>` variant on the `Method` enum,
-//! 2. an `Args` struct for that variant,
-//! 3. a match arm in `run()` that calls the corresponding wrapper method,
-//! 4. a `.t` test that invokes `scsc scmqueryclient-test <method>` against
-//!    a tiny Mononoke fixture repo.
+//! Method coverage grows over the diff stack — each diff that ports a new
+//! ScmQueryService method to SCS-direct also adds the corresponding
+//! `Method::<Method>` variant + args struct + match arm here, and a `.t`
+//! test that invokes `scsc scmqueryclient-test <method>` against a tiny
+//! Mononoke fixture repo.
 
+use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
+use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use identity::IdentitySet;
@@ -45,21 +45,44 @@ pub(super) struct CommandArgs {
     method: Option<Method>,
 }
 
-/// Per-method variants are added by the diffs that port each method to
-/// SCS-direct. This empty form is the scaffolding-only state.
 #[derive(Subcommand)]
-enum Method {}
+enum Method {
+    /// cat_v2: read a file (or directory) at a rev.
+    CatV2(CatV2Args),
+}
+
+#[derive(Args)]
+struct CatV2Args {
+    #[arg(long)]
+    repo: String,
+    #[arg(long, default_value = "hg")]
+    scm_type: String,
+    #[arg(long)]
+    rev: String,
+    #[arg(long)]
+    path: String,
+}
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
-    let _wrapper = build_wrapper(&app, &args.client_id).await?;
+    let wrapper = build_wrapper(&app, &args.client_id).await?;
     match args.method {
-        Some(m) => match m {},
+        Some(Method::CatV2(a)) => {
+            let params = scmquery_types::ScmCatParams {
+                repo: a.repo,
+                scm_type: a.scm_type,
+                rev: a.rev,
+                path: a.path,
+                ..Default::default()
+            };
+            let bytes = wrapper.cat_v2(&params).await?;
+            std::io::stdout().write_all(&bytes)?;
+        }
         None => bail!(
-            "no method specified; the scmqueryclient-test subcommand is built up \
-             incrementally per port - see the diff stack starting from \
-             D106079254 for the per-method ports"
+            "no method specified; pass one of the per-method subcommands. \
+             See `scsc scmqueryclient-test --help` for the list."
         ),
     }
+    Ok(())
 }
 
 async fn build_wrapper(app: &ScscApp, client_id: &str) -> Result<Box<dyn ScmQueryClient>> {

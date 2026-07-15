@@ -53,6 +53,7 @@ rust_binary(
         "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/scs/if:source_control-rust-thriftclients",
         "//scm/scmquery/client:scmqueryclient-rust-test-support",
+        "//scm/scmquery/if:scmquery_types-rust",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
