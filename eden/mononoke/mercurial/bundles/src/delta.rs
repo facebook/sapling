@@ -10,6 +10,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
+#[cfg(test)]
 use bufsize::SizeCounter;
 use bytes::Buf;
 use bytes::BufMut;
@@ -66,6 +67,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     Delta::new(frags).with_context(|| ErrorKind::InvalidDelta("invalid fragment list".into()))
 }
 
+#[cfg(test)]
 #[inline]
 pub fn encoded_len(delta: &Delta) -> usize {
     let mut size_counter = SizeCounter::new();

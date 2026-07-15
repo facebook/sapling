@@ -17,6 +17,7 @@ use anyhow::ensure;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Buf;
+#[cfg(test)]
 use bytes::BufMut;
 use bytes::BytesMut;
 use mercurial_types::Delta;
@@ -166,6 +167,7 @@ impl HistoryEntry {
         }))
     }
 
+    #[cfg(test)]
     pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
         self.verify(kind).with_context(|| {
             ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
@@ -321,6 +323,7 @@ impl DataEntry {
         }))
     }
 
+    #[cfg(test)]
     pub(crate) fn encode(&self, buf: &mut Vec<u8>) -> Result<()> {
         self.verify()?;
         buf.put_slice(self.node.as_ref());

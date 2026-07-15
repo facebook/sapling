@@ -145,6 +145,7 @@ rust_library(
     test_deps = [
         "fbcode//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:bufsize",
         "fbsource//third-party/rust:partial-io",
         "fbsource//third-party/rust:tokio",
         ":mercurial_types-mocks",
@@ -158,7 +159,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-compression",
         "fbsource//third-party/rust:async-stream",
-        "fbsource//third-party/rust:bufsize",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
