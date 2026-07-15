@@ -28,6 +28,8 @@ use derivation_queue_thrift::DerivationPriority;
 use derived_data::DerivationError;
 use fastlog::FastlogParent;
 use fastlog::RootFastlog;
+use fastlog::RootFastlogV2;
+use fastlog::fetch_fastlog_batch_by_hm_id;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
 use futures::future::try_join;
@@ -37,12 +39,15 @@ use futures::stream::Stream;
 use futures_stats::futures03::TimedFutureExt;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use history_manifest::RootHistoryManifestDirectoryId;
 use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::Generation;
+use mononoke_types::HistoryManifestDirectoryId;
+use mononoke_types::HistoryManifestFileId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::path::MPath;
 use mutable_renames::MutableRenames;
@@ -58,6 +63,14 @@ define_stats! {
     unexpected_existing_unode: timeseries(Sum),
     find_where_file_was_deleted_ms: timeseries(Sum, Average),
     merge_in_file_history: timeseries(Sum),
+}
+
+fn should_use_fastlog_v2(repo: &impl Repo) -> bool {
+    justknobs::eval(
+        "scm/mononoke:use_fastlog_v2",
+        None,
+        Some(repo.repo_identity().name()),
+    )
 }
 
 #[derive(Debug, Error)]
@@ -315,6 +328,8 @@ pub async fn list_file_history<'a>(
     // there might be more than one unode entry: if the given path was
     // deleted in several different branches, we have to gather history
     // from all of them
+    // Note: For now, we only use fastlog v2 for the main history traversal.
+    // Deletion handling still uses v1 (unodes) as deleted_manifest is based on unodes.
     let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
@@ -608,6 +623,7 @@ async fn visit(
 }
 
 type UnodeEntry = Entry<ManifestUnodeId, FileUnodeId>;
+type HMEntry = Entry<HistoryManifestDirectoryId, HistoryManifestFileId>;
 
 // Resolves the deletion nodes and inserts them into history as-if they were normal
 // nodes being part of fastlog batch.
@@ -693,6 +709,22 @@ async fn prefetch_history(
     }
 }
 
+/// Returns history for a given history manifest entry if it exists.
+async fn prefetch_history_v2(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    hm_entry: &HMEntry,
+) -> Result<Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error> {
+    let maybe_fastlog_batch =
+        fetch_fastlog_batch_by_hm_id(ctx, repo.repo_blobstore(), hm_entry).await?;
+    if let Some(fastlog_batch) = maybe_fastlog_batch {
+        let res = fetch_flattened(&fastlog_batch, ctx, repo.repo_blobstore()).await?;
+        Ok(Some(res))
+    } else {
+        Ok(None)
+    }
+}
+
 async fn derive_unode_entry(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -705,6 +737,22 @@ async fn derive_unode_entry(
         .await?;
     root_unode_mf_id
         .manifest_unode_id()
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
+        .await
+}
+
+async fn derive_hm_entry(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    path: &MPath,
+) -> Result<Option<HMEntry>, Error> {
+    let root_hm_id = repo
+        .repo_derived_data()
+        .derive::<RootHistoryManifestDirectoryId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
+    root_hm_id
+        .into_history_manifest_directory_id()
         .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
         .await
 }
@@ -1328,6 +1376,19 @@ async fn prefetch_fastlog_by_changeset(
     changeset_id: ChangesetId,
     path: &MPath,
 ) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
+    if should_use_fastlog_v2(repo) {
+        prefetch_fastlog_by_changeset_v2(ctx, repo, changeset_id, path).await
+    } else {
+        prefetch_fastlog_by_changeset_v1(ctx, repo, changeset_id, path).await
+    }
+}
+
+async fn prefetch_fastlog_by_changeset_v1(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    changeset_id: ChangesetId,
+    path: &MPath,
+) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
     let unode_entry_opt = derive_unode_entry(ctx, repo, changeset_id.clone(), path).await?;
     let entry = unode_entry_opt
         .ok_or_else(|| format_err!("Unode entry is not found {changeset_id:?} {path:?}"))?;
@@ -1346,6 +1407,32 @@ async fn prefetch_fastlog_by_changeset(
     let fastlog_batch_opt = prefetch_history(ctx, repo, &entry).await?;
     fastlog_batch_opt
         .ok_or_else(|| format_err!("Fastlog data is not found {changeset_id:?} {path:?}"))
+}
+
+async fn prefetch_fastlog_by_changeset_v2(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    changeset_id: ChangesetId,
+    path: &MPath,
+) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
+    let hm_entry_opt = derive_hm_entry(ctx, repo, changeset_id.clone(), path).await?;
+    let entry = hm_entry_opt
+        .ok_or_else(|| format_err!("HM entry is not found {changeset_id:?} {path:?}"))?;
+
+    // optimistically try to fetch history for a history manifest entry
+    let fastlog_batch_opt = prefetch_history_v2(ctx, repo, &entry).await?;
+    if let Some(batch) = fastlog_batch_opt {
+        return Ok(batch);
+    }
+
+    // if there is no history, let's try to derive batched fastlog data
+    // and fetch history again
+    repo.repo_derived_data()
+        .derive::<RootFastlogV2>(ctx, changeset_id.clone(), DerivationPriority::LOW)
+        .await?;
+    let fastlog_batch_opt = prefetch_history_v2(ctx, repo, &entry).await?;
+    fastlog_batch_opt
+        .ok_or_else(|| format_err!("Fastlog v2 data is not found {changeset_id:?} {path:?}"))
 }
 
 #[cfg(test)]

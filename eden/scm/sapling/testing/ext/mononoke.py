@@ -1099,6 +1099,7 @@ git_delta_manifest_v3_config.delta_chunk_size = 1000
 git_delta_manifest_v3_config.entry_chunk_size = 1000
 xdb_mapping_shard_ids.history_manifests = 0
 xdb_mapping_shard_ids.blame_v3 = 0
+xdb_mapping_shard_ids.fastlog_v2 = 0
 """
     )
 
