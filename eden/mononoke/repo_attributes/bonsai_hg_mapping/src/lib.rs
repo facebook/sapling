@@ -32,6 +32,7 @@ use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use scuba_ext::FutureStatsScubaExt;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
@@ -308,6 +309,10 @@ pub struct SqlBonsaiHgMapping {
     // that set in the database. This should be used only when we try to
     // fix broken entries in the db.
     overwrite: bool,
+    // Dedicated scuba for logging every mapping write, so writes are
+    // attributable independently of the calling service's scuba. A discard
+    // builder (the default) disables the logging.
+    scuba: MononokeScubaSampleBuilder,
 }
 
 mononoke_queries! {
@@ -365,6 +370,7 @@ mononoke_queries! {
 pub struct SqlBonsaiHgMappingBuilder {
     connections: SqlConnections,
     overwrite: bool,
+    scuba: MononokeScubaSampleBuilder,
 }
 
 impl SqlConstruct for SqlBonsaiHgMappingBuilder {
@@ -376,6 +382,7 @@ impl SqlConstruct for SqlBonsaiHgMappingBuilder {
         Self {
             connections,
             overwrite: false,
+            scuba: MononokeScubaSampleBuilder::with_discard(),
         }
     }
 }
@@ -386,10 +393,19 @@ impl SqlBonsaiHgMappingBuilder {
         self
     }
 
+    /// Set the scuba sample builder used to log every mapping write. Pass a
+    /// builder targeting a dedicated table to enable the logging; the default
+    /// discard builder disables it.
+    pub fn with_scuba(mut self, scuba: MononokeScubaSampleBuilder) -> Self {
+        self.scuba = scuba;
+        self
+    }
+
     pub fn build(self, repo_id: RepositoryId, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
         let SqlBonsaiHgMappingBuilder {
             connections,
             overwrite,
+            scuba,
         } = self;
 
         SqlBonsaiHgMapping {
@@ -402,6 +418,7 @@ impl SqlBonsaiHgMappingBuilder {
             ),
             repo_id,
             overwrite,
+            scuba,
         }
     }
 }
@@ -456,6 +473,43 @@ impl SqlBonsaiHgMapping {
             None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
         }
     }
+
+    /// Log one Scuba sample per bulk write, with the written bonsai/hg ids as
+    /// vectors, so a mapping write is attributable to its caller and
+    /// correlator. Logs to a dedicated table (see `with_scuba`), not the
+    /// calling service's scuba; the generic SQL telemetry records only the
+    /// query name, not the changeset ids.
+    fn log_writes_to_scuba(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiHgMappingEntry],
+        affected_rows: u64,
+    ) {
+        if entries.is_empty() {
+            return;
+        }
+        let mut scuba = self.scuba.clone();
+        scuba.add_metadata(ctx.metadata());
+        scuba.add("repo_id", self.repo_id.id());
+        scuba.add(
+            "bcs_ids",
+            entries
+                .iter()
+                .map(|e| e.bcs_id.to_string())
+                .collect::<Vec<_>>(),
+        );
+        scuba.add(
+            "hg_cs_ids",
+            entries
+                .iter()
+                .map(|e| e.hg_cs_id.to_string())
+                .collect::<Vec<_>>(),
+        );
+        scuba.add("batch_size", entries.len() as i64);
+        scuba.add("affected_rows", affected_rows as i64);
+        scuba.add("overwrite", self.overwrite);
+        scuba.log_with_msg("Insert BonsaiHgMapping", None);
+    }
 }
 
 #[async_trait]
@@ -482,14 +536,14 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .map(|e| (&self.repo_id, &e.hg_cs_id, &e.bcs_id))
             .collect();
 
-        if self.overwrite {
+        let affected_rows = if self.overwrite {
             let result = ReplaceMapping::query(
                 &self.write_connection,
                 ctx.sql_query_telemetry(),
                 rows.as_slice(),
             )
             .await?;
-            Ok(result.affected_rows())
+            result.affected_rows()
         } else {
             let result = InsertMapping::query(
                 &self.write_connection,
@@ -502,8 +556,12 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                     self.verify_consistency(ctx, entry.clone()).await?;
                 }
             }
-            Ok(result.affected_rows())
-        }
+            result.affected_rows()
+        };
+
+        self.log_writes_to_scuba(ctx, entries, affected_rows);
+
+        Ok(affected_rows)
     }
 
     async fn get(
@@ -515,6 +573,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             consistent_read_options(ctx.client_correlator(), Some("bonsai_hg_mapping"))?;
 
         let used_consistent_reads = cons_read_opts.is_some();
+        let num_requested = ids.count();
         let timed_res = async move {
             STATS::gets.add_value(1);
             ctx.perf_counters()
@@ -572,6 +631,16 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         };
 
         let res = timed_res.log_future_stats(ctx.scuba().clone(), "Get BonsaiHgMapping", None);
+
+        // Log reads to the dedicated table (see `with_scuba`) too, so both
+        // sides of the mapping are attributable there.
+        let mut scuba = self.scuba.clone();
+        scuba.add_metadata(ctx.metadata());
+        scuba.add("repo_id", self.repo_id.id());
+        scuba.add("requested", num_requested as i64);
+        scuba.add("found", res.len() as i64);
+        scuba.add("used_consistent_reads", used_consistent_reads);
+        scuba.log_with_msg("Get BonsaiHgMapping", None);
 
         Ok(res)
     }

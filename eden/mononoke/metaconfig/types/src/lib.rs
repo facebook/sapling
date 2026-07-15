@@ -380,6 +380,9 @@ pub struct DerivedDataConfig {
     /// Name of scuba table to log all derivation queue operations
     pub derivation_queue_scuba_table: Option<String>,
 
+    /// Name of scuba table to log every bonsai<->hg mapping write to
+    pub bonsai_hg_mapping_scuba_table: Option<String>,
+
     /// Config to use for remote derivation
     pub remote_derivation_config: Option<RemoteDerivationConfig>,
 

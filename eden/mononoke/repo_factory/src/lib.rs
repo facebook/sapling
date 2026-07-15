@@ -940,6 +940,17 @@ impl RepoFactory {
             builder = builder.with_overwrite();
         }
 
+        let scuba = match repo_config
+            .derived_data_config
+            .bonsai_hg_mapping_scuba_table
+            .as_deref()
+        {
+            Some(scuba_table) => MononokeScubaSampleBuilder::new(self.env.fb, scuba_table)
+                .context("Couldn't create scuba sample builder for bonsai_hg_mapping")?,
+            None => MononokeScubaSampleBuilder::with_discard(),
+        };
+        builder = builder.with_scuba(scuba);
+
         let bonsai_hg_mapping = builder.build(repo_identity.id(), self.env.rendezvous_options);
 
         if let Some(cache_handler_factory) = self.cache_handler_factory("bonsai_hg_mapping")? {

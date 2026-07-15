@@ -720,6 +720,7 @@ impl Convert for RawDerivedDataConfig {
                 .map(|(s, raw_config)| Ok((s, raw_config.convert()?)))
                 .collect::<Result<_, anyhow::Error>>()?,
             derivation_queue_scuba_table: self.derivation_queue_scuba_table,
+            bonsai_hg_mapping_scuba_table: self.bonsai_hg_mapping_scuba_table,
             remote_derivation_config: self
                 .remote_derivation_config
                 .map(|raw| raw.convert())

@@ -1610,6 +1610,7 @@ mod test {
                     },],
                     scuba_table: None,
                     derivation_queue_scuba_table: None,
+                    bonsai_hg_mapping_scuba_table: None,
                     remote_derivation_config: None,
                     blocked_derivation: hashmap! {
                         THREES_CSID => Some(hashset! { DerivableType::Unodes, }),
