@@ -294,4 +294,29 @@ impl<R> MononokeRepos<R> {
         // Drop the lock to allow other threads to update the repos.
         drop(lock);
     }
+
+    /// Replace a repo only if it is currently present (by name); no-op if absent.
+    /// Prevents a rebuild from resurrecting a repo a concurrent `remove` dropped.
+    /// Returns whether the repo was present (and thus replaced).
+    pub fn reload_if_present(&self, id: i32, name: String, repo: R) -> bool {
+        let lock = self.update_lock.lock();
+        // Presence check under update_lock is atomic vs remove/reload/populate.
+        if !self.name_to_repo_map.load().contains_key(&name) {
+            drop(lock);
+            return false;
+        }
+        let mut id_to_name_map: HashMap<i32, String> =
+            Arc::<_>::unwrap_or_clone(self.id_to_name_map.load().clone());
+        let mut name_to_repo_map: HashMap<String, Arc<R>> =
+            Arc::<_>::unwrap_or_clone(self.name_to_repo_map.load().clone());
+        id_to_name_map.insert(id, name.clone());
+        name_to_repo_map.insert(name, Arc::new(repo));
+        self.id_to_name_map.store(Arc::new(id_to_name_map));
+        self.name_to_repo_map.store(Arc::new(name_to_repo_map));
+        drop(lock);
+        true
+    }
 }
+
+#[cfg(test)]
+mod tests;
