@@ -21,7 +21,11 @@ class LoggingFetchContext : public ObjectFetchContext {
     Origin origin;
   };
 
-  void didFetch(ObjectType type, const ObjectId& id, Origin origin) override {
+  void didFetch(
+      ObjectType type,
+      const ObjectId& id,
+      Origin origin,
+      uint64_t /*bytes*/ = 0) override {
     requests.emplace_back(type, id, origin);
   }
 

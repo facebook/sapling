@@ -30,7 +30,9 @@ StatsFetchContext::StatsFetchContext(const StatsFetchContext& other)
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
       // This could almost certainly use a more relaxed memory ordering.
       counts_[y][x] = other.counts_[y][x].load();
+      bytes_[y][x] = other.bytes_[y][x].load();
     }
+    failures_[y] = other.failures_[y].load();
   }
 }
 
@@ -43,7 +45,9 @@ StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
       // This could almost certainly use a more relaxed memory ordering.
       counts_[y][x] = other.counts_[y][x].load();
+      bytes_[y][x] = other.bytes_[y][x].load();
     }
+    failures_[y] = other.failures_[y].load();
   }
 }
 
@@ -57,20 +61,49 @@ StatsFetchContext& StatsFetchContext::operator=(
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
       // This could almost certainly use a more relaxed memory ordering.
       counts_[y][x] = other.counts_[y][x].load();
+      bytes_[y][x] = other.bytes_[y][x].load();
     }
+    failures_[y] = other.failures_[y].load();
   }
   return *this;
 }
 
 void StatsFetchContext::didFetch(
     ObjectType type,
-    const ObjectId&,
-    Origin origin) {
+    const ObjectId& /* id */,
+    Origin origin,
+    uint64_t bytes) {
   XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
       << "type is out of range: " << type;
   XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
-      << "origin is out of range: " << type;
+      << "origin is out of range: " << origin;
   counts_[type][origin].fetch_add(1, std::memory_order_acq_rel);
+  bytes_[type][origin].fetch_add(bytes, std::memory_order_acq_rel);
+}
+
+void StatsFetchContext::didFetchBatch(
+    ObjectType type,
+    Origin origin,
+    uint64_t count,
+    uint64_t bytes) {
+  XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
+      << "type is out of range: " << type;
+  XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
+      << "origin is out of range: " << origin;
+  counts_[type][origin].fetch_add(count, std::memory_order_acq_rel);
+  bytes_[type][origin].fetch_add(bytes, std::memory_order_acq_rel);
+}
+
+void StatsFetchContext::didFetchFailed(ObjectType type, uint64_t count) {
+  XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
+      << "type is out of range: " << type;
+  failures_[type].fetch_add(count, std::memory_order_acq_rel);
+}
+
+uint64_t StatsFetchContext::getFailureCount(ObjectType type) const {
+  XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
+      << "type is out of range: " << type;
+  return failures_[type].load(std::memory_order_acquire);
 }
 
 uint64_t StatsFetchContext::countFetchesOfType(ObjectType type) const {
@@ -90,7 +123,9 @@ void StatsFetchContext::merge(const StatsFetchContext& other) {
     for (unsigned origin = 0; origin < ObjectFetchContext::kOriginEnumMax;
          ++origin) {
       counts_[type][origin] += other.counts_[type][origin];
+      bytes_[type][origin] += other.bytes_[type][origin];
     }
+    failures_[type] += other.failures_[type];
   }
 }
 
@@ -100,8 +135,18 @@ uint64_t StatsFetchContext::countFetchesOfTypeAndOrigin(
   XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
       << "type is out of range: " << type;
   XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
-      << "origin is out of range: " << type;
+      << "origin is out of range: " << origin;
   return counts_[type][origin].load(std::memory_order_acquire);
+}
+
+uint64_t StatsFetchContext::countBytesFetchedOfTypeAndOrigin(
+    ObjectType type,
+    Origin origin) const {
+  XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
+      << "type is out of range: " << type;
+  XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
+      << "origin is out of range: " << origin;
+  return bytes_[type][origin].load(std::memory_order_acquire);
 }
 
 FetchStatistics StatsFetchContext::computeStatistics() const {
@@ -118,8 +163,19 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
     uint64_t fromDisk = counts_[type][ObjectFetchContext::FromDiskCache];
     uint64_t fromNetwork = counts_[type][ObjectFetchContext::FromNetworkFetch];
     uint64_t total = fromMemory + fromDisk + fromNetwork;
+
+    uint64_t bytesFromMemory =
+        bytes_[type][ObjectFetchContext::FromMemoryCache];
+    uint64_t bytesFromDisk = bytes_[type][ObjectFetchContext::FromDiskCache];
+    uint64_t bytesFromNetwork =
+        bytes_[type][ObjectFetchContext::FromNetworkFetch];
+    uint64_t totalBytes = bytesFromMemory + bytesFromDisk + bytesFromNetwork;
+
     return FetchStatistics::Access{
-        total, fromNetwork, computePercent(fromMemory + fromDisk, total)};
+        total,
+        fromNetwork,
+        computePercent(fromMemory + fromDisk, total),
+        totalBytes};
   };
 
   auto result = FetchStatistics{};

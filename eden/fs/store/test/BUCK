@@ -57,6 +57,7 @@ cpp_unittest(
         "ObjectCacheTest.cpp",
         "ObjectStoreTest.cpp",
         "ScmStatusCacheTest.cpp",
+        "StatsFetchContextTest.cpp",
         "TreeCacheTest.cpp",
     ],
     network_access = network_access_utils.none(),

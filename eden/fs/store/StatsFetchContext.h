@@ -33,6 +33,8 @@ struct FetchStatistics {
      * character.
      */
     unsigned short cacheHitRate = 0;
+
+    uint64_t totalBytes = 0;
   };
 
   Access tree;
@@ -55,7 +57,17 @@ class StatsFetchContext : public ObjectFetchContext {
   StatsFetchContext(StatsFetchContext&& other) noexcept;
   StatsFetchContext& operator=(StatsFetchContext&&) noexcept;
 
-  void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
+  void didFetch(
+      ObjectType type,
+      const ObjectId& id,
+      Origin origin,
+      uint64_t bytes = 0) override;
+
+  void
+  didFetchBatch(ObjectType type, Origin origin, uint64_t count, uint64_t bytes);
+
+  void didFetchFailed(ObjectType type, uint64_t count);
+  uint64_t getFailureCount(ObjectType type) const;
 
   OptionalProcessId getClientPid() const override;
 
@@ -65,6 +77,8 @@ class StatsFetchContext : public ObjectFetchContext {
 
   uint64_t countFetchesOfType(ObjectType type) const;
   uint64_t countFetchesOfTypeAndOrigin(ObjectType type, Origin origin) const;
+  uint64_t countBytesFetchedOfTypeAndOrigin(ObjectType type, Origin origin)
+      const;
 
   FetchStatistics computeStatistics() const;
 
@@ -81,6 +95,9 @@ class StatsFetchContext : public ObjectFetchContext {
  private:
   std::atomic<uint64_t> counts_[ObjectFetchContext::kObjectTypeEnumMax]
                                [ObjectFetchContext::kOriginEnumMax] = {};
+  std::atomic<uint64_t> bytes_[ObjectFetchContext::kObjectTypeEnumMax]
+                              [ObjectFetchContext::kOriginEnumMax] = {};
+  std::atomic<uint64_t> failures_[ObjectFetchContext::kObjectTypeEnumMax] = {};
   OptionalProcessId clientPid_;
   Cause cause_ = Cause::Unknown;
   std::optional<std::string_view> causeDetail_;

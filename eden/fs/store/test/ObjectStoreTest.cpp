@@ -371,7 +371,11 @@ class FetchContext final : public ObjectFetchContext {
     return nullptr;
   }
 
-  void didFetch(ObjectType, const ObjectId&, Origin origin) override {
+  void didFetch(
+      ObjectType,
+      const ObjectId&,
+      Origin origin,
+      uint64_t /*bytes*/ = 0) override {
     ++fetchCount_;
     origin_ = origin;
   }

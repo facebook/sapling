@@ -114,7 +114,8 @@ class ObjectFetchContext : public RefCounted {
 
   virtual ~ObjectFetchContext() = default;
 
-  virtual void didFetch(ObjectType, const ObjectId&, Origin) {}
+  virtual void
+  didFetch(ObjectType, const ObjectId&, Origin, uint64_t /* bytes */ = 0) {}
 
   virtual OptionalProcessId getClientPid() const {
     return std::nullopt;
