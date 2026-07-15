@@ -4726,6 +4726,12 @@ EdenServiceHandler::getEntryAttributesForPathImpl(
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
+  return semifuture_getAttributesFromFilesV2Impl(std::move(params));
+}
+
+folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
+EdenServiceHandler::semifuture_getAttributesFromFilesV2Impl(
+    std::unique_ptr<GetAttributesFromFilesParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   auto reqScope =
       params->scope().value_or(AttributesRequestScope::TREES_AND_FILES);
