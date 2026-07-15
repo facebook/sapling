@@ -90,6 +90,52 @@ test worktree remove - group dissolved after all linked removed
   $ sl worktree list
   this worktree is not part of a group
 
+#if no-windows
+test worktree remove --all preserves partial progress after eden remove failure
+
+  $ cd $TESTTMP
+  $ newclientrepo partial_progress_repo
+  $ touch file.txt
+  $ sl add file.txt
+  $ sl commit -m "init"
+  $ sl worktree add $TESTTMP/remove_all_fail
+  created linked worktree at $TESTTMP/remove_all_fail
+  $ sl worktree add $TESTTMP/remove_all_ok
+  created linked worktree at $TESTTMP/remove_all_ok
+  $ original_eden_command="$(sl config edenfs.command)"
+  $ cat > $TESTTMP/failing_eden <<EOF
+  > #!/bin/sh
+  > set -eu
+  > original='$original_eden_command'
+  > is_remove=0
+  > last=
+  > for arg in "\$@"; do
+  >   if [ "\$arg" = "remove" ]; then
+  >     is_remove=1
+  >   fi
+  >   last="\$arg"
+  > done
+  > if [ "\$is_remove" = "1" ] && [ "\$last" = "$TESTTMP/remove_all_fail" ]; then
+  >   echo "injected eden remove failure for \$last" >&2
+  >   exit 1
+  > fi
+  > exec "\$original" "\$@"
+  > EOF
+  $ chmod +x $TESTTMP/failing_eden
+  $ setconfig edenfs.command=$TESTTMP/failing_eden
+  $ sl worktree remove --all -y
+  failed to remove $TESTTMP/remove_all_fail: eden remove failed for $TESTTMP/remove_all_fail: injected eden remove failure for $TESTTMP/remove_all_fail
+  removed $TESTTMP/remove_all_ok
+  abort: eden remove failed for $TESTTMP/remove_all_fail: injected eden remove failure for $TESTTMP/remove_all_fail
+  [255]
+  $ test -d $TESTTMP/remove_all_fail
+  $ test -d $TESTTMP/remove_all_ok
+  [1]
+  $ sl worktree list
+  * main    $TESTTMP/partial_progress_repo
+    linked  $TESTTMP/remove_all_fail
+#endif
+
 test worktree remove - pre-worktree-remove hook fires with correct env vars
 
   $ cd $TESTTMP
