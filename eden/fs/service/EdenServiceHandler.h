@@ -697,7 +697,21 @@ class EdenServiceHandler
       AttributesRequestScope reqScope,
       SyncBehavior sync,
       const ObjectFetchContextPtr& fetchContext);
+  ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
+  getEntryAttributesImpl(
+      const EdenMount& edenMount,
+      const std::vector<std::string>& paths,
+      EntryAttributeFlags reqBitmask,
+      AttributesRequestScope reqScope,
+      SyncBehavior sync,
+      const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
+      const EdenMount& edenMount,
+      EntryAttributeFlags reqBitmask,
+      AttributesRequestScope reqScope,
+      std::string_view path,
+      const ObjectFetchContextPtr& fetchContext);
+  ImmediateFuture<EntryAttributes> getEntryAttributesForPathImpl(
       const EdenMount& edenMount,
       EntryAttributeFlags reqBitmask,
       AttributesRequestScope reqScope,

@@ -4443,6 +4443,18 @@ EdenServiceHandler::getEntryAttributes(
     AttributesRequestScope reqScope,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
+  return getEntryAttributesImpl(
+      edenMount, paths, reqBitmask, reqScope, sync, fetchContext);
+}
+
+ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
+EdenServiceHandler::getEntryAttributesImpl(
+    const EdenMount& edenMount,
+    const std::vector<std::string>& paths,
+    EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
+    SyncBehavior sync,
+    const ObjectFetchContextPtr& fetchContext) {
   auto localReqBitmask = reqBitmask;
   if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
     localReqBitmask |= ENTRY_ATTRIBUTE_UNDER_ACL;
@@ -4510,6 +4522,17 @@ bool dtypeMatchesRequestScope(
 } // namespace
 
 ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
+    const EdenMount& edenMount,
+    EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
+    std::string_view path,
+    const ObjectFetchContextPtr& fetchContext) {
+  return getEntryAttributesForPathImpl(
+      edenMount, reqBitmask, reqScope, path, fetchContext);
+}
+
+ImmediateFuture<EntryAttributes>
+EdenServiceHandler::getEntryAttributesForPathImpl(
     const EdenMount& edenMount,
     EntryAttributeFlags reqBitmask,
     AttributesRequestScope reqScope,
