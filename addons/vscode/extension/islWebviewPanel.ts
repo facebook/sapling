@@ -111,12 +111,17 @@ function createOrFocusISLWebview(
   platform: VSCodeServerPlatform,
   logger: Logger,
   column?: vscode.ViewColumn,
+  cwd?: string,
 ): ISLWebviewResult<vscode.WebviewPanel | vscode.WebviewView> {
   // Try to reuse existing ISL panel/view
   if (islPanelOrViewResult) {
     isPanel(islPanelOrViewResult.panel)
       ? islPanelOrViewResult.panel.reveal()
       : islPanelOrViewResult.panel.show();
+    // The single shared webview may be showing a different repo; switch it to the requested one.
+    if (cwd != null) {
+      postMessageToISLWebview({type: 'changeActiveRepo', cwd, focusDotCommit: true});
+    }
     return islPanelOrViewResult;
   }
   // Otherwise, create a new panel/view
@@ -134,9 +139,30 @@ function createOrFocusISLWebview(
     platform,
     {mode: 'isl'},
     logger,
+    cwd,
   );
 
   return islPanelOrViewResult;
+}
+
+/**
+ * `sapling.open-isl` can be triggered from a repository's SCM title bar, an editor title
+ * button, a keybinding, or programmatically. Resolve which repository's cwd the command
+ * should target from whatever argument VS Code passes for those entry points. Returns
+ * undefined when there's no repo-specific context (e.g. the keybinding), in which case the
+ * default cwd selection applies.
+ */
+export function cwdForOpenISLCommand(arg: unknown): string | undefined {
+  // The scm/title menu passes the repository's vscode.SourceControl, whose rootUri is the repo root.
+  const maybeSourceControl = arg as {rootUri?: vscode.Uri} | undefined;
+  if (maybeSourceControl?.rootUri instanceof vscode.Uri) {
+    return maybeSourceControl.rootUri.fsPath;
+  }
+  // The editor/title menu passes the active file's Uri; map it back to its repo root.
+  if (arg instanceof vscode.Uri) {
+    return repositoryCache.cachedRepositoryForPath(arg.fsPath)?.info.repoRoot ?? arg.fsPath;
+  }
+  return undefined;
 }
 
 function createComparisonWebview(
@@ -300,14 +326,28 @@ export function registerISLCommands(
     }
   };
   return vscode.Disposable.from(
-    vscode.commands.registerCommand('sapling.open-isl', () => {
+    vscode.commands.registerCommand('sapling.open-isl', (arg?: unknown) => {
+      const cwd = cwdForOpenISLCommand(arg);
       if (shouldUseWebviewView()) {
-        // just open the sidebar view
-        executeVSCodeCommand('sapling.isl.focus');
+        const viewExists = islPanelOrViewResult != null && !isPanel(islPanelOrViewResult.panel);
+        if (viewExists) {
+          // The view already exists, so `resolveWebviewView` won't run again; reveal it and
+          // switch the existing webview to the requested repo synchronously.
+          executeVSCodeCommand('sapling.isl.focus');
+          if (cwd != null) {
+            postMessageToISLWebview({type: 'changeActiveRepo', cwd, focusDotCommit: true});
+          }
+        } else {
+          // The view hasn't been created yet; `sapling.isl.focus` triggers `resolveWebviewView`
+          // asynchronously. Thread the cwd through the provider so the initial populate targets
+          // the requested repo, since a synchronous `postMessageToISLWebview` would no-op here.
+          webviewViewProvider.setInitialCwd(cwd);
+          executeVSCodeCommand('sapling.isl.focus');
+        }
         return;
       }
       try {
-        createOrFocusISLWebview(context, platform, logger);
+        createOrFocusISLWebview(context, platform, logger, undefined, cwd);
       } catch (err: unknown) {
         vscode.window.showErrorMessage(`error opening isl: ${err}`);
       }
@@ -501,11 +541,18 @@ class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
   // Signal that resolves when the webview view is ready
   public readySignal: Deferred<void> = defer<void>();
 
+  /** cwd to use the next time the view is (re)created, e.g. when opened for a specific repo. */
+  private initialCwd: string | undefined = undefined;
+
   constructor(
     private extensionContext: vscode.ExtensionContext,
     private platform: VSCodeServerPlatform,
     private logger: Logger,
   ) {}
+
+  setInitialCwd(cwd: string | undefined): void {
+    this.initialCwd = cwd;
+  }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
     webviewView.webview.options = getWebviewOptions(this.extensionContext, 'dist/webview');
@@ -515,7 +562,9 @@ class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
       this.platform,
       {mode: 'isl'},
       this.logger,
+      this.initialCwd,
     );
+    this.initialCwd = undefined;
 
     this.readySignal = result.readySignal;
   }
@@ -538,6 +587,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   platform: VSCodeServerPlatform,
   mode: AppMode,
   logger: Logger,
+  cwd?: string,
 ): ISLWebviewResult<W> {
   const readySignal = defer<void>();
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
@@ -572,6 +622,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
 
   const focusedEnv = Internal.basecampGetFocusedEnvironment?.();
   const initialCwd =
+    cwd ??
     focusedEnv?.folderPaths?.[0] ??
     vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ??
     process.cwd();
