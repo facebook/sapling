@@ -338,6 +338,10 @@ class EdenServiceHandler
   semifuture_getAttributesFromFilesV2Impl(
       std::unique_ptr<GetAttributesFromFilesParams> params);
 
+  folly::coro::now_task<std::unique_ptr<GetAttributesFromFilesResultV2>>
+  co_getAttributesFromFilesV2Impl(
+      std::unique_ptr<GetAttributesFromFilesParams> params);
+
   folly::SemiFuture<std::unique_ptr<ReaddirResult>> semifuture_readdir(
       std::unique_ptr<ReaddirParams> params) override;
 

@@ -4726,7 +4726,60 @@ EdenServiceHandler::getEntryAttributesForPathImpl(
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase10.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return folly::coro::co_invoke(
+               [self = shared_from_this()](
+                   std::unique_ptr<GetAttributesFromFilesParams> p)
+                   -> folly::coro::Task<
+                       std::unique_ptr<GetAttributesFromFilesResultV2>> {
+                 co_return co_await self->co_getAttributesFromFilesV2Impl(
+                     std::move(p));
+               },
+               std::move(params))
+        .semi();
+  }
   return semifuture_getAttributesFromFilesV2Impl(std::move(params));
+}
+
+folly::coro::now_task<std::unique_ptr<GetAttributesFromFilesResultV2>>
+EdenServiceHandler::co_getAttributesFromFilesV2Impl(
+    std::unique_ptr<GetAttributesFromFilesParams> params) {
+  XLOG(DBG6, "Using coroutine path for getAttributesFromFilesV2");
+  auto mountHandle = lookupMount(params->mountPoint());
+  auto reqScope =
+      params->scope().value_or(AttributesRequestScope::TREES_AND_FILES);
+  auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
+  std::vector<std::string>& paths = params->paths().value();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3,
+      *params->mountPoint(),
+      getSyncTimeout(*params->sync()),
+      toLogArg(paths));
+  auto& fetchContext = helper->getFetchContext();
+
+  auto allRes = co_await co_getEntryAttributes(
+      mountHandle.getEdenMount(),
+      paths,
+      reqBitmask,
+      reqScope,
+      *params->sync(),
+      fetchContext);
+
+  auto res = std::make_unique<GetAttributesFromFilesResultV2>();
+  res->res()->reserve(allRes.size());
+  size_t index = 0;
+  for (const auto& tryAttributes : allRes) {
+    res->res()->emplace_back(serializeEntryAttributes(
+        mountHandle.getObjectStore(),
+        basename(paths.at(index)),
+        tryAttributes,
+        reqBitmask));
+    ++index;
+  }
+  co_return res;
 }
 
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
