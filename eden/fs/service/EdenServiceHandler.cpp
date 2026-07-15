@@ -4813,6 +4813,7 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2Impl(
                          std::vector<folly::Try<EntryAttributes>>&& allRes) {
                        auto res =
                            std::make_unique<GetAttributesFromFilesResultV2>();
+                       res->res()->reserve(allRes.size());
                        size_t index = 0;
                        for (const auto& tryAttributes : allRes) {
                          res->res()->emplace_back(serializeEntryAttributes(
