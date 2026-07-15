@@ -49,6 +49,8 @@ pub(super) struct CommandArgs {
 enum Method {
     /// cat_v2: read a file (or directory) at a rev.
     CatV2(CatV2Args),
+    /// is_ancestor: check whether one commit is an ancestor of another.
+    IsAncestor(IsAncestorArgs),
 }
 
 #[derive(Args)]
@@ -61,6 +63,18 @@ struct CatV2Args {
     rev: String,
     #[arg(long)]
     path: String,
+}
+
+#[derive(Args)]
+struct IsAncestorArgs {
+    #[arg(long)]
+    repo: String,
+    #[arg(long, default_value = "hg")]
+    scm_type: String,
+    #[arg(long)]
+    maybe_ancestor: String,
+    #[arg(long)]
+    maybe_descendant: String,
 }
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
@@ -76,6 +90,17 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             };
             let bytes = wrapper.cat_v2(&params).await?;
             std::io::stdout().write_all(&bytes)?;
+        }
+        Some(Method::IsAncestor(a)) => {
+            let params = scmquery_types::ScmIsAncestorParams {
+                repo: a.repo,
+                scm_type: a.scm_type,
+                maybe_ancestor: a.maybe_ancestor,
+                maybe_descendant: a.maybe_descendant,
+                ..Default::default()
+            };
+            let result = wrapper.is_ancestor(&params).await?;
+            println!("{result}");
         }
         None => bail!(
             "no method specified; pass one of the per-method subcommands. \
