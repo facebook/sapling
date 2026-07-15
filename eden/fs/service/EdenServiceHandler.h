@@ -717,6 +717,12 @@ class EdenServiceHandler
       AttributesRequestScope reqScope,
       std::string_view path,
       const ObjectFetchContextPtr& fetchContext);
+  folly::coro::now_task<EntryAttributes> co_getEntryAttributesForPath(
+      const EdenMount& edenMount,
+      EntryAttributeFlags reqBitmask,
+      AttributesRequestScope reqScope,
+      std::string_view path,
+      const ObjectFetchContextPtr& fetchContext);
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;

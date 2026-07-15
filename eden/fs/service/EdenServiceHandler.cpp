@@ -4527,8 +4527,76 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     AttributesRequestScope reqScope,
     std::string_view path,
     const ObjectFetchContextPtr& fetchContext) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase10.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](
+                std::shared_ptr<const EdenMount> mountPtr,
+                EntryAttributeFlags reqBitmask,
+                AttributesRequestScope reqScope,
+                std::string pathStr,
+                ObjectFetchContextPtr fetchContext)
+                -> folly::coro::Task<EntryAttributes> {
+              co_return co_await self->co_getEntryAttributesForPath(
+                  *mountPtr,
+                  reqBitmask,
+                  reqScope,
+                  std::string_view{pathStr},
+                  fetchContext);
+            },
+            edenMount.shared_from_this(),
+            reqBitmask,
+            reqScope,
+            std::string{path},
+            fetchContext.copy())
+            .semi()};
+  }
   return getEntryAttributesForPathImpl(
       edenMount, reqBitmask, reqScope, path, fetchContext);
+}
+
+folly::coro::now_task<EntryAttributes>
+EdenServiceHandler::co_getEntryAttributesForPath(
+    const EdenMount& edenMount,
+    EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
+    std::string_view path,
+    const ObjectFetchContextPtr& fetchContext) {
+  if (path.empty()) {
+    co_yield folly::coro::co_error(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path cannot be the empty string"));
+  }
+
+  std::optional<RelativePath> relativePath;
+  std::string parseError;
+  try {
+    relativePath = RelativePath{path};
+  } catch (const std::exception& e) {
+    parseError = e.what();
+  }
+  if (!relativePath) {
+    co_yield folly::coro::co_error(
+        newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, parseError));
+  }
+
+  auto virtualInode =
+      co_await edenMount.co_getVirtualInode(*relativePath, fetchContext);
+  if (!dtypeMatchesRequestScope(virtualInode, reqScope)) {
+    co_yield folly::coro::co_error(PathError(
+        reqScope == AttributesRequestScope::TREES ? ENOTDIR : EISDIR,
+        *relativePath));
+  }
+  co_return co_await virtualInode.co_getEntryAttributes(
+      reqBitmask,
+      *relativePath,
+      edenMount.getObjectStore(),
+      edenMount.getLastCheckoutTime().toTimespec(),
+      fetchContext);
 }
 
 ImmediateFuture<EntryAttributes>
