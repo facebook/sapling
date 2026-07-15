@@ -28,6 +28,7 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
           }
           name
         }
+        headRefName
         commits(last: 100) {
           nodes {
             commit {
