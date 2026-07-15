@@ -332,7 +332,8 @@ folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
   if (!tree->isRestricted()) {
     treeCache_->insert(tree->getObjectId(), tree);
   }
-  fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
+  fetchContext->didFetch(
+      ObjectFetchContext::Tree, id, result.origin, tree->getSizeBytes());
   updateProcessFetch(*fetchContext);
   co_return tree;
 }
@@ -577,7 +578,11 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
                fetchContext.copy()](BackingStore::GetBlobResult result)
               -> std::shared_ptr<const Blob> {
             self->updateProcessFetch(*fetchContext);
-            fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);
+            fetchContext->didFetch(
+                ObjectFetchContext::Blob,
+                id,
+                result.origin,
+                result.blob->getSize());
             return std::move(result.blob);
           });
 }
@@ -589,7 +594,8 @@ folly::coro::now_task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
   deprioritizeWhenFetchHeavy(*fetchContext);
   auto result = co_await co_getBlobImpl(id, fetchContext);
   updateProcessFetch(*fetchContext);
-  fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);
+  fetchContext->didFetch(
+      ObjectFetchContext::Blob, id, result.origin, result.blob->getSize());
   co_return std::move(result.blob);
 }
 
