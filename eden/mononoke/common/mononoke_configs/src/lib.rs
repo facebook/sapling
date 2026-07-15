@@ -360,14 +360,25 @@ impl MononokeConfigs {
     /// repos_manager::remove_repo). Symmetric counterpart to load_repo_config_handle.
     /// No-op if no handle is held.
     pub fn remove_repo_config_handle(&self, repo_name: &str) {
-        match self.repo_handles.write() {
-            Ok(mut handles) => {
-                if handles.remove(repo_name).is_some() {
-                    info!("Removed config handle for repo: {repo_name}");
-                }
-            }
+        let had_handle = match self.repo_handles.write() {
+            Ok(mut handles) => handles.remove(repo_name).is_some(),
             Err(e) => {
                 error!("repo_handles lock poisoned while removing {repo_name}: {e}");
+                false
+            }
+        };
+        // Only evict the bulk repo_configs entry when we actually dropped a handle
+        // (i.e. a split-loaded repo). This forces a later get_or_load to re-parse
+        // from the fresh handle instead of serving stale config (S685134), while
+        // leaving a legacy-blob-only entry intact so it can still be re-added.
+        if had_handle {
+            info!("Removed config handle for repo: {repo_name}");
+            if self.repo_configs.load().repos.contains_key(repo_name) {
+                self.repo_configs.rcu(|current| {
+                    let mut next = (**current).clone();
+                    next.remove_repo(repo_name);
+                    next
+                });
             }
         }
     }

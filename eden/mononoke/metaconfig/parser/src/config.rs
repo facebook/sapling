@@ -778,6 +778,17 @@ impl RepoConfigs {
         self.repos_by_id.insert(config.repoid, name.clone());
         self.repos.insert(name, config);
     }
+
+    /// Remove a repo, keeping `repos` and `repos_by_id` consistent. Returns whether it existed.
+    pub fn remove_repo(&mut self, name: &str) -> bool {
+        match self.repos.remove(name) {
+            Some(config) => {
+                self.repos_by_id.remove(&config.repoid);
+                true
+            }
+            None => false,
+        }
+    }
 }
 
 #[cfg(test)]

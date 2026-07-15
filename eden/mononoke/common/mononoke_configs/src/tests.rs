@@ -149,3 +149,65 @@ fn test_ensure_repo_config_handle_registers_when_in_manifest() {
     assert!(cfg.ensure_repo_config_handle("aosp/manifest").is_ok());
     assert_eq!(cfg.repo_handles.read().unwrap().len(), 1);
 }
+
+// S685134: for a split-loaded repo (has a handle), remove_repo_config_handle must
+// evict the bulk repo_configs entry too, else a reassigned repo serves stale config.
+#[mononoke::test]
+fn test_remove_repo_config_handle_evicts_bulk_cache() {
+    let cfg = empty_configs();
+    // A served split-loaded repo has both a per-repo handle and a bulk entry.
+    cfg.repo_handles
+        .write()
+        .unwrap()
+        .insert("foo".to_string(), static_handle());
+    cfg.repo_configs.rcu(|current| {
+        let mut next = (**current).clone();
+        next.insert_repo(
+            "foo".to_string(),
+            RepoConfig {
+                repoid: mononoke_types::RepositoryId::new(7),
+                ..Default::default()
+            },
+        );
+        next
+    });
+
+    cfg.remove_repo_config_handle("foo");
+
+    assert!(
+        !cfg.repo_configs.load().repos.contains_key("foo"),
+        "must evict the bulk repo_configs entry (S685134)",
+    );
+    assert!(
+        !cfg.repo_configs
+            .load()
+            .repos_by_id
+            .contains_key(&mononoke_types::RepositoryId::new(7)),
+        "eviction must also clean the repos_by_id index",
+    );
+}
+
+// A legacy-blob-only repo (bulk entry, no handle) must NOT be evicted: there is no
+// handle to re-parse from, so the entry must survive for re-add.
+#[mononoke::test]
+fn test_remove_repo_config_handle_preserves_legacy_only_entry() {
+    let cfg = empty_configs();
+    cfg.repo_configs.rcu(|current| {
+        let mut next = (**current).clone();
+        next.insert_repo(
+            "legacy".to_string(),
+            RepoConfig {
+                repoid: mononoke_types::RepositoryId::new(9),
+                ..Default::default()
+            },
+        );
+        next
+    });
+
+    cfg.remove_repo_config_handle("legacy");
+
+    assert!(
+        cfg.repo_configs.load().repos.contains_key("legacy"),
+        "legacy-only bulk entry (no handle) must be preserved",
+    );
+}
