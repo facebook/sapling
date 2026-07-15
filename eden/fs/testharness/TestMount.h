@@ -463,6 +463,7 @@ inline void enableCoroutinesConfig(TestMount& mount) {
       {"coroutines:enable-phase8", "true"},
       {"coroutines:enable-phase9", "true"},
       {"coroutines:enable-phase11", "true"},
+      {"coroutines:enable-phase10", "true"},
   });
 }
 
