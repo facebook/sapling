@@ -4443,8 +4443,90 @@ EdenServiceHandler::getEntryAttributes(
     AttributesRequestScope reqScope,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase10.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](
+                std::shared_ptr<const EdenMount> mountPtr,
+                std::vector<std::string> paths,
+                EntryAttributeFlags reqBitmask,
+                AttributesRequestScope reqScope,
+                SyncBehavior sync,
+                ObjectFetchContextPtr fetchContext)
+                -> folly::coro::Task<std::vector<folly::Try<EntryAttributes>>> {
+              co_return co_await self->co_getEntryAttributes(
+                  *mountPtr, paths, reqBitmask, reqScope, sync, fetchContext);
+            },
+            edenMount.shared_from_this(),
+            paths,
+            reqBitmask,
+            reqScope,
+            sync,
+            fetchContext.copy())
+            .semi()};
+  }
   return getEntryAttributesImpl(
       edenMount, paths, reqBitmask, reqScope, sync, fetchContext);
+}
+
+folly::coro::now_task<std::vector<folly::Try<EntryAttributes>>>
+EdenServiceHandler::co_getEntryAttributes(
+    const EdenMount& edenMount,
+    const std::vector<std::string>& paths,
+    EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
+    SyncBehavior sync,
+    const ObjectFetchContextPtr& fetchContext) {
+  co_await co_waitForPendingWrites(edenMount, sync);
+
+  auto localReqBitmask = reqBitmask;
+  if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+    localReqBitmask |= ENTRY_ATTRIBUTE_UNDER_ACL;
+  }
+
+  std::vector<folly::coro::Task<EntryAttributes>> tasks;
+  tasks.reserve(paths.size());
+  for (const auto& path : paths) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](
+                std::shared_ptr<const EdenMount> mountPtr,
+                EntryAttributeFlags reqBitmask,
+                AttributesRequestScope reqScope,
+                std::string pathStr,
+                ObjectFetchContextPtr fetchContext)
+                -> folly::coro::Task<EntryAttributes> {
+              co_return co_await self->co_getEntryAttributesForPath(
+                  *mountPtr,
+                  reqBitmask,
+                  reqScope,
+                  std::string_view{pathStr},
+                  fetchContext);
+            },
+            edenMount.shared_from_this(),
+            localReqBitmask,
+            reqScope,
+            path,
+            fetchContext.copy()));
+  }
+
+  auto allRes = co_await folly::coro::collectAllTryRange(std::move(tasks));
+
+  if (!reqBitmask.containsAnyOf(kAclPathAttributes)) {
+    co_return allRes;
+  }
+
+  co_return co_await co_fetchPathAclLookupsForAttributes(
+      edenMount.getObjectStore(),
+      edenMount.getCheckedOutRootId(),
+      fetchContext.copy(),
+      std::move(allRes),
+      paths,
+      reqBitmask);
 }
 
 ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
