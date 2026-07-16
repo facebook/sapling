@@ -33,6 +33,8 @@ pub enum InternalError {
     CircularDependency(DagItemId),
     #[error("Transient Zeus connection error: {0}")]
     TransientZeusError(String),
+    #[error("Zelos request throttled: {0}")]
+    ThrottledZelosError(String),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -61,7 +63,12 @@ impl From<zeus_client::ZeusError> for InternalError {
             zeus_client::ZeusError::RuntimeError {
                 message: msg,
                 exception_type: ZelosExceptionType::ZCONNECTIONLOSS,
-                is_throttled: _,
+                is_throttled: true,
+            } => InternalError::ThrottledZelosError(msg),
+            zeus_client::ZeusError::RuntimeError {
+                message: msg,
+                exception_type: ZelosExceptionType::ZCONNECTIONLOSS,
+                is_throttled: false,
             } => InternalError::TransientZeusError(msg),
             _ => InternalError::Other(e.into()),
         }
