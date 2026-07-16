@@ -51,6 +51,8 @@ enum Method {
     CatV2(CatV2Args),
     /// is_ancestor: check whether one commit is an ancestor of another.
     IsAncestor(IsAncestorArgs),
+    /// get_generation: fetch the DAG generation number of a commit.
+    GetGeneration(GetGenerationArgs),
 }
 
 #[derive(Args)]
@@ -77,6 +79,16 @@ struct IsAncestorArgs {
     maybe_descendant: String,
 }
 
+#[derive(Args)]
+struct GetGenerationArgs {
+    #[arg(long)]
+    repo: String,
+    #[arg(long, default_value = "hg")]
+    scm_type: String,
+    #[arg(long)]
+    rev: String,
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let wrapper = build_wrapper(&app, &args.client_id).await?;
     match args.method {
@@ -101,6 +113,16 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             };
             let result = wrapper.is_ancestor(&params).await?;
             println!("{result}");
+        }
+        Some(Method::GetGeneration(a)) => {
+            let params = scmquery_types::ScmGetGenerationParams {
+                repo: a.repo,
+                scm_type: a.scm_type,
+                rev: a.rev,
+                ..Default::default()
+            };
+            let result = wrapper.get_generation(&params).await?;
+            println!("{}", result.generation);
         }
         None => bail!(
             "no method specified; pass one of the per-method subcommands. \
