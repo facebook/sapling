@@ -31,7 +31,7 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 fn-error-context = "0.2"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
-gix-date = "0.15.5"
+gix-date = "0.15.6"
 gix-hash = { version = "0.25.1", features = ["sha1"] }
 gix-object = "0.60.0"
 hex = { version = "0.4.3", features = ["alloc"] }
