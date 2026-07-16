@@ -24,6 +24,7 @@ from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_
 urlreq = util.urlreq
 
 GLOBAL_REV_TYPE = "GLOBAL_REV"
+CLIENT_CALLER = "sapling"
 
 
 class ClientError(Exception):
@@ -214,8 +215,12 @@ class Client:
 
     def getdiffversion(self, timeout, diffid, version=None):
         query = """
-            query DiffLastVersionDescriptionQuery($diffid: String!){
+            query DiffLastVersionDescriptionQuery(
+              $diffid: String!
+              $client_caller: String!
+            ) {
               phabricator_diff_query(query_params: {
+                client_caller: $client_caller
                 numbers: [$diffid]
               }) {
                 results {
@@ -275,7 +280,7 @@ class Client:
             extra_query = ""
         query = query % extra_query
 
-        params = {"diffid": diffid}
+        params = {"diffid": diffid, "client_caller": CLIENT_CALLER}
         ret = self._query(timeout, query, params)
 
         try:
@@ -332,8 +337,12 @@ class Client:
             ret = self._mocked_responses.pop()
         else:
             query = """
-                query DiffToCommitQuery($diffids: [String!]!){
+                query DiffToCommitQuery(
+                    $diffids: [String!]!
+                    $client_caller: String!
+                ) {
                     phabricator_diff_query(query_params: {
+                        client_caller: $client_caller
                         numbers: $diffids
                     }) {
                         results {
@@ -359,7 +368,7 @@ class Client:
                     }
                 }
                 """
-            params = {"diffids": diffids}
+            params = {"diffids": diffids, "client_caller": CLIENT_CALLER}
             ret = self._query(timeout, query, params)
             # Example result:
             # { "data": {
@@ -479,7 +488,12 @@ class Client:
         if self._mock:
             ret = self._mocked_responses.pop()
         else:
-            params = {"params": {"numbers": rev_numbers}}
+            params = {
+                "params": {
+                    "client_caller": CLIENT_CALLER,
+                    "numbers": rev_numbers,
+                }
+            }
             ret = self._query(timeout, self._getquery(signalstatus), params)
         return self._processrevisioninfo(ret)
 
