@@ -39,6 +39,15 @@ pub enum InternalError {
     Other(#[from] anyhow::Error),
 }
 
+impl InternalError {
+    pub fn is_retriable_zelos(&self) -> bool {
+        matches!(
+            self,
+            InternalError::ThrottledZelosError(_) | InternalError::TransientZeusError(_)
+        )
+    }
+}
+
 impl From<DerivationError> for InternalError {
     fn from(e: DerivationError) -> Self {
         InternalError::Other(e.into())
