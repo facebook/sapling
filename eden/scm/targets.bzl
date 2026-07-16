@@ -10,6 +10,12 @@ def _set_default(obj, *keys):
         obj = obj[key]
     return obj
 
+def sl_rust_library(**kwargs):
+    return rust_library(**kwargs)
+
+def sl_rust_binary(**kwargs):
+    return rust_binary(**kwargs)
+
 def exec_compatible_with_target():
     """Intended to be used by genrule's exec_compatible_with to force
     execution platform to match target platform. Without this, one
