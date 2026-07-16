@@ -5,7 +5,7 @@
 # directory of this source tree.
 
 Test that the AWS sync path is triggered when creating redaction key lists,
-and that it fails gracefully when kubectl is not available.
+and that it fails gracefully when AWS command-line tools are not available.
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
@@ -33,9 +33,13 @@ setup repo with testtool_drawdag
 start mononoke
   $ start_and_wait_for_mononoke_server
 
-Without --skip-aws-sync, the command should attempt AWS sync and fail gracefully
-(kubectl is not available in the test environment)
-  $ mononoke_admin redaction create-key-list -R repo -i $C secret --main-bookmark master_bookmark --output-file rs_0 2>&1
+Test-case: AWS sync discovery failure without `--skip-aws-sync`.
+How/setup: Hide the AWS command-line tools from this invocation.
+Expectation: The key list is saved locally and manual sync instructions are printed.
+
+  $ mkdir "$TESTTMP/no-aws-tools"
+
+  $ PATH="$TESTTMP/no-aws-tools" mononoke_admin redaction create-key-list -R repo -i $C secret --main-bookmark master_bookmark --output-file rs_0 2>&1
   Checking redacted content doesn't exist in 'master_bookmark' bookmark
   No files would be redacted in the main bookmark (master_bookmark)
   Redaction saved as: * (glob)
@@ -49,8 +53,11 @@ Without --skip-aws-sync, the command should attempt AWS sync and fail gracefully
     *kubectl exec*monad redaction create-key-list-from-ids -R repo_shadow* (glob)
 
 
-With --skip-aws-sync, no AWS sync output should appear
-  $ mononoke_admin redaction create-key-list -R repo -i $C secret --main-bookmark master_bookmark --skip-aws-sync --output-file rs_1 2>&1
+Test-case: Local-only key list creation with `--skip-aws-sync`.
+How/setup: Create the same key list with AWS sync disabled and the restricted tool path.
+Expectation: The key list is saved without any AWS sync output.
+
+  $ PATH="$TESTTMP/no-aws-tools" mononoke_admin redaction create-key-list -R repo -i $C secret --main-bookmark master_bookmark --skip-aws-sync --output-file rs_1 2>&1
   Checking redacted content doesn't exist in 'master_bookmark' bookmark
   No files would be redacted in the main bookmark (master_bookmark)
   Redaction saved as: * (glob)
