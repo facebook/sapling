@@ -21,26 +21,26 @@ Create commits using testtool drawdag
 
 Base case, check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
-  33
+  43
   $ ls blobstore/1/blobs/ | wc -l
-  33
+  43
   $ ls blobstore/2/blobs/ | wc -l
-  33
+  43
 
 Populate WAL queue by simulating failed writes to blobstore 0
   $ mononoke_testtool populate-wal -R repo --blobstore-path "$TESTTMP/blobstore" --source-blobstore-id 1 --target-blobstore-id 1 --delete-target-blobs
-  Found 33 blobs in source blobstore 1
-  Deleted 33 blobs from target blobstore 0
-  Inserted 33 WAL entries for target multiplex_id 1
+  Found 43 blobs in source blobstore 1
+  Deleted 43 blobs from target blobstore 0
+  Inserted 43 WAL entries for target multiplex_id 1
 
 Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
   0
   $ ls blobstore/1/blobs/ | wc -l
-  33
+  43
   $ ls blobstore/2/blobs/ | wc -l
-  33
+  43
 
 Check that healer queue has items
   $ read_blobstore_wal_queue_size
-  33
+  43

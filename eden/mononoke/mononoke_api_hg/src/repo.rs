@@ -427,6 +427,37 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         Ok(results)
     }
 
+    /// Best-effort derive the augmented manifest for each uploaded commit so the
+    /// routed `trees` endpoint can serve it later without a serve-time derivation
+    /// chokepoint. Gated by the per-repo creation-time JustKnob; concurrency is
+    /// bounded because the batch is client-controlled (S493741).
+    ///
+    /// MUST run only AFTER the bonsai<->hg mapping is committed: deriving
+    /// `RootHgAugmentedManifestId` pulls in `MappedHgChangesetId`, which with no
+    /// stored mapping re-derives and stores Mononoke's own hg id, clobbering a
+    /// caller-supplied divergent id (e.g. null/empty-tree mirror commits from
+    /// `UploadIdenticalChangesets`).
+    pub async fn ensure_uploaded_augmented_manifests_derived(
+        &self,
+        results: &[Result<(HgChangesetId, BonsaiChangeset), MononokeError>],
+    ) {
+        let uploaded_cs_ids: Vec<ChangesetId> = results
+            .iter()
+            .filter_map(|result| {
+                result
+                    .as_ref()
+                    .ok()
+                    .map(|(_, bonsai)| bonsai.get_changeset_id())
+            })
+            .collect();
+        stream::iter(uploaded_cs_ids)
+            .for_each_concurrent(20, |cs_id| {
+                self.repo_ctx()
+                    .ensure_hg_augmented_manifest_derived_at_creation(cs_id)
+            })
+            .await;
+    }
+
     pub async fn fetch_mutations(
         &self,
         hg_changesets: HashSet<HgChangesetId>,

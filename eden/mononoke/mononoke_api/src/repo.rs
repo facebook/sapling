@@ -969,6 +969,28 @@ impl<R: RepoDerivedDataRef + RepoIdentityRef> RepoContext<R> {
             )
     }
 
+    /// Whether to derive the `HgAugmentedManifest` when a commit is created in
+    /// this repo. Creation-time derivation makes the augmented manifest available
+    /// as soon as the commit exists, covering commits that are never resolved
+    /// through a serve-time chokepoint (e.g. `hg up` of an already-known commit,
+    /// or a commit uploaded then checked out by raw hash). Without it, serving the
+    /// augmented manifest in place of the original would fail closed for those
+    /// commits.
+    fn derive_hg_augmented_manifest_at_creation_enabled(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(RootHgAugmentedManifestId::VARIANT)
+            && justknobs::eval(
+                "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset",
+                self.ctx
+                    .metadata()
+                    .client_request_info()
+                    .map(|c| c.correlator.as_str()),
+                Some(self.name()),
+            )
+    }
+
     /// Derive the `HgAugmentedManifest` for a client-influenced batch of
     /// changesets, with bounded concurrency. No-op when disabled for the repo.
     ///
@@ -1001,6 +1023,19 @@ impl<R: RepoDerivedDataRef + RepoIdentityRef> RepoContext<R> {
             results.into_iter().collect::<Result<Vec<_>, _>>()?;
         }
         Ok(())
+    }
+
+    /// Derive the `HgAugmentedManifest` for a newly-created commit so it is
+    /// present from the moment the commit exists, rather than waiting for the
+    /// derived-data tailer to reach it. Best-effort: does nothing when
+    /// creation-time derivation is disabled for the repo, and swallows derivation
+    /// errors (logged in `derive_hg_augmented_manifest`) so it never blocks or
+    /// fails commit creation.
+    pub async fn ensure_hg_augmented_manifest_derived_at_creation(&self, cs_id: ChangesetId) {
+        if !self.derive_hg_augmented_manifest_at_creation_enabled() {
+            return;
+        }
+        let _ = self.derive_hg_augmented_manifest(cs_id).await;
     }
 
     /// Derive the `HgAugmentedManifest` for `cs_id`, logging on failure.

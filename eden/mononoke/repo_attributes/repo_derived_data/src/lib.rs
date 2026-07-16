@@ -285,6 +285,11 @@ impl RepoDerivedData {
         &self.enabled_manager
     }
 
+    /// Name of the repo this derived data belongs to.
+    pub fn repo_name(&self) -> &str {
+        self.enabled_manager.repo_name()
+    }
+
     /// Returns the manager for the given config name.
     pub fn manager_for_config(&self, config_name: &str) -> Result<&DerivedDataManager> {
         self.managers

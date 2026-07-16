@@ -21,17 +21,17 @@ Create commits using testtool drawdag
 
 Populate WAL queue by simulating failed writes to blobstore 0
   $ mononoke_testtool populate-wal -R repo --blobstore-path "$TESTTMP/blobstore" --source-blobstore-id 1 --target-blobstore-id 1 --delete-target-blobs
-  Found 33 blobs in source blobstore 1
-  Deleted 33 blobs from target blobstore 0
-  Inserted 33 WAL entries for target multiplex_id 1
+  Found 43 blobs in source blobstore 1
+  Deleted 43 blobs from target blobstore 0
+  Inserted 43 WAL entries for target multiplex_id 1
 
 Check that healer queue has successful items
   $ read_blobstore_wal_queue_size
-  33
+  43
 
 Check the number of blobs.  Scrub should process every blob once.
   $ ls $TESTTMP/blobstore/1/blobs/blob-repo0000.* | grep -v .filenode_lookup. | wc -l
-  30
+  40
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
 # TODO(mbthomas): concurrent fetches may not hit in the cache

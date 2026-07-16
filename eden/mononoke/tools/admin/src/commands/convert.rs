@@ -18,6 +18,7 @@ use commit_id::print_commit_id;
 use derivation_queue_thrift::DerivationPriority;
 use git_types::MappedGitCommitId;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::derive_hg_augmented_manifest_at_creation;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_derived_data::RepoDerivedData;
@@ -91,6 +92,10 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                         .derive::<MappedHgChangesetId>(&ctx, cs_id, DerivationPriority::LOW)
                         .await
                         .context("Failed to derive Mercurial changeset")?;
+                    // Also derive the augmented manifest so admin-created commits
+                    // fetched by raw hash serve augmented instead of failing closed.
+                    derive_hg_augmented_manifest_at_creation(&ctx, repo.repo_derived_data(), cs_id)
+                        .await;
                 }
                 IdentityScheme::Git => {
                     repo.repo_derived_data()

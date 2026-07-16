@@ -138,7 +138,7 @@ Expected fallback (tree_aux_data is not returned)
   [{"key": {"node": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
             "path": ""},
     "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "has_acl": None,
+    "has_acl": False,
     "parents": None,
     "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
                                           "path": "COMMIT_1"},
@@ -156,11 +156,12 @@ Expected fallback (tree_aux_data is not returned)
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "tree_aux_data": None},
+    "tree_aux_data": {"augmented_manifest_id": bin("3fa0541cdf451ab034a94a5006399bde88da365896ed364798106c5757248d41"),
+                      "augmented_manifest_size": 373}},
    {"key": {"node": bin("dfe7fab71e1f96a0f0f53b0c76725c01d79b244d"),
             "path": ""},
     "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\nCOMMIT_2\030a356c25fb06508d81ed1dceb0550bcaa1ba9e0\ncopy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "has_acl": None,
+    "has_acl": False,
     "parents": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
     "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
                                           "path": "COMMIT_1"},
@@ -194,7 +195,8 @@ Expected fallback (tree_aux_data is not returned)
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "tree_aux_data": None}]
+    "tree_aux_data": {"augmented_manifest_id": bin("0692535594cfc449a55b4c4b1a0c2ce290dd6bae40e188805f97ff6b9e88b79d"),
+                      "augmented_manifest_size": 826}}]
 
 Expected for tree_aux_data to be returned.
   $ mononoke_admin derived-data -R repo derive --derived-data-types hg_augmented_manifests -i $HG_ID_1 -i $HG_ID_2 --unsafe-derive-untopologically

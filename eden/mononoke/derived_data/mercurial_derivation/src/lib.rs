@@ -19,6 +19,7 @@ pub mod pipeline;
 
 pub use augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 pub use derive_hg_changeset::DeriveHgChangeset;
+pub use derive_hg_changeset::derive_hg_augmented_manifest_at_creation;
 pub use derive_hg_changeset::derive_hg_changeset;
 pub use derive_hg_changeset::get_manifest_entry_from_bonsai;
 pub use derive_hg_changeset::get_manifest_from_bonsai;

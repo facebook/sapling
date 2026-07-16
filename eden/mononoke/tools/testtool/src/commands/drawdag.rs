@@ -31,10 +31,13 @@ use clap::Parser;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tokio::io::AsyncReadExt;
 use topo_sort::sort_topological;
@@ -58,6 +61,11 @@ pub struct CommandArgs {
     /// Print hashes in HG format instead of bonsai
     #[clap(long)]
     print_hg_hashes: bool,
+
+    /// Skip augmented-manifest derivation, for tests that need a commit
+    /// deliberately left without one (e.g. to exercise the fail-closed path).
+    #[clap(long)]
+    no_derive_hg_augmented: bool,
 }
 
 fn print_name_hash_pairs(pairs: impl IntoIterator<Item = (String, impl Display)>) -> Result<()> {
@@ -104,7 +112,29 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         if args.derive_all {
             derive_all(&ctx, &repo, &csids).await?;
         } else {
+            // Mirror the creation-time augmented-manifest derivation for drawdag
+            // commits so route_original_to_augmented_hg_manifest can serve them.
+            // Unlike the best-effort serving paths this propagates errors (`?`): a
+            // fixture that can't derive what it asked for should fail loudly.
+            let augmented_enabled = repo
+                .repo_derived_data()
+                .active_config()
+                .types
+                .contains(&DerivableType::HgAugmentedManifests);
+            let augmented_csids = (!args.no_derive_hg_augmented
+                && augmented_enabled
+                && justknobs::eval(
+                    "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset",
+                    ctx.metadata()
+                        .client_request_info()
+                        .map(|c| c.correlator.as_str()),
+                    Some(repo.repo_identity().name()),
+                ))
+            .then(|| csids.clone());
             derive::<MappedHgChangesetId>(&ctx, &repo, csids).await?;
+            if let Some(csids) = augmented_csids {
+                derive::<RootHgAugmentedManifestId>(&ctx, &repo, csids).await?;
+            }
         }
     }
 

@@ -31,6 +31,7 @@ rust_binary(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore_sync_queue:blobstore_sync_queue",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/derived_data:bulk_derivation",

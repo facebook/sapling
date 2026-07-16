@@ -3979,7 +3979,20 @@ async fn test_direct_derivation_subtree_copy_restricted_destination_rows_match_h
     fb: FacebookInit,
 ) -> Result<()> {
     with_just_knobs_async(
-        restricted_paths_access_logging_knobs(true),
+        JustKnobsInMemory::new(HashMap::from([
+            (
+                "scm/mononoke:enabled_restricted_paths_access_logging".to_string(),
+                KnobVal::Bool(true),
+            ),
+            // This test asserts on the exact restricted-path rows recorded by the
+            // Bonsai-direct and HgManifest derivation paths. Keep the at-creation
+            // augmented-manifest hook off so the setup `derive_hg_changeset` calls
+            // do not record extra rows into the shared manifest-id store.
+            (
+                "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string(),
+                KnobVal::Bool(false),
+            ),
+        ])),
         async move {
             // Given: config restricted paths protect only the subtree-copy destination
             // and its nested child, not the source.

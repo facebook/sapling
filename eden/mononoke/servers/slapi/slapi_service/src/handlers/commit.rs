@@ -561,19 +561,23 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
 
-        let results = repo
+        let stored = repo
             .store_hg_changesets(changesets_data, mutation_data)
-            .await?
-            .into_iter()
-            .map(move |r| {
-                r.map(|(hg_cs_id, _bonsai_cs_id)| {
-                    let hgid = HgId::from(hg_cs_id.into_nodehash());
-                    UploadTokensResponse {
-                        token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
-                    }
-                })
-                .map_err(Error::from)
-            });
+            .await?;
+        // Safe to derive now: with bonsai=None, store_hg_changesets already wrote
+        // the mapping (via CreateChangeset), so no conflicting hg id is re-derived.
+        repo.ensure_uploaded_augmented_manifests_derived(&stored)
+            .await;
+
+        let results = stored.into_iter().map(move |r| {
+            r.map(|(hg_cs_id, _bonsai_cs_id)| {
+                let hgid = HgId::from(hg_cs_id.into_nodehash());
+                UploadTokensResponse {
+                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
+                }
+            })
+            .map_err(Error::from)
+        });
 
         Ok(stream::iter(results).boxed())
     }
@@ -793,14 +797,11 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                                 file_type: tc.file_type().try_into()?,
                                 copy_info: tc.copy_from().and_then(|(copy_path, copy_cs_id)| {
                                     // Find the parent index for the copy source changeset
-                                    parents
-                                        .iter()
-                                        .position(|&parent_cs_id| parent_cs_id == *copy_cs_id)
-                                        .and_then(|parent_index| {
-                                            to_hg_path_nonroot(copy_path)
-                                                .ok()
-                                                .map(|path| (path, parent_index))
-                                        })
+                                    to_hg_path_nonroot(copy_path).ok().zip(
+                                        parents
+                                            .iter()
+                                            .position(|&parent_cs_id| parent_cs_id == *copy_cs_id),
+                                    )
                                 }),
                             },
                             FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
@@ -1519,6 +1520,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
             Ok::<_, MononokeError>(())
         };
 
+        let augmented_repo = repo.clone();
         let hg_fut = async move {
             let mut changeset_data = Vec::new();
             for res in bonsai_changesets {
@@ -1552,6 +1554,12 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
             .bulk_add(&ctx, &mapping_entries)
             .await
             .context("While inserting in bonsai-hg mapping")?;
+
+        // Must run AFTER the `bulk_add` above so the augmented derivation reuses
+        // the caller-supplied hg id (see `ensure_uploaded_augmented_manifests_derived`).
+        augmented_repo
+            .ensure_uploaded_augmented_manifests_derived(&hg_changesets)
+            .await;
 
         let tokens = hg_changesets.into_iter().map(move |r| {
             r.map(|(hg_cs_id, _)| {

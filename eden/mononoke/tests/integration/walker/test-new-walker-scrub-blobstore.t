@@ -49,7 +49,7 @@ Check that multi repo runs for all repos specified
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  50
+  60
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
@@ -167,9 +167,19 @@ Check the files after restore.  The blobstore filenode_lookup representation is 
   24
 
   $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/ | grep -E -v blob-repo0002
+  Only in blobstore/1/blobs/: blob-repo0000.aclmf.blake2.ccdc1160ab59cd5c9179719f5f725f2802b9891a2ca6f2f618624ce446b12a1c
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_aclmf.aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_aclmf.e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_aclmf.f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_hgaugmentedmanifest.aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_hgaugmentedmanifest.e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  Only in blobstore/1/blobs/: blob-repo0000.derived_root_hgaugmentedmanifest.f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e
+  Only in blobstore/1/blobs/: blob-repo0000.hgaugmentedmanifest.sha1.41b34f08c1356f6ad068e9ab9b43d984245111aa
+  Only in blobstore/1/blobs/: blob-repo0000.hgaugmentedmanifest.sha1.7c9b4fd8b49377e2fead2e9610bb8db910a98c53
+  Only in blobstore/1/blobs/: blob-repo0000.hgaugmentedmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99
   Only in blobstore/1/blobs/: blob-repo0000.hgfilenode.sha1.005d992c5dcf32993668f7cede29d296c494a5d9
   Only in blobstore/1/blobs/: blob-repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
   Only in blobstore/1/blobs/: blob-repo0000.hgfilenode.sha1.a2e456504a5e61f763f1a0b36a6c247c7541b2b3

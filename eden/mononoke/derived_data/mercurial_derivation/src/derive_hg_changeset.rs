@@ -22,6 +22,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use derived_data_manager::BonsaiDerivable;
 use futures::FutureExt;
 use futures::TryStreamExt;
 use futures::future;
@@ -63,6 +64,7 @@ use crate::derive_hg_manifest::derive_hg_manifest_with_known_entries;
 use crate::derive_hg_manifest::derive_simple_hg_manifest_stack_without_copy_info;
 use crate::mapping::HgChangesetDeriveOptions;
 use crate::mapping::MappedHgChangesetId;
+use crate::mapping::RootHgAugmentedManifestId;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -720,6 +722,39 @@ pub trait DeriveHgChangeset {
     ) -> Result<HgChangesetId, Error>;
 }
 
+/// Best-effort derive the augmented manifest alongside the hg changeset.
+/// Skips bubbles (their manager lacks the deps) and swallows errors
+/// so it never regresses hg-changeset derivation.
+pub async fn derive_hg_augmented_manifest_at_creation(
+    ctx: &CoreContext,
+    derived_data: &RepoDerivedData,
+    cs_id: ChangesetId,
+) {
+    if derived_data.manager().bubble_id().is_some()
+        || !derived_data
+            .config()
+            .is_enabled(RootHgAugmentedManifestId::VARIANT)
+        || !justknobs::eval(
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset",
+            ctx.metadata()
+                .client_request_info()
+                .map(|c| c.correlator.as_str()),
+            Some(derived_data.repo_name()),
+        )
+    {
+        return;
+    }
+    if let Err(err) = derived_data
+        .derive::<RootHgAugmentedManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await
+    {
+        ctx.scuba().clone().log_with_msg(
+            "Augmented Hg manifest derivation alongside hg changeset failed",
+            Some(format!("cs_id: {cs_id:?}, error: {err:?}")),
+        );
+    }
+}
+
 pub async fn derive_hg_changeset(
     ctx: &CoreContext,
     derived_data: &RepoDerivedData,
@@ -734,8 +769,12 @@ pub async fn derive_hg_changeset(
         Ok(id) => Ok(id.hg_changeset_id()),
         Err(err) => Err(err.into()),
     };
+    // Record before the augmented derivation below so this stat excludes it.
     STATS::generate_hg_from_bonsai_total_latency_ms
         .add_value(start_timestamp.elapsed().as_millis() as i64);
+    if result.is_ok() {
+        derive_hg_augmented_manifest_at_creation(ctx, derived_data, cs_id).await;
+    }
     result
 }
 
