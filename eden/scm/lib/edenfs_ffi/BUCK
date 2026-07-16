@@ -1,11 +1,11 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_library")
 
 oncall("source_control")
 
 # Due to some tools changing '-' to '_' when building,
 # this library/crate is named using an '_' so that it can link successfully.
-rust_library(
+sl_rust_library(
     name = "edenfs_ffi",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {

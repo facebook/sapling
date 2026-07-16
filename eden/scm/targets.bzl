@@ -77,7 +77,7 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
     kwargs3["name"] = kwargs["name"]
     kwargs3["crate"] = kwargs["name"].replace("-", "_")
     kwargs3["deps"] = deps3
-    rust_library(**kwargs3)
+    sl_rust_library(**kwargs3)
 
 def gen_slpython(sl_target, suffix = ""):
     if read_bool("fbcode", "mode_win_enabled", False) and "ovr_config//os:windows":
@@ -104,7 +104,7 @@ def fetch_as_eden():
     return read_bool("sl", "fetch_as_eden", False)
 
 def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
-    rust_binary(
+    sl_rust_binary(
         name = name,
         srcs = glob(["exec/hgmain/src/**/*.rs"]),
         features = [

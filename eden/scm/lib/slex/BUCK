@@ -1,9 +1,8 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_binary", "sl_rust_library")
 
 oncall("sapling")
 
-rust_library(
+sl_rust_library(
     name = "slex",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
@@ -42,7 +41,7 @@ rust_library(
     ],
 )
 
-rust_binary(
+sl_rust_binary(
     name = "executor-benches",
     srcs = ["benches/executor.rs"],
     crate_root = "benches/executor.rs",

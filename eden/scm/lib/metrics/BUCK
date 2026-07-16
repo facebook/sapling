@@ -1,8 +1,8 @@
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_library")
 
 oncall("sapling")
 
-rust_library(
+sl_rust_library(
     name = "metrics",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
@@ -28,7 +28,7 @@ rust_library(
     ],
 )
 
-rust_library(
+sl_rust_library(
     name = "metrics_fb",
     srcs = ["src/fb_sink.rs"],
     autocargo = {"ignore_rule": True},

@@ -1,9 +1,8 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_binary", "sl_rust_library")
 
 oncall("sapling")
 
-rust_library(
+sl_rust_library(
     name = "btrfs",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
@@ -27,7 +26,7 @@ rust_library(
     ],
 )
 
-rust_binary(
+sl_rust_binary(
     name = "compsize",
     srcs = ["examples/compsize.rs"],
     autocargo = {"ignore_rule": True},
@@ -40,7 +39,7 @@ rust_binary(
     ],
 )
 
-rust_binary(
+sl_rust_binary(
     name = "setprop",
     srcs = ["examples/setprop.rs"],
     autocargo = {"ignore_rule": True},

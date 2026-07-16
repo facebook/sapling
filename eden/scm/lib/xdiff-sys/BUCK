@@ -1,10 +1,9 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_binary", "sl_rust_library")
 
 oncall("sapling")
 
 # the library itself
-rust_library(
+sl_rust_library(
     name = "xdiff-sys",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
@@ -25,7 +24,7 @@ rust_library(
 )
 
 # small demo binary using the bindings
-rust_binary(
+sl_rust_binary(
     name = "xdiff-sys-bin",
     srcs = ["src/bin/xdiff-sys-bin.rs"],
     crate_root = "src/bin/xdiff-sys-bin.rs",

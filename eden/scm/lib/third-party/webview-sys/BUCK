@@ -1,12 +1,11 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_binary", "sl_rust_library")
 
 oncall("sapling")
 
 # Build these targets with @//mode/mac-xcode
 
-rust_library(
+sl_rust_library(
     name = "webview-sys",
     srcs = ["lib.rs"],
     autocargo = {
@@ -91,7 +90,7 @@ cpp_library(
     preprocessor_flags = ["-DNDEBUG"],
 )
 
-rust_binary(
+sl_rust_binary(
     name = "example",
     srcs = ["examples/example.rs"],
     autocargo = {"ignore_rule": True},

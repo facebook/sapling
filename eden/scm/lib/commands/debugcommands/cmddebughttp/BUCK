@@ -1,8 +1,8 @@
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_library")
 
 oncall("sapling")
 
-rust_library(
+sl_rust_library(
     name = "cmddebughttp",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
