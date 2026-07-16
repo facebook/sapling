@@ -1637,6 +1637,14 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Whether to enable XplatLogger for edenfs_cli_usage telemetry.
+   */
+  ConfigSetting<bool> enableXplatLoggerCliUsage{
+      "telemetry:enable-xplatlogger-cli-usage",
+      false,
+      this};
+
   // [experimental]
 
   /**
