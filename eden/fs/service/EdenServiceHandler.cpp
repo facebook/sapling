@@ -4341,8 +4341,9 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
       getSyncTimeout(*params->sync()),
       toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
-  auto requestedAttributes =
-      EntryAttributeFlags::raw(*params->requestedAttributes());
+  auto requestedAttributes = EntryAttributeFlags::raw(
+      static_cast<std::underlying_type_t<FileAttributes>>(
+          *params->requestedAttributes()));
 
   return wrapImmediateFuture(
              std::move(helper),
@@ -4403,8 +4404,9 @@ EdenServiceHandler::co_readdirImpl(std::unique_ptr<ReaddirParams> params) {
       getSyncTimeout(*params->sync()),
       toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
-  auto requestedAttributes =
-      EntryAttributeFlags::raw(*params->requestedAttributes());
+  auto requestedAttributes = EntryAttributeFlags::raw(
+      static_cast<std::underlying_type_t<FileAttributes>>(
+          *params->requestedAttributes()));
 
   co_await co_waitForPendingWrites(mountHandle.getEdenMount(), *params->sync());
 
@@ -4751,7 +4753,9 @@ EdenServiceHandler::co_getAttributesFromFilesV2Impl(
   auto mountHandle = lookupMount(params->mountPoint());
   auto reqScope =
       params->scope().value_or(AttributesRequestScope::TREES_AND_FILES);
-  auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
+  auto reqBitmask = EntryAttributeFlags::raw(
+      static_cast<std::underlying_type_t<FileAttributes>>(
+          *params->requestedAttributes()));
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
@@ -4788,7 +4792,9 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2Impl(
   auto mountHandle = lookupMount(params->mountPoint());
   auto reqScope =
       params->scope().value_or(AttributesRequestScope::TREES_AND_FILES);
-  auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
+  auto reqBitmask = EntryAttributeFlags::raw(
+      static_cast<std::underlying_type_t<FileAttributes>>(
+          *params->requestedAttributes()));
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
