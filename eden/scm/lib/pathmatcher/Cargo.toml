@@ -18,7 +18,7 @@ bitflags = { version = "2.11.1", features = ["serde", "std"], default-features =
 fancy-regex = "0.16.2"
 fs-err = { version = "3.3.1", features = ["tokio"] }
 glob = "0.3.2"
-globset = { version = "0.4.13", features = ["serde1"] }
+globset = { version = "0.4.19", features = ["serde1"] }
 ignore = "0.4.28"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 regex-automata = "0.3.9"
