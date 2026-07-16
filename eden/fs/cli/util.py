@@ -396,7 +396,10 @@ def get_home_dir() -> Path:
     else:
         home_dir = os.getenv("HOME")
         if not home_dir:
-            home_dir = pwd.getpwuid(os.getuid()).pw_dir
+            try:
+                home_dir = pwd.getpwuid(os.getuid()).pw_dir
+            except Exception:
+                return Path.home()
     return Path(home_dir)
 
 

@@ -9,6 +9,10 @@
 
 import collections
 import configparser
+import errno
+import os
+import sys
+from pathlib import Path
 from typing import (
     Any,
     cast,
@@ -312,3 +316,156 @@ def _toml_value(value: Union[bool, str]) -> str:
     TomlEncoder: Type = toml.TomlEncoder
     value_toml: str = TomlEncoder().dump_inline_table(value)
     return value_toml.rstrip()
+
+
+# Lightweight Eden config reading without needing EdenInstance
+# Used by tools like edenfs_config_manager that need to read telemetry
+# config before EdenFS is running
+
+
+def _get_default_etc_eden_dir() -> Path:
+    if sys.platform == "win32":
+        return Path("C:\\ProgramData\\facebook\\eden")
+    else:
+        return Path("/etc/eden")
+
+
+def _get_default_home_dir() -> Path:
+    # Delegate to util.get_home_dir() as the single source of truth. Import it
+    # lazily: util pulls in heavy dependencies (thrift clients, subprocess, ...)
+    # and this module is meant to stay a lightweight config reader.
+    from . import util
+
+    return util.get_home_dir()
+
+
+def get_eden_config_paths(
+    etc_eden_dir: Optional[Path] = None, home_dir: Optional[Path] = None
+) -> List[Path]:
+    """
+    Get list of Eden config files in load order, without needing EdenInstance.
+    Returns paths to: /etc/eden/config.d/*.toml, /etc/eden/edenfs.rc,
+    /etc/eden/edenfs_dynamic.rc, ~/.edenrc
+
+    Missing files are included in the list – caller should handle FileNotFoundError
+    when reading them, matching EdenInstance.read_configs() behavior.
+    """
+    if etc_eden_dir is None:
+        etc_eden_dir = _get_default_etc_eden_dir()
+    else:
+        etc_eden_dir = Path(etc_eden_dir)
+
+    if home_dir is None:
+        home_dir = _get_default_home_dir()
+    else:
+        home_dir = Path(home_dir)
+
+    result: List[Path] = []
+    config_d = etc_eden_dir / "config.d"
+    try:
+        rc_entries = os.listdir(config_d)
+    except OSError as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+        rc_entries = []
+
+    for name in rc_entries:
+        if not name.startswith(".") and name.endswith(".toml"):
+            result.append(config_d / name)
+
+    result.sort()
+    result.append(etc_eden_dir / "edenfs.rc")
+    result.append(etc_eden_dir / "edenfs_dynamic.rc")
+    result.append(home_dir / ".edenrc")
+
+    return result
+
+
+def load_eden_config(
+    etc_eden_dir: Optional[Path] = None,
+    home_dir: Optional[Path] = None,
+    interpolation_dict: Optional[Dict[str, str]] = None,
+) -> EdenConfigParser:
+    """
+    Load Eden config from standard locations without needing EdenInstance.
+    This is useful for tools like edenfs_config_manager that need to read
+    telemetry config before EdenFS is running.
+    """
+    # Build interpolation dict if not provided
+    if interpolation_dict is None:
+        if home_dir is None:
+            home_dir_path = _get_default_home_dir()
+        else:
+            home_dir_path = Path(home_dir)
+
+        if sys.platform == "win32":
+            user_name = os.environ.get("USERNAME", "")
+            user_id = 0
+        else:
+            user_name = os.environ.get("USER", "")
+            user_id = os.getuid()
+
+        interpolation_dict = {
+            "USER": user_name,
+            "USER_ID": str(user_id),
+            "HOME": str(home_dir_path),
+        }
+
+    parser = EdenConfigParser(interpolation=EdenConfigInterpolator(interpolation_dict))
+
+    for path in get_eden_config_paths(etc_eden_dir, home_dir):
+        try:
+            with path.open("r") as f:
+                toml_cfg = toml.load(f)
+            parser.read_dict(toml_cfg)
+        except FileNotFoundError:
+            # Ignore missing config files, matching EdenInstance.read_configs()
+            continue
+        except Exception:
+            # Silently ignore parse errors to match EdenInstance behavior
+            # (it logs a warning, but we don't have a logger here)
+            continue
+
+    return parser
+
+
+def get_config_value(
+    key: str,
+    default: str = "",
+    etc_eden_dir: Optional[Path] = None,
+    home_dir: Optional[Path] = None,
+    parser: Optional[EdenConfigParser] = None,
+) -> str:
+    """Get a string config value from Eden config files without needing EdenInstance.
+
+    Pass an already-loaded ``parser`` to avoid re-reading and re-parsing every
+    Eden config file when reading multiple values in a single run.
+    """
+    if parser is None:
+        parser = load_eden_config(etc_eden_dir, home_dir)
+    try:
+        section, option = key.split(".", 1)
+    except ValueError:
+        return default
+    return parser.get_str(section, option, default=default)
+
+
+def get_config_bool(
+    key: str,
+    default: bool = False,
+    etc_eden_dir: Optional[Path] = None,
+    home_dir: Optional[Path] = None,
+    parser: Optional[EdenConfigParser] = None,
+) -> bool:
+    """Get a bool config value from Eden config files without needing EdenInstance.
+
+    Pass an already-loaded ``parser`` to avoid re-reading and re-parsing every
+    Eden config file when reading multiple values in a single run.
+    """
+    if parser is None:
+        parser = load_eden_config(etc_eden_dir, home_dir)
+    try:
+        section, option = key.split(".", 1)
+    except ValueError:
+        return default
+    return parser.get_bool(section, option, default=default)
