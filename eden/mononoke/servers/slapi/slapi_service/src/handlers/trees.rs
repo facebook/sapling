@@ -100,6 +100,9 @@ const MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH: usize = 100;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 100;
 const LARGE_TREE_METADATA_LIMIT: usize = 25000;
 
+const ROUTE_ORIGINAL_TO_AUGMENTED_HG_MANIFEST: &str =
+    "scm/mononoke:route_original_to_augmented_hg_manifest";
+
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct TreeParams {
     repo: String,
@@ -213,12 +216,23 @@ async fn fetch_tree<R: MononokeRepo>(
     attributes: TreeAttributes,
 ) -> Result<TreeEntry, Error> {
     let mut entry = TreeEntry::new(key.clone());
+    let route_to_augmented = justknobs::eval(
+        ROUTE_ORIGINAL_TO_AUGMENTED_HG_MANIFEST,
+        None,
+        Some(repo.repo().repo_identity().name()),
+    );
 
-    if attributes.augmented_trees {
+    // The augmented manifest's content is byte-identical to the original Hg
+    // manifest blob, so serving it for an original request still hash-verifies
+    // on the client.
+    if route_to_augmented || attributes.augmented_trees {
         let id = HgAugmentedManifestId::new(HgNodeHash::from(key.hgid));
-        repo.ctx()
-            .perf_counters()
-            .increment_counter(PerfCounterType::EdenapiAugmentedTrees);
+        let perf_counter = if attributes.augmented_trees {
+            PerfCounterType::EdenapiAugmentedTrees
+        } else {
+            PerfCounterType::EdenapiOriginalRoutedToAugmented
+        };
+        repo.ctx().perf_counters().increment_counter(perf_counter);
 
         let maybe_ctx = id
             .context(repo.clone())
@@ -226,17 +240,19 @@ async fn fetch_tree<R: MononokeRepo>(
             .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
         if let Some(ctx) = maybe_ctx {
+            let populate_all_metadata = route_to_augmented;
+
             entry.with_tree_aux_data(TreeAuxData {
                 augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
                 augmented_manifest_size: ctx.augmented_manifest_size(),
             });
             entry.with_has_acl(ctx.is_restricted().await?);
 
-            if attributes.parents {
+            if attributes.parents || populate_all_metadata {
                 entry.with_parents(Some(ctx.hg_parents().into()));
             }
 
-            if attributes.child_metadata {
+            if attributes.child_metadata || populate_all_metadata {
                 repo.ctx()
                     .perf_counters()
                     .increment_counter(PerfCounterType::EdenapiTreesAuxData);
@@ -269,6 +285,32 @@ async fn fetch_tree<R: MononokeRepo>(
             }
 
             return Ok(entry);
+        } else if route_to_augmented {
+            // Fail closed rather than falling back to the unprotected original
+            // manifest. The augmented manifest cannot be derived on demand here
+            // (derivation is per-changeset and needs the ACL overlay, but the
+            // trees endpoint only has a manifest id), so a missing augmented
+            // manifest must be backfilled out of band.
+            repo.ctx()
+                .perf_counters()
+                .increment_counter(PerfCounterType::EdenapiAugmentedManifestMissUnderRoute);
+            let repo_name = repo.repo().repo_identity().name();
+            // Log the specific manifest id that needs backfilling so a miss is
+            // actionable from scuba (the aggregate counter has no per-key id).
+            repo.ctx()
+                .scuba()
+                .clone()
+                .add("repo", repo_name)
+                .add("hg_manifest_id", key.hgid.to_string())
+                .log_with_msg(
+                    "Augmented Hg manifest unavailable (route_original_to_augmented_hg_manifest)",
+                    None,
+                );
+            return Err(MononokeError::NotAvailable(format!(
+                "augmented Hg manifest unavailable for tented repo {repo_name}; \
+                 the original (non-augmented) manifest is disabled"
+            ))
+            .into());
         } else {
             // If we don't have an augmented tree, fallback to the old way of fetching trees
             // Log the fallback to scuba

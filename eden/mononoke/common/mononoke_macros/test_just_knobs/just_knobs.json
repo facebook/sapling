@@ -80,6 +80,7 @@
     "scm/mononoke:derive_hg_augmented_manifest_on_demand": true,
     "scm/mononoke:fail_hard_on_derive_hg_augmented_manifest_on_demand": true,
     "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true,
+    "scm/mononoke:route_original_to_augmented_hg_manifest": false,
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:lfs_server_compression_sniff_enabled": false,
     "scm/mononoke:lfs_server_skip_upstream_for_downloads": false,
