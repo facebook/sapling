@@ -129,23 +129,11 @@ fn setup_logging() {
     }
 }
 
-/// Decides whether edenfs_cli_usage telemetry should be routed through
-/// XplatLogger, by reading the `telemetry:enable-xplatlogger-cli-usage` gate from
-/// the on-disk materialized dynamic config (edenfs_dynamic.rc).
-///
-/// This is deliberately daemon-free: edenfsctl frequently runs with no daemon
-/// available, and the dynamic config is materialized out-of-band by
-/// edenfs_config_manager, so we can consult it without an RPC. Only
-/// edenfs_dynamic.rc is read -- edenfs.rc, config.d/*.toml and ~/.edenrc are
-/// intentionally NOT consulted, matching production where the cconf is
-/// materialized into edenfs_dynamic.rc.
-///
-/// Returns false (legacy logger) in the common cases: (a) telemetry is disabled,
-/// in which case the sample would be dropped anyway so we skip the config read
-/// entirely, and (b) the gate is absent or false in edenfs_dynamic.rc (the
-/// missing-key default in `enable_xplatlogger_cli_usage()`). A missing or
-/// unparsable file is swallowed inside `load_dynamic_config`, so the `Err` branch
-/// here is only reached if building the config itself fails.
+/// Whether edenfs_cli_usage telemetry should route through XplatLogger, per the
+/// `telemetry:enable-xplatlogger-cli-usage` gate in the on-disk dynamic config
+/// (edenfs_dynamic.rc). Daemon-free, since edenfsctl often runs with no daemon.
+/// Returns false when telemetry is disabled (skipping the config read) or when
+/// the gate is absent/false.
 #[cfg(fbcode_build)]
 fn should_use_xplat_cli_usage() -> bool {
     // The gate only matters when a sample is actually emitted. When telemetry is
