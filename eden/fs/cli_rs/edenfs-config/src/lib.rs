@@ -38,6 +38,21 @@ pub struct PrefetchProfiles {
     pub other: toml::value::Table,
 }
 
+#[derive(Serialize, Deserialize, StackConfig, Debug, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct Telemetry {
+    /// Gates logging edenfs_cli_usage through XplatLogger. Read from the on-disk
+    /// materialized dynamic config (edenfs_dynamic.rc) so the short-lived
+    /// edenfsctl process can consult it without a running daemon. Maps to the
+    /// EdenConfig setting `telemetry:enable-xplatlogger-cli-usage`.
+    #[stack(default, merge = "merge_option")]
+    pub enable_xplatlogger_cli_usage: Option<bool>,
+
+    #[stack(merge = "merge_table", default)]
+    #[serde(flatten)]
+    pub other: toml::value::Table,
+}
+
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct Redirections {
@@ -74,12 +89,24 @@ pub struct EdenFsConfig {
     #[stack(nested)]
     pub redirections: Redirections,
 
+    #[stack(nested)]
+    pub telemetry: Telemetry,
+
     #[stack(merge = "merge_table")]
     #[serde(flatten)]
     /// A catch-all field for unused configuration fields. If you need
     /// to use any configurations, define them above instead of reading from
     /// this field.
     pub other: toml::value::Table,
+}
+
+impl EdenFsConfig {
+    /// Whether edenfs_cli_usage telemetry should be routed through XplatLogger,
+    /// as gated by the on-disk `telemetry:enable-xplatlogger-cli-usage` setting.
+    /// Defaults to false when the setting is absent.
+    pub fn enable_xplatlogger_cli_usage(&self) -> bool {
+        self.telemetry.enable_xplatlogger_cli_usage.unwrap_or(false)
+    }
 }
 
 fn merge_option<T>(lhs: &mut Option<T>, rhs: Option<T>) {
@@ -171,6 +198,39 @@ pub fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()>
     load_path(loader, &home_rc)
 }
 
+/// Loads *only* the materialized dynamic config
+/// (`<etc_eden_dir>/edenfs_dynamic.rc`), skipping `edenfs.rc`, `config.d/*.toml`
+/// and `~/.edenrc`. This is for short-lived callers (e.g. edenfsctl telemetry
+/// gating) that only need values materialized by edenfs_config_manager and want
+/// to avoid the extra I/O of a full [`load_config`].
+///
+/// A missing or unparsable `edenfs_dynamic.rc` is not an error: the loader logs
+/// and skips it, and the returned config carries defaults for any absent
+/// settings. The `Err` branch is therefore reserved for a failure of
+/// `loader.build()` itself.
+pub fn load_dynamic_config(etc_eden_dir: &Path) -> Result<EdenFsConfig, EdenFsError> {
+    let mut loader = EdenFsConfig::loader();
+
+    // Prime the loader with an empty layer so that a missing or unparsable
+    // edenfs_dynamic.rc still finalizes to defaults instead of erroring on a
+    // never-populated catch-all field (`other` has no stack default). `load_config`
+    // avoids this only because it typically loads at least one file.
+    loader.load(toml::from_str("").expect("empty document is valid TOML"));
+
+    if let Err(e) = load_dynamic(&mut loader, etc_eden_dir) {
+        event!(
+            Level::INFO,
+            etc_eden_dir = ?etc_eden_dir,
+            "Unable to load dynamic configuration, skipped: {:?}",
+            e
+        );
+    } else {
+        event!(Level::DEBUG, "Dynamic configuration loaded");
+    }
+
+    loader.build().map_err(EdenFsError::ConfigurationError)
+}
+
 pub fn load_config(
     etc_eden_dir: &Path,
     home_dir: Option<&Path>,
@@ -224,4 +284,95 @@ pub fn load_config(
     }
 
     loader.build().map_err(EdenFsError::ConfigurationError)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn build_config(toml_str: &str) -> EdenFsConfig {
+        let mut loader = EdenFsConfig::loader();
+        loader.load(toml::from_str(toml_str).expect("failed to parse test TOML"));
+        loader.build().expect("failed to build config")
+    }
+
+    #[test]
+    fn test_enable_xplatlogger_cli_usage_true() {
+        let config = build_config("[telemetry]\nenable-xplatlogger-cli-usage = true\n");
+        assert_eq!(config.telemetry.enable_xplatlogger_cli_usage, Some(true));
+        assert!(config.enable_xplatlogger_cli_usage());
+    }
+
+    #[test]
+    fn test_enable_xplatlogger_cli_usage_false() {
+        let config = build_config("[telemetry]\nenable-xplatlogger-cli-usage = false\n");
+        assert_eq!(config.telemetry.enable_xplatlogger_cli_usage, Some(false));
+        assert!(!config.enable_xplatlogger_cli_usage());
+    }
+
+    #[test]
+    fn test_enable_xplatlogger_cli_usage_missing() {
+        // Missing key (and missing [telemetry] section) must default to false so
+        // the CLI falls back to the legacy logger.
+        let config = build_config("[core]\neden-directory = \"/tmp/eden\"\n");
+        assert_eq!(config.telemetry.enable_xplatlogger_cli_usage, None);
+        assert!(!config.enable_xplatlogger_cli_usage());
+    }
+
+    /// Minimal RAII temp directory (avoids a `tempfile` dev-dependency for these
+    /// few tests). Cleaned up on drop, including during unwind on assert failure.
+    struct TempEtcDir {
+        path: std::path::PathBuf,
+    }
+
+    impl TempEtcDir {
+        fn new(tag: &str) -> Self {
+            static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+            let mut path = std::env::temp_dir();
+            path.push(format!(
+                "edenfs_config_dyn_test_{}_{}_{}",
+                tag,
+                std::process::id(),
+                NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            ));
+            std::fs::create_dir_all(&path).expect("failed to create temp etc dir");
+            Self { path }
+        }
+
+        fn write_dynamic(&self, contents: &str) {
+            std::fs::write(self.path.join("edenfs_dynamic.rc"), contents)
+                .expect("failed to write edenfs_dynamic.rc");
+        }
+    }
+
+    impl Drop for TempEtcDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn test_load_dynamic_config_present_true() {
+        let dir = TempEtcDir::new("true");
+        dir.write_dynamic("[telemetry]\nenable-xplatlogger-cli-usage = true\n");
+        let config = load_dynamic_config(&dir.path).expect("load_dynamic_config should succeed");
+        assert!(config.enable_xplatlogger_cli_usage());
+    }
+
+    #[test]
+    fn test_load_dynamic_config_present_false() {
+        let dir = TempEtcDir::new("false");
+        dir.write_dynamic("[telemetry]\nenable-xplatlogger-cli-usage = false\n");
+        let config = load_dynamic_config(&dir.path).expect("load_dynamic_config should succeed");
+        assert!(!config.enable_xplatlogger_cli_usage());
+    }
+
+    #[test]
+    fn test_load_dynamic_config_file_missing() {
+        // A missing edenfs_dynamic.rc is swallowed by the loader, yielding an Ok
+        // config that defaults the gate to false.
+        let dir = TempEtcDir::new("missing");
+        let config = load_dynamic_config(&dir.path).expect("load_dynamic_config should succeed");
+        assert!(!config.enable_xplatlogger_cli_usage());
+    }
 }

@@ -13,11 +13,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use edenfs_commands::is_command_enabled_in_rust;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::send;
+use edenfs_telemetry::send_edenfs_cli_usage;
 #[cfg(windows)]
 use edenfs_utils::execute_par;
 #[cfg(windows)]
@@ -128,6 +126,45 @@ fn setup_logging() {
 
     if let Err(e) = subscriber.try_init() {
         eprintln!("Unable to initialize logger. Logging will be disabled. Cause: {e:?}");
+    }
+}
+
+/// Decides whether edenfs_cli_usage telemetry should be routed through
+/// XplatLogger, by reading the `telemetry:enable-xplatlogger-cli-usage` gate from
+/// the on-disk materialized dynamic config (edenfs_dynamic.rc).
+///
+/// This is deliberately daemon-free: edenfsctl frequently runs with no daemon
+/// available, and the dynamic config is materialized out-of-band by
+/// edenfs_config_manager, so we can consult it without an RPC. Only
+/// edenfs_dynamic.rc is read -- edenfs.rc, config.d/*.toml and ~/.edenrc are
+/// intentionally NOT consulted, matching production where the cconf is
+/// materialized into edenfs_dynamic.rc.
+///
+/// Returns false (legacy logger) in the common cases: (a) telemetry is disabled,
+/// in which case the sample would be dropped anyway so we skip the config read
+/// entirely, and (b) the gate is absent or false in edenfs_dynamic.rc (the
+/// missing-key default in `enable_xplatlogger_cli_usage()`). A missing or
+/// unparsable file is swallowed inside `load_dynamic_config`, so the `Err` branch
+/// here is only reached if building the config itself fails.
+#[cfg(fbcode_build)]
+fn should_use_xplat_cli_usage() -> bool {
+    // The gate only matters when a sample is actually emitted. When telemetry is
+    // disabled, create_logger returns a NullLogger regardless of the gate, so
+    // reading the config would be wasted I/O on every edenfsctl invocation.
+    if edenfs_telemetry::telemetry_disabled() {
+        return false;
+    }
+
+    let etc_eden_dir = edenfs_client::utils::get_etc_eden_dir(&None);
+    match edenfs_config::load_dynamic_config(&etc_eden_dir) {
+        Ok(config) => config.enable_xplatlogger_cli_usage(),
+        Err(error) => {
+            tracing::debug!(
+                ?error,
+                "failed to read enable-xplatlogger-cli-usage config; using legacy logger"
+            );
+            false
+        }
     }
 }
 
@@ -325,7 +362,8 @@ fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(fbcode_build)]
     {
         sample.set_exit_code(*code.as_ref().unwrap_or(&1));
-        send(EDENFSCTL_CLI_USAGE.to_string(), sample.sample);
+        let enable_xplat = should_use_xplat_cli_usage();
+        send_edenfs_cli_usage(sample.sample, enable_xplat);
     }
 
     match code {
