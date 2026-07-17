@@ -277,6 +277,9 @@ class ObjectStore : public IObjectStore,
    *
    * The caller is responsible for making sure that the HashRange stays valid
    * for as long as the returned ImmediateFuture.
+   *
+   * DEPRECATED: use co_prefetchBlobs directly. Futures wrapper kept for
+   * non-coroutine callers; remove once all callers have migrated.
    */
   ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
