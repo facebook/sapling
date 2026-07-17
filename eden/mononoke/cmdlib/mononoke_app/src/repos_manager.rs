@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -52,7 +53,10 @@ use mononoke_macros::mononoke;
 use mononoke_repos::MononokeRepos;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
+use repos::RepoSpec;
 use stats::prelude::*;
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
 use tracing::debug;
 use tracing::info;
 use tracing::warn;
@@ -75,6 +79,7 @@ define_stats! {
     reconcile_applied: timeseries(Average, Sum, Count),
     reconcile_dropped: timeseries(Average, Sum, Count),
     reconcile_failed_repos: timeseries(Average, Sum, Count),
+    reconcile_tick_duration_ms: timeseries(Average, Sum, Count),
 }
 
 /// A manager of a MononokeRepos collection.
@@ -95,10 +100,11 @@ pub struct MononokeReposManager<Repo> {
     // Shared with Mononoke<R> (read by list_repos) and with
     // MononokeConfigUpdateReceiver (which refreshes it on each config update).
     repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
-    // Reconcile controller (slice 2): per-repo state (loaded generation, or
-    // last-failed) keyed by name. Empty until reconcile runs. Owned/driven by
-    // the `config_reconcile` crate.
-    reconcile_state: Arc<ArcSwap<HashMap<String, RepoState>>>,
+    // Holds all state a reconcile pass needs (per-repo state, spec-hash cache,
+    // single-flight lock). Shared with the background loop.
+    reconcile_driver: Arc<ReconcileDriver<Repo>>,
+    // Background reconcile loop; aborted on Drop. None without split-loading.
+    reconcile_loop_handle: Option<JoinHandle<()>>,
 }
 
 impl<Repo> MononokeReposManager<Repo> {
@@ -142,14 +148,24 @@ impl<Repo> MononokeReposManager<Repo> {
         let repos = Arc::new(MononokeRepos::new());
         let applied_configs = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
-        let mgr = MononokeReposManager {
+        let reconcile_driver = Arc::new(ReconcileDriver {
+            configs: configs.clone(),
+            repo_factory: repo_factory.clone(),
+            repos: repos.clone(),
+            redaction_disabled,
+            reconcile_state: Arc::new(ArcSwap::from_pointee(HashMap::new())),
+            spec_hash_cache: Arc::new(Mutex::new(HashMap::new())),
+            reconcile_lock: Arc::new(tokio::sync::Mutex::new(())),
+        });
+        let mut mgr = MononokeReposManager {
             repos,
             configs,
             repo_factory,
             redaction_disabled,
             applied_configs: applied_configs.clone(),
             repo_names_in_tier: repo_names_in_tier.clone(),
-            reconcile_state: Arc::new(ArcSwap::from_pointee(HashMap::new())),
+            reconcile_driver,
+            reconcile_loop_handle: None,
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver = MononokeConfigUpdateReceiver::new(
@@ -162,6 +178,19 @@ impl<Repo> MononokeReposManager<Repo> {
         );
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
+
+        // Split-loaded services drive reconcile from a background loop, woken by
+        // a receiver on every config change plus a periodic backstop. The loop
+        // is unconditional; the killswitch is checked per-pass.
+        if mgr.configs.manifest().is_some() {
+            let trigger = Arc::new(Notify::new());
+            mgr.configs.register_for_update(Arc::new(ReconcileTrigger {
+                notify: trigger.clone(),
+            }) as Arc<dyn ConfigUpdateReceiver>);
+            mgr.reconcile_loop_handle =
+                Some(spawn_reconcile_loop(mgr.reconcile_driver.clone(), trigger));
+        }
+
         Ok(mgr)
     }
 
@@ -225,10 +254,8 @@ impl<Repo> MononokeReposManager<Repo> {
         self.configs.remove_repo_config_handle(repo_name);
     }
 
-    /// One level-triggered reconciliation pass, delegating the control logic to
-    /// the `config_reconcile` crate. Gated on `scm/mononoke:use_config_reconcile`,
-    /// read on every call so the knob is a live killswitch (no restart). When off
-    /// this is a no-op and the legacy edge-triggered path stays in control.
+    /// Run one reconciliation pass now. Delegates to the driver. No-op unless the
+    /// `use_config_reconcile` killswitch is on (read every call).
     pub async fn reconcile(&self) -> Result<()>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
@@ -236,47 +263,7 @@ impl<Repo> MononokeReposManager<Repo> {
             + Sync
             + 'static,
     {
-        if !justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
-            return Ok(());
-        }
-        // Reconcile is a split-loading concept: it needs the manifest (for
-        // membership) and a tier (to parse specs). Absent either, do nothing.
-        let Some(tier) = self.configs.tier_name().map(str::to_owned) else {
-            return Ok(());
-        };
-        if self.configs.manifest().is_none() {
-            return Ok(());
-        }
-
-        let config = ReconcileConfigSource {
-            configs: self.configs.clone(),
-        };
-        let manager = ReconcileRepoManager {
-            configs: self.configs.clone(),
-            repo_factory: self.repo_factory.clone(),
-            repos: self.repos.clone(),
-            tier,
-            redaction_disabled: self.redaction_disabled,
-        };
-        let current = self.reconcile_state.load_full();
-        let outcome =
-            config_reconcile::reconcile(&config, &manager, &current, repos_manager_concurrency()?)
-                .await?;
-
-        if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
-            info!(
-                "reconcile: built={} rebuilt={} dropped={} failed={}",
-                outcome.built,
-                outcome.rebuilt,
-                outcome.dropped,
-                outcome.failed.len(),
-            );
-        }
-        STATS::reconcile_applied.add_value((outcome.built + outcome.rebuilt) as i64);
-        STATS::reconcile_dropped.add_value(outcome.dropped as i64);
-        STATS::reconcile_failed_repos.add_value(outcome.failed.len() as i64);
-        self.reconcile_state.store(Arc::new(outcome.next_state));
-        Ok(())
+        self.reconcile_driver.pass().await
     }
 
     async fn populate_repos<Names>(&self, repo_names: Names) -> Result<()>
@@ -356,6 +343,8 @@ impl<Repo> MononokeReposManager<Repo> {
 /// Adapts `MononokeConfigs` to the `config_reconcile::ConfigSource` trait.
 struct ReconcileConfigSource {
     configs: Arc<MononokeConfigs>,
+    // Memoizes spec_hash keyed by the RepoSpec Arc identity. See ReconcileDriver.
+    spec_hash_cache: Arc<Mutex<HashMap<String, (Arc<RepoSpec>, u64)>>>,
 }
 
 impl ConfigSource for ReconcileConfigSource {
@@ -373,7 +362,29 @@ impl ConfigSource for ReconcileConfigSource {
 
     fn desired(&self, name: &str) -> Option<DesiredRepo> {
         let spec = self.configs.live_repo_spec(name)?;
-        let spec_hash = spec_hash(&spec).ok()?;
+
+        // Reuse the cached hash when the live RepoSpec Arc is pointer-identical to
+        // the one we hashed last time (ConfigHandle::get() is pointer-stable while
+        // unchanged), else recompute. spec_hash stays the drift signal — pointer
+        // identity only decides whether to re-serialize.
+        let mut cache = self
+            .spec_hash_cache
+            .lock()
+            .expect("spec_hash_cache poisoned");
+        let cached_hash = match cache.get(name) {
+            Some((cached_spec, hash)) if Arc::ptr_eq(cached_spec, &spec) => Some(*hash),
+            _ => None,
+        };
+        let spec_hash = match cached_hash {
+            Some(hash) => hash,
+            None => {
+                let hash = spec_hash(&spec).ok()?;
+                cache.insert(name.to_string(), (spec.clone(), hash));
+                hash
+            }
+        };
+        drop(cache);
+
         Some(DesiredRepo {
             enabled: spec.enabled,
             spec_hash,
@@ -456,6 +467,185 @@ where
     }
 }
 
+/// Holds all state a reconciliation pass needs and runs one pass via `pass()`.
+/// Shared (via `Arc`) between the background loop and the public `reconcile`
+/// entry point. Owns the per-repo reconcile state, the spec-hash cache (perf),
+/// and the single-flight lock.
+struct ReconcileDriver<Repo> {
+    configs: Arc<MononokeConfigs>,
+    repo_factory: Arc<RepoFactory>,
+    repos: Arc<MononokeRepos<Repo>>,
+    redaction_disabled: bool,
+    // Per-repo reconcile state (loaded generation or last failure), keyed by
+    // name. Empty until reconcile runs; driven by the config_reconcile crate.
+    reconcile_state: Arc<ArcSwap<HashMap<String, RepoState>>>,
+    // Memoizes spec_hash keyed by RepoSpec Arc identity so an unchanged repo is
+    // not re-serialized every pass. Stores the Arc itself (not a raw pointer) to
+    // pin the allocation, so Arc::ptr_eq can't false-match a reused address (ABA).
+    spec_hash_cache: Arc<Mutex<HashMap<String, (Arc<RepoSpec>, u64)>>>,
+    // Single-flight guard: only one pass runs at a time.
+    reconcile_lock: Arc<tokio::sync::Mutex<()>>,
+}
+
+impl<Repo> ReconcileDriver<Repo>
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+        + Send
+        + Sync
+        + 'static,
+{
+    /// One reconciliation pass, shared by the background loop and `reconcile`.
+    /// No-op when `use_config_reconcile` is off or there is no tier/manifest.
+    async fn pass(&self) -> Result<()> {
+        if !justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
+            return Ok(());
+        }
+        // Needs a tier + manifest to parse specs and know membership.
+        let Some(tier) = self.configs.tier_name().map(str::to_owned) else {
+            return Ok(());
+        };
+        if self.configs.manifest().is_none() {
+            return Ok(());
+        }
+
+        // Single-flight: skip if a pass is already running. The loop is the only
+        // caller today and is sequential, so this can't currently contend; it
+        // keeps the pub reconcile() entry safe if ever driven concurrently. The
+        // tokio Mutex is await-safe, so the guard is held across the whole pass.
+        let Ok(_guard) = self.reconcile_lock.try_lock() else {
+            return Ok(());
+        };
+
+        let config = ReconcileConfigSource {
+            configs: self.configs.clone(),
+            spec_hash_cache: self.spec_hash_cache.clone(),
+        };
+        let manager = ReconcileRepoManager {
+            configs: self.configs.clone(),
+            repo_factory: self.repo_factory.clone(),
+            repos: self.repos.clone(),
+            tier,
+            redaction_disabled: self.redaction_disabled,
+        };
+        let current = self.reconcile_state.load_full();
+        let outcome =
+            config_reconcile::reconcile(&config, &manager, &current, repos_manager_concurrency()?)
+                .await?;
+
+        if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
+            info!(
+                "reconcile: built={} rebuilt={} dropped={} failed={}",
+                outcome.built,
+                outcome.rebuilt,
+                outcome.dropped,
+                outcome.failed.len(),
+            );
+        }
+        STATS::reconcile_applied.add_value((outcome.built + outcome.rebuilt) as i64);
+        STATS::reconcile_dropped.add_value(outcome.dropped as i64);
+        STATS::reconcile_failed_repos.add_value(outcome.failed.len() as i64);
+        self.reconcile_state.store(Arc::new(outcome.next_state));
+
+        // Evict spec-hash cache entries for repos no longer in the manifest. Done
+        // here (once per pass) because ConfigSource has no end-of-pass hook. The
+        // std Mutex is acquired after all awaits and not held across one.
+        if let Some(manifest) = self.configs.manifest() {
+            let live: HashSet<&str> = manifest
+                .repos
+                .iter()
+                .map(|e| e.repo_name.as_str())
+                .collect();
+            let mut cache = self
+                .spec_hash_cache
+                .lock()
+                .expect("spec_hash_cache poisoned");
+            cache.retain(|name, _| live.contains(name.as_str()));
+        }
+
+        Ok(())
+    }
+}
+
+/// Interval policy (pure): fixed 60s backstop when off; the tunable value floored
+/// at 1s when on, so a 0 can't spin the loop.
+fn tick_interval_secs(reconcile_on: bool, knob_secs: u64) -> u64 {
+    if reconcile_on { knob_secs.max(1) } else { 60 }
+}
+
+/// Backstop interval. Only reads the tunable knob when reconcile is on (it may be
+/// unregistered otherwise, and missing-knob reads are expensive).
+fn reconcile_tick_interval() -> Duration {
+    let on = justknobs::eval("scm/mononoke:use_config_reconcile", None, None);
+    let knob_secs = if on {
+        justknobs::get_as::<u64>("scm/mononoke:config_reconcile_tick_interval_secs", None)
+    } else {
+        0
+    };
+    Duration::from_secs(tick_interval_secs(on, knob_secs))
+}
+
+/// Spawn the background reconcile loop. Owns an Arc to the driver (task is
+/// `'static`); aborted on Drop. Runs one pass immediately, then again on each
+/// wake — a config-change trigger or the backstop.
+fn spawn_reconcile_loop<Repo>(
+    driver: Arc<ReconcileDriver<Repo>>,
+    trigger: Arc<Notify>,
+) -> JoinHandle<()>
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+        + Send
+        + Sync
+        + 'static,
+{
+    mononoke::spawn_task(async move {
+        loop {
+            let start = Instant::now();
+            if let Err(e) = driver.pass().await {
+                warn!("reconcile pass failed: {e:#}");
+            }
+            STATS::reconcile_tick_duration_ms
+                .add_value(start.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+            let period = reconcile_tick_interval();
+            tokio::select! {
+                _ = trigger.notified() => {}
+                _ = tokio::time::sleep(period) => {}
+            }
+        }
+    })
+}
+
+/// A `ConfigUpdateReceiver` that wakes the reconcile loop on any config change
+/// (bulk or per-repo). `notify_one` coalesces changes into one wake.
+struct ReconcileTrigger {
+    notify: Arc<Notify>,
+}
+
+#[async_trait]
+impl ConfigUpdateReceiver for ReconcileTrigger {
+    async fn apply_update(
+        &self,
+        _repo_configs: Arc<RepoConfigs>,
+        _storage_configs: Arc<StorageConfigs>,
+    ) -> Result<()> {
+        self.notify.notify_one();
+        Ok(())
+    }
+
+    async fn apply_repo_update(&self, _repo_name: &str, _repo_config: &RepoConfig) -> Result<()> {
+        self.notify.notify_one();
+        Ok(())
+    }
+}
+
+impl<Repo> Drop for MononokeReposManager<Repo> {
+    fn drop(&mut self) {
+        // Stop the loop; otherwise it would run forever on a torn-down manager.
+        if let Some(handle) = self.reconcile_loop_handle.as_ref() {
+            handle.abort();
+        }
+    }
+}
+
 impl<R> MononokeReposManager<R> {
     pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
         // Note: the watcher receiver is already registered by the time we
@@ -491,6 +681,10 @@ where
 
 /// Struct responsible for receiving updated configurations from MononokeConfigs
 /// and refreshing repos (and related entities) based on the update.
+///
+/// This is the edge-triggered reload path. While use_config_reconcile is on it
+/// coexists with the reconcile loop (both may rebuild a repo on one change);
+/// retiring it is the reconcile cutover.
 pub struct MononokeConfigUpdateReceiver<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     repo_factory: Arc<RepoFactory>,
@@ -832,305 +1026,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-    use std::collections::HashSet;
-
-    use metaconfig_parser::RepoConfigs;
-    use metaconfig_types::CommonConfig;
-    use metaconfig_types::RepoConfig;
-    use metaconfig_types::ShardedService;
-    use metaconfig_types::ShardingModeConfig;
-    use mononoke_macros::mononoke;
-
-    use super::compute_reloadable_repos;
-    use super::filter_repos_with_changed_config;
-    use super::should_reload_single_repo;
-
-    /// Helper to create a RepoConfig with the specified enabled state and sharding config
-    fn make_repo_config(
-        enabled: bool,
-        deep_sharding_config: Option<ShardingModeConfig>,
-    ) -> RepoConfig {
-        RepoConfig {
-            enabled,
-            deep_sharding_config,
-            ..Default::default()
-        }
-    }
-
-    /// Helper to create a ShardingModeConfig with the given service marked as deep-sharded or not
-    fn make_sharding_config(service: ShardedService, is_deep_sharded: bool) -> ShardingModeConfig {
-        let mut status = HashMap::new();
-        status.insert(service, is_deep_sharded);
-        ShardingModeConfig { status }
-    }
-
-    /// Helper to create RepoConfigs from a list of (name, config) pairs
-    fn make_repo_configs(repos: Vec<(String, RepoConfig)>) -> RepoConfigs {
-        RepoConfigs::new(repos.into_iter().collect(), CommonConfig::default())
-    }
-
-    /// Helper to get repo names from result
-    fn get_repo_names(result: &[(String, RepoConfig)]) -> Vec<&str> {
-        let mut names: Vec<_> = result.iter().map(|(name, _)| name.as_str()).collect();
-        names.sort();
-        names
-    }
-
-    /// Helper to create a repo_exists function from a set of existing repo names
-    fn existing_repos(names: &[&str]) -> impl Fn(&str) -> bool {
-        let set: HashSet<String> = names.iter().map(|s| s.to_string()).collect();
-        move |name: &str| set.contains(name)
-    }
-
-    #[mononoke::test]
-    fn test_existing_repo_always_reloaded() {
-        // Repos already present on the server should always be reloaded,
-        // regardless of service_name or deep_sharding_config
-        let repo_configs = make_repo_configs(vec![(
-            "existing_repo".to_string(),
-            make_repo_config(true, None),
-        )]);
-
-        let result =
-            compute_reloadable_repos(&repo_configs, None, existing_repos(&["existing_repo"]));
-        assert_eq!(get_repo_names(&result), vec!["existing_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_existing_disabled_repo_still_reloaded() {
-        // Even disabled repos should be reloaded if they're already on the server
-        let repo_configs = make_repo_configs(vec![(
-            "existing_repo".to_string(),
-            make_repo_config(false, None),
-        )]);
-
-        let result =
-            compute_reloadable_repos(&repo_configs, None, existing_repos(&["existing_repo"]));
-        assert_eq!(get_repo_names(&result), vec!["existing_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_no_service_name() {
-        // New repos should be loaded when no service_name is provided
-        // This is the key bug fix: previously these repos were not loaded
-        let repo_configs =
-            make_repo_configs(vec![("new_repo".to_string(), make_repo_config(true, None))]);
-
-        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_no_service_name_with_sharding_config() {
-        // New repos with sharding config should still be loaded when no service_name is provided
-        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, true);
-        let repo_configs = make_repo_configs(vec![(
-            "new_repo".to_string(),
-            make_repo_config(true, Some(sharding_config)),
-        )]);
-
-        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_with_service_name_no_sharding_config() {
-        // New repos without sharding config should be loaded (shallow-sharded by default)
-        let repo_configs =
-            make_repo_configs(vec![("new_repo".to_string(), make_repo_config(true, None))]);
-
-        let result = compute_reloadable_repos(
-            &repo_configs,
-            Some(&ShardedService::SaplingRemoteApi),
-            existing_repos(&[]),
-        );
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_shallow_sharded_for_service() {
-        // New repos explicitly marked as shallow-sharded (false) should be loaded
-        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, false);
-        let repo_configs = make_repo_configs(vec![(
-            "new_repo".to_string(),
-            make_repo_config(true, Some(sharding_config)),
-        )]);
-
-        let result = compute_reloadable_repos(
-            &repo_configs,
-            Some(&ShardedService::SaplingRemoteApi),
-            existing_repos(&[]),
-        );
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_deep_sharded_for_service() {
-        // New repos marked as deep-sharded (true) for the service should NOT be loaded
-        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, true);
-        let repo_configs = make_repo_configs(vec![(
-            "new_repo".to_string(),
-            make_repo_config(true, Some(sharding_config)),
-        )]);
-
-        let result = compute_reloadable_repos(
-            &repo_configs,
-            Some(&ShardedService::SaplingRemoteApi),
-            existing_repos(&[]),
-        );
-        assert!(result.is_empty(), "Deep-sharded repos should not be loaded");
-    }
-
-    #[mononoke::test]
-    fn test_new_repo_deep_sharded_for_different_service() {
-        // Repos deep-sharded for a different service should be loaded
-        // Repo is deep-sharded for SourceControlService, but we're SaplingRemoteApi
-        let sharding_config = make_sharding_config(ShardedService::SourceControlService, true);
-        let repo_configs = make_repo_configs(vec![(
-            "new_repo".to_string(),
-            make_repo_config(true, Some(sharding_config)),
-        )]);
-
-        let result = compute_reloadable_repos(
-            &repo_configs,
-            Some(&ShardedService::SaplingRemoteApi),
-            existing_repos(&[]),
-        );
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_disabled_new_repo_not_loaded() {
-        // Disabled new repos should not be loaded
-        let repo_configs = make_repo_configs(vec![(
-            "disabled_repo".to_string(),
-            make_repo_config(false, None),
-        )]);
-
-        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
-        assert!(result.is_empty(), "Disabled new repos should not be loaded");
-    }
-
-    #[mononoke::test]
-    fn test_mixed_repos() {
-        // Test a mix of existing, new, enabled, disabled, and sharded repos
-        let deep_sharded = make_sharding_config(ShardedService::SaplingRemoteApi, true);
-        let shallow_sharded = make_sharding_config(ShardedService::SaplingRemoteApi, false);
-
-        let repo_configs = make_repo_configs(vec![
-            ("existing_enabled".to_string(), make_repo_config(true, None)),
-            (
-                "existing_disabled".to_string(),
-                make_repo_config(false, None),
-            ),
-            (
-                "new_enabled_no_sharding".to_string(),
-                make_repo_config(true, None),
-            ),
-            ("new_disabled".to_string(), make_repo_config(false, None)),
-            (
-                "new_shallow_sharded".to_string(),
-                make_repo_config(true, Some(shallow_sharded)),
-            ),
-            (
-                "new_deep_sharded".to_string(),
-                make_repo_config(true, Some(deep_sharded)),
-            ),
-        ]);
-
-        let result = compute_reloadable_repos(
-            &repo_configs,
-            Some(&ShardedService::SaplingRemoteApi),
-            existing_repos(&["existing_enabled", "existing_disabled"]),
-        );
-        let names = get_repo_names(&result);
-
-        // Should include: existing repos (both), new enabled repos that are not deep-sharded
-        assert!(names.contains(&"existing_enabled"));
-        assert!(names.contains(&"existing_disabled"));
-        assert!(names.contains(&"new_enabled_no_sharding"));
-        assert!(names.contains(&"new_shallow_sharded"));
-
-        // Should NOT include: new disabled repos, new deep-sharded repos
-        assert!(!names.contains(&"new_disabled"));
-        assert!(!names.contains(&"new_deep_sharded"));
-    }
-
-    #[mononoke::test]
-    fn test_filter_skips_repo_with_unchanged_config() {
-        // Repos whose RepoConfig is byte-identical to the applied config should be
-        // filtered out — no reload needed.
-        let config = make_repo_config(true, None);
-        let candidates = vec![("repo".to_string(), config.clone())];
-        let mut applied = HashMap::new();
-        applied.insert("repo".to_string(), config);
-
-        let result = filter_repos_with_changed_config(candidates, &applied);
-        assert!(
-            result.is_empty(),
-            "Repo with unchanged config should not be reloaded, got {:?}",
-            get_repo_names(&result),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_filter_keeps_repo_with_changed_config() {
-        // Repo whose RepoConfig differs from the applied config must be reloaded.
-        let old_config = make_repo_config(true, None);
-        let new_config = make_repo_config(false, None);
-        let candidates = vec![("repo".to_string(), new_config)];
-        let mut applied = HashMap::new();
-        applied.insert("repo".to_string(), old_config);
-
-        let result = filter_repos_with_changed_config(candidates, &applied);
-        assert_eq!(get_repo_names(&result), vec!["repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_filter_keeps_repo_not_in_applied_map() {
-        // A repo absent from the applied map (e.g., never loaded before) must be
-        // passed through so it gets loaded.
-        let config = make_repo_config(true, None);
-        let candidates = vec![("new_repo".to_string(), config)];
-        let applied = HashMap::new();
-
-        let result = filter_repos_with_changed_config(candidates, &applied);
-        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
-    }
-
-    #[mononoke::test]
-    fn test_filter_mixed_candidates() {
-        // Mix of unchanged, changed, and brand-new repos.
-        let config_a = make_repo_config(true, None);
-        let config_b = make_repo_config(false, None);
-
-        let candidates = vec![
-            ("unchanged".to_string(), config_a.clone()),
-            ("changed".to_string(), config_b.clone()),
-            ("brand_new".to_string(), config_a.clone()),
-        ];
-        let mut applied = HashMap::new();
-        applied.insert("unchanged".to_string(), config_a);
-        applied.insert("changed".to_string(), make_repo_config(true, None));
-
-        let result = filter_repos_with_changed_config(candidates, &applied);
-        let names = get_repo_names(&result);
-        assert!(!names.contains(&"unchanged"));
-        assert!(names.contains(&"changed"));
-        assert!(names.contains(&"brand_new"));
-    }
-
-    #[mononoke::test]
-    fn test_should_reload_single_repo() {
-        // Enabled + served -> rebuild.
-        assert!(should_reload_single_repo(true, true));
-        // Not served on this host -> skip (don't rebuild a repo we don't serve
-        // even though a per-repo watcher fired for it).
-        assert!(!should_reload_single_repo(true, false));
-        // Disabled -> skip regardless of serving.
-        assert!(!should_reload_single_repo(false, true));
-        assert!(!should_reload_single_repo(false, false));
-    }
-}
+mod tests;

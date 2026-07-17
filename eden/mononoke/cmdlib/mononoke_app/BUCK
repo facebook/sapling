@@ -35,6 +35,7 @@ rust_library(
             "//common/rust/shed/memcache_stub:memcache",
             "//common/rust/shed/services:services",
             "//common/rust/shed/stats:stats",
+            "//configerator/structs/scm/mononoke/repos:repos-rust",
             "//eden/mononoke/blobstore:blobstore",
             "//eden/mononoke/blobstore:blobstore_factory",
             "//eden/mononoke/blobstore:redactedblobstore",
