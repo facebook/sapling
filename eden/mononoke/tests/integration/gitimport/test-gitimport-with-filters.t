@@ -61,6 +61,39 @@
   [INFO] Initializing repo: repo
   [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
-  [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   [INFO] Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
-  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
+
+# Cleanup must not delete a bookmark whose ref still exists in git but is excluded
+# from this run. master_bookmark is excluded here but still in git, so it survives.
+  $ gitimport "$GIT_REPO" --concurrency 100 --exclude-refs refs/heads/master_bookmark --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo (1/1)
+  [INFO] All repos initialized. It took: * seconds (glob)
+  [INFO] Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  $ mononoke_admin bookmarks -R repo get heads/master_bookmark
+  032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+
+# Same for --include-refs: refs present in git but omitted from the include list
+# keep their bookmarks. Only master_bookmark is generated; first_tag is omitted
+# but still in git, so cleanup must not delete it.
+  $ gitimport "$GIT_REPO" --concurrency 100 --include-refs refs/heads/master_bookmark --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
+  [INFO] using repo "repo" repoid RepositoryId(0)
+  [INFO] GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
+  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  [INFO] Initializing repo: repo
+  [INFO] Initialized repo: repo (1/1)
+  [INFO] All repos initialized. It took: * seconds (glob)
+  $ mononoke_admin bookmarks -R repo get tags/first_tag
+  Metadata changeset for tag bookmark tags/first_tag: 
+  5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
+  Changeset pointed to by the tag bookmark tags/first_tag
+  032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044

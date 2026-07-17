@@ -7,11 +7,14 @@
 
 mod repo;
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -33,6 +36,7 @@ use fbinit::FacebookInit;
 use futures::TryStreamExt;
 use futures::future;
 use futures::stream;
+use futures_retry::retry;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use gix_hash::ObjectId;
 use import_tools::BackfillDerivation;
@@ -75,6 +79,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
+use tracing::debug;
 use tracing::info;
 use tracing::warn;
 
@@ -82,6 +87,9 @@ use crate::repo::Repo;
 
 pub const HEAD_SYMREF: &str = "HEAD";
 const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
+// Retry policy for the one-shot bulk bookmark listing.
+const BOOKMARK_LIST_RETRY_DELAY: Duration = Duration::from_secs(1);
+const BOOKMARK_LIST_RETRY_ATTEMPTS: usize = 4;
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
@@ -649,6 +657,42 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     .await?;
             }
 
+            // One bulk snapshot instead of a resolve_bookmark per ref, reused by
+            // cleanup. u64::MAX matches the old cleanup listing; BTreeMap = stable order.
+            let (existing_bookmarks_list, _) = retry(
+                |_| {
+                    repo.bookmarks()
+                        .list(
+                            ctx.clone(),
+                            BookmarkFreshness::MostRecent,
+                            &BookmarkPrefix::empty(),
+                            BookmarkCategory::ALL,
+                            BookmarkKind::ALL,
+                            &BookmarkPagination::FromStart,
+                            u64::MAX,
+                        )
+                        .try_collect::<Vec<_>>()
+                },
+                BOOKMARK_LIST_RETRY_DELAY,
+            )
+            .binary_exponential_backoff()
+            .max_attempts(BOOKMARK_LIST_RETRY_ATTEMPTS)
+            .inspect_err(|attempt, _err| {
+                info!(
+                    "attempt {attempt} of {BOOKMARK_LIST_RETRY_ATTEMPTS} to list bookmarks failed"
+                )
+            })
+            .await
+            .context("failed to list existing bookmarks")?;
+            let existing_bookmarks: BTreeMap<BookmarkKey, ChangesetId> = existing_bookmarks_list
+                .into_iter()
+                .map(|(bookmark, cs_id)| (bookmark.key().clone(), cs_id))
+                .collect();
+            debug!(
+                "Fetched {} existing bookmarks for reconciliation",
+                existing_bookmarks.len()
+            );
+
             for (maybe_tag_id, name, changeset) in
                 git_ref_mapping
                     .iter()
@@ -673,6 +717,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     continue;
                 }
                 if let Some(tag_id) = maybe_tag_id {
+                    // Keyed on the tag object, not the bookmark target: always run.
                     process_tags(
                         &ctx,
                         &name,
@@ -687,11 +732,19 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 }
                 let bookmark_key = BookmarkKey::new(&name)?;
 
+                // Unchanged per snapshot: skip both read and write.
+                if existing_bookmarks.get(&bookmark_key) == Some(&final_changeset) {
+                    continue;
+                }
+                // Re-read fresh so the CAS old-target is current under concurrent writers.
                 let old_changeset = repo_context
                     .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                     .await
                     .with_context(|| format!("failed to resolve bookmark {name}"))?
                     .map(|context| context.id());
+                if old_changeset.as_ref() == Some(&final_changeset) {
+                    continue;
+                }
                 let allow_non_fast_forward = true;
                 let operation =
                     BookmarkOperation::new(bookmark_key, old_changeset, Some(final_changeset))?;
@@ -706,43 +759,31 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .await?;
             }
             if args.cleanup_mononoke_bookmarks {
-                let mononoke_bookmarks = repo
-                    .bookmarks()
-                    .list(
-                        ctx.clone(),
-                        BookmarkFreshness::MostRecent,
-                        &BookmarkPrefix::empty(),
-                        BookmarkCategory::ALL,
-                        BookmarkKind::ALL,
-                        &BookmarkPagination::FromStart,
-                        u64::MAX,
-                    )
-                    .try_collect::<Vec<_>>()
-                    .await?;
-                for (mononoke_bookmark, old_changeset) in mononoke_bookmarks.iter() {
-                    if !git_ref_mapping
-                        .iter()
-                        .filter_map(|(_, git_ref, _)| git_ref.strip_prefix("refs/"))
-                        .filter(|ref_name| ref_name != &"heads/HEAD")
-                        .any(|ref_name| ref_name == format!("{}", mononoke_bookmark.name()))
-                    {
-                        let allow_non_fast_forward = true;
-                        let operation = BookmarkOperation::new(
-                            mononoke_bookmark.key().clone(),
-                            Some(*old_changeset),
-                            None,
-                        )?;
-
-                        set_bookmark(
-                            &ctx,
-                            &repo_context,
-                            &operation,
-                            pushvars.as_ref(),
-                            allow_non_fast_forward,
-                            BookmarkOperationErrorReporting::WithContext,
-                        )
-                        .await?;
+                // From the full ref mapping, not the filtered generate set, else
+                // excluded/content refs still in git would be deleted.
+                let git_ref_names: HashSet<String> = git_ref_mapping
+                    .iter()
+                    .filter_map(|(_, git_ref, _)| git_ref.strip_prefix("refs/"))
+                    .filter(|ref_name| *ref_name != "heads/HEAD")
+                    .map(str::to_owned)
+                    .collect();
+                for (bookmark_key, old_changeset) in existing_bookmarks.iter() {
+                    if git_ref_names.contains(bookmark_key.name().as_str()) {
+                        continue;
                     }
+                    let allow_non_fast_forward = true;
+                    let operation =
+                        BookmarkOperation::new(bookmark_key.clone(), Some(*old_changeset), None)?;
+
+                    set_bookmark(
+                        &ctx,
+                        &repo_context,
+                        &operation,
+                        pushvars.as_ref(),
+                        allow_non_fast_forward,
+                        BookmarkOperationErrorReporting::WithContext,
+                    )
+                    .await?;
                 }
             }
         };

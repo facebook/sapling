@@ -23,6 +23,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_retry:futures_retry",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/metadata:metadata",

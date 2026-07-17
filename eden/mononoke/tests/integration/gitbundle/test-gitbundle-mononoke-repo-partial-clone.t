@@ -114,10 +114,8 @@
   [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
-  [INFO] Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
   [INFO] Bookmark: "tags/file3_tag": ChangesetId(Blake2(e70bae430caf70f469dd5517d77f396290a0cad67af436397849f01075413ed2)) (created)
   [INFO] Bookmark: "tags/file4_tag": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (created)
-  [INFO] Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
 
 # We already have the repo generated uptill da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c from the earlier clone from bundle
 # Let's generate a bundle of the partial state of the repo after the known head
