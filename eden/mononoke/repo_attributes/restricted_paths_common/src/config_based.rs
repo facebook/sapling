@@ -19,7 +19,6 @@ use permission_checker::MononokeIdentity;
 
 use crate::cache::RestrictedPathsManifestIdCache;
 use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
-use crate::manifest_id_store::RestrictedManifestId;
 
 /// Repository restricted paths configuration — config-based lookups only.
 ///
@@ -55,15 +54,6 @@ impl RestrictedPathsConfigBased {
 
     pub fn manifest_id_cache(&self) -> Option<&Arc<RestrictedPathsManifestIdCache>> {
         self.manifest_id_cache.as_ref()
-    }
-
-    /// Check whether a manifest ID should be ignored for restricted-path lookups.
-    /// The deny-list is type-agnostic: a content collision yields the same hash
-    /// across manifest types, so a single set covers all of them.
-    pub fn is_manifest_id_denylisted(&self, manifest_id: &RestrictedManifestId) -> bool {
-        self.config
-            .manifest_id_denylist
-            .contains(manifest_id.as_inner().as_slice())
     }
 
     /// Returns whether any restricted paths are configured for this repository.
