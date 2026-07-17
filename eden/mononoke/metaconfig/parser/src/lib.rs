@@ -10,6 +10,7 @@
 #![deny(missing_docs)]
 
 pub mod config;
+mod config_hash;
 mod convert;
 pub mod errors;
 mod raw;
@@ -28,4 +29,6 @@ pub use crate::config::load_repo_configs_from_manifest;
 pub use crate::config::load_storage_configs;
 pub use crate::config::parse_raw_repo_config;
 pub use crate::config::parse_repo_spec;
+pub use crate::config_hash::spec_hash;
+pub use crate::config_hash::storage_generation;
 pub use crate::errors::ConfigurationError;
