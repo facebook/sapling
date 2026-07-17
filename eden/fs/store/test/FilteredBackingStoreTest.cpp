@@ -9,7 +9,9 @@
 
 #include <folly/Varint.h>
 #include <folly/coro/BlockingWait.h>
+#include <folly/coro/Collect.h>
 #include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/ManualExecutor.h>
@@ -192,15 +194,18 @@ std::string blobContents(const Blob& blob) {
   return c.readFixedString(blob.getContents().computeChainDataLength());
 }
 
-TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
-  // getRootTree()/getTree()/getBlob() should throw immediately
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
+  // getRootTree()/getTree()/getBlob() should fail with a domain_error
   // when called on non-existent objects.
-  EXPECT_THROW_RE(
-      filteredStore_->getRootTree(
+  auto rootResult =
+      co_await folly::coro::co_awaitTry(filteredStore_->co_getRootTree(
           RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
-          ObjectFetchContext::getNullContext()),
-      std::domain_error,
-      "commit 1 not found");
+          ObjectFetchContext::getNullContext()));
+  EXPECT_TRUE(
+      rootResult.template hasException<std::domain_error>() &&
+      folly::StringPiece{rootResult.exception().what()}.find(
+          "commit 1 not found") != folly::StringPiece::npos);
+
   auto id = makeTestId("1");
   auto blobFilterId =
       FilteredObjectId(id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
@@ -482,7 +487,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getObjectId());
 }
 
-TEST_F(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved) {
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved) {
   Tree::container aclChildEntries{kPathMapDefaultCaseSensitive};
   auto aclChildTree = Tree{
       std::move(aclChildEntries), makeTestId("3004"), AclRootState::AclRoot};
@@ -492,7 +497,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved) {
   auto* rootDir = wrappedStore_->putTree(rootId, {{"acl_dir", aclChildTree}});
   if (rootDir == nullptr) {
     ADD_FAILURE() << "failed to create root tree";
-    return;
+    co_return;
   }
 
   auto future = filteredStore_->getTree(
@@ -502,11 +507,11 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved) {
   auto filteredTree = std::move(future).get(0ms).tree;
   auto aclDir = filteredTree->find("acl_dir"_pc);
 
-  ASSERT_NE(aclDir, filteredTree->cend());
+  CO_ASSERT_NE(aclDir, filteredTree->cend());
   EXPECT_EQ(aclDir->second.hasACL(), std::optional<bool>{true});
 }
 
-TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Id = makeTestId("abc");
   auto dir1FOID = FilteredObjectId(RelativePath{""}, kTestFilter1, dir1Id);
@@ -517,100 +522,99 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // one
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, makeTestId("3"));
 
-  auto executor = folly::ManualExecutor();
+  auto filteredRoot1 =
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)};
+  auto filteredRoot2 =
+      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter1)};
 
-  auto future1 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "1", kTestFilter1)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  EXPECT_FALSE(future1.isReady());
-  auto future2 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "2", kTestFilter1)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  EXPECT_FALSE(future2.isReady());
+  // Test 1: a successful root tree fetch — trigger commit, then dir, in order.
+  {
+    auto getTask = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
+              filteredRoot1, ObjectFetchContext::getNullContext());
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      // Yield to let getTask suspend on commit1's promise.
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit1->trigger();
+      // Yield to let getTask suspend on dir1's promise.
+      co_await folly::coro::co_reschedule_on_current_executor;
+      dir1->trigger();
+    });
+    auto [result, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    EXPECT_EQ(ObjectId{dir1FOID.getValue()}, result.treeId);
+  }
 
-  // Trigger commit1, then dir1 to make future1 ready.
-  commit1->trigger();
-  executor.drain();
-  EXPECT_FALSE(future1.isReady());
-  dir1->trigger();
-  executor.drain();
-  EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future1).get(0ms).treeId);
+  // Test 2: a commit-level error propagates.
+  {
+    auto getTask = folly::coro::co_invoke(
+        [&]()
+            -> folly::coro::Task<folly::Try<BackingStore::GetRootTreeResult>> {
+          co_return co_await folly::coro::co_awaitTry(
+              filteredStore_->co_getRootTree(
+                  filteredRoot1, ObjectFetchContext::getNullContext()));
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit1->triggerError(std::runtime_error("bad luck"));
+    });
+    auto [result, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    EXPECT_TRUE(result.template hasException<std::runtime_error>());
+    EXPECT_TRUE(
+        folly::StringPiece{result.exception().what()}.find("bad luck") !=
+        folly::StringPiece::npos);
+  }
 
-  // future2 should still be pending
-  EXPECT_FALSE(future2.isReady());
+  // Test 3: a directory-level error propagates after the commit succeeds.
+  {
+    auto getTask = folly::coro::co_invoke(
+        [&]()
+            -> folly::coro::Task<folly::Try<BackingStore::GetRootTreeResult>> {
+          co_return co_await folly::coro::co_awaitTry(
+              filteredStore_->co_getRootTree(
+                  filteredRoot1, ObjectFetchContext::getNullContext()));
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit1->trigger();
+      co_await folly::coro::co_reschedule_on_current_executor;
+      dir1->triggerError(std::runtime_error("PC Load Letter"));
+    });
+    auto [result, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    EXPECT_TRUE(result.template hasException<std::runtime_error>());
+    EXPECT_TRUE(
+        folly::StringPiece{result.exception().what()}.find("PC Load Letter") !=
+        folly::StringPiece::npos);
+  }
 
-  // Get another future for commit1
-  auto future3 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "1", kTestFilter1)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  EXPECT_FALSE(future3.isReady());
-
-  // Triggering the directory now should have no effect,
-  // since there should be no futures for it yet.
-  dir1->trigger();
-  executor.drain();
-  EXPECT_FALSE(future3.isReady());
-  commit1->trigger();
-  executor.drain();
-  EXPECT_FALSE(future3.isReady());
-  dir1->trigger();
-  executor.drain();
-  EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future3).get().treeId);
-
-  // Try triggering errors
-  auto future4 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "1", kTestFilter1)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  executor.drain();
-  EXPECT_FALSE(future4.isReady());
-  commit1->triggerError(std::runtime_error("bad luck"));
-  executor.drain();
-  EXPECT_THROW_RE(std::move(future4).get(0ms), std::runtime_error, "bad luck");
-
-  auto future5 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "1", kTestFilter1)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  EXPECT_FALSE(future5.isReady());
-  commit1->trigger();
-  executor.drain();
-  EXPECT_FALSE(future5.isReady());
-  dir1->triggerError(std::runtime_error("PC Load Letter"));
-  executor.drain();
-  EXPECT_THROW_RE(
-      std::move(future5).get(0ms), std::runtime_error, "PC Load Letter");
-
-  // Now trigger commit2.
-  // This should trigger future2 to fail since the tree does not actually
-  // exist.
-  commit2->trigger();
-  executor.drain();
-  EXPECT_THROW_RE(
-      std::move(future2).get(0ms),
-      std::domain_error,
-      "tree .* for commit .* not found");
+  // Test 4: triggering commit2 (whose tree was never added) results in a
+  // tree-not-found error.
+  {
+    auto getTask = folly::coro::co_invoke(
+        [&]()
+            -> folly::coro::Task<folly::Try<BackingStore::GetRootTreeResult>> {
+          co_return co_await folly::coro::co_awaitTry(
+              filteredStore_->co_getRootTree(
+                  filteredRoot2, ObjectFetchContext::getNullContext()));
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit2->trigger();
+    });
+    auto [result, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    EXPECT_TRUE(result.template hasException<std::domain_error>());
+    EXPECT_TRUE(
+        folly::StringPiece{result.exception().what()}.find("not found") !=
+        folly::StringPiece::npos);
+  }
 }
 
-TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
@@ -648,30 +652,26 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Set up a second commit with an additional file
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, fooDirExtendedTree);
 
-  auto executor = folly::ManualExecutor();
-
-  auto future1 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "1", kTestFilter2)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-  auto future2 = filteredStore_
-                     ->getRootTree(
-                         RootId{FilteredBackingStore::createFilteredRootId(
-                             "2", kTestFilter3)},
-                         ObjectFetchContext::getNullContext())
-                     .semi()
-                     .via(&executor);
-
-  // Trigger commit1, then rootDirTree to make future1 ready.
-  commit1->trigger();
-  executor.drain();
-  EXPECT_FALSE(future1.isReady());
-  rootDirTree->trigger();
-  executor.drain();
-  auto fooDirRes = std::move(future1).get(0ms);
+  // Fetch root tree for commit1, triggering its dependencies concurrently.
+  auto fooDirRes =
+      co_await [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+    auto getTask = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  "1", kTestFilter2)},
+              ObjectFetchContext::getNullContext());
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit1->trigger();
+      co_await folly::coro::co_reschedule_on_current_executor;
+      rootDirTree->trigger();
+    });
+    auto [r, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    co_return std::move(r);
+  }();
 
   // Get the object IDs of all the blobs from commit 1.
   auto [foobar1Name1, foobar1TreeEntry1] = *fooDirRes.tree->find("foobar1"_pc);
@@ -701,12 +701,26 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
       filteredStore_->compareObjectsById(foobar2OID1, football1OID1),
       ObjectComparison::Identical);
 
-  // Trigger commit2, then rootDirTreeExtended to make future2 ready.
-  commit2->trigger();
-  executor.drain();
-  fooDirExtendedTree->trigger();
-  executor.drain();
-  auto fooDirExtRes = std::move(future2).get(0ms);
+  // Fetch root tree for commit2, triggering its dependencies concurrently.
+  auto fooDirExtRes =
+      co_await [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+    auto getTask = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  "2", kTestFilter3)},
+              ObjectFetchContext::getNullContext());
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit2->trigger();
+      co_await folly::coro::co_reschedule_on_current_executor;
+      fooDirExtendedTree->trigger();
+    });
+    auto [r, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    co_return std::move(r);
+  }();
 
   // Get the object IDs of all the blobs from commit 1.
   auto [foobar1Name2, foobar1TreeEntry2] =
@@ -745,7 +759,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
       ObjectComparison::Identical);
 }
 
-TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
@@ -803,39 +817,36 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Set up a second commit with an additional file
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, modifiedRootDirTree);
 
-  auto executor = folly::ManualExecutor();
-
-  auto rootFuture1 = filteredStore_
-                         ->getRootTree(
-                             RootId{FilteredBackingStore::createFilteredRootId(
-                                 "1", kTestFilter4Legacy)},
-                             ObjectFetchContext::getNullContext())
-                         .semi()
-                         .via(&executor);
-  auto rootFuture2 = filteredStore_
-                         ->getRootTree(
-                             RootId{FilteredBackingStore::createFilteredRootId(
-                                 "2", kTestFilter5)},
-                             ObjectFetchContext::getNullContext())
-                         .semi()
-                         .via(&executor);
-  auto rootFuture1V1 =
-      filteredStore_
-          ->getRootTree(
+  // Fetch both filter variants of commit1's root tree concurrently with a
+  // single trigger pair (commit1, then rootDirTree) that fulfills both.
+  auto [rootDirRes1, rootDirRes1V1] =
+      co_await [&]() -> folly::coro::Task<std::pair<
+                         BackingStore::GetRootTreeResult,
+                         BackingStore::GetRootTreeResult>> {
+    auto getTask1 = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  "1", kTestFilter4Legacy)},
+              ObjectFetchContext::getNullContext());
+        });
+    auto getTask1V1 = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
               RootId{FilteredBackingStore::createFilteredRootId(
                   "1", kTestFilter4V1)},
-              ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&executor);
-
-  // Trigger commit1, then rootDirTree to make rootFuture1 ready.
-  commit1->trigger();
-  executor.drain();
-  EXPECT_FALSE(rootFuture1.isReady());
-  rootDirTree->trigger();
-  executor.drain();
-  auto rootDirRes1 = std::move(rootFuture1).get(0ms);
-  auto rootDirRes1V1 = std::move(rootFuture1V1).get(0ms);
+              ObjectFetchContext::getNullContext());
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit1->trigger();
+      co_await folly::coro::co_reschedule_on_current_executor;
+      rootDirTree->trigger();
+    });
+    auto [r1, r1V1, _] = co_await folly::coro::collectAll(
+        std::move(getTask1), std::move(getTask1V1), std::move(triggerTask));
+    co_return std::make_pair(std::move(r1), std::move(r1V1));
+  }();
 
   // Get the object IDs of all the trees from commit 1.
   auto [childName, childEntry] = *rootDirRes1.tree->find("child"_pc);
@@ -858,12 +869,26 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
       *childDirRes1V1->find("grandchild"_pc);
   auto grandchildOID1V1 = grandchildEntry1V1.getObjectId();
 
-  // Trigger commit2, then rootDirTreeExtended to make rootFuture2 ready.
-  commit2->trigger();
-  executor.drain();
-  modifiedRootDirTree->trigger();
-  executor.drain();
-  auto rootDirCommit2Res = std::move(rootFuture2).get(0ms);
+  // Fetch the root tree for commit2 concurrently with its triggers.
+  auto rootDirCommit2Res =
+      co_await [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+    auto getTask = folly::coro::co_invoke(
+        [&]() -> folly::coro::Task<BackingStore::GetRootTreeResult> {
+          co_return co_await filteredStore_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  "2", kTestFilter5)},
+              ObjectFetchContext::getNullContext());
+        });
+    auto triggerTask = folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      commit2->trigger();
+      co_await folly::coro::co_reschedule_on_current_executor;
+      modifiedRootDirTree->trigger();
+    });
+    auto [r, _] = co_await folly::coro::collectAll(
+        std::move(getTask), std::move(triggerTask));
+    co_return std::move(r);
+  }();
 
   // Get the object IDs of all the blobs from commit 2.
   auto [childName2, childEntry2] = *rootDirCommit2Res.tree->find("child"_pc);

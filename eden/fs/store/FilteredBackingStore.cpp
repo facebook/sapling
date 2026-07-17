@@ -365,41 +365,19 @@ ImmediateFuture<BackingStore::GetRootTreeResult>
 FilteredBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
-  auto [parsedRootId, filterId] = parseFilterIdFromRootId(rootId);
-  XLOGF(
-      DBG7,
-      "Getting rootTree {} with filter {}",
-      parsedRootId.value(),
-      filterId);
-  auto fut = backingStore_->getRootTree(parsedRootId, context);
-  return std::move(fut).thenValue(
-      [filterId_2 = std::move(filterId),
-       self = shared_from_this()](GetRootTreeResult rootTreeResult) mutable {
-        // Apply the filter to the root tree. The root tree is always a regular
-        // "unfiltered" tree.
-        auto filterFut = self->filterImpl(
-            rootTreeResult.tree,
-            RelativePath{""},
-            filterId_2,
-            FilteredObjectIdType::OBJECT_TYPE_TREE);
-        return std::move(filterFut).thenValue(
-            [self,
-             filterId_3 = std::move(filterId_2),
-             treeId = std::move(rootTreeResult.treeId),
-             sourceTree = std::move(rootTreeResult.tree)](
-                std::unique_ptr<PathMap<TreeEntry>> pathMap) {
-              auto rootFOID =
-                  FilteredObjectId{RelativePath{""}, filterId_3, treeId};
-              auto tree = sourceTree->withNewId(
-                  std::move(*pathMap), ObjectId{rootFOID.getValue()});
-              auto res = GetRootTreeResult{
-                  std::move(tree),
-                  ObjectId{rootFOID.getValue()},
-              };
-              pathMap.reset();
-              return res;
-            });
-      });
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_withExecutor(
+          folly::getGlobalCPUExecutor(),
+          folly::coro::co_invoke(
+              [self = shared_from_this()](auto rootId, auto context)
+                  -> folly::coro::Task<GetRootTreeResult> {
+                co_return co_await self->co_getRootTree(
+                    std::move(rootId), std::move(context));
+              },
+              RootId{rootId},
+              context.copy()))
+          .start()};
 }
 
 folly::coro::now_task<BackingStore::GetRootTreeResult>
