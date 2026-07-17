@@ -8,91 +8,127 @@ from ..i18n import _
 from . import sparseutil
 
 
+def _restricted_filter_paths(ui):
+    return ui.configlist("pathacl", "tent-filter-paths", [])
+
+
+def _restricted_filters(repo):
+    restricted_filter_paths = _restricted_filter_paths(repo.ui)
+    if not restricted_filter_paths:
+        return
+
+    enabled_profiles = sparseutil.enabled_profiles(repo)
+    filter_restricted_paths = repo.ui.configbool(
+        "subtree", "filter-restricted-paths", True
+    )
+    for restricted_filter_path in restricted_filter_paths:
+        is_enabled = restricted_filter_path in enabled_profiles
+        yield (
+            restricted_filter_path,
+            is_enabled,
+            is_enabled and filter_restricted_paths,
+        )
+
+
+def _load_restricted_filter(repo, curr_ctx, restricted_filter_path):
+    try:
+        return sparseutil.load_sparse_profile(repo, curr_ctx, restricted_filter_path)
+    except error.ManifestLookupError:
+        return None
+
+
+def _warn_or_abort_protected_path(
+    ui,
+    from_path,
+    to_path,
+    op_name,
+    should_filter_restricted_paths,
+    abort_by_default,
+):
+    if should_filter_restricted_paths:
+        warn_protected_paths_omitted(ui, from_path)
+        return
+
+    prompt_warning_or_abort(
+        ui, from_path, to_path, op_name, abort_by_default=abort_by_default
+    )
+
+
 def validate_path_acl(
     repo, from_paths, to_paths, curr_ctx, filter_path=None, op_name="copy"
 ):
-    from sapling.ext import sparse
-
     ui = repo.ui
-    acl_file = ui.config("pathacl", "tent-filter-path")
-    if not acl_file:
-        return
-
-    if filter_path == acl_file:
-        # protected paths will be filtered out by the filter (sparse) profile
-        return
-
-    is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
-    should_filter_restricted_paths = is_acl_enabled and ui.configbool(
-        "subtree", "filter-restricted-paths", True
-    )
-    if is_acl_enabled and op_name == "copy":
-        # protected paths will be filtered out by the sparse profile
-        return
-
-    try:
-        raw_content = sparse.getrawprofile(repo, acl_file, curr_ctx.hex())
-    except error.ManifestLookupError:
-        # the file might not exist
-        return
-
-    raw_config = sparse.readsparseconfig(repo, raw_content, filename=acl_file, depth=1)
-    include, exclude = raw_config.toincludeexclude()
-    matcher = sparse.computesparsematcher(repo, [curr_ctx.rev()], raw_config)
-
-    for from_path, to_path in zip(from_paths, to_paths):
-        if from_path == to_path:
+    for (
+        restricted_filter_path,
+        is_filter_enabled,
+        should_filter_restricted_paths,
+    ) in _restricted_filters(repo):
+        if filter_path == restricted_filter_path:
+            # protected paths will be filtered out by the filter (sparse) profile
             continue
 
-        if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
-            to_path
-        ):
-            if should_filter_restricted_paths:
-                warn_protected_paths_omitted(ui, from_path)
+        if is_filter_enabled and op_name == "copy":
+            # protected paths will be filtered out by the sparse profile
+            continue
+
+        restricted_filter = _load_restricted_filter(
+            repo, curr_ctx, restricted_filter_path
+        )
+        if restricted_filter is None:
+            continue
+
+        raw_config, matcher = restricted_filter
+        _, exclude = raw_config.toincludeexclude()
+
+        for from_path, to_path in zip(from_paths, to_paths):
+            if from_path == to_path:
                 continue
 
-            # abort by default for users don't have access (the ACL file was enabled)
-            abort_by_default = is_acl_enabled
-            prompt_warning_or_abort(
-                ui, from_path, to_path, op_name, abort_by_default=abort_by_default
-            )
+            if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
+                to_path
+            ):
+                _warn_or_abort_protected_path(
+                    ui,
+                    from_path,
+                    to_path,
+                    op_name,
+                    should_filter_restricted_paths,
+                    abort_by_default=is_filter_enabled,
+                )
 
 
 def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
     """Validate the ACL of copy/move patterns."""
     ui = repo.ui
-    acl_file = ui.config("pathacl", "tent-filter-path")
-    if not acl_file:
-        return
+    for (
+        restricted_filter_path,
+        is_filter_enabled,
+        should_filter_restricted_paths,
+    ) in _restricted_filters(repo):
+        if is_filter_enabled and op_name in ("copy", "move"):
+            # protected paths should not exist in the working copy
+            continue
 
-    is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
-    should_filter_restricted_paths = is_acl_enabled and ui.configbool(
-        "subtree", "filter-restricted-paths", True
-    )
-    if is_acl_enabled and op_name in ("copy", "move"):
-        # protected paths should not exist in the working copy
-        return
+        restricted_filter = _load_restricted_filter(
+            repo, curr_ctx, restricted_filter_path
+        )
+        if restricted_filter is None:
+            continue
 
-    if acl_file not in curr_ctx:
-        # the acl file does not exist
-        return
+        _, matcher = restricted_filter
 
-    unprotected_matcher = sparseutil.load_sparse_profile_matcher(
-        repo, curr_ctx, acl_file
-    )
-
-    if not unprotected_matcher.matchfn(dest):
-        return
-    for src in src_files:
-        if not unprotected_matcher.matchfn(src):
-            if should_filter_restricted_paths:
-                warn_protected_paths_omitted(ui, src)
-                continue
-
-            abort_by_default = is_acl_enabled
-            prompt_warning_or_abort(
-                ui, src, dest, op_name, abort_by_default=abort_by_default
-            )
+        if not matcher.matchfn(dest):
+            continue
+        for src in src_files:
+            if not matcher.matchfn(src):
+                _warn_or_abort_protected_path(
+                    ui,
+                    src,
+                    dest,
+                    op_name,
+                    should_filter_restricted_paths,
+                    abort_by_default=is_filter_enabled,
+                )
 
 
 def warn_protected_paths_omitted(ui, path):

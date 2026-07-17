@@ -14,24 +14,27 @@ def shouldsparsematch(repo):
     )
 
 
-def is_profile_enabled(repo, profile_name):
+def enabled_profiles(repo):
     from sapling.ext import sparse
 
     if not repo.localvfs.exists("sparse"):
-        return False
+        return set()
 
     raw = repo.localvfs.readutf8("sparse")
     rawconfig = sparse.readsparseconfig(repo, raw)
-
-    profiles = set(rawconfig.profiles)
-    return profile_name in profiles
+    return set(rawconfig.profiles)
 
 
-def load_sparse_profile_matcher(repo, ctx, profile_path):
+def load_sparse_profile(repo, ctx, profile_path):
     from sapling.ext import sparse
 
     raw_content = sparse.getrawprofile(repo, profile_path, ctx.hex())
     raw_config = sparse.readsparseconfig(
         repo, raw_content, filename=profile_path, depth=1
     )
-    return sparse.computesparsematcher(repo, [ctx.rev()], raw_config)
+    matcher = sparse.computesparsematcher(repo, [ctx.rev()], raw_config)
+    return raw_config, matcher
+
+
+def load_sparse_profile_matcher(repo, ctx, profile_path):
+    return load_sparse_profile(repo, ctx, profile_path)[1]

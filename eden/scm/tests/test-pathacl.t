@@ -4,7 +4,7 @@
   $ setconfig subtree.min-path-depth=1
   $ setconfig subtree.allow-any-source-commit=True
 
-  $ setconfig pathacl.tent-filter-path=tent-filter
+  $ setconfig pathacl.tent-filter-paths=tent-filter,other-tent-filter
 
   $ newrepo server
   $ cat > tent-filter << EOF
@@ -18,7 +18,19 @@
   > [exclude]
   > foo/protected
   > EOF
-  $ sl ci -Am "add tent-filter file"
+  $ cat > other-tent-filter << EOF
+  > [metadata]
+  > title: filter for other protected directories
+  > description: This filter defines another protected directory for test
+  > version: 2
+  > required: true
+  > [include]
+  > *
+  > [exclude]
+  > other/protected
+  > EOF
+  $ sl ci -Am "add tent-filter files"
+  adding other-tent-filter
   adding tent-filter
 
   $ mkdir -p foo/protected
@@ -42,15 +54,15 @@
   $ sl book master
 
   $ sl log -G -T '{node|short} {desc}\n'
-  @  3dbe1a097d57 update foo/y
+  @  326041286acb update foo/y
   │
-  o  bf60887fbaff update foo
+  o  430aefdb432b update foo
   │
-  o  6212305f81b9 add bar
+  o  98f6b0925f4c add bar
   │
-  o  3aeb35855961 add foo
+  o  f752f7d59846 add foo
   │
-  o  5184ab37fc85 add tent-filter file
+  o  7f292278f603 add tent-filter files
 
 Setup client repo without enabling tent-filer profile
 
@@ -166,7 +178,7 @@ Test subtree merge protected path in a non-root directory
 
 Test subtree graft protected path
 
-  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff
+  $ sl subtree graft --from-path foo --to-path bar -r 430aefdb432b
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo/protected/x (contains protected data)
    * to-path: bar
@@ -176,7 +188,7 @@ Test subtree graft protected path
 
 Test subtree graft protected path with absolute path
 
-  $ sl subtree graft --from-path $TESTTMP/client1/foo --to-path $TESTTMP/client1/bar -r bf60887fbaff
+  $ sl subtree graft --from-path $TESTTMP/client1/foo --to-path $TESTTMP/client1/bar -r 430aefdb432b
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo/protected/x (contains protected data)
    * to-path: bar
@@ -187,7 +199,7 @@ Test subtree graft protected path with absolute path
 Test subtree graft protected path in a non-root directory
 
   $ cd foo
-  $ sl subtree graft --from-path ../foo --to-path ../bar -r bf60887fbaff
+  $ sl subtree graft --from-path ../foo --to-path ../bar -r 430aefdb432b
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo/protected/x (contains protected data)
    * to-path: bar
@@ -198,7 +210,7 @@ Test subtree graft protected path in a non-root directory
 
 Test subtree copy with addtional filter (sparse profile) path
   $ sl subtree copy --from-path foo --to-path baz --filter tent-filter-not-exist
-  abort: path 'tent-filter-not-exist' does not exist in commit 3dbe1a097d57
+  abort: path 'tent-filter-not-exist' does not exist in commit 326041286acb
   [255]
   $ sl subtree copy --from-path foo --to-path baz --filter tent-filter
   copying foo to baz
@@ -206,11 +218,34 @@ Test subtree copy with addtional filter (sparse profile) path
   y
 
 Test subtree copy with a non-exist tent-filter path (the commit does not have the tent-filter)
-  $ sl subtree copy --from-path foo --to-path baz2 --config pathacl.tent-filter-path=tent-filter-not-exist
+  $ sl subtree copy --from-path foo --to-path baz2 --config pathacl.tent-filter-paths=tent-filter-not-exist
   copying foo to baz2
   $ ls baz2
   protected
   y
+
+Test copy with disabled other-tent-filter
+
+  $ mkdir -p other/protected
+  $ echo "secret" > other/protected/z
+  $ sl ci -Am "add other protected data"
+  adding other/protected/z
+
+  $ sl cp other othercopy
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: other/protected/z (contains protected data)
+   * to-path: othercopy
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+  $ sl subtree copy --from-path other --to-path othercopy
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: other (contains protected data)
+   * to-path: othercopy
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
 
 Test subtree copy to the protected directory
   $ sl subtree copy --from-path foo/protected/x --to-path foo/protected/x2
@@ -234,14 +269,14 @@ file x should be filtered out
   $ ls baz
   y
   $ sl show
-  commit:      4060440d87ac
+  commit:      dd25c294559e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       baz/y
   description:
   subtree copy foo to baz
   
-  Subtree copy from 3dbe1a097d576c690e7ef7607cffe27e4681a9b1
+  Subtree copy from 326041286acb6ccef434a3cdd9ad79ea5fb566aa
   - Copied path foo to baz
   
   
@@ -268,7 +303,7 @@ Test subtree merge protected path with tent-filter enabled
   $ sl subtree merge --from-path foo --to-path bar
   warning: protected data was omitted from path 'foo'; result may be incomplete
   searching for merge base ...
-  merge base: 3aeb35855961
+  merge base: f752f7d59846
   merging bar/y and foo/y to bar/y
   1 files merged, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -283,21 +318,21 @@ Setup client repo with enabling tent-filer profile for subtree graft
 
 Test subtree graft protected path with tent-filter enabled
 
-  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff --config subtree.filter-restricted-paths=False
+  $ sl subtree graft --from-path foo --to-path bar -r 430aefdb432b --config subtree.filter-restricted-paths=False
   abort: copying protected path to an unprotected path is not allowed
   (WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo/protected/x (contains protected data)
    * to-path: bar)
   [255]
 
-  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff
+  $ sl subtree graft --from-path foo --to-path bar -r 430aefdb432b
   warning: protected data was omitted from path 'foo/protected/x'; result may be incomplete
-  grafting bf60887fbaff "update foo"
-  note: graft of bf60887fbaff created no changes to commit
+  grafting 430aefdb432b "update foo"
+  note: graft of 430aefdb432b created no changes to commit
   $ test ! -e bar/protected || echo BUG: protected path leaked into bar
 
 Test subtree graft commits that do not have protected data (should succeed)
 
-  $ sl subtree graft --from-path foo --to-path bar -r 3dbe1a097d57
-  grafting 3dbe1a097d57 "update foo/y"
+  $ sl subtree graft --from-path foo --to-path bar -r 326041286acb
+  grafting 326041286acb "update foo/y"
   merging bar/y and foo/y to bar/y
