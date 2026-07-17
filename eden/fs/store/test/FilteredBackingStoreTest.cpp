@@ -11,6 +11,7 @@
 #include <folly/coro/BlockingWait.h>
 #include <folly/coro/GtestHelpers.h>
 #include <folly/coro/Task.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -154,7 +155,9 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions =
       std::make_unique<SaplingBackingStoreOptions>();
 
-  folly::InlineExecutor executor_ = folly::InlineExecutor::instance();
+  // Use a real executor so coroutine tests don't trip the coro::Task
+  // DCHECK on InlineExecutor (Task.h:470). See D98178331.
+  folly::CPUThreadPoolExecutor executor_{1};
 
   ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 

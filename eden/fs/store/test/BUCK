@@ -40,6 +40,7 @@ cpp_unittest(
         "//folly/coro:blocking_wait",
         "//folly/coro:gtest_helpers",
         "//folly/coro:task",
+        "//folly/executors:cpu_thread_pool_executor",
         "//folly/executors:manual_executor",
         "//folly/io:iobuf",
         "//folly/test:test_utils",
