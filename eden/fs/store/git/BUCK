@@ -16,6 +16,8 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly:string",
+        "//folly/coro:invoke",
+        "//folly/coro:task",
         "//folly/futures:core",
         "//folly/logging:logging",
     ],

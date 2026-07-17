@@ -7,6 +7,8 @@
 
 #include "eden/fs/store/git/GitBackingStore.h"
 
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 // TODO(T168360028)
@@ -144,8 +146,18 @@ BackingStore::GetRootTreeResult GitBackingStore::getRootTreeImpl(
 
 ImmediateFuture<BackingStore::GetRootTreeResult> GitBackingStore::getRootTree(
     const RootId& rootId,
-    const ObjectFetchContextPtr& /*context*/) {
-  return getRootTreeImpl(rootId);
+    const ObjectFetchContextPtr& context) {
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [this](auto rootId, auto context)
+              -> folly::coro::Task<GetRootTreeResult> {
+            co_return co_await co_getRootTree(
+                std::move(rootId), std::move(context));
+          },
+          RootId{rootId},
+          context.copy())
+          .semi()};
 }
 
 folly::coro::now_task<BackingStore::GetRootTreeResult>
