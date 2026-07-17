@@ -6205,7 +6205,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
 
   co_return result;
 }
-// DEPRECATED. Use semifuture_prefetchFilesV2 instead.
+// DEPRECATED. Use co_prefetchFilesV2 instead.
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     std::unique_ptr<PrefetchParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
@@ -6361,139 +6361,8 @@ PrefetchStats populatePrefetchStats(
 
 } // namespace
 
-folly::SemiFuture<std::unique_ptr<PrefetchResult>>
-EdenServiceHandler::semifuture_prefetchFilesV2Impl(
-    std::unique_ptr<PrefetchParams> params) {
-  TaskTraceBlock block{"EdenServiceHandler::prefetchFilesV2"};
-  auto mountHandle = lookupMount(params->mountPoint());
-  if (!params->revisions().value().empty()) {
-    params->revisions() =
-        resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
-  }
-  ThriftGlobImpl globber{
-      *params,
-      server_->getServerState()
-          ->getEdenConfig()
-          ->prefetchOptimizations.getValue()};
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
-      *params->mountPoint(),
-      toLogArg(*params->globs()),
-      globber.logString());
-  auto& context = helper->getFetchContext();
-  auto isBackground = *params->background();
-  auto returnPrefetchedFiles = *params->returnPrefetchedFiles();
-
-  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
-  if (isBackground ||
-      // Use not-ready future so the glob runs on our separate executor even if
-      // all data is ready immediately.
-      server_->usingPrefetchExecutor()) {
-    backgroundFuture = makeNotReadyImmediateFuture();
-  }
-
-  maybeLogExpensiveGlob(
-      *params->globs(),
-      *params->searchRoot(),
-      globber,
-      context,
-      server_->getServerState());
-
-  // Capture start time for stats
-  auto startTime = std::chrono::steady_clock::now();
-
-  // Get a copy of the prefetch context for stats tracking
-  auto prefetchContext = helper->getPrefetchFetchContext().copy();
-
-  auto globFut =
-      std::move(backgroundFuture)
-          .thenValue(
-              [mountHandle,
-               serverState = server_->getServerState(),
-               globs = std::move(*params->globs()),
-               globber = std::move(globber),
-               prefetchContext = prefetchContext.copy()](auto&&) mutable {
-                return globber
-                    .glob(
-                        mountHandle.getEdenMountPtr(),
-                        std::move(serverState),
-                        std::move(globs),
-                        prefetchContext)
-                    .thenValue([prefetchContext = prefetchContext.copy()](
-                                   std::unique_ptr<Glob> glob) mutable {
-                      return std::make_pair(
-                          std::move(glob), std::move(prefetchContext));
-                    });
-              });
-
-  // If returnPrefetchedFiles is set then return the list of globs
-  // Also collect stats from the prefetch context
-  auto prefetchResult =
-      std::move(globFut)
-          .thenValue(
-              [returnPrefetchedFiles, startTime](
-                  std::pair<std::unique_ptr<Glob>, ObjectFetchContextPtr>&&
-                      globAndContext) mutable {
-                auto& [glob, fetchContext] = globAndContext;
-                auto endTime = std::chrono::steady_clock::now();
-                auto durationMs =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        endTime - startTime)
-                        .count();
-
-                std::unique_ptr<PrefetchResult> result =
-                    std::make_unique<PrefetchResult>();
-
-                // Collect stats from the prefetch context
-                auto* statsContext =
-                    dynamic_cast<PrefetchFetchContext*>(fetchContext.get());
-                if (statsContext) {
-                  result->stats() =
-                      populatePrefetchStats(*statsContext, durationMs);
-                } else {
-                  XLOGF(
-                      ERR,
-                      "prefetch stats unavailable: unexpected fetch context");
-                }
-
-                if (returnPrefetchedFiles) {
-                  result->prefetchedFiles() = std::move(*glob);
-                }
-                return result;
-              })
-          .ensure([mountHandle,
-                   helper = std::move(helper),
-                   params = std::move(params)] {});
-
-  // If using a dedicated executor, don't use serial executor since that
-  // precludes parallelism.
-  if (server_->usingPrefetchExecutor()) {
-    // Similar to the checkout executor, we offload the prefetch work to a
-    // dedicated thread pool to avoid overloading the Thrift CPU worker pool.
-    if (isBackground) {
-      folly::futures::detachOn(
-          server_->getPrefetchFilesV2Executor().get(),
-          std::move(prefetchResult).semi());
-      return ImmediateFuture<std::unique_ptr<PrefetchResult>>(
-                 std::make_unique<PrefetchResult>())
-          .semi();
-    } else {
-      return std::move(prefetchResult)
-          .semi()
-          .via(server_->getPrefetchFilesV2Executor().get());
-    }
-  }
-
-  // The glob code has a very large fan-out that can easily overload the
-  // Thrift CPU worker pool. To combat with that, we limit the execution to a
-  // single thread by using `folly::SerialExecutor` so the glob queries will
-  // not overload the executor.
-  return serialDetachIfBackgrounded<PrefetchResult>(
-      std::move(prefetchResult), server_, isBackground);
-}
-
 folly::coro::now_task<std::unique_ptr<PrefetchResult>>
-EdenServiceHandler::co_prefetchFilesV2Impl(
+EdenServiceHandler::prefetchFilesV2Impl(
     std::unique_ptr<PrefetchParams> params) {
   TaskTraceBlock block{"EdenServiceHandler::prefetchFilesV2"};
   auto mountHandle = lookupMount(params->mountPoint());
@@ -6523,55 +6392,96 @@ EdenServiceHandler::co_prefetchFilesV2Impl(
       context,
       server_->getServerState());
 
+  // Capture start time for stats
+  auto startTime = std::chrono::steady_clock::now();
+
+  auto prefetchContext = helper->getPrefetchFetchContext().copy();
+
   auto glob = co_await globber.co_glob(
       mountHandle.getEdenMountPtr(),
       server_->getServerState(),
       std::move(*params->globs()),
-      helper->getPrefetchFetchContext().copy());
+      prefetchContext.copy());
+
+  auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - startTime)
+                        .count();
 
   auto result = std::make_unique<PrefetchResult>();
+
+  // Collect stats from the prefetch context
+  auto* statsContext =
+      dynamic_cast<PrefetchFetchContext*>(prefetchContext.get());
+  if (statsContext) {
+    result->stats() = populatePrefetchStats(*statsContext, durationMs);
+  } else {
+    XLOGF(ERR, "prefetch stats unavailable: unexpected fetch context");
+  }
+
   if (returnPrefetchedFiles) {
     result->prefetchedFiles() = std::move(*glob);
   }
   co_return result;
 }
 
-folly::SemiFuture<std::unique_ptr<PrefetchResult>>
-EdenServiceHandler::semifuture_prefetchFilesV2(
-    std::unique_ptr<PrefetchParams> params) {
+folly::coro::Task<std::unique_ptr<PrefetchResult>>
+EdenServiceHandler::co_prefetchFilesV2(std::unique_ptr<PrefetchParams> params) {
   auto isBackground = *params->background();
-  if (server_->getServerState()
-          ->getEdenConfig()
-          ->enableCoroutinesPhase2.getValue()) {
-    auto prefetchResult = ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](std::unique_ptr<PrefetchParams> p)
-                -> folly::coro::Task<std::unique_ptr<PrefetchResult>> {
-              co_return co_await self->co_prefetchFilesV2Impl(std::move(p));
-            },
-            std::move(params))
-            .semi()};
 
-    // Reuse the same executor selection logic as the futures path
-    if (server_->usingPrefetchExecutor()) {
-      if (isBackground) {
-        folly::futures::detachOn(
-            server_->getPrefetchFilesV2Executor().get(),
-            std::move(prefetchResult).semi());
-        return ImmediateFuture<std::unique_ptr<PrefetchResult>>(
-                   std::make_unique<PrefetchResult>())
-            .semi();
-      } else {
-        return std::move(prefetchResult)
-            .semi()
-            .via(server_->getPrefetchFilesV2Executor().get());
-      }
+  // Build the work coroutine. Capture self via shared_from_this so the
+  // coroutine outlives any background detach.
+  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+  auto task = folly::coro::co_invoke(
+      [self = shared_from_this()](std::unique_ptr<PrefetchParams> p)
+          -> folly::coro::Task<std::unique_ptr<PrefetchResult>> {
+        co_return co_await self->prefetchFilesV2Impl(std::move(p));
+      },
+      std::move(params));
+
+  // If using a dedicated executor, don't use serial executor since that
+  // precludes parallelism. We offload prefetch work to a dedicated thread
+  // pool to avoid overloading the Thrift CPU worker pool.
+  //
+  // TODO: detachOn fire-and-forget loses shutdown cancellation. Consider a
+  // handler-scoped CancellableAsyncScope across this file's ~10 detach sites
+  // (S532385).
+  if (server_->usingPrefetchExecutor()) {
+    folly::Executor::KeepAlive<> exec =
+        folly::getKeepAliveToken(server_->getPrefetchFilesV2Executor().get());
+    auto pinned = folly::coro::co_withExecutor(exec, std::move(task));
+    if (isBackground) {
+      // Fire-and-forget: start the coroutine on the prefetch executor and
+      // detach the resulting SemiFuture there. Return an empty placeholder.
+      folly::futures::detachOn(exec, std::move(pinned).start());
+      co_return std::make_unique<PrefetchResult>();
     }
-    return serialDetachIfBackgrounded<PrefetchResult>(
-        std::move(prefetchResult), server_, isBackground);
+    co_return co_await std::move(pinned);
   }
-  return semifuture_prefetchFilesV2Impl(std::move(params));
+
+  // No dedicated executor. The glob code has a very large fan-out that can
+  // easily overload the Thrift CPU worker pool, so pin coroutine resumptions
+  // to a SerialExecutor when the server isn't already globally serialized.
+  // Without co_withExecutor, the coroutine would escape the serial executor
+  // after the first external co_await, allowing concurrent fan-out from
+  // multiple requests.
+  if (server_->usingThriftSerialExecution()) {
+    if (isBackground) {
+      folly::futures::detachOn(
+          server_->getServerState()->getThreadPool().get(),
+          std::move(task).semi());
+      co_return std::make_unique<PrefetchResult>();
+    }
+    co_return co_await std::move(task);
+  }
+
+  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
+      server_->getServer()->getThreadManager().get());
+  auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
+  if (isBackground) {
+    folly::futures::detachOn(serial, std::move(pinned).start());
+    co_return std::make_unique<PrefetchResult>();
+  }
+  co_return co_await std::move(pinned);
 }
 
 folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
