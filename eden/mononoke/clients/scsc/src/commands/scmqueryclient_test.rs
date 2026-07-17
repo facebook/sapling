@@ -53,6 +53,8 @@ enum Method {
     IsAncestor(IsAncestorArgs),
     /// get_generation: fetch the DAG generation number of a commit.
     GetGeneration(GetGenerationArgs),
+    /// merge_base: find the most recent common ancestor of two commits.
+    MergeBase(MergeBaseArgs),
 }
 
 #[derive(Args)]
@@ -89,6 +91,18 @@ struct GetGenerationArgs {
     rev: String,
 }
 
+#[derive(Args)]
+struct MergeBaseArgs {
+    #[arg(long)]
+    repo: String,
+    #[arg(long, default_value = "hg")]
+    scm_type: String,
+    #[arg(long)]
+    rev1: String,
+    #[arg(long)]
+    rev2: String,
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let wrapper = build_wrapper(&app, &args.client_id).await?;
     match args.method {
@@ -123,6 +137,17 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             };
             let result = wrapper.get_generation(&params).await?;
             println!("{}", result.generation);
+        }
+        Some(Method::MergeBase(a)) => {
+            let params = scmquery_types::ScmMergeBaseParams {
+                repo: a.repo,
+                scm_type: a.scm_type,
+                rev1: a.rev1,
+                rev2: a.rev2,
+                ..Default::default()
+            };
+            let result = wrapper.merge_base(&params).await?;
+            println!("{}", result.hash);
         }
         None => bail!(
             "no method specified; pass one of the per-method subcommands. \
