@@ -1,0 +1,17 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_treehugger")
+
+rust_library(
+    name = "config_reconcile",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+    ],
+)

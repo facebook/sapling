@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -21,6 +22,12 @@ use anyhow::Result;
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
+use config_reconcile::ConfigSource;
+use config_reconcile::DesiredRepo;
+use config_reconcile::ManifestEntry;
+use config_reconcile::RepoGeneration;
+use config_reconcile::RepoManager;
+use config_reconcile::RepoState;
 use facet::AsyncBuildable;
 use futures::stream;
 use futures::stream::AbortHandle;
@@ -30,6 +37,9 @@ use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
+use metaconfig_parser::parse_repo_spec;
+use metaconfig_parser::spec_hash;
+use metaconfig_parser::storage_generation;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
@@ -62,6 +72,9 @@ define_stats! {
         Average, Sum, Count
     ),
     completion_duration_secs: timeseries(Average, Sum, Count),
+    reconcile_applied: timeseries(Average, Sum, Count),
+    reconcile_dropped: timeseries(Average, Sum, Count),
+    reconcile_failed_repos: timeseries(Average, Sum, Count),
 }
 
 /// A manager of a MononokeRepos collection.
@@ -82,6 +95,10 @@ pub struct MononokeReposManager<Repo> {
     // Shared with Mononoke<R> (read by list_repos) and with
     // MononokeConfigUpdateReceiver (which refreshes it on each config update).
     repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
+    // Reconcile controller (slice 2): per-repo state (loaded generation, or
+    // last-failed) keyed by name. Empty until reconcile runs. Owned/driven by
+    // the `config_reconcile` crate.
+    reconcile_state: Arc<ArcSwap<HashMap<String, RepoState>>>,
 }
 
 impl<Repo> MononokeReposManager<Repo> {
@@ -132,6 +149,7 @@ impl<Repo> MononokeReposManager<Repo> {
             redaction_disabled,
             applied_configs: applied_configs.clone(),
             repo_names_in_tier: repo_names_in_tier.clone(),
+            reconcile_state: Arc::new(ArcSwap::from_pointee(HashMap::new())),
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver = MononokeConfigUpdateReceiver::new(
@@ -207,6 +225,60 @@ impl<Repo> MononokeReposManager<Repo> {
         self.configs.remove_repo_config_handle(repo_name);
     }
 
+    /// One level-triggered reconciliation pass, delegating the control logic to
+    /// the `config_reconcile` crate. Gated on `scm/mononoke:use_config_reconcile`,
+    /// read on every call so the knob is a live killswitch (no restart). When off
+    /// this is a no-op and the legacy edge-triggered path stays in control.
+    pub async fn reconcile(&self) -> Result<()>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        if !justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
+            return Ok(());
+        }
+        // Reconcile is a split-loading concept: it needs the manifest (for
+        // membership) and a tier (to parse specs). Absent either, do nothing.
+        let Some(tier) = self.configs.tier_name().map(str::to_owned) else {
+            return Ok(());
+        };
+        if self.configs.manifest().is_none() {
+            return Ok(());
+        }
+
+        let config = ReconcileConfigSource {
+            configs: self.configs.clone(),
+        };
+        let manager = ReconcileRepoManager {
+            configs: self.configs.clone(),
+            repo_factory: self.repo_factory.clone(),
+            repos: self.repos.clone(),
+            tier,
+            redaction_disabled: self.redaction_disabled,
+        };
+        let current = self.reconcile_state.load_full();
+        let outcome =
+            config_reconcile::reconcile(&config, &manager, &current, repos_manager_concurrency()?)
+                .await?;
+
+        if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
+            info!(
+                "reconcile: built={} rebuilt={} dropped={} failed={}",
+                outcome.built,
+                outcome.rebuilt,
+                outcome.dropped,
+                outcome.failed.len(),
+            );
+        }
+        STATS::reconcile_applied.add_value((outcome.built + outcome.rebuilt) as i64);
+        STATS::reconcile_dropped.add_value(outcome.dropped as i64);
+        STATS::reconcile_failed_repos.add_value(outcome.failed.len() as i64);
+        self.reconcile_state.store(Arc::new(outcome.next_state));
+        Ok(())
+    }
+
     async fn populate_repos<Names>(&self, repo_names: Names) -> Result<()>
     where
         Names: IntoIterator<Item = String>,
@@ -278,6 +350,109 @@ impl<Repo> MononokeReposManager<Repo> {
 
     pub fn remove_stats_handle_for_repo(&self, repo_name: &str) {
         self.repos.remove_stats_handle_for_repo(repo_name)
+    }
+}
+
+/// Adapts `MononokeConfigs` to the `config_reconcile::ConfigSource` trait.
+struct ReconcileConfigSource {
+    configs: Arc<MononokeConfigs>,
+}
+
+impl ConfigSource for ReconcileConfigSource {
+    fn manifest(&self) -> Vec<ManifestEntry> {
+        self.configs.manifest().map_or_else(Vec::new, |m| {
+            m.repos
+                .iter()
+                .map(|e| ManifestEntry {
+                    name: e.repo_name.clone(),
+                    is_deep_sharded: e.is_deep_sharded,
+                })
+                .collect()
+        })
+    }
+
+    fn desired(&self, name: &str) -> Option<DesiredRepo> {
+        let spec = self.configs.live_repo_spec(name)?;
+        let spec_hash = spec_hash(&spec).ok()?;
+        Some(DesiredRepo {
+            enabled: spec.enabled,
+            spec_hash,
+        })
+    }
+
+    fn storage_generation(&self) -> Result<u64> {
+        let manifest = self
+            .configs
+            .manifest()
+            .context("reconcile: no manifest for storage generation")?;
+        storage_generation(&manifest.storage)
+    }
+}
+
+/// Adapts `MononokeConfigs` + `RepoFactory` + `MononokeRepos` to the
+/// `config_reconcile::RepoManager` trait: builds a repo from its live config
+/// (async), then inserts it under `MononokeRepos`' update lock (sync).
+struct ReconcileRepoManager<Repo> {
+    configs: Arc<MononokeConfigs>,
+    repo_factory: Arc<RepoFactory>,
+    repos: Arc<MononokeRepos<Repo>>,
+    tier: String,
+    redaction_disabled: bool,
+}
+
+#[async_trait]
+impl<Repo> RepoManager for ReconcileRepoManager<Repo>
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+        + Send
+        + Sync
+        + 'static,
+{
+    fn loaded_names(&self) -> HashSet<String> {
+        self.repos.iter_names().collect()
+    }
+
+    async fn build_and_apply(
+        &self,
+        name: &str,
+        deep: bool,
+        storage_gen: u64,
+    ) -> Result<Option<RepoGeneration>> {
+        let spec = self
+            .configs
+            .live_repo_spec(name)
+            .context("reconcile: no live RepoSpec (unsubscribed or unreadable)")?;
+        let spec_hash = spec_hash(&spec)?;
+        let manifest = self.configs.manifest().context("reconcile: no manifest")?;
+        let mut repo_config =
+            parse_repo_spec(Arc::unwrap_or_clone(spec), &self.tier, &manifest.storage)?;
+        if self.redaction_disabled {
+            repo_config.redaction = Redaction::Disabled;
+        }
+        let repo_id = repo_config.repoid.id();
+        let common_config = self.configs.repo_configs().common.clone();
+        let repo = self
+            .repo_factory
+            .build(name.to_string(), repo_config, common_config)
+            .await?;
+        // The build (async) is done; the insert below is synchronous and takes
+        // the MononokeRepos update lock internally — no lock across an await.
+        let applied = if deep {
+            self.repos
+                .reload_if_present(repo_id, name.to_string(), repo)
+        } else {
+            self.repos.reload(vec![(repo_id, name.to_string(), repo)]);
+            true
+        };
+        Ok(applied.then_some(RepoGeneration {
+            spec_hash,
+            storage_gen,
+        }))
+    }
+
+    fn drop_repo(&self, name: &str) {
+        self.repos.remove(name);
+        self.configs.remove_repo_config_handle(name);
     }
 }
 

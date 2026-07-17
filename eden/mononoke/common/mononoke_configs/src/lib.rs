@@ -325,6 +325,25 @@ impl MononokeConfigs {
         self.maybe_manifest_handle.as_ref().map(|h| h.get())
     }
 
+    /// The tier name (derived from the configerator config path), if split-
+    /// loading is enabled. The reconcile controller needs it to parse `RepoSpec`s.
+    pub fn tier_name(&self) -> Option<&str> {
+        self.tier_name.as_deref()
+    }
+
+    /// The live per-repo `RepoSpec` read straight from its subscribed config
+    /// handle (bypassing the bulk config cache), so the reconcile controller sees
+    /// current desired state for drift detection. Returns `None` when the repo
+    /// has no subscribed handle (not split-loaded, or not yet subscribed) —
+    /// callers must treat that as "unknown", never "drop".
+    pub fn live_repo_spec(&self, repo_name: &str) -> Option<Arc<RepoSpec>> {
+        self.repo_handles
+            .read()
+            .ok()?
+            .get(repo_name)
+            .map(|handle| handle.get())
+    }
+
     /// Is automatic update of the underlying configuration enabled?
     pub fn auto_update_enabled(&self) -> bool {
         // If the config updater handle is none, configs won't be updated.

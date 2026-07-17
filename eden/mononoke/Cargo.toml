@@ -122,6 +122,7 @@ members = [
   "cmdlib/commit_id",
   "cmdlib/commit_id_types",
   "cmdlib/config_args",
+  "cmdlib/config_reconcile",
   "cmdlib/cross_repo",
   "cmdlib/displaying",
   "cmdlib/displaying/graph",

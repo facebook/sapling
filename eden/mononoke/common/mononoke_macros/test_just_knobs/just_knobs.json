@@ -121,7 +121,8 @@
     "scm/mononoke:commit_metadata_scraper_skipped_repos": false,
     "scm/mononoke:commit_metadata_scraper_identity_from_local_cert": false,
     "scm/mononoke:check_hook_bypass_permission_group_with_client_identities": true,
-    "scm/mononoke:use_fastlog_v2": false
+    "scm/mononoke:use_fastlog_v2": false,
+    "scm/mononoke:use_config_reconcile": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
