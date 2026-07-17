@@ -196,54 +196,17 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
 ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) const {
-  if (getEdenConfig()->enableCoroutinesPhase2.getValue()) {
-    return ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](auto rootId, auto context)
-                -> folly::coro::Task<GetRootTreeResult> {
-              co_return co_await self->co_getRootTree(
-                  std::move(rootId), std::move(context));
-            },
-            RootId{rootId},
-            context.copy())
-            .semi()};
-  }
-  XLOGF(DBG3, "getRootTree({})", rootId);
-  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getRootTree};
-
-  // TODO: this code caches the root tree, but doesn't have similar code to look
-  // it up This should be investigated and either changed or the reasoning
-  // should be documented
-  return backingStore_->getRootTree(rootId, context)
-      .thenValue([self = shared_from_this(),
-                  rootId](BackingStore::GetRootTreeResult result) {
-        self->stats_->increment(&ObjectStoreStats::getRootTreeFromBackingStore);
-        return result;
-      })
-      .thenValue(
-          [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
-              BackingStore::GetRootTreeResult result) {
-            auto tree =
-                changeCaseSensitivity(std::move(result.tree), caseSensitive);
-            if (!tree->isRestricted()) {
-              treeCache->insert(result.treeId, tree);
-            }
-
-            return GetRootTreeResult{
-                std::move(tree),
-                result.treeId,
-            };
-          })
-      .thenError(
-          [self = shared_from_this(),
-           rootId](const folly::exception_wrapper& ew)
-              -> ImmediateFuture<ObjectStore::GetRootTreeResult> {
-            self->stats_->increment(&ObjectStoreStats::getRootTreeFailed);
-            XLOGF(DBG4, "unable to find root tree {}", rootId.value());
-            return makeImmediateFuture<ObjectStore::GetRootTreeResult>(ew);
-          })
-      .ensure([scope = std::move(statScope)] {});
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = shared_from_this()](auto rootId, auto context)
+              -> folly::coro::Task<GetRootTreeResult> {
+            co_return co_await self->co_getRootTree(
+                std::move(rootId), std::move(context));
+          },
+          RootId{rootId},
+          context.copy())
+          .semi()};
 }
 
 folly::coro::now_task<ObjectStore::GetRootTreeResult>

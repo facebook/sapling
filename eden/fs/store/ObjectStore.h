@@ -186,6 +186,9 @@ class ObjectStore : public IObjectStore,
    * This returns a Future object that will produce the root Tree when it is
    * ready.  It may result in a std::domain_error if the specified commit ID
    * does not exist, or possibly other exceptions on error.
+   *
+   * DEPRECATED: use co_getRootTree directly. Futures wrapper kept for
+   * non-coroutine callers; remove once all callers have migrated.
    */
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
