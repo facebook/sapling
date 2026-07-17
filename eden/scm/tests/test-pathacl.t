@@ -255,23 +255,46 @@ file x should be filtered out
   +c2
   +
 
-Test subtree merge protected path with tent-filter enabled (should fail)
+Test subtree merge protected path with tent-filter enabled
+(restricted paths must not leak into the to-side)
 
-  $ sl subtree merge --from-path foo --to-path bar
+  $ sl subtree merge --from-path foo --to-path bar --config subtree.filter-restricted-paths=False
   abort: copying protected path to an unprotected path is not allowed
   (WARNING: You are attempting to merge protected data to an unprotected location:
    * from-path: foo (contains protected data)
    * to-path: bar)
   [255]
 
-Test subtree graft protected path with tent-filter enabled (should fail)
+  $ sl subtree merge --from-path foo --to-path bar
+  warning: protected data was omitted from path 'foo'; result may be incomplete
+  searching for merge base ...
+  merge base: 3aeb35855961
+  merging bar/y and foo/y to bar/y
+  1 files merged, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ test ! -e bar/protected || echo BUG: protected path leaked into bar
+  $ sl commit -m "subtree merge foo to bar"
 
-  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff
+Setup client repo with enabling tent-filer profile for subtree graft
+
+  $ cd
+  $ sl clone -q --eden test:server client3 --config clone.eden-sparse-filter=tent-filter
+  $ cd client3
+
+Test subtree graft protected path with tent-filter enabled
+
+  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff --config subtree.filter-restricted-paths=False
   abort: copying protected path to an unprotected path is not allowed
   (WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo/protected/x (contains protected data)
    * to-path: bar)
   [255]
+
+  $ sl subtree graft --from-path foo --to-path bar -r bf60887fbaff
+  warning: protected data was omitted from path 'foo/protected/x'; result may be incomplete
+  grafting bf60887fbaff "update foo"
+  note: graft of bf60887fbaff created no changes to commit
+  $ test ! -e bar/protected || echo BUG: protected path leaked into bar
 
 Test subtree graft commits that do not have protected data (should succeed)
 

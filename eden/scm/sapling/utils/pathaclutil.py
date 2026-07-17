@@ -23,6 +23,9 @@ def validate_path_acl(
         return
 
     is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
+    should_filter_restricted_paths = is_acl_enabled and ui.configbool(
+        "subtree", "filter-restricted-paths", True
+    )
     if is_acl_enabled and op_name == "copy":
         # protected paths will be filtered out by the sparse profile
         return
@@ -44,6 +47,10 @@ def validate_path_acl(
         if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
             to_path
         ):
+            if should_filter_restricted_paths:
+                warn_protected_paths_omitted(ui, from_path)
+                continue
+
             # abort by default for users don't have access (the ACL file was enabled)
             abort_by_default = is_acl_enabled
             prompt_warning_or_abort(
@@ -59,6 +66,9 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
         return
 
     is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
+    should_filter_restricted_paths = is_acl_enabled and ui.configbool(
+        "subtree", "filter-restricted-paths", True
+    )
     if is_acl_enabled and op_name in ("copy", "move"):
         # protected paths should not exist in the working copy
         return
@@ -75,10 +85,22 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
         return
     for src in src_files:
         if not unprotected_matcher.matchfn(src):
+            if should_filter_restricted_paths:
+                warn_protected_paths_omitted(ui, src)
+                continue
+
             abort_by_default = is_acl_enabled
             prompt_warning_or_abort(
                 ui, src, dest, op_name, abort_by_default=abort_by_default
             )
+
+
+def warn_protected_paths_omitted(ui, path):
+    ui.warn(
+        _("protected data was omitted from path '%s'; result may be incomplete\n")
+        % path,
+        notice="warning",
+    )
 
 
 def prompt_warning_or_abort(ui, from_path, to_path, op_name, abort_by_default=False):
