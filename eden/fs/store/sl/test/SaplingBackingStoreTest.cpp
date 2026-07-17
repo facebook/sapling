@@ -112,7 +112,9 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
   auto edenConfig = std::make_shared<ReloadableConfig>(testEdenConfig);
   auto stats = makeRefPtr<EdenStats>();
   FaultInjector faultInjector{/*enabled=*/false};
-  folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  // Use CPUThreadPoolExecutor — InlineExecutor is forbidden for coro::Task
+  // (DCHECK on InlineExecutor at Task.h). getRootTree is now coroutine-backed.
+  folly::CPUThreadPoolExecutor executor{1};
   ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
   auto backingStore = std::make_shared<SaplingBackingStore>(
       testRepo.repo.path(),
@@ -163,7 +165,9 @@ struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
 
 struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/false};
-  folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  // Use a real executor so coroutine tests don't trip the coro::Task
+  // DCHECK on InlineExecutor (Task.h:470). See D98178331.
+  folly::CPUThreadPoolExecutor executor{1};
   ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
@@ -212,7 +216,9 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
-  folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  // Use CPUThreadPoolExecutor — InlineExecutor is forbidden for coro::Task
+  // (DCHECK on InlineExecutor at Task.h:470). See D98178331.
+  folly::CPUThreadPoolExecutor executor{1};
   ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =

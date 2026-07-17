@@ -1881,45 +1881,19 @@ ImmediateFuture<BackingStore::GetRootTreeResult>
 SaplingBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
-  folly::stop_watch<std::chrono::milliseconds> watch;
-  ObjectId commitId = hashFromRootId(rootId);
-  auto self = shared_from_this();
-
-  return faultInjector_
-      .checkAsync("SaplingBackingStore::getRootTree", commitId.asHexString())
-      .thenValue([self, commitId, watch, fetchContext = context.copy()](
-                     auto&&) mutable {
-        return folly::via(
-                   self->serverThreadPool_,
-                   [self, commitId] { return self->getManifestNode(commitId); })
-            .thenValue(
-                [self, commitId, watch, fetchContext = std::move(fetchContext)](
-                    auto manifestNode) {
-                  if (!manifestNode.has_value()) {
-                    return folly::makeFuture<BackingStore::GetRootTreeResult>(
-                        folly::exception_wrapper{std::runtime_error{
-                            "Manifest node could not be found for commitId"}});
-                  }
-                  XLOGF(
-                      DBG3,
-                      "commit {} has manifest node {}",
-                      commitId,
-                      manifestNode.value());
-                  return self
-                      ->importTreeManifestImpl(
-                          *std::move(manifestNode),
-                          fetchContext,
-                          ObjectFetchContext::ObjectType::RootTree)
-                      .thenValue([self, watch](TreePtr rootTree) {
-                        self->stats_->addDuration(
-                            &SaplingBackingStoreStats::getRootTree,
-                            watch.elapsed());
-                        return BackingStore::GetRootTreeResult{
-                            rootTree, rootTree->getObjectId()};
-                      });
-                })
-            .semi();
-      });
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_withExecutor(
+          folly::getKeepAliveToken(serverThreadPool_),
+          folly::coro::co_invoke(
+              [self = shared_from_this()](auto rootId, auto context)
+                  -> folly::coro::Task<GetRootTreeResult> {
+                co_return co_await self->co_getRootTree(
+                    std::move(rootId), std::move(context));
+              },
+              RootId{rootId},
+              context.copy()))
+          .start()};
 }
 
 folly::coro::now_task<BackingStore::GetRootTreeResult>
