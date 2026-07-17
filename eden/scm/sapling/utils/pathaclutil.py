@@ -37,7 +37,7 @@ def _load_restricted_filter(repo, curr_ctx, restricted_filter_path):
         return None
 
 
-def _warn_or_abort_protected_path(
+def _warn_or_abort_restricted_path(
     ui,
     from_path,
     to_path,
@@ -46,7 +46,7 @@ def _warn_or_abort_protected_path(
     abort_by_default,
 ):
     if should_filter_restricted_paths:
-        warn_protected_paths_omitted(ui, from_path)
+        warn_restricted_paths_omitted(ui, from_path)
         return
 
     prompt_warning_or_abort(
@@ -64,11 +64,11 @@ def validate_path_acl(
         should_filter_restricted_paths,
     ) in _restricted_filters(repo):
         if filter_path == restricted_filter_path:
-            # protected paths will be filtered out by the filter (sparse) profile
+            # restricted paths will be filtered out by the filter (sparse) profile
             continue
 
         if is_filter_enabled and op_name == "copy":
-            # protected paths will be filtered out by the sparse profile
+            # restricted paths will be filtered out by the sparse profile
             continue
 
         restricted_filter = _load_restricted_filter(
@@ -84,10 +84,10 @@ def validate_path_acl(
             if from_path == to_path:
                 continue
 
-            if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
-                to_path
-            ):
-                _warn_or_abort_protected_path(
+            if contains_restricted_data(
+                from_path, exclude, matcher
+            ) and matcher.matchfn(to_path):
+                _warn_or_abort_restricted_path(
                     ui,
                     from_path,
                     to_path,
@@ -106,7 +106,7 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
         should_filter_restricted_paths,
     ) in _restricted_filters(repo):
         if is_filter_enabled and op_name in ("copy", "move"):
-            # protected paths should not exist in the working copy
+            # restricted paths should not exist in the working copy
             continue
 
         restricted_filter = _load_restricted_filter(
@@ -121,7 +121,7 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
             continue
         for src in src_files:
             if not matcher.matchfn(src):
-                _warn_or_abort_protected_path(
+                _warn_or_abort_restricted_path(
                     ui,
                     src,
                     dest,
@@ -131,9 +131,9 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
                 )
 
 
-def warn_protected_paths_omitted(ui, path):
+def warn_restricted_paths_omitted(ui, path):
     ui.warn(
-        _("protected data was omitted from path '%s'; result may be incomplete\n")
+        _("restricted data was omitted from path '%s'; result may be incomplete\n")
         % path,
         notice="warning",
     )
@@ -141,8 +141,8 @@ def warn_protected_paths_omitted(ui, path):
 
 def prompt_warning_or_abort(ui, from_path, to_path, op_name, abort_by_default=False):
     default_prompt_tmpl = _(
-        "WARNING: You are attempting to %s protected data to an unprotected location:\n"
-        " * from-path: %s (contains protected data)\n"
+        "WARNING: You are attempting to %s restricted data to an unrestricted location:\n"
+        " * from-path: %s (contains restricted data)\n"
         " * to-path: %s"
     )
     confirm_question = "Do you still wish to continue (y/n)? $$ &Yes $$ &No"
@@ -154,30 +154,30 @@ def prompt_warning_or_abort(ui, from_path, to_path, op_name, abort_by_default=Fa
     if abort_by_default:
         hint = f"{prompt_warning}\n{extra_hint}" if extra_hint else prompt_warning
         raise error.Abort(
-            f"copying protected path to an unprotected path is not allowed",
+            f"copying restricted path to an unrestricted path is not allowed",
             hint=hint,
         )
     elif ui.promptchoice(prompt_msg, default=1) != 0:
         hint = extra_hint
         raise error.Abort(
-            f"copying protected path to an unprotected path is not allowed",
+            f"copying restricted path to an unrestricted path is not allowed",
             hint=hint,
         )
 
 
-def contains_protected_data(from_path, protected_paths, unprotected_matcher) -> bool:
-    """Check if the from_path contains the protected data.
+def contains_restricted_data(from_path, restricted_paths, unrestricted_matcher) -> bool:
+    """Check if the from_path contains the restricted data.
 
-    - unprotected_matcher is generated from a tent_filter sparse profile
+    - unrestricted_matcher is generated from a tent_filter sparse profile
 
     "contains" has two meanings:
-    1. from_path is inside a protected path
-    2. from_path is a parent of a protected path
+    1. from_path is inside a restricted path
+    2. from_path is a parent of a restricted path
     """
-    if not unprotected_matcher.matchfn(from_path):
+    if not unrestricted_matcher.matchfn(from_path):
         return True
     prefix = from_path + "/"
-    for p in protected_paths:
+    for p in restricted_paths:
         if p.startswith(prefix):
             return True
     return False
