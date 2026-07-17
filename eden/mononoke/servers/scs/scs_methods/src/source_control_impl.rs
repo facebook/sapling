@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::future::Future;
 use std::net::IpAddr;
 use std::num::NonZeroU64;
@@ -154,6 +155,9 @@ pub struct SourceControlServiceImpl {
     pub(crate) git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
     pub(crate) watchdog_max_poll: u64,
     pub(crate) remote_diff_options: RemoteDiffOptions,
+    /// KCB request-primary identity types, loaded once from Configerator at
+    /// startup with a fail-secure fallback to the compile-time consts.
+    request_primary_identity_types: Arc<HashSet<String>>,
 }
 
 pub struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
@@ -192,6 +196,7 @@ impl SourceControlServiceImpl {
             git_source_of_truth_config,
             watchdog_max_poll,
             remote_diff_options: app.environment().remote_diff_options.clone(),
+            request_primary_identity_types: load_request_primary_identity_types(app),
         })
     }
 
@@ -502,7 +507,7 @@ impl SourceControlServiceImpl {
             .with_authorization_context(authz)
             .build()
             .await?;
-        maybe_set_nocache_thriftcache(&ctx, &repo)?;
+        maybe_set_nocache_thriftcache(&self.request_primary_identity_types, &ctx, &repo)?;
         Ok(repo)
     }
 
@@ -712,21 +717,86 @@ impl SourceControlServiceImpl {
     }
 }
 
+/// Configerator path of the runtime-updatable `ClientIdentifierPolicy`, mirrored
+/// from the compile-time consts in `client_identifier.thrift`.
+const CLIENT_IDENTIFIER_POLICY_CONFIG_PATH: &str = "ucache/security/client_identifier_policy";
+
+/// Loads the KCB request-primary identity types from Configerator once at
+/// startup. Falls back to the compile-time `REQUEST_PRIMARY_IDENTITY_TYPES`
+/// consts (fail-secure) when the config is missing, unreadable, or empty, so the
+/// pre-rollout window keeps parity with the previous const-only behavior.
+fn load_request_primary_identity_types(app: &MononokeApp) -> Arc<HashSet<String>> {
+    let from_config = match app
+        .environment()
+        .config_store
+        .get_config_handle::<client_identifier_policy::ClientIdentifierPolicy>(
+        CLIENT_IDENTIFIER_POLICY_CONFIG_PATH.to_string(),
+    ) {
+        Ok(handle) => Some(
+            handle
+                .get()
+                .requestPrimaryIdentityTypes
+                .iter()
+                .cloned()
+                .collect::<HashSet<String>>(),
+        ),
+        Err(err) => {
+            tracing::warn!(
+                "Failed to load ClientIdentifierPolicy from Configerator path '{}': {:#}; \
+                 falling back to compile-time REQUEST_PRIMARY_IDENTITY_TYPES",
+                CLIENT_IDENTIFIER_POLICY_CONFIG_PATH,
+                err
+            );
+            None
+        }
+    };
+
+    if matches!(&from_config, Some(types) if types.is_empty()) {
+        tracing::warn!(
+            "ClientIdentifierPolicy at '{}' has empty requestPrimaryIdentityTypes; \
+             falling back to compile-time REQUEST_PRIMARY_IDENTITY_TYPES",
+            CLIENT_IDENTIFIER_POLICY_CONFIG_PATH
+        );
+    }
+
+    Arc::new(resolve_request_primary_identity_types(from_config))
+}
+
+/// Applies the fail-secure fallback: use the configured set when it is present
+/// and non-empty, otherwise the compile-time consts.
+fn resolve_request_primary_identity_types(from_config: Option<HashSet<String>>) -> HashSet<String> {
+    match from_config {
+        Some(types) if !types.is_empty() => types,
+        _ => fallback_request_primary_identity_types(),
+    }
+}
+
+/// The compile-time `REQUEST_PRIMARY_IDENTITY_TYPES` consts as an owned set.
+fn fallback_request_primary_identity_types() -> HashSet<String> {
+    client_identifier_structs::consts::REQUEST_PRIMARY_IDENTITY_TYPES
+        .iter()
+        .map(|id_type| id_type.to_string())
+        .collect()
+}
+
 /// Returns true if the given identity type is covered by KCB's
-/// REQUEST_PRIMARY_IDENTITY_TYPES.
-fn is_kcb_covered(id_type: &str) -> bool {
-    client_identifier_structs::consts::REQUEST_PRIMARY_IDENTITY_TYPES.contains(id_type)
+/// request-primary identity types.
+fn is_kcb_covered(request_primary_identity_types: &HashSet<String>, id_type: &str) -> bool {
+    request_primary_identity_types.contains(id_type)
 }
 
 /// Returns true if the nocache flag should be set, given the repo-level and
 /// path-level ACL-deciding identity types. The flag is set when any identity
-/// type is NOT covered by KCB's REQUEST_PRIMARY_IDENTITY_TYPES.
+/// type is NOT covered by KCB's request-primary identity types.
 fn should_set_nocache_for_identity_types(
+    request_primary_identity_types: &HashSet<String>,
     repo_id_type: Option<&str>,
     path_id_types: &[String],
 ) -> bool {
-    repo_id_type.is_some_and(|id| !is_kcb_covered(id))
-        || path_id_types.iter().any(|id| !is_kcb_covered(id))
+    repo_id_type.is_some_and(|id| !is_kcb_covered(request_primary_identity_types, id))
+        || path_id_types
+            .iter()
+            .any(|id| !is_kcb_covered(request_primary_identity_types, id))
 }
 
 /// Dedicated Scuba dataset for SCS's server-side ACL-check decisions
@@ -737,6 +807,7 @@ const SCS_ACL_CHECKS_SCUBA_TABLE: &str = "mononoke_scs_acl_checks";
 /// flag on the CoreContext. The thrift macro will then set the ThriftCache nocache
 /// response header.
 fn maybe_set_nocache_thriftcache(
+    request_primary_identity_types: &HashSet<String>,
     ctx: &CoreContext,
     repo_ctx: &RepoContext<Repo>,
 ) -> Result<(), scs_errors::ServiceError> {
@@ -750,7 +821,11 @@ fn maybe_set_nocache_thriftcache(
 
     let repo_id_type = repo_ctx.repo_acl_deciding_identity_type();
     let path_id_types = repo_ctx.path_acl_deciding_identity_types();
-    let is_cacheable = !should_set_nocache_for_identity_types(repo_id_type, &path_id_types);
+    let is_cacheable = !should_set_nocache_for_identity_types(
+        request_primary_identity_types,
+        repo_id_type,
+        &path_id_types,
+    );
     if !is_cacheable {
         ctx.set_nocache_thriftcache();
     }
@@ -1814,14 +1889,51 @@ mod tests {
 
     use super::*;
 
+    /// The compile-time-const KCB request-primary identity types used by the
+    /// tests below (also the fail-secure fallback set).
+    fn kcb_types() -> HashSet<String> {
+        fallback_request_primary_identity_types()
+    }
+
+    // ---- Tests for the fail-secure Configerator fallback ----
+
+    #[mononoke::test]
+    fn test_resolve_falls_back_when_config_absent() {
+        // A failed/absent config read yields the compile-time consts.
+        assert_eq!(
+            resolve_request_primary_identity_types(None),
+            fallback_request_primary_identity_types()
+        );
+    }
+
+    #[mononoke::test]
+    fn test_resolve_falls_back_when_config_empty() {
+        // An empty configured set is treated as unconfigured (fail-secure).
+        assert_eq!(
+            resolve_request_primary_identity_types(Some(HashSet::new())),
+            fallback_request_primary_identity_types()
+        );
+    }
+
+    #[mononoke::test]
+    fn test_resolve_uses_non_empty_config() {
+        // A populated configured set is returned as-is, overriding the consts.
+        let configured: HashSet<String> = ["ONLY_CONFIGURED".to_string()].into_iter().collect();
+        assert_eq!(
+            resolve_request_primary_identity_types(Some(configured.clone())),
+            configured
+        );
+    }
+
     // ---- Tests for is_kcb_covered ----
 
     #[mononoke::test]
     fn test_is_kcb_covered_known_types() {
         // All types in REQUEST_PRIMARY_IDENTITY_TYPES should be covered.
+        let request_primary = kcb_types();
         for id_type in client_identifier_structs::consts::REQUEST_PRIMARY_IDENTITY_TYPES.iter() {
             assert!(
-                is_kcb_covered(id_type),
+                is_kcb_covered(&request_primary, id_type),
                 "Expected '{id_type}' to be covered by KCB"
             );
         }
@@ -1829,10 +1941,11 @@ mod tests {
 
     #[mononoke::test]
     fn test_is_kcb_covered_unknown_type() {
-        assert!(!is_kcb_covered("SOME_UNKNOWN_TYPE"));
-        assert!(!is_kcb_covered(""));
-        assert!(!is_kcb_covered("user")); // case-sensitive
-        assert!(!is_kcb_covered("SERVICE_IDENTITY_V2"));
+        let request_primary = kcb_types();
+        assert!(!is_kcb_covered(&request_primary, "SOME_UNKNOWN_TYPE"));
+        assert!(!is_kcb_covered(&request_primary, ""));
+        assert!(!is_kcb_covered(&request_primary, "user")); // case-sensitive
+        assert!(!is_kcb_covered(&request_primary, "SERVICE_IDENTITY_V2"));
     }
 
     // ---- Tests for should_set_nocache_for_identity_types ----
@@ -1840,14 +1953,25 @@ mod tests {
     #[mononoke::test]
     fn test_nocache_not_set_when_no_identity_types() {
         // No repo or path identity types => no nocache.
-        assert!(!should_set_nocache_for_identity_types(None, &[]));
+        let request_primary = kcb_types();
+        assert!(!should_set_nocache_for_identity_types(
+            &request_primary,
+            None,
+            &[]
+        ));
     }
 
     #[mononoke::test]
     fn test_nocache_not_set_for_kcb_repo_identity() {
         // Repo identity is a KCB type => no nocache.
-        assert!(!should_set_nocache_for_identity_types(Some("USER"), &[]));
+        let request_primary = kcb_types();
         assert!(!should_set_nocache_for_identity_types(
+            &request_primary,
+            Some("USER"),
+            &[]
+        ));
+        assert!(!should_set_nocache_for_identity_types(
+            &request_primary,
             Some("SERVICE_IDENTITY"),
             &[]
         ));
@@ -1856,7 +1980,9 @@ mod tests {
     #[mononoke::test]
     fn test_nocache_set_for_non_kcb_repo_identity() {
         // Repo identity is NOT a KCB type => nocache.
+        let request_primary = kcb_types();
         assert!(should_set_nocache_for_identity_types(
+            &request_primary,
             Some("CUSTOM_ACL_TYPE"),
             &[]
         ));
@@ -1865,22 +1991,34 @@ mod tests {
     #[mononoke::test]
     fn test_nocache_not_set_for_kcb_path_identities() {
         // All path identities are KCB types => no nocache.
+        let request_primary = kcb_types();
         let path_types = vec!["USER".to_string(), "PROD_CONTROLLER".to_string()];
-        assert!(!should_set_nocache_for_identity_types(None, &path_types));
+        assert!(!should_set_nocache_for_identity_types(
+            &request_primary,
+            None,
+            &path_types
+        ));
     }
 
     #[mononoke::test]
     fn test_nocache_set_for_non_kcb_path_identity() {
         // One path identity is not a KCB type => nocache.
+        let request_primary = kcb_types();
         let path_types = vec!["USER".to_string(), "CUSTOM_ACL_TYPE".to_string()];
-        assert!(should_set_nocache_for_identity_types(None, &path_types));
+        assert!(should_set_nocache_for_identity_types(
+            &request_primary,
+            None,
+            &path_types
+        ));
     }
 
     #[mononoke::test]
     fn test_nocache_set_when_path_non_kcb_but_repo_is_kcb() {
         // Repo identity is KCB, but a path identity is not => nocache.
+        let request_primary = kcb_types();
         let path_types = vec!["CUSTOM_ACL_TYPE".to_string()];
         assert!(should_set_nocache_for_identity_types(
+            &request_primary,
             Some("USER"),
             &path_types
         ));
@@ -1889,8 +2027,10 @@ mod tests {
     #[mononoke::test]
     fn test_nocache_set_for_non_kcb_repo_skips_path_check() {
         // Non-KCB repo identity triggers nocache regardless of path types.
+        let request_primary = kcb_types();
         let path_types = vec!["USER".to_string()];
         assert!(should_set_nocache_for_identity_types(
+            &request_primary,
             Some("CUSTOM_ACL_TYPE"),
             &path_types
         ));
@@ -1942,15 +2082,21 @@ mod tests {
                 );
                 assert!(jk_enabled);
 
+                let request_primary = kcb_types();
                 // With non-KCB type, should_set_nocache returns true.
                 assert!(should_set_nocache_for_identity_types(
+                    &request_primary,
                     Some("CUSTOM_ACL_TYPE"),
                     &[]
                 ));
 
                 // Simulate what maybe_set_nocache_thriftcache does when JK is on
                 // and identity types trigger nocache:
-                if should_set_nocache_for_identity_types(Some("CUSTOM_ACL_TYPE"), &[]) {
+                if should_set_nocache_for_identity_types(
+                    &request_primary,
+                    Some("CUSTOM_ACL_TYPE"),
+                    &[],
+                ) {
                     ctx.set_nocache_thriftcache();
                 }
                 assert!(ctx.nocache_thriftcache());
@@ -1969,7 +2115,9 @@ mod tests {
                     => KnobVal::Bool(true)
             ]),
             || {
+                let request_primary = kcb_types();
                 assert!(!should_set_nocache_for_identity_types(
+                    &request_primary,
                     Some("USER"),
                     &["SERVICE_IDENTITY".to_string()]
                 ));

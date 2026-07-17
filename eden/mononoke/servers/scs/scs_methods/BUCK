@@ -17,6 +17,7 @@ rust_library(
         if rust_oss.is_oss_build()
         else {
             "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
+            "client_identifier_policy": "//configerator/structs/ucache/security:client_identifier_policy-rust",
             "client_identifier_structs": "//core_infra_security/thrift_authentication_module:client_identifier_structs-rust",
         }
     ),
