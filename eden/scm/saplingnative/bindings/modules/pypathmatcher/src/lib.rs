@@ -25,6 +25,7 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::GitignoreMatcher;
+use pathmatcher::GraftMatcher;
 use pathmatcher::HintedMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
@@ -45,6 +46,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<treematcher>(py)?;
     m.add_class::<hintedmatcher>(py)?;
     m.add_class::<sparsematcher>(py)?;
+    m.add_class::<graftmatcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -233,6 +235,37 @@ py_class!(pub class sparsematcher |py| {
     }
 });
 
+py_class!(pub class graftmatcher |py| {
+    data matcher: DynMatcher;
+    data all_rust: bool;
+
+    def __new__(_cls, matcher: PyObject, grafts: Vec<(PyPathBuf, PyPathBuf)>) -> PyResult<Self> {
+        let (matcher, all_rust) = extract_matcher(py, matcher)?;
+        let grafts = grafts
+            .into_iter()
+            .map(|(from, to)| {
+                Ok((
+                    from.to_repo_path_buf().map_pyerr(py)?,
+                    to.to_repo_path_buf().map_pyerr(py)?,
+                ))
+            })
+            .collect::<PyResult<Vec<_>>>()?;
+        Self::create_instance(py, Arc::new(GraftMatcher::new(matcher, grafts)), all_rust)
+    }
+
+    def matches(&self, path: &PyPath) -> PyResult<bool> {
+        self.matcher(py).matches_file(path.to_repo_path().map_pyerr(py)?).map_pyerr(py)
+    }
+
+    def match_recursive(&self, path: &PyPath) -> PyResult<Option<bool>> {
+        Ok(match self.matcher(py).matches_directory(path.to_repo_path().map_pyerr(py)?).map_pyerr(py)? {
+            DirectoryMatch::Everything => Some(true),
+            DirectoryMatch::Nothing => Some(false),
+            DirectoryMatch::ShouldTraverse => None,
+        })
+    }
+});
+
 pub struct PythonMatcher<'a> {
     py: Python<'a>,
     py_matcher: PyObject,
@@ -329,13 +362,17 @@ pub fn extract_matcher(
         debug!("sparsematcher downcast");
         return Ok((matcher.matcher(py).clone(), true));
     }
+    if let Ok(matcher) = graftmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("graftmatcher downcast");
+        return Ok((matcher.matcher(py).clone(), *matcher.all_rust(py)));
+    }
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
 
     debug!(%type_name);
 
     match type_name.as_ref() {
-        "treematcher" | "gitignorematcher" | "hintedmatcher" | "sparsematcher" => {
+        "treematcher" | "gitignorematcher" | "hintedmatcher" | "sparsematcher" | "graftmatcher" => {
             extract_matcher(py, matcher.getattr(py, "_matcher")?)
         }
         "unionmatcher" => {

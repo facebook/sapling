@@ -409,6 +409,32 @@ class sparsematcher(basematcher):
         return "<sparsematcher>"
 
 
+class graftmatcher(basematcher):
+    """Wrapper for Rust pathmatcher::GraftMatcher."""
+
+    def __init__(self, matcher, grafts):
+        super(graftmatcher, self).__init__(matcher._root, matcher._cwd)
+        self._matcher = pathmatcher.graftmatcher(matcher, grafts)
+        self.bad = matcher.bad
+        self.traversedir = matcher.traversedir
+
+    def matchfn(self, f):
+        return self._matcher.matches(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.match_recursive(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False
+            return False
+
+    def __repr__(self):
+        return "<graftmatcher>"
+
+
 class hintedmatcher(basematcher):
     """Rust matcher fully implementing Python API."""
 

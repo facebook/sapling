@@ -20,6 +20,7 @@ pub use pathmatcher_types::AlwaysMatcher;
 pub use pathmatcher_types::DifferenceMatcher;
 pub use pathmatcher_types::DirectoryMatch;
 pub use pathmatcher_types::DynMatcher;
+pub use pathmatcher_types::GraftMatcher;
 pub use pathmatcher_types::IntersectMatcher;
 pub use pathmatcher_types::Matcher;
 pub use pathmatcher_types::NegateMatcher;
@@ -92,6 +93,59 @@ mod test {
         assert!(!matcher.matches_file("neither".try_into()?)?);
         assert!(!matcher.matches_file("a/a".try_into()?)?);
 
+        Ok(())
+    }
+
+    fn filter_matcher() -> Result<DynMatcher> {
+        Ok(Arc::new(DifferenceMatcher::new(
+            Arc::new(AlwaysMatcher::new()),
+            Arc::new(ExactMatcher::new(
+                [RepoPath::from_str("foo/secret")?].iter(),
+                true,
+            )),
+        )))
+    }
+
+    #[test]
+    fn test_graft_matcher_remaps_files() -> Result<()> {
+        let matcher = GraftMatcher::new(
+            filter_matcher()?,
+            vec![(
+                RepoPath::from_str("foo")?.to_owned(),
+                RepoPath::from_str("bar")?.to_owned(),
+            )],
+        );
+
+        assert!(!matcher.matches_file("foo/secret".try_into()?)?);
+        assert!(!matcher.matches_file("bar/secret".try_into()?)?);
+        assert!(matcher.matches_file("bar/public".try_into()?)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_graft_matcher_traverses_graft_destination_ancestors() -> Result<()> {
+        let matcher = GraftMatcher::new(
+            filter_matcher()?,
+            vec![(
+                RepoPath::from_str("foo")?.to_owned(),
+                RepoPath::from_str("a/b")?.to_owned(),
+            )],
+        );
+
+        assert_eq!(
+            matcher.matches_directory("".try_into()?)?,
+            DirectoryMatch::ShouldTraverse
+        );
+        assert_eq!(
+            matcher.matches_directory("a".try_into()?)?,
+            DirectoryMatch::ShouldTraverse
+        );
+        assert_eq!(
+            matcher.matches_directory("a/b".try_into()?)?,
+            DirectoryMatch::ShouldTraverse
+        );
+        assert!(!matcher.matches_file("a/b/secret".try_into()?)?);
+        assert!(matcher.matches_file("a/b/public".try_into()?)?);
         Ok(())
     }
 }

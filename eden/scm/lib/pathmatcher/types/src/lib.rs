@@ -5,11 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::Result;
 pub use types::RepoPath;
+use types::RepoPathBuf;
 
 /// Limits the set of files to be operated on.
 pub trait Matcher {
@@ -250,6 +252,51 @@ impl Matcher for IntersectMatcher {
             matched = true;
         }
         Ok(matched)
+    }
+}
+
+pub struct GraftMatcher {
+    matcher: DynMatcher,
+    grafts: Vec<(RepoPathBuf, RepoPathBuf)>,
+}
+
+impl GraftMatcher {
+    pub fn new(matcher: DynMatcher, grafts: Vec<(RepoPathBuf, RepoPathBuf)>) -> Self {
+        Self { matcher, grafts }
+    }
+
+    fn ungraft<'a>(&self, path: &'a RepoPath) -> Cow<'a, RepoPath> {
+        for (from, to) in &self.grafts {
+            if let Some(suffix) = path.strip_prefix(to.as_repo_path(), true) {
+                if suffix.is_empty() {
+                    return Cow::Owned(from.clone());
+                } else {
+                    return Cow::Owned(from.join(suffix));
+                }
+            }
+        }
+        Cow::Borrowed(path)
+    }
+
+    fn is_graft_dest_ancestor(&self, path: &RepoPath) -> bool {
+        self.grafts.iter().any(|(_, to)| {
+            let to = to.as_repo_path();
+            to != path && to.starts_with(path, true)
+        })
+    }
+}
+
+impl Matcher for GraftMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        if self.is_graft_dest_ancestor(path) {
+            return Ok(DirectoryMatch::ShouldTraverse);
+        }
+
+        self.matcher.matches_directory(self.ungraft(path).as_ref())
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        self.matcher.matches_file(self.ungraft(path).as_ref())
     }
 }
 
