@@ -69,6 +69,28 @@ ACTION_ADD = "a"
 ACTION_ADD_MODIFIED = "am"
 
 
+def _restricted_sparse_matcher(*ctxs):
+    if not ctxs or not ctxs[0].repo().ui.configbool(
+        "subtree", "filter-restricted-paths", True
+    ):
+        return None
+
+    if not any(ctx.manifest().hasgrafts() for ctx in ctxs):
+        return None
+
+    matcher = None
+    for ctx in ctxs:
+        repo = ctx.repo()
+        if not sparseutil.shouldsparsematch(repo):
+            continue
+        ctxmatcher = repo.sparsematch(ctx.rev())
+        grafts = ctx.manifest().diffgrafts()
+        if grafts:
+            ctxmatcher = matchmod.graftmatcher(ctxmatcher, grafts)
+        matcher = matchmod.intersectmatchers(matcher, ctxmatcher)
+    return matcher
+
+
 class mergestate:
     """track 3-way merge state of individual files
 
@@ -1035,6 +1057,12 @@ def manifestmerge(
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
 
     matcher = None
+    sparsematcher = None
+    restrictedmatcher = (
+        _restricted_sparse_matcher(wctx.p1(), p2, pa)
+        if sparsematch is not None
+        else None
+    )
 
     # Don't use m2-vs-ma optimization if:
     # - ma is the same as m1 or m2, which we're just going to diff again later
@@ -1083,6 +1111,8 @@ def manifestmerge(
         if filesmatcher is not None:
             sparsematcher = matchmod.unionmatcher([sparsematcher, filesmatcher])
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
+
+    matcher = matchmod.intersectmatchers(matcher, restrictedmatcher)
 
     with perftrace.trace("Manifest Diff"):
         if hasattr(to_repo, "resettreefetches"):
