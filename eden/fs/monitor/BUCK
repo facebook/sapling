@@ -69,7 +69,7 @@ cpp_library(
         "//folly/io/async:async_base",
     ],
     external_deps = [
-        "gflags",
         ("boost", None, "boost_filesystem"),
+        "gflags",
     ],
 )
