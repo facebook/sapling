@@ -89,6 +89,14 @@ void StatsFetchContext::didFetchBatch(
     Origin origin,
     uint64_t count,
     uint64_t bytes) {
+  // Self-gated like addPrefetchedBlobSize(), so callers (e.g.
+  // reportPrefetchStats()) don't have to remember to check
+  // shouldCollectStats() themselves before calling this. A no-op for every
+  // context except PrefetchFetchContext with stats disabled, since the base
+  // implementation of shouldCollectStats() always returns true.
+  if (!shouldCollectStats()) {
+    return;
+  }
   XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
       << "type is out of range: " << type;
   XCHECK(origin < ObjectFetchContext::kOriginEnumMax)
@@ -98,6 +106,9 @@ void StatsFetchContext::didFetchBatch(
 }
 
 void StatsFetchContext::didFetchFailed(ObjectType type, uint64_t count) {
+  if (!shouldCollectStats()) {
+    return;
+  }
   XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
       << "type is out of range: " << type;
   failures_[type].fetch_add(count, std::memory_order_acq_rel);

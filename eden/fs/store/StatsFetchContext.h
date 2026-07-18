@@ -69,6 +69,10 @@ class StatsFetchContext : public ObjectFetchContext {
   void didFetchFailed(ObjectType type, uint64_t count);
   uint64_t getFailureCount(ObjectType type) const;
 
+  bool shouldCollectStats() const override {
+    return true;
+  }
+
   OptionalProcessId getClientPid() const override;
 
   Cause getCause() const override;

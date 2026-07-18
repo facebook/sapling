@@ -463,20 +463,33 @@ class PrefetchFetchContext : public StatsFetchContext {
  public:
   explicit PrefetchFetchContext(
       OptionalProcessId pid,
-      std::string_view endpoint)
+      std::string_view endpoint,
+      bool enablePrefetchStats)
       : StatsFetchContext(
             pid,
             ObjectFetchContext::Cause::Prefetch,
             endpoint,
             nullptr),
-        endpoint_(endpoint) {}
+        endpoint_(endpoint),
+        enablePrefetchStats_(enablePrefetchStats) {}
 
   ImportPriority getPriority() const override {
     return kThriftPrefetchPriority;
   }
 
+  bool shouldCollectStats() const override {
+    return enablePrefetchStats_;
+  }
+
+  void addPrefetchedBlobSize(uint64_t bytes) override {
+    if (enablePrefetchStats_) {
+      StatsFetchContext::addPrefetchedBlobSize(bytes);
+    }
+  }
+
  private:
   std::string_view endpoint_;
+  bool enablePrefetchStats_;
 };
 
 /**
@@ -499,7 +512,8 @@ class ThriftRequestScope {
       OptionalProcessId pid,
       JoinFn&& join,
       std::shared_ptr<EdenServiceHandler> serviceHandler,
-      bool enableCancellation = false)
+      bool enableCancellation = false,
+      bool enablePrefetchStats = false)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
         sourceLocation_{sourceLocation},
@@ -512,7 +526,8 @@ class ThriftRequestScope {
             sourceLocation_.function_name())},
         prefetchFetchContext_{makeRefPtr<PrefetchFetchContext>(
             pid,
-            sourceLocation_.function_name())},
+            sourceLocation_.function_name(),
+            enablePrefetchStats)},
         handler_(serviceHandler) {
     if (auto handler = handler_.lock()) {
       if (enableCancellation) {
@@ -842,8 +857,15 @@ bool checkAllowedQuery(
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
 
-#define INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(             \
-    level, enableCancellation, requestContext, ...)           \
+// Core macro: all INSTRUMENT_THRIFT_CALL variants delegate here.
+#define INSTRUMENT_THRIFT_CALL_IMPL(                          \
+    level,                                                    \
+    edenStats,                                                \
+    statPtr,                                                  \
+    requestContext,                                           \
+    enableCancellation,                                       \
+    enablePrefetchStats,                                      \
+    ...)                                                      \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
         fmt::format("eden.thrift.{}", loc.function_name()));  \
@@ -852,47 +874,57 @@ bool checkAllowedQuery(
         logger,                                               \
         folly::LogLevel::level,                               \
         loc,                                                  \
-        nullptr,                                              \
-        nullptr,                                              \
+        edenStats,                                            \
+        statPtr,                                              \
         getAndRegisterClientPid(requestContext),              \
         [&] {                                                 \
           return fmt::to_string(                              \
               fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
         },                                                    \
         this->shared_from_this(),                             \
-        enableCancellation);                                  \
+        enableCancellation,                                   \
+        enablePrefetchStats);                                 \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
-#define INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(    \
-    level, stat, enableCancellation, requestContext, ...)     \
-  ([&](SourceLocation loc) {                                  \
-    static folly::Logger logger(                              \
-        fmt::format("eden.thrift.{}", loc.function_name()));  \
-    return std::make_unique<ThriftRequestScope>(              \
-        this->thriftRequestTraceBus_,                         \
-        logger,                                               \
-        folly::LogLevel::level,                               \
-        loc,                                                  \
-        server_->getStats().copy(),                           \
-        stat,                                                 \
-        getAndRegisterClientPid(requestContext),              \
-        [&] {                                                 \
-          return fmt::to_string(                              \
-              fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
-        },                                                    \
-        this->shared_from_this(),                             \
-        enableCancellation);                                  \
-  }(EDEN_CURRENT_SOURCE_LOCATION))
-
-// Backward compatibility: INSTRUMENT_THRIFT_CALL defaults to uncancelable
 #define INSTRUMENT_THRIFT_CALL(level, ...) \
-  INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(level, false, nullptr, __VA_ARGS__)
+  INSTRUMENT_THRIFT_CALL_IMPL(             \
+      level, nullptr, nullptr, nullptr, false, false, __VA_ARGS__)
 
-// Backward compatibility: INSTRUMENT_THRIFT_CALL_WITH_STAT defaults to
-// uncancelable
+#define INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(   \
+    level, enableCancellation, requestContext, ...) \
+  INSTRUMENT_THRIFT_CALL_IMPL(                      \
+      level,                                        \
+      nullptr,                                      \
+      nullptr,                                      \
+      requestContext,                               \
+      enableCancellation,                           \
+      false,                                        \
+      __VA_ARGS__)
+
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...) \
-  INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(       \
-      level, stat, false, nullptr, __VA_ARGS__)
+  INSTRUMENT_THRIFT_CALL_IMPL(                             \
+      level,                                               \
+      server_->getStats().copy(),                          \
+      stat,                                                \
+      nullptr,                                             \
+      false,                                               \
+      false,                                               \
+      __VA_ARGS__)
+
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION( \
+    level, stat, enableCancellation, requestContext, ...)  \
+  INSTRUMENT_THRIFT_CALL_IMPL(                             \
+      level,                                               \
+      server_->getStats().copy(),                          \
+      stat,                                                \
+      requestContext,                                      \
+      enableCancellation,                                  \
+      false,                                               \
+      __VA_ARGS__)
+
+#define INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS(level, enableStats, ...) \
+  INSTRUMENT_THRIFT_CALL_IMPL(                                              \
+      level, nullptr, nullptr, nullptr, false, enableStats, __VA_ARGS__)
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
@@ -6375,8 +6407,9 @@ EdenServiceHandler::prefetchFilesV2Impl(
       server_->getServerState()
           ->getEdenConfig()
           ->prefetchOptimizations.getValue()};
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS(
       DBG2,
+      params->returnStats().value(),
       *params->mountPoint(),
       toLogArg(*params->globs()),
       globber.logString());
@@ -6392,8 +6425,10 @@ EdenServiceHandler::prefetchFilesV2Impl(
       context,
       server_->getServerState());
 
-  // Capture start time for stats
-  auto startTime = std::chrono::steady_clock::now();
+  std::optional<std::chrono::steady_clock::time_point> startTime;
+  if (helper->getPrefetchFetchContext()->shouldCollectStats()) {
+    startTime = std::chrono::steady_clock::now();
+  }
 
   auto prefetchContext = helper->getPrefetchFetchContext().copy();
 
@@ -6403,19 +6438,19 @@ EdenServiceHandler::prefetchFilesV2Impl(
       std::move(*params->globs()),
       prefetchContext.copy());
 
-  auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now() - startTime)
-                        .count();
-
   auto result = std::make_unique<PrefetchResult>();
 
-  // Collect stats from the prefetch context
-  auto* statsContext =
-      dynamic_cast<PrefetchFetchContext*>(prefetchContext.get());
-  if (statsContext) {
-    result->stats() = populatePrefetchStats(*statsContext, durationMs);
-  } else {
-    XLOGF(ERR, "prefetch stats unavailable: unexpected fetch context");
+  if (startTime.has_value()) {
+    auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now() - *startTime)
+                          .count();
+    auto* statsContext = dynamic_cast<PrefetchFetchContext*>(
+        helper->getPrefetchFetchContext().get());
+    if (statsContext == nullptr) {
+      XLOG(ERR, "prefetch stats unavailable: unexpected fetch context");
+    } else {
+      result->stats() = populatePrefetchStats(*statsContext, durationMs);
+    }
   }
 
   if (returnPrefetchedFiles) {
