@@ -7,8 +7,12 @@
 
 #include "eden/fs/inodes/ServerState.h"
 
+#include <folly/executors/IOThreadPoolExecutor.h>
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
+#include <utility>
+#include <vector>
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"
@@ -45,6 +49,22 @@ constexpr std::chrono::seconds kUserIgnoreMinPollSeconds{5};
 
 /** Throttle Ignore change checks, max of 1 per kSystemIgnoreMinPollSeconds */
 constexpr std::chrono::seconds kSystemIgnoreMinPollSeconds{5};
+
+/** Number of threads in the dedicated preload I/O pool. Sized to drive a
+ *  FUSE mount with parallel self-reads without starving other pools; kept in
+ *  step with the default per-operation preload worker count. */
+constexpr size_t kPreloadThreadPoolSize{32};
+
+/** How often to sweep completed preload operations from the progress map. */
+constexpr std::chrono::seconds kPreloadCleanupInterval{30};
+
+/** How long a completed preload operation is retained for late polling
+ *  before the periodic sweep evicts it. */
+constexpr std::chrono::seconds kPreloadCompletionTtl{60};
+
+/** How long a not-yet-done preload operation may go without observed
+ *  progress before it's presumed stranded (by a bug) and reaped. */
+constexpr std::chrono::hours kMaxStrandedLifetime{1};
 
 ServerState::ServerState(
     UserInfo userInfo,
@@ -135,9 +155,104 @@ ServerState::ServerState(
   if (FLAGS_fault_injection_block_mounts) {
     faultInjector_->injectBlock("mount", ".*");
   }
+
+  preloadCleanupScheduler_.addFunction(
+      [this] { cleanupStalePreloadProgress(kPreloadCompletionTtl); },
+      kPreloadCleanupInterval,
+      "preload-cleanup");
+  preloadCleanupScheduler_.start();
 }
 
-ServerState::~ServerState() = default;
+ServerState::~ServerState() {
+  // Stop the cleanup scheduler before any of the members it touches are
+  // destroyed (notably preloadProgressMap_).
+  preloadCleanupScheduler_.shutdown();
+}
+
+const std::shared_ptr<folly::IOThreadPoolExecutor>&
+ServerState::getPreloadThreadPool() const {
+  // Most EdenFS processes never run a preload, so defer paying for the
+  // thread pool's 32 threads until the first caller actually needs it.
+  folly::call_once(preloadThreadPoolOnceFlag_, [this] {
+    preloadThreadPool_ = std::make_shared<folly::IOThreadPoolExecutor>(
+        kPreloadThreadPoolSize,
+        std::make_shared<folly::NamedThreadFactory>("EdenPreload"));
+  });
+  return preloadThreadPool_;
+}
+
+void ServerState::cleanupStalePreloadProgress(std::chrono::seconds maxAge) {
+  // An operation with no completionTime is still running (or stranded by a
+  // bug). Age alone can't distinguish the two - large preloads can
+  // legitimately run for hours, and progress counters may only advance at
+  // coarse per-chunk granularity - so an operation is presumed stranded only
+  // once a full kMaxStrandedLifetime passes with no sweep observing its
+  // progress counters move. Reaping stranded entries bounds the map size;
+  // progress queries for a reaped id report not-found.
+  const auto kMaxStrandedLifetimeSec =
+      std::chrono::duration_cast<std::chrono::seconds>(kMaxStrandedLifetime)
+          .count();
+  auto now = std::chrono::steady_clock::now();
+
+  // Snapshot the map's entries under a brief read lock. Each entry is a
+  // shared_ptr, so the copy is cheap; the reap-vs-keep evaluation below then
+  // runs without holding the map lock, so a large sweep can't block
+  // concurrent progress queries / removePreloadProgress calls.
+  std::vector<std::pair<std::string, std::shared_ptr<PreloadOperation>>>
+      snapshot;
+  {
+    auto map = preloadProgressMap_.rlock();
+    snapshot.reserve(map->size());
+    for (auto& [id, op] : *map) {
+      snapshot.emplace_back(id, op);
+    }
+  }
+
+  std::vector<std::string> toReap;
+  for (auto& [id, op] : snapshot) {
+    bool reap = false;
+    if (auto ct = op->completionTime.rlock(); ct->has_value()) {
+      reap = (now - **ct > maxAge);
+    } else {
+      auto ageSec =
+          std::chrono::duration_cast<std::chrono::seconds>(now - op->startTime)
+              .count();
+      auto progress = op->processed.load(std::memory_order_relaxed) +
+          op->prefetchProcessed.load(std::memory_order_relaxed);
+      if (progress != op->lastSweepProgress.load(std::memory_order_relaxed)) {
+        op->lastSweepProgress.store(progress, std::memory_order_relaxed);
+        op->lastProgressAgeSec.store(ageSec, std::memory_order_relaxed);
+      } else if (
+          ageSec - op->lastProgressAgeSec.load(std::memory_order_relaxed) >
+          kMaxStrandedLifetimeSec) {
+        reap = true;
+        XLOGF(
+            WARN,
+            "Reaping stalled preload operation {}: no progress in over {} "
+            "minutes (preload {}/{}, prefetch {}/{}); progress queries for "
+            "this id will now report not-found",
+            id,
+            std::chrono::duration_cast<std::chrono::minutes>(
+                kMaxStrandedLifetime)
+                .count(),
+            op->processed.load(std::memory_order_relaxed),
+            op->total.load(std::memory_order_relaxed),
+            op->prefetchProcessed.load(std::memory_order_relaxed),
+            op->prefetchTotal.load(std::memory_order_relaxed));
+      }
+    }
+    if (reap) {
+      toReap.push_back(std::move(id));
+    }
+  }
+
+  if (!toReap.empty()) {
+    auto map = preloadProgressMap_.wlock();
+    for (auto& id : toReap) {
+      map->erase(id);
+    }
+  }
+}
 
 folly::ReadMostlySharedPtr<const EdenConfig> ServerState::getEdenConfig() {
   return config_->getEdenConfig();

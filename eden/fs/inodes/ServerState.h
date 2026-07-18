@@ -7,21 +7,30 @@
 
 #pragma once
 
+#include <folly/Synchronized.h>
 #include <folly/concurrency/memory/ReadMostlySharedPtr.h>
+#include <folly/container/F14Map.h>
+#include <folly/executors/FunctionScheduler.h>
+#include <folly/synchronization/CallOnce.h>
 #include <memory>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CachedParsedFileMonitor.h"
+#include "eden/fs/inodes/PreloadOperation.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 
 namespace folly {
 class EventBase;
 class Executor;
+class IOThreadPoolExecutor;
 } // namespace folly
 
 namespace facebook::eden {
+
+using PreloadProgressMap =
+    folly::F14FastMap<std::string, std::shared_ptr<PreloadOperation>>;
 
 class Clock;
 class EdenConfig;
@@ -224,6 +233,44 @@ class ServerState {
     return notifier_;
   }
 
+  /**
+   * Get the map of active page cache preload operations.
+   * Used by EdenServiceHandler to query progress of ongoing operations.
+   */
+  folly::Synchronized<PreloadProgressMap>& getPreloadProgressMap() {
+    return preloadProgressMap_;
+  }
+
+  /**
+   * Get the dedicated thread pool used for page-cache preload work, creating
+   * it on first use.
+   *
+   * Preload tasks perform blocking filesystem I/O against EdenFS's own mount
+   * (open/read/mmap), so they must NOT share a pool with Thrift handlers or
+   * other EdenMount work — see ACR_thread_pool_batching.md for the starvation
+   * pattern (S412223 / S399431).
+   */
+  const std::shared_ptr<folly::IOThreadPoolExecutor>& getPreloadThreadPool()
+      const;
+
+  /**
+   * Remove a completed preload operation from the progress map.
+   */
+  void removePreloadProgress(const std::string& operationId) {
+    preloadProgressMap_.wlock()->erase(operationId);
+  }
+
+  /**
+   * Remove completed preload operations that finished more than maxAge ago,
+   * plus old not-yet-done operations that have stopped making progress
+   * (presumed stranded by a bug; reaping bounds the map size).
+   *
+   * Runs periodically from preloadCleanupScheduler_ so entries are evicted
+   * even when no client polls. Progress queries for an evicted id report it
+   * as not-found.
+   */
+  void cleanupStalePreloadProgress(std::chrono::seconds maxAge);
+
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
@@ -249,5 +296,21 @@ class ServerState {
   std::shared_ptr<Notifier> notifier_;
   std::shared_ptr<InodeAccessLogger> inodeAccessLogger_;
   std::shared_ptr<FsEventLogger> fsEventLogger_;
+
+  // Map of active page cache preload operations, keyed by a unique operation
+  // ID.
+  folly::Synchronized<PreloadProgressMap> preloadProgressMap_;
+
+  // Dedicated executor for blocking preload I/O. Sized to match the previous
+  // implicit per-call worker count (32). Lives separately from threadPool_ so
+  // a slow preload cannot starve Thrift handlers. Lazily constructed by
+  // getPreloadThreadPool() so processes that never preload don't pay for it.
+  mutable folly::once_flag preloadThreadPoolOnceFlag_;
+  mutable std::shared_ptr<folly::IOThreadPoolExecutor> preloadThreadPool_;
+
+  // Periodic background sweep of preloadProgressMap_ to evict completed
+  // operations whose clients never polled. Started in the constructor,
+  // shut down in the destructor.
+  folly::FunctionScheduler preloadCleanupScheduler_;
 };
 } // namespace facebook::eden
