@@ -14,7 +14,7 @@ name = "mutationstore"
 
 [dependencies]
 anyhow = "1.0.103"
-bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
+bitflags = { version = "2.13.1", features = ["serde", "std"], default-features = false }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 sapling-dag = { version = "0.1.0", path = "../dag", features = ["render"] }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }

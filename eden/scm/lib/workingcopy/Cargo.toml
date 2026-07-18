@@ -14,7 +14,7 @@ name = "workingcopy"
 
 [dependencies]
 anyhow = "1.0.103"
-bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
+bitflags = { version = "2.13.1", features = ["serde", "std"], default-features = false }
 crossbeam = "0.8"
 fs-err = { version = "3.3.1", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

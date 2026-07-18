@@ -15,7 +15,7 @@ name = "util"
 
 [dependencies]
 anyhow = "1.0.103"
-bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
+bitflags = { version = "2.13.1", features = ["serde", "std"], default-features = false }
 dirs = "6.0"
 fn-error-context = "0.2"
 fs-err = { version = "3.3.1", features = ["tokio"] }
