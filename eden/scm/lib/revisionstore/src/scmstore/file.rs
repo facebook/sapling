@@ -694,6 +694,7 @@ mod tests {
     use ::types::RepoPathBuf;
     use ::types::fetch_cause::FetchCause;
     use ::types::fetch_mode::FetchMode;
+    use async_runtime::block_on;
     use tempfile::TempDir;
 
     use super::*;
@@ -786,5 +787,69 @@ mod tests {
             results[0].is_err(),
             "LFS key should not be found when skip_lfs=true"
         );
+    }
+
+    #[test]
+    fn test_blob_origin_remote_then_local() {
+        // An hg blob body is `min(p1, p2) + max(p1, p2) + text`; with no
+        // parents both hashes are zero.
+        let remote_dir = TempDir::new().unwrap();
+        let remote_repo = eagerepo::EagerRepo::open(remote_dir.path()).unwrap();
+        let text = b"remote-then-local content\n";
+        let mut blob = vec![0u8; HgId::len() * 2];
+        blob.extend_from_slice(text);
+        let hgid = remote_repo.add_sha1_blob(&blob).unwrap();
+        block_on(remote_repo.flush()).unwrap();
+
+        let key = Key::new(
+            RepoPathBuf::from_string("foo.txt".to_string()).unwrap(),
+            hgid,
+        );
+
+        let cache_dir = TempDir::new().unwrap();
+        let mut store = FileStore::empty();
+        store.indexedlog_cache = Some(make_indexedlog(&cache_dir));
+        store.edenapi = Some(SaplingRemoteApiFileStore::new(Arc::new(remote_repo)));
+
+        // Fetch 1: cold local cache, AllowRemote. The local cache misses and
+        // the blob is served from the fake remote, warming indexedlog_cache
+        // via write-through.
+        let fctx = FetchContext::new(FetchMode::AllowRemote);
+        let results: Vec<_> = store
+            .fetch(fctx.clone(), vec![key.clone()], FileAttributes::CONTENT)
+            .into_iter()
+            .collect();
+        let content = results[0]
+            .as_ref()
+            .expect("blob should be fetched from the remote")
+            .1
+            .file_content()
+            .unwrap();
+        assert_eq!(content.into_bytes().as_ref(), text);
+        assert_eq!(fctx.remote_fetch_count(), 1);
+        assert_eq!(fctx.local_fetch_count(), 0);
+
+        store.flush().unwrap();
+
+        // Fetch 2: repeat the identical AllowRemote request now that the
+        // cache is warm. A real prefetch always requests AllowRemote (it
+        // doesn't know ahead of time what's cached), so this -- unlike a
+        // LocalOnly request -- proves scmstore's local-first check actually
+        // skips the remote on a cache hit, not just that an explicit
+        // local-only request can be served locally.
+        let fctx = FetchContext::new(FetchMode::AllowRemote);
+        let results: Vec<_> = store
+            .fetch(fctx.clone(), vec![key.clone()], FileAttributes::CONTENT)
+            .into_iter()
+            .collect();
+        let content = results[0]
+            .as_ref()
+            .expect("blob should be served from the local cache")
+            .1
+            .file_content()
+            .unwrap();
+        assert_eq!(content.into_bytes().as_ref(), text);
+        assert_eq!(fctx.local_fetch_count(), 1);
+        assert_eq!(fctx.remote_fetch_count(), 0);
     }
 }

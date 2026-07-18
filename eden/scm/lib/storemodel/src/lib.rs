@@ -75,11 +75,11 @@ pub trait KeyStore: Send + Sync {
     /// - The returned content does not contain raw LFS content. LFS pointer
     ///   is resolved transparently.
     ///
-    /// Fetch mode is ignored in this prototype method
+    /// Fetch mode is ignored in this prototype method.
     /// The iterator might block waiting for network.
     fn get_content_iter(
         &self,
-        _fctx: FetchContext,
+        fctx: FetchContext,
         keys: Vec<Key>,
     ) -> anyhow::Result<ContentFetchItems> {
         let store = self.clone_key_store();
@@ -92,7 +92,10 @@ pub trait KeyStore: Send + Sync {
                     k.path,
                     k.hgid
                 )),
-                Ok(Some(data)) => Ok((k, data)),
+                Ok(Some(data)) => {
+                    fctx.inc_local(1);
+                    Ok((k, data))
+                }
             });
         Ok(ContentFetchItems::item_stream(iter))
     }
@@ -691,4 +694,42 @@ pub fn basic_serialize_tree(
     let serialize = TREE_SERIALIZER
         .get_or_try_init(|| factory::call_constructor::<(), StaticSerializeTreeFunc>(&()))?;
     serialize(items, format)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TestKeyStore;
+
+    impl KeyStore for TestKeyStore {
+        fn get_local_content(&self, _path: &RepoPath, _hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            Ok(Some(Blob::from_static(b"content")))
+        }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(TestKeyStore)
+        }
+    }
+
+    #[test]
+    fn test_get_content_iter_default_impl_increments_local_fetch_count() {
+        let store = TestKeyStore;
+        let fctx = FetchContext::default();
+        let key = Key::new(
+            RepoPathBuf::from_string("foo".to_string()).expect("valid repo path"),
+            HgId::from_byte_array([1; HgId::len()]),
+        );
+
+        let results: Vec<_> = store
+            .get_content_iter(fctx.clone(), vec![key])
+            .expect("get_content_iter should succeed")
+            .into_iter()
+            .collect();
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].is_ok());
+        assert_eq!(fctx.local_fetch_count(), 1);
+        assert_eq!(fctx.remote_fetch_count(), 0);
+    }
 }

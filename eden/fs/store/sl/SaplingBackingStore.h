@@ -531,8 +531,11 @@ class SaplingBackingStore final
   /**
    * Batch fetch blobs directly from lower level store. "Not found" is
    * propagated as an exception.
+   *
+   * Returns the number of successful blob requests served locally and
+   * remotely.
    */
-  void nativeGetBlobBatch(
+  sapling::BatchFetchStats nativeGetBlobBatch(
       folly::Range<const sapling::SaplingRequest*> requests,
       sapling::FetchMode fetch_mode,
       bool allow_ignore_result,

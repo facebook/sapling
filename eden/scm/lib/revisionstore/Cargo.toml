@@ -70,6 +70,7 @@ url = "2.5.8"
 maplit = "1.0"
 mockito = "1.7.2"
 rand_chacha = "0.10"
+sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 tempfile = "3.27.0"
 
 [features]

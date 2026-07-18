@@ -627,8 +627,8 @@ impl<'a> FetchState<'a> {
                             found += 1;
 
                             if self.fctx.mode().ignore_result() {
-                                // If caller doesn't care about content, swap to a stub file to avoid
-                                // needlessly shuffling data around.
+                                // Caller doesn't care about content: swap to a stub
+                                // file to avoid needlessly shuffling data around.
                                 file = StoreFile {
                                     content: Some(LazyFile::Raw(Blob::Bytes(
                                         minibytes::Bytes::new(),

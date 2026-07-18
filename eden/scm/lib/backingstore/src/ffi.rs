@@ -107,6 +107,12 @@ pub(crate) mod ffi {
         content_blake3: [u8; 32],
     }
 
+    /// Successful batch requests served from local storage and remote servers.
+    pub struct BatchFetchStats {
+        pub local_count: u64,
+        pub remote_count: u64,
+    }
+
     #[namespace = "facebook::eden"]
     #[repr(u8)]
     pub enum HgObjectIdFormat {
@@ -337,7 +343,7 @@ pub(crate) mod ffi {
             fetch_mode: FetchMode,
             allow_ignore_result: bool,
             resolver: SharedPtr<GetBlobBatchResolver>,
-        );
+        ) -> BatchFetchStats;
 
         pub fn sapling_backingstore_get_file_aux(
             store: &BackingStore,
@@ -773,7 +779,7 @@ pub fn sapling_backingstore_get_blob_batch(
     fetch_mode: ffi::FetchMode,
     allow_ignore_result: bool,
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
-) {
+) -> ffi::BatchFetchStats {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
     let (cause, all_match) = select_cause(requests.iter().map(|req| req.cause));
 
@@ -784,34 +790,39 @@ pub fn sapling_backingstore_get_blob_batch(
         fetch_mode |= FetchMode::IGNORE_RESULT;
     }
 
-    store.get_blob_batch(
-        FetchContext::new_with_mode_and_cause(fetch_mode, cause),
-        keys,
-        |idx, result| {
-            let resolver = resolver.clone();
+    // Keep a handle so we can read stats after the batch completes.
+    let fctx = FetchContext::new_with_mode_and_cause(fetch_mode, cause);
 
-            let (error, blob) = match result {
-                Ok(blob) => {
-                    match blob {
-                        None => {
-                            if fetch_mode.ignore_result() {
-                                // ignore_result means data is not propagated - allow nullptr in this case.
-                                (UniquePtr::null(), UniquePtr::null())
-                            } else {
-                                (
-                                    into_backingstore_err(anyhow!("no blob found")),
-                                    UniquePtr::null(),
-                                )
-                            }
-                        }
-                        Some(blob) => (UniquePtr::null(), blob.into_iobuf().into()),
+    store.get_blob_batch(fctx.clone(), keys, |idx, result| {
+        let resolver = resolver.clone();
+
+        let (error, blob) = match result {
+            Ok(blob) => match blob {
+                None => {
+                    if fetch_mode.ignore_result() {
+                        (UniquePtr::null(), UniquePtr::null())
+                    } else {
+                        (
+                            into_backingstore_err(anyhow!("no blob found")),
+                            UniquePtr::null(),
+                        )
                     }
                 }
-                Err(error) => (into_backingstore_err(error), UniquePtr::null()),
-            };
-            unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
-        },
-    );
+                Some(blob) => (UniquePtr::null(), blob.into_iobuf().into()),
+            },
+            Err(error) => (into_backingstore_err(error), UniquePtr::null()),
+        };
+        unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
+    });
+
+    batch_fetch_stats(&fctx)
+}
+
+fn batch_fetch_stats(fctx: &FetchContext) -> ffi::BatchFetchStats {
+    ffi::BatchFetchStats {
+        local_count: fctx.local_fetch_count(),
+        remote_count: fctx.remote_fetch_count(),
+    }
 }
 
 pub fn sapling_backingstore_get_file_aux(
@@ -1026,6 +1037,17 @@ pub fn sapling_flush_counters() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_batch_fetch_stats_maps_fetch_context_counts() {
+        let fctx = FetchContext::new(FetchMode::AllowRemote);
+        fctx.inc_local(2);
+        fctx.inc_remote(3);
+
+        let stats = batch_fetch_stats(&fctx);
+        assert_eq!(stats.local_count, 2);
+        assert_eq!(stats.remote_count, 3);
+    }
 
     #[test]
     fn test_select_cause() {

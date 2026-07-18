@@ -39,6 +39,7 @@ sl_rust_library(
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:rand_chacha",
         "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/eagerepo:eagerepo",
     ],
     # A test inside this target is using #[should_panic], setting the backtrace
     # to false here, otherwise the test binary will try to extract the backtrace

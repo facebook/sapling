@@ -2121,17 +2121,9 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
 
   if (prefetchOptimizations &&
       config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
-    // We perform two optimizations here:
-    //
-    // 1. We don't go through the queue. We already have a big batch
-    // of blobs to fetch - shuffling them through the queue
-    // one-at-a-time is very expensive. And then on the other side,
-    // they are chopped down into smaller batches, which loses more
-    // throughput.
-    //
-    // 2. We pass allowIgnoreResult=true, which lets sapling skip work
-    // fetching the blobs (because we don't actually care about the
-    // content).
+    // We skip the queue and allow IGNORE_RESULT to maximize throughput:
+    // prefetch doesn't care about the blob content itself, so Sapling can
+    // skip materializing it entirely.
 
     std::vector<sapling::SaplingRequest> requests;
     requests.reserve(ids.size());
@@ -2167,9 +2159,10 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           self->nativeGetBlobBatch(
               folly::range(requests),
               sapling::FetchMode::AllowRemote,
-              // We aren't going through the queue, so we are certain
-              // we can IGNORE_RESULT without impacting other fetches
-              // for the same id.
+              // We aren't going through the queue, so we are certain we can
+              // IGNORE_RESULT without impacting other fetches for the same
+              // id (S561997: a batch-level IGNORE_RESULT must never strip
+              // results from non-prefetch requests merged into the batch).
               true,
               [&](size_t index,
                   folly::Try<std::unique_ptr<folly::IOBuf>> content) {
@@ -2321,7 +2314,7 @@ folly::coro::now_task<folly::Unit> SaplingBackingStore::co_prefetchBlobs(
   co_return folly::unit;
 }
 
-void SaplingBackingStore::nativeGetBlobBatch(
+sapling::BatchFetchStats SaplingBackingStore::nativeGetBlobBatch(
     folly::Range<const sapling::SaplingRequest*> requests,
     sapling::FetchMode fetch_mode,
     bool allow_ignore_result,
@@ -2329,7 +2322,7 @@ void SaplingBackingStore::nativeGetBlobBatch(
         resolve) {
   auto count = requests.size();
   if (count == 0) {
-    return;
+    return sapling::BatchFetchStats{};
   }
 
   auto resolver =
@@ -2362,7 +2355,7 @@ void SaplingBackingStore::nativeGetBlobBatch(
     }
   }
 
-  sapling_backingstore_get_blob_batch(
+  return sapling_backingstore_get_blob_batch(
       *store_.get(),
       rust::Slice<const sapling::Request>{
           raw_requests.data(), raw_requests.size()},

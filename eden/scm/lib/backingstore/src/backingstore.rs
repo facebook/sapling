@@ -859,7 +859,10 @@ where
             for (i, key) in keys.iter().enumerate() {
                 let result = self.get_local_single(&key.path, key.hgid);
                 let result: Result<Option<OutputType>> = match result {
-                    Ok(Some(v)) => Ok(Some(v.into())),
+                    Ok(Some(v)) => {
+                        fctx.inc_local(1);
+                        Ok(Some(v.into()))
+                    }
                     Ok(None) => Ok(None),
                     Err(e) => Err(e),
                 };

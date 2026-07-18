@@ -50,7 +50,7 @@ cpp_unittest(
         "//eden/fs/telemetry/test:capturing_scribe_logger",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
-        "//eden/scm/lib/backingstore:sapling_native_backingstore",
+        "//eden/scm/lib/backingstore:sapling_backingstore_error",
         "//folly:range",
         "//folly:scope_guard",
         "//folly:try",
