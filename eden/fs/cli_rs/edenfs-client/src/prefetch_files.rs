@@ -14,6 +14,7 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::PrefetchParams;
+use thrift_types::edenfs::PrefetchStats;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
@@ -24,12 +25,14 @@ use crate::methods::EdenThriftMethod;
 #[derive(Clone, Debug)]
 pub struct PrefetchResult {
     pub prefetched_files: Option<Glob>,
+    pub stats: Option<PrefetchStats>,
 }
 
 impl From<thrift_types::edenfs::PrefetchResult> for PrefetchResult {
     fn from(from: thrift_types::edenfs::PrefetchResult) -> Self {
         Self {
             prefetched_files: from.prefetchedFiles.map(Glob::from),
+            stats: from.stats,
         }
     }
 }
@@ -45,6 +48,7 @@ impl EdenFsClient {
         background: Option<bool>,
         predictive_glob: Option<PredictiveFetchParams>,
         return_prefetched_files: bool,
+        return_stats: bool,
     ) -> Result<PrefetchResult> {
         let prefetch_params = PrefetchParams {
             mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
@@ -61,6 +65,7 @@ impl EdenFsClient {
             background: background.unwrap_or_default(),
             predictiveGlob: predictive_glob.map(Into::into),
             returnPrefetchedFiles: return_prefetched_files,
+            returnStats: return_stats,
             ..Default::default()
         };
         self.with_thrift(|thrift| {
