@@ -251,6 +251,11 @@ mock! {
             params: &PrefetchParams,
         ) -> BoxFuture<'static, Result<PrefetchResult, PrefetchFilesV2Error>>;
 
+        fn queryPreloadProgress(
+            &self,
+            request: &PreloadProgressRequest,
+        ) -> BoxFuture<'static, Result<PreloadProgressResponse, QueryPreloadProgressError>>;
+
         fn predictiveGlobFiles(
             &self,
             params: &GlobParams,
