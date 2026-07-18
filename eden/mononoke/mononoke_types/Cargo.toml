@@ -43,7 +43,7 @@ mononoke_types_serialization = { version = "0.1.0", path = "serialization" }
 nonzero_ext = "0.2"
 quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-regex = "1.13.0"
+regex = "1.13.1"
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

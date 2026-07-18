@@ -7,5 +7,5 @@ edition = "2024"
 
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-regex = "1.13.0"
+regex = "1.13.1"
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
