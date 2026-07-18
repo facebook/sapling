@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import List, NamedTuple, Optional
 
-from eden.fs.service.eden.thrift_types import GlobParams, PrefetchParams
+from eden.fs.service.eden.thrift_types import GlobParams, PrefetchParams, PrefetchStats
 
 from .cmd_util import require_checkout
 from .config import EdenCheckout, EdenInstance
@@ -31,6 +31,144 @@ def _eprintln(val: str) -> None:
     buffer = sys.stderr.buffer
     buffer.write(val.encode("utf-8") + b"\n")
     buffer.flush()
+
+
+def _format_bytes(num_bytes: int) -> str:
+    """Format bytes in a human-readable way."""
+    if num_bytes < 1024:
+        return f"{num_bytes} B"
+    elif num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024:.1f} KiB"
+    elif num_bytes < 1024 * 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.1f} MiB"
+    else:
+        return f"{num_bytes / (1024 * 1024 * 1024):.2f} GiB"
+
+
+def _format_count(count: int) -> str:
+    """Format large numbers with commas for readability."""
+    return f"{count:,}"
+
+
+def _print_prefetch_stats(
+    stats: PrefetchStats,
+    globs: Optional[List[str]] = None,
+    preload_duration_ms: Optional[int] = None,
+    actual_total_ms: Optional[int] = None,
+) -> None:
+    """Print prefetch statistics in a human-readable format.
+
+    Args:
+        stats: Prefetch statistics from the server.
+        globs: The glob patterns that were prefetched.
+        preload_duration_ms: Duration of just the preload operation (if used).
+        actual_total_ms: Actual wall clock time from start to finish (reflects
+            interleaved execution). If not provided, falls back to prefetch + preload.
+    """
+    _println("")
+    _println("=== Prefetch Statistics ===")
+    _println("")
+
+    # Summary section
+    _println("Summary:")
+    if globs:
+        globs_str = " ".join(globs)
+        _println(f"  Globs:            {globs_str}")
+    _println(f"  Files prefetched: {_format_count(stats.filesPrefetched)}")
+    if stats.filesFailed > 0:
+        _println(f"  Files failed:     {_format_count(stats.filesFailed)}")
+
+    # Timing section
+    prefetch_secs = stats.totalDurationMs / 1000.0
+    _println(f"  Prefetch time:    {prefetch_secs:.2f} s")
+
+    # total_secs is the user-observed wall-clock time for the whole
+    # operation; when preload runs it dominates by 5x or more, so we
+    # use it (not prefetch_secs alone) as the denominator for file
+    # throughput below.
+    if preload_duration_ms is not None:
+        preload_secs = preload_duration_ms / 1000.0
+        _println(f"  Preload time:     {preload_secs:.2f} s")
+        # Use actual wall clock time if available (reflects interleaved execution)
+        if actual_total_ms is not None:
+            total_secs = actual_total_ms / 1000.0
+        else:
+            total_secs = prefetch_secs + preload_secs
+        _println(f"  Total time:       {total_secs:.2f} s")
+    else:
+        total_secs = prefetch_secs
+
+    if total_secs > 0:
+        # Files-per-second over the FULL wall-clock duration — what the
+        # user actually observes. Anchoring this on prefetch_secs alone
+        # makes preload-heavy runs look 5-9x faster than reality.
+        throughput = stats.filesPrefetched / total_secs
+        _println(f"  Throughput:       {throughput:,.1f} files/s")
+        # Network throughput: decompressed bytes pulled over the wire,
+        # divided by the prefetch phase (which is when network fetches
+        # happen). Distinct from Throughput above — this measures the
+        # daemon's effective network bandwidth, not end-user rate.
+        network_bytes = stats.blobBytesFromNetwork + stats.treeBytesFromNetwork
+        if network_bytes > 0 and prefetch_secs > 0:
+            net_mib_s = (network_bytes / (1024 * 1024)) / prefetch_secs
+            _println(f"  Network:          {net_mib_s:.1f} MiB/s (during prefetch)")
+    # Calculate and display tree cache hit rate with counts and bytes
+    total_trees = (
+        stats.treesFromMemoryCache + stats.treesFromDiskCache + stats.treesFromNetwork
+    )
+    total_tree_bytes = (
+        stats.treeBytesFromMemoryCache
+        + stats.treeBytesFromDiskCache
+        + stats.treeBytesFromNetwork
+    )
+    if total_trees > 0:
+        tree_cached = stats.treesFromMemoryCache + stats.treesFromDiskCache
+        tree_bytes_cached = (
+            stats.treeBytesFromMemoryCache + stats.treeBytesFromDiskCache
+        )
+        tree_hit_rate = 100.0 * tree_cached / total_trees
+        _println(
+            f"  Tree cache:       {tree_hit_rate:.2f}% ({_format_count(tree_cached)} of {_format_count(total_trees)}, {_format_bytes(tree_bytes_cached)} of {_format_bytes(total_tree_bytes)})"
+        )
+
+    # Calculate and display blob cache hit rate with counts and bytes
+    total_blobs = (
+        stats.blobsFromMemoryCache + stats.blobsFromDiskCache + stats.blobsFromNetwork
+    )
+    total_blob_bytes = (
+        stats.blobBytesFromMemoryCache
+        + stats.blobBytesFromDiskCache
+        + stats.blobBytesFromNetwork
+    )
+    if total_blobs > 0:
+        blob_cached = stats.blobsFromMemoryCache + stats.blobsFromDiskCache
+        blob_bytes_cached = (
+            stats.blobBytesFromMemoryCache + stats.blobBytesFromDiskCache
+        )
+        blob_hit_rate = 100.0 * blob_cached / total_blobs
+        _println(
+            f"  Blob cache:       {blob_hit_rate:.2f}% ({_format_count(blob_cached)} of {_format_count(total_blobs)}, {_format_bytes(blob_bytes_cached)} of {_format_bytes(total_blob_bytes)})"
+        )
+
+    _println(f"  Overall cache:    {stats.cacheHitRate:.1f}%")
+    _println("")
+
+    # Trees detail section (reuse total_trees and total_tree_bytes from above)
+    _println(
+        f"Trees: {_format_count(total_trees)} (data volume: {_format_bytes(total_tree_bytes)})"
+    )
+    _println(f"  Memory cache: {_format_count(stats.treesFromMemoryCache)}")
+    _println(f"  Disk cache:   {_format_count(stats.treesFromDiskCache)}")
+    _println(f"  Network:      {_format_count(stats.treesFromNetwork)}")
+    _println("")
+
+    # Blobs detail section (reuse total_blobs and total_blob_bytes from above)
+    _println(
+        f"Blobs: {_format_count(total_blobs)} (data volume: {_format_bytes(total_blob_bytes)})"
+    )
+    _println(f"  Memory cache: {_format_count(stats.blobsFromMemoryCache)}")
+    _println(f"  Disk cache:   {_format_count(stats.blobsFromDiskCache)}")
+    _println(f"  Network:      {_format_count(stats.blobsFromNetwork)}")
 
 
 def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
@@ -281,6 +419,12 @@ class PrefetchCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--stats",
+            help="Print statistics about the prefetch operation (cache hits, timing, etc.)",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
@@ -313,10 +457,18 @@ class PrefetchCmd(Subcmd):
                         returnPrefetchedFiles=not args.background
                         and not args.silent
                         and args.debug_print,
+                        returnStats=args.stats,
                     )
                 )
 
                 result = prefetchResult.prefetchedFiles
+                if args.stats and prefetchResult.stats is not None:
+                    _print_prefetch_stats(
+                        prefetchResult.stats,
+                        globs=checkout_and_patterns.patterns,
+                    )
+                elif args.stats:
+                    _eprintln("Prefetch stats unavailable")
 
                 if result:
                     telemetry_sample.add_int("files_fetched", len(result.matchingFiles))
