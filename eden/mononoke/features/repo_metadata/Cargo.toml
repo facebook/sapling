@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bytes = { version = "1.12.1", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }

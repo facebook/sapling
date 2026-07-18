@@ -17,7 +17,7 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bo
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
-clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_id_types = { version = "0.1.0", path = "../commit_id_types" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
