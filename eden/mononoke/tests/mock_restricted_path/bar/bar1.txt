@@ -3,3 +3,4 @@ bar2
 bar3
 changing bar
 changing bar
+changing bar
