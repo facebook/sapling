@@ -70,6 +70,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 
 use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;
@@ -712,8 +713,12 @@ impl MononokeApp {
         let repo_filter = self.environment().filter_repos.clone();
         let service_name = service.clone();
 
-        // Load configs from both legacy blob and manifest
-        let configs = self.configs.load_all_repo_configs()?;
+        // Load configs from both legacy blob and manifest, keeping the per-repo
+        // parse failures so we can optionally fail closed instead of silently
+        // serving fewer/0 repos.
+        let outcome = self.configs.load_all_repo_configs_checked()?;
+        self.enforce_startup_parse_failures(&outcome.failed, service.as_ref())?;
+        let configs = outcome.loaded;
 
         let repo_names = configs.into_iter().filter_map(|(name, config)| {
             let is_matching_filter = repo_filter.as_ref().is_none_or(|filter| filter(&name));
@@ -739,6 +744,56 @@ impl MononokeApp {
             redaction_disabled,
         )
         .await
+    }
+
+    /// Enforce or log per-repo config parse failures seen at startup. When the
+    /// per-tier `fail_closed_on_repo_config_parse_error` killswitch is on, bails
+    /// listing every repo this task serves at boot (matching the repo filter) that
+    /// failed to parse. Whole-tier (`service == None`) callers serve every enabled
+    /// repo, so none are excluded; for a specific service, the manifest
+    /// `is_deep_sharded` flag is the conservative parse-independent proxy for
+    /// on-demand (fail-open) repos. Otherwise preserves the historical
+    /// one-warn-per-dropped-repo behavior.
+    fn enforce_startup_parse_failures(
+        &self,
+        failed: &[(String, anyhow::Error)],
+        service: Option<&ShardedService>,
+    ) -> Result<()> {
+        let fail_closed = self.configs.tier_name().is_some_and(|tier| {
+            justknobs::eval(
+                "scm/mononoke:fail_closed_on_repo_config_parse_error",
+                None,
+                Some(tier),
+            )
+        });
+        if !fail_closed {
+            for (name, e) in failed {
+                warn!("batch_load: failed to load config for {name}: {e:#}");
+            }
+            return Ok(());
+        }
+        // Whole-tier (service == None) callers serve all enabled repos, so exclude
+        // nothing; for a specific service, manifest is_deep_sharded is the
+        // conservative parse-independent proxy (deep repos load on demand, fail-open).
+        let serves_all = service.is_none();
+        let manifest = self.configs.manifest();
+        let non_deep: HashSet<&str> = manifest
+            .as_ref()
+            .map(|m| {
+                m.repos
+                    .iter()
+                    .filter(|e| !e.is_deep_sharded)
+                    .map(|e| e.repo_name.as_str())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let repo_filter = self.environment().filter_repos.clone();
+        let blocking = startup_blocking_failures(
+            failed,
+            |n| serves_all || non_deep.contains(n),
+            |n| repo_filter.as_ref().is_none_or(|f| f(n)),
+        );
+        startup_parse_failure_decision(&blocking)
     }
 
     /// Create a manager for a set of named managed repos.  These repos must
@@ -1017,6 +1072,41 @@ impl MononokeApp {
     }
 }
 
+/// Parse failures that must block startup: repos this task serves at boot
+/// (non-deep-sharded per the manifest + matching the repo filter). Deep /
+/// filtered-out repos load on demand (fail-open), so exclude them.
+fn startup_blocking_failures<'a>(
+    failed: &'a [(String, anyhow::Error)],
+    is_non_deep_manifest_repo: impl Fn(&str) -> bool,
+    matches_filter: impl Fn(&str) -> bool,
+) -> Vec<&'a (String, anyhow::Error)> {
+    failed
+        .iter()
+        .filter(|(name, _)| is_non_deep_manifest_repo(name) && matches_filter(name))
+        .collect()
+}
+
+/// Pure fail-closed decision for startup repo-config parse failures.
+///
+/// Given the already-scoped `blocking` failures (see `startup_blocking_failures`),
+/// returns an error listing every blocking repo (name + error) so startup bails
+/// instead of silently serving fewer/0 repos. Empty -> `Ok(())`.
+fn startup_parse_failure_decision(blocking: &[&(String, anyhow::Error)]) -> Result<()> {
+    if blocking.is_empty() {
+        return Ok(());
+    }
+
+    let details = blocking
+        .iter()
+        .map(|(name, e)| format!("{name}: {e:#}"))
+        .collect::<Vec<_>>()
+        .join("; ");
+    Err(anyhow!(
+        "fail-closed startup: {} repo config(s) failed to parse: {details}",
+        blocking.len(),
+    ))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CreateStorage {
     ExistingOnly,
@@ -1049,3 +1139,6 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
