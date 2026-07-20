@@ -18,6 +18,7 @@ Bare `?` in handler code converts errors to `HandlerError` via `From<anyhow::Err
 - Rate limiting responses using 429 (Too Many Requests) for server-wide limits -- should be 503 (Service Unavailable) since it's not per-user
 - Access-denied conditions (redaction, permissions) returning 500 instead of 403
 - New `MononokeError` variants without a corresponding mapping in `MononokeErrorExt`
+- Repo-not-found returning 404 when repo exists tier-wide but isn't loaded on this shard -- should be 503 (retriable)
 
 ## Do NOT Flag
 
@@ -55,3 +56,5 @@ return Err(HttpError::e503("server overloaded".into()));
 
 - **D95521399**: Changed untargeted rate limiting from 429 to 503. 429 was misleading because the limit wasn't per-user.
 - **D88865547**: Redacted blob errors surfaced as 500 instead of 403. Added explicit `RedactionError -> e403` mapping.
+- **D111918397**: `get_repo` returned 404 for repos not loaded on the shard. Now returns 503 (`RepoNotLoaded`)
+  when repo exists tier-wide; 404 only for truly unknown repos.
