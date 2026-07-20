@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future::Future;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
@@ -340,6 +341,41 @@ impl<Repo> MononokeReposManager<Repo> {
     }
 }
 
+/// Memoize a per-name hash of an `Arc<T>`. Returns the cached hash only when the
+/// live `Arc` is pointer-identical to the one hashed last time — a re-serialize
+/// optimization; `compute` stays the drift signal, `ptr_eq` never is. On a pointer
+/// miss, recompute via `compute`; on `Ok` cache `(spec.clone(), hash)` and return
+/// it, on `Err` return `None` (matching the caller's `.ok()?`). Stores the `Arc`
+/// itself (not a raw pointer) so a reused address can't false-match via `ptr_eq`
+/// (ABA).
+fn memoized_spec_hash<T>(
+    cache: &Mutex<HashMap<String, (Arc<T>, u64)>>,
+    name: &str,
+    spec: &Arc<T>,
+    compute: impl FnOnce(&T) -> Result<u64>,
+) -> Option<u64> {
+    let mut cache = cache.lock().expect("spec_hash_cache poisoned");
+    if let Some((cached_spec, hash)) = cache.get(name) {
+        if Arc::ptr_eq(cached_spec, spec) {
+            return Some(*hash);
+        }
+    }
+    let hash = compute(spec).ok()?;
+    cache.insert(name.to_string(), (spec.clone(), hash));
+    Some(hash)
+}
+
+/// Drop cache entries whose name is absent from `live`. Called once per pass (there
+/// is no end-of-pass hook on `ConfigSource`) to evict repos removed from the
+/// manifest.
+fn retain_live_cache_entries<T>(
+    cache: &Mutex<HashMap<String, (Arc<T>, u64)>>,
+    live: &HashSet<&str>,
+) {
+    let mut cache = cache.lock().expect("spec_hash_cache poisoned");
+    cache.retain(|name, _| live.contains(name.as_str()));
+}
+
 /// Adapts `MononokeConfigs` to the `config_reconcile::ConfigSource` trait.
 struct ReconcileConfigSource {
     configs: Arc<MononokeConfigs>,
@@ -367,27 +403,11 @@ impl ConfigSource for ReconcileConfigSource {
         // the one we hashed last time (ConfigHandle::get() is pointer-stable while
         // unchanged), else recompute. spec_hash stays the drift signal — pointer
         // identity only decides whether to re-serialize.
-        let mut cache = self
-            .spec_hash_cache
-            .lock()
-            .expect("spec_hash_cache poisoned");
-        let cached_hash = match cache.get(name) {
-            Some((cached_spec, hash)) if Arc::ptr_eq(cached_spec, &spec) => Some(*hash),
-            _ => None,
-        };
-        let spec_hash = match cached_hash {
-            Some(hash) => hash,
-            None => {
-                let hash = spec_hash(&spec).ok()?;
-                cache.insert(name.to_string(), (spec.clone(), hash));
-                hash
-            }
-        };
-        drop(cache);
+        let hash = memoized_spec_hash(&self.spec_hash_cache, name, &spec, spec_hash)?;
 
         Some(DesiredRepo {
             enabled: spec.enabled,
-            spec_hash,
+            spec_hash: hash,
         })
     }
 
@@ -409,6 +429,21 @@ struct ReconcileRepoManager<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     tier: String,
     redaction_disabled: bool,
+}
+
+/// Whether a completed build should record a generation. A deep-sharded repo that
+/// was not already present is skipped (`reload_if_present` returned false) → `None`;
+/// every other case records the generation.
+fn apply_generation(
+    deep: bool,
+    applied: bool,
+    generation: RepoGeneration,
+) -> Option<RepoGeneration> {
+    if deep && !applied {
+        None
+    } else {
+        Some(generation)
+    }
 }
 
 #[async_trait]
@@ -455,10 +490,14 @@ where
             self.repos.reload(vec![(repo_id, name.to_string(), repo)]);
             true
         };
-        Ok(applied.then_some(RepoGeneration {
-            spec_hash,
-            storage_gen,
-        }))
+        Ok(apply_generation(
+            deep,
+            applied,
+            RepoGeneration {
+                spec_hash,
+                storage_gen,
+            },
+        ))
     }
 
     fn drop_repo(&self, name: &str) {
@@ -487,6 +526,20 @@ struct ReconcileDriver<Repo> {
     reconcile_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
+/// Single-flight guard: run `body` under `lock` iff it is free (`try_lock`), else
+/// skip (never queue) and return `None`. The tokio Mutex is await-safe, so the
+/// guard is intentionally held across `body`'s await.
+async fn run_exclusive<F, Fut, T>(lock: &tokio::sync::Mutex<()>, body: F) -> Option<T>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
+{
+    let Ok(_guard) = lock.try_lock() else {
+        return None;
+    };
+    Some(body().await)
+}
+
 impl<Repo> ReconcileDriver<Repo>
 where
     Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
@@ -512,57 +565,58 @@ where
         // caller today and is sequential, so this can't currently contend; it
         // keeps the pub reconcile() entry safe if ever driven concurrently. The
         // tokio Mutex is await-safe, so the guard is held across the whole pass.
-        let Ok(_guard) = self.reconcile_lock.try_lock() else {
-            return Ok(());
-        };
+        // A held lock means "skip this pass", which is a success (Ok(())).
+        run_exclusive(&self.reconcile_lock, move || async move {
+            let config = ReconcileConfigSource {
+                configs: self.configs.clone(),
+                spec_hash_cache: self.spec_hash_cache.clone(),
+            };
+            let manager = ReconcileRepoManager {
+                configs: self.configs.clone(),
+                repo_factory: self.repo_factory.clone(),
+                repos: self.repos.clone(),
+                tier,
+                redaction_disabled: self.redaction_disabled,
+            };
+            let current = self.reconcile_state.load_full();
+            let outcome = config_reconcile::reconcile(
+                &config,
+                &manager,
+                &current,
+                repos_manager_concurrency()?,
+            )
+            .await?;
 
-        let config = ReconcileConfigSource {
-            configs: self.configs.clone(),
-            spec_hash_cache: self.spec_hash_cache.clone(),
-        };
-        let manager = ReconcileRepoManager {
-            configs: self.configs.clone(),
-            repo_factory: self.repo_factory.clone(),
-            repos: self.repos.clone(),
-            tier,
-            redaction_disabled: self.redaction_disabled,
-        };
-        let current = self.reconcile_state.load_full();
-        let outcome =
-            config_reconcile::reconcile(&config, &manager, &current, repos_manager_concurrency()?)
-                .await?;
+            if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
+                info!(
+                    "reconcile: built={} rebuilt={} dropped={} failed={}",
+                    outcome.built,
+                    outcome.rebuilt,
+                    outcome.dropped,
+                    outcome.failed.len(),
+                );
+            }
+            STATS::reconcile_applied.add_value((outcome.built + outcome.rebuilt) as i64);
+            STATS::reconcile_dropped.add_value(outcome.dropped as i64);
+            STATS::reconcile_failed_repos.add_value(outcome.failed.len() as i64);
+            self.reconcile_state.store(Arc::new(outcome.next_state));
 
-        if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
-            info!(
-                "reconcile: built={} rebuilt={} dropped={} failed={}",
-                outcome.built,
-                outcome.rebuilt,
-                outcome.dropped,
-                outcome.failed.len(),
-            );
-        }
-        STATS::reconcile_applied.add_value((outcome.built + outcome.rebuilt) as i64);
-        STATS::reconcile_dropped.add_value(outcome.dropped as i64);
-        STATS::reconcile_failed_repos.add_value(outcome.failed.len() as i64);
-        self.reconcile_state.store(Arc::new(outcome.next_state));
+            // Evict spec-hash cache entries for repos no longer in the manifest.
+            // Done here (once per pass) because ConfigSource has no end-of-pass
+            // hook. The std Mutex is acquired after all awaits, not across one.
+            if let Some(manifest) = self.configs.manifest() {
+                let live: HashSet<&str> = manifest
+                    .repos
+                    .iter()
+                    .map(|e| e.repo_name.as_str())
+                    .collect();
+                retain_live_cache_entries(&self.spec_hash_cache, &live);
+            }
 
-        // Evict spec-hash cache entries for repos no longer in the manifest. Done
-        // here (once per pass) because ConfigSource has no end-of-pass hook. The
-        // std Mutex is acquired after all awaits and not held across one.
-        if let Some(manifest) = self.configs.manifest() {
-            let live: HashSet<&str> = manifest
-                .repos
-                .iter()
-                .map(|e| e.repo_name.as_str())
-                .collect();
-            let mut cache = self
-                .spec_hash_cache
-                .lock()
-                .expect("spec_hash_cache poisoned");
-            cache.retain(|name, _| live.contains(name.as_str()));
-        }
-
-        Ok(())
+            Ok(())
+        })
+        .await
+        .unwrap_or(Ok(()))
     }
 }
 
@@ -584,6 +638,27 @@ fn reconcile_tick_interval() -> Duration {
     Duration::from_secs(tick_interval_secs(on, knob_secs))
 }
 
+/// Loop mechanics for the reconcile background task: run `pass` immediately, then
+/// forever wake on either a `trigger` notification or the backstop
+/// `sleep(next_interval())` and run `pass` again. `next_interval` is injected (not
+/// read from justknobs here) so tests can drive the loop without registered knobs.
+async fn reconcile_loop<F, Fut>(
+    pass: F,
+    trigger: Arc<Notify>,
+    mut next_interval: impl FnMut() -> Duration,
+) where
+    F: Fn() -> Fut,
+    Fut: Future<Output = ()>,
+{
+    loop {
+        pass().await;
+        tokio::select! {
+            _ = trigger.notified() => {}
+            _ = tokio::time::sleep(next_interval()) => {}
+        }
+    }
+}
+
 /// Spawn the background reconcile loop. Owns an Arc to the driver (task is
 /// `'static`); aborted on Drop. Runs one pass immediately, then again on each
 /// wake — a config-change trigger or the backstop.
@@ -597,21 +672,22 @@ where
         + Sync
         + 'static,
 {
-    mononoke::spawn_task(async move {
-        loop {
-            let start = Instant::now();
-            if let Err(e) = driver.pass().await {
-                warn!("reconcile pass failed: {e:#}");
+    mononoke::spawn_task(reconcile_loop(
+        move || {
+            let driver = driver.clone();
+            async move {
+                // Time the whole pass; keep the metric emission adjacent to the pass.
+                let start = Instant::now();
+                if let Err(e) = driver.pass().await {
+                    warn!("reconcile pass failed: {e:#}");
+                }
+                STATS::reconcile_tick_duration_ms
+                    .add_value(start.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
             }
-            STATS::reconcile_tick_duration_ms
-                .add_value(start.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
-            let period = reconcile_tick_interval();
-            tokio::select! {
-                _ = trigger.notified() => {}
-                _ = tokio::time::sleep(period) => {}
-            }
-        }
-    })
+        },
+        trigger,
+        reconcile_tick_interval,
+    ))
 }
 
 /// A `ConfigUpdateReceiver` that wakes the reconcile loop on any config change
