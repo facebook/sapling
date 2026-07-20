@@ -43,7 +43,7 @@ namespace facebook::eden {
 
 namespace {
 constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
-}
+} // namespace
 
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
@@ -220,9 +220,7 @@ ObjectStore::co_getRootTree(
     auto result = co_await backingStore_->co_getRootTree(rootId, context);
     stats_->increment(&ObjectStoreStats::getRootTreeFromBackingStore);
     auto tree = changeCaseSensitivity(std::move(result.tree), caseSensitive_);
-    if (!tree->isRestricted()) {
-      treeCache_->insert(result.treeId, tree);
-    }
+    treeCache_->insert(result.treeId, tree);
     co_return GetRootTreeResult{std::move(tree), result.treeId};
   } catch (...) {
     stats_->increment(&ObjectStoreStats::getRootTreeFailed);
@@ -292,9 +290,7 @@ folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
   auto result = co_await getTreeImpl(id, fetchContext, watch);
   TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
   auto tree = changeCaseSensitivity(std::move(result.tree), caseSensitive_);
-  if (!tree->isRestricted()) {
-    treeCache_->insert(tree->getObjectId(), tree);
-  }
+  treeCache_->insert(tree->getObjectId(), tree);
   fetchContext->didFetch(
       ObjectFetchContext::Tree, id, result.origin, tree->getSizeBytes());
   updateProcessFetch(*fetchContext);

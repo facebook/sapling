@@ -209,6 +209,107 @@ TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
+TEST_P(ObjectStoreTest, getTree_doesNotCacheRestrictedTree) {
+  auto* tree =
+      fakeBackingStore->putRestrictedTree(ObjectId{"restricted_tree"}, {});
+  tree->setReady();
+  auto treeId = tree->get().getObjectId();
+
+  objectStore->getTree(treeId, context).get(0ms);
+  objectStore->getTree(treeId, context).get(0ms);
+
+  ASSERT_EQ(2, loggingContext->requests.size());
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[1].origin);
+}
+
+TEST_P(ObjectStoreTest, getTree_doesNotCacheTreeWithRestrictedChild) {
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+  entries.emplace(
+      "restricted"_pc,
+      TreeEntry{
+          ObjectId{"restricted_child"},
+          TreeEntryType::TREE,
+          /*isRestricted=*/true,
+          /*hasACL=*/true});
+  auto parentTreeId = putReadyTree(entries);
+
+  objectStore->getTree(parentTreeId, context).get(0ms);
+  objectStore->getTree(parentTreeId, context).get(0ms);
+
+  ASSERT_EQ(2, loggingContext->requests.size());
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[1].origin);
+}
+
+TEST_P(ObjectStoreTest, treeCache_doesNotInsertTreeWithRestrictedChild) {
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+  entries.emplace(
+      "restricted"_pc,
+      TreeEntry{
+          ObjectId{"restricted_child"},
+          TreeEntryType::TREE,
+          /*isRestricted=*/true,
+          /*hasACL=*/true});
+  auto* parentTree = fakeBackingStore->putTree(entries);
+  parentTree->setReady();
+  auto parentTreeId = parentTree->get().getObjectId();
+
+  treeCache->insert(parentTreeId, parentTree->getFuture().get());
+
+  EXPECT_EQ(nullptr, treeCache->get(parentTreeId));
+}
+
+TEST_P(ObjectStoreTest, getTree_cachesTreeWithAccessibleAclChild) {
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+  entries.emplace(
+      "acl"_pc,
+      TreeEntry{
+          ObjectId{"acl_child"},
+          TreeEntryType::TREE,
+          /*isRestricted=*/false,
+          /*hasACL=*/true});
+  auto parentTreeId = putReadyTree(entries);
+
+  objectStore->getTree(parentTreeId, context).get(0ms);
+  objectStore->getTree(parentTreeId, context).get(0ms);
+
+  ASSERT_EQ(2, loggingContext->requests.size());
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
+  EXPECT_EQ(
+      ObjectFetchContext::FromMemoryCache, loggingContext->requests[1].origin);
+}
+
+TEST_P(ObjectStoreTest, getRootTree_doesNotSeedCacheWithRestrictedChild) {
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+  entries.emplace(
+      "restricted"_pc,
+      TreeEntry{
+          ObjectId{"restricted_child"},
+          TreeEntryType::TREE,
+          /*isRestricted=*/true,
+          /*hasACL=*/true});
+  auto* rootTree = fakeBackingStore->putTree(entries);
+  rootTree->setReady();
+  RootId rootId{"restricted_root"};
+  auto* commit = fakeBackingStore->putCommit(rootId, rootTree);
+  commit->setReady();
+
+  auto rootResult = objectStore->getRootTree(rootId, context).get(0ms);
+  EXPECT_EQ(nullptr, treeCache->get(rootResult.treeId));
+
+  objectStore->getTree(rootResult.treeId, context).get(0ms);
+
+  ASSERT_EQ(1, loggingContext->requests.size());
+  EXPECT_EQ(
+      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
+}
+
 TEST_P(ObjectStoreTest, getTree_prefetch_missing_aux_data) {
   // FakeBackingStore provides a tree with no aux data
   auto tree1 =

@@ -15,6 +15,22 @@ namespace facebook::eden {
 static constexpr folly::StringPiece kTreeCacheMemory{"tree_cache.memory"};
 static constexpr folly::StringPiece kTreeCacheItems{"tree_cache.items"};
 
+namespace {
+
+bool treeHasRestrictedAclMetadata(const Tree& tree) {
+  if (tree.isRestricted()) {
+    return true;
+  }
+  for (const auto& entry : tree) {
+    if (entry.second.isRestricted()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 std::shared_ptr<const Tree> TreeCache::get(const ObjectId& id) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
     return getSimple(id);
@@ -23,7 +39,8 @@ std::shared_ptr<const Tree> TreeCache::get(const ObjectId& id) {
 }
 
 void TreeCache::insert(ObjectId id, std::shared_ptr<const Tree> tree) {
-  if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
+  if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue() &&
+      !treeHasRestrictedAclMetadata(*tree)) {
     return insertSimple(std::move(id), std::move(tree));
   }
 }
