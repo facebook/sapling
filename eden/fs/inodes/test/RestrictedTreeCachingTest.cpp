@@ -7,8 +7,10 @@
 
 #include <gtest/gtest.h>
 
+#include "eden/common/utils/DirType.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -228,6 +230,116 @@ TEST_F(
   ASSERT_NE(it, rootOverlay.end());
 
   EXPECT_FALSE(it->second.isRestricted());
+}
+
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_statTransitionRefreshesStaleChildOverlay) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/child/file.txt", "secret content");
+  builder.setDirIsRestricted("restricted");
+  builder.setDirHasAcl("restricted/child");
+  initMountWithTtl(builder, 0);
+
+  auto restrictedObjectId = getRestrictedTreeObjectId(builder);
+  auto* backingStore = testMount_->getBackingStore().get();
+  backingStore->setCheckPermissionResult(restrictedObjectId, true);
+
+  auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+
+  auto* overlay = testMount_->getEdenMount()->getOverlay();
+  const auto& restrictedTree =
+      backingStore->getStoredTree(restrictedObjectId)->get();
+  auto childIt = restrictedTree.find("child"_pc);
+  ASSERT_NE(childIt, restrictedTree.cend());
+  ASSERT_FALSE(childIt->second.isRestricted());
+  ASSERT_EQ(std::optional<bool>{true}, childIt->second.hasACL());
+
+  auto staleChildInode = overlay->allocateInodeNumber();
+  DirContents staleContents{kPathMapDefaultCaseSensitive};
+  staleContents.emplace(
+      "child"_pc,
+      DirEntry{
+          dtype_to_mode(
+              mode_to_dtype(modeFromTreeEntryType(childIt->second.getType()))),
+          staleChildInode,
+          childIt->second.getObjectId(),
+          /*isRestricted=*/true,
+          /*hasACL=*/true});
+  overlay->saveOverlayDir(
+      restrictedInode->getNodeId(), staleContents, /*isMaterialized=*/false);
+
+  auto context = ObjectFetchContext::getNullContext();
+  restrictedInode->stat(context).get();
+  ASSERT_FALSE(restrictedInode->isRestricted());
+
+  {
+    auto contents = restrictedInode->lockContentsRead();
+    auto it = contents->entries.find("child"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_EQ(staleChildInode, it->second.getInodeNumber());
+    EXPECT_FALSE(it->second.isRestricted());
+    EXPECT_EQ(std::optional<bool>{true}, it->second.hasACL());
+    EXPECT_FALSE(it->second.isMaterialized());
+  }
+
+  auto healedOverlay = overlay->loadOverlayDir(restrictedInode->getNodeId());
+  auto healedIt = healedOverlay.find("child"_pc);
+  ASSERT_NE(healedIt, healedOverlay.end());
+  EXPECT_EQ(staleChildInode, healedIt->second.getInodeNumber());
+  EXPECT_FALSE(healedIt->second.isRestricted());
+  EXPECT_EQ(std::optional<bool>{true}, healedIt->second.hasACL());
+
+  EXPECT_EQ(
+      "secret content", testMount_->readFile("restricted/child/file.txt"));
+}
+
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_statTransitionLeavesMismatchedOverlayRestricted) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/child/file.txt", "secret content");
+  builder.setDirIsRestricted("restricted");
+  initMountWithTtl(builder, 0);
+
+  auto restrictedObjectId = getRestrictedTreeObjectId(builder);
+  auto* backingStore = testMount_->getBackingStore().get();
+  backingStore->setCheckPermissionResult(restrictedObjectId, true);
+
+  auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+
+  auto* overlay = testMount_->getEdenMount()->getOverlay();
+  auto staleChildInode = overlay->allocateInodeNumber();
+  DirContents staleContents{kPathMapDefaultCaseSensitive};
+  staleContents.emplace(
+      "different"_pc,
+      DirEntry{
+          S_IFDIR | 0755,
+          staleChildInode,
+          ObjectId{"different-child"},
+          /*isRestricted=*/true,
+          /*hasACL=*/true});
+  overlay->saveOverlayDir(
+      restrictedInode->getNodeId(), staleContents, /*isMaterialized=*/false);
+
+  auto context = ObjectFetchContext::getNullContext();
+  restrictedInode->stat(context).get();
+  ASSERT_FALSE(restrictedInode->isRestricted());
+
+  {
+    auto contents = restrictedInode->lockContentsRead();
+    auto it = contents->entries.find("different"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_EQ(staleChildInode, it->second.getInodeNumber());
+    EXPECT_TRUE(it->second.isRestricted());
+  }
+
+  auto loadedOverlay = overlay->loadOverlayDir(restrictedInode->getNodeId());
+  auto loadedIt = loadedOverlay.find("different"_pc);
+  ASSERT_NE(loadedIt, loadedOverlay.end());
+  EXPECT_TRUE(loadedIt->second.isRestricted());
 }
 
 // --- Checkout tests ---

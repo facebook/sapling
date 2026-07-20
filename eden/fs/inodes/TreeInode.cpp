@@ -176,6 +176,51 @@ bool dirEntryMatchesTreeEntry(
              dirEntry.aclRootState(), treeEntry.aclRootState());
 }
 
+bool canRefreshStaleDeniedAclRootState(
+    const ObjectStore& objectStore,
+    const DirEntry& dirEntry,
+    const TreeEntry& treeEntry) {
+  if (!dirEntry.isRestricted() || treeEntry.isRestricted()) {
+    return false;
+  }
+  if (!compareTreeEntryType(
+          treeEntryTypeFromMode(dirEntry.getInitialMode()),
+          treeEntry.getType())) {
+    return false;
+  }
+  if (dirEntry.isMaterialized()) {
+    return true;
+  }
+  return dirEntry.getObjectIdPtr() != nullptr &&
+      objectStore.areObjectsKnownIdentical(
+          dirEntry.getObjectId(), treeEntry.getObjectId());
+}
+
+bool refreshStaleDeniedAclRootStates(
+    const ObjectStore& objectStore,
+    DirContents& dir,
+    const Tree& tree) {
+  bool changed = false;
+  for (auto& entry : dir) {
+    auto it = tree.find(entry.first);
+    if (it == tree.cend()) {
+      continue;
+    }
+    auto& dirEntry = entry.second;
+    const auto& treeEntry = it->second;
+    if (canRefreshStaleDeniedAclRootState(objectStore, dirEntry, treeEntry)) {
+      auto newState = makeAclRootState(
+          /*isRestricted=*/false,
+          preferKnownAclState(treeEntry.hasACL(), dirEntry.hasACL()));
+      if (dirEntry.aclRootState() != newState) {
+        dirEntry.setAclRootState(newState);
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
 } // namespace
 
 /**
@@ -436,7 +481,7 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
       .getTree(*treeId, fetchContext)
       .thenValue([self = inodePtrFromThis(),
                   savedTreeId = *treeId](std::shared_ptr<const Tree> tree) {
-        auto newContents =
+        auto newContentsResult =
             self->buildUnrestrictedDirContents(self->getNodeId(), *tree);
 
         auto renameLock = self->getMount()->acquireRenameLock();
@@ -449,8 +494,26 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
           if (contents->treeId != savedTreeId) {
             return; // treeId changed (checkout raced), stale fetch
           }
-          contents->entries = std::move(newContents);
+          // TreeInodeState::isMaterialized() is !treeId.has_value(); matching
+          // savedTreeId means this directory is still unmaterialized.
+          XDCHECK(contents->treeId.has_value());
+          XDCHECK(!contents->isMaterialized());
+          contents->entries = std::move(newContentsResult.contents);
           contents->treeId = tree->getObjectId();
+          if (newContentsResult.refreshedStaleDeniedAclRootStates) {
+            try {
+              self->saveOverlayDir(
+                  self->getNodeId(),
+                  contents->entries,
+                  /*isMaterialized=*/false);
+            } catch (const std::exception& ex) {
+              XLOGF(
+                  WARN,
+                  "failed to persist refreshed unrestricted overlay contents for inode {}: {}",
+                  self->getNodeId(),
+                  folly::exceptionStr(ex));
+            }
+          }
         }
 
         XLOGF(
@@ -1592,8 +1655,24 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                    tree = std::move(tree),
                    loadOverlayDirSpan = std::move(
                        loadOverlayDirSpan)]() mutable -> unique_ptr<InodeBase> {
-                auto dir = self->buildUnrestrictedDirContents(
+                auto dirContents = self->buildUnrestrictedDirContents(
                     number, *tree, std::move(loadOverlayDirSpan));
+                if (dirContents.refreshedStaleDeniedAclRootStates) {
+                  // This path only loads non-materialized entries whose tree
+                  // fetch succeeded as unrestricted.
+                  try {
+                    self->saveOverlayDir(
+                        number,
+                        dirContents.contents,
+                        /*isMaterialized=*/false);
+                  } catch (const std::exception& ex) {
+                    XLOGF(
+                        WARN,
+                        "failed to persist refreshed unrestricted overlay contents for inode {}: {}",
+                        number,
+                        folly::exceptionStr(ex));
+                  }
+                }
 
                 return std::make_unique<TreeInode>(
                     number,
@@ -1601,7 +1680,7 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     childName,
                     entryMode,
                     std::nullopt,
-                    std::move(dir),
+                    std::move(dirContents.contents),
                     treeId,
                     /*isRestricted=*/false,
                     preferKnownAclState(tree->hasACL(), entryHasACL));
@@ -1937,7 +2016,8 @@ DirContents TreeInode::buildDirFromTree(
   return DirContents{std::move(entries), caseSensitive};
 }
 
-DirContents TreeInode::buildUnrestrictedDirContents(
+TreeInode::BuildUnrestrictedDirContentsResult
+TreeInode::buildUnrestrictedDirContents(
     InodeNumber inodeNumber,
     const Tree& tree,
     std::optional<MiniTracer::Span> loadOverlayDirSpan) {
@@ -1947,6 +2027,9 @@ DirContents TreeInode::buildUnrestrictedDirContents(
   loadOverlayDirSpan.reset();
 
   if (!overlayDir.empty()) {
+    auto refreshedStaleDeniedAclRootStates =
+        refreshStaleDeniedAclRootStates(getObjectStore(), overlayDir, tree);
+
     if (auto differences = findEntryDifferences(overlayDir, tree)) {
       std::string diffString;
       for (const auto& diff : *differences) {
@@ -1960,10 +2043,13 @@ DirContents TreeInode::buildUnrestrictedDirContents(
           inodeNumber,
           diffString);
     }
-    return overlayDir;
+    return BuildUnrestrictedDirContentsResult{
+        std::move(overlayDir), refreshedStaleDeniedAclRootStates};
   }
 
-  return saveDirFromTree(inodeNumber, &tree, getMount());
+  return BuildUnrestrictedDirContentsResult{
+      saveDirFromTree(inodeNumber, &tree, getMount()),
+      /*refreshedStaleDeniedAclRootStates=*/false};
 }
 
 FileInodePtr TreeInode::createImpl(

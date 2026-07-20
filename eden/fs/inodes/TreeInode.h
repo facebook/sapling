@@ -1010,10 +1010,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Build DirContents for an unrestricted tree by checking the overlay
    * first (preserving existing inode numbers), falling back to
-   * saveDirFromTree() for fresh allocation. Reused by startLoadingInode()
-   * and transitionToUnrestricted().
+   * saveDirFromTree() for fresh allocation. Reports whether stale denied
+   * ACL root states were refreshed. Reused by startLoadingInode() and
+   * transitionToUnrestricted().
    */
-  DirContents buildUnrestrictedDirContents(
+  struct BuildUnrestrictedDirContentsResult {
+    DirContents contents;
+    bool refreshedStaleDeniedAclRootStates{false};
+  };
+
+  BuildUnrestrictedDirContentsResult buildUnrestrictedDirContents(
       InodeNumber inodeNumber,
       const Tree& tree,
       std::optional<MiniTracer::Span> loadOverlayDirSpan = std::nullopt);

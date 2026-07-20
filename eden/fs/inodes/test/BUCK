@@ -724,6 +724,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",
