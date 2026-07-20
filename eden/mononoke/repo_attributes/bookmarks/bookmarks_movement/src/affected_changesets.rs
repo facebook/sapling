@@ -368,7 +368,7 @@ impl AffectedChangesets {
 
         let sk_mf = repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestId>(ctx, bcs_id, DerivationPriority::LOW)
+            .derive::<RootSkeletonManifestId>(ctx, bcs_id, DerivationPriority::HIGH)
             .await
             .map_err(Error::from)?
             .into_skeleton_manifest_id()
@@ -380,7 +380,7 @@ impl AffectedChangesets {
             // conflicts compared to its parents.
             let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
                 repo.repo_derived_data()
-                    .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id, DerivationPriority::LOW)
+                    .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id, DerivationPriority::HIGH)
                     .await
                     .map_err(Error::from)?
                     .into_skeleton_manifest_id()
@@ -421,7 +421,7 @@ impl AffectedChangesets {
 
         let ccsm = repo
             .repo_derived_data()
-            .derive::<RootCaseConflictSkeletonManifestId>(ctx, bcs_id, DerivationPriority::LOW)
+            .derive::<RootCaseConflictSkeletonManifestId>(ctx, bcs_id, DerivationPriority::HIGH)
             .await
             .map_err(Error::from)?
             .into_inner_id()
@@ -438,7 +438,7 @@ impl AffectedChangesets {
                         .derive::<RootCaseConflictSkeletonManifestId>(
                             ctx,
                             parent_bcs_id,
-                            DerivationPriority::LOW,
+                            DerivationPriority::HIGH,
                         )
                         .await
                         .map_err(Error::from)?

@@ -2401,13 +2401,13 @@ async fn fetch_manifest_file(
 
     let root_id: compat::ContentManifestId = if use_content_manifests {
         repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::HIGH)
             .await?
             .into_content_manifest_id()
             .into()
     } else {
         repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::HIGH)
             .await?
             .into_fsnode_id()
             .into()
