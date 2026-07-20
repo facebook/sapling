@@ -960,6 +960,13 @@ where
         // per-task repo rebuild below.
         self.refresh_repo_names_in_tier(&repo_configs);
 
+        // When reconcile owns reload, skip the rebuild below (else both rebuild
+        // the same repo on one change). Only the rebuild is gated; the names
+        // refresh above stays unconditional (reconcile does not maintain it).
+        if justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
+            return Ok(());
+        }
+
         let candidates = self.reloadable_repo(repo_configs.clone());
         let candidate_count = candidates.len();
         let applied_snapshot = self.applied_configs.load_full();
@@ -1048,6 +1055,13 @@ where
             }
             Arc::new(snapshot)
         });
+
+        // When reconcile owns reload, skip the rebuild below (else both rebuild
+        // the same repo on one change). Only the rebuild is gated; the names
+        // patch above stays unconditional (reconcile does not maintain it).
+        if justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
+            return Ok(());
+        }
 
         // Skip disabled repos, and repos not served on this host: an unserved
         // repo has no applied_configs entry, so it would fall through the dedup
