@@ -106,11 +106,14 @@ pub(super) fn format_timestamp(ts: &Timestamp) -> String {
 /// Format a duration in a human-readable format
 pub(super) fn format_duration(duration: &Duration) -> String {
     let total_secs = duration.as_secs();
-    let hours = total_secs / 3600;
+    let days = total_secs / 86400;
+    let hours = (total_secs % 86400) / 3600;
     let minutes = (total_secs % 3600) / 60;
     let seconds = total_secs % 60;
 
-    if hours > 0 {
+    if days > 0 {
+        format!("{days}d {hours}h")
+    } else if hours > 0 {
         format!("{hours}h {minutes}m")
     } else if minutes > 0 {
         format!("{minutes}m {seconds}s")
@@ -598,7 +601,9 @@ fn print_timing_section(
         );
     }
     if requests_per_hour > 0.0 {
-        println!("  Completion Rate:     {requests_per_hour:.0} requests/hour");
+        // Show decimals: at whole-number resolution a slow backfill rounds to
+        // an unhelpful 0 or 1 requests/hour.
+        println!("  Completion Rate:     {requests_per_hour:.2} requests/hour");
     }
     if let Some(est) = estimated_remaining {
         println!("  Est. Remaining:      ~{}", format_duration(est));
@@ -836,6 +841,10 @@ mod tests {
     fn test_format_duration() {
         // 12345s = 3h 25m 45s; shown as "{h}h {m}m" once hours are non-zero.
         assert_eq!(format_duration(&Duration::from_secs(12345)), "3h 25m");
+        // Over 24h switches to "{d}d {h}h": 200000s = 2d 7h 33m 20s.
+        assert_eq!(format_duration(&Duration::from_secs(200000)), "2d 7h");
+        // Exactly 24h: 1d 0h.
+        assert_eq!(format_duration(&Duration::from_secs(86400)), "1d 0h");
     }
 
     #[test]
