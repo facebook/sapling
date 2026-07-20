@@ -1772,6 +1772,10 @@ impl RepoFactory {
 
         if use_local_for_git
             && repo_config.default_commit_identity_scheme == CommitIdentityScheme::GIT
+            // A Local WBC with no warmers (NoDerivation, e.g. gitimport) can't
+            // warm anything; leave such callers on their configured cache kind.
+            && self.env.bookmark_cache_options.derived_data
+                != BookmarkCacheDerivedData::NoDerivation
         {
             Ok((
                 BookmarkCacheKind::Local,
