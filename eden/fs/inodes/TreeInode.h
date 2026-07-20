@@ -742,6 +742,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const InodePtr& inode,
       const std::optional<Tree::value_type>& newScmEntry);
 
+  void updateRestrictedPlaceholderFromTreeEntry(const TreeEntry& treeEntry);
+
   RestrictionTransitionPrep prepareRestrictionTransition(
       CheckoutContext* ctx,
       const TreeInodePtr& treeInode,

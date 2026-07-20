@@ -33,8 +33,8 @@ The checkout remains interrupted and asks the user to resume it.
   If there are conflicts, run `sl go --clean *` to discard changes, or `sl go --merge *` to merge. (glob)
   [255]
 
-The suggested resume command is blocked by EdenFS path ACL enforcement.
+The suggested resume command succeeds without walking into the restricted
+directory.
 
   $ sl go $B
-  abort: EdenError: path ACL restriction: directory access denied for dir (inode *): Permission denied (glob)
-  [255]
+  $ sl st

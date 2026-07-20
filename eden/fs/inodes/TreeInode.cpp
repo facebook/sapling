@@ -5102,29 +5102,54 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
 
   auto& entry = it->second;
   if (auto childPtr = entry.getInodePtr()) {
-    if (auto treeInode = childPtr.asTreePtrOrNull(); treeInode &&
-        treeInode->isRestricted() && oldScmEntry &&
-        oldScmEntry->second.isTree() &&
-        (!newScmEntry || !newScmEntry->second.isTree())) {
-      // Restricted children are opaque to checkout. They cannot have visible
-      // local modifications, so remove or replace the parent entry without
-      // fetching or walking the restricted tree.
-      auto descendants = treeInode->getInMemoryDescendants();
-      auto success = removeOrReplaceCheckoutEntryLocked(
-          ctx,
-          state,
-          contents,
-          it,
-          childPtr,
-          newScmEntry,
-          wasDirectoryListModified);
-      if (success.hasException()) {
-        ctx->addError(this, name, success.exception());
-        hadConflicts = true;
+    if (auto treeInode = childPtr.asTreePtrOrNull();
+        treeInode && treeInode->isRestricted()) {
+      const bool destinationIsRestrictedTree = newScmEntry &&
+          newScmEntry->second.isTree() && newScmEntry->second.isRestricted();
+      const bool removeOrReplaceWithNonTree = oldScmEntry &&
+          oldScmEntry->second.isTree() &&
+          (!newScmEntry || !newScmEntry->second.isTree());
+
+      if (destinationIsRestrictedTree) {
+        // Restricted children are opaque to checkout. If the destination is
+        // still restricted, update the loaded placeholder and parent entry
+        // metadata without walking the child.
+        // TODO: Make this repair path unnecessary by preventing restricted
+        // TreeInodes from retaining stale checkout contents. A loaded
+        // restricted child should only be an empty placeholder whose tree id
+        // and ACL state match the parent DirEntry, so checkout should never
+        // need to repair it here.
+        if (!ctx->isDryRun()) {
+          treeInode->updateRestrictedPlaceholderFromTreeEntry(
+              newScmEntry->second);
+          entry.setDematerialized(newScmEntry->second.getObjectId());
+          entry.setAclRootState(newScmEntry->second.aclRootState());
+          wasDirectoryListModified = true;
+        }
         return nullptr;
       }
-      ctx->increaseCheckoutCounter(1 + descendants);
-      return nullptr;
+
+      if (removeOrReplaceWithNonTree) {
+        // Restricted children are opaque to checkout. They cannot have visible
+        // local modifications, so remove or replace the parent entry without
+        // fetching or walking the restricted tree.
+        auto descendants = treeInode->getInMemoryDescendants();
+        auto success = removeOrReplaceCheckoutEntryLocked(
+            ctx,
+            state,
+            contents,
+            it,
+            childPtr,
+            newScmEntry,
+            wasDirectoryListModified);
+        if (success.hasException()) {
+          ctx->addError(this, name, success.exception());
+          hadConflicts = true;
+          return nullptr;
+        }
+        ctx->increaseCheckoutCounter(1 + descendants);
+        return nullptr;
+      }
     }
 
     // If the inode is already loaded, create a CheckoutAction to process it
@@ -5515,6 +5540,33 @@ CheckoutActionResult TreeInode::replaceFileEntry(
   return CheckoutActionResult{InvalidationRequired::Yes};
 }
 
+void TreeInode::updateRestrictedPlaceholderFromTreeEntry(
+    const TreeEntry& treeEntry) {
+  XCHECK(treeEntry.isTree());
+  XCHECK(treeEntry.isRestricted());
+  XCHECK(isRestricted());
+
+  const auto newTreeId = treeEntry.getObjectId();
+  const auto newAclRootState = treeEntry.aclRootState();
+  bool stateChanged = aclRootState() != newAclRootState;
+  {
+    auto contents = getContentsUnchecked().wlock();
+    XCHECK(contents->entries.empty())
+        << "restricted TreeInode must remain an empty placeholder: "
+        << getNodeId().get();
+    stateChanged = stateChanged || contents->isMaterialized() ||
+        !contents->treeId.has_value() ||
+        !contents->treeId->bytesEqual(newTreeId);
+    contents->treeId = newTreeId;
+    if (stateChanged) {
+      saveOverlayDir(contents->entries, /*isMaterialized=*/false);
+    }
+  }
+
+  setAclRootState(newAclRootState);
+  assertRestrictedPlaceholderInvariant();
+}
+
 TreeInode::RestrictionTransitionPrep TreeInode::prepareRestrictionTransition(
     CheckoutContext* ctx,
     const TreeInodePtr& treeInode,
@@ -5878,6 +5930,24 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
           ctx, treeInode, replacementEntry, newRestricted);
       using PrepState = RestrictionTransitionPrep::State;
       if (prep.state == PrepState::NoChange) {
+        if (newRestricted && prep.oldRestricted) {
+          ctx->increaseCheckoutCounter(1 + treeInode->getInMemoryDescendants());
+          if (!ctx->isDryRun()) {
+            treeInode->updateRestrictedPlaceholderFromTreeEntry(
+                replacementEntry.second);
+            auto currentName = getInodeName(ctx, treeInode);
+            childDematerialized(
+                ctx->renameLock(),
+                currentName.piece(),
+                replacementEntry.second.getObjectId(),
+                !getMount()
+                     ->getEdenConfig()
+                     ->skipCheckoutChildOverlayWrites.getValue(),
+                replacementEntry.second.isRestricted(),
+                replacementEntry.second.hasACL());
+          }
+          co_return CheckoutActionResult{InvalidationRequired::No};
+        }
         if (newRestricted && !newTree) {
           co_return CheckoutActionResult{InvalidationRequired::No};
         }

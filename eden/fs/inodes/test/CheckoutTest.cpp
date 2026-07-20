@@ -2797,9 +2797,7 @@ TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
 }
 
-TEST_P(
-    CheckoutTest,
-    checkoutLeavesLoadedRestrictedChildPlaceholderMetadataStale) {
+TEST_P(CheckoutTest, checkoutUpdatesLoadedRestrictedChildPlaceholderMetadata) {
   auto currentBuilder = FakeTreeBuilder{};
   currentBuilder.setFile("project/notes/readme.md", "current note\n");
   currentBuilder.setFile(
@@ -2843,19 +2841,17 @@ TEST_P(
   ASSERT_TRUE(checkoutResult.isReady());
   EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
 
-  // Before the repair, both checkout implementations leave already loaded
-  // restricted child placeholder metadata stale.
   {
     auto contents = parent->lockContentsRead();
     auto it = contents->entries.find("restricted_child"_pc);
     ASSERT_NE(it, contents->entries.end());
     EXPECT_TRUE(it->second.isRestricted());
-    EXPECT_EQ(*oldRestrictedTreeId, it->second.getObjectId());
+    EXPECT_EQ(targetRestrictedTreeId, it->second.getObjectId());
   }
 
   auto updatedRestrictedTreeId = restrictedTree->getObjectId();
   ASSERT_TRUE(updatedRestrictedTreeId.has_value());
-  EXPECT_EQ(*oldRestrictedTreeId, *updatedRestrictedTreeId);
+  EXPECT_EQ(targetRestrictedTreeId, *updatedRestrictedTreeId);
 }
 
 TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnModifiedTrackedFile) {
