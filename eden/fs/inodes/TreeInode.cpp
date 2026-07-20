@@ -5878,20 +5878,6 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
           ctx, treeInode, replacementEntry, newRestricted);
       using PrepState = RestrictionTransitionPrep::State;
       if (prep.state == PrepState::NoChange) {
-        if (newRestricted && prep.oldRestricted) {
-          auto restrictedNewTree = newTree && newTree->isRestricted()
-              ? std::move(newTree)
-              : std::make_shared<Tree>(
-                    Tree::Restricted{},
-                    Tree::container{CHECK_NOTNULL(getMount())
-                                        ->getCheckoutConfig()
-                                        ->getCaseSensitive()},
-                    replacementEntry.second.getObjectId());
-          auto result = co_await treeInode->co_checkout(
-              ctx, std::move(oldTree), std::move(restrictedNewTree));
-          co_return CheckoutActionResult{
-              InvalidationRequired::No, result.hadConflicts};
-        }
         if (newRestricted && !newTree) {
           co_return CheckoutActionResult{InvalidationRequired::No};
         }

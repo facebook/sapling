@@ -246,27 +246,29 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_run(
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.second.isTree()) {
-        auto getTreeSpan = ctx->createSpan("getTree");
-        loadTasks.push_back(
-            folly::coro::co_invoke(
-                [self,
-                 store,
-                 id = newEntry.second.getObjectId(),
-                 ctx,
-                 span = std::move(
-                     getTreeSpan)]() mutable -> folly::coro::Task<folly::Unit> {
-                  co_await folly::coro::co_reschedule_on_current_executor;
-                  try {
-                    auto tree =
-                        co_await store->co_getTree(id, ctx->getFetchContext());
-                    self->setNewTree(std::move(tree));
-                  } catch (const std::exception&) {
-                    self->error(
-                        "error getting new tree",
-                        folly::exception_wrapper{std::current_exception()});
-                  }
-                  co_return folly::unit;
-                }));
+        if (!newEntry.second.isRestricted()) {
+          auto getTreeSpan = ctx->createSpan("getTree");
+          loadTasks.push_back(
+              folly::coro::co_invoke(
+                  [self,
+                   store,
+                   id = newEntry.second.getObjectId(),
+                   ctx,
+                   span = std::move(getTreeSpan)]() mutable
+                      -> folly::coro::Task<folly::Unit> {
+                    co_await folly::coro::co_reschedule_on_current_executor;
+                    try {
+                      auto tree = co_await store->co_getTree(
+                          id, ctx->getFetchContext());
+                      self->setNewTree(std::move(tree));
+                    } catch (const std::exception&) {
+                      self->error(
+                          "error getting new tree",
+                          folly::exception_wrapper{std::current_exception()});
+                    }
+                    co_return folly::unit;
+                  }));
+        }
       } else {
         // We don't actually compare the new blob to anything, so we don't
         // need to fetch it. This just marks that the new inode will be a
