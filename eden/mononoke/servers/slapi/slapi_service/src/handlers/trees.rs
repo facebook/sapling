@@ -218,7 +218,10 @@ async fn fetch_tree<R: MononokeRepo>(
     let mut entry = TreeEntry::new(key.clone());
     let route_to_augmented = justknobs::eval(
         ROUTE_ORIGINAL_TO_AUGMENTED_HG_MANIFEST,
-        None,
+        repo.ctx()
+            .metadata()
+            .client_request_info()
+            .map(|c| c.correlator.as_str()),
         Some(repo.repo().repo_identity().name()),
     );
 
