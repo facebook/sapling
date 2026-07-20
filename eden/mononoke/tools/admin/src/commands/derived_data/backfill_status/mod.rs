@@ -65,6 +65,7 @@ use repo_identity::RepoIdentityRef;
 use requests_table::BlobstoreKey;
 use requests_table::LongRunningRequestEntry;
 use requests_table::LongRunningRequestsQueue;
+use requests_table::RecentBackfillEntry;
 use requests_table::RequestStatus;
 use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
@@ -132,6 +133,11 @@ pub(super) struct BackfillStatusArgs {
     #[clap(long, default_value = "7")]
     lookback: i64,
 
+    /// List all backfills that still have pending or in-progress work,
+    /// regardless of age. Ignores --lookback.
+    #[clap(long)]
+    active: bool,
+
     /// Show extra details:
     /// - root of a multi-repo backfill: a per-repository table
     /// - root of a single (large) repo backfill: a per-child-request table
@@ -160,7 +166,16 @@ pub(super) async fn backfill_status(
     match args.request_id {
         None => {
             // Mode 1: List recent backfills
-            list_backfills(ctx, app, &queue, &blobstore, &repo_names, args.lookback).await?;
+            list_backfills(
+                ctx,
+                app,
+                &queue,
+                &blobstore,
+                &repo_names,
+                args.lookback,
+                args.active,
+            )
+            .await?;
         }
         Some(request_id) => {
             // Mode 2: Show detailed progress for a specific backfill
@@ -230,6 +245,17 @@ async fn load_backfill_params_info(
     }
 }
 
+/// Whether a backfill still has pending or in-progress work: either its root
+/// request hasn't finished spawning children, or some child request is still
+/// queued or running.
+fn backfill_has_active_work(entry: &RecentBackfillEntry) -> bool {
+    matches!(
+        entry.root_status,
+        RequestStatus::New | RequestStatus::InProgress
+    ) || entry.child_new_count > 0
+        || entry.child_inprogress_count > 0
+}
+
 async fn list_backfills(
     ctx: &CoreContext,
     app: &MononokeApp,
@@ -237,18 +263,39 @@ async fn list_backfills(
     blobstore: &Arc<dyn Blobstore>,
     repo_names: &HashMap<RepositoryId, String>,
     lookback_days: i64,
+    all_active: bool,
 ) -> Result<()> {
-    let now = Timestamp::now();
-    let lookback_seconds = lookback_days * 24 * 60 * 60;
-    let min_created_at = Timestamp::from_timestamp_secs(now.timestamp_seconds() - lookback_seconds);
+    // With --all-active we drop the lookback window (query from the epoch) and
+    // instead keep only backfills that still have active work, so long-running
+    // backfills created before the window are still surfaced.
+    let min_created_at = if all_active {
+        Timestamp::from_timestamp_secs(0)
+    } else {
+        let now = Timestamp::now();
+        let lookback_seconds = lookback_days * 24 * 60 * 60;
+        Timestamp::from_timestamp_secs(now.timestamp_seconds() - lookback_seconds)
+    };
 
     let backfills = queue
         .list_recent_backfills_with_repo_count(ctx, &min_created_at)
         .await
         .context("fetching recent backfills")?;
 
+    let backfills: Vec<RecentBackfillEntry> = if all_active {
+        backfills
+            .into_iter()
+            .filter(backfill_has_active_work)
+            .collect()
+    } else {
+        backfills
+    };
+
     if backfills.is_empty() {
-        println!("No backfills found in the last {lookback_days} days");
+        if all_active {
+            println!("No active backfills found");
+        } else {
+            println!("No backfills found in the last {lookback_days} days");
+        }
         return Ok(());
     }
 
@@ -262,11 +309,7 @@ async fn list_backfills(
             failed: entry.child_failed_count.max(0) as u64,
         };
         let has_failed_requests = entry.root_status == RequestStatus::Failed || children.failed > 0;
-        let has_active_work = matches!(
-            entry.root_status,
-            RequestStatus::New | RequestStatus::InProgress
-        ) || children.new > 0
-            || children.inprogress > 0;
+        let has_active_work = backfill_has_active_work(&entry);
         let aggregate_status = if has_failed_requests && has_active_work {
             RepoStatus::InProgress
         } else {
@@ -309,7 +352,7 @@ async fn list_backfills(
     // leftover ids fall back to the git source-of-truth table.
     let resolved = resolve_repo_names(ctx, app, repo_names, &rows).await;
 
-    display_backfill_list(&rows, &resolved);
+    display_backfill_list(&rows, &resolved, all_active);
 
     Ok(())
 }

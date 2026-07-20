@@ -201,8 +201,13 @@ fn format_repo_names_cell(repo_ids: &[i64], repo_names: &HashMap<i64, String>) -
 pub(super) fn display_backfill_list(
     backfills: &[BackfillListRow],
     repo_names: &HashMap<i64, String>,
+    all_active: bool,
 ) {
-    println!("\nAvailable Backfill Jobs (recent)");
+    if all_active {
+        println!("\nAvailable Backfill Jobs (all active)");
+    } else {
+        println!("\nAvailable Backfill Jobs (recent)");
+    }
     println!("{}", "━".repeat(80));
 
     let mut table = Table::new();
