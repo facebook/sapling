@@ -47,7 +47,16 @@ define_stats! {
     restored_connection_to_shardmanager: timeseries(Rate, Sum),
     lost_connection_to_shardmanager: timeseries(Rate, Sum),
     shard_setup_failures: timeseries(Rate, Sum),
+    // Steady-state on_add_shard load failures (parse, setup, or cleanup-then-add),
+    // distinct from the best-effort bulk set_shards path above.
+    on_add_shard_failures: timeseries(Rate, Sum),
     concurrent_shard_setups: singleton_counter(),
+}
+
+/// Whether an on_add_shard outcome is a load failure (as opposed to a success
+/// or an in-progress step). Pure so the failure-counting is unit-testable.
+fn add_shard_outcome_is_failure(state: &RepoState) -> bool {
+    matches!(state, Failed(_))
 }
 
 /// Enum representing the states in which the repo-add
@@ -588,8 +597,17 @@ impl ShardedProcessHandler {
         // before the repo gets assigned.
     }
 
-    /// Called upon moving a shard (in).
+    /// Called upon moving a shard (in). Counts steady-state load failures
+    /// (parse, setup, or cleanup-then-add) via the single exit point below.
     fn on_add_shard(&self, key: &str, shard: smtypes::Shard) -> RepoState {
+        let outcome = self.on_add_shard_inner(key, shard);
+        if add_shard_outcome_is_failure(&outcome) {
+            STATS::on_add_shard_failures.add_value(1);
+        }
+        outcome
+    }
+
+    fn on_add_shard_inner(&self, key: &str, shard: smtypes::Shard) -> RepoState {
         let key = match RepoShard::from_shard_id(key) {
             Ok(repo_shard) => repo_shard,
             Err(e) => {
@@ -1187,3 +1205,6 @@ impl ShardedProcessExecutor {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

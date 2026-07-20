@@ -77,6 +77,9 @@ define_stats! {
         Average, Sum, Count
     ),
     completion_duration_secs: timeseries(Average, Sum, Count),
+    // Deep-shard repo load failures (config load or facet build) via add_repo,
+    // the chokepoint every deep-shard load funnels through.
+    add_repo_failed: timeseries(Sum, Count),
     reconcile_applied: timeseries(Average, Sum, Count),
     reconcile_dropped: timeseries(Average, Sum, Count),
     reconcile_failed_repos: timeseries(Average, Sum, Count),
@@ -221,14 +224,17 @@ impl<Repo> MononokeReposManager<Repo> {
     {
         // get_or_load_repo_config (called via repo_config) subscribes the
         // per-repo ConfigHandle internally.
-        let repo_config = self.repo_config(repo_name)?;
+        let repo_config = self
+            .repo_config(repo_name)
+            .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
         let repo_id = repo_config.repoid.id();
         let common_config = self.configs.repo_configs().common.clone();
         let tracked_config = repo_config.clone();
         let repo = self
             .repo_factory
             .build(repo_name.to_string(), repo_config, common_config)
-            .await?;
+            .await
+            .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
         self.repos.add(repo_name, repo_id, repo);
         self.record_applied_configs(std::iter::once((repo_name.to_string(), tracked_config)));
         self.repos

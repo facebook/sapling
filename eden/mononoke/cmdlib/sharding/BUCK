@@ -9,6 +9,14 @@ rust_library(
     named_deps = {
         "folly-logging": "//common/rust/folly/logging:logging",
     },
+    # facebook.rs (and its tests) is fbcode-only; gate the test macro dep too.
+    test_deps = (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        ]
+    ),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

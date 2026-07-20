@@ -17,3 +17,6 @@ sharding_ext = { version = "0.1.0", path = "../sharding_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
