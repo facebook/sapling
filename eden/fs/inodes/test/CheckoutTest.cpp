@@ -2797,6 +2797,67 @@ TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
 }
 
+TEST_P(
+    CheckoutTest,
+    checkoutLeavesLoadedRestrictedChildPlaceholderMetadataStale) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("project/notes/readme.md", "current note\n");
+  currentBuilder.setFile(
+      "project/notes/restricted_child/secret.txt", "current secret\n");
+  currentBuilder.setDirIsRestricted("project/notes/restricted_child");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+  applyParam(testMount);
+
+  auto parent = testMount.getTreeInode("project/notes"_relpath);
+  auto restrictedTree =
+      testMount.getTreeInode("project/notes/restricted_child"_relpath);
+  ASSERT_TRUE(restrictedTree->isRestricted());
+  auto oldRestrictedTreeId = restrictedTree->getObjectId();
+  ASSERT_TRUE(oldRestrictedTreeId.has_value());
+
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.replaceFile(
+      "project/notes/restricted_child/secret.txt", "target secret\n");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetRestrictedTreeId =
+      targetBuilder.getStoredTree("project/notes/restricted_child"_relpath)
+          ->get()
+          .getObjectId();
+  ASSERT_NE(*oldRestrictedTreeId, targetRestrictedTreeId);
+
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::NORMAL)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
+
+  // Before the repair, both checkout implementations leave already loaded
+  // restricted child placeholder metadata stale.
+  {
+    auto contents = parent->lockContentsRead();
+    auto it = contents->entries.find("restricted_child"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_TRUE(it->second.isRestricted());
+    EXPECT_EQ(*oldRestrictedTreeId, it->second.getObjectId());
+  }
+
+  auto updatedRestrictedTreeId = restrictedTree->getObjectId();
+  ASSERT_TRUE(updatedRestrictedTreeId.has_value());
+  EXPECT_EQ(*oldRestrictedTreeId, *updatedRestrictedTreeId);
+}
+
 TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnModifiedTrackedFile) {
   auto currentBuilder = FakeTreeBuilder{};
   currentBuilder.setFile("regular/file.txt", "base\n");
