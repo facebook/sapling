@@ -81,6 +81,16 @@ define_stats! {
     ensure_repo_handle_failure_count: timeseries(Average, Sum, Count),
 }
 
+/// Outcome of a batch config load. Separates the configs that loaded/parsed
+/// successfully (`loaded`) from the per-repo parse failures (`failed`), so
+/// callers can fail closed instead of silently serving fewer repos.
+pub struct BatchLoadOutcome {
+    /// Repos that loaded successfully (cached hits + freshly parsed).
+    pub loaded: Vec<(String, RepoConfig)>,
+    /// Repos whose `RepoSpec` failed to parse, with the parse error.
+    pub failed: Vec<(String, anyhow::Error)>,
+}
+
 /// Configuration provider and update notifier for all of Mononoke services
 /// and jobs. The configurations provided by this struct are always up-to-date
 /// with its source.
@@ -616,13 +626,18 @@ impl MononokeConfigs {
         parse_repo_spec(Arc::unwrap_or_clone(repo_spec), tier, &manifest.storage)
     }
 
-    /// Batch-load repo configs. Single rcu acquisition, single HashMap clone,
-    /// single ArcSwap store regardless of how many repos are loaded.
-    /// This is the default path for startup (`open_managed_repos`).
-    pub fn batch_load_repo_configs(
+    /// Batch-load repo configs, surfacing per-repo parse failures instead of
+    /// warn+dropping them. Single rcu acquisition, single HashMap clone, single
+    /// ArcSwap store regardless of how many repos are loaded.
+    ///
+    /// `loaded` holds the successes (cached hits + freshly parsed), `failed`
+    /// holds the per-repo parse errors. The outer `Result` is reserved for
+    /// infra errors (e.g. lock poison, handle subscription failure), not
+    /// per-repo parse errors.
+    pub fn batch_load_repo_configs_checked(
         &self,
         repo_names: &[String],
-    ) -> Result<Vec<(String, RepoConfig)>> {
+    ) -> Result<BatchLoadOutcome> {
         // Subscribe per-repo handles up-front; the cached-fast-path loop
         // below would otherwise skip subscription. S678887.
         for name in repo_names {
@@ -643,17 +658,21 @@ impl MononokeConfigs {
         }
 
         if missing.is_empty() {
-            return Ok(results);
+            return Ok(BatchLoadOutcome {
+                loaded: results,
+                failed: Vec::new(),
+            });
         }
 
-        // Step 2: Subscribe to ConfigHandles + parse OUTSIDE rcu
-        let mut loaded: Vec<(String, RepoConfig)> = Vec::new();
+        // Step 2: Subscribe to ConfigHandles + parse OUTSIDE rcu. Accumulate
+        // per-repo parse failures instead of dropping them, so the caller can
+        // decide whether to fail closed.
+        let mut newly_loaded: Vec<(String, RepoConfig)> = Vec::new();
+        let mut failed: Vec<(String, anyhow::Error)> = Vec::new();
         for name in &missing {
             match self.load_and_parse_repo_config(name) {
-                Ok(config) => loaded.push((name.clone(), config)),
-                Err(e) => {
-                    warn!("batch_load: failed to load config for {name}: {e:#}");
-                }
+                Ok(config) => newly_loaded.push((name.clone(), config)),
+                Err(e) => failed.push((name.clone(), e)),
             }
         }
 
@@ -662,10 +681,10 @@ impl MononokeConfigs {
         // get_or_load callers without needing a separate lock. Already-present
         // entries (set by a concurrent writer between Step 1 and here) win
         // — caller-side idempotency.
-        if !loaded.is_empty() {
+        if !newly_loaded.is_empty() {
             self.repo_configs.rcu(|current| {
                 let mut next = (**current).clone();
-                for (name, config) in &loaded {
+                for (name, config) in &newly_loaded {
                     if !next.repos.contains_key(name.as_str()) {
                         next.insert_repo(name.clone(), config.clone());
                     }
@@ -674,13 +693,48 @@ impl MononokeConfigs {
             });
         }
 
-        results.extend(loaded);
-        Ok(results)
+        results.extend(newly_loaded);
+        Ok(BatchLoadOutcome {
+            loaded: results,
+            failed,
+        })
+    }
+
+    /// Batch-load repo configs. Single rcu acquisition, single HashMap clone,
+    /// single ArcSwap store regardless of how many repos are loaded.
+    /// This is the default path for startup (`open_managed_repos`).
+    ///
+    /// Thin wrapper over [`Self::batch_load_repo_configs_checked`] that
+    /// warn+drops per-repo parse failures (historical behavior). Callers that
+    /// need to observe the failures should use the checked variant.
+    pub fn batch_load_repo_configs(
+        &self,
+        repo_names: &[String],
+    ) -> Result<Vec<(String, RepoConfig)>> {
+        let outcome = self.batch_load_repo_configs_checked(repo_names)?;
+        for (name, e) in &outcome.failed {
+            warn!("batch_load: failed to load config for {name}: {e:#}");
+        }
+        Ok(outcome.loaded)
     }
 
     /// Load configs for all repos discovered from both the legacy blob and
     /// the manifest. Uses batch loading (single rcu, single clone).
     pub fn load_all_repo_configs(&self) -> Result<Vec<(String, RepoConfig)>> {
+        let names = self.all_repo_names();
+        self.batch_load_repo_configs(&names)
+    }
+
+    /// Like [`Self::load_all_repo_configs`] but surfaces per-repo parse
+    /// failures (via [`Self::batch_load_repo_configs_checked`]) instead of
+    /// warn+dropping them. Seam for fail-closed startup.
+    pub fn load_all_repo_configs_checked(&self) -> Result<BatchLoadOutcome> {
+        let names = self.all_repo_names();
+        self.batch_load_repo_configs_checked(&names)
+    }
+
+    /// Union of repo names from the legacy blob cache and the manifest.
+    fn all_repo_names(&self) -> Vec<String> {
         let mut all_names: HashSet<String> = self
             .repo_configs
             .load_full()
@@ -693,8 +747,7 @@ impl MononokeConfigs {
                 all_names.insert(entry.repo_name.clone());
             }
         }
-        let names: Vec<String> = all_names.into_iter().collect();
-        self.batch_load_repo_configs(&names)
+        all_names.into_iter().collect()
     }
 
     /// Load a repo config by repository ID. O(1) cache lookup via repos_by_id

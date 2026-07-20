@@ -14,9 +14,19 @@ use cached_config::ModificationTime;
 use cached_config::TestSource;
 use metaconfig_types::CommonConfig;
 use mononoke_macros::mononoke;
+use repos::RawBlobstoreConfig;
+use repos::RawBlobstoreDisabled;
+use repos::RawCommitIdentityScheme;
+use repos::RawDbLocal;
+use repos::RawMetadataConfig;
+use repos::RawRepoConfig;
+use repos::RawStorageConfig;
 use repos::TierRepoEntry;
 
 use super::*;
+
+const TEST_TIER: &str = "scs";
+const TEST_STORAGE: &str = "test_storage";
 
 fn empty_configs() -> MononokeConfigs {
     MononokeConfigs {
@@ -210,4 +220,209 @@ fn test_remove_repo_config_handle_preserves_legacy_only_entry() {
         cfg.repo_configs.load().repos.contains_key("legacy"),
         "legacy-only bulk entry (no handle) must be preserved",
     );
+}
+
+// --- batch_load_repo_configs_checked / load_all_repo_configs_checked ---
+
+/// A minimal valid RawStorageConfig so a RepoSpec referencing it parses.
+fn test_raw_storage_config() -> RawStorageConfig {
+    RawStorageConfig {
+        metadata: RawMetadataConfig::local(RawDbLocal {
+            local_db_path: "/tmp/test_db".to_string(),
+        }),
+        blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+        ephemeral_blobstore: None,
+        mutable_blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+    }
+}
+
+/// JSON for a RepoSpec that parses successfully (references TEST_STORAGE).
+fn valid_repo_spec_json(repo_id: i32, repo_name: &str) -> String {
+    let spec = RepoSpec {
+        repo_id,
+        repo_name: repo_name.to_string(),
+        enabled: true,
+        default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+        repo_config: Some(RawRepoConfig {
+            storage_config: Some(TEST_STORAGE.to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    serde_json::to_string(&spec).expect("RepoSpec serializes")
+}
+
+/// MononokeConfigs with a manifest listing `entries`, a valid named storage,
+/// and a tier set (so parse_repo_spec works). `extra_paths` supplies the
+/// per-repo config blobs referenced by the entries' config_paths.
+fn batch_configs(entries: Vec<TierRepoEntry>, extra_paths: &[(&str, &str)]) -> MononokeConfigs {
+    let manifest = TierManifest {
+        repos: entries,
+        storage: HashMap::from([(TEST_STORAGE.to_string(), test_raw_storage_config())]),
+        ..Default::default()
+    };
+    let manifest_json = serde_json::to_string(&manifest).unwrap();
+    let manifest_path = "test/manifest";
+
+    let mut all = vec![(manifest_path, manifest_json.as_str())];
+    all.extend_from_slice(extra_paths);
+    let store = make_store(&all);
+
+    let mut cfg = empty_configs();
+    cfg.maybe_manifest_handle = Some(
+        store
+            .get_config_handle::<TierManifest>(manifest_path.to_string())
+            .unwrap(),
+    );
+    cfg.config_store = Some(store);
+    cfg.tier_name = Some(TEST_TIER.to_string());
+    cfg
+}
+
+fn entry(repo_name: &str, repo_id: i32, config_path: &str) -> TierRepoEntry {
+    TierRepoEntry {
+        repo_name: repo_name.to_string(),
+        repo_id,
+        config_path: config_path.to_string(),
+        // is_deep_sharded is irrelevant here: this fixture never pre-loads
+        // handles (it bypasses MononokeConfigs::new), so batch load drives it.
+        is_deep_sharded: true,
+        ..Default::default()
+    }
+}
+
+#[mononoke::test]
+fn test_batch_load_checked_good_repo_in_loaded() {
+    let path = "test/repos/good";
+    let cfg = batch_configs(
+        vec![entry("good/repo", 1, path)],
+        &[(path, valid_repo_spec_json(1, "good/repo").as_str())],
+    );
+
+    let outcome = cfg
+        .batch_load_repo_configs_checked(&["good/repo".to_string()])
+        .expect("infra ok");
+
+    assert!(outcome.failed.is_empty(), "a parseable repo must not fail");
+    assert_eq!(outcome.loaded.len(), 1);
+    assert_eq!(outcome.loaded[0].0, "good/repo");
+    assert_eq!(
+        outcome.loaded[0].1.repoid,
+        mononoke_types::RepositoryId::new(1)
+    );
+}
+
+// Negative case: a repo whose RepoSpec does not parse must land in `failed`
+// (with its name) and must NOT appear in `loaded`.
+#[mononoke::test]
+fn test_batch_load_checked_unparsable_repo_in_failed() {
+    let path = "test/repos/bad";
+    // "{}" is a default RepoSpec with no storage_config -> parse fails.
+    let cfg = batch_configs(vec![entry("bad/repo", 2, path)], &[(path, "{}")]);
+
+    let outcome = cfg
+        .batch_load_repo_configs_checked(&["bad/repo".to_string()])
+        .expect("per-repo parse errors must not fail the whole batch");
+
+    assert!(
+        outcome.loaded.is_empty(),
+        "unparsable repo must not be in loaded",
+    );
+    assert_eq!(outcome.failed.len(), 1);
+    assert_eq!(outcome.failed[0].0, "bad/repo");
+}
+
+// A mix of a parseable and an unparsable repo returns both partitions.
+#[mononoke::test]
+fn test_batch_load_checked_mixed_partitions() {
+    let good_path = "test/repos/good";
+    let bad_path = "test/repos/bad";
+    let cfg = batch_configs(
+        vec![
+            entry("good/repo", 1, good_path),
+            entry("bad/repo", 2, bad_path),
+        ],
+        &[
+            (good_path, valid_repo_spec_json(1, "good/repo").as_str()),
+            (bad_path, "{}"),
+        ],
+    );
+
+    let outcome = cfg
+        .batch_load_repo_configs_checked(&["good/repo".to_string(), "bad/repo".to_string()])
+        .expect("infra ok");
+
+    let loaded: Vec<&str> = outcome.loaded.iter().map(|(n, _)| n.as_str()).collect();
+    let failed: Vec<&str> = outcome.failed.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(loaded, ["good/repo"]);
+    assert_eq!(failed, ["bad/repo"]);
+}
+
+// The back-compat wrapper discards failures and returns exactly `loaded`.
+#[mononoke::test]
+fn test_batch_load_wrapper_returns_only_loaded() {
+    let good_path = "test/repos/good";
+    let bad_path = "test/repos/bad";
+    let cfg = batch_configs(
+        vec![
+            entry("good/repo", 1, good_path),
+            entry("bad/repo", 2, bad_path),
+        ],
+        &[
+            (good_path, valid_repo_spec_json(1, "good/repo").as_str()),
+            (bad_path, "{}"),
+        ],
+    );
+
+    let loaded = cfg
+        .batch_load_repo_configs(&["good/repo".to_string(), "bad/repo".to_string()])
+        .expect("wrapper ok");
+
+    let names: Vec<&str> = loaded.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names, ["good/repo"], "wrapper drops the failed repo");
+}
+
+// All-good input yields an empty `failed` partition.
+#[mononoke::test]
+fn test_batch_load_checked_all_good_no_failures() {
+    let p1 = "test/repos/a";
+    let p2 = "test/repos/b";
+    let cfg = batch_configs(
+        vec![entry("repo/a", 1, p1), entry("repo/b", 2, p2)],
+        &[
+            (p1, valid_repo_spec_json(1, "repo/a").as_str()),
+            (p2, valid_repo_spec_json(2, "repo/b").as_str()),
+        ],
+    );
+
+    let outcome = cfg
+        .batch_load_repo_configs_checked(&["repo/a".to_string(), "repo/b".to_string()])
+        .expect("infra ok");
+
+    assert!(outcome.failed.is_empty());
+    assert_eq!(outcome.loaded.len(), 2);
+}
+
+// load_all_repo_configs_checked unions manifest names and reports failures.
+#[mononoke::test]
+fn test_load_all_repo_configs_checked_unions_and_partitions() {
+    let good_path = "test/repos/good";
+    let bad_path = "test/repos/bad";
+    let cfg = batch_configs(
+        vec![
+            entry("good/repo", 1, good_path),
+            entry("bad/repo", 2, bad_path),
+        ],
+        &[
+            (good_path, valid_repo_spec_json(1, "good/repo").as_str()),
+            (bad_path, "{}"),
+        ],
+    );
+
+    let outcome = cfg.load_all_repo_configs_checked().expect("infra ok");
+
+    let loaded: Vec<&str> = outcome.loaded.iter().map(|(n, _)| n.as_str()).collect();
+    let failed: Vec<&str> = outcome.failed.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(loaded, ["good/repo"]);
+    assert_eq!(failed, ["bad/repo"]);
 }
