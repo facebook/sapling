@@ -125,7 +125,7 @@ TEST_F(RestrictedTreeCachingTest, ttlNotExpired_noRecheck) {
   backingStore->setCheckPermissionResult(restrictedObjectId, true);
 
   // TTL NOT expired (lastCheck=now()) → should NOT call checkPermission.
-  // Default TTL is 300 seconds, so now()-now() < 300s → returns false
+  // Default TTL is 65 seconds, so now()-now() < 65s → returns false
   // without calling the backing store.
   auto result = getObjectStore()
                     .checkPermissionIfExpired(
@@ -148,7 +148,7 @@ TEST_F(RestrictedTreeCachingTest, restrictedInode_statReturnsZeroPermissions) {
   ASSERT_TRUE(restrictedInode->isRestricted());
 
   // stat on restricted inode returns S_IFDIR with zero permission bits.
-  // With default TTL=300, no recheck is triggered (lastCheck=now()),
+  // With default TTL=65, no recheck is triggered (lastCheck=now()),
   // so the inode stays restricted.
   auto context = ObjectFetchContext::getNullContext();
   auto st = restrictedInode->stat(context).get();

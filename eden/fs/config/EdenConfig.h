@@ -2632,12 +2632,11 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * TTL in seconds for restricted tree permission rechecks. When a restricted
    * tree's TTL expires, EdenFS calls check_permission to see if the user has
-   * been granted access. Set to 0 to disable TTL-based rechecks (immediate
-   * recheck on every access).
+   * been granted access. Set to 0 to recheck on every access.
    */
   ConfigSetting<uint64_t> restrictedTreeTtlSeconds{
       "acl:restricted-tree-ttl-seconds",
-      300,
+      65,
       this};
 
   /**
