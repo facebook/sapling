@@ -960,12 +960,17 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   }
 
  private:
+  void assertRestrictedPlaceholderInvariant() const;
+
   void setAclRootState(AclRootState state) {
     aclRootState_.store(static_cast<uint8_t>(state), std::memory_order_relaxed);
   }
 
   void setRestricted(bool isRestricted) {
     setAclRootState(makeAclRootState(isRestricted, hasACL()));
+    if (isRestricted) {
+      assertRestrictedPlaceholderInvariant();
+    }
   }
 
   void setHasACL(std::optional<bool> hasACL) {

@@ -342,6 +342,7 @@ TreeInode::TreeInode(
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
       lastPermissionCheck_(std::chrono::steady_clock::now()) {
   XDCHECK_NE(ino, kRootNodeId);
+  assertRestrictedPlaceholderInvariant();
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
@@ -362,7 +363,9 @@ TreeInode::TreeInode(
       contents_(std::in_place, std::move(dir), treeId),
       aclRootState_{
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
-      lastPermissionCheck_(std::chrono::steady_clock::now()) {}
+      lastPermissionCheck_(std::chrono::steady_clock::now()) {
+  assertRestrictedPlaceholderInvariant();
+}
 
 TreeInode::~TreeInode() = default;
 
@@ -417,6 +420,20 @@ void TreeInode::throwRestrictedAccess() const {
           "path ACL restriction: directory access denied for {} (inode {})",
           getLogPath(),
           getNodeId()));
+}
+
+void TreeInode::assertRestrictedPlaceholderInvariant() const {
+  if (!isRestricted()) {
+    return;
+  }
+
+  // TODO: Make it impossible for a restricted TreeInode to enter this invalid
+  // state by representing restricted placeholders separately from populated
+  // contents, instead of validating after construction or state transitions.
+  auto contents = getContentsUnchecked().rlock();
+  XDCHECK(contents->entries.empty())
+      << "restricted TreeInode must not expose child entries: "
+      << getNodeId().get();
 }
 
 ImmediateFuture<folly::Unit> TreeInode::recheckPermissionIfExpired(
