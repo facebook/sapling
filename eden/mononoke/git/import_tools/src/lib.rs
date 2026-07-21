@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![feature(try_blocks)]
 #![feature(trait_alias)]
-#![feature(string_from_utf8_lossy_owned)]
 
 pub mod bookmark;
 pub mod git_reader;
@@ -52,6 +50,7 @@ use gix_object::ObjectRef;
 use linked_hash_map::LinkedHashMap;
 use manifest::BonsaiDiffFileChange;
 use manifest::find_intersection_of_diffs;
+use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
@@ -229,6 +228,7 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
     tag_id: &ObjectId,
     maybe_tag_name: Option<String>,
     original_changeset_id: Option<ChangesetId>,
+    mapping_write: TagMappingWrite,
 ) -> Result<ChangesetId> {
     // Get the parsed Git Tag
     let tag_metadata = TagMetadata::new(ctx, *tag_id, maybe_tag_name, &reader)
@@ -236,7 +236,12 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
         .with_context(|| format_err!("Failed to create TagMetadata from git tag {tag_id}"))?;
     // Create the corresponding changeset for the Git Tag at Mononoke end
     let changeset_id = uploader
-        .generate_changeset_for_annotated_tag(ctx, original_changeset_id, tag_metadata)
+        .generate_changeset_for_annotated_tag(
+            ctx,
+            original_changeset_id,
+            tag_metadata,
+            mapping_write,
+        )
         .await
         .with_context(|| format_err!("Failed to generate changeset for git tag {tag_id}"))?;
     Ok(changeset_id)
@@ -1073,6 +1078,7 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
 #[cfg(test)]
 mod tests {
     use anyhow::anyhow;
+    use mononoke_macros::mononoke;
 
     use super::prefer_deepest_error;
 
@@ -1080,7 +1086,7 @@ mod tests {
     // the SendError cascades up through bonsai_creator and producer. Before
     // this helper, the sequential `?` evaluation returned the bonsai cascade
     // (masking the real finalize error). Asserts the deepest error wins.
-    #[test]
+    #[mononoke::test]
     fn finalize_wins_over_cascaded_send_errors() {
         let result = prefer_deepest_error(
             Err(anyhow!("real root cause from batch_finalizer")),
@@ -1099,7 +1105,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn bonsai_wins_when_finalize_ok() {
         let result = prefer_deepest_error(
             Ok(()),
@@ -1112,7 +1118,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn producer_wins_when_only_producer_fails() {
         let result = prefer_deepest_error(Ok(()), Ok(()), Err(anyhow!("producer-side error")));
         assert_eq!(
@@ -1121,7 +1127,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn all_ok_returns_ok() {
         let result = prefer_deepest_error(Ok(()), Ok(()), Ok(()));
         assert!(result.is_ok(), "all three Ok should return Ok");

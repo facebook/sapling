@@ -115,6 +115,7 @@
     "scm/mononoke:git_server_enable_memory_tracking": false,
     "scm/mononoke:git_server_enable_push_memory_tracking": false,
     "scm/mononoke:git_server_enable_memory_health_check": true,
+    "scm/mononoke:git_atomic_tag_mapping": false,
     "scm/mononoke:http1_vectored_writes_enabled": false,
     "scm/mononoke:create_repos_use_repo_spec": true,
     "scm/mononoke:scs_alert_on_methods": false,

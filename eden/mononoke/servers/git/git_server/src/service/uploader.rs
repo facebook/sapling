@@ -6,12 +6,14 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use cloned::cloned;
 use context::CoreContext;
 use futures::StreamExt;
@@ -32,6 +34,7 @@ use import_tools::import_commit_contents;
 use import_tools::upload_git_object;
 use import_tools::upload_git_tag;
 use import_tools::upload_git_tree_recursively;
+use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::hash::GitSha1;
@@ -52,16 +55,22 @@ struct TagMetadata {
     name: String,
     bonsai_target: Option<ChangesetId>,
     git_target: ObjectId,
+    target_is_tag: bool,
 }
 
-impl TagMetadata {
-    fn new(name: String, bonsai_target: Option<ChangesetId>, git_target: ObjectId) -> Self {
-        Self {
-            name,
-            bonsai_target,
-            git_target,
-        }
-    }
+/// Content tags plus the annotated-tag mappings deferred to the bookmark-move
+/// phase (empty unless atomic mode is on).
+struct ProcessedTags {
+    content_tags: ContentTags,
+    tag_mapping_entries: Vec<BonsaiTagMappingEntry>,
+}
+
+/// Everything an `upload_objects` call produces for a push.
+pub struct UploadedObjects {
+    pub ref_map: RefMap,
+    pub ref_updates: Vec<RefUpdate>,
+    /// Annotated-tag mappings to write atomically during the bookmark move.
+    pub tag_mapping_entries: Vec<BonsaiTagMappingEntry>,
 }
 
 #[derive(Clone, Debug)]
@@ -178,20 +187,60 @@ async fn tags(
             } else {
                 Some(git_to_bonsai(ctx, repo, &target_id).await?)
             };
-            let tag_name_from_object = object
-                .with_parsed_as_tag(|tag| tag.name.to_string())
+            let (tag_name_from_object, target_is_tag) = object
+                .with_parsed_as_tag(|tag| (tag.name.to_string(), tag.target_kind == Kind::Tag))
                 .ok_or_else(|| anyhow::anyhow!("Expected {} to be a tag object", id.to_hex()))?;
             result.insert(
                 id.clone(),
-                TagMetadata::new(tag_name_from_object, bonsai_id, target_id),
+                TagMetadata {
+                    name: tag_name_from_object,
+                    bonsai_target: bonsai_id,
+                    git_target: target_id,
+                    target_is_tag,
+                },
             );
         }
     }
     Ok(result)
 }
 
-/// Method responsible for processing all the tags that are part of this push and returning the
-/// content tags among them
+/// Upload one tag's object + changeset. Returns the mapping entry when the write
+/// is deferred to the bookmark-move phase (atomic mode), otherwise `None`.
+async fn upload_tag<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    uploader: Arc<Uploader>,
+    object_store: Arc<GitObjectStore>,
+    tag_id: ObjectId,
+    name: String,
+    bonsai_target: Option<ChangesetId>,
+    target_is_tag: bool,
+    mapping_write: TagMappingWrite,
+) -> Result<Option<BonsaiTagMappingEntry>> {
+    upload_git_tag(ctx, uploader.clone(), object_store.clone(), &tag_id).await?;
+    let changeset_id = create_changeset_for_annotated_tag(
+        ctx,
+        uploader,
+        object_store,
+        &tag_id,
+        Some(name.clone()),
+        bonsai_target,
+        mapping_write,
+    )
+    .await?;
+    Ok(match mapping_write {
+        TagMappingWrite::Inline => None,
+        TagMappingWrite::Deferred => Some(BonsaiTagMappingEntry {
+            changeset_id,
+            tag_name: name,
+            tag_hash: GitSha1::from_bytes(tag_id.as_bytes())?,
+            target_is_tag,
+        }),
+    })
+}
+
+/// Process all tags in a push: upload each tag object + changeset, populate
+/// `ref_map` / content tags, and return any annotated-tag mappings deferred to
+/// the bookmark-move phase.
 async fn process_tags<Uploader: GitUploader>(
     ctx: &CoreContext,
     repo: &Repo,
@@ -199,7 +248,9 @@ async fn process_tags<Uploader: GitUploader>(
     object_store: Arc<GitObjectStore>,
     ref_map: &mut RefMap,
     ref_updates: &[RefUpdate],
-) -> Result<ContentTags> {
+    // Whether annotated-tag mappings are deferred to the bookmark-move phase.
+    atomic_tag_mapping: bool,
+) -> Result<ProcessedTags> {
     let repo_name = repo.repo_identity().name().to_string();
     let mut content_tags = HashMap::new();
     // Fetch all the tags to be uploaded as part of this push
@@ -223,7 +274,11 @@ async fn process_tags<Uploader: GitUploader>(
         }
     }
     info!("Uploading tags for repo {}", repo_name);
-    // Populate ref_map and content_tags first, then upload in parallel.
+    // Only annotated tags directly pushed as a ref get a name-matched bookmark
+    // move (whose transaction writes the mapping); inner tags of a nested chain
+    // are in the pack but unreferenced, so they keep writing the mapping inline.
+    let referenced_oids: HashSet<ObjectId> =
+        ref_updates.iter().map(|ref_update| ref_update.to).collect();
     let upload_items: Vec<_> = tags
         .into_iter()
         .map(|(tag_id, tag_metadata)| {
@@ -231,37 +286,50 @@ async fn process_tags<Uploader: GitUploader>(
                 name,
                 bonsai_target,
                 git_target,
+                target_is_tag,
             } = tag_metadata;
             if let Some(bonsai_target) = bonsai_target.as_ref() {
                 ref_map.insert_tag(&tag_id, *bonsai_target);
             } else {
                 content_tags.insert(format!("refs/{name}"), git_target);
             }
-            (tag_id, name, bonsai_target)
+            let mapping_write = if atomic_tag_mapping
+                && bonsai_target.is_some()
+                && referenced_oids.contains(&tag_id)
+            {
+                TagMappingWrite::Deferred
+            } else {
+                TagMappingWrite::Inline
+            };
+            (tag_id, name, bonsai_target, target_is_tag, mapping_write)
         })
         .collect();
-    // Upload all tags to blobstore and create bonsai mappings in parallel.
-    stream::iter(upload_items)
-        .map(|(tag_id, name, bonsai_target)| {
-            cloned!(uploader, object_store);
-            async move {
-                upload_git_tag(ctx, uploader.clone(), object_store.clone(), &tag_id).await?;
-                create_changeset_for_annotated_tag(
+    let tag_mapping_entries = stream::iter(upload_items)
+        .map(
+            |(tag_id, name, bonsai_target, target_is_tag, mapping_write)| {
+                cloned!(uploader, object_store);
+                upload_tag(
                     ctx,
                     uploader,
                     object_store,
-                    &tag_id,
-                    Some(name),
+                    tag_id,
+                    name,
                     bonsai_target,
+                    target_is_tag,
+                    mapping_write,
                 )
-                .await?;
-                anyhow::Ok(())
-            }
-        })
+            },
+        )
         .buffer_unordered(20)
         .try_collect::<Vec<_>>()
-        .await?;
-    Ok(content_tags)
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    Ok(ProcessedTags {
+        content_tags,
+        tag_mapping_entries,
+    })
 }
 
 /// Method responsible for uploading git tree and blob objects pointed to by the content refs
@@ -356,7 +424,8 @@ pub async fn upload_objects(
     lfs: GitImportLfs,
     concurrency: usize,
     persist_partial_mappings: bool,
-) -> Result<(RefMap, Vec<RefUpdate>)> {
+    atomic_tag_mapping: bool,
+) -> Result<UploadedObjects> {
     let repo_name = repo.repo_identity().name().to_string();
     let uploader = Arc::new(DirectUploader::with_arc(
         repo.clone(),
@@ -390,13 +459,17 @@ pub async fn upload_objects(
     let mut ref_map = RefMap::from_commits(git_bonsai_mappings);
 
     // Process all the tags that are part of this push
-    let content_tags = process_tags(
+    let ProcessedTags {
+        content_tags,
+        tag_mapping_entries,
+    } = process_tags(
         ctx,
         &repo,
         uploader.clone(),
         object_store.clone(),
         &mut ref_map,
         ref_updates,
+        atomic_tag_mapping,
     )
     .await
     .context("Error during process_tags")?;
@@ -411,5 +484,9 @@ pub async fn upload_objects(
     )
     .await
     .context("Error during upload_content_ref_objects")?;
-    Ok((ref_map, ref_updates))
+    Ok(UploadedObjects {
+        ref_map,
+        ref_updates,
+        tag_mapping_entries,
+    })
 }

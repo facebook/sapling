@@ -63,6 +63,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_api::RepoContext;
+use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::RepoArgs;
@@ -820,6 +821,7 @@ async fn process_tags<Uploader: GitUploader, Reader: GitReader>(
             &tag_id,
             Some(name.clone()),
             changeset,
+            TagMappingWrite::Inline,
         )
         .await?;
     }

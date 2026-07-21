@@ -31,6 +31,7 @@ use import_tools::git_uploader::finalize_batch;
 use import_tools::git_uploader::generate_changeset_for_commit;
 use import_tools::git_uploader::preload_uploaded_commits;
 use import_tools::git_uploader::upload_file;
+use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_api::repo::git::create_annotated_tag;
 use mononoke_api::repo::git::generate_ref_content_mapping;
 use mononoke_api::repo::git::upload_packfile_base_item;
@@ -177,6 +178,7 @@ where
         ctx: &CoreContext,
         target_changeset_id: Option<ChangesetId>,
         mut tag: TagMetadata,
+        mapping_write: TagMappingWrite,
     ) -> Result<ChangesetId, Error> {
         let target_changeset_id = target_changeset_id
             .unwrap_or_else(|| ChangesetId::new(Blake2::from_byte_array([0; 32])));
@@ -194,6 +196,7 @@ where
             tag.message,
             annotated_tag,
             tag.target_is_tag,
+            mapping_write,
         )
         .await
         .context("Failure in creating changeset for tag")

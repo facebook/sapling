@@ -60,6 +60,12 @@ impl BookmarkOperation {
     pub fn is_create(&self) -> bool {
         self.operation_type.is_create()
     }
+
+    /// A move with identical old and new targets. `set_bookmark` treats it as
+    /// success; the transactional path rejects it, so callers must short-circuit.
+    pub fn is_noop(&self) -> bool {
+        matches!(self.operation_type, BookmarkOperationType::Move(old, new) if old == new)
+    }
 }
 
 /// Enum representing the type of bookmark operation.
@@ -186,8 +192,13 @@ pub async fn set_bookmarks<R: MononokeRepo>(
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
     error_reporting: BookmarkOperationErrorReporting,
+    // Hooks committed in the same transaction as the bookmark moves; empty if unused.
+    extra_txn_hooks: Vec<BookmarkTransactionHook>,
 ) -> Result<(), MononokeError> {
     let mut bookmark_transaction = None;
+    // Per-op hooks accumulate through the loop, but a Delete op resets them to
+    // empty, so keep the caller-supplied hooks separate and merge them in at
+    // commit — otherwise a delete in the same batch would silently drop them.
     let mut transaction_hooks = vec![];
     let mut bookmark_infos = vec![];
     for bookmark_operation in bookmark_operations {
@@ -208,6 +219,7 @@ pub async fn set_bookmarks<R: MononokeRepo>(
     // All bookmarks are covered, finally commit the transaction.
     let bookmark_transaction =
         bookmark_transaction.ok_or_else(|| anyhow::anyhow!("No bookmark transaction found"))?;
+    transaction_hooks.extend(extra_txn_hooks);
     let transaction = TransactionWithHooks::new(bookmark_transaction, transaction_hooks);
     transaction
         .commit()
@@ -275,9 +287,9 @@ async fn move_bookmark<R: MononokeRepo>(
                     op_result?
                 }
             } else {
-                Err(MononokeError::InvalidRequest(
-                    "Bookmark: \"{name}\" already points to commit {new_changeset:?}".to_string(),
-                ))?
+                Err(MononokeError::InvalidRequest(format!(
+                    "Bookmark: \"{name}\" already points to commit {new_changeset:?}"
+                )))?
             }
         }
         BookmarkOperationType::Delete(old_changeset) => {

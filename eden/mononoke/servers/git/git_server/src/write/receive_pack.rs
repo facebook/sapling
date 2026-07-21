@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::StreamExt;
@@ -51,6 +53,7 @@ use crate::model::RepositoryRequestContext;
 use crate::scuba::scuba_from_state;
 use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
+use crate::service::UploadedObjects;
 use crate::service::set_ref;
 use crate::service::set_refs;
 use crate::service::upload_objects;
@@ -230,6 +233,13 @@ async fn push(
         } else {
             GitImportLfs::new_disabled()
         };
+        // Evaluate once and thread downstream so a mid-push flip can't desync
+        // the upload and bookmark-move phases.
+        let atomic_tag_mapping = justknobs::eval(
+            "scm/mononoke:git_atomic_tag_mapping",
+            None,
+            Some(repo_name.as_str()),
+        );
         // Upload the objects corresponding to the push to the underlying store
         let upload_objects_result = upload_objects(
             ctx,
@@ -239,10 +249,15 @@ async fn push(
             lfs,
             concurrency,
             git_ctx.persist_partial_mappings(),
+            atomic_tag_mapping,
         )
         .try_timed()
         .await;
-        let (ref_map, ref_updates) = match upload_objects_result {
+        let UploadedObjects {
+            ref_map,
+            ref_updates,
+            tag_mapping_entries,
+        } = match upload_objects_result {
             Ok(result) => result.log_future_stats(
                 scuba.clone(),
                 "GitImport, Derivation and Bonsai creation completed",
@@ -283,6 +298,19 @@ async fn push(
         // Sync so it cannot be passed to refs_update across await points).
         let acl_provider = git_ctx.acl_provider();
 
+        // Some(map) activates the atomic path (keyed by tags/<tag> name); None
+        // keeps the old behavior.
+        let tag_mapping_entries = if atomic_tag_mapping {
+            Some(
+                tag_mapping_entries
+                    .into_iter()
+                    .map(|entry| (entry.tag_name.clone(), entry))
+                    .collect::<HashMap<String, BonsaiTagMappingEntry>>(),
+            )
+        } else {
+            None
+        };
+
         let updated_refs = refs_update(
             ref_updates,
             request_context.clone(),
@@ -291,6 +319,7 @@ async fn push(
             settings.atomic,
             multi_repo_land_service_address,
             acl_provider,
+            tag_mapping_entries,
         )
         .try_timed()
         .await?
@@ -345,8 +374,12 @@ async fn refs_update(
     atomic_update: bool,
     _multi_repo_land_service_address: Option<String>,
     acl_provider: Arc<dyn permission_checker::AclProvider>,
+    tag_mapping_entries: Option<HashMap<String, BonsaiTagMappingEntry>>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
     use super::push_diversion::PushDiversionMode;
+
+    // Share the entries across the concurrent per-ref set_ref calls.
+    let tag_mapping_entries = tag_mapping_entries.map(Arc::new);
 
     let diversion_mode = PushDiversionMode::resolve(&request_context, &acl_provider).await?;
 
@@ -375,6 +408,7 @@ async fn refs_update(
                     request_context,
                     git_bonsai_mapping_store,
                     object_store,
+                    tag_mapping_entries,
                 )
                 .await?
             } else {
@@ -383,6 +417,7 @@ async fn refs_update(
                     request_context,
                     git_bonsai_mapping_store,
                     object_store,
+                    tag_mapping_entries,
                 )
                 .await?
             };
@@ -400,6 +435,7 @@ async fn refs_update(
             request_context.clone(),
             git_bonsai_mapping_store,
             object_store,
+            tag_mapping_entries,
         )
         .await?
     } else {
@@ -408,6 +444,7 @@ async fn refs_update(
             request_context.clone(),
             git_bonsai_mapping_store,
             object_store,
+            tag_mapping_entries,
         )
         .await?
     };
@@ -434,10 +471,16 @@ async fn non_atomic_refs_update(
     request_context: Arc<RepositoryRequestContext>,
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
+    tag_mapping_entries: Option<Arc<HashMap<String, BonsaiTagMappingEntry>>>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
     stream::iter(ref_updates.clone())
         .map(|ref_update| {
-            cloned!(request_context, git_bonsai_mapping_store, object_store);
+            cloned!(
+                request_context,
+                git_bonsai_mapping_store,
+                object_store,
+                tag_mapping_entries
+            );
             async move {
                 let ref_info = ref_update.clone();
                 info!(
@@ -452,6 +495,7 @@ async fn non_atomic_refs_update(
                         git_bonsai_mapping_store,
                         object_store,
                         ref_update,
+                        tag_mapping_entries,
                     )
                     .await
                 })
@@ -476,12 +520,14 @@ async fn atomic_refs_update(
     request_context: Arc<RepositoryRequestContext>,
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
+    tag_mapping_entries: Option<Arc<HashMap<String, BonsaiTagMappingEntry>>>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
     match set_refs(
         request_context,
         git_bonsai_mapping_store,
         object_store,
         ref_updates.clone(),
+        tag_mapping_entries,
     )
     .await
     {

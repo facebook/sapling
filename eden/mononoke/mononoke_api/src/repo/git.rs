@@ -171,6 +171,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             annotation,
             annotated_tag,
             target_is_tag,
+            TagMappingWrite::Inline,
         )
         .await?;
 
@@ -278,6 +279,16 @@ pub async fn generate_ref_content_mapping(
         .map_err(|e| GitError::StorageFailure(git_hash.to_string(), e.into()))
 }
 
+/// Whether `create_annotated_tag` writes the `bonsai_tag_mapping` row itself, or
+/// leaves it to the caller. The Git server push path uses `Deferred` and writes
+/// the row atomically with the bookmark move (S687348); all other callers use
+/// `Inline`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TagMappingWrite {
+    Inline,
+    Deferred,
+}
+
 /// Free function for creating a new annotated tag in the repository.
 ///
 /// Annotated tags are bookmarks of category `Tag` or `Note` which point to one of these
@@ -302,6 +313,7 @@ pub async fn create_annotated_tag(
     annotation: String,
     annotated_tag: BonsaiAnnotatedTag,
     target_is_tag: bool,
+    mapping_write: TagMappingWrite,
 ) -> Result<mononoke_types::ChangesetId, GitError> {
     let tag_hash = tag_hash.unwrap_or_else(|| ObjectId::null(gix_hash::Kind::Sha1));
     let tag_id = tag_hash.clone();
@@ -330,22 +342,26 @@ pub async fn create_annotated_tag(
         .await
         .map_err(|e| anyhow::anyhow!("Error in saving changeset {changeset_id}, Cause: {e:?}"))
         .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
-    let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
-        .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
-    // Create a mapping between the tag name and the metadata changeset
-    let mapping_entry = BonsaiTagMappingEntry {
-        changeset_id,
-        tag_hash,
-        tag_name: name,
-        target_is_tag,
-    };
-    repo.bonsai_tag_mapping()
-        .add_or_update_mappings(ctx, vec![mapping_entry])
-        .await
-        .map_err(|e| {
-            anyhow::anyhow!("Error in storing bonsai tag mappings for tag {tag_id}, Cause: {e:?}")
-        })
-        .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
+    if mapping_write == TagMappingWrite::Inline {
+        let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
+            .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
+        // Create a mapping between the tag name and the metadata changeset
+        let mapping_entry = BonsaiTagMappingEntry {
+            changeset_id,
+            tag_hash,
+            tag_name: name,
+            target_is_tag,
+        };
+        repo.bonsai_tag_mapping()
+            .add_or_update_mappings(ctx, vec![mapping_entry])
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Error in storing bonsai tag mappings for tag {tag_id}, Cause: {e:?}"
+                )
+            })
+            .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
+    }
     Ok(changeset_id)
 }
 

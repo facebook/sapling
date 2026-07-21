@@ -5,17 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkTransactionHook;
 use cloned::cloned;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future::FutureExt;
 use futures::stream;
 use gix_hash::ObjectId;
 use gix_object::Kind;
@@ -46,18 +50,108 @@ use crate::util::mononoke_source_of_truth;
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
 const COMMIT_CLOUD_REF_PREFIX: &str = "refs/commitcloud/upload";
 
+/// Keyed by `tags/<tag>` bookmark name. `None` means the atomic path is off (the
+/// mapping was written inline). A tag ref absent from the map is a lightweight
+/// tag whose stale mapping must be deleted.
+pub type TagMappingEntries = Option<Arc<HashMap<String, BonsaiTagMappingEntry>>>;
+
+// Hooks re-clone captures per call to stay retry-safe.
+fn tag_mapping_write_hook(
+    repo: Arc<Repo>,
+    entry: BonsaiTagMappingEntry,
+) -> BookmarkTransactionHook {
+    Arc::new(move |ctx, sql_txn| {
+        cloned!(repo, entry);
+        async move {
+            let sql_txn = repo
+                .bonsai_tag_mapping()
+                .add_or_update_mappings_in_transaction(&ctx, vec![entry], sql_txn)
+                .await?;
+            Ok(sql_txn)
+        }
+        .boxed()
+    })
+}
+
+fn tag_mapping_delete_hook(repo: Arc<Repo>, tag_name: String) -> BookmarkTransactionHook {
+    Arc::new(move |ctx, sql_txn| {
+        cloned!(repo, tag_name);
+        async move {
+            let sql_txn = repo
+                .bonsai_tag_mapping()
+                .delete_mappings_by_name_in_transaction(&ctx, vec![tag_name], sql_txn)
+                .await?;
+            Ok(sql_txn)
+        }
+        .boxed()
+    })
+}
+
+/// The `bonsai_tag_mapping` change a tag create/move implies: write the new
+/// entry (annotated tag) or delete a stale one (lightweight tag).
+enum TagReconcile {
+    Write(BonsaiTagMappingEntry),
+    Delete(String),
+}
+
+impl TagReconcile {
+    /// The reconcile a tag create/move needs, or `None` for non-tags and deletes
+    /// (deletes reconcile post-commit).
+    fn for_operation(
+        bookmark_operation: &BookmarkOperation,
+        entries: &HashMap<String, BonsaiTagMappingEntry>,
+    ) -> Option<Self> {
+        let bookmark_key = &bookmark_operation.bookmark_key;
+        if !bookmark_key.is_tag() || bookmark_operation.is_delete() {
+            return None;
+        }
+        let tag_name = bookmark_key.name().to_string();
+        Some(match entries.get(&tag_name) {
+            Some(entry) => Self::Write(entry.clone()),
+            None => Self::Delete(tag_name),
+        })
+    }
+
+    /// Apply atomically inside the bookmark-move transaction.
+    fn into_hook(self, repo: Arc<Repo>) -> BookmarkTransactionHook {
+        match self {
+            Self::Write(entry) => tag_mapping_write_hook(repo, entry),
+            Self::Delete(tag_name) => tag_mapping_delete_hook(repo, tag_name),
+        }
+    }
+
+    /// Apply directly when there is no bookmark transaction to attach to (a
+    /// no-op move, where the bookmark itself does not change).
+    async fn apply_directly(self, repo: &Repo, ctx: &CoreContext) -> Result<()> {
+        match self {
+            Self::Write(entry) => {
+                repo.bonsai_tag_mapping()
+                    .add_or_update_mappings(ctx, vec![entry])
+                    .await
+            }
+            Self::Delete(tag_name) => {
+                repo.bonsai_tag_mapping()
+                    .delete_mappings_by_name(ctx, vec![tag_name])
+                    .await
+            }
+        }
+    }
+}
+
 /// Method responsible for creating, moving or deleting a git ref
 pub async fn set_ref(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
     ref_update: RefUpdate,
+    tag_mapping_entries: TagMappingEntries,
 ) -> (RefUpdate, Result<()>) {
     let result = set_ref_inner(
         request_context,
         mappings_store,
         object_store,
         ref_update.clone(),
+        tag_mapping_entries,
     )
     .await;
     (ref_update, result)
@@ -69,6 +163,7 @@ pub async fn set_refs(
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
     ref_updates: Vec<RefUpdate>,
+    tag_mapping_entries: TagMappingEntries,
 ) -> Result<()> {
     let (ctx, repo, repos) = (
         request_context.ctx.clone(),
@@ -120,6 +215,16 @@ pub async fn set_refs(
             }
         })
         .collect::<Vec<_>>();
+    // Reconcile annotated-tag mappings inside this bookmark transaction; pure
+    // deletes are handled post-commit below.
+    let tag_hooks: Vec<BookmarkTransactionHook> = match &tag_mapping_entries {
+        Some(entries) => bookmark_operations
+            .iter()
+            .filter_map(|op| TagReconcile::for_operation(op, entries))
+            .map(|reconcile| reconcile.into_hook(repo.clone()))
+            .collect(),
+        None => vec![],
+    };
     // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
     if !mononoke_source_of_truth(&ctx, repo.clone()).await? {
         return Err(anyhow::anyhow!(
@@ -139,6 +244,7 @@ pub async fn set_refs(
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         BookmarkOperationErrorReporting::Plain,
+        tag_hooks,
     )
     .await;
     if let Err(e) = result {
@@ -157,6 +263,7 @@ async fn set_ref_inner(
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
     ref_update: RefUpdate,
+    tag_mapping_entries: TagMappingEntries,
 ) -> Result<()> {
     let (ctx, repo, repos) = (
         request_context.ctx.clone(),
@@ -210,36 +317,71 @@ async fn set_ref_inner(
     // means the client has explicitly requested for a non-ffwd update and the final result will be
     // governed by the server side config (ofcourse subject to bypass)
     let allow_non_fast_forward = true;
-    // Actually perform the ref update
-    let result = set_bookmark(
-        &ctx,
-        &repo_context,
-        &bookmark_operation,
-        Some(request_context.pushvars.as_ref()),
-        allow_non_fast_forward,
-        BookmarkOperationErrorReporting::Plain,
-    )
-    .await;
+
+    // Captured before `bookmark_operation` may be moved into set_bookmarks.
+    let bookmark_key = bookmark_operation.bookmark_key.clone();
+    let is_tag_delete = bookmark_key.is_tag() && bookmark_operation.is_delete();
+    let is_noop = bookmark_operation.is_noop();
+    let old_changeset = bookmark_operation.operation_type.old_changeset();
+
+    // A real tag create/move commits its mapping atomically via a hook. A no-op
+    // move carries no transaction (the transactional path rejects old == new),
+    // so its reconcile is applied directly afterward — otherwise an
+    // annotated->lightweight conversion that doesn't move the commit would leave
+    // a stale mapping row behind.
+    let (hook_reconcile, direct_reconcile) = match tag_mapping_entries
+        .as_ref()
+        .and_then(|entries| TagReconcile::for_operation(&bookmark_operation, entries))
+    {
+        Some(reconcile) if is_noop => (None, Some(reconcile)),
+        Some(reconcile) => (Some(reconcile), None),
+        None => (None, None),
+    };
+
+    let result = match hook_reconcile {
+        Some(reconcile) => {
+            set_bookmarks(
+                &ctx,
+                &repo_context,
+                vec![bookmark_operation],
+                Some(request_context.pushvars.as_ref()),
+                allow_non_fast_forward,
+                BookmarkOperationErrorReporting::Plain,
+                vec![reconcile.into_hook(repo.clone())],
+            )
+            .await
+        }
+        None => {
+            set_bookmark(
+                &ctx,
+                &repo_context,
+                &bookmark_operation,
+                Some(request_context.pushvars.as_ref()),
+                allow_non_fast_forward,
+                BookmarkOperationErrorReporting::Plain,
+            )
+            .await
+        }
+    };
     if let Err(err) = result {
         anyhow::bail!(update_error(&mappings_store, err).await);
     }
-    // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
-    // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
-    let bookmark_key = &bookmark_operation.bookmark_key;
-    if bookmark_key.is_tag() && bookmark_operation.is_delete() {
+    // No-op move: reconcile the mapping directly (no transaction to attach to).
+    if let Some(reconcile) = direct_reconcile {
+        reconcile
+            .apply_directly(&repo, &ctx)
+            .await
+            .context("Failed to reconcile tag mapping for no-op push")?;
+    }
+    // Pure tag deletes reconcile post-commit (delete path carries no hook).
+    if is_tag_delete {
         repo.bonsai_tag_mapping()
             .delete_mappings_by_name(&ctx, vec![bookmark_key.name().to_string()])
             .await?;
     }
     // If requested, let's wait for the bookmark move to get reflected in WBC
     if request_context.pushvars.wait_for_wbc_update() {
-        wait_for_bookmark_move(
-            &ctx,
-            &repo,
-            bookmark_key,
-            bookmark_operation.operation_type.old_changeset(),
-        )
-        .await?;
+        wait_for_bookmark_move(&ctx, &repo, &bookmark_key, old_changeset).await?;
     }
     Ok(())
 }

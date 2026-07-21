@@ -31,6 +31,7 @@ use futures::stream;
 use futures_retry::retry;
 use futures_stats::TimedTryFutureExt;
 use gix_hash::ObjectId;
+use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -157,12 +158,14 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     ) -> Result<Self::IntermediateChangeset, Error>;
 
     /// Generate a single Bonsai changeset ID for corresponding Git
-    /// annotated tag.
+    /// annotated tag. `mapping_write` controls whether the `bonsai_tag_mapping`
+    /// row is written here or left to the caller.
     async fn generate_changeset_for_annotated_tag(
         &self,
         ctx: &CoreContext,
         target_changeset_id: Option<ChangesetId>,
         tag: TagMetadata,
+        mapping_write: TagMappingWrite,
     ) -> Result<ChangesetId, Error>;
 
     /// Finalize a batch of generated changesets. The supplied batch is
