@@ -98,8 +98,9 @@ pub struct MononokeReposManager<Repo> {
     // Tracks the RepoConfig last applied to each managed repo. Used to skip
     // redundant per-repo reloads when a tier-manifest content change does not
     // change a given repo's config (the common case when a sibling repo is
-    // added or modified).
-    applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+    // added or modified). Persistent + Arc-valued so a copy-on-write update is
+    // O(1) clone + O(log N), not a whole-map deep clone.
+    applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
     // Tier-wide list of enabled repos (name -> default identity scheme).
     // Shared with Mononoke<R> (read by list_repos) and with
     // MononokeConfigUpdateReceiver (which refreshes it on each config update).
@@ -150,7 +151,7 @@ impl<Repo> MononokeReposManager<Repo> {
             + 'static,
     {
         let repos = Arc::new(MononokeRepos::new());
-        let applied_configs = Arc::new(ArcSwap::from_pointee(HashMap::new()));
+        let applied_configs = Arc::new(ArcSwap::from_pointee(im::HashMap::new()));
         let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let reconcile_driver = Arc::new(ReconcileDriver {
             configs: configs.clone(),
@@ -250,8 +251,9 @@ impl<Repo> MononokeReposManager<Repo> {
     where
         I: IntoIterator<Item = (String, RepoConfig)>,
     {
+        // O(1) clone of the persistent map; Arc-wrap each value on insert.
         let mut new_applied = (**self.applied_configs.load()).clone();
-        new_applied.extend(entries);
+        new_applied.extend(entries.into_iter().map(|(n, c)| (n, Arc::new(c))));
         self.applied_configs.store(Arc::new(new_applied));
     }
 
@@ -773,7 +775,7 @@ pub struct MononokeConfigUpdateReceiver<Repo> {
     service_name: Option<ShardedService>,
     mononoke_configs: Arc<MononokeConfigs>,
     // Shared with the owning MononokeReposManager. See MononokeReposManager.
-    applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+    applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
     // Shared with MononokeReposManager and Mononoke<R>. Updated on every
     // config change so `list_repos` sees newly-added repos without waiting
     // for a process restart.
@@ -843,12 +845,12 @@ where
 /// being added or modified.
 fn filter_repos_with_changed_config(
     candidates: Vec<(String, RepoConfig)>,
-    applied: &HashMap<String, RepoConfig>,
+    applied: &im::HashMap<String, Arc<RepoConfig>>,
 ) -> Vec<(String, RepoConfig)> {
     candidates
         .into_iter()
         .filter(|(name, new_config)| match applied.get(name) {
-            Some(existing) => existing != new_config,
+            Some(existing) => **existing != *new_config,
             None => true,
         })
         .collect()
@@ -868,7 +870,7 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
         repo_factory: Arc<RepoFactory>,
         service_name: Option<ShardedService>,
         mononoke_configs: Arc<MononokeConfigs>,
-        applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+        applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
         repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
     ) -> Self {
         Self {
@@ -895,8 +897,9 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     where
         I: IntoIterator<Item = (String, RepoConfig)>,
     {
+        // O(1) clone of the persistent map; Arc-wrap each value on insert.
         let mut new_applied = (**self.applied_configs.load()).clone();
-        new_applied.extend(entries);
+        new_applied.extend(entries.into_iter().map(|(n, c)| (n, Arc::new(c))));
         self.applied_configs.store(Arc::new(new_applied));
     }
 
@@ -1082,7 +1085,7 @@ where
 
         // Skip if the config has not actually changed since the last apply.
         if let Some(existing) = self.applied_configs.load().get(repo_name) {
-            if existing == repo_config {
+            if **existing == *repo_config {
                 debug!(
                     "Skipping single-repo reload for {} (config unchanged)",
                     repo_name,

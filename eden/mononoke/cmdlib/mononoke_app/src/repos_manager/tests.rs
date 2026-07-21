@@ -13,6 +13,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
+use arc_swap::ArcSwap;
 use config_reconcile::RepoGeneration;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
@@ -247,8 +248,8 @@ fn test_filter_skips_repo_with_unchanged_config() {
     // filtered out — no reload needed.
     let config = make_repo_config(true, None);
     let candidates = vec![("repo".to_string(), config.clone())];
-    let mut applied = HashMap::new();
-    applied.insert("repo".to_string(), config);
+    let mut applied: im::HashMap<String, Arc<RepoConfig>> = im::HashMap::new();
+    applied.insert("repo".to_string(), Arc::new(config));
 
     let result = filter_repos_with_changed_config(candidates, &applied);
     assert!(
@@ -264,8 +265,8 @@ fn test_filter_keeps_repo_with_changed_config() {
     let old_config = make_repo_config(true, None);
     let new_config = make_repo_config(false, None);
     let candidates = vec![("repo".to_string(), new_config)];
-    let mut applied = HashMap::new();
-    applied.insert("repo".to_string(), old_config);
+    let mut applied: im::HashMap<String, Arc<RepoConfig>> = im::HashMap::new();
+    applied.insert("repo".to_string(), Arc::new(old_config));
 
     let result = filter_repos_with_changed_config(candidates, &applied);
     assert_eq!(get_repo_names(&result), vec!["repo"]);
@@ -277,7 +278,7 @@ fn test_filter_keeps_repo_not_in_applied_map() {
     // passed through so it gets loaded.
     let config = make_repo_config(true, None);
     let candidates = vec![("new_repo".to_string(), config)];
-    let applied = HashMap::new();
+    let applied: im::HashMap<String, Arc<RepoConfig>> = im::HashMap::new();
 
     let result = filter_repos_with_changed_config(candidates, &applied);
     assert_eq!(get_repo_names(&result), vec!["new_repo"]);
@@ -294,15 +295,59 @@ fn test_filter_mixed_candidates() {
         ("changed".to_string(), config_b.clone()),
         ("brand_new".to_string(), config_a.clone()),
     ];
-    let mut applied = HashMap::new();
-    applied.insert("unchanged".to_string(), config_a);
-    applied.insert("changed".to_string(), make_repo_config(true, None));
+    let mut applied: im::HashMap<String, Arc<RepoConfig>> = im::HashMap::new();
+    applied.insert("unchanged".to_string(), Arc::new(config_a));
+    applied.insert(
+        "changed".to_string(),
+        Arc::new(make_repo_config(true, None)),
+    );
 
     let result = filter_repos_with_changed_config(candidates, &applied);
     let names = get_repo_names(&result);
     assert!(!names.contains(&"unchanged"));
     assert!(names.contains(&"changed"));
     assert!(names.contains(&"brand_new"));
+}
+
+#[mononoke::test]
+fn test_applied_configs_accumulate_and_share() {
+    // Mirrors record_applied_configs' CoW merge: repeated adds accumulate all
+    // entries, and an entry untouched by a later add stays the same Arc across
+    // the clone (the O(1)-clone structural-sharing property the fix relies on).
+    let applied: ArcSwap<im::HashMap<String, Arc<RepoConfig>>> =
+        ArcSwap::from_pointee(im::HashMap::new());
+    let record = |entries: Vec<(String, RepoConfig)>| {
+        let mut next = (**applied.load()).clone();
+        next.extend(entries.into_iter().map(|(n, c)| (n, Arc::new(c))));
+        applied.store(Arc::new(next));
+    };
+
+    record(vec![
+        ("a".to_string(), make_repo_config(true, None)),
+        ("b".to_string(), make_repo_config(false, None)),
+    ]);
+    let after_first = applied.load_full();
+    record(vec![("c".to_string(), make_repo_config(true, None))]);
+
+    let map = applied.load();
+    assert_eq!(map.len(), 3, "all three repos must be tracked");
+    assert_eq!(
+        map.get("a").map(|c| (**c).clone()),
+        Some(make_repo_config(true, None)),
+        "entry a must compare equal via deref",
+    );
+    assert_eq!(
+        map.get("c").map(|c| (**c).clone()),
+        Some(make_repo_config(true, None)),
+        "entry c must compare equal via deref",
+    );
+
+    let before = after_first.get("a").expect("present after first add");
+    let now = map.get("a").expect("still present");
+    assert!(
+        Arc::ptr_eq(before, now),
+        "unchanged entry must be shared by Arc across the CoW update",
+    );
 }
 
 #[mononoke::test]
