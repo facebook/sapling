@@ -1,0 +1,38 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("scm_server_treehugger")
+
+rust_library(
+    name = "repo_manifest_mapping",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "repo_manifest_mapping_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "repo_manifest_mapping_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":repo_manifest_mapping",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
+)
