@@ -2210,124 +2210,16 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
 folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
-  bool prefetchOptimizations =
-      config_->getEdenConfig()->prefetchOptimizations.getValue();
-
-  std::vector<SlOidView> slOids;
-  slOids.reserve(ids.size());
-  for (const auto& id : ids) {
-    slOids.emplace_back(id);
-  }
-
-  if (slOids.empty()) {
-    return ImmediateFuture<folly::Unit>{folly::unit}.semi();
-  }
-
-  logBackingStoreFetch(
-      *context,
-      folly::Range{slOids.data(), slOids.size()},
-      ObjectFetchContext::ObjectType::Blob);
-
-  if (prefetchOptimizations &&
-      config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
-    // We skip the queue and allow IGNORE_RESULT to maximize throughput:
-    // prefetch doesn't care about the blob content itself, so Sapling can
-    // skip materializing it entirely.
-
-    std::vector<sapling::SaplingRequest> requests;
-    requests.reserve(ids.size());
-    for (size_t i = 0; i < ids.size(); i++) {
-      requests.emplace_back(slOids[i], context->getCause(), context.copy());
-    }
-
-    // Use makeNotReadyImmediateFuture to force going through the
-    // executor. This can be a large batch, and we don't want to block
-    // the caller.
-    return makeNotReadyImmediateFuture()
-        .thenValue([self = shared_from_this(),
-                    slOids = std::move(slOids),
-                    requests = std::move(requests),
-                    context = context.copy()](auto&&) {
-          auto importTracker =
-              RequestMetricsScope{&self->pendingImportPrefetchWatches_};
-
-          auto unique = generateUniqueID();
-          self->traceBus_->publish(
-              HgImportTraceEvent::start(
-                  unique,
-                  HgImportTraceEvent::BLOB_BATCH,
-                  slOids[0], // use the first item in batch
-                  context->getPriority().getClass(),
-                  context->getCause(),
-                  context->getClientPid()));
-
-          folly::stop_watch<std::chrono::milliseconds> watch;
-          XLOGF(DBG4, "Batch fetching {} blobs from Sapling", requests.size());
-
-          size_t failureCount = 0;
-          auto fetchStats = self->nativeGetBlobBatch(
-              folly::range(requests),
-              sapling::FetchMode::AllowRemote,
-              // We aren't going through the queue, so we are certain we can
-              // IGNORE_RESULT without impacting other fetches for the same
-              // id (S561997: a batch-level IGNORE_RESULT must never strip
-              // results from non-prefetch requests merged into the batch).
-              true, // IGNORE_RESULT
-              [&](size_t index,
-                  folly::Try<std::unique_ptr<folly::IOBuf>> content) {
-                if (content.hasException()) {
-                  failureCount++;
-                  XLOGF(
-                      ERR,
-                      "Failed to batch import {} from Sapling: {}",
-                      requests[index].oid,
-                      content.exception().what().toStdString());
-                }
-              });
-          reportPrefetchStats(
-              context, fetchStats, /*totalBytes=*/0, failureCount);
-
-          self->traceBus_->publish(
-              HgImportTraceEvent::finish(
-                  unique,
-                  HgImportTraceEvent::BLOB_BATCH,
-                  slOids[0], // use the first item in batch
-                  context->getPriority().getClass(),
-                  context->getCause(),
-                  context->getClientPid(),
-                  context->getFetchedSource()));
-
-          self->stats_->increment(
-              &SaplingBackingStoreStats::prefetchBlobFailure, failureCount);
-          self->stats_->increment(
-              &SaplingBackingStoreStats::prefetchBlobSuccess,
-              requests.size() - failureCount);
-          self->stats_->addDuration(
-              &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
-        })
-        .unit()
-        .semi();
-  } else {
-    // Do not check for whether blobs are already present locally,
-    // this check is useful for latency oriented workflows, not for
-    // throughput oriented ones. Mercurial will anyway not re-fetch a
-    // blob that is already present locally, so the check for local
-    // blob is pure overhead when prefetching.
-    std::vector<ImmediateFuture<GetBlobResult>> futures;
-    futures.reserve(ids.size());
-
-    for (size_t i = 0; i < ids.size(); i++) {
-      futures.emplace_back(getBlobEnqueue(
-          slOids[i], context, SaplingImportRequest::FetchType::Prefetch));
-    }
-
-    return collectAllSafe(std::move(futures))
-        .thenValue(
-            [context = context.copy()](std::vector<GetBlobResult>&& results) {
-              aggregatePrefetchBlobStats(context, results);
-            })
-        .semi();
-  }
+  // NOLINTNEXTLINE(facebook-folly-coro-return-captures-local-var)
+  return folly::coro::co_invoke(
+             [self = shared_from_this()](
+                 auto ids, auto context) -> folly::coro::Task<folly::Unit> {
+               co_return co_await self->co_prefetchBlobs(
+                   std::move(ids), std::move(context));
+             },
+             ids,
+             context.copy())
+      .semi();
 }
 
 folly::coro::now_task<folly::Unit> SaplingBackingStore::co_prefetchBlobs(

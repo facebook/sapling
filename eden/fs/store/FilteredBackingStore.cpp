@@ -600,36 +600,6 @@ FilteredBackingStore::co_getPathAcls(
       parsedRootId, paths, context);
 }
 
-folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
-    ObjectIdRange ids,
-    const ObjectFetchContextPtr& context) {
-  // Fast path: avoid allocation if all ids are can be passed through.
-  if (std::all_of(
-          ids.begin(), ids.end(), [this](auto& id) { return isSlOid(id); })) {
-    return backingStore_->prefetchBlobs(ids, context);
-  }
-
-  std::vector<ObjectId> unfilteredIds;
-  unfilteredIds.reserve(ids.size());
-  std::transform(
-      ids.begin(),
-      ids.end(),
-      std::back_inserter(unfilteredIds),
-      [self = this](auto& id) {
-        if (self->isSlOid(id)) {
-          // Raw id from underlying backingstore.
-          return id;
-        }
-        return FilteredObjectId::fromObjectId(id).object();
-      });
-  // prefetchBlobs() expects that the caller guarantees the ids live at least
-  // longer than this future takes to complete. Therefore, we ensure the
-  // lifetime of the newlly created unfilteredIds.
-  auto fut = backingStore_->prefetchBlobs(unfilteredIds, context);
-  return std::move(fut).deferEnsure(
-      [unfilteredIds = std::move(unfilteredIds)]() {});
-}
-
 folly::coro::now_task<folly::Unit> FilteredBackingStore::co_prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {

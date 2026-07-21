@@ -631,6 +631,10 @@ class SaplingBackingStore final
    */
   folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(SlOidView id);
 
+  /**
+   * DEPRECATED: use co_prefetchBlobs directly. Futures wrapper kept for
+   * non-coroutine callers; remove once all callers have migrated.
+   */
   [[nodiscard]] virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;

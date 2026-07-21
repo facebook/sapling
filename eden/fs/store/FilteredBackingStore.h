@@ -208,10 +208,6 @@ class FilteredBackingStore
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  [[nodiscard]] folly::SemiFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) override;
-
   folly::coro::now_task<folly::Unit> co_prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
