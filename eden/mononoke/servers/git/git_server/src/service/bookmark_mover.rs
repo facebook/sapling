@@ -216,13 +216,25 @@ pub async fn set_refs(
         })
         .collect::<Vec<_>>();
     // Reconcile annotated-tag mappings inside this bookmark transaction; pure
-    // deletes are handled post-commit below.
+    // deletes are handled post-commit below. Sort by tag name so that concurrent
+    // atomic pushes acquire the bonsai_tag_mapping row locks in a consistent
+    // order (mirroring the sorted per-bookmark locks) and cannot deadlock each
+    // other on the mapping rows.
     let tag_hooks: Vec<BookmarkTransactionHook> = match &tag_mapping_entries {
-        Some(entries) => bookmark_operations
-            .iter()
-            .filter_map(|op| TagReconcile::for_operation(op, entries))
-            .map(|reconcile| reconcile.into_hook(repo.clone()))
-            .collect(),
+        Some(entries) => {
+            let mut reconciles: Vec<(String, TagReconcile)> = bookmark_operations
+                .iter()
+                .filter_map(|op| {
+                    TagReconcile::for_operation(op, entries)
+                        .map(|reconcile| (op.bookmark_key.name().to_string(), reconcile))
+                })
+                .collect();
+            reconciles.sort_by(|a, b| a.0.cmp(&b.0));
+            reconciles
+                .into_iter()
+                .map(|(_, reconcile)| reconcile.into_hook(repo.clone()))
+                .collect()
+        }
         None => vec![],
     };
     // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
