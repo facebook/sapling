@@ -239,237 +239,28 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
     const ObjectFetchContextPtr& fetchContext) {
-  bool prefetchOptimizations =
-      serverState->getEdenConfig()->prefetchOptimizations.getValue();
-  bool dedupePrefetchFiles =
-      serverState->getEdenConfig()->globDedupePrefetchFiles.getValue() ||
-      !prefetchOptimizations;
-
-  auto fileBlobsToPrefetch =
-      prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
-
-  // These ids must outlive the GlobResult created by evaluate as the
-  // GlobResults will hold on to references to these ids
-  auto originRootIds = std::make_unique<std::vector<RootId>>();
-
-  // Globs will be evaluated against the specified commits or the current commit
-  // if none are specified. The results will be collected here.
-  std::vector<ImmediateFuture<folly::Unit>> globFutures{};
-  auto globResults = std::make_shared<ResultList>();
-
-  RelativePath searchRoot;
-  if (!(searchRootUser_.empty() || searchRootUser_ == ".")) {
-    searchRoot = RelativePath{searchRootUser_};
-  }
-  std::shared_ptr<GlobTree> globTree = nullptr;
-  std::shared_ptr<GlobNode> globNode = nullptr;
-
-  if (!rootIds_.empty()) {
-    // Note that we MUST reserve here, otherwise while emplacing we might
-    // invalidate the earlier commitId references
-    globFutures.reserve(rootIds_.size());
-    originRootIds->reserve(rootIds_.size());
-    auto caseSensitivity =
-        serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
-        ? edenMount->getCheckoutConfig()->getCaseSensitive()
-        : CaseSensitivity::Sensitive;
-    globTree = std::make_shared<GlobTree>(
-        bool(includeDotfiles_),
-        caseSensitivity,
-        bool(prefetchOptimizations),
-        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue());
-    compileGlobs(globs, *globTree);
-    for (auto& rootId : rootIds_) {
-      const RootId& originRootId = originRootIds->emplace_back(
-          edenMount->getObjectStore()->parseRootId(rootId));
-
-      globFutures.emplace_back(
-          edenMount->getObjectStore()
-              ->getRootTree(originRootId, fetchContext)
-              .thenValue([edenMount,
-                          globTree,
-                          fetchContext = fetchContext.copy(),
-                          searchRoot](ObjectStore::GetRootTreeResult rootTree) {
-                return resolveTree(
-                    *edenMount->getObjectStore(),
-                    fetchContext,
-                    std::move(rootTree.tree),
-                    searchRoot);
-              })
-              .thenValue([edenMount,
-                          globTree,
-                          fetchContext = fetchContext.copy(),
-                          fileBlobsToPrefetch,
-                          globResults,
-                          &originRootId,
-                          prefetchOptimizations,
-                          suppressFileList = suppressFileList_](
-                             std::shared_ptr<const Tree>&& tree) mutable {
-                return globTree->evaluate(
-                    edenMount->getObjectStore(),
-                    fetchContext,
-                    RelativePathPiece(),
-                    std::move(tree),
-                    fileBlobsToPrefetch.get(),
-                    suppressFileList && prefetchOptimizations
-                        ? nullptr
-                        : globResults.get(),
-                    originRootId);
-              }));
-    }
-  } else {
-    bool includeDotfiles = includeDotfiles_;
-    CaseSensitivity caseSensitive =
-        serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
-        ? edenMount->getCheckoutConfig()->getCaseSensitive()
-        : CaseSensitivity::Sensitive;
-    uint32_t asyncDepth =
-        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue();
-    globNode = std::make_shared<GlobNode>(
-        includeDotfiles,
-        caseSensitive,
-        bool(prefetchOptimizations),
-        asyncDepth);
-    compileGlobs(globs, *globNode);
-    const RootId& originRootId =
-        originRootIds->emplace_back(edenMount->getCheckedOutRootId());
-    globFutures.emplace_back(
-        edenMount->getInodeSlow(searchRoot, fetchContext)
-            .thenValue([fetchContext = fetchContext.copy(),
-                        globNode,
-                        edenMount,
-                        fileBlobsToPrefetch,
-                        globResults,
-                        &originRootId,
-                        prefetchOptimizations,
-                        suppressFileList =
-                            suppressFileList_](InodePtr inode) mutable {
-              return globNode->evaluate(
-                  edenMount->getObjectStore(),
-                  fetchContext,
-                  RelativePathPiece(),
-                  inode.asTreePtr(),
-                  fileBlobsToPrefetch.get(),
-                  suppressFileList && prefetchOptimizations ? nullptr
-                                                            : globResults.get(),
-                  originRootId);
-            }));
-  }
-
-  auto prefetchFuture =
-      collectAll(std::move(globFutures))
-          .thenValue([fileBlobsToPrefetch,
-                      dedupePrefetchFiles,
-                      globResults = std::move(globResults),
-                      suppressFileList = suppressFileList_](
-                         std::vector<folly::Try<folly::Unit>>&& tries) {
-            std::vector<GlobResult> sortedResults;
-            if (!suppressFileList) {
-              std::swap(sortedResults, *globResults->wlock());
-              for (auto& try_ : tries) {
-                try_.throwUnlessValue();
-              }
-              std::sort(sortedResults.begin(), sortedResults.end());
-              auto resultsNewEnd =
-                  std::unique(sortedResults.begin(), sortedResults.end());
-              sortedResults.erase(resultsNewEnd, sortedResults.end());
-            }
-
-            // Deduplicate files as an optimization. The BackingStore does not
-            // necessarily dedupe fetches (although SaplingBackingStore does
-            // in the scmstore::FileStore, per batch).
-            //
-            // Note that normally duplicates are rare, and deduping a list of
-            // millions of files can take 5s, so it typically is not worth it.
-            if (dedupePrefetchFiles && fileBlobsToPrefetch) {
-              auto fileBlobsToPrefetchLocked = fileBlobsToPrefetch->wlock();
-              folly::F14FastSet<ObjectId> seen;
-              size_t i = 0;
-              while (i < fileBlobsToPrefetchLocked->size()) {
-                if (seen.insert((*fileBlobsToPrefetchLocked)[i]).second) {
-                  ++i;
-                } else {
-                  std::swap(
-                      (*fileBlobsToPrefetchLocked)[i],
-                      fileBlobsToPrefetchLocked->back());
-                  fileBlobsToPrefetchLocked->pop_back();
-                }
-              }
-            }
-
-            return sortedResults;
-          })
-          .thenValue(
-              [edenMount,
-               wantDtype = wantDtype_,
-               fileBlobsToPrefetch,
-               suppressFileList = suppressFileList_,
-               listOnlyFiles = listOnlyFiles_,
-               numRevisions = rootIds_.size(),
-               fetchContext = fetchContext.copy(),
-               config = serverState->getEdenConfig()](
-                  std::vector<GlobResult>&& results) mutable
-                  -> ImmediateFuture<std::unique_ptr<Glob>> {
-                auto out = std::make_unique<Glob>();
-
-                // When there are 0 or 1 revisions, every entry has the
-                // same origin hash. Skip the per-file renderRootId() call
-                // and the resulting list, as no caller can use it to
-                // distinguish between revisions.
-                bool populateOriginHashes = numRevisions > 1 ||
-                    !config->globSkipRedundantOriginHashes.getValue();
-
-                if (!suppressFileList) {
-                  // already deduplicated at this point, no need to de-dup
-                  for (auto& entry : results) {
-                    if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
-                      out->matchingFiles()->emplace_back(entry.name.asString());
-
-                      if (wantDtype) {
-                        out->dtypes()->emplace_back(
-                            static_cast<OsDtype>(entry.dtype));
-                      }
-
-                      if (populateOriginHashes) {
-                        out->originHashes()->emplace_back(
-                            edenMount->getObjectStore()->renderRootId(
-                                *entry.originId));
-                      }
-                    }
-                  }
-                }
-                if (fileBlobsToPrefetch) {
-                  std::vector<ImmediateFuture<folly::Unit>> futures;
-
-                  auto store = edenMount->getObjectStore();
-                  auto blobs = fileBlobsToPrefetch->rlock();
-                  auto range = folly::Range{blobs->data(), blobs->size()};
-
-                  while (range.size() > 20480) {
-                    auto curRange = range.subpiece(0, 20480);
-                    range.advance(20480);
-                    futures.emplace_back(
-                        store->prefetchBlobs(curRange, fetchContext));
-                  }
-                  if (!range.empty()) {
-                    futures.emplace_back(
-                        store->prefetchBlobs(range, fetchContext));
-                  }
-
-                  return collectAll(std::move(futures))
-                      .thenValue([glob = std::move(out),
-                                  fileBlobsToPrefetch](auto&&) mutable {
-                        return std::move(glob);
-                      });
-                }
-                return std::move(out);
-              })
-          .ensure(
-              [globTree, globNode, originRootIds = std::move(originRootIds)]() {
-                // keep globRoot and originRootIds alive until the end
-              });
-
-  return prefetchFuture;
+  // Move *this into the lambda so it outlives the coroutine even if the caller
+  // destroys its globber after glob() returns.
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [globber = std::move(*this)](
+              auto edenMount,
+              auto serverState,
+              auto globs,
+              auto fetchContext) mutable
+              -> folly::coro::Task<std::unique_ptr<Glob>> {
+            co_return co_await globber.co_glob(
+                std::move(edenMount),
+                std::move(serverState),
+                std::move(globs),
+                std::move(fetchContext));
+          },
+          std::move(edenMount),
+          std::move(serverState),
+          std::move(globs),
+          fetchContext.copy())
+          .semi()};
 }
 
 folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(

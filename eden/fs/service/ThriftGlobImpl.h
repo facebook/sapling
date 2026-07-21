@@ -40,6 +40,9 @@ class ThriftGlobImpl {
   // TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
   // usable for the duration of this glob. Either pass EdenMountHandle or
   // .ensure() the lifetime of EdenMountHandle outlives the call.
+  //
+  // DEPRECATED: use co_glob directly. Futures wrapper kept for non-coroutine
+  // callers; remove once all callers have migrated.
   ImmediateFuture<std::unique_ptr<Glob>> glob(
       std::shared_ptr<EdenMount> edenMount,
       std::shared_ptr<ServerState> serverState,

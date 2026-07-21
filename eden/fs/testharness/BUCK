@@ -324,7 +324,6 @@ cpp_library(
         "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:scribe_logger",
         "//eden/fs/telemetry:stats",
-        "//folly/executors:manual_executor",
     ],
 )
 

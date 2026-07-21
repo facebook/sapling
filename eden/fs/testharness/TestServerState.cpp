@@ -7,7 +7,6 @@
 
 #include "eden/fs/testharness/TestServerState.h"
 
-#include <folly/executors/ManualExecutor.h>
 #include <memory>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
@@ -27,7 +26,11 @@
 namespace facebook::eden {
 
 std::shared_ptr<ServerState> createTestServerState() {
-  auto executor = std::make_shared<folly::ManualExecutor>();
+  // Use a real thread pool rather than a ManualExecutor so that work scheduled
+  // on the ServerState executor (e.g. ThriftGlobImpl::glob) actually runs;
+  // callers drive the resulting future with a blocking get().
+  auto executor =
+      std::make_shared<UnboundedQueueExecutor>(1, "TestServerState");
   auto edenConfig = EdenConfig::createTestEdenConfig();
   auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig);
 
@@ -36,7 +39,7 @@ std::shared_ptr<ServerState> createTestServerState() {
       makeRefPtr<EdenStats>(),
       SessionInfo{},
       std::make_shared<FakePrivHelper>(),
-      std::make_shared<UnboundedQueueExecutor>(executor),
+      executor,
       executor,
       std::make_shared<FakeClock>(),
       std::make_shared<ProcessInfoCache>(),
