@@ -63,9 +63,22 @@
   $ [ "$NOW" = "$Y_BONSAI" ] && echo "bookmark untouched by dry-run"
   bookmark untouched by dry-run
 
-# Apply: the bookmark is moved back to the annotated tag's target (C1),
-# recovering the annotated tag rather than downgrading it to a lightweight tag.
+# --apply requires an explicit target: a divergence is indistinguishable from a
+# genuine annotated->lightweight conversion (S520024), so bare --apply is refused
+# to avoid blindly reverting one.
   $ mononoke_admin git-tag-mapping -R repo reconcile --apply
+  DIVERGED tags/first_tag: move bookmark * -> * (glob)
+  Error: --apply requires an explicit target: pass --tag <names> (the confirmed diverged tags from the dry-run output) or --all to act on every diverged tag.
+  [1]
+# The bookmark is untouched by the refused --apply.
+  $ NOW=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT name, hex(changeset_id) FROM bookmarks" | awk -F"|" '$1=="tags/first_tag"{print $2}')
+  $ [ "$NOW" = "$Y_BONSAI" ] && echo "bookmark untouched by refused --apply"
+  bookmark untouched by refused --apply
+
+# Apply with an explicit --tag: the bookmark is moved back to the annotated tag's
+# target (C1), recovering the annotated tag rather than downgrading it to a
+# lightweight tag.
+  $ mononoke_admin git-tag-mapping -R repo reconcile --apply --tag tags/first_tag
   DIVERGED tags/first_tag: move bookmark * -> * (glob)
   Recovered 1 annotated tag(s) by moving the bookmark to the tag target.
 

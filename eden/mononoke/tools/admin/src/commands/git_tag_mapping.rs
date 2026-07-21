@@ -18,6 +18,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_blobstore::RepoBlobstore;
+use repo_cross_repo::RepoCrossRepo;
 use repo_identity::RepoIdentity;
 
 use self::reconcile::ReconcileArgs;
@@ -46,6 +47,9 @@ pub struct Repo {
     repo_identity: RepoIdentity,
     #[facet]
     repo_config: RepoConfig,
+    // Needed by the reconcile --apply push-redirect / megarepo safety guard.
+    #[facet]
+    repo_cross_repo: RepoCrossRepo,
 }
 
 #[derive(Subcommand)]

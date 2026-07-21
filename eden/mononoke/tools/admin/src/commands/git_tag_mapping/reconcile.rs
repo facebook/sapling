@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -19,6 +20,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks_movement::BookmarkKind;
+use bookmarks_movement::check_bookmark_sync_config;
 use clap::Args;
 use context::CoreContext;
 use futures::stream;
@@ -43,6 +45,25 @@ pub struct ReconcileArgs {
     /// annotated tag's target. Without this flag only reports them (dry-run).
     #[clap(long)]
     apply: bool,
+
+    /// Restrict to these tag names (repeatable or comma-separated), matched
+    /// against the full bonsai_tag_mapping name shown in the dry-run output
+    /// (e.g. `--tag tags/3.4.14475`). With --apply, exactly one of --tag or
+    /// --all is required: a divergence can also be a legitimate annotated->
+    /// lightweight conversion, which recovery would wrongly revert.
+    #[clap(long, value_delimiter = ',')]
+    tag: Vec<String>,
+
+    /// With --apply, act on every diverged tag instead of an explicit --tag
+    /// list. Opt-in, because it reverts any genuine annotated->lightweight
+    /// conversions in the diverged set.
+    #[clap(long, conflicts_with = "tag")]
+    all: bool,
+
+    /// Bypass the source-of-truth / push-redirect safety guards. Only use when
+    /// certain Mononoke owns the repo and it is not megarepo-synced.
+    #[clap(long)]
+    force: bool,
 }
 
 /// A `tags/<tag>` bookmark that has diverged from its annotated tag object: the
@@ -140,6 +161,23 @@ async fn git_sha_map(
         .collect())
 }
 
+/// Refuse to move tag bookmarks in a push-redirected / megarepo-synced repo,
+/// mirroring the guard the git push path enforces -- moving them directly could
+/// desync the large repo. Push-redirect is repo-level for publishing `tags/*`
+/// bookmarks, so a single representative key suffices.
+async fn check_apply_allowed(
+    repo: &Repo,
+    ctx: &CoreContext,
+    sample_tag: &BookmarkKey,
+) -> Result<()> {
+    check_bookmark_sync_config(ctx, repo, sample_tag, BookmarkKind::Publishing)
+        .await
+        .context(
+            "Refusing --apply: repo is push-redirected / megarepo-synced; moving tag \
+             bookmarks directly could desync the large repo. Pass --force to override.",
+        )
+}
+
 pub async fn reconcile(repo: &Repo, ctx: &CoreContext, args: ReconcileArgs) -> Result<()> {
     let entries = repo
         .bonsai_tag_mapping()
@@ -161,6 +199,17 @@ pub async fn reconcile(repo: &Repo, ctx: &CoreContext, args: ReconcileArgs) -> R
         return Ok(());
     }
 
+    // Restrict to the --tag allowlist if provided (matched against the full
+    // bonsai_tag_mapping name, e.g. `tags/3.4.14475`).
+    if !args.tag.is_empty() {
+        let allow: HashSet<&str> = args.tag.iter().map(String::as_str).collect();
+        diverged.retain(|d| allow.contains(d.tag_name.as_str()));
+        if diverged.is_empty() {
+            println!("No diverged tags match --tag {:?}.", args.tag);
+            return Ok(());
+        }
+    }
+
     let git_shas = git_sha_map(repo, ctx, &diverged).await?;
     let show = |cs: &ChangesetId| {
         git_shas
@@ -179,12 +228,28 @@ pub async fn reconcile(repo: &Repo, ctx: &CoreContext, args: ReconcileArgs) -> R
 
     if !args.apply {
         println!(
-            "{} diverged tag(s) (dry-run). Re-run with --apply to move each bookmark to its \
-             annotated tag's target, recovering the annotated tag. NOTE: if a divergence is \
-             instead an intended annotated->lightweight conversion, do NOT apply.",
+            "{} diverged tag(s) (dry-run). To recover, re-run with --apply plus either \
+             --tag <names> (recommended: the confirmed diverged tags from above) or --all. A \
+             divergence can also be a legitimate annotated->lightweight conversion, which \
+             recovery would wrongly revert.",
             diverged.len()
         );
         return Ok(());
+    }
+
+    // --apply requires an explicit target selection so we never blindly revert a
+    // legitimate annotated->lightweight conversion.
+    if args.tag.is_empty() && !args.all {
+        anyhow::bail!(
+            "--apply requires an explicit target: pass --tag <names> (the confirmed diverged \
+             tags from the dry-run output) or --all to act on every diverged tag."
+        );
+    }
+
+    // Repo-level safety guards (unless --force): never move bookmarks in a repo
+    // Mononoke does not own, or that is push-redirected / megarepo-synced.
+    if !args.force {
+        check_apply_allowed(repo, ctx, &diverged[0].bookmark_key).await?;
     }
 
     // Phase 2: re-verify each candidate against master immediately before moving,
@@ -205,6 +270,21 @@ pub async fn reconcile(repo: &Repo, ctx: &CoreContext, args: ReconcileArgs) -> R
             println!("SKIP {} (no longer diverged on master)", d.tag_name);
             continue;
         };
+
+        // Never move a bookmark to a target git cannot advertise (no git sha) --
+        // that would re-introduce the clone failure this tool repairs.
+        if repo
+            .bonsai_git_mapping()
+            .get_git_sha1_from_bonsai(ctx, current.mapping_target)
+            .await?
+            .is_none()
+        {
+            println!(
+                "SKIP {} (annotated tag target {} has no git sha)",
+                current.tag_name, current.mapping_target
+            );
+            continue;
+        }
 
         let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
         // Raw value compare-and-swap: no fast-forward enforcement, so the sibling
