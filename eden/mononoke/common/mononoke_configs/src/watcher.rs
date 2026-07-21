@@ -214,7 +214,8 @@ async fn apply_per_repo_update(
     // `batch_load_repo_configs`) without any lock.
     repo_configs.rcu(|current| {
         let mut next = (**current).clone();
-        next.repos.insert(repo_name.to_owned(), new_config.clone());
+        // Via insert_repo to keep repos_by_id consistent (and Arc-wrap).
+        next.insert_repo(repo_name.to_owned(), new_config.clone());
         next
     });
 
@@ -429,13 +430,14 @@ pub(crate) async fn unified_config_watcher(
                         continue;
                     }
                 };
+                // O(1) clone of the persistent map (structural sharing).
                 let mut repos = base.repos.clone();
                 for entry in &manifest.repos {
                     if let Some(handle) = handles.get(&entry.repo_name) {
                         let spec = handle.get();
                         match parse_repo_spec(Arc::unwrap_or_clone(spec), tier, &manifest.storage) {
                             Ok(config) => {
-                                repos.insert(entry.repo_name.clone(), config);
+                                repos.insert(entry.repo_name.clone(), Arc::new(config));
                             }
                             Err(e) => {
                                 error!(
@@ -448,7 +450,8 @@ pub(crate) async fn unified_config_watcher(
                         STATS::merge_skipped_no_handle.add_value(1);
                     }
                 }
-                RepoConfigs::new(repos, base.common.clone())
+                // from_arc_map rebuilds repos_by_id from the merged map.
+                RepoConfigs::from_arc_map(repos, base.common.clone())
             }
             _ => base,
         };
@@ -860,6 +863,26 @@ mod tests {
             .get("foo")
             .expect("foo should be in bulk Arc after per-repo apply");
         assert_eq!(stored.repoid.id(), 7);
+    }
+
+    // Regression: a repo added via apply_per_repo_update is findable by id.
+    #[mononoke::test]
+    async fn test_apply_per_repo_update_maintains_id_index() {
+        let repo_configs = empty_repo_configs();
+        let receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>> =
+            Arc::new(ArcSwap::from_pointee(vec![]));
+
+        let succeeded =
+            apply_per_repo_update("foo", repo_config_with_id(7), &repo_configs, &receivers).await;
+        assert!(succeeded);
+
+        let after = repo_configs.load();
+        assert!(after.repos.contains_key("foo"), "foo missing by name");
+        let (name, config) = after
+            .get_repo_config_by_raw_id(7)
+            .expect("foo must be findable by raw id after per-repo apply");
+        assert_eq!(name, "foo");
+        assert_eq!(config.repoid.id(), 7);
     }
 
     // Verifies the ordering invariant: the bulk Arc is patched BEFORE the

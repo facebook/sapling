@@ -783,7 +783,7 @@ async fn get_large_repo_config_if_pushredirected(
     ctx: &CoreContext,
     repo: &Repo,
     live_commit_sync_config: &CfgrLiveCommitSyncConfig,
-    repos: &HashMap<String, RepoConfig>,
+    repos: &RepoConfigs,
 ) -> Result<Option<RepoConfig>, Error> {
     let repo_id = repo.repo_id();
     let enabled = live_commit_sync_config
@@ -800,9 +800,10 @@ async fn get_large_repo_config_if_pushredirected(
             }
         };
         let large_repo_id = common_commit_sync_config.large_repo_id;
-        let (_, large_repo_config) = match repos
-            .iter()
-            .find(|(_, repo_config)| repo_config.repoid == large_repo_id)
+        let large_repo_config = match repos
+            .repos
+            .values()
+            .find(|repo_config| repo_config.repoid == large_repo_id)
         {
             Some(result) => result,
             None => {
@@ -811,7 +812,7 @@ async fn get_large_repo_config_if_pushredirected(
                 ));
             }
         };
-        return Ok(Some(large_repo_config.clone()));
+        return Ok(Some((**large_repo_config).clone()));
     }
     Ok(None)
 }
@@ -1047,13 +1048,9 @@ async fn repo_import(
     // Check if the import target is a small repo that is pushredirected to a
     // large repo.  In that case we will import to the large repo and then
     // backsync to the small repo.
-    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
-        &ctx,
-        &repo,
-        &live_commit_sync_config,
-        &configs.repos,
-    )
-    .await?;
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, configs)
+            .await?;
     let mut maybe_small_repo_back_sync_vars = None;
     let mover = Arc::new(CrossRepoMover::new(
         HashMap::new(),
@@ -1464,13 +1461,9 @@ async fn check_additional_setup_steps(
     let live_commit_sync_config =
         CfgrLiveCommitSyncConfig::new(&env.config_store, repo.push_redirection_config_arc())?;
 
-    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
-        &ctx,
-        &repo,
-        &live_commit_sync_config,
-        &configs.repos,
-    )
-    .await?;
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, configs)
+            .await?;
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
             app,

@@ -576,7 +576,7 @@ impl MononokeConfigs {
         // Fast path: lock-free read from cache (covers both legacy blob
         // and previously loaded split-config repos)
         if let Some(config) = self.repo_configs.load_full().repos.get(repo_name) {
-            return Ok(config.clone());
+            return Ok((**config).clone());
         }
 
         // Slow path: try loading from manifest. If split-loading infrastructure
@@ -651,7 +651,7 @@ impl MononokeConfigs {
 
         for name in repo_names {
             if let Some(config) = current.repos.get(name.as_str()) {
-                results.push((name.clone(), config.clone()));
+                results.push((name.clone(), (**config).clone()));
             } else {
                 missing.push(name.clone());
             }

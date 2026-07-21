@@ -11,12 +11,14 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::str;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
+use im::HashMap as ImHashMap;
 use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AsyncRequestsConfig;
 use metaconfig_types::BlobConfig;
@@ -60,10 +62,11 @@ pub fn load_common_config(
 /// Holds configuration for repositories.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepoConfigs {
-    /// Configs for all repositories
-    pub repos: HashMap<String, RepoConfig>,
+    /// Configs for all repos. Persistent + `Arc`-shared so a copy-on-write update
+    /// behind `ArcSwap` is O(1) clone + O(log N), not a whole-map deep clone.
+    pub repos: ImHashMap<String, Arc<RepoConfig>>,
     /// Index from RepositoryId to repo name for O(1) lookup by id
-    pub repos_by_id: HashMap<RepositoryId, String>,
+    pub repos_by_id: ImHashMap<RepositoryId, String>,
     /// Common configs for all repos
     pub common: CommonConfig,
 }
@@ -742,8 +745,25 @@ fn parse_common_config(
 }
 
 impl RepoConfigs {
-    /// Create RepoConfigs with auto-built ID index.
+    /// Create RepoConfigs with an auto-built id index.
     pub fn new(repos: HashMap<String, RepoConfig>, common: CommonConfig) -> Self {
+        let repos_by_id = repos
+            .iter()
+            .map(|(name, config)| (config.repoid, name.clone()))
+            .collect();
+        let repos = repos
+            .into_iter()
+            .map(|(name, config)| (name, Arc::new(config)))
+            .collect();
+        Self {
+            repos,
+            repos_by_id,
+            common,
+        }
+    }
+
+    /// Build from an already-`Arc`-wrapped persistent map, deriving `repos_by_id`.
+    pub fn from_arc_map(repos: ImHashMap<String, Arc<RepoConfig>>, common: CommonConfig) -> Self {
         let repos_by_id = repos
             .iter()
             .map(|(name, config)| (config.repoid, name.clone()))
@@ -758,7 +778,7 @@ impl RepoConfigs {
     /// Get individual `RepoConfig`, given a repo_id. O(1) via index.
     pub fn get_repo_config(&self, repo_id: RepositoryId) -> Option<(&String, &RepoConfig)> {
         let name = self.repos_by_id.get(&repo_id)?;
-        self.repos.get(name).map(|config| (name, config))
+        self.repos.get(name).map(|config| (name, &**config))
     }
 
     /// O(1) lookup by raw repo id (i32). Constructs RepositoryId internally
@@ -776,7 +796,7 @@ impl RepoConfigs {
             }
         }
         self.repos_by_id.insert(config.repoid, name.clone());
-        self.repos.insert(name, config);
+        self.repos.insert(name, Arc::new(config));
     }
 
     /// Remove a repo, keeping `repos` and `repos_by_id` consistent. Returns whether it existed.
@@ -912,6 +932,103 @@ mod test {
         }
 
         tmp_dir
+    }
+
+    fn repo_config_with_id(id: i32) -> RepoConfig {
+        RepoConfig {
+            repoid: RepositoryId::new(id),
+            ..Default::default()
+        }
+    }
+
+    // insert_repo keeps repos_by_id in sync: a new repo is findable by id.
+    #[mononoke::test]
+    fn test_insert_repo_maintains_id_index() {
+        let mut configs = RepoConfigs::new(HashMap::new(), CommonConfig::default());
+        configs.insert_repo("foo".to_string(), repo_config_with_id(7));
+
+        assert!(configs.repos.contains_key("foo"), "foo missing by name");
+        let (name, config) = configs
+            .get_repo_config_by_raw_id(7)
+            .expect("foo must be findable by raw id after insert_repo");
+        assert_eq!(name, "foo");
+        assert_eq!(config.repoid, RepositoryId::new(7));
+    }
+
+    // Re-inserting a repo under a new id must drop the stale id-index entry.
+    #[mononoke::test]
+    fn test_insert_repo_updates_id_index_on_id_change() {
+        let mut configs = RepoConfigs::new(HashMap::new(), CommonConfig::default());
+        configs.insert_repo("foo".to_string(), repo_config_with_id(7));
+        configs.insert_repo("foo".to_string(), repo_config_with_id(8));
+
+        assert!(
+            configs.get_repo_config_by_raw_id(7).is_none(),
+            "stale id 7 must no longer resolve",
+        );
+        let (name, config) = configs
+            .get_repo_config_by_raw_id(8)
+            .expect("foo must resolve under its new id 8");
+        assert_eq!(name, "foo");
+        assert_eq!(config.repoid, RepositoryId::new(8));
+    }
+
+    // remove_repo must drop the entry from both maps.
+    #[mononoke::test]
+    fn test_remove_repo_maintains_id_index() {
+        let mut configs = RepoConfigs::new(HashMap::new(), CommonConfig::default());
+        configs.insert_repo("foo".to_string(), repo_config_with_id(7));
+
+        assert!(
+            configs.remove_repo("foo"),
+            "remove_repo should report prior existence"
+        );
+        assert!(
+            !configs.repos.contains_key("foo"),
+            "foo still present by name"
+        );
+        assert!(
+            configs.get_repo_config_by_raw_id(7).is_none(),
+            "id 7 still resolves after removal",
+        );
+        assert!(
+            !configs.remove_repo("foo"),
+            "second remove should be a no-op"
+        );
+    }
+
+    // Persistent map: cloning is snapshot-isolated and shares unchanged values
+    // by Arc (the O(1)-clone property the fix relies on).
+    #[mononoke::test]
+    fn test_persistent_map_structural_sharing() {
+        let repos: HashMap<String, RepoConfig> = (0..5000)
+            .map(|id| (format!("repo{id}"), repo_config_with_id(id)))
+            .collect();
+        let original = RepoConfigs::new(repos, CommonConfig::default());
+
+        let mut snapshot = original.clone();
+        assert!(
+            snapshot.remove_repo("repo1234"),
+            "entry should exist in clone"
+        );
+
+        // Snapshot isolation: original keeps the entry, clone does not.
+        assert!(
+            original.repos.contains_key("repo1234"),
+            "original must still hold the removed entry",
+        );
+        assert!(
+            !snapshot.repos.contains_key("repo1234"),
+            "clone must not hold the removed entry",
+        );
+
+        // Structural sharing: an untouched entry is the same Arc in both.
+        let a = original.repos.get("repo4321").expect("present in original");
+        let b = snapshot.repos.get("repo4321").expect("present in clone");
+        assert!(
+            Arc::ptr_eq(a, b),
+            "unchanged entries must be shared by Arc across snapshots",
+        );
     }
 
     #[mononoke::test]
@@ -1845,6 +1962,12 @@ mod test {
                 rl_land_service_repo_prefix: None,
             }
         );
+
+        // Wrap expected values in Arc to match the persistent map.
+        let repos: ImHashMap<String, Arc<RepoConfig>> = repos
+            .into_iter()
+            .map(|(name, config)| (name, Arc::new(config)))
+            .collect();
         assert_eq!(
             repoconfig.repos.get("www"),
             repos.get("www"),
@@ -2135,6 +2258,10 @@ mod test {
             }
         };
 
+        let expected: ImHashMap<String, Arc<RepoConfig>> = expected
+            .into_iter()
+            .map(|(name, config)| (name, Arc::new(config)))
+            .collect();
         assert_eq!(
             res.repos, expected,
             "Got: {:#?}\nWant: {:#?}",
@@ -2273,6 +2400,10 @@ mod test {
             }
         };
 
+        let expected: ImHashMap<String, Arc<RepoConfig>> = expected
+            .into_iter()
+            .map(|(name, config)| (name, Arc::new(config)))
+            .collect();
         assert_eq!(
             res.repos, expected,
             "Got: {:#?}\nWant: {:#?}",

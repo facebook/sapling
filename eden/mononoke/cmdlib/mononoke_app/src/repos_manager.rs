@@ -798,6 +798,8 @@ where
 {
     let mut repos_to_load = vec![];
     for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
+        // repos_to_load needs owned RepoConfig.
+        let repo_config = Arc::unwrap_or_clone(repo_config);
         if repo_exists(repo_name.as_str()) {
             // Repo was already present on the server. Need to reload it.
             repos_to_load.push((repo_name, repo_config))
@@ -882,7 +884,8 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     /// Rebuild the tier-wide repo names map from `repo_configs` (the full
     /// tier config, not the per-task subset) and atomically swap it in.
     fn refresh_repo_names_in_tier(&self, repo_configs: &RepoConfigs) {
-        let names = build_repo_names_in_tier(repo_configs.repos.iter());
+        let names =
+            build_repo_names_in_tier(repo_configs.repos.iter().map(|(k, v)| (k, v.as_ref())));
         self.repo_names_in_tier.store(Arc::new(names));
     }
 

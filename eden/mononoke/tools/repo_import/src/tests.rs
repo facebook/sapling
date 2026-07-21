@@ -41,9 +41,11 @@ mod tests {
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
     use mercurial_types::NonRootMPath;
+    use metaconfig_parser::RepoConfigs;
     use metaconfig_types::CommitSyncConfig;
     use metaconfig_types::CommitSyncConfigVersion;
     use metaconfig_types::CommonCommitSyncConfig;
+    use metaconfig_types::CommonConfig;
     use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
     use metaconfig_types::GlobalrevConfig;
     use metaconfig_types::PushrebaseParams;
@@ -434,10 +436,16 @@ mod tests {
                 .await?;
 
         insert_repo_config(0, &mut repos);
+        let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo0, &live_commit_sync_config, &repos)
-                .await?
-                .is_none()
+            get_large_repo_config_if_pushredirected(
+                &ctx,
+                &repo0,
+                &live_commit_sync_config,
+                &repo_configs
+            )
+            .await?
+            .is_none()
         );
 
         let repo1 =
@@ -445,10 +453,16 @@ mod tests {
                 .await?;
 
         insert_repo_config(1, &mut repos);
+        let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo1, &live_commit_sync_config, &repos)
-                .await?
-                .is_some()
+            get_large_repo_config_if_pushredirected(
+                &ctx,
+                &repo1,
+                &live_commit_sync_config,
+                &repo_configs
+            )
+            .await?
+            .is_some()
         );
 
         let repo2 =
@@ -456,10 +470,16 @@ mod tests {
                 .await?;
 
         insert_repo_config(2, &mut repos);
+        let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo2, &live_commit_sync_config, &repos)
-                .await?
-                .is_none()
+            get_large_repo_config_if_pushredirected(
+                &ctx,
+                &repo2,
+                &live_commit_sync_config,
+                &repo_configs
+            )
+            .await?
+            .is_none()
         );
         Ok(())
     }
