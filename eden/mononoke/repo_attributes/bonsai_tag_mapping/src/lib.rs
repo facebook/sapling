@@ -14,6 +14,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
+use sql_ext::Transaction;
 
 pub use crate::cache::CachedBonsaiTagMapping;
 pub use crate::sql::SqlBonsaiTagMapping;
@@ -112,4 +113,22 @@ pub trait BonsaiTagMapping: Send + Sync {
         ctx: &CoreContext,
         tag_names: Vec<String>,
     ) -> Result<()>;
+
+    /// Add/update mappings within `transaction`, returning it so the caller can
+    /// commit atomically alongside a bookmark move.
+    async fn add_or_update_mappings_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+        transaction: Transaction,
+    ) -> Result<Transaction>;
+
+    /// Delete mappings by name within `transaction`, returning it so the caller
+    /// can commit atomically alongside a bookmark move.
+    async fn delete_mappings_by_name_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+        transaction: Transaction,
+    ) -> Result<Transaction>;
 }

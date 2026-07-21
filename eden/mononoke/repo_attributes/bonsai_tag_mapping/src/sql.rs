@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use ::sql_ext::Connection;
+use ::sql_ext::Transaction;
 use ::sql_ext::mononoke_queries;
 use anyhow::Context;
 use anyhow::Result;
@@ -250,6 +251,48 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         ctx: &CoreContext,
         entries: Vec<BonsaiTagMappingEntry>,
     ) -> Result<()> {
+        // Delegate to the in-transaction variant (mirrors BonsaiGitMapping::bulk_add).
+        let transaction = self
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await
+            .context("Failed to start transaction for adding bonsai tag mappings")?;
+        let transaction = self
+            .add_or_update_mappings_in_transaction(ctx, entries, transaction)
+            .await?;
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit transaction for adding bonsai tag mappings")?;
+        Ok(())
+    }
+
+    async fn delete_mappings_by_name(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<()> {
+        let transaction = self
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await
+            .context("Failed to start transaction for deleting bonsai tag mappings")?;
+        let transaction = self
+            .delete_mappings_by_name_in_transaction(ctx, tag_names, transaction)
+            .await?;
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit transaction for deleting bonsai tag mappings")?;
+        Ok(())
+    }
+
+    async fn add_or_update_mappings_in_transaction(
+        &self,
+        _ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+        transaction: Transaction,
+    ) -> Result<Transaction> {
         let converted_entries: Vec<_> = entries
             .iter()
             .map(|entry| {
@@ -262,40 +305,39 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
                 )
             })
             .collect();
-        AddOrUpdateBonsaiTagMapping::query(
-            &self.write_connection,
-            ctx.sql_query_telemetry(),
+        let (transaction, _) = AddOrUpdateBonsaiTagMapping::query_with_transaction(
+            transaction,
             converted_entries.as_slice(),
         )
         .await
         .with_context(|| {
             format!(
-                "Failed to add mappings in repo {} for entries {:?}",
+                "Failed to add mappings in transaction in repo {} for entries {:?}",
                 self.repo_id, entries,
             )
         })?;
-        Ok(())
+        Ok(transaction)
     }
 
-    async fn delete_mappings_by_name(
+    async fn delete_mappings_by_name_in_transaction(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         tag_names: Vec<String>,
-    ) -> Result<()> {
-        DeleteBonsaiTagMappingsByName::query(
-            &self.write_connection,
-            ctx.sql_query_telemetry(),
+        transaction: Transaction,
+    ) -> Result<Transaction> {
+        let (transaction, _) = DeleteBonsaiTagMappingsByName::query_with_transaction(
+            transaction,
             &self.repo_id,
             tag_names.as_slice(),
         )
         .await
         .with_context(|| {
             format!(
-                "Failed to delete mappings in repo {} for tag names {:?}",
+                "Failed to delete mappings in transaction in repo {} for tag names {:?}",
                 self.repo_id, tag_names,
             )
         })?;
-        Ok(())
+        Ok(transaction)
     }
 }
 

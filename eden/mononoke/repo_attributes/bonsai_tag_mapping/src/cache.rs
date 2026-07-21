@@ -19,6 +19,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 use repo_update_logger::PlainBookmarkInfo;
+use sql_ext::Transaction;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
 use tokio::sync::broadcast::Receiver;
@@ -233,5 +234,28 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
     ) -> Result<()> {
         // Writes are directly delegated to inner bonsai tag mapping
         self.inner.delete_mappings_by_name(ctx, tag_names).await
+    }
+
+    async fn add_or_update_mappings_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BonsaiTagMappingEntry>,
+        transaction: Transaction,
+    ) -> Result<Transaction> {
+        // Delegated to inner; cache refreshes via scribe after the commit.
+        self.inner
+            .add_or_update_mappings_in_transaction(ctx, entries, transaction)
+            .await
+    }
+
+    async fn delete_mappings_by_name_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+        transaction: Transaction,
+    ) -> Result<Transaction> {
+        self.inner
+            .delete_mappings_by_name_in_transaction(ctx, tag_names, transaction)
+            .await
     }
 }
