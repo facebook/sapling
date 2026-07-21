@@ -13,9 +13,11 @@ from typing import Any, Optional
 
 from eden.thrift.client import (
     create_thrift_client as _create_modern_client,
-    EdenNotRunningError,  # noqa: F401 - re-exported for backwards compatibility
+    EdenNotRunningError,
 )
 
+
+__all__ = ["EdenClient", "EdenNotRunningError", "SOCKET_PATH", "create_thrift_client"]
 
 SOCKET_PATH = "socket"
 
