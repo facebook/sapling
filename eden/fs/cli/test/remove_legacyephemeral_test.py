@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager
 from typing import cast, Generator, List
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from eden.fs.cli import main as main_mod
 from eden.fs.cli.config import CheckoutConfig, EdenCheckout, EdenInstance
