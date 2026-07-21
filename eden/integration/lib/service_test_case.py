@@ -10,7 +10,6 @@ import abc
 import pathlib
 import typing
 import unittest
-from typing import Optional, Type
 
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
