@@ -172,7 +172,6 @@ from . import (
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem as fs_mod,
-    hg_util,
     mtab,
     prefetch as prefetch_mod,
     rage as rage_mod,
