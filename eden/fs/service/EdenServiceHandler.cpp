@@ -5443,9 +5443,6 @@ EdenServiceHandler::semifuture_globFilesImpl(
       globber.logString());
   auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
-  auto useCoGlob = server_->getServerState()
-                       ->getEdenConfig()
-                       ->enableCoroutinesPhase2.getValue();
 
   ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (isBackground ||
@@ -5759,34 +5756,9 @@ EdenServiceHandler::semifuture_globFilesImpl(
                           serverState = server_->getServerState(),
                           globs = std::move(*params->globs()),
                           globber = std::move(globber),
-                          useCoGlob,
                           context = context.copy()](auto&&) mutable {
                 XLOG(DBG3, "No suffixes, or mixed suffixes and non-suffixes");
                 XLOG(DBG3, "Using local globFiles");
-                if (useCoGlob) {
-                  return ImmediateFuture{
-                      // @lint-ignore CLANGTIDY
-                      // facebook-folly-coro-return-captures-local-var
-                      folly::coro::co_invoke(
-                          [](ThriftGlobImpl globber,
-                             std::shared_ptr<EdenMount> mount,
-                             std::shared_ptr<ServerState> ss,
-                             std::vector<std::string> g,
-                             ObjectFetchContextPtr ctx)
-                              -> folly::coro::Task<std::unique_ptr<Glob>> {
-                            co_return co_await globber.co_glob(
-                                std::move(mount),
-                                std::move(ss),
-                                std::move(g),
-                                ctx);
-                          },
-                          std::move(globber),
-                          mountHandle.getEdenMountPtr(),
-                          serverState,
-                          std::move(globs),
-                          context.copy())
-                          .semi()};
-                }
                 return globber.glob(
                     mountHandle.getEdenMountPtr(),
                     serverState,
@@ -5800,33 +5772,8 @@ EdenServiceHandler::semifuture_globFilesImpl(
                               serverState = server_->getServerState(),
                               globs = std::move(*params->globs()),
                               globber = std::move(globber),
-                              useCoGlob,
                               context = context.copy()](auto&&) mutable {
                     XLOG(DBG3, "Using local globFiles");
-                    if (useCoGlob) {
-                      return ImmediateFuture{
-                          // @lint-ignore CLANGTIDY
-                          // facebook-folly-coro-return-captures-local-var
-                          folly::coro::co_invoke(
-                              [](ThriftGlobImpl globber,
-                                 std::shared_ptr<EdenMount> mount,
-                                 std::shared_ptr<ServerState> ss,
-                                 std::vector<std::string> g,
-                                 ObjectFetchContextPtr ctx)
-                                  -> folly::coro::Task<std::unique_ptr<Glob>> {
-                                co_return co_await globber.co_glob(
-                                    std::move(mount),
-                                    std::move(ss),
-                                    std::move(g),
-                                    ctx);
-                              },
-                              std::move(globber),
-                              mountHandle.getEdenMountPtr(),
-                              serverState,
-                              std::move(globs),
-                              context.copy())
-                              .semi()};
-                    }
                     return globber.glob(
                         mountHandle.getEdenMountPtr(),
                         serverState,

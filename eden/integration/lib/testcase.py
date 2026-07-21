@@ -1052,7 +1052,6 @@ class CoroutinesTestMixin:
 
     def get_coroutines_configs(self) -> List[str]:
         return [
-            "enable-phase2 = true",
             "enable-phase5 = true",
             "enable-phase3 = true",
             "enable-phase4 = true",
