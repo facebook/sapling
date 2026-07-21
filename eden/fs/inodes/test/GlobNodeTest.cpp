@@ -8,11 +8,17 @@
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/utils/GlobResult.h"
 
+#include <atomic>
 #include <utility>
 
 #include <folly/Conv.h>
-#include <folly/Exception.h>
 #include <folly/Range.h>
+#include <folly/Try.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
@@ -27,43 +33,34 @@
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
-using namespace std::chrono_literals;
 
 namespace {
-constexpr folly::Duration kSmallTimeout =
-    std::chrono::duration_cast<folly::Duration>(1s);
-
 /**
  * Issue a glob request.
  *
- * Note: This future executes on the server executor which thus needs to be
+ * Note: This coroutine executes on the server executor which thus needs to be
  * manually drained for the returned Future to be ready.
  */
-folly::Future<std::vector<GlobResult>> evaluateGlob(
+folly::coro::Task<std::vector<GlobResult>> evaluateGlob(
     TestMount& mount,
     GlobNode& globRoot,
-    std::shared_ptr<PrefetchList> prefetchIds,
+    std::shared_ptr<GlobNode::PrefetchList> prefetchIds,
     const RootId& commitId) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
   auto globResults =
       std::make_shared<folly::Synchronized<std::vector<GlobResult>>>();
-  return globRoot
-      .evaluate(
-          std::move(objectStore),
-          ObjectFetchContext::getNullContext(),
-          RelativePathPiece(),
-          rootInode,
-          prefetchIds.get(),
-          globResults.get(),
-          commitId)
-      .thenValue([globResults](auto&&) {
-        std::vector<GlobResult> result;
-        std::swap(result, *globResults->wlock());
-        return result;
-      })
-      .semi()
-      .via(mount.getServerExecutor().get());
+  co_await globRoot.co_evaluate(
+      std::move(objectStore),
+      ObjectFetchContext::getNullContext(),
+      RelativePathPiece(),
+      rootInode,
+      prefetchIds.get(),
+      globResults.get(),
+      commitId);
+  std::vector<GlobResult> result;
+  std::swap(result, *globResults->wlock());
+  co_return result;
 }
 
 const RootId kZeroRootId{};
@@ -111,13 +108,12 @@ class GlobNodeTest : public ::testing::TestWithParam<
       prefetchIds_ = std::make_shared<GlobNode::PrefetchList>();
     }
 
-    auto future = evaluateGlob(mount_, globRoot, prefetchIds_, commitId);
-
     if (!GetParam().first) {
       builder_.setAllReady();
     }
-    mount_.drainServerExecutor();
-    return std::move(future).get(kSmallTimeout);
+    return folly::coro::blockingWait(
+        evaluateGlob(mount_, globRoot, prefetchIds_, commitId),
+        mount_.getServerExecutor().get());
   }
 
   std::vector<GlobResult> doGlobIncludeDotFiles(
@@ -335,7 +331,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   builder.setFiles({{"dir/subdir/file", ""}});
   mount.initialize(builder, /*startReady=*/false);
   builder.setReady("dir");
-  ASSERT_FALSE(
+  EXPECT_FALSE(
       mount.getEdenMount()
           ->getInodeSlow(
               "dir/subdir"_relpath, ObjectFetchContext::getNullContext())
@@ -350,15 +346,9 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
     globRoot.parse("dir/*");
     globRoot.debugDump();
 
-    auto matches = std::vector<GlobResult>{};
-    try {
-      auto fut =
-          evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
-      mount.drainServerExecutor();
-      matches = std::move(fut).get(kSmallTimeout);
-    } catch (const folly::FutureTimeout&) {
-      FAIL() << "Matching dir/subdir should not load dir/subdir";
-    }
+    auto matches = folly::coro::blockingWait(
+        evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId),
+        mount.getServerExecutor().get());
 
     EXPECT_FALSE(
         mount.getEdenMount()
@@ -375,7 +365,70 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   }
 }
 
-TEST(GlobNodeTest, treeLoadError) {
+namespace {
+// Runs the glob evaluation, capturing its result (including any exception) into
+// evalResult and signalling completion via evalDone.
+folly::coro::Task<void> co_runGlobEvaluation(
+    GlobNode& globRoot,
+    std::shared_ptr<ObjectStore> objectStore,
+    TreeInodePtr rootInode,
+    ResultList* globResults,
+    const RootId& commitId,
+    folly::Try<folly::Unit>& evalResult,
+    std::atomic<bool>& evalDone) {
+  evalResult = co_await folly::coro::co_awaitTry(globRoot.co_evaluate(
+      std::move(objectStore),
+      ObjectFetchContext::getNullContext(),
+      RelativePathPiece(),
+      rootInode,
+      /*fileBlobsToPrefetch=*/nullptr,
+      globResults,
+      commitId));
+  evalDone.store(true);
+}
+
+// Drives the mount's ManualExecutor while injecting a fault on dir/a/b, then
+// asserts the evaluation does not complete until dir/b and dir/c also finish
+// loading before releasing the rest of the tree.
+folly::coro::Task<void> co_driveTreeLoadErrorFault(
+    TestMount& mount,
+    FakeTreeBuilder& builder,
+    std::atomic<bool>& evalDone) {
+  // Let the evaluation start loading subtrees.
+  mount.drainServerExecutor();
+  co_await folly::coro::co_reschedule_on_current_executor;
+  EXPECT_FALSE(evalDone.load())
+      << "glob should not finish when some subtrees are not read";
+
+  // Cause dir/a/b to fail to load
+  builder.triggerError("dir/a/b", std::runtime_error("cosmic radiation"));
+  mount.drainServerExecutor();
+  co_await folly::coro::co_reschedule_on_current_executor;
+
+  // We still haven't allowed the rest of the trees to finish loading,
+  // so the glob shouldn't be finished yet.
+  //
+  // This test case is checking for a regression where the glob evaluation would
+  // complete early when an error occurred processing one TreeInode, even
+  // though work was still being done to process the glob on other subtrees.
+  // Completion of the glob evaluation signals the caller that they can destroy
+  // the GlobNode, but this isn't safe if there is still work in progress to
+  // evaluate it, even if that work will eventually get discarded due to the
+  // original error.
+  EXPECT_FALSE(evalDone.load())
+      << "glob should not finish early when still waiting on some trees";
+
+  // Mark all of the remaining trees ready, which should allow the glob
+  // evaluation to complete.
+  builder.setAllReady();
+  while (!evalDone.load()) {
+    mount.drainServerExecutor();
+    co_await folly::coro::co_reschedule_on_current_executor;
+  }
+}
+} // namespace
+
+CO_TEST(GlobNodeTest, treeLoadError) {
   auto mount = TestMount{};
   auto builder = FakeTreeBuilder{};
   builder.setFiles({
@@ -392,47 +445,35 @@ TEST(GlobNodeTest, treeLoadError) {
   builder.setReady("dir");
   builder.setReady("dir/a");
 
-  {
-    GlobNode globRoot(
-        /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
-    globRoot.parse("dir/**/a.txt");
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
+  globRoot.parse("dir/**/a.txt");
 
-    auto globFuture =
-        evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
-    mount.drainServerExecutor();
-    EXPECT_FALSE(globFuture.isReady())
-        << "glob should not finish when some subtrees are not read";
+  auto rootInode = mount.getTreeInode(RelativePathPiece());
+  auto objectStore = mount.getEdenMount()->getObjectStore();
+  auto globResults =
+      std::make_shared<folly::Synchronized<std::vector<GlobResult>>>();
 
-    // Cause dir/a/b to fail to load
-    builder.triggerError("dir/a/b", std::runtime_error("cosmic radiation"));
-    mount.drainServerExecutor();
+  folly::Try<folly::Unit> evalResult;
+  std::atomic<bool> evalDone{false};
 
-    // We still haven't allowed the rest of the trees to finish loading,
-    // so the glob shouldn't be finished yet.
-    //
-    // This test case is checking for a regression where the globFuture would
-    // complete early when an error occurred processing one TreeInode, even
-    // though work was still being done to process the glob on other subtrees.
-    // Completion of the globFuture signals the caller that they can destroy the
-    // GlobNode, but this isn't safe if there is still work in progress to
-    // evaluate it, even if that work will eventually get discarded due to the
-    // original error.
-    EXPECT_FALSE(globFuture.isReady())
-        << "glob should not finish early when still waiting on some trees";
+  // Run the evaluation concurrently with a controller that drives the
+  // ManualExecutor and injects a fault while the evaluation is in flight.
+  co_await folly::coro::collectAll(
+      co_runGlobEvaluation(
+          globRoot,
+          std::move(objectStore),
+          rootInode,
+          globResults.get(),
+          kZeroRootId,
+          evalResult,
+          evalDone),
+      co_driveTreeLoadErrorFault(mount, builder, evalDone));
 
-    // Mark all of the remaining trees ready, which should allow the glob
-    // evaluation to complete.
-    builder.setAllReady();
-    mount.drainServerExecutor();
-    try {
-      auto result = std::move(globFuture).get(kSmallTimeout);
-      FAIL() << "glob should have succeeded";
-    } catch (const std::runtime_error& ex) {
-      EXPECT_THAT(ex.what(), testing::HasSubstr("cosmic radiation"));
-    } catch (const folly::FutureTimeout&) {
-      FAIL() << "glob did not finish";
-    }
-  }
+  EXPECT_TRUE(evalResult.hasException());
+  EXPECT_THAT(
+      evalResult.exception().what().toStdString(),
+      testing::HasSubstr("cosmic radiation"));
 }
 
 TEST_P(GlobNodeTest, testCommitIdSet) {
@@ -465,11 +506,9 @@ TEST(GlobNodeTest, testCaseInsensitive) {
   globRoot.parse("CASE/MixedCase");
   globRoot.parse("f*/b?z");
 
-  auto matches = std::vector<GlobResult>{};
-  auto fut =
-      evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId);
-  mount.drainServerExecutor();
-  matches = std::move(fut).get(kSmallTimeout);
+  auto matches = folly::coro::blockingWait(
+      evaluateGlob(mount, globRoot, /*prefetchIds=*/nullptr, kZeroRootId),
+      mount.getServerExecutor().get());
 
   std::vector<GlobResult> expect{
       GlobResult("case"_relpath, dtype_t::Dir, kZeroRootId),
