@@ -742,7 +742,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const InodePtr& inode,
       const std::optional<Tree::value_type>& newScmEntry);
 
-  void updateRestrictedPlaceholderFromTreeEntry(const TreeEntry& treeEntry);
+  // Returns false without modifying the inode if it is not a valid empty
+  // restricted placeholder.
+  [[nodiscard]] bool updateRestrictedPlaceholder(
+      const ObjectId& treeId,
+      AclRootState aclRootState);
 
   RestrictionTransitionPrep prepareRestrictionTransition(
       CheckoutContext* ctx,
