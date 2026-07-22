@@ -986,13 +986,31 @@ function scsc_scmquery_test {
     scmqueryclient-test "$@"
 }
 
-# Forces scmqueryclient-rust onto the SCS-direct path by enabling the
-# scm/scmquery:direct_scs JustKnob in the per-test override file.
+# Forces scmqueryclient-rust onto the SCS-direct path by enabling every
+# per-method scm/scmquery:client_library_<method>_direct JustKnob in the
+# per-test override file (this diff replaced the old shared
+# scm/scmquery:direct_scs knob with these per-method knobs).
 function enable_scmquery_scs_direct {
   merge_just_knobs <<EOF
 {
   "bools": {
-    "scm/scmquery:direct_scs": true
+    "scm/scmquery:client_library_get_commit_v2_direct": true,
+    "scm/scmquery:client_library_cat_v2_direct": true,
+    "scm/scmquery:client_library_log_v2_direct": true,
+    "scm/scmquery:client_library_get_diff_direct": true,
+    "scm/scmquery:client_library_is_ancestor_direct": true,
+    "scm/scmquery:client_library_translate_revs_direct": true,
+    "scm/scmquery:client_library_locate_files_v2_direct": true,
+    "scm/scmquery:client_library_get_commits_between_on_path_direct": true,
+    "scm/scmquery:client_library_ls_v2_direct": true,
+    "scm/scmquery:client_library_get_changed_files_direct": true,
+    "scm/scmquery:client_library_merge_base_direct": true,
+    "scm/scmquery:client_library_get_generation_direct": true,
+    "scm/scmquery:client_library_get_tags_direct": true,
+    "scm/scmquery:client_library_get_tags_compact_direct": true,
+    "scm/scmquery:client_library_blame_v2_direct": true,
+    "scm/scmquery:client_library_get_branches_direct": true,
+    "scm/scmquery:client_library_get_metadata_diff_direct": true
   }
 }
 EOF
