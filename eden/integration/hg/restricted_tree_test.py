@@ -39,6 +39,7 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
     initial_commit: str = ""
     swapped_commit: str = ""
     added_restricted_commit: str = ""
+    ignored_file_restricted_commit: str = ""
     # Subclasses flip this to False to disable client-side enforcement.
     enable_restricted_tree_mode: bool = True
     # Subclasses flip this to True to enable server-side PermissionDenied.
@@ -97,6 +98,8 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
         eager.write_file("parent/nested_restricted/.slacl", "acl config")
         eager.write_file("parent/nested_restricted/deep.txt", "deep secret")
         eager.write_file("hello.txt", "hello")
+        eager.write_file("ignored_local_only_restricted/tracked.txt", "tracked")
+        eager.write_file(".gitignore", "ignored_local_only_restricted/local.txt\n")
         self.initial_commit = eager.commit("Initial commit.")
 
         # Swapped commit: restricted/ loses .slacl, regular/ gains it.
@@ -111,6 +114,11 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
         eager.write_file("local_only_restricted/server.txt", "server content")
         self.added_restricted_commit = eager.commit("Add restricted tree.")
 
+        eager.write_file("ignored_local_only_restricted/.slacl", "acl config")
+        self.ignored_file_restricted_commit = eager.commit(
+            "Restrict tree containing ignored file."
+        )
+
         # Pull the commits into the backing repo via SLAPI. ``fetch_edenapi``
         # populates ``indexedlog_cache`` with entries that include
         # ``acl_children_indices`` derived from ``has_acl`` on children.
@@ -119,6 +127,7 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
         repo.hg("pull", "-r", self.initial_commit)
         repo.hg("pull", "-r", self.swapped_commit)
         repo.hg("pull", "-r", self.added_restricted_commit)
+        repo.hg("pull", "-r", self.ignored_file_restricted_commit)
         repo.hg("update", self.initial_commit)
 
 
@@ -695,7 +704,27 @@ class _RestrictedTreeServerOnlyBase(
 class RestrictedTreeTest(_RestrictedTreeTestMethods, _RestrictedTreeTestBase):
     """Client-side enforcement via has_acl metadata."""
 
-    pass
+    def test_checkout_restricted_tree_over_ignored_file(self) -> None:
+        """Current behavior aborts while planning around an ignored file."""
+        self.repo.hg("update", self.initial_commit)
+
+        local_dir = os.path.join(self.mount, "ignored_local_only_restricted")
+        local_file = os.path.join(local_dir, "local.txt")
+        with open(local_file, "w") as f:
+            f.write("local content")
+        self.assert_status({"ignored_local_only_restricted/local.txt": "I"})
+
+        with self.assertRaisesRegex(
+            hgrepo.HgError,
+            "file metadata for ignored_local_only_restricted/local.txt "
+            "not found at destination commit",
+        ):
+            self.repo.hg("update", self.ignored_file_restricted_commit)
+
+        self.assertEqual(["local.txt", "tracked.txt"], sorted(os.listdir(local_dir)))
+        with open(local_file, "r") as f:
+            self.assertEqual("local content", f.read())
+        self.assert_status({"ignored_local_only_restricted/local.txt": "I"})
 
 
 @hg_test
