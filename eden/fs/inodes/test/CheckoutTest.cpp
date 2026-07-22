@@ -2581,12 +2581,10 @@ TEST_P(CheckoutTest, overlayWritesDuringCheckout) {
   stats->flush();
   auto checkoutWrites = data->getCounter(key) - initialWrites;
 
-  // WAL adds one checkout-time flush when the parent overlay is loaded.
-  // Without WAL, the pre-checkout writes were already saved, so the expected
-  // count is one lower.
-  auto expected =
-      testMount.getEdenMount()->getEdenConfig()->overlayUseWal.getValue() ? 8
-                                                                          : 7;
+  // The read-side WAL flush is deferred during checkout (see
+  // enterCheckoutDeferral), so WAL and non-WAL configs perform the same number
+  // of checkout-time overlay writes.
+  constexpr int64_t expected = 7;
   EXPECT_EQ(expected, checkoutWrites)
       << "Overlay writes during checkout: " << checkoutWrites;
 

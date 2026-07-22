@@ -702,7 +702,16 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     }
 
     DirContents merged{mutator.finalize()};
-    saveOverlayDir(inodeNumber, merged, /*isMaterialized=*/true);
+    if (!shouldDeferWalFlush() || walResult.parseErrors > 0 ||
+        shouldRewriteOverlay) {
+      // The clean-WAL rewrite is opportunistic compaction, redundant with what
+      // saveOverlayPostCheckout does, so it's deferred during checkout. But a
+      // torn WAL (parseErrors) needs its heal now, and a legacy base
+      // (shouldRewriteOverlay: freshly allocated inode numbers or filtered
+      // AppleDouble entries) needs to be persisted now -- neither is guaranteed
+      // to reach a post-checkout save for directories the checkout only reads.
+      saveOverlayDir(inodeNumber, merged, /*isMaterialized=*/true);
+    }
     stats_->increment(&OverlayStats::loadOverlayDirSuccessful);
     return merged;
   }

@@ -394,6 +394,7 @@ cpp_unittest(
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:testutil",
         "//eden/fs/service:pretty_printers",
         "//eden/fs/telemetry:stats",

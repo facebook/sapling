@@ -35,6 +35,7 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/fscatalog/InodePath.h"
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -276,6 +277,103 @@ TEST_P(OverlayTest, roundTripThroughSaveAndLoadPreservesIsRestricted) {
   const auto& normal = result.find("normal"_pc)->second;
   EXPECT_TRUE(restricted.isRestricted());
   EXPECT_FALSE(normal.isRestricted());
+}
+
+// Exercises loadOverlayDir's WAL handling while a checkout is deferring the
+// opportunistic read-side flush (enterCheckoutDeferral). A clean WAL should be
+// left in place, but a torn WAL must still be healed immediately.
+class OverlayWalDeferralTest : public ::testing::Test {
+ protected:
+  OverlayWalDeferralTest()
+      : testDir_{makeTempDir("eden_overlay_wal_deferral_")} {
+    auto edenConfig = EdenConfig::createTestEdenConfig();
+    edenConfig->overlayUseWal.setValue(true, ConfigSourceType::Default, true);
+    overlay_ = Overlay::create(
+        canonicalPath(testDir_.path().string()),
+        kPathMapDefaultCaseSensitive,
+        kInodeCatalogType,
+        kInodeCatalogOptions,
+        makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
+        makeRefPtr<EdenStats>(),
+        *edenConfig);
+    overlay_->initialize(std::make_shared<ReloadableConfig>(edenConfig)).get();
+  }
+
+  // Write a base directory containing a single entry so loadOverlayDir finds a
+  // base to merge the WAL into.
+  void saveBaseDir(InodeNumber parent, InodeNumber child) {
+    DirContents dir(kPathMapDefaultCaseSensitive);
+    dir.emplace("existing"_pc, S_IFREG | 0644, child);
+    overlay_->saveOverlayDir(parent, dir);
+  }
+
+  overlay::OverlayEntry makeWalEntry(mode_t mode, InodeNumber ino) {
+    overlay::OverlayEntry entry;
+    entry.mode() = mode;
+    entry.inodeNumber() = ino.get();
+    return entry;
+  }
+
+  // Lop `bytes` off the tail of the on-disk WAL so its final frame is torn,
+  // forcing loadWalDelta to report a parse error.
+  void tearWalTail(InodeNumber parent, size_t bytes) {
+    auto walPath = FsFileContentStore::getWalPath(parent);
+    auto fullPath =
+        canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
+    std::string data;
+    ASSERT_TRUE(folly::readFile(fullPath.c_str(), data));
+    ASSERT_GT(data.size(), bytes);
+    ASSERT_TRUE(
+        folly::writeFile(
+            data.substr(0, data.size() - bytes), fullPath.c_str()));
+  }
+
+  folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
+  std::shared_ptr<Overlay> overlay_;
+};
+
+TEST_F(OverlayWalDeferralTest, tornWalHealedDespiteDeferral) {
+  auto rootIno = kRootNodeId;
+  saveBaseDir(rootIno, overlay_->allocateInodeNumber());
+
+  auto* catalog = overlay_->getRawInodeCatalog();
+  auto entry = makeWalEntry(S_IFREG | 0644, overlay_->allocateInodeNumber());
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "keep"_pc, &entry);
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "drop"_pc, &entry);
+  tearWalTail(rootIno, 3);
+  ASSERT_TRUE(catalog->hasWal(rootIno));
+
+  overlay_->enterCheckoutDeferral();
+  auto result = overlay_->loadOverlayDir(rootIno);
+  overlay_->exitCheckoutDeferral();
+
+  // parseErrors > 0 forces the heal (base rewrite + WAL removal) even under
+  // deferral; otherwise a later append would land past the tear and silently
+  // lose data.
+  EXPECT_FALSE(catalog->hasWal(rootIno));
+  EXPECT_TRUE(result.find("keep"_pc) != result.end());
+  EXPECT_TRUE(result.find("drop"_pc) == result.end());
+}
+
+TEST_F(OverlayWalDeferralTest, cleanWalDeferred) {
+  auto rootIno = kRootNodeId;
+  saveBaseDir(rootIno, overlay_->allocateInodeNumber());
+
+  auto* catalog = overlay_->getRawInodeCatalog();
+  auto entry = makeWalEntry(S_IFREG | 0644, overlay_->allocateInodeNumber());
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "added"_pc, &entry);
+  ASSERT_TRUE(catalog->hasWal(rootIno));
+
+  overlay_->enterCheckoutDeferral();
+  auto result = overlay_->loadOverlayDir(rootIno);
+  overlay_->exitCheckoutDeferral();
+
+  // A clean WAL's flush is opportunistic and left for saveOverlayPostCheckout,
+  // so it stays on disk even though it was merged into the returned contents.
+  EXPECT_TRUE(catalog->hasWal(rootIno));
+  EXPECT_TRUE(result.find("added"_pc) != result.end());
 }
 
 TEST(OverlayFilePathTest, getFilePath) {

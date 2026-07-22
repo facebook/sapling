@@ -226,8 +226,28 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   /*
    * Load content of the directory from overlay. If the directory does not
    * exist, this function will return an empty `DirContents`.
+   *
+   * A pending WAL is merged into the returned DirContents. The merged result is
+   * also flushed back to the base file and the WAL removed, unless checkout
+   * deferral is active (see enterCheckoutDeferral), in which case that rewrite
+   * is left to a later load or to saveOverlayPostCheckout.
    */
   DirContents loadOverlayDir(InodeNumber inodeNumber);
+
+  /**
+   * While checkout deferral is active, loadOverlayDir() skips its opportunistic
+   * read-side WAL flush; the WAL is instead cleared by saveOverlayPostCheckout
+   * or replayed idempotently on a later load. Reference-counted so concurrent
+   * checkout contexts (e.g. setPathObjectId, which does not serialize via
+   * beginCheckout) compose correctly.
+   */
+  void enterCheckoutDeferral() noexcept {
+    checkoutDeferralCount_.fetch_add(1, std::memory_order_release);
+  }
+
+  void exitCheckoutDeferral() noexcept {
+    checkoutDeferralCount_.fetch_sub(1, std::memory_order_acq_rel);
+  }
 
   void removeOverlayFile(InodeNumber inodeNumber);
 
@@ -646,6 +666,14 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * mutates `dir`.
    */
   void mergeWalIntoOverlayDir(InodeNumber parent, overlay::OverlayDir& dir);
+
+  bool shouldDeferWalFlush() const noexcept {
+    return checkoutDeferralCount_.load(std::memory_order_acquire) != 0;
+  }
+
+  // Number of in-flight checkout contexts deferring read-side WAL flush. Set on
+  // checkout threads, read by parallel inode-load workers in loadOverlayDir().
+  std::atomic<uint32_t> checkoutDeferralCount_{0};
 };
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =

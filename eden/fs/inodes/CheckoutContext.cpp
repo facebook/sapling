@@ -13,6 +13,7 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectStore.h"
 
@@ -40,9 +41,12 @@ CheckoutContext::CheckoutContext(
     fetchContext_->setTimeTracer(std::make_shared<MiniTracer>());
   }
   fetchContext_->setCancellationToken(std::move(cancellationToken));
+  mount_->getOverlay()->enterCheckoutDeferral();
 }
 
-CheckoutContext::~CheckoutContext() = default;
+CheckoutContext::~CheckoutContext() {
+  mount_->getOverlay()->exitCheckoutDeferral();
+}
 
 void CheckoutContext::start(
     RenameLock&& renameLock,
