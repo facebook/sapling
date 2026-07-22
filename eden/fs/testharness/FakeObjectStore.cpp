@@ -92,12 +92,6 @@ folly::coro::now_task<std::shared_ptr<const Blob>> FakeObjectStore::co_getBlob(
   co_return std::make_shared<const Blob>(iter->second);
 }
 
-ImmediateFuture<folly::Unit> FakeObjectStore::prefetchBlobs(
-    ObjectIdRange,
-    const ObjectFetchContextPtr&) const {
-  return folly::unit;
-}
-
 size_t FakeObjectStore::getAccessCount(const ObjectId& id) const {
   if (auto* item = folly::get_ptr(accessCounts_, id)) {
     return *item;

@@ -74,16 +74,6 @@ class IObjectStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const = 0;
-
-  /**
-   * Prefetch all the blobs represented by the HashRange.
-   *
-   * The caller is responsible for making sure that the HashRange stays valid
-   * for as long as the returned ImmediateFuture.
-   */
-  virtual ImmediateFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) const = 0;
 };
 
 } // namespace facebook::eden

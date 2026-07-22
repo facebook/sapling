@@ -497,28 +497,7 @@ ImmediateFuture<std::optional<uint64_t>> ObjectStore::getTreeDigestSize(
       });
 }
 
-ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
-    ObjectIdRange ids,
-    const ObjectFetchContextPtr& fetchContext) const {
-  // Fast path: avoid allocating a coroutine frame for the common
-  // empty-ids case (called frequently from ThriftGlobImpl::glob).
-  if (ids.empty()) {
-    return folly::unit;
-  }
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [self = shared_from_this()](
-              auto ids, auto context) -> folly::coro::Task<folly::Unit> {
-            co_return co_await self->co_prefetchBlobs(
-                std::move(ids), std::move(context));
-          },
-          ids,
-          fetchContext.copy())
-          .semi()};
-}
-
-folly::coro::now_task<folly::Unit> ObjectStore::co_prefetchBlobs(
+folly::coro::now_task<folly::Unit> ObjectStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& fetchContext) const {
   if (ids.empty()) {

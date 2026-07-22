@@ -52,11 +52,6 @@ class FakeObjectStore final : public IObjectStore {
       const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
 
-  ImmediateFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context =
-          ObjectFetchContext::getNullContext()) const override;
-
   size_t getAccessCount(const ObjectId& id) const;
 
  private:

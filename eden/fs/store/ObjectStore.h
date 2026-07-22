@@ -276,16 +276,9 @@ class ObjectStore : public IObjectStore,
    * Prefetch all the blobs represented by the HashRange.
    *
    * The caller is responsible for making sure that the HashRange stays valid
-   * for as long as the returned ImmediateFuture.
-   *
-   * DEPRECATED: use co_prefetchBlobs directly. Futures wrapper kept for
-   * non-coroutine callers; remove once all callers have migrated.
+   * for as long as the returned coroutine.
    */
-  ImmediateFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) const override;
-
-  folly::coro::now_task<folly::Unit> co_prefetchBlobs(
+  folly::coro::now_task<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) const;
 

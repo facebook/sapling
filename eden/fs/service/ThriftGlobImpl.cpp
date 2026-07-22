@@ -477,7 +477,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
               [store, curRange, fetchContext = fetchContext.copy()]()
                   -> folly::coro::Task<void> {
                 co_await folly::coro::co_reschedule_on_current_executor;
-                co_await store->co_prefetchBlobs(curRange, fetchContext);
+                co_await store->prefetchBlobs(curRange, fetchContext);
               }));
     }
     if (!range.empty()) {
@@ -486,7 +486,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
               [store, range, fetchContext = fetchContext.copy()]()
                   -> folly::coro::Task<void> {
                 co_await folly::coro::co_reschedule_on_current_executor;
-                co_await store->co_prefetchBlobs(range, fetchContext);
+                co_await store->prefetchBlobs(range, fetchContext);
               }));
     }
     // Use collectAllTryRange (not collectAllRange) to avoid cooperative
