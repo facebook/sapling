@@ -50,7 +50,7 @@ folly::coro::Task<std::vector<GlobResult>> evaluateGlob(
   auto objectStore = mount.getEdenMount()->getObjectStore();
   auto globResults =
       std::make_shared<folly::Synchronized<std::vector<GlobResult>>>();
-  co_await globRoot.co_evaluate(
+  co_await globRoot.evaluate(
       std::move(objectStore),
       ObjectFetchContext::getNullContext(),
       RelativePathPiece(),
@@ -376,7 +376,7 @@ folly::coro::Task<void> co_runGlobEvaluation(
     const RootId& commitId,
     folly::Try<folly::Unit>& evalResult,
     std::atomic<bool>& evalDone) {
-  evalResult = co_await folly::coro::co_awaitTry(globRoot.co_evaluate(
+  evalResult = co_await folly::coro::co_awaitTry(globRoot.evaluate(
       std::move(objectStore),
       ObjectFetchContext::getNullContext(),
       RelativePathPiece(),

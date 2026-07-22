@@ -332,7 +332,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
                     fetchContext,
                     std::move(rootTree.tree),
                     searchRoot);
-                co_await globTree->co_evaluate(
+                co_await globTree->evaluate(
                     edenMount->getObjectStore(),
                     fetchContext,
                     RelativePathPiece(),
@@ -374,7 +374,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
                  suppressFileList_]() mutable -> folly::coro::Task<void> {
               auto inode =
                   co_await edenMount->co_getInodeSlow(searchRoot, fetchContext);
-              co_await globNode->co_evaluate(
+              co_await globNode->evaluate(
                   edenMount->getObjectStore(),
                   fetchContext,
                   RelativePathPiece(),

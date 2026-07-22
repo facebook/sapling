@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/GlobNode.h"
 #include <eden/fs/inodes/InodePtrFwd.h>
-#include <folly/coro/Invoke.h>
 #include <iomanip>
 #include <iostream>
 #include "eden/fs/config/EdenConfig.h"
@@ -68,18 +67,12 @@ struct TreeInodePtrRoot {
   }
 
   /** Arrange to load a child TreeInode */
-  ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
-      PathComponentPiece name,
-      const ObjectFetchContextPtr& context) {
-    return root->getOrLoadChildTree(name, context);
-  }
-
   folly::coro::now_task<TreeInodePtr> co_getOrLoadChildTree(
       PathComponentPiece name,
       const ObjectFetchContextPtr& context) {
     co_return co_await root->co_getOrLoadChildTree(name, context);
   }
-  /** Returns true if we should call getOrLoadChildTree() for the given
+  /** Returns true if we should call co_getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */
   bool entryShouldLoadChildTree(const DirEntry* entry) {
     return entry->isMaterialized();
@@ -103,7 +96,7 @@ struct TreeInodePtrRoot {
 };
 } // namespace
 
-ImmediateFuture<folly::Unit> GlobNode::evaluate(
+folly::coro::now_task<folly::Unit> GlobNode::evaluate(
     std::shared_ptr<ObjectStore> store,
     const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
@@ -111,27 +104,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     PrefetchList* fileBlobsToPrefetch,
     ResultList* globResult,
     const RootId& originRootId) const {
-  return evaluateImpl<TreeInodePtrRoot, TreeInodePtr>(
-             store.get(),
-             context,
-             rootPath,
-             TreeInodePtrRoot(std::move(root)),
-             fileBlobsToPrefetch,
-             globResult,
-             originRootId)
-      // Make sure the store stays alive for the duration of globbing.
-      .ensure([store] {});
-}
-
-folly::coro::now_task<folly::Unit> GlobNode::co_evaluate(
-    std::shared_ptr<ObjectStore> store,
-    const ObjectFetchContextPtr& context,
-    RelativePathPiece rootPath,
-    TreeInodePtr root,
-    PrefetchList* fileBlobsToPrefetch,
-    ResultList* globResult,
-    const RootId& originRootId) const {
-  co_return co_await co_evaluateImpl<TreeInodePtrRoot, TreeInodePtr>(
+  co_return co_await evaluateImpl<TreeInodePtrRoot, TreeInodePtr>(
       store.get(),
       context,
       rootPath,
