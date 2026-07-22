@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
@@ -242,10 +243,24 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
 
   /**
    * Return the root Tree corresponding to the passed in RootId.
+   *
+   * Default implementation wraps co_getRootTree; subclasses may override.
    */
   virtual ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
-      const ObjectFetchContextPtr& context) = 0;
+      const ObjectFetchContextPtr& context) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto rootId, auto context)
+                -> folly::coro::Task<GetRootTreeResult> {
+              co_return co_await co_getRootTree(
+                  std::move(rootId), std::move(context));
+            },
+            RootId{rootId},
+            context.copy())
+            .semi()};
+  }
 
   /**
    * Coroutine version of getRootTree.

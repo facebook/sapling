@@ -7,7 +7,6 @@
 
 #include "eden/fs/store/git/GitBackingStore.h"
 
-#include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -142,22 +141,6 @@ BackingStore::GetRootTreeResult GitBackingStore::getRootTreeImpl(
 
   // Now get the specified tree.
   return GetRootTreeResult{getTreeImpl(treeID), treeID};
-}
-
-ImmediateFuture<BackingStore::GetRootTreeResult> GitBackingStore::getRootTree(
-    const RootId& rootId,
-    const ObjectFetchContextPtr& context) {
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [this](auto rootId, auto context)
-              -> folly::coro::Task<GetRootTreeResult> {
-            co_return co_await co_getRootTree(
-                std::move(rootId), std::move(context));
-          },
-          RootId{rootId},
-          context.copy())
-          .semi()};
 }
 
 folly::coro::now_task<BackingStore::GetRootTreeResult>

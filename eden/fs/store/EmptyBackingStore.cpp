@@ -7,7 +7,6 @@
 
 #include "eden/fs/store/EmptyBackingStore.h"
 
-#include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/model/Blob.h"
@@ -37,22 +36,6 @@ ObjectId EmptyBackingStore::parseObjectId(folly::StringPiece /*objectId*/) {
 
 std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
   throw std::domain_error("empty backing store");
-}
-
-ImmediateFuture<BackingStore::GetRootTreeResult> EmptyBackingStore::getRootTree(
-    const RootId& rootId,
-    const ObjectFetchContextPtr& context) {
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [this](auto rootId, auto context)
-              -> folly::coro::Task<GetRootTreeResult> {
-            co_return co_await co_getRootTree(
-                std::move(rootId), std::move(context));
-          },
-          RootId{rootId},
-          context.copy())
-          .semi()};
 }
 
 SemiFuture<BackingStore::GetTreeResult> EmptyBackingStore::getTree(
