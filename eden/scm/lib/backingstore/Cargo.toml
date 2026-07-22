@@ -41,7 +41,7 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-testutil = { version = "0.1.0", path = "../util/testutil" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-walkdetector = { version = "0.1.0", path = "../walkdetector" }
-smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
+smallvec = { version = "1.15.2", default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 

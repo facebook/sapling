@@ -5,6 +5,15 @@ oncall("sapling")
 rust_python_library(
     name = "pytermwiz",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "termwiz": {"features": ["use_serde"]},
+                },
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

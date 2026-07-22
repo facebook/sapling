@@ -10,4 +10,5 @@ anyhow = "1.0.103"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-termwiz = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", features = ["use_serde", "widgets"], default-features = false }
+termwiz = { version = "0.23.3", features = ["use_serde"], default-features = false }
+wezterm-dynamic = { version = "0.2.1", features = ["std"], default-features = false }
