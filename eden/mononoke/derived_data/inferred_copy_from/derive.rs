@@ -488,6 +488,13 @@ async fn find_partial_matches(
     paths_to_ignore: &HashSet<MPath>,
     content_to_candidates: &HashMap<ContentId, Vec<CopyFromCandidate>>,
 ) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
+    // Without any candidates left over from exact/basename matching, no partial
+    // match can ever be found below, so skip the (potentially thousands of)
+    // blobstore metadata fetches used to determine which changed files are binary.
+    if content_to_candidates.is_empty() {
+        return Ok(vec![]);
+    }
+
     let max_num_changed_files = get_max_num_changed_files(derivation_ctx);
 
     // Collect all content ids we'll need later and check whether the content is binary
