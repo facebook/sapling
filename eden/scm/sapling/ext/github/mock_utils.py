@@ -286,7 +286,7 @@ class MockGitHubServer:
     ) -> "UpdatePrRequest":
         if not stack_pr_ids:
             stack_pr_ids = [pr_number]
-        stack_pr_ids = list(reversed(sorted(stack_pr_ids)))
+        stack_pr_ids = sorted(stack_pr_ids, reverse=True)
 
         if len(stack_pr_ids) > 1:
             pr_list = [
@@ -310,6 +310,19 @@ class MockGitHubServer:
         }
         key = create_request_key(params, self.hostname)
         request = UpdatePrRequest(key, pr_id)
+        self._add_request(key, request)
+        return request
+
+    def expect_add_comment_request(
+        self, pr_id: str, body: str
+    ) -> "AddCommentRequest":
+        params: ParamsType = {
+            "query": query.GRAPHQL_ADD_COMMENT,
+            "subjectId": pr_id,
+            "body": body,
+        }
+        key = create_request_key(params, self.hostname)
+        request = AddCommentRequest(key, pr_id)
         self._add_request(key, request)
         return request
 
@@ -537,6 +550,29 @@ class UpdatePrRequest(MockRequest):
 
     def and_respond(self):
         data = {"data": {"updatePullRequest": {"pullRequest": {"id": self._pr_id}}}}
+        self._response = Ok(data)
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class AddCommentRequest(MockRequest):
+    def __init__(self, key: str, pr_id: str) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._pr_id = pr_id
+
+    def and_respond(self):
+        data = {
+            "data": {
+                "addComment": {
+                    "commentEdge": {"node": {"id": f"comment_{self._pr_id}"}}
+                }
+            }
+        }
         self._response = Ok(data)
 
     def get_response(self) -> Result[JsonDict, str]:
