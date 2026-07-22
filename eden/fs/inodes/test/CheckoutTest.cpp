@@ -6,6 +6,7 @@
  */
 
 #include <folly/Conv.h>
+#include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
 #include <folly/executors/ManualExecutor.h>
@@ -2942,12 +2943,103 @@ TEST(Checkout, checkoutRefusesNonEmptyRestrictedPlaceholder) {
 
 TEST(
     Checkout,
+    futuresCheckoutUpdatesRememberedRestrictedChildPlaceholderMetadata) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("restricted_child/secret.txt", "current secret\n");
+  currentBuilder.setDirIsRestricted("restricted_child");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+
+  auto parent = testMount.getRootInode();
+  auto restrictedTree = testMount.getTreeInode("restricted_child"_relpath);
+  ASSERT_TRUE(restrictedTree->isRestricted());
+  auto oldRestrictedTreeId = restrictedTree->getObjectId();
+  ASSERT_TRUE(oldRestrictedTreeId.has_value());
+  auto restrictedInodeNumber = restrictedTree->getNodeId();
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
+
+  // Retain the kernel reference and inode number while removing the loaded
+  // child pointer that would trigger checkout's loaded-child fast path.
+  restrictedTree->incFsRefcount();
+  SCOPE_EXIT {
+    inodeMap->decFsRefcount(restrictedInodeNumber);
+  };
+  restrictedTree.reset();
+  parent->unloadChildrenNow();
+
+  ASSERT_TRUE(inodeMap->isInodeRemembered(restrictedInodeNumber));
+  ASSERT_EQ(nullptr, inodeMap->lookupLoadedTree(restrictedInodeNumber).get());
+  {
+    auto contents = parent->lockContentsRead();
+    auto it = contents->entries.find("restricted_child"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    ASSERT_EQ(nullptr, it->second.getInode());
+    ASSERT_EQ(restrictedInodeNumber, it->second.getInodeNumber());
+    ASSERT_TRUE(it->second.isRestricted());
+    ASSERT_EQ(*oldRestrictedTreeId, it->second.getObjectId());
+  }
+
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.replaceFile("restricted_child/secret.txt", "target secret\n");
+  auto backingStore = testMount.getBackingStore();
+  targetBuilder.finalize(backingStore, true);
+  auto* targetRootTree = targetBuilder.getStoredTree(RelativePathPiece{});
+  const auto targetEntry = targetRootTree->get().find("restricted_child"_pc);
+  ASSERT_NE(targetEntry, targetRootTree->get().cend());
+  ASSERT_TRUE(targetEntry->second.isRestricted());
+  auto targetRestrictedTreeId = targetEntry->second.getObjectId();
+  auto targetAclRootState = targetEntry->second.aclRootState();
+  ASSERT_NE(*oldRestrictedTreeId, targetRestrictedTreeId);
+  ASSERT_EQ(0, backingStore->getAccessCount(*oldRestrictedTreeId));
+  ASSERT_EQ(0, backingStore->getAccessCount(targetRestrictedTreeId));
+
+  auto targetCommit = backingStore->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::NORMAL)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
+  EXPECT_EQ(1, backingStore->getAccessCount(*oldRestrictedTreeId));
+  EXPECT_EQ(0, backingStore->getAccessCount(targetRestrictedTreeId));
+
+  {
+    auto contents = parent->lockContentsRead();
+    auto it = contents->entries.find("restricted_child"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_NE(nullptr, it->second.getInode());
+    EXPECT_EQ(restrictedInodeNumber, it->second.getInodeNumber());
+    EXPECT_TRUE(it->second.isRestricted());
+    EXPECT_EQ(targetAclRootState, it->second.aclRootState());
+    EXPECT_EQ(targetRestrictedTreeId, it->second.getObjectId());
+  }
+
+  restrictedTree = inodeMap->lookupTreeInode(restrictedInodeNumber).get(1ms);
+  auto updatedRestrictedTreeId = restrictedTree->getObjectId();
+  ASSERT_TRUE(updatedRestrictedTreeId.has_value());
+  EXPECT_EQ(targetRestrictedTreeId, *updatedRestrictedTreeId);
+  EXPECT_TRUE(restrictedTree->isRestricted());
+  EXPECT_EQ(targetAclRootState, restrictedTree->aclRootState());
+  auto restrictedContents = restrictedTree->getContentsUnchecked().rlock();
+  EXPECT_TRUE(restrictedContents->entries.empty());
+}
+
+TEST_P(
+    CheckoutTest,
     checkoutUpdatesLoadedRestrictedChildWhenOnlyFetchedTreeIsRestricted) {
   auto currentBuilder = FakeTreeBuilder{};
   currentBuilder.setFile("restricted_child/secret.txt", "current secret\n");
   currentBuilder.setDirIsRestricted("restricted_child");
   TestMount testMount{RootId{"current"}, currentBuilder};
-  enableCoroutinesConfig(testMount);
+  applyParam(testMount);
 
   auto parent = testMount.getRootInode();
   auto restrictedTree = testMount.getTreeInode("restricted_child"_relpath);

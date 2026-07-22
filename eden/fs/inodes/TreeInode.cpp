@@ -5821,7 +5821,35 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
           ctx, treeInode, replacementEntry, newRestricted);
       using PrepState = RestrictionTransitionPrep::State;
       if (prep.state == PrepState::NoChange) {
-        if (newRestricted && !newTree) {
+        if (newRestricted && prep.oldRestricted) {
+          ctx->increaseCheckoutCounter(1 + treeInode->getInMemoryDescendants());
+          if (!ctx->isDryRun()) {
+            // Use the metadata source that established the restriction.
+            auto restrictedTreeId = replacementEntry.second.getObjectId();
+            auto restrictedAclRootState =
+                replacementEntry.second.aclRootState();
+            auto restrictedHasACL = replacementEntry.second.hasACL();
+            if (!replacementEntry.second.isRestricted()) {
+              XCHECK(newTree);
+              XCHECK(newTree->isRestricted());
+              restrictedTreeId = newTree->getObjectId();
+              restrictedAclRootState = newTree->aclRootState();
+              restrictedHasACL = newTree->hasACL();
+            }
+            if (treeInode->updateRestrictedPlaceholder(
+                    restrictedTreeId, restrictedAclRootState)) {
+              auto currentName = getInodeName(ctx, treeInode);
+              childDematerialized(
+                  ctx->renameLock(),
+                  currentName.piece(),
+                  restrictedTreeId,
+                  !getMount()
+                       ->getEdenConfig()
+                       ->skipCheckoutChildOverlayWrites.getValue(),
+                  /*isRestricted=*/true,
+                  restrictedHasACL);
+            }
+          }
           return CheckoutActionResult{InvalidationRequired::No};
         }
 
