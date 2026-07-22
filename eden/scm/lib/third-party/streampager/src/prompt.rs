@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use termwiz::cell::{AttributeChange, CellAttributes};
 use termwiz::color::{AnsiColor, ColorAttribute};
-use termwiz::input::KeyEvent;
+use termwiz::input::{KeyCode, KeyEvent};
 use termwiz::surface::change::Change;
 use termwiz::surface::Position;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -371,8 +371,21 @@ impl Prompt {
         const CTRL: Modifiers = Modifiers::CTRL;
         const NONE: Modifiers = Modifiers::NONE;
         const ALT: Modifiers = Modifiers::ALT;
-        let value_width = width - self.prompt.width() - 4;
-        let action = match (key.modifiers, key.key) {
+        let mut cands = Vec::with_capacity(4);
+        cands.push(key.clone());
+        if key.modifiers.contains(Modifiers::SHIFT) {
+            if let KeyCode::Char(c) = key.key {
+                let mut ns = key.modifiers;
+                ns.remove(Modifiers::SHIFT);
+                cands.push(KeyEvent { key: KeyCode::Char(c), modifiers: ns });
+                if c.is_ascii_lowercase() {
+                    cands.push(KeyEvent { key: KeyCode::Char(c.to_ascii_uppercase()), modifiers: ns });
+                }
+            }
+        }
+        for (mods, k) in cands.into_iter().map(|ke| (ke.modifiers, ke.key)) {
+            let value_width = width - self.prompt.width() - 4;
+            let action = match (mods, k.clone()) {
             (NONE, Enter) | (CTRL, Char('j')) | (CTRL, Char('m')) => {
                 // Finish.
                 let _ = self.history.save();
@@ -410,10 +423,12 @@ impl Prompt {
             (CTRL, Char('t')) => self.state_mut().transpose_chars(),
             (NONE, UpArrow) => self.history.previous(),
             (NONE, DownArrow) => self.history.next(),
-            _ => return DisplayAction::None,
+            _ => continue,
         };
-        self.state_mut().clamp_offset(value_width);
-        action
+            self.state_mut().clamp_offset(value_width);
+            return action;
+        }
+        DisplayAction::None
     }
 
     /// Paste some text into the prompt.
