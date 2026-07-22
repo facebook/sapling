@@ -30,7 +30,7 @@ memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 mysql_async = "0.33.0"
 paste = "1.0.14"
-rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json"] }
+rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json", "vtab"] }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../scuba_ext" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
