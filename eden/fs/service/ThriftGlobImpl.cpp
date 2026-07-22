@@ -327,7 +327,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
                 auto rootTree =
                     co_await edenMount->getObjectStore()->co_getRootTree(
                         originRootId, fetchContext);
-                auto tree = co_await co_resolveTree(
+                auto tree = co_await resolveTree(
                     *edenMount->getObjectStore(),
                     fetchContext,
                     std::move(rootTree.tree),

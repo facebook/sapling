@@ -9,7 +9,6 @@
 
 #include <folly/coro/safe/NowTask.h>
 
-#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
@@ -18,13 +17,7 @@ namespace facebook::eden {
 class ObjectStore;
 class Tree;
 
-ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
-    ObjectStore& objectStore,
-    const ObjectFetchContextPtr& fetchContext,
-    std::shared_ptr<const Tree> root,
-    RelativePathPiece path);
-
-folly::coro::now_task<std::shared_ptr<const Tree>> co_resolveTree(
+folly::coro::now_task<std::shared_ptr<const Tree>> resolveTree(
     ObjectStore& objectStore,
     const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Tree> root,
