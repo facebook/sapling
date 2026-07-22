@@ -36,6 +36,7 @@ _defaulteffects = {
     "underline": 4,
     "inverse": 7,
     "dim": 2,
+    "blink": 5,
     "black_background": 40,
     "red_background": 41,
     "green_background": 42,

@@ -13,6 +13,7 @@ use ::io::enable_compat_mode;
 use termwiz::caps::Capabilities;
 pub use termwiz::caps::ColorLevel;
 use termwiz::caps::ProbeHints;
+use termwiz::cell::Blink;
 use termwiz::cell::CellAttributes;
 use termwiz::cell::Intensity;
 use termwiz::cell::Underline;
@@ -298,6 +299,9 @@ fn eval_non_color(effect: &str, attrs: &mut CellAttributes) -> bool {
         "dim" => {
             attrs.set_intensity(Intensity::Half);
         }
+        "blink" => {
+            attrs.set_blink(Blink::Slow);
+        }
         _ => {
             return false;
         }
@@ -359,6 +363,7 @@ mod test {
 
         assert_spec!(Sixteen, "green", b"\x1B[32m");
         assert_spec!(Sixteen, "green_background", b"\x1B[42m");
+        assert_spec!(Sixteen, "blink", b"\x1B[0m\x1B[5m");
         assert_spec!(
             Sixteen,
             "red blue_background italic underline inverse dim",
