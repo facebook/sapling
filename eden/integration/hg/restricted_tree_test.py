@@ -705,7 +705,7 @@ class RestrictedTreeTest(_RestrictedTreeTestMethods, _RestrictedTreeTestBase):
     """Client-side enforcement via has_acl metadata."""
 
     def test_checkout_restricted_tree_over_ignored_file(self) -> None:
-        """Current behavior aborts while planning around an ignored file."""
+        """Ignored files are discarded when their parent becomes restricted."""
         self.repo.hg("update", self.initial_commit)
 
         local_dir = os.path.join(self.mount, "ignored_local_only_restricted")
@@ -714,17 +714,12 @@ class RestrictedTreeTest(_RestrictedTreeTestMethods, _RestrictedTreeTestBase):
             f.write("local content")
         self.assert_status({"ignored_local_only_restricted/local.txt": "I"})
 
-        with self.assertRaisesRegex(
-            hgrepo.HgError,
-            "file metadata for ignored_local_only_restricted/local.txt "
-            "not found at destination commit",
-        ):
-            self.repo.hg("update", self.ignored_file_restricted_commit)
+        self.repo.hg("update", self.ignored_file_restricted_commit)
 
-        self.assertEqual(["local.txt", "tracked.txt"], sorted(os.listdir(local_dir)))
-        with open(local_file, "r") as f:
-            self.assertEqual("local content", f.read())
-        self.assert_status({"ignored_local_only_restricted/local.txt": "I"})
+        with self.assertRaises(OSError) as ctx:
+            os.listdir(local_dir)
+        self.assertEqual(errno.EACCES, ctx.exception.errno)
+        self.assert_status_empty()
 
 
 @hg_test

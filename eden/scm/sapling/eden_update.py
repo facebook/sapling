@@ -236,6 +236,8 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict_type == "VISIBLE_RESTRICTED":
+            if repo.dirstate[path] == "?" and repo.dirstate._ignore(path):
+                continue
             action_type = mergemod.ACTION_VISIBLE_RESTRICTED
             action = (path, None, path, False, src.node())
             prompt = "prompt restricted"

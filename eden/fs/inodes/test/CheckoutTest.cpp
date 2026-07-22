@@ -3220,7 +3220,7 @@ TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnUntrackedFile) {
   EXPECT_THAT(
       std::move(dryRunResult).get().conflicts,
       UnorderedElementsAre(makeConflict(
-          ConflictType::UNTRACKED_ADDED,
+          ConflictType::VISIBLE_RESTRICTED,
           "local_only_restricted/local.txt",
           "",
           Dtype::REGULAR)));
@@ -3239,15 +3239,11 @@ TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnUntrackedFile) {
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
 
-  EXPECT_THAT(
-      std::move(checkoutResult).get().conflicts,
-      UnorderedElementsAre(makeConflict(
-          ConflictType::UNTRACKED_ADDED,
-          "local_only_restricted/local.txt",
-          "",
-          Dtype::REGULAR)));
-  EXPECT_FALSE(
-      testMount.getTreeInode("local_only_restricted"_relpath)->isRestricted());
+  EXPECT_TRUE(std::move(checkoutResult).get().conflicts.empty());
+  auto restrictedInode =
+      testMount.getTreeInode("local_only_restricted"_relpath);
+  EXPECT_TRUE(restrictedInode->isRestricted());
+  EXPECT_TRUE(restrictedInode->getContentsUnchecked().rlock()->entries.empty());
 }
 
 #endif

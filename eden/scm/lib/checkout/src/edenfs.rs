@@ -96,10 +96,25 @@ fn actionmap_from_eden_conflicts(
                 None
             }
             ConflictType::VisibleRestricted => {
-                return Err(CheckoutConflictsError {
-                    conflicts: vec![conflict.path.clone()],
+                let conflict_path = conflict.path.as_repo_path();
+                let file_state = treestate
+                    .normalized_get(conflict_path.as_str().as_bytes())?
+                    .map_or(StateFlags::empty(), |f| f.state);
+                let is_untracked = !file_state.intersects(
+                    StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
+                );
+                if is_untracked
+                    && wc
+                        .ignore_matcher
+                        .match_relative(conflict_path.to_path().as_path(), false)
+                {
+                    None
+                } else {
+                    return Err(CheckoutConflictsError {
+                        conflicts: vec![conflict.path.clone()],
+                    }
+                    .into());
                 }
-                .into());
             }
             ConflictType::UntrackedAdded | ConflictType::RemovedModified => {
                 let conflict_path = conflict.path.as_repo_path();

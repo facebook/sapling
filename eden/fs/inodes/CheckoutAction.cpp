@@ -389,8 +389,7 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
 
         if (!self->oldScmEntry_ && !self->newScmEntry_) {
           auto treeInode = self->inode_.asTreePtrOrNull();
-          if (self->ctx_->forceUpdate() && !self->ctx_->isDryRun() &&
-              !treeInode) {
+          if (!self->ctx_->isDryRun() && !treeInode) {
             auto parent = self->inode_->getParent(self->ctx_->renameLock());
             return parent
                 ->checkoutUpdateEntry(
@@ -420,7 +419,7 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                   [self, conflictWasAddedToCtx](CheckoutSubtreeResult result)
                       -> ImmediateFuture<CheckoutActionResult> {
                     result.hadConflicts |= conflictWasAddedToCtx;
-                    if (self->ctx_->forceUpdate() && !self->ctx_->isDryRun()) {
+                    if (!self->ctx_->isDryRun()) {
                       auto parent =
                           self->inode_->getParent(self->ctx_->renameLock());
                       return parent
@@ -490,7 +489,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
 
   if (!oldScmEntry_ && !newScmEntry_) {
     auto treeInode = inode_.asTreePtrOrNull();
-    if (ctx_->forceUpdate() && !ctx_->isDryRun() && !treeInode) {
+    if (!ctx_->isDryRun() && !treeInode) {
       auto parent = inode_->getParent(ctx_->renameLock());
       auto result = co_await parent
                         ->checkoutUpdateEntry(
@@ -511,7 +510,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
     auto result = co_await treeInode->co_checkout(
         ctx_, nullptr, nullptr, /*reportLocalOnlyAsConflicts=*/true);
     bool hadConflicts = result.hadConflicts || conflictWasAddedToCtx;
-    if (ctx_->forceUpdate() && !ctx_->isDryRun()) {
+    if (!ctx_->isDryRun()) {
       auto parent = inode_->getParent(ctx_->renameLock());
       auto actionResult = co_await parent
                               ->checkoutUpdateEntry(
@@ -601,7 +600,10 @@ std::optional<bool> CheckoutAction::checkSyncConflict() {
     if (inode_.asTreePtrOrNull()) {
       return false;
     }
-    ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
+    if (!ctx_->isDryRun()) {
+      return false;
+    }
+    ctx_->addConflict(ConflictType::VISIBLE_RESTRICTED, inode_.get());
     return true;
   }
 
