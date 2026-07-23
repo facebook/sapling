@@ -3,10 +3,19 @@ load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
 
 oncall("thrift_dynamic")
 
+DYNAMIC_PACKAGE_AUTHORS = ["Sam De Roeck <sadroeck@meta.com>", "Facebook"]
+
 thrift_rust_library(
     name = "thrift_type_system",
     srcs = glob(["type_system/**/*.rs"]),
     allow_oss_build = False,
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": DYNAMIC_PACKAGE_AUTHORS,
+            },
+        },
+    },
     crate_root = "type_system/lib.rs",
     unittests = is_fbcode(),
     deps = [
@@ -22,7 +31,14 @@ thrift_rust_library(
     name = "type_system_digest",
     srcs = glob(["type_system_digest/**/*.rs"]),
     allow_oss_build = False,
-    autocargo = {"cargo_toml_dir": "type_system_digest"},
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": DYNAMIC_PACKAGE_AUTHORS,
+            },
+        },
+        "cargo_toml_dir": "type_system_digest",
+    },
     crate_root = "type_system_digest/lib.rs",
     deps = [
         "fbsource//third-party/rust:ring",
@@ -34,11 +50,18 @@ thrift_rust_library(
 )
 
 thrift_rust_library(
-    name = "service_catalog_digest",
-    srcs = glob(["service_catalog_digest/**/*.rs"]),
+    name = "thrift_service_catalog",
+    srcs = glob(["service_catalog/**/*.rs"]),
     allow_oss_build = False,
-    autocargo = {"cargo_toml_dir": "service_catalog_digest"},
-    crate_root = "service_catalog_digest/lib.rs",
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": DYNAMIC_PACKAGE_AUTHORS,
+            },
+        },
+        "cargo_toml_dir": "service_catalog",
+    },
+    crate_root = "service_catalog/lib.rs",
     test_deps = [
         "//thrift/lib/cpp2/dynamic/test:service_catalog_digest_expected_values-rust",
     ]
@@ -46,10 +69,33 @@ thrift_rust_library(
     else [],
     unittests = is_fbcode(),
     deps = [
+        "//thrift/lib/rust/dynamic:service_catalog_digest",
         "//thrift/lib/rust/dynamic:type_system_digest",
         "//thrift/lib/thrift:record-rust",
         "//thrift/lib/thrift:service_catalog-rust",
         "//thrift/lib/thrift:type_id-rust",
         "//thrift/lib/thrift:type_system-rust",
+    ],
+)
+
+thrift_rust_library(
+    name = "service_catalog_digest",
+    srcs = glob(["service_catalog_digest/**/*.rs"]),
+    allow_oss_build = False,
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": DYNAMIC_PACKAGE_AUTHORS,
+            },
+        },
+        "cargo_toml_dir": "service_catalog_digest",
+    },
+    crate_root = "service_catalog_digest/lib.rs",
+    unittests = is_fbcode(),
+    deps = [
+        "//thrift/lib/rust/dynamic:type_system_digest",
+        "//thrift/lib/thrift:record-rust",
+        "//thrift/lib/thrift:service_catalog-rust",
+        "//thrift/lib/thrift:type_id-rust",
     ],
 )
