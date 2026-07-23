@@ -10,6 +10,7 @@ import asyncio
 import os
 import sys
 import time
+import unittest
 from typing import Dict, List, Optional
 
 from eden.fs.service.eden.thrift_types import (
@@ -37,6 +38,7 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
     directories: List[str] = ["a", "b", "c"]
     num_files: int = 10
+    deep_file_count: int = 20
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         result = super().edenfs_extra_config() or {}
@@ -52,6 +54,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         for directory in self.directories:
             for i in range(self.num_files):
                 self.repo.write_file(f"{directory}/{i}", f"{i}\n")
+        for i in range(self.deep_file_count):
+            self.repo.write_file(f"deep/parent/child/{i}", f"{i}\n")
         self.repo.commit("Initial commit.")
 
     async def get_loaded_count(self) -> int:
@@ -146,6 +150,33 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         # Everything should still be readable
         self.read_all()
+
+    @unittest.expectedFailure
+    async def test_active_invalidation_reclaims_siblings_of_open_file(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        for i in range(self.deep_file_count):
+            self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
+
+        open_path = os.path.join(self.mount, "deep/parent/child/0")
+        with open(open_path) as open_file:
+            self.assertEqual("0\n", open_file.readline())
+            loaded_after_read = await self.get_loaded_count()
+            self.assertGreaterEqual(
+                loaded_after_read,
+                self.deep_file_count + 4,
+            )
+
+            time.sleep(3)
+
+            invalidated = await self.invalidate("")
+            self.assertGreaterEqual(invalidated, self.deep_file_count)
+
+            loaded_after_gc = await self.get_loaded_count()
+            self.assertLess(loaded_after_gc, loaded_after_read)
+
+        self.assertEqual("0\n", self.read_file("deep/parent/child/0"))
 
     async def test_active_invalidation_preserves_bind_redirection(self) -> None:
         if sys.platform != "linux":
