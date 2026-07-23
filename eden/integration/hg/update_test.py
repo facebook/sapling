@@ -6,10 +6,10 @@
 
 # pyre-unsafe
 
-import asyncio
 import logging
 import os
 import re
+import signal
 import sys
 import threading
 from contextlib import asynccontextmanager
@@ -23,6 +23,7 @@ from eden.fs.cli.mp import get_context
 from eden.fs.service.eden.thrift_types import (
     CheckoutMode,
     CheckOutRevisionParams,
+    ConflictType,
     DIS_ENABLE_FLAGS,
     EdenError,
     EdenErrorType,
@@ -893,6 +894,81 @@ class UpdateTest(EdenHgTestCase):
             dir2 = next(inode for inode in inodes[""].entries if inode.name == b"dir2")
             self.assertFalse(dir2.loaded and inodes["dir2"].materialized)
             self.assertNotIn("dir3", inodes)
+
+    async def test_resume_interrupted_update_with_applied_file_loaded(self) -> None:
+        self.backing_repo.write_file("dir1/foo.txt", "Content 1")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 1")
+        self.backing_repo.write_file("dir3/dog.txt", "Content 1")
+        bottom = self.backing_repo.commit("Add files")
+        self.backing_repo.write_file("dir1/foo.txt", "Content 2")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 2")
+        self.backing_repo.write_file("dir3/dog.txt", "Content 2")
+        top = self.backing_repo.commit("Edit files")
+        self.repo.update(top)
+
+        self.repo.write_file("dir1/foo.txt", "Content 2")
+        self.assertTrue(os.path.isdir(self.get_path("dir2")))
+
+        with self.eden.get_thrift_client() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::checkout",
+                    keyValueRegex="dir2, false",
+                    block=True,
+                )
+            )
+
+        checkout_error = []
+
+        def update_to_bottom() -> None:
+            try:
+                self.repo.update(bottom)
+            except hgrepo.HgError as ex:
+                checkout_error.append(ex)
+
+        checkout_thread = Thread(target=update_to_bottom)
+        checkout_thread.start()
+        try:
+            self.wait_on_fault_hit(key_class="TreeInode::checkout")
+            util.poll_until(
+                lambda: self.read_file("dir1/foo.txt") == "Content 1", timeout=30
+            )
+        finally:
+            with self.eden.get_thrift_client() as client:
+                daemon_pid = client.getPid()
+            # On Windows, os.kill(SIGTERM) calls TerminateProcess.
+            kill_signal = signal.SIGTERM if sys.platform == "win32" else signal.SIGKILL
+            os.kill(daemon_pid, kill_signal)
+            checkout_thread.join(timeout=30)
+        self.assertFalse(checkout_thread.is_alive())
+        self.assertEqual(1, len(checkout_error))
+
+        if self.eden._process is not None:
+            util.poll_until(self.eden._process.poll, timeout=30)
+        self.eden = self.init_eden_client()
+        self.eden.start()
+
+        self.assertEqual("Content 1", self.read_file("dir1/foo.txt"))
+
+        # FIXME: Resume should succeed because dir1/foo.txt already matches bottom.
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=bottom.encode(),
+                checkoutMode=CheckoutMode.DRY_RUN,
+                params=CheckOutRevisionParams(),
+            )
+        self.assertEqual(
+            [(b"dir1/foo.txt", ConflictType.MODIFIED_MODIFIED)],
+            [(conflict.path, conflict.type) for conflict in conflicts],
+        )
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(bottom)
+        self.assertIn(
+            b"1 conflicting file changes:\n dir1/foo.txt",
+            context.exception.stderr,
+        )
 
     async def test_resume_interrupted_with_concurrent_update(self) -> None:
         self.repo.write_file("foo/baz.txt", "Content 3")
