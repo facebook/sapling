@@ -7,10 +7,11 @@
 
 import type {ChangedFileStatus, RepoRelativePath, UncommittedChanges} from '../types';
 
-import {act, fireEvent, render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {defaultChangedFilesDisplayType} from '../ChangedFileDisplayTypePicker';
+import platform from '../platform';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
   closeCommitInfoSidebar,
@@ -239,6 +240,96 @@ describe('Changed Files', () => {
       });
       expect(screen.queryByText(ignoreRTL('file1.js'))).not.toBeInTheDocument();
       expect(screen.queryByText(ignoreRTL('file3.js'))).toBeInTheDocument();
+    });
+  });
+
+  describe('opening files and diffs', () => {
+    function setClickToOpenDiffView(enabled: boolean) {
+      act(() => {
+        simulateMessageFromServer({
+          type: 'gotConfig',
+          name: 'isl.click-to-open-diff-view',
+          value: enabled ? 'true' : 'false',
+        });
+      });
+    }
+
+    beforeEach(() => {
+      // Reset to the default (off); the atom is a module singleton and can leak
+      // a value set by a prior test.
+      setClickToOpenDiffView(false);
+    });
+
+    afterEach(() => {
+      // openDiff is only defined by embedded platforms; clean up our stub.
+      platform.openDiff = undefined;
+    });
+
+    describe('with click-to-open-diff-view off (default)', () => {
+      it('clicking a file name opens the file', () => {
+        const openFile = jest.spyOn(platform, 'openFile').mockImplementation(() => {});
+        const openDiff = jest.fn();
+        platform.openDiff = openDiff;
+        fireEvent.click(screen.getByText(ignoreRTL('file1.js')));
+        expect(openFile).toHaveBeenCalledWith('file1.js');
+        expect(openDiff).not.toHaveBeenCalled();
+      });
+
+      it('the inline button opens the diff view', () => {
+        const openDiff = jest.fn();
+        platform.openDiff = openDiff;
+        const row = screen.getByTestId('changed-file-file1.js');
+        fireEvent.click(within(row).getByTestId('file-open-diff-button'));
+        expect(openDiff).toHaveBeenCalledWith('file1.js', expect.anything());
+      });
+    });
+
+    describe('with click-to-open-diff-view on', () => {
+      beforeEach(() => {
+        setClickToOpenDiffView(true);
+      });
+
+      it('clicking a file name opens the diff view', () => {
+        const openDiff = jest.fn();
+        platform.openDiff = openDiff;
+        const openFile = jest.spyOn(platform, 'openFile').mockImplementation(() => {});
+        fireEvent.click(screen.getByText(ignoreRTL('file1.js')));
+        expect(openDiff).toHaveBeenCalledWith('file1.js', expect.anything());
+        expect(openFile).not.toHaveBeenCalled();
+      });
+
+      it('pressing Enter on a file row opens the diff view', () => {
+        const openDiff = jest.fn();
+        platform.openDiff = openDiff;
+        fireEvent.keyUp(screen.getByTestId('changed-file-file1.js'), {key: 'Enter'});
+        expect(openDiff).toHaveBeenCalledWith('file1.js', expect.anything());
+      });
+
+      it('the inline button opens the whole file', () => {
+        const openFile = jest.spyOn(platform, 'openFile').mockImplementation(() => {});
+        const row = screen.getByTestId('changed-file-file1.js');
+        fireEvent.click(within(row).getByTestId('file-open-file-button'));
+        expect(openFile).toHaveBeenCalledWith('file1.js');
+      });
+    });
+
+    it('conflicted files open the file, never the diff view, even when the setting is on', () => {
+      setClickToOpenDiffView(true);
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: [{path: 'conflict.js', status: 'U'}],
+        });
+      });
+      const openDiff = jest.fn();
+      platform.openDiff = openDiff;
+      const openFile = jest.spyOn(platform, 'openFile').mockImplementation(() => {});
+      fireEvent.click(screen.getByText(ignoreRTL('conflict.js')));
+      expect(openFile).toHaveBeenCalledWith('conflict.js');
+      expect(openDiff).not.toHaveBeenCalled();
+      // conflicted files never get an inline open button, in either mode.
+      const row = screen.getByTestId('changed-file-conflict.js');
+      expect(within(row).queryByTestId('file-open-file-button')).not.toBeInTheDocument();
+      expect(within(row).queryByTestId('file-open-diff-button')).not.toBeInTheDocument();
     });
   });
 

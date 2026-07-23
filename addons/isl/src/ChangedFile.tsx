@@ -18,7 +18,7 @@ import {isMac} from 'isl-components/OperatingSystem';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import React from 'react';
+import React, {useCallback} from 'react';
 import {ComparisonType, labelForComparison, revsetForComparison} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {basename, notEmpty} from 'shared/utils';
@@ -32,7 +32,7 @@ import {SuspenseBoundary} from './SuspenseBoundary';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
-import {readAtom} from './jotaiUtils';
+import {configBackedAtom, readAtom} from './jotaiUtils';
 import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {AddOperation} from './operations/AddOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
@@ -54,6 +54,76 @@ import {usePromise} from './usePromise';
  * On windows, this actually uses the ctrl key instead to avoid conflicting with OS focus behaviors.
  */
 const holdingModifiedKeyAtom = isMac ? holdingAltAtom : holdingCtrlAtom;
+
+const revertableStatues = new Set(['M', 'R', '!']);
+const conflictStatuses = new Set<ChangedFileStatus>(['U', 'Resolved']);
+
+/**
+ * When enabled, clicking a file name opens the diff view instead of the file,
+ * and the inline action button swaps to open the file (VS Code / git-like).
+ * Default off, matching existing ISL behavior.
+ */
+export const clickToOpenDiffViewAtom = configBackedAtom<boolean>(
+  'isl.click-to-open-diff-view',
+  false,
+);
+
+function openDiffView(path: string, comparison: Comparison) {
+  if (platform.openDiff != null) {
+    platform.openDiff(path, comparison);
+  } else {
+    showComparison(comparison, path);
+  }
+}
+
+/**
+ * Shared handlers for opening a changed file or its diff view, used by both the
+ * file name and the inline action buttons.
+ *
+ * `openFileOrDiff` is what a file-name click runs: it opens the diff view only
+ * when the `isl.click-to-open-diff-view` setting is on. Conflict statuses ('U',
+ * 'Resolved') and submodules never open the diff view — it doesn't work for them
+ * — so they always fall back to opening the file regardless of the setting.
+ * `openFile` additionally routes an unresolved conflict to the configured
+ * external merge tool.
+ */
+function useOpenFileOrDiff(file: UIChangedFile, comparison?: Comparison) {
+  const runOperation = useRunOperation();
+  const externalMergeTool = useAtomValue(externalMergeToolAtom);
+  const clickToOpenDiff = useAtomValue(clickToOpenDiffViewAtom);
+
+  const openFile = useCallback(() => {
+    if (file.mode === ChangedFileMode.Submodule) {
+      return;
+    }
+    if (file.visualStatus === 'U' && externalMergeTool != null) {
+      runOperation(new ResolveInExternalMergeToolOperation(externalMergeTool, file.path));
+      return;
+    }
+    platform.openFile(file.path);
+  }, [file.mode, file.path, file.visualStatus, externalMergeTool, runOperation]);
+
+  const openDiff = useCallback(() => {
+    if (comparison != null) {
+      openDiffView(file.path, comparison);
+    }
+  }, [comparison, file.path]);
+
+  const openFileOrDiff = useCallback(() => {
+    if (
+      clickToOpenDiff &&
+      comparison != null &&
+      file.mode !== ChangedFileMode.Submodule &&
+      !conflictStatuses.has(file.status)
+    ) {
+      openDiff();
+    } else {
+      openFile();
+    }
+  }, [clickToOpenDiff, comparison, file.mode, file.status, openDiff, openFile]);
+
+  return {openFile, openDiff, openFileOrDiff, clickToOpenDiff};
+}
 
 export function File({
   file,
@@ -110,11 +180,7 @@ export function File({
           replace: {$comparison: labelForComparison(comparison)},
         }),
         onClick: () => {
-          if (platform.openDiff != null) {
-            platform.openDiff(file.path, comparison);
-          } else {
-            showComparison(comparison, file.path);
-          }
+          openDiffView(file.path, comparison);
         },
       });
     }
@@ -130,8 +196,6 @@ export function File({
     return options;
   });
 
-  const runOperation = useRunOperation();
-
   // Hold "alt" key to show full file paths instead of short form.
   // This is a quick way to see where a file comes from without
   // needing to go through the menu to change the rendering type.
@@ -141,19 +205,7 @@ export function File({
     .filter(notEmpty)
     .join('\n\n');
 
-  const openFile = () => {
-    if (file.mode === ChangedFileMode.Submodule) {
-      return;
-    }
-    if (file.visualStatus === 'U') {
-      const tool = readAtom(externalMergeToolAtom);
-      if (tool != null) {
-        runOperation(new ResolveInExternalMergeToolOperation(tool, file.path));
-        return;
-      }
-    }
-    platform.openFile(file.path);
-  };
+  const {openFileOrDiff} = useOpenFileOrDiff(file, comparison);
 
   return (
     <>
@@ -165,11 +217,11 @@ export function File({
         tabIndex={0}
         onKeyUp={e => {
           if (e.key === 'Enter') {
-            openFile();
+            openFileOrDiff();
           }
         }}>
         <FileSelectionCheckbox file={file} selection={selection} />
-        <span className="changed-file-path" onClick={openFile}>
+        <span className="changed-file-path" onClick={openFileOrDiff}>
           <Icon icon={icon} />
           <Tooltip title={tooltip} delayMs={2_000} placement="right">
             <span
@@ -210,8 +262,6 @@ export function File({
   );
 }
 
-const revertableStatues = new Set(['M', 'R', '!']);
-const conflictStatuses = new Set<ChangedFileStatus>(['U', 'Resolved']);
 function FileActions({
   comparison,
   file,
@@ -231,25 +281,37 @@ function FileActions({
     conflictLabel = <Subtle>{label}</Subtle>;
   }
 
+  const {openFile, openDiff, clickToOpenDiff} = useOpenFileOrDiff(file, comparison);
+
   const actions: Array<React.ReactNode> = [];
 
+  // The inline button is the counterpart to a file-name click: when the setting
+  // is off, the name opens the file so this opens the diff view; when it's on,
+  // the name opens the diff so this opens the file. Conflict statuses always
+  // open the file on name-click, so they get no button either way.
   if (!conflictStatuses.has(file.status)) {
     actions.push(
-      <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
-        <Button
-          className="file-show-on-hover"
-          icon
-          data-testid="file-open-diff-button"
-          onClick={() => {
-            if (platform.openDiff != null) {
-              platform.openDiff(file.path, comparison);
-            } else {
-              showComparison(comparison, file.path);
-            }
-          }}>
-          <Icon icon="request-changes" />
-        </Button>
-      </Tooltip>,
+      clickToOpenDiff ? (
+        <Tooltip title={t('Open file')} key="open-file" delayMs={1000}>
+          <Button
+            className="file-show-on-hover"
+            icon
+            data-testid="file-open-file-button"
+            onClick={openFile}>
+            <Icon icon="go-to-file" />
+          </Button>
+        </Tooltip>
+      ) : (
+        <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
+          <Button
+            className="file-show-on-hover"
+            icon
+            data-testid="file-open-diff-button"
+            onClick={openDiff}>
+            <Icon icon="request-changes" />
+          </Button>
+        </Tooltip>
+      ),
     );
   }
 

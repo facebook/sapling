@@ -19,6 +19,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {nullthrows, tryJsonParse} from 'shared/utils';
+import {clickToOpenDiffViewAtom} from './ChangedFile';
 import {
   copyCommitHashFormatAtom,
   distantRebaseWarningEnabled,
@@ -234,8 +235,9 @@ function SettingsDropdown({
           </Column>
         </Setting>
       )}
-      <Setting title={<T>Layout</T>}>
+      <Setting title={<T>Files & Layout</T>}>
         <Column alignStart>
+          <ClickToOpenDiffViewSetting />
           <CommitInfoLocationSetting />
         </Column>
       </Setting>
@@ -264,6 +266,28 @@ function ConfirmSubmitStackSetting() {
           setValue(checked);
         }}>
         <T>Show confirmation when submitting a stack</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function ClickToOpenDiffViewSetting() {
+  const [value, setValue] = useAtom(clickToOpenDiffViewAtom);
+  return (
+    <Tooltip
+      title={t(
+        'Controls what clicking a file name in the changed files list does. ' +
+          'By default, clicking a file name opens the file, and the hover-only action button opens the diff view. ' +
+          'When enabled, this is flipped: clicking a file name opens the diff view instead, and the hover button opens the file (like the VS Code git panel). ' +
+          'Conflicted files always open the file regardless of this setting.',
+      )}>
+      <Checkbox
+        data-testid="click-to-open-diff-view"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Click filename to open diff view</T>
       </Checkbox>
     </Tooltip>
   );

@@ -945,6 +945,7 @@ export const allConfigNames = [
   'isl.auto-detect-commit-schema',
   'isl.focus-dot-on-repo-change',
   'isl.keyboard-shortcut-overrides',
+  'isl.click-to-open-diff-view',
 ] as const;
 
 /** sl configs read by ISL */
@@ -980,6 +981,7 @@ export const settableConfigNames = [
   'worktree.enabled',
   // Pure data (a map of command name -> [modifiers, keyCode]); no code-execution risk.
   'isl.keyboard-shortcut-overrides',
+  'isl.click-to-open-diff-view',
 ] as const;
 
 /** sl configs written to by ISL */
