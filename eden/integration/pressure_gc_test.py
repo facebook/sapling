@@ -10,7 +10,6 @@ import asyncio
 import os
 import sys
 import time
-import unittest
 from typing import Dict, List, Optional
 
 from eden.fs.service.eden.thrift_types import (
@@ -113,9 +112,10 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             # actually get unloaded (unlike the legacy path which can't
             # invalidate on FUSE).
             self.assertGreater(invalidated, 0)
-            # Fully stale directory subtrees should be invalidated as higher
-            # directory entries, not as one invalidation per file.
-            self.assertLess(invalidated, len(self.directories) * self.num_files)
+            # Pressure GC should invalidate stale entries individually instead
+            # of relying on one parent directory invalidation to reclaim an
+            # entire subtree.
+            self.assertGreaterEqual(invalidated, len(self.directories) * self.num_files)
             self.assertLess(loaded_after, loaded_after_read)
         elif sys.platform == "darwin":
             self.assertLess(loaded_after, loaded_after_read)
@@ -138,11 +138,11 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         loaded_before = await self.get_loaded_count()
 
-        # Invalidate with 2s age: "a" is a fully stale subtree and "b" is
-        # fresh, so the root should invalidate only the "a" directory entry.
+        # Invalidate with 2s age: "a" is stale and "b" is fresh, so GC should
+        # invalidate the stale entries under "a" individually.
         invalidated = await self.invalidate("", seconds=2)
         if sys.platform == "linux":
-            self.assertLess(invalidated, self.num_files)
+            self.assertGreaterEqual(invalidated, self.num_files)
 
         loaded_after = await self.get_loaded_count()
         # Some inodes from "a" should have been unloaded
@@ -151,7 +151,6 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # Everything should still be readable
         self.read_all()
 
-    @unittest.expectedFailure
     async def test_active_invalidation_reclaims_siblings_of_open_file(self) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")

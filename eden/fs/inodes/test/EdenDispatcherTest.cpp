@@ -298,7 +298,7 @@ TEST(RawEdenDispatcherTest, getattr_returns_dynamic_ttl_with_pressure_gc) {
 
 TEST(
     RawEdenDispatcherTest,
-    pressure_gc_collapse_grace_collapses_recent_subtree) {
+    pressure_gc_invalidates_stale_entries_individually) {
 #ifndef __linux__
   GTEST_SKIP() << "FakeFuse invalidation tests are Linux-only";
 #else
@@ -309,7 +309,6 @@ TEST(
 
   mount.updateEdenConfig({
       {"experimental:enable-pressure-based-gc", "true"},
-      {"mount:pressure-gc-collapse-grace", "5s"},
   });
 
   auto fuse = std::make_shared<FakeFuse>();
@@ -328,7 +327,7 @@ TEST(
           ObjectFetchContext::getNullContext())
       .get(0ms);
 
-  mount.getClock().advance(6s);
+  mount.getClock().advance(11s);
   auto cutoff = folly::to<std::chrono::system_clock::time_point>(
                     mount.getClock().getRealtime()) -
       10s;
@@ -338,7 +337,7 @@ TEST(
                             ->handleChildrenNotAccessedRecently(
                                 cutoff, ObjectFetchContext::getNullContext())
                             .get(10s);
-  EXPECT_EQ(1u, numInvalidated);
+  EXPECT_EQ(2u, numInvalidated);
 
   mount.getEdenMount()->flushInvalidations().get(10s);
   fuse->close();

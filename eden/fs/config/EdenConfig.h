@@ -651,9 +651,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * When pressure-based inode GC evaluates whether a directory subtree can be
-   * collapsed into a single FUSE invalidation, entries newer than the normal GC
-   * cutoff by less than this grace period do not block collapse.
+   * Deprecated no-op retained for compatibility with existing configs.
    */
   ConfigSetting<std::chrono::nanoseconds> pressureBasedGcCollapseGrace{
       "mount:pressure-gc-collapse-grace",

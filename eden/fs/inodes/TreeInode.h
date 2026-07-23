@@ -829,11 +829,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Active FUSE invalidation for pressure-based GC.
    *
-   * Walks the inode tree bottom-up, sending FUSE_NOTIFY_INVAL_ENTRY for stale
-   * entries. Fully stale directory subtrees are collapsed into a single
-   * invalidation from the first ancestor that cannot also be collapsed. This
-   * causes the kernel to send FORGET for those inodes, decrementing fsRefcount
-   * so they can be unloaded.
+   * Walks the inode tree bottom-up, sending FUSE_NOTIFY_INVAL_ENTRY for each
+   * stale entry. This causes the kernel to send FORGET for those inodes,
+   * decrementing fsRefcount so they can be unloaded.
    *
    * Both materialized and non-materialized inodes are invalidated —
    * invalidateEntry only drops the dcache entry, overlay data is preserved.
@@ -844,15 +842,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken = {});
 
-  ImmediateFuture<std::pair<uint64_t /* numInvalidated */, bool /* allStale */>>
+  ImmediateFuture<uint64_t /* numInvalidated */>
   invalidateChildrenNotAccessedRecentlyFuseImpl(
       std::chrono::system_clock::time_point cutoff,
-      std::chrono::system_clock::time_point collapseCutoff,
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken,
       const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
-      const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
-      bool isRoot);
+      const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier);
 #endif
 
   /**
