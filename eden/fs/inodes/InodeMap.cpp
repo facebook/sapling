@@ -114,9 +114,7 @@ InodeMap::InodeMap(
     : mount_{mount},
       config_{std::move(config)},
       stats_{std::move(stats)},
-      edenFsEventsLogger_{std::move(logger)},
-      lazyInodePersistence_{
-          config_->getEdenConfig()->lazyInodePersistence.getValue()} {}
+      edenFsEventsLogger_{std::move(logger)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -1120,7 +1118,6 @@ void InodeMap::onInodeUnreferenced(
   // Decide if we should unload the inode now, or wait until later.
   bool unloadNow = false;
   bool shuttingDown = data->shutdownPromise.has_value();
-  bool mustPersistInodeNumbers = false;
   bool parentEntryUnavailable = parentInfo.parentEntryUnavailable();
   XDCHECK(shuttingDown || inode != root_.get());
   if (shuttingDown) {
@@ -1134,10 +1131,6 @@ void InodeMap::onInodeUnreferenced(
     // Always unload Inode objects immediately when shutting down.
     // We can't destroy the EdenMount until all inodes get unloaded.
     unloadNow = true;
-
-    // During shutdown we definitely want to persist inode numbers (by writing
-    // directory to overlay).
-    mustPersistInodeNumbers = true;
   } else if (parentEntryUnavailable && inode->getFsRefcount() == 0) {
     // This inode has no usable parent entry and no outstanding FS references.
     // It can now be completely destroyed and forgotten about.
@@ -1155,7 +1148,6 @@ void InodeMap::onInodeUnreferenced(
         parentInfo.getParent().get(),
         parentInfo.getName(),
         parentEntryUnavailable,
-        mustPersistInodeNumbers,
         data);
     if (!parentEntryUnavailable) {
       const auto& parentContents = parentInfo.getParentContents();
@@ -1186,10 +1178,8 @@ void InodeMap::unloadInode(
     TreeInode* parent,
     PathComponentPiece name,
     bool isUnlinked,
-    bool mustPersistInodeNumbers,
     const InodeMapLock& lock) {
-  return unloadInode(
-      inode, parent, name, isUnlinked, mustPersistInodeNumbers, lock.data_);
+  return unloadInode(inode, parent, name, isUnlinked, lock.data_);
 }
 
 void InodeMap::unloadInode(
@@ -1197,12 +1187,11 @@ void InodeMap::unloadInode(
     TreeInode* parent,
     PathComponentPiece name,
     bool isUnlinked,
-    bool mustPersistInodeNumbers,
     const folly::Synchronized<Members>::LockedPtr& data) {
   // Call updateOverlayForUnload() to update the overlay and compute
   // if we need to remember an UnloadedInode entry.
-  auto unloadedEntry = updateOverlayForUnload(
-      inode, parent, name, isUnlinked, mustPersistInodeNumbers, data);
+  auto unloadedEntry =
+      updateOverlayForUnload(inode, parent, name, isUnlinked, data);
   if (unloadedEntry) {
     // Insert the unloaded entry
     XLOGF(
@@ -1219,7 +1208,6 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     TreeInode* parent,
     PathComponentPiece name,
     bool isUnlinked,
-    bool mustPersistInodeNumbers,
     const folly::Synchronized<Members>::LockedPtr& data) {
   auto fsCount = inode->getFsRefcount();
   auto overlay = mount_->getOverlay();
@@ -1253,26 +1241,6 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     }
   }
 
-  auto* asTree = dynamic_cast<TreeInode*>(inode);
-
-  if (lazyInodePersistence_) {
-    // Do a just-in-time write of directory to overlay if we need to persist
-    // the entries' inode numbers. This avoids needing to write to overlay in
-    // the read path.
-    if (asTree && mustPersistInodeNumbers && !asTree->isMaterialized() &&
-        !overlay->hasOverlayDir(asTree->getNodeId())) {
-      XLOGF(
-          DBG4,
-          "performing just-in-time overlay write of inode={} path={} to persist entry inodes",
-          asTree->getNodeId(),
-          asTree->getLogPath());
-      overlay->saveOverlayDir(
-          asTree->getNodeId(),
-          asTree->getContentsUnchecked().unsafeGetUnlocked().entries,
-          /*isMaterialized=*/false);
-    }
-  }
-
   // If the mount point has been unmounted, ignore any outstanding FS
   // refcounts on inodes that still existed before it was unmounted.
   // Everything is unreferenced by FS after an unmount operation, and we no
@@ -1297,7 +1265,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     return std::nullopt;
   }
 
-  if (asTree) {
+  if (auto* asTree = dynamic_cast<TreeInode*>(inode)) {
     // Normally, acquiring the tree's contents lock while the InodeMap members
     // lock is held violates our lock hierarchy. However, since this TreeInode
     // is being unloaded, nobody else can reference it right now, so the lock is

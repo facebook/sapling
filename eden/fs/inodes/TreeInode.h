@@ -601,13 +601,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Unload all children, recursively, neither referenced internally by Eden
    * nor by FUSE or ProjectedFS.
    *
-   * If mustPersistInodeNumbers is false, we will skip lazy inode persistence
-   * to overlay. This makes sense for "checkout" where all bets are off and we
-   * don't want user to wait for overlay writes.
-   *
    * Returns the number of inodes unloaded.
    */
-  size_t unloadChildrenUnreferencedByFs(bool mustPersistInodeNumbers = true);
+  size_t unloadChildrenUnreferencedByFs();
 
 #ifndef _WIN32
   /**

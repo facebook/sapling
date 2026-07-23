@@ -1821,19 +1821,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * When true, no longer eagerly write directories to the overlay on read.
-   * Instead, non-materialized directories are written to the overlay when they
-   * are unloaded, except during checkout.
-   *
-   * Note that this can cause significant pauses during shutdown as we must
-   * write out all directories to the overlay.
-   */
-  ConfigSetting<bool> lazyInodePersistence{
-      "experimental:lazy-inode-persistence",
-      false,
-      this};
-
-  /**
    * Unified flag to control all the prefetch optimizations I'm working on so we
    * can run an experiment using a single config flag. The various optimizations
    * are also controlled by separate config flags that are enabled by default.

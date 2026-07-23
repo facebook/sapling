@@ -2073,13 +2073,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // checkout code will take care of doing the right invalidation for
         // these.
         //
-        // We pass mustPersistInodeNumbers=false here because we don't want the
-        // user to wait for us to just-in-time write a lot of directories to the
-        // overlay. The assumption is it is okay to regenerate inode numbers at
-        // checkout time for inodes with fs-ref-count==0.
         {
           auto unloadSpan = ctx->createSpan("unloadChildrenUnreferencedByFs");
-          rootInode->unloadChildrenUnreferencedByFs(false);
+          rootInode->unloadChildrenUnreferencedByFs();
         }
 
         return serverState_->getFaultInjector()
@@ -2221,7 +2217,7 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
 
     {
       auto unloadSpan = ctx->createSpan("unloadChildrenUnreferencedByFs");
-      rootInode->unloadChildrenUnreferencedByFs(false);
+      rootInode->unloadChildrenUnreferencedByFs();
     }
 
     co_await serverState_->getFaultInjector().co_checkAsync(
