@@ -152,7 +152,7 @@ fn truncate_str(s: &str, max: usize) -> String {
 }
 
 /// Render the "Repo Names" column for a backfill list row: the repo names,
-/// truncated to a reasonable width. Unknown ids fall back to `repo_id: <id>`.
+/// truncated to a reasonable width. Unknown ids fall back to the bare id.
 /// The repo count lives in its own column, so it isn't repeated here.
 fn format_repo_names_cell(repo_ids: &[i64], repo_names: &HashMap<i64, String>) -> String {
     /// Max width of the names portion before we truncate with an ellipsis.
@@ -163,7 +163,7 @@ fn format_repo_names_cell(repo_ids: &[i64], repo_names: &HashMap<i64, String>) -
             // Fall back to the id for unknown or empty names so we never render
             // a blank entry.
             Some(name) if !name.is_empty() => name.clone(),
-            _ => format!("repo_id: {}", format_number(repo_id.max(0) as usize)),
+            _ => format_number(repo_id.max(0) as usize),
         }
     };
 
@@ -865,9 +865,9 @@ mod tests {
 
     #[test]
     fn test_format_repo_names_cell_single_unknown_id() {
-        // An id with no known name falls back to "repo_id: <grouped id>".
+        // An id with no known name falls back to the bare grouped id.
         let names = HashMap::new();
-        assert_eq!(format_repo_names_cell(&[12345], &names), "repo_id: 12_345");
+        assert_eq!(format_repo_names_cell(&[12345], &names), "12_345");
     }
 
     #[test]

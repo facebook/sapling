@@ -21,6 +21,8 @@ mod verify_aug_direct;
 mod verify_manifests;
 mod verify_stage_output;
 
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -239,11 +241,22 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         };
         let sql_queue = async_requests_client::open_sql_connection(ctx.fb, &app).await?;
         let blobstore = async_requests_client::open_blobstore(ctx.fb, &app).await?;
-        let repo_names = app
-            .repo_configs()
-            .repos
+        // Deep-sharded repos aren't in the legacy config blob backing
+        // repo_configs(); their names live only in the tier manifest. Union both
+        // so the status table can resolve ids repo_configs() doesn't know.
+        // Manifest entries come first so repo_configs() entries win on collect.
+        let repo_configs = app.repo_configs();
+        let manifest = app.configs().manifest();
+        let repo_names: HashMap<RepositoryId, String> = manifest
             .iter()
-            .map(|(name, repo_config)| (repo_config.repoid, name.clone()))
+            .flat_map(|manifest| &manifest.repos)
+            .map(|entry| (RepositoryId::new(entry.repo_id), entry.repo_name.clone()))
+            .chain(
+                repo_configs
+                    .repos
+                    .iter()
+                    .map(|(name, repo_config)| (repo_config.repoid, name.clone())),
+            )
             .collect();
         return backfill_status(
             &ctx,
