@@ -41,6 +41,7 @@ struct BlobCacheStats;
 struct TreeCacheStats;
 struct ScmStatusCacheStats;
 struct TakeoverStats;
+struct CheckoutStats;
 struct FakeStats;
 
 class EdenStats : public RefCounted {
@@ -97,6 +98,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<TreeCacheStats> treeCacheStats_;
   ThreadLocal<ScmStatusCacheStats> scmStatusCacheStats_;
   ThreadLocal<TakeoverStats> takeoverStats_;
+  ThreadLocal<CheckoutStats> checkoutStats_;
   ThreadLocal<FakeStats> fakeStats_;
 };
 
@@ -179,6 +181,11 @@ EdenStats::getStatsForCurrentThread<ScmStatusCacheStats>() {
 template <>
 inline TakeoverStats& EdenStats::getStatsForCurrentThread<TakeoverStats>() {
   return *takeoverStats_.get();
+}
+
+template <>
+inline CheckoutStats& EdenStats::getStatsForCurrentThread<CheckoutStats>() {
+  return *checkoutStats_.get();
 }
 
 template <>
@@ -752,6 +759,10 @@ struct TakeoverStats : StatsGroup<TakeoverStats> {
   Counter sendFailure{"takeover.send_failure"};
   Duration receive{"takeover.receive_us"};
   Counter receiveSuccess{"takeover.receive_success"};
+};
+
+struct CheckoutStats : StatsGroup<CheckoutStats> {
+  Counter avoidedDestinationConflicts{"checkout.avoided_destination_conflicts"};
 };
 
 /*

@@ -75,8 +75,10 @@ cpp_unittest(
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:testutil",
         "//eden/fs/service:pretty_printers",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
+        "//fb303:service_data",
         "//folly/executors:manual_executor",
     ],
 )

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <fb303/ServiceData.h>
 #include <folly/executors/ManualExecutor.h>
 #include <gtest/gtest.h>
 
@@ -12,6 +13,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -53,6 +55,13 @@ TEST(
   EXPECT_EQ(std::nullopt, preInode->getObjectId());
   EXPECT_TRUE(mount.getTreeInode("a")->isMaterialized());
 
+  auto& stats = mount.getEdenMount()->getStats();
+  stats->flush();
+  auto data = facebook::fb303::ServiceData::get();
+  constexpr folly::StringPiece key =
+      "checkout.avoided_destination_conflicts.sum.60";
+  auto initialAvoidedConflicts = data->getCounterIfExists(key).value_or(0);
+
   // Now checkout 2.
 
   auto result = mount.getEdenMount()
@@ -65,10 +74,11 @@ TEST(
                     .semi()
                     .via(executor)
                     .getVia(executor);
-  EXPECT_EQ(1, result.conflicts.size());
-  // There will be a conflict, but force will succeed.
-  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type());
-  EXPECT_EQ("a/test.txt", *result.conflicts[0].path());
+  EXPECT_TRUE(result.conflicts.empty());
+
+  stats->flush();
+  EXPECT_EQ(
+      initialAvoidedConflicts + 1, data->getCounterIfExists(key).value_or(0));
 
   // Checkout replaces the inode, so we need to look up the file again.
 

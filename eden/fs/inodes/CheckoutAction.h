@@ -175,6 +175,11 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   bool classifyFileContentConflict(bool isSame);
 
   /**
+   * Classify the result of comparing a file with the checkout destination.
+   */
+  bool classifyFileDestinationConflict(bool isSameAsDestination);
+
+  /**
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */

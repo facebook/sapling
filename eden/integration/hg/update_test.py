@@ -23,7 +23,6 @@ from eden.fs.cli.mp import get_context
 from eden.fs.service.eden.thrift_types import (
     CheckoutMode,
     CheckOutRevisionParams,
-    ConflictType,
     DIS_ENABLE_FLAGS,
     EdenError,
     EdenErrorType,
@@ -950,7 +949,6 @@ class UpdateTest(EdenHgTestCase):
 
         self.assertEqual("Content 1", self.read_file("dir1/foo.txt"))
 
-        # FIXME: Resume should succeed because dir1/foo.txt already matches bottom.
         async with self.eden.get_async_thrift_client() as client:
             conflicts = await client.checkOutRevision(
                 mountPoint=self.mount_path_bytes,
@@ -958,17 +956,14 @@ class UpdateTest(EdenHgTestCase):
                 checkoutMode=CheckoutMode.DRY_RUN,
                 params=CheckOutRevisionParams(),
             )
-        self.assertEqual(
-            [(b"dir1/foo.txt", ConflictType.MODIFIED_MODIFIED)],
-            [(conflict.path, conflict.type) for conflict in conflicts],
-        )
+        self.assertEqual([], conflicts)
 
-        with self.assertRaises(hgrepo.HgError) as context:
-            self.repo.update(bottom)
-        self.assertIn(
-            b"1 conflicting file changes:\n dir1/foo.txt",
-            context.exception.stderr,
-        )
+        output = self.repo.update(bottom)
+        self.assertEqual("update complete\n", output)
+        self.assertEqual("Content 1", self.read_file("dir1/foo.txt"))
+        self.assertEqual("Content 1", self.read_file("dir2/bar.txt"))
+        self.assertEqual("Content 1", self.read_file("dir3/dog.txt"))
+        self.assert_status_empty()
 
     async def test_resume_interrupted_with_concurrent_update(self) -> None:
         self.repo.write_file("foo/baz.txt", "Content 3")

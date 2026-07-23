@@ -20,6 +20,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 using folly::exception_wrapper;
 
@@ -552,7 +553,8 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
     return *syncResult;
   }
 
-  // Async tail: compare file contents against the old source control entry.
+  // Compare the source first to avoid fetching the destination in the common
+  // case where the working copy is unmodified.
   auto fileInode = inode_.asFilePtrOrNull();
   return fileInode
       ->isSameAs(
@@ -560,9 +562,25 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
           oldBlobSha1_.value(),
           oldScmEntry_.value().second.getType(),
           ctx_->getFetchContext())
-      .thenValue([self = shared_from_this()](bool isSame) {
-        return self->classifyFileContentConflict(isSame);
-      });
+      .thenValue(
+          [self = shared_from_this()](
+              bool isSameAsSource) -> ImmediateFuture<bool> {
+            if (isSameAsSource || !self->newBlobMarker_) {
+              return self->classifyFileContentConflict(isSameAsSource);
+            }
+
+            auto fileInode = self->inode_.asFilePtrOrNull();
+            const auto& destination = self->newScmEntry_.value().second;
+            return fileInode
+                ->isSameAs(
+                    destination.getObjectId(),
+                    destination.getType(),
+                    self->ctx_->getFetchContext())
+                .thenValue([self](bool isSameAsDestination) {
+                  return self->classifyFileDestinationConflict(
+                      isSameAsDestination);
+                });
+          });
 }
 
 std::optional<bool> CheckoutAction::checkSyncConflict() {
@@ -640,17 +658,37 @@ bool CheckoutAction::classifyFileContentConflict(bool isSame) {
   return true;
 }
 
+bool CheckoutAction::classifyFileDestinationConflict(bool isSameAsDestination) {
+  if (isSameAsDestination) {
+    if (!ctx_->isDryRun()) {
+      inode_->getMount()->getStats()->increment(
+          &CheckoutStats::avoidedDestinationConflicts);
+    }
+    return false;
+  }
+  return classifyFileContentConflict(false);
+}
+
 folly::coro::now_task<bool> CheckoutAction::co_hasConflict() {
   if (auto syncResult = checkSyncConflict()) {
     co_return *syncResult;
   }
 
   auto fileInode = inode_.asFilePtrOrNull();
-  bool isSame = co_await fileInode->co_isSameAs(
+  bool isSameAsSource = co_await fileInode->co_isSameAs(
       oldScmEntry_.value().second.getObjectId(),
       oldBlobSha1_.value(),
       oldScmEntry_.value().second.getType(),
       ctx_->getFetchContext());
-  co_return classifyFileContentConflict(isSame);
+  if (isSameAsSource || !newBlobMarker_) {
+    co_return classifyFileContentConflict(isSameAsSource);
+  }
+
+  const auto& destination = newScmEntry_.value().second;
+  bool isSameAsDestination = co_await fileInode->co_isSameAs(
+      destination.getObjectId(),
+      destination.getType(),
+      ctx_->getFetchContext());
+  co_return classifyFileDestinationConflict(isSameAsDestination);
 }
 } // namespace facebook::eden

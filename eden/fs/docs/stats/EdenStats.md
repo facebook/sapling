@@ -27,6 +27,11 @@ The list of all the EdenStats Counter/Duration are as follows:
 - [SaplingBackingStoreStats](./SaplingBackingStoreStats.md)
 - [ObjectStoreStats](./ObjectStoreStats.md)
 - [OverlayStats](./OverlayStats.md)
+- CheckoutStats
+  1. `Counter avoidedDestinationConflicts{"checkout.avoided_destination_conflicts"}`:
+     Number of conflicts avoided because a loaded inode already matched the
+     checkout destination.
+
 - JournalStats
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a
      truncated read happens in Journal.
