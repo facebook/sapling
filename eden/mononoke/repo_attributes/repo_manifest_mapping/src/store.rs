@@ -22,6 +22,9 @@ use crate::types::MembershipEdge;
 use crate::types::RepoBranch;
 use crate::types::RepoName;
 
+/// Rows per bulk-INSERT batch — keeps bound params under the SQLite/MySQL limit.
+const INSERT_CHUNK_SIZE: usize = 1000;
+
 mononoke_queries! {
     // Hot reverse / fan-out read: which manifest branches (across all manifest
     // repos) include the given member repo on the given repo branch. Results
@@ -75,19 +78,30 @@ mononoke_queries! {
         "DELETE FROM repo_manifest_mapping WHERE manifest_repo_id = {manifest_repo_id} AND manifest_branch = {manifest_branch}"
     }
 
-    read GetWatermark(repo_id: RepositoryId) -> (i64,) {
-        "SELECT log_id FROM manifest_watermark WHERE repo_id = {repo_id}"
+    // Per-branch watermark: the last processed log id for one manifest branch.
+    read GetBranchWatermark(repo_id: RepositoryId, manifest_branch: ManifestBranch) -> (i64,) {
+        "SELECT log_id FROM manifest_watermark WHERE repo_id = {repo_id} AND manifest_branch = {manifest_branch}"
     }
 
-    // Unconditional upsert, deliberately NOT a compare-and-swap. Exactly-once is
-    // delivered by advancing the watermark in the SAME transaction as the
-    // membership replace (see `replace_membership`), and the tailer that owns
-    // this watermark is a single-leader singleton per manifest repo. A CAS guard
-    // would only add defense against concurrent/split-brain writers, which that
-    // model precludes; add it if a future consumer needs it.
-    write SetWatermark(repo_id: RepositoryId, log_id: i64) {
+    // Read cursor for a manifest repo: the LARGEST per-branch watermark, i.e. the
+    // highest log id applied for any branch. The tailer reads new entries from
+    // here so it always advances — a dormant branch's stale watermark can't pin
+    // it. Per-branch watermarks remain the source of truth; if a future
+    // per-repo-per-bookmark model breaks per-repo id monotonicity, only this read
+    // strategy changes (e.g. per-branch reads), not the schema. Returns 0 rows
+    // when the repo has no branches yet.
+    read GetReadCursor(repo_id: RepositoryId) -> (i64,) {
+        "SELECT log_id FROM manifest_watermark WHERE repo_id = {repo_id} ORDER BY log_id DESC LIMIT 1"
+    }
+
+    // Unconditional per-branch upsert, deliberately NOT a compare-and-swap.
+    // Exactly-once comes from advancing the branch watermark in the SAME
+    // transaction as the membership replace (see `replace_membership`), and the
+    // owning tailer is a single-leader singleton. Add a CAS guard only if a
+    // future concurrent writer needs it.
+    write SetBranchWatermark(repo_id: RepositoryId, manifest_branch: ManifestBranch, log_id: i64) {
         none,
-        "REPLACE INTO manifest_watermark (repo_id, log_id) VALUES ({repo_id}, {log_id})"
+        "REPLACE INTO manifest_watermark (repo_id, manifest_branch, log_id) VALUES ({repo_id}, {manifest_branch}, {log_id})"
     }
 }
 
@@ -229,23 +243,22 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         })?;
         txn = txn_;
 
-        // Skip the INSERT entirely when there is nothing to insert: an empty
-        // `VALUES` clause would be invalid SQL. An empty `edges` slice is a
-        // legitimate request to clear the manifest branch's membership.
-        if !deduped.is_empty() {
-            let rows: Vec<_> = deduped
-                .iter()
-                .copied()
-                .map(|edge| {
-                    (
-                        &manifest_repo_id,
-                        manifest_branch,
-                        &edge.repo_name,
-                        &edge.repo_branch,
-                    )
-                })
-                .collect();
-            let (txn_, _) = InsertEdges::query_with_transaction(txn, rows.as_slice())
+        // Chunk to stay under the bind-variable limit; empty edges yield no chunks
+        // (a legitimate clear), avoiding an invalid empty VALUES clause.
+        let rows: Vec<_> = deduped
+            .iter()
+            .copied()
+            .map(|edge| {
+                (
+                    &manifest_repo_id,
+                    manifest_branch,
+                    &edge.repo_name,
+                    &edge.repo_branch,
+                )
+            })
+            .collect();
+        for chunk in rows.chunks(INSERT_CHUNK_SIZE) {
+            let (txn_, _) = InsertEdges::query_with_transaction(txn, chunk)
                 .await
                 .with_context(|| {
                     format!(
@@ -256,14 +269,18 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         }
 
         if let Some(log_id) = watermark {
-            let (txn_, _) =
-                SetWatermark::query_with_transaction(txn, &manifest_repo_id, &log_id)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Failed to set watermark for manifest repo {manifest_repo_id} while replacing membership"
-                        )
-                    })?;
+            let (txn_, _) = SetBranchWatermark::query_with_transaction(
+                txn,
+                &manifest_repo_id,
+                manifest_branch,
+                &log_id,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to set watermark for manifest repo {manifest_repo_id} branch {manifest_branch} while replacing membership"
+                )
+            })?;
             txn = txn_;
         }
 
@@ -275,39 +292,65 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         Ok(())
     }
 
-    async fn get_watermark(
+    async fn get_branch_watermark(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        staleness: Staleness,
+    ) -> Result<Option<i64>> {
+        let rows = GetBranchWatermark::query(
+            self.get_connection(staleness),
+            ctx.sql_query_telemetry(),
+            &manifest_repo_id,
+            manifest_branch,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure fetching watermark for manifest repo {manifest_repo_id} branch {manifest_branch}"
+            )
+        })?;
+        Ok(rows.into_iter().next().map(|(log_id,)| log_id))
+    }
+
+    async fn get_read_cursor(
         &self,
         ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
         staleness: Staleness,
     ) -> Result<Option<i64>> {
-        let rows = GetWatermark::query(
+        let rows = GetReadCursor::query(
             self.get_connection(staleness),
             ctx.sql_query_telemetry(),
             &manifest_repo_id,
         )
         .await
         .with_context(|| {
-            format!("Failure fetching watermark for manifest repo {manifest_repo_id}")
+            format!("Failure fetching read cursor for manifest repo {manifest_repo_id}")
         })?;
         Ok(rows.into_iter().next().map(|(log_id,)| log_id))
     }
 
-    async fn set_watermark(
+    async fn set_branch_watermark(
         &self,
         ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
         log_id: i64,
     ) -> Result<()> {
-        SetWatermark::query(
+        SetBranchWatermark::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &manifest_repo_id,
+            manifest_branch,
             &log_id,
         )
         .await
         .with_context(|| {
-            format!("Failed to set watermark for manifest repo {manifest_repo_id} to {log_id}")
+            format!(
+                "Failed to set watermark for manifest repo {manifest_repo_id} branch {manifest_branch} to {log_id}"
+            )
         })?;
         Ok(())
     }

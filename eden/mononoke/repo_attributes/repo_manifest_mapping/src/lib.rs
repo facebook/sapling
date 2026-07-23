@@ -8,8 +8,8 @@
 //! A dedicated SQL store for the repo-manifest membership mapping.
 //!
 //! Maintains a bidirectional `(repo_name, repo_branch) -> [(manifest_repo_id,
-//! manifest_branch)]` membership projection, plus a per-manifest-repo tailer
-//! watermark row.
+//! manifest_branch)]` membership projection, plus a per-manifest-branch tailer
+//! watermark.
 //!
 //! Here "manifest" means an AOSP/west-style repo-manifest (a `default.xml`
 //! listing member repos and their branches), NOT a Mononoke derived-data
@@ -88,7 +88,7 @@ pub trait RepoManifestMapping: Send + Sync {
     ) -> Result<Vec<MembershipEdge>>;
 
     /// Atomically replace the entire membership set of a manifest branch,
-    /// optionally advancing the manifest repo's tailer watermark in the SAME
+    /// optionally advancing that manifest branch's tailer watermark in the SAME
     /// transaction.
     ///
     /// Runs a delete-then-bulk-insert (+ optional watermark set) as one
@@ -104,20 +104,31 @@ pub trait RepoManifestMapping: Send + Sync {
         watermark: Option<i64>,
     ) -> Result<()>;
 
-    /// Read the tailer watermark for the given manifest repo (`None` if never
-    /// set).
-    async fn get_watermark(
+    /// Read the tailer watermark for one manifest branch (`None` if never set).
+    async fn get_branch_watermark(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        staleness: Staleness,
+    ) -> Result<Option<i64>>;
+
+    /// The read cursor for a manifest repo: the largest per-branch watermark
+    /// (`None` if the repo has no branches yet). The tailer reads new log entries
+    /// from here so it always advances (a dormant branch can't pin it).
+    async fn get_read_cursor(
         &self,
         ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
         staleness: Staleness,
     ) -> Result<Option<i64>>;
 
-    /// Set (upsert) the tailer watermark for the given manifest repo.
-    async fn set_watermark(
+    /// Set (upsert) the tailer watermark for one manifest branch.
+    async fn set_branch_watermark(
         &self,
         ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
         log_id: i64,
     ) -> Result<()>;
 }
@@ -160,7 +171,17 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
         Ok(())
     }
 
-    async fn get_watermark(
+    async fn get_branch_watermark(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _manifest_branch: &ManifestBranch,
+        _staleness: Staleness,
+    ) -> Result<Option<i64>> {
+        Ok(None)
+    }
+
+    async fn get_read_cursor(
         &self,
         _ctx: &CoreContext,
         _manifest_repo_id: RepositoryId,
@@ -169,10 +190,11 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
         Ok(None)
     }
 
-    async fn set_watermark(
+    async fn set_branch_watermark(
         &self,
         _ctx: &CoreContext,
         _manifest_repo_id: RepositoryId,
+        _manifest_branch: &ManifestBranch,
         _log_id: i64,
     ) -> Result<()> {
         Ok(())
@@ -186,7 +208,7 @@ type StoredRow = (RepositoryId, ManifestBranch, RepoName, RepoBranch);
 #[derive(Default)]
 struct TestState {
     rows: HashSet<StoredRow>,
-    watermarks: HashMap<RepositoryId, i64>,
+    watermarks: HashMap<(RepositoryId, ManifestBranch), i64>,
 }
 
 /// An in-memory double that mirrors the SQL store's observable semantics
@@ -272,29 +294,53 @@ impl RepoManifestMapping for TestRepoManifestMapping {
             ));
         }
         if let Some(log_id) = watermark {
-            state.watermarks.insert(manifest_repo_id, log_id);
+            state
+                .watermarks
+                .insert((manifest_repo_id, manifest_branch.clone()), log_id);
         }
         Ok(())
     }
 
-    async fn get_watermark(
+    async fn get_branch_watermark(
+        &self,
+        _ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        _staleness: Staleness,
+    ) -> Result<Option<i64>> {
+        let state = self.state.lock().expect("poisoned lock");
+        Ok(state
+            .watermarks
+            .get(&(manifest_repo_id, manifest_branch.clone()))
+            .copied())
+    }
+
+    async fn get_read_cursor(
         &self,
         _ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
         _staleness: Staleness,
     ) -> Result<Option<i64>> {
         let state = self.state.lock().expect("poisoned lock");
-        Ok(state.watermarks.get(&manifest_repo_id).copied())
+        Ok(state
+            .watermarks
+            .iter()
+            .filter(|((repo_id, _), _)| *repo_id == manifest_repo_id)
+            .map(|(_, log_id)| *log_id)
+            .max())
     }
 
-    async fn set_watermark(
+    async fn set_branch_watermark(
         &self,
         _ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
         log_id: i64,
     ) -> Result<()> {
         let mut state = self.state.lock().expect("poisoned lock");
-        state.watermarks.insert(manifest_repo_id, log_id);
+        state
+            .watermarks
+            .insert((manifest_repo_id, manifest_branch.clone()), log_id);
         Ok(())
     }
 }

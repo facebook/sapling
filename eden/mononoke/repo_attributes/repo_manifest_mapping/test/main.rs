@@ -512,51 +512,44 @@ async fn test_reverse_read_fans_out_across_manifest_repos(fb: FacebookInit) -> R
     Ok(())
 }
 
-// 10. watermark get (absent -> None) / set / get keyed by repo_id, and
-//     replace_membership with a watermark advances it in the same txn.
+// 10. Per-branch watermark: absent -> None, set/get, independence across
+//     branches, and replace_membership advancing THIS branch's watermark (with
+//     its edges) in the same txn.
 #[mononoke::fbinit_test]
 async fn test_watermark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let store = new_store()?;
     let aosp = rid(1);
-    let zephyr = rid(2);
 
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MaybeStale)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MaybeStale)
             .await?,
         None,
-        "absent watermark reads as None"
+        "absent branch watermark reads as None"
     );
 
-    store.set_watermark(&ctx, aosp, 42).await?;
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("main"), 42)
+        .await?;
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         Some(42)
     );
 
-    store.set_watermark(&ctx, aosp, 100).await?;
+    // Independent per branch: another branch of the same repo is unaffected.
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
-            .await?,
-        Some(100),
-        "watermark updates"
-    );
-
-    // Keyed by repo_id: a different manifest repo's watermark is independent.
-    assert_eq!(
-        store
-            .get_watermark(&ctx, zephyr, Staleness::MaybeStale)
+            .get_branch_watermark(&ctx, aosp, &mb("dev"), Staleness::MostRecent)
             .await?,
         None,
-        "watermark is keyed per manifest repo"
+        "watermark is keyed per manifest branch"
     );
 
-    // Advancing the watermark inside a replace transaction: both the edges and
-    // the new watermark must be visible after commit.
+    // Advancing inside a replace transaction: both the edges and the new branch
+    // watermark are visible after commit.
     store
         .replace_membership(
             &ctx,
@@ -568,10 +561,10 @@ async fn test_watermark(fb: FacebookInit) -> Result<()> {
         .await?;
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         Some(200),
-        "watermark advanced in the replace transaction"
+        "branch watermark advanced in the replace transaction"
     );
     assert_eq!(
         store
@@ -584,6 +577,77 @@ async fn test_watermark(fb: FacebookInit) -> Result<()> {
             .await?,
         vec![(aosp, mb("main"))],
         "edges from the same transaction are visible"
+    );
+
+    Ok(())
+}
+
+// 10b. The read cursor is the MAX watermark across a repo's branches (None when
+//      empty), so it always advances — a dormant branch's stale watermark can't
+//      hold it back; it rises only when a branch advances past the current max.
+#[mononoke::fbinit_test]
+async fn test_read_cursor_is_max_across_branches(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+    let other = rid(2);
+
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, aosp, Staleness::MaybeStale)
+            .await?,
+        None,
+        "read cursor is None when the repo has no branch watermarks"
+    );
+
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("main"), 100)
+        .await?;
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("dev"), 30)
+        .await?;
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("release"), 55)
+        .await?;
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, aosp, Staleness::MostRecent)
+            .await?,
+        Some(100),
+        "read cursor tracks the most-advanced branch"
+    );
+
+    // A dormant/lagging branch advancing but staying below the max leaves it.
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("dev"), 70)
+        .await?;
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, aosp, Staleness::MostRecent)
+            .await?,
+        Some(100),
+        "advancing a branch that stays below the max leaves the cursor unchanged"
+    );
+
+    // A branch advancing past the max raises the cursor.
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("dev"), 150)
+        .await?;
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, aosp, Staleness::MostRecent)
+            .await?,
+        Some(150),
+        "a branch advancing past the max raises the cursor"
+    );
+
+    // Scoped per manifest repo.
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, other, Staleness::MostRecent)
+            .await?,
+        None,
+        "an unrelated manifest repo has its own (empty) cursor"
     );
 
     Ok(())
@@ -639,7 +703,7 @@ async fn test_replace_membership_dedups_duplicate_edges(fb: FacebookInit) -> Res
     );
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         Some(9),
         "watermark advances once in the dedup replace transaction"
@@ -695,10 +759,39 @@ async fn test_replace_membership_empty_clears(fb: FacebookInit) -> Result<()> {
     );
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         Some(6),
         "the watermark still advances when membership is cleared"
+    );
+
+    Ok(())
+}
+
+// 12b. A membership larger than one INSERT batch must round-trip fully: the bulk
+//      insert is chunked to stay under the backend's bound-variable ceiling.
+#[mononoke::fbinit_test]
+async fn test_replace_membership_large_batch_chunks(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+
+    // Comfortably more than one INSERT_CHUNK_SIZE worth of distinct edges.
+    let edges: Vec<MembershipEdge> = (0..2500)
+        .map(|i| edge(&format!("platform/p{i}"), "main"))
+        .collect();
+
+    store
+        .replace_membership(&ctx, aosp, &mb("main"), &edges, Some(1))
+        .await?;
+
+    let members = store
+        .members_for_manifest_branch(&ctx, aosp, &mb("main"), Staleness::MostRecent)
+        .await?;
+    assert_eq!(
+        members.len(),
+        2500,
+        "every edge in a multi-chunk batch must be inserted"
     );
 
     Ok(())
@@ -712,7 +805,9 @@ async fn test_replace_membership_none_watermark_preserved(fb: FacebookInit) -> R
     let store = new_store()?;
     let aosp = rid(1);
 
-    store.set_watermark(&ctx, aosp, 7).await?;
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("main"), 7)
+        .await?;
     store
         .replace_membership(
             &ctx,
@@ -725,10 +820,10 @@ async fn test_replace_membership_none_watermark_preserved(fb: FacebookInit) -> R
 
     assert_eq!(
         store
-            .get_watermark(&ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         Some(7),
-        "a None watermark must leave the existing watermark untouched"
+        "a None watermark must leave the existing branch watermark untouched"
     );
 
     Ok(())
@@ -748,6 +843,7 @@ async fn test_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
     ) -> Result<(
         Vec<MembershipEdge>,
         Vec<(RepositoryId, ManifestBranch)>,
+        Option<i64>,
         Option<i64>,
     )> {
         let aosp = rid(1);
@@ -788,9 +884,12 @@ async fn test_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
             )
             .await?;
         let watermark = store
-            .get_watermark(ctx, aosp, Staleness::MostRecent)
+            .get_branch_watermark(ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?;
-        Ok((forward, reverse, watermark))
+        let read_cursor = store
+            .get_read_cursor(ctx, aosp, Staleness::MostRecent)
+            .await?;
+        Ok((forward, reverse, watermark, read_cursor))
     }
 
     let sql = new_store()?;
@@ -810,6 +909,11 @@ async fn test_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
         "platform/build@aosp-main fans out to both manifest repos"
     );
     assert_eq!(sql_out.2, Some(11));
+    assert_eq!(
+        sql_out.3,
+        Some(11),
+        "read cursor is the max per-branch watermark for the repo"
+    );
 
     Ok(())
 }
@@ -829,7 +933,8 @@ async fn test_noop_double(fb: FacebookInit) -> Result<()> {
         Some(1),
     )
     .await?;
-    noop.set_watermark(&ctx, aosp, 42).await?;
+    noop.set_branch_watermark(&ctx, aosp, &mb("main"), 42)
+        .await?;
 
     assert!(
         noop.members_for_manifest_branch(&ctx, aosp, &mb("main"), Staleness::MostRecent)
@@ -847,7 +952,7 @@ async fn test_noop_double(fb: FacebookInit) -> Result<()> {
         .is_empty()
     );
     assert_eq!(
-        noop.get_watermark(&ctx, aosp, Staleness::MostRecent)
+        noop.get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
             .await?,
         None,
         "the Noop double stores nothing"
