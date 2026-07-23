@@ -626,11 +626,19 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * FUSE negative dentry cache TTL (seconds) for ENOENT lookups.
-   * Defaults to the legacy "effectively infinite" cache duration.
+   *
+   * EdenFS answers a lookup of a non-existent path with nodeid 0 and this
+   * TTL, so the kernel caches the negative (ENOENT) result for that long.
+   * When the path later appears (e.g. after checkout), EdenFS clears the
+   * cached entry with FUSE_NOTIFY_INVAL_ENTRY. Should that invalidation ever
+   * be missed, the stale negative entry would otherwise persist for the full
+   * TTL and keep hiding the now-existing file until a write (e.g. touch)
+   * forces a fresh lookup. A bounded TTL caps how long such a stale entry can
+   * persist.
    */
   ConfigSetting<uint64_t> fuseNegativeDcacheTtlSeconds{
       "fuse:negative-dcache-ttl-seconds",
-      2147483647,
+      60,
       this};
 
   /**
