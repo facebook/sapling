@@ -364,9 +364,6 @@ class SaplingBackingStore final
       getTreeBatchConvertsPermissionDeniedToRestrictedTree);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
-      getRootTreeFutureChainCanBePausedAndResumed);
-  FRIEND_TEST(
-      SaplingBackingStoreWithFaultInjectorTest,
       getTreeEnqueueFutureChainCanBePausedAndResumed);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
@@ -404,13 +401,6 @@ class SaplingBackingStore final
       const ObjectFetchContextPtr& context,
       const ObjectFetchContext::ObjectType type);
 
-  /**
-   * DEPRECATED: use co_getRootTree directly. Futures wrapper kept for
-   * non-coroutine callers; remove once all callers have migrated.
-   */
-  ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& rootId,
-      const ObjectFetchContextPtr& context) override;
   folly::coro::now_task<GetRootTreeResult> co_getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;

@@ -13,6 +13,7 @@
 #include <folly/coro/GtestHelpers.h>
 #include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
+#include <folly/coro/Timeout.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/Cursor.h>
@@ -1187,12 +1188,15 @@ const auto kTestTimeout = 10s;
 TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFI) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
-  auto rootFuture1 = filteredStoreFFI_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId(
-          commit1.value(),
-          fmt::format("{}:{}", filterRelPath.piece(), commit1.value()))},
-      ObjectFetchContext::getNullContext());
-  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+  auto rootDirRes = folly::coro::blockingWait(
+      folly::coro::timeout(
+          filteredStoreFFI_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  commit1.value(),
+                  fmt::format(
+                      "{}:{}", filterRelPath.piece(), commit1.value()))},
+              ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   // Get the object IDs of all the trees/files from the root dir.
   auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);
@@ -1225,12 +1229,13 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFI) {
 
 TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
   // Set up one commit with a root tree
-  auto rootFuture1 = filteredStoreFFI_->getRootTree(
-      RootId{
-          FilteredBackingStore::createFilteredRootId(commit1.value(), "null")},
-      ObjectFetchContext::getNullContext());
-
-  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+  auto rootDirRes = folly::coro::blockingWait(
+      folly::coro::timeout(
+          filteredStoreFFI_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  commit1.value(), "null")},
+              ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   // Get the object IDs of all the trees/files from the root dir.
   auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);
@@ -1262,13 +1267,15 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
 TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
-  auto rootFuture1 = filteredStoreFFI_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId(
-          commit1.value(),
-          fmt::format("{}:{}", filterRelPath.piece(), commit1.value()))},
-      ObjectFetchContext::getNullContext());
-
-  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+  auto rootDirRes = folly::coro::blockingWait(
+      folly::coro::timeout(
+          filteredStoreFFI_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  commit1.value(),
+                  fmt::format(
+                      "{}:{}", filterRelPath.piece(), commit1.value()))},
+              ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   // Get the object IDs of all the trees/files from the root dir.
   auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);

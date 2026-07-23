@@ -1986,25 +1986,6 @@ folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
   }
 }
 
-ImmediateFuture<BackingStore::GetRootTreeResult>
-SaplingBackingStore::getRootTree(
-    const RootId& rootId,
-    const ObjectFetchContextPtr& context) {
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_withExecutor(
-          folly::getKeepAliveToken(serverThreadPool_),
-          folly::coro::co_invoke(
-              [self = shared_from_this()](auto rootId, auto context)
-                  -> folly::coro::Task<GetRootTreeResult> {
-                co_return co_await self->co_getRootTree(
-                    std::move(rootId), std::move(context));
-              },
-              RootId{rootId},
-              context.copy()))
-          .start()};
-}
-
 folly::coro::now_task<BackingStore::GetRootTreeResult>
 SaplingBackingStore::co_getRootTree(
     const RootId& rootId,

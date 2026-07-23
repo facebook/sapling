@@ -6,9 +6,11 @@
  */
 
 #include <folly/ScopeGuard.h>
+#include <folly/coro/BlockingWait.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/GtestHelpers.h>
 #include <folly/coro/Task.h>
+#include <folly/coro/Timeout.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/testing/TestUtil.h>
@@ -240,9 +242,11 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
 } // namespace
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getTree) {
-  auto tree1 = queuedBackingStore
-                   ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                   .get(kTestTimeout);
+  auto tree1 = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   auto [tree2, origin2] =
       queuedBackingStore
@@ -306,9 +310,11 @@ TEST_F(
 }
 
 TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTree) {
-  auto tree1 = queuedBackingStore
-                   ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                   .get(kTestTimeout);
+  auto tree1 = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   auto [tree2, origin2] =
       queuedBackingStore
@@ -319,9 +325,11 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTree) {
 }
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getBlob) {
-  auto tree = queuedBackingStore
-                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                  .get(kTestTimeout);
+  auto tree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   for (auto& [name, entry] : *tree.tree) {
     if (entry.isTree()) {
@@ -348,9 +356,11 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getBlob) {
 }
 
 TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
-  auto tree = queuedBackingStore
-                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                  .get(kTestTimeout);
+  auto tree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   for (auto& [name, entry] : *tree.tree) {
     if (entry.isTree()) {
@@ -593,9 +603,11 @@ TEST_F(
   testEdenConfig->prefetchOptimizations.setValue(
       false, ConfigSourceType::UserConfig);
 
-  auto tree = queuedBackingStore
-                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                  .get(kTestTimeout);
+  auto tree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   std::vector<ObjectId> blobIds;
   for (auto& [name, entry] : *tree.tree) {
@@ -624,9 +636,11 @@ TEST_F(
   testEdenConfig->prefetchOptimizations.setValue(
       true, ConfigSourceType::UserConfig);
 
-  auto tree = queuedBackingStore
-                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                  .get(kTestTimeout);
+  auto tree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   std::vector<ObjectId> blobIds;
   for (auto& [name, entry] : *tree.tree) {
@@ -650,9 +664,11 @@ TEST_F(
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
     prefetchBlobsWithDuplicatesResolvesAllCallbacks) {
-  auto tree = queuedBackingStore
-                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-                  .get(kTestTimeout);
+  auto tree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
 
   ObjectId firstBlobId;
   for (auto& [name, entry] : *tree.tree) {
@@ -828,10 +844,11 @@ TEST_F(
   // someone reverts to raw `this`, the weak_ptr would expire after reset() and
   // the continuation would access freed memory.
 
-  auto rootTree =
-      queuedBackingStore
-          ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-          .get(kTestTimeout);
+  auto rootTree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
   SlOid treeOid{rootTree.treeId};
 
   auto weak = std::weak_ptr<SaplingBackingStore>(queuedBackingStore);
@@ -866,10 +883,11 @@ TEST_F(
   // shared_from_this() capture would cause a use-after-free on resumption.
 
   // Get a valid tree ObjectId from the repo so we can construct a real SlOid.
-  auto rootTree =
-      queuedBackingStore
-          ->getRootTree(commit1, ObjectFetchContext::getNullContext())
-          .get(kTestTimeout);
+  auto rootTree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
   SlOid treeOid{rootTree.treeId};
 
   auto baselineUseCount = queuedBackingStore.use_count();

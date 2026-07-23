@@ -361,25 +361,6 @@ FilteredBackingStore::co_filterImpl(
   co_return std::make_unique<PathMap<TreeEntry>>(std::move(pathMap));
 }
 
-ImmediateFuture<BackingStore::GetRootTreeResult>
-FilteredBackingStore::getRootTree(
-    const RootId& rootId,
-    const ObjectFetchContextPtr& context) {
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_withExecutor(
-          folly::getGlobalCPUExecutor(),
-          folly::coro::co_invoke(
-              [self = shared_from_this()](auto rootId, auto context)
-                  -> folly::coro::Task<GetRootTreeResult> {
-                co_return co_await self->co_getRootTree(
-                    std::move(rootId), std::move(context));
-              },
-              RootId{rootId},
-              context.copy()))
-          .start()};
-}
-
 folly::coro::now_task<BackingStore::GetRootTreeResult>
 FilteredBackingStore::co_getRootTree(
     const RootId& rootId,
