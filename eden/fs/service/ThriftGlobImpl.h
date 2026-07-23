@@ -37,10 +37,6 @@ class ThriftGlobImpl {
       const PrefetchParams& params,
       bool prefetchOptimizations);
 
-  // TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
-  // usable for the duration of this glob. Either pass EdenMountHandle or
-  // .ensure() the lifetime of EdenMountHandle outlives the call.
-  //
   // DEPRECATED: use co_glob directly. Futures wrapper kept for non-coroutine
   // callers; remove once all callers have migrated.
   ImmediateFuture<std::unique_ptr<Glob>> glob(
@@ -68,21 +64,8 @@ class ThriftGlobImpl {
   folly::StringPiece searchRootUser_;
 };
 
-// TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
-// usable for the duration of this glob. Either pass EdenMountHandle or
-// .ensure() the lifetime of EdenMountHandle outlives the call.
-ImmediateFuture<std::vector<BackingStore::GetGlobFilesResult>>
-getLocalGlobResults(
-    const std::shared_ptr<EdenMount>& edenMount,
-    const std::shared_ptr<ServerState>& serverState,
-    bool includeDotfiles,
-    const std::vector<std::string>& suffixGlobs,
-    const std::vector<std::string>& prefixes,
-    const TreeInodePtr& rootInode,
-    const ObjectFetchContextPtr& context);
-
 folly::coro::now_task<std::vector<BackingStore::GetGlobFilesResult>>
-co_getLocalGlobResults(
+getLocalGlobResults(
     const std::shared_ptr<EdenMount>& edenMount,
     const std::shared_ptr<ServerState>& serverState,
     bool includeDotfiles,

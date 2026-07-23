@@ -5532,7 +5532,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
       // Get glob results — either local or per-revision
       std::vector<BackingStore::GetGlobFilesResult> globResults;
       if (revisions.empty()) {
-        globResults = co_await co_getLocalGlobResults(
+        globResults = co_await getLocalGlobResults(
             edenMount,
             server_->getServerState(),
             includeDotfiles,

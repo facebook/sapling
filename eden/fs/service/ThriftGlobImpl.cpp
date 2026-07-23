@@ -54,94 +54,7 @@ void compileGlobs(const std::vector<std::string>& globs, GlobNodeImpl& root) {
   }
 }
 
-ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
-    const std::shared_ptr<EdenMount>& edenMount,
-    const std::shared_ptr<ServerState>& serverState,
-    bool includeDotfiles,
-    const RootId& rootId,
-    const TreeInodePtr& rootInode,
-    const std::vector<std::string>& suffixGlobs,
-    const ObjectFetchContextPtr& context) {
-  auto enforceParents = serverState->getReloadableConfig()
-                            ->getEdenConfig()
-                            ->enforceParents.getValue();
-  bool caseSensitive =
-      serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue();
-
-  return edenMount
-      ->diff(
-          rootInode,
-          rootId,
-          // Default uncancellable token
-          folly::CancellationToken(),
-          context,
-          /*listIgnored=*/true,
-          enforceParents)
-      .thenValue([rootId,
-                  edenMount,
-                  caseSensitive,
-                  suffixGlobs,
-                  includeDotfiles](auto&& status) {
-        if (!status->errors_ref().value().empty()) {
-          XLOG(DBG4, "Error getting local changes");
-          throw newEdenError(
-              EINVAL,
-              EdenErrorType::POSIX_ERROR,
-              "unable to look up local files");
-        }
-        std::vector<GlobMatcher> globMatchers{};
-        GlobOptions options = includeDotfiles ? GlobOptions::DEFAULT
-                                              : GlobOptions::IGNORE_DOTFILES;
-        if (caseSensitive) {
-          if (edenMount->getCheckoutConfig()->getCaseSensitive() ==
-              CaseSensitivity::Insensitive) {
-            options |= GlobOptions::CASE_INSENSITIVE;
-          }
-        }
-        for (auto& glob : suffixGlobs) {
-          XLOGF(DBG4, "Creating glob matcher for glob: {}", glob);
-          auto expectGlobMatcher = GlobMatcher::create("**/*" + glob, options);
-          if (expectGlobMatcher.hasValue()) {
-            XLOGF(DBG4, "Successfully created glob matcher for glob: {}", glob);
-            globMatchers.push_back(expectGlobMatcher.value());
-          } else {
-            XLOGF(ERR, "Invalid glob: {}", glob);
-          }
-        }
-
-        std::unique_ptr<LocalFiles> localFiles = std::make_unique<LocalFiles>();
-        for (auto const& [pathString, scmFileStatus] :
-             status->entries_ref().value()) {
-          if (scmFileStatus == ScmFileStatus::ADDED) {
-            for (auto& matcher : globMatchers) {
-              if (matcher.match(pathString)) {
-                localFiles->addedFiles.insert(pathString);
-              }
-            }
-            // Globbing is not applied on non-added files
-            // since they'll use the globbed results from
-            // the server vs a set which should be faster
-            // than globbing every change
-          } else if (scmFileStatus == ScmFileStatus::REMOVED) {
-            // Don't return files that have been deleted
-            // locally
-            localFiles->removedFiles.insert(pathString);
-          } else if (scmFileStatus == ScmFileStatus::MODIFIED) {
-            for (auto& matcher : globMatchers) {
-              if (matcher.match(pathString)) {
-                localFiles->modifiedFiles.insert(pathString);
-              }
-            }
-          } else if (scmFileStatus == ScmFileStatus::IGNORED) {
-            // Not doing anything with these for now, just putting
-            // it here for completeness
-            localFiles->ignoredFiles.insert(pathString);
-          }
-        }
-        return localFiles;
-      });
-}
-folly::coro::now_task<std::unique_ptr<LocalFiles>> co_computeLocalFiles(
+folly::coro::now_task<std::unique_ptr<LocalFiles>> computeLocalFiles(
     const std::shared_ptr<EdenMount>& edenMount,
     const std::shared_ptr<ServerState>& serverState,
     bool includeDotfiles,
@@ -499,64 +412,8 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
   co_return out;
 }
 
-ImmediateFuture<std::vector<BackingStore::GetGlobFilesResult>>
-getLocalGlobResults(
-    const std::shared_ptr<EdenMount>& edenMount,
-    const std::shared_ptr<ServerState>& serverState,
-    bool includeDotfiles,
-    const std::vector<std::string>& suffixGlobs,
-    const std::vector<std::string>& prefixes,
-    const TreeInodePtr& rootInode,
-    const ObjectFetchContextPtr& context) {
-  // Use current commit id
-  XLOG(DBG3, "No commit id in input, using current id");
-  auto rootId = edenMount->getCheckedOutRootId();
-  auto& store = edenMount->getObjectStore();
-  return store->getGlobFiles(rootId, suffixGlobs, prefixes, context)
-      .thenValue([edenMount,
-                  serverState,
-                  includeDotfiles,
-                  rootId,
-                  rootInode,
-                  suffixGlobs,
-                  context = context.copy()](auto&& remoteGlobFiles) mutable {
-        return computeLocalFiles(
-                   edenMount,
-                   serverState,
-                   includeDotfiles,
-                   rootId,
-                   rootInode,
-                   suffixGlobs,
-                   context)
-            .thenValue([remoteGlobFiles = std::move(remoteGlobFiles),
-                        rootId](std::unique_ptr<LocalFiles>&& localFiles) {
-              BackingStore::GetGlobFilesResult filteredRemoteGlobFiles;
-              filteredRemoteGlobFiles.rootId = remoteGlobFiles.rootId;
-              for (auto& entry : remoteGlobFiles.globFiles) {
-                if (localFiles->removedFiles.contains(entry) ||
-                    localFiles->addedFiles.contains(entry) ||
-                    localFiles->modifiedFiles.contains(entry)) {
-                  continue;
-                }
-                filteredRemoteGlobFiles.globFiles.emplace_back(entry);
-              }
-              BackingStore::GetGlobFilesResult localGlobFiles;
-              localGlobFiles.isLocal = true;
-              localGlobFiles.rootId = rootId;
-              for (auto& entry : localFiles->addedFiles) {
-                localGlobFiles.globFiles.emplace_back(entry);
-              }
-              for (auto& entry : localFiles->modifiedFiles) {
-                localGlobFiles.globFiles.emplace_back(entry);
-              }
-              return std::vector<BackingStore::GetGlobFilesResult>{
-                  filteredRemoteGlobFiles, localGlobFiles};
-            });
-      });
-}
-
 folly::coro::now_task<std::vector<BackingStore::GetGlobFilesResult>>
-co_getLocalGlobResults(
+getLocalGlobResults(
     const std::shared_ptr<EdenMount>& edenMount,
     const std::shared_ptr<ServerState>& serverState,
     bool includeDotfiles,
@@ -571,7 +428,7 @@ co_getLocalGlobResults(
   auto remoteGlobFiles =
       co_await store->co_getGlobFiles(rootId, suffixGlobs, prefixes, context);
 
-  auto localFiles = co_await co_computeLocalFiles(
+  auto localFiles = co_await computeLocalFiles(
       edenMount,
       serverState,
       includeDotfiles,
