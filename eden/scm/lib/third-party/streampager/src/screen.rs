@@ -1241,17 +1241,42 @@ impl Screen {
         key: KeyEvent,
         event_sender: &EventSender,
     ) -> DisplayAction {
-        if let Some(binding) = self.keymap.get(key.modifiers, key.key) {
-            match binding {
-                Binding::Action(action) => {
-                    let action = action.clone();
-                    return self.dispatch_action(action, event_sender);
+        // Ghostty with modifyOtherKeys enabled (termwiz enables ESC[>4;2m in set_raw_mode)
+        // encodes Shift+G as ESC[27;2;71~ which termwiz decodes as Char('G')+SHIFT.
+        // Our keymap stores 'G' as Char('G')+NONE, so we normalize by stripping SHIFT.
+        for candidate in Self::normalize_key_candidates(key) {
+            if let Some(binding) = self.keymap.get(candidate.modifiers, candidate.key) {
+                match binding {
+                    Binding::Action(action) => {
+                        let action = action.clone();
+                        return self.dispatch_action(action, event_sender);
+                    }
+                    Binding::Custom(b) => {
+                        b.run(self.file.index());
+                        return DisplayAction::Render;
+                    }
+                    Binding::Unrecognized(_) => {}
                 }
-                Binding::Custom(b) => b.run(self.file.index()),
-                Binding::Unrecognized(_) => {}
             }
         }
         DisplayAction::Render
+    }
+
+    fn normalize_key_candidates(key: KeyEvent) -> Vec<KeyEvent> {
+        use termwiz::input::{KeyCode, Modifiers};
+        let mut out = Vec::with_capacity(4);
+        out.push(key.clone());
+        if key.modifiers.contains(Modifiers::SHIFT) {
+            if let KeyCode::Char(c) = key.key {
+                let mut no_shift = key.modifiers;
+                no_shift.remove(Modifiers::SHIFT);
+                out.push(KeyEvent { key: KeyCode::Char(c), modifiers: no_shift });
+                if c.is_ascii_lowercase() {
+                    out.push(KeyEvent { key: KeyCode::Char(c.to_ascii_uppercase()), modifiers: no_shift });
+                }
+            }
+        }
+        out
     }
 
     /// Append a digit to the repeat count.
