@@ -34,6 +34,12 @@ test worktree add - missing PATH argument and no path-generator
   abort: worktree.path-generator is not configured; pass a PATH argument
   [255]
 
+test worktree --rev is rejected for other subcommands
+
+  $ sl worktree list --rev .
+  abort: --rev can only be used with 'worktree add'
+  [255]
+
 test worktree add - require-generated-path without a generator
 
   $ sl worktree add --config worktree.require-generated-path=true
@@ -60,6 +66,46 @@ test worktree add - linked checkout is on the same commit as main checkout
   $ test "$main_hash" = "$linked_hash"
   $ echo "main: $main_hash, linked: $linked_hash"
   main: *, linked: * (glob)
+
+test worktree add - revision flag checks out requested revision and accepts bookmark names
+
+  $ base_hash=$(sl log -r . -T '{node}')
+  $ sl bookmark -i -r "$base_hash" base
+  $ echo more >> file.txt
+  $ sl commit -m "second"
+  $ tip_hash=$(sl log -r . -T '{node}')
+  $ test "$base_hash" != "$tip_hash"
+  $ sl worktree add $TESTTMP/linked_revision --rev base
+  created linked worktree at $TESTTMP/linked_revision
+  $ linked_revision_hash=$(cd $TESTTMP/linked_revision && sl log -r . -T '{node}')
+  $ test "$linked_revision_hash" = "$base_hash"
+  $ test "$linked_revision_hash" != "$tip_hash"
+
+test worktree add - invalid revision does not create a worktree
+
+  $ sl worktree add $TESTTMP/invalid_rev --rev does-not-exist
+  abort: unknown revision 'does-not-exist'
+  [255]
+  $ test -d $TESTTMP/invalid_rev
+  [1]
+
+test worktree add - revision flag accepts remote-only commit hashes
+
+  $ cd $TESTTMP
+  $ newrepo remote_server
+  $ echo base > file.txt
+  $ sl commit -Aqm "base"
+  $ sl clone -q --eden test:remote_server $TESTTMP/remote_client
+  $ cd $TESTTMP/remote_server
+  $ echo remote > file.txt
+  $ sl commit -Aqm "remote-only"
+  $ remote_hash=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP/remote_client
+  $ sl worktree add $TESTTMP/remote_linked --rev "$remote_hash"
+  created linked worktree at $TESTTMP/remote_linked
+  $ remote_linked_hash=$(cd $TESTTMP/remote_linked && sl log -r . -T '{node}')
+  $ test "$remote_linked_hash" = "$remote_hash"
+  $ cd $TESTTMP/myrepo
 
 test worktree add - writes .sl/worktreename marker (basename when no --label)
 
@@ -253,6 +299,18 @@ test worktree add - path-generator produces path when PATH omitted
   $ sl worktree add
   created linked worktree at $TESTTMP/generated_wt
   $ test -d $TESTTMP/generated_wt
+
+test worktree add - specified revision with generated path
+
+  $ echo generated-rev > generated-rev.txt
+  $ sl commit -Aqm "generated rev"
+  $ generated_rev=$(sl log -r . -T '{node}')
+  $ sl goto -q .^
+  $ setconfig worktree.path-generator="echo $TESTTMP/generated_rev_wt"
+  $ sl worktree add --rev "$generated_rev"
+  created linked worktree at $TESTTMP/generated_rev_wt
+  $ linked_hash=$(cd $TESTTMP/generated_rev_wt && sl log -r . -T '{node}')
+  $ test "$generated_rev" = "$linked_hash"
 
 test worktree add - path-generator receives correct env vars
 

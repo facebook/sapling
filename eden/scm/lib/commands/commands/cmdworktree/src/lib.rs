@@ -31,6 +31,11 @@ define_flags! {
         /// create a snapshot of the current working copy, then restore it in the new worktree (for 'add')
         snapshot: bool,
 
+        /// revision to check out (for 'add')
+        #[short('r')]
+        #[argtype("REV")]
+        rev: String,
+
         /// remove all linked worktrees (for 'remove')
         all: bool,
 
@@ -50,6 +55,9 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
     }
 
     let subcmd = ctx.opts.args.first().map(|s| s.as_str()).unwrap_or("");
+    if !ctx.opts.rev.is_empty() && subcmd != "add" {
+        abort!("--rev can only be used with 'worktree add'");
+    }
     let runner: fn(&ReqCtx<WorktreeOpts>, &Repo, &WorkingCopy) -> Result<u8> = match subcmd {
         "list" | "ls" => list::run,
         "add" => add::run,
@@ -98,10 +106,10 @@ pub fn doc() -> &'static str {
 
     Subcommands::
 
-      list [-Tjson]                            List all worktrees in the group
-      add [PATH] [--label TEXT] [--snapshot]   Create a new linked worktree
-      remove PATH [PATH...] [--all] [-y]        Remove linked worktree(s)
-      label [PATH] TEXT [--remove]             Set or remove a worktree label
+      list [-Tjson]                                     List all worktrees in the group
+      add [PATH] [-r REV] [--label TEXT] [--snapshot]   Create a new linked worktree
+      remove PATH [PATH...] [--all] [-y]                Remove linked worktree(s)
+      label [PATH] TEXT [--remove]                      Set or remove a worktree label
 
     If PATH is omitted from `add`, `worktree.path-generator` is used to
     choose the destination path.

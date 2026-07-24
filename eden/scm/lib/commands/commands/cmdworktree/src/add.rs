@@ -90,6 +90,16 @@ fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &Path, id: &str) -> anyhow
 pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     let logger = ctx.logger();
 
+    if ctx.opts.snapshot && !ctx.opts.rev.is_empty() {
+        abort!("cannot use --rev with --snapshot");
+    }
+
+    let requested_target = if ctx.opts.rev.is_empty() {
+        None
+    } else {
+        Some(repo.resolve_commit(&ctx.opts.rev)?.any()?)
+    };
+
     let require_generated: bool = repo
         .config()
         .get_or_default("worktree", "require-generated-path")?;
@@ -188,7 +198,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         with_worktree_path_op_lock(&shared_store_path, &canonical_repo_path, || {
             let source_client_dir = edenfs_client::get_client_dir(repo.path())?;
             let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
-            let target = parents.p1().copied();
+            let target = requested_target.or_else(|| parents.p1().copied());
             let source_sparse_config = clone::snapshot_sparse_config(repo.dot_hg_path())?;
             let source_user_config = clone::snapshot_eden_user_config(&source_client_dir)?;
             let source_status = if ctx.opts.snapshot && use_direct_copy {

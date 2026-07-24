@@ -12,6 +12,14 @@ setup backing repo
   $ sl add file.txt dir/subdir/nested.txt
   $ sl commit -m "init"
 
+test worktree add --snapshot rejects --rev
+
+  $ sl worktree add --snapshot --rev . $TESTTMP/wt_snapshot_rev
+  abort: cannot use --rev with --snapshot
+  [255]
+  $ test -d $TESTTMP/wt_snapshot_rev
+  [1]
+
 test worktree add --snapshot - modified file
 
   $ echo modified > file.txt
