@@ -9,6 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::KeyedBlobstore;
 use context::CoreContext;
+use either::Either;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -372,5 +373,86 @@ impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<AclManifestId, AclManifestRe
 
     fn is_empty(&self) -> bool {
         self.size() == 0
+    }
+}
+
+/// `TrieMapOps` for `Either`, mirroring the `Manifest`/`OrderedManifest` impls
+/// for `Either` in `combined.rs`. This lets `compare_manifest` (and hence
+/// `diff_manifests`) operate over the compat `Either<ContentManifest, Fsnode>`
+/// manifest used by `commit_compare`: for a content-manifest repo every node is
+/// the `Left` (sharded) variant, so identical sub-shards are still pruned by id.
+#[async_trait]
+impl<Store, A, B, TA, LA, TB, LB> TrieMapOps<Store, Entry<Either<TA, TB>, Either<LA, LB>>>
+    for Either<A, B>
+where
+    Store: Send + Sync + 'static,
+    A: TrieMapOps<Store, Entry<TA, LA>> + Send + 'static,
+    B: TrieMapOps<Store, Entry<TB, LB>> + Send + 'static,
+    TA: Send + 'static,
+    LA: Send + 'static,
+    TB: Send + 'static,
+    LB: Send + 'static,
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<Either<TA, TB>, Either<LA, LB>>>,
+        Vec<(u8, Self)>,
+    )> {
+        match self {
+            Either::Left(a) => {
+                let (entry, children) = a.expand(ctx, blobstore).await?;
+                Ok((
+                    entry.map(|e| e.left_entry()),
+                    children
+                        .into_iter()
+                        .map(|(byte, child)| (byte, Either::Left(child)))
+                        .collect(),
+                ))
+            }
+            Either::Right(b) => {
+                let (entry, children) = b.expand(ctx, blobstore).await?;
+                Ok((
+                    entry.map(|e| e.right_entry()),
+                    children
+                        .into_iter()
+                        .map(|(byte, child)| (byte, Either::Right(child)))
+                        .collect(),
+                ))
+            }
+        }
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(SmallVec<[u8; 24]>, Entry<Either<TA, TB>, Either<LA, LB>>)>,
+        >,
+    > {
+        match self {
+            Either::Left(a) => Ok(a
+                .into_stream(ctx, blobstore)
+                .await?
+                .map_ok(|(key, value)| (key, value.left_entry()))
+                .boxed()),
+            Either::Right(b) => Ok(b
+                .into_stream(ctx, blobstore)
+                .await?
+                .map_ok(|(key, value)| (key, value.right_entry()))
+                .boxed()),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            Either::Left(a) => a.is_empty(),
+            Either::Right(b) => b.is_empty(),
+        }
     }
 }
