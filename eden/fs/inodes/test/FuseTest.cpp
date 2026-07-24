@@ -13,6 +13,7 @@
 #include <system_error>
 #include <thread>
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -125,6 +126,12 @@ TEST(FuseTest, restrictedTreeLookupUsesAclTtl) {
   builder.setFile("restricted/secret.txt", "secret content");
   builder.setDirIsRestricted("restricted");
   TestMount testMount{builder};
+  auto restrictedObjectId =
+      builder.getRoot()->get().find("restricted"_pc)->second.getObjectId();
+  // Keep this test on the denied-placeholder path; FakeBackingStore defaults
+  // checkPermission to allow.
+  testMount.getBackingStore()->setCheckPermissionResult(
+      restrictedObjectId, false);
   testMount.updateEdenConfig({{"acl:restricted-tree-ttl-seconds", "84"}});
 
   auto fuse = make_shared<FakeFuse>();

@@ -97,6 +97,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
+  enum class InitialPermissionCheck {
+    Unknown,
+    JustDenied,
+  };
+
   /**
    * Construct a TreeInode from an unrestricted source control tree.
    */
@@ -120,7 +125,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       DirContents&& dir,
       std::optional<ObjectId> treeId,
       bool isRestricted = false,
-      std::optional<bool> hasACL = std::nullopt);
+      std::optional<bool> hasACL = std::nullopt,
+      InitialPermissionCheck initialPermissionCheck =
+          InitialPermissionCheck::Unknown);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -135,7 +142,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       DirContents&& dir,
       const std::optional<ObjectId>& treeId,
       bool isRestricted = false,
-      std::optional<bool> hasACL = std::nullopt);
+      std::optional<bool> hasACL = std::nullopt,
+      InitialPermissionCheck initialPermissionCheck =
+          InitialPermissionCheck::Unknown);
 
   ~TreeInode() override;
 
@@ -968,6 +977,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     setAclRootState(makeAclRootState(isRestricted, hasACL()));
     if (isRestricted) {
       assertRestrictedPlaceholderInvariant();
+      lastPermissionCheck_.store(
+          std::chrono::steady_clock::time_point::min(),
+          std::memory_order_relaxed);
     }
   }
 
@@ -1431,8 +1443,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /**
    * Timestamp of the last permission recheck attempt for restricted inodes.
-   * Initialized to now() so newly created restricted inodes do not
-   * immediately retry.
+   * Cached restricted inodes with unknown check provenance start at
+   * time_point::min() to force one recheck after load; a denied recheck updates
+   * this to now() and resumes TTL throttling.
    */
   std::atomic<std::chrono::steady_clock::time_point> lastPermissionCheck_{};
 

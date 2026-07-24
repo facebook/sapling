@@ -140,18 +140,24 @@ TEST_F(RestrictedTreeCachingTest, ttlNotExpired_noRecheck) {
 
 // --- Stat behavior tests ---
 
-TEST_F(RestrictedTreeCachingTest, restrictedInode_statReturnsZeroPermissions) {
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_deniedStatRecheckIsThrottled) {
   FakeTreeBuilder builder;
   builder.setFile("restricted/secret.txt", "secret content");
   builder.setDirIsRestricted("restricted");
   initMount(builder);
 
+  auto restrictedObjectId = getRestrictedTreeObjectId(builder);
+  auto* backingStore = testMount_->getBackingStore().get();
+  backingStore->setCheckPermissionResult(restrictedObjectId, false);
+
   auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
   ASSERT_TRUE(restrictedInode->isRestricted());
 
   // stat on restricted inode returns S_IFDIR with zero permission bits.
-  // With default TTL=65, no recheck is triggered (lastCheck=now()),
-  // so the inode stays restricted.
+  // The first access rechecks permission. A denied result keeps the inode
+  // restricted and throttles subsequent rechecks for the configured TTL.
   auto context = ObjectFetchContext::getNullContext();
   auto st = restrictedInode->stat(context).get();
 
@@ -161,6 +167,92 @@ TEST_F(RestrictedTreeCachingTest, restrictedInode_statReturnsZeroPermissions) {
 #endif
 
   EXPECT_TRUE(restrictedInode->isRestricted());
+  EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 1);
+
+  backingStore->setCheckPermissionResult(restrictedObjectId, true);
+  auto st2 = restrictedInode->stat(context).get();
+#ifndef _WIN32
+  EXPECT_TRUE(S_ISDIR(st2.st_mode));
+  EXPECT_EQ(st2.st_mode & 07777, 0);
+#endif
+
+  EXPECT_TRUE(restrictedInode->isRestricted());
+  EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 1);
+}
+
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_firstStatTransitionsToUnrestricted) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret content");
+  builder.setDirIsRestricted("restricted");
+  initMount(builder);
+
+  auto restrictedObjectId = getRestrictedTreeObjectId(builder);
+  auto* backingStore = testMount_->getBackingStore().get();
+  backingStore->setCheckPermissionResult(restrictedObjectId, true);
+
+  auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+
+  auto context = ObjectFetchContext::getNullContext();
+  auto st = restrictedInode->stat(context).get();
+#ifndef _WIN32
+  EXPECT_TRUE(S_ISDIR(st.st_mode));
+  EXPECT_NE(st.st_mode & 07777, 0);
+#endif
+
+  EXPECT_FALSE(restrictedInode->isRestricted());
+  EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 1);
+
+  auto children = restrictedInode->getChildren(context, false);
+  EXPECT_EQ(children.size(), 1);
+  EXPECT_EQ(children[0].first, "secret.txt"_pc);
+}
+
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_freshDeniedTreeFetchIsThrottled) {
+  testMount_ = std::make_unique<TestMount>();
+  auto backingStore = testMount_->getBackingStore();
+
+  auto [secretBlob, secretBlobId] = backingStore->putBlob("secret content");
+  secretBlob->setReady();
+
+  auto* restrictedTree = backingStore->putRestrictedTree({
+      {"secret.txt", secretBlobId},
+  });
+  restrictedTree->setReady();
+  auto restrictedTreeId = restrictedTree->get().getObjectId();
+
+  Tree::container rootEntries{kPathMapDefaultCaseSensitive};
+  rootEntries.emplace(
+      "restricted"_pc,
+      ObjectId{restrictedTreeId},
+      TreeEntryType::TREE,
+      /*isRestricted=*/false,
+      /*hasACL=*/std::nullopt);
+  auto* rootTree = backingStore->putTree(std::move(rootEntries));
+  rootTree->setReady();
+  backingStore->putCommit(RootId{"1"}, rootTree)->setReady();
+  testMount_->initialize(RootId{"1"});
+
+  backingStore->setCheckPermissionResult(restrictedTreeId, true);
+
+  auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+  EXPECT_EQ(backingStore->getAccessCount(restrictedTreeId), 1);
+  EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedTreeId), 0);
+
+  auto context = ObjectFetchContext::getNullContext();
+  auto st = restrictedInode->stat(context).get();
+#ifndef _WIN32
+  EXPECT_TRUE(S_ISDIR(st.st_mode));
+  EXPECT_EQ(st.st_mode & 07777, 0);
+#endif
+
+  EXPECT_TRUE(restrictedInode->isRestricted());
+  EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedTreeId), 0);
 }
 
 TEST_F(

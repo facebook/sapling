@@ -306,6 +306,16 @@ void maybeBackfillAclDirEntry(DirEntry& entry, const InodeBase* childInode) {
   }
 }
 
+std::chrono::steady_clock::time_point initialLastPermissionCheck(
+    bool isRestricted,
+    TreeInode::InitialPermissionCheck initialPermissionCheck) {
+  if (isRestricted &&
+      initialPermissionCheck == TreeInode::InitialPermissionCheck::Unknown) {
+    return std::chrono::steady_clock::time_point::min();
+  }
+  return std::chrono::steady_clock::now();
+}
+
 TreeInode::TreeInode(
     InodeNumber ino,
     TreeInodePtr parent,
@@ -335,12 +345,14 @@ TreeInode::TreeInode(
     DirContents&& dir,
     std::optional<ObjectId> treeId,
     bool isRestricted,
-    std::optional<bool> hasACL)
+    std::optional<bool> hasACL,
+    InitialPermissionCheck initialPermissionCheck)
     : Base(ino, initialMode, initialTimestamps, parent, name),
       contents_(std::in_place, std::move(dir), std::move(treeId)),
       aclRootState_{
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
-      lastPermissionCheck_(std::chrono::steady_clock::now()) {
+      lastPermissionCheck_(
+          initialLastPermissionCheck(isRestricted, initialPermissionCheck)) {
   XDCHECK_NE(ino, kRootNodeId);
   assertRestrictedPlaceholderInvariant();
 }
@@ -358,12 +370,14 @@ TreeInode::TreeInode(
     DirContents&& dir,
     const std::optional<ObjectId>& treeId,
     bool isRestricted,
-    std::optional<bool> hasACL)
+    std::optional<bool> hasACL,
+    InitialPermissionCheck initialPermissionCheck)
     : Base(mount),
       contents_(std::in_place, std::move(dir), treeId),
       aclRootState_{
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
-      lastPermissionCheck_(std::chrono::steady_clock::now()) {
+      lastPermissionCheck_(
+          initialLastPermissionCheck(isRestricted, initialPermissionCheck)) {
   assertRestrictedPlaceholderInvariant();
 }
 
@@ -452,7 +466,8 @@ ImmediateFuture<folly::Unit> TreeInode::recheckPermissionIfExpired(
   auto lastCheck = lastPermissionCheck_.load(std::memory_order_relaxed);
   while (true) {
     auto now = std::chrono::steady_clock::now();
-    if (now - lastCheck < ttl) {
+    if (lastCheck != std::chrono::steady_clock::time_point::min() &&
+        now - lastCheck < ttl) {
       return folly::unit;
     }
     if (lastPermissionCheck_.compare_exchange_weak(
@@ -1654,7 +1669,8 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     DirContents{caseSensitivity},
                     tree->getObjectId(),
                     /*isRestricted=*/true,
-                    tree->hasACL());
+                    tree->hasACL(),
+                    InitialPermissionCheck::JustDenied);
                 return ImmediateFuture<unique_ptr<InodeBase>>{
                     std::move(restricted)};
               }

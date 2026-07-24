@@ -288,6 +288,10 @@ class RestrictedTreeInodeEndToEnd : public ::testing::Test {
     builder.setFile("restricted/secret.txt", "secret content");
     builder.setDirIsRestricted("restricted");
     testMount_ = std::make_unique<TestMount>(builder);
+    auto restrictedObjectId =
+        builder.getRoot()->get().find("restricted"_pc)->second.getObjectId();
+    testMount_->getBackingStore()->setCheckPermissionResult(
+        restrictedObjectId, false);
   }
 
   TreeInodePtr getRestrictedInode() {
@@ -433,6 +437,8 @@ TEST(RestrictedTreeInode, nestedRestrictedDirBlocksAccess) {
   auto restrictedInode =
       testMount.getTreeInode("parent/restricted_child"_relpath);
   EXPECT_TRUE(restrictedInode->isRestricted());
+  testMount.getBackingStore()->setCheckPermissionResult(
+      restrictedInode->getObjectId().value(), false);
 
   auto context = ObjectFetchContext::getNullContext();
   expectEacces([&] {
