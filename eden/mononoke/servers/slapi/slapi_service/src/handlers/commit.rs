@@ -564,6 +564,7 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
         let stored = repo
             .store_hg_changesets(changesets_data, mutation_data)
             .await?;
+
         // Safe to derive now: with bonsai=None, store_hg_changesets already wrote
         // the mapping (via CreateChangeset), so no conflicting hg id is re-derived.
         repo.ensure_uploaded_augmented_manifests_derived(&stored)

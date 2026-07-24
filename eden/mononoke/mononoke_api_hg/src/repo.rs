@@ -441,16 +441,25 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         &self,
         results: &[Result<(HgChangesetId, BonsaiChangeset), MononokeError>],
     ) {
-        let uploaded_cs_ids: Vec<ChangesetId> = results
+        // Derive only the heads of the uploaded batch: deriving a head derives
+        // all its ancestors, so this covers every uploaded commit without the
+        // redundant per-commit fan-out. A commit is a head iff no other uploaded
+        // commit lists it as a parent. Computed by set difference, not by order:
+        // `results` is NOT topologically sorted (store_hg_changesets builds it
+        // from a HashMap) and one request may carry multiple independent stacks.
+        let stored: Vec<&BonsaiChangeset> = results
             .iter()
-            .filter_map(|result| {
-                result
-                    .as_ref()
-                    .ok()
-                    .map(|(_, bonsai)| bonsai.get_changeset_id())
-            })
+            .filter_map(|result| result.as_ref().ok().map(|(_, bcs)| bcs))
             .collect();
-        stream::iter(uploaded_cs_ids)
+        let parents_of_batch: HashSet<ChangesetId> =
+            stored.iter().flat_map(|bcs| bcs.parents()).collect();
+        let heads: Vec<ChangesetId> = stored
+            .iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .filter(|cs_id| !parents_of_batch.contains(cs_id))
+            .collect();
+
+        stream::iter(heads)
             .for_each_concurrent(20, |cs_id| {
                 self.repo_ctx()
                     .ensure_hg_augmented_manifest_derived_at_creation(cs_id)
