@@ -29,6 +29,11 @@ use crate::client::Client;
 use crate::errors::ConfigError;
 use crate::errors::SaplingRemoteApiError;
 
+/// HTTP header used to pin requests to a specific Mononoke host behind
+/// Proxygen via a `server_selection_type=Direct` rule. Its value is a
+/// "host:port" that the Proxygen rule reads to route to that exact backend.
+const DIRECT_HOST_HEADER: &str = "x-mononoke-direct-host";
+
 /// External function that constructs other kinds of `SaplingRemoteApi` from config.
 static CUSTOM_BUILD_FUNCS: LazyLock<
     RwLock<
@@ -181,6 +186,15 @@ impl HttpClientBuilder {
             .transpose()
             .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e))?
             .unwrap_or_default();
+
+        // Pin requests to a specific Mononoke host behind Proxygen. The value is
+        // a "host:port" that a Proxygen `server_selection_type=Direct` rule reads
+        // off this header to route the request to that exact backend.
+        if let Some(direct_host) = get_config::<String>(config, "mononoke", "direct-host")? {
+            if !direct_host.is_empty() {
+                headers.insert(DIRECT_HOST_HEADER.to_string(), direct_host);
+            }
+        }
 
         let source = if std::env::current_exe()
             .ok()
@@ -726,6 +740,25 @@ mod tests {
         );
 
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_direct_host_header_set() {
+        let config = make_config(vec![("mononoke.direct-host", "some.host:1234")]);
+
+        let builder = HttpClientBuilder::from_config(&config).unwrap();
+        assert_eq!(
+            builder.headers.get(DIRECT_HOST_HEADER).map(|s| s.as_str()),
+            Some("some.host:1234"),
+        );
+    }
+
+    #[test]
+    fn test_direct_host_header_absent_by_default() {
+        let config = make_config(vec![]);
+
+        let builder = HttpClientBuilder::from_config(&config).unwrap();
+        assert!(!builder.headers.contains_key(DIRECT_HOST_HEADER));
     }
 
     #[test]

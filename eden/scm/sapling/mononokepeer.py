@@ -241,6 +241,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
         self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
         self._confheaders = ui.config("http", "extra_headers_json")
+        self._direct_host = ui.config("mononoke", "direct-host")
         self._verbose = ui.configbool("http", "verbose")
 
         self._proxyhandler = url.proxyhandler(ui)
@@ -396,6 +397,13 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 if os.getenv("CLIENT_DEBUG"):
                     headers["X-Client-Debug"] = "true"
+
+                # Pin the request to a specific Mononoke host behind Proxygen.
+                # The value is a "host:port" that a Proxygen
+                # server_selection_type=Direct rule reads off this header to
+                # route to that exact backend.
+                if self._direct_host:
+                    headers["x-mononoke-direct-host"] = self._direct_host
 
                 if self._confheaders:
                     headers.update(json.loads(self._confheaders))
