@@ -5795,9 +5795,9 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
   // If we are going from a directory to a directory, all we need to do
   // is call checkout().
   if (newScmEntry && newScmEntry->second.isTree()) {
-    XCHECK(newScmEntry.has_value());
+    XDCHECK(newScmEntry.has_value());
     if (!newScmEntry->second.isRestricted()) {
-      XCHECK(newTree);
+      XDCHECK(newTree);
     }
 
     if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
@@ -5825,8 +5825,8 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
                 replacementEntry.second.aclRootState();
             auto restrictedHasACL = replacementEntry.second.hasACL();
             if (!replacementEntry.second.isRestricted()) {
-              XCHECK(newTree);
-              XCHECK(newTree->isRestricted());
+              XDCHECK(newTree);
+              XDCHECK(newTree->isRestricted());
               restrictedTreeId = newTree->getObjectId();
               restrictedAclRootState = newTree->aclRootState();
               restrictedHasACL = newTree->hasACL();
@@ -5873,7 +5873,7 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
           newRestricted);
       std::shared_ptr<const Tree> checkoutToTree;
       if (!newRestricted) {
-        XCHECK(newTree);
+        XDCHECK(newTree);
         checkoutToTree = std::move(newTree);
       }
       return treeInode
@@ -5963,9 +5963,9 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
   }
 
   if (newScmEntry && newScmEntry->second.isTree()) {
-    XCHECK(newScmEntry.has_value());
+    XDCHECK(newScmEntry.has_value());
     if (!newScmEntry->second.isRestricted()) {
-      XCHECK(newTree);
+      XDCHECK(newTree);
     }
 
     if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
@@ -6034,7 +6034,7 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
 
       std::shared_ptr<const Tree> checkoutToTree;
       if (!newRestricted) {
-        XCHECK(newTree);
+        XDCHECK(newTree);
         checkoutToTree = std::move(newTree);
       }
       auto result = co_await treeInode->co_checkout(
