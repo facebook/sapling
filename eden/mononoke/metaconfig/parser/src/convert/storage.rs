@@ -360,6 +360,7 @@ impl Convert for RawMetadataConfig {
                     repo_metadata: raw.repo_metadata.convert()?,
                     restricted_paths: raw.restricted_paths.convert()?,
                     commit_derived_data_mapping: raw.derived_data_mapping.convert()?,
+                    repo_manifest_mapping: raw.repo_manifest_mapping.convert()?,
                 },
             )),
             RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(

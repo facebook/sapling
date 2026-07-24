@@ -1110,9 +1110,11 @@ impl MergeResolutionOverride {
 
 #[cfg(test)]
 mod merge_resolution_override_tests {
+    use mononoke_macros::mononoke;
+
     use super::MergeResolutionOverride;
 
-    #[test]
+    #[mononoke::test]
     fn from_pushvar_value_recognizes_truthy() {
         assert_eq!(
             MergeResolutionOverride::from_pushvar_value(Some(b"true")),
@@ -1132,7 +1134,7 @@ mod merge_resolution_override_tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn from_pushvar_value_recognizes_falsy() {
         assert_eq!(
             MergeResolutionOverride::from_pushvar_value(Some(b"false")),
@@ -1148,7 +1150,7 @@ mod merge_resolution_override_tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn from_pushvar_value_defaults_to_use_jk() {
         assert_eq!(
             MergeResolutionOverride::from_pushvar_value(None),
@@ -1168,7 +1170,7 @@ mod merge_resolution_override_tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn qe_arm_str_maps_each_variant() {
         assert_eq!(MergeResolutionOverride::ForceOn.qe_arm_str(), "test");
         assert_eq!(MergeResolutionOverride::ForceOff.qe_arm_str(), "control");
@@ -1597,6 +1599,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub restricted_paths: Option<RemoteDatabaseConfig>,
     /// Database for commit derived data mapping
     pub commit_derived_data_mapping: Option<ShardableRemoteDatabaseConfig>,
+    /// Database for repo-manifest membership routing (repo_manifest_mapping)
+    pub repo_manifest_mapping: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.

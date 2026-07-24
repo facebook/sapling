@@ -1559,6 +1559,7 @@ mod test {
                         db_address: "derived_data_mapping".into(),
                     },
                 )),
+                repo_manifest_mapping: None,
             }),
             ephemeral_blobstore: None,
             mutable_blobstore: multiplex,
@@ -2229,6 +2230,7 @@ mod test {
                         commit_derived_data_mapping: Some(ShardableRemoteDatabaseConfig::Unsharded(RemoteDatabaseConfig {
                             db_address: "derived_data_mapping".into(),
                         })),
+                        repo_manifest_mapping: None,
                     }),
                     ephemeral_blobstore: None,
                     mutable_blobstore: BlobConfig::MultiplexedWal {
@@ -2386,6 +2388,7 @@ mod test {
                         repo_metadata: Some(RemoteDatabaseConfig { db_address: "repo_metadata".into() }),
                         restricted_paths: Some(RemoteDatabaseConfig { db_address: "restricted_paths".into(), }),
                         commit_derived_data_mapping: Some(ShardableRemoteDatabaseConfig::Unsharded(RemoteDatabaseConfig { db_address: "derived_data_mapping".into() })),
+                        repo_manifest_mapping: None,
                     }),
 
                     ephemeral_blobstore: None,

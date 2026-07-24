@@ -9,8 +9,13 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
@@ -143,9 +148,20 @@ impl SqlConstruct for SqlRepoManifestMappingBuilder {
     }
 }
 
-// NOTE: `SqlConstructFromMetadataDatabaseConfig` is deliberately NOT
-// implemented here. Wiring this store into the metadata database config (and
-// the corresponding metaconfig field) is scoped to a follow-up.
+// Optional dedicated remote tier (`xdb.mononoke_manifest`); falls back to the
+// shared metadata DB when unset, so this is inert until the tier is bound.
+impl SqlConstructFromMetadataDatabaseConfig for SqlRepoManifestMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        remote.repo_manifest_mapping.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 impl SqlRepoManifestMappingBuilder {
     /// Consume the builder and produce the ready-to-use store.
