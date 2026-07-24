@@ -106,11 +106,34 @@ where
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
     Store: Send + Sync + 'static,
 {
+    compare_manifest_with_stores(ctx, blobstore, blobstore, mf, base_mfs).await
+}
+
+/// Like [`compare_manifest`], but `mf` and the base manifests may live in
+/// different blobstores (e.g. cross-repo diffs). Subtree pruning compares
+/// trie-map node ids, which are content-addressed and therefore valid across
+/// blobstores; only diverging subtrees are expanded, each from its own store.
+pub async fn compare_manifest_with_stores<'a, M, Store>(
+    ctx: &'a CoreContext,
+    mf_store: &'a Store,
+    base_store: &'a Store,
+    mf: M,
+    base_mfs: Vec<Option<M>>,
+) -> Result<
+    impl Stream<Item = Result<ManifestComparison<M::TrieMapType, Entry<M::TreeId, M::Leaf>>>> + 'a,
+>
+where
+    M: Manifest<Store>,
+    M::TreeId: Send + Sync + Eq + 'static,
+    M::Leaf: Send + Sync + Eq + 'static,
+    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
+    Store: Send + Sync + 'static,
+{
     let (mf_trie_map, base_mf_trie_maps) = future::try_join(
-        mf.into_trie_map(ctx, blobstore),
+        mf.into_trie_map(ctx, mf_store),
         future::try_join_all(base_mfs.into_iter().map(|p| async move {
             match p {
-                Some(p) => Ok(Some(p.into_trie_map(ctx, blobstore).await?)),
+                Some(p) => Ok(Some(p.into_trie_map(ctx, base_store).await?)),
                 None => Ok(None),
             }
         })),
@@ -120,9 +143,9 @@ where
         256,
         Some((MPathElementPrefix::new(), mf_trie_map, base_mf_trie_maps)),
         {
-            cloned!(ctx, blobstore);
+            cloned!(ctx, mf_store, base_store);
             move |(prefix, mf_trie_map, base_mf_trie_maps)| {
-                cloned!(ctx, blobstore);
+                cloned!(ctx, mf_store, base_store);
                 async move {
                     if let Some(index) = base_mf_trie_maps
                         .iter()
@@ -153,11 +176,11 @@ where
 
                     borrowed!(ctx);
                     let ((mf_value, mf_children), expanded_base_mfs) = future::try_join(
-                        mf_trie_map.expand(ctx, blobstore),
+                        mf_trie_map.expand(ctx, mf_store),
                         future::try_join_all(base_mf_trie_maps.into_iter().map({
                             |parent| async move {
                                 match parent {
-                                    Some(parent) => parent.expand(ctx, blobstore).await,
+                                    Some(parent) => parent.expand(ctx, base_store).await,
                                     None => Ok((None, Vec::new())),
                                 }
                             }
