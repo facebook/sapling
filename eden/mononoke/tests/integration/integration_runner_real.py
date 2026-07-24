@@ -258,6 +258,12 @@ def run_tests(
     args = list(test_flags.runner_args())
 
     if xunit_output is not None:
+        # On remote execution the xunit output dir is passed relative to the
+        # project root, but _hg_runner runs run-tests.py with cwd=TEST_ROOT, so a
+        # relative path would not resolve on the RE worker. Anchor it to an
+        # absolute path (and ensure it exists) before the cwd change.
+        xunit_output = os.path.abspath(xunit_output)
+        os.makedirs(xunit_output, exist_ok=True)
         xunit_file = os.path.join(xunit_output, ".".join([prefix, "xml"]))
         args.extend(["--xunit", xunit_file])
     args.extend(existing_tests)
