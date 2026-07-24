@@ -44,8 +44,11 @@ use crate::ttype::TType;
 pub enum SerializedStreamElement<Payload> {
     /// A normal stream response, without any error. Contains the serialized response.
     Success(Payload),
-    /// Contains the serialized declared exception.
-    DeclaredException(Payload),
+    /// Contains the serialized declared exception, plus the declared thrift
+    /// exception type name (for stream error metadata `name_utf8`; empty if the
+    /// name is unavailable). The name lets consumers avoid logging an empty
+    /// error reason, mirroring C++ `encode_stream_exception`.
+    DeclaredException(Payload, String),
     /// Contains the application exception.
     ApplicationException(ApplicationException),
 }
