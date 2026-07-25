@@ -100,6 +100,8 @@ def uisetup(ui) -> None:
 
 _runningpid = None
 
+_stop = threading.Event()
+
 
 def reposetup(ui, repo) -> None:
     interval = ui.configint("sigtrace", "interval")
@@ -119,8 +121,7 @@ def reposetup(ui, repo) -> None:
         try:
             dir = os.path.dirname(path)
             util.makedirs(dir)
-            while True:
-                time.sleep(interval)
+            while not _stop.wait(interval):
                 # Keep 10 minutes of sigtraces.
                 util.gcdir(dir, 60 * 10)
 
@@ -143,5 +144,10 @@ def reposetup(ui, repo) -> None:
     thread = threading.Thread(
         target=writesigtracethread, args=(path, interval), name="sigtracethread"
     )
-    thread.daemon = True
+
+    def _stop_worker():
+        _stop.set()
+
+    threading._register_atexit(_stop_worker)
+
     thread.start()
