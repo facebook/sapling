@@ -214,31 +214,53 @@ pub(crate) mod tests {
 
     pub(crate) fn get_mock_spawner(
         program: String,
+        expected_cwd: Option<&Path>,
         output: Option<(i32, Option<Vec<u8>>)>,
     ) -> MockCommandSpawner {
-        MockCommandSpawner::with_callback(move |cmd| match cmd.program.to_str() {
-            Some(cmd_program) if cmd_program == program && output.is_some() => {
-                let (exit_code, stdout_lines) = output.clone().unwrap();
-                Ok(mock_child(exit_code, stdout_lines, None))
+        let expected_cwd = expected_cwd.map(Path::to_path_buf);
+        MockCommandSpawner::with_callback(move |cmd| {
+            if cmd.current_dir.as_deref() != expected_cwd.as_deref() {
+                return Err(Error::other(anyhow::anyhow!(
+                    "Not expected current dir: {:?}; expected: {:?}",
+                    cmd.current_dir,
+                    expected_cwd
+                )));
             }
-            program => Err(Error::other(anyhow::anyhow!(
-                "Not expected program: {program:?}"
-            ))),
+            match cmd.program.to_str() {
+                Some(cmd_program) if cmd_program == program && output.is_some() => {
+                    let (exit_code, stdout_lines) = output.clone().unwrap();
+                    Ok(mock_child(exit_code, stdout_lines, None))
+                }
+                program => Err(Error::other(anyhow::anyhow!(
+                    "Not expected program: {program:?}"
+                ))),
+            }
         })
     }
 
     pub(crate) fn get_mock_spawner_with_stderr(
         program: String,
+        expected_cwd: Option<&Path>,
         output: Option<(i32, Option<Vec<u8>>, Option<Vec<u8>>)>,
     ) -> MockCommandSpawner {
-        MockCommandSpawner::with_callback(move |cmd| match cmd.program.to_str() {
-            Some(cmd_program) if cmd_program == program && output.is_some() => {
-                let (exit_code, stdout_lines, stderr_lines) = output.clone().unwrap();
-                Ok(mock_child(exit_code, stdout_lines, stderr_lines))
+        let expected_cwd = expected_cwd.map(Path::to_path_buf);
+        MockCommandSpawner::with_callback(move |cmd| {
+            if cmd.current_dir.as_deref() != expected_cwd.as_deref() {
+                return Err(Error::other(anyhow::anyhow!(
+                    "Not expected current dir: {:?}; expected: {:?}",
+                    cmd.current_dir,
+                    expected_cwd
+                )));
             }
-            program => Err(Error::other(anyhow::anyhow!(
-                "Not expected program: {program:?}"
-            ))),
+            match cmd.program.to_str() {
+                Some(cmd_program) if cmd_program == program && output.is_some() => {
+                    let (exit_code, stdout_lines, stderr_lines) = output.clone().unwrap();
+                    Ok(mock_child(exit_code, stdout_lines, stderr_lines))
+                }
+                program => Err(Error::other(anyhow::anyhow!(
+                    "Not expected program: {program:?}"
+                ))),
+            }
         })
     }
 

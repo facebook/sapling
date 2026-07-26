@@ -202,6 +202,7 @@ A fbcode/buck2/app/buck2_audit_server/src/perf
 ";
         let spawner = get_mock_spawner(
             get_sapling_executable_path(),
+            None,
             Some((0, Some(output.as_bytes().to_vec()))),
         );
         let params = GetDiffDirsParams {

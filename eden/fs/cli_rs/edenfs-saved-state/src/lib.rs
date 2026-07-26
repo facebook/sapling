@@ -105,7 +105,7 @@ impl SavedStateClient {
     ) -> anyhow::Result<(SavedState, String)> {
         let timestamp = match timestamp {
             Some(timestamp) => timestamp,
-            None => get_commit_timestamp(commit_id)
+            None => get_commit_timestamp(commit_id, None)
                 .await
                 .map_err(anyhow::Error::msg)?,
         };
@@ -121,9 +121,9 @@ impl SavedStateClient {
             if hash.is_empty() {
                 return Err(anyhow::anyhow!("No saved state commit id found"));
             }
-            if is_commit_in_repo(hash).await? {
+            if is_commit_in_repo(hash, None).await? {
                 hash.to_string()
-            } else if !sync_hash.is_empty() && is_commit_in_repo(sync_hash).await? {
+            } else if !sync_hash.is_empty() && is_commit_in_repo(sync_hash, None).await? {
                 sync_hash.to_string()
             } else {
                 return Err(anyhow::anyhow!(

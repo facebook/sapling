@@ -155,6 +155,8 @@ fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<Mergebas
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use crate::mergebase::*;
     use crate::utils::tests::get_mock_spawner;
     use crate::utils::tests::get_mock_spawner_with_stderr;
@@ -172,6 +174,7 @@ mod tests {
         let output = DETAILS.to_owned();
         let spawner = get_mock_spawner(
             get_sapling_executable_path(),
+            Some(Path::new(".")),
             Some((0, Some(output.as_bytes().to_vec()))),
         );
 
@@ -207,6 +210,7 @@ mod tests {
                       2026-05-27T10:19:36Z  WARN run: cats: wanted-key not found, falling back\n";
         let spawner = get_mock_spawner_with_stderr(
             get_sapling_executable_path(),
+            Some(Path::new(".")),
             Some((
                 0,
                 Some(stdout.as_bytes().to_vec()),
@@ -230,6 +234,7 @@ mod tests {
         let stderr = "abort: unknown revision\n";
         let spawner = get_mock_spawner_with_stderr(
             get_sapling_executable_path(),
+            Some(Path::new(".")),
             Some((255, None, Some(stderr.as_bytes().to_vec()))),
         );
 
