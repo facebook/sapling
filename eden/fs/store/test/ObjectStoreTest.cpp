@@ -533,7 +533,7 @@ TEST_P(
   EXPECT_EQ(context->getFetchCount(), 2);
 }
 
-TEST_P(ObjectStoreTest, glob_files_test) {
+CO_TEST_P(ObjectStoreTest, glob_files_test) {
   RootId rootId{"00000000000000000000"};
   auto glob = std::vector<std::string>{"foo.txt", "bar.txt"};
   putReadyGlob(std::pair<RootId, std::string>(rootId, ".txt"), std::move(glob));
@@ -541,12 +541,11 @@ TEST_P(ObjectStoreTest, glob_files_test) {
   auto context = makeRefPtr<FetchContext>();
   auto globs = std::vector<std::string>{".txt"};
 
-  auto fut = objectStore->getGlobFiles(
+  auto result = co_await objectStore->co_getGlobFiles(
       rootId,
       globs,
       std::vector<std::string>{},
       context.as<ObjectFetchContext>());
-  auto result = std::move(fut).get(0ms);
   EXPECT_EQ(result.globFiles.size(), 2);
   auto sorted_result = result.globFiles;
   std::sort(sorted_result.begin(), sorted_result.end());
