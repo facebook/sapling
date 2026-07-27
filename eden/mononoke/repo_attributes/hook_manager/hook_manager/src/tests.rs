@@ -343,6 +343,7 @@ async fn run_changeset_hooks(
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            None,
         )
         .await
         .unwrap();
@@ -374,6 +375,7 @@ async fn run_file_hooks(
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            None,
         )
         .await
         .unwrap();
@@ -902,6 +904,7 @@ async fn test_unauthorized_bypass_file_hook_annotates_each_path(fb: FacebookInit
             Some(&bypass_pushvars()),
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            None,
         )),
     )
     .await
@@ -1241,6 +1244,7 @@ impl BypassScenario {
                 self.pushvars.as_ref(),
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )),
         )
         .await
@@ -1326,6 +1330,7 @@ async fn test_bypass_resolves_author_email_to_group_unixname(fb: FacebookInit) {
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            None,
         )),
     )
     .await

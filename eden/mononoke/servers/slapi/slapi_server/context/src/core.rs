@@ -104,6 +104,20 @@ impl CoreContext {
         }
     }
 
+    /// Return a clone of this context with the session's metadata overridden,
+    /// preserving the logging container (scuba, perf counters, scribe, sampling
+    /// key, etc.). Unlike `SessionContainer::new_context`, which starts a fresh
+    /// `LoggingContainer`, this keeps the caller's logging state intact, so work
+    /// run under the returned context (e.g. hooks evaluated with `run_as`)
+    /// observes only a different identity, not a reset logging environment.
+    pub fn with_overridden_metadata(&self, metadata: Arc<Metadata>) -> Self {
+        Self {
+            fb: self.fb,
+            session: self.session.override_metadata(metadata),
+            logging: self.logging.clone(),
+        }
+    }
+
     pub fn sampling_key(&self) -> Option<&SamplingKey> {
         self.logging.sampling_key()
     }

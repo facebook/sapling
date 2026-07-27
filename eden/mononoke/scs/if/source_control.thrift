@@ -1670,11 +1670,33 @@ struct CommitListDescendantBookmarksParams {
   5: set<CommitIdentityScheme> identity_schemes;
 }
 
+/// A single identity to run hooks as, identified by its type and data
+/// (e.g. id_type = "USER", id_data = "alice").
+struct RunAsIdentity {
+  1: string id_type;
+  2: string id_data;
+}
+
+/// The set of identities to run hooks as. See `CommitRunHooksParams.run_as`.
+union RunAsIdentities {
+  /// A list of plain type/data identities. Sufficient for hooks that match
+  /// on identity type and data only.
+  1: list<RunAsIdentity> identities;
+  /// A Compact-thrift-encoded `access/if` `AuthenticatedIdentityList` (a bare
+  /// `list<AuthenticatedIdentity>`, not wrapped in a struct). Use this when
+  /// hooks need the full identity attributes. Meta-internal only.
+  2: binary encoded_authenticated_identities;
+}
+
 struct CommitRunHooksParams {
   /// Run the same hooks as when landing to bookmark
   1: string bookmark;
   /// Pushvars used on the push.
   2: optional map<string, binary> pushvars;
+  /// If set, run the hooks as if the push was performed by these identities
+  /// (instead of the calling client's identities). Does not affect
+  /// repository access control, which still uses the caller's identity.
+  3: optional RunAsIdentities run_as;
 }
 
 /// Parameters for checking commit rate limits.

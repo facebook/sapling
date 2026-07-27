@@ -79,6 +79,7 @@ use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterMan
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mutable_renames::MutableRenamesArc;
+use permission_checker::MononokeIdentitySet;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -2115,17 +2116,39 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         &self,
         bookmark: impl AsRef<str>,
         pushvars: Option<&HashMap<String, Bytes>>,
+        run_as: Option<MononokeIdentitySet>,
     ) -> Result<Vec<HookOutcome>, MononokeError> {
+        // When `run_as` is provided, run the hooks against a context derived from
+        // the caller's session with only the metadata identities swapped for the
+        // `run_as` set (via `with_overridden_metadata`, which shares the rest of
+        // the session -- rate limiters, session class, etc. -- and the caller's
+        // logging container -- scuba, perf counters, scribe, sampling), so hooks
+        // see them as the pusher while observability is otherwise unchanged. The
+        // real caller's identities are captured for audit logging. Repository
+        // access control has already been applied using the caller's real
+        // identity when this `ChangesetContext` was created; `run_as` only
+        // changes what the hooks observe. The request-level context
+        // (`self.ctx()`) is left untouched, so logging after the hooks finish --
+        // and at the end of the request -- still reflects the real caller.
+        let run_as_original_identities = run_as
+            .as_ref()
+            .map(|_| self.ctx().metadata().identities().clone());
+        let run_as_ctx = run_as.map(|identities| {
+            let metadata = self.ctx().metadata().clone().set_identities(identities);
+            self.ctx().with_overridden_metadata(Arc::new(metadata))
+        });
+        let ctx = run_as_ctx.as_ref().unwrap_or_else(|| self.ctx());
         Ok(self
             .repo_ctx()
             .hook_manager()
             .run_changesets_hooks_for_bookmark(
-                self.ctx(),
+                ctx,
                 &[self.bonsai_changeset().await?],
                 &BookmarkKey::new(bookmark.as_ref())?,
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                run_as_original_identities.as_ref(),
             )
             .await?)
     }

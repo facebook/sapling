@@ -10,6 +10,8 @@ use std::io::Write;
 
 use anyhow::Result;
 use commit_id_types::CommitIdArgs;
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
@@ -37,6 +39,10 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Name of the bookmark you would push to if pushing for real
     to: String,
+    #[clap(long = "run-as", value_name = "TYPE:DATA")]
+    /// Run the hooks as if the push was performed by these identities instead
+    /// of your own (format: TYPE:data, e.g. USER:alice).
+    run_as: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -89,10 +95,30 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let bookmark: String = args.to.clone();
     let pushvars = args.pushvar_args.clone().into_pushvars();
+    let run_as = if args.run_as.is_empty() {
+        None
+    } else {
+        let identities = args
+            .run_as
+            .iter()
+            .map(|id| match id.split_once(':') {
+                Some((id_type, id_data)) if !id_type.is_empty() && !id_data.is_empty() => {
+                    Ok(MononokeIdentity::from_legacy_type_data(id_type, id_data))
+                }
+                _ => Err(anyhow::anyhow!(
+                    "invalid --run-as value '{id}', expected TYPE:data with non-empty TYPE and data"
+                )),
+            })
+            .collect::<Result<MononokeIdentitySet>>()?;
+        Some(thrift::RunAsIdentities::encoded_authenticated_identities(
+            MononokeIdentity::serialize_thrift_compact_bytes(&identities),
+        ))
+    };
 
     let params = thrift::CommitRunHooksParams {
         bookmark: bookmark.clone(),
         pushvars,
+        run_as,
         ..Default::default()
     };
     let response = conn

@@ -70,6 +70,12 @@ impl MononokeIdentity {
         )
     }
 
+    pub fn try_from_thrift_compact_bytes(_: &[u8]) -> Result<MononokeIdentitySet> {
+        bail!(
+            "Decoding compact-encoded AuthenticatedIdentity is not supported for MononokeIdentity in OSS builds"
+        )
+    }
+
     pub fn try_from_x509(cert: &X509) -> Result<MononokeIdentitySet> {
         let subject_vec: Result<Vec<_>> = cert
             .subject_name()

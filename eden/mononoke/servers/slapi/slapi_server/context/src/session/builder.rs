@@ -21,6 +21,7 @@ use super::SessionContainerInner;
 
 pub struct SessionContainerBuilder {
     fb: FacebookInit,
+    metadata: Arc<Metadata>,
     inner: SessionContainerInner,
     session_class: SessionClass,
 }
@@ -29,6 +30,7 @@ impl SessionContainerBuilder {
     pub fn build(self) -> SessionContainer {
         SessionContainer {
             fb: self.fb,
+            metadata: self.metadata,
             inner: Arc::new(self.inner),
             session_class: self.session_class,
         }
@@ -37,8 +39,8 @@ impl SessionContainerBuilder {
     pub fn new(fb: FacebookInit) -> Self {
         Self {
             fb,
+            metadata: Arc::new(Metadata::default()),
             inner: SessionContainerInner {
-                metadata: Arc::new(Metadata::default()),
                 rate_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
@@ -50,7 +52,7 @@ impl SessionContainerBuilder {
     }
 
     pub fn metadata(mut self, value: Arc<Metadata>) -> Self {
-        self.inner.metadata = value;
+        self.metadata = value;
         self
     }
 

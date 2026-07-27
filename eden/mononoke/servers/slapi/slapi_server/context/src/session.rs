@@ -31,6 +31,7 @@ mod builder;
 #[derive(Clone)]
 pub struct SessionContainer {
     fb: FacebookInit,
+    metadata: Arc<Metadata>,
     inner: Arc<SessionContainerInner>,
     session_class: SessionClass,
 }
@@ -52,7 +53,6 @@ pub enum SessionClass {
 }
 
 struct SessionContainerInner {
-    metadata: Arc<Metadata>,
     rate_limiter: Option<BoxRateLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
@@ -103,7 +103,17 @@ impl SessionContainer {
     }
 
     pub fn metadata(&self) -> &Metadata {
-        &self.inner.metadata
+        &self.metadata
+    }
+
+    /// Return a clone of this session with the metadata replaced.
+    pub fn override_metadata(&self, metadata: Arc<Metadata>) -> Self {
+        Self {
+            fb: self.fb,
+            metadata,
+            inner: self.inner.clone(),
+            session_class: self.session_class,
+        }
     }
 
     pub fn rate_limiter(&self) -> Option<&(dyn RateLimiter + Send + Sync)> {

@@ -49,6 +49,8 @@ use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
@@ -66,6 +68,51 @@ use crate::source_control_impl::SourceControlServiceImpl;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
+
+/// Convert the thrift `run_as` union into a set of Mononoke identities to run
+/// hooks as. The `encoded_authenticated_identities` variant carries a
+/// Compact-thrift-encoded `AuthenticatedIdentityList` and preserves identity
+/// attributes; it is only supported in Meta-internal builds. Rejects a request
+/// that resolves to no identities, or a type/data identity with an empty
+/// `id_type` or `id_data`, so callers get a clear error instead of a confusing
+/// hook result.
+fn run_as_identities(
+    run_as: thrift::RunAsIdentities,
+) -> Result<MononokeIdentitySet, scs_errors::ServiceError> {
+    let identities = match run_as {
+        thrift::RunAsIdentities::identities(identities) => identities
+            .into_iter()
+            .map(|id| {
+                if id.id_type.is_empty() || id.id_data.is_empty() {
+                    return Err(scs_errors::invalid_request(format!(
+                        "run_as identity has an empty id_type or id_data: {id:?}"
+                    )));
+                }
+                Ok(MononokeIdentity::from_legacy_type_data(
+                    id.id_type, id.id_data,
+                ))
+            })
+            .collect::<Result<MononokeIdentitySet, _>>()?,
+        thrift::RunAsIdentities::encoded_authenticated_identities(bytes) => {
+            MononokeIdentity::try_from_thrift_compact_bytes(&bytes).map_err(|err| {
+                scs_errors::invalid_request(format!(
+                    "invalid encoded_authenticated_identities: {err:#}"
+                ))
+            })?
+        }
+        thrift::RunAsIdentities::UnknownField(variant) => {
+            return Err(
+                scs_errors::invalid_request(format!("unknown run_as variant: {variant}")).into(),
+            );
+        }
+    };
+    if identities.is_empty() {
+        return Err(
+            scs_errors::invalid_request("run_as was set but resolved to no identities").into(),
+        );
+    }
+    Ok(identities)
+}
 
 struct CommitFileDiffsItem {
     path_diff_context: ChangesetPathDiffContext<Repo>,
@@ -1237,8 +1284,9 @@ impl SourceControlServiceImpl {
         let pushvars: Option<HashMap<String, Bytes>> = params
             .pushvars
             .map(|p| p.into_iter().map(|(k, v)| (k, Bytes::from(v))).collect());
+        let run_as = params.run_as.map(run_as_identities).transpose()?;
         let outcomes = changeset
-            .run_hooks(params.bookmark, pushvars.as_ref())
+            .run_hooks(params.bookmark, pushvars.as_ref(), run_as)
             .await?;
 
         let mut outcomes_map = BTreeMap::new();
@@ -1747,5 +1795,60 @@ impl SourceControlServiceImpl {
             changed_paths: changed_paths.into_iter().collect(),
             ..Default::default()
         })
+    }
+}
+
+#[cfg(test)]
+mod run_as_tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn typed_variant_maps_to_identities() {
+        let run_as = thrift::RunAsIdentities::identities(vec![
+            thrift::RunAsIdentity {
+                id_type: "USER".to_string(),
+                id_data: "alice".to_string(),
+                ..Default::default()
+            },
+            thrift::RunAsIdentity {
+                id_type: "SERVICE_IDENTITY".to_string(),
+                id_data: "landservice".to_string(),
+                ..Default::default()
+            },
+        ]);
+        let identities = run_as_identities(run_as).expect("typed run_as should convert");
+        assert_eq!(identities.len(), 2);
+        assert!(
+            identities
+                .iter()
+                .any(|id| id.id_type() == "USER" && id.id_data() == "alice")
+        );
+        assert!(
+            identities
+                .iter()
+                .any(|id| id.id_type() == "SERVICE_IDENTITY" && id.id_data() == "landservice")
+        );
+    }
+
+    #[mononoke::test]
+    fn unknown_variant_is_rejected() {
+        assert!(run_as_identities(thrift::RunAsIdentities::UnknownField(7)).is_err());
+    }
+
+    #[mononoke::test]
+    fn empty_identities_list_is_rejected() {
+        assert!(run_as_identities(thrift::RunAsIdentities::identities(vec![])).is_err());
+    }
+
+    #[mononoke::test]
+    fn empty_id_component_is_rejected() {
+        let run_as = thrift::RunAsIdentities::identities(vec![thrift::RunAsIdentity {
+            id_type: "USER".to_string(),
+            id_data: String::new(),
+            ..Default::default()
+        }]);
+        assert!(run_as_identities(run_as).is_err());
     }
 }

@@ -47,6 +47,7 @@ rust_binary(
         "//eden/mononoke/clients/scsc/raw_client_lib:scs_client_raw",
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/cmdlib/commit_id_types:commit_id_types",
+        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/scs/if:source_control-rust",

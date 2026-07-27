@@ -606,6 +606,10 @@ impl HookManager {
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        // When the hooks are being run as a different set of identities than the
+        // caller's (e.g. `commit_run_hooks` with `run_as`), this holds the
+        // caller's real identities for audit logging. `None` for real pushes.
+        run_as_original_identities: Option<&MononokeIdentitySet>,
     ) -> Result<Vec<HookOutcome>, Error> {
         debug!("Running hooks for bookmark {:?}", bookmark);
 
@@ -624,6 +628,21 @@ impl HookManager {
 
         if let Some(user) = user_option {
             scuba.add("user", user);
+        }
+
+        // Record when hooks are run as a different set of identities than the
+        // real caller (e.g. `commit_run_hooks` with `run_as`) so the scm_hooks
+        // scuba table captures both that run_as was used and who the real caller
+        // was. `scuba` propagates into each hook's per-execution log below.
+        if let Some(original_identities) = run_as_original_identities {
+            scuba.add("run_as", true);
+            scuba.add(
+                "original_identities_when_run_as",
+                original_identities
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>(),
+            );
         }
 
         let resolved_hooks = hooks
