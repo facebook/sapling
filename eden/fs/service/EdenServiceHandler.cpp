@@ -5218,7 +5218,7 @@ EdenServiceHandler::co_predictiveGlobFilesImpl(
       endTime,
       std::move(sandcastleAlias));
 
-  auto resultTry = co_await co_awaitTry(globber.co_glob(
+  auto resultTry = co_await co_awaitTry(globber.glob(
       mountHandle.getEdenMountPtr(),
       serverState,
       std::move(globs),
@@ -5616,7 +5616,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
     }
 
     if (needFallback) {
-      result = co_await globber.co_glob(
+      result = co_await globber.glob(
           mountHandle.getEdenMountPtr(),
           server_->getServerState(),
           std::move(*params->globs()),
@@ -5625,7 +5625,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
   } else {
     // Path 2/3: SaplingRemoteAPI not offloadable or not enabled
     XLOG(DBG3, "Using local globFiles");
-    result = co_await globber.co_glob(
+    result = co_await globber.glob(
         mountHandle.getEdenMountPtr(),
         server_->getServerState(),
         std::move(*params->globs()),
@@ -5672,7 +5672,7 @@ folly::coro::Task<void> EdenServiceHandler::co_prefetchFiles(
         maybeLogExpensiveGlob(
             *p->globs(), *p->searchRoot(), globber, context, serverState);
 
-        co_await globber.co_glob(
+        co_await globber.glob(
             mountHandle.getEdenMountPtr(),
             serverState,
             std::move(*p->globs()),
@@ -5854,7 +5854,7 @@ EdenServiceHandler::prefetchFilesV2Impl(
 
   auto prefetchContext = helper->getPrefetchFetchContext().copy();
 
-  auto glob = co_await globber.co_glob(
+  auto glob = co_await globber.glob(
       mountHandle.getEdenMountPtr(),
       server_->getServerState(),
       std::move(*params->globs()),

@@ -37,15 +37,7 @@ class ThriftGlobImpl {
       const PrefetchParams& params,
       bool prefetchOptimizations);
 
-  // DEPRECATED: use co_glob directly. Futures wrapper kept for non-coroutine
-  // callers; remove once all callers have migrated.
-  ImmediateFuture<std::unique_ptr<Glob>> glob(
-      std::shared_ptr<EdenMount> edenMount,
-      std::shared_ptr<ServerState> serverState,
-      std::vector<std::string> globs,
-      const ObjectFetchContextPtr& fetchContext);
-
-  folly::coro::now_task<std::unique_ptr<Glob>> co_glob(
+  folly::coro::now_task<std::unique_ptr<Glob>> glob(
       std::shared_ptr<EdenMount> edenMount,
       std::shared_ptr<ServerState> serverState,
       std::vector<std::string> globs,

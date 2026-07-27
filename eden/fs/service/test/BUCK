@@ -88,6 +88,8 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_server_state",
+        "//folly/coro:gtest_helpers",
+        "//folly/coro:task",
     ],
 )
 

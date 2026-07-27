@@ -147,36 +147,7 @@ ThriftGlobImpl::ThriftGlobImpl(
       rootIds_{*params.revisions()},
       searchRootUser_{*params.searchRoot()} {}
 
-ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
-    std::shared_ptr<EdenMount> edenMount,
-    std::shared_ptr<ServerState> serverState,
-    std::vector<std::string> globs,
-    const ObjectFetchContextPtr& fetchContext) {
-  // Move *this into the lambda so it outlives the coroutine even if the caller
-  // destroys its globber after glob() returns.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [globber = std::move(*this)](
-              auto edenMount,
-              auto serverState,
-              auto globs,
-              auto fetchContext) mutable
-              -> folly::coro::Task<std::unique_ptr<Glob>> {
-            co_return co_await globber.co_glob(
-                std::move(edenMount),
-                std::move(serverState),
-                std::move(globs),
-                std::move(fetchContext));
-          },
-          std::move(edenMount),
-          std::move(serverState),
-          std::move(globs),
-          fetchContext.copy())
-          .semi()};
-}
-
-folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
+folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<EdenMount> edenMount,
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
@@ -299,9 +270,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::co_glob(
             }));
   }
 
-  // Copy member fields before suspension point — the ThriftGlobImpl object
-  // may be destroyed while co_await suspends (it's owned by the caller's
-  // lambda which returns the ImmediateFuture before co_glob completes).
+  // Copy member fields into locals before the suspension point below.
   bool suppressFileList = suppressFileList_;
   bool listOnlyFiles = listOnlyFiles_;
   bool wantDtype = wantDtype_;

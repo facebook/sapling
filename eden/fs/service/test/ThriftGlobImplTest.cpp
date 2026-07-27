@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Task.h>
 #include <gtest/gtest.h>
 #include <cstddef>
 #include <memory>
@@ -35,23 +37,19 @@ void assertInodeCounters(
   ASSERT_EQ(unloaded, expectedUnloaded);
 }
 
-class ThriftGlobImplTest : public ::testing::TestWithParam<bool> {
+class ThriftGlobImplTest : public ::testing::Test {
  protected:
   void SetUp() override {
     builder_.setFile("foo/bar/dir1/file.txt", "contents");
     builder_.setFile("foo/bar/dir2/file.txt", "contents");
     mount_.initialize(builder_);
-
-    if (GetParam()) {
-      enableCoroutinesConfig(mount_);
-    }
   }
 
   FakeTreeBuilder builder_;
   TestMount mount_;
 };
 
-TEST_P(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
+CO_TEST_F(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
   auto serverState = createTestServerState();
   auto edenMount = mount_.getEdenMount();
   auto* inodeMap = edenMount->getInodeMap();
@@ -62,13 +60,11 @@ TEST_P(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
 
   std::string glob{"**/*.txt"};
   auto globber = ThriftGlobImpl{GlobParams{}};
-  auto globFuture = globber.glob(
+  co_await globber.glob(
       edenMount,
       serverState,
       std::vector<std::string>{"**/*.txt"},
       ObjectFetchContext::getNullContext());
-
-  auto _result = std::move(globFuture).get();
 
   // Then we compare the number, both counter should remain the same before and
   // after the call.
@@ -87,13 +83,5 @@ TEST_P(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
   // - foo/bar/dir2/file.txt
   assertInodeCounters(inodeMap, loaded + 6, unloaded);
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    ThriftGlobImplTestVariants,
-    ThriftGlobImplTest,
-    ::testing::Bool(),
-    [](const ::testing::TestParamInfo<bool>& info) {
-      return info.param ? "Coroutines" : "Futures";
-    });
 
 } // namespace facebook::eden
