@@ -33,7 +33,9 @@ use crate::Manifest;
 use crate::PathOrPrefix;
 use crate::PathTree;
 use crate::StoreLoadable;
+use crate::TrieMapOps;
 use crate::comparison::diff_manifest_node_by_listing;
+use crate::comparison::diff_manifests;
 use crate::select::select_path_tree;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -323,7 +325,14 @@ where
             Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             Error,
         >,
-    > {
+    >
+    where
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
+                Store,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            > + Eq,
+    {
         self.filtered_diff(
             ctx,
             store.clone(),
@@ -339,6 +348,21 @@ where
     /// `output_filter` lets us configure what will be returned from filtered_diff. it accepts
     /// every diff entry and returns Option<Out>, so it acts similar to filter_map() function
     /// recurse_pruner is a function that allows us to skip iterating over some subtrees
+    ///
+    /// When the `scm/mononoke:enable_sharding_aware_manifest_diff` JustKnob is
+    /// enabled, this is sharding-aware via [`diff_manifests`]: replacement-free
+    /// subtrees prune identical sub-shards by their content-addressed id without
+    /// loading them -- this is what keeps sharded-manifest (e.g. content_manifest)
+    /// diffs cheap; see the `derived_data_use_content_manifests` SEV. Subtrees
+    /// that carry a manifest replacement are diffed by listing, so a large
+    /// directory off the replacement paths is still pruned.
+    ///
+    /// The JustKnob gates a behavioural change: the sharding-aware path yields
+    /// the (unordered) diff entries in a different order than the legacy
+    /// [`ManifestOps::filtered_diff_slow`] path. It defaults to off so the
+    /// ordering is unchanged until the fast path is deliberately rolled out; flip
+    /// it off again to instantly revert if a client turns out to depend on the
+    /// legacy order.
     fn filtered_diff<FilterMap, Out, RecursePruner>(
         &self,
         ctx: CoreContext,
@@ -361,16 +385,44 @@ where
             + 'static,
         RecursePruner: Fn(&Diff<Self>) -> bool + Clone + Send + 'static,
         Out: Send + 'static,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
+                Store,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            > + Eq,
     {
-        self.filtered_diff_slow(
-            ctx,
-            store,
-            other,
-            other_store,
-            output_filter,
-            recurse_pruner,
-            manifest_replacements,
-        )
+        if justknobs::eval(
+            "scm/mononoke:enable_sharding_aware_manifest_diff",
+            None,
+            None,
+        ) {
+            diff_manifests(
+                ctx,
+                store,
+                self.clone(),
+                other_store,
+                other,
+                recurse_pruner,
+                manifest_replacements,
+            )
+            .filter_map(move |result| {
+                future::ready(match result {
+                    Ok(diff) => output_filter(diff).map(Ok),
+                    Err(err) => Some(Err(err)),
+                })
+            })
+            .boxed()
+        } else {
+            self.filtered_diff_slow(
+                ctx,
+                store,
+                other,
+                other_store,
+                output_filter,
+                recurse_pruner,
+                manifest_replacements,
+            )
+        }
     }
 
     /// The non-sharding-aware diff implementation, used by

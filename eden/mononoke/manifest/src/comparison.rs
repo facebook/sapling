@@ -700,7 +700,7 @@ where
 /// replacement are diffed by listing (the old-side entries are substituted),
 /// while replacement-free subtrees keep the fast id-pruned path -- so a huge
 /// directory off the replacement paths is still never enumerated.
-pub fn diff_manifests<TreeId, Leaf, Store, Pruner>(
+pub(crate) fn diff_manifests<TreeId, Leaf, Store, Pruner>(
     ctx: CoreContext,
     old_store: Store,
     old_id: TreeId,

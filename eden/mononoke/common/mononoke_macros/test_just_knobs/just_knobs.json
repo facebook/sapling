@@ -10,6 +10,7 @@
     "scm/mononoke:derived_data_disable_remote_derivation": false,
     "scm/mononoke:derived_data_use_streaming_derivation": true,
     "scm/mononoke:derived_data_use_content_manifests": true,
+    "scm/mononoke:enable_sharding_aware_manifest_diff": true,
     "scm/mononoke:derived_data_use_store_mapping_batch": false,
     "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping": false,
     "scm/mononoke:derived_data_tailer_skip_pipeline_types": true,

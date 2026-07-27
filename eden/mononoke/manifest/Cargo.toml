@@ -20,6 +20,7 @@ either = "1.16.0"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 itertools = "0.15.0"
+justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
