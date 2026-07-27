@@ -80,7 +80,9 @@ class Client:
         self._auth_token_regex = ui.config(
             "phabricator",
             "auth-expired-regex",
-            r"invalid auth token|the provided crypto auth token\(s\) are expired",
+            # interngraph prefixes every CAT rejection (expired / empty list /
+            # wrong format) with this stem.
+            r"invalid auth token|the provided crypto auth token",
         )
         if not self._mock:
             self._app_id = ui.config("phabricator", "graphql_app_id")
