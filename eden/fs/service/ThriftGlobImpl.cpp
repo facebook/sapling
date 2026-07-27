@@ -395,7 +395,7 @@ getLocalGlobResults(
   auto& store = edenMount->getObjectStore();
 
   auto remoteGlobFiles =
-      co_await store->co_getGlobFiles(rootId, suffixGlobs, prefixes, context);
+      co_await store->getGlobFiles(rootId, suffixGlobs, prefixes, context);
 
   auto localFiles = co_await computeLocalFiles(
       edenMount,

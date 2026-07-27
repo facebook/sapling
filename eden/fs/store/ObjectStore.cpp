@@ -1005,33 +1005,17 @@ folly::coro::now_task<bool> ObjectStore::co_areBlobsEqual(
   co_return std::get<0>(results) == std::get<1>(results);
 }
 
-ImmediateFuture<BackingStore::GetGlobFilesResult> ObjectStore::getGlobFiles(
+folly::coro::now_task<BackingStore::GetGlobFilesResult>
+ObjectStore::getGlobFiles(
     const RootId& id,
     const std::vector<std::string>& globs,
     const std::vector<std::string>& prefixes,
     const ObjectFetchContextPtr& context) const {
-  return getGlobFilesImpl(id, globs, prefixes, context);
-}
-
-ImmediateFuture<BackingStore::GetGlobFilesResult> ObjectStore::getGlobFilesImpl(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& prefixes,
-    const ObjectFetchContextPtr& /*context*/) const {
-  return backingStore_->getGlobFiles(id, globs, prefixes);
+  co_return co_await getGlobFilesImpl(id, globs, prefixes, context);
 }
 
 folly::coro::now_task<BackingStore::GetGlobFilesResult>
-ObjectStore::co_getGlobFiles(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& prefixes,
-    const ObjectFetchContextPtr& context) const {
-  co_return co_await co_getGlobFilesImpl(id, globs, prefixes, context);
-}
-
-folly::coro::now_task<BackingStore::GetGlobFilesResult>
-ObjectStore::co_getGlobFilesImpl(
+ObjectStore::getGlobFilesImpl(
     const RootId& id,
     const std::vector<std::string>& globs,
     const std::vector<std::string>& prefixes,

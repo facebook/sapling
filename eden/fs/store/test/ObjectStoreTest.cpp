@@ -541,7 +541,7 @@ CO_TEST_P(ObjectStoreTest, glob_files_test) {
   auto context = makeRefPtr<FetchContext>();
   auto globs = std::vector<std::string>{".txt"};
 
-  auto result = co_await objectStore->co_getGlobFiles(
+  auto result = co_await objectStore->getGlobFiles(
       rootId,
       globs,
       std::vector<std::string>{},

@@ -5394,7 +5394,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
                      std::vector<std::string> px,
                      ObjectFetchContextPtr ctx)
                       -> folly::coro::Task<BackingStore::GetGlobFilesResult> {
-                    co_return co_await s->co_getGlobFiles(rootId, sg, px, ctx);
+                    co_return co_await s->getGlobFiles(rootId, sg, px, ctx);
                   },
                   edenMount->getObjectStore(),
                   store.parseRootId(id),

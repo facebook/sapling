@@ -392,13 +392,7 @@ class ObjectStore : public IObjectStore,
   /**
    * Get file paths matching the given globs
    */
-  ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes,
-      const ObjectFetchContextPtr& context) const;
-
-  folly::coro::now_task<BackingStore::GetGlobFilesResult> co_getGlobFiles(
+  folly::coro::now_task<BackingStore::GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes,
@@ -537,13 +531,7 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
 
-  ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes,
-      const ObjectFetchContextPtr& context) const;
-
-  folly::coro::now_task<BackingStore::GetGlobFilesResult> co_getGlobFilesImpl(
+  folly::coro::now_task<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes,
