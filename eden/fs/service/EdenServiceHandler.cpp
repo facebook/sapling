@@ -5156,159 +5156,40 @@ folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
   auto isBackground = *params->background();
-  if (server_->getServerState()
-          ->getEdenConfig()
-          ->enableCoroutinesPhase3.getValue()) {
-    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-    auto task = folly::coro::co_invoke(
-        [self = shared_from_this()](std::unique_ptr<GlobParams> p)
-            -> folly::coro::Task<std::unique_ptr<Glob>> {
-          co_return co_await self->co_predictiveGlobFilesImpl(std::move(p));
-        },
-        std::move(params));
+  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+  auto task = folly::coro::co_invoke(
+      [self = shared_from_this()](std::unique_ptr<GlobParams> p)
+          -> folly::coro::Task<std::unique_ptr<Glob>> {
+        co_return co_await self->co_predictiveGlobFilesImpl(std::move(p));
+      },
+      std::move(params));
 
-    if (server_->usingThriftSerialExecution()) {
-      // Already globally serialized — just handle background detach.
-      if (isBackground) {
-        folly::futures::detachOn(
-            server_->getServerState()->getThreadPool().get(),
-            std::move(task).semi());
-        return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>())
-            .semi();
-      }
-      return std::move(task).semi();
-    }
-
-    // Pin all coroutine resumptions to a SerialExecutor so CPU work
-    // between co_await points is serialized, matching the futures path.
-    // Without co_withExecutor, the coroutine would escape the serial
-    // executor after the first external co_await (e.g. getTopUsedDirs),
-    // allowing concurrent fan-out from multiple requests.
-    folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
-        server_->getServer()->getThreadManager().get());
-    auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
+  if (server_->usingThriftSerialExecution()) {
+    // Already globally serialized — just handle background detach.
     if (isBackground) {
-      folly::futures::detachOn(serial, std::move(pinned).start());
+      folly::futures::detachOn(
+          server_->getServerState()->getThreadPool().get(),
+          std::move(task).semi());
       return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>())
           .semi();
     }
-    return std::move(pinned).start();
-  }
-  auto mountHandle = lookupMount(params->mountPoint());
-  if (!params->revisions().value().empty()) {
-    params->revisions() =
-        resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
-  }
-  ThriftGlobImpl globber{*params};
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint(), globber.logString());
-
-  /* set predictive glob fetch parameters */
-  // if numResults is not specified, use default predictivePrefetchProfileSize
-  auto& serverState = server_->getServerState();
-  auto numResults =
-      serverState->getEdenConfig()->predictivePrefetchProfileSize.getValue();
-  // if user is not specified, get user info from the server state
-  auto user = folly::StringPiece{serverState->getUserInfo().getUsername()};
-  auto backingStore = mountHandle.getObjectStore().getBackingStore();
-  // if repo is not specified, get repository name from the backingstore
-  auto repo_optional = backingStore->getRepoName();
-  if (repo_optional == std::nullopt) {
-    // typeid() does not evaluate expressions
-    auto& r = *backingStore.get();
-    throw std::runtime_error(
-        folly::to<std::string>(
-            "mount must use SaplingBackingStore, type is ", typeid(r).name()));
+    return std::move(task).semi();
   }
 
-  auto repo = repo_optional.value();
-  auto os = getOperatingSystemName();
-
-  // sandcastleAlias, startTime, and endTime are optional parameters
-  std::optional<std::string> sandcastleAlias;
-  std::optional<uint64_t> startTime;
-  std::optional<uint64_t> endTime;
-  // check if this is a sandcastle job (getenv will return nullptr if the env
-  // variable is not set)
-  auto scAliasEnv = std::getenv("SANDCASTLE_ALIAS");
-  sandcastleAlias = scAliasEnv ? std::make_optional(std::string(scAliasEnv))
-                               : sandcastleAlias;
-
-  // check specified predictive parameters
-  auto predictiveGlob = params->predictiveGlob();
-  if (predictiveGlob.has_value()) {
-    numResults = predictiveGlob->numTopDirectories().value_or(numResults);
-    user = predictiveGlob->user().has_value() ? predictiveGlob->user().value()
-                                              : user;
-    repo = predictiveGlob->repo().has_value() ? predictiveGlob->repo().value()
-                                              : repo;
-    os = predictiveGlob->os().has_value() ? predictiveGlob->os().value() : os;
-    startTime = predictiveGlob->startTime().has_value()
-        ? predictiveGlob->startTime().value()
-        : startTime;
-    endTime = predictiveGlob->endTime().has_value()
-        ? predictiveGlob->endTime().value()
-        : endTime;
+  // Pin all coroutine resumptions to a SerialExecutor so CPU work
+  // between co_await points is serialized, matching the futures path.
+  // Without co_withExecutor, the coroutine would escape the serial
+  // executor after the first external co_await (e.g. getTopUsedDirs),
+  // allowing concurrent fan-out from multiple requests.
+  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
+      server_->getServer()->getThreadManager().get());
+  auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
+  if (isBackground) {
+    folly::futures::detachOn(serial, std::move(pinned).start());
+    return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>())
+        .semi();
   }
-
-  auto& fetchContext = helper->getPrefetchFetchContext();
-
-  auto future =
-      ImmediateFuture{// @lint-ignore CLANGTIDY
-                      // facebook-folly-coro-return-captures-local-var
-                      folly::coro::co_invoke(
-                          [](UsageService* svc,
-                             std::string u,
-                             std::string r,
-                             uint32_t n,
-                             std::string o,
-                             std::optional<uint64_t> st,
-                             std::optional<uint64_t> et,
-                             std::optional<std::string> sc)
-                              -> folly::coro::Task<std::vector<std::string>> {
-                            co_return co_await svc->getTopUsedDirs(
-                                u, r, n, o, st, et, std::move(sc));
-                          },
-                          usageService_.get(),
-                          std::string{user},
-                          std::string{repo},
-                          numResults,
-                          std::string{os},
-                          startTime,
-                          endTime,
-                          std::move(sandcastleAlias))
-                          .semi()}
-          .thenValue([globber = std::move(globber),
-                      mountHandle,
-                      serverState,
-                      fetchContext = fetchContext.copy()](
-                         std::vector<std::string>&& globs) mutable {
-            return globber.glob(
-                mountHandle.getEdenMountPtr(),
-                serverState,
-                globs,
-                fetchContext);
-          })
-          .thenTry([mountHandle,
-                    params = std::move(params),
-                    helper = std::move(helper)](
-                       folly::Try<std::unique_ptr<Glob>> tryGlob) {
-            if (tryGlob.hasException()) {
-              auto& ew = tryGlob.exception();
-              XLOGF(
-                  ERR,
-                  "Error fetching predictive file globs: {}",
-                  folly::exceptionStr(ew));
-            }
-            return tryGlob;
-          });
-
-  // The glob code has a very large fan-out that can easily overload the
-  // Thrift CPU worker pool. To combat with that, we limit the execution to a
-  // single thread by using `folly::SerialExecutor` so the glob queries will
-  // not overload the executor.
-  return serialDetachIfBackgrounded<Glob>(
-      std::move(future), server_, isBackground);
+  return std::move(pinned).start();
 }
 
 folly::coro::now_task<std::unique_ptr<Glob>>
