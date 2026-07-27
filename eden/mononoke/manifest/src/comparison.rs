@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::iter::Peekable;
 
+use anyhow::Context;
 use anyhow::Result;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
@@ -18,14 +20,18 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_watchdog::WatchdogExt;
+use mononoke_macros::mononoke;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
 use mononoke_types::NonRootMPath;
 
+use crate::Diff;
 use crate::Entry;
 use crate::Manifest;
 use crate::TrieMapOps;
+use crate::ops::ReplacementsHolder;
 
 /// How much of the trie keyspace a comparison result covers: a single complete
 /// entry, or a whole unexpanded sub-trie under a byte-prefix.
@@ -399,6 +405,203 @@ where
         },
     )
     .try_flatten()
+}
+
+/// A queued subtree diff plus the manifest replacements that apply within it.
+type RecurseWork<TreeId, Leaf> = (
+    Diff<TreeId>,
+    BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+);
+
+/// Classify a single child, given its (optional) old and new entries, into an
+/// optional leaf-level `Diff` output and an optional subtree `Diff` to recurse
+/// into. Callers must have already established that the entries differ (equal
+/// children produce no diff).
+///
+/// Generic over the tree-id payload `T` so both the unordered (`T = TreeId`) and
+/// the ordered (`T = (Weight, TreeId)`) paths share the exact leaf/tree
+/// classification; the ordered path strips the weight afterwards. A file<->dir
+/// transition yields both a leaf output and a subtree recursion.
+pub(crate) fn classify_child<T, Leaf>(
+    path: MPath,
+    old: Option<Entry<T, Leaf>>,
+    new: Option<Entry<T, Leaf>>,
+) -> (Option<Diff<Entry<T, Leaf>>>, Option<Diff<T>>) {
+    match (old, new) {
+        (Some(Entry::Leaf(old)), Some(Entry::Leaf(new))) => (
+            Some(Diff::Changed(path, Entry::Leaf(old), Entry::Leaf(new))),
+            None,
+        ),
+        (Some(Entry::Tree(old)), Some(new @ Entry::Leaf(_))) => (
+            Some(Diff::Added(path.clone(), new)),
+            Some(Diff::Removed(path, old)),
+        ),
+        (Some(old @ Entry::Leaf(_)), Some(Entry::Tree(new))) => (
+            Some(Diff::Removed(path.clone(), old)),
+            Some(Diff::Added(path, new)),
+        ),
+        (Some(Entry::Tree(old)), Some(Entry::Tree(new))) => {
+            (None, Some(Diff::Changed(path, old, new)))
+        }
+        (Some(old @ Entry::Leaf(_)), None) => (Some(Diff::Removed(path, old)), None),
+        (Some(Entry::Tree(old)), None) => (None, Some(Diff::Removed(path, old))),
+        (None, Some(new @ Entry::Leaf(_))) => (Some(Diff::Added(path, new)), None),
+        (None, Some(Entry::Tree(new))) => (None, Some(Diff::Added(path, new))),
+        (None, None) => (None, None),
+    }
+}
+
+/// Apply a [`classify_child`] result for the unordered paths: output the leaf
+/// diff, and queue the subtree diff (carrying `replacements`) subject to the
+/// pruner.
+fn push_child<TreeId, Leaf, Pruner>(
+    (output, recurse): (Option<Diff<Entry<TreeId, Leaf>>>, Option<Diff<TreeId>>),
+    outs: &mut Vec<Diff<Entry<TreeId, Leaf>>>,
+    recurse_work: &mut Vec<RecurseWork<TreeId, Leaf>>,
+    replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    recurse_pruner: &Pruner,
+) where
+    Pruner: Fn(&Diff<TreeId>) -> bool,
+{
+    if let Some(output) = output {
+        outs.push(output);
+    }
+    if let Some(work) = recurse {
+        if recurse_pruner(&work) {
+            recurse_work.push((work, replacements));
+        }
+    }
+}
+
+/// Diff a single node by listing both sides and substituting old-side entries
+/// with any `replacements`, returning the child `Diff`s plus the subtree work to
+/// recurse into (with the pruner already applied, and the replacements that
+/// apply within each subtree).
+///
+/// This is the list-based per-node core shared by [`diff_manifests`] (for
+/// replacement-bearing subtrees) and [`crate::ManifestOps::filtered_diff_slow`]
+/// (which stays generic over manifest types without `TrieMapOps`), so it must
+/// not depend on `TrieMapOps`. `work` is the node to expand: `Changed` compares
+/// both sides, `Added`/`Removed` enumerate one side (a replacement injects the
+/// opposite side).
+pub(crate) async fn diff_manifest_node_by_listing<TreeId, Leaf, Store, Pruner>(
+    ctx: &CoreContext,
+    old_store: &Store,
+    new_store: &Store,
+    work: Diff<TreeId>,
+    mut replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    recurse_pruner: Pruner,
+) -> Result<(
+    Vec<Diff<Entry<TreeId, Leaf>>>,
+    Vec<RecurseWork<TreeId, Leaf>>,
+)>
+where
+    Store: Clone + Send + Sync + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Eq + Unpin + 'static,
+    // Owned (not `&Pruner`) so the future stays `Send` without requiring
+    // `Pruner: Sync` -- `RecursePruner` on the diff APIs is only `Send`.
+    Pruner: Fn(&Diff<TreeId>) -> bool + Send,
+{
+    let mut outs: Vec<Diff<Entry<TreeId, Leaf>>> = Vec::new();
+    let mut recurse: Vec<RecurseWork<TreeId, Leaf>> = Vec::new();
+    match work {
+        Diff::Changed(path, left, right) => {
+            let l = mononoke::spawn_task({
+                cloned!(ctx, left, old_store);
+                async move { left.load(&ctx, &old_store).watched().await }
+            });
+            let r = mononoke::spawn_task({
+                cloned!(ctx, right, new_store);
+                async move { right.load(&ctx, &new_store).watched().await }
+            });
+            let (left_mf, right_mf) = future::try_join(l, r).await?;
+            let (left_mf, right_mf) = (left_mf?, right_mf?);
+
+            let mut stream = left_mf.list(ctx, old_store).await?;
+            while let Some((name, left)) = stream.try_next().await? {
+                tokio::task::consume_budget().await;
+                let child_path = path.join(&name);
+                let (replacement, child_replacements) =
+                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                let left = replacement.unwrap_or(left);
+                let right = right_mf.lookup(ctx, new_store, &name).await?;
+                if right.as_ref() != Some(&left) {
+                    push_child(
+                        classify_child(child_path, Some(left), right),
+                        &mut outs,
+                        &mut recurse,
+                        child_replacements,
+                        &recurse_pruner,
+                    );
+                }
+            }
+
+            let mut stream = right_mf.list(ctx, new_store).await?;
+            while let Some((name, right)) = stream.try_next().await? {
+                tokio::task::consume_budget().await;
+                if left_mf.lookup(ctx, old_store, &name).await?.is_none() {
+                    let child_path = path.join(&name);
+                    let (replacement, child_replacements) =
+                        replacements.remove(&name).unwrap_or_default().deconstruct();
+                    push_child(
+                        classify_child(child_path, replacement, Some(right)),
+                        &mut outs,
+                        &mut recurse,
+                        child_replacements,
+                        &recurse_pruner,
+                    );
+                }
+            }
+            ReplacementsHolder::finalize(&path, replacements)
+                .context("Failed to finalize replacements for changed tree")?;
+            outs.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
+        }
+        Diff::Added(path, tree) => {
+            let manifest = tree.load(ctx, new_store).await?;
+            let mut stream = manifest.list(ctx, new_store).await?;
+            while let Some((name, right)) = stream.try_next().await? {
+                tokio::task::consume_budget().await;
+                let child_path = path.join(&name);
+                let (replacement, child_replacements) =
+                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                push_child(
+                    classify_child(child_path, replacement, Some(right)),
+                    &mut outs,
+                    &mut recurse,
+                    child_replacements,
+                    &recurse_pruner,
+                );
+            }
+            ReplacementsHolder::finalize(&path, replacements)
+                .context("Failed to finalize replacements for added tree")?;
+            outs.push(Diff::Added(path, Entry::Tree(tree)));
+        }
+        Diff::Removed(path, tree) => {
+            let manifest = tree.load(ctx, old_store).await?;
+            let mut stream = manifest.list(ctx, old_store).await?;
+            while let Some((name, entry)) = stream.try_next().await? {
+                tokio::task::consume_budget().await;
+                let child_path = path.join(&name);
+                let (replacement, child_replacements) =
+                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                let entry = replacement.unwrap_or(entry);
+                push_child(
+                    classify_child(child_path, Some(entry), None),
+                    &mut outs,
+                    &mut recurse,
+                    child_replacements,
+                    &recurse_pruner,
+                );
+            }
+            ReplacementsHolder::finalize(&path, replacements)
+                .context("Failed to finalize replacements for removed tree")?;
+            outs.push(Diff::Removed(path, Entry::Tree(tree)));
+        }
+    }
+    Ok((outs, recurse))
 }
 
 #[cfg(test)]
