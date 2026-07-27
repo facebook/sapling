@@ -1,0 +1,291 @@
+// (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+
+use std::io::Cursor;
+use std::sync::Arc;
+
+use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
+use repo_event_publisher::AllBookmarksFilter;
+use repo_event_publisher::ScribeListener;
+use repo_update_logger::PlainBookmarkInfo;
+use scribe_api::ReadFlavor;
+use scribe_api::consumer::ScribeConsumerOptions;
+use scribe_api::consumer::SerializationFormat;
+use scribe_api::inmemory::create_consumer_producer_pair;
+use scribe_api::producer::ScribeProducer;
+use scribe_api::producer::ScribeProducerOptions;
+
+#[mononoke::fbinit_test]
+async fn test_basic_listener_creation(fb: FacebookInit) -> anyhow::Result<()> {
+    ScribeListener::<PlainBookmarkInfo, _>::new(fb, "test_category", AllBookmarksFilter {})
+        .expect("Failed to create scribe listener");
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_listener_with_single_subscriber(fb: FacebookInit) -> anyhow::Result<()> {
+    unsafe {
+        std::env::set_var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY", "log");
+    }
+    let producer_options = ScribeProducerOptions::builder()
+        .name("test_producer")
+        .build();
+    let consumer_options = ScribeConsumerOptions::builder()
+        .backlog(100)
+        .serialization_format(SerializationFormat::SCUBA_JSON)
+        .maybe_read_flavor(Some(ReadFlavor::HIGH_DURABILITY))
+        .build();
+    let (consumer, producer) =
+        create_consumer_producer_pair(fb, "test_category", consumer_options, producer_options)?;
+
+    let bookmark_info_json = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    let consumer = Arc::new(consumer);
+    let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
+        fb,
+        consumer.clone(),
+        "test_category".to_string(),
+        AllBookmarksFilter {},
+    )
+    .expect("Failed to create scribe listener");
+    listener.listen_and_notify();
+    let mut receiver = listener.subscribe(&"test_repo".to_string());
+    producer.write_message(&mut Cursor::new(bookmark_info_json.as_bytes()), None)?;
+    let notification_bookmark_info = receiver.recv().await.expect("Failed to receive message");
+    assert_eq!(
+        notification_bookmark_info.bookmark_name,
+        "test_bookmark".to_string()
+    );
+    // Send multiple messages and ensure that the subscriber gets all of them
+    let message_1 = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "new_bookmark",
+                "new_bookmark_value": "new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "create",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    let message_2 = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "deleted_bookmark",
+                "old_bookmark_value": "test_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "delete",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    let message_3 = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    producer.write_message(&mut Cursor::new(message_1.as_bytes()), None)?;
+    producer.write_message(&mut Cursor::new(message_2.as_bytes()), None)?;
+    producer.write_message(&mut Cursor::new(message_3.as_bytes()), None)?;
+    // Ensure all three messages are received in the expected order
+    let received_msg_1 = receiver.recv().await?;
+    let received_msg_2 = receiver.recv().await?;
+    let received_msg_3 = receiver.recv().await?;
+    assert_eq!(received_msg_1.bookmark_name, "new_bookmark".to_string());
+    assert_eq!(received_msg_2.bookmark_name, "deleted_bookmark".to_string());
+    assert_eq!(received_msg_3.bookmark_name, "test_bookmark".to_string());
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_listener_with_multiple_subscriber_same_repo(fb: FacebookInit) -> anyhow::Result<()> {
+    unsafe {
+        std::env::set_var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY", "log");
+    }
+    let producer_options = ScribeProducerOptions::builder()
+        .name("test_producer")
+        .build();
+    let consumer_options = ScribeConsumerOptions::builder()
+        .backlog(100)
+        .serialization_format(SerializationFormat::SCUBA_JSON)
+        .build();
+    let (consumer, producer) =
+        create_consumer_producer_pair(fb, "test_category", consumer_options, producer_options)?;
+
+    let bookmark_info_json = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
+        fb,
+        Arc::new(consumer),
+        "test_category".to_string(),
+        AllBookmarksFilter {},
+    )
+    .expect("Failed to create scribe listener");
+    listener.listen_and_notify();
+    let mut receiver_1 = listener.subscribe(&"test_repo".to_string());
+    let mut receiver_2 = listener.subscribe(&"test_repo".to_string());
+    let mut receiver_3 = listener.subscribe(&"test_repo".to_string());
+    producer.write_message(&mut Cursor::new(bookmark_info_json.as_bytes()), None)?;
+    // Ensure that all subscribers get the expected notification
+    let notification_1 = receiver_1.recv().await?;
+    let notification_2 = receiver_2.recv().await?;
+    let notification_3 = receiver_3.recv().await?;
+    assert_eq!(notification_1.bookmark_name, "test_bookmark".to_string());
+    assert_eq!(notification_2.bookmark_name, "test_bookmark".to_string());
+    assert_eq!(notification_3.bookmark_name, "test_bookmark".to_string());
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_listener_with_multiple_subscriber_multiple_repo(
+    fb: FacebookInit,
+) -> anyhow::Result<()> {
+    unsafe {
+        std::env::set_var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY", "log");
+    }
+    let producer_options = ScribeProducerOptions::builder()
+        .name("test_producer")
+        .build();
+    let consumer_options = ScribeConsumerOptions::builder()
+        .backlog(100)
+        .serialization_format(SerializationFormat::SCUBA_JSON)
+        .build();
+    let (consumer, producer) =
+        create_consumer_producer_pair(fb, "test_category", consumer_options, producer_options)?;
+
+    let test_repo_bookmark = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "test_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
+        fb,
+        Arc::new(consumer),
+        "test_category".to_string(),
+        AllBookmarksFilter {},
+    )
+    .expect("Failed to create scribe listener");
+    listener.listen_and_notify();
+    let mut receiver_1 = listener.subscribe(&"test_repo".to_string());
+    let mut receiver_2 = listener.subscribe(&"other_repo".to_string());
+    let mut receiver_3 = listener.subscribe(&"another_repo".to_string());
+    producer.write_message(&mut Cursor::new(test_repo_bookmark.as_bytes()), None)?;
+    let other_repo_bookmark = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "other_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    producer.write_message(&mut Cursor::new(other_repo_bookmark.as_bytes()), None)?;
+    let another_repo_bookmark = r#"
+        {
+            "int": {
+                "time": 1744712410        
+            },
+            "normal": {
+                "repo_name": "another_repo",
+                "bookmark_kind": "test_bookmark_kind",
+                "bookmark_name": "test_bookmark",
+                "old_bookmark_value": "test_old_bookmark_value",
+                "new_bookmark_value": "test_new_bookmark_value",
+                "update_reason": "test_update_reason",
+                "operation": "test_operation",
+                "tw_job_handle": "test_tw_job_handle",
+                "client_entry_point": "test_client_entry_point"
+            }
+        }
+    "#;
+    producer.write_message(&mut Cursor::new(another_repo_bookmark.as_bytes()), None)?;
+    // Ensure that all subscribers get the expected notification
+    let test_repo_bookmark = receiver_1.recv().await?;
+    let other_repo_bookmark = receiver_2.recv().await?;
+    let another_repo_bookmark = receiver_3.recv().await?;
+    assert_eq!(test_repo_bookmark.repo_name, "test_repo".to_string());
+    assert_eq!(other_repo_bookmark.repo_name, "other_repo".to_string());
+    assert_eq!(another_repo_bookmark.repo_name, "another_repo".to_string());
+
+    Ok(())
+}
