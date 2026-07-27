@@ -603,12 +603,11 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "inode_access_logger_dual_write",
-    srcs = ["InodeAccessLoggerDualWriteTest.cpp"],
+    name = "inode_access_logger_xplat",
+    srcs = ["InodeAccessLoggerXplatTest.cpp"],
     network_access = network_access_utils.none(),
     deps = [
         "//eden/common/telemetry:log_info",
-        "//eden/common/telemetry:structured_logger",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:stats",

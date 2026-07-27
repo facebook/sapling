@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/common/telemetry/StructuredLoggerFactory.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -26,7 +25,6 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/FileAccessStructuredLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/utils/Clock.h"
@@ -69,7 +67,8 @@ constexpr std::chrono::hours kMaxStrandedLifetime{1};
 ServerState::ServerState(
     UserInfo userInfo,
     EdenStatsPtr edenStats,
-    SessionInfo sessionInfo, // NOLINT(performance-unnecessary-value-param)
+    [[maybe_unused]] SessionInfo
+        sessionInfo, // NOLINT(performance-unnecessary-value-param)
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<folly::Executor> fsChannelThreadPool,
@@ -124,20 +123,11 @@ ServerState::ServerState(
           kSystemIgnoreMinPollSeconds}},
       notifier_{std::move(notifier)},
       inodeAccessLogger_{
-          inodeAccessLogger
-              ? std::move(inodeAccessLogger)
-              : std::make_shared<InodeAccessLogger>(
-                    config_,
-                    makeDefaultStructuredLogger<
-                        FileAccessStructuredLogger,
-                        EdenStatsPtr>(
-                        config_->getEdenConfig()->scribeLogger.getValue(),
-                        config_->getEdenConfig()
-                            ->fileAccessScribeCategory.getValue(),
-                        std::move(sessionInfo),
-                        edenStats_.copy()),
-                    edenStats_.copy(),
-                    xplatLogger)},
+          inodeAccessLogger ? std::move(inodeAccessLogger)
+                            : std::make_shared<InodeAccessLogger>(
+                                  config_,
+                                  edenStats_.copy(),
+                                  xplatLogger)},
       fsEventLogger_{
           initialConfig.requestSamplesPerMinute.getValue()
               ? std::make_shared<FsEventLogger>(config_, scribeLogger_)

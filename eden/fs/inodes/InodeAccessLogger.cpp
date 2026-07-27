@@ -13,13 +13,11 @@
 
 #include <re2/re2.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/telemetry/LogEvent.h"
 
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/Stats.h"
@@ -41,11 +39,9 @@ const static RE2 kFbsourceFilter("xplat\\/toolchains\\/minimal_xcode");
 
 InodeAccessLogger::InodeAccessLogger(
     std::shared_ptr<ReloadableConfig> reloadableConfig,
-    std::shared_ptr<StructuredLogger> structuredLogger,
     EdenStatsPtr edenStats,
     IXplatLogger* xplatLogger)
     : reloadableConfig_{std::move(reloadableConfig)},
-      structuredLogger_{std::move(structuredLogger)},
       edenStats_{std::move(edenStats)},
       xplatLogger_{xplatLogger} {
   workerThread_ = std::thread{[this] {
@@ -245,23 +241,13 @@ void InodeAccessLogger::processInodeAccessEvents() {
       // task can flush this cache to Scuba. This would make it possible to
       // increase the InodeAccessesPercentage without overwhelming Scribe.
 
-      // Gate on enableXplatLoggerFileAccess config:
-      // true  → XplatLogger Thrift path (Compact Protocol + ScribeD RPC)
-      // false → StructuredLogger/scribe_cat path (existing behavior)
-      if (reloadableConfig_->getEdenConfig()
-              ->enableXplatLoggerFileAccess.getValue() &&
-          xplatLogger_ != nullptr) {
+      // File accesses are logged exclusively via the XplatLogger Thrift path
+      // (Compact Protocol + ScribeD RPC). OSS builds have no xplat logger, so
+      // guard against a null logger and no-op rather than dropping through to a
+      // removed backend.
+      if (xplatLogger_ != nullptr) {
         edenStats_->increment(&TelemetryStats::fileAccessViaXplatLogger);
         logFileAccessViaXplat(repo, directory, filename, source, sourceDetail);
-      } else {
-        edenStats_->increment(&TelemetryStats::fileAccessViaStructuredLogger);
-        structuredLogger_->logEvent(
-            FileAccessEvent{
-                repo.str(),
-                std::move(directory),
-                std::move(filename),
-                std::move(source),
-                std::move(sourceDetail)});
       }
     }
   }

@@ -36,7 +36,8 @@ constexpr std::string_view kSourceDetail{"read(fd=42, offset=0, len=4096)"};
 
 namespace {
 
-// Populate a DynamicEvent the same way FileAccessEvent::populate() does.
+// Populate a DynamicEvent the same way the legacy scribe_cat file-access path
+// did, for an apples-to-apples comparison against the XplatLogger path.
 DynamicEvent makeScribeCatEvent() {
   DynamicEvent event;
   event.addString("repo", std::string{kRepo});
