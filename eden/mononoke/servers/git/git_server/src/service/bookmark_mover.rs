@@ -13,6 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransactionHook;
 use cloned::cloned;
@@ -220,23 +221,36 @@ pub async fn set_refs(
     // atomic pushes acquire the bonsai_tag_mapping row locks in a consistent
     // order (mirroring the sorted per-bookmark locks) and cannot deadlock each
     // other on the mapping rows.
-    let tag_hooks: Vec<BookmarkTransactionHook> = match &tag_mapping_entries {
-        Some(entries) => {
-            let mut reconciles: Vec<(String, TagReconcile)> = bookmark_operations
-                .iter()
-                .filter_map(|op| {
-                    TagReconcile::for_operation(op, entries)
-                        .map(|reconcile| (op.bookmark_key.name().to_string(), reconcile))
-                })
-                .collect();
-            reconciles.sort_by(|a, b| a.0.cmp(&b.0));
-            reconciles
-                .into_iter()
-                .map(|(_, reconcile)| reconcile.into_hook(repo.clone()))
-                .collect()
-        }
-        None => vec![],
-    };
+    let (tag_hooks, annotated_tags): (Vec<BookmarkTransactionHook>, AnnotatedTags) =
+        match &tag_mapping_entries {
+            Some(entries) => {
+                let mut reconciles: Vec<(String, BookmarkKey, TagReconcile)> = bookmark_operations
+                    .iter()
+                    .filter_map(|op| {
+                        TagReconcile::for_operation(op, entries).map(|reconcile| {
+                            (
+                                op.bookmark_key.name().to_string(),
+                                op.bookmark_key.clone(),
+                                reconcile,
+                            )
+                        })
+                    })
+                    .collect();
+                reconciles.sort_by(|a, b| a.0.cmp(&b.0));
+                // Pre-push-redirect bookmark keys: on a push-redirected repo the hook runs on the large-repo key, so annotated_tags misses and falls back to get_tag_type (affected repos are not push-redirected).
+                let annotated_tags = reconciles
+                    .iter()
+                    .filter(|(_, _, reconcile)| matches!(reconcile, TagReconcile::Write(_)))
+                    .map(|(_, key, _)| key.clone())
+                    .collect();
+                let tag_hooks = reconciles
+                    .into_iter()
+                    .map(|(_, _, reconcile)| reconcile.into_hook(repo.clone()))
+                    .collect();
+                (tag_hooks, annotated_tags)
+            }
+            None => (vec![], AnnotatedTags::default()),
+        };
     // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
     if !mononoke_source_of_truth(&ctx, repo.clone()).await? {
         return Err(anyhow::anyhow!(
@@ -256,7 +270,7 @@ pub async fn set_refs(
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         BookmarkOperationErrorReporting::Plain,
-        None,
+        Some(&annotated_tags),
         tag_hooks,
     )
     .await;
@@ -351,6 +365,11 @@ async fn set_ref_inner(
         None => (None, None),
     };
 
+    // Annotated tag whose mapping write is deferred into the txn (absent when bookmark hooks run); None = no such signal.
+    let annotated_tags: Option<AnnotatedTags> =
+        matches!(&hook_reconcile, Some(TagReconcile::Write(_)))
+            .then(|| std::iter::once(bookmark_key.clone()).collect());
+
     let result = match hook_reconcile {
         Some(reconcile) => {
             set_bookmarks(
@@ -360,7 +379,7 @@ async fn set_ref_inner(
                 Some(request_context.pushvars.as_ref()),
                 allow_non_fast_forward,
                 BookmarkOperationErrorReporting::Plain,
-                None,
+                annotated_tags.as_ref(),
                 vec![reconcile.into_hook(repo.clone())],
             )
             .await
@@ -373,7 +392,7 @@ async fn set_ref_inner(
                 Some(request_context.pushvars.as_ref()),
                 allow_non_fast_forward,
                 BookmarkOperationErrorReporting::Plain,
-                None,
+                annotated_tags.as_ref(),
             )
             .await
         }
