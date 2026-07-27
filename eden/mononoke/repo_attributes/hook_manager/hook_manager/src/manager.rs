@@ -12,6 +12,7 @@ use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
+use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use cloned::cloned;
@@ -533,6 +534,7 @@ impl HookManager {
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<Vec<HookOutcome>, Error> {
         debug!("Running bookmark hooks for bookmark {:?}", bookmark);
 
@@ -585,6 +587,7 @@ impl HookManager {
                 scuba,
                 cross_repo_push_source,
                 push_authored_by,
+                annotated_tags,
                 hook.get_config().log_only,
                 bypass,
             ) {
@@ -973,6 +976,7 @@ impl<'a> HookInstance<'a> {
         cs: &BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&AnnotatedTags>,
         log_only: bool,
         bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
@@ -985,6 +989,7 @@ impl<'a> HookInstance<'a> {
                 cs,
                 cross_repo_push_source,
                 push_authored_by,
+                annotated_tags,
                 hook_name,
                 scuba,
                 log_only,
@@ -1091,6 +1096,7 @@ impl Hook {
         scuba: MononokeScubaSampleBuilder,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&'cs AnnotatedTags>,
         log_only: bool,
         bypass: BypassDecision,
     ) -> Vec<impl Future<Output = Result<HookOutcome, Error>> + 'cs> {
@@ -1106,6 +1112,7 @@ impl Hook {
                 to,
                 cross_repo_push_source,
                 push_authored_by,
+                annotated_tags,
                 log_only,
                 bypass,
             )),
@@ -1166,6 +1173,7 @@ impl Hook {
                                         cs,
                                         cross_repo_push_source,
                                         push_authored_by,
+                                        None,
                                         log_only,
                                         bypass.clone(),
                                     )

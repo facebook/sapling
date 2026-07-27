@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use anyhow::format_err;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionHook;
@@ -39,6 +40,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&'a HashMap<String, Bytes>>,
+        annotated_tags: Option<&'a AnnotatedTags>,
     ) -> Result<UpdateBookmarkOp<'a>, MononokeError> {
         self.start_write()?;
 
@@ -67,6 +69,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             old_target: ChangesetId,
             allow_non_fast_forward: bool,
             pushvars: Option<&'a HashMap<String, Bytes>>,
+            annotated_tags: Option<&'a AnnotatedTags>,
         ) -> UpdateBookmarkOp<'a> {
             let op = UpdateBookmarkOp::new(
                 bookmark.clone(),
@@ -81,7 +84,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                 },
                 BookmarkUpdateReason::ApiRequest,
             )
-            .with_pushvars(pushvars);
+            .with_pushvars(pushvars)
+            .with_annotated_tags(annotated_tags);
             op.log_new_public_commits_to_scribe()
         }
         let push_redirector = self.push_redirector().await?;
@@ -116,6 +120,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                annotated_tags,
             )
         } else {
             make_move_op(
@@ -124,6 +129,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                annotated_tags,
             )
         };
         Ok(op)
@@ -137,6 +143,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&HashMap<String, Bytes>>,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<(), MononokeError> {
         let update_op = self
             .move_bookmark_op(
@@ -145,6 +152,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                annotated_tags,
             )
             .await?;
         let push_redirector = self.push_redirector().await?;
@@ -181,6 +189,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&HashMap<String, Bytes>>,
+        annotated_tags: Option<&AnnotatedTags>,
         txn: Option<Box<dyn BookmarkTransaction>>,
         txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
@@ -196,6 +205,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                annotated_tags,
             )
             .await?;
         let bookmark_info_transaction = update_op

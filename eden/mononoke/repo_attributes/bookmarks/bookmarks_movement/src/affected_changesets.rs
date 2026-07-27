@@ -14,6 +14,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use borrowed::borrowed;
@@ -213,6 +214,7 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<Vec<CommitInfo>, BookmarkMovementError> {
         let needs_extras_check = Self::needs_extras_check(repo, kind);
         let needs_case_conflicts_check = Self::needs_case_conflicts_check(repo, kind);
@@ -254,6 +256,7 @@ impl AffectedChangesets {
                     bookmark,
                     pushvars,
                     cross_repo_push_source,
+                    annotated_tags,
                 )
                 .await?;
             }
@@ -505,6 +508,7 @@ impl AffectedChangesets {
         bookmark: &BookmarkKey,
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<(), BookmarkMovementError> {
         let push_authored_by = if authz.is_service() {
             PushAuthoredBy::Service
@@ -519,6 +523,7 @@ impl AffectedChangesets {
             pushvars,
             cross_repo_push_source,
             push_authored_by,
+            annotated_tags,
         )
         .await?;
 

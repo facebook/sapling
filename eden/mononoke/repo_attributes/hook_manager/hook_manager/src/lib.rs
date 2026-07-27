@@ -25,6 +25,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use futures::FutureExt;
@@ -271,6 +272,7 @@ fn record_outcome_and_apply_bypass(
 /// with bookmarks metadata.
 #[async_trait]
 pub trait BookmarkHook: Send + Sync {
+    /// `annotated_tags`: server-computed tags known annotated in this push, whose mapping row may be written only in the bookmark txn (after this hook runs); `None` if unprovided.
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
@@ -279,6 +281,7 @@ pub trait BookmarkHook: Send + Sync {
         to: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<HookExecution, Error>;
 
     async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
@@ -289,6 +292,7 @@ pub trait BookmarkHook: Send + Sync {
         to: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&AnnotatedTags>,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
@@ -302,6 +306,7 @@ pub trait BookmarkHook: Send + Sync {
                 to,
                 cross_repo_push_source,
                 push_authored_by,
+                annotated_tags,
             )
             .map_ok(|exec| {
                 HookOutcome::BookmarkHook(

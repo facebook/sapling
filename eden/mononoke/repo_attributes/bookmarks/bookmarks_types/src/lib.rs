@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::fmt;
 use std::ops::Bound;
 use std::ops::Range;
@@ -184,6 +185,26 @@ impl BookmarkKey {
         } else {
             ref_name.starts_with("tags/")
         }
+    }
+}
+
+/// Server-trusted set of annotated-tag bookmarks a push is creating/moving, whose bonsai_tag_mapping row may be written only in the bookmark transaction.
+#[derive(Clone, Debug, Default)]
+pub struct AnnotatedTags(HashSet<BookmarkKey>);
+
+impl AnnotatedTags {
+    pub fn new(tags: HashSet<BookmarkKey>) -> Self {
+        Self(tags)
+    }
+
+    pub fn contains(&self, bookmark: &BookmarkKey) -> bool {
+        self.0.contains(bookmark)
+    }
+}
+
+impl FromIterator<BookmarkKey> for AnnotatedTags {
+    fn from_iter<I: IntoIterator<Item = BookmarkKey>>(iter: I) -> Self {
+        Self::new(iter.into_iter().collect())
     }
 }
 

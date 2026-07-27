@@ -261,6 +261,7 @@ pub async fn prepare_pushrebase_hooks(
             kind,
             AdditionalChangesets::None,
             cross_repo_push_source,
+            None,
         )
         .await?;
 

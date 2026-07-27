@@ -451,6 +451,7 @@ impl SourceControlServiceImpl {
             &BookmarkKey::new(&params.bookmark).map_err(Into::<MononokeError>::into)?,
             changeset.id(),
             pushvars.as_ref(),
+            None,
         )
         .await?;
         Ok(thrift::RepoCreateBookmarkResponse {
@@ -490,6 +491,7 @@ impl SourceControlServiceImpl {
             old_changeset_id,
             params.allow_non_fast_forward_move,
             pushvars.as_ref(),
+            None,
         )
         .await?;
         Ok(thrift::RepoMoveBookmarkResponse {

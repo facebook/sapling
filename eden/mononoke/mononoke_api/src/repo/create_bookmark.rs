@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::format_err;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionHook;
@@ -32,6 +33,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark: &'_ BookmarkKey,
         target: ChangesetId,
         pushvars: Option<&'a HashMap<String, Bytes>>,
+        annotated_tags: Option<&'a AnnotatedTags>,
     ) -> Result<CreateBookmarkOp<'a>, MononokeError> {
         self.start_write()?;
 
@@ -39,10 +41,12 @@ impl<R: MononokeRepo> RepoContext<R> {
             bookmark: &'_ BookmarkKey,
             target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
+            annotated_tags: Option<&'a AnnotatedTags>,
         ) -> CreateBookmarkOp<'a> {
             let op =
                 CreateBookmarkOp::new(bookmark.clone(), target, BookmarkUpdateReason::ApiRequest)
-                    .with_pushvars(pushvars);
+                    .with_pushvars(pushvars)
+                    .with_annotated_tags(annotated_tags);
             op.log_new_public_commits_to_scribe()
         }
         let push_redirector = self.push_redirector().await?;
@@ -69,9 +73,9 @@ impl<R: MononokeRepo> RepoContext<R> {
                         "Error in create_bookmark absence of corresponding commit in target repo for {target}",
                     )
                 })?;
-            make_create_op(&large_bookmark, target, pushvars)
+            make_create_op(&large_bookmark, target, pushvars, annotated_tags)
         } else {
-            make_create_op(bookmark, target, pushvars)
+            make_create_op(bookmark, target, pushvars, annotated_tags)
         };
         Ok(create_op)
     }
@@ -82,8 +86,11 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark: &BookmarkKey,
         target: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<(), MononokeError> {
-        let create_op = self.create_bookmark_op(bookmark, target, pushvars).await?;
+        let create_op = self
+            .create_bookmark_op(bookmark, target, pushvars, annotated_tags)
+            .await?;
         let push_redirector = self.push_redirector().await?;
         if let Some(redirector) = push_redirector.as_ref() {
             let ctx = self.ctx();
@@ -116,6 +123,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark: &BookmarkKey,
         target: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
+        annotated_tags: Option<&AnnotatedTags>,
         txn: Option<Box<dyn BookmarkTransaction>>,
         txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
@@ -124,7 +132,9 @@ impl<R: MononokeRepo> RepoContext<R> {
                 "create_bookmark_with_transaction",
             ));
         }
-        let create_op = self.create_bookmark_op(bookmark, target, pushvars).await?;
+        let create_op = self
+            .create_bookmark_op(bookmark, target, pushvars, annotated_tags)
+            .await?;
         let bookmark_info_transaction = create_op
             .run_with_transaction(
                 self.ctx(),

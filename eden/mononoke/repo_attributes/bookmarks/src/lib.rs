@@ -25,6 +25,7 @@ pub mod saturation;
 mod subscription;
 mod transaction;
 
+pub use bookmarks_types::AnnotatedTags;
 pub use bookmarks_types::Bookmark;
 pub use bookmarks_types::BookmarkCategory;
 pub use bookmarks_types::BookmarkKey;

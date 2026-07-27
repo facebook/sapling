@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks_movement::BookmarkInfoData;
@@ -128,13 +129,14 @@ pub async fn set_bookmark<R: MononokeRepo>(
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
     error_reporting: BookmarkOperationErrorReporting,
+    annotated_tags: Option<&AnnotatedTags>,
 ) -> Result<(), MononokeError> {
     let bookmark_key = &bookmark_operation.bookmark_key;
     let name = bookmark_key.name();
     match bookmark_operation.operation_type {
         BookmarkOperationType::Create(new_changeset) => {
             let op_result = repo_context
-                .create_bookmark(bookmark_key, new_changeset, pushvars)
+                .create_bookmark(bookmark_key, new_changeset, pushvars, annotated_tags)
                 .await;
             if error_reporting == BookmarkOperationErrorReporting::WithContext {
                 op_result.with_context(|| format!("failed to create bookmark {name}"))?;
@@ -152,6 +154,7 @@ pub async fn set_bookmark<R: MononokeRepo>(
                         Some(old_changeset),
                         allow_non_fast_forward,
                         pushvars,
+                        annotated_tags,
                     )
                     .await;
                 if error_reporting == BookmarkOperationErrorReporting::WithContext {
@@ -192,6 +195,7 @@ pub async fn set_bookmarks<R: MononokeRepo>(
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
     error_reporting: BookmarkOperationErrorReporting,
+    annotated_tags: Option<&AnnotatedTags>,
     // Hooks committed in the same transaction as the bookmark moves; empty if unused.
     extra_txn_hooks: Vec<BookmarkTransactionHook>,
 ) -> Result<(), MononokeError> {
@@ -210,6 +214,7 @@ pub async fn set_bookmarks<R: MononokeRepo>(
             bookmark_transaction,
             transaction_hooks,
             error_reporting,
+            annotated_tags,
         )
         .await?;
         bookmark_transaction = move_bookmark_result.bookmark_transaction;
@@ -244,6 +249,7 @@ async fn move_bookmark<R: MononokeRepo>(
     bookmark_transaction: Option<Box<dyn BookmarkTransaction>>,
     transaction_hooks: Vec<BookmarkTransactionHook>,
     error_reporting: BookmarkOperationErrorReporting,
+    annotated_tags: Option<&AnnotatedTags>,
 ) -> Result<MoveBookmarkResult, MononokeError> {
     let bookmark_key = &bookmark_operation.bookmark_key;
     let name = bookmark_key.name();
@@ -254,6 +260,7 @@ async fn move_bookmark<R: MononokeRepo>(
                     bookmark_key,
                     new_changeset,
                     pushvars,
+                    annotated_tags,
                     bookmark_transaction,
                     transaction_hooks,
                 )
@@ -273,6 +280,7 @@ async fn move_bookmark<R: MononokeRepo>(
                         Some(old_changeset),
                         allow_non_fast_forward,
                         pushvars,
+                        annotated_tags,
                         bookmark_transaction,
                         transaction_hooks,
                     )

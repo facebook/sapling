@@ -256,6 +256,7 @@ pub async fn set_refs(
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         BookmarkOperationErrorReporting::Plain,
+        None,
         tag_hooks,
     )
     .await;
@@ -359,6 +360,7 @@ async fn set_ref_inner(
                 Some(request_context.pushvars.as_ref()),
                 allow_non_fast_forward,
                 BookmarkOperationErrorReporting::Plain,
+                None,
                 vec![reconcile.into_hook(repo.clone())],
             )
             .await
@@ -371,6 +373,7 @@ async fn set_ref_inner(
                 Some(request_context.pushvars.as_ref()),
                 allow_non_fast_forward,
                 BookmarkOperationErrorReporting::Plain,
+                None,
             )
             .await
         }

@@ -17,6 +17,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
@@ -71,8 +72,7 @@ impl BlockAccidentalNewBookmarkCreationHook {
         }) = config.allow_creations_with_marker
         {
             let marker_extraction_regex = Regex::new(&format!(
-                r"(?m)^{}:\s*(?<{}>.+?)(\s|$|\n)",
-                &marker, &NAMED_CAPTURE_NAME
+                r"(?m)^{marker}:\s*(?<{NAMED_CAPTURE_NAME}>.+?)(\s|$|\n)"
             ))?;
             Some(CreationAllowedWithMarkerOptions {
                 marker_extraction_regex,
@@ -110,6 +110,7 @@ impl BookmarkHook for BlockAccidentalNewBookmarkCreationHook {
         to: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<HookExecution, Error> {
         let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if !bookmark_state.is_new() {

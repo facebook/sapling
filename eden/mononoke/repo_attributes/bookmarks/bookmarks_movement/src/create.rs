@@ -11,6 +11,7 @@ use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
@@ -43,6 +44,7 @@ pub struct CreateBookmarkOp<'op> {
     cross_repo_push_source: CrossRepoPushSource,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    annotated_tags: Option<&'op AnnotatedTags>,
     log_new_public_commits_to_scribe: bool,
     only_log_acl_checks: bool,
 }
@@ -61,6 +63,7 @@ impl<'op> CreateBookmarkOp<'op> {
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
+            annotated_tags: None,
             log_new_public_commits_to_scribe: false,
             only_log_acl_checks: false,
         }
@@ -78,6 +81,12 @@ impl<'op> CreateBookmarkOp<'op> {
 
     pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
         self.pushvars = pushvars;
+        self
+    }
+
+    /// Tags the git server classified as annotated in this push, whose mapping write may be deferred to the bookmark txn.
+    pub fn with_annotated_tags(mut self, annotated_tags: Option<&'op AnnotatedTags>) -> Self {
+        self.annotated_tags = annotated_tags;
         self
     }
 
@@ -157,6 +166,7 @@ impl<'op> CreateBookmarkOp<'op> {
                 kind,
                 AdditionalChangesets::Ancestors(self.target),
                 self.cross_repo_push_source,
+                self.annotated_tags,
             )
             .await?;
 

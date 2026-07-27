@@ -8,6 +8,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use hook_manager::TagType;
@@ -39,8 +40,14 @@ impl BookmarkHook for BlockUnannotatedTagsHook {
         _to: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<HookExecution, Error> {
         if !bookmark.is_tag() {
+            return Ok(HookExecution::accepted());
+        }
+
+        // Trust the server's in-push classification: the atomic path defers this annotated tag's mapping row to the bookmark txn, so get_tag_type would wrongly read it as lightweight.
+        if annotated_tags.is_some_and(|tags| tags.contains(bookmark)) {
             return Ok(HookExecution::accepted());
         }
 

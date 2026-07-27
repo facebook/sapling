@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::AnnotatedTags;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
@@ -137,6 +138,7 @@ impl BookmarkHook for BlockDeweyLfsUrlOnNewBookmarkHook {
         to: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _annotated_tags: Option<&AnnotatedTags>,
     ) -> Result<HookExecution, Error> {
         let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if !bookmark_state.is_new() {

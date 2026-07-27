@@ -168,6 +168,7 @@ async fn set_bookmark<R: MononokeRepo>(
                 Some(from),
                 true,
                 pushvars,
+                None,
             )
             .await?
         }
@@ -181,7 +182,7 @@ async fn set_bookmark<R: MononokeRepo>(
                 .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
                 .id();
 
-            repo.create_bookmark(&BookmarkKey::new(&bookmark)?, to, pushvars)
+            repo.create_bookmark(&BookmarkKey::new(&bookmark)?, to, pushvars, None)
                 .await?
         }
         (None, Some(from_hgid)) => {
