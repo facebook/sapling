@@ -148,8 +148,8 @@ impl SqlConstruct for SqlRepoManifestMappingBuilder {
     }
 }
 
-// Optional dedicated remote tier (`xdb.mononoke_manifest`); falls back to the
-// shared metadata DB when unset, so this is inert until the tier is bound.
+// Binds the dedicated `xdb.mononoke_manifest` tier. Fails loud when unconfigured
+// rather than falling back to the shared metadata DB, so routing data never lands there.
 impl SqlConstructFromMetadataDatabaseConfig for SqlRepoManifestMappingBuilder {
     fn remote_database_config(
         remote: &RemoteMetadataDatabaseConfig,
