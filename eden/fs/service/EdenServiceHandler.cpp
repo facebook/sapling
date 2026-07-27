@@ -5002,46 +5002,6 @@ folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
   return std::move(future).semi().via(serial);
 }
 
-ImmediateFuture<folly::Unit> detachIfBackgrounded(
-    ImmediateFuture<folly::Unit> future,
-    const std::shared_ptr<ServerState>& serverState,
-    bool background) {
-  if (!background) {
-    return future;
-  } else {
-    folly::futures::detachOn(
-        serverState->getThreadPool().get(), std::move(future).semi());
-    return ImmediateFuture<folly::Unit>(folly::unit);
-  }
-}
-
-folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
-    ImmediateFuture<folly::Unit> future,
-    EdenServer* const server,
-    bool background) {
-  // If we're already using serial execution across the board, just do a
-  // normal detachIfBackgrounded
-  if (server->usingThriftSerialExecution()) {
-    return detachIfBackgrounded(
-               std::move(future), server->getServerState(), background)
-        .semi();
-  }
-
-  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
-      server->getServer()->getThreadManager().get());
-
-  if (background) {
-    folly::futures::detachOn(serial, std::move(future).semi());
-    future = ImmediateFuture<folly::Unit>(folly::unit);
-  }
-
-  if (future.isReady()) {
-    return std::move(future).semi();
-  }
-
-  return std::move(future).semi().via(serial);
-}
-
 void maybeLogExpensiveGlob(
     const std::vector<std::string>& globs,
     const folly::StringPiece searchRoot,
@@ -5674,63 +5634,88 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
 
   co_return result;
 }
-// DEPRECATED. Use co_prefetchFilesV2 instead.
-folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
+folly::coro::Task<void> EdenServiceHandler::co_prefetchFiles(
     std::unique_ptr<PrefetchParams> params) {
+  auto isBackground = *params->background();
+
+  // Resolve mount and revisions before any detach so invalid ones surface as an
+  // EdenError to the caller rather than a lost failure in a detached task.
   auto mountHandle = lookupMount(params->mountPoint());
   if (!params->revisions().value().empty()) {
     params->revisions() =
         resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
   }
+
+  auto serverState = server_->getServerState();
   ThriftGlobImpl globber{
-      *params,
-      server_->getServerState()
-          ->getEdenConfig()
-          ->prefetchOptimizations.getValue()};
+      *params, serverState->getEdenConfig()->prefetchOptimizations.getValue()};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *params->mountPoint(),
       toLogArg(*params->globs()),
       globber.logString());
-  auto& context = helper->getFetchContext();
-  auto isBackground = *params->background();
 
-  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
-  if (isBackground) {
-    backgroundFuture = makeNotReadyImmediateFuture();
+  // Capture everything the work needs as guards; the detached task must not
+  // touch the raw server_, which EdenServer can destroy during shutdown.
+  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+  auto task = folly::coro::co_invoke(
+      [mountHandle,
+       serverState,
+       globber = std::move(globber),
+       helper = std::move(helper)](std::unique_ptr<PrefetchParams> p) mutable
+          -> folly::coro::Task<void> {
+        TaskTraceBlock block{"EdenServiceHandler::prefetchFiles"};
+        auto& context = helper->getFetchContext();
+
+        co_await folly::coro::co_reschedule_on_current_executor;
+
+        maybeLogExpensiveGlob(
+            *p->globs(), *p->searchRoot(), globber, context, serverState);
+
+        co_await globber.co_glob(
+            mountHandle.getEdenMountPtr(),
+            serverState,
+            std::move(*p->globs()),
+            helper->getPrefetchFetchContext().copy());
+      },
+      std::move(params));
+
+  if (server_->usingPrefetchExecutor()) {
+    folly::Executor::KeepAlive<> exec =
+        folly::getKeepAliveToken(server_->getPrefetchFilesV2Executor().get());
+    auto pinned = folly::coro::co_withExecutor(exec, std::move(task));
+    if (isBackground) {
+      folly::futures::detachOn(exec, std::move(pinned).start());
+      co_return;
+    }
+    co_await std::move(pinned);
+    co_return;
   }
-
-  maybeLogExpensiveGlob(
-      *params->globs(),
-      *params->searchRoot(),
-      globber,
-      context,
-      server_->getServerState());
-
-  auto globFut =
-      std::move(backgroundFuture)
-          .thenValue([mountHandle,
-                      serverState = server_->getServerState(),
-                      globs = std::move(*params->globs()),
-                      globber = std::move(globber),
-                      context = helper->getPrefetchFetchContext().copy()](
-                         auto&&) mutable {
-            return globber.glob(
-                mountHandle.getEdenMountPtr(),
-                serverState,
-                std::move(globs),
-                context);
-          })
-          .ensure([mountHandle] {})
-          .thenValue([](std::unique_ptr<Glob>) { return folly::unit; });
-  globFut = std::move(globFut).ensure(
-      [helper = std::move(helper), params = std::move(params)] {});
 
   // The glob code has a very large fan-out that can easily overload the
   // Thrift CPU worker pool. To combat with that, we limit the execution to a
   // single thread by using `folly::SerialExecutor` so the glob queries will
   // not overload the executor.
-  return serialDetachIfBackgrounded(std::move(globFut), server_, isBackground);
+  if (server_->usingThriftSerialExecution()) {
+    if (isBackground) {
+      folly::futures::detachOn(
+          server_->getServerState()->getThreadPool().get(),
+          std::move(task).semi());
+      co_return;
+    }
+    co_await std::move(task);
+    co_return;
+  }
+
+  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
+      server_->getServer()->getThreadManager().get());
+  auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
+  if (isBackground) {
+    folly::futures::detachOn(serial, std::move(pinned).start());
+    co_return;
+  }
+  co_await std::move(pinned);
+  co_return;
 }
 
 namespace {

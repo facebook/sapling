@@ -351,7 +351,7 @@ class EdenServiceHandler
   folly::coro::now_task<std::unique_ptr<Glob>> co_globFilesImpl(
       std::unique_ptr<GlobParams> params);
 
-  folly::SemiFuture<folly::Unit> semifuture_prefetchFiles(
+  folly::coro::Task<void> co_prefetchFiles(
       std::unique_ptr<PrefetchParams> params) override;
 
   folly::coro::Task<std::unique_ptr<PrefetchResult>> co_prefetchFilesV2(
