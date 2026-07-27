@@ -6,10 +6,12 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::iter::Peekable;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -30,6 +32,7 @@ use mononoke_types::NonRootMPath;
 use crate::Diff;
 use crate::Entry;
 use crate::Manifest;
+use crate::OrderedManifest;
 use crate::TrieMapOps;
 use crate::ops::ReplacementsHolder;
 
@@ -473,6 +476,80 @@ fn push_child<TreeId, Leaf, Pruner>(
     }
 }
 
+/// Compare the children of two directory manifests, returning only the children
+/// that differ as `(element, old_entry, new_entry)` tuples (`None` on a side
+/// means the child is absent there). Identical sub-shards are pruned by their
+/// content-addressed id -- never loaded -- via [`compare_manifest_with_stores`],
+/// and byte-prefix spans of new/removed children are expanded to their
+/// individual elements.
+///
+/// This is the shared node-level core behind both the unordered
+/// [`diff_manifests`] and the ordered [`diff_weighted_children`]; the two differ
+/// only in how they consume these per-child differences (recursive vs. weighted
+/// ordered traversal). `old_mf` and `new_mf` may come from different blobstores.
+///
+/// The returned children are in unspecified order; callers that need them sorted
+/// (e.g. the ordered path) must sort by element.
+async fn diff_manifest_children<M, Store>(
+    ctx: &CoreContext,
+    new_store: &Store,
+    new_mf: M,
+    old_store: &Store,
+    old_mf: M,
+) -> Result<
+    Vec<(
+        MPathElement,
+        Option<Entry<M::TreeId, M::Leaf>>,
+        Option<Entry<M::TreeId, M::Leaf>>,
+    )>,
+>
+where
+    M: Manifest<Store>,
+    M::TreeId: Send + Sync + Eq + 'static,
+    M::Leaf: Send + Sync + Eq + 'static,
+    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
+    Store: Send + Sync + 'static,
+{
+    let mut result = Vec::new();
+    let mut cmps =
+        compare_manifest_with_stores(ctx, new_store, old_store, new_mf, vec![Some(old_mf)]).await?;
+    while let Some(cmp) = cmps.try_next().await? {
+        match cmp {
+            ManifestComparison::Same(..) => {}
+            ManifestComparison::New(Span::Element(name, entry)) => {
+                result.push((name, None, Some(entry)));
+            }
+            ManifestComparison::New(Span::Prefix(prefix, trie_map)) => {
+                let mut entries = trie_map.into_stream(ctx, new_store).await?;
+                while let Some((suffix, entry)) = entries.try_next().await? {
+                    let name = prefix.clone().join_into_element(suffix)?;
+                    result.push((name, None, Some(entry)));
+                }
+            }
+            ManifestComparison::Removed(Span::Element(name, base_entries)) => {
+                result.push((name, base_entries.into_iter().flatten().next(), None));
+            }
+            ManifestComparison::Removed(Span::Prefix(prefix, base_trie_maps)) => {
+                if let Some(trie_map) = base_trie_maps.into_iter().flatten().next() {
+                    let mut entries = trie_map.into_stream(ctx, old_store).await?;
+                    while let Some((suffix, entry)) = entries.try_next().await? {
+                        let name = prefix.clone().join_into_element(suffix)?;
+                        result.push((name, Some(entry), None));
+                    }
+                }
+            }
+            ManifestComparison::Changed(name, new_entry, base_entries) => {
+                result.push((
+                    name,
+                    base_entries.into_iter().flatten().next(),
+                    Some(new_entry),
+                ));
+            }
+        }
+    }
+    Ok(result)
+}
+
 /// Diff a single node by listing both sides and substituting old-side entries
 /// with any `replacements`, returning the child `Diff`s plus the subtree work to
 /// recurse into (with the pruner already applied, and the replacements that
@@ -602,6 +679,221 @@ where
         }
     }
     Ok((outs, recurse))
+}
+
+/// A sharding-aware, two-store replacement for the recursion in
+/// [`crate::ManifestOps::filtered_diff`].
+///
+/// Produces the same `Diff` entries as `old_id.filtered_diff(.., new_id, ..)`
+/// with an identity output filter and the given `recurse_pruner`, but compares
+/// each changed directory's children via [`compare_manifest_with_stores`]. For
+/// sharded manifests (e.g. content manifests) this prunes identical sub-shards
+/// by their content-addressed id WITHOUT loading them, instead of re-enumerating
+/// the whole directory on both sides (which is what made content-manifest diffs
+/// pathologically expensive -- see the `derived_data_use_content_manifests` SEV).
+///
+/// `old_id` (the "old"/base side) and `new_id` (the "new" side) may live in
+/// different blobstores (cross-repo diffs); subtree-id pruning is valid across
+/// blobstores because the ids are content hashes.
+///
+/// Supports `manifest_replacements` (like `filtered_diff`): subtrees carrying a
+/// replacement are diffed by listing (the old-side entries are substituted),
+/// while replacement-free subtrees keep the fast id-pruned path -- so a huge
+/// directory off the replacement paths is still never enumerated.
+pub fn diff_manifests<TreeId, Leaf, Store, Pruner>(
+    ctx: CoreContext,
+    old_store: Store,
+    old_id: TreeId,
+    new_store: Store,
+    new_id: TreeId,
+    recurse_pruner: Pruner,
+    manifest_replacements: HashMap<MPath, Entry<TreeId, Leaf>>,
+) -> impl Stream<Item = Result<Diff<Entry<TreeId, Leaf>>>>
+where
+    Store: Clone + Send + Sync + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
+    Pruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + 'static,
+{
+    let (root_replacement, child_replacements) =
+        ReplacementsHolder::new(manifest_replacements).deconstruct();
+    let old_id = match root_replacement {
+        None => old_id,
+        Some(Entry::Tree(replacement)) => replacement,
+        Some(Entry::Leaf(_)) => {
+            return stream::once(async move {
+                Err::<Diff<Entry<TreeId, Leaf>>, _>(anyhow!(
+                    "Manifest replacement at root which resolves to a leaf"
+                ))
+            })
+            .boxed();
+        }
+    };
+
+    let init = if old_id == new_id {
+        None
+    } else {
+        Some((
+            Diff::Changed(MPath::ROOT, old_id, new_id),
+            child_replacements,
+        ))
+    };
+    bounded_traversal::bounded_traversal_stream(256, init, move |(work, replacements)| {
+        cloned!(ctx, old_store, new_store, recurse_pruner);
+        async move {
+            let ctx = &ctx;
+            let old_store = &old_store;
+            let new_store = &new_store;
+            let (outs, recurse) = match work {
+                // Fast path: a replacement-free subtree; compare children via
+                // the shared comparison engine, pruning identical sub-shards by
+                // id without loading them.
+                Diff::Changed(path, old_id, new_id) if replacements.is_empty() => {
+                    let (old_mf, new_mf) =
+                        future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store))
+                            .await?;
+                    let mut outs: Vec<Diff<Entry<TreeId, Leaf>>> = Vec::new();
+                    let mut recurse: Vec<RecurseWork<TreeId, Leaf>> = Vec::new();
+                    for (name, old, new) in
+                        diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?
+                    {
+                        let child_path = path.join(&name);
+                        push_child(
+                            classify_child(child_path, old, new),
+                            &mut outs,
+                            &mut recurse,
+                            BTreeMap::new(),
+                            &recurse_pruner,
+                        );
+                    }
+                    outs.push(Diff::Changed(
+                        path,
+                        Entry::Tree(old_id),
+                        Entry::Tree(new_id),
+                    ));
+                    (outs, recurse)
+                }
+                // A replacement applies somewhere in this subtree, or this is an
+                // added/removed subtree: diff by listing. Replacement-free
+                // children recurse back into the fast path above.
+                work => {
+                    diff_manifest_node_by_listing(
+                        ctx,
+                        old_store,
+                        new_store,
+                        work,
+                        replacements,
+                        recurse_pruner,
+                    )
+                    .await?
+                }
+            };
+            anyhow::Ok((stream::iter(outs).map(Ok), recurse))
+        }
+        .boxed()
+    })
+    .try_flatten()
+    .boxed()
+}
+
+/// Sharding-aware ordered child diff for a single directory level: returns the
+/// children that differ between `old_id` and `new_id`, sorted by element name,
+/// as weighted entries (matching `OrderedManifest::list_weighted`'s shape).
+///
+/// Used by the fast path of `filtered_diff_ordered`: identical sub-shards are
+/// pruned by id (via `compare_manifest_with_stores`) instead of listing both
+/// whole directories. Weights (which the ordered scheduler uses to bound its
+/// queue) are fetched via `lookup_weighted` only for the differing *tree*
+/// children -- those are few and are loaded during recursion anyway.
+pub async fn diff_weighted_children<TreeId, Leaf, Store>(
+    ctx: &CoreContext,
+    old_store: &Store,
+    old_id: &TreeId,
+    new_store: &Store,
+    new_id: &TreeId,
+) -> Result<
+    Vec<(
+        MPathElement,
+        Option<Entry<(crate::types::Weight, TreeId), Leaf>>,
+        Option<Entry<(crate::types::Weight, TreeId), Leaf>>,
+    )>,
+>
+where
+    Store: Send + Sync + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        OrderedManifest<Store> + Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
+{
+    let (old_mf, new_mf) =
+        future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
+
+    // id-pruned comparison of `new` vs `old` via the shared node-level core.
+    let mut differing = diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?;
+    if differing.is_empty() {
+        return Ok(Vec::new());
+    }
+    // The ordered scheduler consumes children in element order.
+    differing.sort_by(|(a, ..), (b, ..)| a.cmp(b));
+
+    // Weights are only needed for tree entries. Reload the parents once if any
+    // differing child is a tree, then resolve weights via `lookup_weighted`.
+    let needs_weight = differing.iter().any(|(_, old_entry, new_entry)| {
+        matches!(old_entry, Some(Entry::Tree(_))) || matches!(new_entry, Some(Entry::Tree(_)))
+    });
+    let (old_mf, new_mf) = if needs_weight {
+        let (old_mf, new_mf) =
+            future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
+        (Some(old_mf), Some(new_mf))
+    } else {
+        (None, None)
+    };
+
+    let mut result = Vec::with_capacity(differing.len());
+    for (name, old_entry, new_entry) in differing {
+        let left = weight_entry(ctx, old_store, old_mf.as_ref(), &name, old_entry).await?;
+        let right = weight_entry(ctx, new_store, new_mf.as_ref(), &name, new_entry).await?;
+        result.push((name, left, right));
+    }
+    Ok(result)
+}
+
+/// Attach the rollup weight to a tree entry (leaves carry no weight), fetching
+/// it from the parent manifest via `lookup_weighted`.
+async fn weight_entry<TreeId, Leaf, Store, M>(
+    ctx: &CoreContext,
+    store: &Store,
+    mf: Option<&M>,
+    name: &MPathElement,
+    entry: Option<Entry<TreeId, Leaf>>,
+) -> Result<Option<Entry<(crate::types::Weight, TreeId), Leaf>>>
+where
+    Store: Send + Sync,
+    M: OrderedManifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    TreeId: Send + Sync,
+    Leaf: Send + Sync,
+{
+    match entry {
+        None => Ok(None),
+        Some(Entry::Leaf(leaf)) => Ok(Some(Entry::Leaf(leaf))),
+        Some(Entry::Tree(tree_id)) => {
+            let weight = match mf
+                .expect("needs_weight implies parents were loaded")
+                .lookup_weighted(ctx, store, name)
+                .await?
+            {
+                Some(Entry::Tree((weight, _))) => weight,
+                _ => 0,
+            };
+            Ok(Some(Entry::Tree((weight, tree_id))))
+        }
+    }
 }
 
 #[cfg(test)]
