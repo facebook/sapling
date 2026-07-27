@@ -1403,15 +1403,6 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Scribe category is the first argument passed to the scribe_cat binary. This
-   * is used by the FileAccessStructuredLogger
-   */
-  ConfigSetting<std::string> fileAccessScribeCategory{
-      "telemetry:file-access-scribe-category",
-      "",
-      this};
-
-  /**
-   * Scribe category is the first argument passed to the scribe_cat binary. This
    * is used by the NotificationsStructuredLogger
    */
   ConfigSetting<std::string> notificationsScribeCategory{
@@ -1606,14 +1597,6 @@ class EdenConfig : private ConfigSettingManager {
       "telemetry:long-running-fs-request-threshold",
       folly::kIsWindows ? std::chrono::nanoseconds(0)
                         : std::chrono::seconds{45},
-      this};
-
-  /**
-   * Whether to enable XplatLogger for edenfs_file_accesses telemetry
-   */
-  ConfigSetting<bool> enableXplatLoggerFileAccess{
-      "telemetry:enable-xplatlogger-fileaccess",
-      false,
       this};
 
   /**
