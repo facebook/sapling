@@ -38,21 +38,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "file_access_structured_logger",
-    srcs = [
-        "FileAccessStructuredLogger.cpp",
-    ],
-    headers = [
-        "FileAccessStructuredLogger.h",
-    ],
-    exported_deps = [
-        ":structured_logger",
-        "//eden/common/telemetry:log_info",
-        "//eden/common/telemetry:scribe_logger",
-    ],
-)
-
-cpp_library(
     name = "xplat_keys",
     headers = [
         "XplatKeys.h",
