@@ -17,6 +17,11 @@ thrift_rust_library(
         },
     },
     crate_root = "type_system/lib.rs",
+    test_deps = [
+        "//thrift/lib/cpp2/dynamic/test:digest_expected_values-rust",
+    ]
+    if is_fbcode()
+    else [],
     unittests = is_fbcode(),
     deps = [
         "fbsource//third-party/rust:thiserror",
