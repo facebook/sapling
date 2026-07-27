@@ -9,11 +9,14 @@ rust_library(
         "ovr_config//os:linux",
     ],
     test_deps = [
+        "//common/rust/mysql:ephemeral_shards",
         "//common/rust/shed/fbinit:fbinit-tokio",
     ],
+    test_labels = ["needs_local_mysqld"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
         "//common/rust/mysql:mysql_client",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/fs/cli_rs/sapling-client:sapling-client",
