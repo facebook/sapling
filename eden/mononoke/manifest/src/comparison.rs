@@ -809,7 +809,7 @@ where
 /// whole directories. Weights (which the ordered scheduler uses to bound its
 /// queue) are fetched via `lookup_weighted` only for the differing *tree*
 /// children -- those are few and are loaded during recursion anyway.
-pub async fn diff_weighted_children<TreeId, Leaf, Store>(
+pub(crate) async fn diff_weighted_children<TreeId, Leaf, Store>(
     ctx: &CoreContext,
     old_store: &Store,
     old_id: &TreeId,

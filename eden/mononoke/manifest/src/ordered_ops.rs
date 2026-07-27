@@ -34,9 +34,13 @@ use crate::Manifest;
 use crate::OrderedManifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
+use crate::TrieMapOps;
+use crate::comparison::classify_child;
+use crate::comparison::diff_weighted_children;
 use crate::ops::Diff;
 use crate::ops::ReplacementsHolder;
 use crate::select::select_path_tree;
+use crate::types::Weight;
 
 /// Track where we are relative to the `after` parameter.
 pub enum After {
@@ -278,7 +282,14 @@ where
             Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             Error,
         >,
-    > {
+    >
+    where
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
+                Store,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            > + Eq,
+    {
         self.filtered_diff_ordered(
             ctx,
             store.clone(),
@@ -318,6 +329,11 @@ where
             + 'static,
         RecursePruner: Fn(&Diff<Self>) -> bool + Send + Sync + 'static,
         Out: Send + Unpin + 'static,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
+        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
+                Store,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            > + Eq,
     {
         let (replacement, child_replacements) =
             ReplacementsHolder::new(manifest_replacements).deconstruct();
@@ -368,6 +384,15 @@ where
             ),
         ));
 
+        // Gate the sharding-aware fast path behind a JustKnob so it can be rolled
+        // out gradually and reverted instantly. Defaults to off, keeping the
+        // legacy listing behaviour until the fast path is deliberately enabled.
+        let use_fast = justknobs::eval(
+            "scm/mononoke:enable_sharding_aware_manifest_diff",
+            None,
+            None,
+        );
+
         (async_stream::stream! {
             borrowed!(ctx, store, other_store, output_filter, recurse_pruner);
 
@@ -393,146 +418,68 @@ where
 
                         match input {
                             Diff::Changed(path, left, right) => {
-                                let l = mononoke::spawn_task({
-                                    cloned!(ctx, left, store);
-                                    async move { left.load(&ctx, &store).watched().await }
-                                });
-                                let r = mononoke::spawn_task({
-                                    cloned!(ctx, right, other_store);
-                                    async move { right.load(&ctx, &other_store).watched().await }
-                                });
-                                let (left_mf, right_mf) = future::try_join(l, r).watched().await?;
-                                let (left_mf, right_mf) = (left_mf?, right_mf?);
-
                                 if after.include_self() {
                                     push_output(
                                         &mut output,
                                         Diff::Changed(
                                             path.clone(),
-                                            Entry::Tree(left),
-                                            Entry::Tree(right),
+                                            Entry::Tree(left.clone()),
+                                            Entry::Tree(right.clone()),
                                         ),
                                     );
                                 }
 
-                                let iter = EntryDiffIterator::new(
-                                    left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
-                                    right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
-                                );
-                                for (name, left, right) in iter {
+                                // Fast path (gated behind the
+                                // `scm/mononoke:enable_sharding_aware_manifest_diff`
+                                // JustKnob): with no replacements, prune identical
+                                // sub-shards by id instead of listing both whole
+                                // directories. Falls back to a full weighted list
+                                // when the knob is off or replacements are present.
+                                let entries = if replacements.is_empty() && use_fast {
+                                    diff_weighted_children(ctx, store, &left, other_store, &right)
+                                        .watched()
+                                        .await?
+                                } else {
+                                    let l = mononoke::spawn_task({
+                                        cloned!(ctx, left, store);
+                                        async move { left.load(&ctx, &store).watched().await }
+                                    });
+                                    let r = mononoke::spawn_task({
+                                        cloned!(ctx, right, other_store);
+                                        async move { right.load(&ctx, &other_store).watched().await }
+                                    });
+                                    let (left_mf, right_mf) =
+                                        future::try_join(l, r).watched().await?;
+                                    let (left_mf, right_mf) = (left_mf?, right_mf?);
+                                    EntryDiffIterator::new(
+                                        left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
+                                        right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
+                                    )
+                                    .collect::<Vec<_>>()
+                                };
+                                for (name, left, right) in entries {
                                     let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
                                     let left = replacement.or(left);
                                     if after.skip(&name) || left == right {
                                         continue;
                                     }
                                     let path = path.join(&name);
-                                    match (left, right) {
-                                        (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Changed(
-                                                        path,
-                                                        Entry::Leaf(left),
-                                                        Entry::Leaf(right),
-                                                    ),
-                                                );
-                                            }
+                                    let (child_output, child_recurse) =
+                                        classify_child(path, left, right);
+                                    if let Some(out) = child_output {
+                                        if after.include_file(&name) {
+                                            push_output(&mut output, strip_entry_weight(out));
                                         }
-                                        (
-                                            Some(Entry::Leaf(left)),
-                                            Some(Entry::Tree((weight, tree))),
-                                        ) => {
-                                            // Removed file comes before all
-                                            // files in the dir it is replaced
-                                            // by.
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Removed(path.clone(), Entry::Leaf(left)),
-                                                );
-                                            }
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Added(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (Some(Entry::Leaf(left)), None) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Removed(path, Entry::Leaf(left)),
-                                                );
-                                            }
-                                        }
-                                        (
-                                            Some(Entry::Tree((weight, tree))),
-                                            Some(Entry::Leaf(right)),
-                                        ) => {
-                                            // Added file comes before all
-                                            // files in the dir it replaces
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
-                                                );
-                                            }
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Removed(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (
-                                            Some(Entry::Tree((left_weight, left))),
-                                            Some(Entry::Tree((right_weight, right))),
-                                        ) => {
-                                            // Approximate recursion weight
-                                            // using `max`.  The theoretical
-                                            // max is actually the sum of the
-                                            // weights, but that is likely to
-                                            // be overkill most of the time.
-                                            let weight = left_weight.max(right_weight);
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Changed(path, left, right),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (Some(Entry::Tree((weight, tree))), None) => {
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Removed(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (None, Some(Entry::Leaf(right))) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
-                                                );
-                                            }
-                                        }
-                                        (None, Some(Entry::Tree((weight, tree)))) => {
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Added(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (None, None) => {}
+                                    }
+                                    if let Some(work) = child_recurse {
+                                        let (weight, work) = strip_weight(work);
+                                        push_recurse(
+                                            &mut output,
+                                            weight,
+                                            work,
+                                            after.enter_dir(&name),
+                                            child_replacements,
+                                        );
                                     }
                                 }
                                 ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for changed tree")?;
@@ -554,72 +501,22 @@ where
                                         continue;
                                     }
                                     let path = path.join(&name);
-                                    match (replacement, right) {
-                                        (None, Entry::Tree((weight, tree))) => {
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Added(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
+                                    let (child_output, child_recurse) =
+                                        classify_child(path, replacement, Some(right));
+                                    if let Some(out) = child_output {
+                                        if after.include_file(&name) {
+                                            push_output(&mut output, strip_entry_weight(out));
                                         }
-                                        (None, Entry::Leaf(leaf)) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Added(path, Entry::Leaf(leaf)),
-                                                );
-                                            }
-                                        }
-                                        (Some(Entry::Leaf(left)), Entry::Leaf(right)) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Changed(path, Entry::Leaf(left), Entry::Leaf(right)),
-                                                );
-                                            }
-                                        }
-                                        (Some(Entry::Tree((weight, tree))), Entry::Leaf(right)) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
-                                                );
-                                            }
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Removed(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (Some(Entry::Leaf(left)), Entry::Tree((weight, tree))) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Removed(path.clone(), Entry::Leaf(left)),
-                                                );
-                                            }
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Added(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
-                                        (Some(Entry::Tree((left_weight, left))), Entry::Tree((right_weight, right))) => {
-                                            let weight = left_weight.max(right_weight);
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Changed(path, left, right),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
-                                        }
+                                    }
+                                    if let Some(work) = child_recurse {
+                                        let (weight, work) = strip_weight(work);
+                                        push_recurse(
+                                            &mut output,
+                                            weight,
+                                            work,
+                                            after.enter_dir(&name),
+                                            child_replacements,
+                                        );
                                     }
                                 }
                                 ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for added tree")?;
@@ -640,24 +537,22 @@ where
                                     let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
                                     let entry = replacement.unwrap_or(entry);
                                     let path = path.join(&name);
-                                    match entry {
-                                        Entry::Tree((weight, tree)) => {
-                                            push_recurse(
-                                                &mut output,
-                                                weight,
-                                                Diff::Removed(path, tree),
-                                                after.enter_dir(&name),
-                                                child_replacements,
-                                            );
+                                    let (child_output, child_recurse) =
+                                        classify_child(path, Some(entry), None);
+                                    if let Some(out) = child_output {
+                                        if after.include_file(&name) {
+                                            push_output(&mut output, strip_entry_weight(out));
                                         }
-                                        Entry::Leaf(leaf) => {
-                                            if after.include_file(&name) {
-                                                push_output(
-                                                    &mut output,
-                                                    Diff::Removed(path, Entry::Leaf(leaf)),
-                                                );
-                                            }
-                                        }
+                                    }
+                                    if let Some(work) = child_recurse {
+                                        let (weight, work) = strip_weight(work);
+                                        push_recurse(
+                                            &mut output,
+                                            weight,
+                                            work,
+                                            after.enter_dir(&name),
+                                            child_replacements,
+                                        );
                                     }
                                 }
                                 ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for removed tree")?;
@@ -675,6 +570,35 @@ where
             }
         })
         .boxed()
+    }
+}
+
+/// Split a weighted subtree diff (produced by [`classify_child`] over
+/// weighted entries) into the recursion weight and the plain `Diff<TreeId>` the
+/// ordered scheduler recurses on. A changed tree approximates its weight with
+/// `max` of the two sides (the theoretical maximum is the sum, but that is
+/// overkill in practice).
+fn strip_weight<TreeId>(diff: Diff<(Weight, TreeId)>) -> (Weight, Diff<TreeId>) {
+    match diff {
+        Diff::Added(path, (weight, tree)) => (weight, Diff::Added(path, tree)),
+        Diff::Removed(path, (weight, tree)) => (weight, Diff::Removed(path, tree)),
+        Diff::Changed(path, (left_weight, left), (right_weight, right)) => (
+            left_weight.max(right_weight),
+            Diff::Changed(path, left, right),
+        ),
+    }
+}
+
+/// Drop the weights from a leaf-level diff so it can be emitted as an ordinary
+/// `Diff<Entry<TreeId, Leaf>>` (the entries are always leaves in practice).
+fn strip_entry_weight<TreeId, Leaf>(
+    diff: Diff<Entry<(Weight, TreeId), Leaf>>,
+) -> Diff<Entry<TreeId, Leaf>> {
+    let strip = |entry: Entry<(Weight, TreeId), Leaf>| entry.map_tree(|(_weight, tree)| tree);
+    match diff {
+        Diff::Added(path, entry) => Diff::Added(path, strip(entry)),
+        Diff::Removed(path, entry) => Diff::Removed(path, strip(entry)),
+        Diff::Changed(path, left, right) => Diff::Changed(path, strip(left), strip(right)),
     }
 }
 
