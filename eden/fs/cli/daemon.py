@@ -722,6 +722,7 @@ def get_edenfs_environment(
         "ATLAS",
         # Identifier of dev docker containers
         "ATLAS_ENV_ID",
+        "CI_PURPOSE",
         "SANDCASTLE",
         "SANDCASTLE_ALIAS",
         "SANDCASTLE_INSTANCE_ID",
