@@ -154,7 +154,6 @@ class FilteredBackingStore
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getTree);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getRootTree);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getGlobFiles);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, co_getGlobFiles);
   FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       restrictedTreePreservedAfterFiltering);
@@ -210,12 +209,7 @@ class FilteredBackingStore
       const std::vector<std::string>& paths,
       const ObjectFetchContextPtr& context) override;
 
-  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) override;
-
-  folly::coro::now_task<GetGlobFilesResult> co_getGlobFiles(
+  folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes) override;

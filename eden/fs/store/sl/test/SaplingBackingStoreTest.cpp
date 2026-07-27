@@ -391,7 +391,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple) {
   auto prefixes = std::vector<std::string>{};
   auto globFiles = folly::coro::blockingWait(
       folly::coro::timeout(
-          queuedBackingStore->co_getGlobFiles(commit1, suffixes, prefixes),
+          queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes),
           kTestTimeout));
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
@@ -414,7 +414,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle) {
   auto prefixes = std::vector<std::string>{};
   auto globFiles = folly::coro::blockingWait(
       folly::coro::timeout(
-          queuedBackingStore->co_getGlobFiles(commit1, suffixes, prefixes),
+          queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes),
           kTestTimeout));
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
@@ -434,7 +434,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone) {
   auto prefixes = std::vector<std::string>{};
   auto globFiles = folly::coro::blockingWait(
       folly::coro::timeout(
-          queuedBackingStore->co_getGlobFiles(commit1, suffixes, prefixes),
+          queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes),
           kTestTimeout));
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
@@ -452,7 +452,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested) {
   auto prefixes = std::vector<std::string>{};
   auto globFiles = folly::coro::blockingWait(
       folly::coro::timeout(
-          queuedBackingStore->co_getGlobFiles(commit1, suffixes, prefixes),
+          queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes),
           kTestTimeout));
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);

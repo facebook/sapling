@@ -312,15 +312,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * return an error. The caller should fallback to resolving globFiles locally
    * in this case.
    */
-  virtual ImmediateFuture<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) = 0;
-
-  /**
-   * Coroutine version of getGlobFiles.
-   */
-  virtual folly::coro::now_task<GetGlobFilesResult> co_getGlobFiles(
+  virtual folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes) = 0;

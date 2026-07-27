@@ -74,11 +74,7 @@ class EmptyBackingStore final : public BijectiveBackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) override;
-  folly::coro::now_task<GetGlobFilesResult> co_getGlobFiles(
+  folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes) override;

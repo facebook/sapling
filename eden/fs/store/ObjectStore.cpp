@@ -1020,7 +1020,7 @@ ObjectStore::getGlobFilesImpl(
     const std::vector<std::string>& globs,
     const std::vector<std::string>& prefixes,
     const ObjectFetchContextPtr& /*context*/) const {
-  co_return co_await backingStore_->co_getGlobFiles(id, globs, prefixes);
+  co_return co_await backingStore_->getGlobFiles(id, globs, prefixes);
 }
 
 ObjectComparison ObjectStore::compareObjectsById(

@@ -283,21 +283,8 @@ FakeBackingStore::co_getBlobAuxData(
       blobResult.origin};
 }
 
-ImmediateFuture<BackingStore::GetGlobFilesResult>
-FakeBackingStore::getGlobFiles(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& /*prefixes*/) {
-  // Since unordered map can't take a vec for testing purposes only use the
-  // first entry in the query
-  auto suffixQuery = std::pair<RootId, std::string>(id, globs[0]);
-  auto glob = getStoredGlob(suffixQuery)->get();
-  return ImmediateFuture<GetGlobFilesResult>{
-      GetGlobFilesResult{std::move(glob), id}};
-}
-
 folly::coro::now_task<BackingStore::GetGlobFilesResult>
-FakeBackingStore::co_getGlobFiles(
+FakeBackingStore::getGlobFiles(
     const RootId& id,
     const std::vector<std::string>& globs,
     const std::vector<std::string>& /*prefixes*/) {

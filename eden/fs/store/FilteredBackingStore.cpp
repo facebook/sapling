@@ -607,56 +607,14 @@ folly::coro::now_task<folly::Unit> FilteredBackingStore::co_prefetchBlobs(
   co_return folly::unit;
 }
 
-ImmediateFuture<BackingStore::GetGlobFilesResult>
+folly::coro::now_task<BackingStore::GetGlobFilesResult>
 FilteredBackingStore::getGlobFiles(
     const RootId& id,
     const std::vector<std::string>& globs,
     const std::vector<std::string>& prefixes) {
   auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
-  auto fut = backingStore_->getGlobFiles(parsedRootId, globs, prefixes);
-  return std::move(fut).thenValue([self = shared_from_this(),
-                                   id,
-                                   filterId = parsedFilterId](
-                                      auto&& getGlobFilesResult) {
-    std::vector<ImmediateFuture<std::pair<std::string, FilterCoverage>>>
-        isFilteredFutures;
-    isFilteredFutures.reserve(getGlobFilesResult.globFiles.size());
-    for (std::string& path : getGlobFilesResult.globFiles) {
-      auto filterResult = self->filter_->getFilterCoverageForPath(
-          RelativePathPiece(path), filterId);
-      auto filterFut =
-          std::move(filterResult)
-              .thenValue([path = std::move(path)](auto&& coverage) mutable {
-                return std::pair(std::move(path), std::move(coverage));
-              });
-      isFilteredFutures.emplace_back(std::move(filterFut));
-    }
-    return collectAllSafe(std::move(isFilteredFutures))
-        .thenValue([rootId = id](
-                       std::vector<std::pair<std::string, FilterCoverage>>&&
-                           filterCoverageVec) {
-          std::vector<std::string> filteredPaths;
-          for (auto&& filterCoveragePair : filterCoverageVec) {
-            auto filterCoverage = filterCoveragePair.second;
-            // Let through unfiltered paths
-            if (filterCoverage != FilterCoverage::RECURSIVELY_FILTERED) {
-              filteredPaths.emplace_back(std::move(filterCoveragePair.first));
-            }
-            // If the filterCoverage is RECURSIVELY_FILTERED, just drop it
-          }
-          return GetGlobFilesResult{filteredPaths, std::move(rootId)};
-        });
-  });
-}
-
-folly::coro::now_task<BackingStore::GetGlobFilesResult>
-FilteredBackingStore::co_getGlobFiles(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& prefixes) {
-  auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
   auto getGlobFilesResult =
-      co_await backingStore_->co_getGlobFiles(parsedRootId, globs, prefixes);
+      co_await backingStore_->getGlobFiles(parsedRootId, globs, prefixes);
 
   // Parallelize filter checks matching the futures path's collectAllSafe.
   std::vector<folly::coro::Task<std::pair<std::string, FilterCoverage>>>

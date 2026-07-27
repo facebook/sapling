@@ -663,11 +663,7 @@ class SaplingBackingStore final
       ObjectFetchContext::FetchResult fetchResult,
       folly::stop_watch<std::chrono::milliseconds> watch);
 
-  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) override;
-  folly::coro::now_task<GetGlobFilesResult> co_getGlobFiles(
+  folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes) override;

@@ -937,7 +937,7 @@ CO_TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
       ObjectComparison::Identical);
 }
 
-CO_TEST_F(FakeSubstringFilteredBackingStoreTest, co_getGlobFiles) {
+CO_TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
   // Same setup as getGlobFiles test
   RootId rootId =
       RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)};
@@ -980,15 +980,15 @@ CO_TEST_F(FakeSubstringFilteredBackingStoreTest, co_getGlobFiles) {
           "this/filter/is/very/nested",
       });
 
-  auto res1 = co_await filteredStore_->co_getGlobFiles(
+  auto res1 = co_await filteredStore_->getGlobFiles(
       rootId, std::vector<std::string>{"foo"}, std::vector<std::string>{});
-  auto res2 = co_await filteredStore_->co_getGlobFiles(
+  auto res2 = co_await filteredStore_->getGlobFiles(
       rootId2, std::vector<std::string>{"foo"}, std::vector<std::string>{});
-  auto res3 = co_await filteredStore_->co_getGlobFiles(
+  auto res3 = co_await filteredStore_->getGlobFiles(
       rootId3, std::vector<std::string>{"foo"}, std::vector<std::string>{});
-  auto res4 = co_await filteredStore_->co_getGlobFiles(
+  auto res4 = co_await filteredStore_->getGlobFiles(
       rootId4, std::vector<std::string>{"foo"}, std::vector<std::string>{});
-  auto res5 = co_await filteredStore_->co_getGlobFiles(
+  auto res5 = co_await filteredStore_->getGlobFiles(
       rootId5, std::vector<std::string>{"foo"}, std::vector<std::string>{});
 
   EXPECT_EQ(res1.globFiles.size(), 0);
