@@ -220,7 +220,7 @@ impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         self.remove_repo(&self.repo_name)
-            .with_context(|| format!("Failure in stopping repo {}", &self.repo_name))
+            .with_context(|| format!("Failure in stopping repo {}", self.repo_name))
     }
 }
 

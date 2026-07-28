@@ -97,7 +97,7 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
     let bonsai = new_bonsai_mut.freeze().unwrap();
     let cs_id = bonsai.get_changeset_id();
 
-    println!("fallback_changeset_bonsai: {0:#?}", &bonsai);
+    println!("fallback_changeset_bonsai: {0:#?}", bonsai);
 
     // Save that changeset
     save_changesets(&ctx, &fallback_repo, vec![bonsai])

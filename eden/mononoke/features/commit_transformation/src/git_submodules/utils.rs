@@ -98,7 +98,7 @@ where
       .with_context(|| {
           format!(
               "Failed to fetch content from content id {} file containing the submodule's git commit hash",
-              &submodule_file_content_id
+              submodule_file_content_id
           )
       })?;
 
@@ -423,8 +423,8 @@ pub async fn get_submodule_bonsai_changeset_id<R: Repo>(
         // Not a known dangling pointer, so it's an unexpected failure
         return Err(anyhow!(
             "Failed to get changeset id from git submodule commit hash {} in repo {}",
-            &git_submodule_sha1,
-            &submodule_repo.repo_identity().name()
+            git_submodule_sha1,
+            submodule_repo.repo_identity().name()
         ));
     };
 

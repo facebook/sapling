@@ -130,9 +130,8 @@ impl<T: Blobstore + Clone, R: Repo + Clone> MemWritesBlobstoreWithFallback<T, R>
         write!(
             f,
             "MemWritesBlobstoreWithFallback<{0}, {1:#?}>",
-            &self.inner,
-            &self
-                .fallback_blobstores
+            self.inner,
+            self.fallback_blobstores
                 .iter()
                 .map(|repo| (
                     repo.repo_identity().name().to_string().clone(),

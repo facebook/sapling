@@ -2221,7 +2221,7 @@ where
         Err(e) => {
             let msg = format!(
                 "Could not step to {:?}, due to {:?}, via {:?}",
-                &walk_item, e, via
+                walk_item, e, via
             );
             // Log to scuba regardless
             add_node_to_scuba(

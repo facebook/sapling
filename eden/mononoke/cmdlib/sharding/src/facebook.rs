@@ -613,7 +613,7 @@ impl ShardedProcessHandler {
             Err(e) => {
                 let details = format!(
                     "On Add Shard failed while parsing shard {}. Error: {:#}",
-                    &key, e
+                    key, e
                 );
                 error!("{}", &details);
                 return RepoState::Failed(details);
@@ -633,7 +633,7 @@ impl ShardedProcessHandler {
                             Ok(Some(repo_execution_process)) => {
                                 guarded_repo_map.remove(&key);
                                 let details =
-                                    format!("Adding shard {} completed successfully", &key);
+                                    format!("Adding shard {} completed successfully", key);
                                 guarded_repo_map
                                     .insert(key, RepoProcess::Execution(repo_execution_process));
                                 info!("{}", &details);
@@ -642,7 +642,7 @@ impl ShardedProcessHandler {
                             // The setup is still in-progress.
                             Ok(None) => RepoState::InProgress(format!(
                                 "Setup still incomplete. Adding shard {} is in progress.",
-                                &key
+                                key
                             )),
                             // The setup for the repo failed. Need to return failure to SM.
                             // NOTE: Its safe to return failure in this case (as compared
@@ -652,7 +652,7 @@ impl ShardedProcessHandler {
                             Err(e) => {
                                 let details = format!(
                                     "Setup failed while adding shard {}. Error: {:#}",
-                                    &key, e
+                                    key, e
                                 );
                                 error!("{}", &details);
                                 // NOTE: Returning failure without removing the process from the map can
@@ -665,7 +665,7 @@ impl ShardedProcessHandler {
                     // The repo already reached execution stage and there is nothing
                     // more to do.
                     Execution(_) => {
-                        RepoState::Completed(format!("Shard {} was already added", &key))
+                        RepoState::Completed(format!("Shard {} was already added", key))
                     }
                     // The repo being added is under clean-up. This could occur if there
                     // was a rapid remove-and-add operation for the same repo on this replica
@@ -686,7 +686,7 @@ impl ShardedProcessHandler {
                             Ok(Some(_)) => {
                                 let details = format!(
                                     "Shard addition is still in progress but shard {} cleanup was completed successfully",
-                                    &key
+                                    key
                                 );
                                 info!("{}", &details,);
                                 guarded_repo_map.remove(&key);
@@ -697,7 +697,7 @@ impl ShardedProcessHandler {
                             Ok(None) => {
                                 let details = format!(
                                     "Shard {} addition is still in process since it hasn't been dropped yet",
-                                    &key
+                                    key
                                 );
                                 RepoState::InProgress(details)
                             }
@@ -706,7 +706,7 @@ impl ShardedProcessHandler {
                             Err(e) => {
                                 let details = format!(
                                     "Shard {} failed while completing a past clean-up. It cannot be added right now. Error: {:#}",
-                                    &key, e
+                                    key, e
                                 );
                                 guarded_repo_map.remove(&key);
                                 RepoState::Failed(details)
@@ -718,7 +718,7 @@ impl ShardedProcessHandler {
             // The setup has not been initiated yet. Need to setup the execution
             // for this repo.
             else {
-                let details = format!("Initiating setup. Adding shard {} is in progress", &key);
+                let details = format!("Initiating setup. Adding shard {} is in progress", key);
                 let repo_setup_process = RepoSetupProcess::new(
                     self.fb,
                     shard,
@@ -746,7 +746,7 @@ impl ShardedProcessHandler {
             Err(e) => {
                 let details = format!(
                     "Drop shard failed while parsing shard {}. Error: {:#}",
-                    &key, e
+                    key, e
                 );
                 error!("{}", &details);
                 return RepoState::Failed(details);
@@ -824,7 +824,7 @@ impl ShardedProcessHandler {
                             Ok(Some(repo_execution_process)) => {
                                 let details = format!(
                                     "Dropping shard {} is in progress. The repo is in execution state and now needs to be cleaned up",
-                                    &key
+                                    key
                                 );
                                 guarded_repo_map
                                     .insert(key, RepoProcess::Execution(repo_execution_process));
@@ -834,14 +834,14 @@ impl ShardedProcessHandler {
                             // The setup is still in-progress.
                             Ok(None) => RepoState::InProgress(format!(
                                 "Setup still incomplete. Dropping shard {} is in progress.",
-                                &key
+                                key
                             )),
                             // The setup for the repo failed. However, we would still return success
                             // to SM since this repo was anyway required to be dropped.
                             Err(e) => {
                                 let details = format!(
                                     "Setup failed while dropping shard {}. Error: {:#}",
-                                    &key, e
+                                    key, e
                                 );
                                 error!("{}", &details);
                                 RepoState::Completed(format!(

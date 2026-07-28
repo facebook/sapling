@@ -81,7 +81,7 @@ pub async fn request_handler(
             &format!("Requested repo \"{reponame}\" does not exist or is disabled"),
         );
 
-        anyhow!("Unknown Repo: {}", &reponame)
+        anyhow!("Unknown Repo: {}", reponame)
     })?;
 
     let RepoHandler {

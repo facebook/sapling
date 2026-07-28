@@ -247,8 +247,7 @@ async fn read_objects_task(
                 Err(e) => {
                     if let Some(sender) = maybe_sender {
                         let _ = sender.send(
-                            Err(e)
-                                .with_context(|| format!("read_objects_task failed for {}", &buf)),
+                            Err(e).with_context(|| format!("read_objects_task failed for {}", buf)),
                         );
                     }
                     continue;

@@ -680,7 +680,7 @@ pub(crate) fn compare_expected_changesets(
     expected_changesets: &[ExpectedChangeset],
 ) -> Result<()> {
     // Print the actual changesets to debug test failures
-    println!("actual_changesets: {:#?}\n\n", &actual_changesets);
+    println!("actual_changesets: {:#?}\n\n", actual_changesets);
 
     assert_eq!(
         actual_changesets.len(),
@@ -740,7 +740,7 @@ pub(crate) async fn check_submodule_metadata_file_in_large_repo<'a>(
         .await?
         .ok_or(anyhow!(
             "No manifest entry for x-repo submodule metadata file in path {}",
-            &metadata_file_path
+            metadata_file_path
         ))?
         .into_leaf()
         .ok_or(anyhow!(
@@ -873,10 +873,7 @@ pub(crate) async fn sync_changeset_and_derive_all_types(
     let target_repo_changesets = get_all_changeset_data_from_repo(&ctx, target_repo).await?;
 
     // Print all target repo changesets for debugging, if the test fails
-    println!(
-        "All target repo changesets: {0:#?}",
-        &target_repo_changesets
-    );
+    println!("All target repo changesets: {0:#?}", target_repo_changesets);
 
     derive_all_enabled_types_for_repo(&ctx, target_repo, &target_repo_changesets).await?;
 

@@ -119,7 +119,7 @@ impl GitBookmarkInfo {
     ) -> Self {
         let repo_name = format!("{}.git", repo.repo_identity().name());
         // Need to prepend the refs/ prefix since Mononoke bookmarks strip that off
-        let bookmark_name = format!("refs/{}", &info.bookmark_name);
+        let bookmark_name = format!("refs/{}", info.bookmark_name);
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Time travel exception!")

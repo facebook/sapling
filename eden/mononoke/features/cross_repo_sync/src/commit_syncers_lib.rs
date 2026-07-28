@@ -379,7 +379,7 @@ where
         ctx,
         format!(
             "Getting version and parent map for target bookmark {}, parent version {} and synced_ancestors_versions {2:#?}",
-            target_bookmark, &parent_version, synced_ancestors_versions,
+            target_bookmark, parent_version, synced_ancestors_versions,
         ),
     );
 
@@ -572,7 +572,7 @@ where
             ctx,
             format!(
                 "all validations passed with parent_mapping {0:#?}",
-                &parent_mapping,
+                parent_mapping,
             ),
         );
         // There's exactly one parent that's ancestor of target_bookmark.

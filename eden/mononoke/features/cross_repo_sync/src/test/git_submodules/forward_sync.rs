@@ -1511,7 +1511,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
-    println!("sync_result: {0:#?}", &sync_result);
+    println!("sync_result: {0:#?}", sync_result);
 
     assert!(sync_result.is_err_and(|err| {
         err.chain().any(|e| {
@@ -1579,7 +1579,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
 
-    println!("sync_result from changeset #1: {0:#?}", &sync_result);
+    println!("sync_result from changeset #1: {0:#?}", sync_result);
 
     // TODO(T174902563): fail EXPANSION because of path overlap
     // Currently we're failing VALIDATION because the content is not a valid
@@ -1592,7 +1592,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
     // }));
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
+    println!("large_repo_changesets: {:#?}\n\n", large_repo_changesets);
 
     // When this is fixed, the commit sync should fail, instead of validation.
     // check_mapping(ctx.clone(), &commit_sync_data, small_repo_cs_id, None).await;
@@ -1623,7 +1623,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
 
-    println!("sync_result from changeset #2: {0:#?}", &sync_result);
+    println!("sync_result from changeset #2: {0:#?}", sync_result);
 
     // TODO(T174902563): fail expansion because of path overlap
     // let expected_err_msg =
@@ -1705,7 +1705,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
         .context("sync_to_master failed")
         .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
 
-    println!("sync_result: {0:#?}", &sync_result);
+    println!("sync_result: {0:#?}", sync_result);
 
     // TODO(T174902563): fail EXPANSION because of path overlap
     // Currently we're failing VALIDATION because the content is not a valid
@@ -2319,7 +2319,7 @@ async fn test_expanding_existing_submdule_commits_as_dangling_pointers(
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, small_repo_cs_id_2).await;
 
-    println!("sync_result: {0:#?}", &sync_result);
+    println!("sync_result: {0:#?}", sync_result);
 
     assert!(sync_result.is_err_and(|err| {
         err.chain().any(|e| {

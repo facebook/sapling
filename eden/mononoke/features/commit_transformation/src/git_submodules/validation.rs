@@ -287,7 +287,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     .log_future_stats(
         ctx.scuba().clone(),
         "Getting root manifest id from submodule git commit",
-        format!("Submodule repo: {}", &submodule_repo.repo_identity().name()),
+        format!("Submodule repo: {}", submodule_repo.repo_identity().name()),
     )?;
 
     // ------------------------------------------------------------------------
@@ -306,7 +306,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     .log_future_stats(
         ctx.scuba().clone(),
         "Get submodule expansion manifest id",
-        format!("Synced submodule path: {}", &synced_submodule_path),
+        format!("Synced submodule path: {}", synced_submodule_path),
     )
     .context("Failed to get submodule expansion manifest id")?;
 

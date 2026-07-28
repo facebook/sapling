@@ -76,7 +76,7 @@ fn diff_configs(
                     .ok_or_else(|| {
                         MegarepoError::request(anyhow!(
                             "remapping state is missing mapping for {}",
-                            &old_source.source_name
+                            old_source.source_name
                         ))
                     })?;
                 removed.push((old_source, *cs_id));
@@ -87,7 +87,7 @@ fn diff_configs(
                     .ok_or_else(|| {
                         MegarepoError::request(anyhow!(
                             "changesets_to_merge is missing mapping for {}",
-                            &new_source.source_name
+                            new_source.source_name
                         ))
                     })?;
                 added.push((new_source, *cs_id));
@@ -98,7 +98,7 @@ fn diff_configs(
                     .ok_or_else(|| {
                         MegarepoError::request(anyhow!(
                             "remapping state is missing mapping for {}",
-                            &old_source.source_name
+                            old_source.source_name
                         ))
                     })?;
                 let new_cs_id = new_changesets
@@ -106,7 +106,7 @@ fn diff_configs(
                     .ok_or_else(|| {
                         MegarepoError::request(anyhow!(
                             "changesets_to_merge is missing mapping for {}",
-                            &new_source.source_name
+                            new_source.source_name
                         ))
                     })?;
                 if old_source.source_name != new_source.source_name
@@ -257,7 +257,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
             let mut scuba = ctx.scuba().clone();
             scuba.log_with_msg(
                 "Created change target config merge commit for additions",
-                Some(format!("{}", &additions_merge_cs_id)),
+                Some(format!("{}", additions_merge_cs_id)),
             );
             target_repo
                 .changeset(additions_merge_cs_id)
@@ -284,7 +284,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         let mut scuba = ctx.scuba().clone();
         scuba.log_with_msg(
             "Created change target config merge commit connecting additions to removals",
-            Some(format!("{}", &final_merge)),
+            Some(format!("{}", final_merge)),
         );
 
         // Derive all the necessary data before moving the bookmark

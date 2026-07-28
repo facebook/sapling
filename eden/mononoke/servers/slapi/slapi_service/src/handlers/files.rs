@@ -306,7 +306,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
 
     let repo: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
 
-    let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
+    let id = AnyFileContentId::from_str(&format!("{}/{}", params.idtype, params.id))
         .map_err(HttpError::e400)?;
 
     let body = Body::take_from(state)

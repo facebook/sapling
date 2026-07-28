@@ -355,7 +355,7 @@ pub trait MegarepoOp<R> {
                 |path_context| async move {
                     Result::<(), _>::Err(MegarepoError::request(anyhow!(
                         "path {} cannot be added to the target - it's already present",
-                        &path_context.path()
+                        path_context.path()
                     )))
                 }
             })
@@ -381,7 +381,7 @@ pub trait MegarepoOp<R> {
                     if path_context.is_file().await? {
                         Result::<(), _>::Err(MegarepoError::request(anyhow!(
                             "File in target path {} conflicts with newly added files",
-                            &path_context.path()
+                            path_context.path()
                         )))
                     } else {
                         Ok(())

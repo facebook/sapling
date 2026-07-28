@@ -26,7 +26,7 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
     let source_repo = mononoke.raw_repo(repo_name).ok_or_else(|| {
         anyhow!(
             "Requested repo {} is not being served by this server",
-            &repo_name
+            repo_name
         )
     })?;
     let base = source_repo.repo_handler_base.clone();

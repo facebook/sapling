@@ -360,7 +360,7 @@ async fn expand_git_submodule<'a, R>(
 where
     R: Repo,
 {
-    log_debug(ctx, format!("Expanding submodule {}", &submodule_path));
+    log_debug(ctx, format!("Expanding submodule {}", submodule_path));
 
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
     let git_submodule_sha1 =
@@ -370,9 +370,9 @@ where
         ctx,
         format!(
             "submodule_path: {} | git_submodule_hash: {} | submodule_repo name: {}",
-            &submodule_path,
-            &git_submodule_sha1,
-            &submodule_repo.repo_identity().name()
+            submodule_path,
+            git_submodule_sha1,
+            submodule_repo.repo_identity().name()
         ),
     );
 
@@ -609,7 +609,7 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
     .with_context(|| {
         format!(
             "Failed to expand recursive submodule inside submodule {}",
-            &submodule_repo.repo_identity().name()
+            submodule_repo.repo_identity().name()
         )
     })?;
 

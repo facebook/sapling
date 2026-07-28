@@ -59,9 +59,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let sender: Arc<dyn EdenapiSender + Send + Sync> = {
         let url = if let Some(socket) = app_args.edenapi_args.dest_socket {
             // Only for integration tests
-            format!("{}:{}/edenapi/", &config.url, socket)
+            format!("{}:{}/edenapi/", config.url, socket)
         } else {
-            format!("{}/edenapi/", &config.url)
+            format!("{}/edenapi/", config.url)
         };
 
         let tls_args = app_args

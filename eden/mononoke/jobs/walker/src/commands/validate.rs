@@ -71,7 +71,7 @@ impl RepoShardedProcess for WalkerValidateProcess {
             .with_context(|| {
                 format!(
                     "Failure in setting up walker validate for repo {}",
-                    &repo_name
+                    repo_name
                 )
             })?;
         info!("Completed walker validate setup for repo {}", repo_name);
@@ -128,7 +128,7 @@ impl RepoShardedProcessExecutor for WalkerValidateProcessExecutor {
         .with_context(|| {
             format!(
                 "Error while executing walker validate execution for repo {}",
-                &self.repo_name
+                self.repo_name
             )
         })
     }

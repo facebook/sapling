@@ -562,7 +562,7 @@ impl<R: CommitGraphRef + Clone> ChangesetContext<R> {
             .changeset_generation(self.ctx(), self.id)
             .await
             .map_err(|_| {
-                MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))
+                MononokeError::NotAvailable(format!("Generation number missing for {:?}", self.id))
             })
     }
 
@@ -573,7 +573,7 @@ impl<R: CommitGraphRef + Clone> ChangesetContext<R> {
             .changeset_linear_depth(self.ctx(), self.id)
             .await
             .map_err(|_| {
-                MononokeError::NotAvailable(format!("Linear depth missing for {:?}", &self.id))
+                MononokeError::NotAvailable(format!("Linear depth missing for {:?}", self.id))
             })
     }
 

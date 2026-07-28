@@ -244,7 +244,7 @@ fn process_pack_entries(
         .into_par_iter()
         .map(|entry| {
             let mut output = vec![];
-            let err_context = format!("Error in decoding packfile entry: {:?}", &entry.header);
+            let err_context = format!("Error in decoding packfile entry: {:?}", entry.header);
             let outcome = pack_file.decode_entry(
                 into_data_entry(entry.clone()),
                 &mut output,

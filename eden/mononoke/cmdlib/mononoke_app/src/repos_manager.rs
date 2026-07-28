@@ -310,7 +310,7 @@ impl<Repo> MononokeReposManager<Repo> {
                     let repo = repo_factory
                         .build(name, repo_config, common_config)
                         .await
-                        .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
+                        .with_context(|| format!("Failed to initialize repo '{}'", repo_name))?;
                     let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
                     info!("Initialized repo: {} ({}/{})", &repo_name, n, total);
                     STATS::initialization_time_millisecs.add_value(
@@ -1018,7 +1018,7 @@ where
                     .binary_exponential_backoff()
                     .max_attempts(5)
                     .await
-                    .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?
+                    .with_context(|| format!("Failed to reload repo '{}'", repo_name))?
                     .0;
                     let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
                     info!("Reloaded repo: {} ({}/{})", &repo_name, n, total);

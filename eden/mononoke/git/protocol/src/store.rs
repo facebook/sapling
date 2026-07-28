@@ -97,13 +97,13 @@ pub(crate) async fn base_packfile_item(
             let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                 format!(
                     "Error in fetching raw git object bytes for object {:?} while generating packfile item",
-                    &git_objectid
+                    git_objectid
                 )
             })?;
             let packfile_item = PackfileItem::new_base(object_bytes).with_context(|| {
                 format!(
                     "Error in creating packfile item from git object bytes for {:?}",
-                    &git_objectid
+                    git_objectid
                 )
             })?;
             Ok(packfile_item)
@@ -116,7 +116,7 @@ pub(crate) async fn base_packfile_item(
                     .with_context(|| {
                         format!(
                             "Error in fetching packfile item for git object {:?} in FetchOnly mode",
-                            &git_objectid
+                            git_objectid
                         )
                     })?;
             Ok(PackfileItem::new_encoded_base(
@@ -134,7 +134,7 @@ pub(crate) async fn base_packfile_item(
             .with_context(|| {
                 format!(
                     "Error in fetching packfile item for git object {:?} in FetchAndStore mode",
-                    &git_objectid
+                    git_objectid
                 )
             })?;
             match fetch_result {
@@ -145,7 +145,7 @@ pub(crate) async fn base_packfile_item(
                     let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                         format!(
                             "Error in fetching raw git object bytes for object {:?} while fetching-and-storing packfile item",
-                            &git_objectid
+                            git_objectid
                         )
                     })?;
                     let packfile_base_item = upload_packfile_base_item(

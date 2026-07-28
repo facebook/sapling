@@ -76,10 +76,7 @@ impl RepoShardedProcess for WalkerSizingProcess {
         let (job_params, command) = setup_sizing(&repos, &self.app, &self.args)
             .await
             .with_context(|| {
-                format!(
-                    "Failure in setting up walker sizing for repo {}",
-                    &repo_name
-                )
+                format!("Failure in setting up walker sizing for repo {}", repo_name)
             })?;
         info!("Completed walker sizing setup for repo {}", repo_name);
         Ok(Arc::new(WalkerSizingProcessExecutor::new(
@@ -135,7 +132,7 @@ impl RepoShardedProcessExecutor for WalkerSizingProcessExecutor {
         .with_context(|| {
             format!(
                 "Error while executing walker sizing for repo {}",
-                &self.repo_name
+                self.repo_name
             )
         })
     }
