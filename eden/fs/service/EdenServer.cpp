@@ -935,18 +935,28 @@ void EdenServer::registerXplatTransforms() {
   // Register XplatLogger transforms for all EdenFS Scuba tables.
   // This must happen before any logging call sites fire.
   // Add new registerTransform() calls here as new tables are onboarded.
+  //
+  // Bind the shared telemetry identity into each transform via a capturing
+  // lambda so the generic core stays identity-agnostic.
+  const auto& identity = xplatLogger_->getTelemetryIdentity();
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kFileAccessCategory},
       "GeneratedEdenfsFileAccessesLoggerConfig",
-      fileAccessTransform);
+      [identity](const DynamicEvent& event) {
+        return fileAccessTransform(identity, event);
+      });
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kEventsCategory},
       "GeneratedEdenfsEventsLoggerConfig",
-      edenfsEventsTransform);
+      [identity](const DynamicEvent& event) {
+        return edenfsEventsTransform(identity, event);
+      });
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kErrorsCategory},
       "GeneratedEdenfsErrorsLoggerConfig",
-      errorsTransform);
+      [identity](const DynamicEvent& event) {
+        return errorsTransform(identity, event);
+      });
 }
 #endif
 
