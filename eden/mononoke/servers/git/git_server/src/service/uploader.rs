@@ -46,6 +46,7 @@ use tracing::info;
 
 use super::reader::GitObjectStore;
 use crate::Repo;
+use crate::command::RefType;
 use crate::command::RefUpdate;
 
 type ContentTags = HashMap<String, ObjectId>;
@@ -357,6 +358,15 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
                 // If the ref is a tag, use the content_tags mapping to get the git hash of the peeled object
                 if let Some(tag_id) = content_tags.get(&ref_name) {
                     git_hash = tag_id.clone();
+                }
+                // don't crash and 500 on a null hash, let it bubble up to 200 `ng`
+                if git_hash.is_null() {
+                    return anyhow::Ok(RefUpdate::new(
+                        ref_name,
+                        RefType::Unknown,
+                        ref_update.from,
+                        ref_update.to,
+                    ));
                 }
                 let obj_kind = reader
                     .get_object(git_hash.as_ref())

@@ -15,9 +15,6 @@ use gix_transport::bstr::ByteSlice;
 pub use self::fetch::FetchArgs;
 pub use self::ls_refs::LsRefsArgs;
 pub use self::push::PushArgs;
-// Test-only re-export for `RefUpdate` fixtures in sibling modules.
-// Kept under `#[cfg(test)]` to avoid widening the production API surface.
-#[cfg(test)]
 pub(crate) use self::push::RefType;
 pub use self::push::RefUpdate;
 
