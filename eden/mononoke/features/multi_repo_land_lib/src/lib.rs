@@ -16,7 +16,10 @@ mod scribe;
 
 pub use crate::manifest_commit::create_manifest_commit;
 pub use crate::repin::PreparedManifestCommit;
+pub use crate::repin::RepinOptions;
+pub use crate::repin::RepinOutcome;
 pub use crate::repin::prepare_manifest_commit;
+pub use crate::repin::repin_manifest_branch;
 pub use crate::repo_provider::RepoProvider;
 pub use crate::resolve::ResolveEntry;
 pub use crate::resolve::ResolveOutcome;

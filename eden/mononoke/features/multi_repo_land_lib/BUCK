@@ -23,6 +23,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks/multi_repo_bookmarks_transaction:multi_repo_bookmarks_transaction",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_attributes/phases:phases",

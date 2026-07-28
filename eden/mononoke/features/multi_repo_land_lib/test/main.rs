@@ -35,12 +35,15 @@ use mononoke_repos::MononokeRepos;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
+use multi_repo_land_lib::RepinOptions;
+use multi_repo_land_lib::RepinOutcome;
 use multi_repo_land_lib::RepoProvider;
 use multi_repo_land_lib::ResolveEntry;
 use multi_repo_land_lib::ResolveOutcome;
 use multi_repo_land_lib::create_manifest_commit;
 use multi_repo_land_lib::log_scribe_bookmark_update;
 use multi_repo_land_lib::prepare_manifest_commit;
+use multi_repo_land_lib::repin_manifest_branch;
 use multi_repo_land_lib::resolve_bookmarks_cross_repo;
 use phases::Phases;
 use repo_blobstore::RepoBlobstore;
@@ -532,6 +535,153 @@ async fn test_log_scribe_bookmark_update_no_destination_is_noop(fb: FacebookInit
             .await?,
         Some(head),
         "scribe logging must not move the bookmark",
+    );
+
+    Ok(())
+}
+
+/// `repin_manifest_branch` generates the manifest commit on the current head
+/// and atomically moves the bookmark to it, returning `Moved` with the new
+/// changeset and its pre-derived git identity.
+#[mononoke::fbinit_test]
+async fn test_repin_manifest_branch_moves_bookmark(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "branch")
+        .create_publishing(head)
+        .await?;
+
+    let manifest_path = NonRootMPath::new("static.xml")?;
+    let outcome = repin_manifest_branch(
+        &ctx,
+        &repo,
+        &bm,
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+        &RepinOptions::default(),
+    )
+    .await?;
+
+    let new_cs = match outcome {
+        RepinOutcome::Moved { new_cs, mapped_git } => {
+            assert_eq!(
+                mapped_git.oid().as_ref().len(),
+                20,
+                "a 20-byte git sha1 should be pre-derived",
+            );
+            new_cs
+        }
+        RepinOutcome::CasFailure => panic!("expected Moved, got CasFailure"),
+    };
+    assert_ne!(new_cs, head, "a new commit must be created");
+
+    // The branch head now points at the generated static.xml commit.
+    assert_eq!(
+        repo.bookmarks()
+            .get(ctx.clone(), &bm, Freshness::MostRecent)
+            .await?,
+        Some(new_cs),
+        "the branch head must move to new_cs",
+    );
+
+    // That commit is built on the old head and changes only the manifest file.
+    let bcs = new_cs.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(bcs.parents().collect::<Vec<_>>(), vec![head]);
+    let changed: Vec<_> = bcs.file_changes().map(|(p, _)| p.clone()).collect();
+    assert_eq!(changed, vec![manifest_path]);
+
+    Ok(())
+}
+
+/// When the CAS baseline is stale, the transaction fails and `repin_manifest_branch`
+/// returns `CasFailure` without moving the bookmark. Modeled deterministically
+/// with a scratch bookmark: `prepare_manifest_commit` reads its head (kind-
+/// agnostic), but the transaction's CAS only matches PUBLISHING rows, so it
+/// matches zero rows — the same `!is_success()` a concurrent publishing move
+/// produces.
+#[mononoke::fbinit_test]
+async fn test_repin_manifest_branch_cas_failure(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "branch").create_scratch(head).await?;
+
+    let manifest_path = NonRootMPath::new("static.xml")?;
+    let outcome = repin_manifest_branch(
+        &ctx,
+        &repo,
+        &bm,
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+        &RepinOptions::default(),
+    )
+    .await?;
+
+    assert!(
+        matches!(outcome, RepinOutcome::CasFailure),
+        "a stale CAS baseline must yield CasFailure, got {outcome:?}",
+    );
+
+    // The bookmark is left untouched.
+    assert_eq!(
+        repo.bookmarks()
+            .get(ctx.clone(), &bm, Freshness::MostRecent)
+            .await?,
+        Some(head),
+        "a CAS failure must leave the bookmark unchanged",
+    );
+
+    Ok(())
+}
+
+/// With `log_scribe = false` the bookmark still moves; only the fire-and-forget
+/// scribe emission is skipped.
+#[mononoke::fbinit_test]
+async fn test_repin_manifest_branch_no_scribe_still_moves(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "branch")
+        .create_publishing(head)
+        .await?;
+
+    let manifest_path = NonRootMPath::new("static.xml")?;
+    let outcome = repin_manifest_branch(
+        &ctx,
+        &repo,
+        &bm,
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+        &RepinOptions { log_scribe: false },
+    )
+    .await?;
+
+    let new_cs = match outcome {
+        RepinOutcome::Moved { new_cs, .. } => new_cs,
+        RepinOutcome::CasFailure => panic!("expected Moved, got CasFailure"),
+    };
+    assert_eq!(
+        repo.bookmarks()
+            .get(ctx.clone(), &bm, Freshness::MostRecent)
+            .await?,
+        Some(new_cs),
+        "the branch head must move even with scribe disabled",
     );
 
     Ok(())
