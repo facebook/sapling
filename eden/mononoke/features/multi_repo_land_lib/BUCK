@@ -1,0 +1,45 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("scm_server_treehugger")
+
+rust_library(
+    name = "multi_repo_land_lib",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "."},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//eden/mononoke/common/mononoke_repos:mononoke_repos",
+        "//eden/mononoke/features/changesets_creation:changesets_creation",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/filestore:filestore",
+        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "multi_repo_land_lib_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "multi_repo_land_lib_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        ":multi_repo_land_lib",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_repos:mononoke_repos",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+)

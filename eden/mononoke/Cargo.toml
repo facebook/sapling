@@ -276,6 +276,7 @@ members = [
   "features/microwave/if/clients",
   "features/microwave/if/mocks",
   "features/microwave/if/services",
+  "features/multi_repo_land_lib",
   "features/pushrebase",
   "features/pushrebase/pushrebase_client",
   "features/pushrebase/pushrebase_hook",
