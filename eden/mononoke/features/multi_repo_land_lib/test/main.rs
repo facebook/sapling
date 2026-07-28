@@ -11,17 +11,37 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingEntry;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use bytes::Bytes;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use dbbookmarks::store::SqlBookmarks;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
+use metaconfig_types::RepoConfig;
 use mononoke_macros::mononoke;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 use multi_repo_land_lib::RepoProvider;
+use multi_repo_land_lib::ResolveEntry;
+use multi_repo_land_lib::ResolveOutcome;
 use multi_repo_land_lib::create_manifest_commit;
+use multi_repo_land_lib::resolve_bookmarks_cross_repo;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
+use tests_utils::bookmark;
 
 #[mononoke::fbinit_test]
 async fn test_creates_commit_on_top_of_parent(fb: FacebookInit) -> Result<()> {
@@ -130,4 +150,192 @@ fn test_repo_provider_blanket_impl() {
     );
     // Confirm the returned handle is an Arc to the stored repo.
     let _handle: Arc<DummyRepo> = provider.get_by_name("present").expect("present exists");
+}
+
+/// Test repo with the facets `resolve_bookmarks_cross_repo` needs
+/// (`RepoIdentityRef` + `SqlBookmarksRef`), plus the facets the `tests_utils`
+/// commit/bookmark helpers require. `BasicTestRepo` is unusable here because it
+/// lacks the concrete `SqlBookmarks` facet.
+#[facet::container]
+#[derive(Clone)]
+struct TestRepo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_config: RepoConfig,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    sql_bookmarks: SqlBookmarks,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+}
+
+/// A mixed batch exercises every outcome (unknown repo, invalid/missing
+/// bookmark, missing git mapping, success across two repos) and asserts the
+/// results line up with the input order.
+///
+/// Both repos are built from a single `TestRepoFactory` so they share one
+/// in-memory metadata DB — mirroring the single-shard assumption the resolve
+/// relies on for its cross-repo `IN (...)` queries.
+///
+/// NOTE: the `BATCH_SIZE = 500` chunk boundary is not exercised here —
+/// provisioning 500+ repos in a unit test is impractical. The batching is a
+/// straightforward `.chunks(500)` loop over the deduped pairs.
+#[mononoke::fbinit_test]
+async fn test_resolve_bookmarks_cross_repo_mixed_batch(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let mut factory = TestRepoFactory::new(fb)?;
+    let repo_a: TestRepo = factory
+        .with_id(RepositoryId::new(0))
+        .with_name("repo_a")
+        .build()
+        .await?;
+    let repo_b: TestRepo = factory
+        .with_id(RepositoryId::new(1))
+        .with_name("repo_b")
+        .build()
+        .await?;
+
+    // repo_a: "main" -> commit with a git mapping (success).
+    let main_a = CreateCommitContext::new_root(&ctx, &repo_a)
+        .add_file("f", "a-main")
+        .commit()
+        .await?;
+    bookmark(&ctx, &repo_a, "main")
+        .create_publishing(main_a)
+        .await?;
+    let sha_a = GitSha1::from_byte_array([0xAA; 20]);
+    repo_a
+        .bonsai_git_mapping()
+        .add(&ctx, BonsaiGitMappingEntry::new(sha_a, main_a))
+        .await?;
+
+    // repo_a: "nomapping" -> commit WITHOUT a git mapping.
+    let nomap_a = CreateCommitContext::new_root(&ctx, &repo_a)
+        .add_file("f", "a-nomap")
+        .commit()
+        .await?;
+    bookmark(&ctx, &repo_a, "nomapping")
+        .create_publishing(nomap_a)
+        .await?;
+
+    // repo_b: "release" -> commit with a git mapping (success, second repo).
+    let main_b = CreateCommitContext::new_root(&ctx, &repo_b)
+        .add_file("f", "b-release")
+        .commit()
+        .await?;
+    bookmark(&ctx, &repo_b, "release")
+        .create_publishing(main_b)
+        .await?;
+    let sha_b = GitSha1::from_byte_array([0xBB; 20]);
+    repo_b
+        .bonsai_git_mapping()
+        .add(&ctx, BonsaiGitMappingEntry::new(sha_b, main_b))
+        .await?;
+
+    let repos: MononokeRepos<TestRepo> = MononokeRepos::new();
+    repos.add("repo_a", 0, repo_a);
+    repos.add("repo_b", 1, repo_b);
+
+    let entries = vec![
+        // 0: success (first repo -> supplies the shared read connection).
+        ResolveEntry {
+            repo_name: "repo_a".to_string(),
+            bookmark_name: "main".to_string(),
+        },
+        // 1: unknown repo.
+        ResolveEntry {
+            repo_name: "ghost".to_string(),
+            bookmark_name: "main".to_string(),
+        },
+        // 2: invalid (non-ascii) bookmark name.
+        ResolveEntry {
+            repo_name: "repo_a".to_string(),
+            bookmark_name: "inval\u{00e9}d".to_string(),
+        },
+        // 3: valid name, but no such bookmark.
+        ResolveEntry {
+            repo_name: "repo_a".to_string(),
+            bookmark_name: "missing".to_string(),
+        },
+        // 4: bookmark exists, but no git mapping.
+        ResolveEntry {
+            repo_name: "repo_a".to_string(),
+            bookmark_name: "nomapping".to_string(),
+        },
+        // 5: success in the second repo.
+        ResolveEntry {
+            repo_name: "repo_b".to_string(),
+            bookmark_name: "release".to_string(),
+        },
+    ];
+
+    let results = resolve_bookmarks_cross_repo(&ctx, &repos, &entries).await?;
+
+    // One result per input, in the same order.
+    assert_eq!(results.len(), entries.len(), "one result per input entry");
+    for (entry, result) in entries.iter().zip(results.iter()) {
+        assert_eq!(
+            (result.repo_name.as_str(), result.bookmark_name.as_str()),
+            (entry.repo_name.as_str(), entry.bookmark_name.as_str()),
+            "results must stay aligned with input order",
+        );
+    }
+
+    assert_eq!(results[0].outcome, ResolveOutcome::Resolved(sha_a));
+    assert_eq!(
+        results[1].outcome,
+        ResolveOutcome::Error("unknown repo: ghost".to_string()),
+    );
+    assert_eq!(
+        results[2].outcome,
+        ResolveOutcome::Error("invalid bookmark name: inval\u{00e9}d".to_string()),
+    );
+    assert_eq!(
+        results[3].outcome,
+        ResolveOutcome::Error("bookmark not found".to_string()),
+    );
+    assert_eq!(
+        results[4].outcome,
+        ResolveOutcome::Error("git mapping not found".to_string()),
+    );
+    assert_eq!(results[5].outcome, ResolveOutcome::Resolved(sha_b));
+
+    Ok(())
+}
+
+/// An empty request returns an empty result set without touching any repo.
+#[mononoke::fbinit_test]
+async fn test_resolve_bookmarks_cross_repo_empty(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repos: MononokeRepos<TestRepo> = MononokeRepos::new();
+
+    let results = resolve_bookmarks_cross_repo(&ctx, &repos, &[]).await?;
+    assert!(results.is_empty(), "empty input yields empty output");
+
+    Ok(())
 }

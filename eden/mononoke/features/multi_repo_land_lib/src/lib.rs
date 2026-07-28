@@ -10,6 +10,11 @@
 
 mod manifest_commit;
 mod repo_provider;
+mod resolve;
 
 pub use crate::manifest_commit::create_manifest_commit;
 pub use crate::repo_provider::RepoProvider;
+pub use crate::resolve::ResolveEntry;
+pub use crate::resolve::ResolveOutcome;
+pub use crate::resolve::ResolveResult;
+pub use crate::resolve::resolve_bookmarks_cross_repo;
