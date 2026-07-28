@@ -43,3 +43,27 @@ pub fn get_systemd_unit(instance: &EdenFsInstance) -> Result<String> {
     let escaped = String::from_utf8_lossy(&output.stdout).trim().to_string();
     Ok(EDENFS_UNIT_NAME_TEMPLATE.replace("{escaped_state_dir}", &escaped))
 }
+
+/// D-Bus session environment (`XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`)
+/// for reaching the current user's systemd `--user` manager, derived from the
+/// current UID rather than from inherited environment variables.
+///
+/// Returns `None` when the D-Bus session socket for the current user does not
+/// exist.
+#[cfg(target_os = "linux")]
+pub fn systemd_user_session_env() -> Option<[(&'static str, String); 2]> {
+    // SAFETY: `getuid` takes no arguments and touches no memory; POSIX
+    // guarantees it always succeeds, so there are no preconditions to uphold.
+    let uid = unsafe { libc::getuid() };
+    let runtime_dir = format!("/run/user/{uid}");
+    let bus_path = format!("{runtime_dir}/bus");
+
+    if !std::path::Path::new(&bus_path).exists() {
+        return None;
+    }
+
+    Some([
+        ("XDG_RUNTIME_DIR", runtime_dir),
+        ("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={bus_path}")),
+    ])
+}

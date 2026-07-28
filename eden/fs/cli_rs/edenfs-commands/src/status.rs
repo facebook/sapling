@@ -187,10 +187,17 @@ fn print_systemd_status_full(instance: &EdenFsInstance) {
         }
     };
 
-    if let Err(e) = Command::new("systemctl")
-        .args(["--user", "status", "--no-pager", &unit])
-        .status()
-    {
+    let mut command = Command::new("systemctl");
+    command.args(["--user", "status", "--no-pager", &unit]);
+
+    // Point `systemctl --user` at the current user's D-Bus session bus rather
+    // than trusting inherited env vars, which after `su` may reference another
+    // user's bus and yield "Operation not permitted".
+    if let Some(session_env) = edenfs_client::daemon::systemd_user_session_env() {
+        command.envs(session_env);
+    }
+
+    if let Err(e) = command.status() {
         eprintln!("warning: failed to get status of edenfs service unit: {e}");
     }
 }

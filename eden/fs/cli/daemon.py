@@ -74,23 +74,22 @@ def _build_systemd_run_cmd(edenfs_cmd: List[str], eden_dir: str) -> List[str]:
 
 
 def _ensure_dbus_env(env: Dict[str, str]) -> bool:
-    """Ensure D-Bus session vars are present in *env*.
+    """Ensure D-Bus session vars are present and correct in *env*.
 
-    If ``XDG_RUNTIME_DIR`` or ``DBUS_SESSION_BUS_ADDRESS`` are missing,
-    falls back to the standard systemd paths derived from the UID.
+    Always computes the expected runtime directory from the current UID
+    rather than trusting inherited environment variables, which may point
+    to a different user's bus after `su`.
 
     Returns True if the vars are now set, False if the D-Bus socket does
     not exist.
     """
-    if "XDG_RUNTIME_DIR" in env and "DBUS_SESSION_BUS_ADDRESS" in env:
-        return True
     uid = os.getuid()
-    xdg_runtime_dir = env.get("XDG_RUNTIME_DIR", f"/run/user/{uid}")
+    xdg_runtime_dir = f"/run/user/{uid}"
     dbus_socket = f"{xdg_runtime_dir}/bus"
     if not os.path.exists(dbus_socket):
         return False
-    env.setdefault("XDG_RUNTIME_DIR", xdg_runtime_dir)
-    env.setdefault("DBUS_SESSION_BUS_ADDRESS", f"unix:path={dbus_socket}")
+    env["XDG_RUNTIME_DIR"] = xdg_runtime_dir
+    env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={dbus_socket}"
     return True
 
 
@@ -106,21 +105,16 @@ def _try_setup_systemd_env(
     eden_env: Dict[str, str],
     instance: "EdenInstance",
 ) -> bool:
-    """Ensure the D-Bus session env vars are available for systemd --user commands.
+    """Prepare *eden_env* for systemd --user commands via _ensure_dbus_env.
 
-    get_edenfs_environment() preserves them from os.environ when present.
-    When invoked from a system service (e.g. edenfs_restarter timer), they may
-    be missing.  Fall back to the standard systemd paths derived from the UID.
-    If the D-Bus socket does not exist, skip systemd entirely.
-
-    Returns True if the env is ready, False to fall back to direct daemon
-    management.
+    Logs a telemetry sample and returns False (fall back to direct daemon
+    management) when the D-Bus socket is unavailable; returns True otherwise.
     """
     if not _ensure_dbus_env(eden_env):
         instance.log_sample(
             "systemd_setup",
             success=False,
-            reason=f"dbus_socket_not_found at {eden_env.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')}/bus",
+            reason=f"dbus_socket_not_found at /run/user/{os.getuid()}/bus",
         )
         return False
     return True
