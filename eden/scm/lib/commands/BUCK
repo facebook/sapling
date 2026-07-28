@@ -102,6 +102,7 @@ sl_rust_library(
         "//eden/scm/lib/util/nodeipc:nodeipc",
         "//eden/scm/lib/util/testutil:testutil",
         "//eden/scm/lib/version:rust_version",
+        "//eden/scm/lib/worktree:worktree",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
         # see update_modules.sh
         # [[[cog

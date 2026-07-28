@@ -2,6 +2,9 @@
 #require eden
 
   $ setconfig worktree.enabled=true
+  $ unset SCM_SAMPLING_FILEPATH
+  $ setconfig sampling.key.command_info=worktree_command_info
+  $ setconfig sampling.filepath=$TESTTMP/worktree-sampling
 
 setup backing repo
 
@@ -10,10 +13,35 @@ setup backing repo
   $ sl add file.txt
   $ sl commit -m "init"
 
+test worktree telemetry - normal checkout
+
+  >>> import json, os
+  >>> sample_path = os.path.join(os.environ["TESTTMP"], "worktree-sampling")
+  >>> def print_is_linked_worktree():
+  ...     with open(sample_path) as f:
+  ...         records = [json.loads(item) for item in f.read().strip("\0").split("\0")]
+  ...     value = [record["data"]["is_linked_worktree"] for record in records if "is_linked_worktree" in record["data"]][-1]
+  ...     assert isinstance(value, bool)
+  ...     print(value)
+  $ sl root > /dev/null
+  >>> print_is_linked_worktree()
+  False
+
 test worktree add - basic
 
   $ sl worktree add $TESTTMP/linked1
   created linked worktree at $TESTTMP/linked1
+
+test worktree telemetry - main and linked checkouts
+
+  $ sl root > /dev/null
+  >>> print_is_linked_worktree()
+  False
+  $ cd $TESTTMP/linked1
+  $ sl root > /dev/null
+  >>> print_is_linked_worktree()
+  True
+  $ cd $TESTTMP/myrepo
 
 test worktree add - with label
 

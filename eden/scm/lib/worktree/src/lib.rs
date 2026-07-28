@@ -318,6 +318,25 @@ pub fn load_registry(shared_store_path: &Path) -> Result<Registry> {
     }
 }
 
+/// Return whether `repo_path` is a linked worktree in its shared-store registry.
+pub fn is_linked_worktree(shared_store_path: &Path, repo_path: &Path) -> Result<bool> {
+    let current = util::path::strip_unc_prefix(fs::canonicalize(repo_path).with_context(|| {
+        format!(
+            "failed to canonicalize repository path {}",
+            repo_path.display()
+        )
+    })?);
+    let registry = load_registry(shared_store_path)?;
+    let Some(group_id) = registry.find_group_for_path(&current) else {
+        return Ok(false);
+    };
+
+    Ok(registry
+        .groups
+        .get(&group_id)
+        .is_some_and(|group| current != group.main))
+}
+
 pub fn save_registry(shared_store_path: &Path, registry: &Registry) -> Result<()> {
     let path = shared_store_path.join("worktrees.json");
     let content = serde_json::to_string_pretty(registry).context("failed to serialize registry")?;
@@ -420,6 +439,38 @@ mod tests {
         let reg = load_registry(dir.path()).unwrap();
         assert_eq!(reg.version, 1);
         assert!(reg.groups.is_empty());
+    }
+
+    #[test]
+    fn test_is_linked_worktree_roles() {
+        let store_dir = tempfile::tempdir().unwrap();
+        let checkouts_dir = tempfile::tempdir().unwrap();
+        let main_path = checkouts_dir.path().join("main");
+        let linked_path = checkouts_dir.path().join("linked");
+        let unregistered_path = checkouts_dir.path().join("legacy-share");
+        for path in [&main_path, &linked_path, &unregistered_path] {
+            std::fs::create_dir(path).unwrap();
+        }
+
+        assert!(!is_linked_worktree(store_dir.path(), &main_path).unwrap());
+
+        let main_path = util::path::strip_unc_prefix(fs::canonicalize(main_path).unwrap());
+        let linked_path = util::path::strip_unc_prefix(fs::canonicalize(linked_path).unwrap());
+        let mut group = Group::new(main_path.clone());
+        group.worktrees.insert(
+            linked_path.clone(),
+            WorktreeEntry {
+                added: "2025-01-01T00:00:00Z".to_string(),
+                label: None,
+            },
+        );
+        let mut registry = Registry::new();
+        registry.groups.insert("test-group-id".to_string(), group);
+        save_registry(store_dir.path(), &registry).unwrap();
+
+        assert!(!is_linked_worktree(store_dir.path(), &main_path).unwrap());
+        assert!(is_linked_worktree(store_dir.path(), &linked_path).unwrap());
+        assert!(!is_linked_worktree(store_dir.path(), &unregistered_path).unwrap());
     }
 
     #[test]
