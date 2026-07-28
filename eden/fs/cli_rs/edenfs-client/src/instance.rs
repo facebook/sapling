@@ -522,7 +522,7 @@ impl EdenFsInstance {
         match std::fs::read_to_string(&directory_map) {
             Ok(buff) => {
                 let string_map = serde_json::from_str::<BTreeMap<String, String>>(&buff)
-                    .with_context(|| format!("Failed to parse directory map: {:?}", &buff))?;
+                    .with_context(|| format!("Failed to parse directory map: {:?}", buff))?;
                 Ok(string_map
                     .into_iter()
                     .map(|(key, val)| (key.into(), val))

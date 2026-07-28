@@ -448,7 +448,7 @@ impl CheckoutConfig {
                 self.save_config(config_dir.clone()).with_context(|| {
                     anyhow!(
                         "failed to save config in the given config_dir: {}",
-                        &config_dir.display()
+                        config_dir.display()
                     )
                 })?;
             }
@@ -529,7 +529,7 @@ impl CheckoutConfig {
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
                     "failed to save config in the given config_dir: {}",
-                    &config_dir.display()
+                    config_dir.display()
                 )
             })?;
             Ok(())
@@ -562,7 +562,7 @@ impl CheckoutConfig {
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
                     "failed to save config in the given config_dir: {}",
-                    &config_dir.display()
+                    config_dir.display()
                 )
             })?;
         }
@@ -582,7 +582,7 @@ impl CheckoutConfig {
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
                     "failed to save config in the given config_dir: {}",
-                    &config_dir.display()
+                    config_dir.display()
                 )
             })?;
         };
@@ -605,7 +605,7 @@ impl CheckoutConfig {
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
                     "failed to save config in the given config_dir: {}",
-                    &config_dir.display()
+                    config_dir.display()
                 )
             })?;
         };
@@ -1181,7 +1181,7 @@ impl EdenFsCheckout {
                 let res = self
                     .get_contents_for_profile(&profile, silent)
                     .with_context(|| {
-                        anyhow!("failed to get contents of prefetch profile {}", &profile)
+                        anyhow!("failed to get contents of prefetch profile {}", profile)
                     })?;
                 profile_contents.extend(res);
             }

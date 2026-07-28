@@ -319,7 +319,7 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to execute mkscratch cmd: `{} {}`",
-                    &mkscratch.display(),
+                    mkscratch.display(),
                     shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                 )
             })?;
@@ -336,7 +336,7 @@ impl Redirection {
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
-                &mkscratch.display(),
+                mkscratch.display(),
                 shlex::try_join(args.iter().copied()).unwrap_or("<undecodeable>".to_string()),
                 String::from_utf8_lossy(&output.stderr),
                 output.status,
@@ -680,8 +680,8 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "remove_bind_mount thrift call failed for '{}' in checkout '{}'",
-                    &self.repo_path.display(),
-                    &checkout.path().display()
+                    self.repo_path.display(),
+                    checkout.path().display()
                 )
             })?;
         Ok(())
@@ -779,7 +779,7 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to create symlink {} with target {}",
-                    &symlink_path.display(),
+                    symlink_path.display(),
                     target.display()
                 )
             })?;
@@ -1045,7 +1045,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
                 }
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
-                    &checkout.path().display()
+                    checkout.path().display()
                 ))),
             }
         } else if self.redir_type == RedirectionType::Symlink {
@@ -1065,7 +1065,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
                 Some(t) => self._apply_symlink(&checkout.path(), &t, force),
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
-                    &checkout.path().display()
+                    checkout.path().display()
                 ))),
             }
         } else {
@@ -1179,7 +1179,7 @@ pub fn get_configured_redirections(
         let s = String::from_utf8(contents).from_err()?;
         let config: RedirectionsConfig = toml::from_str(&s)
             .from_err()
-            .with_context(|| format!("Failed to create RedirectionsConfig from str '{}'", &s))?;
+            .with_context(|| format!("Failed to create RedirectionsConfig from str '{}'", s))?;
         for (repo_path, redir_type) in config.inner.redirections {
             redirs.insert(
                 repo_path.clone(),
@@ -1431,8 +1431,8 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
             let rel_path = diff_paths(&canonical_path, &checkout_path).with_context(|| {
                 format!(
                     "{} starts with {}, but we failed to compute the relative repo path.",
-                    &canonical_path.display(),
-                    &checkout_path.display(),
+                    canonical_path.display(),
+                    checkout_path.display(),
                 )
             })?;
             return Ok(rel_path);

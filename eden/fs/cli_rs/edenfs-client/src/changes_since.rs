@@ -515,7 +515,7 @@ pub struct StateEntered {
 
 impl fmt::Display for StateEntered {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.name)
+        write!(f, "{}", self.name)
     }
 }
 
@@ -541,7 +541,7 @@ pub struct StateLeft {
 
 impl fmt::Display for StateLeft {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.name,)
+        write!(f, "{}", self.name,)
     }
 }
 
