@@ -58,6 +58,42 @@ And now with bad responses:
   Error info: Unexpected graphql response format
   Error
 
+Transient network failures degrade to an "Error" placeholder instead of crashing
+
+  $ cat > $TESTTMP/failphab.py << 'EOF'
+  > from sapling import extensions, httpclient
+  > from sapling.ext.extlib.phabricator import graphql
+  > def uisetup(ui):
+  >     def failquery(orig, self, *args, **kwargs):
+  >         kind = self._ui.config("failphab", "kind")
+  >         if kind == "reset":
+  >             raise ConnectionResetError("Connection reset by peer")
+  >         if kind == "other":
+  >             raise RuntimeError("something unexpected")
+  >         raise httpclient.HTTPTimeoutException("timeout reading data")
+  >     extensions.wrapfunction(graphql.Client, "getrevisioninfo", failquery)
+  > EOF
+  $ cat > $TESTTMP/mockduit << 'EOF'
+  > []
+  > EOF
+
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit sl log -T '{phabstatus}\n' -r . --config extensions.failphab=$TESTTMP/failphab.py --config failphab.kind=timeout
+  Error talking to phabricator. No diff information can be provided.
+  Error info: timeout reading data
+  Error
+
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit sl log -T '{phabstatus}\n' -r . --config extensions.failphab=$TESTTMP/failphab.py --config failphab.kind=reset
+  Error talking to phabricator. No diff information can be provided.
+  Error info: $ECONNRESET$
+  Error
+
+The catch-all keeps any other unexpected error from crashing smartlog
+
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit sl log -T '{phabstatus}\n' -r . --config extensions.failphab=$TESTTMP/failphab.py --config failphab.kind=other
+  Unexpected error retrieving diff status. No diff information can be provided.
+  Error info: something unexpected
+  Error
+
 Missing status field is treated as an error
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [

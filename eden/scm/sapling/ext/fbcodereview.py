@@ -29,6 +29,7 @@ Config::
     hide-landed-commits = true
 """
 
+import http.client
 import os
 import re
 import socket
@@ -305,7 +306,14 @@ def getdiffstatus(repo, *diffid):
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
-    except (graphql.ClientError, ssl.SSLError, socket.timeout) as ex:
+    except (
+        graphql.ClientError,
+        ConnectionError,
+        TimeoutError,
+        socket.gaierror,
+        ssl.SSLError,
+        http.client.HTTPException,
+    ) as ex:
         msg = _("Error talking to phabricator. No diff information can be provided.\n")
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
@@ -313,6 +321,13 @@ def getdiffstatus(repo, *diffid):
     except ValueError as ex:
         msg = _(
             "Error decoding GraphQL response. No diff information can be provided.\n"
+        )
+        hint = _("Error info: %s\n") % str(ex)
+        ret = _fail(repo, diffid, msg, hint)
+        return ret
+    except Exception as ex:
+        msg = _(
+            "Unexpected error retrieving diff status. No diff information can be provided.\n"
         )
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
