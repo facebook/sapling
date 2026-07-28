@@ -398,9 +398,9 @@ class EdenServiceHandler
       std::unique_ptr<::facebook::eden::TraceTaskEventsRequest> request)
       override;
 
-  folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
-  semifuture_getScmStatusV2(
-      std::unique_ptr<GetScmStatusParams> params) override;
+  folly::coro::Task<std::unique_ptr<GetScmStatusResult>> co_getScmStatusV2(
+      apache::thrift::RequestParams params,
+      std::unique_ptr<GetScmStatusParams> scmParams) override;
 
   apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
   streamChangesSince(std::unique_ptr<StreamChangesSinceParams> params) override;

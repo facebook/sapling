@@ -5970,53 +5970,51 @@ EdenServiceHandler::semifuture_changeOwnership(
 #endif // !_WIN32
 }
 
-folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
-EdenServiceHandler::semifuture_getScmStatusV2(
-    unique_ptr<GetScmStatusParams> params) {
-  auto* context = getRequestContext();
-  auto rootIdOptions = params->rootIdOptions().ensure();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+folly::coro::Task<std::unique_ptr<GetScmStatusResult>>
+EdenServiceHandler::co_getScmStatusV2(
+    apache::thrift::RequestParams params,
+    unique_ptr<GetScmStatusParams> scmParams) {
+  auto* context = params.getRequestContext();
+  auto rootIdOptions = scmParams->rootIdOptions().ensure();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
-      *params->mountPoint(),
-      folly::to<string>("commitHash=", logHash(*params->commit())),
-      folly::to<string>("listIgnored=", *params->listIgnored()),
+      false,
+      context,
+      *scmParams->mountPoint(),
+      folly::to<string>("commitHash=", logHash(*scmParams->commit())),
+      folly::to<string>("listIgnored=", *scmParams->listIgnored()),
       folly::to<string>(
           "fid=",
           rootIdOptions.fid().has_value() ? *rootIdOptions.fid() : "(none)"));
-  helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
+  helper->getThriftFetchContext().fillClientRequestInfo(scmParams->cri());
 
   auto& fetchContext = helper->getFetchContext();
 
-  auto mountHandle = lookupMount(params->mountPoint());
+  auto mountHandle = lookupMount(scmParams->mountPoint());
 
   // If we were passed a FilterID, create a RootID that contains the filter
   // and a varint that indicates the length of the original id.
-  std::string parsedCommit =
-      resolveRootId(std::move(*params->commit()), rootIdOptions, mountHandle);
+  std::string parsedCommit = resolveRootId(
+      std::move(*scmParams->commit()), rootIdOptions, mountHandle);
   auto rootId = mountHandle.getObjectStore().parseRootId(parsedCommit);
 
   const auto& enforceParents = server_->getServerState()
                                    ->getReloadableConfig()
                                    ->getEdenConfig()
                                    ->enforceParents.getValue();
-  return wrapImmediateFuture(
-             std::move(helper),
-             mountHandle.getEdenMount()
-                 .diff(
-                     mountHandle.getRootInode(),
-                     rootId,
-                     context->getConnectionContext()->getCancellationToken(),
-                     fetchContext,
-                     *params->listIgnored(),
-                     enforceParents)
-                 .ensure([mountHandle] {})
-                 .thenValue([this](std::unique_ptr<ScmStatus>&& status) {
-                   auto result = std::make_unique<GetScmStatusResult>();
-                   result->status() = std::move(*status);
-                   result->version() = server_->getVersion();
-                   return result;
-                 }))
-      .semi();
+
+  auto status = co_await mountHandle.getEdenMount().co_diff(
+      mountHandle.getRootInode(),
+      rootId,
+      context->getConnectionContext()->getCancellationToken(),
+      fetchContext,
+      *scmParams->listIgnored(),
+      enforceParents);
+
+  auto result = std::make_unique<GetScmStatusResult>();
+  result->status() = std::move(*status);
+  result->version() = server_->getVersion();
+  co_return result;
 }
 
 folly::SemiFuture<unique_ptr<ScmStatus>>
