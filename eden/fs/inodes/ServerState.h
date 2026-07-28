@@ -87,7 +87,7 @@ class ServerState {
       std::shared_ptr<Notifier> notifier,
       bool enableFaultInjection = false,
       std::shared_ptr<InodeAccessLogger> inodeAccessLogger = nullptr,
-      IXplatLogger* xplatLogger = nullptr);
+      std::shared_ptr<IXplatLogger> xplatLogger = nullptr);
   ~ServerState();
 
   /**

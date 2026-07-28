@@ -34,7 +34,7 @@ class InodeAccessLogger {
   InodeAccessLogger(
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       EdenStatsPtr edenStats,
-      IXplatLogger* xplatLogger = nullptr);
+      std::shared_ptr<IXplatLogger> xplatLogger = nullptr);
   virtual ~InodeAccessLogger();
 
   InodeAccessLogger(const InodeAccessLogger&) = delete;
@@ -92,7 +92,7 @@ class InodeAccessLogger {
 
   std::shared_ptr<ReloadableConfig> reloadableConfig_;
   EdenStatsPtr edenStats_;
-  IXplatLogger* xplatLogger_;
+  std::shared_ptr<IXplatLogger> xplatLogger_;
 };
 
 } // namespace facebook::eden

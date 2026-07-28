@@ -70,7 +70,8 @@ class InodeAccessLoggerXplatTest : public ::testing::Test {
         testMount_->getEdenMount()};
   }
 
-  std::unique_ptr<InodeAccessLogger> createLogger(XplatLogger* xplatLogger) {
+  std::unique_ptr<InodeAccessLogger> createLogger(
+      std::shared_ptr<IXplatLogger> xplatLogger) {
     auto config = EdenConfig::createTestEdenConfig();
     config->logFileAccesses.setValue(true, ConfigSourceType::UserConfig, true);
     config->logFileAccessesSamplingDenominator.setValue(
@@ -79,7 +80,9 @@ class InodeAccessLoggerXplatTest : public ::testing::Test {
     auto reloadableConfig =
         std::make_shared<ReloadableConfig>(std::move(config));
     return std::make_unique<InodeAccessLogger>(
-        std::move(reloadableConfig), makeRefPtr<EdenStats>(), xplatLogger);
+        std::move(reloadableConfig),
+        makeRefPtr<EdenStats>(),
+        std::move(xplatLogger));
   }
 
   FakeTreeBuilder builder_;
@@ -87,20 +90,31 @@ class InodeAccessLoggerXplatTest : public ::testing::Test {
 };
 
 TEST_F(InodeAccessLoggerXplatTest, logsFileAccessViaXplat) {
-  SpyXplatLogger spyXplatLogger;
-  auto logger = createLogger(&spyXplatLogger);
+  auto spyXplatLogger = std::make_shared<SpyXplatLogger>();
+  std::weak_ptr<SpyXplatLogger> weakXplatLogger = spyXplatLogger;
+  auto logger = createLogger(spyXplatLogger);
+  spyXplatLogger.reset();
+
+  EXPECT_FALSE(weakXplatLogger.expired());
+  auto retainedXplatLogger = weakXplatLogger.lock();
+  ASSERT_NE(nullptr, retainedXplatLogger);
 
   logger->logInodeAccess(makeTestEvent());
-  ASSERT_TRUE(spyXplatLogger.eventLogged.try_wait_for(std::chrono::seconds(5)));
+  ASSERT_TRUE(
+      retainedXplatLogger->eventLogged.try_wait_for(std::chrono::seconds(5)));
   logger.reset();
 
-  EXPECT_EQ(1, spyXplatLogger.callCount.load());
-  EXPECT_EQ(xplat_keys::kFileAccessCategory, spyXplatLogger.lastCategory);
-  const auto& strings = spyXplatLogger.lastEvent.getStringMap();
+  EXPECT_EQ(1, retainedXplatLogger->callCount.load());
+  EXPECT_EQ(
+      xplat_keys::kFileAccessCategory, retainedXplatLogger->lastCategory);
+  const auto& strings = retainedXplatLogger->lastEvent.getStringMap();
   EXPECT_EQ("test_repo", strings.at(std::string{xplat_keys::kRepo}));
   EXPECT_EQ("src", strings.at(std::string{xplat_keys::kDirectory}));
   EXPECT_EQ("main.cpp", strings.at(std::string{xplat_keys::kFilename}));
   EXPECT_EQ("fs", strings.at(std::string{xplat_keys::kSource}));
+
+  retainedXplatLogger.reset();
+  EXPECT_TRUE(weakXplatLogger.expired());
 }
 
 TEST_F(InodeAccessLoggerXplatTest, nullXplatLoggerNoOps) {

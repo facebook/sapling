@@ -40,10 +40,10 @@ const static RE2 kFbsourceFilter("xplat\\/toolchains\\/minimal_xcode");
 InodeAccessLogger::InodeAccessLogger(
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     EdenStatsPtr edenStats,
-    IXplatLogger* xplatLogger)
+    std::shared_ptr<IXplatLogger> xplatLogger)
     : reloadableConfig_{std::move(reloadableConfig)},
       edenStats_{std::move(edenStats)},
-      xplatLogger_{xplatLogger} {
+      xplatLogger_{std::move(xplatLogger)} {
   workerThread_ = std::thread{[this] {
     folly::setThreadName("InodeAccessLoggerProcessor");
     processInodeAccessEvents();

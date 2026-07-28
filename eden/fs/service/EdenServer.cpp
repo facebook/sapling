@@ -723,7 +723,7 @@ EdenServer::EdenServer(
               sessionInfo,
               edenStats.copy())},
 #ifdef EDEN_HAVE_LOGGER
-      xplatLogger_{std::make_unique<XplatLogger>(
+      xplatLogger_{std::make_shared<XplatLogger>(
           EdenTelemetryIdentity::fromSessionInfo(sessionInfo),
           edenStats.copy(),
           config_)},
@@ -773,7 +773,7 @@ EdenServer::EdenServer(
 #ifdef EDEN_HAVE_LOGGER
           [this]() {
             registerXplatTransforms();
-            return xplatLogger_.get();
+            return xplatLogger_;
           }()
 #else
           nullptr

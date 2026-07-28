@@ -850,10 +850,11 @@ class EdenServer : private TakeoverHandler {
   /**
    * Cross-platform structured logger for file access, events, and error
    * telemetry. Owns the EdenTelemetryIdentity used for all log entries.
-   * Declared before errorLogger_ so it can be passed to it, and before
-   * serverState_ so it outlives InodeAccessLogger.
+   * Shared with InodeAccessLogger so it remains alive for its asynchronous
+   * worker. Declared before errorLogger_ and edenFsEventsLogger_ so their
+   * borrowed pointers remain valid.
    */
-  std::unique_ptr<XplatLogger> xplatLogger_;
+  std::shared_ptr<XplatLogger> xplatLogger_;
 #endif
 
   /**
