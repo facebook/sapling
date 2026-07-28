@@ -14,8 +14,14 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
+use bookmarks::BookmarksRef;
+use bookmarks::Freshness;
 use bytes::Bytes;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
@@ -33,11 +39,16 @@ use multi_repo_land_lib::RepoProvider;
 use multi_repo_land_lib::ResolveEntry;
 use multi_repo_land_lib::ResolveOutcome;
 use multi_repo_land_lib::create_manifest_commit;
+use multi_repo_land_lib::log_scribe_bookmark_update;
+use multi_repo_land_lib::prepare_manifest_commit;
 use multi_repo_land_lib::resolve_bookmarks_cross_repo;
+use phases::Phases;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
@@ -152,10 +163,13 @@ fn test_repo_provider_blanket_impl() {
     let _handle: Arc<DummyRepo> = provider.get_by_name("present").expect("present exists");
 }
 
-/// Test repo with the facets `resolve_bookmarks_cross_repo` needs
-/// (`RepoIdentityRef` + `SqlBookmarksRef`), plus the facets the `tests_utils`
-/// commit/bookmark helpers require. `BasicTestRepo` is unusable here because it
-/// lacks the concrete `SqlBookmarks` facet.
+/// Test repo carrying every facet the lib functions under test need:
+/// `resolve_bookmarks_cross_repo` (`RepoIdentityRef` + `SqlBookmarksRef`),
+/// `prepare_manifest_commit` (blobstore/filestore/commit-graph/derived-data),
+/// and `log_scribe_bookmark_update` (repo-config/git-mapping/globalrev/phases),
+/// plus the facets the `tests_utils` commit/bookmark helpers require.
+/// `BasicTestRepo` is unusable here because it lacks the concrete `SqlBookmarks`
+/// facet.
 #[facet::container]
 #[derive(Clone)]
 struct TestRepo {
@@ -191,6 +205,12 @@ struct TestRepo {
 
     #[facet]
     bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    phases: dyn Phases,
 }
 
 /// A mixed batch exercises every outcome (unknown repo, invalid/missing
@@ -336,6 +356,183 @@ async fn test_resolve_bookmarks_cross_repo_empty(fb: FacebookInit) -> Result<()>
 
     let results = resolve_bookmarks_cross_repo(&ctx, &repos, &[]).await?;
     assert!(results.is_empty(), "empty input yields empty output");
+
+    Ok(())
+}
+
+/// With no parent override, the generated commit is built on the bookmark head,
+/// `old_cs` is that head (the CAS baseline), and the manifest file is the only
+/// change. A `MappedGitCommitId` is pre-derived.
+#[mononoke::fbinit_test]
+async fn test_prepare_manifest_commit_default_parent(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "manifest")
+        .create_publishing(head)
+        .await?;
+
+    let manifest_path = NonRootMPath::new("default.xml")?;
+    let prepared = prepare_manifest_commit(
+        &ctx,
+        &repo,
+        &bm,
+        None,
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+    )
+    .await?;
+
+    assert_eq!(
+        prepared.old_cs, head,
+        "old_cs must be the live head (CAS baseline)"
+    );
+    assert_ne!(prepared.new_cs, head, "a new commit must be created");
+
+    let bcs = prepared.new_cs.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        bcs.parents().collect::<Vec<_>>(),
+        vec![head],
+        "default parent is the bookmark head",
+    );
+    let changed: Vec<_> = bcs.file_changes().map(|(p, _)| p.clone()).collect();
+    assert_eq!(
+        changed,
+        vec![manifest_path],
+        "the manifest file is the only change",
+    );
+
+    // A SHA1 git commit id (20 bytes) was pre-derived.
+    assert_eq!(
+        prepared.mapped_git.oid().as_ref().len(),
+        20,
+        "mapped git commit id should be a 20-byte SHA1",
+    );
+
+    Ok(())
+}
+
+/// A parent override (the user's manifest commit) becomes the generated commit's
+/// parent, while `old_cs` still reflects the live bookmark head.
+#[mononoke::fbinit_test]
+async fn test_prepare_manifest_commit_parent_override(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "manifest")
+        .create_publishing(head)
+        .await?;
+
+    // The user's own manifest commit, one commit ahead of the head.
+    let user_commit = CreateCommitContext::new(&ctx, &repo, vec![head])
+        .add_file("user", "change")
+        .commit()
+        .await?;
+
+    let manifest_path = NonRootMPath::new("override.xml")?;
+    let prepared = prepare_manifest_commit(
+        &ctx,
+        &repo,
+        &bm,
+        Some(user_commit),
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+    )
+    .await?;
+
+    assert_eq!(
+        prepared.old_cs, head,
+        "old_cs stays the head even with an override parent",
+    );
+    let bcs = prepared.new_cs.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        bcs.parents().collect::<Vec<_>>(),
+        vec![user_commit],
+        "commit is built on the override parent",
+    );
+
+    Ok(())
+}
+
+/// A missing manifest bookmark yields the exact "manifest bookmark not found"
+/// error, preserving the service's behavior.
+#[mononoke::fbinit_test]
+async fn test_prepare_manifest_commit_bookmark_not_found(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let bm = BookmarkKey::new("absent")?;
+    let manifest_path = NonRootMPath::new("m.xml")?;
+    let err = prepare_manifest_commit(
+        &ctx,
+        &repo,
+        &bm,
+        None,
+        &manifest_path,
+        Bytes::from("<manifest/>"),
+        "svc",
+    )
+    .await
+    .expect_err("absent bookmark must error");
+
+    assert!(
+        err.to_string().contains("manifest bookmark not found"),
+        "error should name the missing bookmark, got: {err}",
+    );
+
+    Ok(())
+}
+
+/// `log_scribe_bookmark_update` is fire-and-forget: on a repo with no
+/// `bookmark_logging_destination` (the default test config) it runs the
+/// draft-ancestor walk and the gated no-op logging to completion without
+/// panicking, and moves no bookmark.
+#[mononoke::fbinit_test]
+async fn test_log_scribe_bookmark_update_no_destination_is_noop(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let head = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "main")
+        .create_publishing(head)
+        .await?;
+    // A draft child of the (public) head, standing in for the moved-to commit.
+    let new_target = CreateCommitContext::new(&ctx, &repo, vec![head])
+        .add_file("next", "v2")
+        .commit()
+        .await?;
+
+    let info = BookmarkInfo {
+        bookmark_name: bm.clone(),
+        bookmark_kind: BookmarkKind::Publishing,
+        operation: BookmarkOperation::Update(head, new_target),
+        reason: BookmarkUpdateReason::MultiRepoLand,
+    };
+
+    // Returns () without panicking despite there being no logging destination.
+    log_scribe_bookmark_update(&ctx, &repo, &info, Some(new_target)).await;
+
+    // Logging is read-only: the bookmark must be untouched.
+    assert_eq!(
+        repo.bookmarks()
+            .get(ctx.clone(), &bm, Freshness::MostRecent)
+            .await?,
+        Some(head),
+        "scribe logging must not move the bookmark",
+    );
 
     Ok(())
 }

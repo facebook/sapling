@@ -9,12 +9,17 @@
 //! `multi_repo_land_service` binary's concrete `Repo` container.
 
 mod manifest_commit;
+mod repin;
 mod repo_provider;
 mod resolve;
+mod scribe;
 
 pub use crate::manifest_commit::create_manifest_commit;
+pub use crate::repin::PreparedManifestCommit;
+pub use crate::repin::prepare_manifest_commit;
 pub use crate::repo_provider::RepoProvider;
 pub use crate::resolve::ResolveEntry;
 pub use crate::resolve::ResolveOutcome;
 pub use crate::resolve::ResolveResult;
 pub use crate::resolve::resolve_bookmarks_cross_repo;
+pub use crate::scribe::log_scribe_bookmark_update;
