@@ -239,6 +239,18 @@ cpp_binary(
 )
 
 cpp_binary(
+    name = "get_attributes_from_files_v2",
+    srcs = ["get_attributes_from_files_v2.cpp"],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/benchmarks:bench_utils",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//folly/io/async:event_base_thread",
+    ],
+)
+
+cpp_binary(
     name = "get_digest_hash",
     srcs = ["get_digest_hash.cpp"],
     deps = [
