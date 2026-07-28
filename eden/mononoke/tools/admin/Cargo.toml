@@ -123,7 +123,9 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
+repo_spec_writer = { version = "0.1.0", path = "../repo_spec_writer" }
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
+repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 requests_table = { version = "0.1.0", path = "../../features/async_requests/requests_table" }
 restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted_paths" }
 restricted_paths_common = { version = "0.1.0", path = "../../repo_attributes/restricted_paths_common" }

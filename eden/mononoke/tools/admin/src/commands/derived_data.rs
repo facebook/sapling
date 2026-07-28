@@ -7,6 +7,7 @@
 
 mod backfill_abort;
 mod backfill_enqueue;
+mod backfill_reconcile_configs;
 mod backfill_status;
 mod count_underived;
 mod derive;
@@ -53,6 +54,8 @@ use self::backfill_abort::BackfillAbortArgs;
 use self::backfill_abort::backfill_abort;
 use self::backfill_enqueue::BackfillEnqueueArgs;
 use self::backfill_enqueue::backfill_enqueue;
+use self::backfill_reconcile_configs::BackfillReconcileConfigsArgs;
+use self::backfill_reconcile_configs::backfill_reconcile_configs;
 use self::backfill_status::BackfillStatusArgs;
 use self::backfill_status::backfill_status;
 use self::count_underived::CountUnderivedArgs;
@@ -159,6 +162,9 @@ enum DerivedDataSubcommand {
     BackfillAbort(BackfillAbortArgs),
     /// Enqueue derived data backfill work via async requests
     BackfillEnqueue(BackfillEnqueueArgs),
+    /// Reconcile the enabled_derived_data_types table into configerator
+    /// (Phase-A bridge). Dry-run by default; --apply lands config.
+    BackfillReconcileConfigs(BackfillReconcileConfigsArgs),
     /// Show status of derive backfill jobs.
     /// Pass -R or --repo-id to drill down on a specific repo in a multi-repo backfill.
     BackfillStatus(BackfillStatusArgs),
@@ -204,6 +210,13 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // ignores the top-level repo args.
     if let DerivedDataSubcommand::EnabledTypes(enabled_types_args) = args.subcommand {
         return enabled_types(&ctx, &app, enabled_types_args).await;
+    }
+
+    // BackfillReconcileConfigs is cross-repo (reads the global enabled-types
+    // table + all repo configs) and opens its own minimal container; it ignores
+    // the top-level repo args.
+    if let DerivedDataSubcommand::BackfillReconcileConfigs(reconcile_args) = args.subcommand {
+        return backfill_reconcile_configs(&ctx, &app, reconcile_args).await;
     }
 
     let repo_arg_list = args.repo.ids_or_names();
@@ -299,6 +312,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let repo: Repo = match &args.subcommand {
         DerivedDataSubcommand::BackfillAbort(_)
         | DerivedDataSubcommand::BackfillEnqueue(_)
+        | DerivedDataSubcommand::BackfillReconcileConfigs(_)
         | DerivedDataSubcommand::BackfillStatus(_)
         | DerivedDataSubcommand::EnabledTypes(_) => {
             unreachable!("handled above")
@@ -353,6 +367,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         DerivedDataSubcommand::BackfillAbort(_)
         | DerivedDataSubcommand::BackfillEnqueue(_)
+        | DerivedDataSubcommand::BackfillReconcileConfigs(_)
         | DerivedDataSubcommand::BackfillStatus(_)
         | DerivedDataSubcommand::EnabledTypes(_) => {
             unreachable!("handled above")

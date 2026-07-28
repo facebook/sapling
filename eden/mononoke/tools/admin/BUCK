@@ -73,6 +73,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//configerator/configo/if:configo-rust-srclients",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo_utils:blobrepo_utils",
         "//eden/mononoke/blobstore:blobstore",
@@ -184,11 +185,14 @@ rust_binary(
         if rust_oss.is_oss_build()
         else [
             "fbsource//third-party/rust:serde",
+            "//common/rust/configo:configo",
+            "//configerator/structs/scm/mononoke/repos:repos-rust",
             "//eden/mononoke/blobstore:blobstore_factory",
             "//eden/mononoke/blobstore:fileblob",
             "//eden/mononoke/blobstore:redactedblobstore",
             "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
             "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
+            "//eden/mononoke/tools/repo_spec_writer:repo_spec_writer",
             # Tupperware log reader (for `backfill-status --detailed` worker logs).
             "//tupperware/api/if:common-rust",
             "//tupperware/front_end/log_reader/if:log_reader-rust",
