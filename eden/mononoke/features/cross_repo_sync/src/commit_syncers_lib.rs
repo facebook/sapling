@@ -547,9 +547,7 @@ where
     log_debug(ctx, format!("target bookmark csid: {target_bookmark_csid}"));
 
     let mut parent_mapping = HashMap::new();
-    for (_source_parent_csid, (target_parent_csid, _version)) in
-        synced_ancestors_versions.rewritten_ancestors.iter()
-    {
+    for (target_parent_csid, _version) in synced_ancestors_versions.rewritten_ancestors.values() {
         // If the bookmark value is descendant of our parent it should have equivalent working
         // copy.
         if target_repo
