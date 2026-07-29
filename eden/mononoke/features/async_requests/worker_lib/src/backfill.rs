@@ -31,6 +31,7 @@ use futures::TryStreamExt;
 use futures::stream;
 use futures_retry::retry;
 use futures_stats::TimedTryFutureExt;
+use metaconfig_types::DerivationPipelineConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
@@ -62,6 +63,11 @@ const JK_BACKFILL_SEGMENT_CHUNK_SIZE: &str =
 
 /// JustKnob for per-chunk retry limit during slice derivation
 const JK_BACKFILL_CHUNK_RETRY_LIMIT: &str = "scm/mononoke:derived_data_backfill_chunk_retry_limit";
+
+/// JustKnob (repo-scoped) gating use of the derivation pipeline for slice
+/// backfill. Off by default; when off, slices derive via the canonical path so
+/// enabling/rolling back is instant and per-repo.
+const JK_BACKFILL_USE_PIPELINE: &str = "scm/mononoke:derived_data_backfill_use_pipeline";
 const CHUNK_RETRY_BASE_BACKOFF: Duration = Duration::from_secs(1);
 const CHUNK_RETRY_MAX_BACKOFF: Duration = Duration::from_secs(30);
 
@@ -286,6 +292,111 @@ pub(crate) async fn compute_derive_boundaries(
     })
 }
 
+/// Decide whether slice backfill should derive `derived_data_type` via the
+/// derivation pipeline for this repo. Returns the repo's pipeline config when
+/// all of the following hold, else `None` (canonical path):
+///   - the repo has a pipeline config whose managed `types` include the type,
+///   - the type actually supports pipeline derivation, and
+///   - the repo-scoped rollout JustKnob is enabled.
+fn should_use_pipeline<'a>(
+    manager: &'a DerivedDataManager,
+    derived_data_type: DerivableType,
+) -> Option<&'a DerivationPipelineConfig> {
+    let config = manager.pipeline_config()?;
+    if !config.types.contains(&derived_data_type) {
+        return None;
+    }
+    if derived_data_type.into_pipeline_derivable_variant().is_err() {
+        return None;
+    }
+    if !justknobs::eval(JK_BACKFILL_USE_PIPELINE, None, Some(manager.repo_name())) {
+        return None;
+    }
+    Some(config)
+}
+
+/// Derive a slice's segments via the derivation pipeline instead of the
+/// canonical path. Each segment is enumerated, flipped to forward-topological
+/// order, split into chokepoint-aware batches, then derived stage-by-stage
+/// (deepest first) via the shared `derivation_pipeline_driver`. Segments are
+/// processed sequentially to preserve topological ordering, and each segment's
+/// batches carry the same per-chunk retry/backoff as the canonical path.
+///
+/// Returns the number of changesets derived across all segments.
+async fn derive_slice_pipeline(
+    ctx: &CoreContext,
+    manager: &DerivedDataManager,
+    pipeline_config: &DerivationPipelineConfig,
+    derived_data_type: DerivableType,
+    segments: Vec<(ChangesetId, ChangesetId)>,
+) -> Result<i64, AsyncRequestsError> {
+    let order = derivation_pipeline_driver::plan_stages_and_types(
+        manager,
+        pipeline_config,
+        &[derived_data_type],
+    );
+    // Reuse the (possibly throttled) manager's blobstore and commit graph.
+    let commit_graph = manager.commit_graph();
+    let blobstore = manager.repo_blobstore();
+
+    let max_attempts =
+        (justknobs::get_as::<i64>(JK_BACKFILL_CHUNK_RETRY_LIMIT, None).max(0) as usize) + 1;
+
+    let mut derived_count: i64 = 0;
+    for (base, head) in segments {
+        // `range_stream` yields the segment in forward topological order
+        // (parents before children), which is exactly what the pipeline needs:
+        // each batch is derived assuming its out-of-batch parents are already
+        // derived.
+        let segment_cs_ids: Vec<ChangesetId> = commit_graph
+            .range_stream(ctx, base, head)
+            .await
+            .map_err(AsyncRequestsError::internal)?
+            .collect()
+            .await;
+        let count = segment_cs_ids.len() as i64;
+
+        let batches = derivation_pipeline_driver::plan_batches(
+            ctx,
+            blobstore,
+            pipeline_config,
+            segment_cs_ids,
+        )
+        .await
+        .map_err(AsyncRequestsError::internal)?;
+
+        retry(
+            |_attempt| {
+                derivation_pipeline_driver::run_pipeline_batches(
+                    manager,
+                    ctx,
+                    pipeline_config,
+                    &order.sorted_stages,
+                    &order.sorted_types,
+                    &batches,
+                )
+            },
+            CHUNK_RETRY_BASE_BACKOFF,
+        )
+        .binary_exponential_backoff()
+        .max_interval(CHUNK_RETRY_MAX_BACKOFF)
+        .max_attempts(max_attempts)
+        .inspect_err(|attempt, err| {
+            warn!(
+                "Pipeline slice derivation failed (attempt {}/{}, type {:?}): {:#}",
+                attempt, max_attempts, derived_data_type, err,
+            );
+        })
+        .await
+        .map(|(_result, _attempt)| ())
+        .map_err(AsyncRequestsError::internal)?;
+
+        derived_count += count;
+    }
+
+    Ok(derived_count)
+}
+
 /// Compute derive_slice request - derives a slice of commits (segments defined by head..base ranges)
 pub(crate) async fn compute_derive_slice(
     ctx: &CoreContext,
@@ -349,6 +460,24 @@ pub(crate) async fn compute_derive_slice(
         })
         .collect::<Result<Vec<_>, _>>()
         .map_err(AsyncRequestsError::request)?;
+
+    // Pipeline path: when the repo+type is pipeline-enabled (and the rollout JK
+    // is on), derive each segment via the derivation pipeline instead of the
+    // canonical batch path.
+    if let Some(pipeline_config) = should_use_pipeline(&manager, derived_data_type) {
+        info!(
+            "Deriving slice via derivation pipeline for repo {} type {:?}",
+            params.repo_id, derived_data_type,
+        );
+        let derived_count =
+            derive_slice_pipeline(ctx, &manager, pipeline_config, derived_data_type, segments)
+                .await?;
+        return Ok(thrift::DeriveSliceResponse {
+            derived_count,
+            error_message: None,
+            ..Default::default()
+        });
+    }
 
     let max_attempts =
         (justknobs::get_as::<i64>(JK_BACKFILL_CHUNK_RETRY_LIMIT, None).max(0) as usize) + 1;
