@@ -1503,7 +1503,7 @@ deleted file mode 100644
     #[test]
     fn test_edit_cost_against_diff_hunks() {
         // Edit cost should match diff_hunks line count.
-        const CHARS: [u8; 4] = [b'x', b'y', b'z', b'\n'];
+        const CHARS: [u8; 4] = *b"xyz\n";
         let to_slice = |bits: u8| -> [u8; 8] {
             [
                 CHARS[(bits & 3) as usize],
