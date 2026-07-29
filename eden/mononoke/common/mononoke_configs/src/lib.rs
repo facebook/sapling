@@ -34,7 +34,6 @@ use anyhow::anyhow;
 use arc_swap::ArcSwap;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
-use cached_config::ConfigUpdateWatcher;
 use cloned::cloned;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
@@ -44,7 +43,6 @@ use metaconfig_parser::configerator_repo_spec_handle;
 use metaconfig_parser::parse_repo_spec;
 use metaconfig_types::ConfigInfo;
 use metaconfig_types::RepoConfig;
-use repos::RawRepoConfigs;
 use repos::RepoSpec;
 use repos::TierManifest;
 use stats::prelude::*;
@@ -101,7 +99,6 @@ pub struct MononokeConfigs {
     config_info: Swappable<Option<ConfigInfo>>,
     maybe_config_updater: Option<JoinHandle<()>>,
     maybe_liveness_updater: Option<JoinHandle<()>>,
-    maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
     // Per-repo split-loading fields
     maybe_manifest_handle: Option<ConfigHandle<TierManifest>>,
     repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RepoSpec>>>>,
@@ -298,7 +295,6 @@ impl MononokeConfigs {
             update_receivers,
             config_info,
             maybe_config_updater,
-            maybe_config_handle,
             maybe_liveness_updater,
             maybe_manifest_handle,
             repo_handles,
@@ -360,20 +356,9 @@ impl MononokeConfigs {
         self.maybe_config_updater.is_some()
     }
 
-    // Config watcher that can be used to get notified of the latest
-    // changes in the underlying config and to act on it. This is useful
-    // if the processing to be performed is long running which is not supported
-    // via ConfigUpdateReceivers
-    pub fn config_watcher(&self) -> Option<ConfigUpdateWatcher<RawRepoConfigs>> {
-        self.maybe_config_handle
-            .as_ref()
-            .and_then(|config_handle| config_handle.watcher().ok())
-    }
-
     /// Register an instance of ConfigUpdateReceiver to receive notifications of updates to
     /// the underlying configs which can then be used to perform further actions. Note that
     /// the operation performed by the ConfigUpdateReceiver should not be too long running.
-    /// If that's the case, use config_watcher method instead.
     ///
     /// Thread-safe: uses `rcu` so concurrent registrations from multiple
     /// services don't lose entries to a load-modify-store race.

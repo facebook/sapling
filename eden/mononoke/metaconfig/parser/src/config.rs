@@ -48,17 +48,6 @@ use crate::errors::ConfigurationError;
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 
-/// Load configuration common to all repositories.
-pub fn load_common_config(
-    config_path: impl AsRef<Path>,
-    config_store: &ConfigStore,
-) -> Result<CommonConfig> {
-    let RawRepoConfigs {
-        common, storage, ..
-    } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
-    parse_common_config(common, &storage)
-}
-
 /// Holds configuration for repositories.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepoConfigs {
@@ -219,7 +208,7 @@ pub fn load_configs_from_raw(
 ///
 /// These fields come from different sources depending on the loading path:
 /// - In the monolithic path: extracted from `RawRepoDefinition`
-/// - In the per-repo split-loading path: defaults are used
+/// - In the per-repo split-loading path: taken from the `RepoSpec`
 struct RepoMetadata {
     repoid: RepositoryId,
     enabled: bool,
@@ -294,33 +283,6 @@ fn parse_with_repo_definition(
             default_commit_identity_scheme,
             enable_git_bundle_uri,
             acl_region_config,
-        },
-        named_storage_configs,
-    )
-}
-
-/// Parse a single RawRepoConfig into a RepoConfig for the per-repo split-loading path.
-///
-/// Unlike `parse_with_repo_definition` which gets repo metadata from `RawRepoDefinition`,
-/// this function takes `repo_id` directly (from the TierManifest) and uses sensible defaults
-/// for other metadata fields (enabled=true, readonly=false, etc.).
-///
-/// `named_storage_configs` typically comes from `TierManifest.storage`.
-pub fn parse_raw_repo_config(
-    raw_repo_config: RawRepoConfig,
-    repo_id: i32,
-    named_storage_configs: &HashMap<String, RawStorageConfig>,
-) -> Result<RepoConfig> {
-    build_repo_config(
-        raw_repo_config,
-        RepoMetadata {
-            repoid: RepositoryId::new(repo_id),
-            enabled: true,
-            hipster_acl: None,
-            readonly: RepoReadOnly::ReadWrite,
-            default_commit_identity_scheme: Default::default(),
-            enable_git_bundle_uri: false,
-            acl_region_config: None,
         },
         named_storage_configs,
     )
@@ -416,7 +378,7 @@ pub fn parse_repo_spec(
 /// metadata into a `RepoConfig`.
 ///
 /// Both `parse_with_repo_definition` (monolithic loading path) and
-/// `parse_raw_repo_config` (per-repo split-loading path) delegate to this function.
+/// `parse_repo_spec` (per-repo split-loading path) delegate to this function.
 fn build_repo_config(
     raw_repo_config: RawRepoConfig,
     metadata: RepoMetadata,

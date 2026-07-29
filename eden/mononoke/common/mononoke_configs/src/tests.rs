@@ -41,7 +41,6 @@ fn empty_configs() -> MononokeConfigs {
         config_info: Arc::new(ArcSwap::from_pointee(None)),
         maybe_config_updater: None,
         maybe_liveness_updater: None,
-        maybe_config_handle: None,
         maybe_manifest_handle: None,
         repo_handles: Arc::new(RwLock::new(HashMap::new())),
         config_store: None,
