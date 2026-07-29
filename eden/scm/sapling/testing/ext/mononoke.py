@@ -1448,6 +1448,7 @@ mutation = {{ db_address = "{db_shard_name}" }}
 commit_cloud = {{ db_address = "{db_shard_name}" }}
 git_bundles = {{ db_address = "{db_shard_name}" }}
 restricted_paths = {{ db_address = "{db_shard_name}" }}
+repo_manifest_mapping = {{ db_address = "{db_shard_name}" }}
 derived_data_mapping = {{ unsharded = {{ db_address = "{db_shard_name}" }} }}
 """
     else:
