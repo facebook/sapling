@@ -34,7 +34,7 @@ import {useModal} from './useModal';
 
 import './ISLShortcuts.css';
 
-const CMD = isMac ? Modifier.CMD : Modifier.CTRL;
+export const CMD = isMac ? Modifier.CMD : Modifier.CTRL;
 
 /* eslint-disable no-bitwise */
 export const [ISLCommandContext, useCommand, dispatchCommand, allCommands, setCommands] =
@@ -62,7 +62,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands, setCo
       ToggleFocusMode: [Modifier.ALT, KeyCode.F],
       ToggleBookmarksManagerDropdown: [Modifier.ALT, KeyCode.M],
       RebaseOntoCurrentStackBase: [Modifier.ALT, KeyCode.R],
-      ToggleFilterDropdown: [Modifier.CMD, KeyCode.F],
+      ToggleFilterDropdown: [CMD, KeyCode.F],
       Pull: [Modifier.ALT, KeyCode.P],
       ArcPull: [[Modifier.ALT, Modifier.SHIFT], KeyCode.P],
     },

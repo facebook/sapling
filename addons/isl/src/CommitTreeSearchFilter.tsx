@@ -8,13 +8,13 @@
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {KeyCode} from 'isl-components/KeyboardShortcuts';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import css from './CommitTreeSearchFilter.module.css';
 import {DropdownFields} from './DropdownFields';
-import {useCommandEvent} from './ISLShortcuts';
+import {CMD, useCommandEvent} from './ISLShortcuts';
 import {T, t} from './i18n';
 
 export const commitTreeSearchFilter = atom<string>('');
@@ -24,7 +24,7 @@ export function CommitTreeSearchFilterButton() {
   const additionalToggles = useCommandEvent('ToggleFilterDropdown');
   const isActive = filter !== '';
 
-  const shortcut = <Kbd keycode={KeyCode.F} modifiers={[Modifier.CMD]} />;
+  const shortcut = <Kbd keycode={KeyCode.F} modifiers={[CMD]} />;
   return (
     <Tooltip
       trigger="click"
