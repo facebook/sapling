@@ -463,7 +463,7 @@ impl CheckoutConfig {
     ) -> Result<()> {
         self.redirections.clear();
         self.redirection_targets.clear();
-        for (_, redir) in redirs.iter() {
+        for redir in redirs.values() {
             if redir.source != REPO_SOURCE {
                 self.redirections
                     .insert(redir.repo_path(), redir.redir_type);
