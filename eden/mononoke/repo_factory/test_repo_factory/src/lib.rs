@@ -786,16 +786,11 @@ impl TestRepoFactory {
 
         let restricted_paths_config = repo_config.restricted_paths_config.clone();
 
-        // Build the manifest id cache with the specified refresh interval
         let cache = RestrictedPathsManifestIdCacheBuilder::new(
             self.ctx.clone(),
             restricted_paths_manifest_id_store.clone(),
         )
-        .with_refresh_interval(std::time::Duration::from_millis(
-            restricted_paths_config
-                .manifest_id_store_config
-                .cache_update_interval_ms,
-        ))
+        .with_manifest_id_store_cache(restricted_paths_config.manifest_id_store_config.clone())
         .build()
         .await?;
 

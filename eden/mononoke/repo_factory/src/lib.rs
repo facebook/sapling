@@ -1422,9 +1422,7 @@ impl RepoFactory {
                 ctx.clone(),
                 restricted_paths_manifest_id_store.clone(),
             )
-            .with_refresh_interval(std::time::Duration::from_millis(
-                manifest_id_store_config.cache_update_interval_ms,
-            ))
+            .with_manifest_id_store_cache(manifest_id_store_config.clone())
             .build()
             .await?;
 

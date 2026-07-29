@@ -23,6 +23,7 @@ use futures::FutureExt;
 use futures::channel::oneshot;
 use futures::future::select;
 use metaconfig_types::RestrictedPathsConfig;
+use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
@@ -53,7 +54,7 @@ impl RestrictedPathsManifestIdCache {
     pub async fn new(
         ctx: &CoreContext,
         manifest_id_store: &ArcRestrictedPathsManifestIdStore,
-        refresh_interval: Duration,
+        config: RestrictedPathsManifestIdStoreConfig,
     ) -> Result<Self> {
         let cache = Arc::new(RwLock::new(HashMap::new()));
         let (sender, receiver) = oneshot::channel();
@@ -72,6 +73,7 @@ impl RestrictedPathsManifestIdCache {
 
         // Spawn background updater thread. This runs in a separate OS thread,
         // so it won't be affected by tokio runtime scheduling
+        let refresh_interval = Duration::from_millis(config.cache_update_interval_ms);
         updater.spawn(receiver, refresh_interval).await;
 
         Ok(Self {
@@ -105,7 +107,7 @@ impl Drop for RestrictedPathsManifestIdCache {
 pub struct RestrictedPathsManifestIdCacheBuilder {
     ctx: CoreContext,
     manifest_id_store: ArcRestrictedPathsManifestIdStore,
-    refresh_interval: Duration,
+    config: RestrictedPathsManifestIdStoreConfig,
 }
 
 impl RestrictedPathsManifestIdCacheBuilder {
@@ -114,28 +116,22 @@ impl RestrictedPathsManifestIdCacheBuilder {
         Self {
             ctx,
             manifest_id_store,
-            refresh_interval: Duration::from_millis(
-                RestrictedPathsConfig::default()
-                    .manifest_id_store_config
-                    .cache_update_interval_ms,
-            ),
+            config: RestrictedPathsConfig::default().manifest_id_store_config,
         }
     }
 
-    /// Set the cache refresh interval.
-    pub fn with_refresh_interval(mut self, interval: Duration) -> Self {
-        self.refresh_interval = interval;
+    /// Set the complete manifest ID store cache configuration.
+    pub fn with_manifest_id_store_cache(
+        mut self,
+        config: RestrictedPathsManifestIdStoreConfig,
+    ) -> Self {
+        self.config = config;
         self
     }
 
     /// Build and initialize the cache.
     pub async fn build(self) -> Result<RestrictedPathsManifestIdCache> {
-        RestrictedPathsManifestIdCache::new(
-            &self.ctx,
-            &self.manifest_id_store,
-            self.refresh_interval,
-        )
-        .await
+        RestrictedPathsManifestIdCache::new(&self.ctx, &self.manifest_id_store, self.config).await
     }
 }
 

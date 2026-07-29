@@ -1338,12 +1338,9 @@ async fn setup_test_repo(
         ..Default::default()
     };
 
-    // Build the manifest id cache with the specified refresh interval
     let cache = Arc::new(
         RestrictedPathsManifestIdCacheBuilder::new(ctx.clone(), manifest_id_store.clone())
-            .with_refresh_interval(std::time::Duration::from_millis(
-                config.manifest_id_store_config.cache_update_interval_ms,
-            ))
+            .with_manifest_id_store_cache(config.manifest_id_store_config.clone())
             .build()
             .await?,
     );

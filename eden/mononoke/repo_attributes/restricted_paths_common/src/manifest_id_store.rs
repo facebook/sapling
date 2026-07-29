@@ -515,14 +515,12 @@ mod tests {
         manifest_type: ManifestType,
         manifest_id: &RestrictedManifestId,
         path: &str,
-    ) -> RestrictedPathManifestIdEntry {
+    ) -> Result<RestrictedPathManifestIdEntry> {
         RestrictedPathManifestIdEntry::new(
             manifest_type,
             manifest_id.clone(),
-            RepoPath::dir(NonRootMPath::new(path).expect("valid path"))
-                .expect("valid directory repo path"),
+            RepoPath::dir(NonRootMPath::new(path)?)?,
         )
-        .expect("valid entry")
     }
 
     #[mononoke::fbinit_test]
@@ -543,27 +541,27 @@ mod tests {
 
         // The same manifest id is stored in both repos under two manifest types.
         store_repo1
-            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo1/hg"))
+            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo1/hg")?)
             .await?;
         store_repo1
             .add_entry(
                 &ctx,
-                entry(ManifestType::HgAugmented, &shared_id, "repo1/hg_aug"),
+                entry(ManifestType::HgAugmented, &shared_id, "repo1/hg_aug")?,
             )
             .await?;
         store_repo2
-            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo2/hg"))
+            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo2/hg")?)
             .await?;
         store_repo2
             .add_entry(
                 &ctx,
-                entry(ManifestType::HgAugmented, &shared_id, "repo2/hg_aug"),
+                entry(ManifestType::HgAugmented, &shared_id, "repo2/hg_aug")?,
             )
             .await?;
 
         // A control entry with a different manifest id must survive deletion.
         store_repo1
-            .add_entry(&ctx, entry(ManifestType::Hg, &control_id, "repo1/control"))
+            .add_entry(&ctx, entry(ManifestType::Hg, &control_id, "repo1/control")?)
             .await?;
 
         // (a) get_all_paths_by_manifest_id is scoped to the store's repo: repo1
