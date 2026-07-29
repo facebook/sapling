@@ -141,6 +141,7 @@ dott_test(
     dott_files = glob([
         "test-filenodes*.t",
     ]),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
@@ -163,6 +164,7 @@ dott_test(
         ],
         exclude = ["test-lfs-server*.t"],
     ),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/servers/lfs/lfs_server:lfs_server",
@@ -175,6 +177,7 @@ dott_test(
     dott_files = [
         "test-cache-warmup-microwave.t",
     ],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/features/microwave:builder",
@@ -188,6 +191,7 @@ dott_test(
     dott_files = [
         "test-packer.t",
     ],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/packer:packer",
@@ -231,6 +235,7 @@ dott_test(
 dott_test(
     name = "streaming-clone",
     dott_files = glob(["test-streaming-clone*.t"]),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/streaming_clone:new_streaming_clone",

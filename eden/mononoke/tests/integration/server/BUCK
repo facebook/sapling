@@ -21,6 +21,7 @@ dott_test(
             "test-pushrebase-pessimistic-locking-stack.t",
         ],
     ),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         # TODO: This is required for test-getpackv2-multibyte-filenames.t, as

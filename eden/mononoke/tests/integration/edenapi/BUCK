@@ -24,6 +24,7 @@ dott_test(
         ["*.t"],
         exclude = OSS_EXCLUDED_TESTS if rust_oss.is_oss_build() else NETWORK_EXCLUDED_TESTS,
     ),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",

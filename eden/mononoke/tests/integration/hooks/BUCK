@@ -12,6 +12,7 @@ dott_test(
             "*.t",
         ],
     ),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/testtool:testtool",
