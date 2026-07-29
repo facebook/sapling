@@ -1,8 +1,8 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule", "buck_sh_binary")
-load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
+load("@prelude//utils:buckconfig.bzl", "read_bool")
 
 def _set_default(obj, *keys):
     for key in keys:

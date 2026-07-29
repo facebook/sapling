@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
-load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
+load("@prelude//utils:buckconfig.bzl", "read_bool")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
 def excluded_t_tests():

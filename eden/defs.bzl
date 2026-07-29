@@ -1,6 +1,6 @@
 # This file contains macros that are shared across Eden.
 
-load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
+load("@prelude//utils:buckconfig.bzl", "read_bool")
 
 def get_oss_suffix():
     """Build rule suffix to use for open-source-specific build targets."""
