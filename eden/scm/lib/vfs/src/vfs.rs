@@ -353,8 +353,9 @@ impl VFS {
     ///
     /// This is a slow operation, and should not be called before attempting to create `path`.
     ///
-    /// If `clear_conflicts` is disabled via `overwrite_path_conflicts=false`, this will return an error
-    /// with information about the conflict instead of removing the conflicting files.
+    /// Destination files and symlinks are always removed so they can be overwritten. If
+    /// `overwrite_path_conflicts=false`, ancestor conflicts and destination directories return an
+    /// error instead of being removed.
     fn clear_conflicts(&self, repo_path: &RepoPath) -> Result<()> {
         let full_path = self.join(repo_path);
         let clear_conflicts_enabled = self.inner.overwrite_path_conflicts;
@@ -378,7 +379,8 @@ impl VFS {
             };
 
             if metadata.is_file() || metadata.is_symlink() {
-                if !clear_conflicts_enabled {
+                let is_leaf = prefix.as_repo_path() == repo_path;
+                if !clear_conflicts_enabled && !is_leaf {
                     let conflict_type = if metadata.is_symlink() {
                         ConflictType::Symlink
                     } else {
@@ -766,9 +768,9 @@ mod unix_tests {
     use super::*;
 
     #[test]
-    fn test_symlink_overwrite() {
+    fn test_symlink_overwrite_non_destructive() {
         let tmp = tempfile::tempdir().unwrap();
-        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
         vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Symlink)
             .unwrap();

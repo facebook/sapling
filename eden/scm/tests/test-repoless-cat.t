@@ -241,15 +241,13 @@ Test cat --output preserves executable and symlink metadata:
   -rw-r--r-- normal
   -rwxr-xr-x script
 
-Test cat --output fails to overwrite an existing symlink (FIXME: this should succeed):
+Test cat --output overwrites an existing symlink:
 
   $ rm output/link
   $ ln -s normal output/link
   $ sl cat -R test:server2 -r $A --output 'output/%p' link
-  abort: can't clear conflicts after handling error * (glob)
-  [255]
   $ readlink output/link
-  normal
+  script
 
 Test cat --tar preserves executable and symlink metadata:
 
