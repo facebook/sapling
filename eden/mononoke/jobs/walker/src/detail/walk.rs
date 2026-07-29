@@ -334,7 +334,7 @@ async fn published_bookmarks_step<V: VisitOne>(
     checker: &Checker<V>,
 ) -> Result<StepOutput, StepError> {
     let mut edges = vec![];
-    for (_, bcs_id) in published_bookmarks.iter() {
+    for bcs_id in published_bookmarks.values() {
         checker.add_edge(&mut edges, EdgeType::PublishedBookmarksToChangeset, || {
             Node::Changeset(ChangesetKey {
                 inner: bcs_id.clone(),
