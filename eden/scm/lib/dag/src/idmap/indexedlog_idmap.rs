@@ -237,13 +237,9 @@ impl IdMap {
         name: &[u8],
         max_group: Group,
     ) -> Result<Option<Id>> {
-        Ok(self.find_id_by_name(name)?.and_then(|id| {
-            if id.group() <= max_group {
-                Some(id)
-            } else {
-                None
-            }
-        }))
+        Ok(self
+            .find_id_by_name(name)?
+            .filter(|&id| id.group() <= max_group))
     }
 
     /// Insert a new entry mapping from a name to an id.
