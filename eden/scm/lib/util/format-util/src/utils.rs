@@ -28,7 +28,7 @@ pub(crate) fn normalize_email_user(
     let name = name.trim();
     ensure!(!name.is_empty(), "invalid name (empty): {name:?}");
 
-    let invalid_bytes = [b'\0', b'\n', b'\r'];
+    let invalid_bytes = *b"\0\n\r";
     ensure!(
         invalid_bytes
             .iter()
