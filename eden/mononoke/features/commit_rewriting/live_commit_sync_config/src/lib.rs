@@ -260,7 +260,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
 
         let mut interesting_configs: Vec<_> = vec![];
 
-        for (_, config_version_set) in large_repo_config_version_sets.iter() {
+        for config_version_set in large_repo_config_version_sets.values() {
             if !Self::related_to_repo(config_version_set, repo_id) {
                 continue;
             }
@@ -292,7 +292,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         let large_repo_config_version_sets = &self.config_handle_for_all_versions.get().repos;
 
         let mut version = None;
-        for (_, config_version_set) in large_repo_config_version_sets.iter() {
+        for config_version_set in large_repo_config_version_sets.values() {
             if !Self::related_to_repo(config_version_set, repo_id) {
                 continue;
             }
