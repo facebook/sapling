@@ -396,13 +396,7 @@ struct ThriftCancellation : public EdenFSEvent {
 };
 
 struct NFSStaleError : public EdenFSEvent {
-  uint64_t ino;
-
-  explicit NFSStaleError(uint64_t ino) : ino(ino) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addInt("ino", ino);
-  }
+  void populate(DynamicEvent& /*event*/) const override {}
 
   const char* getType() const override {
     return "nfs_stale_error";
@@ -543,7 +537,6 @@ struct MetadataSizeMismatch : public EdenFSEvent {
 
 struct InodeMetadataMismatch : public EdenFSEvent {
   uint64_t mode;
-  uint64_t ino;
   uint64_t gid;
   uint64_t uid;
   uint64_t atime;
@@ -552,14 +545,12 @@ struct InodeMetadataMismatch : public EdenFSEvent {
 
   InodeMetadataMismatch(
       uint64_t mode,
-      uint64_t ino,
       uint64_t gid,
       uint64_t uid,
       uint64_t atime,
       uint64_t ctime,
       uint64_t mtime)
       : mode(mode),
-        ino(ino),
         gid(gid),
         uid(uid),
         atime(atime),
@@ -568,7 +559,6 @@ struct InodeMetadataMismatch : public EdenFSEvent {
 
   void populate(DynamicEvent& event) const override {
     event.addInt("st_mode", mode);
-    event.addInt("ino", ino);
     event.addInt("gid", gid);
     event.addInt("uid", uid);
     event.addInt("atime", atime);
@@ -583,11 +573,9 @@ struct InodeMetadataMismatch : public EdenFSEvent {
 
 struct InodeLoadingFailed : public EdenFSEvent {
   std::string error;
-  uint64_t ino;
   bool causedByX2P = false;
 
-  explicit InodeLoadingFailed(std::string err, uint64_t ino)
-      : error(std::move(err)), ino(ino) {
+  explicit InodeLoadingFailed(std::string err) : error(std::move(err)) {
     if (error.find("x-x2pagentd-error")) {
       causedByX2P = true;
     }
@@ -595,7 +583,6 @@ struct InodeLoadingFailed : public EdenFSEvent {
 
   void populate(DynamicEvent& event) const override {
     event.addString("load_error", error);
-    event.addInt("ino", ino);
     event.addBool("caused_by_x2p", causedByX2P);
   }
 

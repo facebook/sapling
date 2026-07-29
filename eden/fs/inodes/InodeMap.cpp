@@ -335,7 +335,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.
 #ifndef _WIN32
-      edenFsEventsLogger_->logEvent(NFSStaleError{number.getRawValue()});
+      edenFsEventsLogger_->logEvent(NFSStaleError{});
       return ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
           std::system_error{std::error_code{ESTALE, std::system_category()}}}};
 #endif
@@ -589,8 +589,7 @@ void InodeMap::inodeLoadFailed(
 
   // Temporarily log every inode load failure and associated error string.
   // This data will help us understand the impact of X2P errors on EdenFS.
-  edenFsEventsLogger_->logEvent(
-      InodeLoadingFailed{errStr.toStdString(), number.getRawValue()});
+  edenFsEventsLogger_->logEvent(InodeLoadingFailed{errStr.toStdString()});
   ex.with_exception([&](const std::exception& e) {
     mount_->getServerState()->getErrorLogger().log(
         EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))

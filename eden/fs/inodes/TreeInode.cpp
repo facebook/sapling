@@ -405,7 +405,6 @@ struct stat TreeInode::statWithCurrentRestrictionState() const {
     getMount()->getServerState()->getEdenFsEventsLogger()->logEvent(
         InodeMetadataMismatch{
             st.st_mode,
-            st.st_ino,
             metadata.gid,
             metadata.uid,
             metadata.timestamps.atime.asRawRepresentation(),
