@@ -17,15 +17,25 @@ test worktree telemetry - normal checkout
 
   >>> import json, os
   >>> sample_path = os.path.join(os.environ["TESTTMP"], "worktree-sampling")
-  >>> def print_is_linked_worktree():
+  >>> sample_count = 0
+  >>> def print_worktree_info():
+  ...     global sample_count
   ...     with open(sample_path) as f:
   ...         records = [json.loads(item) for item in f.read().strip("\0").split("\0")]
-  ...     value = [record["data"]["is_linked_worktree"] for record in records if "is_linked_worktree" in record["data"]][-1]
-  ...     assert isinstance(value, bool)
-  ...     print(value)
+  ...     data = {}
+  ...     for record in records[sample_count:]:
+  ...         data.update(record["data"])
+  ...     sample_count = len(records)
+  ...     is_linked_worktree = data["is_linked_worktree"]
+  ...     worktree_count_group = data.get("worktree_count_group")
+  ...     worktree_count = data.get("worktree_count")
+  ...     assert isinstance(is_linked_worktree, bool)
+  ...     assert worktree_count_group is None or type(worktree_count_group) is int
+  ...     assert worktree_count is None or type(worktree_count) is int
+  ...     print((is_linked_worktree, worktree_count_group, worktree_count))
   $ sl root > /dev/null
-  >>> print_is_linked_worktree()
-  False
+  >>> print_worktree_info()
+  (False, None, None)
 
 test worktree add - basic
 
@@ -35,12 +45,12 @@ test worktree add - basic
 test worktree telemetry - main and linked checkouts
 
   $ sl root > /dev/null
-  >>> print_is_linked_worktree()
-  False
+  >>> print_worktree_info()
+  (False, 2, 2)
   $ cd $TESTTMP/linked1
   $ sl root > /dev/null
-  >>> print_is_linked_worktree()
-  True
+  >>> print_worktree_info()
+  (True, 2, 2)
   $ cd $TESTTMP/myrepo
 
 test worktree add - with label

@@ -837,16 +837,20 @@ fn is_inside_test() -> bool {
 
 fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
     // The "version" and "repo" fields are consumed by telemetry.
-    let is_linked_worktree = repo.is_some_and(|repo| {
-        worktree::is_linked_worktree(repo.store_path(), repo.path()).unwrap_or_else(|err| {
-            tracing::debug!(
-                target: "worktree",
-                error = %err,
-                "failed to detect linked worktree for telemetry"
-            );
-            false
+    let worktree_info = repo.and_then(|repo| {
+        worktree::worktree_info(repo.store_path(), repo.path()).unwrap_or_else(|err| {
+            tracing::debug!(target: "worktree", error = %err, "failed to read worktree telemetry");
+            None
         })
     });
+    let is_linked_worktree = worktree_info.as_ref().is_some_and(|info| info.is_linked);
+    if let Some(info) = worktree_info {
+        tracing::info!(
+            target: "command_info",
+            worktree_count_group = info.worktree_count_group,
+            worktree_count = info.worktree_count,
+        );
+    }
     if let Some(repo) = repo {
         let config = repo.config();
         let opt_path_default: std::result::Result<Option<String>, _> =

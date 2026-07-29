@@ -54,6 +54,20 @@ pub struct WorktreeEntry {
     pub label: Option<String>,
 }
 
+/// Worktree registry information for a single checkout.
+///
+/// Note: `Group::new` inserts the main checkout into `worktrees`, so both counts
+/// include the main checkout, not just linked worktrees.
+#[derive(Debug, Eq, PartialEq)]
+pub struct WorktreeInfo {
+    /// Whether this checkout is a linked worktree (i.e. not the group's main checkout).
+    pub is_linked: bool,
+    /// Total number of checkouts in this checkout's group (main + linked).
+    pub worktree_count_group: usize,
+    /// Total number of checkouts across all groups in the registry (main + linked).
+    pub worktree_count: usize,
+}
+
 impl Registry {
     pub fn new() -> Self {
         Self {
@@ -318,8 +332,8 @@ pub fn load_registry(shared_store_path: &Path) -> Result<Registry> {
     }
 }
 
-/// Return whether `repo_path` is a linked worktree in its shared-store registry.
-pub fn is_linked_worktree(shared_store_path: &Path, repo_path: &Path) -> Result<bool> {
+/// Return worktree group information for `repo_path`, if it is registered.
+pub fn worktree_info(shared_store_path: &Path, repo_path: &Path) -> Result<Option<WorktreeInfo>> {
     let current = util::path::strip_unc_prefix(fs::canonicalize(repo_path).with_context(|| {
         format!(
             "failed to canonicalize repository path {}",
@@ -328,13 +342,19 @@ pub fn is_linked_worktree(shared_store_path: &Path, repo_path: &Path) -> Result<
     })?);
     let registry = load_registry(shared_store_path)?;
     let Some(group_id) = registry.find_group_for_path(&current) else {
-        return Ok(false);
+        return Ok(None);
     };
-
-    Ok(registry
+    let worktree_count = registry
         .groups
-        .get(&group_id)
-        .is_some_and(|group| current != group.main))
+        .values()
+        .map(|group| group.worktrees.len())
+        .sum();
+
+    Ok(registry.groups.get(&group_id).map(|group| WorktreeInfo {
+        is_linked: current != group.main,
+        worktree_count_group: group.worktrees.len(),
+        worktree_count,
+    }))
 }
 
 pub fn save_registry(shared_store_path: &Path, registry: &Registry) -> Result<()> {
@@ -442,20 +462,30 @@ mod tests {
     }
 
     #[test]
-    fn test_is_linked_worktree_roles() {
+    fn test_worktree_info_roles() {
         let store_dir = tempfile::tempdir().unwrap();
         let checkouts_dir = tempfile::tempdir().unwrap();
         let main_path = checkouts_dir.path().join("main");
         let linked_path = checkouts_dir.path().join("linked");
         let unregistered_path = checkouts_dir.path().join("legacy-share");
-        for path in [&main_path, &linked_path, &unregistered_path] {
+        let other_main_path = checkouts_dir.path().join("other-main");
+        let other_linked_path = checkouts_dir.path().join("other-linked");
+        for path in [
+            &main_path,
+            &linked_path,
+            &unregistered_path,
+            &other_main_path,
+            &other_linked_path,
+        ] {
             std::fs::create_dir(path).unwrap();
         }
 
-        assert!(!is_linked_worktree(store_dir.path(), &main_path).unwrap());
+        assert_eq!(worktree_info(store_dir.path(), &main_path).unwrap(), None);
 
         let main_path = util::path::strip_unc_prefix(fs::canonicalize(main_path).unwrap());
         let linked_path = util::path::strip_unc_prefix(fs::canonicalize(linked_path).unwrap());
+        let other_main_path = fs::canonicalize(other_main_path).unwrap();
+        let other_linked_path = fs::canonicalize(other_linked_path).unwrap();
         let mut group = Group::new(main_path.clone());
         group.worktrees.insert(
             linked_path.clone(),
@@ -464,13 +494,41 @@ mod tests {
                 label: None,
             },
         );
+        let mut other_group = Group::new(other_main_path);
+        other_group.worktrees.insert(
+            other_linked_path,
+            WorktreeEntry {
+                added: "2025-01-01T00:00:00Z".to_string(),
+                label: None,
+            },
+        );
         let mut registry = Registry::new();
         registry.groups.insert("test-group-id".to_string(), group);
+        registry
+            .groups
+            .insert("other-group-id".to_string(), other_group);
         save_registry(store_dir.path(), &registry).unwrap();
 
-        assert!(!is_linked_worktree(store_dir.path(), &main_path).unwrap());
-        assert!(is_linked_worktree(store_dir.path(), &linked_path).unwrap());
-        assert!(!is_linked_worktree(store_dir.path(), &unregistered_path).unwrap());
+        assert_eq!(
+            worktree_info(store_dir.path(), &main_path).unwrap(),
+            Some(WorktreeInfo {
+                is_linked: false,
+                worktree_count_group: 2,
+                worktree_count: 4,
+            })
+        );
+        assert_eq!(
+            worktree_info(store_dir.path(), &linked_path).unwrap(),
+            Some(WorktreeInfo {
+                is_linked: true,
+                worktree_count_group: 2,
+                worktree_count: 4,
+            })
+        );
+        assert_eq!(
+            worktree_info(store_dir.path(), &unregistered_path).unwrap(),
+            None
+        );
     }
 
     #[test]
