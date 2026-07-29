@@ -35,7 +35,6 @@ use futures::stream;
 use futures::stream::AbortHandle;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
@@ -58,7 +57,6 @@ use repos::RepoSpec;
 use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
-use tracing::debug;
 use tracing::info;
 use tracing::warn;
 
@@ -95,12 +93,6 @@ pub struct MononokeReposManager<Repo> {
     configs: Arc<MononokeConfigs>,
     repo_factory: Arc<RepoFactory>,
     redaction_disabled: bool,
-    // Tracks the RepoConfig last applied to each managed repo. Used to skip
-    // redundant per-repo reloads when a tier-manifest content change does not
-    // change a given repo's config (the common case when a sibling repo is
-    // added or modified). Persistent + Arc-valued so a copy-on-write update is
-    // O(1) clone + O(log N), not a whole-map deep clone.
-    applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
     // Tier-wide list of enabled repos (name -> default identity scheme).
     // Shared with Mononoke<R> (read by list_repos) and with
     // MononokeConfigUpdateReceiver (which refreshes it on each config update).
@@ -139,7 +131,9 @@ impl<Repo> MononokeReposManager<Repo> {
     pub(crate) async fn new_with_redaction_disabled<Names>(
         configs: Arc<MononokeConfigs>,
         repo_factory: Arc<RepoFactory>,
-        service_name: Option<ShardedService>,
+        // Retained for the app.rs open_named_managed_repos API; reconcile derives
+        // deep-sharding from the manifest, so the receiver no longer needs it.
+        _service_name: Option<ShardedService>,
         repo_names: Names,
         redaction_disabled: bool,
     ) -> Result<Self>
@@ -151,7 +145,6 @@ impl<Repo> MononokeReposManager<Repo> {
             + 'static,
     {
         let repos = Arc::new(MononokeRepos::new());
-        let applied_configs = Arc::new(ArcSwap::from_pointee(im::HashMap::new()));
         let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let reconcile_driver = Arc::new(ReconcileDriver {
             configs: configs.clone(),
@@ -167,20 +160,12 @@ impl<Repo> MononokeReposManager<Repo> {
             configs,
             repo_factory,
             redaction_disabled,
-            applied_configs: applied_configs.clone(),
             repo_names_in_tier: repo_names_in_tier.clone(),
             reconcile_driver,
             reconcile_loop_handle: None,
         };
         mgr.populate_repos(repo_names).await?;
-        let update_receiver = MononokeConfigUpdateReceiver::new(
-            mgr.repos.clone(),
-            mgr.repo_factory.clone(),
-            service_name,
-            mgr.configs.clone(),
-            applied_configs,
-            repo_names_in_tier,
-        );
+        let update_receiver = MononokeConfigUpdateReceiver::new(repo_names_in_tier);
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
 
@@ -230,31 +215,15 @@ impl<Repo> MononokeReposManager<Repo> {
             .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
         let repo_id = repo_config.repoid.id();
         let common_config = self.configs.repo_configs().common.clone();
-        let tracked_config = repo_config.clone();
         let repo = self
             .repo_factory
             .build(repo_name.to_string(), repo_config, common_config)
             .await
             .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
         self.repos.add(repo_name, repo_id, repo);
-        self.record_applied_configs(std::iter::once((repo_name.to_string(), tracked_config)));
         self.repos
             .get_by_name(repo_name)
             .ok_or_else(|| anyhow!("Couldn't retrieve added repo {repo_name}"))
-    }
-
-    /// Merge the given (repo_name, RepoConfig) entries into the applied-config
-    /// cache. This is the source of truth for "which config is currently active
-    /// in MononokeRepos for each repo" and drives per-repo reload dedup in
-    /// MononokeConfigUpdateReceiver.
-    fn record_applied_configs<I>(&self, entries: I)
-    where
-        I: IntoIterator<Item = (String, RepoConfig)>,
-    {
-        // O(1) clone of the persistent map; Arc-wrap each value on insert.
-        let mut new_applied = (**self.applied_configs.load()).clone();
-        new_applied.extend(entries.into_iter().map(|(n, c)| (n, Arc::new(c))));
-        self.applied_configs.store(Arc::new(new_applied));
     }
 
     /// Remove a repo from the managed repo collection.
@@ -292,10 +261,6 @@ impl<Repo> MononokeReposManager<Repo> {
             })
             .collect::<Result<Vec<_>>>()?;
         let total = repo_configs.len();
-        let tracked_configs: Vec<(String, RepoConfig)> = repo_configs
-            .iter()
-            .map(|(name, config)| (name.clone(), config.clone()))
-            .collect();
         let completed = Arc::new(AtomicUsize::new(0));
         let repos_input = stream::iter(repo_configs)
             .map(|(repo_name, repo_config)| {
@@ -310,7 +275,7 @@ impl<Repo> MononokeReposManager<Repo> {
                     let repo = repo_factory
                         .build(name, repo_config, common_config)
                         .await
-                        .with_context(|| format!("Failed to initialize repo '{}'", repo_name))?;
+                        .with_context(|| format!("Failed to initialize repo '{repo_name}'"))?;
                     let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
                     info!("Initialized repo: {} ({}/{})", &repo_name, n, total);
                     STATS::initialization_time_millisecs.add_value(
@@ -336,7 +301,6 @@ impl<Repo> MononokeReposManager<Repo> {
             .try_collect::<Vec<_>>()
             .await?;
         self.repos.populate(repos_input);
-        self.record_applied_configs(tracked_configs);
         Ok(())
     }
 
@@ -763,124 +727,19 @@ where
         .collect()
 }
 
-/// Struct responsible for receiving updated configurations from MononokeConfigs
-/// and refreshing repos (and related entities) based on the update.
-///
-/// This is the edge-triggered reload path. While use_config_reconcile is on it
-/// coexists with the reconcile loop (both may rebuild a repo on one change);
-/// retiring it is the reconcile cutover.
-pub struct MononokeConfigUpdateReceiver<Repo> {
-    repos: Arc<MononokeRepos<Repo>>,
-    repo_factory: Arc<RepoFactory>,
-    service_name: Option<ShardedService>,
-    mononoke_configs: Arc<MononokeConfigs>,
-    // Shared with the owning MononokeReposManager. See MononokeReposManager.
-    applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
+/// A `ConfigUpdateReceiver` that keeps the tier-wide repo names map fresh on
+/// every config change. Repo (re)building is owned by the reconcile loop;
+/// reconcile does not maintain this map, so it lives here.
+pub struct MononokeConfigUpdateReceiver {
     // Shared with MononokeReposManager and Mononoke<R>. Updated on every
     // config change so `list_repos` sees newly-added repos without waiting
     // for a process restart.
     repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
 }
 
-/// Determines which repos should be loaded/reloaded based on config.
-///
-/// A repo should be loaded if:
-/// 1. It already exists on the server (always reload to pick up config changes), OR
-/// 2. It's a new repo that is:
-///    - enabled in config, AND
-///    - either no service_name is configured, OR
-///    - the repo is shallow-sharded for the given service (not deep-sharded)
-fn compute_reloadable_repos<F>(
-    repo_configs: &RepoConfigs,
-    service_name: Option<&ShardedService>,
-    repo_exists: F,
-) -> Vec<(String, RepoConfig)>
-where
-    F: Fn(&str) -> bool,
-{
-    let mut repos_to_load = vec![];
-    for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
-        // repos_to_load needs owned RepoConfig.
-        let repo_config = Arc::unwrap_or_clone(repo_config);
-        if repo_exists(repo_name.as_str()) {
-            // Repo was already present on the server. Need to reload it.
-            repos_to_load.push((repo_name, repo_config))
-        }
-        // Only reload repos that are enabled in config
-        else if repo_config.enabled {
-            match (service_name, &repo_config.deep_sharding_config) {
-                (Some(service_name), Some(config)) => {
-                    // Service name is provided AND Repo is shallow sharded for this service, so should be loaded.
-                    if !config.status.get(service_name).cloned().unwrap_or(false) {
-                        repos_to_load.push((repo_name, repo_config));
-                    }
-                }
-                (Some(_), None) => {
-                    // Service name is provided but sharding config doesn't exist for repo. In this case it should
-                    // be considered as shallow-sharded.
-                    repos_to_load.push((repo_name, repo_config));
-                }
-                (None, _) => {
-                    // Service name is not provided so regardless of whether the sharding config
-                    // exists or not, the repo should be considered as shallow-sharded.
-                    repos_to_load.push((repo_name, repo_config));
-                }
-            }
-        }
-        // The repos present on the server but not part of RepoConfigs are ignored by
-        // default. This situation can happen when the name of the repo changes
-        // (e.g. whatsapp/server.mirror renamed to whatsapp/server) or when a repo is
-        // added or removed. In such a case, reloading of the repo with the old name
-        // would not be possible based on the new configs.
-    }
-    repos_to_load
-}
-
-/// Filter a list of reload candidates down to only those whose `RepoConfig`
-/// actually differs from the previously-applied config. A candidate not present
-/// in `applied` is treated as never-loaded and passed through.
-///
-/// This avoids the cost of rebuilding repos whose config did not change — the
-/// common case when a tier manifest content-hash bumps due to an unrelated repo
-/// being added or modified.
-fn filter_repos_with_changed_config(
-    candidates: Vec<(String, RepoConfig)>,
-    applied: &im::HashMap<String, Arc<RepoConfig>>,
-) -> Vec<(String, RepoConfig)> {
-    candidates
-        .into_iter()
-        .filter(|(name, new_config)| match applied.get(name) {
-            Some(existing) => **existing != *new_config,
-            None => true,
-        })
-        .collect()
-}
-
-/// Whether a single-repo config update should rebuild the repo on this host.
-/// Skips disabled repos and repos not currently served here — per-repo watchers
-/// fire for every manifest repo, but a host only builds its own shard's repos
-/// (a newly-assigned shard is built by `add_repo`).
-fn should_reload_single_repo(enabled: bool, currently_served: bool) -> bool {
-    enabled && currently_served
-}
-
-impl<Repo> MononokeConfigUpdateReceiver<Repo> {
-    fn new(
-        repos: Arc<MononokeRepos<Repo>>,
-        repo_factory: Arc<RepoFactory>,
-        service_name: Option<ShardedService>,
-        mononoke_configs: Arc<MononokeConfigs>,
-        applied_configs: Arc<ArcSwap<im::HashMap<String, Arc<RepoConfig>>>>,
-        repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
-    ) -> Self {
-        Self {
-            repos,
-            repo_factory,
-            service_name,
-            mononoke_configs,
-            applied_configs,
-            repo_names_in_tier,
-        }
+impl MononokeConfigUpdateReceiver {
+    fn new(repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>) -> Self {
+        Self { repo_names_in_tier }
     }
 
     /// Rebuild the tier-wide repo names map from `repo_configs` (the full
@@ -890,165 +749,25 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
             build_repo_names_in_tier(repo_configs.repos.iter().map(|(k, v)| (k, v.as_ref())));
         self.repo_names_in_tier.store(Arc::new(names));
     }
-
-    /// Merge the given (repo_name, RepoConfig) entries into the applied-config
-    /// cache after a successful reload.
-    fn record_applied_configs<I>(&self, entries: I)
-    where
-        I: IntoIterator<Item = (String, RepoConfig)>,
-    {
-        // O(1) clone of the persistent map; Arc-wrap each value on insert.
-        let mut new_applied = (**self.applied_configs.load()).clone();
-        new_applied.extend(entries.into_iter().map(|(n, c)| (n, Arc::new(c))));
-        self.applied_configs.store(Arc::new(new_applied));
-    }
-
-    /// Method for determining the set of repos to be reloaded with the new config
-    fn reloadable_repo(&self, repo_configs: Arc<RepoConfigs>) -> Vec<(String, RepoConfig)> {
-        // Check if manifest has repos not yet in repo_configs
-        let manifest = self.mononoke_configs.manifest();
-        let has_new_manifest_repos = manifest.as_ref().is_some_and(|m| {
-            m.repos
-                .iter()
-                .any(|e| !repo_configs.repos.contains_key(&e.repo_name))
-        });
-
-        if !has_new_manifest_repos {
-            // Common case: no new manifest repos, avoid cloning
-            return compute_reloadable_repos(&repo_configs, self.service_name.as_ref(), |name| {
-                self.repos.get_by_name(name).is_some()
-            });
-        }
-
-        // Clone and enrich with manifest repos
-        let mut enriched = (*repo_configs).clone();
-        if let Some(manifest) = manifest {
-            for entry in &manifest.repos {
-                if !enriched.repos.contains_key(&entry.repo_name) {
-                    match self
-                        .mononoke_configs
-                        .get_or_load_repo_config(&entry.repo_name)
-                    {
-                        Ok(config) => {
-                            enriched.insert_repo(entry.repo_name.clone(), config);
-                        }
-                        Err(e) => {
-                            warn!(
-                                "reloadable_repo: failed to load manifest repo {}: {:#}",
-                                entry.repo_name, e
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        compute_reloadable_repos(&enriched, self.service_name.as_ref(), |name| {
-            self.repos.get_by_name(name).is_some()
-        })
-    }
 }
 
 #[async_trait]
-impl<Repo> ConfigUpdateReceiver for MononokeConfigUpdateReceiver<Repo>
-where
-    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
-        + Send
-        + Sync
-        + 'static,
-{
+impl ConfigUpdateReceiver for MononokeConfigUpdateReceiver {
     async fn apply_update(
         &self,
         repo_configs: Arc<RepoConfigs>,
         _: Arc<StorageConfigs>,
     ) -> Result<()> {
-        // Refresh the tier-wide names list first so `list_repos` reflects the
-        // latest tier config independent of (and not blocked by) the heavy
-        // per-task repo rebuild below.
+        // Keep the tier-wide names map fresh so `list_repos` reflects the latest
+        // tier config. Repo (re)building is owned by the reconcile loop.
         self.refresh_repo_names_in_tier(&repo_configs);
-
-        // When reconcile owns reload, skip the rebuild below (else both rebuild
-        // the same repo on one change). Only the rebuild is gated; the names
-        // refresh above stays unconditional (reconcile does not maintain it).
-        if justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
-            return Ok(());
-        }
-
-        let candidates = self.reloadable_repo(repo_configs.clone());
-        let candidate_count = candidates.len();
-        let applied_snapshot = self.applied_configs.load_full();
-        let repos_to_load = filter_repos_with_changed_config(candidates, &applied_snapshot);
-        let suppressed = candidate_count - repos_to_load.len();
-        if suppressed > 0 {
-            info!(
-                "Skipping reload of {} repos with unchanged config (reloading {})",
-                suppressed,
-                repos_to_load.len(),
-            );
-        }
-        if repos_to_load.is_empty() {
-            return Ok(());
-        }
-        let tracked_configs: Vec<(String, RepoConfig)> = repos_to_load
-            .iter()
-            .map(|(name, config)| (name.clone(), config.clone()))
-            .collect();
-
-        let total = repos_to_load.len();
-        let completed = Arc::new(AtomicUsize::new(0));
-
-        let repos_input = stream::iter(repos_to_load)
-            .map(|(repo_name, repo_config)| {
-                let repo_factory = self.repo_factory.clone();
-                let name = repo_name.clone();
-                let common_config = repo_configs.common.clone();
-                let repo_id = repo_config.repoid.id();
-                let completed = completed.clone();
-                mononoke::spawn_task(async move {
-                    info!("Reloading repo: {}", &repo_name);
-                    let repo = retry(
-                        |_| {
-                            repo_factory.build(
-                                name.clone(),
-                                repo_config.clone(),
-                                common_config.clone(),
-                            )
-                        },
-                        Duration::from_millis(100),
-                    )
-                    .binary_exponential_backoff()
-                    .max_attempts(5)
-                    .await
-                    .with_context(|| format!("Failed to reload repo '{}'", repo_name))?
-                    .0;
-                    let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
-                    info!("Reloaded repo: {} ({}/{})", &repo_name, n, total);
-
-                    anyhow::Ok((repo_id, repo_name, repo))
-                })
-            })
-            // Repo construction can be heavy, limit concurrency via JK.
-            .buffer_unordered(repos_manager_concurrency()?)
-            .map(|r| anyhow::Ok(r??))
-            .try_collect::<Vec<_>>()
-            .await?;
-        // Ensure that we only add or replace repos and NEVER remove them
-        self.repos.reload(repos_input);
-        self.record_applied_configs(tracked_configs);
         Ok(())
     }
 
     async fn apply_repo_update(&self, repo_name: &str, repo_config: &RepoConfig) -> Result<()> {
-        // Surgically patch the tier-wide names map from the passed-in
-        // arg, not from self.mononoke_configs.repo_configs(). The arg is
-        // authoritative for THIS repo; self.mononoke_configs depends on
-        // an ordering invariant (the caller must have already swapped in
-        // the new config) which isn't documented on the trait. Using the
-        // arg eliminates that coupling.
-        //
-        // rcu() makes the load-mutate-store atomic against concurrent writers:
-        // if anything else (another apply_repo_update, or apply_update's bulk
-        // refresh) stores during the closure, the CAS fails and the closure
-        // re-runs on the fresher snapshot. Idempotent for our patch shape.
+        // Patch the names map from the passed-in arg (authoritative for THIS
+        // repo). rcu() makes the load-mutate-store atomic against concurrent
+        // writers (e.g. apply_update's bulk refresh); idempotent for this shape.
         self.repo_names_in_tier.rcu(|current| {
             let mut snapshot = (**current).clone();
             if repo_config.enabled {
@@ -1061,68 +780,6 @@ where
             }
             Arc::new(snapshot)
         });
-
-        // When reconcile owns reload, skip the rebuild below (else both rebuild
-        // the same repo on one change). Only the rebuild is gated; the names
-        // patch above stays unconditional (reconcile does not maintain it).
-        if justknobs::eval("scm/mononoke:use_config_reconcile", None, None) {
-            return Ok(());
-        }
-
-        // Skip disabled repos, and repos not served on this host: an unserved
-        // repo has no applied_configs entry, so it would fall through the dedup
-        // below and rebuild a repo we don't serve. Mirrors compute_reloadable_repos.
-        if !should_reload_single_repo(
-            repo_config.enabled,
-            self.repos.get_by_name(repo_name).is_some(),
-        ) {
-            debug!(
-                "Skipping single-repo reload for {} (disabled or unserved)",
-                repo_name
-            );
-            return Ok(());
-        }
-
-        // Skip if the config has not actually changed since the last apply.
-        if let Some(existing) = self.applied_configs.load().get(repo_name) {
-            if **existing == *repo_config {
-                debug!(
-                    "Skipping single-repo reload for {} (config unchanged)",
-                    repo_name,
-                );
-                return Ok(());
-            }
-        }
-
-        // Get the common config from the current repo_configs
-        let common_config = self.mononoke_configs.repo_configs().common.clone();
-
-        let repo_id = repo_config.repoid.id();
-        info!("Reloading single repo config: {}", repo_name);
-
-        let repo = retry(
-            |_| {
-                self.repo_factory.build(
-                    repo_name.to_string(),
-                    repo_config.clone(),
-                    common_config.clone(),
-                )
-            },
-            Duration::from_millis(100),
-        )
-        .binary_exponential_backoff()
-        .max_attempts(5)
-        .await
-        .with_context(|| format!("Failed to reload repo '{repo_name}'"))?
-        .0;
-
-        info!("Reloaded single repo: {}", repo_name);
-        self.repos
-            .reload(vec![(repo_id, repo_name.to_string(), repo)]);
-        self.record_applied_configs(std::iter::once((
-            repo_name.to_string(),
-            repo_config.clone(),
-        )));
         Ok(())
     }
 }
