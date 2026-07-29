@@ -26,9 +26,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
-use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::DerivedDataManager;
-use derived_data_manager::ManifestStagePayload;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::TestRepoFixture;
@@ -128,31 +126,6 @@ pub fn pipeline_config_from_stages(
     };
     config.validate()?;
     Ok(config)
-}
-
-/// Topologically sort `types` so every type's dependencies (restricted to the
-/// given set) come before it.
-fn topo_sort_types(manager: &DerivedDataManager, types: &[DerivableType]) -> Vec<DerivableType> {
-    let managed: BTreeSet<DerivableType> = types.iter().copied().collect();
-    let mut sorted: Vec<DerivableType> = Vec::with_capacity(types.len());
-    let mut placed: BTreeSet<DerivableType> = BTreeSet::new();
-    while sorted.len() < types.len() {
-        for &derivable_type in types {
-            if placed.contains(&derivable_type) {
-                continue;
-            }
-            let deps_ready = manager
-                .dependency_types(derivable_type)
-                .into_iter()
-                .filter(|dep| managed.contains(dep))
-                .all(|dep| placed.contains(&dep));
-            if deps_ready {
-                sorted.push(derivable_type);
-                placed.insert(derivable_type);
-            }
-        }
-    }
-    sorted
 }
 
 fn parse_stage_path(path: &str) -> Result<MPath> {
@@ -361,17 +334,10 @@ async fn plan_pipeline(
         .await?;
     let batches =
         derivation_pipeline_utils::split_batches_at_chokepoints(batches, &bonsais, config);
-    // Deepest stages first; config validation guarantees deps are exactly one
-    // level deeper, so depth order is a valid topological order.
-    let mut sorted_stages: Vec<MPath> = config.stages.keys().cloned().collect();
-    sorted_stages.sort_by(|a, b| {
-        b.num_components()
-            .cmp(&a.num_components())
-            .then_with(|| a.cmp(b))
-    });
-    // Each type's dependencies (within the managed set) must be derived before
-    // it, mirroring the deepest-stage-first ordering above.
-    let sorted_types = topo_sort_types(manager, types);
+    let derivation_pipeline_driver::PipelineOrder {
+        sorted_stages,
+        sorted_types,
+    } = derivation_pipeline_driver::plan_stages_and_types(manager, config, types);
     Ok(PipelinePlan {
         batches,
         sorted_stages,
@@ -381,62 +347,25 @@ async fn plan_pipeline(
 }
 
 /// Execute the pipeline synchronously in dependency-and-ancestor order so every
-/// required input is already stored before it is read.
+/// required input is already stored before it is read. Delegates to the shared
+/// `derivation_pipeline_driver` so the harness and the production backfill
+/// worker exercise the same orchestration.
 async fn run_pipeline(
     manager: &DerivedDataManager,
     ctx: &CoreContext,
     config: &DerivationPipelineConfig,
     plan: &PipelinePlan,
 ) -> Result<()> {
-    for batch in &plan.batches {
-        for stage_path in &plan.sorted_stages {
-            let stage_config = &config.stages[stage_path];
-            let deps: Vec<MPathElement> = stage_config
-                .dependencies
-                .iter()
-                .map(|dep_path| {
-                    dep_path
-                        .iter()
-                        .last()
-                        .cloned()
-                        .ok_or_else(|| anyhow!("dependency path {dep_path:?} is empty"))
-                })
-                .collect::<Result<_>>()?;
-            let payload = DerivationStagePayload::Manifest(ManifestStagePayload {
-                path: stage_path.clone(),
-                deps,
-            });
-            for &derivable_type in &plan.sorted_types {
-                let variant = derivable_type.into_pipeline_derivable_variant()?;
-                bulk_derivation::derive_stage_batch(
-                    manager,
-                    ctx,
-                    batch.commits.clone(),
-                    &payload,
-                    variant,
-                )
-                .await?;
-            }
-        }
-
-        // Drive the finalize stage for types that have one, after all manifest
-        // stages of the batch are stored.
-        for &derivable_type in &plan.sorted_types {
-            let variant = derivable_type.into_pipeline_derivable_variant()?;
-            if !bulk_derivation::pipeline_has_finalize(variant) {
-                continue;
-            }
-            bulk_derivation::derive_stage_batch(
-                manager,
-                ctx,
-                batch.commits.clone(),
-                &DerivationStagePayload::Finalize,
-                variant,
-            )
-            .await?;
-        }
-    }
-    Ok(())
+    derivation_pipeline_driver::run_pipeline_batches(
+        manager,
+        ctx,
+        config,
+        &plan.sorted_stages,
+        &plan.sorted_types,
+        &plan.batches,
+    )
+    .await
+    .map_err(anyhow::Error::from)
 }
 
 /// Assert pipeline output matches canonical for every pipeline-derived

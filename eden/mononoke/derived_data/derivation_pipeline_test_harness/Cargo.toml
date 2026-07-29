@@ -15,6 +15,7 @@ bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bulk_derivation = { version = "0.1.0", path = "../bulk_derivation" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
+derivation_pipeline_driver = { version = "0.1.0", path = "../derivation_pipeline_driver" }
 derivation_pipeline_utils = { version = "0.1.0", path = "../derivation_pipeline_utils" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
