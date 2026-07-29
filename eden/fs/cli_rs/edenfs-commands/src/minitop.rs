@@ -231,7 +231,7 @@ fn aggregate_processes(processes: &TrackedProcesses, system: &System) -> Vec<Pro
     // (mount, cmd) => Process
     let mut aggregated_processes = BTreeMap::<(&str, &str), Process>::new();
 
-    for (_pid, process) in processes.iter() {
+    for process in processes.values() {
         match aggregated_processes.get_mut(&(&process.mount_name, &process.cmd)) {
             Some(agg_proc) => {
                 // We aggregate access counts, but we don't change fetch counts
