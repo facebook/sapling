@@ -484,13 +484,9 @@ async fn check_fsnode_leaf(
             .into());
         }
         let mut iter = leaf_info.parents.into_iter();
-        let fsnode_file = iter.next().and_then(|first_elem| {
-            if iter.all(|next_elem| next_elem == first_elem) {
-                Some(first_elem)
-            } else {
-                None
-            }
-        });
+        let fsnode_file = iter
+            .next()
+            .filter(|&first_elem| iter.all(|next_elem| next_elem == first_elem));
         if let Some(fsnode_file) = fsnode_file {
             Ok((None, fsnode_file))
         } else {
