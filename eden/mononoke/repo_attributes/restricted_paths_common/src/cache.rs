@@ -12,6 +12,7 @@
 //! the database to reduce the number of DB queries for high-QPS operations.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
@@ -34,7 +35,7 @@ use crate::manifest_id_store::RestrictedManifestId;
 
 /// Type alias for the manifest ID cache structure.
 pub type ManifestIdCache =
-    Arc<RwLock<HashMap<ManifestType, HashMap<RestrictedManifestId, Vec<NonRootMPath>>>>>;
+    Arc<RwLock<HashMap<ManifestType, HashMap<RestrictedManifestId, HashSet<NonRootMPath>>>>>;
 
 /// The restricted paths cache maintains an in-memory copy of manifest ID mappings
 /// that are refreshed periodically by querying the database.
@@ -153,7 +154,7 @@ impl CacheUpdater {
 
         // Build new cache structure from entries using fold
         let new_cache = entries.into_iter().try_fold(
-            HashMap::<ManifestType, HashMap<RestrictedManifestId, Vec<NonRootMPath>>>::new(),
+            HashMap::<ManifestType, HashMap<RestrictedManifestId, HashSet<NonRootMPath>>>::new(),
             |mut acc,
              RestrictedPathManifestIdEntry {
                  manifest_type,
@@ -169,7 +170,7 @@ impl CacheUpdater {
                         .or_default()
                         .entry(manifest_id)
                         .or_default()
-                        .push(non_root);
+                        .insert(non_root);
                 }
 
                 anyhow::Ok(acc)

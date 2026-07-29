@@ -194,7 +194,7 @@ pub(crate) async fn get_manifest_restricted_paths_from_config(
         return Ok(cache_guard
             .get(manifest_type)
             .and_then(|type_map| type_map.get(manifest_id))
-            .cloned()
+            .map(|paths| paths.iter().cloned().collect())
             .unwrap_or_default());
     }
 
