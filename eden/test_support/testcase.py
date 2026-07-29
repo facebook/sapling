@@ -119,5 +119,5 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
         dir_path.mkdir(parents=parents)
         return dir_path
 
-    def assertStartsWith(self, string, prefix) -> None:
-        self.assertEqual(string[: len(prefix)], prefix)
+    def assertStartsWith(self, s, prefix, msg=None) -> None:
+        self.assertEqual(s[: len(prefix)], prefix, msg)
