@@ -245,6 +245,23 @@ impl DerivedDataManager {
         }
     }
 
+    // Replace the repo-level derivation pipeline config (used in tests to
+    // simulate a pipeline-enabled repo).
+    pub fn with_replaced_pipeline_config(
+        &self,
+        pipeline_config: Option<DerivationPipelineConfig>,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                derivation_context: self
+                    .inner
+                    .derivation_context
+                    .with_replaced_pipeline_config(pipeline_config),
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     pub fn with_replaced_derivation_service_client(
         &self,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,

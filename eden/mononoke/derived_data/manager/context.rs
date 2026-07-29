@@ -106,6 +106,16 @@ impl DerivationContext {
         }
     }
 
+    pub(crate) fn with_replaced_pipeline_config(
+        &self,
+        pipeline_config: Option<DerivationPipelineConfig>,
+    ) -> Self {
+        Self {
+            pipeline_config,
+            ..self.clone()
+        }
+    }
+
     // For dangerous-override: allow replacement of bonsai-hg-mapping
     pub(crate) fn with_replaced_bonsai_hg_mapping(
         &self,
