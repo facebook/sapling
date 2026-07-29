@@ -240,7 +240,7 @@ impl SkeletonManifest {
             }
         }
 
-        for (_lower_name, names) in lower_map.iter() {
+        for names in lower_map.values() {
             match names.as_slice() {
                 [name1, name2, ..] => {
                     // These names form a case conflict.  All names
