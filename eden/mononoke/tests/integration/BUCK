@@ -37,6 +37,7 @@ buck_filegroup(
 dott_test(
     name = "library-unit-tests",
     dott_files = glob(["test-library-*.t"]),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
@@ -76,6 +77,7 @@ python_binary(
 dott_test(
     name = "aliasverify",
     dott_files = ["test-alias-verify.t"],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/aliasverify:aliasverify",
@@ -86,6 +88,7 @@ dott_test(
 dott_test(
     name = "benchmark-filestore",
     dott_files = ["test-benchmark-filestore.t"],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/benchmarks/filestore:benchmark_filestore",
     ],
@@ -94,6 +97,7 @@ dott_test(
 dott_test(
     name = "blobstore-healer",
     dott_files = ["test-blobstore-healer.t"],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
         "//eden/mononoke/tools/testtool:testtool",
@@ -125,6 +129,7 @@ dott_test(
 dott_test(
     name = "check-git-wc",
     dott_files = ["test-check-git-wc.t"],
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/tools/check_git_wc:check_git_wc",
         "//eden/mononoke/tools/testtool:testtool",
@@ -203,6 +208,7 @@ dott_test(
 dott_test(
     name = "restore-keys",
     dott_files = glob(["test-restore-keys*.t"]),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/jobs/walker:walker",
         "//eden/mononoke/tools/admin:admin",
@@ -215,6 +221,7 @@ dott_test(
     dott_files = glob([
         "test-testtool-*.t",
     ]),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",

@@ -10,6 +10,7 @@ dott_test(
     dott_files = glob(
         ["*.t"],
     ),
+    enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
