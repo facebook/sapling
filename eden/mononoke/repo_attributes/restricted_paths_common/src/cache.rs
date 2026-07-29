@@ -215,3 +215,217 @@ impl CacheUpdater {
         mononoke::spawn_task(fut);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use mononoke_types::RepositoryId;
+    use smallvec::SmallVec;
+
+    use super::*;
+    use crate::manifest_id_store::RestrictedPathsManifestIdStore;
+
+    struct TestManifestIdStore {
+        rows: RwLock<Vec<RestrictedPathManifestIdEntry>>,
+        fail_reads: RwLock<bool>,
+    }
+
+    impl TestManifestIdStore {
+        fn new(rows: Vec<RestrictedPathManifestIdEntry>) -> Self {
+            Self {
+                rows: RwLock::new(rows),
+                fail_reads: RwLock::new(false),
+            }
+        }
+
+        fn replace_rows(&self, rows: Vec<RestrictedPathManifestIdEntry>) -> Result<()> {
+            *self
+                .rows
+                .write()
+                .map_err(|error| anyhow::anyhow!("locking test rows for writing: {error}"))? = rows;
+            Ok(())
+        }
+
+        fn fail_reads(&self) -> Result<()> {
+            *self
+                .fail_reads
+                .write()
+                .map_err(|error| anyhow::anyhow!("locking test failure flag: {error}"))? = true;
+            Ok(())
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl RestrictedPathsManifestIdStore for TestManifestIdStore {
+        async fn add_entry(
+            &self,
+            _ctx: &CoreContext,
+            _entry: RestrictedPathManifestIdEntry,
+        ) -> Result<bool> {
+            Ok(false)
+        }
+
+        async fn add_entries(
+            &self,
+            _ctx: &CoreContext,
+            _entries: &[RestrictedPathManifestIdEntry],
+        ) -> Result<bool> {
+            Ok(false)
+        }
+
+        async fn get_paths_by_manifest_id(
+            &self,
+            _ctx: &CoreContext,
+            _manifest_id: &RestrictedManifestId,
+            _manifest_type: &ManifestType,
+        ) -> Result<Vec<NonRootMPath>> {
+            Ok(Vec::new())
+        }
+
+        async fn get_all_entries(
+            &self,
+            _ctx: &CoreContext,
+        ) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+            if *self
+                .fail_reads
+                .read()
+                .map_err(|error| anyhow::anyhow!("locking test failure flag: {error}"))?
+            {
+                anyhow::bail!("injected manifest store read failure");
+            }
+            Ok(self
+                .rows
+                .read()
+                .map_err(|error| anyhow::anyhow!("locking test rows for reading: {error}"))?
+                .clone())
+        }
+
+        async fn get_all_paths_by_manifest_id(
+            &self,
+            _ctx: &CoreContext,
+            _manifest_id: &RestrictedManifestId,
+        ) -> Result<Vec<(ManifestType, NonRootMPath)>> {
+            Ok(Vec::new())
+        }
+
+        async fn delete_by_manifest_id(
+            &self,
+            _ctx: &CoreContext,
+            _manifest_id: &RestrictedManifestId,
+        ) -> Result<u64> {
+            Ok(0)
+        }
+
+        fn repo_id(&self) -> RepositoryId {
+            RepositoryId::new(1)
+        }
+    }
+
+    /// What it tests: a full refresh populates all manifest types and suppresses duplicate rows.
+    /// Expected: lookups retain both manifest types while identical paths occupy one cache entry.
+    #[mononoke::fbinit_test]
+    async fn test_full_refresh_populates_and_deduplicates(fb: FacebookInit) -> Result<()> {
+        let fsnode = entry(ManifestType::Fsnode, 1, "shared")?;
+        let store = Arc::new(TestManifestIdStore::new(vec![
+            fsnode.clone(),
+            fsnode,
+            entry(ManifestType::Hg, 2, "hg")?,
+        ]));
+        let updater = updater(fb, store);
+
+        updater.refresh_cache().await?;
+
+        assert_eq!(cached_path_count(&updater.cache)?, 2);
+        assert_eq!(cached_manifest_type_count(&updater.cache)?, 2);
+        Ok(())
+    }
+
+    /// What it tests: each successful full refresh atomically replaces prior cache contents.
+    /// Expected: deleted rows disappear, replacement rows appear, and an empty store clears the cache.
+    #[mononoke::fbinit_test]
+    async fn test_full_refresh_replaces_deletions_and_empty_store(fb: FacebookInit) -> Result<()> {
+        let store = Arc::new(TestManifestIdStore::new(vec![entry(
+            ManifestType::Fsnode,
+            1,
+            "deleted",
+        )?]));
+        let updater = updater(fb, store.clone());
+        updater.refresh_cache().await?;
+
+        store.replace_rows(vec![entry(ManifestType::HgAugmented, 2, "replacement")?])?;
+        updater.refresh_cache().await?;
+        assert_eq!(
+            cached_paths(&updater.cache)?,
+            HashSet::from([NonRootMPath::new("replacement")?])
+        );
+
+        store.replace_rows(Vec::new())?;
+        updater.refresh_cache().await?;
+        assert_eq!(cached_path_count(&updater.cache)?, 0);
+        Ok(())
+    }
+
+    /// What it tests: a failed store read cannot publish a partial or empty cache replacement.
+    /// Expected: refresh returns the injected error and the last successful cache remains readable.
+    #[mononoke::fbinit_test]
+    async fn test_full_refresh_failure_preserves_cache(fb: FacebookInit) -> Result<()> {
+        let store = Arc::new(TestManifestIdStore::new(vec![entry(
+            ManifestType::ContentManifest,
+            1,
+            "retained",
+        )?]));
+        let updater = updater(fb, store.clone());
+        updater.refresh_cache().await?;
+        store.replace_rows(Vec::new())?;
+        store.fail_reads()?;
+
+        assert!(updater.refresh_cache().await.is_err());
+        assert_eq!(
+            cached_paths(&updater.cache)?,
+            HashSet::from([NonRootMPath::new("retained")?])
+        );
+        Ok(())
+    }
+
+    fn updater(fb: FacebookInit, store: Arc<TestManifestIdStore>) -> CacheUpdater {
+        CacheUpdater {
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            manifest_id_store: store,
+            ctx: CoreContext::test_mock(fb),
+        }
+    }
+
+    fn entry(
+        manifest_type: ManifestType,
+        manifest_byte: u8,
+        path: &str,
+    ) -> Result<RestrictedPathManifestIdEntry> {
+        RestrictedPathManifestIdEntry::new(
+            manifest_type,
+            RestrictedManifestId::new(SmallVec::from_slice(&[manifest_byte; 32])),
+            RepoPath::dir(NonRootMPath::new(path)?)?,
+        )
+    }
+
+    fn cached_path_count(cache: &ManifestIdCache) -> Result<usize> {
+        Ok(cached_paths(cache)?.len())
+    }
+
+    fn cached_manifest_type_count(cache: &ManifestIdCache) -> Result<usize> {
+        Ok(cache
+            .read()
+            .map_err(|error| anyhow::anyhow!("locking cache for assertion: {error}"))?
+            .len())
+    }
+
+    fn cached_paths(cache: &ManifestIdCache) -> Result<HashSet<NonRootMPath>> {
+        Ok(cache
+            .read()
+            .map_err(|error| anyhow::anyhow!("locking cache for assertion: {error}"))?
+            .values()
+            .flat_map(HashMap::values)
+            .flat_map(HashSet::iter)
+            .cloned()
+            .collect())
+    }
+}
