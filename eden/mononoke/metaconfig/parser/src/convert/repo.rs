@@ -72,6 +72,7 @@ use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RemoteDiffConfig;
 use metaconfig_types::RestrictedPathsConfig;
+use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
 use metaconfig_types::ShardingModeConfig;
@@ -138,6 +139,7 @@ use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRemoteDerivationConfig;
 use repos::RawRemoteDiffConfig;
 use repos::RawRestrictedPathsConfig;
+use repos::RawRestrictedPathsManifestIdStoreConfig;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
 use repos::RawShardingModeConfig;
@@ -1478,12 +1480,12 @@ impl Convert for RawRestrictedPathsConfig {
         let path_restriction_metadata =
             merge_path_restriction_metadata(self.path_acls, self.path_restriction_metadata)?;
 
-        let use_manifest_id_cache = self.use_manifest_id_cache.unwrap_or(true);
-        let cache_update_interval_ms = self
-            .cache_update_interval_ms
-            .map(|v| v.try_into())
-            .transpose()?
-            .unwrap_or(RestrictedPathsConfig::default().cache_update_interval_ms);
+        let raw_manifest_id_store_config = self.manifest_id_store_config.unwrap_or_default();
+        let manifest_id_store_config = convert_manifest_id_store_config(
+            raw_manifest_id_store_config,
+            self.use_manifest_id_cache,
+            self.cache_update_interval_ms,
+        )?;
 
         let soft_path_acls = self
             .soft_path_acls
@@ -1544,8 +1546,7 @@ impl Convert for RawRestrictedPathsConfig {
 
         Ok(RestrictedPathsConfig {
             path_restriction_metadata,
-            use_manifest_id_cache,
-            cache_update_interval_ms,
+            manifest_id_store_config,
             soft_path_acls,
             tooling_allowlist_group,
             rollout_allowlist_group,
@@ -1558,6 +1559,78 @@ impl Convert for RawRestrictedPathsConfig {
             acl_manifest_mode: parse_acl_manifest_mode(self.acl_manifest_mode.as_deref())?,
         })
     }
+}
+
+fn convert_manifest_id_store_config(
+    raw: RawRestrictedPathsManifestIdStoreConfig,
+    legacy_use_manifest_id_cache: Option<bool>,
+    legacy_cache_update_interval_ms: Option<i64>,
+) -> Result<RestrictedPathsManifestIdStoreConfig> {
+    let defaults = RestrictedPathsManifestIdStoreConfig::default();
+    let use_manifest_id_cache = reconcile_legacy_config_field(
+        "use_manifest_id_cache",
+        legacy_use_manifest_id_cache,
+        raw.use_manifest_id_cache,
+    )?
+    .unwrap_or(defaults.use_manifest_id_cache);
+    let cache_update_interval_ms = reconcile_legacy_config_field(
+        "cache_update_interval_ms",
+        legacy_cache_update_interval_ms,
+        raw.cache_update_interval_ms,
+    )?;
+    let cache_update_interval_ms = positive_config_value(
+        "cache_update_interval_ms",
+        cache_update_interval_ms,
+        defaults.cache_update_interval_ms,
+    )?;
+    let incremental_cache_update_lookback_ids = positive_config_value(
+        "incremental_cache_update_lookback_ids",
+        raw.incremental_cache_update_lookback_ids,
+        defaults.incremental_cache_update_lookback_ids,
+    )?;
+    let cache_full_refresh_interval_ms = positive_config_value(
+        "cache_full_refresh_interval_ms",
+        raw.cache_full_refresh_interval_ms,
+        defaults.cache_full_refresh_interval_ms,
+    )?;
+    let use_incremental_cache_updates = raw.use_incremental_cache_updates.unwrap_or(false);
+    if use_incremental_cache_updates {
+        bail!("use_incremental_cache_updates is not supported by this binary");
+    }
+
+    Ok(RestrictedPathsManifestIdStoreConfig {
+        use_manifest_id_cache,
+        cache_update_interval_ms,
+        use_incremental_cache_updates,
+        incremental_cache_update_lookback_ids,
+        cache_full_refresh_interval_ms,
+    })
+}
+
+fn reconcile_legacy_config_field<T: Copy + Eq>(
+    field_name: &str,
+    legacy: Option<T>,
+    nested: Option<T>,
+) -> Result<Option<T>> {
+    match (legacy, nested) {
+        (Some(legacy), Some(nested)) if legacy != nested => {
+            bail!("Conflicting legacy and manifest_id_store_config values for {field_name}")
+        }
+        (_, Some(nested)) => Ok(Some(nested)),
+        (legacy, None) => Ok(legacy),
+    }
+}
+
+fn positive_config_value(field_name: &str, value: Option<i64>, default: u64) -> Result<u64> {
+    let value = value
+        .map(u64::try_from)
+        .transpose()
+        .with_context(|| format!("{field_name} must be positive"))?
+        .unwrap_or(default);
+    if value == 0 {
+        bail!("{field_name} must be positive");
+    }
+    Ok(value)
 }
 
 #[cfg(test)]
@@ -1676,6 +1749,184 @@ mod tests {
             path_acls: Default::default(),
             ..Default::default()
         }
+    }
+
+    /// What it tests: legacy manifest-id cache fields remain supported.
+    /// Expected: legacy values populate the nested typed configuration.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_accepts_legacy_fields() -> Result<()> {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.use_manifest_id_cache = Some(false);
+        raw.cache_update_interval_ms = Some(250);
+
+        let config: RestrictedPathsConfig = raw.convert()?;
+
+        assert_eq!(
+            config.manifest_id_store_config,
+            RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 250,
+                ..Default::default()
+            }
+        );
+        Ok(())
+    }
+
+    /// What it tests: the nested manifest-id cache fields are converted.
+    /// Expected: explicit values are retained and absent values use safe defaults.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_accepts_nested_fields() -> Result<()> {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
+            use_manifest_id_cache: Some(false),
+            cache_update_interval_ms: Some(500),
+            use_incremental_cache_updates: Some(false),
+            incremental_cache_update_lookback_ids: Some(2_000),
+            cache_full_refresh_interval_ms: Some(60_000),
+        });
+
+        let config: RestrictedPathsConfig = raw.convert()?;
+
+        assert_eq!(
+            config.manifest_id_store_config,
+            RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 500,
+                use_incremental_cache_updates: false,
+                incremental_cache_update_lookback_ids: 2_000,
+                cache_full_refresh_interval_ms: 60_000,
+            }
+        );
+        Ok(())
+    }
+
+    /// What it tests: equal legacy and nested values are valid during rollout.
+    /// Expected: conversion succeeds and produces the shared values once.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_accepts_equal_dual_fields() -> Result<()> {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.use_manifest_id_cache = Some(true);
+        raw.cache_update_interval_ms = Some(750);
+        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
+            use_manifest_id_cache: Some(true),
+            cache_update_interval_ms: Some(750),
+            ..Default::default()
+        });
+
+        let config: RestrictedPathsConfig = raw.convert()?;
+
+        assert!(config.manifest_id_store_config.use_manifest_id_cache);
+        assert_eq!(
+            config.manifest_id_store_config.cache_update_interval_ms,
+            750
+        );
+        Ok(())
+    }
+
+    /// What it tests: divergent legacy and nested values cannot silently disagree.
+    /// Expected: conversion fails with the conflicting field name.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_rejects_conflicting_dual_fields() -> Result<()>
+    {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.use_manifest_id_cache = Some(true);
+        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
+            use_manifest_id_cache: Some(false),
+            ..Default::default()
+        });
+
+        let error = <RawRestrictedPathsConfig as Convert>::convert(raw)
+            .err()
+            .ok_or_else(|| anyhow!("expected conflicting dual manifest-id cache fields to fail"))?;
+
+        assert!(
+            format!("{error:#}").contains("use_manifest_id_cache"),
+            "expected error to name the conflicting field, got: {error:#}"
+        );
+        Ok(())
+    }
+
+    /// What it tests: a partial rollout cannot silently enable unsupported behavior.
+    /// Expected: incremental mode is rejected until its consumer is present.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_rejects_incremental_mode() -> Result<()> {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
+            use_incremental_cache_updates: Some(true),
+            ..Default::default()
+        });
+
+        let error = <RawRestrictedPathsConfig as Convert>::convert(raw)
+            .err()
+            .ok_or_else(|| anyhow!("expected unsupported incremental mode to fail"))?;
+
+        assert!(
+            format!("{error:#}").contains("use_incremental_cache_updates"),
+            "expected error to name the unsupported field, got: {error:#}"
+        );
+        Ok(())
+    }
+
+    /// What it tests: refresh intervals and lookback cannot disable safety throttles.
+    /// Expected: zero and negative numeric values are rejected with their field name.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_rejects_non_positive_values() -> Result<()> {
+        [
+            ("cache_update_interval_ms", 0),
+            ("cache_update_interval_ms", -1),
+            ("incremental_cache_update_lookback_ids", 0),
+            ("incremental_cache_update_lookback_ids", -1),
+            ("cache_full_refresh_interval_ms", 0),
+            ("cache_full_refresh_interval_ms", -1),
+        ]
+        .into_iter()
+        .try_for_each(|(field_name, value)| {
+            let mut nested = RawRestrictedPathsManifestIdStoreConfig::default();
+            match field_name {
+                "cache_update_interval_ms" => nested.cache_update_interval_ms = Some(value),
+                "incremental_cache_update_lookback_ids" => {
+                    nested.incremental_cache_update_lookback_ids = Some(value)
+                }
+                "cache_full_refresh_interval_ms" => {
+                    nested.cache_full_refresh_interval_ms = Some(value)
+                }
+                _ => bail!("unexpected test field {field_name}"),
+            }
+            let mut raw = empty_raw_restricted_paths_config();
+            raw.manifest_id_store_config = Some(nested);
+
+            let error = <RawRestrictedPathsConfig as Convert>::convert(raw)
+                .err()
+                .ok_or_else(|| anyhow!("expected {field_name}={value} to fail"))?;
+            anyhow::ensure!(
+                format!("{error:#}").contains(field_name),
+                "expected error to name {field_name}, got: {error:#}"
+            );
+            Ok(())
+        })
+    }
+
+    /// What it tests: the legacy and nested update intervals cannot diverge.
+    /// Expected: conversion rejects the conflict and names the interval field.
+    #[mononoke::test]
+    fn test_restricted_paths_manifest_id_store_config_rejects_conflicting_intervals() -> Result<()>
+    {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.cache_update_interval_ms = Some(500);
+        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
+            cache_update_interval_ms: Some(750),
+            ..Default::default()
+        });
+
+        let error = <RawRestrictedPathsConfig as Convert>::convert(raw)
+            .err()
+            .ok_or_else(|| anyhow!("expected conflicting cache intervals to fail"))?;
+
+        assert!(
+            format!("{error:#}").contains("cache_update_interval_ms"),
+            "expected error to name the conflicting field, got: {error:#}"
+        );
+        Ok(())
     }
 
     #[mononoke::test]

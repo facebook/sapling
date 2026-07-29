@@ -12,6 +12,7 @@ use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::PathRestrictionMetadata;
+use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
@@ -46,8 +47,11 @@ impl RestrictedPathsConfigBuilder {
     pub(crate) fn new() -> Self {
         Self {
             config: RestrictedPathsConfig {
-                use_manifest_id_cache: true,
-                cache_update_interval_ms: 100,
+                manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+                    use_manifest_id_cache: true,
+                    cache_update_interval_ms: 100,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         }
@@ -158,8 +162,11 @@ mod tests {
             .with_path_restriction_metadata("restricted", "REPO_REGION:restricted_acl")?
             .build();
 
-        assert!(config.use_manifest_id_cache);
-        assert_eq!(config.cache_update_interval_ms, 100);
+        assert!(config.manifest_id_store_config.use_manifest_id_cache);
+        assert_eq!(
+            config.manifest_id_store_config.cache_update_interval_ms,
+            100
+        );
         assert_eq!(config.path_restriction_metadata.len(), 1);
         Ok(())
     }

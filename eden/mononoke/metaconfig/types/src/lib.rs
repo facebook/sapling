@@ -2630,11 +2630,8 @@ impl PathRestrictionMetadata {
 pub struct RestrictedPathsConfig {
     /// Map from restricted path prefixes to their restriction metadata
     pub path_restriction_metadata: HashMap<NonRootMPath, PathRestrictionMetadata>,
-    /// Whether the in-memory cache of manifest ids should be used instead of
-    /// directly querying the manifest id store DB
-    pub use_manifest_id_cache: bool,
-    /// Interval to update the in-memory cache of manifest ids
-    pub cache_update_interval_ms: u64,
+    /// Manifest-id store cache configuration.
+    pub manifest_id_store_config: RestrictedPathsManifestIdStoreConfig,
     /// Soft restricted paths configuration
     pub soft_path_acls: Vec<SoftRestrictedPathConfig>,
     /// Group name for tooling that should be allowlisted for all restricted paths.
@@ -2664,8 +2661,7 @@ impl Default for RestrictedPathsConfig {
     fn default() -> Self {
         Self {
             path_restriction_metadata: HashMap::new(),
-            use_manifest_id_cache: true,
-            cache_update_interval_ms: 1000,
+            manifest_id_store_config: RestrictedPathsManifestIdStoreConfig::default(),
             soft_path_acls: Vec::new(),
             tooling_allowlist_group: None,
             rollout_allowlist_group: None,
@@ -2674,6 +2670,33 @@ impl Default for RestrictedPathsConfig {
             enforcement_condition_sets: Vec::new(),
             enforcement_enabled: false,
             acl_manifest_mode: AclManifestMode::Disabled,
+        }
+    }
+}
+
+/// Configuration for the restricted-path manifest-id cache.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RestrictedPathsManifestIdStoreConfig {
+    /// Whether to use the in-memory cache instead of querying the store directly.
+    pub use_manifest_id_cache: bool,
+    /// Interval between cache update attempts.
+    pub cache_update_interval_ms: u64,
+    /// Whether update attempts fetch only recently inserted rows.
+    pub use_incremental_cache_updates: bool,
+    /// Number of IDs below the watermark included in incremental queries.
+    pub incremental_cache_update_lookback_ids: u64,
+    /// Interval between full cache reconciliations in incremental mode.
+    pub cache_full_refresh_interval_ms: u64,
+}
+
+impl Default for RestrictedPathsManifestIdStoreConfig {
+    fn default() -> Self {
+        Self {
+            use_manifest_id_cache: true,
+            cache_update_interval_ms: 1_000,
+            use_incremental_cache_updates: false,
+            incremental_cache_update_lookback_ids: 1_000,
+            cache_full_refresh_interval_ms: 30 * 60 * 1_000,
         }
     }
 }

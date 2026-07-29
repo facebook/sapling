@@ -206,6 +206,7 @@ mod tests {
     use metaconfig_types::AclManifestMode;
     use metaconfig_types::PathRestrictionMetadata;
     use metaconfig_types::RestrictedPathsConfig;
+    use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
     use mononoke_api::Repo;
     use mononoke_api::RepoContext;
     use mononoke_api::changeset::ChangesetContext;
@@ -309,8 +310,11 @@ mod tests {
 
         let config = RestrictedPathsConfig {
             path_restriction_metadata,
-            use_manifest_id_cache: false,
-            cache_update_interval_ms: 100,
+            manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 100,
+                ..Default::default()
+            },
             acl_manifest_mode,
             ..Default::default()
         };
@@ -349,8 +353,11 @@ mod tests {
         let repo_id = RepositoryId::new(0);
         let config = RestrictedPathsConfig {
             path_restriction_metadata: build_path_restriction_metadata(config_path_acls)?,
-            use_manifest_id_cache: false,
-            cache_update_interval_ms: 100,
+            manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 100,
+                ..Default::default()
+            },
             acl_manifest_mode: AclManifestMode::Both,
             ..Default::default()
         };
@@ -1138,8 +1145,11 @@ mod tests {
             path_restriction_metadata: build_path_restriction_metadata_with_group(
                 path, acl, group,
             )?,
-            use_manifest_id_cache: false,
-            cache_update_interval_ms: 100,
+            manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 100,
+                ..Default::default()
+            },
             acl_manifest_mode: AclManifestMode::Disabled,
             ..Default::default()
         };

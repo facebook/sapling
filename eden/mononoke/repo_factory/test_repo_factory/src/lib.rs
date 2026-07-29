@@ -792,7 +792,9 @@ impl TestRepoFactory {
             restricted_paths_manifest_id_store.clone(),
         )
         .with_refresh_interval(std::time::Duration::from_millis(
-            restricted_paths_config.cache_update_interval_ms,
+            restricted_paths_config
+                .manifest_id_store_config
+                .cache_update_interval_ms,
         ))
         .build()
         .await?;

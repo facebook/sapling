@@ -15,6 +15,7 @@ use fbinit::FacebookInit;
 use metaconfig_types::AclManifestMode;
 use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
+use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -1075,8 +1076,11 @@ async fn create_test_restricted_paths_with_mode(
 
     let config = RestrictedPathsConfig {
         path_restriction_metadata,
-        use_manifest_id_cache: false,
-        cache_update_interval_ms: 100,
+        manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+            use_manifest_id_cache: false,
+            cache_update_interval_ms: 100,
+            ..Default::default()
+        },
         acl_manifest_mode,
         ..Default::default()
     };
@@ -1116,8 +1120,11 @@ async fn create_both_mode_test_changeset(
     let repo_id = RepositoryId::new(0);
     let config = RestrictedPathsConfig {
         path_restriction_metadata: build_path_restriction_metadata(config_path_acls)?,
-        use_manifest_id_cache: false,
-        cache_update_interval_ms: 100,
+        manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+            use_manifest_id_cache: false,
+            cache_update_interval_ms: 100,
+            ..Default::default()
+        },
         acl_manifest_mode: AclManifestMode::Both,
         ..Default::default()
     };

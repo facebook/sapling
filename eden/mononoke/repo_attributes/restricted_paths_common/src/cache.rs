@@ -114,7 +114,9 @@ impl RestrictedPathsManifestIdCacheBuilder {
             ctx,
             manifest_id_store,
             refresh_interval: Duration::from_millis(
-                RestrictedPathsConfig::default().cache_update_interval_ms,
+                RestrictedPathsConfig::default()
+                    .manifest_id_store_config
+                    .cache_update_interval_ms,
             ),
         }
     }

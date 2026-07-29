@@ -511,6 +511,7 @@ mod tests {
     use metaconfig_types::AclManifestMode;
     use metaconfig_types::PathRestrictionMetadata;
     use metaconfig_types::RestrictedPathsConfig;
+    use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
     use metadata::Metadata;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
@@ -686,8 +687,11 @@ mod tests {
 
         let config = RestrictedPathsConfig {
             path_restriction_metadata,
-            use_manifest_id_cache: false,
-            cache_update_interval_ms: 5,
+            manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
+                use_manifest_id_cache: false,
+                cache_update_interval_ms: 5,
+                ..Default::default()
+            },
             acl_manifest_mode,
             ..Default::default()
         };
