@@ -1,0 +1,61 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("rust_thrift")
+
+rust_library(
+    name = "channel_pipeline",
+    srcs = glob(["src/*.rs"], exclude = ["src/integration_test.rs"]),
+    allow_oss_build = False,
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "name": "fbthrift-channel-pipeline",
+                "publish": False,
+                "version": "0.0.1+unstable",
+            },
+        },
+    },
+    cpp_deps = [
+        "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:callback_context",
+    ],
+    cxx_bridge = "src/ffi.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "fbcode//common/rust/folly:iobuf",
+        "fbsource//third-party/rust:cxx",
+    ],
+)
+
+rust_unittest(
+    name = "channel_pipeline_integration_test",
+    srcs = ["src/integration_test.rs"],
+    allow_oss_build = False,
+    cpp_deps = [
+        "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:callback_context",
+        "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:pipeline_test_helper",
+    ],
+    crate_root = "src/integration_test.rs",
+    cxx_bridge = "src/integration_test.rs",
+    deps = [
+        "fbsource//third-party/rust:cxx",
+        ":channel_pipeline",
+    ],
+)
+
+rust_binary(
+    name = "channel_pipeline_bench",
+    srcs = ["src/bench.rs"],
+    allow_oss_build = False,
+    cpp_deps = [
+        "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:rust_bench_harness",
+    ],
+    crate_root = "src/bench.rs",
+    cxx_bridge = "src/bench.rs",
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:cxx",
+        ":channel_pipeline",
+    ],
+)
