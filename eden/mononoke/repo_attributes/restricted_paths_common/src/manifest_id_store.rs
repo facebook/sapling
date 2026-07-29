@@ -59,9 +59,17 @@ pub enum ManifestType {
 }
 
 /// Entry representing a restricted path with its manifest type and id
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Derivative)]
-#[derivative(Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RestrictedPathManifestIdEntry {
+    /// Database-assigned insertion ID. Hand-created entries omit it until read back.
+    #[derivative(
+        PartialEq = "ignore",
+        Hash = "ignore",
+        PartialOrd = "ignore",
+        Ord = "ignore"
+    )]
+    pub id: Option<u64>,
     pub manifest_type: ManifestType,
     pub manifest_id: RestrictedManifestId,
     #[derivative(Debug(format_with = "fmt_path_bytes"))]
@@ -89,6 +97,7 @@ impl RestrictedPathManifestIdEntry {
             ..
         } = PathHash::from_repo_path(&repo_path);
         Ok(Self {
+            id: None,
             manifest_type,
             manifest_id,
             path,
