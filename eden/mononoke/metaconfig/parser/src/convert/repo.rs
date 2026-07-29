@@ -1594,9 +1594,6 @@ fn convert_manifest_id_store_config(
         defaults.cache_full_refresh_interval_ms,
     )?;
     let use_incremental_cache_updates = raw.use_incremental_cache_updates.unwrap_or(false);
-    if use_incremental_cache_updates {
-        bail!("use_incremental_cache_updates is not supported by this binary");
-    }
 
     Ok(RestrictedPathsManifestIdStoreConfig {
         use_manifest_id_cache,
@@ -1780,7 +1777,7 @@ mod tests {
         raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
             use_manifest_id_cache: Some(false),
             cache_update_interval_ms: Some(500),
-            use_incremental_cache_updates: Some(false),
+            use_incremental_cache_updates: Some(true),
             incremental_cache_update_lookback_ids: Some(2_000),
             cache_full_refresh_interval_ms: Some(60_000),
         });
@@ -1792,7 +1789,7 @@ mod tests {
             RestrictedPathsManifestIdStoreConfig {
                 use_manifest_id_cache: false,
                 cache_update_interval_ms: 500,
-                use_incremental_cache_updates: false,
+                use_incremental_cache_updates: true,
                 incremental_cache_update_lookback_ids: 2_000,
                 cache_full_refresh_interval_ms: 60_000,
             }
@@ -1842,27 +1839,6 @@ mod tests {
         assert!(
             format!("{error:#}").contains("use_manifest_id_cache"),
             "expected error to name the conflicting field, got: {error:#}"
-        );
-        Ok(())
-    }
-
-    /// What it tests: a partial rollout cannot silently enable unsupported behavior.
-    /// Expected: incremental mode is rejected until its consumer is present.
-    #[mononoke::test]
-    fn test_restricted_paths_manifest_id_store_config_rejects_incremental_mode() -> Result<()> {
-        let mut raw = empty_raw_restricted_paths_config();
-        raw.manifest_id_store_config = Some(RawRestrictedPathsManifestIdStoreConfig {
-            use_incremental_cache_updates: Some(true),
-            ..Default::default()
-        });
-
-        let error = <RawRestrictedPathsConfig as Convert>::convert(raw)
-            .err()
-            .ok_or_else(|| anyhow!("expected unsupported incremental mode to fail"))?;
-
-        assert!(
-            format!("{error:#}").contains("use_incremental_cache_updates"),
-            "expected error to name the unsupported field, got: {error:#}"
         );
         Ok(())
     }

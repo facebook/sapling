@@ -30,7 +30,6 @@ use sql::sql_common::mysql::ValueError;
 use sql::sql_common::mysql::opt_try_from_rowfield;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use strum::Display as EnumDisplay;
@@ -138,11 +137,18 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
         // TODO(T239041722): handle different paths with the same manifest id
     ) -> Result<Vec<NonRootMPath>>;
 
-    /// Get all entries from the database
+    /// Get all entries from the database with their insertion IDs.
     async fn get_all_entries(
         &self,
         ctx: &CoreContext,
         // TODO(T239041722): add limit
+    ) -> Result<Vec<RestrictedPathManifestIdEntry>>;
+
+    /// Get entries whose insertion ID is at or above the inclusive lower bound.
+    async fn get_entries_by_id(
+        &self,
+        ctx: &CoreContext,
+        min_id: u64,
     ) -> Result<Vec<RestrictedPathManifestIdEntry>>;
 
     /// Get all entries in this repo matching a manifest id, regardless of
@@ -212,6 +218,14 @@ impl RestrictedPathsManifestIdStore for NoopRestrictedPathsManifestIdStore {
         Ok(vec![])
     }
 
+    async fn get_entries_by_id(
+        &self,
+        _ctx: &CoreContext,
+        _min_id: u64,
+    ) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+        Ok(vec![])
+    }
+
     async fn get_all_paths_by_manifest_id(
         &self,
         _ctx: &CoreContext,
@@ -264,8 +278,9 @@ mononoke_queries! {
         "
     }
 
-    read SelectAllEntries(repo_id: RepositoryId) -> (ManifestType, RestrictedManifestId, NonRootMPath) {
+    read SelectAllEntries(repo_id: RepositoryId) -> (u64, ManifestType, RestrictedManifestId, NonRootMPath) {
         "SELECT
+            id,
             manifest_type,
             manifest_id,
             path
@@ -273,6 +288,21 @@ mononoke_queries! {
             restricted_paths_manifest_ids
          WHERE
             repo_id = {repo_id}
+         "
+    }
+
+    read SelectEntriesById(repo_id: RepositoryId, min_id: u64) -> (u64, ManifestType, RestrictedManifestId, NonRootMPath) {
+        "SELECT
+            id,
+            manifest_type,
+            manifest_id,
+            path
+         FROM
+            restricted_paths_manifest_ids
+         WHERE
+            repo_id = {repo_id}
+            AND id >= {min_id}
+         ORDER BY id
          "
     }
 
@@ -373,11 +403,44 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
         .await?;
 
         rows.into_iter()
-            .map(|(manifest_type, manifest_id, non_root_mpath)| {
-                let repo_path = RepoPath::DirectoryPath(non_root_mpath);
-                RestrictedPathManifestIdEntry::new(manifest_type, manifest_id, repo_path)
+            .map(|(id, manifest_type, manifest_id, non_root_mpath)| {
+                Ok(RestrictedPathManifestIdEntry {
+                    id: Some(id),
+                    ..RestrictedPathManifestIdEntry::new(
+                        manifest_type,
+                        manifest_id,
+                        RepoPath::DirectoryPath(non_root_mpath),
+                    )?
+                })
             })
-            .collect::<Result<_>>()
+            .collect()
+    }
+
+    async fn get_entries_by_id(
+        &self,
+        ctx: &CoreContext,
+        min_id: u64,
+    ) -> Result<Vec<RestrictedPathManifestIdEntry>> {
+        let rows = SelectEntriesById::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &min_id,
+        )
+        .await?;
+
+        rows.into_iter()
+            .map(|(id, manifest_type, manifest_id, non_root_mpath)| {
+                Ok(RestrictedPathManifestIdEntry {
+                    id: Some(id),
+                    ..RestrictedPathManifestIdEntry::new(
+                        manifest_type,
+                        manifest_id,
+                        RepoPath::DirectoryPath(non_root_mpath),
+                    )?
+                })
+            })
+            .collect()
     }
 
     async fn get_all_paths_by_manifest_id(
@@ -506,7 +569,6 @@ mod tests {
     use smallvec::SmallVec;
 
     use super::*;
-
     fn manifest_id_from(bytes: &[u8]) -> RestrictedManifestId {
         RestrictedManifestId::new(SmallVec::from_slice(bytes))
     }

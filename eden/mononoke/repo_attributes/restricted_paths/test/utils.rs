@@ -1329,6 +1329,7 @@ async fn setup_test_repo(
         manifest_id_store_config: RestrictedPathsManifestIdStoreConfig {
             use_manifest_id_cache,
             cache_update_interval_ms,
+            use_incremental_cache_updates: true,
             ..Default::default()
         },
         tooling_allowlist_group,
