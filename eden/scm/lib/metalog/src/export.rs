@@ -106,7 +106,7 @@ impl MetaLog {
             let root = load_root(&self.blobs.read(), root_id)?;
 
             // Add blobs.
-            for (_key, SerId20(value_id)) in root.map.iter() {
+            for SerId20(value_id) in root.map.values() {
                 if blob_id_map.contains_key(value_id) {
                     continue;
                 }
