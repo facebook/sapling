@@ -65,8 +65,8 @@ mod test {
 
     use super::*;
 
-    const BAD_BYTES: [u8; 3] = [b',', b';', b'='];
-    const BYTES_TO_ESCAPE: [u8; 4] = [b':', b',', b';', b'='];
+    const BAD_BYTES: [u8; 3] = *b",;=";
+    const BYTES_TO_ESCAPE: [u8; 4] = *b":,;=";
 
     quickcheck! {
         fn test_roundtrip(input: Vec<u8>) -> bool {
