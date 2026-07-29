@@ -29,11 +29,14 @@ use slex::WorkOptions;
 use spawn_ext::CommandExt;
 use workingcopy::workingcopy::WorkingCopy;
 use worktree::Group;
+use worktree::Reservation;
 use worktree::WorktreeEntry;
 use worktree::check_dest_not_in_repo;
 use worktree::group_id_for_main_path;
 use worktree::load_registry;
+use worktree::new_reservation_id;
 use worktree::with_registry_lock;
+use worktree::with_reservations;
 use worktree::with_worktree_path_op_lock;
 use worktree::write_worktree_name_marker;
 
@@ -87,6 +90,70 @@ fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &Path, id: &str) -> anyhow
     Ok(())
 }
 
+/// Error message shown when the per-repo linked-worktree limit is reached.
+///
+/// Centralized so the two abort sites (the pre-lock fast-fail and the
+/// under-lock reservation check) stay in sync, and includes instructions for
+/// overriding the limit via user config.
+fn worktree_limit_reached_message(max_count: u64, repo_path: &Path, current: usize) -> String {
+    let repo_path = repo_path.display();
+    format!(
+        "cannot create worktree: limit of {max_count} linked worktrees reached for repository '{repo_path}' (currently {current}); \
+         set `worktree.max-count` in your user config (e.g. ~/.hgrc) to raise it, or 0 to disable the limit"
+    )
+}
+
+/// RAII guard for a reserved `worktree add` slot.
+///
+/// The slot is recorded in the separate reservations file (counting against
+/// `worktree.max-count`) before the destination is cloned, so a concurrent add
+/// racing for the last slot fails fast instead of cloning and then aborting
+/// during registration — which would leave a fully cloned but unregistered
+/// checkout behind. [`SlotReservation::release`] removes the slot once the add
+/// finishes (success or failure); `Drop` calls it as a backstop.
+///
+/// The reservation is keyed by a unique `reservation_id` (not the destination),
+/// so releasing only ever removes *this* add's slot even when another add is
+/// racing for the same destination.
+struct SlotReservation {
+    shared_store_path: PathBuf,
+    reservation_id: String,
+    dest: PathBuf,
+    logger: TermLogger,
+    released: bool,
+}
+
+impl SlotReservation {
+    /// Remove this add's reservation (idempotent, best effort). Called on both
+    /// the success path (once the worktree is registered) and, as a backstop, on
+    /// drop. A failure only leaves a stale reservation that the TTL will prune,
+    /// so it never fails the command.
+    fn release(&mut self) {
+        if self.released {
+            return;
+        }
+        let id = self.reservation_id.clone();
+        match with_reservations(&self.shared_store_path, |_registry, reservations| {
+            reservations.reservations.remove(&id);
+            Ok(())
+        }) {
+            Ok(()) => self.released = true,
+            Err(e) => self.logger.warn(format!(
+                "failed to release worktree slot reservation for {} \
+                 (it will expire automatically): {:#}",
+                self.dest.display(),
+                e
+            )),
+        }
+    }
+}
+
+impl Drop for SlotReservation {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
 pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     let logger = ctx.logger();
 
@@ -103,6 +170,8 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
     let require_generated: bool = repo
         .config()
         .get_or_default("worktree", "require-generated-path")?;
+
+    let max_count: u64 = repo.config().get_or("worktree", "max-count", || 0)?;
 
     // Pre-compute the canonical path for the source repo early since the path generator needs it.
     let canonical_repo_path = fs::canonicalize(repo.path())
@@ -143,6 +212,17 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         );
     }
     let group_main_path = resolve_group_for_main_path(&registry, &canonical_repo_path);
+
+    // Fast-fail if worktree limit is already reached (re-checked inside lock).
+    if max_count > 0 {
+        let linked = count_linked_worktrees(&registry, &group_main_path);
+        if linked >= max_count as usize {
+            abort!(
+                "{}",
+                worktree_limit_reached_message(max_count, repo.path(), linked)
+            );
+        }
+    }
 
     // Replicate the source repo's scm type and active filters.
     // When edensparse is in requirements, the backing store should be filteredhg
@@ -216,6 +296,50 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
             ))
         })?;
 
+    // Reserve a slot before cloning. The reservation counts against max-count,
+    // so a concurrent add racing for the last slot fails fast here rather than
+    // cloning its destination and then aborting during registration (which would
+    // orphan the just-cloned checkout). Reservations live in a separate file
+    // (never touched by older `sl` binaries) and the lock is held only briefly,
+    // so parallel adds are not serialized across the slow clone. `reservation`
+    // releases the slot on drop / after registration.
+    //
+    // Skipped entirely when the limit is disabled (`max-count = 0`, the default):
+    // reservations only affect enforcement, so there is nothing to reserve and no
+    // reason to take the lock or rewrite the reservations file.
+    let mut reservation = if max_count > 0 {
+        let reservation_id = new_reservation_id();
+        let reservation_ttl_seconds = crate::reservation_ttl_seconds(repo)?;
+        with_reservations(&shared_store_path, |registry, reservations| {
+            reservations.prune_stale(reservation_ttl_seconds);
+            // Linked worktrees plus every in-flight reservation for this group;
+            // each is a distinct slot. Our own reservation is inserted only after
+            // this check, so it is not counted here.
+            let in_use = count_linked_worktrees(registry, &group_main_path)
+                + reservations.count_for_group(&group_main_path);
+            if in_use >= max_count as usize {
+                abort!(
+                    "{}",
+                    worktree_limit_reached_message(max_count, repo.path(), in_use)
+                );
+            }
+            reservations.reservations.insert(
+                reservation_id.clone(),
+                Reservation::now(group_main_path.clone(), dest.clone()),
+            );
+            Ok(())
+        })?;
+        Some(SlotReservation {
+            shared_store_path: shared_store_path.clone(),
+            reservation_id,
+            dest: dest.clone(),
+            logger: logger.clone(),
+            released: false,
+        })
+    } else {
+        None
+    };
+
     // Lock the destination path while creating and initializing that checkout.
     with_worktree_path_op_lock(&shared_store_path, &dest, || {
         if dest.exists() {
@@ -243,6 +367,16 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
     with_registry_lock(&shared_store_path, |registry| {
         if registry.find_group_for_path(&dest).is_some() {
+            // The clone already materialized the checkout, so hint at cleanup
+            // mirroring the eden_clone failure path (this is nearly unreachable:
+            // same-dest adds serialize on the dest path lock and abort at the
+            // dest.exists() check above before cloning).
+            logger.warn(format!(
+                "worktree add left a checkout at {} that could not be registered; \
+                 try running `eden rm {}` to recover",
+                dest.display(),
+                dest.display()
+            ));
             abort!(
                 "destination path '{}' is already registered as a worktree",
                 dest.display()
@@ -255,6 +389,9 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
             .entry(group_id.clone())
             .or_insert_with(|| Group::new(group_main_path.clone()));
 
+        // The limit was enforced at reservation time; deliberately no re-check
+        // here — re-checking after the clone is exactly what could strand this
+        // checkout on disk unregistered.
         grp.worktrees.insert(
             dest.clone(),
             WorktreeEntry {
@@ -287,6 +424,11 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
         Ok(())
     })?;
+    // The reserved slot (if any) is now a registered worktree; release it promptly
+    // so it is not double-counted. `Drop` is a backstop if this early-returns.
+    if let Some(reservation) = reservation.as_mut() {
+        reservation.release();
+    }
 
     logger.info(format!("created linked worktree at {}", dest.display()));
 
@@ -375,6 +517,14 @@ fn resolve_group_id_for_main_path(registry: &worktree::Registry, group_main_path
     registry
         .find_group_for_path(group_main_path)
         .unwrap_or_else(|| group_id_for_main_path(group_main_path))
+}
+
+fn count_linked_worktrees(registry: &worktree::Registry, group_main_path: &Path) -> usize {
+    registry
+        .find_group_for_path(group_main_path)
+        .and_then(|group_id| registry.groups.get(&group_id))
+        .map(Group::linked_worktree_count)
+        .unwrap_or(0)
 }
 
 /// Runs the `worktree.path-generator` command and returns the generated path.

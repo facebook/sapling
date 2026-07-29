@@ -17,7 +17,7 @@ use clidispatch::abort;
 use cmdutil::Result;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
-use worktree::dissolve_group;
+use worktree::dissolve_group_if_empty;
 use worktree::load_registry;
 use worktree::lock_worktree_path_op;
 use worktree::with_registry_lock;
@@ -119,16 +119,12 @@ fn remove_and_update_registry(
     }
 
     with_registry_lock(&current_group.shared_store_path, |registry| {
-        let Some(grp) = registry.groups.get_mut(&current_group.group_id) else {
-            return Ok(());
-        };
-        for target in targets {
-            grp.worktrees.remove(*target);
+        if let Some(grp) = registry.groups.get_mut(&current_group.group_id) {
+            for target in targets {
+                grp.worktrees.remove(*target);
+            }
         }
-        let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
-        if linked_count == 0 {
-            dissolve_group(registry, &current_group.group_id);
-        }
+        dissolve_group_if_empty(registry, &current_group.group_id);
         Ok(())
     })?;
 
@@ -219,16 +215,12 @@ fn run_remove_all(
 
     if !removed_paths.is_empty() {
         with_registry_lock(&current_group.shared_store_path, |registry| {
-            let Some(grp) = registry.groups.get_mut(&current_group.group_id) else {
-                return Ok(());
-            };
-            for path in &removed_paths {
-                grp.worktrees.remove(path);
+            if let Some(grp) = registry.groups.get_mut(&current_group.group_id) {
+                for path in &removed_paths {
+                    grp.worktrees.remove(path);
+                }
             }
-            let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
-            if linked_count == 0 {
-                dissolve_group(registry, &current_group.group_id);
-            }
+            dissolve_group_if_empty(registry, &current_group.group_id);
             Ok(())
         })?;
     }

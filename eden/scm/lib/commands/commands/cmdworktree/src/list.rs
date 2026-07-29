@@ -18,6 +18,7 @@ use repo::repo::Repo;
 use serde::Serialize;
 use workingcopy::workingcopy::WorkingCopy;
 use worktree::dissolve_group;
+use worktree::dissolve_group_if_empty;
 use worktree::with_registry_lock;
 
 use crate::WorktreeOpts;
@@ -96,9 +97,8 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
                 .get_mut(&group_id)
                 .expect("group must exist: not dissolved when main is present");
             group.worktrees.retain(|path, _| path.exists());
-            let linked_count = group.worktrees.keys().filter(|p| **p != group.main).count();
-            if linked_count == 0 {
-                dissolve_group(registry, &group_id);
+            dissolve_group_if_empty(registry, &group_id);
+            if !registry.groups.contains_key(&group_id) {
                 return Ok(None);
             }
         }
