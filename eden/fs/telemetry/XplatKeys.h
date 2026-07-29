@@ -63,7 +63,6 @@ inline constexpr std::string_view kIsTakeover = "is_takeover";
 inline constexpr std::string_view kRepoSource = "repo_source";
 inline constexpr std::string_view kError = "error";
 inline constexpr std::string_view kInterface = "interface";
-inline constexpr std::string_view kIno = "ino";
 inline constexpr std::string_view kActionType = "action_type";
 
 // --- Fsck ---
