@@ -394,7 +394,7 @@ impl MPath {
             if num_el > 1 {
                 for e in &self.elements[..num_el - 1] {
                     context.update(e.as_ref());
-                    context.update([b'/'])
+                    context.update(*b"/")
                 }
             }
             context.update(self.elements[num_el - 1].as_ref());
@@ -878,7 +878,7 @@ impl NonRootMPath {
             if num_el > 1 {
                 for e in &self.0.elements[..num_el - 1] {
                     context.update(e.as_ref());
-                    context.update([b'/'])
+                    context.update(*b"/")
                 }
             }
             context.update(self.0.elements[num_el - 1].as_ref());
