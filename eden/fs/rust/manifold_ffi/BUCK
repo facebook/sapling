@@ -10,8 +10,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:cxx",
-        "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/edenfs_ffi/cxxerror:cxxerror",
-        "//scm/telemetry/corpmanifold:corpmanifold",
+        "//scm/telemetry/manifold:manifold",
     ],
 )
