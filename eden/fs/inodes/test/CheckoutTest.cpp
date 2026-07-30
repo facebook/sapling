@@ -2941,32 +2941,71 @@ TEST(Checkout, checkoutRefusesNonEmptyRestrictedPlaceholder) {
 #endif
 }
 
-TEST(
-    Checkout,
-    futuresCheckoutUpdatesRememberedRestrictedChildPlaceholderMetadata) {
+#ifndef _WIN32
+TEST_P(CheckoutTest, forceCheckoutKeepsRememberedRestrictedChildOpaque) {
   auto currentBuilder = FakeTreeBuilder{};
   currentBuilder.setFile("restricted_child/secret.txt", "current secret\n");
   currentBuilder.setDirIsRestricted("restricted_child");
   TestMount testMount{RootId{"current"}, currentBuilder};
+  applyParam(testMount);
 
-  auto parent = testMount.getRootInode();
   auto restrictedTree = testMount.getTreeInode("restricted_child"_relpath);
   ASSERT_TRUE(restrictedTree->isRestricted());
-  auto oldRestrictedTreeId = restrictedTree->getObjectId();
-  ASSERT_TRUE(oldRestrictedTreeId.has_value());
+  auto currentRestrictedTreeId = restrictedTree->getObjectId();
+  ASSERT_TRUE(currentRestrictedTreeId.has_value());
   auto restrictedInodeNumber = restrictedTree->getNodeId();
-  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
 
-  // Retain the kernel reference and inode number while removing the loaded
-  // child pointer that would trigger checkout's loaded-child fast path.
+  // First update the loaded restricted placeholder. This creates the legacy
+  // child overlay record that survives takeover in the production failure.
+  auto backingStore = testMount.getBackingStore();
+  auto intermediateBuilder = currentBuilder.clone();
+  intermediateBuilder.replaceFile(
+      "restricted_child/secret.txt", "intermediate secret\n");
+  intermediateBuilder.finalize(backingStore, true);
+  auto* intermediateRootTree =
+      intermediateBuilder.getStoredTree(RelativePathPiece{});
+  const auto intermediateEntry =
+      intermediateRootTree->get().find("restricted_child"_pc);
+  ASSERT_NE(intermediateEntry, intermediateRootTree->get().cend());
+  ASSERT_TRUE(intermediateEntry->second.isRestricted());
+  auto oldRestrictedTreeId = intermediateEntry->second.getObjectId();
+  ASSERT_NE(*currentRestrictedTreeId, oldRestrictedTreeId);
+
+  auto intermediateCommit =
+      backingStore->putCommit(RootId{"intermediate"}, intermediateBuilder);
+  intermediateCommit->setReady();
+  auto executor = testMount.getServerExecutor().get();
+  auto intermediateCheckout = testMount.getEdenMount()
+                                  ->checkout(
+                                      testMount.getRootInode(),
+                                      RootId{"intermediate"},
+                                      ObjectFetchContext::getNullContext(),
+                                      __func__,
+                                      CheckoutMode::FORCE)
+                                  .semi()
+                                  .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(intermediateCheckout.isReady());
+  EXPECT_EQ(0, std::move(intermediateCheckout).get().conflicts.size());
+  ASSERT_TRUE(testMount.hasOverlayDir(restrictedInodeNumber));
+  auto intermediatePlaceholderId = restrictedTree->getObjectId();
+  ASSERT_TRUE(intermediatePlaceholderId.has_value());
+  ASSERT_EQ(oldRestrictedTreeId, *intermediatePlaceholderId);
+
+  // Retain the kernel reference and inode number across takeover, then remount
+  // with the legacy overlay directory present and the child inode unloaded.
   restrictedTree->incFsRefcount();
+  restrictedTree.reset();
+  testMount.remountGracefully();
+
+  auto parent = testMount.getRootInode();
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
   SCOPE_EXIT {
     inodeMap->decFsRefcount(restrictedInodeNumber);
   };
-  restrictedTree.reset();
-  parent->unloadChildrenNow();
 
   ASSERT_TRUE(inodeMap->isInodeRemembered(restrictedInodeNumber));
+  ASSERT_TRUE(testMount.hasOverlayDir(restrictedInodeNumber));
   ASSERT_EQ(nullptr, inodeMap->lookupLoadedTree(restrictedInodeNumber).get());
   {
     auto contents = parent->lockContentsRead();
@@ -2975,12 +3014,10 @@ TEST(
     ASSERT_EQ(nullptr, it->second.getInode());
     ASSERT_EQ(restrictedInodeNumber, it->second.getInodeNumber());
     ASSERT_TRUE(it->second.isRestricted());
-    ASSERT_EQ(*oldRestrictedTreeId, it->second.getObjectId());
+    ASSERT_EQ(oldRestrictedTreeId, it->second.getObjectId());
   }
 
-  auto targetBuilder = currentBuilder.clone();
-  targetBuilder.replaceFile("restricted_child/secret.txt", "target secret\n");
-  auto backingStore = testMount.getBackingStore();
+  auto targetBuilder = intermediateBuilder.clone();
   targetBuilder.finalize(backingStore, true);
   auto* targetRootTree = targetBuilder.getStoredTree(RelativePathPiece{});
   const auto targetEntry = targetRootTree->get().find("restricted_child"_pc);
@@ -2988,28 +3025,30 @@ TEST(
   ASSERT_TRUE(targetEntry->second.isRestricted());
   auto targetRestrictedTreeId = targetEntry->second.getObjectId();
   auto targetAclRootState = targetEntry->second.aclRootState();
-  ASSERT_NE(*oldRestrictedTreeId, targetRestrictedTreeId);
-  ASSERT_EQ(0, backingStore->getAccessCount(*oldRestrictedTreeId));
-  ASSERT_EQ(0, backingStore->getAccessCount(targetRestrictedTreeId));
+  ASSERT_EQ(oldRestrictedTreeId, targetRestrictedTreeId);
+  ASSERT_EQ(intermediateEntry->second.aclRootState(), targetAclRootState);
+  const auto restrictedTreeAccessCount =
+      backingStore->getAccessCount(oldRestrictedTreeId);
 
   auto targetCommit = backingStore->putCommit(RootId{"target"}, targetBuilder);
   targetCommit->setReady();
 
-  auto executor = testMount.getServerExecutor().get();
+  executor = testMount.getServerExecutor().get();
   auto checkoutResult = testMount.getEdenMount()
                             ->checkout(
                                 testMount.getRootInode(),
                                 RootId{"target"},
                                 ObjectFetchContext::getNullContext(),
                                 __func__,
-                                CheckoutMode::NORMAL)
+                                CheckoutMode::FORCE)
                             .semi()
                             .via(executor);
   testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
   EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
-  EXPECT_EQ(1, backingStore->getAccessCount(*oldRestrictedTreeId));
-  EXPECT_EQ(0, backingStore->getAccessCount(targetRestrictedTreeId));
+  EXPECT_EQ(
+      restrictedTreeAccessCount,
+      backingStore->getAccessCount(targetRestrictedTreeId));
 
   {
     auto contents = parent->lockContentsRead();
@@ -3021,16 +3060,19 @@ TEST(
     EXPECT_EQ(targetAclRootState, it->second.aclRootState());
     EXPECT_EQ(targetRestrictedTreeId, it->second.getObjectId());
   }
-
-  restrictedTree = inodeMap->lookupTreeInode(restrictedInodeNumber).get(1ms);
+  restrictedTree = inodeMap->lookupLoadedTree(restrictedInodeNumber);
+  ASSERT_NE(nullptr, restrictedTree.get());
   auto updatedRestrictedTreeId = restrictedTree->getObjectId();
   ASSERT_TRUE(updatedRestrictedTreeId.has_value());
   EXPECT_EQ(targetRestrictedTreeId, *updatedRestrictedTreeId);
   EXPECT_TRUE(restrictedTree->isRestricted());
   EXPECT_EQ(targetAclRootState, restrictedTree->aclRootState());
-  auto restrictedContents = restrictedTree->getContentsUnchecked().rlock();
-  EXPECT_TRUE(restrictedContents->entries.empty());
+  {
+    auto restrictedContents = restrictedTree->getContentsUnchecked().rlock();
+    EXPECT_TRUE(restrictedContents->entries.empty());
+  }
 }
+#endif
 
 TEST_P(
     CheckoutTest,

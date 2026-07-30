@@ -1,5 +1,6 @@
 #debugruntest-incompatible
 #require eden no-windows
+#testcases normal clean
 
   $ newserver server
   $ drawdag << 'EOS'
@@ -33,8 +34,12 @@ The checkout remains interrupted and asks the user to resume it.
   If there are conflicts, run `sl go --clean *` to discard changes, or `sl go --merge *` to merge. (glob)
   [255]
 
-The suggested resume command succeeds without walking into the restricted
+The suggested resume commands succeed without walking into the restricted
 directory.
 
+#if clean
+  $ sl go --clean $B
+#else
   $ sl go $B
+#endif
   $ sl st

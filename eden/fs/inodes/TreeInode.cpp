@@ -5111,11 +5111,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   }
 
   auto& entry = it->second;
+  const bool destinationIsRestrictedTree = newScmEntry &&
+      newScmEntry->second.isTree() && newScmEntry->second.isRestricted();
+
   if (auto childPtr = entry.getInodePtr()) {
     if (auto treeInode = childPtr.asTreePtrOrNull();
         treeInode && treeInode->isRestricted()) {
-      const bool destinationIsRestrictedTree = newScmEntry &&
-          newScmEntry->second.isTree() && newScmEntry->second.isRestricted();
       const bool removeOrReplaceWithNonTree = oldScmEntry &&
           oldScmEntry->second.isTree() &&
           (!newScmEntry || !newScmEntry->second.isTree());
@@ -5183,6 +5184,14 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     // CheckoutAction to process it once it is loaded.
     auto inodeFuture =
         loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+    if (entry.isDirectory() && !entry.isMaterialized() &&
+        entry.isRestricted() && oldScmEntry && oldScmEntry->second.isTree() &&
+        destinationIsRestrictedTree) {
+      // Omitting oldScmEntry keeps the placeholder opaque and avoids fetching
+      // the denied source tree.
+      return std::make_shared<CheckoutAction>(
+          ctx, nullptr, newScmEntry, std::move(inodeFuture));
+    }
     return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   } else {
