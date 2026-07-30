@@ -1695,6 +1695,14 @@ function derived_data_tailer {
     "$@"
 }
 
+function manifest_reconciler_job {
+  GLOG_minloglevel=5 "$MANIFEST_RECONCILER_JOB" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    "$@"
+}
+
 function manifest_tailer_job {
   GLOG_minloglevel=5 "$MANIFEST_TAILER_JOB" \
     "${CACHE_ARGS[@]}" \
