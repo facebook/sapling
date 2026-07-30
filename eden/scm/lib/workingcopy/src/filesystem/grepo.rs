@@ -95,7 +95,7 @@ impl FileSystem for GrepoFileSystem {
                 .into_iter()
                 .next()
         {
-            for (path, _proj) in self.parse_grepo_projects()?.iter() {
+            for path in self.parse_grepo_projects()?.keys() {
                 let path_str = path.to_str().unwrap();
                 let repo_path = RepoPath::from_str(path_str)?;
 
