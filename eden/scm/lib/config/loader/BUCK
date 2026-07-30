@@ -98,6 +98,7 @@ sl_rust_library(
             "//common/rust/fbwhoami:fbwhoami",
             "//common/rust/shed/hostcaps:hostcaps",
             "//eden/scm/lib/metrics:metrics",
+            "//eden/scm/lib/sampling:sampling",
             "//eden/scm/lib/config/remote-loader:remote-loader",
             "//eden/scm/lib/hgtime:hgtime",
             "//eden/scm/lib/http-client:http-client",
