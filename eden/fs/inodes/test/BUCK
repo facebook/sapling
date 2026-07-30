@@ -493,6 +493,23 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "prjfs_dispatcher",
+    srcs = ["PrjfsDispatcherImplTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+    ],
+)
+
+cpp_unittest(
     name = "traverse",
     srcs = ["TraverseTest.cpp"],
     network_access = network_access_utils.none(),

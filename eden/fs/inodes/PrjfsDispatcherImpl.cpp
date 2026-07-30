@@ -198,19 +198,17 @@ bool isNonEdenFsPathDirectory(AbsolutePath path) {
   auto fileType = boost::filesystem::status(boostPath, ec).type();
   return fileType == boost::filesystem::directory_file;
 }
+
 } // namespace
 
 std::variant<AbsolutePath, RelativePath>
 PrjfsDispatcherImpl::determineTargetType(
     RelativePath symlink,
     string_view targetStringView) {
-  // Creating absolute path symlinks with a variety of tools (e.g.,
-  // mklink on Windows or os.symlink on Python) makes the created
-  // symlinks start with an UNC prefix. However, there could be tools
-  // that create symlinks that don't add this prefix.
-  // TODO: Make this line also consider tools that do not add an UNC
-  // prefix to absolute path symlinks.
-  auto targetString = targetStringView.starts_with(detail::kUNCPrefix)
+  // An absolute target is handed to canonicalPath() as-is; a relative target is
+  // first resolved against the symlink's own directory.
+  auto targetString =
+      std::filesystem::path(std::string_view{targetStringView}).is_absolute()
       ? std::string(targetStringView)
       : fmt::format(
             "{}{}{}",
