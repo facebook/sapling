@@ -277,7 +277,6 @@ fn register_error_handlers() {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
-    use std::sync::Arc;
 
     use types::HgId;
     use types::RepoPathBuf;
@@ -294,11 +293,7 @@ mod tests {
             ("sampling.filepath", output_file_str.as_ref()),
             ("sampling.key.acl_error", "acl_error"),
         ]);
-        sampling::CONFIG
-            .set(Some(Arc::new(
-                sampling::SamplingConfig::new(&config).unwrap(),
-            )))
-            .ok();
+        sampling::init(&config);
 
         let gil = Python::acquire_gil();
         let py = gil.python();

@@ -8,8 +8,10 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io;
 use std::io::BufWriter;
 use std::io::Write;
+use std::mem::size_of;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -23,10 +25,42 @@ use serde::ser::SerializeMap;
 pub use serde_json;
 use serde_json::Serializer as JsonSerializer;
 
+const PENDING_BYTE_LIMIT: usize = 8 * 1024 * 1024;
+const PENDING_ENTRY_LIMIT: usize = 4096;
+
 pub static CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
+static PENDING: Mutex<PendingSamples> = Mutex::new(PendingSamples {
+    samples: Vec::new(),
+    bytes: 0,
+});
 
 pub fn init(config: &dyn configmodel::Config) {
-    CONFIG.get_or_init(|| SamplingConfig::new(config).map(Arc::new));
+    if CONFIG.get().is_some() {
+        return;
+    }
+
+    let mut pending = PENDING.lock();
+    if CONFIG.get().is_some() {
+        return;
+    }
+
+    let sampling_config = SamplingConfig::new(config).map(Arc::new);
+    let _ = CONFIG.set(sampling_config);
+    let samples = std::mem::take(&mut pending.samples);
+    pending.bytes = 0;
+    drop(pending);
+
+    // New events can overtake this batch, but buffered events stay FIFO and
+    // none can be stranded between publishing CONFIG and detaching the batch.
+    let sampling_config = CONFIG.get().and_then(Option::as_deref);
+    for sample in samples {
+        if let (Some(config), Ok(value)) = (
+            sampling_config,
+            serde_json::from_slice::<&serde_json::value::RawValue>(&sample.value),
+        ) {
+            let _ = config.append_key(&sample.key, value);
+        }
+    }
 }
 
 pub fn flush() {
@@ -54,6 +88,42 @@ where
             None => return,
         };
         let _ = sc.append(category, value);
+    }
+}
+
+struct PendingSample {
+    key: Box<str>,
+    value: Box<[u8]>,
+}
+
+#[derive(Default)]
+struct PendingSamples {
+    samples: Vec<PendingSample>,
+    bytes: usize,
+}
+
+impl PendingSamples {
+    fn push(&mut self, key: &str, value: &serde_json::Value) {
+        if self.samples.len() >= PENDING_ENTRY_LIMIT {
+            return;
+        }
+        let overhead = size_of::<PendingSample>() + key.len();
+        let remaining = PENDING_BYTE_LIMIT.saturating_sub(self.bytes.saturating_add(overhead));
+        if remaining == 0 {
+            return;
+        }
+        let Ok(value) = serde_json::to_vec(value) else {
+            return;
+        };
+        if value.len() > remaining {
+            return;
+        }
+        let sample = PendingSample {
+            key: key.into(),
+            value: value.into(),
+        };
+        self.bytes += overhead + sample.value.len();
+        self.samples.push(sample);
     }
 }
 
@@ -112,6 +182,13 @@ impl SamplingConfig {
         self.keys.get(key).map(|c| &**c)
     }
 
+    fn append_key<V: ?Sized + Serialize>(&self, key: &str, value: &V) -> io::Result<()> {
+        match self.category(key) {
+            Some(category) => self.append(category, value),
+            None => Ok(()),
+        }
+    }
+
     pub fn file(&self) -> MutexGuard<'_, BufWriter<File>> {
         self.file.lock()
     }
@@ -136,18 +213,37 @@ impl SamplingConfig {
 
 /// Similar to `tracing::info!(target: $target, $key = $value, ...)`, but `$value`
 /// can be any serde type, not just tracing's limited `Value`.
+/// Before initialization, values are evaluated for bounded buffering; keep them cheap and side-effect-free.
 #[macro_export]
 macro_rules! log {
     (target: $target:expr $(, $key:ident = $value:expr)*) => {
-        'block: {
-            if let Some(Some(config)) = $crate::CONFIG.get() {
-                if let Some(category) = config.category($target) {
-                    break 'block config.append(category, &$crate::serde_json::json!({$(stringify!($key): $value),*}));
-                }
-            }
-            Ok(())
+        match $crate::CONFIG.get() {
+            Some(Some(config)) => match config.category($target) {
+                Some(category) => config.append(category, &$crate::serde_json::json!({$(stringify!($key): $value),*})),
+                None => Ok(()),
+            },
+            Some(None) => Ok(()),
+            None => $crate::log_before_init(
+                $target,
+                $crate::serde_json::json!({$(stringify!($key): $value),*}),
+            ),
         }
     };
+}
+
+#[doc(hidden)]
+pub fn log_before_init(key: &str, value: serde_json::Value) -> io::Result<()> {
+    let mut pending = PENDING.lock();
+    if let Some(config) = CONFIG.get() {
+        let config = config.clone();
+        drop(pending);
+        return match config {
+            Some(config) => config.append_key(key, &value),
+            None => Ok(()),
+        };
+    }
+    pending.push(key, &value);
+    Ok(())
 }
 
 /// Log an event to the `sl_events` tracing target.
@@ -183,4 +279,93 @@ fn sampling_output_file(config: &dyn configmodel::Config) -> Option<(PathBuf, bo
     candidates
         .into_iter()
         .find(|(path, _okay_exists)| path.parent().is_some_and(|d| d.exists()))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::Barrier;
+
+    use super::*;
+
+    #[test]
+    fn log_does_not_lose_events_during_init() {
+        let path = std::env::temp_dir().join(format!("sampling-test-{}", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let config = BTreeMap::from([
+            ("sampling.filepath".to_owned(), path.display().to_string()),
+            ("sampling.key.banana".to_owned(), "pear".to_owned()),
+        ]);
+
+        crate::log!(target: "banana", value = 1).unwrap();
+        crate::log!(target: "apple", value = 0).unwrap();
+        crate::log!(target: "banana", value = 2).unwrap();
+
+        let serializing = Barrier::new(2);
+        let resume = Barrier::new(2);
+        std::thread::scope(|scope| {
+            let log = scope.spawn(|| {
+                crate::log!(
+                    target: "banana",
+                    value = {
+                        serializing.wait();
+                        resume.wait();
+                        3
+                    }
+                )
+            });
+            serializing.wait();
+            init(&config);
+            resume.wait();
+            log.join().unwrap().unwrap();
+        });
+
+        crate::log!(target: "banana", value = 4).unwrap();
+        let mut evaluated = false;
+        crate::log!(target: "apple", value = {
+            evaluated = true;
+            false
+        })
+        .unwrap();
+        assert!(!evaluated);
+        flush();
+
+        let samples = std::fs::read(&path).unwrap();
+        let values: Vec<u64> = samples
+            .split(|byte| *byte == 0)
+            .filter(|sample| !sample.is_empty())
+            .map(|sample| {
+                serde_json::from_slice::<serde_json::Value>(sample).unwrap()["data"]["value"]
+                    .as_u64()
+                    .unwrap()
+            })
+            .collect();
+        let mut sorted = values.clone();
+        sorted.sort_unstable();
+        assert_eq!(sorted, [1, 2, 3, 4]);
+        assert!(
+            values.iter().position(|value| *value == 1)
+                < values.iter().position(|value| *value == 2)
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn pending_samples_are_bounded() {
+        let mut pending = PendingSamples::default();
+        pending.push(
+            "key",
+            &serde_json::Value::String("x".repeat(PENDING_BYTE_LIMIT)),
+        );
+        assert!(pending.samples.is_empty());
+
+        pending.push("key", &serde_json::json!(1));
+        assert_eq!(pending.samples.len(), 1);
+        assert_eq!(pending.bytes, size_of::<PendingSample>() + 4);
+
+        for _ in 1..=PENDING_ENTRY_LIMIT {
+            pending.push("key", &serde_json::json!(1));
+        }
+        assert_eq!(pending.samples.len(), PENDING_ENTRY_LIMIT);
+    }
 }
