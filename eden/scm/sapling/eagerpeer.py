@@ -59,6 +59,10 @@ class eagerpeer(repository.peer):
     def edenapi(self):
         return self._inner.edenapiclient()
 
+    @property
+    def nullableedenapi(self):
+        return self.edenapi
+
     # "Push" without using unbundle.
     # Eventually EdenAPI would handle "push". For now we use EagerRepo APIs.
 

@@ -41,7 +41,7 @@ from typing import Optional
 
 from bindings import cats, clientinfo, zstd
 
-from . import error, httpconnection, progress, sslutil, stdiopeer, url, util
+from . import edenapi, error, httpconnection, progress, sslutil, stdiopeer, url, util
 from .i18n import _
 from .thirdparty.pysocks import socks
 
@@ -360,6 +360,16 @@ class mononokepeer(stdiopeer.stdiopeer):
 
             except IOError as ex:
                 self._connectionerror(ex, tlserror=True)
+
+    @util.propertycache
+    def nullableedenapi(self):
+        # A mono:// remote always serves SLAPI, so build a client from our own
+        # URL (cached). Return None on failure so callers fall back to wireproto.
+        try:
+            return edenapi.getclient(self._ui, path=self._url)
+        except Exception as e:
+            self._ui.debug("failed to build SLAPI client for %s: %s\n" % (self._url, e))
+            return None
 
     def _validaterepo(self):
         # cleanup up previous run

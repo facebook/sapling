@@ -71,6 +71,17 @@ class _basepeer(abc.ABC):
         associated with the peer should be cleaned up.
         """
 
+    @property
+    def nullableedenapi(self):
+        """Return an EdenApi/SLAPI client for this peer, or None.
+
+        Peers backed by a SLAPI-capable remote can expose a client here so
+        callers can route requests through SLAPI without knowing the concrete
+        peer type. Peers without such a client (or where construction fails)
+        return None and callers must fall back to the wire protocol.
+        """
+        return None
+
 
 class _basewirecommands(abc.ABC):
     """Client-side interface for communicating over the wire protocol.
