@@ -96,14 +96,12 @@ pub(crate) async fn base_packfile_item(
         PackfileItemInclusion::Generate => {
             let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                 format!(
-                    "Error in fetching raw git object bytes for object {:?} while generating packfile item",
-                    git_objectid
+                    "Error in fetching raw git object bytes for object {git_objectid:?} while generating packfile item"
                 )
             })?;
             let packfile_item = PackfileItem::new_base(object_bytes).with_context(|| {
                 format!(
-                    "Error in creating packfile item from git object bytes for {:?}",
-                    git_objectid
+                    "Error in creating packfile item from git object bytes for {git_objectid:?}"
                 )
             })?;
             Ok(packfile_item)
@@ -115,8 +113,7 @@ pub(crate) async fn base_packfile_item(
                     .await
                     .with_context(|| {
                         format!(
-                            "Error in fetching packfile item for git object {:?} in FetchOnly mode",
-                            git_objectid
+                            "Error in fetching packfile item for git object {git_objectid:?} in FetchOnly mode"
                         )
                     })?;
             Ok(PackfileItem::new_encoded_base(
@@ -133,8 +130,7 @@ pub(crate) async fn base_packfile_item(
             .await
             .with_context(|| {
                 format!(
-                    "Error in fetching packfile item for git object {:?} in FetchAndStore mode",
-                    git_objectid
+                    "Error in fetching packfile item for git object {git_objectid:?} in FetchAndStore mode"
                 )
             })?;
             match fetch_result {
@@ -144,8 +140,7 @@ pub(crate) async fn base_packfile_item(
                 None => {
                     let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                         format!(
-                            "Error in fetching raw git object bytes for object {:?} while fetching-and-storing packfile item",
-                            git_objectid
+                            "Error in fetching raw git object bytes for object {git_objectid:?} while fetching-and-storing packfile item"
                         )
                     })?;
                     let packfile_base_item = upload_packfile_base_item(
