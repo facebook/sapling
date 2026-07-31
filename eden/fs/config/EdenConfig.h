@@ -1956,15 +1956,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether EdenFS uses phase 3 coroutine implementations
-   * (glob, predictiveGlob, and related code paths).
-   */
-  ConfigSetting<bool> enableCoroutinesPhase3{
-      "coroutines:enable-phase3",
-      false,
-      this};
-
-  /**
    * Controls whether EdenFS uses phase 4 coroutine implementations
    * (readdir and VirtualInode attribute fetching coroutine paths).
    */
