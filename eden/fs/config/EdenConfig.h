@@ -2371,7 +2371,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> fsckMaxConcurrentMounts{
       "fsck:max-concurrent-mounts",
-      5,
+      1,
       this};
 
   // [glob]
