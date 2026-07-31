@@ -868,37 +868,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<folly::Unit> chown(uid_t uid, gid_t gid);
 
-  /**
-   * Compute differences between the current commit and the working directory
-   * state.
-   *
-   * @param listIgnored Whether or not to inform the callback of ignored files.
-   *     When listIgnored is set to false can speed up the diff computation, as
-   *     the code does not need to descend into ignored directories at all.
-   * @param enforceCurrentParent Whether or not to return an error if the
-   *     specified commitId does not match the actual current working
-   *     directory parent.  If this is false the code will still compute a diff
-   *     against the specified commitId even the working directory parent
-   *     points elsewhere, or when a checkout is currently in progress.
-   * @param request This ResponseChannelRequest is passed from the
-   *     ServiceHandler and is used to check if the request is still active,
-   *     because if the request is no longer active we will cancel this diff
-   *     operation.
-   * @param the rootInode of this mount. Used to prevent the mount from being
-   *     shut down.
-   *
-   * @return Returns a folly::Future that will be fulfilled when the diff
-   *     operation is complete.  This is marked [[nodiscard]] to
-   *     make sure callers do not forget to wait for the operation to complete.
-   */
-  [[nodiscard]] ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
-      TreeInodePtr rootInode,
-      const RootId& commitId,
-      folly::CancellationToken cancellation,
-      const ObjectFetchContextPtr& fetchContext,
-      bool listIgnored = false,
-      bool enforceCurrentParent = true);
-
   [[nodiscard]] folly::coro::now_task<std::unique_ptr<ScmStatus>> co_diff(
       TreeInodePtr rootInode,
       const RootId& commitId,
@@ -906,17 +875,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false,
       bool enforceCurrentParent = true);
-
-  /**
-   * This version of diff is primarily intended for testing.
-   * Use diff(DiffCallback* callback, bool listIgnored) instead.
-   * The caller must ensure that the DiffContext object ctsPtr points to
-   * exists at least until the returned Future completes.
-   */
-  [[nodiscard]] ImmediateFuture<folly::Unit> diff(
-      TreeInodePtr rootInode,
-      DiffContext* ctxPtr,
-      const RootId& commitId) const;
 
   /**
    * Reset the state to point to the specified parent commit, without
@@ -1320,22 +1278,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       folly::CancellationToken cancellation,
       const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false) const;
-
-  /**
-   * This accepts a callback which will be invoked as differences are found.
-   * Note that the callback methods may be invoked simultaneously from multiple
-   * different threads, and the callback is responsible for performing
-   * synchronization (if it is needed). It will be packaged into a DiffContext
-   * and passed through the TreeInode diff() codepath
-   */
-  [[nodiscard]] ImmediateFuture<folly::Unit> diff(
-      TreeInodePtr rootInode,
-      ScmStatusDiffCallback* callback,
-      const RootId& commitId,
-      bool listIgnored,
-      bool enforceCurrentParent,
-      folly::CancellationToken cancellation,
-      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Signal to unmount() that fsChannelMount() or takeoverFuse() has started.
