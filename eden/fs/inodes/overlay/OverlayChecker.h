@@ -218,6 +218,7 @@ class OverlayChecker {
 
   using ShardID = uint32_t;
   void scanForWalChildren();
+  void scanForWalInodes();
   bool recoverWalFiles();
   void readInodes(const ProgressCallback& progressCallback = [](auto) {});
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);
@@ -239,6 +240,7 @@ class OverlayChecker {
       folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
 
   void linkInodeChildren();
+  void linkInodeChildrenMemoryEfficient();
   void scanForParentErrors();
   void checkNextInodeNumber();
 

@@ -594,6 +594,22 @@ fsck::InodeInfo readInodeInfoFromFile(InodeNumber number, folly::File& file) {
       folly::hexlify(ByteRange{typeID}));
 }
 
+folly::File openFileNoVerifyWithFlags(
+    int dirFd,
+    AbsolutePathPiece localDir,
+    InodeNumber inodeNumber,
+    const InodePath& path,
+    int flags) {
+  int fd = openat(dirFd, path.c_str(), flags | O_CLOEXEC | O_NOFOLLOW);
+  folly::checkUnixError(
+      fd,
+      fmt::format(
+          "error opening overlay file for inode {} in {}",
+          inodeNumber,
+          localDir.view()));
+  return folly::File{fd, /* ownsFd */ true};
+}
+
 } // namespace
 
 bool FsInodeCatalog::loadOverlayEntries(
@@ -1301,16 +1317,9 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
 
 std::variant<folly::File, InodeNumber> FsFileContentStore::openFileNoVerify(
     InodeNumber inodeNumber) {
-  auto path = FsFileContentStore::getFilePath(inodeNumber);
-
-  int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-  folly::checkUnixError(
-      fd,
-      fmt::format(
-          "error opening overlay file for inode {} in {}",
-          inodeNumber,
-          localDir_.view()));
-  return folly::File{fd, /* ownsFd */ true};
+  auto path = getFilePath(inodeNumber);
+  return openFileNoVerifyWithFlags(
+      dirFile_.fd(), localDir_, inodeNumber, path, O_RDWR);
 }
 
 namespace {
@@ -1573,12 +1582,14 @@ std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfo(
   return core_->loadInodeInfo(number);
 }
 
-std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfoAndEntries(
+std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfoAndEntries(
     InodeNumber number,
-    OverlayEntryLoader loader) {
+    InodeCatalog::OverlayEntryLoader loader) {
   folly::File file;
   try {
-    file = std::get<folly::File>(core_->openFileNoVerify(number));
+    auto path = getFilePath(number);
+    file = openFileNoVerifyWithFlags(
+        dirFile_.fd(), localDir_, number, path, O_RDONLY);
   } catch (const std::exception& ex) {
     return makeInodeError(
         number, "error opening file: ", folly::exceptionStr(ex));
@@ -1596,6 +1607,12 @@ std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfoAndEntries(
   }
   loadOverlayEntriesFromData(number, rawData, loader);
   return info;
+}
+
+std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfoAndEntries(
+    InodeNumber number,
+    OverlayEntryLoader loader) {
+  return core_->loadInodeInfoAndEntries(number, loader);
 }
 } // namespace facebook::eden
 

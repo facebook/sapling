@@ -31,6 +31,7 @@ using folly::ByteRange;
 using folly::StringPiece;
 using std::make_shared;
 using std::string;
+using ::testing::Contains;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAre;
 
@@ -416,6 +417,41 @@ TEST_P(FsckTest, testNoErrors) {
           .toString());
 }
 
+TEST_P(FsckTest, testNoErrorsMemoryEfficientScanDisabled) {
+  auto testOverlay = make_shared<TestOverlay>(overlayType());
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+  testOverlay->closeCleanly();
+
+  testOverlay->recreateSqliteInodeCatalog();
+  FsFileContentStore& fcs = testOverlay->fcs();
+  InodeCatalog* catalog = testOverlay->inodeCatalog();
+  std::optional<InodeNumber> nextInode;
+  if (overlayType() == InodeCatalogType::Legacy) {
+    nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
+  } else {
+    nextInode = catalog->initOverlay(/*createIfNonExisting=*/true);
+    fcs.initialize(/*createIfNonExisting=*/false);
+  }
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      catalog,
+      &fcs,
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+      CaseSensitivity::Sensitive,
+      /*useMemoryEfficientScan=*/false);
+  checker.scanForErrors();
+  EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
+  EXPECT_EQ(
+      "src/foo/x/y/z.txt",
+      checker.computePath(layout.src_foo_x_y_zTxt.number()).toString());
+}
+
 TEST_P(FsckTest, testMissingNextInodeNumber) {
   // This test is not applicable for Sqlite and InMemory backed overlays since
   // they implicitly track the next inode number
@@ -728,6 +764,74 @@ TEST_P(FsckTest, testTruncatedDirData) {
       testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
+}
+
+TEST(FsckScanTest, partiallyParsedDirDoesNotLinkChildren) {
+  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+
+  auto srcDataFile = testOverlay->fcs().openFileNoVerify(layout.src.number());
+  auto fd = std::get<folly::File>(srcDataFile).fd();
+  auto fileSize = lseek(fd, 0, SEEK_END);
+  folly::checkUnixError(fileSize, "failed to determine directory inode size");
+  ASSERT_GT(fileSize, FsFileContentStore::kHeaderLength);
+  folly::checkUnixError(
+      ftruncate(fd, fileSize - 1), "failed to truncate directory inode");
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+      CaseSensitivity::Sensitive,
+      /*useMemoryEfficientScan=*/true);
+  checker.scanForErrors();
+
+  auto messages = errorMessages(checker);
+  EXPECT_THAT(
+      messages,
+      Contains(
+          fmt::format(
+              "found orphan directory inode {}", layout.src_foo.number())));
+  EXPECT_THAT(
+      messages,
+      Contains(
+          fmt::format(
+              "found orphan file inode {}", layout.src_todoTxt.number())));
+}
+
+TEST(FsckScanTest, unreadableParentProducesDescriptivePath) {
+  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+      CaseSensitivity::Sensitive,
+      /*useMemoryEfficientScan=*/true);
+  checker.scanForErrors();
+  ASSERT_THAT(errorMessages(checker), UnorderedElementsAre());
+
+  testOverlay->inodeCatalog()->removeOverlayDir(layout.src_foo_x_y.number());
+  EXPECT_EQ(
+      fmt::format(
+          "src/foo/x/y/[unreadable_child({})]",
+          layout.src_foo_x_y_zTxt.number()),
+      checker.computePath(layout.src_foo_x_y_zTxt.number()).toString());
 }
 
 TEST_P(FsckTest, testMissingDirData) {

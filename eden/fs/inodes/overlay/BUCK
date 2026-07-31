@@ -49,6 +49,7 @@ cpp_library(
         "//folly:file_util",
         "//folly:overload",
         "//folly:string",
+        "//folly/container:f14_hash",
         "//folly/gen:base",
         "//folly/gen:parallel_map",
         "//folly/logging:logging",

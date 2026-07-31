@@ -159,6 +159,10 @@ class FsFileContentStore : public FileContentStore {
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number);
 
+  std::optional<fsck::InodeInfo> loadInodeInfoAndEntries(
+      InodeNumber number,
+      InodeCatalog::OverlayEntryLoader loader);
+
   /**
    * Get the path to the WAL file for the given inode, relative to localDir.
    * Same "XX/<inode>" layout as getFilePath, with ".wal" suffix appended.
