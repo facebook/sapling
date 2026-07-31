@@ -44,6 +44,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 pub use crate::errors::HookManagerError;
 pub use crate::manager::HookManager;
 use crate::manager::HooksOutcome;
+use crate::manager::annotate_agent_bypass_rejection;
 use crate::manager::annotate_unauthorized_rejection;
 pub use crate::repo::HookRepo;
 
@@ -147,7 +148,12 @@ pub enum BypassDecision {
     },
     /// A bypass fired but the pusher is not in the required group — the
     /// rejection stands, annotated with a "not a member" note.
-    Unauthorized { group: String },
+    UnauthorizedUser { group: String },
+    /// A bypass fired and the pusher is in the required group, but the pusher
+    /// is an agent — the rejection stands, annotated with a note handing the
+    /// decision back to a human. Carries the bypass reason and the restricting
+    /// permission group.
+    UnauthorizedAgent { reason: String, group: String },
 }
 
 /// Add the mechanical execution-stats columns to `scuba`: common server data,
@@ -255,13 +261,27 @@ fn record_outcome_and_apply_bypass(
                 .add("outcome", "rejected");
             Ok(outcome)
         }
-        BypassDecision::Unauthorized { group } => {
+        BypassDecision::UnauthorizedUser { group } => {
             scuba
                 .add("stderr", long_description)
                 .add("errorcode", 1)
                 .add("failed_hooks", 1)
                 .add("outcome", "rejected");
             Ok(annotate_unauthorized_rejection(outcome, group))
+        }
+        // The pusher was in the group, so the bypass is worth recording in full:
+        // `bypass_blocked_for_agent` is what makes agent bypass attempts
+        // countable, separately from ordinary rejections.
+        BypassDecision::UnauthorizedAgent { reason, group } => {
+            scuba
+                .add("stderr", long_description)
+                .add("errorcode", 1)
+                .add("failed_hooks", 1)
+                .add("bypass_reason", reason.clone())
+                .add("bypass_permission_group", group.clone())
+                .add("bypass_blocked_for_agent", true)
+                .add("outcome", "rejected");
+            Ok(annotate_agent_bypass_rejection(outcome, group))
         }
     }
 }

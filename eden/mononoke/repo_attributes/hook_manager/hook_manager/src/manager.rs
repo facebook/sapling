@@ -90,7 +90,12 @@ enum BypassAuthorizationResult {
     Bypassed(String),
     /// Bypass was attempted but the user is not in the required group.
     /// Contains the group name for the rejection message.
-    Unauthorized(String),
+    UnauthorizedUser(String),
+    /// Bypass was attempted and the pusher is in the required group, but the
+    /// pusher is an agent. Restricting a bypass to a permission group makes
+    /// using it a human judgement call, so the bypass is refused. Contains the
+    /// bypass reason and the group name for logging and the rejection message.
+    UnauthorizedAgent { reason: String, group: String },
 }
 
 impl HookManager {
@@ -269,18 +274,61 @@ impl HookManager {
                 reason,
                 permission_group: permission_group.map(|g| g.to_string()),
             },
-            BypassAuthorizationResult::Unauthorized(group) => {
-                BypassDecision::Unauthorized { group }
+            BypassAuthorizationResult::UnauthorizedUser(group) => {
+                BypassDecision::UnauthorizedUser { group }
+            }
+            BypassAuthorizationResult::UnauthorizedAgent { reason, group } => {
+                BypassDecision::UnauthorizedAgent { reason, group }
             }
         })
     }
 
-    /// Check if a bypass is authorized given the permission group restriction.
+    /// Check if a bypass is authorized, then refuse it if the pusher is an agent.
+    ///
+    /// Restricting a bypass to a permission group makes using it a human
+    /// judgement call, so an authorized bypass is downgraded when the pusher is
+    /// an agent. Two things about where this sits matter:
+    ///
+    /// * It runs *after* the membership check, so an agent that is not in the
+    ///   group still gets the more specific "not a member" rejection — that is
+    ///   the reason it actually failed.
+    /// * It reads the agent signal from the pusher's own metadata. The identity
+    ///   set the membership check runs against is often the commit author's
+    ///   synthetic `USER:<unixname>` identity, which never carries the
+    ///   credential attributes `likely_an_agent` looks for.
+    async fn check_bypass_authorization(
+        &self,
+        hook: &Hook,
+        ctx: &CoreContext,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cs_msg: Option<&str>,
+        changeset_author: Option<&str>,
+    ) -> Result<BypassAuthorizationResult> {
+        let result = self
+            .resolve_bypass_authorization(hook, ctx, maybe_pushvars, cs_msg, changeset_author)
+            .await?;
+
+        Ok(match result {
+            BypassAuthorizationResult::Bypassed(reason) if ctx.metadata().likely_an_agent() => {
+                BypassAuthorizationResult::UnauthorizedAgent {
+                    reason,
+                    group: hook
+                        .get_bypass_permission_group()
+                        .unwrap_or("unknown")
+                        .to_string(),
+                }
+            }
+            result => result,
+        })
+    }
+
+    /// Resolve the bypass against the hook's permission group, ignoring whether
+    /// the pusher is an agent (see `check_bypass_authorization`, the only caller).
     ///
     /// When `changeset_author` is provided (e.g., "Alice <alice@fb.com>"),
     /// group membership is checked against the commit author's identity
     /// rather than the pusher's TLS cert identities.
-    async fn check_bypass_authorization(
+    async fn resolve_bypass_authorization(
         &self,
         hook: &Hook,
         ctx: &CoreContext,
@@ -353,7 +401,7 @@ impl HookManager {
             Ok(BypassAuthorizationResult::Bypassed(bypass_reason))
         } else {
             let group_name = hook.get_bypass_permission_group().unwrap_or("unknown");
-            Ok(BypassAuthorizationResult::Unauthorized(
+            Ok(BypassAuthorizationResult::UnauthorizedUser(
                 group_name.to_string(),
             ))
         }
@@ -392,7 +440,7 @@ impl HookManager {
             )
             .await?;
 
-        if matches!(result, BypassAuthorizationResult::Unauthorized(_))
+        if matches!(result, BypassAuthorizationResult::UnauthorizedUser(_))
             && is_user
             && justknobs::eval(
                 "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass",
@@ -777,17 +825,45 @@ impl HookManager {
 /// Append a note to a rejection telling the pusher their bypass was ignored
 /// because they are not in the permission group. The hook's own reason is kept.
 pub(crate) fn annotate_unauthorized_rejection(
-    mut outcome: HookOutcome,
+    outcome: HookOutcome,
     group_name: &str,
 ) -> HookOutcome {
+    annotate_rejection(
+        outcome,
+        &format!(
+            "Note: your hook bypass was ignored because you are not a member of \
+             group '{group_name}'. Request access to the group, or fix the issue above."
+        ),
+        "Unauthorized bypass rejected",
+    )
+}
+
+/// Append a note to a rejection telling the pusher their bypass was ignored
+/// because an agent cannot use a bypass that is restricted to a permission
+/// group. The hook's own reason is kept.
+pub(crate) fn annotate_agent_bypass_rejection(
+    outcome: HookOutcome,
+    group_name: &str,
+) -> HookOutcome {
+    annotate_rejection(
+        outcome,
+        &format!(
+            "Note: your hook bypass was ignored because bypassing this hook is restricted \
+             to members of group '{group_name}', and that call cannot be made by an agent. \
+             A human needs to review these changes and, if the bypass is warranted, push \
+             them themselves."
+        ),
+        "Agent bypass rejected",
+    )
+}
+
+/// Append `note` to a rejection's user-facing description and prepend
+/// `extra_log` to its diagnostic logs. A no-op on an accepted outcome.
+fn annotate_rejection(mut outcome: HookOutcome, note: &str, extra_log: &str) -> HookOutcome {
     if let Some(info) = outcome.get_execution().rejection_info() {
         let mut info = info.clone();
-        info.long_description = format!(
-            "{}\n\nNote: your hook bypass was ignored because you are not a member of \
-             group '{group_name}'. Request access to the group, or fix the issue above.",
-            info.long_description,
-        );
-        let extra_logs = ["Unauthorized bypass rejected".to_string()]
+        info.long_description = format!("{}\n\n{note}", info.long_description);
+        let extra_logs = [extra_log.to_string()]
             .into_iter()
             .chain(outcome.get_execution().extra_logs.clone())
             .collect();

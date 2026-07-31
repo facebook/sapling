@@ -1123,12 +1123,11 @@ fn test_agent_identities_are_recognised_as_an_agent() {
     assert!(!user_identities(&["client_user"]).likely_an_agent());
 }
 
-/// FIXME: an agent whose client identity is in the bypass permission group can
-/// currently use the bypass, just like a human. It should be rejected instead --
-/// only a human should be able to decide to override a restricted hook.
+/// An agent whose client identity is in the bypass permission group is still
+/// refused: only a human should be able to decide to override a restricted hook.
 #[cfg(fbcode_build)]
 #[mononoke::fbinit_test]
-async fn test_agent_in_bypass_group_can_bypass(fb: FacebookInit) {
+async fn test_agent_in_bypass_group_cannot_bypass(fb: FacebookInit) {
     let res = BypassScenario {
         checker: Some(AlwaysMember::new().into()),
         client_identities: agent_identities("client_user"),
@@ -1136,18 +1135,17 @@ async fn test_agent_in_bypass_group_can_bypass(fb: FacebookInit) {
     }
     .run(fb)
     .await;
-    assert_bypassed(&res);
+    assert_agent_bypass_rejected(&res);
 }
 
-/// FIXME: on the changeset-author path the agent bypass also goes through. This
-/// is the path a real push takes by default, and it is the one that a check on
-/// the membership-checked identity set would miss: that set is the author's
+/// The same on the changeset-author path, which is the path a real push takes by
+/// default. Worth its own test: that path membership-checks the author's
 /// synthetic `USER:<unixname>` identity, which never carries the credential
-/// attributes `likely_an_agent()` looks for. The agent signal has to come from
-/// the pusher's own metadata.
+/// attributes `likely_an_agent()` looks for, so the agent signal has to come
+/// from the pusher's own metadata rather than the identity set being checked.
 #[cfg(fbcode_build)]
 #[mononoke::fbinit_test]
-async fn test_agent_bypass_on_author_path(fb: FacebookInit) {
+async fn test_agent_cannot_bypass_on_author_path(fb: FacebookInit) {
     let res = BypassScenario {
         // `changeset_with_bypass_msg` is authored by "Test User <test@fb.com>".
         checker: Some(allowlist(&["test"])),
@@ -1157,7 +1155,7 @@ async fn test_agent_bypass_on_author_path(fb: FacebookInit) {
     }
     .run(fb)
     .await;
-    assert_bypassed(&res);
+    assert_agent_bypass_rejected(&res);
 }
 
 /// An agent that is not in the permission group is rejected for the more
@@ -1182,6 +1180,11 @@ async fn test_agent_not_in_bypass_group_gets_group_note(fb: FacebookInit) {
     assert!(
         info.long_description.contains("not a member of group"),
         "expected the not-a-member note, got {:?}",
+        info.long_description,
+    );
+    assert!(
+        !info.long_description.contains("cannot be made by an agent"),
+        "being an agent is not why this was refused, got {:?}",
         info.long_description,
     );
 }
@@ -1301,6 +1304,22 @@ fn assert_hook_rejected(outcomes: &[HookOutcome]) {
         outcomes[0].get_execution().is_rejected(),
         "expected the hook to reject, got {:?}",
         outcomes[0].get_execution(),
+    );
+}
+
+/// Assert the bypass was refused because the pusher is an agent: the hook ran
+/// and rejected, annotated with the note handing the decision to a human.
+#[cfg(fbcode_build)]
+fn assert_agent_bypass_rejected(outcomes: &[HookOutcome]) {
+    assert_hook_rejected(outcomes);
+    let info = outcomes[0]
+        .get_execution()
+        .rejection_info()
+        .expect("hook rejected");
+    assert!(
+        info.long_description.contains("cannot be made by an agent"),
+        "expected the agent bypass note, got {:?}",
+        info.long_description,
     );
 }
 
