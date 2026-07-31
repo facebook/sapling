@@ -599,6 +599,43 @@ TEST(FsckProgressTest, repairReportsSlowPhases) {
   EXPECT_EQ(10, *progressEvents.back().progress10Pct);
 }
 
+TEST(FsckRepairTest, orphanRepairPreservesSubtreeWhenChildReloadFails) {
+  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  root.save();
+
+  auto orphan = root.mkdir("orphan");
+  auto file = orphan.create("a-file", "contents");
+  auto child = orphan.mkdir("child");
+  orphan.save();
+  child.save();
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+
+  auto result =
+      checker.repairErrors([&](const OverlayChecker::Progress& progress) {
+        if (progress.phase == OverlayChecker::Progress::Phase::Repairing &&
+            progress.progress10Pct == 0) {
+          testOverlay->inodeCatalog()->removeOverlayDir(child.number());
+        }
+      });
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(1, result->totalErrors);
+  EXPECT_EQ(0, result->fixedErrors);
+  EXPECT_TRUE(testOverlay->inodeCatalog()->hasOverlayDir(orphan.number()));
+  EXPECT_TRUE(testOverlay->fcs().hasOverlayFile(file.number()));
+}
+
 TEST_P(FsckTest, testTruncatedDirData) {
   // This test doesn't work for SQLite or InMemory backed overlays because it
   // directly manipluates the written overlay data on disk to simulate file

@@ -498,21 +498,14 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       case InodeType::File: {
         auto outputPath = repair.getLostAndFoundPath(number_);
         archiveOrphanFile(repair, number_, outputPath, S_IFREG | 0644);
-        return true;
+        return tryRemoveFileInode(repair, number_);
       }
       case InodeType::Dir: {
-        // Look up the previously loaded children data
-        auto iter = repair.checker()->impl_->inodes.find(number_);
-        if (iter == repair.checker()->impl_->inodes.end()) {
-          XLOGF(
-              DFATAL,
-              "failed to look up previously-loaded children for orphan directory inode {}",
-              number_);
+        auto outputPath = repair.getLostAndFoundPath(number_);
+        if (!archiveOrphanDir(repair, number_, outputPath)) {
           return false;
         }
-        auto outputPath = repair.getLostAndFoundPath(number_);
-        archiveOrphanDir(repair, number_, outputPath, iter->second.children);
-        return true;
+        return removeArchivedOrphanDir(repair, number_);
       }
       case InodeType::Error: {
         processOrphanedError(repair, number_);
@@ -531,25 +524,43 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
   }
 
  private:
-  void archiveOrphanDir(
+  template <typename Prepare, typename Visitor>
+  bool forEachRemovableChild(
       RepairState& repair,
       InodeNumber number,
-      AbsolutePath archivePath,
-      const std::unique_ptr<overlay::OverlayDir>& children) const {
-    std::optional<overlay::OverlayDir> reloadedChildren;
-    const overlay::OverlayDir* childrenToArchive = children.get();
-    if (!childrenToArchive) {
-      reloadedChildren = repair.inodeCatalog()->loadOverlayDir(number);
-      if (!reloadedChildren) {
-        // Eager scanning must retain children for every readable directory.
-        throw std::runtime_error(
-            fmt::format(
-                "cannot archive orphan directory inode {} without its children",
-                number));
-      }
-      childrenToArchive = &*reloadedChildren;
-    }
+      Prepare&& prepare,
+      Visitor&& visitor) const {
+    auto* const checker = repair.checker();
+    return repair.inodeCatalog()->loadOverlayEntries(
+        number, [&](size_t size, InodeCatalog::OverlayEntryIterator iterate) {
+          prepare(size);
+          iterate([&](const std::string& name,
+                      const overlay::OverlayEntry& childEntry) {
+            const auto childRawInode = *childEntry.inodeNumber();
+            if (childRawInode == 0) {
+              // No overlay inode has been allocated for this child.
+              return;
+            }
 
+            const auto* childInfo =
+                checker->getInodeInfo(InodeNumber(childRawInode));
+            if (!childInfo) {
+              return;
+            }
+            // Preserve children still referenced by another parent. If every
+            // parent is orphaned, a later fsck run will find this child too.
+            if (childInfo->parents.size() > 1) {
+              return;
+            }
+            visitor(name, childEntry, *childInfo);
+          });
+        });
+  }
+
+  bool archiveOrphanDir(
+      RepairState& repair,
+      InodeNumber number,
+      const AbsolutePath& archivePath) const {
     auto rc = mkdir(archivePath.value().c_str(), 0700);
     if (rc != 0 && errno != EEXIST) {
       // EEXIST is okay.  Another error repair step (like InodeDataError) may
@@ -562,55 +573,49 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
               number));
     }
 
-    auto* const checker = repair.checker();
-    for (const auto& childEntry : *childrenToArchive->entries()) {
-      auto childRawInode = *childEntry.second.inodeNumber();
-      if (childRawInode == 0) {
-        // If this child does not have an inode number allocated it cannot
-        // be materialized.
-        continue;
-      }
-
-      // Look up the inode information that we previously loaded for this child.
-      InodeNumber childInodeNumber(childRawInode);
-      auto childInfo = checker->getInodeInfo(childInodeNumber);
-      if (!childInfo) {
-        // This child was not present in the overlay.
-        // This means that it wasn't materialized, so there is nothing for us to
-        // do here.
-        continue;
-      }
-
-      auto childPath = archivePath + PathComponentPiece(childEntry.first);
-      archiveDirectoryEntry(repair, childInfo, childEntry.second, childPath);
+    bool archivedAllChildren = true;
+    auto found = forEachRemovableChild(
+        repair,
+        number,
+        [](size_t) {},
+        [&](const std::string& name,
+            const overlay::OverlayEntry& childEntry,
+            const InodeInfo& childInfo) {
+          auto childPath = archivePath + PathComponentPiece(name);
+          if (!archiveDirectoryEntry(
+                  repair, childInfo, childEntry, childPath)) {
+            archivedAllChildren = false;
+          }
+        });
+    if (!found) {
+      XLOGF(
+          WARN,
+          "unable to load orphan directory inode {} while archiving it",
+          number);
+      return false;
     }
 
-    tryRemoveDirInode(repair, number);
+    if (!archivedAllChildren) {
+      return false;
+    }
+    return true;
   }
 
-  void archiveDirectoryEntry(
+  bool archiveDirectoryEntry(
       RepairState& repair,
-      InodeInfo* info,
-      overlay::OverlayEntry dirEntry,
-      AbsolutePath archivePath) const {
-    // If this directory entry has multiple parents skip it.
-    // We don't want to remove it from the overlay if another parent is still
-    // referencing it.  If all parents were themselves orphans this entry would
-    // be detected as an orphan by a second fsck run.
-    if (info->parents.size() > 1) {
-      return;
-    }
-
-    switch (info->type) {
+      const InodeInfo& info,
+      const overlay::OverlayEntry& dirEntry,
+      const AbsolutePath& archivePath) const {
+    switch (info.type) {
       case InodeType::File:
-        archiveOrphanFile(repair, info->number, archivePath, *dirEntry.mode());
-        return;
+        archiveOrphanFile(repair, info.number, archivePath, *dirEntry.mode());
+        return true;
       case InodeType::Dir:
-        archiveOrphanDir(repair, info->number, archivePath, info->children);
-        return;
+        return archiveOrphanDir(repair, info.number, archivePath);
       case InodeType::Error:
-        processOrphanedError(repair, info->number);
-        return;
+        // InodeDataError already archived its contents. Removal is deferred
+        // until the parent directory no longer references this inode.
+        return true;
       case InodeType::Unknown:
         break;
     }
@@ -618,15 +623,15 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     XLOGF(
         DFATAL,
         "unexpected inode type {} when processing orphan inode {}",
-        enumValue(info->type),
-        info->number);
+        enumValue(info.type),
+        info.number);
     throw std::runtime_error("unexpected inode type");
   }
 
   void archiveOrphanFile(
       RepairState& repair,
       InodeNumber number,
-      AbsolutePath archivePath,
+      const AbsolutePath& archivePath,
       mode_t mode) const {
     auto input = std::get<folly::File>(repair.fcs()->openFile(
         number, FsFileContentStore::kHeaderIdentifierFile));
@@ -696,9 +701,56 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
               number,
               archivePath.view()));
     }
+  }
 
-    // Now remove the orphan inode file
-    tryRemoveFileInode(repair, number);
+  bool removeArchivedOrphanDir(RepairState& repair, InodeNumber number) const {
+    std::vector<const InodeInfo*> children;
+    const auto found = forEachRemovableChild(
+        repair,
+        number,
+        [&](size_t size) { children.reserve(size); },
+        [&](const std::string&,
+            const overlay::OverlayEntry&,
+            const InodeInfo& childInfo) { children.push_back(&childInfo); });
+    if (!found) {
+      XLOGF(
+          WARN,
+          "unable to reload archived orphan directory inode {} before removing it",
+          number);
+      return false;
+    }
+
+    // Remove the parent first so a failure leaves all of its references valid.
+    // After this succeeds, child removal failures leave recoverable orphans
+    // rather than a directory that references missing inodes.
+    if (!tryRemoveDirInode(repair, number)) {
+      return false;
+    }
+
+    bool removedAllChildren = true;
+    for (const auto* child : children) {
+      switch (child->type) {
+        case InodeType::Unknown:
+          XLOGF(
+              DFATAL,
+              "cannot remove archived child inode {} before its type is loaded",
+              child->number);
+          removedAllChildren = false;
+          break;
+        case InodeType::File:
+        case InodeType::Error:
+          if (!tryRemoveFileInode(repair, child->number)) {
+            removedAllChildren = false;
+          }
+          break;
+        case InodeType::Dir:
+          if (!removeArchivedOrphanDir(repair, child->number)) {
+            removedAllChildren = false;
+          }
+          break;
+      }
+    }
+    return removedAllChildren;
   }
 
   void processOrphanedError(RepairState& repair, InodeNumber number) const {
@@ -714,9 +766,10 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     tryRemoveFileInode(repair, number);
   }
 
-  void tryRemoveDirInode(RepairState& repair, InodeNumber number) const {
+  bool tryRemoveDirInode(RepairState& repair, InodeNumber number) const {
     try {
       repair.inodeCatalog()->removeOverlayDir(number);
+      return true;
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
@@ -726,12 +779,14 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           "error removing overlay file for orphaned directory inode {} after archiving it: {}",
           number,
           ex.what());
+      return false;
     }
   }
 
-  void tryRemoveFileInode(RepairState& repair, InodeNumber number) const {
+  bool tryRemoveFileInode(RepairState& repair, InodeNumber number) const {
     try {
       repair.fcs()->removeOverlayFile(number);
+      return true;
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
@@ -741,6 +796,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           "error removing overlay file for orphaned file inode {} after archiving it: {}",
           number,
           ex.what());
+      return false;
     }
   }
 
