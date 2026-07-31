@@ -15,17 +15,14 @@
 -- that owns the manifest branch, so multiple manifest repos (e.g. AOSP and a
 -- west/Zephyr firmware manifest) can coexist in one table.
 --
--- The production MySQL schema is authored separately in configerator with a
--- binary/`_bin` collation on the VARBINARY columns. Do NOT add a separate index
--- on `(manifest_repo_id, manifest_branch)`: it is the leftmost prefix of the
--- UNIQUE key below, which already serves forward lookups scoped by
--- `(manifest_repo_id, manifest_branch)`.
+-- The MySQL schema is hand-synced in configerator; `test/main.rs` pins the key shape.
+-- `reverse_idx` stays narrow: InnoDB appends the missing PK columns, so the fan-out read covers.
+-- Do NOT index `(manifest_repo_id, manifest_branch)` separately -- it is the PK's leftmost prefix.
 CREATE TABLE IF NOT EXISTS `repo_manifest_mapping` (
-  `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `manifest_repo_id` INTEGER NOT NULL,
   `manifest_branch` VARBINARY(255) NOT NULL,
   `repo_name` VARBINARY(255) NOT NULL,
   `repo_branch` VARBINARY(255) NOT NULL,
-  UNIQUE (`manifest_repo_id`, `manifest_branch`, `repo_name`, `repo_branch`)
+  PRIMARY KEY (`manifest_repo_id`, `manifest_branch`, `repo_name`, `repo_branch`)
 );
 CREATE INDEX IF NOT EXISTS `reverse_idx` ON `repo_manifest_mapping` (`repo_name`, `repo_branch`);

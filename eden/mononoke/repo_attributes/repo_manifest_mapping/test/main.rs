@@ -960,3 +960,31 @@ async fn test_noop_double(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+// 16. Pin the key shape each query depends on (SQLite side; MySQL is hand-synced).
+#[mononoke::test]
+fn test_schema_key_shape() {
+    let schema = <SqlRepoManifestMappingBuilder as SqlConstruct>::CREATION_QUERY
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    assert!(
+        schema.contains(
+            "PRIMARY KEY (`manifest_repo_id`, `manifest_branch`, `repo_name`, `repo_branch`)"
+        ),
+        "narrowing this key resurrects the duplicates GetManifestBranchesForRepo dropped DISTINCT for; got: {schema}"
+    );
+    assert!(
+        !schema.contains("AUTOINCREMENT"),
+        "a surrogate key displaces the natural PK the reverse read covers from; got: {schema}"
+    );
+    assert!(
+        schema.contains("`reverse_idx` ON `repo_manifest_mapping` (`repo_name`, `repo_branch`)"),
+        "reverse_idx must exist and stay narrow; got: {schema}"
+    );
+    assert!(
+        schema.contains("CREATE INDEX IF NOT EXISTS `read_cursor_idx`"),
+        "read_cursor_idx must exist and be non-unique (the writer is a REPLACE INTO); got: {schema}"
+    );
+}

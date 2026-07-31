@@ -16,3 +16,6 @@ CREATE TABLE IF NOT EXISTS `manifest_watermark` (
   `log_id` BIGINT NOT NULL,
   PRIMARY KEY (`repo_id`, `manifest_branch`)
 );
+-- Serves `GetReadCursor` (`ORDER BY log_id DESC LIMIT 1`) without a filesort.
+-- Must stay NON-UNIQUE: `SetBranchWatermark` is a `REPLACE INTO`, which deletes unique-key conflicts.
+CREATE INDEX IF NOT EXISTS `read_cursor_idx` ON `manifest_watermark` (`repo_id`, `log_id`);

@@ -32,17 +32,16 @@ const INSERT_CHUNK_SIZE: usize = 1000;
 
 mononoke_queries! {
     // Hot reverse / fan-out read: which manifest branches (across all manifest
-    // repos) include the given member repo on the given repo branch. Results
-    // are DISTINCT (defensive: the UNIQUE key already forbids duplicate rows,
-    // so a given (manifest_repo_id, manifest_branch) cannot appear twice for a
-    // fixed (repo_name, repo_branch)). ORDER BY makes the output sequence a
-    // contract rather than an incidental index-scan artifact, so the in-memory
-    // Test double (which sorts) is an observationally faithful mirror.
+    // repos) include the given member repo on the given repo branch. ORDER BY
+    // makes the output sequence a contract rather than an incidental index-scan
+    // artifact, so the in-memory Test double (which sorts) is an
+    // observationally faithful mirror.
+    // No DISTINCT: the 4-column PK forbids duplicates, and it would cost a temp table.
     read GetManifestBranchesForRepo(
         repo_name: RepoName,
         repo_branch: RepoBranch,
     ) -> (RepositoryId, ManifestBranch) {
-        "SELECT DISTINCT manifest_repo_id, manifest_branch
+        "SELECT manifest_repo_id, manifest_branch
          FROM repo_manifest_mapping
          WHERE repo_name = {repo_name} AND repo_branch = {repo_branch}
          ORDER BY manifest_repo_id, manifest_branch"
@@ -64,7 +63,7 @@ mononoke_queries! {
     // Bulk insert of membership edges. Plain INSERT (not INSERT OR IGNORE):
     // the replace flow deletes the manifest branch's rows first, so there is
     // nothing to conflict with, and `replace_membership` de-duplicates the batch
-    // before inserting, so the VALUES list is always UNIQUE-key-clean.
+    // before inserting, so the VALUES list is always primary-key-clean.
     write InsertEdges(values: (
         manifest_repo_id: RepositoryId,
         manifest_branch: ManifestBranch,
@@ -230,7 +229,7 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         // legitimately list the same (repo_name, repo_branch) more than once (e.g.
         // the same repo pinned at the same branch via two different project paths —
         // the path is not part of the edge). Collapsing duplicates keeps the bulk
-        // INSERT free of UNIQUE-key conflicts and matches set semantics; the
+        // INSERT free of primary-key conflicts and matches set semantics; the
         // in-memory Test double dedups identically.
         let mut seen = std::collections::HashSet::with_capacity(edges.len());
         let deduped: Vec<&MembershipEdge> = edges.iter().filter(|e| seen.insert(*e)).collect();
