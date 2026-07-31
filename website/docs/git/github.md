@@ -48,10 +48,11 @@ See the dedicated [Sapling Stack](/docs/git/sapling-stack.md) page for more info
 **Pros:**
 
 - Works with any GitHub repo.
+- With `github.pr-workflow=stacked`, integrates with GitHub's native [stacked pull requests](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) feature, so GitHub renders the stack in the pull request UI and can merge it from the bottom up. See [Pull request workflows](/docs/git/sapling-stack.md#pull-request-workflows).
 
 **Cons:**
 
-- Creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](/docs/addons/reviewstack.md) for code review instead of GitHub.
+- By default, creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](/docs/addons/reviewstack.md) for code review instead of GitHub, or to switch to the `stacked` workflow.
 
 :::tip
 
