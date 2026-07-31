@@ -1226,6 +1226,14 @@ std::unique_ptr<OverlayChecker::Error> make_error(Args&&... args) {
   return std::make_unique<ErrorType>(std::forward<Args>(args)...);
 }
 
+std::string getInodeErrorMessage(const InodeInfo& info) {
+  if (info.errorMsg) {
+    return *info.errorMsg;
+  }
+  return fmt::format(
+      "inode {} has error type without error details", info.number.get());
+}
+
 void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
   using namespace folly::gen;
 
@@ -1387,7 +1395,8 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromInodeCatalog(
 
   if (info.has_value() && info.value().type == InodeType::Error) {
     errors.wlock()->push_back(
-        make_error<InodeDataError>(info.value().number, info.value().errorMsg));
+        make_error<InodeDataError>(
+            info.value().number, getInodeErrorMessage(info.value())));
   }
   return loadDirectoryChildren(std::move(info), errors);
 }
@@ -1399,7 +1408,8 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
 
   if (info.has_value() && info.value().type == InodeType::Error) {
     errors.wlock()->push_back(
-        make_error<InodeDataError>(info.value().number, info.value().errorMsg));
+        make_error<InodeDataError>(
+            info.value().number, getInodeErrorMessage(info.value())));
   }
   return loadDirectoryChildren(std::move(info), errors);
 }

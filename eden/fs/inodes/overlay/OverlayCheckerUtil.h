@@ -33,7 +33,9 @@ struct InodeInfo {
   explicit InodeInfo(InodeNumber num) : number(num), type(InodeType::Unknown) {}
   InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
   InodeInfo(InodeNumber num, InodeType t, std::string e)
-      : number(num), type(t), errorMsg{e} {}
+      : number(num),
+        type(t),
+        errorMsg(std::make_unique<std::string>(std::move(e))) {}
   InodeInfo(InodeNumber num, overlay::OverlayDir&& c)
       : number(num),
         type(InodeType::Dir),
@@ -46,7 +48,7 @@ struct InodeInfo {
 
   InodeNumber number;
   InodeType type{InodeType::Error};
-  std::string errorMsg;
+  std::unique_ptr<std::string> errorMsg;
   mode_t modeFromParent{0};
   std::unique_ptr<overlay::OverlayDir> children;
   folly::small_vector<InodeNumber, 1> parents;
