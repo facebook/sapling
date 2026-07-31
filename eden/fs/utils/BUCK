@@ -73,6 +73,19 @@ cpp_library(
 )
 
 cpp_library(
+    name = "glob_path",
+    headers = [
+        "GlobPath.h",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//folly:range",
+        "//folly/io:iobuf",
+        "//thrift/lib/cpp2/protocol/detail:protocol_methods",
+    ],
+)
+
+cpp_library(
     name = "glob",
     srcs = [
         "GlobNodeImpl.cpp",

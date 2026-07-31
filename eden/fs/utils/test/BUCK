@@ -123,6 +123,18 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "glob_path_test",
+    srcs = ["GlobPathTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/utils:glob_path",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)
+
+cpp_unittest(
     name = "request_permit_vendor_test",
     srcs = ["RequestPermitVendorTest.cpp"],
     network_access = network_access_utils.none(),
