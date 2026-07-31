@@ -14,7 +14,11 @@
 #include <fmt/core.h>
 #include <folly/portability/Unistd.h>
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <ctime>
+#include <mutex>
+#include <utility>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -1610,96 +1614,175 @@ void OverlayChecker::linkInodeChildren() {
 }
 
 void OverlayChecker::linkInodeChildrenMemoryEfficient() {
-  for (auto& [parentInodeNumber, parentInfo] : impl_->inodes) {
-    std::vector<std::pair<InodeInfo*, mode_t>> parentRelationships;
-    std::vector<std::unique_ptr<Error>> parentErrors;
-    auto maxChildInodeNumber = maxInodeNumber_;
-    auto processEntry = [&](const std::string& childName,
-                            const overlay::OverlayEntry& child) {
-      auto childRawInode = *child.inodeNumber();
-      if (childRawInode == 0) {
-        return;
-      }
+  using namespace folly::gen;
 
-      auto childInodeNumber = InodeNumber(childRawInode);
-      maxChildInodeNumber =
-          std::max(maxChildInodeNumber, childInodeNumber.get());
-      auto childInfo = getInodeInfo(childInodeNumber);
-      if (!childInfo) {
-        auto id = child.hash();
-        if (!id.has_value() || id->empty()) {
-          parentErrors.push_back(
-              make_error<MissingMaterializedInode>(
-                  parentInodeNumber, childName, child));
-        }
-      } else {
-        parentRelationships.emplace_back(childInfo, *child.mode());
-      }
-    };
+  XLOGF(
+      INFO,
+      "fsck:{}: loading inode relationships with {} workers",
+      impl_->fcs->getLocalDir(),
+      numErrorDiscoveryThreads_);
 
-    std::optional<InodeInfo> loadedInfo;
-    bool parsedAllEntries = false;
-    try {
-      if (impl_->scanIncludedWalChildren &&
-          impl_->walBackedDirs.contains(parentInodeNumber)) {
-        auto dirData = impl_->inodeCatalog->loadOverlayDir(parentInodeNumber);
-        if (!dirData.has_value()) {
-          dirData.emplace();
-        }
-        impl_->fcs->replayWal(
-            parentInodeNumber, *dirData, impl_->caseSensitive);
-        forEachEntryInDir(
-            *dirData, [&](const std::string& childName, const auto& child) {
-              processEntry(childName, child);
-            });
-        loadedInfo.emplace(parentInodeNumber, InodeType::Dir);
-      } else {
-        auto loadEntries = [&](size_t,
-                               InodeCatalog::OverlayEntryIterator iterate) {
-          iterate([&](const std::string& childName, const auto& child) {
-            processEntry(childName, child);
-          });
-        };
-        loadedInfo = parentInfo.type == InodeType::Unknown
-            ? impl_->fcs->loadInodeInfoAndEntries(
-                  parentInodeNumber, loadEntries)
-            : impl_->inodeCatalog->loadInodeInfoAndEntries(
-                  parentInodeNumber, loadEntries);
-        if (!loadedInfo) {
-          loadedInfo.emplace(
-              parentInodeNumber,
-              InodeType::Error,
-              fmt::format("unable to load inode {}", parentInodeNumber.get()));
-        }
-      }
-      parsedAllEntries = true;
-    } catch (const std::exception& ex) {
-      loadedInfo.emplace(
-          parentInodeNumber,
-          InodeType::Error,
-          fmt::format("error loading inode: {}", folly::exceptionStr(ex)));
-    }
-
-    parentInfo.type = loadedInfo->type;
-    parentInfo.errorMsg = std::move(loadedInfo->errorMsg);
-    if (parentInfo.type == InodeType::Error) {
-      addError<InodeDataError>(
-          parentInodeNumber, getInodeErrorMessage(parentInfo));
-    }
-
-    if (!parsedAllEntries) {
-      // Discard an incomplete directory's results. Applying only its parsed
-      // prefix could hide children orphaned when repair replaces the parent.
-      continue;
-    }
-    for (const auto& [childInfo, mode] : parentRelationships) {
-      childInfo->addParent(parentInodeNumber, mode);
-    }
-    for (auto& error : parentErrors) {
-      addError(std::move(error));
-    }
-    updateMaxInodeNumber(InodeNumber(maxChildInodeNumber));
+  std::array<std::vector<InodeInfo*>, FsFileContentStore::kNumShards>
+      inodesByShard;
+  for (auto& [inodeNumber, inodeInfo] : impl_->inodes) {
+    auto shardID = inodeNumber.get() & 0xff;
+    inodesByShard[shardID].push_back(&inodeInfo);
   }
+  folly::Synchronized<std::vector<std::unique_ptr<Error>>> errors;
+  constexpr size_t kInodeLockCount = 256;
+  std::array<std::mutex, kInodeLockCount> inodeLocks;
+  const auto scannedMaxInodeNumber = maxInodeNumber_;
+  std::atomic<uint64_t> maxReferencedInodeNumber{scannedMaxInodeNumber};
+  // Loading never changes the map itself. Const lookup is safe across workers;
+  // each mutable value is protected by its inode stripe.
+  const auto& inodes = std::as_const(impl_->inodes);
+
+  auto updateMaxReferencedInodeNumber = [&](uint64_t candidate) {
+    auto current = maxReferencedInodeNumber.load(std::memory_order_relaxed);
+    while (current < candidate &&
+           !maxReferencedInodeNumber.compare_exchange_weak(
+               current, candidate, std::memory_order_relaxed)) {
+    }
+  };
+
+  seq(0u, FsFileContentStore::kNumShards - 1) |
+      pmap(
+          [&](uint32_t shardID) {
+            for (auto* parentInfoPtr : inodesByShard[shardID]) {
+              auto& parentInfo = *parentInfoPtr;
+              auto parentInodeNumber = parentInfo.number;
+              std::vector<std::pair<InodeInfo*, mode_t>> parentRelationships;
+              std::vector<std::unique_ptr<Error>> parentErrors;
+              auto maxChildInodeNumber = scannedMaxInodeNumber;
+              auto processEntry = [&](const std::string& childName,
+                                      const overlay::OverlayEntry& child) {
+                auto childRawInode = *child.inodeNumber();
+                if (childRawInode == 0) {
+                  return;
+                }
+
+                auto childInodeNumber = InodeNumber(childRawInode);
+                maxChildInodeNumber =
+                    std::max(maxChildInodeNumber, childInodeNumber.get());
+                auto childIter = inodes.find(childInodeNumber);
+                if (childIter != inodes.end()) {
+                  parentRelationships.emplace_back(
+                      &const_cast<InodeInfo&>(childIter->second),
+                      *child.mode());
+                  return;
+                }
+
+                auto id = child.hash();
+                if (!id.has_value() || id->empty()) {
+                  parentErrors.push_back(
+                      make_error<MissingMaterializedInode>(
+                          parentInodeNumber, childName, child));
+                }
+              };
+
+              std::optional<InodeInfo> loadedInfo;
+              bool parsedAllEntries = false;
+              try {
+                if (impl_->scanIncludedWalChildren &&
+                    impl_->walBackedDirs.contains(parentInodeNumber)) {
+                  auto dirData =
+                      impl_->inodeCatalog->loadOverlayDir(parentInodeNumber);
+                  if (!dirData.has_value()) {
+                    dirData.emplace();
+                  }
+                  impl_->fcs->replayWal(
+                      parentInodeNumber, *dirData, impl_->caseSensitive);
+                  forEachEntryInDir(
+                      *dirData,
+                      [&](const std::string& childName, const auto& child) {
+                        processEntry(childName, child);
+                      });
+                  loadedInfo.emplace(parentInodeNumber, InodeType::Dir);
+                } else {
+                  auto loadEntries =
+                      [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
+                        iterate([&](const std::string& childName,
+                                    const auto& child) {
+                          processEntry(childName, child);
+                        });
+                      };
+                  loadedInfo = parentInfo.type == InodeType::Unknown
+                      ? impl_->fcs->loadInodeInfoAndEntries(
+                            parentInodeNumber, loadEntries)
+                      : impl_->inodeCatalog->loadInodeInfoAndEntries(
+                            parentInodeNumber, loadEntries);
+                  if (!loadedInfo) {
+                    loadedInfo.emplace(
+                        parentInodeNumber,
+                        InodeType::Error,
+                        fmt::format(
+                            "unable to load inode {}",
+                            parentInodeNumber.get()));
+                  }
+                }
+                parsedAllEntries = true;
+              } catch (const std::exception& ex) {
+                loadedInfo.emplace(
+                    parentInodeNumber,
+                    InodeType::Error,
+                    fmt::format(
+                        "error loading inode: {}", folly::exceptionStr(ex)));
+              }
+
+              std::unique_ptr<Error> inodeError;
+              if (loadedInfo->type == InodeType::Error) {
+                inodeError = make_error<InodeDataError>(
+                    parentInodeNumber, getInodeErrorMessage(*loadedInfo));
+              }
+              {
+                auto& inodeLock =
+                    inodeLocks[parentInodeNumber.get() % kInodeLockCount];
+                std::lock_guard lock{inodeLock};
+                parentInfo.type = loadedInfo->type;
+                parentInfo.errorMsg = std::move(loadedInfo->errorMsg);
+              }
+              if (inodeError) {
+                errors.wlock()->push_back(std::move(inodeError));
+              }
+
+              if (!parsedAllEntries) {
+                // Applying a partially parsed directory could hide children
+                // orphaned by parent repair.
+                continue;
+              }
+              for (const auto& [childInfo, mode] : parentRelationships) {
+                auto& inodeLock =
+                    inodeLocks[childInfo->number.get() % kInodeLockCount];
+                std::lock_guard lock{inodeLock};
+                childInfo->addParent(parentInodeNumber, mode);
+              }
+              if (!parentErrors.empty()) {
+                auto errorsLock = errors.wlock();
+                for (auto& error : parentErrors) {
+                  errorsLock->push_back(std::move(error));
+                }
+              }
+              if (maxChildInodeNumber > scannedMaxInodeNumber) {
+                updateMaxReferencedInodeNumber(maxChildInodeNumber);
+              }
+            }
+            return true;
+          },
+          numErrorDiscoveryThreads_) |
+      count;
+
+  maxInodeNumber_ = maxReferencedInodeNumber.load(std::memory_order_relaxed);
+
+  auto errorsLock = errors.wlock();
+  while (!errorsLock->empty()) {
+    addError(std::move(errorsLock->back()));
+    errorsLock->pop_back();
+  }
+
+  XLOGF(
+      INFO,
+      "fsck:{}: finished loading inode relationships",
+      impl_->fcs->getLocalDir());
 }
 
 void OverlayChecker::scanForParentErrors() {

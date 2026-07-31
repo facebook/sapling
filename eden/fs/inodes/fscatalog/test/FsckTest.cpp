@@ -370,6 +370,28 @@ class FsckTest : public ::testing::TestWithParam<InodeCatalogType> {
   }
 };
 
+TEST(InodeInfoTest, addParentIsDeterministic) {
+  fsck::InodeInfo info{InodeNumber{42}, fsck::InodeType::File};
+  fsck::InodeInfo reverseInfo{InodeNumber{42}, fsck::InodeType::File};
+
+  info.addParent(InodeNumber{30}, S_IFREG | 0755);
+  info.addParent(InodeNumber{10}, S_IFREG | 0644);
+  info.addParent(InodeNumber{20}, S_IFREG | 0700);
+  info.addParent(InodeNumber{10}, S_IFREG | 0600);
+  reverseInfo.addParent(InodeNumber{10}, S_IFREG | 0600);
+  reverseInfo.addParent(InodeNumber{20}, S_IFREG | 0700);
+  reverseInfo.addParent(InodeNumber{10}, S_IFREG | 0644);
+  reverseInfo.addParent(InodeNumber{30}, S_IFREG | 0755);
+
+  EXPECT_THAT(
+      info.parents,
+      ::testing::ElementsAre(
+          InodeNumber{10}, InodeNumber{10}, InodeNumber{20}, InodeNumber{30}));
+  EXPECT_EQ(S_IFREG | 0600, info.modeFromParent);
+  EXPECT_EQ(info.parents, reverseInfo.parents);
+  EXPECT_EQ(info.modeFromParent, reverseInfo.modeFromParent);
+}
+
 TEST_P(FsckTest, testNoErrors) {
   auto testOverlay = make_shared<TestOverlay>(overlayType());
   auto root = testOverlay->init();

@@ -234,6 +234,9 @@ class FsFileContentStore : public FileContentStore {
    *
    * Used by cold paths (recursive remove, GC, fsck). The hot direct-
    * serialization load path uses loadWalDelta directly.
+   *
+   * This method supports concurrent calls when each call receives a distinct
+   * OverlayDir. Callers must separately synchronize concurrent WAL mutations.
    */
   LoadWalResult replayWal(
       InodeNumber parent,

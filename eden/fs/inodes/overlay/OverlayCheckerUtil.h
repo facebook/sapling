@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 
@@ -42,8 +43,14 @@ struct InodeInfo {
         children(std::make_unique<overlay::OverlayDir>(std::move(c))) {}
 
   void addParent(InodeNumber parent, mode_t mode) {
-    parents.push_back(parent);
-    modeFromParent = mode;
+    // Keep path and replacement-mode selection independent of scan scheduling.
+    const bool useMode = parents.empty() || parent < parents.front() ||
+        (parent == parents.front() && mode < modeFromParent);
+    parents.insert(
+        std::upper_bound(parents.begin(), parents.end(), parent), parent);
+    if (useMode) {
+      modeFromParent = mode;
+    }
   }
 
   InodeNumber number;
