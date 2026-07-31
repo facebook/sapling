@@ -103,7 +103,7 @@ pub struct RevNotFound(pub u32);
 
 impl fmt::Display for CommitNotFound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "00changelog.i@{:.8?}: not found", &self.0)
+        write!(f, "00changelog.i@{:.8?}: not found", self.0)
     }
 }
 
@@ -111,7 +111,7 @@ impl std::error::Error for CommitNotFound {}
 
 impl fmt::Display for RevNotFound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "00changelog.i: rev {:.8?} not found", &self.0)
+        write!(f, "00changelog.i: rev {:.8?} not found", self.0)
     }
 }
 

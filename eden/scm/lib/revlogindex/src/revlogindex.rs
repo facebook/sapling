@@ -536,7 +536,7 @@ impl RevlogIndex {
             data_handler: Default::default(),
             index_path: changelogi_path.to_path_buf(),
             nodemap_path: nodemap_path.to_path_buf(),
-            id: format!("rlog:{}", &nodemap_path.display()),
+            id: format!("rlog:{}", nodemap_path.display()),
             version: VerLink::new(),
         };
         Ok(result)
@@ -874,7 +874,7 @@ impl RevlogIndex {
                 p1: i32::to_be(parent_revs[0]),
                 p2: i32::to_be(parent_revs[1]),
                 node: <[u8; 20]>::try_from(node.as_ref()).map_err(|_| {
-                    crate::Error::Unsupported(format!("node is not 20-char long: {:?}", &node))
+                    crate::Error::Unsupported(format!("node is not 20-char long: {:?}", node))
                 })?,
                 _padding: [0u8; 12],
             };
@@ -1888,7 +1888,7 @@ impl RevlogIndex {
                     if parent_revs.len() > 2 {
                         return Err(Error::Unsupported(format!(
                             "revlog does not support > 2 parents (when inserting {:?})",
-                            &head
+                            head
                         ))
                         .into());
                     }

@@ -210,7 +210,7 @@ impl CommitFields for GitCommitLazyFields {
                 return Ok(id);
             }
         }
-        bail!("invalid git commit format: {}", &self.text);
+        bail!("invalid git commit format: {}", self.text);
     }
 
     fn author_name(&self) -> Result<&str> {

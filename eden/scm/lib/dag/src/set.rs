@@ -964,7 +964,7 @@ pub(crate) mod tests {
                 "set {:?} ({:?}) != {:?} ({:?})",
                 self,
                 self.iter().unwrap().map(|i| i.unwrap()).collect::<Vec<_>>(),
-                &other,
+                other,
                 other
                     .iter()
                     .unwrap()
@@ -1094,7 +1094,7 @@ pub(crate) mod tests {
             "<diff <or <static [0202]> <static [0101]>> <and <static [0303]> <static [0202, 0303]>>>"
         );
         assert_eq!(
-            format!("\n{:#?}", &set),
+            format!("\n{:#?}", set),
             r#"
 <diff
   <or
@@ -1401,26 +1401,26 @@ pub(crate) mod tests {
             first,
             names.first().cloned(),
             "first() should match iter().first() (set: {:?})",
-            &query
+            query
         );
         assert_eq!(
             last,
             names.last().cloned(),
             "last() should match iter().last() (set: {:?})",
-            &query
+            query
         );
         assert_eq!(
             count,
             names.len() as u64,
             "count() should match iter().count() (set: {:?})",
-            &query
+            query
         );
         assert!(
             size_hint_min <= count,
             "size_hint().0 ({}) must <= count ({}) (set: {:?})",
             size_hint_min,
             count,
-            &query
+            query
         );
         if let Some(size_hint_max) = size_hint_max {
             assert!(
@@ -1428,28 +1428,28 @@ pub(crate) mod tests {
                 "size_hint().1 ({}) must >= count ({}) (set: {:?})",
                 size_hint_max,
                 count,
-                &query
+                query
             );
         }
         assert_eq!(
             is_empty,
             count == 0,
             "is_empty() should match count() == 0 (set: {:?})",
-            &query
+            query
         );
         assert!(
             names
                 .iter()
                 .all(|name| nb(query.contains(name)).ok() == Some(true)),
             "contains() should return true for names returned by iter() (set: {:?})",
-            &query
+            query
         );
         assert!(
             names
                 .iter()
                 .all(|name| nb(query.contains_fast(name)).unwrap_or(None) != Some(false)),
             "contains_fast() should not return false for names returned by iter() (set: {:?})",
-            &query
+            query
         );
         assert!(
             (0..=0xff).all(|b| {
@@ -1457,7 +1457,7 @@ pub(crate) mod tests {
                 nb(query.contains(&name)).ok() == Some(names.contains(&name))
             }),
             "contains() should return false for names not returned by iter() (set: {:?})",
-            &query
+            query
         );
         assert!(
             (0..=0xff)
@@ -1468,7 +1468,7 @@ pub(crate) mod tests {
                     old_contains.is_none() || contains == old_contains
                 }),
             "contains_fast() should be consistent (set: {:?})",
-            &query
+            query
         );
         assert!(
             (0..=0xff).all(|b| {
@@ -1477,7 +1477,7 @@ pub(crate) mod tests {
                 contains.is_none() || contains == Some(names.contains(&name))
             }),
             "contains_fast() should not return true for names not returned by iter() (set: {:?})",
-            &query
+            query
         );
         if let Some(flatten_id) = query.specialized_flatten_id() {
             let iter = r(AsyncSetQuery::iter(&*flatten_id))?;
@@ -1488,7 +1488,7 @@ pub(crate) mod tests {
             assert_eq!(
                 &sorted_names, &flatten_names,
                 "specialized_flatten_id() should return a same set, order could be different (set: {:?})",
-                &query
+                query
             );
         }
         let reversed: Vec<Vertex> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
@@ -1501,7 +1501,7 @@ pub(crate) mod tests {
             names,
             reversed.into_iter().rev().collect::<Vec<Vertex>>(),
             "iter() should match iter_rev().rev() (set: {:?})",
-            &query
+            query
         );
         Ok(())
     }
@@ -1558,7 +1558,7 @@ pub(crate) mod tests {
                         assert_eq!(
                             actual_names, expected_names,
                             "check_skip_take_reverse {:?} failed at reverse={reverse} skip={skip} take={take}",
-                            &set
+                            set
                         );
                     }
                 }

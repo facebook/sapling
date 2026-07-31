@@ -224,7 +224,7 @@ impl MultiLog {
             let msg = format!(
                 "Invalid lock used to write_meta (Lock path = {:?}, MultiLog path = {:?})",
                 lock.0.path(),
-                &self.path
+                self.path
             );
             return Err(crate::Error::programming(msg));
         }

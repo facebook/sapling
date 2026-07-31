@@ -43,7 +43,7 @@ fn child_main() {
     println!("Child: got message {message:?}");
 
     let payload = ipc.recv_fd_vec().unwrap();
-    println!("Child: got sendfd payload {:?}", &payload);
+    println!("Child: got sendfd payload {:?}", payload);
 
     for fd in payload.raw_fds {
         #[cfg(windows)]

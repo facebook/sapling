@@ -164,7 +164,7 @@ where
             };
 
             let mut msg = RepairMessage::new(path);
-            msg += &format!("Corruption detected: {:?}.\n", &e);
+            msg += &format!("Corruption detected: {:?}.\n", e);
 
             let lock = match ScopedDirLock::new_with_options(path, &CHECK_READER_LOCK_OPTS) {
                 Ok(lock) => lock,

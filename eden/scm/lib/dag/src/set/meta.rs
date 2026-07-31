@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(dbg(&set), "<meta ?>");
         r(set.evaluate()).unwrap();
         assert_eq!(
-            format!("{:5?}", &set),
+            format!("{:5?}", set),
             "<meta <static [31, 33, 32, 37, 35]>>"
         );
     }

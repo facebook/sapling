@@ -65,7 +65,7 @@ where
                 let seg = seg?;
                 let span = seg.span()?;
                 let mut add_problem =
-                    |msg| problems.push(format!("Level {} segment {:?} {}", level, &seg, msg));
+                    |msg| problems.push(format!("Level {} segment {:?} {}", level, seg, msg));
 
                 // Spans need to be sorted and non-overlapping within a group.
                 if span.low.group() > expected_low.group() {
@@ -137,10 +137,7 @@ where
                         let seg = seg?;
                         let subspan = seg.span()?;
                         if subspan.high > span.high && subspan.low <= span.high {
-                            add_problem(format!(
-                                "does not align with low-level segment {:?}",
-                                &seg
-                            ));
+                            add_problem(format!("does not align with low-level segment {:?}", seg));
                         }
                         if subspan.low > span.high {
                             break;
@@ -227,7 +224,7 @@ where
             let mut add_problem = |msg| {
                 problems.push(format!(
                     "range {:?}::{:?} with parents {:?}: {}",
-                    &root, &head, &parents, msg
+                    root, head, parents, msg
                 ));
             };
             tracing::trace!("checking range {:?}::{:?}", &root, &head);
@@ -260,7 +257,7 @@ where
                 Err(e) => {
                     add_problem(format!(
                         "cannot get parents of {:?} on the other graph: {:?}",
-                        &root, e
+                        root, e
                     ));
                     continue;
                 }
@@ -268,7 +265,7 @@ where
             if other_parents != parents {
                 add_problem(format!(
                     "parents mismatch: {:?} != {:?}",
-                    &parents, other_parents
+                    parents, other_parents
                 ));
             }
 

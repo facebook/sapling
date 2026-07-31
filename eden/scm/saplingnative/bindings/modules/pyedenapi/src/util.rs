@@ -100,7 +100,7 @@ pub fn as_deltastore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutabl
 
 pub fn meta_to_dict(py: Python, meta: &ResponseMeta) -> PyResult<PyDict> {
     let dict = PyDict::new(py);
-    dict.set_item(py, "version", format!("{:?}", &meta.version))?;
+    dict.set_item(py, "version", format!("{:?}", meta.version))?;
     dict.set_item(py, "status", meta.status.as_u16())?;
     dict.set_item(py, "server", &meta.server)?;
     dict.set_item(py, "request_id", &meta.request_id)?;

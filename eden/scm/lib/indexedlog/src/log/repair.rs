@@ -45,7 +45,7 @@ impl OpenOptions {
         let dir = dir.into();
         let dir = match dir.as_opt_path() {
             Some(dir) => dir,
-            None => return Ok(format!("{:?} is not on disk. Nothing to repair.\n", &dir)),
+            None => return Ok(format!("{:?} is not on disk. Nothing to repair.\n", dir)),
         };
 
         let result: crate::Result<_> = (|| {

@@ -201,7 +201,7 @@ impl MutationStore {
                 let op = if copy_entry.op.ends_with("-copy") {
                     copy_entry.op.clone()
                 } else {
-                    format!("{}-copy", &copy_entry.op)
+                    format!("{}-copy", copy_entry.op)
                 };
                 // The new entry will be the one returned by `get(y)`.
                 // It overrides the "x -> y" entry.
@@ -718,7 +718,7 @@ mod tests {
 
         // The set evaluated.
         // (0x42 == b'B', 0x58 == b'X')
-        assert_eq!(format!("{:.2?}", &obsolete), "<static [42, 58]>");
+        assert_eq!(format!("{:.2?}", obsolete), "<static [42, 58]>");
 
         // E does not have a successor.
         assert!(!r(obsolete.contains(&v("E")))?);

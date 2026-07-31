@@ -576,7 +576,7 @@ impl Client {
             Err(_e) => return,
         };
         let timestamp = chrono::Local::now().format("%y%m%d_%H%M%S_%f");
-        let name = format!("{}_{}.log", &timestamp, label);
+        let name = format!("{}_{}.log", timestamp, label);
         let path = log_dir.join(name);
 
         let _ = async_runtime::spawn_blocking(move || {
@@ -1624,7 +1624,7 @@ impl SaplingRemoteApi for Client {
             let bookmarks = bookmarks_wire.bookmarks;
             let message = format!(
                 "Requested bookmarks {:?} but only got {:?}.",
-                bookmarks, &response
+                bookmarks, response
             );
             return Err(SaplingRemoteApiError::IncompleteResponse(message));
         }

@@ -48,7 +48,7 @@ fn split_path(path: &Path) -> Option<(&Path, &Path)> {
                 Some((Path::new(s), rest))
             }
         } else {
-            panic!("ProgrammingError: unexpected path component {:?}", &c);
+            panic!("ProgrammingError: unexpected path component {:?}", c);
         }
     })
 }

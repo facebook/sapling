@@ -353,7 +353,7 @@ impl Zstore {
     }
 
     fn error(&self, message: impl fmt::Display) -> crate::Error {
-        crate::Error(format!("{:?}: {}", &self.dir, message))
+        crate::Error(format!("{:?}: {}", self.dir, message))
     }
 }
 

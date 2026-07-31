@@ -285,7 +285,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
-                &self.pending_heads.vertexes(),
+                self.pending_heads.vertexes(),
             ));
         }
         tracing::debug!(target: "dag::add_heads_and_flush", lifecycle_id=?self.lifecycle_id, ?heads);
@@ -647,7 +647,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "strip does not support pending heads ({:?})",
-                &self.pending_heads.vertexes(),
+                self.pending_heads.vertexes(),
             ));
         }
         tracing::debug!(target: "dag::strip", lifecycle_id=?self.lifecycle_id, ?set);
@@ -680,7 +680,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "strip does not support pending heads ({:?})",
-                &self.pending_heads.vertexes(),
+                self.pending_heads.vertexes(),
             ));
         }
 
@@ -842,7 +842,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "import_pull_data called with pending heads ({:?})",
-                &self.pending_heads.vertexes(),
+                self.pending_heads.vertexes(),
             ));
         }
         if let Some(group) = heads.max_desired_group() {
@@ -1097,7 +1097,7 @@ where
                         // above.
                         let e = NeedSlowPath(format!(
                             "{:?} exists in local graph as {:?} - fast path requires MASTER group",
-                            &high_vertex, id
+                            high_vertex, id
                         ));
                         return Err(e);
                     }
@@ -1124,7 +1124,7 @@ where
                             Ok(id) if id.group() != Group::MASTER => {
                                 return Err(NeedSlowPath(format!(
                                     "{:?} exists id in local graph as {:?} - fast path requires MASTER group",
-                                    &parent_names, id
+                                    parent_names, id
                                 )));
                             }
                             Ok(id) => {

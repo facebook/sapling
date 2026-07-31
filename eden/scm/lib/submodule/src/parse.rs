@@ -78,7 +78,7 @@ pub fn parse_gitmodules(
                     Some(v) => v,
                     None => match self.config {
                         Some(config) => {
-                            match config.get_opt("submodule", &format!("active-{}", &taken.name)) {
+                            match config.get_opt("submodule", &format!("active-{}", taken.name)) {
                                 Ok(Some(v)) => v,
                                 _ => self.default_active(),
                             }

@@ -275,7 +275,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 if last_high >= seg.low {
                     return bug(format!(
                         "PreparedFlatSegments are not sorted: {:?}",
-                        &outcome.segments
+                        outcome.segments
                     ));
                 }
             }
@@ -427,7 +427,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                                 return bug(format!(
                                     "invalid lv{} segment: {:?} (parent >= low)",
                                     level - 1,
-                                    &segments[i]
+                                    segments[i]
                                 ));
                             }
                             if *p < segment_low {
@@ -618,7 +618,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         if set.count() > 2 {
             // Try to (greatly) reduce the size of the `set` to make calculation cheaper.
             set = self.heads_ancestors(set)?;
-            trace(&|| format!("simplified to {:?}", &set));
+            trace(&|| format!("simplified to {:?}", set));
         }
         let mut result = IdSet::empty();
         let mut to_visit: BinaryHeap<_> = set.iter_desc().collect();
@@ -642,10 +642,10 @@ pub trait IdDagAlgorithm: IdDagStore {
                 let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
                     let span = seg.span()?;
-                    trace(&|| format!(" push lv{} {:?}", level, &span));
+                    trace(&|| format!(" push lv{} {:?}", level, span));
                     result.push_span(span);
                     let parents = seg.parents()?;
-                    trace(&|| format!(" follow parents {:?}", &parents));
+                    trace(&|| format!(" follow parents {:?}", parents));
                     for parent in parents {
                         to_visit.push(parent);
                     }
@@ -654,10 +654,10 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
             if let Some(seg) = flat_seg {
                 let span = (seg.span()?.low..=id).into();
-                trace(&|| format!(" push lv0 {:?}", &span));
+                trace(&|| format!(" push lv0 {:?}", span));
                 result.push_span(span);
                 let parents = seg.parents()?;
-                trace(&|| format!(" follow parents {:?}", &parents));
+                trace(&|| format!(" follow parents {:?}", parents));
                 for parent in parents {
                     to_visit.push(parent);
                 }
@@ -670,7 +670,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
         }
 
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
 
         Ok(result)
     }
@@ -689,7 +689,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 // If `id` is in `result`, then `ancestors(id)` are all in `result`.
                 continue;
             }
-            trace(&|| format!(" visit {:?}", &id));
+            trace(&|| format!(" visit {:?}", id));
             let flat_seg = self.find_flat_segment_including_id(id)?;
             if let Some(ref seg) = flat_seg {
                 let span = seg.span()?;
@@ -700,7 +700,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 }
             }
         }
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
         Ok(result)
     }
 
@@ -720,7 +720,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         // Return the next "high" id for segment lookup.
         // Return None if there is no segment to check for the given span.
         let mut process_seg = |span: &IdSpan, seg: Segment| -> Result<Option<Id>> {
-            trace(&|| format!(" process {:?} seg {:?}", &span, &seg));
+            trace(&|| format!(" process {:?} seg {:?}", span, seg));
             let seg_span = seg.span()?;
             let low = seg_span.low;
             if low < span.low {
@@ -729,7 +729,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             if seg.parent_count()? >= 2 {
                 // span.low <= low <= high <= span.high
                 debug_assert!(set.contains(low));
-                trace(&|| format!(" push merge {:?}", &low));
+                trace(&|| format!(" push merge {:?}", low));
                 result.push_span(low.into());
             }
             if seg_span.low > Id(0) {
@@ -761,7 +761,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
         }
 
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
 
         Ok(result)
     }
@@ -792,7 +792,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                         parent_set.push_set(&IdSet::from_spans(seg.parents()?));
                         set = set.difference(&seg_set);
                         result = result.union(&parent_set);
-                        trace(&|| format!(" push lv{} {:?}", level, &parent_set));
+                        trace(&|| format!(" push lv{} {:?}", level, parent_set));
                         continue 'outer;
                     }
                 }
@@ -824,11 +824,11 @@ pub trait IdDagAlgorithm: IdDagStore {
             };
 
             set = set.difference(&seg_set);
-            trace(&|| format!(" push lv0 {:?}", &parent_set));
+            trace(&|| format!(" push lv0 {:?}", parent_set));
             result = result.union(&parent_set);
         }
 
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
 
         Ok(result)
     }
@@ -853,7 +853,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         match self.try_first_ancestor_nth(id, n)? {
             None => Err(Programming(format!(
                 "{}~{} cannot be resolved - no parents",
-                &id, n
+                id, n
             ))),
             Some(id) => Ok(id),
         }
@@ -968,7 +968,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 .ok_or_else(|| id.not_found_error())?;
             let span = seg.span()?;
             let head = span.high;
-            trace(&|| format!(" in seg {:?}", &seg));
+            trace(&|| format!(" in seg {:?}", seg));
             // Can we use an `id` from `heads` as `x`?
             let intersected = heads.intersection(&(id..=head).into());
             if !intersected.is_empty() {
@@ -992,7 +992,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             let parent_span = span.low.max(id)..=span.high;
             for entry in self.iter_flat_segments_with_parent_span(parent_span.into())? {
                 let (parent_id, child_seg) = entry?;
-                trace(&|| format!("  {:?} has child seg ({:?})", parent_id, &child_seg));
+                trace(&|| format!("  {:?} has child seg ({:?})", parent_id, child_seg));
                 let child_low = child_seg.low()?;
                 if !ancestors.contains(child_low) {
                     // `child_low` is outside `ancestors(heads)`, cannot use it
@@ -1016,7 +1016,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                         None => {
                             return bug(format!(
                                 "segment {:?} should have parent {:?}",
-                                &child_seg, &parent_id
+                                child_seg, parent_id
                             ));
                         }
                         Some(p) => {
@@ -1025,7 +1025,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                                 trace(&|| {
                                     format!(
                                         "   child seg cannot be followed ({:?} is not p1)",
-                                        &parent_id
+                                        parent_id
                                     )
                                 });
                                 continue;
@@ -1095,7 +1095,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
         }
         let result = IdSet::from_sorted_spans(result.into_iter().rev());
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
         Ok(result)
     }
 
@@ -1151,13 +1151,13 @@ pub trait IdDagAlgorithm: IdDagStore {
             mut range: IdSpan,
             level: Level,
         ) -> Result<()> {
-            trace(&|| format!("visit range {:?} lv{}", &range, level));
+            trace(&|| format!("visit range {:?} lv{}", range, level));
             let mut visited = false;
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
                 visited = true;
-                trace(&|| format!(" seg {:?}", &seg));
+                trace(&|| format!(" seg {:?}", seg));
                 // `range` is all valid. If a high-level segment misses it, try
                 // a lower level one.
                 if span.high < range.high {
@@ -1168,7 +1168,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     let missing_range = IdSpan::from(low_id..=range.high);
                     if level > 0 {
                         trace(&|| {
-                            format!("  visit missing range at lower level: {:?}", &missing_range)
+                            format!("  visit missing range at lower level: {:?}", missing_range)
                         });
                         visit_segments(ctx, missing_range, level - 1)?;
                     } else {
@@ -1208,7 +1208,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     if overlapped_parents == parents.len()
                         && intersection.count() + 1 == span.count()
                     {
-                        trace(&|| format!(" push lv{} {:?} (rootless fast path)", level, &span));
+                        trace(&|| format!(" push lv{} {:?} (rootless fast path)", level, span));
                         ctx.result.push_span(span);
                         continue;
                     }
@@ -1227,7 +1227,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                                 .iter()
                                 .map(|s| s.low + 1..=s.high + 1),
                         );
-                        trace(&|| format!(" push {:?} (flat segment range)", &seg_children));
+                        trace(&|| format!(" push {:?} (flat segment range)", seg_children));
                         ctx.result.push_set(&seg_children);
                     }
                 }
@@ -1238,7 +1238,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     } else {
                         // child(any parent) = lowest id in this flat segment.
                         trace(&|| {
-                            format!(" push {:?} (overlapped parents of flat segment)", &span.low)
+                            format!(" push {:?} (overlapped parents of flat segment)", span.low)
                         });
                         ctx.result.push_span(span.low.into());
                     }
@@ -1269,7 +1269,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             visit_segments(&mut ctx, *span, max_level)?;
         }
 
-        trace(&|| format!(" result: {:?}", &ctx.result));
+        trace(&|| format!(" result: {:?}", ctx.result));
 
         Ok(ctx.result)
     }
@@ -1377,7 +1377,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         if min_head_id < min_root_id {
             let span = min_root_id..=Id::MAX;
             heads = heads.intersection(&span.into());
-            trace(&|| format!(" removed unreachable heads: {:?}", &heads));
+            trace(&|| format!(" removed unreachable heads: {:?}", heads));
         }
 
         let ancestors_of_heads = self.ancestors(heads)?;
@@ -1389,7 +1389,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             assert_eq!(result.as_spans(), intersection.as_spans());
         }
 
-        trace(&|| format!(" result: {:?}", &result));
+        trace(&|| format!(" result: {:?}", result));
         Ok(result)
     }
 
@@ -1447,7 +1447,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             if span.low > master_max_id {
                 break;
             }
-            trace(&|| format!(" visit {:?}", &seg));
+            trace(&|| format!(" visit {:?}", seg));
             let parents = seg.parents()?;
             let low = if !parents.is_empty()
                 && parents
@@ -1471,7 +1471,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 break;
             }
             let result_span = IdSpan::from(low..=span.high);
-            trace(&|| format!("  push {:?}", &result_span));
+            trace(&|| format!("  push {:?}", result_span));
             result.push_span_asc(result_span);
         }
 
@@ -1495,14 +1495,14 @@ pub trait IdDagAlgorithm: IdDagStore {
                 None => break,
             };
             let seg_span = seg.span()?;
-            trace(&|| format!(" visit {:?} => {:?}", &next_span, &seg));
+            trace(&|| format!(" visit {:?} => {:?}", next_span, seg));
             // The overlap part of the flat segment and the span from 'ancestors'.
             let mut overlap_span =
                 IdSpan::from(seg_span.low.max(next_span.low)..=seg_span.high.min(next_span.high));
             if roots.contains(overlap_span.low) {
                 // Descendants includes 'overlap_span' since 'low' is in 'roots'.
                 // (no need to check 'result' - it does not include anything in 'overlap')
-                trace(&|| format!("  push {:?} (root contains low)", &overlap_span));
+                trace(&|| format!("  push {:?} (root contains low)", overlap_span));
                 result.push_span_asc(overlap_span);
             } else if next_span.low == seg_span.low {
                 let parents = seg.parents()?;
@@ -1512,7 +1512,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                         .any(|p| result.contains(p) || roots.contains(p))
                 {
                     // Descendants includes 'overlap_span' since parents are in roots or result.
-                    trace(&|| format!("  push {:?} (root contains parent)", &overlap_span));
+                    trace(&|| format!("  push {:?} (root contains parent)", overlap_span));
                     result.push_span_asc(overlap_span);
                 } else if overlap_span.low <= max_root && overlap_span.high >= min_root {
                     // If 'overlap_span' overlaps with roots, part of it should be in
@@ -1526,7 +1526,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     let roots_intersection = roots.intersection(&overlap_span.into());
                     if let Some(id) = roots_intersection.min() {
                         overlap_span.low = id;
-                        trace(&|| format!("  push {:?} (root in span)", &overlap_span));
+                        trace(&|| format!("  push {:?} (root in span)", overlap_span));
                         result.push_span_asc(overlap_span);
                     }
                 }
@@ -1547,7 +1547,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 );
                 let p = next_span.low - 1;
                 if result.contains(p) || roots.contains(p) {
-                    trace(&|| format!("  push {:?} ({:?} was included)", &overlap_span, p));
+                    trace(&|| format!("  push {:?} ({:?} was included)", overlap_span, p));
                     result.push_span_asc(overlap_span);
                 }
             }
@@ -1556,7 +1556,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 .or_else(|| span_iter.next());
         }
 
-        trace(&|| format!(" intersect with {:?}", &ancestors));
+        trace(&|| format!(" intersect with {:?}", ancestors));
         result = result.intersection(ancestors);
 
         Ok(result)
@@ -1602,7 +1602,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         let max_level = max_level.min(self.max_level()?);
         let mut result = VecDeque::new();
         'next_span: for span in id_set.iter_span_desc() {
-            trace(&|| format!(" visiting span {:?}", &span));
+            trace(&|| format!(" visiting span {:?}", span));
             let mut span: IdSpan = *span;
 
             'current_span: loop {
@@ -1617,10 +1617,10 @@ pub trait IdDagAlgorithm: IdDagStore {
                     debug_assert_eq!(seg_span.high, span.high);
 
                     if seg_span.low < span.low {
-                        trace(&|| format!("  skip  lv {} seg {:?}", level, &seg));
+                        trace(&|| format!("  skip  lv {} seg {:?}", level, seg));
                         continue;
                     } else {
-                        trace(&|| format!("  found lv {} seg {:?}", level, &seg));
+                        trace(&|| format!("  found lv {} seg {:?}", level, seg));
                     }
 
                     let id_seg = IdSegment {
@@ -1647,7 +1647,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     None => return bug(format!("flat segments does not cover {span:?}")),
                     Some(seg) => seg,
                 };
-                trace(&|| format!("  found flat seg {:?}", &seg));
+                trace(&|| format!("  found flat seg {:?}", seg));
 
                 let seg_span = seg.span()?;
                 debug_assert!(seg_span.high >= span.high);
@@ -1855,7 +1855,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
 
         let set = self.descendants(set)?;
-        trace(&|| format!("descendants(set) = {:?}", &set));
+        trace(&|| format!("descendants(set) = {:?}", set));
 
         if set.is_empty() {
             return Ok(set);
@@ -1865,7 +1865,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut to_resize: Vec<(Segment, Option<Id>)> = Vec::new();
 
         for span in set.iter_span_desc() {
-            trace(&|| format!(" visiting span {:?}", &span));
+            trace(&|| format!(" visiting span {:?}", span));
 
             // span:   (low)    [------------] (high)
             // [seg]:       [-------][---][--]
@@ -1880,10 +1880,10 @@ impl<Store: IdDagStore> IdDag<Store> {
 
                 let new_high = if seg_span.low < span.low {
                     let new_high = span.low - 1;
-                    trace(&|| format!("  truncate flat seg {:?} at {}", &seg, new_high));
+                    trace(&|| format!("  truncate flat seg {:?} at {}", seg, new_high));
                     Some(new_high)
                 } else {
-                    trace(&|| format!("  remove flat seg {:?}", &seg));
+                    trace(&|| format!("  remove flat seg {:?}", seg));
                     None
                 };
                 // It's not possible to truncate a segment twice iterating different `span`s.

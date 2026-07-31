@@ -389,7 +389,7 @@ impl fmt::Debug for OpenOptions {
         write!(f, "max_bytes_per_log: {}, ", self.max_bytes_per_log)?;
         write!(f, "max_log_count: {}, ", self.max_log_count)?;
         write!(f, "auto_sync_threshold: {:?}, ", self.auto_sync_threshold)?;
-        write!(f, "log_open_options: {:?} }}", &self.log_open_options)?;
+        write!(f, "log_open_options: {:?} }}", self.log_open_options)?;
         Ok(())
     }
 }

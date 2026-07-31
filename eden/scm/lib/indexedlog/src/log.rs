@@ -923,7 +923,7 @@ impl Log {
                 if self.meta.primary_len != meta.primary_len || self.meta.epoch != meta.epoch {
                     return Err(crate::Error::programming(format!(
                         "race detected, callsite responsible for preventing races (old meta: {:?}, new meta: {:?})",
-                        &self.meta, &meta
+                        self.meta, meta
                     )));
                 }
                 self.meta = meta;
@@ -1092,7 +1092,7 @@ impl Log {
                     "invalid index_id {} (len={}, path={:?})",
                     index_id,
                     self.indexes.len(),
-                    &self.dir
+                    self.dir
                 );
                 Err(crate::Error::programming(msg))
             }
@@ -1247,7 +1247,7 @@ impl Log {
             "fold_id {} is out of bound (len={}, dir={:?})",
             fold_id,
             self.open_options.fold_defs.len(),
-            &self.dir
+            self.dir
         );
         crate::Error::programming(msg)
     }
@@ -1743,7 +1743,7 @@ impl Log {
                 .context(&index.path, || {
                     format!(
                         "index metadata cannot be parsed as an integer: {:?}",
-                        &index_meta
+                        index_meta
                     )
                 })?
                 .0
@@ -1772,7 +1772,7 @@ impl Log {
                 "index_id {} is out of bound (len={}, dir={:?})",
                 index_id,
                 self.indexes.len(),
-                &self.dir
+                self.dir
             );
             crate::Error::programming(msg)
         })
@@ -1785,7 +1785,7 @@ impl Log {
                 "index_id {} is out of bound (len={}, dir={:?})",
                 index_id,
                 self.indexes.len(),
-                &self.dir
+                self.dir
             );
             crate::Error::programming(msg)
         })

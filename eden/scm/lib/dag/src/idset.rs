@@ -341,7 +341,7 @@ impl IdSet {
                 assert!(
                     span.high + 1 < self.spans[i - 1].low,
                     "{:?} is not in DESC order or has mergeable adjacent spans (around #{})",
-                    &self.spans,
+                    self.spans,
                     i
                 );
             }
@@ -1701,10 +1701,10 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = IdSet::from_spans(vec![1..=1, 2..=9, 10..=10, 20..=20, 31..=35, 36..=40]);
-        assert_eq!(format!("{:10?}", &set), "1..=10 20 31..=40");
-        assert_eq!(format!("{:3?}", &set), "1..=10 20 31..=40");
-        assert_eq!(format!("{:2?}", &set), "1..=10 20 and 1 span");
-        assert_eq!(format!("{:1?}", &set), "1..=10 and 2 spans");
+        assert_eq!(format!("{:10?}", set), "1..=10 20 31..=40");
+        assert_eq!(format!("{:3?}", set), "1..=10 20 31..=40");
+        assert_eq!(format!("{:2?}", set), "1..=10 20 and 1 span");
+        assert_eq!(format!("{:1?}", set), "1..=10 and 2 spans");
     }
 
     #[test]

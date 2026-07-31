@@ -241,7 +241,7 @@ impl Debug for IdSegment {
             self.level,
             self.low,
             self.high,
-            &self.parents,
+            self.parents,
             if self.has_root { "R" } else { "" }
         )
     }
