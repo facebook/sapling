@@ -477,7 +477,8 @@ void Overlay::initOverlay(
         std::nullopt,
         lookupCallback,
         config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue(),
-        caseSensitive_);
+        caseSensitive_,
+        config->getEdenConfig()->fsckUseMemoryEfficientScan.getValue());
     folly::stop_watch<> fsckRuntime;
     auto result = checker.repairErrors(progressCallback);
     auto fsckRuntimeInSeconds =

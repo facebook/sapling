@@ -33,6 +33,8 @@ DEFINE_int64(
     4,
     "Number of threads to use for discovering errors in the overlay");
 
+DEFINE_bool(memory_efficient_scan, true, "Use fsck's lower-memory scan path");
+
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
@@ -73,7 +75,9 @@ int main(int argc, char** argv) {
       &fileContentStore.value(),
       nextInodeNumber,
       lookup,
-      FLAGS_num_error_discovery_threads);
+      FLAGS_num_error_discovery_threads,
+      CaseSensitivity::Sensitive,
+      FLAGS_memory_efficient_scan);
   if (FLAGS_dry_run || FLAGS_force) {
     checker.scanForErrors(
         /*progressCallback=*/[](auto) {}, /*includeWalChildren=*/true);

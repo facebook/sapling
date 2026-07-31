@@ -92,7 +92,8 @@ class OverlayChecker {
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback,
       uint64_t numErrorDiscoveryThreads,
-      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive);
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive,
+      bool useMemoryEfficientScan = true);
 
   ~OverlayChecker();
 

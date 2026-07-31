@@ -2356,6 +2356,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Use fsck's lower-memory scan path. This avoids retaining every parsed
+   * directory map for the full fsck run.
+   */
+  ConfigSetting<bool> fsckUseMemoryEfficientScan{
+      "fsck:use-memory-efficient-scan",
+      true,
+      this};
+
+  /**
    * Maximum number of mounts that can run fsck concurrently during startup.
    * Limits peak memory usage after ungraceful shutdown to N times a single
    * mount's fsck. Set to 0 for unlimited concurrency (no semaphore).

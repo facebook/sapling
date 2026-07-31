@@ -71,6 +71,7 @@ struct OverlayChecker::Impl {
   std::optional<InodeNumber> loadedNextInodeNumber;
   InodeCatalog::LookupCallback& lookupCallback;
   CaseSensitivity caseSensitive;
+  bool useMemoryEfficientScan;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
@@ -78,12 +79,14 @@ struct OverlayChecker::Impl {
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback,
-      CaseSensitivity caseSensitive)
+      CaseSensitivity caseSensitive,
+      bool useMemoryEfficientScan)
       : inodeCatalog{inodeCatalog},
         fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
         lookupCallback{lookupCallback},
-        caseSensitive{caseSensitive} {}
+        caseSensitive{caseSensitive},
+        useMemoryEfficientScan{useMemoryEfficientScan} {}
 };
 
 class OverlayChecker::RepairState {
@@ -785,13 +788,15 @@ OverlayChecker::OverlayChecker(
     optional<InodeNumber> nextInodeNumber,
     InodeCatalog::LookupCallback& lookupCallback,
     uint64_t numErrorDiscoveryThreads,
-    CaseSensitivity caseSensitive)
+    CaseSensitivity caseSensitive,
+    bool useMemoryEfficientScan)
     : impl_{std::make_unique<Impl>(
           inodeCatalog,
           fcs,
           nextInodeNumber,
           lookupCallback,
-          caseSensitive)},
+          caseSensitive,
+          useMemoryEfficientScan)},
       numErrorDiscoveryThreads_{numErrorDiscoveryThreads} {
   XCHECK_GT(numErrorDiscoveryThreads_, 0u);
 }
