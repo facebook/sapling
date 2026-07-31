@@ -85,9 +85,7 @@ impl RepoShardedProcess for WalkerScrubProcess {
         };
         let (job_params, command) = setup_scrub(&repos, &self.app, &self.args)
             .await
-            .with_context(|| {
-                format!("Failure in setting up walker scrub for repo {}", repo_name)
-            })?;
+            .with_context(|| format!("Failure in setting up walker scrub for repo {repo_name}"))?;
         info!("Completed walker scrub setup for repo {}", repo_name);
         Ok(Arc::new(WalkerScrubProcessExecutor::new(
             self.app.fb,

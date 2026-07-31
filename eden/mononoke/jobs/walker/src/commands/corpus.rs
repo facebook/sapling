@@ -74,9 +74,7 @@ impl RepoShardedProcess for WalkerCorpusProcess {
         };
         let (job_params, command) = setup_corpus(&repos, &self.app, &self.args)
             .await
-            .with_context(|| {
-                format!("Failure in setting up walker corpus for repo {}", repo_name)
-            })?;
+            .with_context(|| format!("Failure in setting up walker corpus for repo {repo_name}"))?;
         info!("Completed walker corpus setup for repo {}", repo_name);
         Ok(Arc::new(WalkerCorpusProcessExecutor::new(
             self.app.fb,

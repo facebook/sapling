@@ -69,10 +69,7 @@ impl RepoShardedProcess for WalkerValidateProcess {
         let (job_params, command) = setup_validate(&repos, &self.app, &self.args)
             .await
             .with_context(|| {
-                format!(
-                    "Failure in setting up walker validate for repo {}",
-                    repo_name
-                )
+                format!("Failure in setting up walker validate for repo {repo_name}")
             })?;
         info!("Completed walker validate setup for repo {}", repo_name);
         Ok(Arc::new(WalkerValidateProcessExecutor::new(
