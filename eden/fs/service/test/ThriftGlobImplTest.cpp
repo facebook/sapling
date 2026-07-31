@@ -60,11 +60,15 @@ CO_TEST_F(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
 
   std::string glob{"**/*.txt"};
   auto globber = ThriftGlobImpl{GlobParams{}};
-  co_await globber.glob(
+  auto result = co_await globber.glob(
       edenMount,
       serverState,
       std::vector<std::string>{"**/*.txt"},
       ObjectFetchContext::getNullContext());
+
+  const std::vector<std::string> expectedFiles{
+      "foo/bar/dir1/file.txt", "foo/bar/dir2/file.txt"};
+  EXPECT_EQ(expectedFiles, *result->matchingFiles());
 
   // Then we compare the number, both counter should remain the same before and
   // after the call.
