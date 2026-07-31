@@ -6,6 +6,8 @@
  */
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -499,9 +501,10 @@ TEST_P(InodeAccessLoggingTest, getChildRecursiveDirTopLevel) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
-  rootInode
-      ->getChildRecursive("src"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  folly::coro::blockingWait(
+      rootInode->co_getChildRecursive(
+          "src"_relpath, ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   // No accesses logged because we don't log accesses to the root tree
   EXPECT_EQ(0, getAccessCount());
@@ -511,10 +514,10 @@ TEST_P(InodeAccessLoggingTest, getChildRecursiveFileTopLevel) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
-  rootInode
-      ->getChildRecursive(
-          "toplevel.txt"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  folly::coro::blockingWait(
+      rootInode->co_getChildRecursive(
+          "toplevel.txt"_relpath, ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   // No accesses logged because we don't log accesses to the root tree
   EXPECT_EQ(0, getAccessCount());
@@ -524,10 +527,10 @@ TEST_P(InodeAccessLoggingTest, getChildRecursiveDirNested) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
-  rootInode
-      ->getChildRecursive(
-          "src/a/b"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  folly::coro::blockingWait(
+      rootInode->co_getChildRecursive(
+          "src/a/b"_relpath, ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   // 2 accesses logged, for src looking for a and for src/a looking for b -  we
   // don't log the access to src because we don't log accesses to the root tree
@@ -538,10 +541,10 @@ TEST_P(InodeAccessLoggingTest, getChildRecursiveFileNested) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
-  rootInode
-      ->getChildRecursive(
-          "src/a/b/1.txt"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  folly::coro::blockingWait(
+      rootInode->co_getChildRecursive(
+          "src/a/b/1.txt"_relpath, ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   // 3 accesses logged, for src looking for a, for src/a looking for b, and for
   // src/a/b looking for 1.txt -  we don't log the access to src because we

@@ -616,6 +616,8 @@ cpp_unittest(
         "//eden/fs/testharness:fake_inode_access_logger",
         "//eden/fs/testharness:test_mount",
         "//folly:exception_wrapper",
+        "//folly/coro:blocking_wait",
+        "//folly/executors:manual_executor",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
     ],

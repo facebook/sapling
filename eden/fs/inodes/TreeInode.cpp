@@ -1269,24 +1269,6 @@ class LookupProcessor {
 };
 } // namespace
 
-ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
-    RelativePathPiece path,
-    const ObjectFetchContextPtr& context) {
-  // DEPRECATED: use co_getChildRecursive directly. Kept only because
-  // EdenMount::getInodeSlow and EdenServiceHandler glob entry lookup
-  // still consume ImmediateFuture chains; delete once those are migrated.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [this](auto&&... args) -> folly::coro::Task<InodePtr> {
-            co_return co_await co_getChildRecursive(
-                std::forward<decltype(args)>(args)...);
-          },
-          path.copy(),
-          context.copy())
-          .semi()};
-}
-
 folly::coro::now_task<InodePtr> TreeInode::co_getChildRecursive(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) {

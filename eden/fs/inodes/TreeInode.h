@@ -259,10 +259,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * The Inode object in question, and all intervening TreeInode objects,
    * will be loaded if they are not already loaded.
    */
-  ImmediateFuture<InodePtr> getChildRecursive(
-      RelativePathPiece name,
-      const ObjectFetchContextPtr& context);
-
   folly::coro::now_task<InodePtr> co_getChildRecursive(
       RelativePathPiece name,
       const ObjectFetchContextPtr& context);
