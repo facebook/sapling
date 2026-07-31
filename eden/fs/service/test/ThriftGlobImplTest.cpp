@@ -50,6 +50,8 @@ class ThriftGlobImplTest : public ::testing::Test {
   void SetUp() override {
     builder_.setFile("foo/bar/dir1/file.txt", "contents");
     builder_.setFile("foo/bar/dir2/file.txt", "contents");
+    builder_.setFile("foo/.hidden/file.txt", "contents");
+    builder_.setFile("other/bar/dir1/file.txt", "contents");
     mount_.initialize(builder_);
   }
 
@@ -77,6 +79,7 @@ CO_TEST_F(ThriftGlobImplTest, testGlobFilesNotLoadingInode) {
   const std::vector<std::string> expectedFiles{
       "foo/bar/dir1/file.txt",
       "foo/bar/dir2/file.txt",
+      "other/bar/dir1/file.txt",
   };
   EXPECT_EQ(expectedFiles, getMatchingFiles(*result));
 
@@ -148,6 +151,60 @@ CO_TEST_F(ThriftGlobImplTest, suppressesResultPathsForPrefetch) {
       ObjectFetchContext::getNullContext());
 
   EXPECT_TRUE(result->matchingFiles()->empty());
+}
+
+CO_TEST_F(ThriftGlobImplTest, testRecursiveGlobMatchesMultiComponentSuffix) {
+  auto serverState = createTestServerState();
+  auto edenMount = mount_.getEdenMount();
+
+  auto globber = ThriftGlobImpl{GlobParams{}};
+  auto result = co_await globber.glob(
+      edenMount,
+      serverState,
+      std::vector<std::string>{"**/bar/dir1/file.txt"},
+      ObjectFetchContext::getNullContext());
+
+  const std::vector<std::string> expectedFiles{
+      "foo/bar/dir1/file.txt",
+      "other/bar/dir1/file.txt",
+  };
+  EXPECT_EQ(expectedFiles, getMatchingFiles(*result));
+}
+
+CO_TEST_F(ThriftGlobImplTest, handlesAdjacentRecursiveComponents) {
+  auto serverState = createTestServerState();
+  auto edenMount = mount_.getEdenMount();
+
+  auto globber = ThriftGlobImpl{GlobParams{}};
+  auto result = co_await globber.glob(
+      edenMount,
+      serverState,
+      {"**/**/file.txt"},
+      ObjectFetchContext::getNullContext());
+  const std::vector<std::string> expected{
+      "foo/bar/dir1/file.txt",
+      "foo/bar/dir2/file.txt",
+      "other/bar/dir1/file.txt",
+  };
+  EXPECT_EQ(expected, getMatchingFiles(*result));
+}
+
+CO_TEST_F(ThriftGlobImplTest, dedupesOverlappingSuffixPatterns) {
+  auto serverState = createTestServerState();
+  auto edenMount = mount_.getEdenMount();
+
+  auto globber = ThriftGlobImpl{GlobParams{}};
+  auto result = co_await globber.glob(
+      edenMount,
+      serverState,
+      {"**/bar/dir1/file.txt", "**/bar/dir2/file.txt"},
+      ObjectFetchContext::getNullContext());
+  const std::vector<std::string> expected{
+      "foo/bar/dir1/file.txt",
+      "foo/bar/dir2/file.txt",
+      "other/bar/dir1/file.txt",
+  };
+  EXPECT_EQ(expected, getMatchingFiles(*result));
 }
 
 } // namespace facebook::eden
