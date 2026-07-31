@@ -513,18 +513,14 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
         )
         .await?
         .ok_or_else(|| {
-            anyhow!(
-                "submodule metadata file not found in large repo: {:?}",
-                metadata_file_path
-            )
+            anyhow!("submodule metadata file not found in large repo: {metadata_file_path:?}")
         })?;
 
     let metadata_file: compat::ContentManifestFile = match metadata_file_entry {
         Entry::Leaf(file) => file.into(),
         _ => {
             return Err(anyhow!(
-                "submodule metadata path doesn't represent a file: {:?}",
-                metadata_file_path
+                "submodule metadata path doesn't represent a file: {metadata_file_path:?}"
             ));
         }
     };
@@ -616,20 +612,17 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
         .await?;
     let submodule_file_leaf: compat::ContentManifestFile = submodule_entry
         .ok_or(anyhow!(
-            "No manifest entry in small repo for submodule path {}",
-            submodule_path
+            "No manifest entry in small repo for submodule path {submodule_path}"
         ))?
         .into_leaf()
         .ok_or(anyhow!(
-            "Small repo manifest entry for submodule path {} is not a leaf",
-            submodule_path
+            "Small repo manifest entry for submodule path {submodule_path} is not a leaf"
         ))?
         .into();
 
     if submodule_file_leaf.file_type() != FileType::GitSubmodule {
         return Err(anyhow!(
-            "submodule path is not a git submodule: {}!",
-            submodule_path,
+            "submodule path is not a git submodule: {submodule_path}!",
         ));
     }
 
@@ -790,15 +783,13 @@ fn find_submodule_expansion(
         let expansion_metadata_file = if let Entry::Leaf(leaf) = entry {
             if leaf.file_type() != FileType::Regular {
                 return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
-                    "git submodule expansion metadata file {} has to be a regular file",
-                    source_elem_path,
+                    "git submodule expansion metadata file {source_elem_path} has to be a regular file",
                 )))));
             }
             leaf.clone()
         } else {
             return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
-                "git submodule expansion metadata path {} has to be a file",
-                source_elem_path,
+                "git submodule expansion metadata path {source_elem_path} has to be a file",
             )))));
         };
         if let Some(Entry::Tree(expansion_dir_id)) = source_dir_map.get(expansion_path.basename()) {
@@ -811,8 +802,7 @@ fn find_submodule_expansion(
             ));
         } else {
             return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
-                "submodule expansion directory not found in large repo: {:?} while submodule metadata file is present",
-                expansion_path,
+                "submodule expansion directory not found in large repo: {expansion_path:?} while submodule metadata file is present",
             )))));
         }
     }
