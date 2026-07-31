@@ -6,7 +6,6 @@
  */
 
 #include <folly/ExceptionWrapper.h>
-#include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
@@ -32,6 +31,42 @@ using namespace std::chrono_literals;
 using std::string;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
+
+namespace {
+// EdenMount::co_diff returns a now_task that binds references to its arguments,
+// so it cannot be detached into a future directly. This wrapper owns the
+// arguments by value for the duration of the await, yielding a Task the tests
+// can .semi() and drive on the ManualExecutor.
+folly::coro::Task<std::unique_ptr<ScmStatus>> diffTask(
+    std::shared_ptr<EdenMount> edenMount,
+    TreeInodePtr rootInode,
+    RootId commitId,
+    folly::CancellationToken cancellation,
+    bool listIgnored,
+    bool enforceCurrentParent) {
+  co_return co_await edenMount->co_diff(
+      rootInode,
+      commitId,
+      std::move(cancellation),
+      ObjectFetchContext::getNullContext(),
+      listIgnored,
+      enforceCurrentParent);
+}
+
+// Same now_task bridging for TreeInode::co_diff. The caller must keep the
+// DiffContext pointed to by ctx alive until the returned future completes.
+folly::coro::Task<folly::Unit> treeDiffTask(
+    TreeInodePtr rootInode,
+    DiffContext* ctx,
+    std::shared_ptr<const Tree> rootTree) {
+  co_return co_await rootInode->co_diff(
+      ctx,
+      RelativePathPiece{},
+      std::vector{std::move(rootTree)},
+      ctx->getToplevelIgnore(),
+      false);
+}
+} // namespace
 
 template <typename T>
 T getFutureResult(folly::Future<T>& future, const char* filename, int line) {
@@ -61,8 +96,7 @@ constexpr folly::StringPiece kReadmeContent{"No one reads docs.\n"};
  */
 class DiffTest {
  public:
-  explicit DiffTest(bool useCoroutines = false)
-      : useCoroutines_{useCoroutines} {
+  explicit DiffTest() {
     // Set up a directory structure that we will use for most
     // of the tests below
     builder_.setFiles({
@@ -74,28 +108,20 @@ class DiffTest {
         {"toplevel.txt", "toplevel\n"},
     });
     mount_.initialize(builder_);
-    if (useCoroutines_) {
-      enableCoroutinesConfig(mount_);
-    }
+    enableCoroutinesConfig(mount_);
   }
 
   explicit DiffTest(
-      std::initializer_list<FakeTreeBuilder::FileInfo>&& fileArgs,
-      bool useCoroutines = false)
-      : useCoroutines_{useCoroutines} {
+      std::initializer_list<FakeTreeBuilder::FileInfo>&& fileArgs) {
     builder_.setFiles(std::move(fileArgs));
     mount_.initialize(builder_);
-    if (useCoroutines_) {
-      enableCoroutinesConfig(mount_);
-    }
+    enableCoroutinesConfig(mount_);
   }
 
-  explicit DiffTest(const FakeTreeBuilder& builder, bool useCoroutines = false)
-      : useCoroutines_{useCoroutines}, builder_{builder.clone()} {
+  explicit DiffTest(const FakeTreeBuilder& builder)
+      : builder_{builder.clone()} {
     mount_.initialize(builder_);
-    if (useCoroutines_) {
-      enableCoroutinesConfig(mount_);
-    }
+    enableCoroutinesConfig(mount_);
   }
 
   ScmStatus diff(
@@ -114,79 +140,33 @@ class DiffTest {
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents)};
     auto commitId = mount_.getEdenMount()->getCheckedOutRootId();
-    if (useCoroutines_) {
-      auto rootTree =
-          mount_.getEdenMount()
-              ->getObjectStore()
-              ->getRootTree(commitId, ObjectFetchContext::getNullContext())
-              .semi()
-              .via(mount_.getServerExecutor().get());
-      mount_.drainServerExecutor();
-      auto tree = std::move(rootTree).get();
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      auto coFut = folly::coro::co_invoke(
-          [](TreeInodePtr rootInode,
-             DiffContext* ctx,
-             std::shared_ptr<const Tree> rootTreePtr)
-              -> folly::coro::Task<folly::Unit> {
-            co_return co_await rootInode->co_diff(
-                ctx,
-                RelativePathPiece{},
-                std::vector{std::move(rootTreePtr)},
-                ctx->getToplevelIgnore(),
-                false);
-          },
-          mount_.getRootInode(),
-          &diffContext,
-          std::move(tree.tree));
-      auto f = std::move(coFut).semi().via(mount_.getServerExecutor().get());
-      mount_.drainServerExecutor();
-      EXPECT_FUTURE_RESULT(f);
-    } else {
-      auto diffFuture =
-          mount_.getEdenMount()
-              ->diff(mount_.getRootInode(), &diffContext, commitId)
-              .semi()
-              .via(mount_.getServerExecutor().get());
-      mount_.drainServerExecutor();
-      EXPECT_FUTURE_RESULT(diffFuture);
-    }
+    auto rootTree =
+        mount_.getEdenMount()
+            ->getObjectStore()
+            ->getRootTree(commitId, ObjectFetchContext::getNullContext())
+            .semi()
+            .via(mount_.getServerExecutor().get());
+    mount_.drainServerExecutor();
+    auto tree = std::move(rootTree).get();
+    auto f =
+        treeDiffTask(mount_.getRootInode(), &diffContext, std::move(tree.tree))
+            .semi()
+            .via(mount_.getServerExecutor().get());
+    mount_.drainServerExecutor();
+    EXPECT_FUTURE_RESULT(f);
     return callback.extractStatus();
   }
   ImmediateFuture<ScmStatus> diffFuture(bool listIgnored = false) {
     auto commitId = mount_.getEdenMount()->getWorkingCopyParent();
-    if (useCoroutines_) {
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      auto coFut = folly::coro::co_invoke(
-          [](std::shared_ptr<EdenMount> edenMount,
-             TreeInodePtr rootInode,
-             RootId cid,
-             bool li) -> folly::coro::Task<std::unique_ptr<ScmStatus>> {
-            co_return co_await edenMount->co_diff(
-                rootInode,
-                cid,
-                folly::CancellationToken{},
-                ObjectFetchContext::getNullContext(),
-                li,
-                /*enforceCurrentParent=*/false);
-          },
-          mount_.getEdenMount(),
-          mount_.getRootInode(),
-          commitId,
-          listIgnored);
-      return ImmediateFuture<std::unique_ptr<ScmStatus>>{
-          std::move(coFut).semi()}
-          .thenValue(
-              [](std::unique_ptr<ScmStatus>&& result) { return *result; });
-    }
-    auto diffFuture = mount_.getEdenMount()->diff(
-        mount_.getRootInode(),
-        commitId,
-        folly::CancellationToken{},
-        ObjectFetchContext::getNullContext(),
-        listIgnored,
-        /*enforceCurrentParent=*/false);
-    return std::move(diffFuture)
+    return ImmediateFuture<std::unique_ptr<ScmStatus>>{
+        diffTask(
+            mount_.getEdenMount(),
+            mount_.getRootInode(),
+            commitId,
+            folly::CancellationToken{},
+            listIgnored,
+            /*enforceCurrentParent=*/false)
+            .semi()}
         .thenValue([](std::unique_ptr<ScmStatus>&& result) { return *result; });
   }
 
@@ -207,7 +187,6 @@ class DiffTest {
   }
 
  private:
-  bool useCoroutines_{false};
   FakeTreeBuilder builder_;
   TestMount mount_;
   std::string readmeContent_;
@@ -236,18 +215,18 @@ ScmStatus DiffTest::resetCommitAndDiff(
   return EXPECT_FUTURE_RESULT(df);
 }
 
-class DiffTestParam : public ::testing::TestWithParam<bool> {
+class DiffTestParam : public ::testing::Test {
  protected:
   DiffTest createTest() {
-    return DiffTest{GetParam()};
+    return DiffTest{};
   }
   DiffTest createTest(
       std::initializer_list<FakeTreeBuilder::FileInfo>&& fileArgs) {
-    return DiffTest{std::move(fileArgs), GetParam()};
+    return DiffTest{std::move(fileArgs)};
   }
 };
 
-TEST_P(DiffTestParam, noChanges) {
+TEST_F(DiffTestParam, noChanges) {
   auto test = createTest();
   // Run diff with no inodes loaded
   test.checkNoChanges();
@@ -262,7 +241,7 @@ TEST_P(DiffTestParam, noChanges) {
   test.checkNoChanges();
 }
 
-TEST_P(DiffTestParam, fileModified) {
+TEST_F(DiffTestParam, fileModified) {
   auto test = createTest();
   test.getMount().overwriteFile("src/1.txt", "This file has been updated.\n");
 
@@ -274,7 +253,7 @@ TEST_P(DiffTestParam, fileModified) {
 }
 
 #ifndef _WIN32
-TEST_P(DiffTestParam, fileModeChanged) {
+TEST_F(DiffTestParam, fileModeChanged) {
   auto test = createTest();
   test.getMount().chmod("src/2.txt", 0755);
 
@@ -287,7 +266,7 @@ TEST_P(DiffTestParam, fileModeChanged) {
 
 #endif // !_WIN32
 
-TEST_P(DiffTestParam, fileRemoved) {
+TEST_F(DiffTestParam, fileRemoved) {
   auto test = createTest();
   test.getMount().deleteFile("src/1.txt");
 
@@ -298,7 +277,7 @@ TEST_P(DiffTestParam, fileRemoved) {
           std::make_pair("src/1.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, fileAdded) {
+TEST_F(DiffTestParam, fileAdded) {
   auto test = createTest();
   test.getMount().addFile("src/new.txt", "extra stuff");
 
@@ -309,7 +288,7 @@ TEST_P(DiffTestParam, fileAdded) {
           std::make_pair("src/new.txt", ScmFileStatus::ADDED)));
 }
 
-TEST_P(DiffTestParam, directoryRemoved) {
+TEST_F(DiffTestParam, directoryRemoved) {
   auto test = createTest();
   auto& mount = test.getMount();
   mount.deleteFile("src/a/b/3.txt");
@@ -325,7 +304,7 @@ TEST_P(DiffTestParam, directoryRemoved) {
           std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, directoryAdded) {
+TEST_F(DiffTestParam, directoryAdded) {
   auto test = createTest();
   auto& mount = test.getMount();
   mount.mkdir("src/new");
@@ -343,7 +322,7 @@ TEST_P(DiffTestParam, directoryAdded) {
           std::make_pair("src/new/subdir/bar.txt", ScmFileStatus::ADDED)));
 }
 
-TEST_P(DiffTestParam, dirReplacedWithFile) {
+TEST_F(DiffTestParam, dirReplacedWithFile) {
   auto test = createTest();
   auto& mount = test.getMount();
   mount.deleteFile("src/a/b/3.txt");
@@ -361,7 +340,7 @@ TEST_P(DiffTestParam, dirReplacedWithFile) {
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, fileReplacedWithDir) {
+TEST_F(DiffTestParam, fileReplacedWithDir) {
   auto test = createTest();
   auto& mount = test.getMount();
   mount.deleteFile("src/2.txt");
@@ -381,7 +360,7 @@ TEST_P(DiffTestParam, fileReplacedWithDir) {
           std::make_pair("src/2.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, fileCasingChange) {
+TEST_F(DiffTestParam, fileCasingChange) {
   auto test = createTest();
   auto& mount = test.getMount();
   mount.deleteFile("doc/readme.txt");
@@ -405,7 +384,7 @@ TEST_P(DiffTestParam, fileCasingChange) {
 // Test file adds/removes/modifications with various orderings of names between
 // the TreeInode entries and Tree entries.  This exercises the code that walks
 // through the two entry lists comparing entry names.
-TEST_P(DiffTestParam, pathOrdering) {
+TEST_F(DiffTestParam, pathOrdering) {
   auto test = createTest({
       {"one/bbb.txt", "test\n"},
       {"one/xxx.txt", "test\n"},
@@ -468,10 +447,10 @@ TEST_P(DiffTestParam, pathOrdering) {
  * materialized, but are nonetheless different than the current commit.
  */
 
-void testResetFileModified(bool loadInodes, bool useCoroutines) {
+void testResetFileModified(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   auto b2 = t.getBuilder().clone();
   b2.replaceFile("src/1.txt", "This file has been updated.\n");
 
@@ -482,17 +461,17 @@ void testResetFileModified(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST_P(DiffTestParam, resetFileModified) {
-  testResetFileModified(true, GetParam());
-  testResetFileModified(false, GetParam());
+TEST_F(DiffTestParam, resetFileModified) {
+  testResetFileModified(true);
+  testResetFileModified(false);
 }
 
 // TODO: T66590035
 #ifndef _WIN32
-void testResetFileModeChanged(bool loadInodes, bool useCoroutines) {
+void testResetFileModeChanged(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   auto b2 = t.getBuilder().clone();
   b2.replaceFile("src/1.txt", "This is src/1.txt.\n", true);
 
@@ -503,16 +482,16 @@ void testResetFileModeChanged(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST_P(DiffTestParam, resetFileModeChanged) {
-  testResetFileModeChanged(true, GetParam());
-  testResetFileModeChanged(false, GetParam());
+TEST_F(DiffTestParam, resetFileModeChanged) {
+  testResetFileModeChanged(true);
+  testResetFileModeChanged(false);
 }
 #endif
 
-void testResetFileRemoved(bool loadInodes, bool useCoroutines) {
+void testResetFileRemoved(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with a new file added.
   // When we reset to it (without changing the working directory) it will look
   // like we have removed this file.
@@ -526,15 +505,15 @@ void testResetFileRemoved(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/notpresent.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, resetFileRemoved) {
-  testResetFileRemoved(true, GetParam());
-  testResetFileRemoved(false, GetParam());
+TEST_F(DiffTestParam, resetFileRemoved) {
+  testResetFileRemoved(true);
+  testResetFileRemoved(false);
 }
 
-void testResetFileAdded(bool loadInodes, bool useCoroutines) {
+void testResetFileAdded(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with a file removed.
   // When we reset to it (without changing the working directory) it will look
   // like we have added this file.
@@ -547,15 +526,15 @@ void testResetFileAdded(bool loadInodes, bool useCoroutines) {
       UnorderedElementsAre(std::make_pair("src/1.txt", ScmFileStatus::ADDED)));
 }
 
-TEST_P(DiffTestParam, resetFileAdded) {
-  testResetFileAdded(true, GetParam());
-  testResetFileAdded(false, GetParam());
+TEST_F(DiffTestParam, resetFileAdded) {
+  testResetFileAdded(true);
+  testResetFileAdded(false);
 }
 
-void testResetDirectoryRemoved(bool loadInodes, bool useCoroutines) {
+void testResetDirectoryRemoved(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with a new directory added.
   // When we reset to it (without changing the working directory) it will look
   // like we have removed this directory.
@@ -578,15 +557,15 @@ void testResetDirectoryRemoved(bool loadInodes, bool useCoroutines) {
               "src/extradir/a/b/c/d/e.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, resetDirectoryRemoved) {
-  testResetDirectoryRemoved(true, GetParam());
-  testResetDirectoryRemoved(false, GetParam());
+TEST_F(DiffTestParam, resetDirectoryRemoved) {
+  testResetDirectoryRemoved(true);
+  testResetDirectoryRemoved(false);
 }
 
-void testResetDirectoryAdded(bool loadInodes, bool useCoroutines) {
+void testResetDirectoryAdded(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with a directory removed.
   // When we reset to it (without changing the working directory) it will look
   // like we have added this directory.
@@ -602,18 +581,18 @@ void testResetDirectoryAdded(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED)));
 }
 
-TEST_P(DiffTestParam, resetDirectoryAdded) {
-  testResetDirectoryAdded(true, GetParam());
-  testResetDirectoryAdded(false, GetParam());
+TEST_F(DiffTestParam, resetDirectoryAdded) {
+  testResetDirectoryAdded(true);
+  testResetDirectoryAdded(false);
 }
 
-TEST_P(DiffTestParam, resetRestrictedLoadedDirectorySkipped) {
+TEST_F(DiffTestParam, resetRestrictedLoadedDirectorySkipped) {
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "hello world");
   builder1.setFile("restricted_dir/secret.txt", "secret");
   builder1.setDirIsRestricted("restricted_dir");
 
-  DiffTest t{builder1, GetParam()};
+  DiffTest t{builder1};
   auto restrictedInode = t.getMount().getTreeInode("restricted_dir"_relpath);
   ASSERT_TRUE(restrictedInode->isRestricted());
 
@@ -633,10 +612,10 @@ TEST_P(DiffTestParam, resetRestrictedLoadedDirectorySkipped) {
           std::make_pair("src/main.c", ScmFileStatus::MODIFIED)));
 }
 
-void testResetReplaceDirWithFile(bool loadInodes, bool useCoroutines) {
+void testResetReplaceDirWithFile(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with 2.txt replaced by a directory added.
   // When we reset to it (without changing the working directory) it will look
   // like we have replaced this directory with the 2.txt file.
@@ -660,15 +639,15 @@ void testResetReplaceDirWithFile(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/2.txt/a/b/c/d/e.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, resetReplaceDirWithFile) {
-  testResetReplaceDirWithFile(true, GetParam());
-  testResetReplaceDirWithFile(false, GetParam());
+TEST_F(DiffTestParam, resetReplaceDirWithFile) {
+  testResetReplaceDirWithFile(true);
+  testResetReplaceDirWithFile(false);
 }
 
-void testResetReplaceFileWithDir(bool loadInodes, bool useCoroutines) {
+void testResetReplaceFileWithDir(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
-  DiffTest t{useCoroutines};
+  DiffTest t{};
   // Create a commit with a directory removed and replaced with a file.
   // When we reset to it (without changing the working directory) it will look
   // like we have removed the file and replaced it with the directory.
@@ -686,13 +665,13 @@ void testResetReplaceFileWithDir(bool loadInodes, bool useCoroutines) {
           std::make_pair("src/a", ScmFileStatus::REMOVED)));
 }
 
-TEST_P(DiffTestParam, resetReplaceFileWithDir) {
-  testResetReplaceFileWithDir(true, GetParam());
-  testResetReplaceFileWithDir(false, GetParam());
+TEST_F(DiffTestParam, resetReplaceFileWithDir) {
+  testResetReplaceFileWithDir(true);
+  testResetReplaceFileWithDir(false);
 }
 
 // Test with a .gitignore file in the top-level directory
-TEST_P(DiffTestParam, ignoreToplevelOnly) {
+TEST_F(DiffTestParam, ignoreToplevelOnly) {
   auto test = createTest({
       {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
       {"a/b.txt", "test\n"},
@@ -737,7 +716,7 @@ TEST_P(DiffTestParam, ignoreToplevelOnly) {
 
 // Test with a file that matches a .gitignore pattern but also is already in the
 // Tree (so we should report the modification)
-TEST_P(DiffTestParam, ignoredFileInMountAndInTree) {
+TEST_F(DiffTestParam, ignoredFileInMountAndInTree) {
   auto test = createTest({
       {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\nxyz\n"},
       {"a/b.txt", "test\n"},
@@ -786,7 +765,7 @@ TEST_P(DiffTestParam, ignoredFileInMountAndInTree) {
 
 // Test with a file that matches a .gitignore pattern but also is already in the
 // Tree but removed from mount (so we should report the file removal)
-TEST_P(DiffTestParam, ignoredFileNotInMountButInTree) {
+TEST_F(DiffTestParam, ignoredFileNotInMountButInTree) {
   auto test = createTest({
       {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\nxyz\n"},
       {"a/b.txt", "test\n"},
@@ -836,7 +815,7 @@ TEST_P(DiffTestParam, ignoredFileNotInMountButInTree) {
 // Test with a .gitignore file in the top-level directory
 // and the presence of none, either, or both of system level
 // and user specific ignore files
-TEST_P(DiffTestParam, ignoreSystemLevelAndUser) {
+TEST_F(DiffTestParam, ignoreSystemLevelAndUser) {
   auto test = createTest({
       {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
       {"a/b.txt", "test\n"},
@@ -882,7 +861,7 @@ TEST_P(DiffTestParam, ignoreSystemLevelAndUser) {
 
 #ifndef _WIN32
 // Test gitignore file which is a symlink. Symlinked gitignore are ignored.
-TEST_P(DiffTestParam, ignoreSymlink) {
+TEST_F(DiffTestParam, ignoreSymlink) {
   auto test = createTest({
       {"actual", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
       {"a/b.txt", "test\n"},
@@ -928,7 +907,7 @@ TEST_P(DiffTestParam, ignoreSymlink) {
 #endif // !_WIN32
 
 // Test with a .gitignore file in the top-level directory
-TEST_P(DiffTestParam, ignoreInSubdirectories) {
+TEST_F(DiffTestParam, ignoreInSubdirectories) {
   auto test = createTest({
       {".gitignore", "**/foo/bar.txt\n"},
       {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
@@ -1002,7 +981,7 @@ TEST_P(DiffTestParam, ignoreInSubdirectories) {
 
 // Test with a .gitignore in subdirectories and file exists both in mount and in
 // the Tree (so we should report the file modification)
-TEST_P(DiffTestParam, ignoreInSubdirectoriesInMountAndInTree) {
+TEST_F(DiffTestParam, ignoreInSubdirectoriesInMountAndInTree) {
   auto test = createTest(
       {{".gitignore", "**/foo/bar.txt\n"},
        {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
@@ -1080,7 +1059,7 @@ TEST_P(DiffTestParam, ignoreInSubdirectoriesInMountAndInTree) {
 
 // Test with a .gitignore in subdirectories and file exists not in mount but
 // exists in the Tree (so we should report the file deletion)
-TEST_P(DiffTestParam, ignoreInSubdirectoriesNotInMountButInTree) {
+TEST_F(DiffTestParam, ignoreInSubdirectoriesNotInMountButInTree) {
   auto test = createTest(
       {{".gitignore", "**/foo/bar.txt\n"},
        {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
@@ -1157,7 +1136,7 @@ TEST_P(DiffTestParam, ignoreInSubdirectoriesNotInMountButInTree) {
 }
 
 // Test when files already tracked in source control match ignore patterns
-TEST_P(DiffTestParam, explicitlyTracked) {
+TEST_F(DiffTestParam, explicitlyTracked) {
   auto test = createTest({
       {".gitignore", "1.txt\njunk\n"},
       {"junk/a/b/c.txt", "test\n"},
@@ -1197,7 +1176,7 @@ TEST_P(DiffTestParam, explicitlyTracked) {
 }
 
 // Test making modifications to the .gitignore file
-TEST_P(DiffTestParam, ignoreFileModified) {
+TEST_F(DiffTestParam, ignoreFileModified) {
   auto test = createTest({
       {"a/.gitignore", "foo.txt\n"},
   });
@@ -1241,7 +1220,7 @@ TEST_P(DiffTestParam, ignoreFileModified) {
 }
 
 // Make sure the code ignores .gitignore directories
-TEST_P(DiffTestParam, ignoreFileIsDirectory) {
+TEST_F(DiffTestParam, ignoreFileIsDirectory) {
   auto test = createTest({
       {".gitignore", "1.txt\nignore.txt\n"},
       {"a/b.txt", "test\n"},
@@ -1261,7 +1240,7 @@ TEST_P(DiffTestParam, ignoreFileIsDirectory) {
           std::make_pair("a/b/1.txt", ScmFileStatus::IGNORED)));
 }
 
-TEST_P(DiffTestParam, emptyIgnoreFile) {
+TEST_F(DiffTestParam, emptyIgnoreFile) {
   auto test = createTest({
       {"src/foo.txt", "test\n"},
       {"src/subdir/bar.txt", "test\n"},
@@ -1280,7 +1259,7 @@ TEST_P(DiffTestParam, emptyIgnoreFile) {
 #ifndef _WIN32
 // Disabling on Windows as writing files with \r is too painful:
 // https://stackoverflow.com/questions/21571999/handling-files-with-carriage-return-in-filename-on-windows
-TEST_P(DiffTestParam, ignoredFilePatternCarriageReturn) {
+TEST_F(DiffTestParam, ignoredFilePatternCarriageReturn) {
   auto test = createTest({
       {"src/foo.txt", "test\n"},
       {"src/.gitignore", "Icon[\r]"},
@@ -1298,7 +1277,7 @@ TEST_P(DiffTestParam, ignoredFilePatternCarriageReturn) {
           std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
 }
 
-TEST_P(DiffTestParam, ignoredFileDoubleCarriageReturn) {
+TEST_F(DiffTestParam, ignoredFileDoubleCarriageReturn) {
   auto test = createTest({
       {"src/foo.txt", "test\n"},
       {"src/.gitignore", "Icon\r\r"},
@@ -1316,7 +1295,7 @@ TEST_P(DiffTestParam, ignoredFileDoubleCarriageReturn) {
           std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
 }
 
-TEST_P(DiffTestParam, ignoredFileSingleCarriageReturn) {
+TEST_F(DiffTestParam, ignoredFileSingleCarriageReturn) {
   auto test = createTest({
       {"src/foo.txt", "test\n"},
       {"src/.gitignore", "Icon\r"},
@@ -1332,7 +1311,7 @@ TEST_P(DiffTestParam, ignoredFileSingleCarriageReturn) {
 #endif
 
 // Files under the .hg directory should never be reported in diff results
-TEST_P(DiffTestParam, ignoreHidden) {
+TEST_F(DiffTestParam, ignoreHidden) {
   auto test = createTest({
       {"a/b.txt", "test\n"},
       {"a/c/d.txt", "test\n"},
@@ -1361,7 +1340,7 @@ TEST_P(DiffTestParam, ignoreHidden) {
 // a file locally, and the directory matches an ignore rule. In this case,
 // the file should be recorded as ADDED, since the ignore rule is specifically
 // for directories
-TEST_P(DiffTestParam, directoryToFileWithGitIgnore) {
+TEST_F(DiffTestParam, directoryToFileWithGitIgnore) {
   auto test = createTest({
       {"a/b.txt", "test\n"},
       {"a/b/c.txt", "test\n"},
@@ -1395,7 +1374,7 @@ TEST_P(DiffTestParam, directoryToFileWithGitIgnore) {
 
 // Tests the case in which a file becomes a directory and the directory is
 // ignored but the parent directory is not ignored.
-TEST_P(DiffTestParam, addIgnoredDirectory) {
+TEST_F(DiffTestParam, addIgnoredDirectory) {
   auto test = createTest({
       {"a/b.txt", "test\n"},
       {"a/b/c.txt", "test\n"},
@@ -1429,7 +1408,7 @@ TEST_P(DiffTestParam, addIgnoredDirectory) {
 
 // Tests the case in which a directory is ignored but later down a file is
 // unignored, makes sure that the file is correctly marked as added.
-TEST_P(DiffTestParam, nestedGitIgnoreFiles) {
+TEST_F(DiffTestParam, nestedGitIgnoreFiles) {
   auto test = createTest({
       {"a/b.txt", "test\n"},
       {"a/b/c.txt", "test\n"},
@@ -1457,7 +1436,7 @@ TEST_P(DiffTestParam, nestedGitIgnoreFiles) {
 // Tests the case in which a tracked file in source control is modified locally.
 // In this case, the file should be recorded as MODIFIED, since it matches
 // an ignore rule but was already tracked
-TEST_P(DiffTestParam, diff_trees_with_tracked_ignored_file_modified) {
+TEST_F(DiffTestParam, diff_trees_with_tracked_ignored_file_modified) {
   auto test = createTest({
       {"src/foo/a.txt", "a"},
       {"src/foo/b.txt", "b"},
@@ -1496,7 +1475,7 @@ TEST_P(DiffTestParam, diff_trees_with_tracked_ignored_file_modified) {
 // Tests the case in which a tracked file in source control is modified locally.
 // In this case, the file should be recorded as MODIFIED, since it matches
 // an ignore rule but was already tracked
-TEST_P(DiffTestParam, tree_file_matches_new_ignore_rule_modified_locally) {
+TEST_F(DiffTestParam, tree_file_matches_new_ignore_rule_modified_locally) {
   auto test = createTest({
       {"src/foo/a.txt", "a"},
       {"src/foo/b.txt", "b"},
@@ -1607,14 +1586,13 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  auto diffFuture = mount.getEdenMount()
-                        ->diff(
-                            mount.getRootInode(),
-                            commitId2,
-                            folly::CancellationToken{},
-                            ObjectFetchContext::getNullContext(),
-                            /*listIgnored=*/false,
-                            /*enforceCurrentParent=*/false)
+  auto diffFuture = diffTask(
+                        mount.getEdenMount(),
+                        mount.getRootInode(),
+                        commitId2,
+                        folly::CancellationToken{},
+                        /*listIgnored=*/false,
+                        /*enforceCurrentParent=*/false)
                         .semi()
                         .via(mount.getServerExecutor().get());
   mount.drainServerExecutor();
@@ -1736,14 +1714,13 @@ TEST(DiffTest, cancelledDiff) {
 
   auto cancellationSource = folly::CancellationSource{};
 
-  auto diffFuture = mount.getEdenMount()
-                        ->diff(
-                            mount.getRootInode(),
-                            commitId2,
-                            cancellationSource.getToken(),
-                            ObjectFetchContext::getNullContext(),
-                            /*listIgnored=*/false,
-                            /*enforceCurrentParent=*/false)
+  auto diffFuture = diffTask(
+                        mount.getEdenMount(),
+                        mount.getRootInode(),
+                        commitId2,
+                        cancellationSource.getToken(),
+                        /*listIgnored=*/false,
+                        /*enforceCurrentParent=*/false)
                         .semi()
                         .via(mount.getServerExecutor().get());
   mount.drainServerExecutor();
@@ -1789,14 +1766,13 @@ class DiffTestNonMateralized : public ::testing::Test {
   }
 
   std::unique_ptr<ScmStatus> diff(const RootId& id) {
-    auto fut = testMount_.getEdenMount()
-                   ->diff(
-                       testMount_.getRootInode(),
-                       id,
-                       folly::CancellationToken{},
-                       ObjectFetchContext::getNullContext(),
-                       /*listIgnored=*/true,
-                       /*enforceCurrentParent=*/false)
+    auto fut = diffTask(
+                   testMount_.getEdenMount(),
+                   testMount_.getRootInode(),
+                   id,
+                   folly::CancellationToken{},
+                   /*listIgnored=*/true,
+                   /*enforceCurrentParent=*/false)
                    .semi()
                    .via(testMount_.getServerExecutor().get());
     testMount_.drainServerExecutor();
@@ -2295,11 +2271,3 @@ TEST(DiffTest, multiTreeDiff) {
       *status.entries(),
       UnorderedElementsAre(std::make_pair("b", ScmFileStatus::MODIFIED)));
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    DiffTestVariants,
-    DiffTestParam,
-    ::testing::Bool(),
-    [](const ::testing::TestParamInfo<bool>& info) {
-      return info.param ? "Coroutines" : "Futures";
-    });

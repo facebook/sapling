@@ -9,6 +9,9 @@
 #include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
+#include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Task.h>
+#include <folly/coro/Timeout.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/portability/Unistd.h>
 #include <folly/test/TestUtils.h>
@@ -1970,7 +1973,7 @@ TYPED_TEST(
 }
 #endif
 
-TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
+CO_TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId{"1"}, builder1};
@@ -1988,26 +1991,29 @@ TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
                          .semi()
                          .via(executor);
   testMount.drainServerExecutor();
-  ASSERT_TRUE(testMount.getServerState()->getFaultInjector().waitUntilBlocked(
-      "checkout", 5s));
+  CO_ASSERT_TRUE(
+      testMount.getServerState()->getFaultInjector().waitUntilBlocked(
+          "checkout", 5s));
   EXPECT_FALSE(checkoutTo1.isReady());
 
   // Call getStatus and make sure it fails.
   auto commitId = RootId{"1"};
 
+  bool caught = false;
   try {
-    testMount.getEdenMount()
-        ->diff(
+    co_await folly::coro::timeout(
+        testMount.getEdenMount()->co_diff(
             testMount.getRootInode(),
             commitId,
             folly::CancellationToken{},
-            ObjectFetchContext::getNullContext())
-        .get();
-    FAIL()
-        << "diff should have failed with EdenErrorType::CHECKOUT_IN_PROGRESS";
+            ObjectFetchContext::getNullContext()),
+        60s);
   } catch (const EdenError& exception) {
-    ASSERT_EQ(*exception.errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
+    caught = true;
+    CO_ASSERT_EQ(*exception.errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
   }
+  CO_ASSERT_TRUE(caught)
+      << "diff should have failed with EdenErrorType::CHECKOUT_IN_PROGRESS";
 
   // Unblock checkout
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
@@ -2016,15 +2022,16 @@ TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
   EXPECT_TRUE(waitedCheckoutTo1.isReady());
 
   // Try to diff again just to make sure we don't block again.
-  auto diff2 = testMount.getEdenMount()->diff(
-      testMount.getRootInode(),
-      commitId,
-      folly::CancellationToken{},
-      ObjectFetchContext::getNullContext());
-  EXPECT_NO_THROW(std::move(diff2).get());
+  co_await folly::coro::timeout(
+      testMount.getEdenMount()->co_diff(
+          testMount.getRootInode(),
+          commitId,
+          folly::CancellationToken{},
+          ObjectFetchContext::getNullContext()),
+      60s);
 }
 
-TEST_P(CheckoutTest, droppedCheckoutFutureRestoresParentStateOnError) {
+CO_TEST_P(CheckoutTest, droppedCheckoutFutureRestoresParentStateOnError) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId{"1"}, builder1};
@@ -2042,8 +2049,9 @@ TEST_P(CheckoutTest, droppedCheckoutFutureRestoresParentStateOnError) {
                         .semi()
                         .via(executor);
     testMount.drainServerExecutor();
-    ASSERT_TRUE(testMount.getServerState()->getFaultInjector().waitUntilBlocked(
-        "checkout", 5s));
+    CO_ASSERT_TRUE(
+        testMount.getServerState()->getFaultInjector().waitUntilBlocked(
+            "checkout", 5s));
     EXPECT_FALSE(checkout.isReady());
   }
 
@@ -2065,12 +2073,14 @@ TEST_P(CheckoutTest, droppedCheckoutFutureRestoresParentStateOnError) {
   testMount.drainServerExecutor();
   EXPECT_NO_THROW(std::move(recoveryCheckout).getVia(executor));
 
-  auto diff = testMount.getEdenMount()->diff(
-      testMount.getRootInode(),
-      RootId{"1"},
-      folly::CancellationToken{},
-      ObjectFetchContext::getNullContext());
-  EXPECT_NO_THROW(std::move(diff).get());
+  // Diffing after the recovered checkout should succeed.
+  co_await folly::coro::timeout(
+      testMount.getEdenMount()->co_diff(
+          testMount.getRootInode(),
+          RootId{"1"},
+          folly::CancellationToken{},
+          ObjectFetchContext::getNullContext()),
+      60s);
 }
 
 TEST_P(
