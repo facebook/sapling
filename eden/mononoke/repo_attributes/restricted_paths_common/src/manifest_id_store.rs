@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::fmt;
 
 use anyhow::Result;
@@ -36,6 +37,8 @@ use strum::Display as EnumDisplay;
 use strum::EnumString;
 
 type FromValueResult<T> = Result<T, FromValueError>;
+
+const MAX_LOGGED_ENTRIES: usize = 10;
 
 pub use mononoke_types::RestrictedManifestId;
 
@@ -367,7 +370,14 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
             ctx.sql_query_telemetry(),
             &values[..],
         )
-        .await?;
+        .await
+        .inspect_err(|err| {
+            let mut scuba = ctx.scuba().clone();
+            scuba.unsampled().log_with_msg(
+                "Failed to add restricted manifest id entries to manifest id store",
+                manifest_id_store_insert_error_message(self.repo_id, entries, err),
+            );
+        })?;
 
         Ok(result.affected_rows() > 0)
     }
@@ -560,6 +570,37 @@ fn fmt_path_bytes(path: &PathBytes, f: &mut fmt::Formatter) -> fmt::Result {
 
 fn fmt_path_hash_bytes(path_hash: &PathHashBytes, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "\"{}\"", hex::encode(&path_hash.0))
+}
+
+fn manifest_id_store_insert_error_message(
+    repo_id: RepositoryId,
+    entries: &[RestrictedPathManifestIdEntry],
+    error: &(impl fmt::Display + ?Sized),
+) -> String {
+    let manifest_types = entries
+        .iter()
+        .map(|entry| entry.manifest_type.to_string())
+        .collect::<BTreeSet<_>>();
+    let logged_entries = entries
+        .iter()
+        .take(MAX_LOGGED_ENTRIES)
+        .map(|entry| {
+            serde_json::json!({
+                "manifest_type": entry.manifest_type.to_string(),
+                "path": String::from_utf8_lossy(&entry.path.0),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::json!({
+        "repo_id": repo_id.id(),
+        "entry_count": entries.len(),
+        "manifest_types": manifest_types,
+        "entries": logged_entries,
+        "entries_truncated": entries.len() > MAX_LOGGED_ENTRIES,
+        "error": format!("{error:#}"),
+    })
+    .to_string()
 }
 
 #[cfg(test)]
