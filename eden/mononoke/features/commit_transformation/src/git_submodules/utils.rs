@@ -97,8 +97,7 @@ where
       .await
       .with_context(|| {
           format!(
-              "Failed to fetch content from content id {} file containing the submodule's git commit hash",
-              submodule_file_content_id
+              "Failed to fetch content from content id {submodule_file_content_id} file containing the submodule's git commit hash"
           )
       })?;
 

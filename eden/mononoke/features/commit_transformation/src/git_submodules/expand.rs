@@ -360,7 +360,7 @@ async fn expand_git_submodule<'a, R>(
 where
     R: Repo,
 {
-    log_debug(ctx, format!("Expanding submodule {}", submodule_path));
+    log_debug(ctx, format!("Expanding submodule {submodule_path}"));
 
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
     let git_submodule_sha1 =
