@@ -775,7 +775,7 @@ fn get_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
 }
 
 fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkKey, Error> {
-    BookmarkKey::new(format!("repo_import_{}", bookmark_suffix))
+    BookmarkKey::new(format!("repo_import_{bookmark_suffix}"))
 }
 
 // Note: pushredirection only works from small repo to large repo.
