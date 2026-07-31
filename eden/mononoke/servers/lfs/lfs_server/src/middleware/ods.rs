@@ -69,7 +69,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let ctx = state.try_borrow::<RequestContext>()?;
     let method = ctx.method?;
     let repo = ctx.repository.clone()?;
-    let repo_and_method = format!("{}.{}", repo, method);
+    let repo_and_method = format!("{repo}.{method}");
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
