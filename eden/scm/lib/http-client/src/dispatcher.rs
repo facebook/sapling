@@ -21,6 +21,7 @@ use anyhow::anyhow;
 use curl::multi::Multi;
 use flume::Receiver;
 use flume::Sender;
+use flume::TryRecvError;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures::channel::oneshot;
@@ -279,6 +280,10 @@ impl AsyncRequestDispatcher for MultiWorkerDispatcher {
         client: WorkerClient,
         requests: Vec<StreamRequest>,
     ) -> Result<StatsFuture, HttpClientError> {
+        if requests.is_empty() {
+            return Ok(futures::future::ready(Ok(Stats::default())).boxed());
+        }
+
         let (stats_tx, stats_rx) = oneshot::channel();
         self.send_to_worker(client, requests, stats_tx)?;
         Ok(stats_rx.map(|res| res?).boxed())
@@ -351,11 +356,21 @@ fn run_dispatcher_worker(rx: Receiver<HttpJob>) {
                 if driver.num_transfers() == 0 {
                     // All request slots are held by other workers. Wait briefly for a
                     // slot to free up rather than dropping the batch.
-                    std::thread::sleep(Duration::from_millis(1));
-                    while let Ok(job) = rx.try_recv() {
-                        let mut next_batch_id = batch_id_counter.get();
-                        enqueue_job(job, &mut batches.borrow_mut(), &mut next_batch_id);
-                        batch_id_counter.set(next_batch_id);
+                    loop {
+                        match rx.try_recv() {
+                            Ok(job) => {
+                                let mut next_batch_id = batch_id_counter.get();
+                                enqueue_job(job, &mut batches.borrow_mut(), &mut next_batch_id);
+                                batch_id_counter.set(next_batch_id);
+                            }
+                            Err(TryRecvError::Empty) => {
+                                std::thread::sleep(Duration::from_millis(1));
+                                break;
+                            }
+                            Err(TryRecvError::Disconnected) => {
+                                return Err(anyhow!("http dispatcher shutting down").into());
+                            }
+                        }
                     }
                     continue;
                 }

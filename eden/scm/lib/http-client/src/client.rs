@@ -799,6 +799,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_async_dispatcher_empty_batch() -> Result<()> {
+        let client = dispatcher_client(1);
+
+        let (responses, stats) = client.send_async(Vec::new())?;
+
+        assert!(responses.is_empty());
+        assert_eq!(stats.await?, Stats::default());
+        Ok(())
+    }
+
+    #[test]
+    fn test_async_dispatcher_shutdown_cancels_waiting_batch() -> Result<()> {
+        let client = dispatcher_client(1).max_concurrent_requests(Some(1));
+        let _held_claim = client.claimer.claim_request();
+        let request = client.get(Url::parse("http://example.com/test")?);
+        let (responses, stats) = client.send_async(vec![request])?;
+        drop(responses);
+
+        let (shutdown_tx, shutdown_rx) = crossbeam::channel::bounded(1);
+        let shutdown_thread = std::thread::spawn(move || {
+            drop(client);
+            shutdown_tx.send(()).unwrap();
+        });
+
+        shutdown_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("dispatcher shutdown should cancel a batch waiting for a request slot");
+        shutdown_thread.join().unwrap();
+        assert!(futures::executor::block_on(stats).is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_async_dispatcher_mixed_success_and_failure() -> Result<()> {
         let mut server = mockito::Server::new_async().await;
         let body = b"body";
