@@ -574,13 +574,10 @@ fn create_acl_provider(
             acl_args.access_checker_shadow_sample_rate,
         ));
     }
-    if acl_args.access_checker_enabled {
-        let verifier = parse_access_checker_verifier(acl_args)?;
-        return runtime
-            .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
-            .context("Failed to create AccessCheckerProvider");
-    }
-    DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")
+    let verifier = parse_access_checker_verifier(acl_args)?;
+    runtime
+        .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
+        .context("Failed to create AccessCheckerProvider")
 }
 
 #[cfg(fbcode_build)]
