@@ -137,6 +137,26 @@ def get_rage_reporter(instance: EdenInstance) -> str:
     return processor.format(hostname=socket.getfqdn())
 
 
+# Reporters that upload via Phabricator and therefore need `.arcrc` credentials.
+ARC_AUTHED_REPORTERS: Tuple[str, ...] = ("pastry", "jf", "arc")
+
+
+def reporter_needs_arc_auth(processor: str) -> bool:
+    if not processor:
+        return False
+    argv = shlex.split(processor)
+    if not argv:
+        return False
+    return os.path.basename(argv[0]).split(".")[0] in ARC_AUTHED_REPORTERS
+
+
+def check_rage_reporter_auth(processor: str) -> Optional[str]:
+    """Returns a description of why `processor` cannot upload, or None if it can."""
+    if not reporter_needs_arc_auth(processor):
+        return None
+    return util_mod.check_arcrc_auth()
+
+
 THRIFT_COUNTER_REGEX = (
     r"thrift\.(EdenService|BaseService)\..*(time|num_samples|num_calls).*"
 )

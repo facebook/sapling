@@ -3165,6 +3165,17 @@ class RageCmd(Subcmd):
         instance.log_sample("eden_rage")
         rage_processor = rage_mod.get_rage_reporter(instance)
 
+        if not args.dry_run:
+            auth_problem = rage_mod.check_rage_reporter_auth(rage_processor)
+            if auth_problem is not None:
+                print_stderr(
+                    f"Error: cannot upload the rage report because {auth_problem}.\n"
+                    "Run `jf auth` to authenticate, then retry `eden rage`.\n"
+                    "To print the report locally without uploading it, "
+                    "run `eden rage --dry-run`."
+                )
+                return 1
+
         if args.report:
             rage_mod.report_edenfs_bug(instance, rage_processor)
             return 0
