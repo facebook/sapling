@@ -3527,159 +3527,28 @@ ImmediateFuture<Unit> TreeInode::diff(
     std::vector<shared_ptr<const Tree>> trees,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
-  if (getMount()->getEdenConfig()->enableCoroutinesPhase3.getValue()) {
-    return ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = inodePtrFromThis()](
-                DiffContext* context,
-                RelativePath currentPath,
-                std::vector<shared_ptr<const Tree>> trees,
-                const GitIgnoreStack* parentIgnore,
-                bool isIgnored) -> folly::coro::Task<Unit> {
-              co_return co_await self->co_diff(
-                  context,
-                  currentPath,
-                  std::move(trees),
-                  parentIgnore,
-                  isIgnored);
-            },
-            context,
-            currentPath.copy(),
-            std::move(trees),
-            parentIgnore,
-            isIgnored)
-            .semi()};
-  }
-
-  if (context->isCancelled()) {
-    XLOGF(
-        DBG7,
-        "diff() on directory {} cancelled due to client request no longer being active",
-        getLogPath());
-    return folly::unit;
-  }
-
-  InodePtr inode;
-  auto gitignoreInodeFuture = ImmediateFuture<InodePtr>::makeEmpty();
-  vector<IncompleteInodeLoad> pendingLoads;
-  {
-    // We have to get a write lock since we may have to load
-    // the .gitignore inode, which changes the entry status
-    auto contents = lockContentsWrite();
-
-    // TODO: support trees.size() != 1
-    XLOGF(
-        DBG7,
-        "diff() on directory {} ({}, {}) vs {}",
-        getLogPath(),
-        getNodeId(),
-        (contents->isMaterialized() ? "materialized"
-                                    : contents->treeId->toLogString()),
-        (trees.size() == 1 ? trees[0]->getObjectId().toLogString()
-                           : "null tree"));
-
-    // Check to see if we can short-circuit the diff operation if we have the
-    // same id as the tree we are being compared to.
-    if (!contents->isMaterialized()) {
-      for (auto& tree : trees) {
-        if (getObjectStore().areObjectsKnownIdentical(
-                contents->treeId.value(), tree->getObjectId())) {
-          // There are no changes in our tree or any children subtrees.
-          return folly::unit;
-        }
-      }
-    }
-
-    // If this directory is already ignored, we don't need to bother loading its
-    // .gitignore file.  Everything inside this directory must also be ignored,
-    // unless it is explicitly tracked in source control.
-    //
-    // Explicit include rules cannot be used to unignore files inside an ignored
-    // directory.
-    if (isIgnored) {
-      // We can pass in a null GitIgnoreStack pointer here.
-      // Since the entire directory is ignored, we don't need to check ignore
-      // status for any entries that aren't already tracked in source control.
-      return computeDiff(
-          std::move(contents),
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = inodePtrFromThis()](
+              DiffContext* context,
+              RelativePath currentPath,
+              std::vector<shared_ptr<const Tree>> trees,
+              const GitIgnoreStack* parentIgnore,
+              bool isIgnored) -> folly::coro::Task<Unit> {
+            co_return co_await self->co_diff(
+                context,
+                currentPath,
+                std::move(trees),
+                parentIgnore,
+                isIgnored);
+          },
           context,
-          currentPath,
+          currentPath.copy(),
           std::move(trees),
-          nullptr,
-          isIgnored);
-    }
-
-    // Load the ignore rules for this directory.
-    //
-    // In our repositories less than .1% of directories contain a .gitignore
-    // file, so we optimize for the case where a .gitignore isn't present.
-    // When there is no .gitignore file we avoid acquiring and releasing the
-    // contents_ lock twice, and we avoid creating a Future to load the
-    // .gitignore data.
-    DirEntry* gitignoreEntry = nullptr;
-    auto iter = contents->entries.find(kIgnoreFilename);
-    if (iter != contents->entries.end()) {
-      gitignoreEntry = &iter->second;
-      if (gitignoreEntry->isDirectory()) {
-        // Ignore .gitignore directories
-        XLOGF(DBG4, "Ignoring .gitignore directory in {}", getLogPath());
-        gitignoreEntry = nullptr;
-      }
-    }
-
-    if (!gitignoreEntry) {
-      return computeDiff(
-          std::move(contents),
-          context,
-          currentPath,
-          std::move(trees),
-          make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
-          isIgnored);
-    }
-
-    XLOGF(DBG7, "Loading ignore file for {}", getLogPath());
-    inode = gitignoreEntry->getInodePtr();
-    if (!inode) {
-      gitignoreInodeFuture = loadChildLocked(
-          kIgnoreFilename,
-          *gitignoreEntry,
-          pendingLoads,
-          context->getFetchContext());
-    }
-  }
-
-  // Finish setting up any load operations we started while holding the
-  // contents_ lock above.
-  for (auto& load : pendingLoads) {
-    load.finish();
-  }
-
-  if (!inode) {
-    return std::move(gitignoreInodeFuture)
-        .thenValue([self = inodePtrFromThis(),
-                    context,
-                    currentPath = RelativePath{currentPath},
-                    trees = std::move(trees),
-                    parentIgnore,
-                    isIgnored](InodePtr&& loadedInode) mutable {
-          return self->loadGitIgnoreThenDiff(
-              std::move(loadedInode),
-              context,
-              currentPath,
-              std::move(trees),
-              parentIgnore,
-              isIgnored);
-        });
-  } else {
-    return loadGitIgnoreThenDiff(
-        std::move(inode),
-        context,
-        currentPath,
-        std::move(trees),
-        parentIgnore,
-        isIgnored);
-  }
+          parentIgnore,
+          isIgnored)
+          .semi()};
 }
 
 folly::coro::now_task<folly::Unit> TreeInode::co_diff(
