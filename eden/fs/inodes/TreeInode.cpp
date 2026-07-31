@@ -3652,61 +3652,6 @@ folly::coro::now_task<folly::Unit> TreeInode::co_diff(
   co_return folly::unit;
 }
 
-ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
-    InodePtr gitignoreInode,
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    std::vector<shared_ptr<const Tree>> trees,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
-  auto loadGitIgnoreThenDiffSpan = context->createSpan("loadGitIgnoreThenDiff");
-
-  return makeImmediateFutureWith([gitignoreInode = std::move(gitignoreInode),
-                                  context] {
-           auto fileInode = gitignoreInode.asFileOrNull();
-           if (!fileInode) {
-             XLOGF(
-                 WARN,
-                 "loadGitIgnoreThenDiff() invoked with a non-file inode: {}",
-                 gitignoreInode->getLogPath());
-             return makeImmediateFuture<std::string>(
-                 InodeError(EISDIR, gitignoreInode));
-           } else {
-#ifndef _WIN32
-             if (fileInode->getType() == dtype_t::Symlink) {
-               return makeImmediateFuture<std::string>(
-                   InodeError(EMLINK, gitignoreInode));
-             }
-#endif
-             return fileInode->readAll(context->getFetchContext());
-           }
-         })
-      .thenTry(
-          [self = inodePtrFromThis(),
-           context,
-           currentPath = RelativePath{currentPath}, // deep copy
-           trees = std::move(trees),
-           parentIgnore,
-           isIgnored](folly::Try<std::string> ignoreFileContentsTry) mutable {
-            std::string ignoreFileContents;
-            if (ignoreFileContentsTry.hasException()) {
-              XLOGF(
-                  WARN,
-                  "error reading ignore file: {}",
-                  folly::exceptionStr(ignoreFileContentsTry.exception()));
-            } else {
-              ignoreFileContents = std::move(ignoreFileContentsTry).value();
-            }
-            return self->computeDiff(
-                self->lockContentsWrite(),
-                context,
-                currentPath,
-                std::move(trees),
-                make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-                isIgnored);
-          });
-}
-
 folly::coro::now_task<folly::Unit> TreeInode::co_loadGitIgnoreThenDiff(
     InodePtr gitignoreInode,
     DiffContext* context,
@@ -4148,69 +4093,6 @@ TreeInode::prepareDeferredDiffEntries(
   }
 
   return deferredEntries;
-}
-
-ImmediateFuture<Unit> TreeInode::computeDiff(
-    folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    const std::vector<shared_ptr<const Tree>>& trees,
-    std::unique_ptr<GitIgnoreStack> ignore,
-    bool isIgnored) {
-  auto computeDiffSpan = context->createSpan("computeDiff");
-
-  auto deferredEntries = prepareDeferredDiffEntries(
-      std::move(contentsLock),
-      context,
-      currentPath,
-      trees,
-      ignore.get(),
-      isIgnored);
-
-  std::vector<ImmediateFuture<Unit>> deferredFutures;
-  deferredFutures.reserve(deferredEntries.size());
-  for (auto& entry : deferredEntries) {
-    deferredFutures.push_back(entry->run());
-  }
-
-  // Wait on all of the deferred entries to complete.
-  // Note that we explicitly move-capture the deferredFutures vector into this
-  // callback, to ensure that the DeferredDiffEntry objects do not get
-  // destroyed before they complete.
-  auto faultFuture =
-      getMount()->getServerState()->getFaultInjector().checkAsync(
-          "TreeInode::computeDiff", currentPath.view());
-  return std::move(faultFuture)
-      .thenValue(
-          [deferredFutures = std::move(deferredFutures)](auto&&) mutable {
-            return collectAll(std::move(deferredFutures));
-          })
-      .thenValue([self = inodePtrFromThis(),
-                  currentPath = RelativePath{currentPath},
-                  context,
-                  // Capture ignore to ensure it remains valid until all of our
-                  // children's diff operations complete.
-                  ignore = std::move(ignore),
-                  deferredJobs = std::move(deferredEntries)](
-                     std::vector<folly::Try<Unit>> results) {
-        // Call diffError() for any jobs that failed.
-        for (size_t n = 0; n < results.size(); ++n) {
-          auto& result = results[n];
-          if (result.hasException()) {
-            XLOGF(
-                WARN,
-                "exception processing diff for {}: {}",
-                deferredJobs[n]->getPath(),
-                folly::exceptionStr(result.exception()));
-            context->callback->diffError(
-                deferredJobs[n]->getPath(), result.exception());
-          }
-        }
-        // Report success here, even if some of our deferred jobs failed.
-        // We will have reported those errors to the callback already, and so we
-        // don't want our parent to report a new error at our path.
-        return folly::unit;
-      });
 }
 
 folly::coro::now_task<folly::Unit> TreeInode::co_computeDiff(

@@ -1127,40 +1127,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<IncompleteInodeLoad>& pendingLoads,
       const ObjectFetchContextPtr& fetchContext);
 
-  /**
-   * Load the .gitignore file for this directory, then call computeDiff() once
-   * it is loaded.
-   */
-  [[nodiscard]] ImmediateFuture<folly::Unit> loadGitIgnoreThenDiff(
-      InodePtr gitignoreInode,
-      DiffContext* context,
-      RelativePathPiece currentPath,
-      std::vector<std::shared_ptr<const Tree>> trees,
-      const GitIgnoreStack* parentIgnore,
-      bool isIgnored);
-
   folly::coro::now_task<folly::Unit> co_loadGitIgnoreThenDiff(
       InodePtr gitignoreInode,
       DiffContext* context,
       RelativePathPiece currentPath,
       std::vector<std::shared_ptr<const Tree>> trees,
       const GitIgnoreStack* parentIgnore,
-      bool isIgnored);
-
-  /**
-   * The bulk of the actual implementation of diff()
-   *
-   * The main diff() function's GitIgnoreStack parameter contains the ignore
-   * data for the ancestors of this directory.  diff() loads .gitignore data
-   * for the current directory and then invokes computeDiff() to perform the
-   * diff once all .gitignore data is loaded.
-   */
-  [[nodiscard]] ImmediateFuture<folly::Unit> computeDiff(
-      folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
-      DiffContext* context,
-      RelativePathPiece currentPath,
-      const std::vector<std::shared_ptr<const Tree>>& trees,
-      std::unique_ptr<GitIgnoreStack> ignore,
       bool isIgnored);
 
   folly::coro::now_task<folly::Unit> co_computeDiff(
