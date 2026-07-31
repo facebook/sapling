@@ -460,17 +460,15 @@ void FsInodeCatalog::saveOverlayEntries(
       inodeNumber, iov.data(), iov.size(), crashSafe);
 }
 
-bool FsInodeCatalog::loadOverlayEntries(
+namespace {
+
+void loadOverlayEntriesFromData(
     InodeNumber inodeNumber,
-    OverlayEntryLoader loader) {
+    folly::StringPiece rawData,
+    InodeCatalog::OverlayEntryLoader loader) {
   using apache::thrift::protocol::TType;
 
-  auto rawData = core_->loadRawOverlayDir(inodeNumber);
-  if (!rawData) {
-    return false;
-  }
-
-  auto buf = folly::IOBuf::wrapBuffer(rawData->data(), rawData->size());
+  auto buf = folly::IOBuf::wrapBuffer(rawData.data(), rawData.size());
   apache::thrift::CompactProtocolReader reader;
   reader.setInput(buf.get());
 
@@ -513,17 +511,17 @@ bool FsInodeCatalog::loadOverlayEntries(
 
   // Each map entry is at least a few bytes (varint string length + struct
   // stop field), so mapSize cannot plausibly exceed the raw data size.
-  if (mapSize > rawData->size()) {
+  if (mapSize > rawData.size()) {
     throw_<std::runtime_error>(
         "corrupt overlay for inode ",
         inodeNumber,
         ": map size ",
         mapSize,
         " exceeds data size ",
-        rawData->size());
+        rawData.size());
   }
 
-  loader(mapSize, [&](OverlayEntryVisitor visitor) {
+  loader(mapSize, [&](InodeCatalog::OverlayEntryVisitor visitor) {
     std::string name;
     for (uint32_t i = 0; i < mapSize; ++i) {
       reader.readString(name);
@@ -539,7 +537,74 @@ bool FsInodeCatalog::loadOverlayEntries(
     reader.readFieldBegin(fieldName, fieldType, fieldId);
     reader.readStructEnd();
   });
+}
 
+template <typename... Args>
+fsck::InodeInfo makeInodeError(InodeNumber number, Args&&... args) {
+  return fsck::InodeInfo(
+      number,
+      fsck::InodeType::Error,
+      fmt::to_string(
+          fmt::join(std::make_tuple(std::forward<Args>(args)...), "")));
+}
+
+fsck::InodeInfo readInodeInfoFromFile(InodeNumber number, folly::File& file) {
+  std::array<char, FsFileContentStore::kHeaderLength> headerContents{};
+  auto readResult =
+      folly::readFull(file.fd(), headerContents.data(), headerContents.size());
+  if (readResult < 0) {
+    return makeInodeError(
+        number, "error reading from file: ", folly::errnoStr(errno));
+  } else if (readResult != FsFileContentStore::kHeaderLength) {
+    return makeInodeError(
+        number,
+        fmt::format(
+            "file was too short to contain overlay header: read {} bytes, expected {} bytes",
+            readResult,
+            FsFileContentStore::kHeaderLength));
+  }
+
+  static_assert(
+      FsFileContentStore::kHeaderIdentifierDir.size() ==
+          FsFileContentStore::kHeaderIdentifierFile.size(),
+      "both header IDs must have the same length");
+  StringPiece typeID(
+      headerContents.data(),
+      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size());
+
+  uint32_t versionBE;
+  memcpy(
+      &versionBE,
+      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size(),
+      sizeof(uint32_t));
+  auto version = folly::Endian::big(versionBE);
+  if (version != FsFileContentStore::kHeaderVersion) {
+    return makeInodeError(
+        number, "unknown overlay file format version ", version);
+  }
+
+  if (typeID == FsFileContentStore::kHeaderIdentifierDir) {
+    return fsck::InodeInfo(number, fsck::InodeType::Dir);
+  } else if (typeID == FsFileContentStore::kHeaderIdentifierFile) {
+    return fsck::InodeInfo(number, fsck::InodeType::File);
+  }
+  return makeInodeError(
+      number,
+      "unknown overlay file type ID: ",
+      folly::hexlify(ByteRange{typeID}));
+}
+
+} // namespace
+
+bool FsInodeCatalog::loadOverlayEntries(
+    InodeNumber inodeNumber,
+    OverlayEntryLoader loader) {
+  auto rawData = core_->loadRawOverlayDir(inodeNumber);
+  if (!rawData) {
+    return false;
+  }
+
+  loadOverlayEntriesFromData(inodeNumber, *rawData, loader);
   return true;
 }
 
@@ -1490,94 +1555,47 @@ bool FsInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
   return core_->hasOverlayFile(inodeNumber);
 }
 
-namespace {
-overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
-  std::string serializedData;
-  if (!folly::readFile(file.fd(), serializedData)) {
-    folly::throwSystemError("read failed");
-  }
-
-  return CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
-}
-} // namespace
-
 std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
     InodeNumber number) {
-  auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
-    return {fsck::InodeInfo(
-        number,
-        fsck::InodeType::Error,
-        fmt::to_string(fmt::join(std::make_tuple(args...), "")))};
-  };
-
-  // Open the inode file
   folly::File file;
   try {
     file = std::get<folly::File>(openFileNoVerify(number));
   } catch (const std::exception& ex) {
-    return inodeError("error opening file: ", folly::exceptionStr(ex));
+    return makeInodeError(
+        number, "error opening file: ", folly::exceptionStr(ex));
   }
 
-  // Read the file header
-  std::array<char, FsFileContentStore::kHeaderLength> headerContents;
-  auto readResult =
-      folly::readFull(file.fd(), headerContents.data(), headerContents.size());
-  if (readResult < 0) {
-    int errnum = errno;
-    return inodeError("error reading from file: ", folly::errnoStr(errnum));
-  } else if (readResult != FsFileContentStore::kHeaderLength) {
-    return inodeError(
-        fmt::format(
-            "file was too short to contain overlay header: read {} bytes, expected {} bytes",
-            readResult,
-            FsFileContentStore::kHeaderLength));
-  }
-
-  // The first 4 bytes of the header are the file type identifier.
-  static_assert(
-      FsFileContentStore::kHeaderIdentifierDir.size() ==
-          FsFileContentStore::kHeaderIdentifierFile.size(),
-      "both header IDs must have the same length");
-  StringPiece typeID(
-      headerContents.data(),
-      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size());
-
-  // The next 4 bytes are the version ID.
-  uint32_t versionBE;
-  memcpy(
-      &versionBE,
-      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size(),
-      sizeof(uint32_t));
-  auto version = folly::Endian::big(versionBE);
-  if (version != FsFileContentStore::kHeaderVersion) {
-    return inodeError("unknown overlay file format version ", version);
-  }
-
-  fsck::InodeType type;
-  if (typeID == FsFileContentStore::kHeaderIdentifierDir) {
-    type = fsck::InodeType::Dir;
-  } else if (typeID == FsFileContentStore::kHeaderIdentifierFile) {
-    type = fsck::InodeType::File;
-  } else {
-    return inodeError(
-        "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
-  }
-
-  if (type == fsck::InodeType::Dir) {
-    try {
-      return {fsck::InodeInfo(number, loadDirectoryChildren(file))};
-    } catch (const std::exception& ex) {
-      return inodeError(
-          "error parsing directory contents: ", folly::exceptionStr(ex));
-    }
-  } else {
-    return {fsck::InodeInfo(number, type)};
-  }
+  return readInodeInfoFromFile(number, file);
 }
 
 std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfo(
     InodeNumber number) {
   return core_->loadInodeInfo(number);
+}
+
+std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfoAndEntries(
+    InodeNumber number,
+    OverlayEntryLoader loader) {
+  folly::File file;
+  try {
+    file = std::get<folly::File>(core_->openFileNoVerify(number));
+  } catch (const std::exception& ex) {
+    return makeInodeError(
+        number, "error opening file: ", folly::exceptionStr(ex));
+  }
+
+  auto info = readInodeInfoFromFile(number, file);
+  if (info.type != fsck::InodeType::Dir) {
+    return info;
+  }
+
+  std::string rawData;
+  if (!folly::readFile(file.fd(), rawData)) {
+    return makeInodeError(
+        number, "error reading directory contents: ", folly::errnoStr(errno));
+  }
+  loadOverlayEntriesFromData(number, rawData, loader);
+  return info;
 }
 } // namespace facebook::eden
 

@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
-#include <fmt/core.h>
 #include <folly/File.h>
 
 #include "eden/common/utils/Bug.h"
@@ -97,24 +96,11 @@ InodeNumber SqliteInodeCatalog::nextInodeNumber() {
 
 std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
     InodeNumber number) {
-  auto inodeError =
-      [number](std::string msg) -> std::optional<fsck::InodeInfo> {
-    return {fsck::InodeInfo(number, fsck::InodeType::Error, std::move(msg))};
-  };
-
   if (!hasOverlayDir(number)) {
     return std::nullopt;
   }
 
-  auto overlayDir = loadOverlayDir(number);
-
-  if (!overlayDir.has_value()) {
-    return inodeError(
-        fmt::format(
-            "unable to load directory contents for inode {}", number.get()));
-  }
-
-  return {fsck::InodeInfo(number, std::move(overlayDir.value()))};
+  return {fsck::InodeInfo(number, fsck::InodeType::Dir)};
 }
 
 std::vector<InodeNumber> SqliteInodeCatalog::getAllParentInodeNumbers() {

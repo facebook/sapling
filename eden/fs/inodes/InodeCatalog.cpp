@@ -36,4 +36,20 @@ bool InodeCatalog::loadOverlayEntries(
   return true;
 }
 
+std::optional<fsck::InodeInfo> InodeCatalog::loadInodeInfoAndEntries(
+    InodeNumber inodeNumber,
+    OverlayEntryLoader loader) {
+  auto info = loadInodeInfo(inodeNumber);
+  if (!info || info->type != fsck::InodeType::Dir) {
+    return info;
+  }
+  if (!loadOverlayEntries(inodeNumber, loader)) {
+    return fsck::InodeInfo{
+        inodeNumber,
+        fsck::InodeType::Error,
+        "unable to load directory contents"};
+  }
+  return info;
+}
+
 } // namespace facebook::eden

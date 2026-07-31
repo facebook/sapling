@@ -380,7 +380,8 @@ class FsFileContentStore : public FileContentStore {
  */
 class FsInodeCatalog : public InodeCatalog {
  public:
-  explicit FsInodeCatalog(FsFileContentStore* core) : core_(core) {}
+  explicit FsInodeCatalog(FsFileContentStore* FOLLY_NONNULL core)
+      : core_(core) {}
 
   bool supportsSemanticOperations() const override {
     return false;
@@ -446,6 +447,10 @@ class FsInodeCatalog : public InodeCatalog {
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
+  std::optional<fsck::InodeInfo> loadInodeInfoAndEntries(
+      InodeNumber number,
+      OverlayEntryLoader loader) override;
+
   uint64_t appendWalEntry(
       InodeNumber parent,
       WalOpType op,
@@ -476,7 +481,7 @@ class FsInodeCatalog : public InodeCatalog {
   }
 
  private:
-  FsFileContentStore* core_;
+  FsFileContentStore* const FOLLY_NONNULL core_;
 };
 
 } // namespace facebook::eden

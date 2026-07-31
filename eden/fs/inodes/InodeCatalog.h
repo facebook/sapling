@@ -238,6 +238,17 @@ class InodeCatalog {
       OverlayEntryLoader loader);
 
   /**
+   * Load inode metadata and stream directory entries when the inode is a
+   * directory. Catalogs may override this to perform both operations from one
+   * underlying read. Parsing and loader exceptions propagate, and the loader
+   * may have observed a partial directory before an exception. Callers must
+   * not commit streamed results until this method returns successfully.
+   */
+  virtual std::optional<fsck::InodeInfo> loadInodeInfoAndEntries(
+      InodeNumber inodeNumber,
+      OverlayEntryLoader loader);
+
+  /**
    * Remove the overlay directory record associated with the passed InodeNumber.
    */
   virtual void removeOverlayDir(InodeNumber inodeNumber) = 0;

@@ -234,6 +234,9 @@ class OverlayChecker {
   std::optional<fsck::InodeInfo> loadInodeInfoFromInodeCatalog(
       InodeNumber number,
       folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
+  std::optional<fsck::InodeInfo> loadDirectoryChildren(
+      std::optional<fsck::InodeInfo> info,
+      folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
 
   void linkInodeChildren();
   void scanForParentErrors();

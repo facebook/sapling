@@ -696,17 +696,6 @@ bool FsInodeCatalogDev::hasOverlayDir(InodeNumber inodeNumber) {
   return core_->hasOverlayFile(inodeNumber);
 }
 
-namespace {
-overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
-  std::string serializedData;
-  if (!folly::readFile(file.fd(), serializedData)) {
-    folly::throwSystemError("read failed");
-  }
-
-  return CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
-}
-} // namespace
-
 std::optional<fsck::InodeInfo> FsFileContentStoreDev::loadInodeInfo(
     InodeNumber number) {
   auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
@@ -771,16 +760,7 @@ std::optional<fsck::InodeInfo> FsFileContentStoreDev::loadInodeInfo(
         "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
   }
 
-  if (type == fsck::InodeType::Dir) {
-    try {
-      return {fsck::InodeInfo(number, loadDirectoryChildren(file))};
-    } catch (const std::exception& ex) {
-      return inodeError(
-          "error parsing directory contents: ", folly::exceptionStr(ex));
-    }
-  } else {
-    return {fsck::InodeInfo(number, type)};
-  }
+  return {fsck::InodeInfo(number, type)};
 }
 
 std::optional<fsck::InodeInfo> FsInodeCatalogDev::loadInodeInfo(

@@ -125,13 +125,13 @@ class OverlayChecker::RepairState {
     return dir_;
   }
 
-  OverlayChecker* checker() {
+  OverlayChecker* FOLLY_NONNULL checker() {
     return checker_;
   }
-  InodeCatalog* inodeCatalog() {
+  InodeCatalog* FOLLY_NONNULL inodeCatalog() {
     return checker_->impl_->inodeCatalog;
   }
-  FsFileContentStore* fcs() {
+  FsFileContentStore* FOLLY_NONNULL fcs() {
     return checker_->impl_->fcs;
   }
 
@@ -314,7 +314,7 @@ class OverlayChecker::RepairState {
     }
   }
 
-  OverlayChecker* const checker_;
+  OverlayChecker* const FOLLY_NONNULL checker_;
   AbsolutePath dir_;
   folly::File logFile_;
 };
@@ -518,6 +518,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
         processOrphanedError(repair, number_);
         return false;
       }
+      case InodeType::Unknown:
+        break;
     }
 
     XLOGF(
@@ -533,7 +535,21 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       RepairState& repair,
       InodeNumber number,
       AbsolutePath archivePath,
-      const overlay::OverlayDir& children) const {
+      const std::unique_ptr<overlay::OverlayDir>& children) const {
+    std::optional<overlay::OverlayDir> reloadedChildren;
+    const overlay::OverlayDir* childrenToArchive = children.get();
+    if (!childrenToArchive) {
+      reloadedChildren = repair.inodeCatalog()->loadOverlayDir(number);
+      if (!reloadedChildren) {
+        // Eager scanning must retain children for every readable directory.
+        throw std::runtime_error(
+            fmt::format(
+                "cannot archive orphan directory inode {} without its children",
+                number));
+      }
+      childrenToArchive = &*reloadedChildren;
+    }
+
     auto rc = mkdir(archivePath.value().c_str(), 0700);
     if (rc != 0 && errno != EEXIST) {
       // EEXIST is okay.  Another error repair step (like InodeDataError) may
@@ -547,7 +563,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     }
 
     auto* const checker = repair.checker();
-    for (const auto& childEntry : *children.entries()) {
+    for (const auto& childEntry : *childrenToArchive->entries()) {
       auto childRawInode = *childEntry.second.inodeNumber();
       if (childRawInode == 0) {
         // If this child does not have an inode number allocated it cannot
@@ -595,6 +611,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       case InodeType::Error:
         processOrphanedError(repair, info->number);
         return;
+      case InodeType::Unknown:
+        break;
     }
 
     XLOGF(
@@ -885,7 +903,8 @@ void OverlayChecker::scanForWalChildren() {
 
       auto iter = impl_->inodes.find(ino);
       if (iter != impl_->inodes.end()) {
-        iter->second.children = std::move(*dirData);
+        iter->second.children =
+            std::make_unique<overlay::OverlayDir>(std::move(*dirData));
       } else if (!dirData->entries()->empty()) {
         impl_->inodes.emplace(ino, InodeInfo{ino, std::move(*dirData)});
         updateMaxInodeNumber(ino);
@@ -1120,7 +1139,15 @@ PathComponent OverlayChecker::findChildName(
   // error, which is hopefully rare.  Therefore we avoid doing as much work as
   // possible during linkInodeChildren(), at the cost of doing extra work here
   // if we do actually need to compute paths.
-  for (const auto& entry : *parentInfo.children.entries()) {
+  if (!parentInfo.children) {
+    XLOGF(
+        DFATAL,
+        "bug in fsck code: parent {} of child {} has no loaded directory contents",
+        parentInfo.number,
+        child);
+    return PathComponent(fmt::format("[missing_child({})]", child));
+  }
+  for (const auto& entry : *parentInfo.children->entries()) {
     if (static_cast<uint64_t>(*entry.second.inodeNumber()) == child.get()) {
       return PathComponent(entry.first);
     }
@@ -1158,9 +1185,10 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
   for (const auto& d : dirs) {
     auto inodeInfoOpt = loadInodeInfoFromInodeCatalog(d, errors);
     if (inodeInfoOpt.has_value()) {
-      auto inodeInfo = inodeInfoOpt.value();
-      updateMaxInodeNumber(inodeInfo.number);
-      impl_->inodes.emplace(inodeInfo.number, inodeInfo);
+      auto inodeInfo = std::move(inodeInfoOpt).value();
+      auto inodeNumber = inodeInfo.number;
+      updateMaxInodeNumber(inodeNumber);
+      impl_->inodes.emplace(inodeNumber, std::move(inodeInfo));
     }
   }
 
@@ -1235,7 +1263,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
       map([this, progressCallback, &progress10pct](
               std::optional<InodeInfo> inodeInfoOpt) -> bool {
         if (inodeInfoOpt.has_value()) {
-          auto inodeInfo = inodeInfoOpt.value();
+          auto inodeInfo = std::move(inodeInfoOpt).value();
           ShardID shardID = static_cast<ShardID>(inodeInfo.number.get() & 0xff);
           uint32_t progress = (10 * shardID) / FsFileContentStore::kNumShards;
           if (progress > progress10pct) {
@@ -1250,8 +1278,9 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
             progress10pct = progress;
           }
 
-          updateMaxInodeNumber(inodeInfo.number);
-          impl_->inodes.emplace(inodeInfo.number, inodeInfo);
+          auto inodeNumber = inodeInfo.number;
+          updateMaxInodeNumber(inodeNumber);
+          impl_->inodes.emplace(inodeNumber, std::move(inodeInfo));
           if (impl_->inodes.size() % 10000 == 0) {
             XLOGF(
                 DBG5,
@@ -1304,7 +1333,7 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromInodeCatalog(
     errors.wlock()->push_back(
         make_error<InodeDataError>(info.value().number, info.value().errorMsg));
   }
-  return info;
+  return loadDirectoryChildren(std::move(info), errors);
 }
 
 std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
@@ -1316,12 +1345,45 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
     errors.wlock()->push_back(
         make_error<InodeDataError>(info.value().number, info.value().errorMsg));
   }
-  return info;
+  return loadDirectoryChildren(std::move(info), errors);
+}
+
+std::optional<InodeInfo> OverlayChecker::loadDirectoryChildren(
+    std::optional<InodeInfo> info,
+    folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
+  if (!info.has_value() || info->type != InodeType::Dir) {
+    return info;
+  }
+
+  try {
+    auto children = impl_->inodeCatalog->loadOverlayDir(info->number);
+    if (children.has_value()) {
+      info->children =
+          std::make_unique<overlay::OverlayDir>(std::move(*children));
+      return info;
+    }
+
+    auto message = fmt::format(
+        "unable to load directory contents for inode {}", info->number.get());
+    errors.wlock()->push_back(
+        make_error<InodeDataError>(info->number, message));
+    return InodeInfo{info->number, InodeType::Error, std::move(message)};
+  } catch (const std::exception& ex) {
+    auto message = fmt::format(
+        "error parsing directory contents: {}", folly::exceptionStr(ex));
+    errors.wlock()->push_back(
+        make_error<InodeDataError>(info->number, message));
+    return InodeInfo{info->number, InodeType::Error, std::move(message)};
+  }
 }
 
 void OverlayChecker::linkInodeChildren() {
   for (const auto& [parentInodeNumber, parent] : impl_->inodes) {
-    for (const auto& [childName, child] : *parent.children.entries()) {
+    if (!parent.children) {
+      XDCHECK(parent.type != InodeType::Dir);
+      continue;
+    }
+    for (const auto& [childName, child] : *parent.children->entries()) {
       auto childRawInode = *child.inodeNumber();
       if (childRawInode == 0) {
         // Older versions of edenfs would leave the inode number set to 0

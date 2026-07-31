@@ -182,6 +182,45 @@ TEST_F(FsInodeCatalogEntryTest, roundTripEntries) {
   expectEntriesEqual(*odir.entries(), loaded);
 }
 
+TEST_F(FsInodeCatalogEntryTest, loadInodeInfoAndEntries) {
+  overlay::OverlayDir odir;
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = 5;
+  odir.entries()->emplace("alpha", std::move(entry));
+  saveFromOverlayDir(*catalog_, InodeNumber{20}, odir);
+
+  std::map<std::string, overlay::OverlayEntry> entries;
+  auto info = catalog_->loadInodeInfoAndEntries(
+      InodeNumber{20},
+      [&](size_t count, InodeCatalog::OverlayEntryIterator iterate) {
+        EXPECT_EQ(1, count);
+        iterate([&](const std::string& name, const auto& loadedEntry) {
+          entries.emplace(name, loadedEntry);
+        });
+      });
+
+  ASSERT_TRUE(info.has_value());
+  EXPECT_EQ(fsck::InodeType::Dir, info->type);
+  expectEntriesEqual(*odir.entries(), entries);
+}
+
+TEST_F(FsInodeCatalogEntryTest, loadFileInfoDoesNotVisitEntries) {
+  constexpr folly::StringPiece contents{"contents"};
+  store_->createOverlayFile(
+      InodeNumber{21},
+      folly::ByteRange{
+          reinterpret_cast<const uint8_t*>(contents.data()), contents.size()});
+
+  auto info = catalog_->loadInodeInfoAndEntries(
+      InodeNumber{21}, [](size_t, InodeCatalog::OverlayEntryIterator) {
+        FAIL() << "file inode unexpectedly produced directory entries";
+      });
+
+  ASSERT_TRUE(info.has_value());
+  EXPECT_EQ(fsck::InodeType::File, info->type);
+}
+
 TEST_F(FsInodeCatalogEntryTest, emptyDirectory) {
   overlay::OverlayDir odir;
 
