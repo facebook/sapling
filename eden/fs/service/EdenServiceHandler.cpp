@@ -5580,15 +5580,17 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
             return a.file < b.file;
           });
       for (GlobEntry& globEntry : globEntries) {
-        std::string filePath = globEntry.file;
+        StringPiece filePath{globEntry.file};
         if (!searchRoot.empty() && searchRoot != ".") {
-          if (filePath.rfind(searchRoot, 0) == 0) {
-            filePath = filePath.substr(searchRoot.length() + 1);
-          } else {
+          if (!filePath.startsWith(searchRoot) ||
+              filePath.size() <= searchRoot.size() ||
+              !detail::isDirSeparator(filePath[searchRoot.size()])) {
             continue;
           }
+          filePath = filePath.subpiece(searchRoot.size() + 1);
         }
-        result->matchingFiles().value().emplace_back(std::move(filePath));
+        result->matchingFiles().value().emplace_back(
+            PathComponent::storage_type{filePath.data(), filePath.size()});
         if (wantDtype) {
           if (globEntry.dType == DT_UNKNOWN) {
             // Triggers the outer catch below and falls back to local globbing,

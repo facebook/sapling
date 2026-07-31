@@ -330,7 +330,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   if (!suppressFileList) {
     for (auto& entry : sortedResults) {
       if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
-        out->matchingFiles()->emplace_back(std::move(entry.name).intoString());
+        out->matchingFiles()->emplace_back(std::move(entry.name));
 
         if (wantDtype) {
           out->dtypes()->emplace_back(static_cast<OsDtype>(entry.dtype));

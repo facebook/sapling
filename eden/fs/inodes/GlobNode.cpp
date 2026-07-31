@@ -108,6 +108,7 @@ folly::coro::now_task<folly::Unit> GlobNode::evaluate(
       store.get(),
       context,
       rootPath,
+      globResult ? GlobPath::makeDir(rootPath) : GlobPathBuilder::Dir{},
       TreeInodePtrRoot(std::move(root)),
       fileBlobsToPrefetch,
       globResult,

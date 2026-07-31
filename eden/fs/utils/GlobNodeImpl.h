@@ -139,6 +139,15 @@ class GlobNodeImpl {
       return !entryIsTree(entry);
     }
   };
+
+  // A null directory disables path construction when results are suppressed.
+  static GlobPathBuilder::Dir makeChildResultDir(
+      const GlobPathBuilder::Dir& resultDir,
+      PathComponentPiece child) {
+    return resultDir ? GlobPath::childDir(resultDir, child)
+                     : GlobPathBuilder::Dir{};
+  }
+
   // Evaluates any recursive glob entries associated with this node.
   // This is a recursive function which evaluates the current GlobNodeImpl
   // against the recursive set of children. By contrast, evaluate() walks down
@@ -151,12 +160,14 @@ class GlobNodeImpl {
       const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       RelativePathPiece startOfRecursive,
+      const GlobPathBuilder::Dir& resultDir,
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList* globResult,
       const RootId& originRootId,
       size_t currentDepth = 0) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateRecursiveComponentImpl"};
+    const GlobPathBuilder pathBuilder;
     std::vector<RelativePath> subDirNames;
     std::vector<folly::coro::Task<void>> tasks;
     std::vector<ObjectId> localFileBlobsToPrefetch;
@@ -172,12 +183,12 @@ class GlobNodeImpl {
             if (globResult) {
               if (prefetchOptimizations_) {
                 localGlobResults.emplace_back(
-                    rootPath + candidateName,
+                    pathBuilder.makePath(resultDir, entry.first),
                     entry.second.getDtype(),
                     originRootId);
               } else {
                 globResult->wlock()->emplace_back(
-                    rootPath + candidateName,
+                    pathBuilder.makePath(resultDir, entry.first),
                     entry.second.getDtype(),
                     originRootId);
               }
@@ -219,6 +230,7 @@ class GlobNodeImpl {
                      objectId = entry.second.getObjectId(),
                      context = context.copy(),
                      candidateName = std::move(candidateName),
+                     resultDir = resultDir,
                      rootPath = rootPath.copy(),
                      this,
                      fileBlobsToPrefetch,
@@ -230,6 +242,8 @@ class GlobNodeImpl {
                         co_await folly::coro::co_reschedule_on_current_executor;
                       }
                       auto tree = co_await store->co_getTree(objectId, context);
+                      auto childResultDir = makeChildResultDir(
+                          resultDir, candidateName.basename());
                       co_await evaluateRecursiveComponentImpl<
                           TreeRoot,
                           TreeRootPtr>(
@@ -237,6 +251,7 @@ class GlobNodeImpl {
                           context,
                           rootPath,
                           candidateName,
+                          std::move(childResultDir),
                           TreeRoot(std::move(tree)),
                           fileBlobsToPrefetch,
                           globResult,
@@ -269,6 +284,7 @@ class GlobNodeImpl {
       tasks.emplace_back(
           folly::coro::co_invoke(
               [candidateName = std::move(candidateName),
+               resultDir = resultDir,
                rootPath = rootPath.copy(),
                store,
                context = context.copy(),
@@ -280,11 +296,14 @@ class GlobNodeImpl {
                &root]() mutable -> folly::coro::Task<void> {
                 auto dir = co_await root.co_getOrLoadChildTree(
                     candidateName.basename(), context);
+                auto childResultDir =
+                    makeChildResultDir(resultDir, candidateName.basename());
                 co_await evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
                     store,
                     context,
                     rootPath,
                     candidateName,
+                    std::move(childResultDir),
                     ROOT(std::move(dir)),
                     fileBlobsToPrefetch,
                     globResult,
@@ -314,11 +333,13 @@ class GlobNodeImpl {
       const ObjectStore* store,
       const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
+      GlobPathBuilder::Dir resultDir,
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList* globResult,
       const RootId& originRootId) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateImpl"};
+    const GlobPathBuilder pathBuilder;
     std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
     std::vector<folly::coro::Task<void>> tasks;
     std::vector<ObjectId> localFileBlobsToPrefetch;
@@ -330,6 +351,7 @@ class GlobNodeImpl {
               [store,
                context = context.copy(),
                rootPath = rootPath.copy(),
+               resultDir,
                root2 = ROOT(root),
                this,
                fileBlobsToPrefetch,
@@ -340,6 +362,7 @@ class GlobNodeImpl {
                     context,
                     rootPath,
                     RelativePathPiece{""},
+                    std::move(resultDir),
                     std::move(root2),
                     fileBlobsToPrefetch,
                     globResult,
@@ -360,6 +383,7 @@ class GlobNodeImpl {
           tasks.emplace_back(
               folly::coro::co_invoke(
                   [candidateName = rootPath + name,
+                   resultDir,
                    store,
                    context = context.copy(),
                    innerNode = node,
@@ -369,10 +393,13 @@ class GlobNodeImpl {
                    objectId = entry->getObjectId()]() mutable
                       -> folly::coro::Task<void> {
                     auto dir = co_await store->co_getTree(objectId, context);
+                    auto childResultDir =
+                        makeChildResultDir(resultDir, candidateName.basename());
                     co_await innerNode->evaluateImpl<TreeRoot, TreeRootPtr>(
                         store,
                         context,
                         candidateName,
+                        std::move(childResultDir),
                         TreeRoot(std::move(dir)),
                         fileBlobsToPrefetch,
                         globResult,
@@ -399,10 +426,14 @@ class GlobNodeImpl {
               if (globResult) {
                 if (prefetchOptimizations_) {
                   localGlobResults.emplace_back(
-                      rootPath + name, entry->second.getDtype(), originRootId);
+                      pathBuilder.makePath(resultDir, name),
+                      entry->second.getDtype(),
+                      originRootId);
                 } else {
                   globResult->wlock()->emplace_back(
-                      rootPath + name, entry->second.getDtype(), originRootId);
+                      pathBuilder.makePath(resultDir, name),
+                      entry->second.getDtype(),
+                      originRootId);
                 }
               }
 
@@ -435,10 +466,14 @@ class GlobNodeImpl {
                 if (globResult) {
                   if (prefetchOptimizations_) {
                     localGlobResults.emplace_back(
-                        rootPath + name, entry.second.getDtype(), originRootId);
+                        pathBuilder.makePath(resultDir, name),
+                        entry.second.getDtype(),
+                        originRootId);
                   } else {
                     globResult->wlock()->emplace_back(
-                        rootPath + name, entry.second.getDtype(), originRootId);
+                        pathBuilder.makePath(resultDir, name),
+                        entry.second.getDtype(),
+                        originRootId);
                   }
                 }
                 if (fileBlobsToPrefetch &&
@@ -489,6 +524,7 @@ class GlobNodeImpl {
               [store,
                context = context.copy(),
                candidateName = rootPath + item.first,
+               resultDir,
                node = item.second,
                fileBlobsToPrefetch,
                globResult,
@@ -496,10 +532,13 @@ class GlobNodeImpl {
                &root,
                name = item.first]() mutable -> folly::coro::Task<void> {
                 auto dir = co_await root.co_getOrLoadChildTree(name, context);
+                auto childResultDir =
+                    makeChildResultDir(resultDir, candidateName.basename());
                 co_await node->evaluateImpl<ROOT, ROOTPtr>(
                     store,
                     context,
                     candidateName,
+                    std::move(childResultDir),
                     ROOT(std::move(dir)),
                     fileBlobsToPrefetch,
                     globResult,

@@ -484,6 +484,9 @@ cpp_library(
 # the thrift C++ data structures.
 thrift_library(
     name = "thrift",
+    cpp2_deps = [
+        "//eden/fs/utils:glob_path",
+    ],
     languages = [
         "cpp2",
         "java-swift",

@@ -100,6 +100,7 @@ cpp_library(
         "//eden/fs/config:config",
     ],
     exported_deps = [
+        ":glob_path",
         ":matcher",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:enum",

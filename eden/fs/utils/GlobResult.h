@@ -11,11 +11,12 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/GlobPath.h"
 
 namespace facebook::eden {
 
 struct GlobResult {
-  RelativePath name;
+  GlobPath name;
   dtype_t dtype;
   // Currently this is the commit id for the commit to which this file
   // belongs. But should eden move away from commit ids this may become
@@ -35,22 +36,30 @@ struct GlobResult {
   }
 
   bool operator<(const GlobResult& other) const noexcept {
-    return name < other.name || (name == other.name && dtype < other.dtype) ||
-        (name == other.name && dtype == other.dtype &&
-         originId < other.originId);
+    auto nameCompare = name.compare(other.name);
+    if (nameCompare != 0) {
+      return nameCompare < 0;
+    }
+    if (dtype != other.dtype) {
+      return dtype < other.dtype;
+    }
+    return originId < other.originId;
   }
 
   // originId should never become a dangling reference because the caller
   // of Globresult::evaluate ensures that the ids have a lifetime that
   // exceeds that of the GlobResults returned.
   GlobResult(RelativePathPiece name, dtype_t dtype, const RootId& originId)
-      : name(name.copy()), dtype(dtype), originId(&originId) {}
+      : name(name), dtype(dtype), originId(&originId) {}
+
+  GlobResult(GlobPath&& name, dtype_t dtype, const RootId& originId) noexcept
+      : name(std::move(name)), dtype(dtype), originId(&originId) {}
 
   GlobResult(
       RelativePath&& name,
       dtype_t dtype,
       const RootId& originId) noexcept
-      : name(std::move(name)), dtype(dtype), originId(&originId) {}
+      : name(std::move(name).intoString()), dtype(dtype), originId(&originId) {}
 };
 
 using ResultList = folly::Synchronized<std::vector<GlobResult>>;
