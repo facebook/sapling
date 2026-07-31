@@ -14,6 +14,7 @@ import type {
   AbsolutePath,
   Disposable,
   OneIndexedLineNumber,
+  PageVisibility,
   PlatformName,
   RepoRelativePath,
   ServerToClientMessage,
@@ -23,6 +24,11 @@ import {browserPlatform} from './BrowserPlatform';
 import type {CodeReviewIssue} from './firstPassCodeReview/types';
 
 export type InitialParamKeys = 'token' | string;
+
+export interface PlatformVisibility {
+  getVisibility(): PageVisibility;
+  onDidChangeVisibility(callback: (visibility: PageVisibility) => unknown): Disposable;
+}
 
 /**
  * Platform-specific API for each target: vscode extension, electron standalone, browser, ...
@@ -77,6 +83,10 @@ export interface Platform {
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown): Disposable;
     resetCSS?: string;
   };
+
+  /** Optional embedding-host activity. Effective visibility is the least-active
+   * value reported by this source and the browser document. */
+  visibility?: PlatformVisibility;
 
   /** If the platform has a notion of pending edits (typically from an AI), methods for listening and resolving them. */
   suggestedEdits?: {

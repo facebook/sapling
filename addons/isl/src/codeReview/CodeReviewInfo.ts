@@ -26,6 +26,8 @@ import {Internal} from '../Internal';
 import {getTracker} from '../analytics/globalTracker';
 import {atomFamilyWeak, atomWithOnChange, configBackedAtom, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
+import platform from '../platform';
+import {browserPageVisibility, combinePageVisibility} from '../platformVisibility';
 import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {registerCleanup, registerDisposable} from '../utils';
@@ -256,7 +258,9 @@ export const effectiveSchemaForCommit = atomFamilyWeak((hashOrHead: Hash | 'head
 );
 
 export const pageVisibility = atomWithOnChange(
-  atom<PageVisibility>(document.hasFocus() ? 'focused' : document.visibilityState),
+  atom<PageVisibility>(
+    combinePageVisibility(browserPageVisibility(document), platform.visibility?.getVisibility()),
+  ),
   debounce(state => {
     serverAPI.postMessage({
       type: 'pageVisibility',
@@ -265,8 +269,9 @@ export const pageVisibility = atomWithOnChange(
   }, 50),
 );
 
+let parentVisibility = platform.visibility?.getVisibility();
 const handleVisibilityChange = () => {
-  const newValue = document.hasFocus() ? 'focused' : document.visibilityState;
+  const newValue = combinePageVisibility(browserPageVisibility(document), parentVisibility);
   writeAtom(pageVisibility, oldValue => {
     if (oldValue !== newValue && newValue === 'hidden') {
       clearTrackedCache();
@@ -274,6 +279,11 @@ const handleVisibilityChange = () => {
     return newValue;
   });
 };
+
+const platformVisibilityDisposable = platform.visibility?.onDidChangeVisibility(visibility => {
+  parentVisibility = visibility;
+  handleVisibilityChange();
+});
 
 window.addEventListener('focus', handleVisibilityChange);
 window.addEventListener('blur', handleVisibilityChange);
@@ -284,6 +294,7 @@ registerCleanup(
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('focus', handleVisibilityChange);
     window.removeEventListener('blur', handleVisibilityChange);
+    platformVisibilityDisposable?.dispose();
   },
   import.meta.hot,
 );

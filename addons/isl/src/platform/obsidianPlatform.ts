@@ -10,12 +10,14 @@ import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
 import {makeBrowserLikePlatformImpl} from './browserPlatformImpl';
+import {makeParentVisibilitySource} from './parentVisibility';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
 
 const obsidianPlatform: Platform = {
   ...makeBrowserLikePlatformImpl('obsidian'),
+  visibility: makeParentVisibilitySource(window),
 
   // Override file opening to send messages to Obsidian via postMessage
   openFile: (path: RepoRelativePath, options?: {line?: OneIndexedLineNumber}) => {
