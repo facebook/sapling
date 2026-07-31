@@ -68,6 +68,16 @@ uint16_t progress10Pct(size_t completed, size_t total) {
   return static_cast<uint16_t>(std::min<size_t>(10, completed * 10 / total));
 }
 
+uint64_t resolveFsckThreadCount(uint64_t configuredThreads) {
+  constexpr uint64_t kDefaultFsckThreadCount = 24;
+  return configuredThreads == 0
+      ? std::max<uint64_t>(
+            1,
+            std::min<uint64_t>(
+                kDefaultFsckThreadCount, folly::available_concurrency()))
+      : configuredThreads;
+}
+
 } // namespace
 
 struct OverlayChecker::Impl {
@@ -878,7 +888,8 @@ OverlayChecker::OverlayChecker(
           lookupCallback,
           caseSensitive,
           useMemoryEfficientScan)},
-      numErrorDiscoveryThreads_{numErrorDiscoveryThreads} {
+      numErrorDiscoveryThreads_{
+          resolveFsckThreadCount(numErrorDiscoveryThreads)} {
   XCHECK_GT(numErrorDiscoveryThreads_, 0u);
 }
 

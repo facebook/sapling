@@ -28,10 +28,10 @@ DEFINE_bool(
     false,
     "Force fsck to scan for errors even on checkouts that appear to currently be mounted.  It will not attempt to fix any problems, but will only scan and report possible issues");
 
-DEFINE_int64(
+DEFINE_uint64(
     num_error_discovery_threads,
-    4,
-    "Number of threads to use for discovering errors in the overlay");
+    0,
+    "Number of threads to use per parallel fsck stage. 0 selects an I/O-oriented default.");
 
 DEFINE_bool(memory_efficient_scan, true, "Use fsck's lower-memory scan path");
 
