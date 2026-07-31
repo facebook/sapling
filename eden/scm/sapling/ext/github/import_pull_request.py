@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 import asyncio
-from typing import Optional
+from typing import List, Optional
 
 from sapling import error
 from sapling.hg import updatetotally
@@ -12,7 +12,7 @@ from sapling.i18n import _
 from sapling.node import bin
 
 from .consts.stackheader import STACK_HEADER_PREFIX as GHSTACK_HEADER_PREFIX
-from .gh_submit import get_pull_request_details
+from .gh_submit import get_pull_request_details, get_stack_for_pull_request
 from .pull_request_arg import parse_pull_request_arg
 from .pull_request_body import parse_stack_information
 from .pullrequest import PullRequestId
@@ -102,12 +102,31 @@ async def _get_pr(ui, repo, pr_id: PullRequestId, is_goto: bool) -> None:
                 )
 
     else:
-        ui.warn(
-            _(
-                "No stack information found in the pull request body.\n"
-                "Ancestors will not be linked to pull requests.\n"
+        # The body has no Sapling stack list footer, but the pull request may
+        # be part of a native GitHub stack (e.g., if it was created with
+        # github.pr-workflow=stacked, which omits the footer).
+        ancestor_numbers = await _get_stack_ancestors_from_github(ui, pr_id)
+        if ancestor_numbers is None:
+            ui.warn(
+                _(
+                    "No stack information found in the pull request body.\n"
+                    "Ancestors will not be linked to pull requests.\n"
+                )
             )
-        )
+        elif ancestor_numbers:
+            unlinked_ancestors = list(
+                filter(
+                    lambda pr: pr is not None,
+                    await asyncio.gather(
+                        *[
+                            _link_pull_request(store, pr_id, number)
+                            for number in ancestor_numbers
+                        ]
+                    ),
+                )
+            )
+        # else: pr_id is the bottom of a native stack, so there are no
+        # ancestors to link.
 
     if is_goto:
         updatetotally(ui, repo, head_oid_node, None)
@@ -123,6 +142,34 @@ async def _get_pr(ui, repo, pr_id: PullRequestId, is_goto: bool) -> None:
             )
             % unlinked_ancestors
         )
+
+
+async def _get_stack_ancestors_from_github(
+    ui, pr_id: PullRequestId
+) -> Optional[List[int]]:
+    """Queries GitHub's native "stacked pull requests" API for the stack
+    containing pr_id.
+
+    Returns None if the pull request is not part of a native stack.
+    Otherwise, returns the numbers of the pull requests below pr_id in the
+    stack, ordered from the one directly below pr_id downward (which may be
+    empty if pr_id is the bottom of the stack).
+    """
+    result = await get_stack_for_pull_request(
+        pr_id.get_hostname(), pr_id.owner, pr_id.name, pr_id.number
+    )
+    if result.is_err():
+        ui.warn(
+            _("warning, could not query stacks for #%d: %s\n")
+            % (pr_id.number, result.unwrap_err())
+        )
+        return None
+    stack = result.unwrap()
+    if stack is None or pr_id.number not in stack.pull_requests:
+        return None
+    index = stack.pull_requests.index(pr_id.number)
+    # stack.pull_requests is ordered from the bottom of the stack to the top.
+    return list(reversed(stack.pull_requests[:index]))
 
 
 async def _link_pull_request(
