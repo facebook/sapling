@@ -597,7 +597,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
-    println!("Sync result: {0:#?}", sync_result);
+    println!("Sync result: {sync_result:#?}");
 
     let expected_err_msg = concat!(
         "Failed to get changeset id from git submodule ",
@@ -651,7 +651,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
-    println!("Sync result: {0:#?}", sync_result);
+    println!("Sync result: {sync_result:#?}");
 
     assert!(sync_result.is_err_and(|err| {
         err.to_string() == "Submodule metadata file was deleted but 2 files in the submodule expansion were not."
@@ -668,7 +668,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
-    println!("Sync result: {0:#?}", sync_result);
+    println!("Sync result: {sync_result:#?}");
 
     assert!(sync_result.is_err_and(|err| {
         err.to_string() == "Submodule metadata file was deleted but 1 files in the submodule expansion were not."
@@ -711,7 +711,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails(
 
     let sync_result = sync_to_master(ctx.clone(), &commit_sync_data, cs_id).await;
 
-    println!("Sync result: {0:#?}", sync_result);
+    println!("Sync result: {sync_result:#?}");
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
