@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
+use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -38,6 +39,8 @@ use strum::EnumString;
 
 type FromValueResult<T> = Result<T, FromValueError>;
 
+const FAIL_DERIVATION_ON_RESTRICTED_MANIFEST_ID_STORE_ERROR: &str =
+    "scm/mononoke:fail_derivation_on_restricted_manifest_id_store_error";
 const MAX_LOGGED_ENTRIES: usize = 10;
 
 pub use mononoke_types::RestrictedManifestId;
@@ -58,6 +61,59 @@ pub enum ManifestType {
     HgAugmented,
     Fsnode,
     ContentManifest,
+}
+
+/// Identifies a manifest-ID store writer for per-callsite JustKnob targeting.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ManifestIdStoreWriteCallsite {
+    DeriveFromHgManifestAndParentsStaged,
+    FinalizeEnvelope,
+    CreateHgManifest,
+    TrackAllRestrictedPaths,
+    CreateFsnode,
+    CreateContentManifestDirectory,
+}
+
+impl ManifestIdStoreWriteCallsite {
+    fn switch_value(self) -> &'static str {
+        match self {
+            Self::DeriveFromHgManifestAndParentsStaged => {
+                "mercurial_derivation::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged"
+            }
+            Self::FinalizeEnvelope => {
+                "mercurial_derivation::derive_hg_augmented_manifest::finalize_envelope"
+            }
+            Self::CreateHgManifest => {
+                "mercurial_derivation::derive_hg_manifest::create_hg_manifest"
+            }
+            Self::TrackAllRestrictedPaths => {
+                "mercurial_derivation::mapping::track_all_restricted_paths"
+            }
+            Self::CreateFsnode => "fsnodes::derive::create_fsnode",
+            Self::CreateContentManifestDirectory => {
+                "content_manifest_derivation::derive::create_content_manifest_directory"
+            }
+        }
+    }
+}
+
+/// Returns `Ok(())` while manifest-ID store writes are best-effort. When the
+/// fail-derivation JustKnob is enabled for `callsite`, returns `error` so the
+/// derivation fails.
+pub fn maybe_propagate_manifest_id_store_write_error(
+    error: Error,
+    callsite: ManifestIdStoreWriteCallsite,
+) -> Result<()> {
+    if justknobs::eval(
+        FAIL_DERIVATION_ON_RESTRICTED_MANIFEST_ID_STORE_ERROR,
+        None,
+        Some(callsite.switch_value()),
+    ) {
+        Err(error)
+    } else {
+        Ok(())
+    }
 }
 
 /// Entry representing a restricted path with its manifest type and id

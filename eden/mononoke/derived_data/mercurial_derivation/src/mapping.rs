@@ -44,11 +44,13 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::RepoPath;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
+use restricted_paths_common::ManifestIdStoreWriteCallsite;
 use restricted_paths_common::ManifestType;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
+use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
 use stats::prelude::*;
 use tracing::debug;
-use tracing::warn;
+use tracing::error;
 
 define_stats! {
     prefix = "mononoke.derived_data.hgchangesets";
@@ -398,9 +400,13 @@ async fn track_all_restricted_paths(
         .manifest_id_store()
         .add_entries(ctx, &entries)
         .await
-        .context("Failed to add entries to the manifest id store")
+        .with_context(|| format!("Failed to track restricted paths for changeset {hg_cs_id}"))
     {
-        warn!("Failed to track restricted paths for changeset {hg_cs_id}: {e}");
+        error!(changeset = %hg_cs_id, error = %e, "Failed to track restricted paths");
+        maybe_propagate_manifest_id_store_write_error(
+            e,
+            ManifestIdStoreWriteCallsite::TrackAllRestrictedPaths,
+        )?;
     }
 
     Ok(())

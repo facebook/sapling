@@ -53,10 +53,12 @@ use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
+use restricted_paths_common::ManifestIdStoreWriteCallsite;
 use restricted_paths_common::ManifestType;
 use restricted_paths_common::RestrictedManifestId;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
+use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -400,13 +402,17 @@ async fn create_fsnode(
                     .manifest_id_store()
                     .add_entry(ctx, entry)
                     .await
+                    .with_context(|| format!("Failed to track restricted path at {path}"))
                 {
-                    // Log error but don't fail manifest derivation
-                    tracing::warn!(
+                    tracing::error!(
                         path = %path,
                         error = %e,
                         "Failed to track restricted path"
                     );
+                    maybe_propagate_manifest_id_store_write_error(
+                        e,
+                        ManifestIdStoreWriteCallsite::CreateFsnode,
+                    )?;
                 }
             }
         }

@@ -76,10 +76,12 @@ use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestId;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
+use restricted_paths_common::ManifestIdStoreWriteCallsite;
 use restricted_paths_common::ManifestType;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
-use tracing::warn;
+use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
+use tracing::error;
 
 use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_manifest::ParentIndex;
@@ -518,9 +520,15 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
                                 .manifest_id_store()
                                 .add_entry(ctx, entry)
                                 .await
+                                .with_context(|| {
+                                    format!("Failed to track restricted path at {path}")
+                                })
                             {
-                                // Log error but don't fail manifest derivation
-                                warn!("Failed to track restricted path at {path}: {e}");
+                                error!(path = %path, error = %e, "Failed to track restricted path");
+                                maybe_propagate_manifest_id_store_write_error(
+                                    e,
+                                    ManifestIdStoreWriteCallsite::DeriveFromHgManifestAndParentsStaged,
+                                )?;
                             }
                         }
                     }
@@ -1251,8 +1259,13 @@ async fn finalize_envelope(
             .manifest_id_store()
             .add_entry(ctx, entry)
             .await
+            .with_context(|| format!("Failed to track restricted path at {tree_path}"))
         {
-            warn!("Failed to track restricted path at {tree_path}: {e}");
+            error!(path = %tree_path, error = %e, "Failed to track restricted path");
+            maybe_propagate_manifest_id_store_write_error(
+                e,
+                ManifestIdStoreWriteCallsite::FinalizeEnvelope,
+            )?;
         }
     }
 

@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
@@ -42,10 +43,12 @@ use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::content_manifest::ContentManifestRollupData;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use restricted_paths_common::ManifestIdStoreWriteCallsite;
 use restricted_paths_common::ManifestType;
 use restricted_paths_common::RestrictedManifestId;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
+use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
 
 use crate::ContentManifestDerivationError;
 use crate::RootContentManifestId;
@@ -206,12 +209,17 @@ pub(crate) async fn create_content_manifest_directory(
                     .manifest_id_store()
                     .add_entry(&ctx, entry)
                     .await
+                    .with_context(|| format!("Failed to track restricted path at {path}"))
                 {
-                    tracing::warn!(
+                    tracing::error!(
                         path = %path,
                         error = %e,
                         "Failed to track restricted path"
                     );
+                    maybe_propagate_manifest_id_store_write_error(
+                        e,
+                        ManifestIdStoreWriteCallsite::CreateContentManifestDirectory,
+                    )?;
                 }
             }
         }
