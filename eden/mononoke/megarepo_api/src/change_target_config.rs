@@ -257,7 +257,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
             let mut scuba = ctx.scuba().clone();
             scuba.log_with_msg(
                 "Created change target config merge commit for additions",
-                Some(format!("{}", additions_merge_cs_id)),
+                Some(format!("{additions_merge_cs_id}")),
             );
             target_repo
                 .changeset(additions_merge_cs_id)
@@ -284,7 +284,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         let mut scuba = ctx.scuba().clone();
         scuba.log_with_msg(
             "Created change target config merge commit connecting additions to removals",
-            Some(format!("{}", final_merge)),
+            Some(format!("{final_merge}")),
         );
 
         // Derive all the necessary data before moving the bookmark
