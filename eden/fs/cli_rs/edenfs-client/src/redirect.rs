@@ -1179,7 +1179,7 @@ pub fn get_configured_redirections(
         let s = String::from_utf8(contents).from_err()?;
         let config: RedirectionsConfig = toml::from_str(&s)
             .from_err()
-            .with_context(|| format!("Failed to create RedirectionsConfig from str '{}'", s))?;
+            .with_context(|| format!("Failed to create RedirectionsConfig from str '{s}'"))?;
         for (repo_path, redir_type) in config.inner.redirections {
             redirs.insert(
                 repo_path.clone(),

@@ -1181,7 +1181,7 @@ impl EdenFsCheckout {
                 let res = self
                     .get_contents_for_profile(&profile, silent)
                     .with_context(|| {
-                        anyhow!("failed to get contents of prefetch profile {}", profile)
+                        anyhow!("failed to get contents of prefetch profile {profile}")
                     })?;
                 profile_contents.extend(res);
             }
