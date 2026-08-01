@@ -23,7 +23,7 @@ import {
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
-import {getTracker} from '../analytics/globalTracker';
+import {tracker} from '../analytics';
 import {atomFamilyWeak, atomWithOnChange, configBackedAtom, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import platform from '../platform';
@@ -141,7 +141,7 @@ registerCleanup(
     serverAPI.postMessage({
       type: 'fetchDiffSummaries',
     });
-    getTracker()?.track('DiffFetchSource', {extras: {source: 'webview_startup'}});
+    tracker.track('DiffFetchSource', {extras: {source: 'webview_startup'}});
   }),
   import.meta.hot,
 );

@@ -25,7 +25,7 @@ import {
   useState,
 } from 'react';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {getTracker} from './analytics/globalTracker';
+import {tracker} from './analytics';
 import {featureFlagLoadable} from './featureFlags';
 import {t, T} from './i18n';
 import {Internal} from './Internal';
@@ -67,7 +67,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands, setCo
       ArcPull: [[Modifier.ALT, Modifier.SHIFT], KeyCode.P],
     },
     ({command, key, modifiers}) => {
-      getTracker()?.track('KeyboardShortcutUsed', {extras: {command, key, modifiers}});
+      tracker.track('KeyboardShortcutUsed', {extras: {command, key, modifiers}});
     },
   );
 

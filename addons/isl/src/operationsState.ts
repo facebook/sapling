@@ -13,6 +13,7 @@ import {atom} from 'jotai';
 import {useCallback} from 'react';
 import {defer} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
+import {tracker} from './analytics';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {atomResetOnCwdChange} from './repositoryData';
 import {Timer} from './timer';
@@ -230,7 +231,7 @@ registerDisposable(
               op => op.operation.id === progress.id && op.exitCode == null,
             );
 
-            window.globalIslClientTracker.track('ExitMessageOutOfOrder', {
+            tracker.track('ExitMessageOutOfOrder', {
               extras: {
                 operationThatExited: operationThatExited?.operation.trackEventName,
               },

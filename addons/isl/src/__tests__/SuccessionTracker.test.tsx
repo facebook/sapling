@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Tracker} from 'isl-server/src/analytics/tracker';
-
-import {SuccessionTracker} from '../SuccessionTracker';
+import {tracker as analyticsTracker} from '../analytics';
 import {Dag, DagCommitInfo} from '../dag/dag';
+import {SuccessionTracker} from '../SuccessionTracker';
 import {COMMIT} from '../testUtils';
 
 describe('SuccessionTracker', () => {
@@ -114,9 +113,7 @@ describe('SuccessionTracker', () => {
     const onSuccession = jest.fn();
     const tracker = new SuccessionTracker();
     const dispose = tracker.onSuccessions(onSuccession);
-    const mockTrack = jest.fn();
-
-    window.globalIslClientTracker = {track: mockTrack} as unknown as Tracker<Record<string, never>>;
+    const mockTrack = jest.spyOn(analyticsTracker, 'track').mockImplementation(() => {});
 
     let dag = new Dag().add(
       [
@@ -163,6 +160,6 @@ describe('SuccessionTracker', () => {
 
     dispose();
 
-    delete (window as {globalIslClientTracker?: unknown}).globalIslClientTracker;
+    mockTrack.mockRestore();
   });
 });

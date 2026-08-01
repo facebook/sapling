@@ -19,7 +19,7 @@ import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
 } from '../../CommitInfoView/CommitMessageFields';
-import {getTracker} from '../../analytics/globalTracker';
+import {tracker} from '../../analytics';
 import {WDIR_NODE} from '../../dag/virtualCommit';
 import {t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
@@ -618,7 +618,6 @@ export function bumpStackEditMetric(key: keyof StackEditMetrics, count = 1) {
 }
 
 export function sendStackEditMetrics(stackEdit: UseStackEditState, save = true) {
-  const tracker = getTracker();
   const duration = Date.now() - currentMetricsStartTime;
   const intention = readAtom(stackEditState).intention;
 
@@ -635,7 +634,7 @@ export function sendStackEditMetrics(stackEdit: UseStackEditState, save = true) 
     bumpStackEditMetric('editsAfterAiSplit', editsAfterAiSplit);
   }
 
-  tracker?.track('StackEditMetrics', {
+  tracker.track('StackEditMetrics', {
     duration,
     extras: {...currentMetrics, save, intention},
   });

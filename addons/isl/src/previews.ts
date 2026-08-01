@@ -15,7 +15,7 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {notEmpty, nullthrows} from 'shared/utils';
 import {latestSuccessorsMapAtom} from './SuccessionTracker';
-import {getTracker} from './analytics/globalTracker';
+import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
@@ -425,7 +425,7 @@ export function useMarkOperationsCompleted(): void {
             } else if (
               uncommittedChanges.fetchStartTimestamp > nullthrows(operation.endTime).valueOf()
             ) {
-              getTracker()?.track('OptimisticFilesStateForceResolved', {extras: {}});
+              tracker.track('OptimisticFilesStateForceResolved', {extras: {}});
               files = true;
             }
           }
@@ -445,7 +445,7 @@ export function useMarkOperationsCompleted(): void {
               (mergeConflictsContext.conflicts?.fetchStartTimestamp ?? 0) >
               nullthrows(operation.endTime).valueOf()
             ) {
-              getTracker()?.track('OptimisticConflictsStateForceResolved', {
+              tracker.track('OptimisticConflictsStateForceResolved', {
                 extras: {operation: getOpName(operation.operation)},
               });
               conflicts = true;

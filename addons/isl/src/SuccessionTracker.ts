@@ -9,6 +9,7 @@ import type {Dag} from './dag/dag';
 import type {SmartlogCommits} from './types';
 
 import {atom} from 'jotai';
+import {tracker} from './analytics';
 import {MutationDag} from './dag/mutation_dag';
 import {writeAtom} from './jotaiUtils';
 import {registerCleanup} from './utils';
@@ -54,7 +55,6 @@ export class SuccessionTracker {
    * in order to find successions and run callbacks on them.
    */
   public findNewSuccessionsFromCommits(previousDag: Dag, commits: SmartlogCommits) {
-    const tracker = window.globalIslClientTracker; // avoid import cycle
     const successions: Successions = [];
     for (const commit of commits) {
       if (commit.phase === 'public') {
@@ -86,7 +86,7 @@ export class SuccessionTracker {
               previousCommit.diffId &&
               previousCommit.diffId !== commit.diffId
             ) {
-              tracker?.track('BuggySuccessionDetected', {
+              tracker.track('BuggySuccessionDetected', {
                 extras: {
                   oldHash,
                   newHash,
@@ -106,7 +106,7 @@ export class SuccessionTracker {
     }
 
     if (successions.length > 0) {
-      tracker?.track('SuccessionsDetected', {extras: {successions}});
+      tracker.track('SuccessionsDetected', {extras: {successions}});
       for (const cb of this.callbacks) {
         cb(successions);
       }
