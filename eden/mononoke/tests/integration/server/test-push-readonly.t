@@ -52,7 +52,6 @@ create new commit in repo2 and check that push to a bookmark fails
 
   $ hg push --to master_bookmark --force --debug
   sending hello command
-  sending clienttelemetry command
   pushing rev 4bdc98495893 to destination mono:repo bookmark master_bookmark
   query 1; heads
   searching for changes
@@ -89,7 +88,6 @@ Check that a push which doesn't move a bookmark is allowed
   tracking on None {}
   pushing to mono:repo
   sending hello command
-  sending clienttelemetry command
   query 1; heads
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1

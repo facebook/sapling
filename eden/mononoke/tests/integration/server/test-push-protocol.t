@@ -176,7 +176,6 @@ push to Mononoke
   tracking on None {}
   pushing to mono:repo
   sending hello command
-  sending clienttelemetry command
   query 1; heads
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 1

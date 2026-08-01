@@ -41,7 +41,6 @@ Create new commits
   $ hg commit -Aqm "add files"
   $ hg push --debug --to master_bookmark
   sending hello command
-  sending clienttelemetry command
   pushing rev 8e48c8a863b5 to destination mono:repo bookmark master_bookmark
   query 1; heads
   searching for changes
