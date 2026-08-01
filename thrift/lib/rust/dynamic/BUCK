@@ -77,6 +77,7 @@ thrift_rust_library(
         "//thrift/lib/rust/dynamic:service_catalog_digest",
         "//thrift/lib/rust/dynamic:type_system_digest",
         "//thrift/lib/thrift:record-rust",
+        "//thrift/lib/thrift:schema-rust",
         "//thrift/lib/thrift:service_catalog-rust",
         "//thrift/lib/thrift:type_id-rust",
         "//thrift/lib/thrift:type_system-rust",
