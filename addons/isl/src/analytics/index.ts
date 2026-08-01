@@ -8,7 +8,7 @@
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 
 import {Tracker} from 'isl-server/src/analytics/tracker';
-import {Internal} from '../Internal';
+// @fb-only: import serverAPI from '../ClientToServerAPI';
 
 /** Client-side global analytics tracker */
 export const tracker = new Tracker(sendDataToServer, {});
@@ -16,10 +16,13 @@ window.globalIslClientTracker = tracker;
 
 /**
  * The client side sends data to the server-side to actually get tracked.
+ *
+ * This is inlined (rather than imported from `Internal`) so this low-level module
+ * doesn't pull in the `Internal` graph, which would form an import cycle
+ * (analytics -> Internal -> InternalImports -> ... -> analytics). The send is
+ * `@fb-only`, so in open source it's stripped to a no-op (we don't track there).
  */
 // prettier-ignore
 function sendDataToServer(data: TrackDataWithEventName) {
-  // In open source, we don't even need to bother sending these messages to the server,
-  // since we don't track anything anyway.
-  Internal?.sendAnalyticsDataToServer?.(data);
+  // @fb-only: serverAPI.postMessage({type: 'track', data});
 }
