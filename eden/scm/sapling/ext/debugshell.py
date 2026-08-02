@@ -242,7 +242,7 @@ Available IPython magics (auto magic is on, `%` is optional):
  time:   measure time
  timeit: benchmark
  trace:  run and print ASCII trace (better with --trace command flag)
- hg:     run commands inline
+ sl:     run commands inline
 """
         have_ipython = True
     except ImportError:
@@ -314,8 +314,8 @@ def _configipython(ui, ipython) -> None:
     get_ipython = ipython.get_ipython  # noqa: F841
 
     @register_line_magic
-    def hg(line):
-        args = ["hg"] + shlex.split(line)
+    def sl(line):
+        args = ["sl"] + shlex.split(line)
         return bindings.commands.run(args, ui.fin, ui.fout, ui.ferr)
 
     @register_line_magic
