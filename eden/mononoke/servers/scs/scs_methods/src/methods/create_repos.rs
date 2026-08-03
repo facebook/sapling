@@ -997,53 +997,46 @@ async fn create_repos_in_mononoke(
             .max_attempts(5)
             .await?;
 
-            let spawn_task =
-                justknobs::eval("scm/mononoke:spawn_mutation_polling_task", None, None);
-            if spawn_task {
-                // Clone necessary data for the spawned task
-                let poll_ctx = ctx.clone();
-                let git_sot_config = git_source_of_truth_config.clone();
+            // Clone necessary data for the spawned task
+            let poll_ctx = ctx.clone();
+            let git_sot_config = git_source_of_truth_config.clone();
 
-                mononoke::spawn_task({
-                    async move {
-                        // Poll interval - start with 5 seconds
-                        let poll_interval = Duration::from_secs(5);
+            mononoke::spawn_task({
+                async move {
+                    // Poll interval - start with 5 seconds
+                    let poll_interval = Duration::from_secs(5);
 
-                        loop {
-                            match poll_mutation_id(
-                                poll_ctx.clone(),
-                                git_sot_config.as_ref(),
-                                mutation_id,
-                            )
-                            .await
-                            {
-                                Ok(state) => match state {
-                                    MutationState::PREPARED
-                                    | MutationState::CANARYING
-                                    | MutationState::PREPARING
-                                    | MutationState::LANDING
-                                    | MutationState::SERVICE_CANARYING
-                                    | MutationState::VALIDATING => {
-                                        info!(
-                                            "mutation in progress for mutation_id {}",
-                                            mutation_id
-                                        );
-                                        tokio::time::sleep(poll_interval).await;
-                                    }
-                                    _ => break,
-                                },
-                                Err(e) => {
-                                    warn!(
-                                        "Error polling repo creation for mutation_id: {}, error: {:?}",
-                                        mutation_id, e
-                                    );
-                                    break;
+                    loop {
+                        match poll_mutation_id(
+                            poll_ctx.clone(),
+                            git_sot_config.as_ref(),
+                            mutation_id,
+                        )
+                        .await
+                        {
+                            Ok(state) => match state {
+                                MutationState::PREPARED
+                                | MutationState::CANARYING
+                                | MutationState::PREPARING
+                                | MutationState::LANDING
+                                | MutationState::SERVICE_CANARYING
+                                | MutationState::VALIDATING => {
+                                    info!("mutation in progress for mutation_id {}", mutation_id);
+                                    tokio::time::sleep(poll_interval).await;
                                 }
+                                _ => break,
+                            },
+                            Err(e) => {
+                                warn!(
+                                    "Error polling repo creation for mutation_id: {}, error: {:?}",
+                                    mutation_id, e
+                                );
+                                break;
                             }
                         }
                     }
-                });
-            }
+                }
+            });
             Ok(Some(mutation_id))
         }
         Err(e) => {
