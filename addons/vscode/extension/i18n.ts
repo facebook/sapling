@@ -10,6 +10,7 @@ import type * as vscode from 'vscode';
 import fs from 'node:fs';
 import path from 'node:path';
 import {tryJsonParse} from 'shared/utils';
+import englishTranslations from '../package.nls.json';
 
 // VS Code requires a restart if you change the configured language,
 // thus we can globally load this value on startup.
@@ -27,7 +28,8 @@ function validateLocale(l: string | undefined): string | undefined {
   return /^[a-zA-Z_]+$/.test(l) ? l : undefined;
 }
 
-let translations: {[key: string]: string} | undefined = undefined;
+let translations: {[key: string]: string} | undefined =
+  locale === 'en' ? englishTranslations : undefined;
 
 /**
  * Load translations for configured language from disk.
@@ -37,12 +39,13 @@ let translations: {[key: string]: string} | undefined = undefined;
 export async function ensureTranslationsLoaded(
   extensionContext: vscode.ExtensionContext,
 ): Promise<void> {
+  if (locale === 'en') {
+    return;
+  }
+
   try {
     const translationsData = await fs.promises.readFile(
-      path.join(
-        extensionContext.extensionPath,
-        locale === 'en' ? 'package.nls.json' : `package.nls.${locale}.json`,
-      ),
+      path.join(extensionContext.extensionPath, `package.nls.${locale}.json`),
       'utf-8',
     );
     translations = JSON.parse(translationsData);
