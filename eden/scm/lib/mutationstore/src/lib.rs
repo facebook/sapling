@@ -718,7 +718,7 @@ mod tests {
 
         // The set evaluated.
         // (0x42 == b'B', 0x58 == b'X')
-        assert_eq!(format!("{:.2?}", obsolete), "<static [42, 58]>");
+        assert_eq!(format!("{obsolete:.2?}"), "<static [42, 58]>");
 
         // E does not have a successor.
         assert!(!r(obsolete.contains(&v("E")))?);
