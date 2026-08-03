@@ -127,7 +127,7 @@ impl IdMap {
                             Group::NON_MASTER.0 as u8,
                         ]))]
                     } else {
-                        panic!("bug: invalid segment {:?}", data);
+                        panic!("bug: invalid segment {data:?}");
                     }
                 } else {
                     let slice = &data[..8];
@@ -160,7 +160,7 @@ impl IdMap {
                         Group::NON_MASTER.0 as u8,
                     ]))]
                 } else {
-                    panic!("bug: invalid segment {:?}", data);
+                    panic!("bug: invalid segment {data:?}");
                 }
             })
             .flush_filter(Some(|_, _| {
@@ -312,8 +312,7 @@ impl IdMap {
                     let value = value?;
                     if value.len() < 8 {
                         return bug(format!(
-                            "find_range got entry {:?} shorter than expected",
-                            value
+                            "find_range got entry {value:?} shorter than expected"
                         ));
                     }
                     let name: &[u8] = &value[9..];
