@@ -46,8 +46,6 @@ export async function activate(
       logger,
       tracker: extensionTracker,
     };
-    // TODO: This await is in the critical path to loading the ISL webview,
-    // but none of these features really apply for the webview. Can we defer this to speed up first ISL load?
     const [, enabledSCMApiFeatures] = await Promise.all([
       ensureTranslationsLoaded(context),
       Internal.getEnabledSCMApiFeatures?.(ctx) ??
@@ -64,24 +62,17 @@ export async function activate(
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
     let inlineCommentsProvider;
-    if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
-      if (
-        enabledSCMApiFeatures.has('newInlineComments') &&
-        Internal.registerNewInlineCommentsProvider
-      ) {
-        context.subscriptions.push(
-          ...Internal.registerNewInlineCommentsProvider(
-            context,
-            extensionTracker,
-            logger,
-            reposList,
-          ),
-        );
-      } else {
-        inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, []);
-        if (inlineCommentsProvider != null) {
-          context.subscriptions.push(inlineCommentsProvider);
-        }
+    if (
+      enabledSCMApiFeatures.has('newInlineComments') &&
+      Internal.registerNewInlineCommentsProvider
+    ) {
+      context.subscriptions.push(
+        ...Internal.registerNewInlineCommentsProvider(context, extensionTracker, logger, reposList),
+      );
+    } else if (Internal.inlineCommentsProvider) {
+      inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx);
+      if (inlineCommentsProvider != null) {
+        context.subscriptions.push(inlineCommentsProvider);
       }
     }
     if (Internal.SaplingISLUriHandler != null) {

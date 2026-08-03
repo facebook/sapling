@@ -11,8 +11,7 @@
  * sidebar => VS Code SCM API, VS Code Source Control sidebar entry.
  * diffview => diff commands, gutters. Requires 'sidebar'.
  * */
-export type EnabledSCMApiFeature =
-  'blame' | 'sidebar' | 'comments' | 'newInlineComments' | 'aiFirstPassCodeReview';
+export type EnabledSCMApiFeature = 'blame' | 'sidebar' | 'newInlineComments';
 
 export enum ActionTriggerType {
   ISL2InlineComment = 'ISL2InlineComment', // provided from the Sapling ISL Inline Comment
