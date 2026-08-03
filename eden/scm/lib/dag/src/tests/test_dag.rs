@@ -475,7 +475,7 @@ impl RemoteIdConvertProtocol for ProtocolMonitor {
         heads: Vec<Vertex>,
         names: Vec<Vertex>,
     ) -> Result<Vec<(protocol::AncestorPath, Vec<Vertex>)>> {
-        let msg = format!("resolve names: {:?}, heads: {:?}", names, heads);
+        let msg = format!("resolve names: {names:?}, heads: {heads:?}");
         self.output.lock().unwrap().push(msg);
         self.inner
             .resolve_names_to_relative_paths(heads, names)
@@ -486,7 +486,7 @@ impl RemoteIdConvertProtocol for ProtocolMonitor {
         &self,
         paths: Vec<protocol::AncestorPath>,
     ) -> Result<Vec<(protocol::AncestorPath, Vec<Vertex>)>> {
-        let msg = format!("resolve paths: {:?}", paths);
+        let msg = format!("resolve paths: {paths:?}");
         self.output.lock().unwrap().push(msg);
         self.inner.resolve_relative_paths_to_names(paths).await
     }
