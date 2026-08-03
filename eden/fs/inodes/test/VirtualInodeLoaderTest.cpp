@@ -11,6 +11,7 @@
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 #include <optional>
+#include <string_view>
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -28,6 +29,28 @@ using namespace std::literals::chrono_literals;
 // compare the hashes instead.
 namespace {
 #define FILES {{"dir/a.txt", "dir/a.txt"}, {"dir/sub/b.txt", "dir/sub/b.txt"}}
+
+template <typename T>
+void expectErrno(const folly::Try<T>& result, int expectedErrno) {
+  ASSERT_TRUE(result.hasException());
+  const auto* error =
+      result.exception().template get_exception<std::system_error>();
+  ASSERT_NE(nullptr, error);
+  EXPECT_EQ(expectedErrno, error->code().value());
+}
+
+template <typename T>
+void expectDomainError(
+    const folly::Try<T>& result,
+    std::string_view expectedMessage) {
+  ASSERT_TRUE(result.hasException());
+  const auto* error =
+      result.exception().template get_exception<std::domain_error>();
+  ASSERT_NE(nullptr, error);
+  EXPECT_NE(
+      std::string_view{error->what()}.find(expectedMessage),
+      std::string_view::npos);
+}
 } // namespace
 
 TEST(InodeLoader, load) {
@@ -163,8 +186,8 @@ CO_TEST(CoInodeLoader, loadBlake3) {
     EXPECT_EQ(
         Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}}),
         results[0].value());
-    EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
-    EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
+    expectErrno(results[1], ENOENT);
+    expectErrno(results[2], ENOENT);
     EXPECT_EQ(
         Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/sub/b.txt"}}),
         results[3].value());
@@ -205,7 +228,7 @@ CO_TEST(CoInodeLoader, loadBlake3) {
     EXPECT_EQ(
         Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}}),
         results[0].value());
-    EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
+    expectDomainError(results[1], "absolute path");
   }
 }
 
@@ -238,8 +261,8 @@ CO_TEST(CoInodeLoader, loadDigestHash) {
         std::optional<Hash32>{
             Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}})},
         results[0].value());
-    EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
-    EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
+    expectErrno(results[1], ENOENT);
+    expectErrno(results[2], ENOENT);
     EXPECT_EQ(
         std::optional<Hash32>{Hash32::blake3(
             folly::ByteRange{folly::StringPiece{"dir/sub/b.txt"}})},
@@ -282,6 +305,6 @@ CO_TEST(CoInodeLoader, loadDigestHash) {
         std::optional<Hash32>{
             Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}})},
         results[0].value());
-    EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
+    expectDomainError(results[1], "absolute path");
   }
 }
