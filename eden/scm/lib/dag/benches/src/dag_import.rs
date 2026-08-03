@@ -64,7 +64,7 @@ fn example_clone_data() -> CloneData<Vertex> {
     //   export CLONEDATA=/tmp/CLONEDATA
     //   sl dbsh -c "open(os.getenv('CLONEDATA'),'wb').write(b.cbor.dumps(api.pulllazy([],list(repo.nodes('master'))).export()))"
     if let Ok(path) = std::env::var("CLONEDATA") {
-        eprintln!("Using CLONEDATA={}", path);
+        eprintln!("Using CLONEDATA={path}");
         let data = std::fs::read(path).unwrap();
         let data: CloneData<Vertex> = serde_cbor::from_slice(&data).unwrap();
         return data;
