@@ -22,6 +22,7 @@ use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 
+use crate::AbandonedRequestAction;
 use crate::BlobstoreKey;
 use crate::ClaimedBy;
 use crate::LongRunningRequestEntry;
@@ -560,12 +561,14 @@ mononoke_queries! {
         id: RowId,
         request_type: RequestType,
         abandoned_timestamp: Timestamp,
+        max_retry_allowed: u8,
     )
     {
         none,
         "UPDATE long_running_request_queue
-         SET status = 'new', claimed_by = NULL, inprogress_last_updated_at = NULL
+         SET status = 'new', claimed_by = NULL, inprogress_last_updated_at = NULL, num_retries = COALESCE(num_retries, 0) + 1
          WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
+               AND COALESCE(num_retries, 0) < {max_retry_allowed}
         "
     }
 
@@ -1563,17 +1566,54 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         ctx: &CoreContext,
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
-    ) -> Result<bool> {
+        max_retry_allowed: u8,
+    ) -> Result<AbandonedRequestAction> {
         let res = MarkRequestAsNewAgainIfAbandoned::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &request_id.0,
             &request_id.1,
             &abandoned_timestamp,
+            &max_retry_allowed,
         )
         .await?;
+        if res.affected_rows() > 0 {
+            return Ok(AbandonedRequestAction::Requeued);
+        }
 
-        Ok(res.affected_rows() > 0)
+        // Nothing matched: the request either stopped being abandoned, or is out of retries.
+        let txn = self
+            .connections
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await?;
+        let (mut txn, rows) =
+            GetRequest::query_with_transaction(txn, &request_id.0, &request_id.1).await?;
+        let action = match rows.into_iter().next() {
+            None => AbandonedRequestAction::Skipped,
+            Some(row) => {
+                let entry = row_to_entry(row);
+                let still_abandoned = entry.status == RequestStatus::InProgress
+                    && entry
+                        .inprogress_last_updated_at
+                        .is_some_and(|ts| ts <= abandoned_timestamp);
+                if still_abandoned && entry.num_retries.unwrap_or(0) >= max_retry_allowed {
+                    txn = FailRequestWithCascade::query_with_transaction(
+                        txn,
+                        &request_id.0,
+                        &Timestamp::now(),
+                    )
+                    .await?
+                    .0;
+                    AbandonedRequestAction::Failed
+                } else {
+                    AbandonedRequestAction::Skipped
+                }
+            }
+        };
+        txn.commit().await?;
+
+        Ok(action)
     }
 
     async fn mark_ready(
@@ -2620,10 +2660,11 @@ mod test {
         tokio::time::sleep(Duration::from_secs(3)).await;
         let now = Timestamp::now();
         let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
-        assert!(
-            !queue
-                .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp)
-                .await?
+        assert_eq!(
+            queue
+                .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp, 3)
+                .await?,
+            AbandonedRequestAction::Skipped
         );
 
         Ok(())
@@ -2670,14 +2711,75 @@ mod test {
         assert_eq!(abandoned[0].0, id);
 
         let res = queue
-            .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp)
+            .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp, 3)
             .await?;
-        assert!(res);
+        assert_eq!(res, AbandonedRequestAction::Requeued);
 
         let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
         assert!(request.is_some());
         let request = request.unwrap();
         assert_eq!(request.status, RequestStatus::New);
+        assert_eq!(request.num_retries, Some(1));
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_mark_as_new_stops_at_retry_limit(fb: FacebookInit) -> Result<()> {
+        const MAX_RETRY_ALLOWED: u8 = 2;
+
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let repo_id = RepositoryId::new(0);
+        let request_type = RequestType("megarepo_sync_changeset".to_string());
+        let id = queue
+            .add_request(
+                &ctx,
+                &request_type,
+                Some(&repo_id),
+                &BlobstoreKey("key".to_string()),
+                None,
+            )
+            .await?;
+        let req_id = RequestId(id, request_type.clone());
+
+        // Each round claims the request and then lets it go abandoned.
+        for round in 1..=(MAX_RETRY_ALLOWED + 1) {
+            let claimed = queue
+                .claim_and_get_new_request(
+                    &ctx,
+                    &ClaimedBy("me".to_string()),
+                    &QueueRepoFilter::Except(vec![]),
+                    &QueueRequestTypeFilter::All,
+                )
+                .await?;
+            assert!(claimed.is_some());
+
+            let abandoned_timestamp =
+                Timestamp::from_timestamp_secs(Timestamp::now().timestamp_seconds() + 1);
+            let action = queue
+                .mark_abandoned_request_as_new(
+                    &ctx,
+                    req_id.clone(),
+                    abandoned_timestamp,
+                    MAX_RETRY_ALLOWED,
+                )
+                .await?;
+
+            let request = queue
+                .test_get_request_entry_by_id(&ctx, &id)
+                .await?
+                .unwrap();
+            if round <= MAX_RETRY_ALLOWED {
+                assert_eq!(action, AbandonedRequestAction::Requeued);
+                assert_eq!(request.status, RequestStatus::New);
+                assert_eq!(request.num_retries, Some(round));
+            } else {
+                assert_eq!(action, AbandonedRequestAction::Failed);
+                assert_eq!(request.status, RequestStatus::Failed);
+                assert_eq!(request.num_retries, Some(MAX_RETRY_ALLOWED));
+            }
+        }
 
         Ok(())
     }

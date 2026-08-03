@@ -13,6 +13,7 @@ mod error;
 pub use error::AsyncRequestsError;
 
 mod queue;
+pub use queue::AbandonedRequestAction;
 pub use queue::AsyncMethodRequestQueue;
 pub use queue::ClaimedBy;
 pub use queue::DequeuedRequest;

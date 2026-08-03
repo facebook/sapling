@@ -101,6 +101,17 @@ pub enum RequestStatus {
     Failed,
 }
 
+/// What happened to a request whose worker stopped updating it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AbandonedRequestAction {
+    /// Put back on the queue for another worker to pick up.
+    Requeued,
+    /// Out of retries: the request and its dependents were failed.
+    Failed,
+    /// No longer abandoned, so nothing was changed.
+    Skipped,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LongRunningRequestEntry {
     pub id: RowId,

@@ -24,6 +24,7 @@ use mononoke_api::MononokeRepo;
 use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+pub use requests_table::AbandonedRequestAction;
 use requests_table::BlobstoreKey;
 use requests_table::ChildCounts;
 pub use requests_table::ClaimedBy;
@@ -614,9 +615,10 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
-    ) -> Result<bool, Error> {
+    ) -> Result<AbandonedRequestAction, Error> {
+        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&request_id.1.0));
         self.table
-            .mark_abandoned_request_as_new(ctx, request_id, abandoned_timestamp)
+            .mark_abandoned_request_as_new(ctx, request_id, abandoned_timestamp, max_retry_allowed)
             .await
     }
 

@@ -20,6 +20,7 @@ mod types;
 pub use crate::backfill_progress::ChildCounts;
 pub use crate::backfill_progress::RepoStatus;
 pub use crate::store::SqlLongRunningRequestsQueue;
+pub use crate::types::AbandonedRequestAction;
 pub use crate::types::BlobstoreKey;
 pub use crate::types::ClaimedBy;
 pub use crate::types::LongRunningRequestEntry;
@@ -153,13 +154,15 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     ) -> Result<Vec<RequestId>>;
 
     /// If `request_id` is still abandoned, then mark it as new so that
-    /// somebody else can pick it up
+    /// somebody else can pick it up, or fail it if `max_retry_allowed`
+    /// retries are already spent.
     async fn mark_abandoned_request_as_new(
         &self,
         ctx: &CoreContext,
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
-    ) -> Result<bool>;
+        max_retry_allowed: u8,
+    ) -> Result<AbandonedRequestAction>;
 
     /// Mark request as ready
     async fn mark_ready(

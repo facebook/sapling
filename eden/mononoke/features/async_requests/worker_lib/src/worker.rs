@@ -22,6 +22,7 @@ use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
+use async_requests::AbandonedRequestAction;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
@@ -108,6 +109,7 @@ define_stats! {
     prefix = "async_requests.worker";
     dequeue_called: timeseries("dequeue.called"; Count),
     cleanup_error: timeseries("cleanup.error"; Count),
+    cleanup_request_failed: timeseries("cleanup.request_failed"; Count),
     dequeue_error: timeseries("dequeue.error"; Count),
     process_aborted: timeseries("process.aborted"; Count),
     process_failed: timeseries("process.failed"; Count),
@@ -317,14 +319,28 @@ impl AsyncMethodRequestWorker {
         }
 
         for req_id in requests {
-            if queue
+            match queue
                 .mark_abandoned_request_as_new(ctx, req_id.clone(), abandoned_timestamp)
                 .await?
             {
-                ctx.scuba()
-                    .clone()
-                    .add("request_id", req_id.0.0)
-                    .log_with_msg("Abandoned request", None);
+                AbandonedRequestAction::Requeued => {
+                    ctx.scuba()
+                        .clone()
+                        .add("request_id", req_id.0.0)
+                        .log_with_msg("Abandoned request", None);
+                }
+                AbandonedRequestAction::Failed => {
+                    STATS::cleanup_request_failed.add_value(1);
+                    warn!(
+                        "[{}] abandoned request is out of retries, failing it",
+                        req_id.0.0
+                    );
+                    ctx.scuba()
+                        .clone()
+                        .add("request_id", req_id.0.0)
+                        .log_with_msg("Abandoned request out of retries", None);
+                }
+                AbandonedRequestAction::Skipped => {}
             }
         }
         Ok(())
