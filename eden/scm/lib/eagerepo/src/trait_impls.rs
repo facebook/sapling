@@ -114,7 +114,7 @@ impl FileStore for EagerRepoStore {
                             Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
                             Ok((_, None)) => None,
                         },
-                        Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", k))),
+                        Ok(None) => Some(Err(anyhow::format_err!("no such file: {k:?}"))),
                     }
                 });
                 Ok(Box::new(iter))
