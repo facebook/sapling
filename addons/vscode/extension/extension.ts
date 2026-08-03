@@ -61,19 +61,15 @@ export async function activate(
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
-    let inlineCommentsProvider;
-    if (
-      enabledSCMApiFeatures.has('newInlineComments') &&
-      Internal.registerNewInlineCommentsProvider
-    ) {
-      context.subscriptions.push(
-        ...Internal.registerNewInlineCommentsProvider(context, extensionTracker, logger, reposList),
-      );
-    } else if (Internal.inlineCommentsProvider) {
-      inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx);
-      if (inlineCommentsProvider != null) {
-        context.subscriptions.push(inlineCommentsProvider);
-      }
+    const inlineCommentsProvider = Internal.registerInlineCommentsProvider?.(
+      context,
+      extensionTracker,
+      logger,
+      reposList,
+      ctx,
+    );
+    if (inlineCommentsProvider != null) {
+      context.subscriptions.push(inlineCommentsProvider);
     }
     if (Internal.SaplingISLUriHandler != null) {
       context.subscriptions.push(
