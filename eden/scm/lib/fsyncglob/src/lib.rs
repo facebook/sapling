@@ -31,7 +31,7 @@ pub fn fsync_glob(dir: &Path, patterns: &[&str], newer_than: Option<SystemTime>)
     let escaped_dir = Pattern::escape(&dir.display().to_string());
     let mut result = Vec::new();
     for p in patterns {
-        let full_pattern = format!("{}/{}", escaped_dir, p);
+        let full_pattern = format!("{escaped_dir}/{p}");
         debug!("globing {}", &full_pattern);
 
         let matches = match glob::glob(&full_pattern) {
