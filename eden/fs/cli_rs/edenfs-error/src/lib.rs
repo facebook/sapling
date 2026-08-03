@@ -64,6 +64,7 @@ pub enum EdenThriftErrorType {
     CheckoutInProgressError,
     OutOfDateParentError,
     AttributeUnavailable,
+    ShuttingDown,
     UnknownError,
 }
 
@@ -86,6 +87,7 @@ impl From<thrift_types::edenfs::EdenErrorType> for EdenThriftErrorType {
             thrift_types::edenfs::EdenErrorType::ATTRIBUTE_UNAVAILABLE => {
                 Self::AttributeUnavailable
             }
+            thrift_types::edenfs::EdenErrorType::SHUTTING_DOWN => Self::ShuttingDown,
             _ => Self::UnknownError,
         }
     }
