@@ -371,7 +371,7 @@ impl OpenOptions {
                 let span = debug_span!("Log::open", dir = &fs_dir.to_string_lossy().as_ref());
                 let _guard = span.enter();
                 self.open_internal(&dir, None, None)
-                    .context(|| format!("in log::OpenOptions::open({:?})", dir))
+                    .context(|| format!("in log::OpenOptions::open({dir:?})"))
             }
         }
     }
@@ -446,7 +446,7 @@ impl OpenOptions {
                     Log::load_or_create_meta(dir, true)
                 }
             } else {
-                Err(err).context(|| format!("cannot open Log at {:?}", dir))
+                Err(err).context(|| format!("cannot open Log at {dir:?}"))
             }
         })?;
 

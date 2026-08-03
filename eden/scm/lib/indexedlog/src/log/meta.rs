@@ -125,7 +125,7 @@ impl LogMetadata {
         let path = path.as_ref();
         let buf = atomic_read(path).context(path, "when reading LogMetadata")?;
         Self::read(&buf[..]).context(path, || {
-            format!("when parsing LogMetadata (content: {:?})", buf)
+            format!("when parsing LogMetadata (content: {buf:?})")
         })
     }
 
@@ -240,7 +240,7 @@ mod tests {
         *buf.last_mut().unwrap() ^= 1;
         std::fs::write(&path, &buf).unwrap();
         let err = LogMetadata::read_file(&path).unwrap_err();
-        let content = format!("{:?}", buf);
+        let content = format!("{buf:?}");
         assert!(err.to_string().contains(&content));
     }
 }
