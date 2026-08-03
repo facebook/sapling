@@ -1741,10 +1741,7 @@ impl Log {
             index_meta
                 .read_vlq_at(0)
                 .context(&index.path, || {
-                    format!(
-                        "index metadata cannot be parsed as an integer: {:?}",
-                        index_meta
-                    )
+                    format!("index metadata cannot be parsed as an integer: {index_meta:?}")
                 })?
                 .0
         })

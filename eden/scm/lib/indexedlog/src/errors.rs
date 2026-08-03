@@ -358,14 +358,14 @@ mod tests {
     fn test_error_format() {
         let mut e = Error::blank();
 
-        assert_eq!(format!("{}", e), "");
+        assert_eq!(format!("{e}"), "");
 
         // Attach messages.
 
         e = e.message("Error Message 1");
         e = e.message("Error Message 2");
         assert_eq!(
-            format!("{}", e),
+            format!("{e}"),
             r#"Error Message 1
 Error Message 2"#
         );
@@ -378,7 +378,7 @@ Error Message 2"#
                 .source(Error::blank().message("Nested Error 1")),
         );
         assert_eq!(
-            format!("{}", e),
+            format!("{e}"),
             r#"Error Message 1
 Error Message 2
 Caused by 2 errors:
@@ -391,7 +391,7 @@ Caused by 2 errors:
         // Mark as data corruption.
         e = e.mark_corruption();
         assert_eq!(
-            format!("{:?}", e),
+            format!("{e:?}"),
             r#"Error Message 1
 Error Message 2
 (This error is considered as a data corruption)
@@ -436,7 +436,7 @@ Caused by 1 errors:
         );
 
         let name = "b.txt";
-        let err = io_result().context(Path::new(&name), || format!("cannot open {}", name));
+        let err = io_result().context(Path::new(&name), || format!("cannot open {name}"));
         assert_eq!(
             format!("{}", err.unwrap_err()),
             r#""b.txt": cannot open b.txt

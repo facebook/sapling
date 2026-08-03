@@ -3693,10 +3693,10 @@ mod tests {
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // Removing keys on an empty index should not create new entries.
-        let text = format!("{:?}", index);
+        let text = format!("{index:?}");
         index.remove("").unwrap();
         index.remove("a").unwrap();
-        assert_eq!(text, format!("{:?}", index));
+        assert_eq!(text, format!("{index:?}"));
 
         index.insert(b"abc", 42).unwrap();
         index.insert(b"abc", 43).unwrap();
@@ -3711,7 +3711,7 @@ mod tests {
         assert_eq!(index.range(..).unwrap().count(), 0);
 
         // Since all entries are "dirty" in memory, removing keys should not create new entries.
-        let text = format!("{:?}", index);
+        let text = format!("{index:?}");
         index.remove("").unwrap();
         index.remove("a").unwrap();
         index.remove("ab").unwrap();
@@ -3721,7 +3721,7 @@ mod tests {
         index.remove("abcx").unwrap();
         index.remove("abcxyz").unwrap();
         index.remove("abcxyzz").unwrap();
-        assert_eq!(text, format!("{:?}", index));
+        assert_eq!(text, format!("{index:?}"));
 
         // Removal state can be saved to disk.
         index.flush().unwrap();
@@ -4346,7 +4346,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
             // Drop `index` here. This would unmap files so File::create below
             // can work on Windows.
             if std::env::var("DEBUG").is_ok() {
-                eprintln!("{:?}", index);
+                eprintln!("{index:?}");
             }
 
             buf

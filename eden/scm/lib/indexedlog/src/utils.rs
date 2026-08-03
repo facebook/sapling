@@ -239,10 +239,7 @@ fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
         Ok(hex::decode(&encoded_content[4..]).map_err(|_e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!(
-                    "{:?}: cannot decode hex content {:?}",
-                    path, encoded_content,
-                ),
+                format!("{path:?}: cannot decode hex content {encoded_content:?}",),
             )
         })?)
     } else {
@@ -276,10 +273,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                     if let Some(parent) = dir.parent() {
                         if fix_perm_path(parent, true).is_ok() {
                             return try_mkdir_once().context(dir, "cannot mkdir").context(|| {
-                                format!(
-                                    "while trying to mkdir {:?} after fix_perm {:?}",
-                                    dir, parent
-                                )
+                                format!("while trying to mkdir {dir:?} after fix_perm {parent:?}")
                             });
                         }
                     }
