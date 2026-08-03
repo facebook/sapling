@@ -33,6 +33,7 @@ use crate::ChangesetContext;
 use crate::Mononoke;
 use crate::MononokeRepo;
 use crate::RepoContext;
+use crate::errors::MononokeError;
 use crate::sparse_profile::MonitoringProfiles;
 use crate::sparse_profile::ProfileSizeChange;
 use crate::sparse_profile::SparseProfileMonitoring;
@@ -220,6 +221,38 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
         ],
         paths
     );
+
+    // A directory is not expanded to the files under it, and a missing path is skipped.
+    let monitor = mock_sparse_monitoring(
+        vec![],
+        vec![],
+        MonitoringProfiles::Exact {
+            profiles: vec![
+                "sparse/other".to_string(),
+                "dir1".to_string(),
+                "sparse/does_not_exist".to_string(),
+            ],
+        },
+    )?;
+
+    assert_eq!(
+        vec![NonRootMPath::new("sparse/other")?],
+        monitor.get_monitoring_profiles(&changeset_a).await?
+    );
+
+    // An empty profile name is rejected rather than resolving to the repo root.
+    let monitor = mock_sparse_monitoring(
+        vec![],
+        vec![],
+        MonitoringProfiles::Exact {
+            profiles: vec!["sparse/other".to_string(), "".to_string()],
+        },
+    )?;
+
+    assert!(matches!(
+        monitor.get_monitoring_profiles(&changeset_a).await,
+        Err(MononokeError::InvalidRequest(_))
+    ));
 
     Ok(())
 }
