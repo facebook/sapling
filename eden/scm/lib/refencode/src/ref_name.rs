@@ -35,7 +35,7 @@ impl TryFrom<String> for RefName {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() || value.contains('\n') {
-            return Err(invalid(format!("invalid reference name: {:?}", value)));
+            return Err(invalid(format!("invalid reference name: {value:?}")));
         }
         Ok(Self(value))
     }
