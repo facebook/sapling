@@ -498,9 +498,9 @@ pub(crate) mod tests {
             "<lazy [0100000000000000+1, 0300000000000000+3] + ? more>"
         );
         iter.next();
-        assert_eq!(format!("{:2.2?}", set), "<lazy [01+1, 03+3]+ 1 + ? more>");
+        assert_eq!(format!("{set:2.2?}"), "<lazy [01+1, 03+3]+ 1 + ? more>");
         iter.next();
-        assert_eq!(format!("{:1.3?}", set), "<lazy [010+1] + 2 more>");
+        assert_eq!(format!("{set:1.3?}"), "<lazy [010+1] + 2 more>");
     }
 
     #[test]

@@ -279,9 +279,9 @@ mod tests {
         iter.next();
         assert_eq!(dbg(&set), "<lazy [1111, 3333] + ? more>");
         iter.next();
-        assert_eq!(format!("{:2.2?}", set), "<lazy [11, 33]+ 1 + ? more>");
+        assert_eq!(format!("{set:2.2?}"), "<lazy [11, 33]+ 1 + ? more>");
         iter.next();
-        assert_eq!(format!("{:1.3?}", set), "<lazy [111] + 2 more>");
+        assert_eq!(format!("{set:1.3?}"), "<lazy [111] + 2 more>");
     }
 
     #[test]
