@@ -47,18 +47,6 @@ impl RemoteDerivationOptions {
 
 #[async_trait]
 pub trait DerivationClient: Send + Sync {
-    async fn derive_remotely(
-        &self,
-        ctx: &CoreContext,
-        request: &thrift::DeriveRequest,
-    ) -> Result<thrift::DeriveResponse>;
-
-    async fn poll(
-        &self,
-        ctx: &CoreContext,
-        request: &thrift::DeriveRequest,
-    ) -> Result<thrift::DeriveResponse>;
-
     /// Request derivation and wait for the terminal result over a server stream,
     /// returning it as a single `DeriveResponse` (no poll loop).
     async fn derive_streaming(
