@@ -608,8 +608,8 @@ fn maybe_write_trace(
         // A hardcoded minimal duration (in microseconds).
         let data = tracing_data.lock();
         match write_trace(io, &path, &data) {
-            Ok(_) => io.write_err(format!("(Trace was written to {})\n", path))?,
-            Err(err) => io.write_err(format!("(Failed to write Trace to {}: {})\n", path, err))?,
+            Ok(_) => io.write_err(format!("(Trace was written to {path})\n"))?,
+            Err(err) => io.write_err(format!("(Failed to write Trace to {path}: {err})\n"))?,
         }
     }
     Ok(())
@@ -882,7 +882,7 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
 
             let tracing_summary = pytracing::DATA.lock().ascii(&ascii_opts);
             if config.get_or_default("tracing", "stderr")? {
-                let _ = write!(io.error(), "{}\n", tracing_summary);
+                let _ = write!(io.error(), "{tracing_summary}\n");
             }
             outputs.push(tracing_summary);
         }
