@@ -103,8 +103,11 @@ fn remove_and_update_registry(
     confirm_remove(ctx, targets)?;
 
     let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-remove");
-    for target in targets {
-        with_worktree_path_op_lock(&current_group.shared_store_path, target, || {
+    let multi_target = targets.len() > 1;
+    let mut removed_paths = Vec::new();
+    let mut remove_error: Option<Error> = None;
+    for &target in targets {
+        let result = with_worktree_path_op_lock(&current_group.shared_store_path, target, || {
             pre_hooks.run_hooks(
                 Some(repo),
                 false,
@@ -115,22 +118,45 @@ fn remove_and_update_registry(
             )?;
             run_eden_remove(ctx, repo, target)?;
             Ok(())
-        })?;
+        });
+        match result {
+            Ok(()) => {
+                removed_paths.push(target);
+                logger.info(format!("removed {}", target.display()));
+            }
+            Err(err) if multi_target => {
+                logger.warn(format!("failed to remove {}: {}", target.display(), err));
+                if remove_error.is_none() {
+                    remove_error = Some(err);
+                }
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    finalize_registry_removal(current_group, &removed_paths)?;
+
+    if let Some(err) = remove_error {
+        return Err(err);
+    }
+
+    Ok(())
+}
+
+fn finalize_registry_removal(current_group: &CurrentGroup, removed_paths: &[&Path]) -> Result<()> {
+    if removed_paths.is_empty() {
+        return Ok(());
     }
 
     with_registry_lock(&current_group.shared_store_path, |registry| {
         if let Some(grp) = registry.groups.get_mut(&current_group.group_id) {
-            for target in targets {
-                grp.worktrees.remove(*target);
+            for path in removed_paths {
+                grp.worktrees.remove(*path);
             }
         }
         dissolve_group_if_empty(registry, &current_group.group_id);
         Ok(())
     })?;
-
-    for target in targets {
-        logger.info(format!("removed {}", target.display()));
-    }
 
     Ok(())
 }
@@ -213,17 +239,8 @@ fn run_remove_all(
         removed_paths.push(path.clone());
     }
 
-    if !removed_paths.is_empty() {
-        with_registry_lock(&current_group.shared_store_path, |registry| {
-            if let Some(grp) = registry.groups.get_mut(&current_group.group_id) {
-                for path in &removed_paths {
-                    grp.worktrees.remove(path);
-                }
-            }
-            dissolve_group_if_empty(registry, &current_group.group_id);
-            Ok(())
-        })?;
-    }
+    let removed_path_refs: Vec<&Path> = removed_paths.iter().map(|p| p.as_path()).collect();
+    finalize_registry_removal(current_group, &removed_path_refs)?;
     for path in &removed_paths {
         logger.info(format!("removed {}", path.display()));
     }

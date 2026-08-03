@@ -63,6 +63,53 @@ test worktree remove - multiple paths in one command
   $ sl worktree list
   this worktree is not part of a group
 
+#if no-windows
+test worktree remove - multiple paths preserves partial progress after eden remove failure
+
+  $ cd $TESTTMP
+  $ newclientrepo multipath_partial_repo
+  $ touch file.txt
+  $ sl add file.txt
+  $ sl commit -m "init"
+  $ sl worktree add $TESTTMP/multipath_ok
+  created linked worktree at $TESTTMP/multipath_ok
+  $ sl worktree add $TESTTMP/multipath_z_fail
+  created linked worktree at $TESTTMP/multipath_z_fail
+  $ original_eden_command="$(sl config edenfs.command)"
+  $ cat > $TESTTMP/failing_eden_multipath <<EOF
+  > #!/bin/sh
+  > set -eu
+  > original='$original_eden_command'
+  > is_remove=0
+  > last=
+  > for arg in "\$@"; do
+  >   if [ "\$arg" = "remove" ]; then
+  >     is_remove=1
+  >   fi
+  >   last="\$arg"
+  > done
+  > if [ "\$is_remove" = "1" ] && [ "\$last" = "$TESTTMP/multipath_z_fail" ]; then
+  >   echo "injected eden remove failure for \$last" >&2
+  >   exit 1
+  > fi
+  > exec "\$original" "\$@"
+  > EOF
+  $ chmod +x $TESTTMP/failing_eden_multipath
+  $ setconfig edenfs.command=$TESTTMP/failing_eden_multipath
+  $ sl worktree remove $TESTTMP/multipath_ok $TESTTMP/multipath_z_fail -y
+  removed $TESTTMP/multipath_ok
+  failed to remove $TESTTMP/multipath_z_fail: eden remove failed for $TESTTMP/multipath_z_fail: injected eden remove failure for $TESTTMP/multipath_z_fail
+  abort: eden remove failed for $TESTTMP/multipath_z_fail: injected eden remove failure for $TESTTMP/multipath_z_fail
+  [255]
+  $ test -d $TESTTMP/multipath_ok
+  [1]
+  $ test -d $TESTTMP/multipath_z_fail
+  $ sl worktree list
+  * main    $TESTTMP/multipath_partial_repo
+    linked  $TESTTMP/multipath_z_fail
+  $ cd $TESTTMP/myrepo
+#endif
+
 test worktree remove - duplicate paths are deduplicated
 
   $ sl worktree add $TESTTMP/dedup1
