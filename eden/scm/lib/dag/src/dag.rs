@@ -1096,8 +1096,7 @@ where
                         // checked all "roots" are missing in the local graph. See `NeedSlowPath`
                         // above.
                         let e = NeedSlowPath(format!(
-                            "{:?} exists in local graph as {:?} - fast path requires MASTER group",
-                            high_vertex, id
+                            "{high_vertex:?} exists in local graph as {id:?} - fast path requires MASTER group"
                         ));
                         return Err(e);
                     }
@@ -1123,8 +1122,7 @@ where
                         match res {
                             Ok(id) if id.group() != Group::MASTER => {
                                 return Err(NeedSlowPath(format!(
-                                    "{:?} exists id in local graph as {:?} - fast path requires MASTER group",
-                                    parent_names, id
+                                    "{parent_names:?} exists id in local graph as {id:?} - fast path requires MASTER group"
                                 )));
                             }
                             Ok(id) => {
