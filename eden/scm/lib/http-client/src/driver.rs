@@ -235,7 +235,7 @@ impl<'a> MultiDriver<'a> {
 
         tracing::debug!("{}", &stats);
         if self.verbose {
-            eprintln!("{}", stats);
+            eprintln!("{stats}");
         }
 
         Ok(stats)
