@@ -874,7 +874,7 @@ impl RevlogIndex {
                 p1: i32::to_be(parent_revs[0]),
                 p2: i32::to_be(parent_revs[1]),
                 node: <[u8; 20]>::try_from(node.as_ref()).map_err(|_| {
-                    crate::Error::Unsupported(format!("node is not 20-char long: {:?}", node))
+                    crate::Error::Unsupported(format!("node is not 20-char long: {node:?}"))
                 })?,
                 _padding: [0u8; 12],
             };
@@ -1887,8 +1887,7 @@ impl RevlogIndex {
                         .collect();
                     if parent_revs.len() > 2 {
                         return Err(Error::Unsupported(format!(
-                            "revlog does not support > 2 parents (when inserting {:?})",
-                            head
+                            "revlog does not support > 2 parents (when inserting {head:?})"
                         ))
                         .into());
                     }
