@@ -71,7 +71,7 @@ impl NodeIpc {
             let ret = unsafe { libc::sendmsg(socket_fd, &hdr, 0) };
             if ret < 0 {
                 return Err(std::io::Error::last_os_error())
-                    .with_context(|| format!("Failed to sendmsg with fds {:?}", fds));
+                    .with_context(|| format!("Failed to sendmsg with fds {fds:?}"));
             }
             drop((cmsgs, opaque));
 
