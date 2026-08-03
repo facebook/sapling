@@ -12,6 +12,6 @@ rust_library(
         "fbsource//third-party/rust:proc-macro-error2",
         "fbsource//third-party/rust:proc-macro2",
         "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn",
+        "fbsource//third-party/rust:syn2",
     ],
 )

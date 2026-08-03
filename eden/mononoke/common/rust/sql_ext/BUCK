@@ -102,6 +102,6 @@ rust_library(
     proc_macro = True,
     deps = [
         "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn",
+        "fbsource//third-party/rust:syn2",
     ],
 )
