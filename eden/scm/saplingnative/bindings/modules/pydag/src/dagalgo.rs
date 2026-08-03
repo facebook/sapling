@@ -208,7 +208,7 @@ py_class!(pub class dagalgo |py| {
         let (id_set, _id_map) = match set.to_id_set_and_id_map_in_o1() {
             Some(v) => v,
             None => {
-                let msg = format!("{:?} cannot be converted to IdSet", set);
+                let msg = format!("{set:?} cannot be converted to IdSet");
                 return Err(PyErr::new::<exc::ValueError, _>(py, msg));
             }
         };
