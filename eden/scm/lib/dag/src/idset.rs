@@ -1701,10 +1701,10 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = IdSet::from_spans(vec![1..=1, 2..=9, 10..=10, 20..=20, 31..=35, 36..=40]);
-        assert_eq!(format!("{:10?}", set), "1..=10 20 31..=40");
-        assert_eq!(format!("{:3?}", set), "1..=10 20 31..=40");
-        assert_eq!(format!("{:2?}", set), "1..=10 20 and 1 span");
-        assert_eq!(format!("{:1?}", set), "1..=10 and 2 spans");
+        assert_eq!(format!("{set:10?}"), "1..=10 20 31..=40");
+        assert_eq!(format!("{set:3?}"), "1..=10 20 31..=40");
+        assert_eq!(format!("{set:2?}"), "1..=10 20 and 1 span");
+        assert_eq!(format!("{set:1?}"), "1..=10 and 2 spans");
     }
 
     #[test]

@@ -44,7 +44,7 @@ pub fn render_dag(
     let mut out = String::new();
     let next_rows = dag_to_renderer_next_rows(dag, None)?;
     for (node, parents) in next_rows {
-        let mut name = format!("{:?}", node);
+        let mut name = format!("{node:?}");
         let message = get_message(&node).unwrap_or_default();
         let row = if name.len() == 1 {
             renderer.next_row(node, parents, name, message)

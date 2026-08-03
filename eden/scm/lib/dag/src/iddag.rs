@@ -720,7 +720,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         // Return the next "high" id for segment lookup.
         // Return None if there is no segment to check for the given span.
         let mut process_seg = |span: &IdSpan, seg: Segment| -> Result<Option<Id>> {
-            trace(&|| format!(" process {:?} seg {:?}", span, seg));
+            trace(&|| format!(" process {span:?} seg {seg:?}"));
             let seg_span = seg.span()?;
             let low = seg_span.low;
             if low < span.low {
@@ -1614,7 +1614,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                     debug_assert_eq!(seg_span.high, span.high);
 
                     if seg_span.low < span.low {
-                        trace(&|| format!("  skip  lv {} seg {:?}", level, seg));
+                        trace(&|| format!("  skip  lv {level} seg {seg:?}"));
                         continue;
                     } else {
                         trace(&|| format!("  found lv {level} seg {seg:?}"));

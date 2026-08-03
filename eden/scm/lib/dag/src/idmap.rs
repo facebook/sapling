@@ -301,8 +301,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             }
                             if parents.iter().any(|&p| p >= id) {
                                 return bug(format!(
-                                    "IdMap Ids are not topo-sorted: {:?} ({:?}) has parent ids {:?}",
-                                    id, head, parents,
+                                    "IdMap Ids are not topo-sorted: {id:?} ({head:?}) has parent ids {parents:?}",
                                 ));
                             }
                             outcome.push_edge(id, &parents);
