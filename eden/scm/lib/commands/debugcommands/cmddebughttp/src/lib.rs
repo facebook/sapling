@@ -14,7 +14,7 @@ use repo::repo::Repo;
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
     let client = edenapi::Builder::from_config(repo.config())?.build()?;
     let meta = block_on(client.health())?;
-    ctx.io().write(format!("{:#?}\n", meta))?;
+    ctx.io().write(format!("{meta:#?}\n"))?;
     Ok(0)
 }
 
