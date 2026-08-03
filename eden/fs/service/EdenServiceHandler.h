@@ -11,6 +11,7 @@
 #include <folly/CancellationToken.h>
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
+#include <atomic>
 #include <optional>
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/TraceBus.h"
@@ -676,6 +677,8 @@ class EdenServiceHandler
    */
   void cancelAllActiveRequests(std::string_view reason);
 
+  void beginStreamJournalChangedShutdown();
+
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);
@@ -742,6 +745,10 @@ class EdenServiceHandler
 
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const FOLLY_NONNULL server_;
+
+  // Recovery installs a new handler. Publishers from the old handler retain
+  // this state so they still report the shutdown that terminated their stream.
+  std::shared_ptr<std::atomic<bool>> streamJournalChangedShuttingDown_;
 
   std::unique_ptr<UsageService> usageService_;
 

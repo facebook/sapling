@@ -337,9 +337,11 @@ TEST_F(EdenServerTest, StopIsIdempotent) {
 #ifndef _WIN32
 TEST_F(EdenServerTest, TakeoverSendFailureRecoversDuringCleanup) {
   auto& server = testServer().getServer();
+  auto originalHandler = server.getHandler();
   ASSERT_NO_FATAL_FAILURE(
       driveTakeoverSendFailureToCleanup(testServer(), server));
   EXPECT_FALSE(server.performCleanup());
+  EXPECT_NE(originalHandler, server.getHandler());
 }
 
 TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {

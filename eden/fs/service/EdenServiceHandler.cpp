@@ -22,6 +22,7 @@
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
 #include <folly/String.h>
+#include <folly/Utility.h>
 #include <folly/chrono/Conv.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/CurrentExecutor.h>
@@ -974,6 +975,8 @@ EdenServiceHandler::EdenServiceHandler(
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server},
+      streamJournalChangedShuttingDown_{
+          std::make_shared<std::atomic<bool>>(false)},
       usageService_{std::move(usageService)},
       thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
       thriftRequestTraceBus_(
@@ -1922,6 +1925,7 @@ EdenServiceHandler::streamJournalChanged(
   // created them both, so we need to share an optional id between them.
   auto handle = std::make_shared<std::optional<Journal::SubscriberId>>();
   auto disconnected = std::make_shared<std::atomic<bool>>(false);
+  auto shuttingDown = folly::copy(streamJournalChangedShuttingDown_);
 
   // This is called when the subscription channel is torn down
   auto onDisconnect = [weakMount, handle, disconnected] {
@@ -1946,26 +1950,37 @@ EdenServiceHandler::streamJournalChanged(
   struct Publisher {
     apache::thrift::ServerStreamPublisher<JournalPosition> publisher;
     std::shared_ptr<std::atomic<bool>> disconnected;
+    std::shared_ptr<std::atomic<bool>> shuttingDown;
 
     explicit Publisher(
         apache::thrift::ServerStreamPublisher<JournalPosition> publisher,
-        std::shared_ptr<std::atomic<bool>> disconnected)
+        std::shared_ptr<std::atomic<bool>> disconnected,
+        std::shared_ptr<std::atomic<bool>> shuttingDown)
         : publisher(std::move(publisher)),
-          disconnected(std::move(disconnected)) {}
+          disconnected(std::move(disconnected)),
+          shuttingDown(std::move(shuttingDown)) {}
 
     ~Publisher() {
       // We have to send an exception as part of the completion, otherwise
       // thrift doesn't seem to notify the peer of the shutdown
       if (!disconnected->load()) {
-        std::move(publisher).complete(
-            folly::make_exception_wrapper<std::runtime_error>(
-                "subscriber terminated"));
+        if (shuttingDown->load()) {
+          std::move(publisher).complete(
+              folly::make_exception_wrapper<EdenError>(newEdenError(
+                  EdenErrorType::SHUTTING_DOWN, "edenfs is shutting down")));
+        } else {
+          std::move(publisher).complete(
+              folly::make_exception_wrapper<std::runtime_error>(
+                  "subscriber terminated"));
+        }
       }
     }
   };
 
   auto stream = std::make_shared<Publisher>(
-      std::move(streamAndPublisher.second), std::move(disconnected));
+      std::move(streamAndPublisher.second),
+      std::move(disconnected),
+      std::move(shuttingDown));
 
   // Register onJournalChange with the journal subsystem, and assign
   // the subscriber id into the handle so that the callbacks can consume it.
@@ -1979,6 +1994,13 @@ EdenServiceHandler::streamJournalChanged(
       }));
 
   return std::move(streamAndPublisher.first);
+}
+
+void EdenServiceHandler::beginStreamJournalChangedShutdown() {
+  streamJournalChangedShuttingDown_->store(
+      server_->getServerState()
+          ->getEdenConfig()
+          ->thriftStreamJournalChangedShuttingDownError.getValue());
 }
 
 namespace {

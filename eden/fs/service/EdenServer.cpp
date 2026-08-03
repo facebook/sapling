@@ -3192,6 +3192,8 @@ void EdenServer::shutdownSubscribers() {
   // TODO: Set a flag in handler_ to reject future subscription requests.
   // Alternatively, have them seamless transfer through takeovers.
 
+  handler_->beginStreamJournalChangedShutdown();
+
   // If we have any subscription sessions from watchman, we want to shut
   // those down now, otherwise they will block the server_->stop() call
   // below

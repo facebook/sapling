@@ -459,6 +459,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether streamJournalChanged should complete subscriptions with a typed
+   * SHUTTING_DOWN EdenError during intentional EdenFS shutdown.
+   */
+  ConfigSetting<bool> thriftStreamJournalChangedShuttingDownError{
+      "thrift:stream-journal-changed-shutting-down-error",
+      true,
+      this};
+
+  /**
    * Whether the Thrift server should be configured to leak outstanding requests
    * when the server is stopped during shutdown/restart.
    */

@@ -9,7 +9,7 @@
 import os
 from typing import Optional
 
-from eden.fs.service.eden.thrift_types import ScmFileStatus
+from eden.fs.service.eden.thrift_types import EdenError, EdenErrorType, ScmFileStatus
 from eden.fs.service.streamingeden.thrift_clients import StreamingEdenService
 from eden.fs.service.streamingeden.thrift_types import (
     StreamChangesSinceParams,
@@ -62,6 +62,20 @@ class EdenJournalTest(EdenHgTestCase):
             timeout=timeout,
             client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
         )
+
+    async def test_journal_change_stream_reports_shutdown(self) -> None:
+        async with self.get_streaming_client() as client:
+            stream = await client.streamJournalChanged(self.mount_path_bytes)
+            self.eden.shutdown()
+
+            with self.assertRaises(EdenError) as context:
+                async for _ in stream:
+                    pass
+
+            self.assertEqual(
+                context.exception.errorType,
+                EdenErrorType.SHUTTING_DOWN,
+            )
 
     async def test_journal_stream_selected_changes_since_complex_globs(self) -> None:
         """
