@@ -404,25 +404,6 @@ async fn select_mapping(
         return Ok(vec![]);
     }
 
-    let use_rendezvous = justknobs::eval(
-        "scm/mononoke:rendezvous_bonsai_git_mapping",
-        ctx.client_correlator(),
-        None,
-    );
-
-    if use_rendezvous {
-        select_mapping_rendezvous(ctx, connection, repo_id, objects).await
-    } else {
-        select_mapping_non_rendezvous(ctx, &connection.conn, repo_id, objects).await
-    }
-}
-
-async fn select_mapping_rendezvous(
-    ctx: &CoreContext,
-    connection: &RendezVousConnection,
-    repo_id: &RepositoryId,
-    objects: &BonsaisOrGitShas,
-) -> Result<Vec<BonsaiGitMappingEntry>> {
     let found = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
             let ret = connection
@@ -480,42 +461,5 @@ async fn select_mapping_rendezvous(
     Ok(found
         .into_iter()
         .map(move |(git_sha1, bcs_id)| BonsaiGitMappingEntry { git_sha1, bcs_id })
-        .collect())
-}
-
-async fn select_mapping_non_rendezvous(
-    ctx: &CoreContext,
-    connection: &Connection,
-    repo_id: &RepositoryId,
-    objects: &BonsaisOrGitShas,
-) -> Result<Vec<BonsaiGitMappingEntry>> {
-    if objects.is_empty() {
-        return Ok(vec![]);
-    }
-
-    let rows = match objects {
-        BonsaisOrGitShas::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(
-                connection,
-                ctx.sql_query_telemetry(),
-                repo_id,
-                &bcs_ids[..],
-            )
-            .await?
-        }
-        BonsaisOrGitShas::GitSha1(git_sha1s) => {
-            SelectMappingByGitSha1::query(
-                connection,
-                ctx.sql_query_telemetry(),
-                repo_id,
-                &git_sha1s[..],
-            )
-            .await?
-        }
-    };
-
-    Ok(rows
-        .into_iter()
-        .map(move |(git_sha1, bcs_id)| BonsaiGitMappingEntry { bcs_id, git_sha1 })
         .collect())
 }
