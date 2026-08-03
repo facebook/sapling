@@ -26,6 +26,7 @@ rust_binary(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:num",
+        "fbsource//third-party/rust:percent-encoding",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:strum",
