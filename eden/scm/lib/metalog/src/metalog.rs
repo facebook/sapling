@@ -482,8 +482,7 @@ impl Repair<()> for MetaLog {
                         Ok(Some(_)) => true,
                         _ => {
                             let desc = format!("Root {} ({})", root_id.to_hex(), root.message);
-                            message +=
-                                &format!("Key {:?} referred by {} cannot be read.\n", key, desc);
+                            message += &format!("Key {key:?} referred by {desc} cannot be read.\n");
                             false
                         }
                     }),
