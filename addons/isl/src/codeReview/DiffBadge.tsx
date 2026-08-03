@@ -328,7 +328,7 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
 const diffSignalCountFamily = atomFamilyWeak((diffId: DiffId) =>
   atomLoadableWithRefresh(async () => {
     const {fetchDiffSignalCount} = Internal;
-    if (Internal.featureFlags?.DiffSignalDetails == null || fetchDiffSignalCount == null) {
+    if (fetchDiffSignalCount == null) {
       return null;
     }
     const count = await fetchDiffSignalCount(diffId);
@@ -345,15 +345,12 @@ function DiffSignalSummary({
   diff: DiffSummary;
   diffId?: DiffId;
 }) {
-  const signalDetailsEnabled = useFeatureFlagSync(Internal.featureFlags?.DiffSignalDetails);
   const [countLoadable, refreshCount] = useAtom(diffSignalCountFamily(diffId ?? ''));
   const repo = useAtomValue(repositoryInfo);
 
-  // Fetch signal count using the atom (only if feature is enabled and we have a diffId)
   // We fetch for all signal states except 'no-signal' and 'deferred' since even 'pass'
-  // diffs can have INFO signals we want to count
+  // diffs can have INFO signals we want to count.
   const shouldFetchCount =
-    signalDetailsEnabled &&
     diffId != null &&
     diff.signalSummary != null &&
     diff.signalSummary !== 'no-signal' &&
@@ -387,7 +384,7 @@ function DiffSignalSummary({
         </IconStack>
       );
       tooltip = t(
-        `Test Signals are still running for this Diff, with warnings so far. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
+        'Test Signals are still running for this Diff, with warnings so far. Click for more details.',
       );
       break;
     case 'running-failed':
@@ -398,7 +395,7 @@ function DiffSignalSummary({
         </IconStack>
       );
       tooltip = t(
-        `Test Signals are still running for this Diff, with failures so far. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
+        'Test Signals are still running for this Diff, with failures so far. Click for more details.',
       );
       break;
     case 'pass':
@@ -408,7 +405,7 @@ function DiffSignalSummary({
     case 'failed':
       icon = 'error';
       tooltip = t(
-        `An error was encountered during the test signals on this Diff. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
+        'An error was encountered during the test signals on this Diff. Click for more details.',
       );
       break;
     case 'no-signal':
@@ -417,15 +414,11 @@ function DiffSignalSummary({
       break;
     case 'warning':
       icon = <CircleExclamationIcon />;
-      tooltip = t(
-        `Test Signals were not fully successful for this Diff. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
-      );
+      tooltip = t('Test Signals were not fully successful for this Diff. Click for more details.');
       break;
     case 'land-cancelled':
       icon = 'circle-slash';
-      tooltip = t(
-        `Land was cancelled for this Diff. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
-      );
+      tooltip = t('Land was cancelled for this Diff. Click for more details.');
       break;
     case 'land-on-hold':
       icon = 'debug-pause';
@@ -439,7 +432,7 @@ function DiffSignalSummary({
 
   const renderedIcon = typeof icon === 'string' ? <Icon icon={icon} /> : icon;
 
-  if (signalDetailsEnabled && diffId != null && Internal.DiffSignalDetailsComponent != null) {
+  if (diffId != null && Internal.DiffSignalDetailsComponent != null) {
     const DiffSignalDetailsComponent = Internal.DiffSignalDetailsComponent;
     // Get diffVersionNumber from diff if available (for phabricator diffs)
     const diffVersionNumber = Internal.getDiffVersionNumber?.(diff, commit.hash);

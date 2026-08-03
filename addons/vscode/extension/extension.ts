@@ -92,7 +92,7 @@ export async function activate(
       );
     }
 
-    if (enabledSCMApiFeatures.has('diffSignalDetails') && Internal.registerDiffSignalProvider) {
+    if (Internal.registerDiffSignalProvider) {
       context.subscriptions.push(
         Internal.registerDiffSignalProvider(context, extensionTracker, logger, reposList),
       );

@@ -12,12 +12,7 @@
  * diffview => diff commands, gutters. Requires 'sidebar'.
  * */
 export type EnabledSCMApiFeature =
-  | 'blame'
-  | 'sidebar'
-  | 'comments'
-  | 'newInlineComments'
-  | 'aiFirstPassCodeReview'
-  | 'diffSignalDetails';
+  'blame' | 'sidebar' | 'comments' | 'newInlineComments' | 'aiFirstPassCodeReview';
 
 export enum ActionTriggerType {
   ISL2InlineComment = 'ISL2InlineComment', // provided from the Sapling ISL Inline Comment
