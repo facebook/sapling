@@ -10,7 +10,6 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
-        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:enum",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",

@@ -2641,7 +2641,7 @@ EdenMount::getFsChannelCompletionFuture() {
   return fsChannelCompletionPromise_.getFuture();
 }
 
-#ifndef _WIN32
+#ifdef __linux__
 namespace {
 std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
     EdenMount* mount,
@@ -2664,7 +2664,6 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifier(),
-      mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getRequireUtf8Path(),
       edenConfig->fuseMaximumBackgroundRequests.getValue(),
       edenConfig->maxFsChannelInflightRequests.getValue(),
@@ -2866,6 +2865,15 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
         // that mimics privhelper mount failing
         serverState_->getFaultInjector().check(
             "failMountInitialization", mountPath.view());
+#ifdef __APPLE__
+        (void)readOnly;
+        auto error = folly::make_exception_wrapper<std::system_error>(
+            ENOTSUP,
+            std::generic_category(),
+            "FUSE mounts are not supported on macOS");
+        mountPromise->setException(error);
+        return folly::makeFuture<folly::Unit>(std::move(error));
+#else
         return serverState_->getPrivHelper()
             ->fuseMount(
                 mountPath.view(), readOnly, edenConfig->fuseVfsType.getValue())
@@ -2906,6 +2914,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                       makeFuseChannel(this, std::move(fuseDevice).value()));
                   return folly::makeFuture(folly::unit);
                 });
+#endif
 #endif
       });
 }
@@ -3022,6 +3031,13 @@ void EdenMount::fsChannelInitSuccessful(
 folly::Future<folly::Unit> EdenMount::takeoverFuse(
     FuseChannelData takeoverData) {
 #ifndef _WIN32
+#ifdef __APPLE__
+  (void)takeoverData;
+  return folly::makeFuture<folly::Unit>(std::system_error(
+      ENOTSUP,
+      std::generic_category(),
+      "FUSE mounts are not supported on macOS"));
+#else
   transitionState(State::INITIALIZED, State::STARTING);
 
   try {
@@ -3048,6 +3064,7 @@ folly::Future<folly::Unit> EdenMount::takeoverFuse(
     return folly::makeFuture<folly::Unit>(
         folly::exception_wrapper(std::current_exception()));
   }
+#endif
 #else
   (void)takeoverData;
   return folly::makeFuture<folly::Unit>(

@@ -7,6 +7,7 @@
 
 #include "eden/fs/takeover/TakeoverData.h"
 
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <variant>
@@ -788,20 +789,28 @@ TakeoverData TakeoverData::deserializeThriftMounts(
         // the default mount protocol fuse. We can fall through to parsing a
         // fuse mount in this case.
         [[fallthrough]];
-      case TakeoverMountProtocol::FUSE:
+      case TakeoverMountProtocol::FUSE: {
         checkCanSerDeMountType(
             protocolCapabilities,
             TakeoverMountProtocol::FUSE,
             *serializedMount.mountPath());
+        if (serializedMount.connInfo()->size() != sizeof(fuse_init_out)) {
+          throwf<std::runtime_error>(
+              "invalid FUSE connection info size {} for mount {}, expected {}",
+              serializedMount.connInfo()->size(),
+              *serializedMount.mountPath(),
+              sizeof(fuse_init_out));
+        }
+        fuse_init_out connInfo{};
+        std::memcpy(
+            &connInfo, serializedMount.connInfo()->data(), sizeof(connInfo));
         data.mountPoints.emplace_back(
             canonicalPath(*serializedMount.mountPath()),
             canonicalPath(*serializedMount.stateDirectory()),
-            FuseChannelData{
-                folly::File{},
-                *reinterpret_cast<const fuse_init_out*>(
-                    serializedMount.connInfo()->data())},
+            FuseChannelData{folly::File{}, connInfo},
             std::move(*serializedMount.inodeMap()));
         break;
+      }
       case TakeoverMountProtocol::NFS:
         checkCanSerDeMountType(
             protocolCapabilities,

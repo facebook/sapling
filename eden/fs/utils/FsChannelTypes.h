@@ -10,10 +10,8 @@
 #include <folly/File.h>
 #include <variant>
 
-#ifdef __linux__
+#ifndef _WIN32
 #include "eden/fs/third-party/fuse_kernel_linux.h" // @manual
-#elif __APPLE__
-#include "eden/fs/third-party/fuse_kernel_osxfuse.h" // @manual
 #endif
 
 namespace facebook::eden {

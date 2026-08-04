@@ -8,10 +8,12 @@
 #include <folly/Exception.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/io/IOBufQueue.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include <eden/fs/takeover/gen-cpp2/takeover_types.h>
 #include "eden/fs/takeover/TakeoverClient.h"
@@ -204,6 +206,35 @@ TEST(Takeover, invalidComboCapabilities) {
   EXPECT_THROW(
       TakeoverData::capabilitiesToVersion(TakeoverCapabilities::FUSE),
       std::runtime_error);
+}
+
+TEST(Takeover, rejectsLegacyFuseConnectionInfoSize) {
+  SerializedMountInfo serializedMount;
+  serializedMount.mountPath() = "/mount";
+  serializedMount.stateDirectory() = "/state";
+  serializedMount.connInfo() = std::string(FUSE_COMPAT_22_INIT_OUT_SIZE, '\0');
+  serializedMount.inodeMap() = SerializedInodeMap{};
+  serializedMount.mountProtocol() = TakeoverMountProtocol::FUSE;
+
+  SerializedTakeoverInfo serializedInfo;
+  serializedInfo.mounts() = {std::move(serializedMount)};
+  SerializedTakeoverResult serializedResult;
+  serializedResult.takeoverData() = std::move(serializedInfo);
+
+  folly::IOBufQueue buffer;
+  folly::io::QueueAppender appender(&buffer, 0);
+  appender.writeBE<uint32_t>(TakeoverData::kTakeoverProtocolVersionSeven);
+  appender.writeBE<uint32_t>(sizeof(uint64_t));
+  appender.writeBE<uint64_t>(kSupportedCapabilities);
+  apache::thrift::CompactSerializer::serialize(serializedResult, &buffer);
+
+  auto serialized = buffer.move();
+  serialized->coalesce();
+  UnixSocket::Message message{std::move(*serialized)};
+  EXPECT_THROW_RE(
+      TakeoverData::deserialize(message),
+      std::runtime_error,
+      "invalid FUSE connection info size");
 }
 
 TEST(Takeover, matchCapabilities) {

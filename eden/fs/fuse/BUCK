@@ -35,7 +35,6 @@ cpp_library(
         "fbsource//third-party/googletest:gtest",
         "//eden/common/os:os",
         "//eden/common/telemetry:telemetry",
-        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:ref_ptr",

@@ -22,7 +22,6 @@
 #include <system_error>
 
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -101,7 +100,6 @@ class FuseChannelTest : public ::testing::Test {
         errorLoggerOverride_ ? *errorLoggerOverride_ : noopErrorLogger_,
         std::chrono::seconds(60),
         /*notifications=*/nullptr,
-        CaseSensitivity::Sensitive,
         /*requireUtf8Path=*/true,
         /*maximumBackgroundRequests=*/12,
         /*maximumInFlightRequests=*/1000,

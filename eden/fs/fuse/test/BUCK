@@ -13,7 +13,6 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:log_info",
-        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:enum",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",

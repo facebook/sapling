@@ -27,7 +27,6 @@
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/TraceBus.h"
-#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
@@ -272,8 +271,6 @@ class FuseChannel final : public FsChannel {
    * will give the lower levels of EdenFS to process an event. ETIMEDOUT will be
    * returned to the kernel if a request exceeds this amount of time. notifier -
    *      used to flag abnormal EdenFS behavior to users.
-   * caseSensitive -
-   *      whether or not the mount is case sensitive.
    * requireUtf8Path -
    *      whether the mount requires utf-8 compliant paths.
    * maximumBackgroundRequests -
@@ -327,7 +324,6 @@ class FuseChannel final : public FsChannel {
       ErrorLogger& errorLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
-      CaseSensitivity caseSensitive,
       bool requireUtf8Path,
       int32_t maximumBackgroundRequests,
       size_t maximumInFlightRequests,
@@ -972,7 +968,6 @@ class FuseChannel final : public FsChannel {
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
   std::shared_ptr<Notifier> const notifier_;
-  CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
   /**
    * The maximum number of concurrent background FUSE requests we allow the

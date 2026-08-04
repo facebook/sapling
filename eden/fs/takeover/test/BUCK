@@ -18,7 +18,9 @@ cpp_unittest(
         "//eden/fs/takeover:takeover",
         "//folly:exception",
         "//folly/futures:core",
+        "//folly/io:iobuf",
         "//folly/test:test_utils",
         "//folly/testing:test_util",
+        "//thrift/lib/cpp2/protocol:protocol",
     ],
 )

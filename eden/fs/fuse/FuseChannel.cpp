@@ -609,11 +609,6 @@ constexpr auto kFuseHandlers = [] {
   handlers[FUSE_SETUPMAPPING] = {"FUSE_SETUPMAPPING", Read};
   handlers[FUSE_REMOVEMAPPING] = {"FUSE_REMOVEMAPPING", Read};
 #endif
-#ifdef __APPLE__
-  handlers[FUSE_SETVOLNAME] = {"FUSE_SETVOLNAME", Write};
-  handlers[FUSE_GETXTIMES] = {"FUSE_GETXTIMES", Read};
-  handlers[FUSE_EXCHANGE] = {"FUSE_EXCHANGE", Write};
-#endif
   return handlers;
 }();
 
@@ -656,13 +651,6 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
     {FUSE_MAX_PAGES, "MAX_PAGES"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
     {FUSE_EXPLICIT_INVAL_DATA, "EXPLICIT_INVAL_DATA"},
-#endif
-#ifdef __APPLE__
-    {FUSE_ALLOCATE, "ALLOCATE"},
-    {FUSE_EXCHANGE_DATA, "EXCHANGE_DATA"},
-    {FUSE_CASE_INSENSITIVE, "CASE_INSENSITIVE"},
-    {FUSE_VOL_RENAME, "VOL_RENAME"},
-    {FUSE_XTIMES, "XTIMES"},
 #endif
 #ifdef FUSE_NO_OPEN_SUPPORT
     {FUSE_NO_OPEN_SUPPORT, "NO_OPEN_SUPPORT"},
@@ -1003,7 +991,6 @@ FuseChannel::FuseChannel(
     ErrorLogger& errorLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
-    CaseSensitivity caseSensitive,
     bool requireUtf8Path,
     int32_t maximumBackgroundRequests,
     size_t maximumInFlightRequests,
@@ -1037,7 +1024,6 @@ FuseChannel::FuseChannel(
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
       notifier_(std::move(notifier)),
-      caseSensitive_{caseSensitive},
       requireUtf8Path_{requireUtf8Path},
       maximumBackgroundRequests_{maximumBackgroundRequests},
       maximumInFlightRequests_{maximumInFlightRequests},
@@ -1060,10 +1046,9 @@ FuseChannel::FuseChannel(
               fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}",
       mountPath,
       numThreads,
-      caseSensitive,
       requireUtf8Path,
       maximumBackgroundRequests,
       maximumInFlightRequests,
@@ -1868,17 +1853,11 @@ void FuseChannel::readInitPacket() {
     }
 
     // Error out if the kernel sends less data than the minimum INIT packet.
-#ifdef __linux__
     // On Linux, use the compat size (16 bytes) for the original fuse_init_in
     // before flags2 was added. Newer kernels may send a larger fuse_init_in
     // with flags2, which we accept but don't require.
     if (static_cast<size_t>(res) <
-        sizeof(init.header) + FUSE_COMPAT_INIT_IN_SIZE)
-#else
-    // On macOS (osxfuse), fuse_init_in is fixed at 16 bytes.
-    if (static_cast<size_t>(res) < sizeof(init) - sizeof(init.padding_))
-#endif
-    {
+        sizeof(init.header) + FUSE_COMPAT_INIT_IN_SIZE) {
       throw_<std::runtime_error>(
           "received partial FUSE_INIT packet on mount \"",
           mountPath_,
@@ -1985,14 +1964,6 @@ void FuseChannel::readInitPacket() {
   // open() and release().
   want |= FUSE_NO_OPENDIR_SUPPORT;
 #endif
-#ifdef FUSE_CASE_INSENSITIVE
-  if (caseSensitive_ == CaseSensitivity::Insensitive) {
-    want |= FUSE_CASE_INSENSITIVE;
-  }
-#else
-  (void)caseSensitive_;
-#endif
-
 #ifdef FUSE_ALLOW_IDMAP
   // Allow processes whose uid/gid doesn't map into our user namespace to
   // access this mount. Without this, the kernel FUSE layer rejects requests
@@ -2057,7 +2028,6 @@ void FuseChannel::readInitPacket() {
   // initPromise_, so that the kernel will put the mount point in use and will
   // not block further filesystem access on us while running the FuseDispatcher
   // callback code.
-#ifdef __linux__
   static_assert(
       FUSE_KERNEL_MINOR_VERSION > 22,
       "Your kernel headers are too old to build Eden.");
@@ -2073,13 +2043,6 @@ void FuseChannel::readInitPacket() {
             reinterpret_cast<const uint8_t*>(&connInfo),
             FUSE_COMPAT_22_INIT_OUT_SIZE});
   }
-#elif defined(__APPLE__)
-  static_assert(
-      FUSE_KERNEL_MINOR_VERSION == 19,
-      "osxfuse: API/ABI likely changed, may need something like the"
-      " linux code above to send the correct response to the kernel");
-  sendReply(init.header, connInfo);
-#endif
 
   if (negotiatedIoUringTransport(connInfo)) {
     XLOGF(
