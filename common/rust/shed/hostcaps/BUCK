@@ -27,10 +27,16 @@ rust_library(
 )
 
 cpp_library(
+    # @autodeps-skip
+    # Header-only wrapper over the Rust :hostcaps lib, which defines fb_has_servicerouter
+    # et al. via #[no_mangle] extern "C". The linkage is symbol-only (no #include from this
+    # target), so autodeps can't see it and demotes/removes :hostcaps; because this target
+    # has no srcs, a private dep does not propagate, so downstream binaries fail to link the
+    # symbols. Keep :hostcaps exported and skip autodeps management of this target.
     name = "hostcaps_ffi",
     headers = ["hostcaps.h"],
     exported_deps = [
-        ":hostcaps",
+        "//common/rust/shed/hostcaps:hostcaps",
     ],
 )
 
