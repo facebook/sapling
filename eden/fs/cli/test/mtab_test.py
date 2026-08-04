@@ -38,7 +38,6 @@ devfs on /dev (devfs, local, nobrowse)
 map -hosts on /net (autofs, nosuid, automounted, nobrowse)
 map auto_home on /home (autofs, automounted, nobrowse)
 map -fstab on /Network/Servers (autofs, automounted, nobrowse)
-eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
 """
         self.assertEqual(
             [
@@ -48,11 +47,6 @@ eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
                     device=b"/dev/disk1s4",
                     mount_point=b"/private/var/vm",
                     vfstype=b"apfs",
-                ),
-                MountInfo(
-                    device=b"eden@osxfuse0",
-                    mount_point=b"/Users/wez/fbsource",
-                    vfstype=b"osxfuse_eden",
                 ),
             ],
             parse_macos_mount_output(contents),

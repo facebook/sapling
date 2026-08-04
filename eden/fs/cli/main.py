@@ -2418,8 +2418,6 @@ class StartCmd(Subcmd):
                 instance, daemon_binary, args.edenfs_args, args.preserved_vars
             )
 
-        if config_mod.should_migrate_mount_protocol_to_nfs(instance):
-            config_mod._do_nfs_migration(instance, get_migration_success_message)
         if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
             config_mod._do_in_memory_inode_catalog_migration(instance)
         result = daemon.start_edenfs_service(
@@ -3065,8 +3063,6 @@ re-open these files after EdenFS is restarted.
             config_mod._do_manual_migration(
                 instance, migrate_to, get_migration_success_message
             )
-        elif config_mod.should_migrate_mount_protocol_to_nfs(instance):
-            config_mod._do_nfs_migration(instance, get_migration_success_message)
         return self._finish_restart(instance, allow_root=allow_root)
 
     def _force_restart(

@@ -120,7 +120,6 @@ devfs on /dev (devfs, local, nobrowse)
 map -hosts on /net (autofs, nosuid, automounted, nobrowse)
 map auto_home on /home (autofs, automounted, nobrowse)
 map -fstab on /Network/Servers (autofs, automounted, nobrowse)
-eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
 "
     .to_string();
 
@@ -139,11 +138,6 @@ eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
             device: "/dev/disk1s4".to_string(),
             mount_point: PathBuf::from("/private/var/vm"),
             vfstype: "apfs".to_string(),
-        },
-        MountTableInfo {
-            device: "eden@osxfuse0".to_string(),
-            mount_point: PathBuf::from("/Users/wez/fbsource"),
-            vfstype: "osxfuse_eden".to_string(),
         },
     ];
     let actual = parse_macos_mtab(contents);

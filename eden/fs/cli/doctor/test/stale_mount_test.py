@@ -115,6 +115,28 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual([b"/mnt/fuseedenfs"], self.mount_table.unmount_lazy_calls)
 
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_unmount_for_macfuse_mount(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = True
+        self.mount_table.add_mount(
+            "/mnt/macfuse", device="eden", vfstype="macfuse_eden"
+        )
+        self.mount_table.fail_access("/mnt/macfuse/.eden", errno.ENOTCONN)
+
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual(
+            """\
+<yellow>- Found problem:<reset>
+Found 1 stale edenfs mount:
+  /mnt/macfuse
+Unmounting 1 stale edenfs mount...<green>fixed<reset>
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        self.assertEqual([b"/mnt/macfuse"], self.mount_table.unmount_lazy_calls)
+
     @patch("eden.fs.cli.doctor.check_stale_mounts.StaleMountsFound.perform_fix")
     def test_check_fix(self, mock_perform_fix: MagicMock) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
