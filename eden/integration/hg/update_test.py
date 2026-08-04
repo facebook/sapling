@@ -1005,11 +1005,9 @@ class UpdateTest(EdenHgTestCase):
 
         output = self.repo.update(bottom)
         self.assertEqual("update complete\n", output)
-        # FIXME: Restarting after the failed resume loses the original source
-        # commit, so this resume leaves stale content and status entries.
-        self.assertEqual("Content 2", self.read_file("dir1/foo.txt"))
-        self.assertEqual("Content 2", self.read_file("dir2/bar.txt"))
-        self.assert_status({"dir1/foo.txt": "M", "dir2/bar.txt": "M"})
+        self.assertEqual("Content 1", self.read_file("dir1/foo.txt"))
+        self.assertEqual("Content 1", self.read_file("dir2/bar.txt"))
+        self.assert_status_empty()
 
     async def test_resume_interrupted_with_concurrent_update(self) -> None:
         self.repo.write_file("foo/baz.txt", "Content 3")

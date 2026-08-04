@@ -51,6 +51,7 @@ CheckoutContext::~CheckoutContext() {
 void CheckoutContext::start(
     RenameLock&& renameLock,
     EdenMount::ParentLock::LockedPtr&& parentLock,
+    const RootId& oldSnapshot,
     RootId newSnapshot,
     std::shared_ptr<const Tree> toTree) {
   renameLock_ = std::move(renameLock);
@@ -62,7 +63,7 @@ void CheckoutContext::start(
       XCHECK(
           std::holds_alternative<ParentCommitState::CheckoutInProgress>(
               parentLock->checkoutState));
-      oldParent = parentLock->workingCopyParentRootId;
+      oldParent = oldSnapshot;
       // Update the in-memory snapshot ID
       parentLock->checkedOutRootId = newSnapshot;
       parentLock->workingCopyParentRootId = newSnapshot;

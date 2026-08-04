@@ -2031,8 +2031,13 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                   return treeResults;
                 });
           })
-      .thenValue([this, rootInode, ctx, checkoutTimes, stopWatch, snapshotId](
-                     RootTreeTuple treeResults) {
+      .thenValue([this,
+                  rootInode,
+                  ctx,
+                  checkoutTimes,
+                  stopWatch,
+                  oldParent,
+                  snapshotId](RootTreeTuple treeResults) {
         checkoutTimes->didDiff = stopWatch.elapsed();
 
         // Perform the requested checkout operation after the journal diff
@@ -2046,6 +2051,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         ctx->start(
             std::move(renameLock),
             parentState_.wlock(),
+            oldParent,
             snapshotId,
             std::get<1>(treeResults).tree);
 
@@ -2209,6 +2215,7 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
       ctx->start(
           std::move(renameLock),
           parentState_.wlock(),
+          oldParent,
           snapshotId,
           toTreeRes.tree);
     }
