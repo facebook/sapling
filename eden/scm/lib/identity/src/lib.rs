@@ -440,7 +440,8 @@ const SL_GIT: Identity = Identity {
     repo: &RepoIdentity {
         dot_dir: if cfg!(windows) { ".git\\sl" } else { ".git/sl" },
         sniff_dot_dir: Some(".git"),
-        sniff_dot_dir_required_files: &[],
+        // Similar to Git, check `.git/HEAD`
+        sniff_dot_dir_required_files: &["HEAD"],
         // Highest priority: outer .git repo wins over inner .sl/.hg
         // that may have been injected as file paths by git.
         sniff_root_priority: 0,
@@ -1171,6 +1172,7 @@ mod test {
 
         let git_module_dir = dir.join(".git").join("modules").join("sub1");
         fs::create_dir_all(&git_module_dir)?;
+        write_required_files(dir, SL_GIT);
 
         let submodule_dir = dir.join("sub1");
         fs::create_dir_all(&submodule_dir)?;
@@ -1181,6 +1183,37 @@ mod test {
 
         let full_dot_dir = id.resolve_full_dot_dir(&submodule_dir);
         assert_eq!(full_dot_dir, git_module_dir.join("sl"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dotgit_inside_dotsl() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let dir = dir.path();
+
+        // .sl
+        fs::create_dir_all(dir.join(SL.repo.sniff_dot_dir()))?;
+        write_required_files(dir, SL);
+
+        // empty/.git: not a git repo (lack of HEAD)
+        let empty = dir.join("empty");
+        fs::create_dir_all(empty.join(".git"))?;
+        assert!(sniff_dir(&empty)?.is_none());
+        assert_eq!(sniff_root(&empty)?.unwrap().0, dir);
+
+        // scaffolded/.git/sl/store: not a git repo (lack of HEAD)
+        let scaffolded = dir.join("scaffolded");
+        fs::create_dir_all(scaffolded.join(".git").join("sl").join("store"))?;
+        assert!(sniff_dir(&scaffolded)?.is_none());
+        assert_eq!(sniff_root(&scaffolded)?.unwrap().0, dir);
+
+        // partial/.git/HEAD: is a git repo
+        let partial = dir.join("partial");
+        fs::create_dir_all(partial.join(".git"))?;
+        fs::write(partial.join(".git").join("HEAD"), b"ref: refs/heads/main\n")?;
+        assert_eq!(sniff_dir(&partial)?.unwrap().repo, SL_GIT.repo);
+        assert_eq!(sniff_root(&partial)?.unwrap().0, partial);
 
         Ok(())
     }
