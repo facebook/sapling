@@ -104,6 +104,15 @@ pub trait RepoManifestMapping: Send + Sync {
         watermark: Option<i64>,
     ) -> Result<()>;
 
+    /// Every manifest branch this repo has a watermark for, i.e. everything the
+    /// tailer has seen. The scope a periodic reconcile sweep runs over.
+    async fn list_manifest_branches(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        staleness: Staleness,
+    ) -> Result<Vec<ManifestBranch>>;
+
     /// Read the tailer watermark for one manifest branch (`None` if never set).
     async fn get_branch_watermark(
         &self,
@@ -169,6 +178,15 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
         _watermark: Option<i64>,
     ) -> Result<()> {
         Ok(())
+    }
+
+    async fn list_manifest_branches(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _staleness: Staleness,
+    ) -> Result<Vec<ManifestBranch>> {
+        Ok(vec![])
     }
 
     async fn get_branch_watermark(
@@ -299,6 +317,23 @@ impl RepoManifestMapping for TestRepoManifestMapping {
                 .insert((manifest_repo_id, manifest_branch.clone()), log_id);
         }
         Ok(())
+    }
+
+    async fn list_manifest_branches(
+        &self,
+        _ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        _staleness: Staleness,
+    ) -> Result<Vec<ManifestBranch>> {
+        let state = self.state.lock().expect("poisoned lock");
+        let mut branches: Vec<ManifestBranch> = state
+            .watermarks
+            .keys()
+            .filter(|(repo_id, _)| *repo_id == manifest_repo_id)
+            .map(|(_, branch)| branch.clone())
+            .collect();
+        branches.sort();
+        Ok(branches)
     }
 
     async fn get_branch_watermark(

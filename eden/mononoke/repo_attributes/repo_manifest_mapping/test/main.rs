@@ -582,6 +582,61 @@ async fn test_watermark(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+// 10c. Branch listing is the scope a periodic reconcile sweep runs over. It comes
+//      from the watermark table, so it covers every branch the tailer has seen and
+//      stays scoped to one manifest repo.
+#[mononoke::fbinit_test]
+async fn test_list_manifest_branches(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+    let other = rid(2);
+
+    assert!(
+        store
+            .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+            .await?
+            .is_empty(),
+        "a repo with no watermarks lists no branches"
+    );
+
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("heads/main"), 10)
+        .await?;
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("heads/dev"), 20)
+        .await?;
+    store
+        .set_branch_watermark(&ctx, other, &mb("heads/elsewhere"), 30)
+        .await?;
+
+    let mut branches = store
+        .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+        .await?;
+    branches.sort();
+    assert_eq!(
+        branches,
+        vec![mb("heads/dev"), mb("heads/main")],
+        "lists this repo's branches only, not another manifest repo's"
+    );
+
+    // Re-stamping a watermark must not duplicate the branch: the sweep would
+    // reconcile it twice.
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("heads/main"), 99)
+        .await?;
+    assert_eq!(
+        store
+            .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+            .await?
+            .len(),
+        2,
+        "advancing a watermark does not add a second entry for the branch"
+    );
+
+    Ok(())
+}
+
 // 10b. The read cursor is the MAX watermark across a repo's branches (None when
 //      empty), so it always advances — a dormant branch's stale watermark can't
 //      hold it back; it rises only when a branch advances past the current max.

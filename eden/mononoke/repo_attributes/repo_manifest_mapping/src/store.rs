@@ -106,6 +106,12 @@ mononoke_queries! {
         "SELECT log_id FROM manifest_watermark WHERE repo_id = {repo_id} ORDER BY log_id DESC LIMIT 1"
     }
 
+    // Every manifest branch the tailer has seen. Read from the watermark table, not
+    // the edge table: one row per branch there versus hundreds of thousands here.
+    read ListManifestBranches(repo_id: RepositoryId) -> (ManifestBranch,) {
+        "SELECT manifest_branch FROM manifest_watermark WHERE repo_id = {repo_id}"
+    }
+
     // Unconditional per-branch upsert, deliberately NOT a compare-and-swap.
     // Exactly-once comes from advancing the branch watermark in the SAME
     // transaction as the membership replace (see `replace_membership`), and the
@@ -372,6 +378,24 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
             format!("Failure fetching read cursor for manifest repo {manifest_repo_id}")
         })?;
         Ok(rows.into_iter().next().map(|(log_id,)| log_id))
+    }
+
+    async fn list_manifest_branches(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        staleness: Staleness,
+    ) -> Result<Vec<ManifestBranch>> {
+        let rows = ListManifestBranches::query(
+            self.get_connection(staleness),
+            ctx.sql_query_telemetry(),
+            &manifest_repo_id,
+        )
+        .await
+        .with_context(|| {
+            format!("Failure listing manifest branches for manifest repo {manifest_repo_id}")
+        })?;
+        Ok(rows.into_iter().map(|(branch,)| branch).collect())
     }
 
     async fn set_branch_watermark(
