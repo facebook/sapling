@@ -76,9 +76,6 @@ class FakePrivHelper final : public PrivHelper {
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) override;
   folly::Future<folly::Unit> setLogFile(folly::File logFile) override;
-  folly::Future<folly::Unit> setDaemonTimeout(
-      std::chrono::nanoseconds duration) override;
-  folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   folly::Future<pid_t> getServerPid() override;
   folly::Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
   folly::Future<pid_t> startFam(

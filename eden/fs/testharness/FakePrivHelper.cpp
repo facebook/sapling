@@ -178,15 +178,6 @@ std::shared_ptr<FakePrivHelper::MountDelegate> FakePrivHelper::getMountDelegate(
   return it->second;
 }
 
-folly::Future<folly::Unit> FakePrivHelper::setDaemonTimeout(
-    std::chrono::nanoseconds /* duration */) {
-  return folly::Unit{};
-}
-
-folly::Future<folly::Unit> FakePrivHelper::setUseEdenFs(bool /* useEdenFs */) {
-  return folly::unit;
-}
-
 folly::Future<pid_t> FakePrivHelper::getServerPid() {
   return -1;
 }

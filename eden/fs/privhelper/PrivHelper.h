@@ -11,7 +11,6 @@
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <sys/types.h>
-#include <chrono>
 #include <memory>
 
 namespace folly {
@@ -182,23 +181,6 @@ class PrivHelper {
       folly::File logFile) = 0;
 
   /**
-   * Tell the privhelper server to use `duration` for the `daemon_timeout`
-   * parameter in subsequent fuseMount requests.
-   * The `daemon_timeout` is a macOS specific FUSE implementation detail;
-   * it is equivalent to our FuseChannel::fuseRequestTimeout_ value, except
-   * that the consequence of exceeding the timeout is that the FUSE session
-   * is torn down. */
-  [[nodiscard]] virtual folly::Future<folly::Unit> setDaemonTimeout(
-      std::chrono::nanoseconds duration) = 0;
-
-  /**
-   * Tell the privhelper server whether it should try loading /dev/edenfs
-   * rather than the system fuse implementation.
-   */
-  [[nodiscard]] virtual folly::Future<folly::Unit> setUseEdenFs(
-      bool useEdenFs) = 0;
-
-  /**
    * Get the PID of the privhelper server
    */
   [[nodiscard]] virtual folly::Future<pid_t> getServerPid() = 0;
@@ -258,7 +240,6 @@ class PrivHelper {
    * started.
    */
   void setLogFileBlocking(folly::File logFile);
-  void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
   void setMemoryPriorityForProcessBlocking(pid_t pid, int targetPriority);
   NamespaceInfo getNamespaceInfoBlocking(pid_t daemonPid);
 

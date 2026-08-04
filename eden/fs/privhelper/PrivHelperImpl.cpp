@@ -126,9 +126,6 @@ class PrivHelperClientImpl : public PrivHelper,
       StringPiece mountPath,
       const vector<string>& bindMounts) override;
   Future<Unit> setLogFile(folly::File logFile) override;
-  Future<folly::Unit> setDaemonTimeout(
-      std::chrono::nanoseconds duration) override;
-  Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   Future<pid_t> getServerPid() override;
   Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
   Future<pid_t> startFam(
@@ -583,31 +580,6 @@ Future<Unit> PrivHelperClientImpl::setLogFile(folly::File logFile) {
       });
 }
 
-Future<Unit> PrivHelperClientImpl::setDaemonTimeout(
-    std::chrono::nanoseconds duration) {
-  auto xid = getNextXid();
-  auto request = PrivHelperConn::serializeSetDaemonTimeoutRequest(
-      xid, std::move(duration));
-
-  return sendAndRecv(xid, std::move(request))
-      .thenValue([](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_SET_DAEMON_TIMEOUT, response);
-      });
-}
-
-Future<Unit> PrivHelperClientImpl::setUseEdenFs(bool useEdenFs) {
-  auto xid = getNextXid();
-  auto request =
-      PrivHelperConn::serializeSetUseEdenFsRequest(xid, std::move(useEdenFs));
-
-  return sendAndRecv(xid, std::move(request))
-      .thenValue([](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_SET_USE_EDENFS, response);
-      });
-}
-
 Future<pid_t> PrivHelperClientImpl::getServerPid() {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeGetPidRequest(xid);
@@ -989,17 +961,6 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<folly::Unit> setLogFile(folly::File logFile) override {
     (void)logFile;
-    return folly::unit;
-  }
-
-  folly::Future<folly::Unit> setDaemonTimeout(
-      std::chrono::nanoseconds duration) override {
-    (void)duration;
-    return folly::unit;
-  }
-
-  folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override {
-    (void)useEdenFs;
     return folly::unit;
   }
 
