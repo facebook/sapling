@@ -1,8 +1,6 @@
 
 #require eden
 
-  $ setconfig worktree.enabled=true
-
 setup backing repo with linked worktrees
 
   $ newclientrepo myrepo

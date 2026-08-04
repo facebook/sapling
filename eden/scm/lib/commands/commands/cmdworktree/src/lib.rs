@@ -51,10 +51,6 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
-    if !repo.config().get_or("worktree", "enabled", || false)? {
-        abort!("worktree command requires --config worktree.enabled=true");
-    }
-
     let subcmd = ctx.opts.args.first().map(|s| s.as_str()).unwrap_or("");
     if !ctx.opts.rev.is_empty() && subcmd != "add" {
         abort!("--rev can only be used with 'worktree add'");
@@ -128,7 +124,6 @@ pub fn doc() -> &'static str {
 
     Config options::
 
-      worktree.enabled=true                    Enable worktree commands
       worktree.max-count=N                     Hard limit on linked worktrees per repo group (0 = unlimited, the default)
       worktree.reservation-ttl=DURATION        How long an in-flight add holds a slot before it is treated as stale (default 1h)
       worktree.require-generated-path=true     Require path generator, disallow manual PATH

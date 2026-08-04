@@ -1,7 +1,7 @@
 
 #require eden
 
-  $ setconfig worktree.enabled=true worktree.snapshot-direct-copy=true
+  $ setconfig worktree.snapshot-direct-copy=true
 
 setup backing repo
 

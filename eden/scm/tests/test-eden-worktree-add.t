@@ -1,7 +1,6 @@
 
 #require eden
 
-  $ setconfig worktree.enabled=true
   $ unset SCM_SAMPLING_FILEPATH
   $ setconfig sampling.key.command_info=worktree_command_info
   $ setconfig sampling.filepath=$TESTTMP/worktree-sampling
@@ -468,7 +467,7 @@ test worktree add - max-count limit enforced
 
   $ cd $TESTTMP
   $ newclientrepo limitrepo
-  $ setconfig worktree.enabled=true worktree.max-count=2
+  $ setconfig worktree.max-count=2
   $ touch file.txt
   $ sl add file.txt
   $ sl commit -m init
@@ -486,7 +485,7 @@ test worktree add - a slot reservation counts against max-count
 
   $ cd $TESTTMP
   $ newclientrepo resvrepo
-  $ setconfig worktree.enabled=true worktree.max-count=2
+  $ setconfig worktree.max-count=2
   $ touch file.txt
   $ sl add file.txt
   $ sl commit -m init

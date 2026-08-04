@@ -1,7 +1,5 @@
 #require no-eden
 
-  $ setconfig worktree.enabled=true
-
   $ newrepo repo
 
 empty or unknown subcommands keep their existing errors
