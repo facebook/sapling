@@ -59,7 +59,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands, setCo
       ToggleDownloadCommitsDropdown: [Modifier.ALT, KeyCode.D],
       ToggleCwdDropdown: [Modifier.ALT, KeyCode.C],
       ToggleBulkActionsDropdown: [Modifier.ALT, KeyCode.B],
-      ToggleFocusMode: [Modifier.ALT, KeyCode.F],
+      ToggleFocusMode: [[Modifier.ALT, Modifier.SHIFT], KeyCode.F],
       ToggleBookmarksManagerDropdown: [Modifier.ALT, KeyCode.M],
       RebaseOntoCurrentStackBase: [Modifier.ALT, KeyCode.R],
       ToggleFilterDropdown: [CMD, KeyCode.F],
