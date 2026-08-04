@@ -4235,22 +4235,21 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
     bool reportLocalOnlyAsConflicts) {
   auto setup = beginCheckout(ctx, fromTree, toTree, reportLocalOnlyAsConflicts);
 
-  // Now start all of the checkout actions
-  std::vector<ImmediateFuture<CheckoutActionResult>> actionFutures;
-  actionFutures.reserve(setup.actions.size());
-  for (const auto& action : setup.actions) {
-    actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
-  }
-
   auto faultFuture =
       getMount()->getServerState()->getFaultInjector().checkAsync(
           "TreeInode::checkout", getLogPath(), ctx->isDryRun());
-  auto collectFuture = collectAll(std::move(actionFutures));
 
-  // Wait for all of the actions, and record any errors.
+  // Start the actions after the fault check so injected faults can stop this
+  // directory before it is modified.
   return std::move(faultFuture)
-      .thenValue([collectFuture = std::move(collectFuture)](auto&&) mutable {
-        return std::move(collectFuture);
+      .thenValue([ctx, self = inodePtrFromThis(), actions = setup.actions](
+                     auto&&) mutable {
+        std::vector<ImmediateFuture<CheckoutActionResult>> actionFutures;
+        actionFutures.reserve(actions.size());
+        for (const auto& action : actions) {
+          actionFutures.emplace_back(action->run(ctx, &self->getObjectStore()));
+        }
+        return collectAll(std::move(actionFutures));
       })
       .thenValue(
           [ctx,
@@ -4340,6 +4339,9 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
     ctx->increaseCheckoutCounter(1);
   };
 
+  co_await self->getMount()->getServerState()->getFaultInjector().co_checkAsync(
+      "TreeInode::checkout", getLogPath(), ctx->isDryRun());
+
   std::vector<folly::coro::Task<CheckoutActionResult>> actionTasks;
   actionTasks.reserve(setup.actions.size());
   for (const auto& action : setup.actions) {
@@ -4352,25 +4354,8 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
             }));
   }
 
-  auto faultCheckTask = folly::coro::co_invoke(
-      [self, ctx, logPath = getLogPath()]() -> folly::coro::Task<folly::Unit> {
-        co_await folly::coro::co_reschedule_on_current_executor;
-        co_await self->getMount()
-            ->getServerState()
-            ->getFaultInjector()
-            .co_checkAsync("TreeInode::checkout", logPath, ctx->isDryRun());
-        co_return folly::unit;
-      });
-
-  auto [faultCheckTry, actionResultsTry] = co_await folly::coro::collectAllTry(
-      std::move(faultCheckTask),
-      folly::coro::collectAllTryRange(std::move(actionTasks)));
-
-  if (faultCheckTry.hasException()) {
-    co_yield folly::coro::co_error(std::move(faultCheckTry).exception());
-  }
-
-  auto actionResults = std::move(actionResultsTry).value();
+  auto actionResults =
+      co_await folly::coro::collectAllTryRange(std::move(actionTasks));
 
   auto finalizeStateTry = self->processCheckoutActionResults(
       ctx,

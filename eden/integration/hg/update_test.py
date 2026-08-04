@@ -965,6 +965,52 @@ class UpdateTest(EdenHgTestCase):
         self.assertEqual("Content 1", self.read_file("dir3/dog.txt"))
         self.assert_status_empty()
 
+    async def test_restart_after_failed_interrupted_update_resume(self) -> None:
+        if sys.platform == "win32":
+            self.skipTest("PrjFS projects destination content after EdenFS restarts")
+
+        self.backing_repo.write_file("dir1/foo.txt", "Content 1")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 1")
+        bottom = self.backing_repo.commit("Add files")
+        self.backing_repo.write_file("dir1/foo.txt", "Content 2")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 2")
+        top = self.backing_repo.commit("Edit files")
+        self.repo.update(top)
+
+        self.assertEqual("Content 2", self.read_file("dir1/foo.txt"))
+        self.assertTrue(os.path.isdir(self.get_path("dir2")))
+
+        await self.kill_eden_during_checkout_and_restart(bottom, "<root>, false")
+
+        self.assertEqual("Content 2", self.read_file("dir1/foo.txt"))
+        self.assertEqual("Content 2", self.read_file("dir2/bar.txt"))
+
+        async with self.eden.get_async_thrift_client() as client:
+            await client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::checkout",
+                    keyValueRegex="<root>, false",
+                    errorType="runtime_error",
+                    errorMessage="intentional checkout error",
+                    count=1,
+                )
+            )
+
+        with self.assertRaisesRegex(hgrepo.HgError, "intentional checkout error"):
+            self.repo.update(bottom)
+        self.assertEqual("Content 2", self.read_file("dir1/foo.txt"))
+        self.assertEqual("Content 2", self.read_file("dir2/bar.txt"))
+
+        self.eden.restart()
+
+        output = self.repo.update(bottom)
+        self.assertEqual("update complete\n", output)
+        # FIXME: Restarting after the failed resume loses the original source
+        # commit, so this resume leaves stale content and status entries.
+        self.assertEqual("Content 2", self.read_file("dir1/foo.txt"))
+        self.assertEqual("Content 2", self.read_file("dir2/bar.txt"))
+        self.assert_status({"dir1/foo.txt": "M", "dir2/bar.txt": "M"})
+
     async def test_resume_interrupted_with_concurrent_update(self) -> None:
         self.repo.write_file("foo/baz.txt", "Content 3")
         await self.kill_eden_during_checkout_and_restart(self.commit1, "foo, false")
