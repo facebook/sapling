@@ -6,8 +6,7 @@ two primary interfaces for other processes to interact with it.
 
 The first of these is the file system interface
 ([FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) on Linux,
-[NFS](https://datatracker.ietf.org/doc/html/rfc1813)/[macFUSE](https://osxfuse.github.io/)
-on macOS, and
+[NFS](https://datatracker.ietf.org/doc/html/rfc1813) on macOS, and
 [Projected FS](https://docs.microsoft.com/en-us/windows/win32/projfs/projected-file-system)
 on Windows), through which it exposes virtual filesystems. Other applications
 can interact with files and directories in EdenFS checkouts just like they would

@@ -36,11 +36,7 @@ On Linux, EdenFS uses
 [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to provide
 filesystem functionality.
 
-On macOS, EdenFS uses either [FUSE for macOS](https://osxfuse.github.io/) (which
-behaves very similarly to Linux FUSE) or
-[NFSv3](https://datatracker.ietf.org/doc/html/rfc1813). As Apple moves to
-deprecate kernel extensions, EdenFS on macOS will move towards using NFS
-exclusively.
+On macOS, EdenFS uses [NFSv3](https://datatracker.ietf.org/doc/html/rfc1813).
 
 On Windows, EdenFS uses Microsoft's
 [Projected File System](https://docs.microsoft.com/en-us/windows/win32/projfs/projected-file-system).
