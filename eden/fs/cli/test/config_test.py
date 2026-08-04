@@ -355,6 +355,25 @@ prefetching-enable = true
         with self.assertRaises(config_mod.CheckoutConfigCorruptedError):
             config_mod.EdenInstance._combine_mount_info([], [checkout])
 
+    def test_checkout_without_protocol_defaults_to_nfs_on_macos(self) -> None:
+        client_dir = self._state_dir / "clients" / "legacy-client"
+        client_dir.mkdir(parents=True)
+        (client_dir / "config.toml").write_text(
+            """
+[repository]
+path = "/backing-repo"
+type = "hg"
+"""
+        )
+
+        with patch("sys.platform", "darwin"):
+            checkout = config_mod.EdenCheckout(
+                self.get_config(),
+                self.tmp_dir / "legacy-mount",
+                client_dir,
+            )
+            self.assertEqual("nfs", checkout.get_config().mount_protocol)
+
 
 class EdenConfigParserTest(unittest.TestCase):
     unsupported_value = {"dict of string to string": ""}

@@ -749,12 +749,13 @@ class EdenCheckoutConfigCorruption(FixableProblem):
         self._ex = ex
 
     def is_nfs_default(self) -> bool:
-        default_protocol = "PrjFS" if sys.platform == "win32" else "FUSE"
+        default_protocol = util_mod.get_platform_default_mount_protocol()
         return (
-            self._checkout_info.instance.get_config_value(
+            default_protocol == util_mod.NFS_MOUNT_PROTOCOL_STRING
+            or self._checkout_info.instance.get_config_value(
                 "clone.default-mount-protocol", default_protocol
-            ).upper()
-            == "NFS"
+            ).lower()
+            == util_mod.NFS_MOUNT_PROTOCOL_STRING
         )
 
     def description(self) -> str:

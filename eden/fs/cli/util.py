@@ -911,6 +911,15 @@ def is_apple_silicon() -> bool:
         return False
 
 
+def get_platform_default_mount_protocol() -> str:
+    if sys.platform == "win32":
+        return PRJFS_MOUNT_PROTOCOL_STRING
+    elif sys.platform == "darwin":
+        return NFS_MOUNT_PROTOCOL_STRING
+    else:
+        return FUSE_MOUNT_PROTOCOL_STRING
+
+
 def get_protocol(nfs: bool) -> str:
     if sys.platform == "win32":
         return PRJFS_MOUNT_PROTOCOL_STRING

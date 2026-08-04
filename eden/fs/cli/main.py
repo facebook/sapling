@@ -153,7 +153,6 @@ from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
     EdenStartError,
-    is_apple_silicon,
     wait_for_instance_healthy,
 )
 from eden.fs.service.eden.thrift_types import EdenError
@@ -535,7 +534,10 @@ class CloneCmd(Subcmd):
             "--nfs",
             dest="nfs",
             action="store_true",
-            default=is_apple_silicon(),
+            default=(
+                util.get_platform_default_mount_protocol()
+                == util.NFS_MOUNT_PROTOCOL_STRING
+            ),
             help=argparse.SUPPRESS,
         )
 
@@ -628,12 +630,12 @@ class CloneCmd(Subcmd):
         # pyre-fixme[53]: Captured variable `instance` is not annotated.
         # pyre-fixme[3]: Return type must be annotated.
         def is_nfs_default():
-            default_protocol = "PrjFS" if sys.platform == "win32" else "FUSE"
+            default_protocol = util.get_platform_default_mount_protocol()
             return (
                 instance.get_config_value(
                     "clone.default-mount-protocol", default_protocol
-                ).upper()
-                == "NFS"
+                ).lower()
+                == util.NFS_MOUNT_PROTOCOL_STRING
             )
 
         args.path = os.path.realpath(args.path)

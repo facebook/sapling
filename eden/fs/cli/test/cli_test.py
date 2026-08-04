@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from eden.fs.cli import config as config_mod, main as main_mod, telemetry
+from eden.fs.cli import config as config_mod, main as main_mod, telemetry, util
 from eden.fs.cli.config import (
     CheckoutConfig,
     DEFAULT_REVISION,
@@ -145,6 +145,24 @@ class GlobalOptionEnvDefaultsTest(unittest.TestCase):
             args = self.parse_args("--config-dir", "$EDEN_TEST_BASE/cfg", "--version")
 
         self.assertEqual(args.config_dir, "/expanded/base/cfg")
+
+
+class CloneProtocolDefaultTest(unittest.TestCase):
+    def test_platform_default(self) -> None:
+        cases = (
+            ("darwin", True, util.NFS_MOUNT_PROTOCOL_STRING),
+            ("linux", False, util.FUSE_MOUNT_PROTOCOL_STRING),
+            ("win32", False, util.PRJFS_MOUNT_PROTOCOL_STRING),
+        )
+
+        for platform, use_nfs, protocol in cases:
+            with (
+                self.subTest(platform=platform),
+                patch.object(main_mod.sys, "platform", platform),
+            ):
+                args = main_mod.create_parser().parse_args(["clone", "repo", "path"])
+                self.assertEqual(args.nfs, use_nfs)
+                self.assertEqual(util.get_protocol(args.nfs), protocol)
 
 
 class RestartTest(unittest.TestCase):

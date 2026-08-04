@@ -2704,12 +2704,16 @@ Attempted and failed to fix problem CheckoutNotMounted
             out.getvalue(),
         )
 
+    @unittest.skipUnless(sys.platform == "darwin", "macOS only")
     @patch("eden.fs.cli.util.get_repo")
-    def test_missing_config_fix(
+    def test_missing_config_fix_uses_nfs_on_macos(
         self,
         mock_get_repo: MagicMock,
     ) -> None:
-        instance = FakeEdenInstance(self.make_temporary_directory())
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(),
+            config={"clone.default-mount-protocol": "FUSE"},
+        )
         checkout = instance.create_test_mount("path1")
         checkout_config = instance._checkouts_by_path[str(checkout.path)].config
 
@@ -2752,6 +2756,7 @@ Attempted and failed to fix problem CheckoutNotMounted
         )
 
         self.assertTrue(os.path.exists(checkout.state_dir / "config.toml"))
+        self.assertEqual("nfs", checkout.get_config().mount_protocol)
         self.assertEqual(
             out.getvalue(),
             f"""\

@@ -1579,7 +1579,7 @@ class EdenCheckout:
 
         mount_protocol = repository.get("protocol")
         if not isinstance(mount_protocol, str):
-            mount_protocol = "prjfs" if sys.platform == "win32" else "fuse"
+            mount_protocol = util.get_platform_default_mount_protocol()
         if mount_protocol not in SUPPORTED_MOUNT_PROTOCOLS:
             raise CheckoutConfigCorruptedError(
                 f'repository "{config_path}" has unsupported mount protocol '
