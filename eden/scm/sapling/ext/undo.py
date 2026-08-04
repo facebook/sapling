@@ -423,25 +423,34 @@ def _gapcheck(ui, repo, reverseindex):
     rlog = _getrevlog(repo, "index.i")
     absoluteindex = _invertindex(rlog, reverseindex)
     path = "undolog" + "/" + "gap"
+    # Callers treat False as "history may be missing" and refuse to undo, so it
+    # is the safe answer whenever the check cannot be completed.
     result = False
     try:
-        result = absoluteindex >= int(repo.localvfs.read(path))
-    except IOError:
-        # recreate file
-        repo.ui.debug("failed to read gap file in %s, attempting recreation\n" % path)
-        _logtoscuba(ui, "gap file corruption")
-        rlog = _getrevlog(repo, "index.i")
-        i = 0
-        while i < (len(rlog)):
-            indexdict = _readindex(repo, i, rlog)
-            if "" == _readnode(repo, "command.i", indexdict["command"]):
-                break
-            i += 1
-        # defaults to before oldest command
-        _recordnewgap(repo, _invertindex(rlog, i))
-        result = absoluteindex >= _invertindex(rlog, i)
-    finally:
-        return result
+        try:
+            result = absoluteindex >= int(repo.localvfs.read(path))
+        except IOError:
+            # recreate file
+            repo.ui.debug(
+                "failed to read gap file in %s, attempting recreation\n" % path
+            )
+            _logtoscuba(ui, "gap file corruption")
+            rlog = _getrevlog(repo, "index.i")
+            i = 0
+            while i < (len(rlog)):
+                indexdict = _readindex(repo, i, rlog)
+                if "" == _readnode(repo, "command.i", indexdict["command"]):
+                    break
+                i += 1
+            # defaults to before oldest command
+            _recordnewgap(repo, _invertindex(rlog, i))
+            result = absoluteindex >= _invertindex(rlog, i)
+    except Exception as e:
+        repo.ui.debug(
+            "gap check in %s failed (%s), assuming missing history\n" % (path, e)
+        )
+        result = False
+    return result
 
 
 # Visualize
