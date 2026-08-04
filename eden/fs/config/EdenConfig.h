@@ -799,17 +799,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * The maximum time duration that the kernel should allow for a fuse request.
-   * If a request exceeds this amount of time, it may take aggressive
-   * measures to shut down the fuse channel.
-   * This value is only applicable to the macOS fuse implementation.
-   */
-  ConfigSetting<std::chrono::nanoseconds> fuseDaemonTimeout{
-      "fuse:daemon-timeout",
-      std::chrono::nanoseconds::max(),
-      this};
-
-  /**
    * The maximum number of concurrent requests allowed into userspace from the
    * kernel. This corresponds to fuse_init_out::max_background. The
    * documentation this applies to only readaheads and async direct IO, but

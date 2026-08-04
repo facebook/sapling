@@ -111,6 +111,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processSetLogFileMsg(
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
+  UnixSocket::Message processLegacyMacFuseConfigRequest(
+      folly::io::Cursor& cursor);
   std::string findMatchingMountPrefix(folly::StringPiece path);
   struct RegisteredMount {
 #ifndef __APPLE__
@@ -137,12 +139,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       const RegisteredMount& registeredMount,
       UnmountOptions options);
 
-  UnixSocket::Message processSetDaemonTimeout(
-      folly::io::Cursor& cursor,
-      UnixSocket::Message& request);
-  UnixSocket::Message processSetUseEdenFs(
-      folly::io::Cursor& cursor,
-      UnixSocket::Message& request);
   UnixSocket::Message processGetPid();
   UnixSocket::Message processGetNamespaceInfo(folly::io::Cursor& cursor);
   UnixSocket::Message processStartFam(folly::io::Cursor& cursor);
@@ -237,15 +233,12 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void insecureBindUnmount(const char* mountPath);
   virtual void bindUnmount(const char* mountPath, folly::StringPiece mountRoot);
   virtual void setLogFile(folly::File logFile);
-  virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
   virtual void setMemoryPriorityForProcess(pid_t pid, int priority);
 
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;
   uid_t uid_{std::numeric_limits<uid_t>::max()};
   gid_t gid_{std::numeric_limits<gid_t>::max()};
-  std::chrono::nanoseconds fuseTimeout_{std::chrono::seconds(60)};
-  bool useDevEdenFs_{false};
   std::unique_ptr<FileAccessMonitorProcess> famProcess_;
 
   // The privhelper server only has a single thread,

@@ -32,6 +32,7 @@ cpp_unittest(
         "//folly:file_util",
         "//folly:range",
         "//folly/futures:core",
+        "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/io/async:event_base_thread",
         "//folly/test:test_utils",

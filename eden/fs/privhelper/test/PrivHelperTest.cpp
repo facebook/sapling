@@ -10,6 +10,8 @@
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/test/TestUtils.h>
@@ -18,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <atomic>
 #include <chrono>
+#include <optional>
 #include <unordered_map>
 
 #include "eden/common/testharness/TempFile.h"
@@ -265,6 +268,101 @@ class PrivHelperFdUnmountTestServer : public PrivHelperServer {
   std::atomic<bool> insecureBindUnmountCalled_{false};
 };
 
+namespace {
+
+UnixSocket::Message makeLegacyMacFuseConfigRequest(
+    uint32_t xid,
+    uint32_t requestId,
+    uint64_t value) {
+  constexpr uint32_t kProtocolVersion = 1;
+  constexpr uint32_t kMetadataLength = 8;
+  constexpr size_t kRequestSize = 4 * sizeof(uint32_t) + sizeof(uint64_t);
+
+  UnixSocket::Message request;
+  request.data = folly::IOBuf(folly::IOBuf::CREATE, kRequestSize);
+  folly::io::Appender appender(&request.data, kRequestSize);
+  appender.write<uint32_t>(kProtocolVersion);
+  appender.write<uint32_t>(kMetadataLength);
+  appender.write<uint32_t>(xid);
+  appender.write<uint32_t>(requestId);
+  appender.write<uint64_t>(value);
+  return request;
+}
+
+static_assert(PrivHelperConn::REQ_SET_DAEMON_TIMEOUT == 9);
+static_assert(PrivHelperConn::REQ_SET_USE_EDENFS == 10);
+
+} // namespace
+
+class RawPrivHelperClient : private UnixSocket::ReceiveCallback {
+ public:
+  explicit RawPrivHelperClient(File conn) {
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [this, conn = std::move(conn)]() mutable {
+          conn_ = UnixSocket::makeUnique(
+              clientIoThread_.getEventBase(), std::move(conn));
+          conn_->setReceiveCallback(this);
+        });
+  }
+
+  ~RawPrivHelperClient() override {
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait([this] {
+      if (conn_) {
+        conn_->clearReceiveCallback();
+        conn_->closeNow();
+        conn_.reset();
+      }
+    });
+  }
+
+  UnixSocket::Message sendAndRecv(UnixSocket::Message request) {
+    Promise<UnixSocket::Message> promise;
+    auto future = promise.getFuture();
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [this,
+         request = std::move(request),
+         promise = std::move(promise)]() mutable {
+          responsePromise_ = std::move(promise);
+          conn_->send(std::move(request));
+        });
+    return std::move(future).get(1s);
+  }
+
+ private:
+  void messageReceived(UnixSocket::Message&& message) noexcept override {
+    if (responsePromise_) {
+      std::move(*responsePromise_).setValue(std::move(message));
+      responsePromise_.reset();
+    }
+  }
+
+  void eofReceived() noexcept override {
+    setResponseException(
+        folly::make_exception_wrapper<std::runtime_error>("privhelper exited"));
+  }
+
+  void socketClosed() noexcept override {
+    setResponseException(
+        folly::make_exception_wrapper<std::runtime_error>(
+            "privhelper client socket closed"));
+  }
+
+  void receiveError(const folly::exception_wrapper& ew) noexcept override {
+    setResponseException(ew);
+  }
+
+  void setResponseException(folly::exception_wrapper ew) noexcept {
+    if (responsePromise_) {
+      std::move(*responsePromise_).setException(std::move(ew));
+      responsePromise_.reset();
+    }
+  }
+
+  EventBaseThread clientIoThread_;
+  UnixSocket::UniquePtr conn_;
+  std::optional<Promise<UnixSocket::Message>> responsePromise_;
+};
+
 class PrivHelperTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -328,6 +426,45 @@ class PrivHelperFdUnmountTest : public ::testing::Test {
   std::thread serverThread_;
   EventBaseThread clientIoThread_;
 };
+
+class PrivHelperRawProtocolTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    File clientConn;
+    File serverConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn);
+
+    serverThread_ =
+        std::thread([this, conn = std::move(serverConn)]() mutable noexcept {
+          server_.initPartial(std::move(conn), getuid(), getgid());
+          server_.run();
+        });
+    client_.emplace(std::move(clientConn));
+  }
+
+  void TearDown() override {
+    client_.reset();
+    if (serverThread_.joinable()) {
+      serverThread_.join();
+    }
+  }
+
+  PrivHelperThreadedTestServer server_;
+  std::thread serverThread_;
+  std::optional<RawPrivHelperClient> client_;
+};
+
+TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
+  auto timeoutResponse = client_->sendAndRecv(makeLegacyMacFuseConfigRequest(
+      1, PrivHelperConn::REQ_SET_DAEMON_TIMEOUT, 60'000'000'000));
+  PrivHelperConn::parseEmptyResponse(
+      PrivHelperConn::REQ_SET_DAEMON_TIMEOUT, timeoutResponse);
+
+  auto useEdenFsResponse = client_->sendAndRecv(
+      makeLegacyMacFuseConfigRequest(2, PrivHelperConn::REQ_SET_USE_EDENFS, 1));
+  PrivHelperConn::parseEmptyResponse(
+      PrivHelperConn::REQ_SET_USE_EDENFS, useEdenFsResponse);
+}
 
 TEST_F(PrivHelperTest, fuseMount) {
   auto mountPoint = makeTempDir("bar");

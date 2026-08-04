@@ -80,7 +80,6 @@ cpp_library(
         "//eden/common/utils:errno_utils",
         "//eden/common/utils:fsdetect",
         "//eden/common/utils:path",
-        "//eden/common/utils:sysctl_util",
         "//eden/common/utils:throw",
         "//eden/fs/privhelper/priority:process_priority",
         "//eden/fs/utils:mount_info_table",
@@ -101,7 +100,6 @@ cpp_library(
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:macos": [
-            "fbsource//third-party/osxfuse:osxfuse",
             "fbsource//third-party/toolchains/macos:CoreFoundation",
             "fbsource//third-party/toolchains/macos:IOKit",
         ],

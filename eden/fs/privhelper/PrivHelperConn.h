@@ -46,6 +46,9 @@ class PrivHelperConn {
     REQ_TAKEOVER_STARTUP = 6,
     REQ_SET_LOG_FILE = 7,
     REQ_UNMOUNT_BIND = 8,
+    // Legacy macOS FUSE configuration requests. Older daemons can send these
+    // startup requests even when using NFS. Keep the request IDs as no-ops
+    // while old daemons may start against this helper.
     REQ_SET_DAEMON_TIMEOUT = 9,
     REQ_SET_USE_EDENFS = 10,
     REQ_MOUNT_NFS = 11,
@@ -169,19 +172,7 @@ class PrivHelperConn {
       folly::File logFile);
   static void parseSetLogFileRequest(folly::io::Cursor& cursor);
 
-  static UnixSocket::Message serializeSetDaemonTimeoutRequest(
-      uint32_t xid,
-      std::chrono::nanoseconds duration);
-  static void parseSetDaemonTimeoutRequest(
-      folly::io::Cursor& cursor,
-      std::chrono::nanoseconds& duration);
-
-  static UnixSocket::Message serializeSetUseEdenFsRequest(
-      uint32_t xid,
-      bool useEdenFs);
-  static void parseSetUseEdenFsRequest(
-      folly::io::Cursor& cursor,
-      bool& useEdenFs);
+  static void parseLegacyMacFuseConfigRequest(folly::io::Cursor& cursor);
 
   static UnixSocket::Message serializeGetPidRequest(uint32_t xid);
   static pid_t parseGetPidResponse(const UnixSocket::Message& msg);

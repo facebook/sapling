@@ -508,39 +508,6 @@ void PrivHelperConn::parseBindMountRequest(
   checkAtEnd(cursor, "bind mount request");
 }
 
-UnixSocket::Message PrivHelperConn::serializeSetDaemonTimeoutRequest(
-    uint32_t xid,
-    std::chrono::nanoseconds duration) {
-  auto msg = serializeRequestPacket(xid, REQ_SET_DAEMON_TIMEOUT);
-  Appender appender(&msg.data, kDefaultBufferSize);
-  uint64_t durationNanoseconds = duration.count();
-  appender.write<uint64_t>(durationNanoseconds);
-
-  return msg;
-}
-
-void PrivHelperConn::parseSetDaemonTimeoutRequest(
-    Cursor& cursor,
-    std::chrono::nanoseconds& duration) {
-  duration = std::chrono::nanoseconds(cursor.read<uint64_t>());
-  checkAtEnd(cursor, "set daemon timeout request");
-}
-
-UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
-    uint32_t xid,
-    bool useEdenFs) {
-  auto msg = serializeRequestPacket(xid, REQ_SET_USE_EDENFS);
-  Appender appender(&msg.data, kDefaultBufferSize);
-  appender.write<uint64_t>(static_cast<uint64_t>(((useEdenFs) ? 1 : 0)));
-
-  return msg;
-}
-
-void PrivHelperConn::parseSetUseEdenFsRequest(Cursor& cursor, bool& useEdenFs) {
-  useEdenFs = bool(cursor.read<uint64_t>());
-  checkAtEnd(cursor, "set use /dev/edenfs");
-}
-
 UnixSocket::Message PrivHelperConn::serializeGetPidRequest(uint32_t xid) {
   return serializeRequestPacket(xid, REQ_GET_PID);
 }
@@ -742,6 +709,11 @@ void PrivHelperConn::parseSetLogFileRequest(folly::io::Cursor& cursor) {
   // REQ_SET_LOG_FILE has an empty body.  The only contents
   // are the file descriptor transferred with the request.
   checkAtEnd(cursor, "set log file request");
+}
+
+void PrivHelperConn::parseLegacyMacFuseConfigRequest(Cursor& cursor) {
+  cursor.read<uint64_t>();
+  checkAtEnd(cursor, "legacy macOS FUSE configuration request");
 }
 
 UnixSocket::Message PrivHelperConn::serializeSetMemoryPriorityForProcessRequest(
