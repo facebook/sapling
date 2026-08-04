@@ -172,7 +172,7 @@ inline constexpr std::string_view kRemountError = "remount_error";
 inline constexpr std::string_view kMountPath = "mount_path";
 inline constexpr std::string_view kPathType = "path_type";
 
-// --- SqliteIntegrityCheck ---
+// --- SqliteIntegrityCheck and FinishedCheckout ---
 inline constexpr std::string_view kNumErrors = "num_errors";
 
 // --- NfsCrawlDetected ---

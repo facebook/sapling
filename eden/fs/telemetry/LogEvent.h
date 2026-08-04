@@ -284,6 +284,8 @@ struct FinishedCheckout : public EdenFSEvent {
   uint64_t accessedBlobs = 0;
   uint64_t accessedBlobsAuxData = 0;
   uint64_t numConflicts = 0;
+  uint64_t numErrors = 0;
+  std::string error;
   uint64_t numLoadedInodes = 0;
   uint64_t numUnloadedInodes = 0;
   uint64_t numPeriodicLinkedUnloadedInodes = 0;
@@ -338,6 +340,11 @@ struct FinishedCheckout : public EdenFSEvent {
     durationFinish = durationFinish_;
   }
 
+  void populateError(uint64_t numErrors_, std::string error_) {
+    numErrors = numErrors_;
+    error = std::move(error_);
+  }
+
   void populate(DynamicEvent& event) const override {
     event.addString("mode", mode);
     event.addDouble("duration", duration);
@@ -349,6 +356,10 @@ struct FinishedCheckout : public EdenFSEvent {
     event.addInt("accessed_blobs", accessedBlobs);
     event.addInt("accessed_blobs_metadata", accessedBlobsAuxData);
     event.addInt("num_conflicts", numConflicts);
+    event.addInt("num_errors", numErrors);
+    if (!error.empty()) {
+      event.addString("error", error);
+    }
     event.addInt("loaded_inodes", numLoadedInodes);
     event.addInt("unloaded_inodes", numUnloadedInodes);
     event.addInt("linked_unloaded_inodes", numPeriodicLinkedUnloadedInodes);

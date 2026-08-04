@@ -1854,9 +1854,21 @@ folly::Try<CheckoutResult> EdenMount::finalizeCheckout(
       std::chrono::duration<double>{stopWatch.elapsed()};
 
   uint64_t numConflicts = 0;
+  uint64_t numErrors = 0;
+  std::string firstError;
   if (result.hasValue()) {
     auto& conflicts = result.value().conflicts;
     numConflicts = conflicts.size();
+
+    for (const auto& conflict : conflicts) {
+      if (conflict.type() == ConflictType::ERROR) {
+        ++numErrors;
+        if (firstError.empty()) {
+          firstError = fmt::format(
+              "{}: {}", conflict.path().value(), conflict.message().value());
+        }
+      }
+    }
 
     if (!ctx->isDryRun()) {
       const auto maxConflictsToPrint =
@@ -1879,6 +1891,9 @@ folly::Try<CheckoutResult> EdenMount::finalizeCheckout(
         printedConflicts++;
       }
     }
+  } else {
+    numErrors = 1;
+    firstError = folly::exceptionStr(result.exception()).toStdString();
   }
 
   // Don't log aux data fetches, because our backends don't yet support
@@ -1899,6 +1914,7 @@ folly::Try<CheckoutResult> EdenMount::finalizeCheckout(
       inodeCounts.unloadedInodeCount,
       inodeCounts.periodicLinkedUnloadInodeCount,
       inodeCounts.periodicUnlinkedUnloadInodeCount};
+  finishedCheckout.populateError(numErrors, std::move(firstError));
   if (result.hasValue()) {
     finishedCheckout.populateCheckoutDurations(
         std::chrono::duration_cast<std::chrono::microseconds>(
