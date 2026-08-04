@@ -1578,6 +1578,19 @@ struct EdenMount::CheckoutInProgressGuard {
     XCHECK(mount_ != nullptr);
     auto mount = mount_;
     mount_ = nullptr;
+    if (res.hasException()) {
+      XLOGF(ERR, "checkout error: {}", folly::exceptionStr(res.exception()));
+    } else {
+      for (const auto& conflict : res.value()) {
+        if (conflict.type() == ConflictType::ERROR) {
+          XLOGF(
+              ERR,
+              "checkout error for {}: {}",
+              conflict.path().value(),
+              conflict.message().value());
+        }
+      }
+    }
     if (applyResetState(mount, res.hasException())) {
       res.exception().with_exception([&](const std::exception& ex) {
         mount->getServerState()->getErrorLogger().log(

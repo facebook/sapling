@@ -69,6 +69,23 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "checkout_context",
+    srcs = ["CheckoutContextTest.cpp"],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/utils:eden_error",
+        "//folly:scope_guard",
+        "//folly/logging/test:test_handler",
+    ],
+)
+
+cpp_unittest(
     name = "dematerialize",
     srcs = ["DematerializeTest.cpp"],
     network_access = network_access_utils.none(),
