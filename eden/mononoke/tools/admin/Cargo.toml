@@ -152,7 +152,7 @@ thiserror = "2.0.19"
 time_measuring = { version = "0.1.0", path = "../../common/time_measuring" }
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-tokio-util = { version = "0.7.18", features = ["full"] }
+tokio-util = { version = "0.7.19", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
