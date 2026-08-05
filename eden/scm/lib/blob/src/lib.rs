@@ -85,6 +85,36 @@ impl Blob {
         }
     }
 
+    /// Copies the available bytes starting at `offset` into `destination`.
+    ///
+    /// This preserves an IOBuf's chunked representation instead of coalescing
+    /// the entire blob when a caller only needs one range.
+    pub fn copy_range(&self, offset: usize, destination: &mut [u8]) -> usize {
+        self.clone().into_copy_range(offset, destination)
+    }
+
+    /// Consumes this handle while copying a range, avoiding an extra IOBuf
+    /// chain clone when the caller already owns the handle.
+    pub fn into_copy_range(self, offset: usize, destination: &mut [u8]) -> usize {
+        match self {
+            Self::Bytes(bytes) => {
+                let start = offset.min(bytes.len());
+                let end = start.saturating_add(destination.len()).min(bytes.len());
+                let copied = end - start;
+                destination[..copied].copy_from_slice(&bytes[start..end]);
+                copied
+            }
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => {
+                let mut cursor = buf.cursor();
+                cursor.advance(offset.min(cursor.remaining()));
+                let copied = destination.len().min(cursor.remaining());
+                cursor.copy_to_slice(&mut destination[..copied]);
+                copied
+            }
+        }
+    }
+
     pub fn sha1(&self) -> types::Sha1 {
         use sha1::Digest;
 
@@ -329,6 +359,26 @@ mod test {
             });
             assert_eq!(got, b"hello world!");
             assert!(res.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_copy_range() {
+        let blob = Blob::Bytes(minibytes::Bytes::from("hello world"));
+        let mut destination = [0u8; 5];
+        assert_eq!(blob.copy_range(6, &mut destination), 5);
+        assert_eq!(&destination, b"world");
+        assert_eq!(blob.copy_range(100, &mut destination), 0);
+
+        #[cfg(fbcode_build)]
+        {
+            let mut iobuf = iobuf::IOBufShared::from("hello");
+            iobuf.append_to_end(iobuf::IOBufShared::from(" "));
+            iobuf.append_to_end(iobuf::IOBufShared::from("world"));
+            let blob = Blob::IOBuf(iobuf);
+            let mut destination = [0u8; 7];
+            assert_eq!(blob.copy_range(4, &mut destination), 7);
+            assert_eq!(&destination, b"o world");
         }
     }
 }
