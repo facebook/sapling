@@ -127,11 +127,11 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             fb,
             common_config.edenapi_dumper_scuba_table.clone(),
         ))
+        .add(<ScubaMiddleware<SaplingRemoteApiScubaHandler>>::new(scuba))
+        .add(OdsMiddleware::new())
         .add(ThrottleMiddleware::new())
         .add(LoadMiddleware::new())
         .add(log_middleware)
-        .add(OdsMiddleware::new())
-        .add(<ScubaMiddleware<SaplingRemoteApiScubaHandler>>::new(scuba))
         .add(TimerMiddleware::new())
         .build(router);
 
