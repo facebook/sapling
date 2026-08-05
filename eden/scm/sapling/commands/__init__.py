@@ -3942,8 +3942,10 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire
     project.
 
-    If no revision range is specified, the default is the current commit
-    and all of its ancestors (``::.``).
+    If no revision range is specified, the default revision range is the
+    current commit and all of its ancestors (``::.``). The experimental
+    ``--mutation`` option changes this default to the current commit and its
+    mutation predecessors (``predecessors(.)``).
 
     File history is shown without following the rename or copy
     history of files. To follow file history across renames and

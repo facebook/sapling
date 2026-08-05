@@ -3162,6 +3162,8 @@ def _logrevs(repo, opts):
         revs = smartset.baseset(repo=repo)
     elif follow:
         revs = repo.revs("reverse(:.)")
+    elif opts.get("mutation"):
+        revs = repo.revs("reverse(predecessors(.))")
     else:
         revs = repo.revs("all()")
         revs.reverse()

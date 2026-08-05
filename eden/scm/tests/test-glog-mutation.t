@@ -4,6 +4,11 @@ Test --mutation, -t of `log`.
 
   $ setconfig diff.git=true
 
+Mutation log is empty without a working copy parent:
+
+  $ newrepo
+  $ sl log --mutation
+
   $ newrepo
   $ drawdag --no-files << 'EOS'
   >   B3  # B3/f=1\n2\n3\n4\n
@@ -36,6 +41,22 @@ Mutation graph log:
   x  B1
   
   o  A
+
+Without an explicit revision, mutation log defaults to the mutation history of
+the current commit:
+
+  $ sl goto -q $B3
+  $ sl log -t -T '{desc}\n'
+  B3
+  B2
+  B1
+  $ sl log -Gt -T '{desc}\n'
+  @  B3
+  │
+  x  B2
+  │
+  x  B1
+  $ sl goto -q null
 
 `-p` and `--stat` are affected by `--mutation` too, for both graph and non-graph log:
 
