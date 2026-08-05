@@ -53,10 +53,12 @@ rust_binary(
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:k8s-openapi",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:num-format",
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
@@ -72,8 +74,10 @@ rust_binary(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/hostname:hostname",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//configerator/configo/if:configo-rust-srclients",
+        "//configerator/structs/scm/mononoke/redaction:redaction_set-rust",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo_utils:blobrepo_utils",
         "//eden/mononoke/blobstore:blobstore",
@@ -184,7 +188,6 @@ rust_binary(
         []
         if rust_oss.is_oss_build()
         else [
-            "fbsource//third-party/rust:serde",
             "//common/rust/configo:configo",
             "//configerator/structs/scm/mononoke/repos:repos-rust",
             "//eden/mononoke/blobstore:blobstore_factory",

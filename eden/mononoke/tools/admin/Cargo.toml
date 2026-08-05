@@ -79,8 +79,10 @@ gix-hash = { version = "0.25.1", features = ["sha1"] }
 gix-object = "0.60.0"
 hex = { version = "0.4.3", features = ["alloc"] }
 history_manifest = { version = "0.1.0", path = "../../derived_data/history_manifest" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
+k8s-openapi = { version = "0.27.1", features = ["latest"] }
 live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
@@ -114,6 +116,7 @@ pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 redaction = { version = "0.1.0", path = "../../features/redaction" }
+redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
 regex = "1.13.1"
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
