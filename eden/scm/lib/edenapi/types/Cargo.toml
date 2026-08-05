@@ -31,7 +31,7 @@ sapling-revisionstore_types = { version = "0.1.0", path = "../../revisionstore/t
 sapling-type_macros = { version = "0.1.0", path = "proc_macros" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_derive = "1.0.185"
+serde_derive = "1.0.229"
 thiserror = "2.0.18"
 
 [dev-dependencies]

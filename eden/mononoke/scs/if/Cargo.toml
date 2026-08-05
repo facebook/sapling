@@ -28,7 +28,7 @@ megarepo_configs = { version = "0.1.0", path = "../../megarepo_api/if/megarepo_c
 ref-cast = "1.0.18"
 rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_derive = "1.0.185"
+serde_derive = "1.0.229"
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
 thiserror = "2.0.18"
 thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

@@ -56,7 +56,7 @@ restricted_paths_acl_file = { version = "0.1.0", path = "../../repo_attributes/r
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_derive = "1.0.185"
+serde_derive = "1.0.229"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_regex = "1.2.0"
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }

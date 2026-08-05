@@ -21,7 +21,7 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_derive = "1.0.185"
+serde_derive = "1.0.229"
 sharding = { version = "0.1.0", path = "../sharding/sharding" }
 thiserror = "2.0.18"
 
