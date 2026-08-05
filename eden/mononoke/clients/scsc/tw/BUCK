@@ -4,6 +4,7 @@ oncall("scm_server_treehugger")
 
 fbpkg.builder(
     name = "scm.scsc",
+    architectures = ["x86_64"],
     buck_opts = fbpkg.buck_opts(
         mode = "opt",
     ),
