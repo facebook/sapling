@@ -18,7 +18,7 @@ libc = "0.2.186"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-ascii-tree = { version = "0.1.0", path = "../util/ascii-tree" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 

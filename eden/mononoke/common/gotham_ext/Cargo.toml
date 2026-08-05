@@ -49,7 +49,7 @@ sapling-cats-constants = { version = "0.1.0", path = "../../../scm/lib/cats/cons
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scopeguard = "1.2.0"
 scuba_ext = { version = "0.1.0", path = "../scuba_ext" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6.5"

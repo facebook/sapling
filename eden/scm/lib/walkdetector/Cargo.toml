@@ -20,7 +20,7 @@ sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-procinfo = { version = "0.1.0", path = "../procinfo" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

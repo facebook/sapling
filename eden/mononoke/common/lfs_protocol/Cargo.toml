@@ -19,4 +19,4 @@ serde = { version = "1.0.229", features = ["derive", "rc"] }
 assert_matches = "1.5"
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

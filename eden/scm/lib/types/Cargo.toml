@@ -33,7 +33,7 @@ thiserror = "2.0.19"
 quickcheck = "1.1"
 rand = "0.10.2"
 serde_cbor = "0.11.2"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

@@ -56,7 +56,7 @@ sapling-version = { version = "0.1.0", path = "../version" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 slex = { version = "0.1.0", path = "../slex" }

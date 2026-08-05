@@ -66,5 +66,5 @@ memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 paste = "1.0.14"
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 rand = "0.10.2"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
