@@ -694,13 +694,13 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             finalize_outer,
             &scuba,
             "Completed Finalize Batch for all commits",
-            "Panic while running finalize_batch for commits",
+            "finalize_batch for commits failed",
         );
         let bonsai_res = peel_joined(
             bonsai_outer,
             &scuba,
             "Completed Bonsai Changeset creation for all commits",
-            "Panic while running bonsai_creator for commits",
+            "bonsai_creator for commits failed",
         );
         // `producer` is a plain async block (not a `JoinHandle`), so its
         // `try_timed` shape is `Result<(FutureStats, ()), Error>` — no
@@ -736,7 +736,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                 "Completed Bonsai Changeset creation for all commits",
                 "Import".to_string(),
             )
-            .context("Panic while running bonsai_creator for commits")?;
+            .context("bonsai_creator for commits failed")?;
         // Ensure that the batch finalization has completed before we exit
         batch_finalizer
             .try_timed()
@@ -747,7 +747,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                 "Completed Finalize Batch for all commits",
                 "Import".to_string(),
             )
-            .context("Panic while running finalize_batch for commits")?;
+            .context("finalize_batch for commits failed")?;
     }
 
     debug!("Completed git import for repo {}.", repo_name);
