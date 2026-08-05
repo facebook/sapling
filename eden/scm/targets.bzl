@@ -112,6 +112,8 @@ def sl_rust_library(**kwargs):
     autocargo = _autocargo_overrides(**kwargs)
     if autocargo != None:
         kwargs["autocargo"] = autocargo
+    # avoid nightly features
+    kwargs["rustc_flags"] = (kwargs.get("rustc_flags") or []) + ["-Funstable-features"]
     return rust_library(**kwargs)
 
 def sl_rust_binary(**kwargs):
