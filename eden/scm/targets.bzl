@@ -157,7 +157,9 @@ def exec_compatible_with_target():
             choices[full_name] = [full_name]
         return select(choices)
 
-    return select_with("ovr_config//os/constraints:", os_list) + select_with("ovr_config//cpu/constraints:", cpu_list)
+    return select_with("ovr_config//os/constraints:", os_list) + select(
+        {"DEFAULT": select_with("ovr_config//cpu/constraints:", cpu_list), "ovr_config//os/constraints:macos": []}
+    )
 
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, pyo3 = False, **kwargs):
     # Python 3 target
