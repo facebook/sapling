@@ -249,6 +249,15 @@ Available IPython magics (auto magic is on, `%` is optional):
         pass
 
     if not have_ipython:
+        doc = ui.config("debugshell", "ipython-install-doc")
+        if doc:
+            import textwrap
+
+            doc = textwrap.indent(doc, "  ")
+            ui.status(
+                _("Consider installing IPython for a better experience:\n%s\n") % (doc,)
+            )
+
         # Fallback to stdlib REPL
         import code
 
