@@ -93,7 +93,7 @@ sapling-tracing-reload-states = { version = "0.1.0", path = "../tracing-reload/t
 sapling-tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 sapling-version = { version = "0.1.0", path = "../version" }
 sapling-worktree-registry = { version = "0.1.0", path = "../worktree" }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }

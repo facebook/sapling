@@ -15,7 +15,7 @@ anyhow = "1.0.103"
 clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 libc = "0.2.186"
 plist = "1.10.0"
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sha2 = "0.10.6"
 
@@ -23,7 +23,7 @@ sha2 = "0.10.6"
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 
 [features]
 fb = []

@@ -13,7 +13,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 moka = { version = "0.12.15", features = ["future", "sync"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

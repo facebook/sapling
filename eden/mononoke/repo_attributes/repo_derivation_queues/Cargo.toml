@@ -28,7 +28,7 @@ justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 thiserror = "2.0.18"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

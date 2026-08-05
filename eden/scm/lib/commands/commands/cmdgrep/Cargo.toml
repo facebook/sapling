@@ -21,7 +21,7 @@ sapling-pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-termstyle = { version = "0.1.0", path = "../../../io/term/style" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 
 [features]

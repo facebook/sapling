@@ -46,7 +46,7 @@ quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/fac
 regex = "1.13.1"
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 sha1 = "0.10.7"
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
