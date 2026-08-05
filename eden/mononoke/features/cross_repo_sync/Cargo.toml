@@ -51,7 +51,7 @@ pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_hooks = { version = "0.1.0", path = "../pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 rand = "0.10.2"
-ref-cast = "1.0.18"
+ref-cast = "1.0.26"
 regex = "1.13.1"
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }

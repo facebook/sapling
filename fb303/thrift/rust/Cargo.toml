@@ -21,7 +21,7 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 cpp = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-ref-cast = "1.0.18"
+ref-cast = "1.0.26"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
 thiserror = "2.0.18"

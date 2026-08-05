@@ -20,7 +20,7 @@ byteorder = "1.5"
 quickcheck = { version = "1.1", optional = true }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.10.2", optional = true }
-ref-cast = "1.0.18"
+ref-cast = "1.0.26"
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }

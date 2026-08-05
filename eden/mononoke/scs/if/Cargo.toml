@@ -25,7 +25,7 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hack = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 megarepo_configs = { version = "0.1.0", path = "../../megarepo_api/if/megarepo_configs" }
-ref-cast = "1.0.18"
+ref-cast = "1.0.26"
 rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
