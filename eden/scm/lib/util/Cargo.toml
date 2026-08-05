@@ -14,7 +14,7 @@ license = "MIT"
 name = "util"
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 bitflags = { version = "2.13.1", features = ["serde", "std"], default-features = false }
 dirs = "6.0"
 fn-error-context = "0.2"

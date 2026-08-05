@@ -13,5 +13,5 @@ license = "MIT"
 name = "grepomanifest"
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 roxmltree = "0.21.1"

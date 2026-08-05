@@ -18,5 +18,5 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 pin-project = "1.1.13"
 
 [dev-dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }

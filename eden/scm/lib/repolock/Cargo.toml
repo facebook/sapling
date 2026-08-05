@@ -23,5 +23,5 @@ thiserror = "2.0.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 tempfile = "3.27.0"

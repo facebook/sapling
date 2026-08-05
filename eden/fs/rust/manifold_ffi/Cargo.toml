@@ -8,6 +8,6 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 cxx = "1.0.194"
 cxxerror = { version = "0.1.0", path = "../../../scm/lib/edenfs_ffi/cxxerror" }

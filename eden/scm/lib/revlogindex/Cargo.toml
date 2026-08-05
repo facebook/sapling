@@ -27,5 +27,5 @@ sapling-util = { version = "0.1.0", path = "../util" }
 thiserror = "2.0.19"
 
 [dev-dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 tempfile = "3.27.0"

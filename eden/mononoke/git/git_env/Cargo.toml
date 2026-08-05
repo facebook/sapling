@@ -8,6 +8,6 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 gotham = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../common/gotham_ext" }

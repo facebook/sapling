@@ -12,7 +12,7 @@ name = "multi_repo_land_lib_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_globalrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }

@@ -18,7 +18,7 @@ harness = false
 required-features = ["for-tests"]
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.104"
 blob = { version = "0.1.0", path = "../blob" }
 bytecount = "0.6.9"
 num_cpus = "1.16"
