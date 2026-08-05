@@ -50,13 +50,11 @@
   $ git commit -aqm "add dangling LFS pointer"
 
 # Push without the pushvar. The git server tries to resolve the pointer from
-# the local filestore, finds nothing under sha256:baaaaaad..., and the push
-# fails with an HTTP 500 (the LFS-resolution error bubbles up as a server
-# error rather than a clean per-ref rejection — pre-receive packfile parsing
-# can't easily emit sideband errors).
-  $ git_client push 2>&1 | grep -e "HTTP 500" -e "fatal:" | sort -u
-  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
-  fatal: the remote end hung up unexpectedly
+# the local filestore and finds nothing under sha256:baaaaaad.... This is a
+# client error (the object was never uploaded), so the push is rejected with
+# an actionable message rather than an HTTP 500.
+  $ git_client push 2>&1 | grep -e "HTTP 500" -e "fatal:" -e "remote unpack failed" | sort -u
+  error: remote unpack failed: LFS files missing in Git LFS server. Please upload before pushing. Error:
 
 # Push again with `x-git-allow-dangling-lfs-pointers: 1`. The pointer is
 # still unresolvable, but the pushvar tells the git server to accept the

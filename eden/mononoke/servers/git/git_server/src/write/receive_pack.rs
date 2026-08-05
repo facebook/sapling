@@ -265,7 +265,10 @@ async fn push(
             ),
             Err(e) => {
                 let err_msg = format!("{e:?}");
-                if err_msg.contains("find_file_changes") && err_msg.contains("status: 404") {
+                if err_msg.contains("find_file_changes")
+                    && (err_msg.contains("status: 404")
+                        || err_msg.contains("not found in internal filestore"))
+                {
                     return reject_push_with_message(
                         state,
                         &ref_updates,
@@ -599,7 +602,7 @@ async fn reject_push_with_message(
     }
     for ref_update in ref_updates {
         write_text_packetline(
-            format!("{} {} {}", REF_ERR, ref_update.ref_name, &error_message).as_bytes(),
+            format!("{} {} {}", REF_ERR, ref_update.ref_name, error_message).as_bytes(),
             &mut output,
         )
         .await?;
