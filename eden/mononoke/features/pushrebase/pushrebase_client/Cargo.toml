@@ -13,7 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.103"
 arc-swap = { version = "1.9.2", features = ["weak"] }
-async-trait = "0.1.86"
+async-trait = "0.1.91"
 bookmarks = { version = "0.1.0", path = "../../../repo_attributes/bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../../repo_attributes/bookmarks/bookmarks_movement" }
 bookmarks_types = { version = "0.1.0", path = "../../../repo_attributes/bookmarks/bookmarks_types" }

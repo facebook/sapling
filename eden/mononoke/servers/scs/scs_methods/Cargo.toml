@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.103"
 async-stream = "0.3"
-async-trait = "0.1.86"
+async-trait = "0.1.91"
 async_requests = { version = "0.1.0", path = "../../../features/async_requests" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../../repo_attributes/bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../../repo_attributes/bookmarks" }

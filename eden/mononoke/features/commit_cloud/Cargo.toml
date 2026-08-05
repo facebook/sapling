@@ -13,7 +13,7 @@ path = "tests/main.rs"
 
 [dependencies]
 anyhow = "1.0.103"
-async-trait = "0.1.86"
+async-trait = "0.1.91"
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }

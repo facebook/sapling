@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.103"
-async-trait = "0.1.86"
+async-trait = "0.1.91"
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 enum-map = "2.7.3"
