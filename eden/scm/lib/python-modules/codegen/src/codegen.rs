@@ -66,10 +66,15 @@ fn generate_code_py(py: Python, sys_path: Option<&Path>) -> PyResult<String> {
     let module_tuples = module
         .call(py, "compile_modules", (sys_path0,), None)?
         .extract::<Vec<ModuleInfoTuple>>(py)?;
-    let module_infos: Vec<ModuleInfo> = module_tuples
+    let mut module_infos: Vec<ModuleInfo> = module_tuples
         .into_iter()
         .map(|t| ModuleInfo::from_tuple(py, t))
         .collect();
+
+    // Module discovery order is nondeterministic (Python set iteration order
+    // is hash-seed dependent, and filesystem scan order varies). Sort so the
+    // generated code is deterministic.
+    module_infos.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 
     if is_cargo {
         for m in &module_infos {
