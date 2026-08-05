@@ -48,6 +48,41 @@ describe('CommitTreeList', () => {
     await act(() => simulateCommits({value: allCommits}));
   });
 
+  it('shows how to disable focus mode to see additional commits', () => {
+    fireEvent.click(screen.getByTestId('focus-mode-toggle'));
+
+    expect(
+      screen.getByText('Focus mode is on. Disable to see additional commits'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Load more commits')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Focus mode is on. Disable to see additional commits'));
+
+    expect(
+      screen.queryByText('Focus mode is on. Disable to see additional commits'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Load more commits')).toBeInTheDocument();
+    expect(screen.getByTestId('focus-mode-toggle')).toHaveAttribute('data-focus-mode', 'false');
+  });
+
+  it('does not show the focus mode indicator at the true repository root', async () => {
+    await act(() =>
+      simulateCommits({
+        value: [
+          COMMIT('0', 'repository root', 'unused', {parents: []}),
+          COMMIT('a', 'My Commit', '0'),
+          COMMIT('b', 'Another Commit', 'a', {isDot: true}),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByTestId('focus-mode-toggle'));
+
+    expect(
+      screen.queryByText('Focus mode is on. Disable to see additional commits'),
+    ).not.toBeInTheDocument();
+  });
+
   it('disables while running', async () => {
     fireEvent.click(screen.getByText('Load more commits'));
     expectMessageSentToServer({type: 'loadMoreCommits'});

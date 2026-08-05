@@ -13,7 +13,7 @@ import type {Hash} from './types';
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {atom, useAtomValue, useSetAtom} from 'jotai';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {Commit, InlineProgressSpan} from './Commit';
 import {commitTreeSearchFilter} from './CommitTreeSearchFilter';
 import {Center, LargeSpinner} from './ComponentUtils';
@@ -41,7 +41,10 @@ import {
 import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 
+import {Icon} from 'isl-components/Icon';
 import './CommitTreeList.css';
+import {tracker} from './analytics';
+import {focusMode} from './atoms/FocusModeState';
 
 type DagCommitListProps = {
   isNarrow: boolean;
@@ -144,14 +147,41 @@ function DagCommitList(props: DagCommitListProps) {
   );
 }
 
+function FocusModeIndicator() {
+  const [focused, setFocused] = useAtom(focusMode);
+  if (!focused) {
+    return null;
+  }
+  return (
+    <Button
+      onClick={() => {
+        tracker.track('SetFocusMode', {extras: {focus: false}});
+        setFocused(false);
+      }}
+      icon>
+      <Icon icon="screen-normal" />
+      <T>Focus mode is on. Disable to see additional commits</T>
+    </Button>
+  );
+}
+
 function renderCommit(info: DagCommitInfo) {
   return <DagCommitBody info={info} />;
 }
 
 function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
+  return <CommitExtras info={info} row={row} />;
+}
+
+function CommitExtras({info, row}: {info: DagCommitInfo; row: ExtendedGraphRow}) {
+  const focused = useAtomValue(focusMode);
   if (row.termLine != null && (info.parents.length > 0 || (info.ancestors?.size ?? 0) > 0)) {
     // Root (no parents) in the displayed DAG, but not root in the full DAG.
-    return <MaybeFetchingAdditionalCommitsRow hash={info.hash} />;
+    return focused ? (
+      <FocusModeIndicator />
+    ) : (
+      <MaybeFetchingAdditionalCommitsRow hash={info.hash} />
+    );
   } else if (info.phase === 'draft') {
     // Draft but parents are not drafts. Likely a stack root. Show stack buttons.
     return <MaybeStackActions hash={info.hash} />;
