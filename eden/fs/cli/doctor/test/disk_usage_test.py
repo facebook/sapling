@@ -7,7 +7,6 @@
 # pyre-strict
 
 
-import collections
 import typing
 from typing import List, Optional
 from unittest.mock import patch
