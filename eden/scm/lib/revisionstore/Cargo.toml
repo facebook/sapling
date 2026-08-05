@@ -60,7 +60,7 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 slex = { version = "0.1.0", path = "../slex" }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

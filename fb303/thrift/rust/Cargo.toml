@@ -24,7 +24,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 ref-cast = "1.0.26"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [build-dependencies]

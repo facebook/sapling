@@ -27,7 +27,7 @@ sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/ty
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 strum = { version = "0.28.0", features = ["derive"] }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 

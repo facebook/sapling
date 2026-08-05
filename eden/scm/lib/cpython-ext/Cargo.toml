@@ -18,7 +18,7 @@ sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

@@ -21,5 +21,5 @@ scuba_ext = { version = "0.1.0", path = "../scuba_ext" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.28.0", features = ["derive"] }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }

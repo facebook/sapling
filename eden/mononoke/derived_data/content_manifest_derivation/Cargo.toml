@@ -24,7 +24,7 @@ justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 restricted_paths_common = { version = "0.1.0", path = "../../repo_attributes/restricted_paths_common" }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

@@ -23,7 +23,7 @@ mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_ty
 ref-cast = "1.0.26"
 rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [build-dependencies]

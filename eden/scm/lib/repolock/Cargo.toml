@@ -19,7 +19,7 @@ sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
 sapling-util = { version = "0.1.0", path = "../util" }
-thiserror = "2.0.18"
+thiserror = "2.0.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
