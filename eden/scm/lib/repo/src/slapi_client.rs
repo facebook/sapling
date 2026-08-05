@@ -7,7 +7,6 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use anyhow::anyhow;
 use async_runtime::block_on;
@@ -18,6 +17,7 @@ use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use repourl::RepoUrl;
 use storemodel::StoreInfo;
+use try_once_lock::OnceLock;
 
 const DEFAULT_CAPABILITIES: [&str; 1] = ["sapling-common"];
 

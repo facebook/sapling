@@ -41,6 +41,7 @@ sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", optional = true }
 sapling-metrics = { version = "0.1.0", path = "../metrics", optional = true }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 tempfile = "3.27.0"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -20,14 +20,11 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
-#![feature(once_cell_try)]
-
 use std::any::Any;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use async_trait::async_trait;
 use blob::Blob;
@@ -42,6 +39,7 @@ use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
 use slex_items::Items;
+use try_once_lock::OnceLock;
 pub use types;
 use types::FetchContext;
 use types::HgId;

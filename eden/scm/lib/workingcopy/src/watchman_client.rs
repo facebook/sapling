@@ -8,13 +8,13 @@
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use tokio::time::timeout;
+use try_once_lock::OnceLock;
 
 pub struct DeferredWatchmanClient {
     config: Arc<dyn Config>,

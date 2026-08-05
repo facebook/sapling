@@ -30,6 +30,7 @@ sl_rust_library(
         ],
         "ovr_config//os:windows": [
             "fbsource//third-party/rust:winapi",
+            "//eden/scm/lib/util/try-once-lock:try-once-lock",
         ],
     }),
 )

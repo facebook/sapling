@@ -74,6 +74,7 @@ sl_rust_library(
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/format-util:format-util",
         "//eden/scm/lib/util/hgplain:hgplain",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
         "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy/repostate:repostate",
         "//watchman/rust/watchman_client:watchman_client",

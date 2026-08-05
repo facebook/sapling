@@ -13,7 +13,6 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -24,6 +23,7 @@ use tracing::debug;
 use tracing::debug_span;
 use tracing::info;
 use tracing::trace;
+use try_once_lock::OnceLock;
 
 use crate::change_detect::SharedChangeDetector;
 use crate::errors::IoResultExt;

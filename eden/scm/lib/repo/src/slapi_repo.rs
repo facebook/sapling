@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -32,6 +31,7 @@ use sparse::Root;
 use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::TreeStore;
+use try_once_lock::OnceLock;
 use types::HgId;
 
 use crate::scmstore::build_scm_file_store;

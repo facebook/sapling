@@ -97,6 +97,7 @@ sl_rust_library(
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/format-util:format-util",
         "//eden/scm/lib/util/redacted:redacted",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/vlqencoding:vlqencoding",
     ],

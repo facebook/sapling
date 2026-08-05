@@ -7,8 +7,6 @@
 
 //! Cross-platform utilities for process related logic, like waiting or killing.
 
-#![cfg_attr(windows, feature(once_cell_try))]
-
 use std::io;
 use std::time::Duration;
 use std::time::Instant;
@@ -243,7 +241,7 @@ pub use win32::ProcessGroup;
 pub fn terminate_pid_tree_on_exit(pid: u32) -> io::Result<()> {
     #[cfg(windows)]
     {
-        use std::sync::OnceLock;
+        use try_once_lock::OnceLock;
         static GROUP: OnceLock<ProcessGroup> = OnceLock::new();
         let group = GROUP.get_or_try_init(|| -> io::Result<ProcessGroup> {
             let g = ProcessGroup::new()?;

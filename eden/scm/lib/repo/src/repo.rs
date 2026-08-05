@@ -11,7 +11,6 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use anyhow::Result;
 use commits_trait::DagCommits;
@@ -44,6 +43,7 @@ use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 use storemodel::TreeStore;
+use try_once_lock::OnceLock;
 use types::HgId;
 use types::hgid::NULL_ID;
 use types::hgid::WDIR_ID;

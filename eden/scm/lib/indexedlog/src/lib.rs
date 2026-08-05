@@ -6,7 +6,6 @@
  */
 
 #![allow(dead_code)]
-#![feature(once_cell_try)]
 
 //! # Indexed Log
 //!

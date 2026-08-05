@@ -72,6 +72,7 @@ sl_rust_library(
         "//eden/scm/lib/util/format-util:format-util",
         "//eden/scm/lib/util/hgplain:hgplain",
         "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
         "//eden/scm/lib/workingcopy:workingcopy",
     ],
 )

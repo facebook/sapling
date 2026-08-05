@@ -50,6 +50,7 @@ sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-revisionstore_types = { version = "0.1.0", path = "types" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
+sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-version = { version = "0.1.0", path = "../version" }

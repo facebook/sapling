@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#![feature(once_cell_try)]
-
 mod acl_metrics;
 mod bfs;
 mod diff;
@@ -24,7 +22,6 @@ use std::collections::HashSet;
 use std::collections::btree_map::Entry;
 use std::fmt;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::bail;
@@ -47,6 +44,7 @@ use storemodel::InsertOpts;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 use thiserror::Error;
+use try_once_lock::OnceLock;
 use types::HgId;
 pub use types::PathComponent;
 pub use types::PathComponentBuf;

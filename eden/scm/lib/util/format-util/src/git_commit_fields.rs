@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::OnceLock;
 
 use anyhow::Context as _;
 use anyhow::Result;
@@ -15,6 +14,7 @@ use anyhow::bail;
 use anyhow::ensure;
 use minibytes::Text;
 use serde::Deserialize;
+use try_once_lock::OnceLock;
 use types::Id20;
 use types::SerializationFormat;
 use types::hgid::GIT_EMPTY_TREE_ID;

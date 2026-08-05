@@ -24,6 +24,7 @@ sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 slex-items = { version = "0.1.0", path = "../slex/items" }

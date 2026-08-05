@@ -9,7 +9,6 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -18,6 +17,7 @@ use anyhow::bail;
 use manifest::File;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
+use try_once_lock::OnceLock;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;

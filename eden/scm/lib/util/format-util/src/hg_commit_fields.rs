@@ -7,13 +7,13 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::OnceLock;
 
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::bail;
 use minibytes::Text;
 use serde::Deserialize;
+use try_once_lock::OnceLock;
 use types::Id20;
 use types::RepoPath;
 use types::SerializationFormat;

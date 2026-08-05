@@ -33,5 +33,6 @@ sl_rust_library(
         "//eden/scm/lib/slex/items:slex_items",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
     ],
 )

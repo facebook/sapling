@@ -9,7 +9,6 @@ use std::io::Cursor;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -29,6 +28,7 @@ use minibytes::Bytes;
 use revisionstore_types::InternalMetadata;
 use storemodel::SerializationFormat;
 use tracing::warn;
+use try_once_lock::OnceLock;
 use types::HgId;
 use types::Id20;
 use types::Key;

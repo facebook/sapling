@@ -97,7 +97,6 @@
 //! The produced stores must implement the `HgIdDataStore` trait.
 
 #![allow(unexpected_cfgs)]
-#![feature(once_cell_try)]
 
 mod indexedloghistorystore;
 mod lfs;

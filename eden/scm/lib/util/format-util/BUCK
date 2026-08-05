@@ -27,5 +27,6 @@ sl_rust_library(
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
     ],
 )

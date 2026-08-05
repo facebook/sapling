@@ -17,6 +17,7 @@ anyhow = "1.0.104"
 memchr = "2.8.3"
 sapling-hgtime = { version = "0.1.0", path = "../../hgtime" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
+sapling-try-once-lock = { version = "0.1.0", path = "../try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 sha1 = "0.10.7"

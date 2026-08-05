@@ -9,7 +9,6 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -54,6 +53,7 @@ use storemodel::TreeEntry;
 use storemodel::TreeFetch;
 use storemodel::TreeFetchItems;
 use storemodel::basic_parse_tree;
+use try_once_lock::OnceLock;
 use types::AuxData;
 
 use super::util::try_local_content;
