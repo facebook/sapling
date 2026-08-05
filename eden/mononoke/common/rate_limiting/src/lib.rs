@@ -690,9 +690,9 @@ mod test {
             },
         };
 
-        let empty_target_rate_limit = RateLimit {
+        let generic_rate_limit = RateLimit {
             body: RateLimitBody::default(),
-            target: Some(Target::Identities([].into())),
+            target: None,
             fci_metric: FciMetric {
                 metric: Metric::EgressBytes,
                 window: Duration::from_mins(1),
@@ -707,7 +707,7 @@ mod test {
                 rate_limits: vec![
                     main_client_id_rate_limit.clone(),
                     identities_rate_limit.clone(),
-                    empty_target_rate_limit.clone(),
+                    generic_rate_limit.clone(),
                 ],
                 load_shed_limits: vec![],
             }),
@@ -723,7 +723,11 @@ mod test {
                 Some(idents.clone()),
                 Some("non_matching_id"),
                 None,
-            ) == Some(empty_target_rate_limit)
+            ) == Some(generic_rate_limit.clone())
+        );
+        assert!(
+            rate_limiter.find_rate_limit(Metric::EgressBytes, None, None, None)
+                == Some(generic_rate_limit)
         );
         assert!(
             rate_limiter.find_rate_limit(

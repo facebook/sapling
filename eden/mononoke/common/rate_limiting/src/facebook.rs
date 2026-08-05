@@ -218,7 +218,13 @@ impl RateLimiter for MononokeRateLimits {
 
         // If no main client ID match is found, find the most specific one that applies to the identities
         let mut max_identities = 0;
-        let mut most_specific_rate_limit = None;
+        let mut most_specific_rate_limit = self
+            .config
+            .rate_limits
+            .iter()
+            .filter(|r| r.fci_metric.metric == metric)
+            .rfind(|r| r.target.is_none())
+            .cloned();
 
         if let Some(identities) = identities {
             self.config
