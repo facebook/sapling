@@ -319,12 +319,6 @@ struct protocol_methods<
     out = facebook::eden::GlobPath{std::move(path)};
   }
 
-  template <typename Protocol, typename Context>
-  static void
-  readWithContext(Protocol& protocol, facebook::eden::GlobPath& out, Context&) {
-    read(protocol, out);
-  }
-
   template <typename Protocol>
   static std::size_t write(
       Protocol& protocol,
