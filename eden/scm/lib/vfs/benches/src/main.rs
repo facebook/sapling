@@ -43,37 +43,36 @@ fn make_paths() -> Vec<(RepoPathBuf, bool)> {
 
 fn main() {
     let paths = make_paths();
-    for case_sensitive in [true, false] {
-        bench(
-            format!("path audit with fs (case sensitive={case_sensitive})"),
-            || {
-                let dir = tempfile::tempdir().unwrap();
-                elapsed(|| {
-                    let auditor = PathAuditor::new(dir.path(), case_sensitive);
-                    for (path, expect_ok) in &paths {
-                        let result = auditor.audit(path);
-                        debug_assert_eq!(result.is_ok(), *expect_ok);
-                        let _ = black_box(result);
-                    }
-                })
-            },
-        );
-        bench(
-            format!("path audit without fs (case sensitive={case_sensitive})"),
-            || {
-                let mut fs_features = FsFeatures::empty();
-                if !case_sensitive {
-                    fs_features |= FsFeatures::CASE_INSENSITIVE;
+
+    // Note: PathAuditor::audit is no longer used by the Rust VFS.
+    bench("PathAuditor::audit".to_string(), || {
+        let dir = tempfile::tempdir().unwrap();
+        elapsed(|| {
+            let auditor = PathAuditor::new(dir.path(), false);
+            for (path, expect_ok) in &paths {
+                let result = auditor.audit(path);
+                debug_assert_eq!(result.is_ok(), *expect_ok);
+                let _ = black_box(result);
+            }
+        })
+    });
+
+    for fs_features in [
+        FsFeatures::empty(),
+        FsFeatures::APPLE_NFD,
+        FsFeatures::CASE_INSENSITIVE,
+        FsFeatures::CASE_INSENSITIVE | FsFeatures::APPLE_NFD,
+    ] {
+        bench(format!("audit_components ({fs_features:?})"), || {
+            let fs_features = black_box(fs_features);
+            elapsed(|| {
+                for (path, expect_ok) in &paths {
+                    let result = vfs::audit_invalid_components(path.as_str(), fs_features);
+                    debug_assert_eq!(result.is_ok(), *expect_ok);
+                    let _ = black_box(result);
                 }
-                elapsed(|| {
-                    for (path, expect_ok) in &paths {
-                        let result = vfs::audit_invalid_components(path.as_str(), fs_features);
-                        debug_assert_eq!(result.is_ok(), *expect_ok);
-                        let _ = black_box(result);
-                    }
-                })
-            },
-        )
+            })
+        })
     }
 }
 
