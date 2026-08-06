@@ -5064,7 +5064,25 @@ def getdoc(obj):
     if isinstance(obj, str):
         return obj
     doc = getattr(obj, "__doc__", None)
-    return doc
+    if doc is None or isinstance(obj, types.ModuleType):
+        return doc
+    return _normalizedoc(doc)
+
+
+def _normalizedoc(doc):
+    """Restore the body indentation help rendering expects.
+
+    Python 3.13 made the compiler strip a docstring's common leading
+    indentation, so `__doc__` differs between interpreter versions. Normalize
+    both shapes to the indented one rather than branching on the version, so
+    help output is identical either way.
+    """
+    lines = doc.expandtabs().splitlines()
+    if len(lines) < 2:
+        return doc
+    body = textwrap.dedent("\n".join(lines[1:]))
+    indented = textwrap.indent(body, "    ", lambda line: line.strip() != "")
+    return "\n".join([lines[0], indented])
 
 
 def parse_email(fp):
