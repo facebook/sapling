@@ -26,8 +26,8 @@ use journal::Journal;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
@@ -88,7 +88,7 @@ impl EdenFsClient {
 }
 
 type ArcFileStore = Arc<dyn FileStore>;
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
+type ArcTreeResolver = Arc<dyn TreeResolver>;
 type BoxFileSystem = Box<dyn FileSystem + Send>;
 
 pub struct WorkingCopy {
@@ -96,7 +96,7 @@ pub struct WorkingCopy {
     config: Arc<dyn Config>,
     ident: Identity,
     treestate: Arc<Mutex<TreeState>>,
-    tree_resolver: ArcReadTreeManifest,
+    tree_resolver: ArcTreeResolver,
     filestore: ArcFileStore,
     pub(crate) filesystem: Mutex<BoxFileSystem>,
     pub ignore_matcher: Arc<GitignoreMatcher>,
@@ -115,7 +115,7 @@ impl WorkingCopy {
     pub fn new(
         path: &Path,
         config: &Arc<dyn Config>,
-        tree_resolver: ArcReadTreeManifest,
+        tree_resolver: ArcTreeResolver,
         filestore: ArcFileStore,
         locker: Arc<RepoLocker>,
         // For dirstate
@@ -265,13 +265,13 @@ impl WorkingCopy {
         self.filestore.clone()
     }
 
-    pub fn tree_resolver(&self) -> ArcReadTreeManifest {
+    pub fn tree_resolver(&self) -> ArcTreeResolver {
         self.tree_resolver.clone()
     }
 
     pub(crate) fn current_manifests(
         treestate: &TreeState,
-        tree_resolver: &ArcReadTreeManifest,
+        tree_resolver: &ArcTreeResolver,
     ) -> Result<Vec<Arc<TreeManifest>>> {
         let mut parents = treestate.parents().peekable();
         if parents.peek_mut().is_some() {
@@ -308,7 +308,7 @@ impl WorkingCopy {
         shared_dot_dir: &Path,
         config: Arc<dyn Config>,
         file_system_type: FileSystemType,
-        tree_resolver: ArcReadTreeManifest,
+        tree_resolver: ArcTreeResolver,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
         watchman_client: Arc<DeferredWatchmanClient>,

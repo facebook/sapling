@@ -16,8 +16,8 @@ use anyhow::anyhow;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use context::CoreContext;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DynMatcher;
@@ -56,7 +56,7 @@ use crate::watchman_client::DeferredWatchmanClient;
 use crate::watchman_client::connect_watchman_async;
 use crate::workingcopy::WorkingCopy;
 
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
+type ArcTreeResolver = Arc<dyn TreeResolver>;
 
 pub struct WatchmanFileSystem {
     client: Arc<DeferredWatchmanClient>,
@@ -100,7 +100,7 @@ impl WatchmanFileSystem {
     pub fn new(
         vfs: VFS,
         dot_dir: &Path,
-        tree_resolver: ArcReadTreeManifest,
+        tree_resolver: ArcTreeResolver,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
         client: Arc<DeferredWatchmanClient>,

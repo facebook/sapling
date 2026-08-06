@@ -998,7 +998,7 @@ impl<M: Matcher> Matcher for TranslatingMatcher<M> {
     }
 }
 
-pub trait ReadTreeManifest: Send + Sync + 'static {
+pub trait TreeResolver: Send + Sync + 'static {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest>;
     fn get_root_id(&self, commit_id: &HgId) -> Result<HgId>;
     fn get_by_root_id(&self, root_id: &HgId) -> Result<TreeManifest>;

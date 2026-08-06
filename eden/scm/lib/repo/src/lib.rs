@@ -21,7 +21,7 @@ pub mod trees;
 pub use commits_trait::DagCommits;
 pub use commits_trait::NewCommit;
 pub use core_repo::CoreRepo;
-pub use manifest_tree::ReadTreeManifest;
+pub use manifest_tree::TreeResolver;
 pub use repo::Repo;
 pub use repo::ResolveResult;
 pub use repo_minimal_info::RepoMinimalInfo;

@@ -18,8 +18,8 @@ use configloader::config::Options;
 use configloader::hg::RepoInfo;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
@@ -49,7 +49,7 @@ pub struct SlapiRepo {
     eden_api: OnceSlapi,
     file_store: OnceLock<Arc<dyn FileStore>>,
     tree_store: OnceLock<Arc<dyn TreeStore>>,
-    tree_resolver: OnceLock<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    tree_resolver: OnceLock<Arc<dyn TreeResolver + Send + Sync>>,
     permission_denied_paths: Option<context::PermissionDeniedPaths>,
 }
 
@@ -140,7 +140,7 @@ impl SlapiRepo {
     }
 
     /// Get the tree resolver, constructing it if necessary.
-    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+    pub fn tree_resolver(&self) -> Result<Arc<dyn TreeResolver + Send + Sync>> {
         let tr = self.tree_resolver.get_or_try_init(|| {
             Ok::<_, anyhow::Error>(Arc::new(SlapiTreeResolver::new(
                 self.eden_api()?,

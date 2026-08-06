@@ -14,8 +14,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use configmodel::ConfigExt;
 use context::CoreContext;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
@@ -47,12 +47,12 @@ use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
 
 type ArcFileStore = Arc<dyn FileStore>;
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
+type ArcTreeResolver = Arc<dyn TreeResolver>;
 
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache
     pub(crate) vfs: VFS,
-    pub(crate) tree_resolver: ArcReadTreeManifest,
+    pub(crate) tree_resolver: ArcTreeResolver,
     pub(crate) store: ArcFileStore,
     pub(crate) treestate: Arc<Mutex<TreeState>>,
     pub(crate) locker: Arc<RepoLocker>,
@@ -63,7 +63,7 @@ impl PhysicalFileSystem {
     pub fn new(
         vfs: VFS,
         dot_dir: &Path,
-        tree_resolver: ArcReadTreeManifest,
+        tree_resolver: ArcTreeResolver,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {

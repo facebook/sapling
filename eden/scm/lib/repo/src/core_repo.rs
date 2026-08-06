@@ -10,8 +10,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use configloader::Config;
 use context::CoreContext;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use pathmatcher::DynMatcher;
 use revsets::utils::ResolveResult;
 use storemodel::FileStore;
@@ -62,7 +62,7 @@ impl CoreRepo {
     }
 
     /// Get the tree resolver.
-    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+    pub fn tree_resolver(&self) -> Result<Arc<dyn TreeResolver + Send + Sync>> {
         match self {
             CoreRepo::Disk(repo) => repo.tree_resolver(),
             CoreRepo::Slapi(repo) => repo.tree_resolver(),

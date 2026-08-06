@@ -24,8 +24,8 @@ use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use grepocompat::trees::synthesize_grepo_projects;
 use identity::Identity;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use metalog::MetaLog;
 use metalog::RefName;
 use parking_lot::RwLock;
@@ -81,7 +81,7 @@ pub struct Repo {
     working_copy: OnceLock<Arc<RwLock<WorkingCopy>>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
-    tree_resolver: OnceLock<Arc<dyn ReadTreeManifest>>,
+    tree_resolver: OnceLock<Arc<dyn TreeResolver>>,
     permission_denied_paths: Option<context::PermissionDeniedPaths>,
     // Working copy p1 at repo load time. This is normally what "." revset should resolve
     // to (i.e. we don't want to lazily load p1 since it can be changing).
@@ -421,25 +421,24 @@ impl Repo {
         Some(store.clone())
     }
 
-    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+    pub fn tree_resolver(&self) -> Result<Arc<dyn TreeResolver + Send + Sync>> {
         let tr = self.tree_resolver.get_or_try_init(|| {
             let tree_store = self.tree_store()?;
-            let local: Arc<dyn ReadTreeManifest + Send + Sync> = Arc::new(LocalTreeResolver::new(
+            let local: Arc<dyn TreeResolver + Send + Sync> = Arc::new(LocalTreeResolver::new(
                 self.dag_commits()?,
                 tree_store.clone(),
             ));
 
             // If SLAPI is available, also try resolving remotely to a tree. This works
             // even if we haven't pulled the commit into our local commit graph.
-            let mut resolver: Arc<dyn ReadTreeManifest + Send + Sync> =
-                match self.optional_eden_api() {
-                    Ok(Some(eden_api)) => {
-                        let slapi: Arc<dyn ReadTreeManifest + Send + Sync> =
-                            Arc::new(SlapiTreeResolver::new(eden_api, tree_store));
-                        Arc::new(UnionTreeResolver::new(vec![local, slapi]))
-                    }
-                    _ => local,
-                };
+            let mut resolver: Arc<dyn TreeResolver + Send + Sync> = match self.optional_eden_api() {
+                Ok(Some(eden_api)) => {
+                    let slapi: Arc<dyn TreeResolver + Send + Sync> =
+                        Arc::new(SlapiTreeResolver::new(eden_api, tree_store));
+                    Arc::new(UnionTreeResolver::new(vec![local, slapi]))
+                }
+                _ => local,
+            };
 
             if self.requirements.contains("grepo") {
                 let file_store = self.file_store()?;

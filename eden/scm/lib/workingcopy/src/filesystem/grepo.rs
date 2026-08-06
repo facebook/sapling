@@ -17,8 +17,8 @@ use grepomanifest::parse::parse_manifest;
 use grepomanifest::schema::Project;
 use manifest::FileType;
 use manifest::Manifest;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use treestate::treestate::TreeState;
@@ -36,7 +36,7 @@ use crate::filesystem::PendingChange;
 pub struct GrepoFileSystem {
     inner: DotGitFileSystem,
     vfs: VFS,
-    tree_resolver: Arc<dyn ReadTreeManifest>,
+    tree_resolver: Arc<dyn TreeResolver>,
     manifest_path: PathBuf,
 }
 
@@ -44,7 +44,7 @@ impl GrepoFileSystem {
     pub fn new(
         inner: DotGitFileSystem,
         vfs: VFS,
-        tree_resolver: Arc<dyn ReadTreeManifest>,
+        tree_resolver: Arc<dyn TreeResolver>,
         config: &dyn Config,
     ) -> Result<Self> {
         let manifest_path = grepo_manifest_path(&vfs, config)?;

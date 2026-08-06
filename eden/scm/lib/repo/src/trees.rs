@@ -16,8 +16,8 @@ use edenapi::SaplingRemoteApi;
 use format_util::CommitFields;
 use format_util::HgCommitLazyFields;
 use format_util::hg_sha1_deserialize;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use manifest_tree::TreeStore;
 use parking_lot::RwLock;
 use types::HgId;
@@ -52,7 +52,7 @@ impl LocalTreeResolver {
     }
 }
 
-impl ReadTreeManifest for LocalTreeResolver {
+impl TreeResolver for LocalTreeResolver {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
         self.get_by_root_id(&self.get_root_id(commit_id)?)
     }
@@ -104,7 +104,7 @@ impl SlapiTreeResolver {
     }
 }
 
-impl ReadTreeManifest for SlapiTreeResolver {
+impl TreeResolver for SlapiTreeResolver {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
         self.get_by_root_id(&self.get_root_id(commit_id)?)
     }
@@ -146,16 +146,16 @@ impl ReadTreeManifest for SlapiTreeResolver {
 /// If a resolver returns a `TreeNotFoundError`, the next resolver is tried.
 /// Other errors are propagated immediately.
 pub struct UnionTreeResolver {
-    resolvers: Vec<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    resolvers: Vec<Arc<dyn TreeResolver + Send + Sync>>,
 }
 
 impl UnionTreeResolver {
-    pub fn new(resolvers: Vec<Arc<dyn ReadTreeManifest + Send + Sync>>) -> Self {
+    pub fn new(resolvers: Vec<Arc<dyn TreeResolver + Send + Sync>>) -> Self {
         UnionTreeResolver { resolvers }
     }
 }
 
-impl ReadTreeManifest for UnionTreeResolver {
+impl TreeResolver for UnionTreeResolver {
     fn get_by_root_id(&self, root_id: &HgId) -> Result<TreeManifest> {
         let mut last_err = None;
         for resolver in &self.resolvers {
@@ -210,13 +210,13 @@ impl ReadTreeManifest for UnionTreeResolver {
 /// the commit content. Useful for trees which are not directly available
 /// in store but can be derived from the commit content (e.g. projects in .repo/manifests).
 pub struct GrepoTreeResolver {
-    inner_resolver: Arc<dyn ReadTreeManifest>,
+    inner_resolver: Arc<dyn TreeResolver>,
     synthesize_fn: Arc<dyn Fn(&TreeManifest) -> Result<TreeManifest> + Send + Sync>,
 }
 
 impl GrepoTreeResolver {
     pub fn new(
-        inner_resolver: Arc<dyn ReadTreeManifest>,
+        inner_resolver: Arc<dyn TreeResolver>,
         synthesize_fn: Arc<dyn Fn(&TreeManifest) -> Result<TreeManifest> + Send + Sync>,
     ) -> Self {
         GrepoTreeResolver {
@@ -226,7 +226,7 @@ impl GrepoTreeResolver {
     }
 }
 
-impl ReadTreeManifest for GrepoTreeResolver {
+impl TreeResolver for GrepoTreeResolver {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
         self.get_by_root_id(&self.get_root_id(commit_id)?)
     }
@@ -252,7 +252,7 @@ mod tests {
     /// A mock resolver that returns not found for any commit.
     struct NotFoundResolver;
 
-    impl ReadTreeManifest for NotFoundResolver {
+    impl TreeResolver for NotFoundResolver {
         fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
             Err(TreeNotFoundError::Commit {
                 commit_id: commit_id.clone(),
@@ -280,7 +280,7 @@ mod tests {
         root_id: HgId,
     }
 
-    impl ReadTreeManifest for SuccessResolver {
+    impl TreeResolver for SuccessResolver {
         fn get(&self, _commit_id: &HgId) -> Result<TreeManifest> {
             // For testing, we only care about get_root_id
             panic!("get() not implemented for SuccessResolver in tests")
@@ -300,7 +300,7 @@ mod tests {
         message: String,
     }
 
-    impl ReadTreeManifest for ErrorResolver {
+    impl TreeResolver for ErrorResolver {
         fn get(&self, _commit_id: &HgId) -> Result<TreeManifest> {
             Err(anyhow::anyhow!("{}", self.message))
         }

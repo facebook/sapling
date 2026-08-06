@@ -25,7 +25,7 @@ use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
-use repo::ReadTreeManifest;
+use repo::TreeResolver;
 use storemodel::FileStore;
 use types::FetchContext;
 use types::HgId;
@@ -73,7 +73,7 @@ type SparseMatcherResult = anyhow::Result<Option<DynMatcher>>;
 /// are canceled when all copies of the returned channel are dropped.
 pub(crate) fn prefetch_manager(
     config: Config,
-    tree_resolver: Arc<dyn ReadTreeManifest>,
+    tree_resolver: Arc<dyn TreeResolver>,
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
     detector: walkdetector::Detector,
@@ -1043,7 +1043,7 @@ mod test {
         }
     }
 
-    impl ReadTreeManifest for TestTreeResolver {
+    impl TreeResolver for TestTreeResolver {
         fn get(&self, commit_id: &HgId) -> anyhow::Result<TreeManifest> {
             let root_hgid = self
                 .root_hgids
