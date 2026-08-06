@@ -9,7 +9,7 @@ use bitflags::bitflags;
 use caseless::Caseless;
 use unicode_normalization::UnicodeNormalization;
 
-const NO_STATE: usize = usize::MAX;
+const NO_STATE: u8 = u8::MAX;
 
 bitflags! {
     #[derive(Copy, Clone, Debug)]
@@ -27,7 +27,7 @@ bitflags! {
 }
 
 pub(crate) struct WordSet {
-    transitions: Vec<[usize; 128]>,
+    transitions: Vec<[u8; 128]>,
     accepting: Vec<bool>,
 }
 
@@ -51,12 +51,13 @@ impl WordSet {
                 let next_state = transitions[state][byte as usize];
                 state = if next_state == NO_STATE {
                     let next_state = transitions.len();
+                    assert!(next_state < NO_STATE as usize);
                     transitions.push([NO_STATE; 128]);
                     accepting.push(false);
-                    transitions[state][byte as usize] = next_state;
+                    transitions[state][byte as usize] = next_state as u8;
                     next_state
                 } else {
-                    next_state
+                    next_state as usize
                 };
             }
             accepting[state] = true;
@@ -105,10 +106,11 @@ impl WordSet {
             if byte > 127 {
                 return None;
             }
-            state = self.transitions[state][byte as usize];
-            if state == NO_STATE {
+            let next_state = self.transitions[state][byte as usize];
+            if next_state == NO_STATE {
                 return Some(false);
             }
+            state = next_state as usize;
         }
         Some(self.accepting[state])
     }
@@ -145,5 +147,11 @@ mod tests {
         assert!(words.contains(u037e, flags));
         assert!(!words.contains(u037e, Normalization::empty()));
         assert!(!words.contains("ſl", flags)); // case folding, not NFD
+    }
+
+    #[test]
+    fn test_state_size_good_for_main_usecase() {
+        // Does not panic (too many states)
+        let _w = WordSet::new(vec![".", "..", ".hg", ".sl", ".git", ".repo", ".jj"]);
     }
 }
