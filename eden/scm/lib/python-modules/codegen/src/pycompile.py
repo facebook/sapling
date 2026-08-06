@@ -163,7 +163,6 @@ ESSENTIAL_STDLIB_MODULE_NAMES = {
     "__future__",
     "_collections_abc",
     "_compat_pickle",
-    "_compression",
     "_sitebuiltins",
     "_strptime",
     "_weakrefset",
@@ -276,6 +275,11 @@ ESSENTIAL_STDLIB_MODULE_NAMES = {
 if sys.version_info < (3, 13):
     # https://docs.python.org/3/whatsnew/3.13.html#whatsnew313-pep594
     ESSENTIAL_STDLIB_MODULE_NAMES |= {"pipes", "uu"}
+
+if sys.version_info < (3, 14):
+    # 3.14 replaced the private `_compression` module with the `compression`
+    # package, which `sys.stdlib_module_names` already covers.
+    ESSENTIAL_STDLIB_MODULE_NAMES |= {"_compression"}
 
 
 # sys.stdlib_module_names requires Python 3.10
