@@ -65,7 +65,8 @@ code {
   width: calc(100% - 8 * var(--pad));
   height: 100%;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
 }
 
 vscode-button::part(content) {
