@@ -49,7 +49,7 @@ Record help
       --amend               amend the parent of the working directory
    -s --secret              use the secret phase for committing
    -e --edit                invoke editor on commit messages
-   -m --message TEXT        use text as commit message
+   -m --message TEXT [+]    use text as commit message
    -l --logfile FILE        read commit message from file
    -d --date DATE           record the specified date as commit date
    -u --user USER           record the specified user as committer

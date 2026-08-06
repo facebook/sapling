@@ -58,6 +58,17 @@ commit date test
   sl: parse error: invalid date: '-3147483649 0'
   [255]
 
+multiple commit messages are separated by blank lines
+
+  $ echo foo >> foo
+  $ sl commit -m title -m body -m body2
+  $ sl log -r . -T '{desc}\n'
+  title
+  
+  body
+  
+  body2
+
 commit added file that has been deleted
 
   $ echo bar > bar

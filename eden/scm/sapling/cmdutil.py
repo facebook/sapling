@@ -102,7 +102,7 @@ walkopts = _typedflags(
 )
 
 commitopts = [
-    ("m", "message", "", _("use text as commit message"), _("TEXT")),
+    ("m", "message", [], _("use text as commit message"), _("TEXT")),
     ("l", "logfile", "", _("read commit message from file"), _("FILE")),
 ]
 
@@ -882,6 +882,8 @@ def logmessage(repo, opts):
 
     if message and logfile:
         raise error.Abort(_("options --message and --logfile are mutually exclusive"))
+    if isinstance(message, list):
+        message = "\n\n".join(message)
     if not message and logfile:
         try:
             if isstdiofilename(logfile):

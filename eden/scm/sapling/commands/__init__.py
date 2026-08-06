@@ -1734,9 +1734,10 @@ def commit(ui, repo, *pats, **opts):
     conflicts occur during :prog:`goto`, commit all pending changes.
     Do not specify files or use ``-I``, ``-X``, or ``-i``.
 
-    Specify the ``-m`` flag to include a free-form commit message. If you do
-    not specify ``-m``, @Product@ opens your configured editor where you can
-    enter a message based on a pre-loaded commit template.
+    Specify the ``-m`` flag to include a free-form commit message. Repeat
+    ``-m`` to concatenate multiple messages separated by blank lines. If you
+    do not specify ``-m``, @Product@ opens your configured editor where you
+    can enter a message based on a pre-loaded commit template.
 
     Returns 0 on success, 1 if nothing changed.
 
