@@ -58,6 +58,15 @@ bitflags! {
         const WINDOWS_NAMES = 5;
         /// Certain characters are ignored by HFS+.
         const HFS_STRIP = 8;
+        /// Apple NFD normalization rules [1].
+        /// Changes `CASE_INSENSITIVE` to also do Unicode CaseFolding [2].
+        /// NFD case folding: `ſ` -> `s`, `ß` -> `ss`, `ﬂ` -> `fl`, `Ｓ` -> `ｓ`
+        /// NFD alone: `é` -> `e◌́`
+        /// NOT NFKD (Apple does not do these): `Ｓ` -> `S`, `．`/`․` -> `.`, `‥` -> `..`
+        /// Note: ASCII `.` does not have NFD alternatives.
+        /// [1]: https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html
+        /// [2]: https://www.unicode.org/Public/9.0.0/ucd/CaseFolding.txt
+        const APPLE_NFD = 16;
     }
 }
 
@@ -66,7 +75,7 @@ impl FsFeatures {
         if cfg!(windows) {
             Self::BACKSLASH_SEP | Self::WINDOWS_NAMES
         } else if cfg!(target_os = "macos") {
-            Self::HFS_STRIP
+            Self::HFS_STRIP | Self::APPLE_NFD
         } else {
             Self::empty()
         }
@@ -227,6 +236,7 @@ pub fn is_path_component_invalid(component: &str, fs_features: FsFeatures) -> bo
             Normalization::CASE.bits(),
             FsFeatures::CASE_INSENSITIVE.bits()
         );
+        debug_assert_eq!(Normalization::NFD.bits(), FsFeatures::APPLE_NFD.bits());
         Normalization::from_bits_truncate(fs_features.bits())
     };
     s.is_empty()
@@ -379,6 +389,21 @@ mod tests {
 
         // HFS chars in a normal component are fine
         assert!(audit_invalid_components("a/foo\u{200c}bar/b", hfs).is_ok());
+    }
+
+    #[test]
+    fn test_apple_nfd_case_folding() {
+        let flags = FsFeatures::APPLE_NFD | FsFeatures::CASE_INSENSITIVE;
+        assert!(audit_invalid_components("a/.ſl/b", flags).is_err());
+        assert!(audit_invalid_components("a/.ſl/b", FsFeatures::CASE_INSENSITIVE).is_ok());
+        assert!(audit_invalid_components("a/.ſl/b", FsFeatures::APPLE_NFD).is_ok());
+        assert!(audit_invalid_components("a/.é/b", flags).is_ok());
+        assert!(audit_invalid_components("a/.foo/b", flags).is_ok());
+        assert!(audit_invalid_components("a/é.foo/b", flags).is_ok());
+        assert!(audit_invalid_components("a/．sl/b", flags).is_ok());
+
+        let flags = flags | FsFeatures::HFS_STRIP;
+        assert!(audit_invalid_components("a/\u{200c}.ſl/b", flags).is_err());
     }
 
     #[test]
