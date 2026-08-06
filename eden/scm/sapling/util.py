@@ -545,7 +545,7 @@ def versiontuple(v=None, n=4):
     """
     if not v:
         v = version()
-    parts = remod.split("[\\+-]", v, 1)
+    parts = remod.split("[\\+-]", v, maxsplit=1)
     if len(parts) == 1:
         vparts, extra = parts[0], None
     else:

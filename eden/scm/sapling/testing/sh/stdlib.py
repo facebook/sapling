@@ -607,7 +607,7 @@ def _sedscript(script: str, lines: List[str]) -> List[str]:
         if "g" in rest:
             count = 0
 
-        return [re.sub(pat, replace, line, count) for line in lines]
+        return [re.sub(pat, replace, line, count=count) for line in lines]
     elif script.startswith("/") and script.count("/") > 1:
         pat, rest = script[1:].split("/", 1)
         patre = re.compile(pat)
