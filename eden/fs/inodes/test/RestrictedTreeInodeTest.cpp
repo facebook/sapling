@@ -10,7 +10,6 @@
 #include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 #include <algorithm>
-#include <stdexcept>
 #include <system_error>
 
 #include "eden/common/utils/CaseSensitivity.h"
@@ -783,7 +782,7 @@ TEST(RestrictedTreeInode, isRestricted_reflectsVariant) {
   EXPECT_FALSE(VirtualInode{InodePtr{normalInode}}.isRestricted());
 }
 
-TEST(RestrictedTreeInode, getDigestHash_restrictedTreePtrQueriesBackingStore) {
+TEST(RestrictedTreeInode, getDigestHash_restrictedTreePtrWithholdsDigestHash) {
   FakeTreeBuilder builder;
   builder.setFile("restricted/secret.txt", "secret");
   builder.setDirIsRestricted("restricted");
@@ -800,12 +799,13 @@ TEST(RestrictedTreeInode, getDigestHash_restrictedTreePtrQueriesBackingStore) {
                         testMount.getEdenMount()->getObjectStore(),
                         ObjectFetchContext::getNullContext())
                     .getTry();
-  EXPECT_TRUE(result.hasException<std::domain_error>());
+  ASSERT_TRUE(result.hasValue());
+  EXPECT_FALSE(result.value().has_value());
 }
 
 CO_TEST(
     RestrictedTreeInode,
-    co_getDigestHash_restrictedTreePtrQueriesBackingStore) {
+    co_getDigestHash_restrictedTreePtrWithholdsDigestHash) {
   FakeTreeBuilder builder;
   builder.setFile("restricted/secret.txt", "secret");
   builder.setDirIsRestricted("restricted");
@@ -820,7 +820,8 @@ CO_TEST(
       "restricted"_relpath,
       testMount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext()));
-  EXPECT_TRUE(result.hasException<std::domain_error>());
+  CO_ASSERT_TRUE(result.hasValue());
+  EXPECT_FALSE(result.value().has_value());
 }
 
 TEST(RestrictedTreeInode, tryGetEntryAttributesSync_restrictedDirWithholdsAux) {

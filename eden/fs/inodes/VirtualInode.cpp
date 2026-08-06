@@ -337,9 +337,16 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
           EINVAL, path, std::string_view{"variant is of unhandled type"}));
   }
 
+  // A restricted directory is an ACL-denied placeholder that still carries the
+  // real ObjectId, so dispatching below would fetch the backing store's tree
+  // aux data and leak a digest of contents the server refused to serve. Report
+  // "no digest" instead.
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    return std::optional<Hash32>{std::nullopt};
+  }
+
   // This is now guaranteed to be a dtype_t::Dir. This means there's no
   // need to handle any file case
-
   return match(
       variant_,
       [&](const InodePtr& inode) {
@@ -384,6 +391,14 @@ folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
     // DigestHash of a file is its Blake3 hash.
     co_return std::optional<Hash32>{
         co_await co_getBlake3(path, objectStore, fetchContext)};
+  }
+
+  // A restricted directory is an ACL-denied placeholder that still carries the
+  // real ObjectId, so dispatching below would fetch the backing store's tree
+  // aux data and leak a digest of contents the server refused to serve. Report
+  // "no digest" instead.
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    co_return std::nullopt;
   }
 
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
