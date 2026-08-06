@@ -10,6 +10,7 @@
 #include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <stdexcept>
 #include <system_error>
 
 #include "eden/common/utils/CaseSensitivity.h"
@@ -780,6 +781,46 @@ TEST(RestrictedTreeInode, isRestricted_reflectsVariant) {
   EXPECT_TRUE(VirtualInode{InodePtr{restrictedInode}}.isRestricted());
   auto normalInode = testMount.getTreeInode("normal"_relpath);
   EXPECT_FALSE(VirtualInode{InodePtr{normalInode}}.isRestricted());
+}
+
+TEST(RestrictedTreeInode, getDigestHash_restrictedTreePtrQueriesBackingStore) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto restricted = testMount.getVirtualInode("restricted"_relpath);
+  ASSERT_EQ(
+      VirtualInode::ContainedType::Tree, restricted.testGetContainedType());
+  ASSERT_TRUE(restricted.isRestricted());
+
+  auto result = restricted
+                    .getDigestHash(
+                        "restricted"_relpath,
+                        testMount.getEdenMount()->getObjectStore(),
+                        ObjectFetchContext::getNullContext())
+                    .getTry();
+  EXPECT_TRUE(result.hasException<std::domain_error>());
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    co_getDigestHash_restrictedTreePtrQueriesBackingStore) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto restricted = testMount.getVirtualInode("restricted"_relpath);
+  CO_ASSERT_EQ(
+      VirtualInode::ContainedType::Tree, restricted.testGetContainedType());
+  CO_ASSERT_TRUE(restricted.isRestricted());
+
+  auto result = co_await folly::coro::co_awaitTry(restricted.co_getDigestHash(
+      "restricted"_relpath,
+      testMount.getEdenMount()->getObjectStore(),
+      ObjectFetchContext::getNullContext()));
+  EXPECT_TRUE(result.hasException<std::domain_error>());
 }
 
 TEST(RestrictedTreeInode, tryGetEntryAttributesSync_restrictedDirWithholdsAux) {
