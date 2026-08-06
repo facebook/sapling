@@ -6,8 +6,6 @@
  */
 
 mod access_checker;
-mod aclchecker;
 mod identity;
 
 pub use self::access_checker::AccessCheckerProvider;
-pub use self::aclchecker::HipsterAclProvider;

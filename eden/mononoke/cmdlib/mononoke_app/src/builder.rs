@@ -43,6 +43,7 @@ use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use permission_checker::AclProvider;
+#[cfg(not(fbcode_build))]
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
@@ -560,19 +561,6 @@ fn create_acl_provider(
     if let Some(acl_file) = &acl_args.acl_file {
         return InternalAclProvider::from_file(acl_file)
             .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()));
-    }
-    if acl_args.access_checker_shadow_enabled {
-        let verifier = parse_access_checker_verifier(acl_args)?;
-        let primary = DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")?;
-        let shadow = runtime
-            .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
-            .context("Failed to create AccessCheckerProvider for shadow mode")?;
-        return Ok(permission_checker::ShadowAclProvider::new(
-            fb,
-            primary,
-            shadow,
-            acl_args.access_checker_shadow_sample_rate,
-        ));
     }
     let verifier = parse_access_checker_verifier(acl_args)?;
     runtime
