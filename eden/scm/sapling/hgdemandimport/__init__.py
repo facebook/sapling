@@ -58,6 +58,7 @@ ignore = [
     "_weakrefset",
     "warnings",
     "threading",  # For RLock
+    "_contextvars",  # imported by threading as of 3.14
     "_scandir",  # for IPython
     "collections.abc",  # for IPython - pickleshare
     "sqlite3",  # for IPython to detect missing sqlite
