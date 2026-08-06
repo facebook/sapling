@@ -343,7 +343,7 @@ def amend(ui, repo, *pats, **opts):
     haschildren = bool(repo.revs("children(.)"))
 
     if (
-        not opts.get("noeditmessage")
+        (not opts.get("noeditmessage") or opts.get("message_field"))
         and not opts.get("message")
         and not opts.get("logfile")
     ):
