@@ -17,6 +17,7 @@ use dashmap::DashMap;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::wordset::Normalization;
 use crate::wordset::WordSet;
 
 /// Audit repositories path to make sure that it is safe to write/remove through them.
@@ -48,8 +49,8 @@ static INVALID_COMPONENTS: LazyLock<WordSet> = LazyLock::new(|| {
 });
 
 bitflags! {
-    #[derive(Copy, Clone)]
-    pub struct FsFeatures: u32 {
+    #[derive(Copy, Clone, Debug)]
+    pub struct FsFeatures: u8 {
         const CASE_INSENSITIVE = 1;
         /// `\` can be a path separator.
         const BACKSLASH_SEP = 2;
@@ -180,7 +181,9 @@ fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
         return true;
     }
     if let Some((l, r)) = component.split_once('~') {
-        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(l, true) {
+        if r.chars().any(|c| c.is_numeric())
+            && WINDOWS_SHORTNAME_ALIASES.contains(l, Normalization::CASE)
+        {
             return false;
         }
     }
@@ -218,9 +221,16 @@ pub fn is_path_component_invalid(component: &str, fs_features: FsFeatures) -> bo
     } else {
         Cow::Borrowed(s)
     };
-    let case_insensitive = fs_features.contains(FsFeatures::CASE_INSENSITIVE);
+    let norm = {
+        // Use direct bits cast to avoid `if` branching in a hot loop (could add ~30% overhead).
+        debug_assert_eq!(
+            Normalization::CASE.bits(),
+            FsFeatures::CASE_INSENSITIVE.bits()
+        );
+        Normalization::from_bits_truncate(fs_features.bits())
+    };
     s.is_empty()
-        || INVALID_COMPONENTS.contains(&s, case_insensitive)
+        || INVALID_COMPONENTS.contains(&s, norm)
         || !valid_windows_component(&s, fs_features)
 }
 
