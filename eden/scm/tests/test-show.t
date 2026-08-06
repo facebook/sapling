@@ -419,6 +419,24 @@ Check sl show '' fails to parse the revision
   sl: parse error: empty query
   [255]
 
+Check --mutation compares the commit with its mutation predecessor
+
+  $ sl init mutation
+  $ cd mutation
+  $ setconfig diff.git=true
+  $ echo before > file
+  $ sl commit -qAm original
+  $ echo after >> file
+  $ sl amend -qm amended
+  $ sl show --mutation -T '{desc}\n'
+  amended
+  diff --git a/file b/file
+  --- a/file
+  +++ b/file
+  @@ -1,1 +1,2 @@
+   before
+  +after
+
 Confirm that --help works (it didn't when we used an alias)
 
   $ sl show --help
@@ -490,6 +508,7 @@ Confirm that --help works (it didn't when we used an alias)
    -g --git                 use git extended diff format
    -U --unified VALUE       number of lines of diff context to show (default: 3)
    -r --rev VALUE [+]       show the specified revision
+   -t --mutation            use mutation history for diffs (EXPERIMENTAL)
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank

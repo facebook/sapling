@@ -5575,6 +5575,12 @@ def serve(ui, repo, **opts):
         ("g", "git", None, _("use git extended diff format")),
         ("U", "unified", 3, _("number of lines of diff context to show")),
         ("r", "rev", [], _("show the specified revision")),
+        (
+            "t",
+            "mutation",
+            False,
+            _("use mutation history for diffs (EXPERIMENTAL)"),
+        ),
     ]
     + diffwsopts
     + templateopts
