@@ -41,6 +41,7 @@ rust_unittest(
     cxx_bridge = "src/integration_test.rs",
     deps = [
         "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:static_assertions",
         ":channel_pipeline",
     ],
 )
