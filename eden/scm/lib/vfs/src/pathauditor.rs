@@ -17,6 +17,8 @@ use dashmap::DashMap;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::wordset::WordSet;
+
 /// Audit repositories path to make sure that it is safe to write/remove through them.
 ///
 /// This uses caching internally to avoid the heavy cost of querying the OS for each directory in
@@ -44,56 +46,6 @@ static INVALID_COMPONENTS: LazyLock<WordSet> = LazyLock::new(|| {
         .collect();
     WordSet::new(words)
 });
-
-/// A set of short words, for "contains" check.
-struct WordSet {
-    words_per_len: Vec<Vec<&'static str>>,
-}
-
-impl WordSet {
-    fn new(words: Vec<&'static str>) -> Self {
-        let max_len = words.iter().map(|w| w.len()).max().unwrap_or_default();
-        let mut words_per_len: Vec<Vec<&'static str>> = Vec::with_capacity(max_len + 1);
-        words_per_len.resize_with(max_len + 1, Default::default);
-        for word in words {
-            // Case-insensitive contains requires lowercase words.
-            assert_eq!(word, word.to_lowercase());
-            let words = &mut words_per_len[word.len()];
-            words.push(word);
-            // Case-insensitive contains uses u16 bits to track matches.
-            assert!(words.len() < 16);
-        }
-        Self { words_per_len }
-    }
-
-    fn contains(&self, s: &str, case_insensitive: bool) -> bool {
-        match self.words_per_len.get(s.len()) {
-            Some(words) if !words.is_empty() => {
-                if case_insensitive {
-                    // Scan `s` byte-by-byte to avoid allocation.
-                    let mut match_bits = u16::MAX;
-                    for (byte_pos, b) in s.bytes().enumerate() {
-                        let mut current_match_bits = 0u16;
-                        let b = b.to_ascii_lowercase();
-                        for (word_index, w) in words.iter().enumerate() {
-                            if Some(&b) == w.as_bytes().get(byte_pos) {
-                                current_match_bits |= 1u16 << word_index;
-                            }
-                        }
-                        match_bits &= current_match_bits;
-                        if match_bits == 0 {
-                            return false;
-                        }
-                    }
-                    match_bits != 0
-                } else {
-                    words.contains(&s)
-                }
-            }
-            None | Some(_) => false,
-        }
-    }
-}
 
 bitflags! {
     #[derive(Copy, Clone)]

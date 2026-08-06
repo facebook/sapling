@@ -8,6 +8,7 @@
 mod async_vfs;
 mod pathauditor;
 mod vfs;
+mod wordset;
 
 pub use fsinfo::fstype;
 pub use util::lock::PathLock;
