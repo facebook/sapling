@@ -763,7 +763,7 @@ def _compute_filter_matcher(repo, ctx, filter_path=None):
 def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     user = opts.get("user")
     date = opts.get("date")
-    text = opts.get("message")
+    text = cmdutil.logmessage(repo, opts)
 
     extra = {}
     extra.update(
