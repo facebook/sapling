@@ -75,3 +75,9 @@ Can remove fields
   Summary: new summary
   
   Reviewers: otherperson
+
+bug: commit --amend does not preserve existing fields when using --message-field
+  $ sl commit --amend -q --message-field="Summary=commit amend summary
+  > "
+  $ sl log -T '{desc}\n' -r .
+  Summary: commit amend summary
