@@ -34,7 +34,7 @@ pub(crate) async fn enqueue<P: ThriftParams>(
             .await
             .map(|res| res.into_thrift())
             .map_err(|e| {
-                scs_errors::internal_error(format!("Failed to enqueue the request: {e}")).into()
+                scs_errors::internal_error(format!("Failed to enqueue the request: {e:#}")).into()
             }),
         None => Err(async_requests_disabled()),
     }
