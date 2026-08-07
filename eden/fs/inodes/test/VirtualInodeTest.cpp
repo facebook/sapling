@@ -43,8 +43,6 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 namespace {
-constexpr auto kFutureTimeout = 10s;
-
 using ContainedType = VirtualInode::ContainedType;
 std::string to_string(const ContainedType& ctype) {
   switch (ctype) {
@@ -695,37 +693,34 @@ TEST_P(VirtualInodeTestBase, findDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-void testRootDirAChildren(TestMount& mount) {
+folly::coro::Task<void> testRootDirAChildren(TestMount& mount) {
   auto virtualInode = mount.getVirtualInode(RelativePathPiece{"root_dirA"});
   EXPECT_TRUE(virtualInode.isDirectory());
 
-  auto children = virtualInode.getChildren(
+  auto children = co_await virtualInode.co_getChildren(
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());
-  EXPECT_EQ(2, children.value().size());
-  EXPECT_THAT(
-      children.value(), testing::Contains(testing::Key("child1_fileA1"_pc)));
-  EXPECT_THAT(
-      children.value(), testing::Contains(testing::Key("child1_fileA2"_pc)));
-  mount.drainServerExecutor();
-  for (auto& child : children.value()) {
-    std::move(child.second).get(kFutureTimeout);
+  EXPECT_EQ(2, children.size());
+  EXPECT_THAT(children, testing::Contains(testing::Key("child1_fileA1"_pc)));
+  EXPECT_THAT(children, testing::Contains(testing::Key("child1_fileA2"_pc)));
+  for (auto& child : children) {
+    (void)child.second.value();
   }
 }
 
-TEST_P(VirtualInodeTestBase, getChildrenSimple) {
+CO_TEST_P(VirtualInodeTestBase, getChildrenSimple) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
 
-  testRootDirAChildren(mount);
+  co_await testRootDirAChildren(mount);
   VERIFY_TREE_DEFAULT();
 }
 
-TEST_P(VirtualInodeTestBase, getLoaded) {
+CO_TEST_P(VirtualInodeTestBase, getLoaded) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -734,11 +729,11 @@ TEST_P(VirtualInodeTestBase, getLoaded) {
   // load inode
   mount.getInode(RelativePathPiece{"root_dirA"});
   files.setFlags(RelativePathPiece{"root_dirA"}, FLAG_L);
-  testRootDirAChildren(mount);
+  co_await testRootDirAChildren(mount);
   VERIFY_TREE_DEFAULT();
 }
 
-TEST_P(VirtualInodeTestBase, getChildrenMaterialized) {
+CO_TEST_P(VirtualInodeTestBase, getChildrenMaterialized) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -750,11 +745,11 @@ TEST_P(VirtualInodeTestBase, getChildrenMaterialized) {
   mount.overwriteFile(folly::StringPiece{path}, newContents);
   files.setContents(RelativePathPiece{path}, newContents);
 
-  testRootDirAChildren(mount);
+  co_await testRootDirAChildren(mount);
   VERIFY_TREE_DEFAULT();
 }
 
-TEST_P(VirtualInodeTestBase, getChildrenMaterializedUnloaded) {
+CO_TEST_P(VirtualInodeTestBase, getChildrenMaterializedUnloaded) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -772,10 +767,10 @@ TEST_P(VirtualInodeTestBase, getChildrenMaterializedUnloaded) {
     directoryInode->unloadChildrenNow();
   }
 
-  testRootDirAChildren(mount);
+  co_await testRootDirAChildren(mount);
 }
 
-TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
+CO_TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -787,7 +782,7 @@ TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
     auto virtualInode = mount.getVirtualInode(info->path);
     EXPECT_INODE_OR(virtualInode, *info.get());
     if (virtualInode.isDirectory()) {
-      virtualInode.getChildren(
+      (void)co_await virtualInode.co_getChildren(
           info->path,
           mount.getEdenMount()->getObjectStore(),
           ObjectFetchContext::getNullContext());

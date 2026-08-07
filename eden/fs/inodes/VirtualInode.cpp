@@ -1488,7 +1488,7 @@ VirtualInode applyAncestorAcl(
   return child;
 }
 
-ImmediateFuture<VirtualInode> applyAncestorAcl(
+[[maybe_unused]] ImmediateFuture<VirtualInode> applyAncestorAcl(
     ImmediateFuture<VirtualInode> childFuture,
     std::optional<bool> ancestorUnderAcl) {
   return std::move(childFuture)
@@ -1510,7 +1510,8 @@ folly::Try<VirtualInode> applyAncestorAcl(
 /**
  * Helper function for getChildren when the current node is a Tree.
  */
-std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
+[[maybe_unused]] std::vector<
+    std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 getChildrenHelper(
     const TreePtr& tree,
     const std::shared_ptr<ObjectStore>& objectStore,
@@ -1611,56 +1612,6 @@ co_getChildrenHelper(
   co_return result;
 }
 } // namespace
-
-folly::Try<std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
-VirtualInode::getChildren(
-    RelativePathPiece path,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) {
-  if (!isDirectory()) {
-    return folly::Try<
-        std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>(
-        PathError(ENOTDIR, path));
-  }
-
-  auto notDirectory = [&] {
-    // These represent files in VirtualInode, and can't be descended
-    return folly::Try<
-        std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-        PathError(
-            ENOTDIR, path, std::string_view{"variant is of unhandled type"})};
-  };
-
-  return match(
-      variant_,
-      [&](const InodePtr& inode) {
-        auto children = inode.asTreePtr()->getChildren(fetchContext, false);
-        for (auto& child : children) {
-          child.second =
-              applyAncestorAcl(std::move(child.second), isUnderAcl());
-        }
-        return folly::Try<std::vector<
-            std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-            std::move(children)};
-      },
-      [&](const TreePtr& tree) {
-        if (tree->isRestricted()) {
-          return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-              PathError(EACCES, path)};
-        }
-        auto children = getChildrenHelper(tree, objectStore, fetchContext);
-        for (auto& child : children) {
-          child.second =
-              applyAncestorAcl(std::move(child.second), isUnderAcl());
-        }
-        return folly::Try<std::vector<
-            std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-            std::move(children)};
-      },
-      [&](const UnmaterializedUnloadedBlobDirEntry&) { return notDirectory(); },
-      [&](const TreeEntry&) { return notDirectory(); });
-}
 
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>

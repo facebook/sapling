@@ -244,17 +244,7 @@ class VirtualInode {
   /**
    * Retrieves VirtualInode for each of the children of this
    * directory.
-   *
-   * fetchContext is used in the returned ImmediateFutures, it must have a
-   * lifetime longer than these futures.
    */
-  folly::Try<
-      std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
-  getChildren(
-      RelativePathPiece path,
-      const std::shared_ptr<ObjectStore>& objectStore,
-      const ObjectFetchContextPtr& fetchContext);
-
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
   co_getChildren(
