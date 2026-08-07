@@ -1707,6 +1707,7 @@ mod test {
                         THREES_CSID => Some(hashset! { DerivableType::Unodes, }),
                     },
                     extra_types_available_for_read: hashset! {},
+                    wbc_excluded_types: hashset! {},
                     pipeline_config: None,
                 },
                 enforce_lfs_acl_check: false,

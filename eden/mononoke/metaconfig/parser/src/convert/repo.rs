@@ -737,6 +737,12 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|s| DerivableType::from_name(&s))
                 .collect::<Result<_, _>>()?,
+            wbc_excluded_types: self
+                .wbc_excluded_types
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| DerivableType::from_name(&s))
+                .collect::<Result<_, _>>()?,
             // Reads thrift field `pipeline_config_v2` (renamed from
             // `pipeline_config` so old binaries' JSON deserializer skips
             // the new shape instead of crashing on it). The in-memory

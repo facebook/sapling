@@ -373,7 +373,7 @@ impl WarmBookmarksCacheBuilder {
 
         let config = repo_derived_data.config();
         for ty in types.iter() {
-            if config.is_enabled(**ty) {
+            if config.is_enabled(**ty) && !config.is_excluded_from_wbc(**ty) {
                 self.warmers
                     .extend(self.derived_data_warmer(ty, repo_derived_data));
             }

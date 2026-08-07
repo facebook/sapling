@@ -391,6 +391,9 @@ pub struct DerivedDataConfig {
     /// Extra derived data types that are available for read but not necessarily enabled for derivation.
     pub extra_types_available_for_read: HashSet<DerivableType>,
 
+    /// Derived data types the warm bookmarks cache must not wait on.
+    pub wbc_excluded_types: HashSet<DerivableType>,
+
     /// Repo-level pipeline configuration.
     pub pipeline_config: Option<DerivationPipelineConfig>,
 }
@@ -450,6 +453,11 @@ impl DerivedDataConfig {
         self.extra_types_available_for_read
             .contains(&derivable_type)
             || self.is_enabled(derivable_type)
+    }
+
+    /// Whether the warm bookmarks cache should skip waiting for this type.
+    pub fn is_excluded_from_wbc(&self, derivable_type: DerivableType) -> bool {
+        self.wbc_excluded_types.contains(&derivable_type)
     }
 }
 
