@@ -277,15 +277,6 @@ class VirtualInode {
    * Note: we return error values for attributes in some cases. See
    * fs/service/eden.thrift for more details on error conditions for each type.
    */
-  ImmediateFuture<
-      std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
-  getChildrenAttributes(
-      EntryAttributeFlags requestedAttributes,
-      RelativePath path,
-      const std::shared_ptr<ObjectStore>& objectStore,
-      timespec lastCheckoutTime,
-      const ObjectFetchContextPtr& fetchContext);
-
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
   co_getChildrenAttributes(

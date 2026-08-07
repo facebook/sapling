@@ -1701,63 +1701,6 @@ VirtualInode::co_getChildren(
   }
 }
 
-ImmediateFuture<
-    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
-VirtualInode::getChildrenAttributes(
-    EntryAttributeFlags requestedAttributes,
-    RelativePath path,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    timespec lastCheckoutTime,
-    const ObjectFetchContextPtr& fetchContext) {
-  auto children = this->getChildren(path.piece(), objectStore, fetchContext);
-
-  if (children.hasException()) {
-    return ImmediateFuture<
-        std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>{
-        children.exception()};
-  }
-
-  std::vector<PathComponent> names{};
-  std::vector<ImmediateFuture<EntryAttributes>> attributesFutures{};
-
-  names.reserve(children.value().size());
-  attributesFutures.reserve(children.value().size());
-
-  for (auto& nameAndvirtualInode : children.value()) {
-    names.push_back(nameAndvirtualInode.first);
-    attributesFutures.push_back(
-        std::move(nameAndvirtualInode.second)
-            .thenValue([requestedAttributes,
-                        subPath = path + nameAndvirtualInode.first,
-                        objectStore,
-                        lastCheckoutTime,
-                        fetchContext =
-                            fetchContext.copy()](VirtualInode virtualInode) {
-              return virtualInode.getEntryAttributes(
-                  requestedAttributes,
-                  subPath,
-                  objectStore,
-                  lastCheckoutTime,
-                  fetchContext);
-            }));
-  }
-  return collectAll(std::move(attributesFutures))
-      .thenValue(
-          [names = std::move(names)](
-              std::vector<folly::Try<EntryAttributes>> attributes) mutable {
-            std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>
-                zippedResult{};
-            zippedResult.reserve(attributes.size());
-            XDCHECK_EQ(attributes.size(), names.size())
-                << "Missing/too many attributes for the names.";
-            for (uint32_t i = 0; i < attributes.size(); ++i) {
-              zippedResult.emplace_back(
-                  std::move(names.at(i)), std::move(attributes.at(i)));
-            }
-            return zippedResult;
-          });
-}
-
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 VirtualInode::co_getChildrenAttributes(

@@ -796,7 +796,7 @@ TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST_P(VirtualInodeTestBase, getChildrenAttributes) {
+CO_TEST_P(VirtualInodeTestBase, getChildrenAttributes) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -817,15 +817,12 @@ TEST_P(VirtualInodeTestBase, getChildrenAttributes) {
     EXPECT_INODE_OR(virtualInode, *info.get());
     if (virtualInode.isDirectory()) {
       for (auto& attribute_request : attribute_requests) {
-        auto result =
-            virtualInode
-                .getChildrenAttributes(
-                    attribute_request,
-                    info->path,
-                    mount.getEdenMount()->getObjectStore(),
-                    mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
-                    ObjectFetchContext::getNullContext())
-                .get();
+        auto result = co_await virtualInode.co_getChildrenAttributes(
+            attribute_request,
+            info->path,
+            mount.getEdenMount()->getObjectStore(),
+            mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+            ObjectFetchContext::getNullContext());
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
           auto childVirtualInode = mount.getVirtualInode(child->path);
