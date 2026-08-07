@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/.*\.(cpp|h)$'
-apply_to_content: 'incFsRefcount|decFsRefcount|lookupInode|FUSE_FORGET|fuse_entry_out|NfsDispatcher'
+name: ACR-inode-refcount
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/.*\.(cpp|h)$'
+  apply_to_content: 'incFsRefcount|decFsRefcount|lookupInode|FUSE_FORGET|fuse_entry_out|NfsDispatcher'
 ---
 
 # Inode FS Refcount Management
