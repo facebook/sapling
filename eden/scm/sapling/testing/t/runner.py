@@ -6,6 +6,7 @@
 import collections
 import doctest
 import json
+import linecache
 import os
 import queue
 import re
@@ -344,7 +345,7 @@ class doctestrunner(doctest.DocTestRunner):
             srcloc=srcloc,
             outloc=outloc,
             endloc=endloc,
-            indent=example.indent,
+            indent=_exampleindent(test, example),
             # pyre-fixme[6]: For 8th param expected `str` but got `Optional[str]`.
             filename=test.filename,
             testname=self.testname,
@@ -361,6 +362,36 @@ class doctestrunner(doctest.DocTestRunner):
             excstr = exctypestr
         got = f"Traceback (most recent call last):\n  ...\n{excstr}\n"
         return self.report_failure(out, test, example, got)
+
+
+def _exampleindent(test: doctest.DocTest, example: doctest.Example) -> int:
+    """Indentation of the `>>>` prompt for an example, as written on disk.
+
+    Python 3.13 made the compiler strip a docstring's common leading
+    indentation, so `doctest.Example.indent` is relative to the dedented
+    docstring and no longer matches the source file. Autofix rewrites the
+    source, so it needs the on-disk indentation.
+    """
+    fallback = example.indent
+    if test.filename is None or test.lineno is None:
+        return fallback
+    # `example.lineno` counts lines of the parsed docstring, which need not
+    # line up with the source: in a non-raw docstring a trailing backslash
+    # joins two source lines, and a `\n` escape splits one. Non-empty prompt
+    # lines do correspond 1:1 with examples in both, so count those instead.
+    wanted = next((i for i, e in enumerate(test.examples) if e is example), -1)
+    if wanted < 0:
+        return fallback
+    # DocTestFinder.find() already loaded the file into linecache to locate
+    # docstrings, so this is a cache hit rather than another read.
+    seen = -1
+    for line in linecache.getlines(test.filename)[test.lineno :]:
+        stripped = line.lstrip()
+        if stripped.startswith(">>>") and stripped.rstrip() != ">>>":
+            seen += 1
+            if seen == wanted:
+                return len(line) - len(stripped)
+    return fallback
 
 
 def rundoctest(testid: TestId, mismatchcb: Callable[[Mismatch], None]):
