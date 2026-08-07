@@ -62,6 +62,15 @@ Match the "max" commit
   $ log bar
   B: bar-baz
 
+Disabled for plain or agent
+
+  $ SL_AUTOMATION=1 log bar
+  abort: unknown revision 'bar'!
+  [255]
+  $ CODING_AGENT_METADATA=id=test log bar
+  abort: unknown revision 'bar'!
+  [255]
+
 Case insensitive
 
   $ log 'FoO'

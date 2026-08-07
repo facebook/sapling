@@ -95,9 +95,12 @@ def hoistednames(repo):
 @builtinnamespace("titles", priority=90)
 def titles(repo):
     """Match the titles of draft commits."""
-    # Disable on PLAIN - potentially dangerous for automation.
-    if repo.ui.plain("titles-namespace") or not repo.ui.configbool(
-        "experimental", "titles-namespace"
+    # Disable on PLAIN or agent - potentially dangerous for automation.
+    ui = repo.ui
+    if (
+        ui.plain("titles-namespace")
+        or ui.agent()
+        or not ui.configbool("experimental", "titles-namespace")
     ):
         return None
 
