@@ -4112,39 +4112,6 @@ SourceControlType entryTypeToThriftType(std::optional<TreeEntryType> type) {
   }
 }
 
-[[maybe_unused]] ImmediateFuture<
-    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
-getAllEntryAttributes(
-    EntryAttributeFlags requestedAttributes,
-    const EdenMount& edenMount,
-    std::string path,
-    const ObjectFetchContextPtr& fetchContext) {
-  auto virtualInode =
-      edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
-  return std::move(virtualInode)
-      .thenValue(
-          [path = std::move(path),
-           requestedAttributes,
-           objectStore = edenMount.getObjectStore(),
-           lastCheckoutTime = edenMount.getLastCheckoutTime().toTimespec(),
-           fetchContext = fetchContext.copy()](VirtualInode tree) mutable {
-            if (!tree.isDirectory()) {
-              return ImmediateFuture<std::vector<
-                  std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
-                  newEdenError(
-                      EINVAL,
-                      EdenErrorType::ARGUMENT_ERROR,
-                      fmt::format("{}: path must be a directory", path)));
-            }
-            return tree.getChildrenAttributes(
-                requestedAttributes,
-                RelativePath{path},
-                objectStore,
-                lastCheckoutTime,
-                fetchContext);
-          });
-}
-
 template <typename SerializedT, typename T>
 bool fillErrorRef(
     SerializedT& result,
