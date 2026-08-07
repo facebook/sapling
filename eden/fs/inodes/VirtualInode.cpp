@@ -1488,16 +1488,6 @@ VirtualInode applyAncestorAcl(
   return child;
 }
 
-[[maybe_unused]] ImmediateFuture<VirtualInode> applyAncestorAcl(
-    ImmediateFuture<VirtualInode> childFuture,
-    std::optional<bool> ancestorUnderAcl) {
-  return std::move(childFuture)
-      .thenValue([ancestorUnderAcl](VirtualInode child) {
-        child.inheritAclFromAncestor(ancestorUnderAcl);
-        return child;
-      });
-}
-
 folly::Try<VirtualInode> applyAncestorAcl(
     folly::Try<VirtualInode> child,
     std::optional<bool> ancestorUnderAcl) {
