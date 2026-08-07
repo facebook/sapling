@@ -2381,6 +2381,40 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
     }
 }
 
+/// Whether the root manifest [`fetch_manifest_file`] would read for `cs_id` is
+/// already derived, so merge resolution can run without paying for derivation
+/// inside the pushrebase critical section.
+///
+/// This must probe the same manifest type `fetch_manifest_file` derives --
+/// probing fsnodes on a repo that has migrated to content manifests would
+/// report "not derived" forever and silently disable merge resolution.
+async fn root_manifest_is_derived(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+) -> Result<bool> {
+    let repo_name = repo.repo_identity().name();
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        Some(repo_name),
+    );
+
+    if use_content_manifests {
+        Ok(repo
+            .repo_derived_data()
+            .fetch_derived::<RootContentManifestId>(ctx, cs_id)
+            .await?
+            .is_some())
+    } else {
+        Ok(repo
+            .repo_derived_data()
+            .fetch_derived::<RootFsnodeId>(ctx, cs_id)
+            .await?
+            .is_some())
+    }
+}
+
 /// Fetch manifest file entry for a given path from a changeset's manifest.
 /// Returns the ContentManifestFile which provides access to content_id and file_type.
 /// Uses content_manifest or fsnode depending on the JustKnobs gate.
@@ -2545,21 +2579,15 @@ async fn dry_run_merge_check(
 ) {
     let repo_name = repo.repo_identity().name();
 
-    // If derive_fsnodes is false, check if fsnodes are already derived.
-    // If not, skip dry-run to avoid expensive derivation.
-    if !derive_fsnodes {
-        let root_fsnode = repo
-            .repo_derived_data()
-            .fetch_derived::<RootFsnodeId>(ctx, root)
-            .await;
-        if !matches!(root_fsnode, Ok(Some(_))) {
-            ctx.scuba()
-                .clone()
-                .add("repo_name", repo_name)
-                .add("merge_dry_run_outcome", "skipped_fsnodes_not_derived")
-                .log_with_msg("Pushrebase dry-run merge resolution", None);
-            return;
-        }
+    // If derive_fsnodes is false, check if the root manifest is already
+    // derived. If not, skip dry-run to avoid expensive derivation.
+    if !derive_fsnodes && !matches!(root_manifest_is_derived(ctx, repo, root).await, Ok(true)) {
+        ctx.scuba()
+            .clone()
+            .add("repo_name", repo_name)
+            .add("merge_dry_run_outcome", "skipped_fsnodes_not_derived")
+            .log_with_msg("Pushrebase dry-run merge resolution", None);
+        return;
     }
 
     // Only attempt on exact path matches (left == right), skip prefix conflicts
@@ -2791,18 +2819,16 @@ async fn collect_merge_file_info(
         return Err(MergeResolutionError::TooManyConflicts);
     }
 
-    // If derive_fsnodes is false, check if fsnodes are already derived.
-    // If not, skip merge resolution to avoid expensive derivation in the
-    // pushrebase critical section.
+    // If derive_fsnodes is false, check if the root manifest is already
+    // derived. If not, skip merge resolution to avoid expensive derivation in
+    // the pushrebase critical section.
     if !derive_fsnodes {
-        let root_fsnode = repo
-            .repo_derived_data()
-            .fetch_derived::<RootFsnodeId>(ctx, root)
+        let is_derived = root_manifest_is_derived(ctx, repo, root)
             .await
             .map_err(|e| MergeResolutionError::InternalError(e.into()))?;
-        if root_fsnode.is_none() {
+        if !is_derived {
             return Err(MergeResolutionError::Skipped(
-                "fsnodes not derived for base commit".to_string(),
+                "root manifest not derived for base commit".to_string(),
             ));
         }
     }

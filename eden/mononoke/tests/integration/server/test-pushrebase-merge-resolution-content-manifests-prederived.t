@@ -4,19 +4,20 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-# Verify that merge resolution works when derive_fsnodes=false but fsnodes
-# are already derived (e.g. via mononoke_admin).
+# Content-manifest counterpart of
+# test-pushrebase-merge-resolution-no-derive-fsnodes-prederived.t.
 #
-# Setup: WBC derivation disabled, fsnodes explicitly derived via admin CLI.
-# The merge resolution pre-check finds existing fsnodes and proceeds normally.
+# Verify that merge resolution works when derive_fsnodes=false and the repo has
+# migrated to content manifests (`derived_data_use_content_manifests` on), with
+# content manifests already derived.
 #
-# `derived_data_use_content_manifests` is pinned OFF so this test deterministically
-# covers the fsnode branch of the pre-check. Without the pin it inherits the
-# ambient test default (true, see common/mononoke_macros/test_just_knobs), under
-# which the pre-check looks for content manifests and this fixture -- which only
-# pre-derives fsnodes -- would legitimately skip merge resolution.
-# The content-manifest branch is covered by
-# test-pushrebase-merge-resolution-content-manifests-prederived.t.
+# This is the regression test for the pre-check probing the wrong manifest type:
+# `fetch_manifest_file` reads content manifests when the knob is on, so the
+# pre-check must probe content manifests too. When it hardcoded
+# `fetch_derived::<RootFsnodeId>` it found nothing on a migrated repo and
+# silently skipped merge resolution forever, rejecting conflicts that were
+# perfectly resolvable. Before that fix this test fails on the final push with
+# "Conflicts while pushrebasing".
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
@@ -24,7 +25,7 @@
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
-  >     "scm/mononoke:derived_data_use_content_manifests": false,
+  >     "scm/mononoke:derived_data_use_content_manifests": true,
   >     "scm/mononoke:pushrebase_enable_merge_resolution": true,
   >     "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes": false
   >   },
@@ -57,8 +58,10 @@ Create a base file with multiple lines
   $ hg ci -m "add shared.txt"
   $ hg push -r . --to master_bookmark -q
 
-Explicitly derive fsnodes so the pre-check finds them
-  $ mononoke_admin derived-data -R repo derive -T fsnodes --all-bookmarks
+Explicitly derive content manifests so the pre-check finds them.
+Note we deliberately do NOT derive fsnodes: on a migrated repo they may not be
+derived at all, and the pre-check must not depend on them.
+  $ mononoke_admin derived-data -R repo derive -T content_manifests --all-bookmarks
 
 Server-side commit: modify the FIRST line
   $ hg up -q master_bookmark
@@ -72,8 +75,8 @@ Server-side commit: modify the FIRST line
   $ hg ci -m "server: edit line 1"
   $ hg push -r . --to master_bookmark -q
 
-Derive fsnodes for the new bookmark position too
-  $ mononoke_admin derived-data -R repo derive -T fsnodes --all-bookmarks
+Derive content manifests for the new bookmark position too
+  $ mononoke_admin derived-data -R repo derive -T content_manifests --all-bookmarks
 
 Client commit (from pre-server base): modify the LAST line
   $ hg up -q .~1
@@ -86,7 +89,7 @@ Client commit (from pre-server base): modify the LAST line
   > EOF
   $ hg ci -m "client: edit line 5"
 
-Pushrebase should succeed — fsnodes are pre-derived, merge resolution works
+Pushrebase should succeed — content manifests are pre-derived, merge resolution works
   $ hg push -r . --to master_bookmark
   pushing rev * to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 1 commit for upload
