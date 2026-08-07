@@ -68,6 +68,7 @@
     "scm/mononoke:defer_to_backsyncer_for_backsync": false,
     "scm/mononoke:enable_three_way_merge_on_rebase": false,
     "scm/mononoke:edenapi_disable_mutable_blame": false,
+    "scm/mononoke:edenapi_qps_rim_shadow": true,
     "scm/mononoke:edenapi_force_local_pushrebase": false,
     "scm/mononoke:scs_history_enforce_limit": false,
     "scm/mononoke:scs_disable_mutable_blame": false,

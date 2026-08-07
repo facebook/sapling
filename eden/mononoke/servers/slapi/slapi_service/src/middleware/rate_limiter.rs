@@ -51,14 +51,22 @@ impl Middleware for ThrottleMiddleware {
         let rctx: RequestContext = RequestContext::borrow_from(state).clone();
         let ctx: CoreContext = rctx.ctx;
 
-        // Retrieve rate limiter
+        let metadata = state.try_borrow::<MetadataState>()?.metadata();
+        let tenant = metadata.tenant_info();
+
+        #[cfg(fbcode_build)]
+        if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
+            tokio::join!(
+                crate::utils::rim_shadow::shadow_check(&ctx, &tenant),
+                crate::utils::rim_shadow::report_qps(&ctx, &tenant),
+            );
+        }
+
         let rate_limiter = ctx.session().rate_limiter().or_else(|| {
             debug!("No rate_limiter info found");
             None
         })?;
 
-        let metadata = state.try_borrow::<MetadataState>()?.metadata();
-        let tenant = metadata.tenant_info();
         // No main id -> this request can't be attributed to a client, so it
         // isn't subject to per-client throttling.
         let Some(client_main_id) = tenant.client_id.as_deref() else {
@@ -67,11 +75,6 @@ impl Middleware for ThrottleMiddleware {
         };
         let identities = metadata.identities();
         let atlas = metadata.clientinfo_atlas();
-
-        #[cfg(fbcode_build)]
-        if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
-            crate::utils::rim_shadow::shadow_check(&ctx, &tenant).await;
-        }
 
         let limit = rate_limiter.find_rate_limit(
             Metric::EdenApiQps,
@@ -103,13 +106,7 @@ impl Middleware for ThrottleMiddleware {
         )
         .await
         {
-            Ok(_) => {
-                #[cfg(fbcode_build)]
-                if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
-                    crate::utils::rim_shadow::report_qps(&ctx, &tenant).await;
-                }
-                None
-            }
+            Ok(_) => None,
             Err(response) => {
                 // Per-user rate limiting (counter keyed by client_main_id):
                 // always 429, this client specifically is the offender.
