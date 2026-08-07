@@ -15,6 +15,7 @@ use anyhow::anyhow;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
+use either::Either;
 use futures::FutureExt;
 use futures::Stream;
 use futures::TryFutureExt;
@@ -514,6 +515,23 @@ impl ManifestLeaf for ContentManifestFile {
 impl ManifestLeaf for FileUnodeId {
     fn reuses(&self, other: &Self) -> bool {
         self == other
+    }
+}
+
+/// Leaf of a compat manifest id (`Either<ContentManifestId, FsnodeId>`), which
+/// lets `bonsai_diff` run against whichever backend the
+/// `derived_data_use_content_manifests` JustKnob selected for the repo.
+///
+/// Both sides of a single diff always come from the same backend, so the mixed
+/// cases are unreachable in practice; they answer `false` (don't reuse), which
+/// is the conservative choice.
+impl<L: ManifestLeaf, R: ManifestLeaf> ManifestLeaf for Either<L, R> {
+    fn reuses(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Either::Left(this), Either::Left(other)) => this.reuses(other),
+            (Either::Right(this), Either::Right(other)) => this.reuses(other),
+            _ => false,
+        }
     }
 }
 
