@@ -61,6 +61,7 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "//common/rust/zippydb/zippydb-thrift:zippydb_thrift",
         "//configerator/structs/infrasec/if:acl-rust",
+        "//crewmate/rust:crewmate_access",
         "//crypto/keychain_service:if-rust",
         "//crypto/keychain_service:if-rust-srclients",
         "//eden/mononoke/blobstore:blobstore",
