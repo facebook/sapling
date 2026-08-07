@@ -512,6 +512,11 @@ class ui:
         """
         return bindings.util.is_plain(feature)
 
+    @staticmethod
+    def agent():
+        """is run by a coding agent?"""
+        return bindings.agentdetect.is_agent()
+
     def username(self, acceptempty=False):
         """Return default username to be used in commits.
 
