@@ -5,9 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {TypedEventEmitter} from './TypedEventEmitter';
+import type {Deferred} from './utils';
+
+import {defer} from './utils';
 
 type Id = number;
+
+type QueuedTask = {
+  id: Id;
+  /** Resolved by the limiter to hand this task its turn. */
+  allowedToRun: Deferred<void>;
+};
 
 /**
  * Rate limits requests to run an arbitrary task.
@@ -23,9 +31,8 @@ type Id = number;
  * ```
  */
 export class RateLimiter {
-  private queued: Array<Id> = [];
+  private queued: Array<QueuedTask> = [];
   private running: Array<Id> = [];
-  private runs = new TypedEventEmitter<'run', Id>();
 
   constructor(
     private maxSimultaneousRunning: number,
@@ -39,20 +46,17 @@ export class RateLimiter {
 
   async enqueueRun<T>(runner: () => Promise<T>): Promise<T> {
     const id = this.generateId();
+    // Created before the task is queued so that `run` can always hand out the turn, whether or not
+    // this function has reached the `await` below by the time the turn is granted.
+    const task: QueuedTask = {id, allowedToRun: defer<void>()};
 
-    this.queued.push(id);
+    this.queued.push(task);
     this.tryDequeueNext();
 
     if (!this.running.includes(id)) {
       this.log?.(`${this.running.length} tasks are already running, enqueuing ID:${id}`);
-      await new Promise(res => {
-        this.runs.on('run', ran => {
-          if (ran === id) {
-            this.log?.(`now allowing ID:${id} to run`);
-            res(undefined);
-          }
-        });
-      });
+      await task.allowedToRun.promise;
+      this.log?.(`now allowing ID:${id} to run`);
     }
 
     try {
@@ -76,8 +80,8 @@ export class RateLimiter {
     }
   }
 
-  private run(id: Id) {
-    this.running.push(id);
-    this.runs.emit('run', id);
+  private run(task: QueuedTask) {
+    this.running.push(task.id);
+    task.allowedToRun.resolve(undefined);
   }
 }
