@@ -98,7 +98,7 @@ struct MononokeServerArgs {
     #[clap(long, default_value = "scm/mononoke/ratelimiting/ratelimits")]
     rate_limit_config_path: Option<String>,
     /// RIM backend ID for EdenAPI QPS shadow probes
-    #[clap(long, default_value = "38000001")]
+    #[clap(long)]
     rim_backend: Option<i32>,
     /// Mark this instance as a shadow tier. Shadow tiers never forward
     /// shadow traffic, preventing forwarding loops.
