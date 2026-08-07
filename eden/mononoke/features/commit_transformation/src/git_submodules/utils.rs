@@ -22,7 +22,6 @@ use cloned::cloned;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use either::Either;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream;
@@ -61,6 +60,59 @@ use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::types::Repo;
 use crate::types::SubmoduleDeps;
 use crate::types::SubmodulePath;
+
+/// Whether `repo` has been migrated from fsnodes to content manifests.
+///
+/// `justknobs::eval` panics on a missing knob (fail-loud, no silent default).
+pub(crate) fn use_content_manifests(repo: &impl RepoIdentityRef) -> bool {
+    justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        Some(repo.repo_identity().name()),
+    )
+}
+
+/// Derive the root manifest id of `cs_id`, as a content manifest or an fsnode
+/// depending on `use_content_manifests`.
+///
+/// The flag is a parameter rather than an internal [`use_content_manifests`]
+/// call because the two sides of a submodule-expansion comparison must agree
+/// on a backend: a `compat::ContentManifestId` from the large repo can only be
+/// compared against one from the submodule repo if both are the same variant.
+/// Callers that only read a single repo can pass [`use_content_manifests`] for
+/// that repo directly.
+pub(crate) async fn derive_root_manifest_id<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    cs_id: ChangesetId,
+    use_content_manifests: bool,
+) -> Result<compat::ContentManifestId>
+where
+    R: RepoDerivedDataRef + RepoIdentityRef,
+{
+    let repo_name = repo.repo_identity().name();
+    if use_content_manifests {
+        Ok(repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await
+            .with_context(|| {
+                format!("Failed to derive RootContentManifestId of {cs_id} from repo {repo_name}")
+            })?
+            .into_content_manifest_id()
+            .into())
+    } else {
+        Ok(repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+            .await
+            .with_context(|| {
+                format!("Failed to derive RootFsnodeId of {cs_id} from repo {repo_name}")
+            })?
+            .into_fsnode_id()
+            .into())
+    }
+}
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
@@ -169,27 +221,21 @@ pub async fn submodule_diff<T: Repo>(
     cs_id: ChangesetId,
     parents: Vec<ChangesetId>,
 ) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, ContentId, u64)>>> + use<T>> {
-    let fsnode_id = sm_repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await
-        .with_context(|| format!("Failed to get fsnode id form changeset id {cs_id}"))?
-        .into_fsnode_id();
+    let use_content_manifests = use_content_manifests(sm_repo);
 
-    let parent_fsnode_ids = stream::iter(parents)
+    let root_id = derive_root_manifest_id(ctx, sm_repo, cs_id, use_content_manifests)
+        .await
+        .with_context(|| format!("Failed to get root manifest id from changeset id {cs_id}"))?;
+
+    let parent_root_ids = stream::iter(parents)
         .then(|parent_cs_id| async move {
-            anyhow::Ok(
-                sm_repo
-                    .repo_derived_data()
-                    .derive::<RootFsnodeId>(ctx, parent_cs_id, DerivationPriority::LOW)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Failed to get parent's fsnode id from its changeset id: {parent_cs_id}"
-                        )
-                    })?
-                    .into_fsnode_id(),
-            )
+            derive_root_manifest_id(ctx, sm_repo, parent_cs_id, use_content_manifests)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to get parent's root manifest id from its changeset id: {parent_cs_id}"
+                    )
+                })
         })
         .try_collect::<HashSet<_>>()
         .await?;
@@ -197,16 +243,13 @@ pub async fn submodule_diff<T: Repo>(
     Ok(bonsai_diff(
         ctx.clone(),
         sm_repo.repo_blobstore_arc().clone(),
-        fsnode_id,
-        parent_fsnode_ids,
+        root_id,
+        parent_root_ids,
     )
     .map_ok(|change| {
-        change.map_leaf(|fsnode| {
-            (
-                fsnode.file_type().clone(),
-                fsnode.content_id().clone(),
-                fsnode.size(),
-            )
+        change.map_leaf(|leaf| {
+            let file: compat::ContentManifestFile = leaf.into();
+            (file.file_type(), file.content_id(), file.size())
         })
     }))
 }
@@ -235,25 +278,20 @@ pub async fn content_id_of_file_with_type<R>(
 where
     R: RepoDerivedDataRef + RepoBlobstoreArc + RepoIdentityRef,
 {
-    let fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to derive RootFsnodeId of {cs_id} from repo {0}",
-                repo.repo_identity().name()
-            )
-        })?
-        .into_fsnode_id();
+    let root_id = derive_root_manifest_id(ctx, repo, cs_id, use_content_manifests(repo)).await?;
 
-    let entry = fsnode_id
+    let entry = root_id
         .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
         .await?;
 
     match entry {
-        Some(Entry::Leaf(file)) if *file.file_type() == expected_file_type => {
-            Ok(Some(file.content_id().clone()))
+        Some(Entry::Leaf(leaf)) => {
+            let file: compat::ContentManifestFile = leaf.into();
+            if file.file_type() == expected_file_type {
+                Ok(Some(file.content_id()))
+            } else {
+                Ok(None)
+            }
         }
         _ => Ok(None),
     }
@@ -268,27 +306,18 @@ pub async fn list_non_submodule_files_under<R>(
 where
     R: RepoDerivedDataRef + RepoBlobstoreArc + RepoIdentityRef,
 {
-    let fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to derive RootFsnodeId of {cs_id} from repo {0}",
-                repo.repo_identity().name()
-            )
-        })?
-        .into_fsnode_id();
+    let root_id = derive_root_manifest_id(ctx, repo, cs_id, use_content_manifests(repo)).await?;
 
-    Ok(fsnode_id
+    Ok(root_id
         .list_leaf_entries_under(
             ctx.clone(),
             repo.repo_blobstore_arc(),
             vec![submodule_path.0],
         )
-        .try_filter_map(|(path, fsnode_file)| {
+        .try_filter_map(|(path, leaf)| {
+            let file: compat::ContentManifestFile = leaf.into();
             future::ready(Ok(
-                (*fsnode_file.file_type() != FileType::GitSubmodule).then_some(path)
+                (file.file_type() != FileType::GitSubmodule).then_some(path)
             ))
         }))
 }
@@ -309,21 +338,7 @@ pub async fn root_manifest_id_from_submodule_git_commit(
         .await
         .context("Failed to get submodule bonsai changeset id")?;
 
-    if use_content_manifests {
-        let root_id = repo
-            .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await
-            .context("Failed to derive RootContentManifestId")?;
-        Ok(Either::Left(root_id.into_content_manifest_id()))
-    } else {
-        let root_id = repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await
-            .context("Failed to derive RootFsnodeId")?;
-        Ok(Either::Right(root_id.into_fsnode_id()))
-    }
+    derive_root_manifest_id(ctx, repo, cs_id, use_content_manifests).await
 }
 
 /// Build a new submodule dependency map to expand/validate recursive submodules
