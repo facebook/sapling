@@ -70,6 +70,19 @@ class SubmitWorkflow(Enum):
     """
     OVERLAP = "overlap"
 
+    """Like SINGLE, but additionally links the pull requests together using
+    GitHub's native "stacked pull requests" feature so GitHub renders the
+    stack natively and can merge/retarget it bottom-up:
+    https://docs.github.com/en/pull-requests/get-started/about-stacked-prs
+    """
+    STACKED = "stacked"
+
+    def uses_chained_bases(self) -> bool:
+        """Whether each PR in the stack uses the head branch of the PR below
+        it as its base branch (as opposed to all PRs sharing a common base).
+        """
+        return self in (SubmitWorkflow.SINGLE, SubmitWorkflow.STACKED)
+
     @staticmethod
     def from_config(ui) -> "SubmitWorkflow":
         workflow = ui.config(
@@ -80,6 +93,8 @@ class SubmitWorkflow(Enum):
             return SubmitWorkflow.OVERLAP
         elif workflow == "single":
             return SubmitWorkflow.SINGLE
+        elif workflow == "stacked":
+            return SubmitWorkflow.STACKED
         else:
             # Note that "classic" is not recognized yet.
             ui.warn(
@@ -212,13 +227,14 @@ async def update_commits_in_stack(
 
     repository = params.repository
 
-    # For the SINGLE workflow, we must update the base branch on existing PRs
-    # BEFORE pushing the new branch contents. Otherwise, when commits are
-    # reordered in the stack, GitHub may see that a PR's commits already exist
-    # in its (old) base branch and auto-close the PR as "merged".
+    # For workflows with chained base branches (SINGLE, STACKED), we must
+    # update the base branch on existing PRs BEFORE pushing the new branch
+    # contents. Otherwise, when commits are reordered in the stack, GitHub may
+    # see that a PR's commits already exist in its (old) base branch and
+    # auto-close the PR as "merged".
     #
     # See https://github.com/facebook/sapling/issues/1275
-    if workflow == SubmitWorkflow.SINGLE:
+    if workflow.uses_chained_bases():
         existing_prs = [
             p for p in partitions if p[0].pr and p[0].pr.state == PullRequestState.OPEN
         ]
@@ -327,7 +343,7 @@ async def rewrite_pull_request_body(
     # stack to the bottom.
     partition = partitions[index]
     base = repository.get_base_branch()
-    if workflow == SubmitWorkflow.SINGLE and index < len(partitions) - 1:
+    if workflow.uses_chained_bases() and index < len(partitions) - 1:
         base = none_throws(partitions[index + 1][0].head_branch_name)
 
     head_commit_data = partition[0]
@@ -509,7 +525,7 @@ async def create_pull_requests_serially(
     parent = None
     for commit, branch_name in commits:
         base = repository.get_base_branch()
-        if workflow == SubmitWorkflow.SINGLE and parent:
+        if workflow.uses_chained_bases() and parent:
             base = none_throws(parent.head_branch_name)
 
         commit_msg = commit.get_msg()
@@ -658,7 +674,7 @@ async def create_pull_requests_from_placeholder_issues(
 
         # Note that "overlapping" pull requests will all share the same base.
         base = base_branch_for_repo
-        if workflow == SubmitWorkflow.SINGLE:
+        if workflow.uses_chained_bases():
             parent = params.parent
             if parent:
                 base = none_throws(parent.head_branch_name)

@@ -28,8 +28,11 @@ REPO_NAME = "test_github_repo"
 REPO_ID = "R_test_github_repo"
 USER_NAME = "facebook_username"
 
-ParamsType = Dict[str, Union[bool, int, str]]
-MakeRequestType = Callable[[ParamsType, str, str, Optional[str]], Result[JsonDict, str]]
+ParamsType = Dict[str, Union[bool, int, str, List[bool], List[int], List[str]]]
+MakeRequestType = Callable[
+    [ParamsType, str, str, Optional[str], Optional[Dict[str, str]]],
+    Result[JsonDict, str],
+]
 RunGitCommandType = Callable[[List[str], str], bytes]
 
 
@@ -83,10 +86,15 @@ class MockGitHubServer:
         hostname: str,
         endpoint: str = "graphql",
         method: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
     ) -> Result[JsonDict, str]:
         """Wrapper function for `github_gh_cli.make_request`.
 
         It reads mock data from `self.requests` instead of sending network requests.
+
+        Note that `headers` is intentionally not part of the request key: the
+        headers we send (e.g., X-GitHub-Api-Version) do not affect which mock
+        response should be returned.
         """
         assert real_make_request.__name__ == "_make_request", (
             f"expected '_make_request', but got '{real_make_request.__name__}'"
