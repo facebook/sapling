@@ -161,9 +161,9 @@ class CoverageChecker:
             # Lines like comments or docstrings don't need coverage.
             # Only check lines referred by bytecode instructions.
             expect_linenos = {
-                inst.starts_line
-                for inst in dis.Bytecode(code)
-                if inst.starts_line is not None
+                lineno
+                for lineno in (_instruction_lineno(i) for i in dis.Bytecode(code))
+                if lineno is not None
             }
             # Line numbers that are actually covered.
             actual_linenos = self._covered_code_lines[code]
@@ -179,6 +179,19 @@ class CoverageChecker:
                     "%12s+%-4d| %s\n" % (func.__name__, relative_lineno, line.rstrip())
                 )
         return "".join(missing_coverage)
+
+
+def _instruction_lineno(inst):
+    """Line number an instruction starts, or None.
+
+    `dis.Instruction.starts_line` held the line number up to 3.12; in 3.13 it
+    became a bool and the number moved to `line_number`. Only read the old
+    attribute when the new one is absent -- it is deprecated and slated for
+    removal, so touching it on newer versions defeats the point.
+    """
+    if hasattr(inst, "line_number"):
+        return inst.line_number
+    return inst.starts_line
 
 
 class MissingCoverage(ValueError):
