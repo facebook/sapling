@@ -6,7 +6,6 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
-#![feature(never_type)]
 #![recursion_limit = "256"]
 
 mod connection_acceptor;
@@ -63,6 +62,7 @@ pub async fn create_repo_listeners<'a>(
     is_shadow_tier: bool,
     tls_ca_path: Option<&Path>,
     rate_limit_config_path: Option<String>,
+    rim_backend: Option<i32>,
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
@@ -99,6 +99,7 @@ pub async fn create_repo_listeners<'a>(
             config_store,
             is_shadow_tier,
             tls_ca_path,
+            rim_backend,
         )
         .context("Error instantiating SaplingRemoteAPI")?
     };

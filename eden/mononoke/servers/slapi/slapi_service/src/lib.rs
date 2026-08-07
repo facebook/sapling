@@ -19,6 +19,8 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use anyhow::Error;
+#[cfg(fbcode_build)]
+use backend_if::RimBackend;
 use cached_config::ConfigStore;
 use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
@@ -68,9 +70,15 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     config_store: &ConfigStore,
     is_shadow_tier: bool,
     tls_ca_path: Option<&Path>,
+    rim_backend: Option<i32>,
 ) -> Result<SaplingRemoteApi, Error> {
     #[cfg(fbcode_build)]
-    crate::utils::rim_shadow::init();
+    let rim_backend = rim_backend
+        .map(RimBackend)
+        .inspect(|rim_backend| crate::utils::rim_shadow::init(*rim_backend));
+
+    #[cfg(not(fbcode_build))]
+    let _ = rim_backend;
 
     let ctx = ServerContext::new(mononoke, will_exit);
 
@@ -129,7 +137,10 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         ))
         .add(<ScubaMiddleware<SaplingRemoteApiScubaHandler>>::new(scuba))
         .add(OdsMiddleware::new())
-        .add(ThrottleMiddleware::new())
+        .add(ThrottleMiddleware::new(
+            #[cfg(fbcode_build)]
+            rim_backend,
+        ))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(TimerMiddleware::new())

@@ -23,17 +23,16 @@ use tokio::time::timeout;
 use tracing::debug;
 use tracing::warn;
 
-const MONONOKE_SERVER: RimBackend = RimBackend(38000001);
 const RIM_RESOURCE_QPS: &str = "qps";
 const RIM_ACQUIRE_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Call once at server startup. Failures are logged and swallowed so RIM
 /// infra outages can't prevent the server from serving traffic — the
 /// shadow probe just becomes a no-op.
-pub fn init() {
-    match RimThinClient::initialize(MONONOKE_SERVER) {
+pub fn init(rim_backend: RimBackend) {
+    match RimThinClient::initialize(rim_backend) {
         Ok(status) if status.success() => {
-            debug!("RIM thin client initialized for MONONOKE_SERVER");
+            debug!("RIM thin client initialized for backend {:?}", rim_backend);
         }
         Ok(status) => {
             warn!(
@@ -43,7 +42,7 @@ pub fn init() {
             );
         }
         Err(e) => {
-            warn!("RIM initialize failed for MONONOKE_SERVER: {}", e);
+            warn!("RIM initialize failed for backend {:?}: {}", rim_backend, e);
         }
     }
 }
@@ -53,7 +52,7 @@ pub fn init() {
 /// scuba quota bounded; the common allow path is silent. The "ratelim
 /// reject, RIM allow" comparison is covered by ratelim's own existing
 /// rejection log.
-pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo) {
+pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
     let Some(tenancy_path) = tenant.tenancy_path() else {
         return;
     };
@@ -67,7 +66,7 @@ pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo) {
 
     match timeout(
         RIM_ACQUIRE_TIMEOUT,
-        RimThinClient::acquire(MONONOKE_SERVER, tenancy_path, requirements),
+        RimThinClient::acquire(rim_backend, tenancy_path, requirements),
     )
     .await
     {
@@ -87,7 +86,7 @@ pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo) {
     }
 }
 
-pub async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo) {
+pub async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
     let Some(tenancy_path) = tenant.tenancy_path() else {
         return;
     };
@@ -101,7 +100,7 @@ pub async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo) {
 
     match timeout(
         RIM_ACQUIRE_TIMEOUT,
-        RimThinClient::report(MONONOKE_SERVER, tenancy_path, usage),
+        RimThinClient::report(rim_backend, tenancy_path, usage),
     )
     .await
     {

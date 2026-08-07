@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
+use backend_if::RimBackend;
 use context::CoreContext;
 use gotham::handler::IntoBody as _;
 use gotham::helpers::http::Body;
@@ -32,10 +34,16 @@ const EDENAPI_QPS_LIMIT: &str = "edenapi_qps";
 // - It only needs to run if we're going to serve a request.
 
 #[derive(Clone)]
-pub struct ThrottleMiddleware;
+pub struct ThrottleMiddleware {
+    #[cfg(fbcode_build)]
+    rim_backend: Option<RimBackend>,
+}
 impl ThrottleMiddleware {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(#[cfg(fbcode_build)] rim_backend: Option<RimBackend>) -> Self {
+        Self {
+            #[cfg(fbcode_build)]
+            rim_backend,
+        }
     }
 }
 
@@ -55,10 +63,12 @@ impl Middleware for ThrottleMiddleware {
         let tenant = metadata.tenant_info();
 
         #[cfg(fbcode_build)]
-        if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
+        if let Some(rim_backend) = self.rim_backend
+            && justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None)
+        {
             tokio::join!(
-                crate::utils::rim_shadow::shadow_check(&ctx, &tenant),
-                crate::utils::rim_shadow::report_qps(&ctx, &tenant),
+                crate::utils::rim_shadow::shadow_check(&ctx, &tenant, rim_backend),
+                crate::utils::rim_shadow::report_qps(&ctx, &tenant, rim_backend),
             );
         }
 
