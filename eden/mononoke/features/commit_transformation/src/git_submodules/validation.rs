@@ -28,7 +28,6 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use itertools::Itertools;
-use justknobs;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
@@ -51,6 +50,7 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_manifest_id_from_submodule_git_commit;
+use crate::git_submodules::utils::use_content_manifests;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::types::Repo;
 use crate::types::SubmodulePath;
@@ -85,11 +85,12 @@ impl ValidSubmoduleExpansionBonsai {
         // Iterate over the submodule dependency paths.
         // Create a map grouping the file changes per submodule dependency.
 
-        let use_content_manifests = justknobs::eval(
-            "scm/mononoke:derived_data_use_content_manifests",
-            None,
-            Some(sm_exp_data.large_repo.repo_identity().name()),
-        );
+        // Decided once for the large repo and threaded through every helper
+        // below: expansion manifests from the large repo are compared against
+        // submodule manifests from the submodule repos, and a
+        // `compat::ContentManifestId` can only be compared against the same
+        // variant. Both sides must agree on a backend.
+        let use_content_manifests = use_content_manifests(&sm_exp_data.large_repo);
 
         let bonsai_res: Result<BonsaiChangeset> =
             stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))

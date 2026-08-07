@@ -16,11 +16,8 @@ use anyhow::anyhow;
 use anyhow::bail;
 use bytes::Bytes;
 use cloned::cloned;
-use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
-use derivation_queue_thrift::DerivationPriority;
 use filestore::StoreRequest;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -35,7 +32,6 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat;
 use movers::Mover;
 use reporting::log_debug;
 use reporting::log_error;
@@ -44,7 +40,9 @@ use tracing::trace;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::git_hash_from_submodule_metadata_file;
+use crate::git_submodules::utils::derive_root_manifest_id;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::utils::use_content_manifests;
 use crate::git_submodules::validation::SubmoduleExpansionValidationToken;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::rewrite_commit_with_file_changes_filter;
@@ -353,29 +351,14 @@ async fn compact_submodule_expansion_deletion<'a, R: Repo>(
         _ => bail!("Can't compact expansion in bonsai with multiple parents"),
     };
 
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(large_repo.repo_identity().name()),
-    );
-
-    let parent_root: compat::ContentManifestId = if use_content_manifests {
-        large_repo
-            .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, parent_cs_id, DerivationPriority::LOW)
-            .await
-            .context("Failed to derive parent root content manifest id")?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        large_repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, parent_cs_id, DerivationPriority::LOW)
-            .await
-            .context("Failed to derive parent root fsnode id")?
-            .into_fsnode_id()
-            .into()
-    };
+    let parent_root = derive_root_manifest_id(
+        ctx,
+        large_repo,
+        parent_cs_id,
+        use_content_manifests(large_repo),
+    )
+    .await
+    .context("Failed to derive parent root manifest id")?;
 
     let expansion_files_stream = parent_root.list_leaf_entries_under(
         ctx.clone(),
