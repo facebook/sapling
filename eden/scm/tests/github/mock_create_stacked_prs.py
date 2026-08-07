@@ -3,20 +3,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""Mock extension for testing `sl pr submit --open` flag.
-
-This extends the standard mock_create_prs to also capture webbrowser.open calls
-and print them to stderr so they can be verified in tests.
-"""
-
 from sapling import extensions
 from sapling.ext.github import github_gh_cli, submit
 from sapling.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
 from sapling.ext.github.pull_request_body import title_and_body
 
+# An extension to mock network requests for the initial `sl pr submit` of a
+# stack of two commits with github.pr-workflow=stacked. It replaces
+# `github_gh_cli.make_request` and `submit.run_git_command` with the
+# corresponding mock functions. Check the `uisetup` function for how the mock
+# functions are registered.
+
 
 def setup_mock_github_server(ui) -> MockGitHubServer:
-    """Setup mock GitHub Server for testing happy case of `sl pr submit` command."""
+    """Setup mock GitHub Server for testing happy case of `sl pr submit` with
+    the "stacked" workflow.
+    """
     github_server = MockGitHubServer()
 
     github_server.expect_get_repository_request().and_respond()
@@ -28,20 +30,12 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
         (43, "two\n"),
     ]
 
-    # Both "single" and "stacked" chain each PR's base to the PR below it.
-    workflow = ui.config("github", "pr-workflow")
-    chained = workflow in ("single", "stacked")
-    # The "stacked" workflow omits the stack list footer from PR bodies
-    # because GitHub renders the stack natively.
-    stacked = workflow == "stacked"
-
     for idx, (num, msg) in enumerate(prs):
         title, body = title_and_body(msg)
         head = f"pr{num}"
 
-        base = "main"
-        if chained and idx > 0:
-            base = "pr%d" % prs[idx - 1][0]
+        # Each PR's base is chained to the head branch of the PR below it.
+        base = "main" if idx == 0 else "pr%d" % prs[idx - 1][0]
 
         github_server.expect_create_pr_request(
             body=body,
@@ -53,12 +47,12 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
         pr_id = f"PR_id_{num}"
         github_server.expect_get_pr_details_request(num).and_respond(pr_id)
 
+        # The "stacked" workflow omits the stack list footer from PR bodies
+        # (GitHub renders the stack natively), so stack_pr_ids is left unset.
+        # It also leaves the base branch untouched when rewriting the body
+        # (base=None), since the native stack manages base branches.
         github_server.expect_update_pr_request(
-            pr_id,
-            num,
-            msg,
-            base=base,
-            stack_pr_ids=None if stacked else [pr[0] for pr in prs],
+            pr_id, num, msg, base=None
         ).and_respond()
 
     github_server.expect_get_username_request().and_respond()
@@ -66,31 +60,18 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
     head = "1a67244b0a776bfcc3be6bf811e98c993d78ce47"
     github_server.expect_merge_into_branch(head).and_respond()
 
+    # Neither the bottom (#42) nor the top (#43) pull request is part of a
+    # stack yet, so a new stack is created.
+    github_server.expect_get_stack_request(42).and_respond()
+    github_server.expect_get_stack_request(43).and_respond()
+    github_server.expect_create_stack_request([42, 43]).and_respond(stack_number=100)
+
     return github_server
 
 
-# Track opened URLs for verification
-_opened_urls = []
-
-
-def mock_webbrowser_open(url):
-    """Mock webbrowser.open that captures URLs and prints them for test verification."""
-    _opened_urls.append(url)
-    # Print to stderr so it appears in test output (same as ui.status_err)
-    import sys
-
-    sys.stderr.write(f"[mock] opened browser: {url}\n")
-    return True
-
-
 def uisetup(ui):
-    import webbrowser
-
     mock_github_server = setup_mock_github_server(ui)
     extensions.wrapfunction(
         github_gh_cli, "_make_request", mock_github_server.make_request
     )
     extensions.wrapfunction(submit, "run_git_command", mock_run_git_command)
-
-    # Mock webbrowser.open to capture and log URL opens
-    webbrowser.open = mock_webbrowser_open
