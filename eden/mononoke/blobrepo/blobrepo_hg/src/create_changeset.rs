@@ -45,6 +45,7 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstoreArc;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::SortedVectorMap;
 use stats::prelude::*;
@@ -85,6 +86,7 @@ impl CreateChangeset {
         self,
         ctx: CoreContext,
         repo: &(impl RepoBlobstoreArc + CommitGraphWriterArc + BonsaiHgMappingArc + Send + Sync),
+        restricted_paths: ArcRestrictedPathsConfigBased,
         bonsai: Option<BonsaiChangeset>,
         mut scuba_logger: MononokeScubaSampleBuilder,
     ) -> ChangesetHandle {
@@ -94,8 +96,11 @@ impl CreateChangeset {
         let uuid = Uuid::new_v4();
         scuba_logger.add("changeset_uuid", format!("{uuid}"));
 
-        let entry_processor =
-            UploadEntries::new(repo.repo_blobstore().clone(), scuba_logger.clone());
+        let entry_processor = UploadEntries::new(
+            repo.repo_blobstore().clone(),
+            restricted_paths,
+            scuba_logger.clone(),
+        );
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));
         let expected_nodeid = self.expected_nodeid;
@@ -189,7 +194,8 @@ impl CreateChangeset {
                 };
                 let bonsai_blob = bonsai_cs.clone().into_blob();
                 let bcs_id = bonsai_blob.id().clone();
-                let cs_id = hg_cs.get_changeset_id().into_nodehash();
+                let hg_cs_id = hg_cs.get_changeset_id();
+                let cs_id = hg_cs_id.into_nodehash();
                 let manifest_id = hg_cs.manifestid();
 
                 if let Some(expected_nodeid) = expected_nodeid {
@@ -227,7 +233,7 @@ impl CreateChangeset {
                     bcs_fut,
                     hg_cs.save(&ctx, &blobstore),
                     entry_processor
-                        .finalize(&ctx, root_mf_id, parent_manifest_hashes)
+                        .finalize(&ctx, hg_cs_id, root_mf_id, parent_manifest_hashes)
                         .map_err(|err| err.context("While finalizing processing")),
                 )?;
 

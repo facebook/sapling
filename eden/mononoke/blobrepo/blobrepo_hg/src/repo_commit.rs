@@ -55,9 +55,15 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
+use restricted_paths_common::ManifestIdStoreWriteCallsite;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
+use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
+use tracing::error;
 
 use crate::errors::*;
 
@@ -181,10 +187,15 @@ pub struct UploadEntries {
     scuba_logger: MononokeScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
     blobstore: RepoBlobstore,
+    restricted_paths: ArcRestrictedPathsConfigBased,
 }
 
 impl UploadEntries {
-    pub fn new(blobstore: RepoBlobstore, scuba_logger: MononokeScubaSampleBuilder) -> Self {
+    pub fn new(
+        blobstore: RepoBlobstore,
+        restricted_paths: ArcRestrictedPathsConfigBased,
+        scuba_logger: MononokeScubaSampleBuilder,
+    ) -> Self {
         Self {
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
@@ -192,6 +203,7 @@ impl UploadEntries {
                 parents: HashSet::new(),
             })),
             blobstore,
+            restricted_paths,
         }
     }
 
@@ -317,38 +329,79 @@ impl UploadEntries {
     pub async fn finalize(
         self,
         ctx: &CoreContext,
+        changeset_id: HgChangesetId,
         mf_id: HgManifestId,
         parent_manifest_ids: Vec<HgManifestId>,
     ) -> Result<(), Error> {
         // NOTE: we consume self.entries hence the signature, even if we don't actually need
         // mutable access
         let this = &self;
+        let changeset_id = changeset_id.to_string();
+        let ctx = ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("changeset_id", changeset_id.clone());
+            scuba
+        });
+        let ctx = &ctx;
+        let mut scuba_logger = this.scuba_logger();
+        scuba_logger.add("changeset_id", changeset_id.clone());
+        let required_checks_scuba = scuba_logger.clone();
+        let parent_checks_scuba = scuba_logger.clone();
 
         let required_checks = {
+            let restricted_paths_enabled = justknobs::eval(
+                "scm/mononoke:enabled_restricted_paths_access_logging",
+                None,
+                Some("hg_changeset_upload"),
+            );
             async move {
-                find_intersection_of_diffs(
+                let entries = find_intersection_of_diffs(
                     ctx.clone(),
                     this.blobstore.clone().boxed(),
                     mf_id,
                     parent_manifest_ids,
                 )
-                .try_for_each_concurrent(100, {
+                .map_ok({
                     move |(path, entry)| {
                         async move {
+                            let manifest_id = match &entry {
+                                Entry::Tree(manifest_id) => Some(*manifest_id),
+                                Entry::Leaf(_) => None,
+                            };
                             let entry = entry.map_leaf(|(_, fnid)| fnid);
                             Self::assert_in_blobstore(ctx, &this.blobstore, entry)
                                 .await
                                 .with_context(|| format!("Error checking for path: {path:?}"))?;
-                            Ok(())
+
+                            if !restricted_paths_enabled {
+                                return Ok(None);
+                            }
+                            let Some(manifest_id) = manifest_id else {
+                                return Ok(None);
+                            };
+                            let Some(path) = Option::<NonRootMPath>::from(path) else {
+                                return Ok(None);
+                            };
+                            if !this.restricted_paths.should_record_manifest_id_entry(&path) {
+                                return Ok(None);
+                            }
+
+                            Ok(Some(RestrictedPathManifestIdEntry::new(
+                                ManifestType::Hg,
+                                manifest_id.to_string().into(),
+                                RepoPath::DirectoryPath(path),
+                            )?))
                         }
                         .boxed()
                     }
                 })
+                .try_buffer_unordered(100)
+                .try_filter_map(|entry| async move { Ok(entry) })
+                .try_collect::<Vec<_>>()
                 .try_timed()
                 .await?
-                .log_future_stats(this.scuba_logger(), "Required checks", None);
+                .log_future_stats(required_checks_scuba, "Required checks", None);
 
-                Ok::<_, Error>(())
+                Ok::<_, Error>(entries)
             }
         };
 
@@ -379,7 +432,7 @@ impl UploadEntries {
                 .try_for_each_concurrent(100, |f| f)
                 .try_timed()
                 .await?
-                .log_future_stats(this.scuba_logger(), "Parent checks", None);
+                .log_future_stats(parent_checks_scuba, "Parent checks", None);
             Ok(())
         };
 
@@ -400,13 +453,38 @@ impl UploadEntries {
             STATS::finalize_uploaded_filenodes.add_value(uploaded_filenodes_cnt as i64);
             STATS::finalize_uploaded_manifests.add_value(uploaded_manifests_cnt as i64);
 
-            this.scuba_logger()
+            scuba_logger
                 .add("manifests_count", uploaded_manifests_cnt)
                 .add("filelogs_count", uploaded_filenodes_cnt)
                 .log_with_msg("Size of changeset", None);
         }
 
-        future::try_join(parent_checks, required_checks).await?;
+        let ((), entries) = future::try_join(parent_checks, required_checks).await?;
+        if !entries.is_empty() {
+            let entry_count = entries.len();
+            if let Err(error) = this
+                .restricted_paths
+                .manifest_id_store()
+                .add_entries(ctx, &entries)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to track {entry_count} restricted paths for uploaded Hg changeset {changeset_id}"
+                    )
+                })
+            {
+                error!(
+                    error = %error,
+                    entry_count,
+                    changeset_id = %changeset_id,
+                    "Failed to track restricted paths for uploaded Hg changeset"
+                );
+                maybe_propagate_manifest_id_store_write_error(
+                    error,
+                    ManifestIdStoreWriteCallsite::FinalizeUploadedHgChangeset,
+                )?;
+            }
+        }
         Ok(())
     }
 }

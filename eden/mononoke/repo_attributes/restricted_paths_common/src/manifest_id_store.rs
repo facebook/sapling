@@ -70,6 +70,7 @@ pub enum ManifestIdStoreWriteCallsite {
     DeriveFromHgManifestAndParentsStaged,
     FinalizeEnvelope,
     CreateHgManifest,
+    FinalizeUploadedHgChangeset,
     TrackAllRestrictedPaths,
     CreateFsnode,
     CreateContentManifestDirectory,
@@ -86,6 +87,9 @@ impl ManifestIdStoreWriteCallsite {
             }
             Self::CreateHgManifest => {
                 "mercurial_derivation::derive_hg_manifest::create_hg_manifest"
+            }
+            Self::FinalizeUploadedHgChangeset => {
+                "blobrepo_hg::repo_commit::UploadEntries::finalize"
             }
             Self::TrackAllRestrictedPaths => {
                 "mercurial_derivation::mapping::track_all_restricted_paths"

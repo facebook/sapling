@@ -34,6 +34,7 @@ use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
 use mononoke_types::DateTime;
 use repo_blobstore::RepoBlobstoreArc;
+use restricted_paths::RestrictedPathsArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::Repo;
@@ -185,6 +186,7 @@ pub fn create_changeset_no_parents(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
+        repo.restricted_paths_arc().config_based().clone(),
         None,
         MononokeScubaSampleBuilder::with_discard(),
     )
@@ -222,6 +224,7 @@ pub fn create_changeset_one_parent(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
+        repo.restricted_paths_arc().config_based().clone(),
         None,
         MononokeScubaSampleBuilder::with_discard(),
     )

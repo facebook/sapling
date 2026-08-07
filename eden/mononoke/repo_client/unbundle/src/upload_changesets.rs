@@ -326,7 +326,13 @@ pub async fn upload_changeset(
         cs_metadata,
         upload_to_blobstore_only: bonsai.is_some(),
     };
-    let scheduled_uploading = create_changeset.create(ctx, &repo, bonsai, scuba_logger);
+    let restricted_paths = repo
+        .repo_derived_data_arc()
+        .manager()
+        .derivation_context(None)
+        .restricted_paths();
+    let scheduled_uploading =
+        create_changeset.create(ctx, &repo, restricted_paths, bonsai, scuba_logger);
 
     uploaded_changesets.insert(node, scheduled_uploading);
     Ok(uploaded_changesets)

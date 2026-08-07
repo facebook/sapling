@@ -528,6 +528,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
 
     let entries = UploadEntries::new(
         repo.repo_blobstore().clone(),
+        repo.restricted_paths_arc().config_based().clone(),
         MononokeScubaSampleBuilder::with_discard(),
     );
 
@@ -541,7 +542,10 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
         .await
         .unwrap();
 
-    (entries.finalize(&ctx, roothash, vec![])).await.unwrap();
+    let changeset_id = HgChangesetId::new(roothash.into_nodehash());
+    (entries.finalize(&ctx, changeset_id, roothash, vec![]))
+        .await
+        .unwrap();
 }
 
 #[mononoke::fbinit_test]
@@ -553,6 +557,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
 
     let entries = UploadEntries::new(
         repo.repo_blobstore().clone(),
+        repo.restricted_paths_arc().config_based().clone(),
         MononokeScubaSampleBuilder::with_discard(),
     );
 
@@ -570,7 +575,8 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let res = (entries.finalize(&ctx, root_mfid, vec![])).await;
+    let changeset_id = HgChangesetId::new(root_mfid.into_nodehash());
+    let res = (entries.finalize(&ctx, changeset_id, root_mfid, vec![])).await;
 
     assert!(res.is_err());
 }
