@@ -4112,7 +4112,7 @@ SourceControlType entryTypeToThriftType(std::optional<TreeEntryType> type) {
   }
 }
 
-ImmediateFuture<
+[[maybe_unused]] ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 getAllEntryAttributes(
     EntryAttributeFlags requestedAttributes,
@@ -4372,84 +4372,8 @@ folly::coro::now_task<DirListAttributeDataOrError> co_getAllEntryAttributes(
 
 } // namespace
 
-folly::SemiFuture<std::unique_ptr<ReaddirResult>>
-EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
-  if (server_->getServerState()
-          ->getEdenConfig()
-          ->enableCoroutinesPhase4.getValue()) {
-    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-    return folly::coro::co_invoke(
-               [self = shared_from_this()](std::unique_ptr<ReaddirParams> p)
-                   -> folly::coro::Task<std::unique_ptr<ReaddirResult>> {
-                 co_return co_await self->co_readdirImpl(std::move(p));
-               },
-               std::move(params))
-        .semi();
-  }
-  auto mountHandle = lookupMount(params->mountPoint());
-  auto paths = *params->directoryPaths();
-  // Get requested attributes for each path
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3,
-      *params->mountPoint(),
-      getSyncTimeout(*params->sync()),
-      toLogArg(paths));
-  auto& fetchContext = helper->getFetchContext();
-  auto requestedAttributes = EntryAttributeFlags::raw(
-      static_cast<std::underlying_type_t<FileAttributes>>(
-          *params->requestedAttributes()));
-
-  return wrapImmediateFuture(
-             std::move(helper),
-             waitForPendingWrites(mountHandle.getEdenMount(), *params->sync())
-                 .thenValue(
-                     [mountHandle,
-                      requestedAttributes,
-                      paths = std::move(paths),
-                      fetchContext = fetchContext.copy()](auto&&) mutable
-                         -> ImmediateFuture<
-                             std::vector<DirListAttributeDataOrError>> {
-                       std::vector<ImmediateFuture<DirListAttributeDataOrError>>
-                           futures;
-                       futures.reserve(paths.size());
-                       for (auto& path : paths) {
-                         futures.emplace_back(
-                             getAllEntryAttributes(
-                                 requestedAttributes,
-                                 mountHandle.getEdenMount(),
-                                 std::move(path),
-                                 fetchContext)
-                                 .thenTry([requestedAttributes, mountHandle](
-                                              folly::Try<std::vector<std::pair<
-                                                  PathComponent,
-                                                  folly::Try<EntryAttributes>>>>
-                                                  entries) {
-                                   return serializeEntryAttributes(
-                                       mountHandle.getObjectStore(),
-                                       entries,
-                                       requestedAttributes);
-                                 })
-
-                         );
-                       }
-
-                       // Collect all futures into a single tuple
-                       return facebook::eden::collectAllSafe(
-                           std::move(futures));
-                     })
-                 .thenValue(
-                     [](std::vector<DirListAttributeDataOrError>&& allRes)
-                         -> std::unique_ptr<ReaddirResult> {
-                       auto res = std::make_unique<ReaddirResult>();
-                       res->dirLists() = std::move(allRes);
-                       return res;
-                     })
-                 .ensure([mountHandle] {}))
-      .semi();
-}
-
-folly::coro::now_task<std::unique_ptr<ReaddirResult>>
-EdenServiceHandler::co_readdirImpl(std::unique_ptr<ReaddirParams> params) {
+folly::coro::Task<std::unique_ptr<ReaddirResult>>
+EdenServiceHandler::co_readdir(std::unique_ptr<ReaddirParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   auto paths = *params->directoryPaths();
   auto helper = INSTRUMENT_THRIFT_CALL(

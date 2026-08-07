@@ -343,7 +343,7 @@ class EdenServiceHandler
   co_getAttributesFromFilesV2Impl(
       std::unique_ptr<GetAttributesFromFilesParams> params);
 
-  folly::SemiFuture<std::unique_ptr<ReaddirResult>> semifuture_readdir(
+  folly::coro::Task<std::unique_ptr<ReaddirResult>> co_readdir(
       std::unique_ptr<ReaddirParams> params) override;
 
   folly::SemiFuture<std::unique_ptr<Glob>> semifuture_globFiles(
@@ -631,9 +631,6 @@ class EdenServiceHandler
   folly::coro::Task<std::unique_ptr<GetFileContentResponse>> co_getFileContent(
       apache::thrift::RequestParams params,
       std::unique_ptr<GetFileContentRequest> request) override;
-
-  folly::coro::now_task<std::unique_ptr<ReaddirResult>> co_readdirImpl(
-      std::unique_ptr<ReaddirParams> params);
 
   folly::coro::Task<std::unique_ptr<::facebook::eden::CancelRequestsResponse>>
   co_cancelRequests(
