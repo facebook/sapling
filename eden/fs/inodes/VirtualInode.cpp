@@ -1507,47 +1507,6 @@ folly::Try<VirtualInode> applyAncestorAcl(
   return child;
 }
 
-/**
- * Helper function for getChildren when the current node is a Tree.
- */
-[[maybe_unused]] std::vector<
-    std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
-getChildrenHelper(
-    const TreePtr& tree,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) {
-  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result{};
-  result.reserve(tree->size());
-
-  for (auto& child : *tree) {
-    const auto* treeEntry = &child.second;
-    if (treeEntry->isTree()) {
-      if (treeEntry->isRestricted()) {
-        // Skip fetch — return restricted empty tree
-        result.emplace_back(
-            child.first,
-            VirtualInode::makeRestricted(
-                *treeEntry, tree->getCaseSensitivity()));
-      } else {
-        result.emplace_back(
-            child.first,
-            objectStore->getTree(treeEntry->getObjectId(), fetchContext)
-                .thenValue([mode = modeFromTreeEntryType(treeEntry->getType()),
-                            hasACL = treeEntry->hasACL()](TreePtr tree) {
-                  auto virtualInode = VirtualInode{std::move(tree), mode};
-                  virtualInode.setHasACL(hasACL);
-                  return virtualInode;
-                }));
-      }
-    } else {
-      // This is a file, return the TreeEntry for it
-      result.emplace_back(child.first, VirtualInode{*treeEntry});
-    }
-  }
-
-  return result;
-}
-
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
 co_getChildrenHelper(
