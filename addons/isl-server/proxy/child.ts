@@ -17,7 +17,7 @@
 
 import type {StartServerArgs, StartServerResult} from './server';
 
-import * as fs from 'node:fs';
+import {registerUncaughtExceptionHandler} from './uncaughtException';
 
 /**
  * This defines the shape of the messages that the parent process accepts.
@@ -56,13 +56,4 @@ import('./server')
     sendMessageToParentProcess({type: 'result', result: {type: 'error', error: String(error)}}),
   );
 
-process.on('uncaughtException', err => {
-  const {logFileLocation} = args;
-  fs.promises.appendFile(
-    logFileLocation,
-    `\n[${new Date().toString()}] ISL server child process got an uncaught exception:\n${
-      err?.stack ?? err?.message
-    }\n\n`,
-    'utf8',
-  );
-});
+registerUncaughtExceptionHandler(args.logFileLocation);
