@@ -433,11 +433,12 @@ Commands on OS filesystem:
     ...     with tempfile.TemporaryDirectory('.test-shinterp') as d:
     ...         fs = OSFS()
     ...         fs.chdir(d)
-    ...         with tarfile.open(fileobj=fs.open("archive.tar", "wb"), mode="w") as tar:
-    ...             data = b"content\n"
-    ...             info = tarfile.TarInfo(name)
-    ...             info.size = len(data)
-    ...             tar.addfile(info, io.BytesIO(data))
+    ...         with fs.open("archive.tar", "wb") as archive:
+    ...             with tarfile.open(fileobj=archive, mode="w") as tar:
+    ...                 data = b"content\n"
+    ...                 info = tarfile.TarInfo(name)
+    ...                 info.size = len(data)
+    ...                 tar.addfile(info, io.BytesIO(data))
     ...         env = Env(fs=fs, cmdtable=dict(stdlib.cmdtable))
     ...         return sheval(code, env)
 
