@@ -67,6 +67,7 @@ use futures::TryStreamExt;
 use futures::future::try_join_all;
 use manifest::Entry;
 use manifest::ManifestOps;
+use manifest::PathOrPrefix;
 use manifest::get_implicit_deletes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::MPath;
@@ -297,8 +298,6 @@ async fn find_deleted_cluster_paths(
 ) -> Result<Vec<DeletedClusterPath>> {
     use mononoke_types::FileChange;
 
-    let mut deleted_paths = Vec::new();
-
     // Phase 1a: Handle implicit deletes using get_implicit_deletes
     // This gives us all FILE paths under directories that were replaced by files.
     let parent_cs_ids: Vec<_> = bonsai.parents().collect();
@@ -432,35 +431,36 @@ async fn find_deleted_cluster_paths(
         .collect();
 
     if all_deleted_paths.is_empty() {
-        return Ok(deleted_paths);
+        return Ok(Vec::new());
     }
 
-    // Phase 4: Extract cluster info from parent DBCM for each deleted path (dirs and files)
-    // No nested expansion needed - implicit deletes already gave us all nested paths
-    for deleted_path in all_deleted_paths {
-        let cluster_info = match parent
-            .find_entry(ctx.clone(), blobstore.clone(), deleted_path.clone())
-            .await?
-        {
-            Some(Entry::Tree(dir)) if dir.is_clustered() => {
-                Some((dir.primary.clone(), dir.secondaries.clone()))
-            }
-            Some(Entry::Leaf(file)) if file.is_clustered() => {
-                Some((file.primary.clone(), file.secondaries.clone()))
-            }
-            _ => None,
-        };
-
-        if let Some((primary, secondaries)) = cluster_info {
-            deleted_paths.push(DeletedClusterPath {
-                path: deleted_path,
-                primary,
-                secondaries,
-            });
-        }
-    }
-
-    Ok(deleted_paths)
+    // Phase 4: Extract cluster info from parent DBCM for each deleted path (dirs and files).
+    // No nested expansion needed - implicit deletes already gave us all nested paths.
+    // A single find_entries shares one traversal across every path, so a prefix that is
+    // absent from the manifest prunes its whole subtree instead of being rewalked per path.
+    parent
+        .find_entries(
+            ctx.clone(),
+            blobstore.clone(),
+            all_deleted_paths.into_iter().map(PathOrPrefix::Path),
+        )
+        .try_filter_map(|(path, entry)| async move {
+            anyhow::Ok(match entry {
+                Entry::Tree(dir) if dir.is_clustered() => Some(DeletedClusterPath {
+                    path,
+                    primary: dir.primary,
+                    secondaries: dir.secondaries,
+                }),
+                Entry::Leaf(file) if file.is_clustered() => Some(DeletedClusterPath {
+                    path,
+                    primary: file.primary,
+                    secondaries: file.secondaries,
+                }),
+                _ => None,
+            })
+        })
+        .try_collect()
+        .await
 }
 
 /// Find deleted paths with cluster info and generate appropriate ClusterUpdate entries.
