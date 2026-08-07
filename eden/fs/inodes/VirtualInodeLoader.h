@@ -6,6 +6,8 @@
  */
 
 #pragma once
+#include <type_traits>
+
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBVector.h>
 #include <folly/MapUtil.h>
@@ -210,7 +212,7 @@ class VirtualInodeLoader {
 // error.
 template <typename Func>
 using VirtualInodeResult = folly::coro::semi_await_result_t<
-    folly::invoke_result_t<Func&, VirtualInode, RelativePath>>;
+    std::invoke_result_t<Func&, VirtualInode, RelativePath>>;
 
 /** Given a `rootInode` and a list of `paths` relative to that root,
  * attempt to load the VirtualInode for each.
@@ -240,7 +242,7 @@ auto applyToVirtualInode(
   // DEPRECATED: use co_applyToVirtualInode directly. Kept only because
   // EdenServiceHandler and VirtualInodeLoaderTest still consume
   // ImmediateFuture chains; delete once those paths are migrated to coroutines.
-  using FuncRet = folly::invoke_result_t<Func&, VirtualInode, RelativePath>;
+  using FuncRet = std::invoke_result_t<Func&, VirtualInode, RelativePath>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
   detail::VirtualInodeLoader loader;
