@@ -53,6 +53,19 @@ See the dedicated [Sapling Stack](/docs/git/sapling-stack.md) page for more info
 
 - Creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](/docs/addons/reviewstack.md) for code review instead of GitHub.
 
+When reviewers do use GitHub, you can ask Sapling to post a short update
+comment with a GitHub compare link each time `sl pr submit` updates an existing
+pull request:
+
+```
+sl config github.pr-submit-comment-deltas true
+```
+
+The compare link shows the delta between the previous submitted PR head and the
+new PR head. GitHub's Files Changed tab still shows the current PR diff against
+its base, so ReviewStack remains the preferred stack-aware review UI. Large
+stacks may still create one comment for each updated pull request.
+
 :::tip
 
 You can use the `pr` revset to automatically pull and checkout GitHub pull request. For example, `sl goto pr123`. See `sl help revsets` for more info.
