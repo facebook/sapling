@@ -35,7 +35,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:digest",
+        "fbsource//third-party/rust:digest-010",
         "fbsource//third-party/rust:flate2",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-actor",

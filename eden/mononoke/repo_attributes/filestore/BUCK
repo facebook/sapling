@@ -25,7 +25,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:digest",
+        "fbsource//third-party/rust:digest-010",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:pin-project",
