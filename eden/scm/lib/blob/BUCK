@@ -23,7 +23,7 @@ sl_rust_library(
     },
     deps = [
         "fbsource//third-party/rust:blake3",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "//common/rust/folly:iobuf",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",

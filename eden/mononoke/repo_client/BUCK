@@ -235,7 +235,7 @@ rust_library(
         "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:futures-util",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",

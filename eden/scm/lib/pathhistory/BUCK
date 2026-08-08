@@ -21,7 +21,7 @@ sl_rust_library(
     test_deps = [
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:ctor",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/dev-logger:dev-logger",

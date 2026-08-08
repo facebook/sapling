@@ -10,7 +10,7 @@ sl_rust_binary(
         "fbsource//third-party/rust:criterion",
         "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "//eden/scm/lib/types:types",
     ],
 )

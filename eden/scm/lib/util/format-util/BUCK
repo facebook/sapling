@@ -22,7 +22,7 @@ sl_rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:memchr",
         "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/minibytes:minibytes",

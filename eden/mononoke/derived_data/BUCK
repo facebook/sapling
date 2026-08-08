@@ -153,7 +153,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:digest-010",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",

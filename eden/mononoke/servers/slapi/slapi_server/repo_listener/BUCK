@@ -21,7 +21,7 @@ rust_library(
         "fbsource//third-party/rust:percent-encoding",
         "fbsource//third-party/rust:pin-project",
         "fbsource//third-party/rust:serde_json",
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha1-010",
         "fbsource//third-party/rust:textwrap",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
