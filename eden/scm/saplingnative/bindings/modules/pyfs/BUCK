@@ -9,5 +9,6 @@ rust_python_library(
     deps = [
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/fsinfo:fsinfo",
+        "//eden/scm/lib/util/win32-8dot3:win32-8dot3",
     ],
 )

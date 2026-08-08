@@ -9,3 +9,4 @@ edition = "2024"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-fsinfo = { version = "0.1.0", path = "../../../../lib/fsinfo" }
+sapling-win32-8dot3 = { version = "0.1.0", path = "../../../../lib/util/win32-8dot3" }
