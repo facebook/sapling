@@ -51,6 +51,7 @@ sl_rust_library(
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/util/factory:factory",
         "//eden/scm/lib/util/format-util:format-util",
+        "//eden/scm/lib/util/win32-8dot3:win32-8dot3",
         "//eden/scm/lib/zstore:zstore",
     ],
 )
