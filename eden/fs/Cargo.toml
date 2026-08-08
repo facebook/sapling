@@ -38,28 +38,10 @@ bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c16
 c2pa = { git = "https://github.com/peekmoar/c2pa-rs", rev = "bc2e763f3333eb7aaa1f169b045c9bbf60b146f7" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
 cxx-build = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
-fsst = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
 gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "ebad63b48e960270b8d8d0dec74f5b2e54cad13f" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
-lance = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-arrow = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-arrow-scalar = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-arrow-stats = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-bitpacking = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-core = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-datafusion = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-datagen = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-encoding = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-file = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-index = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-io = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-linalg = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-namespace = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-namespace-impls = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-select = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
-lance-table = { git = "https://github.com/fbsource/lance", rev = "fd53b045523b9760b94eaf8364ccea3f9fa77f93" }
 libcras = { git = "https://github.com/google/crosvm", rev = "299c1e7c3d5a1b98106212c20f58b9fdb7b1b1ea" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minijail", rev = "fc020fd4672b3340ee706e192d043e12df8c8578" }
@@ -106,6 +88,29 @@ zbus = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b1e1e
 zbus_macros = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b1e1e9bd96e54327024be09" }
 zvariant = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b1e1e9bd96e54327024be09" }
 zvariant_derive = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b1e1e9bd96e54327024be09" }
+
+[patch."https://github.com/lance-format/lance.git"]
+fsst = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-arrow = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-arrow-scalar = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-arrow-stats = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-bitpacking = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-core = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-datafusion = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-datagen = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-derive = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-encoding = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-file = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-index = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-index-core = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-io = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-linalg = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-namespace = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-namespace-impls = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-select = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-table = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+lance-tokenizer = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
 
 [patch."https://github.com/milvus-io/rust-stemmers.git"]
 rust-stemmers = { git = "https://github.com/fbsource/rust-stemmers", rev = "3b2545218f76e797baecbf91fa1cbd2c0db60726" }
