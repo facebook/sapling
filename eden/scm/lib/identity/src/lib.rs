@@ -131,6 +131,11 @@ impl Identity {
         self.repo.dot_dir
     }
 
+    /// Obtain the sniff dot dir, for ".git/sl" this returns ".git".
+    pub fn sniff_dot_dir(&self) -> &'static str {
+        self.repo.sniff_dot_dir()
+    }
+
     /// Obtain the full ".hg" or ".sl", or ".git/sl" path, given the working
     /// copy root. This function handles complexity like dotgit and submodules.
     ///
