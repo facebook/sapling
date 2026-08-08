@@ -222,6 +222,7 @@ members = [
   "lib/util/time-interval",
   "lib/util/try-once-lock",
   "lib/util/udsipc",
+  "lib/util/win32-8dot3",
   "lib/version",
   "lib/vfs",
   "lib/vfs/benches",
