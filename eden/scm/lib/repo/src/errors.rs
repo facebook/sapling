@@ -36,6 +36,9 @@ pub enum InitError {
     #[error("unable to create file at `{0}`: `{1}`")]
     FileCreationError(PathBuf, std::io::Error),
 
+    #[error("unable to remove 8.3 short name from `{0}`: `{1}`")]
+    ShortNameRemovalError(PathBuf, std::io::Error),
+
     #[error("config loading error: `{0}`")]
     ConfigLoadingError(anyhow::Error),
 }

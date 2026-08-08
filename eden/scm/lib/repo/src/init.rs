@@ -36,6 +36,11 @@ pub fn init_hg_repo(
         return Err(InitError::ExistingRepoError(PathBuf::from(root_path)));
     }
     create_dir(&hg_path)?;
+    if let Err(err) = win32_8dot3::remove_short_name_at(&hg_path) {
+        if !config.get_or_default("unsafe", "ignore-win32-8dot3-error")? {
+            return Err(InitError::ShortNameRemovalError(hg_path.clone(), err));
+        }
+    }
 
     write_reponame(&hg_path, config)?;
     write_changelog(&hg_path)?;
