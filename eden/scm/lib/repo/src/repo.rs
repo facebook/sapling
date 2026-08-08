@@ -138,6 +138,8 @@ impl Repo {
         config: Option<ConfigSet>,
     ) -> Result<Self> {
         let info = RepoMinimalInfo::from_repo_root(path)?;
+        let dot_dir = info.path.join(info.ident.sniff_dot_dir());
+        let _ = win32_8dot3::remove_short_name_at(&dot_dir);
         Self::build_with_info(info, pinned_config, config)
     }
 
