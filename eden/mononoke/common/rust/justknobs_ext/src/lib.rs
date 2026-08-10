@@ -16,6 +16,8 @@
 //! `JustKnobsCombinedImpl` struct) is re-exported unchanged from the
 //! stub so Mononoke `use` paths keep working.
 
+pub mod overrides;
+
 pub use justknobs_stub::JustKnobsCombinedImpl;
 pub use justknobs_stub::cached_config;
 pub use justknobs_stub::init_cached_config_just_knobs;
@@ -25,12 +27,18 @@ pub use justknobs_stub::test_helpers;
 /// Evaluate a Boolean knob. Panics if the read fails (e.g. the JK doesn't
 /// exist or is misspelled).
 pub fn eval(name: &str, hash_val: Option<&str>, switch_val: Option<&str>) -> bool {
+    if let Some(overridden) = overrides::eval(name) {
+        return overridden;
+    }
     justknobs_stub::eval(name, hash_val, switch_val)
         .unwrap_or_else(|e| panic!("JustKnobs eval failed for {name}: {e:#}"))
 }
 
 /// Evaluate a numeric knob. Panics if the read fails.
 pub fn get(name: &str, switch_val: Option<&str>) -> i64 {
+    if let Some(overridden) = overrides::get(name) {
+        return overridden;
+    }
     justknobs_stub::get(name, switch_val)
         .unwrap_or_else(|e| panic!("JustKnobs get failed for {name}: {e:#}"))
 }
@@ -42,6 +50,11 @@ where
     T: TryFrom<i64>,
     <T as TryFrom<i64>>::Error: std::error::Error + Send + Sync + 'static,
 {
+    if let Some(overridden) = overrides::get(name) {
+        return overridden
+            .try_into()
+            .unwrap_or_else(|e| panic!("JustKnobs get_as failed for {name}: {e:#}"));
+    }
     justknobs_stub::get_as(name, switch_val)
         .unwrap_or_else(|e| panic!("JustKnobs get_as failed for {name}: {e:#}"))
 }

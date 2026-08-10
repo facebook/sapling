@@ -539,6 +539,17 @@ fn init_just_knobs_worker(
     logger: impl justknobs::cached_config::IntoLogger,
     handle: Handle,
 ) -> Result<()> {
+    if !just_knobs_args.just_knob_overrides.is_empty() {
+        let overrides = just_knobs_args
+            .just_knob_overrides
+            .iter()
+            .map(|arg| justknobs::overrides::parse_override(arg))
+            .collect::<Result<_>>()?;
+        justknobs::overrides::set_debug_overrides(overrides)?;
+        if let Some(overrides) = justknobs::overrides::debug_overrides() {
+            tracing::warn!("JustKnobs pinned by --just-knob: {:?}", overrides);
+        }
+    }
     if let Some(just_knobs_config_path) = &just_knobs_args.just_knobs_config_path {
         let config_handle =
             config_store.get_config_handle(parse_config_spec_to_path(just_knobs_config_path)?)?;
