@@ -225,12 +225,24 @@ The pipeline runs 6 sequential steps:
 
 By default, repo creation uses the `rl_source_control` oncall. If you need a different oncall, override it with `--flag oncall_name="<your_oncall>"`.
 
+### Repo creation: the config mutation died
+
+Creating a repo raises a Configerator mutation, which the pipeline polls for up to 45 minutes. Two things can kill that mutation, and the pipeline handles both automatically:
+
+- **`Canary failed`** — the config change failed its canary.
+- **`SIMULTANEOUS_MODIFICATION`** — someone else landed a change to the same configs while the mutation was canarying. The mutation writes `repos/repo_index.cinc` and the shared tier manifests, which every repo creation touches, so the collision window is the whole ~20-minute canary phase. A concurrent pipeline run or an unrelated Mononoke config land can both cause it.
+
+In either case SCS releases the repo's reservation before reporting the failure, so the pipeline re-submits `create_repos` from scratch and gets a fresh mutation. It tries up to 3 times, waiting 5–7 minutes between attempts. **No action is needed unless all three fail**, in which case the run reports the last failure reason.
+
 ### Repo creation timed out
 
-The pipeline polls for up to 45 minutes for the repo creation mutation to land. If it times out:
-- Check if the SCS service is healthy.
-- Check the Sandcastle job logs for the `create_repos_poll` responses to see the status codes.
-- Retry the pipeline — if the repo was partially created, subsequent runs will detect it.
+The mutation was still in flight after 45 minutes of polling, without ever reporting a failure. Check whether SCS is healthy, and read the `create_repos_poll` responses in the Sandcastle job log — the timeout message now includes the last response. Re-running is safe: an existing repo is detected and skipped.
+
+### Repo creation aborted after unrecognised responses
+
+`create_repos_poll` returned five consecutive responses the pipeline could not classify — neither a known status nor a known failure. This usually means SCS changed its error wording; it is not something you caused.
+
+The pipeline deliberately does **not** re-create here, because it cannot prove the mutation is dead, and re-creating a live mutation would leave two of them competing for the same repo. The abort message names the `mutation_id` and links the mutation. Check its state before re-running; if it is dead, the message explains how to clear the leftover reservation. Transport failures reaching SCS are handled separately and do not trigger this.
 
 ### Gitimport fails after all retries
 
