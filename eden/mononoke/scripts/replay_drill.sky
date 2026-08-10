@@ -1,0 +1,66 @@
+# Skycastle workflow: run the Mononoke commit-throughput drill
+# (//eden/mononoke/scripts:replay_drill) on an fbsource checkout.
+#
+# The drill resets the `mononoke_commit_throughput_test` bookmark to the local
+# master tip and lands many file-disjoint stacks in parallel via SCS, measuring
+# how fast commits keep up with the bookmark.
+#
+# Validate ad-hoc (runs on Sandcastle as the scheduling user, lands to prod
+# Mononoke):
+#   arc skycastle schedule //fbcode/eden/mononoke/scripts/replay_drill.sky:main
+#
+# Recurring (daily) scheduling is added separately via a Chronozl `.chronos.bzl`
+# spec once the job is provisioned to run as the throughput bot identity.
+
+load("//tools/skycastle/api2/api.sky", "config", "entry_point")
+load("//tools/skycastle/api2/repositories.sky", "fbsource")
+load("//tools/skycastle/api2/sandcastle_config.sky", "SandcastleConfig")
+load("//tools/skycastle/lib2/buck/buck.sky", "BuckVersion", "buck_run")
+load("//tools/skycastle/lib2/tools/_buck2.sky", "buck2")
+load("//tools/skycastle/lib2/tools/sl.sky", "sl")
+
+ONCALL = "scm_server_infra"
+
+config(
+    oncall = ONCALL,
+    tags = ["mononoke-commit-throughput-drill"],
+)
+
+def _drill():
+    return buck_run(
+        description = "Land 100 commits to the Mononoke throughput test bookmark",
+        # Cell-qualified: from the repo root, "//eden/..." resolves against the
+        # root cell (fbsource//eden, which doesn't exist).
+        target = "fbcode//eden/mononoke/scripts:replay_drill",
+        buck_cell = "fbcode",
+        param_list = ["--count", "100", "--max-stack-size", "5"],
+        buck_version = BuckVersion.buck2,
+        # Explicit cell: from the repo root, "@//mode/opt" would resolve against
+        # the root cell (no such file); "@fbcode//mode/opt" is unambiguous.
+        modes = ["@fbcode//mode/opt"],
+        # Run from the repo ROOT, not fbcode/: the drill replays commits across
+        # many top-level trees (arvr/, www/, xplat/, fbcode/, ...) and passes
+        # repo-root-relative paths to `sl revert`/`add`, which resolve relative to
+        # cwd -- a cwd of fbcode/ would mangle them into fbcode/<path>.
+        cwd = fbsource.root(),
+        # The drill shells out to `sl`; buck2 runs the target itself.
+        tools = [buck2, sl],
+        # The drill lands commits (side effects) -- never serve a cached result.
+        cache = False,
+    )
+
+entry_point(
+    name = "main",
+    alias = "mononoke-commit-throughput-drill",
+    description = "Mononoke commit-throughput drill",
+    actions = [_drill()],
+    sandcastle_config = SandcastleConfig(
+        tenant = "fbcode_castle",
+        # Broad tag satisfies scheduling; narrow tag authorizes act-as on the
+        # throughput bot so the land passes verify_integrity.
+        required_tag_identities = [
+            "mononoke_commit_throughput_drill",
+            "mononoke_commit_throughput_drill_act_as",
+        ],
+    ),
+)

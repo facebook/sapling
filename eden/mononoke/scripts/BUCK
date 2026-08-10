@@ -5,6 +5,21 @@ load("//fbpkg:fbpkg.bzl", "fbpkg")
 oncall("scm_server_treehugger")
 
 python_binary(
+    name = "replay_drill",
+    srcs = ["replay_drill.py"],
+    # Transitive configerator/polyglot/thrift deps don't build under
+    # dev-rust-oss; drop that mode from CI (builds fine in default/opt).
+    labels = ci.remove_labels(ci.mode("fbcode//mode/dev-rust-oss")),
+    main_function = "eden.mononoke.scripts.replay_drill.main",
+    deps = [
+        "//configerator/distribution/api/py:configerator_client",
+        "//eden/mononoke/scs/if:source_control-py3-clients",
+        "//eden/mononoke/scs/if:source_control-py3-types",
+        "//servicerouter/client/py3:get_client",
+    ],
+)
+
+python_binary(
     name = "merge_resolution_blame_checker",
     srcs = ["merge_resolution_blame_checker.py"],
     main_function = "eden.mononoke.scripts.merge_resolution_blame_checker.main",
