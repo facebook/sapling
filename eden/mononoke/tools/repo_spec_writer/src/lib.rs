@@ -7,10 +7,9 @@
 
 //! Reusable helpers for writing Mononoke `RepoSpec` `.cconf` files via Configo.
 //!
-//! The SCS `create_repos` API and the Phase 6 `repo_spec_migrator` both produce
-//! `RepoSpec` files at canonical paths in configerator. The path computation,
-//! Python-literal formatters, and `repo_index.cinc` updater live here so both
-//! consumers share a single, byte-equivalent code path.
+//! The SCS `create_repos` API produces `RepoSpec` files at canonical paths in
+//! configerator. The path computation, Python-literal formatters, and
+//! `repo_index.cinc` updater live here.
 
 use anyhow::Context;
 use anyhow::Result;
