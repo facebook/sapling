@@ -1,6 +1,9 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*(\.rs|BUCK)$'
+name: mononoke-structure
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*(\.rs|BUCK)$'
 ---
 
 # Mononoke Architecture & Filesystem Layout
