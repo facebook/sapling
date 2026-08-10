@@ -4,12 +4,13 @@
 
 This guide explains how to use the Skycastle-based **gitimport-from-bundle** pipeline to import a Git repository into Mononoke from a Git bundle stored in Manifold. The pipeline automates:
 
-1. Creating the repo in Mononoke (if it doesn't exist)
-2. Cloning the repo from Mononoke
-3. Downloading the Git bundle from Manifold
-4. Unbundling and running gitimport
-5. Forcing a Git server cache refresh
-6. Verifying that all refs match between the bundle and Mononoke
+1. Validating that the bundle exists in Manifold
+2. Creating the repo in Mononoke (if it doesn't exist)
+3. Cloning the repo from Mononoke
+4. Downloading the Git bundle from Manifold
+5. Unbundling and running gitimport
+6. Forcing a Git server cache refresh
+7. Verifying that all refs match between the bundle and Mononoke
 
 All interaction is through the terminal/CLI.
 
@@ -32,7 +33,7 @@ You need the following on your Fedora machine (connected to Corp VPN):
 
    ```bash
    # Install if not already available
-   sudo dnf install fb-manifold
+   sudo dnf install fb-manifold-cli
    ```
 
    Verify it works:
@@ -73,14 +74,16 @@ git bundle verify /tmp/my_repo.bundle
 
 Upload the bundle file to a Manifold bucket so the pipeline can fetch it.
 
+The signature is `put [localpath] bucketpath` — **local file first**, and the bucket and key joined into a single argument.
+
 ```bash
-manifold --apikey <YOUR_API_KEY> put <BUCKET_NAME>/<KEY_PATH> /tmp/my_repo.bundle
+manifold --apikey <YOUR_API_KEY> put /tmp/my_repo.bundle <BUCKET_NAME>/<KEY_PATH>
 ```
 
 **Example:**
 
 ```bash
-manifold --apikey upstream_repo_bundles-key put upstream_repo_bundles/flat/my_project_repo /tmp/my_repo.bundle
+manifold --apikey upstream_repo_bundles-key put /tmp/my_repo.bundle upstream_repo_bundles/flat/my_project_repo
 ```
 
 **Verify the upload succeeded:**
@@ -127,7 +130,7 @@ arc skycastle schedule \
 | `oncall_name` | `rl_source_control` | Oncall team name used during repo creation. |
 | `include_refs` | `""` (all refs) | Comma-separated list of refs to import. Leave empty to import all. |
 | `hipster_group` | `""` | Hipster group for ACL setup during repo creation. |
-| `gitimport_concurrency` | `200` | Number of concurrent gitimport operations. |
+| `gitimport_concurrency` | `20` | Number of concurrent gitimport operations. |
 
 ### Minimal Example
 
@@ -173,13 +176,13 @@ Success!
 
 ```bash
 # Check the status of a workflow run by ID
-arc skycastle status <WORKFLOW_RUN_ID>
+arc skycastle workflow-run get-status <WORKFLOW_RUN_ID>
 ```
 
 Example:
 
 ```bash
-arc skycastle status 3422735716815416755
+arc skycastle workflow-run get-status 3422735716815416755
 ```
 
 ### Option B: Via Browser
@@ -190,7 +193,7 @@ Open the **Workflow run URL** from the scheduling output in your browser:
 https://www.internalfb.com/sandcastle/workflow/<WORKFLOW_RUN_ID>
 ```
 
-This shows all 6 pipeline steps with their status (pending, running, passed, failed). Click on any step to see its logs.
+This shows all 7 pipeline steps with their status (pending, running, passed, failed). Click on any step to see its logs.
 
 ### Option C: Via Execution Job URL
 
@@ -206,16 +209,17 @@ This provides detailed logs for each action in the pipeline.
 
 ## Pipeline Steps Explained
 
-The pipeline runs 6 sequential steps:
+The pipeline runs 7 sequential steps:
 
 | Step | Name | What It Does |
 |------|------|-------------|
-| 1 | **Check or Create Repo** | Checks if the repo exists in Mononoke. If not, creates it via SCS thrift and polls for up to 45 minutes for the creation to complete. |
-| 2 | **Clone from Mononoke** | Clones the repo from Mononoke's Git server. If the repo is empty (newly created), initializes a bare repo instead. |
-| 3 | **Fetch Bundle** | Downloads the Git bundle from Manifold to the worker machine. |
-| 4 | **Unbundle and Gitimport** | Unpacks the bundle into the cloned repo and runs `gitimport` to import all objects and refs into Mononoke. Retries up to 45 times with 60-second intervals if gitimport fails (e.g., waiting for config propagation). |
-| 5 | **Bust Git Cache** | Pushes and deletes a temporary branch to force the Mononoke Git server to refresh its cache. |
-| 6 | **Verify Import** | Compares refs from the bundle with refs on the Mononoke Git server to confirm everything was imported correctly. |
+| 1 | **Validate Bundle** | Confirms the bundle exists in Manifold before any other work starts, so a bad key fails the run in seconds rather than after a repo has been created. |
+| 2 | **Check or Create Repo** | Checks if the repo exists in Mononoke. If not, creates it via SCS thrift and polls for up to 45 minutes for the creation to complete. Re-submits up to 3 times if the config mutation dies. |
+| 3 | **Clone from Mononoke** | Clones the repo from Mononoke's Git server. If the repo is empty (newly created), initializes a bare repo instead. |
+| 4 | **Fetch Bundle** | Downloads the Git bundle from Manifold to the worker machine. |
+| 5 | **Unbundle and Gitimport** | Unpacks the bundle into the cloned repo and runs `gitimport` to import all objects and refs into Mononoke. Retries up to 45 times with 60-second intervals if gitimport fails (e.g., waiting for config propagation). |
+| 6 | **Bust Git Cache** | Pushes and deletes a temporary branch to force the Mononoke Git server to refresh its cache. |
+| 7 | **Verify Import** | Compares refs from the bundle with refs on the Mononoke Git server to confirm everything was imported correctly. |
 
 ---
 
@@ -248,7 +252,7 @@ The pipeline deliberately does **not** re-create here, because it cannot prove t
 
 Gitimport retries up to 45 times with 60-second intervals (total ~45 minutes). Common causes:
 - **Config not propagated**: New repos need their config to propagate. The retry mechanism handles this, but if 45 minutes isn't enough, check config propagation manually.
-- **Large repo**: For very large repos, increase concurrency with `--flag gitimport_concurrency=400` or adjust as needed.
+- **Large repo**: For very large repos, *lower* concurrency with `--flag gitimport_concurrency=5`. The default was reduced from 200 to 20 because high concurrency was itself a cause of failures on big repos.
 - Check the detailed logs in Sandcastle for the specific error message.
 
 ### Verification failed: refs do not match
