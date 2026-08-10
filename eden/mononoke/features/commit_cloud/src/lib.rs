@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::bail;
@@ -220,10 +221,17 @@ impl CommitCloud {
             });
         }
 
+        // Always-on, O(1) phase timing for the (non-no-op) read path. The early
+        // `base_version == latest_version` return above emits nothing so that
+        // fast path stays free. See references::log_get_references_timing.
+        let total_start = Instant::now();
+
         let raw_references_data = fetch_references(&self.ctx, cc_ctx, &self.storage)
             .await
             .map_err(CommitCloudInternalError::Error)?;
+        let fetch_ms = total_start.elapsed().as_millis() as i64;
 
+        let cast_start = Instant::now();
         let references_data = cast_references_data(
             raw_references_data,
             latest_version,
@@ -236,6 +244,10 @@ impl CommitCloud {
         )
         .await
         .map_err(CommitCloudInternalError::Error)?;
+        let cast_ms = cast_start.elapsed().as_millis() as i64;
+
+        let total_ms = total_start.elapsed().as_millis() as i64;
+        references::log_get_references_timing(fetch_ms, cast_ms, total_ms);
 
         Ok(references_data)
     }

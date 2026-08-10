@@ -58,6 +58,13 @@ define_stats! {
     // Per-sync count of returned heads falling into each age bucket, keyed by
     // bucket label (see AGE_BUCKETS).
     head_age_bucket: dynamic_timeseries("head_age.{}", (bucket: &'static str); Sum, Average),
+    // Wall-clock latency of the get_references read path, split into its two
+    // phases plus the total. Emitted as quantile_stat (not the deprecated
+    // histogram, whose tail percentiles run 2-3x too high) to match the
+    // *_duration_ms convention used by the slapi ODS middleware.
+    fetch_references_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
+    cast_references_data_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
+    total_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
 }
 
 const SECONDS_PER_DAY: i64 = 86400;
@@ -106,6 +113,19 @@ fn log_head_age_metrics(heads_dates: &HashMap<CloudChangesetId, i64>) {
     for ((_, label), count) in AGE_BUCKETS.iter().zip(buckets.iter()) {
         STATS::head_age_bucket.add_value(*count, (*label,));
     }
+}
+
+// Emit the per-phase and total wall-clock timing of a (non-no-op) get_references
+// read. This is always-on and O(1) -- just a few Instant reads in the caller plus
+// these add_value calls -- so it is deliberately not gated by a JustKnob. The
+// read path had no sub-phase timing, and profiling shows latency concentrated in
+// the tail of rebuild syncs (scaling super-linearly with workspace size); this
+// splits fetch_references vs cast_references_data vs total so we can confirm which
+// phase dominates before optimizing. Pure telemetry: it must not affect results.
+pub(crate) fn log_get_references_timing(fetch_ms: i64, cast_ms: i64, total_ms: i64) {
+    STATS::fetch_references_ms.add_value(fetch_ms);
+    STATS::cast_references_data_ms.add_value(cast_ms);
+    STATS::total_ms.add_value(total_ms);
 }
 
 // Workspace information as we retrieve it form the database
