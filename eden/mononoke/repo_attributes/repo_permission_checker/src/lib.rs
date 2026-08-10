@@ -305,11 +305,6 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         identities: &MononokeIdentitySet,
         service_name: &str,
     ) -> bool {
-        if identities.likely_an_agent()
-            && justknobs::eval("scm/mononoke:block_agentic_service_writes", None, None)
-        {
-            return false;
-        }
         self.service_permchecker
             .check_set(identities, &[service_name])
             .await
