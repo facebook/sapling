@@ -118,6 +118,7 @@ redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobsto
 redaction = { version = "0.1.0", path = "../../features/redaction" }
 redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
 regex = "1.13.1"
+repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }

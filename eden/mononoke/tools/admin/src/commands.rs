@@ -42,6 +42,7 @@ mononoke_app::subcommands! {
     mod cross_repo_config;
     mod derivation_queue;
     mod derived_data;
+    mod diff;
     mod ephemeral_store;
     mod fetch;
     mod filestore;
