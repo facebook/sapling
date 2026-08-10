@@ -15,6 +15,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
+justknobs_ext = { version = "0.1.0", path = "../rust/justknobs_ext" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }

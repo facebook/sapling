@@ -12,14 +12,19 @@ use std::time::Duration;
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
+use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_types::CommonConfig;
 use mononoke_macros::mononoke;
+use repos::RawAllowlistIdentity;
 use repos::RawBlobstoreConfig;
 use repos::RawBlobstoreDisabled;
 use repos::RawCommitIdentityScheme;
+use repos::RawCommonConfig;
 use repos::RawDbLocal;
 use repos::RawMetadataConfig;
+use repos::RawRedactionConfig;
 use repos::RawRepoConfig;
+use repos::RawRepoConfigs;
 use repos::RawStorageConfig;
 use repos::TierRepoEntry;
 
@@ -424,4 +429,162 @@ fn test_load_all_repo_configs_checked_unions_and_partitions() {
     let failed: Vec<&str> = outcome.failed.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(loaded, ["good/repo"]);
     assert_eq!(failed, ["bad/repo"]);
+}
+
+// --- Sourcing `common`/`storage` from the manifest (common_from_manifest) ---
+
+/// A default `RawCommonConfig` is not parsable: two required fields fail conversion.
+fn test_raw_common_config(trusted_tier: &str) -> RawCommonConfig {
+    RawCommonConfig {
+        trusted_parties_hipster_tier: Some(trusted_tier.to_string()),
+        internal_identity: RawAllowlistIdentity {
+            identity_type: "SERVICE_IDENTITY".to_string(),
+            identity_data: "internal".to_string(),
+        },
+        redaction_config: RawRedactionConfig {
+            blobstore: TEST_STORAGE.to_string(),
+            redaction_sets_location: "test/redaction_sets".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn test_storage_map() -> HashMap<String, RawStorageConfig> {
+    HashMap::from([(TEST_STORAGE.to_string(), test_raw_storage_config())])
+}
+
+/// Asserted parsable, else the tests below pass via the fallback branch instead.
+fn parseable_manifest(trusted_tier: &str) -> TierManifest {
+    let manifest = TierManifest {
+        common: test_raw_common_config(trusted_tier),
+        storage: test_storage_map(),
+        ..Default::default()
+    };
+    assert!(
+        parse_manifest_common_and_storage(&manifest).is_ok(),
+        "fixture must parse, else the tests below pass for the wrong reason"
+    );
+    manifest
+}
+
+#[mononoke::test]
+fn test_manifest_common_and_storage_none_without_manifest() {
+    assert!(
+        manifest_common_and_storage(None, &CommonConfig::default(), None, true).is_none(),
+        "No manifest means the blob stays authoritative, even with the knob on"
+    );
+}
+
+#[mononoke::test]
+fn test_manifest_common_and_storage_none_when_knob_off() {
+    let manifest = parseable_manifest("manifest_tier");
+    assert!(
+        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, false)
+            .is_none(),
+        "Knob off must keep the blob authoritative even though the manifest parses"
+    );
+}
+
+#[mononoke::test]
+fn test_manifest_common_and_storage_returns_manifest_when_knob_on() {
+    let manifest = parseable_manifest("manifest_tier");
+
+    let (common, storage) =
+        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, true)
+            .expect("knob on and manifest parses");
+
+    assert_eq!(
+        common.trusted_parties_hipster_tier,
+        Some("manifest_tier".to_string()),
+        "common must come from the manifest, not the blob"
+    );
+    assert!(
+        storage.storage.contains_key(TEST_STORAGE),
+        "storage must come from the manifest"
+    );
+}
+
+/// The only deliberately fail-safe path: fall back rather than propagate.
+#[mononoke::test]
+fn test_manifest_common_and_storage_falls_back_when_manifest_unparsable() {
+    let manifest = TierManifest {
+        storage: test_storage_map(),
+        ..Default::default()
+    };
+    assert!(
+        parse_manifest_common_and_storage(&manifest).is_err(),
+        "this fixture is meant to be unparsable"
+    );
+
+    assert!(
+        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, true)
+            .is_none(),
+        "An unparsable manifest must fall back to the blob even with the knob on"
+    );
+}
+
+/// `justknobs_ext::eval` panics on an unknown knob, so a typo is a startup crash.
+#[mononoke::test]
+fn test_common_from_manifest_knob_resolves() {
+    assert!(
+        !use_manifest_source(),
+        "knob must resolve and default to false"
+    );
+}
+
+/// This equivalence is what makes the knob safe to enable.
+#[mononoke::test]
+fn test_manifest_and_blob_agree_on_common_and_storage() {
+    let common = test_raw_common_config("test_trusted_tier");
+
+    let (blob_configs, blob_storage) = load_configs_from_raw(RawRepoConfigs {
+        common: common.clone(),
+        storage: test_storage_map(),
+        ..Default::default()
+    })
+    .expect("blob parses");
+
+    let (manifest_common, manifest_storage) = parse_manifest_common_and_storage(&TierManifest {
+        common,
+        storage: test_storage_map(),
+        ..Default::default()
+    })
+    .expect("manifest parses");
+
+    assert_eq!(
+        blob_configs.common, manifest_common,
+        "common must be identical from either source"
+    );
+    assert_eq!(
+        blob_storage, manifest_storage,
+        "storage must be identical from either source"
+    );
+}
+
+/// Divergence must be observable through the real entry point.
+#[mononoke::test]
+fn test_manifest_wins_over_a_diverging_blob_when_knob_on() {
+    let manifest = parseable_manifest("manifest_tier");
+
+    let (blob_configs, _) = load_configs_from_raw(RawRepoConfigs {
+        common: test_raw_common_config("blob_tier"),
+        storage: test_storage_map(),
+        ..Default::default()
+    })
+    .expect("blob parses");
+
+    let (common, _) =
+        manifest_common_and_storage(Some(&manifest), &blob_configs.common, None, true)
+            .expect("knob on and manifest parses");
+
+    assert_ne!(
+        common, blob_configs.common,
+        "the two sources genuinely diverge in this fixture"
+    );
+    assert_eq!(
+        common.trusted_parties_hipster_tier,
+        Some("manifest_tier".to_string()),
+        "the manifest must win when the knob is on"
+    );
 }

@@ -58,9 +58,14 @@ use tracing::warn;
 use crate::STATS;
 use crate::Swappable;
 use crate::config_info::build_config_info;
+use crate::manifest_common_and_storage;
 use crate::receiver::ConfigUpdateReceiver;
+use crate::use_manifest_source;
 
 const LIVENESS_INTERVAL: Duration = Duration::from_secs(300);
+
+/// Nothing else wakes the loop on a JustKnob change, so this bounds rollback latency.
+const KNOB_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Result of awaiting one per-repo watcher fire. Owns the watcher so the
 /// caller can re-push a fresh wait future for it without re-subscribing.
@@ -284,6 +289,12 @@ pub(crate) async fn unified_config_watcher(
     let mut prev_blob: Option<Arc<RawRepoConfigs>> = None;
     let mut prev_manifest: Option<Arc<TierManifest>> = None;
     let mut cached_parsed: Option<RepoConfigs> = None;
+    // Kept for comparison and fallback. `Arc` because `StorageConfigs` isn't `Clone`.
+    let mut cached_blob_storage: Option<Arc<StorageConfigs>> = None;
+    // Last applied knob value, so a flip alone forces a resolution pass.
+    let mut last_use_manifest: Option<bool> = None;
+    // Reused when a re-parse yields equal content, to keep pointer identity stable.
+    let mut cached_manifest_storage: Option<Arc<StorageConfigs>> = None;
 
     // Last-applied RepoSpec per repo; lets the per-repo arm skip spurious
     // identical-content reloads. Seeded at registration.
@@ -296,6 +307,13 @@ pub(crate) async fn unified_config_watcher(
     // single channel avoids the duplicate-registration race that a separate
     // seed loop would create against a concurrent `load_repo_config_handle`.
     let mut per_repo_wait_futures: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
+
+    // Hoisted: a `sleep` inside the `select!` is rebuilt each iteration and starves.
+    let mut knob_poll = tokio::time::interval_at(
+        tokio::time::Instant::now() + KNOB_POLL_INTERVAL,
+        KNOB_POLL_INTERVAL,
+    );
+    knob_poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
         tokio::select! {
@@ -345,6 +363,19 @@ pub(crate) async fn unified_config_watcher(
                 ).await;
                 continue;
             }
+            _ = knob_poll.tick() => {
+                // Fall through only on a flip -- a full pass re-parses every RepoSpec.
+                // `last_use_manifest` starts `None`, so the FIRST tick always falls
+                // through. Deliberate: that pass is what sets `prev_manifest`, and
+                // `handle_per_repo_fire` defers every per-repo reload until it is set.
+                // Do not seed this to suppress that pass, and never seed it from a
+                // second `use_manifest_source()` read -- `MononokeConfigs::new` already
+                // read the knob and applied it, so a flip in between would be recorded
+                // as "already applied" and never reconciled.
+                if last_use_manifest == Some(use_manifest_source()) {
+                    continue;
+                }
+            }
         }
 
         let current_blob = blob_handle.as_ref().map(|h| h.get());
@@ -353,21 +384,24 @@ pub(crate) async fn unified_config_watcher(
         let blob_changed = content_changed(&prev_blob, &current_blob);
         let manifest_changed = content_changed(&prev_manifest, &current_manifest);
 
-        if !blob_changed && !manifest_changed {
+        let use_manifest = use_manifest_source();
+        let source_changed = last_use_manifest != Some(use_manifest);
+
+        if !blob_changed && !manifest_changed && !source_changed {
             STATS::spurious_reload_suppressed.add_value(1);
             debug!("Config version bumped but content identical, skipping reload");
             continue;
         }
 
         info!(
-            "Config content changed (blob={blob_changed}, manifest={manifest_changed}), applying update",
+            "Config content changed (blob={blob_changed}, manifest={manifest_changed}, source={source_changed}), applying update",
         );
 
         if blob_changed {
             if let Some(ref raw) = current_blob {
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw.clone())) {
                     Ok((configs, new_storage)) => {
-                        storage_configs.store(Arc::new(new_storage));
+                        cached_blob_storage = Some(Arc::new(new_storage));
                         match build_config_info(raw.clone()) {
                             Ok(info) => config_info.store(Arc::new(Some(info))),
                             Err(e) => warn!("Could not compute new config_info: {e:?}"),
@@ -420,6 +454,27 @@ pub(crate) async fn unified_config_watcher(
             .clone()
             .unwrap_or_else(|| RepoConfigs::new(HashMap::new(), CommonConfig::default()));
 
+        // Resolve only -- committing before the `continue`s below could mix sources.
+        let (resolved_common, resolved_storage) = match manifest_common_and_storage(
+            prev_manifest.as_deref(),
+            &base.common,
+            cached_blob_storage.as_deref(),
+            use_manifest,
+        ) {
+            Some((common, storage)) => {
+                let storage = match cached_manifest_storage.take() {
+                    Some(cached) if *cached == storage => cached,
+                    _ => Arc::new(storage),
+                };
+                cached_manifest_storage = Some(storage.clone());
+                (common, Some(storage))
+            }
+            None => {
+                cached_manifest_storage = None;
+                (base.common.clone(), cached_blob_storage.clone())
+            }
+        };
+
         let merged = match (&prev_manifest, tier_name.as_deref()) {
             (Some(manifest), Some(tier)) => {
                 let handles = match repo_handles.read() {
@@ -451,10 +506,19 @@ pub(crate) async fn unified_config_watcher(
                     }
                 }
                 // from_arc_map rebuilds repos_by_id from the merged map.
-                RepoConfigs::from_arc_map(repos, base.common.clone())
+                RepoConfigs::from_arc_map(repos, resolved_common)
             }
-            _ => base,
+            _ => RepoConfigs {
+                common: resolved_common,
+                ..base
+            },
         };
+
+        // Commit only now: everything above can `continue`.
+        last_use_manifest = Some(use_manifest);
+        if let Some(storage) = resolved_storage {
+            storage_configs.store(storage);
+        }
 
         let new_configs = Arc::new(merged);
         repo_configs.store(new_configs.clone());

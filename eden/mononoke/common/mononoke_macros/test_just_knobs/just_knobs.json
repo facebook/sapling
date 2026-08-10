@@ -87,6 +87,7 @@
     "scm/mononoke:lfs_server_compression_sniff_enabled": false,
     "scm/mononoke:lfs_server_skip_upstream_for_downloads": false,
     "scm/mononoke:cross_repo_pause_backsyncer": false,
+    "scm/mononoke:common_from_manifest": false,
     "scm/mononoke:allow_bare_author_unixname": true,
     "scm/mononoke:lock_users_directory": false,
     "scm/mononoke:restrict_user_directories_resolve_unixname_from_employee_service": false,

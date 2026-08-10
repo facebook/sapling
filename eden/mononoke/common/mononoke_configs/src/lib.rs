@@ -40,7 +40,9 @@ use metaconfig_parser::StorageConfigs;
 use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::configerator_manifest_handle;
 use metaconfig_parser::configerator_repo_spec_handle;
+use metaconfig_parser::parse_manifest_common_and_storage;
 use metaconfig_parser::parse_repo_spec;
+use metaconfig_types::CommonConfig;
 use metaconfig_types::ConfigInfo;
 use metaconfig_types::RepoConfig;
 use repos::RepoSpec;
@@ -77,6 +79,44 @@ define_stats! {
     per_repo_refresh_failure_count: timeseries(Average, Sum, Count),
     ensure_repo_handle_success_count: timeseries(Average, Sum, Count),
     ensure_repo_handle_failure_count: timeseries(Average, Sum, Count),
+    manifest_common_divergence: timeseries(Average, Sum, Count),
+    manifest_storage_divergence: timeseries(Average, Sum, Count),
+    manifest_common_parse_failure: timeseries(Average, Sum, Count),
+}
+
+/// Gates sourcing `common`/`storage` from the `TierManifest` over the legacy blob.
+const COMMON_FROM_MANIFEST_JK: &str = "scm/mononoke:common_from_manifest";
+
+/// Rollback lever; the watcher polls it on a timer, not just on config changes.
+pub(crate) fn use_manifest_source() -> bool {
+    justknobs::eval(COMMON_FROM_MANIFEST_JK, None, None)
+}
+
+/// Manifest-sourced `common`/`storage`, or `None` to keep the blob's.
+pub(crate) fn manifest_common_and_storage(
+    manifest: Option<&TierManifest>,
+    blob_common: &CommonConfig,
+    blob_storage: Option<&StorageConfigs>,
+    use_manifest: bool,
+) -> Option<(CommonConfig, StorageConfigs)> {
+    let manifest = manifest?;
+
+    let (common, storage) = match parse_manifest_common_and_storage(manifest) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            warn!("Failed to parse common/storage from tier manifest: {e:?}");
+            STATS::manifest_common_parse_failure.add_value(1);
+            return None;
+        }
+    };
+
+    STATS::manifest_common_divergence.add_value(i64::from(&common != blob_common));
+    // Only comparable when a blob is present; file-backed configs have none.
+    if let Some(blob_storage) = blob_storage {
+        STATS::manifest_storage_divergence.add_value(i64::from(&storage != blob_storage));
+    }
+
+    use_manifest.then_some((common, storage))
 }
 
 /// Outcome of a batch config load. Separates the configs that loaded/parsed
@@ -124,10 +164,9 @@ impl MononokeConfigs {
         manifest_path: Option<&str>,
         runtime_handle: Handle,
     ) -> Result<Self> {
-        let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
-        let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
-        let repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
-        let repo_configs = Arc::new(ArcSwap::from_pointee(repo_configs));
+        // Loaded either way, so the two sources can be compared below.
+        let blob_storage = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
+        let blob_repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
 
         // Derive tier name from the configerator config path.
         // Configerator paths follow the pattern:
@@ -182,6 +221,28 @@ impl MononokeConfigs {
                 "tier_name is required when split-loading is enabled (manifest_path is set)"
             );
         }
+
+        let manifest = maybe_manifest_handle.as_ref().map(|handle| handle.get());
+        // Bound the borrow of `blob_repo_configs.common` to this statement so both
+        // arms below can move `blob_repo_configs` whole.
+        let from_manifest = manifest_common_and_storage(
+            manifest.as_deref(),
+            &blob_repo_configs.common,
+            Some(&blob_storage),
+            use_manifest_source(),
+        );
+        let (resolved_repo_configs, storage) = match from_manifest {
+            Some((common, storage)) => (
+                RepoConfigs {
+                    common,
+                    ..blob_repo_configs
+                },
+                storage,
+            ),
+            None => (blob_repo_configs, blob_storage),
+        };
+        let storage_configs = Arc::new(ArcSwap::from_pointee(storage));
+        let repo_configs = Arc::new(ArcSwap::from_pointee(resolved_repo_configs));
 
         let repo_handles = Arc::new(RwLock::new(HashMap::new()));
 

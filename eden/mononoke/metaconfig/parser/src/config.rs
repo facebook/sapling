@@ -148,10 +148,26 @@ pub fn load_repo_configs_from_manifest(
         })
         .collect::<Result<HashMap<String, RepoConfig>>>()?;
 
-    let common = parse_common_config(manifest.common.clone(), &manifest.storage)
-        .context("Failed to parse common config from tier manifest")?;
+    let (common, _storage) = parse_manifest_common_and_storage(&manifest)?;
 
     Ok(RepoConfigs::new(repos, common))
+}
+
+/// A `TierManifest`'s `common`/`storage`, equivalent to the blob's same two sections.
+pub fn parse_manifest_common_and_storage(
+    manifest: &TierManifest,
+) -> Result<(CommonConfig, StorageConfigs)> {
+    let common = parse_common_config(manifest.common.clone(), &manifest.storage)
+        .context("Failed to parse common config from tier manifest")?;
+    let storage = manifest
+        .storage
+        .clone()
+        .into_iter()
+        .map(|(name, config)| Ok((name, config.convert()?)))
+        .collect::<Result<_>>()
+        .context("Failed to parse storage configs from tier manifest")?;
+
+    Ok((common, StorageConfigs { storage }))
 }
 
 /// Empty repo configs useful for testing purposes

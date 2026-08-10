@@ -25,6 +25,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/scm/mononoke/repos:repos-rust",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",
     ],
