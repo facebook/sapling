@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: 'for_each|iter\(\)|collect|manifest|file_changes|changed_files|traverse|walk'
+name: repeated-large-traversal
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: 'for_each|iter\(\)|collect|manifest|file_changes|changed_files|traverse|walk'
 ---
 
 # Repeated Large Traversal
