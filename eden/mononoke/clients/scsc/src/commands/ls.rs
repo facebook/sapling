@@ -68,7 +68,6 @@ pub(super) struct CommandArgs {
 #[serde(untagged)]
 enum LsEntryOutput {
     Tree {
-        id: String,
         child_files_count: i64,
         child_files_total_size: i64,
         child_dirs_count: i64,
@@ -76,7 +75,6 @@ enum LsEntryOutput {
         descendant_files_total_size: i64,
     },
     File {
-        id: String,
         size: i64,
         content_sha1: String,
         content_sha256: String,
@@ -196,19 +194,14 @@ fn list_output(
             let repo = repo.clone();
             async move {
                 let entry_output = match entry.info {
-                    thrift::EntryInfo::tree(info) => {
-                        let id = faster_hex::hex_string(&info.id);
-                        LsEntryOutput::Tree {
-                            id,
-                            child_files_count: info.child_files_count,
-                            child_dirs_count: info.child_dirs_count,
-                            child_files_total_size: info.child_files_total_size,
-                            descendant_files_count: info.descendant_files_count,
-                            descendant_files_total_size: info.descendant_files_total_size,
-                        }
-                    }
+                    thrift::EntryInfo::tree(info) => LsEntryOutput::Tree {
+                        child_files_count: info.child_files_count,
+                        child_dirs_count: info.child_dirs_count,
+                        child_files_total_size: info.child_files_total_size,
+                        descendant_files_count: info.descendant_files_count,
+                        descendant_files_total_size: info.descendant_files_total_size,
+                    },
                     thrift::EntryInfo::file(info) => {
-                        let id = faster_hex::hex_string(&info.id);
                         let content_sha1 = faster_hex::hex_string(&info.content_sha1);
                         let content_sha256 = faster_hex::hex_string(&info.content_sha256);
                         let link_target = if long && entry.r#type == thrift::EntryType::LINK {
@@ -218,7 +211,6 @@ fn list_output(
                             None
                         };
                         LsEntryOutput::File {
-                            id,
                             content_sha1,
                             content_sha256,
                             size: info.file_size,
