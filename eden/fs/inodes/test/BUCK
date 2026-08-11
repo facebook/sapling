@@ -389,9 +389,7 @@ cpp_library(
     srcs = ["OverlayTestUtil.cpp"],
     headers = ["OverlayTestUtil.h"],
     exported_deps = [
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:path",
-        "//eden/common/utils:ref_ptr",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:error_logger",

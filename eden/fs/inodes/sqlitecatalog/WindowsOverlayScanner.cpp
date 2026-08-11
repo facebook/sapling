@@ -13,15 +13,18 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
+#ifdef _WIN32
+// These headers are only referenced from the Windows-only main() below, so
+// guard them to keep clang-tidy's include cleaner (which analyzes the
+// non-Windows build) from flagging them as unused.
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/WinStackTrace.h"
+#endif
 
 DEFINE_string(
     mount_path,
@@ -55,11 +58,7 @@ int main(int argc, char** argv) {
   auto overlayPath = canonicalPath(argv[1]);
   auto mountPath = canonicalPath(FLAGS_mount_path);
 
-  auto edenFsEventsLogger = std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      nullptr,
-      nullptr,
-      makeRefPtr<EdenStats>());
+  auto edenFsEventsLogger = std::make_shared<EdenFsEventsLogger>(nullptr);
   SqliteInodeCatalog inodeCatalog(overlayPath, edenFsEventsLogger);
   inodeCatalog.initOverlay(/*createIfNonExisting=*/true);
   XLOG(INFO, "start scanning");
