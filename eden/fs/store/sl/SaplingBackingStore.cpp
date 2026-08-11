@@ -1792,9 +1792,8 @@ SaplingBackingStore::getBlobAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   // DEPRECATED: use co_getBlobAuxData directly. Kept only because
-  // ObjectStore::getBlobAuxDataImpl and FilteredBackingStore::getBlobAuxData
-  // still consume ImmediateFuture chains;
-  // delete once those paths are migrated to coroutines.
+  // FilteredBackingStore::getBlobAuxData still consumes ImmediateFuture
+  // chains; delete once that path is migrated to coroutines.
   DurationScope<EdenStats> scope{
       stats_, &SaplingBackingStoreStats::getBlobAuxData};
 

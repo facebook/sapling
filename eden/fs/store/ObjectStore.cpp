@@ -623,107 +623,18 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
   // EdenServiceHandler.cpp, VirtualInode.cpp, FileInode.cpp, getBlobSize,
   // getBlobSha1, and getBlobBlake3 still consume ImmediateFuture chains;
   // delete once those paths are migrated to coroutines.
-  if (getEdenConfig()->enableCoroutinesPhase5.getValue()) {
-    return ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](
-                ObjectId oid, ObjectFetchContextPtr ctx, bool b3)
-                -> folly::coro::Task<BlobAuxData> {
-              co_return co_await self->co_getBlobAuxData(oid, ctx, b3);
-            },
-            ObjectId{id},
-            fetchContext.copy(),
-            blake3Needed)
-            .semi()};
-  }
-
-  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getBlobAuxData};
-  folly::stop_watch<std::chrono::milliseconds> watch;
-
-  // Check in-memory cache
-  auto inMemoryCacheBlobAuxData =
-      getBlobAuxDataFromInMemoryCache(id, fetchContext);
-  if (inMemoryCacheBlobAuxData) {
-    if (blake3Needed && !inMemoryCacheBlobAuxData->blake3) {
-      return getBlob(id, fetchContext)
-          .thenValue(
-              [self = shared_from_this(),
-               id,
-               auxData = std::move(inMemoryCacheBlobAuxData).value(),
-               watch](auto&& blob) mutable -> ImmediateFuture<BlobAuxData> {
-                auto blake3 = self->computeBlake3(*blob);
-                // updating the aux data with the computed blake3 hash and
-                // update the cache
-                auxData.blake3.emplace(blake3);
-                self->blobAuxDataCache_.store(id, auxData);
-                self->stats_->increment(
-                    &ObjectStoreStats::getBlobAuxDataFromBlob);
-                self->stats_->addDuration(
-                    &ObjectStoreStats::getBlobAuxDataFromBlobDuration,
-                    watch.elapsed());
-                return auxData;
-              });
-    }
-    stats_->increment(&ObjectStoreStats::getBlobAuxDataFromMemory);
-    stats_->addDuration(
-        &ObjectStoreStats::getBlobAuxDataMemoryDuration, watch.elapsed());
-    return std::move(inMemoryCacheBlobAuxData).value();
-  }
-
-  deprioritizeWhenFetchHeavy(*fetchContext);
-
-  return ImmediateFuture<BackingStore::GetBlobAuxResult>{
+  return ImmediateFuture{
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](
-              ObjectId id,
-              ObjectFetchContextPtr context,
-              folly::stop_watch<std::chrono::milliseconds> watch)
-              -> folly::coro::Task<BackingStore::GetBlobAuxResult> {
-            co_return co_await self->getBlobAuxDataImpl(id, context, watch);
+              ObjectId oid, ObjectFetchContextPtr ctx, bool b3)
+              -> folly::coro::Task<BlobAuxData> {
+            co_return co_await self->co_getBlobAuxData(oid, ctx, b3);
           },
           ObjectId{id},
           fetchContext.copy(),
-          watch)
-          .semi()}
-      .thenValue(
-          [self = shared_from_this(),
-           fetchContext = fetchContext.copy(),
-           id,
-           statScope = std::move(statScope),
-           blake3Needed](BackingStore::GetBlobAuxResult result)
-              -> ImmediateFuture<BlobAuxData> {
-            if (!result.blobAux) {
-              self->stats_->increment(&ObjectStoreStats::getBlobAuxDataFailed);
-              XLOGF(DBG4, "unable to find aux data for {}", id);
-              throwf<std::domain_error>("aux data {} not found", id);
-            }
-            auto auxData = std::move(result.blobAux);
-            // likely that this case should never happen as backing store should
-            // pretty much always always return blake3 but it is better to be
-            // extra careful :)
-            if (blake3Needed && !auxData->blake3) {
-              return self->getBlob(id, fetchContext)
-                  .thenValue(
-                      [self, id, auxData = std::move(auxData)](
-                          auto&& blob) mutable -> ImmediateFuture<BlobAuxData> {
-                        auto blake3 = self->computeBlake3(*blob);
-                        // updating the aux data with the computed blake3 hash
-                        // and update the cache
-                        auto auxDataCopy = *auxData;
-                        auxDataCopy.blake3.emplace(blake3);
-                        self->blobAuxDataCache_.store(id, auxDataCopy);
-                        return auxDataCopy;
-                      });
-            } else {
-              self->blobAuxDataCache_.store(id, *auxData);
-              fetchContext->didFetch(
-                  ObjectFetchContext::BlobAuxData, id, result.origin);
-              self->updateProcessFetch(*fetchContext);
-              return *auxData;
-            }
-          });
+          blake3Needed)
+          .semi()};
 }
 
 folly::coro::now_task<BlobAuxData> ObjectStore::co_getBlobAuxData(
