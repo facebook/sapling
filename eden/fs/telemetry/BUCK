@@ -222,8 +222,6 @@ cpp_library(
         ":stats",
         ":xplat_keys",
         ":xplat_logger",
-        "//eden/common/telemetry:structured_logger_factory",
-        "//eden/fs/config:config",
     ],
     exported_deps = [
         "//eden/common/telemetry:log_info",

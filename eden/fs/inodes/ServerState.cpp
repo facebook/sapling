@@ -93,11 +93,7 @@ ServerState::ServerState(
       clock_{std::move(clock)},
       processInfoCache_{std::move(processInfoCache)},
       structuredLogger_{std::move(structuredLogger)},
-      edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
-          structuredLogger_,
-          xplatLogger.get(),
-          reloadableConfig,
-          edenStats_.copy())},
+      edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(xplatLogger)},
       notificationsStructuredLogger_{std::move(notificationsStructuredLogger)},
       errorLogger_{std::move(errorLogger)},
       scribeLogger_{std::move(scribeLogger)},

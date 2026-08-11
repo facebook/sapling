@@ -23,23 +23,8 @@ using namespace facebook::eden;
 
 namespace {
 
-class SpyStructuredLogger : public StructuredLogger {
- public:
-  SpyStructuredLogger() : StructuredLogger(true, SessionInfo{}) {}
-  std::atomic<int> callCount{0};
-
- protected:
-  void logDynamicEvent(DynamicEvent) override {
-    callCount.fetch_add(1);
-  }
-};
-
-std::shared_ptr<ReloadableConfig> makeTestReloadableConfig(
-    bool enableXplatLoggerEvents = false) {
-  auto config = EdenConfig::createTestEdenConfig();
-  config->enableXplatLoggerEvents.setValue(
-      enableXplatLoggerEvents, ConfigSourceType::UserConfig, true);
-  return std::make_shared<ReloadableConfig>(std::move(config));
+std::shared_ptr<ReloadableConfig> makeTestReloadableConfig() {
+  return std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
 }
 
 class SpyXplatLogger : public XplatLogger {
@@ -91,90 +76,45 @@ struct TestTypelessEvent : public TypelessTestEvent {
   }
 };
 
-class EdenFsEventsLoggerTest : public ::testing::Test {
- protected:
-  EdenFsEventsLogger createLogger(
-      bool enableXplatLoggerEvents,
-      std::shared_ptr<SpyStructuredLogger> spyLogger,
-      XplatLogger* xplatLogger) {
-    auto reloadableConfig = makeTestReloadableConfig(enableXplatLoggerEvents);
-    return EdenFsEventsLogger(
-        std::move(spyLogger),
-        xplatLogger,
-        std::move(reloadableConfig),
-        makeRefPtr<EdenStats>());
-  }
-};
-
-TEST_F(EdenFsEventsLoggerTest, typedEventRoutesToStructuredLoggerWhenDisabled) {
-  auto spyLogger = std::make_shared<SpyStructuredLogger>();
-  auto logger = createLogger(false, spyLogger, nullptr);
+TEST(EdenFsEventsLoggerTest, typedEventUsesRetainedXplatLogger) {
+  auto spyXplatLogger = std::make_shared<SpyXplatLogger>();
+  std::weak_ptr<SpyXplatLogger> weakXplatLogger = spyXplatLogger;
+  EdenFsEventsLogger logger{spyXplatLogger};
+  spyXplatLogger.reset();
 
   logger.logEvent(TestTypedEvent{"hello", 42});
 
-  EXPECT_EQ(1, spyLogger->callCount.load());
-}
-
-TEST_F(EdenFsEventsLoggerTest, typedEventRoutesToXplatLoggerWhenEnabled) {
-  auto spyLogger = std::make_shared<SpyStructuredLogger>();
-  SpyXplatLogger spyXplatLogger;
-  auto logger = createLogger(true, spyLogger, &spyXplatLogger);
-
-  logger.logEvent(TestTypedEvent{"hello", 42});
-
-  EXPECT_EQ(1, spyXplatLogger.callCount.load());
-  EXPECT_EQ(0, spyLogger->callCount.load());
+  auto retainedXplatLogger = weakXplatLogger.lock();
+  ASSERT_NE(nullptr, retainedXplatLogger);
+  EXPECT_EQ(1, retainedXplatLogger->callCount.load());
   EXPECT_EQ(
-      std::string{xplat_keys::kEventsCategory}, spyXplatLogger.lastCategory);
+      std::string{xplat_keys::kEventsCategory},
+      retainedXplatLogger->lastCategory);
 
-  const auto& strings = spyXplatLogger.lastEvent.getStringMap();
+  const auto& strings = retainedXplatLogger->lastEvent.getStringMap();
   EXPECT_EQ("hello", strings.at("str"));
   EXPECT_EQ("test_typed_event", strings.at(std::string{xplat_keys::kType}));
 
-  const auto& ints = spyXplatLogger.lastEvent.getIntMap();
+  const auto& ints = retainedXplatLogger->lastEvent.getIntMap();
   EXPECT_EQ(42, ints.at("number"));
 }
 
-TEST_F(
-    EdenFsEventsLoggerTest,
-    typedEventRoutesToStructuredLoggerWhenXplatLoggerNull) {
-  auto spyLogger = std::make_shared<SpyStructuredLogger>();
-  auto logger = createLogger(true, spyLogger, nullptr);
-
-  logger.logEvent(TestTypedEvent{"hello", 42});
-
-  EXPECT_EQ(1, spyLogger->callCount.load());
-}
-
-TEST_F(
-    EdenFsEventsLoggerTest,
-    typelessEventRoutesToStructuredLoggerWhenDisabled) {
-  auto spyLogger = std::make_shared<SpyStructuredLogger>();
-  auto logger = createLogger(false, spyLogger, nullptr);
+TEST(EdenFsEventsLoggerTest, typelessEventOmitsType) {
+  auto spyXplatLogger = std::make_shared<SpyXplatLogger>();
+  EdenFsEventsLogger logger{spyXplatLogger};
 
   logger.logEvent(TestTypelessEvent{"world", 99});
 
-  EXPECT_EQ(1, spyLogger->callCount.load());
-}
-
-TEST_F(EdenFsEventsLoggerTest, typelessEventRoutesToXplatLoggerWhenEnabled) {
-  auto spyLogger = std::make_shared<SpyStructuredLogger>();
-  SpyXplatLogger spyXplatLogger;
-  auto logger = createLogger(true, spyLogger, &spyXplatLogger);
-
-  logger.logEvent(TestTypelessEvent{"world", 99});
-
-  EXPECT_EQ(1, spyXplatLogger.callCount.load());
-  EXPECT_EQ(0, spyLogger->callCount.load());
+  EXPECT_EQ(1, spyXplatLogger->callCount.load());
   EXPECT_EQ(
-      std::string{xplat_keys::kEventsCategory}, spyXplatLogger.lastCategory);
+      std::string{xplat_keys::kEventsCategory}, spyXplatLogger->lastCategory);
 
-  const auto& strings = spyXplatLogger.lastEvent.getStringMap();
+  const auto& strings = spyXplatLogger->lastEvent.getStringMap();
   EXPECT_EQ("world", strings.at("str"));
   // TypelessEvent should NOT have the type field
   EXPECT_EQ(strings.end(), strings.find(std::string{xplat_keys::kType}));
 
-  const auto& ints = spyXplatLogger.lastEvent.getIntMap();
+  const auto& ints = spyXplatLogger->lastEvent.getIntMap();
   EXPECT_EQ(99, ints.at("number"));
 }
 

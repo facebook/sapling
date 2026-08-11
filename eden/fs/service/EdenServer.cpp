@@ -740,14 +740,12 @@ EdenServer::EdenServer(
 #endif
               )},
       edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
-          structuredLogger_,
 #ifdef EDEN_HAVE_LOGGER
-          xplatLogger_.get(),
+          xplatLogger_
 #else
-          nullptr,
+          nullptr
 #endif
-          config_,
-          edenStats.copy())},
+          )},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
