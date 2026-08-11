@@ -75,22 +75,53 @@ def load_out_env():
 def find_vcvarsall():
     if os.name != "nt":
         return ""
+
+    program_files_x86 = os.environ.get("ProgramFiles(x86)")
+    if program_files_x86:
+        vswhere = os.path.join(
+            program_files_x86,
+            "Microsoft Visual Studio",
+            "Installer",
+            "vswhere.exe",
+        )
+        if os.path.isfile(vswhere):
+            try:
+                paths = output(
+                    [
+                        vswhere,
+                        "-latest",
+                        "-products",
+                        "*",
+                        "-find",
+                        r"VC\Auxiliary\Build\vcvarsall.bat",
+                        "-utf8",
+                    ]
+                ).splitlines()
+            except (OSError, subprocess.CalledProcessError) as ex:
+                print(f"warning: failed to run {vswhere}: {ex}", file=sys.stderr)
+            else:
+                for path in paths:
+                    path = path.strip()
+                    if path and os.path.isfile(path):
+                        return path
+
     patterns = []
     for envvar in ("ProgramFiles", "ProgramFiles(x86)"):
         root = os.environ.get(envvar)
         if root:
-            patterns.append(
-                os.path.join(
-                    root,
-                    "Microsoft Visual Studio",
-                    "20[0-9][0-9]",
-                    "*",
-                    "VC",
-                    "Auxiliary",
-                    "Build",
-                    "vcvarsall.bat",
+            for version_pattern in ("20[0-9][0-9]", "1[0-9]"):
+                patterns.append(
+                    os.path.join(
+                        root,
+                        "Microsoft Visual Studio",
+                        version_pattern,
+                        "*",
+                        "VC",
+                        "Auxiliary",
+                        "Build",
+                        "vcvarsall.bat",
+                    )
                 )
-            )
     paths = [path for pattern in patterns for path in glob.glob(pattern)]
     return sorted(paths, reverse=True)[0] if paths else ""
 
@@ -731,7 +762,7 @@ def add_common_options(parser):
         help=(
             "Windows-only path to vcvarsall.bat. If omitted, out/env "
             "VCVARSALL or VCVARSALL_PATH is used, then Visual Studio "
-            "2017/2019/2022 install paths are searched."
+            "is discovered using vswhere or common install paths."
         ),
     )
 
