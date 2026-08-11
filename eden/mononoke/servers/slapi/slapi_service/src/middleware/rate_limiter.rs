@@ -19,6 +19,8 @@ use http::Response;
 use http::StatusCode;
 use http::Uri;
 use maplit::hashmap;
+use permission_checker::MononokeIdentitySet;
+use permission_checker::TenantInfo;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
 use tracing::debug;
@@ -27,6 +29,26 @@ use crate::utils::build_counter;
 use crate::utils::counter_check_and_bump;
 
 const EDENAPI_QPS_LIMIT: &str = "edenapi_qps";
+
+#[derive(Debug, Eq, PartialEq)]
+enum LegacyQpsDecision {
+    Allow,
+    Reject(String),
+}
+
+fn too_many_requests(message: impl ToString) -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::TOO_MANY_REQUESTS)
+        .body(message.to_string().into_body())
+        .expect("Couldn't build http response")
+}
+
+fn legacy_response(decision: Option<LegacyQpsDecision>) -> Option<Response<Body>> {
+    match decision {
+        Some(LegacyQpsDecision::Reject(message)) => Some(too_many_requests(message)),
+        Some(LegacyQpsDecision::Allow) | None => None,
+    }
+}
 
 // NOTE: Our Throttling middleware is implemented as Gotham middleware for 3 reasons:
 // - It needs to replace responses.
@@ -72,39 +94,56 @@ impl Middleware for ThrottleMiddleware {
             );
         }
 
-        let rate_limiter = ctx.session().rate_limiter().or_else(|| {
-            debug!("No rate_limiter info found");
-            None
-        })?;
+        legacy_response(
+            check_and_report_legacy_qps(
+                &ctx,
+                metadata.identities(),
+                metadata.clientinfo_atlas(),
+                &tenant,
+            )
+            .await,
+        )
+    }
+}
 
-        // No main id -> this request can't be attributed to a client, so it
-        // isn't subject to per-client throttling.
-        let Some(client_main_id) = tenant.client_id.as_deref() else {
-            debug!("No main client id found");
-            return None;
-        };
-        let identities = metadata.identities();
-        let atlas = metadata.clientinfo_atlas();
+async fn check_and_report_legacy_qps(
+    ctx: &CoreContext,
+    identities: &MononokeIdentitySet,
+    clientinfo_atlas: Option<bool>,
+    tenant: &TenantInfo,
+) -> Option<LegacyQpsDecision> {
+    let rate_limiter = ctx.session().rate_limiter().or_else(|| {
+        debug!("No rate_limiter info found");
+        None
+    })?;
 
-        let limit = rate_limiter.find_rate_limit(
-            Metric::EdenApiQps,
-            Some(identities.clone()),
-            Some(client_main_id),
-            atlas,
-        )?;
+    // No main id -> this request can't be attributed to a client, so it
+    // isn't subject to per-client throttling.
+    let Some(client_main_id) = tenant.client_id.as_deref() else {
+        debug!("No main client id found");
+        return None;
+    };
 
-        let enforced = match limit.body.raw_config.status {
-            RateLimitStatus::Disabled => return None,
-            RateLimitStatus::Tracked => false,
-            RateLimitStatus::Enforced => true,
-            _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
-        };
+    let limit = rate_limiter.find_rate_limit(
+        Metric::EdenApiQps,
+        Some(identities.clone()),
+        Some(client_main_id),
+        clientinfo_atlas,
+    )?;
 
-        let category = rate_limiter.category();
-        let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, client_main_id);
+    let enforced = match limit.body.raw_config.status {
+        RateLimitStatus::Disabled => return None,
+        RateLimitStatus::Tracked => false,
+        RateLimitStatus::Enforced => true,
+        _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
+    };
 
+    let category = rate_limiter.category();
+    let counter = build_counter(ctx, category, EDENAPI_QPS_LIMIT, client_main_id);
+
+    Some(
         match counter_check_and_bump(
-            &ctx,
+            ctx,
             counter,
             1.0,
             limit,
@@ -116,16 +155,8 @@ impl Middleware for ThrottleMiddleware {
         )
         .await
         {
-            Ok(_) => None,
-            Err(response) => {
-                // Per-user rate limiting (counter keyed by client_main_id):
-                // always 429, this client specifically is the offender.
-                let res = Response::builder()
-                    .status(StatusCode::TOO_MANY_REQUESTS)
-                    .body(response.to_string().into_body())
-                    .expect("Couldn't build http response");
-                Some(res)
-            }
-        }
-    }
+            Ok(_) => LegacyQpsDecision::Allow,
+            Err(response) => LegacyQpsDecision::Reject(response.to_string()),
+        },
+    )
 }
