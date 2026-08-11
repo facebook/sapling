@@ -219,7 +219,6 @@ cpp_library(
         "EdenStructuredLogger.h",
     ],
     deps = [
-        ":stats",
         ":xplat_keys",
         ":xplat_logger",
     ],
@@ -227,6 +226,5 @@ cpp_library(
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/common/telemetry:structured_logger",
-        "//eden/common/utils:ref_ptr",
     ],
 )

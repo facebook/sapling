@@ -8,41 +8,29 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 #include <gtest/gtest.h>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/LogEvent.h"
-#include "eden/common/telemetry/StructuredLogger.h"
-#include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/XplatKeys.h"
-#include "eden/fs/telemetry/facebook/EdenTelemetryIdentity.h"
-#include "eden/fs/telemetry/facebook/XplatLogger.h"
 
 using namespace facebook::eden;
 
 namespace {
 
-std::shared_ptr<ReloadableConfig> makeTestReloadableConfig() {
-  return std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
-}
-
-class SpyXplatLogger : public XplatLogger {
+class SpyXplatLogger : public IXplatLogger {
  public:
-  SpyXplatLogger()
-      : XplatLogger(
-            EdenTelemetryIdentity{},
-            makeRefPtr<EdenStats>(),
-            makeTestReloadableConfig()) {}
-
-  std::atomic<int> callCount{0};
+  int callCount{0};
   std::string lastCategory;
   DynamicEvent lastEvent;
 
   void logEvent(std::string_view category, const DynamicEvent& event) override {
     lastCategory = std::string{category};
     lastEvent = event;
-    callCount.fetch_add(1);
+    ++callCount;
   }
 };
 
@@ -86,7 +74,7 @@ TEST(EdenFsEventsLoggerTest, typedEventUsesRetainedXplatLogger) {
 
   auto retainedXplatLogger = weakXplatLogger.lock();
   ASSERT_NE(nullptr, retainedXplatLogger);
-  EXPECT_EQ(1, retainedXplatLogger->callCount.load());
+  EXPECT_EQ(1, retainedXplatLogger->callCount);
   EXPECT_EQ(
       std::string{xplat_keys::kEventsCategory},
       retainedXplatLogger->lastCategory);
@@ -105,13 +93,12 @@ TEST(EdenFsEventsLoggerTest, typelessEventOmitsType) {
 
   logger.logEvent(TestTypelessEvent{"world", 99});
 
-  EXPECT_EQ(1, spyXplatLogger->callCount.load());
+  EXPECT_EQ(1, spyXplatLogger->callCount);
   EXPECT_EQ(
       std::string{xplat_keys::kEventsCategory}, spyXplatLogger->lastCategory);
 
   const auto& strings = spyXplatLogger->lastEvent.getStringMap();
   EXPECT_EQ("world", strings.at("str"));
-  // TypelessEvent should NOT have the type field
   EXPECT_EQ(strings.end(), strings.find(std::string{xplat_keys::kType}));
 
   const auto& ints = spyXplatLogger->lastEvent.getIntMap();

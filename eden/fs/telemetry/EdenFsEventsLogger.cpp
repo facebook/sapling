@@ -8,7 +8,6 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 #include "eden/common/telemetry/DynamicEvent.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/XplatKeys.h"
 
@@ -17,13 +16,6 @@ namespace facebook::eden {
 EdenFsEventsLogger::EdenFsEventsLogger(
     std::shared_ptr<IXplatLogger> xplatLogger)
     : xplatLogger_{std::move(xplatLogger)} {}
-
-EdenFsEventsLogger::EdenFsEventsLogger(
-    std::shared_ptr<StructuredLogger> /*structuredLogger*/,
-    std::shared_ptr<IXplatLogger> xplatLogger,
-    std::shared_ptr<ReloadableConfig> /*reloadableConfig*/,
-    EdenStatsPtr /*edenStats*/)
-    : EdenFsEventsLogger{std::move(xplatLogger)} {}
 
 void EdenFsEventsLogger::logEvent(const TypedEvent& event) const {
   if (!xplatLogger_) {

@@ -10,16 +10,10 @@
 #include <memory>
 
 #include "eden/common/telemetry/LogEvent.h"
-#include "eden/common/utils/RefPtr.h"
 
 namespace facebook::eden {
 
-class EdenStats;
 class IXplatLogger;
-class ReloadableConfig;
-class StructuredLogger;
-
-using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
  * Logs edenfs_events telemetry through the process-wide XplatLogger.
@@ -31,11 +25,6 @@ using EdenStatsPtr = RefPtr<EdenStats>;
 class EdenFsEventsLogger {
  public:
   explicit EdenFsEventsLogger(std::shared_ptr<IXplatLogger> xplatLogger);
-  EdenFsEventsLogger(
-      std::shared_ptr<StructuredLogger> structuredLogger,
-      std::shared_ptr<IXplatLogger> xplatLogger,
-      std::shared_ptr<ReloadableConfig> reloadableConfig,
-      EdenStatsPtr edenStats);
 
   void logEvent(const TypedEvent& event) const;
   void logEvent(const TypelessEvent& event) const;

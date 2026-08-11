@@ -189,12 +189,8 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:log_info",
-        "//eden/common/telemetry:structured_logger",
-        "//eden/fs/config:config",
-        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:xplat_keys",
-        "//eden/fs/telemetry/facebook:eden_telemetry_identity",
-        "//eden/fs/telemetry/facebook:xplat_logger",
+        "//eden/fs/telemetry:xplat_logger",
     ],
 )
