@@ -21,18 +21,23 @@ use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Output;
 use std::process::Stdio;
+use std::sync::atomic::AtomicBool;
 
 /// Extensions to `std::process::Command`.
 pub trait CommandExt {
     /// Attempt to avoid inheriting file handles.
     /// Call this before setting up redirections!
+    /// If [`CONFIG_SKIP_PRE_EXEC`] is set, do nothing instead.
     fn avoid_inherit_handles(&mut self) -> &mut Self;
 
     /// Use a new session for the new process.
     /// Call this after `avoid_inherit_handles`!
+    /// If [`CONFIG_SKIP_PRE_EXEC`] is set, do nothing instead.
     fn new_session(&mut self) -> &mut Self;
 
     /// Setup this command to be detached from the parent process.
+    /// Calls `avoid_inherit_handles` and `new_session`.
+    /// If [`CONFIG_SKIP_PRE_EXEC`] is on, do nothing instead.
     fn detached(&mut self) -> &mut Self;
 
     // Setup this command to capture stderr/out.
@@ -86,6 +91,13 @@ pub struct CommandError {
     output: String,
     source: Option<io::Error>,
 }
+
+/// Skip `pre_exec` usage. When setting to `true`, it will:
+/// - No-op `avoid_inherit_handles`, `new_session`, and `detached` on unix.
+/// - Under the hood (Rust stdlib), uses `posix_spawn` instead of `fork`.
+/// `fork()` is more likely to crash on macOS. By default, this config is turned
+/// on for macOS.
+pub static CONFIG_SKIP_PRE_EXEC: AtomicBool = AtomicBool::new(cfg!(target_os = "macos"));
 
 impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -423,6 +435,9 @@ mod unix {
     const MAXFD: i32 = 2048;
 
     pub fn avoid_inherit_handles(command: &mut Command) {
+        if CONFIG_SKIP_PRE_EXEC.load(std::sync::atomic::Ordering::Acquire) {
+            return;
+        }
         // There are some constraints for this function.
         // See std::os::unix::process::CommandExt::pre_exec.
         // Namely, do not allocate.
@@ -430,6 +445,9 @@ mod unix {
     }
 
     pub fn new_session(command: &mut Command) {
+        if CONFIG_SKIP_PRE_EXEC.load(std::sync::atomic::Ordering::Acquire) {
+            return;
+        }
         unsafe { command.pre_exec(pre_exec_setsid) };
     }
 
