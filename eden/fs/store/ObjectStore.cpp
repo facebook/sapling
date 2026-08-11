@@ -674,7 +674,19 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
   deprioritizeWhenFetchHeavy(*fetchContext);
 
   return ImmediateFuture<BackingStore::GetBlobAuxResult>{
-      getBlobAuxDataImpl(id, fetchContext, watch)}
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = shared_from_this()](
+              ObjectId id,
+              ObjectFetchContextPtr context,
+              folly::stop_watch<std::chrono::milliseconds> watch)
+              -> folly::coro::Task<BackingStore::GetBlobAuxResult> {
+            co_return co_await self->getBlobAuxDataImpl(id, context, watch);
+          },
+          ObjectId{id},
+          fetchContext.copy(),
+          watch)
+          .semi()}
       .thenValue(
           [self = shared_from_this(),
            fetchContext = fetchContext.copy(),
@@ -743,7 +755,7 @@ folly::coro::now_task<BlobAuxData> ObjectStore::co_getBlobAuxData(
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
-  auto result = co_await co_getBlobAuxDataImpl(id, fetchContext, watch);
+  auto result = co_await getBlobAuxDataImpl(id, fetchContext, watch);
   if (!result.blobAux) {
     stats_->increment(&ObjectStoreStats::getBlobAuxDataFailed);
     XLOGF(DBG4, "unable to find aux data for {}", id);
@@ -768,72 +780,8 @@ folly::coro::now_task<BlobAuxData> ObjectStore::co_getBlobAuxData(
   }
 }
 
-folly::SemiFuture<BackingStore::GetBlobAuxResult>
-ObjectStore::getBlobAuxDataImpl(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context,
-    folly::stop_watch<std::chrono::milliseconds> watch) const {
-  // DEPRECATED: use co_getBlobAuxDataImpl directly. Kept only because
-  // getBlobAuxData still consumes ImmediateFuture chains;
-  // delete once those paths are migrated to coroutines.
-  return ImmediateFuture{backingStore_->getBlobAuxData(id, context)}
-      .thenValue(
-          [self = shared_from_this(), id, context = context.copy(), watch](
-              BackingStore::GetBlobAuxResult result)
-              -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
-            if (result.blobAux &&
-                result.blobAux->sha1 !=
-                    kZeroHash) { // from eden/fs/model/Hash.cpp
-              self->stats_->increment(
-                  &ObjectStoreStats::getBlobAuxDataFromBackingStore);
-              self->stats_->addDuration(
-                  &ObjectStoreStats::getBlobAuxDataBackingstoreDuration,
-                  watch.elapsed());
-              return result;
-            }
-
-            return ImmediateFuture{self->getBlobImpl(id, context)}.thenValue(
-                [self, backingStoreResult = std::move(result), watch](
-                    BackingStore::GetBlobResult result) {
-                  if (result.blob) {
-                    self->stats_->increment(
-                        &ObjectStoreStats::getBlobAuxDataFromBlob);
-
-                    std::optional<Hash32> blake3;
-                    if (backingStoreResult.blobAux &&
-                        backingStoreResult.blobAux->blake3.has_value()) {
-                      blake3 = backingStoreResult.blobAux->blake3.value();
-                    }
-
-                    self->stats_->addDuration(
-                        &ObjectStoreStats::getBlobAuxDataFromBlobDuration,
-                        watch.elapsed());
-
-                    return BackingStore::GetBlobAuxResult{
-                        std::make_shared<BlobAuxData>(
-                            Hash20::sha1(result.blob->getContents()),
-                            std::move(blake3),
-                            result.blob->getSize()),
-                        result.origin};
-                  }
-                  self->stats_->increment(
-                      &ObjectStoreStats::getBlobAuxDataFailed);
-                  return BackingStore::GetBlobAuxResult{
-                      nullptr, ObjectFetchContext::Origin::NotFetched};
-                });
-          })
-      .thenError(
-          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
-              -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
-            self->stats_->increment(&ObjectStoreStats::getBlobAuxDataFailed);
-            XLOGF(DBG4, "unable to find aux data for {}", id);
-            return makeImmediateFuture<BackingStore::GetBlobAuxResult>(ew);
-          })
-      .semi();
-}
-
 folly::coro::now_task<BackingStore::GetBlobAuxResult>
-ObjectStore::co_getBlobAuxDataImpl(
+ObjectStore::getBlobAuxDataImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {

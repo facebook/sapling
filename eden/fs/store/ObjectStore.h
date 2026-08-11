@@ -521,12 +521,7 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
-  folly::SemiFuture<BackingStore::GetBlobAuxResult> getBlobAuxDataImpl(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context,
-      folly::stop_watch<std::chrono::milliseconds> watch) const;
-
-  folly::coro::now_task<BackingStore::GetBlobAuxResult> co_getBlobAuxDataImpl(
+  folly::coro::now_task<BackingStore::GetBlobAuxResult> getBlobAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
