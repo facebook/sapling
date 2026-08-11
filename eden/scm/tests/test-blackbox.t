@@ -148,3 +148,19 @@ blackbox should not fail with "TypeError: not enough arguments for format string
   $ sl blackbox --pattern '{"legacy_log":{"service":"foo"}}'
   [legacy][foo] bar %s %r
   [legacy][foo] bar %s %r arg1
+
+blackbox.enable=false skips opening the on-disk log, even for read-write
+commands (checked via the file, since in-process tests share the memory buffer)
+
+  $ newclientrepo enabletest
+  $ echo x > x
+  $ rm -rf .sl/blackbox
+  $ sl --config blackbox.enable=false add x
+  $ test -e .sl/blackbox
+  [1]
+
+logging stays on by default
+
+  $ echo y > y
+  $ sl add y
+  $ test -e .sl/blackbox

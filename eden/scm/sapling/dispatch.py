@@ -1073,11 +1073,14 @@ def _dispatch(req):
 def _initblackbox(req, repo, cmdtype):
     """Initialize the native blackbox logging at the shared repo path.
 
-    This might choose to disable logging if the blackbox extension is disabled
-    via '--config=extensions.blackbox=!' or '--config=blackbox.track=', and
-    the command is read-only. (In other words, read-write commands will always
-    be logged)
+    This might choose to disable logging if 'blackbox.enable' is false, or if
+    the blackbox extension is disabled via '--config=extensions.blackbox=!' or
+    '--config=blackbox.track=' and the command is read-only. (In other words,
+    read-write commands will always be logged)
     """
+    if not repo.ui.configbool("blackbox", "enable", True):
+        return
+
     # See "class command" in registrar.py for valid command types.
     # Enforce blackbox logging for non-readonly commands, so if an automation
     # runs commands like `hg commit --config extensions.blackbox=!`, we still
