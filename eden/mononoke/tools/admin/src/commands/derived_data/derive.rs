@@ -20,6 +20,9 @@ use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::ManifestStagePayload;
 use derived_data_manager::Rederivation;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use futures_stats::TimedTryFutureExt;
 use itertools::Itertools;
 use mononoke_api::ChangesetId;
@@ -136,16 +139,19 @@ pub(super) async fn derive(
         }
     } else if args.unsafe_derive_untopologically {
         for derived_data_type in derived_data_types {
-            for csid in csids {
-                unsafe_derive_untopologically(
-                    ctx,
-                    manager,
-                    derived_data_type,
-                    *csid,
-                    rederivation.clone(),
-                )
+            stream::iter(csids)
+                .map(|csid| {
+                    unsafe_derive_untopologically(
+                        &*ctx,
+                        manager,
+                        derived_data_type,
+                        *csid,
+                        rederivation.clone(),
+                    )
+                })
+                .buffer_unordered(50)
+                .try_collect::<Vec<_>>()
                 .await?;
-            }
         }
     } else {
         let (stats, ()) = manager
