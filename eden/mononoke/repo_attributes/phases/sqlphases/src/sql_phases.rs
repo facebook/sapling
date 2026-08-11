@@ -170,30 +170,10 @@ impl SqlPhases {
             return Ok(public_cold);
         }
 
-        let client_correlator = ctx.client_request_info().map(|cri| cri.correlator.as_str());
-        tracing::info!(
-            repo_id = %self.repo_id,
-            unknown_count = unknown.len(),
-            client_correlator = ?client_correlator,
-            "get_public_derive: changesets not in phases table, \
-             fetching all publishing heads and traversing ancestry"
-        );
         // log fetching public heads
         STATS::public_heads_fetched.add_value(1);
         let heads = (self.heads_fetcher)(ctx).await?;
-        tracing::info!(
-            repo_id = %self.repo_id,
-            heads_count = heads.len(),
-            client_correlator = ?client_correlator,
-            "get_public_derive: fetched publishing heads, starting mark_reachable_as_public"
-        );
         let freshly_marked = mark_reachable_as_public(ctx, self, &heads, ephemeral_derive).await?;
-        tracing::info!(
-            repo_id = %self.repo_id,
-            freshly_marked_count = freshly_marked.len(),
-            client_correlator = ?client_correlator,
-            "get_public_derive: mark_reachable_as_public completed"
-        );
 
         // Still do the get_public_raw in case someone else marked the changes as public
         // and thus mark_reachable_as_public did not return them as freshly_marked
@@ -300,20 +280,7 @@ pub async fn mark_reachable_as_public(
         .copied()
         .collect::<Vec<_>>();
 
-    let non_public_heads = input.len();
-    let client_correlator = ctx.client_request_info().map(|cri| cri.correlator.as_str());
-    tracing::info!(
-        repo_id = %phases.repo_id,
-        total_heads = all_heads.len(),
-        already_public = public.len(),
-        non_public_heads,
-        client_correlator = ?client_correlator,
-        "mark_reachable_as_public: starting DFS traversal"
-    );
-
-    let start = std::time::Instant::now();
     let mut unmarked = HashMap::new();
-    let mut lookups: u64 = 0;
     loop {
         let cs = match input.pop() {
             None => {
@@ -321,19 +288,6 @@ pub async fn mark_reachable_as_public(
             }
             Some(cs) => cs,
         };
-
-        lookups += 1;
-        if lookups.is_multiple_of(1000) {
-            tracing::info!(
-                repo_id = %phases.repo_id,
-                lookups,
-                unmarked_so_far = unmarked.len(),
-                stack_size = input.len(),
-                elapsed_s = start.elapsed().as_secs(),
-                client_correlator = ?client_correlator,
-                "mark_reachable_as_public: DFS traversal in progress"
-            );
-        }
 
         let phase = phases.get_single_raw(ctx, cs).await?;
         if let Some(Phase::Public) = phase {
@@ -350,15 +304,6 @@ pub async fn mark_reachable_as_public(
         input.extend(parents.into_iter().filter(|p| !unmarked.contains_key(p)));
     }
 
-    tracing::info!(
-        repo_id = %phases.repo_id,
-        total_lookups = lookups,
-        total_unmarked = unmarked.len(),
-        elapsed_s = start.elapsed().as_secs(),
-        client_correlator = ?client_correlator,
-        "mark_reachable_as_public: DFS traversal completed, writing to DB"
-    );
-
     // NOTE: We need to write phases in increasing generation number order, this will
     //       ensure that our phases in a valid state (i.e do not have any gaps). Once
     //       first public changeset is found we assume that all ancestors of it have
@@ -374,12 +319,5 @@ pub async fn mark_reachable_as_public(
         }
         result.extend(chunk)
     }
-    tracing::info!(
-        repo_id = %phases.repo_id,
-        total_written = result.len(),
-        elapsed_s = start.elapsed().as_secs(),
-        client_correlator = ?client_correlator,
-        "mark_reachable_as_public: completed"
-    );
     Ok(result)
 }

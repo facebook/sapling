@@ -32,7 +32,7 @@ export LLVM_PROFILE_FILE="$TESTTMP/default_%p.profraw"
 
 # Suppress diagnostic info logs from repo initialization facets that would
 # otherwise appear in test output and break .t file expectations.
-export RUST_LOG="${RUST_LOG:-info,repo_factory=WARN,dbbookmarks=WARN,warm_bookmarks_cache=WARN,sqlphases=WARN}"
+export RUST_LOG="${RUST_LOG:-info,repo_factory=WARN,dbbookmarks=WARN,warm_bookmarks_cache=WARN}"
 
 function urlencode {
   python_fn urlencode "$@"

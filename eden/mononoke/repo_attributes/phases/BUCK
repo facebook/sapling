@@ -50,7 +50,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:tracing",
         ":phases",
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/sql:sql",
