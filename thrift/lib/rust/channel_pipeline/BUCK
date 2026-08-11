@@ -22,6 +22,7 @@ rust_library(
         "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:rust_type_erased_box",
     ],
     cxx_bridge = "src/ffi.rs",
+    test_labels = ["tpx:no-timeout-multiplier"],
     visibility = ["PUBLIC"],
     deps = [
         "fbcode//common/rust/folly:iobuf",
@@ -39,6 +40,7 @@ rust_unittest(
     ],
     crate_root = "src/integration_test.rs",
     cxx_bridge = "src/integration_test.rs",
+    labels = ["tpx:no-timeout-multiplier"],
     deps = [
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:static_assertions",
