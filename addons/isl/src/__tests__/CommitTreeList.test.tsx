@@ -7,6 +7,8 @@
 
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import App from '../App';
+import {scrollToYouAreHereOnOpen} from '../CommitTreeList';
+import {writeAtom} from '../jotaiUtils';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
   closeCommitInfoSidebar,
@@ -24,6 +26,8 @@ import {CommandRunner} from '../types';
 describe('CommitTreeList', () => {
   beforeEach(() => {
     resetTestMessages();
+    writeAtom(scrollToYouAreHereOnOpen, false);
+    jest.mocked(HTMLElement.prototype.scrollIntoView).mockClear();
   });
 
   it('shows loading spinner on mount', () => {
@@ -43,6 +47,43 @@ describe('CommitTreeList', () => {
 
     expect(screen.getByTestId('bug-button')).toBeInTheDocument();
     expect(screen.getByText('invalid certificate')).toBeInTheDocument();
+  });
+
+  it('auto-scrolls to the current commit when enabled', async () => {
+    render(<App />);
+    act(() => {
+      writeAtom(scrollToYouAreHereOnOpen, true);
+      simulateRepoConnected();
+      closeCommitInfoSidebar();
+      simulateCommits({
+        value: [
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('a', 'My Commit', '1', {isDot: true}),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'auto',
+        block: 'start',
+      });
+    });
+  });
+
+  it('clears the top bar height when it unmounts', () => {
+    const {unmount} = render(<App />);
+    act(() => {
+      simulateRepoConnected();
+      simulateCommits({
+        value: [COMMIT('1', 'some public base', '0', {phase: 'public', isDot: true})],
+      });
+    });
+
+    expect(document.body.style.getPropertyValue('--top-bar-height')).not.toBe('');
+    unmount();
+    expect(document.body.style.getPropertyValue('--top-bar-height')).toBe('');
   });
 
   describe('after commits loaded', () => {

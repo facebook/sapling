@@ -12,8 +12,11 @@ import type {Hash} from './types';
 
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useEffect, useRef} from 'react';
 import {Commit, InlineProgressSpan} from './Commit';
 import {commitTreeSearchFilter} from './CommitTreeSearchFilter';
 import {Center, LargeSpinner} from './ComponentUtils';
@@ -41,7 +44,6 @@ import {
 import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 
-import {Icon} from 'isl-components/Icon';
 import './CommitTreeList.css';
 import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
@@ -49,6 +51,32 @@ import {focusMode} from './atoms/FocusModeState';
 type DagCommitListProps = {
   isNarrow: boolean;
 };
+
+const YOU_ARE_HERE_ANCHOR_ID = 'isl-you-are-here-anchor';
+
+/**
+ * Where the "You are here" row is relative to the scroll viewport: visible, or
+ * scrolled off the top ('above') / bottom ('below'). Drives the floating button.
+ */
+type YouAreHerePosition = 'visible' | 'above' | 'below';
+const youAreHerePosition = atom<YouAreHerePosition>('visible');
+
+/**
+ * Scroll the commit graph so the "You are here" row is visible.
+ * Returns false if the anchor is not in the DOM yet (nothing scrolled).
+ */
+export function scrollToYouAreHere(behavior: ScrollBehavior = 'smooth'): boolean {
+  // ponytail: getElementById avoids threading a ref from the DAG row up to the TopBar button.
+  const anchor = document.getElementById(YOU_ARE_HERE_ANCHOR_ID);
+  // The anchor is a zero-height span trailing the badge; scroll the container so the
+  // badge above it isn't clipped at the top edge.
+  const container = anchor?.parentElement;
+  if (container == null) {
+    return false;
+  }
+  container.scrollIntoView({behavior, block: 'start'});
+  return true;
+}
 
 const dagWithYouAreHere = atom(get => {
   let dag = get(dagWithPreviews);
@@ -63,6 +91,12 @@ const dagWithYouAreHere = atom(get => {
 export const condenseObsoleteStacks = localStorageBackedAtom<boolean | null>(
   'isl.condense-obsolete-stacks',
   true,
+);
+
+/** Opt-in because auto-scrolling on open can be intrusive. */
+export const scrollToYouAreHereOnOpen = localStorageBackedAtom<boolean>(
+  'isl.scroll-to-you-are-here-on-open',
+  false,
 );
 
 const renderSubsetUnionSelection = atom(get => {
@@ -209,10 +243,69 @@ function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLD
 
 function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
   const inlineProgress = useAtomValue(inlineProgressByHash(info.hash));
+  const setPosition = useSetAtom(youAreHerePosition);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    // Observe the badge container (the anchor's parent has real height) to drive the
+    // floating "scroll to here" button, which shows when the row is off-screen and
+    // points toward wherever it scrolled off.
+    const el = anchorRef.current?.parentElement;
+    if (el == null) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setPosition('visible');
+          return;
+        }
+        const bounds = entry.rootBounds;
+        const above = bounds != null && entry.boundingClientRect.top < bounds.top;
+        setPosition(above ? 'above' : 'below');
+      },
+      {root: el.closest('.main-content-area'), threshold: 0},
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      // No "You are here" row rendered -> nothing to scroll to, so hide the button.
+      setPosition('visible');
+    };
+  }, [setPosition]);
   return (
     <YouAreHereGlyph info={info}>
+      <span id={YOU_ARE_HERE_ANCHOR_ID} ref={anchorRef} />
       {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
     </YouAreHereGlyph>
+  );
+}
+
+// Sticky (not fixed) so it centers over the commit-tree column (`.main-content-area`)
+// rather than the whole panel — the commit-info sidebar is a separate drawer outside it.
+// Rendered in the 'above' slot (first child, sticks to top) or 'below' slot (last child,
+// sticks to bottom) so it points toward wherever the current commit scrolled off.
+function ScrollToCurrentCommitButton({slot}: {slot: 'above' | 'below'}) {
+  const position = useAtomValue(youAreHerePosition);
+  if (position !== slot) {
+    return null;
+  }
+  const atTop = slot === 'above';
+  return (
+    <div className={'scroll-to-current-commit ' + (atTop ? 'floating-top' : 'floating-bottom')}>
+      <Tooltip
+        delayMs={DOCUMENTATION_DELAY}
+        placement={atTop ? 'bottom' : 'top'}
+        title={<T>Scroll to your current commit ("You are here")</T>}>
+        <Button
+          primary
+          className="scroll-to-current-commit-pill"
+          onClick={() => scrollToYouAreHere('smooth')}
+          data-testid="scroll-to-current-commit-button">
+          <Icon icon={atTop ? 'arrow-up' : 'arrow-down'} />
+          <T>Scroll to current commit</T>
+        </Button>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -290,6 +383,16 @@ export function CommitTreeList() {
 
   const {trees} = useAtomValue(treeWithPreviews);
   const fetchError = useAtomValue(commitFetchError);
+  const shouldScrollToYouAreHereOnOpen = useAtomValue(scrollToYouAreHereOnOpen);
+
+  const hasAutoScrolled = useRef(false);
+  useEffect(() => {
+    if (!shouldScrollToYouAreHereOnOpen || hasAutoScrolled.current || trees.length === 0) {
+      return;
+    }
+    hasAutoScrolled.current = scrollToYouAreHere('auto');
+  }, [trees, shouldScrollToYouAreHereOnOpen]);
+
   return fetchError == null && trees.length === 0 ? (
     <Center>
       <LargeSpinner />
@@ -297,7 +400,9 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
+      <ScrollToCurrentCommitButton slot="above" />
       <DagCommitList isNarrow={isNarrow} />
+      <ScrollToCurrentCommitButton slot="below" />
       <MaybeEditStackModal />
     </>
   );

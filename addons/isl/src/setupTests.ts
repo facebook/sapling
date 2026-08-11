@@ -43,6 +43,21 @@ configure({
 
 global.ResizeObserver = require('resize-observer-polyfill');
 
+// jsdom does not implement scrollIntoView; stub it so components that call it
+// (e.g. auto-scroll-to-"You are here") don't throw during tests.
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
+
+// jsdom does not implement IntersectionObserver; stub it so components that observe
+// (e.g. the "You are here" viewport tracking) don't throw during tests.
+global.IntersectionObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+} as unknown as typeof IntersectionObserver;
+
 global.fetch = jest.fn().mockImplementation(() => Promise.resolve());
 
 // Default all QE flags to false in tests so they don't hang waiting for server responses

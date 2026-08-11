@@ -9,11 +9,13 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
+import {useCallback, useRef} from 'react';
 import {clearTrackedCache} from 'shared/LRU';
 import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
+import {scrollToYouAreHere} from './CommitTreeList';
 import {CommitTreeSearchFilterButton} from './CommitTreeSearchFilter';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
@@ -31,15 +33,37 @@ import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverA
 import {Internal} from './Internal';
 import './TopBar.css';
 
+// Publish the (wrapping, variable-height) top bar's height as a CSS var so overlays like
+// the floating "scroll to current commit" pill can sit below it instead of over it.
+// A ref callback (not useEffect) because the bar mounts only once commits have loaded.
+function useTopBarHeightVar() {
+  const observerRef = useRef<ResizeObserver | null>(null);
+  return useCallback((el: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (el == null) {
+      document.body.style.removeProperty('--top-bar-height');
+      return;
+    }
+    document.body.style.setProperty('--top-bar-height', `${el.offsetHeight}px`);
+    const obs = new ResizeObserver(([entry]) => {
+      const height = entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight;
+      document.body.style.setProperty('--top-bar-height', `${height}px`);
+    });
+    obs.observe(el);
+    observerRef.current = obs;
+  }, []);
+}
+
 export function TopBar() {
   const loaded = useAtomValue(haveCommitsLoadedYet);
   const canPush = useAtomValue(haveRemotePath);
+  const ref = useTopBarHeightVar();
 
   if (!loaded) {
     return null;
   }
   return (
-    <div className="top-bar">
+    <div className="top-bar" ref={ref}>
       <span className="button-group">
         {canPush && <PullButton />}
         <CwdSelector />
@@ -52,6 +76,7 @@ export function TopBar() {
       </span>
       <span className="button-group">
         <DebugToolsButton />
+        <ScrollToYouAreHereButton />
         <CommitTreeSearchFilterButton />
         <FocusModeToggle />
         <BugButton />
@@ -59,6 +84,19 @@ export function TopBar() {
         <RefreshButton />
       </span>
     </div>
+  );
+}
+
+function ScrollToYouAreHereButton() {
+  return (
+    <Tooltip
+      delayMs={DOCUMENTATION_DELAY}
+      placement="bottom"
+      title={<T>Scroll to your current commit ("You are here")</T>}>
+      <Button icon onClick={() => scrollToYouAreHere()} data-testid="scroll-to-you-are-here-button">
+        <Icon icon="target" />
+      </Button>
+    </Tooltip>
   );
 }
 

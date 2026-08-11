@@ -80,16 +80,6 @@ describe('Interactive Split', () => {
         value: TEST_COMMIT_HISTORY,
       });
     });
-
-    const mockObserveFn = () => {
-      return {
-        observe: jest.fn(),
-        unobserve: jest.fn(),
-        disconnect: jest.fn(),
-      };
-    };
-
-    window.IntersectionObserver = jest.fn().mockImplementation(mockObserveFn);
   });
 
   it('shows split button on dot commit', () => {

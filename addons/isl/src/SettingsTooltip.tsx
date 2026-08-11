@@ -26,7 +26,7 @@ import {
   rebaseOffWarmWarningEnabled,
   rebaseOntoMasterWarningEnabled,
 } from './Commit';
-import {condenseObsoleteStacks} from './CommitTreeList';
+import {condenseObsoleteStacks, scrollToYouAreHereOnOpen} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
@@ -142,6 +142,7 @@ function SettingsDropdown({
         <Column alignStart>
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
+          <ScrollToYouAreHereSetting />
           <RebaseOffWarmWarningSetting />
           <DistantRebaseWarningSetting />
           <RebaseOntoMasterWarningSetting />
@@ -353,6 +354,23 @@ function CondenseObsoleteSetting() {
           setValue(checked);
         }}>
         <T>Condense Obsolete Stacks</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function ScrollToYouAreHereSetting() {
+  const [value, setValue] = useAtom(scrollToYouAreHereOnOpen);
+  return (
+    <Tooltip
+      title={t('When enabled, ISL automatically scrolls to your current commit when it opens.')}>
+      <Checkbox
+        data-testid="scroll-to-you-are-here-on-open"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Auto scroll to "You are here" on open</T>
       </Checkbox>
     </Tooltip>
   );
