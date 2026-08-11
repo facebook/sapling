@@ -75,7 +75,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     #[cfg(fbcode_build)]
     let rim_backend = rim_backend
         .map(RimBackend)
-        .inspect(|rim_backend| crate::utils::rim_shadow::init(*rim_backend));
+        .inspect(|rim_backend| crate::utils::rim_rate_limiter::init(*rim_backend));
 
     #[cfg(not(fbcode_build))]
     let _ = rim_backend;

@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-//! Shadow-mode RIM probe on the EdenAPI QPS path — runs alongside the
-//! legacy ratelim decision and never affects the response. Exists so RIM
-//! vs ratelim decisions can be compared in scuba before RIM becomes
-//! authoritative.
+//! RIM-backed rate limiting on the EdenAPI QPS path. Supports both comparison
+//! against the legacy rate limiter and authoritative enforcement. RIM failures
+//! always fail open.
 //!
 //! Configerator source of truth: `source/rim/backend_settings/mononoke_server/`.
 
@@ -26,10 +25,16 @@ use tracing::warn;
 const RIM_RESOURCE_QPS: &str = "qps";
 const RIM_ACQUIRE_TIMEOUT: Duration = Duration::from_millis(500);
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RimQpsDecision {
+    Allow,
+    Reject,
+    FailOpen,
+}
+
 /// Call once at server startup. Failures are logged and swallowed so RIM
-/// infra outages can't prevent the server from serving traffic — the
-/// shadow probe just becomes a no-op.
-pub fn init(rim_backend: RimBackend) {
+/// infra outages can't prevent the server from serving traffic.
+pub(crate) fn init(rim_backend: RimBackend) {
     match RimThinClient::initialize(rim_backend) {
         Ok(status) if status.success() => {
             debug!("RIM thin client initialized for backend {:?}", rim_backend);
@@ -47,14 +52,13 @@ pub fn init(rim_backend: RimBackend) {
     }
 }
 
-/// Never returns a decision — the caller must not gate the request on
-/// this. Emits a scuba sample only on reject / error / timeout to keep
-/// scuba quota bounded; the common allow path is silent. The "ratelim
-/// reject, RIM allow" comparison is covered by ratelim's own existing
-/// rejection log.
-pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
+pub(crate) async fn check_qps(
+    ctx: &CoreContext,
+    tenant: &TenantInfo,
+    rim_backend: RimBackend,
+) -> RimQpsDecision {
     let Some(tenancy_path) = tenant.tenancy_path() else {
-        return;
+        return RimQpsDecision::FailOpen;
     };
     let requirements = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
 
@@ -64,29 +68,41 @@ pub async fn shadow_check(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: R
         scuba.log_with_msg(tag, detail);
     };
 
-    match timeout(
+    let result = match timeout(
         RIM_ACQUIRE_TIMEOUT,
         RimThinClient::acquire(rim_backend, tenancy_path, requirements),
     )
     .await
     {
-        Ok(Ok(result)) if result.rejected() => {
-            log("RIM would reject", format!("code={:?}", result.code()));
-        }
-        Ok(Ok(_)) => {}
+        Ok(Ok(result)) => result,
         Ok(Err(e)) => {
-            log("RIM shadow probe error", e.to_string());
+            log("RIM QPS check error", e.to_string());
+            return RimQpsDecision::FailOpen;
         }
         Err(_) => {
             log(
-                "RIM shadow probe timeout",
+                "RIM QPS check timeout",
                 format!("timeout after {RIM_ACQUIRE_TIMEOUT:?}"),
             );
+            return RimQpsDecision::FailOpen;
         }
+    };
+
+    if result.rejected() {
+        log(
+            "RIM rejected QPS request",
+            format!("code={:?}", result.code()),
+        );
+        RimQpsDecision::Reject
+    } else if result.failed() {
+        log("RIM QPS check failed", format!("code={:?}", result.code()));
+        RimQpsDecision::FailOpen
+    } else {
+        RimQpsDecision::Allow
     }
 }
 
-pub async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
+pub(crate) async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
     let Some(tenancy_path) = tenant.tenancy_path() else {
         return;
     };

@@ -31,7 +31,7 @@ pub mod convert;
 pub mod monitor;
 pub mod rate_limit;
 #[cfg(fbcode_build)]
-pub mod rim_shadow;
+pub mod rim_rate_limiter;
 
 pub use cbor::cbor_mime;
 pub use cbor::cbor_stream_filtered_errors;

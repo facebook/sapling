@@ -67,8 +67,8 @@ impl Middleware for ThrottleMiddleware {
             && justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None)
         {
             tokio::join!(
-                crate::utils::rim_shadow::shadow_check(&ctx, &tenant, rim_backend),
-                crate::utils::rim_shadow::report_qps(&ctx, &tenant, rim_backend),
+                crate::utils::rim_rate_limiter::check_qps(&ctx, &tenant, rim_backend),
+                crate::utils::rim_rate_limiter::report_qps(&ctx, &tenant, rim_backend),
             );
         }
 
