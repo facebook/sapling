@@ -400,44 +400,23 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
-  // Ensure this is a regular file.
-  // We intentionally want to refuse to compute the SHA1 of symlinks
-  switch (getDtype()) {
-    case dtype_t::Dir:
-      return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
-    case dtype_t::Symlink:
-      return makeImmediateFuture<Hash20>(
-          PathError(EINVAL, path, std::string_view{"file is a symlink"}));
-    case dtype_t::Regular:
-      break;
-    default:
-      return makeImmediateFuture<Hash20>(PathError(
-          EINVAL, path, std::string_view{"variant is of unhandled type"}));
-  }
-
-  // This is now guaranteed to be a dtype_t::Regular file. This means there's no
-  // need for a Tree case, as Trees are always directories.
-
-  return match(
-      variant_,
-      [&](const InodePtr& inode) {
-        return inode.asFilePtr()->getSha1(fetchContext);
-      },
-      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
-        return objectStore->getBlobSha1(entry.getObjectId(), fetchContext);
-      },
-      [&](const TreePtr&) {
-        return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
-      },
-      [&](const TreeEntry& entry) {
-        const auto& hash = entry.getContentSha1();
-        // If available, use the TreeEntry's ContentsSha1
-        if (hash.has_value()) {
-          return ImmediateFuture<Hash20>(hash.value());
-        }
-        // Revert to querying the objectStore for the file's metadata
-        return objectStore->getBlobSha1(entry.getObjectId(), fetchContext);
-      });
+  // DEPRECATED: use co_getSHA1 directly. Kept only because the futures Thrift
+  // handler and VirtualInodeLoaderTest still consume SemiFuture chains.
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [](VirtualInode inode,
+             RelativePath path,
+             std::shared_ptr<ObjectStore> objectStore,
+             ObjectFetchContextPtr fetchContext) -> folly::coro::Task<Hash20> {
+            co_return co_await inode.co_getSHA1(
+                path, objectStore, fetchContext);
+          },
+          *this,
+          path.copy(),
+          objectStore,
+          fetchContext.copy())
+          .semi()};
 }
 
 folly::coro::now_task<Hash20> VirtualInode::co_getSHA1(
