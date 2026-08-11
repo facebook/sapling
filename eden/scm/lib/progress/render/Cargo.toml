@@ -20,4 +20,3 @@ termwiz = { version = "0.23.3", default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unicode-segmentation = "1.13.3"
 unicode-width = "0.1.14"
-wezterm-dynamic = { version = "0.2.1", features = ["std"], default-features = false }

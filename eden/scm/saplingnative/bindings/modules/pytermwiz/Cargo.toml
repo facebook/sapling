@@ -11,4 +11,3 @@ cpython = { version = "0.7.2", features = ["python3-sys"], default-features = fa
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 termwiz = { version = "0.23.3", features = ["use_serde"], default-features = false }
-wezterm-dynamic = { version = "0.2.1", features = ["std"], default-features = false }

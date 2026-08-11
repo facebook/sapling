@@ -69,28 +69,6 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
     for crate, override in overrides.items():
         _set_autocargo_dep_override(autocargo, dep_kind, crate, override)
 
-    if "termwiz" in overrides:
-        # D105187099 switched fbsource termwiz to the wezterm git workspace.
-        # Buck's wezterm-dynamic target enables std, but autocargo does not inherit that:
-        #
-        #     error[E0599]: no associated function or constant named `from_dynamic`
-        #     found for struct `HashMap<K, V, S, A>` in the current scope
-        #     --> termwiz-0.23.3/src/hyperlink.rs:19:39
-        #
-        # The missing HashMap impl is gated behind wezterm-dynamic/std. Work around it for now.
-        # Revisit if fbsource monorepo switches to published termwiz.
-        _set_autocargo_dep_override(
-            autocargo,
-            dep_kind,
-            "wezterm-dynamic",
-            {
-                "default-features": False,
-                "features": ["std"],
-                "version": "0.2.1",
-            },
-        )
-        _add_extra_buck_dependency(autocargo, dep_kind, "fbsource//third-party/rust/vendor/wezterm-dynamic:0.2")
-
 def _set_autocargo_dep_override(autocargo, dep_kind, crate, override):
     dep = _set_default(
         autocargo,
@@ -101,12 +79,6 @@ def _set_autocargo_dep_override(autocargo, dep_kind, crate, override):
     )
     for key, value in override.items():
         dep.setdefault(key, value)
-
-def _add_extra_buck_dependency(autocargo, dep_kind, dep):
-    extra = _set_default(autocargo, "cargo_toml_config", "extra_buck_dependencies")
-    deps = extra.get(dep_kind, [])
-    if dep not in deps:
-        extra[dep_kind] = deps + [dep]
 
 def sl_rust_library(**kwargs):
     autocargo = _autocargo_overrides(**kwargs)
