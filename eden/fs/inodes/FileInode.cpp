@@ -1756,22 +1756,19 @@ void FileInode::materializeNow(
   // This function should only be called from the BLOB_NOT_LOADING state
   XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
-  // If the blob aux data is immediately available, use it to populate the SHA-1
-  // value in the overlay for this file.
+  // If the blob aux data is immediately available, use it to populate the
+  // cached hashes in the overlay for this file.
   // Since this uses state->nonMaterializedState.id we perform this before
   // calling state.setMaterialized().
-  auto blobSha1Future = getObjectStore().getBlobSha1(
-      state->nonMaterializedState.id, fetchContext);
   std::optional<Hash20> blobSha1;
-  if (blobSha1Future.isReady()) {
-    blobSha1 = std::move(blobSha1Future).get();
-  }
-
-  auto blobBlake3Future = getObjectStore().getBlobBlake3(
-      state->nonMaterializedState.id, fetchContext);
   std::optional<Hash32> blobBlake3;
-  if (blobBlake3Future.isReady()) {
-    blobBlake3 = std::move(blobBlake3Future).get();
+  // Preserve a cached SHA-1 even when the entry does not include BLAKE3.
+  if (auto blobAuxData = getObjectStore().getBlobAuxDataFromInMemoryCache(
+          state->nonMaterializedState.id,
+          fetchContext,
+          false /* blake3Required */)) {
+    blobSha1 = blobAuxData->sha1;
+    blobBlake3 = blobAuxData->blake3;
   }
 
   getOverlayFileAccess(state)->createFile(

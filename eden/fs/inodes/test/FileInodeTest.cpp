@@ -18,8 +18,10 @@
 #include <thread>
 
 #include "eden/common/utils/StatTimes.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
@@ -847,6 +849,30 @@ CO_TEST(FileInode, co_getSha1Materialized) {
   // overwritten) Just verify we get a valid SHA-1
   EXPECT_FALSE(sha1.toString().empty());
   EXPECT_EQ(40, sha1.toString().size()); // SHA-1 is 20 bytes = 40 hex chars
+}
+
+CO_TEST(FileInode, materializationPreservesCachedHashes) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"test.txt", "Hello World"}});
+  TestMount mount{builder};
+
+  auto inode = mount.getFileInode("test.txt");
+  auto objectStore = mount.getEdenMount()->getObjectStore();
+  auto fetchContext = ObjectFetchContext::getNullContext();
+  auto cachedAuxData = co_await objectStore->co_getBlobAuxData(
+      inode->getObjectId().value(), fetchContext, true /* blake3Needed */);
+  CO_ASSERT_TRUE(cachedAuxData.blake3.has_value());
+
+  co_await inode->ensureMaterialized(fetchContext, true).semi();
+
+  auto materializedSha1 =
+      mount.getEdenMount()->getOverlayFileAccess()->getSha1(*inode);
+  EXPECT_EQ(cachedAuxData.sha1, materializedSha1);
+
+  auto materializedBlake3 =
+      mount.getEdenMount()->getOverlayFileAccess()->getBlake3(
+          *inode, std::optional<std::string>{std::string(32, 'k')});
+  EXPECT_EQ(*cachedAuxData.blake3, materializedBlake3);
 }
 
 // TODO: test multiple flags together
