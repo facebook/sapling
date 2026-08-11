@@ -94,7 +94,12 @@ impl SourceControlServiceImpl {
             .target
             .clone()
             .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id = RepositoryId::new(
+            target
+                .repo_id
+                .try_into()
+                .map_err(scs_errors::invalid_request)?,
+        );
         self.check_write_allowed(&ctx, target_repo_id).await?;
         // Route through `get_or_load_repo_config_by_id` so split-loaded repos
         // (only present in the per-tier RepoSpec manifest) resolve correctly.
