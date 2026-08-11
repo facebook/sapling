@@ -383,7 +383,7 @@ folly::Try<folly::dynamic> collectNFSUtilStats() {
     auto nfsStatProc =
         SpawnedProcess({"nfsstat", "-f", "JSON"}, std::move(opts));
     std::string nfsStatOutputString = nfsStatProc.communicate().first;
-    nfsStatProc.waitTimeout(1s);
+    nfsStatProc.waitOrTerminateOrKill(1s, 1s);
     return folly::Try<folly::dynamic>(folly::parseJson(nfsStatOutputString));
   } catch (const std::exception& e) {
     return folly::Try<folly::dynamic>(e);
