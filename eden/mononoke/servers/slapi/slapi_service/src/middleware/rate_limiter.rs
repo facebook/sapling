@@ -27,8 +27,29 @@ use tracing::debug;
 
 use crate::utils::build_counter;
 use crate::utils::counter_check_and_bump;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::RimQpsDecision;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::check_qps;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::report_qps;
 
 const EDENAPI_QPS_LIMIT: &str = "edenapi_qps";
+
+#[cfg(fbcode_build)]
+enum QpsEnforcer {
+    Legacy,
+    Rim,
+}
+
+#[cfg(fbcode_build)]
+fn qps_enforcer() -> QpsEnforcer {
+    if justknobs::eval("scm/mononoke:slapi_rim_enforce", None, None) {
+        QpsEnforcer::Rim
+    } else {
+        QpsEnforcer::Legacy
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 enum LegacyQpsDecision {
@@ -43,10 +64,30 @@ fn too_many_requests(message: impl ToString) -> Response<Body> {
         .expect("Couldn't build http response")
 }
 
-fn legacy_response(decision: Option<LegacyQpsDecision>) -> Option<Response<Body>> {
+fn legacy_enforcement_response(decision: Option<LegacyQpsDecision>) -> Option<Response<Body>> {
     match decision {
         Some(LegacyQpsDecision::Reject(message)) => Some(too_many_requests(message)),
         Some(LegacyQpsDecision::Allow) | None => None,
+    }
+}
+
+#[cfg(fbcode_build)]
+fn rim_enforcement_response(decision: RimQpsDecision) -> Option<Response<Body>> {
+    match decision {
+        RimQpsDecision::Reject => Some(too_many_requests("RIM QPS rate limit exceeded")),
+        RimQpsDecision::Allow | RimQpsDecision::FailOpen => None,
+    }
+}
+
+#[cfg(fbcode_build)]
+fn enforcement_response(
+    enforcer: QpsEnforcer,
+    rim_decision: Option<RimQpsDecision>,
+    legacy_decision: Option<LegacyQpsDecision>,
+) -> Option<Response<Body>> {
+    match enforcer {
+        QpsEnforcer::Legacy => legacy_enforcement_response(legacy_decision),
+        QpsEnforcer::Rim => rim_decision.and_then(rim_enforcement_response),
     }
 }
 
@@ -83,26 +124,45 @@ impl Middleware for ThrottleMiddleware {
 
         let metadata = state.try_borrow::<MetadataState>()?.metadata();
         let tenant = metadata.tenant_info();
+        let identities = metadata.identities();
+        let clientinfo_atlas = metadata.clientinfo_atlas();
 
         #[cfg(fbcode_build)]
-        if let Some(rim_backend) = self.rim_backend
-            && justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None)
-        {
-            tokio::join!(
-                crate::utils::rim_rate_limiter::check_qps(&ctx, &tenant, rim_backend),
-                crate::utils::rim_rate_limiter::report_qps(&ctx, &tenant, rim_backend),
-            );
-        }
+        let enforcer = qps_enforcer();
 
-        legacy_response(
-            check_and_report_legacy_qps(
-                &ctx,
-                metadata.identities(),
-                metadata.clientinfo_atlas(),
-                &tenant,
-            )
-            .await,
+        #[cfg(fbcode_build)]
+        return if let Some(rim_backend) = self.rim_backend {
+            let (rim_decision, (), legacy_decision) = tokio::join!(
+                check_qps(&ctx, &tenant, rim_backend),
+                report_qps(&ctx, &tenant, rim_backend),
+                check_and_report_legacy_qps(&ctx, identities, clientinfo_atlas, &tenant),
+            );
+
+            enforcement_response(enforcer, Some(rim_decision), legacy_decision)
+        } else {
+            let legacy_decision =
+                check_and_report_legacy_qps(&ctx, identities, clientinfo_atlas, &tenant).await;
+            enforcement_response(enforcer, None, legacy_decision)
+        };
+
+        #[cfg(not(fbcode_build))]
+        legacy_enforcement_response(
+            check_and_report_legacy_qps(&ctx, identities, clientinfo_atlas, &tenant).await,
         )
+    }
+}
+
+#[cfg(all(test, fbcode_build))]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn missing_rim_backend_fails_open_when_rim_enforces() {
+        let legacy_decision = Some(LegacyQpsDecision::Reject("legacy rejected".to_string()));
+
+        assert!(enforcement_response(QpsEnforcer::Rim, None, legacy_decision).is_none());
     }
 }
 
