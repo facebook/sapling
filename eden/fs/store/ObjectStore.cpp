@@ -792,18 +792,17 @@ ImmediateFuture<Hash32> ObjectStore::getBlobBlake3(
   // DEPRECATED: use co_getBlobBlake3 directly. Kept only because
   // VirtualInode.cpp and FileInode.cpp still consume ImmediateFuture chains;
   // delete once those paths are migrated to coroutines.
-  return getBlobAuxData(id, context, true /* blake3Needed */)
-      .thenValue(
-          [id, context = context.copy(), self = shared_from_this()](
-              const BlobAuxData& auxData) -> ImmediateFuture<Hash32> {
-            if (auxData.blake3) {
-              return *auxData.blake3;
-            }
-
-            // should never happen but better than crashing
-            EDEN_BUG() << fmt::format(
-                "Blake3 hash is not defined for id={}", id);
-          });
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = shared_from_this()](
+              ObjectId id,
+              ObjectFetchContextPtr context) -> folly::coro::Task<Hash32> {
+            co_return co_await self->co_getBlobBlake3(id, context);
+          },
+          ObjectId{id},
+          context.copy())
+          .semi()};
 }
 
 folly::coro::now_task<Hash20> ObjectStore::co_getBlobSha1(
