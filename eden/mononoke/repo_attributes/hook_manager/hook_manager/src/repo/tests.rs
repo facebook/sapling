@@ -51,6 +51,7 @@ use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Clone)]
 struct FindFilesChangesetHook {
@@ -67,6 +68,7 @@ impl ChangesetHook for FindFilesChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let path = to_mpath(self.filename.as_str());
         let res = repo
@@ -107,6 +109,7 @@ impl ChangesetHook for FileChangesChangesetHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let parent = changeset.parents().next();
         let (added, changed, removed) = if let Some(parent) = parent {
@@ -150,6 +153,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let paths = self.0.keys().cloned().collect();
         let res = repo

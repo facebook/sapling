@@ -636,6 +636,7 @@ impl HookManager {
                 cross_repo_push_source,
                 push_authored_by,
                 annotated_tags,
+                maybe_pushvars,
                 hook.get_config().log_only,
                 bypass,
             ) {
@@ -785,6 +786,7 @@ impl HookManager {
                     scuba,
                     cross_repo_push_source,
                     push_authored_by,
+                    maybe_pushvars,
                     hook.get_config().log_only,
                     bypass_by_cs,
                 )
@@ -1036,6 +1038,7 @@ impl<'a> HookInstance<'a> {
         changesets: Vec<&'a BonsaiChangeset>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
         log_only: bool,
         bypass_by_cs: Arc<HashMap<ChangesetId, BypassDecision>>,
     ) -> HooksOutcome<'a> {
@@ -1054,6 +1057,7 @@ impl<'a> HookInstance<'a> {
                 changesets,
                 cross_repo_push_source,
                 push_authored_by,
+                maybe_pushvars,
                 hook_name,
                 scuba,
                 log_only,
@@ -1061,17 +1065,18 @@ impl<'a> HookInstance<'a> {
             ),
         }
     }
-    pub(crate) async fn run_hook(
+    pub(crate) async fn run_hook<'cs>(
         self,
         ctx: &CoreContext,
         repo: &HookRepo,
         bookmark: &BookmarkKey,
         hook_name: &str,
         scuba: MononokeScubaSampleBuilder,
-        cs: &BonsaiChangeset,
+        cs: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         annotated_tags: Option<&AnnotatedTags>,
+        maybe_pushvars: Option<&'cs HashMap<String, Bytes>>,
         log_only: bool,
         bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
@@ -1097,6 +1102,7 @@ impl<'a> HookInstance<'a> {
                 cs,
                 cross_repo_push_source,
                 push_authored_by,
+                maybe_pushvars,
                 hook_name,
                 scuba,
                 log_only,
@@ -1192,6 +1198,7 @@ impl Hook {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         annotated_tags: Option<&'cs AnnotatedTags>,
+        maybe_pushvars: Option<&'cs HashMap<String, Bytes>>,
         log_only: bool,
         bypass: BypassDecision,
     ) -> Vec<impl Future<Output = Result<HookOutcome, Error>> + 'cs> {
@@ -1208,6 +1215,7 @@ impl Hook {
                 cross_repo_push_source,
                 push_authored_by,
                 annotated_tags,
+                maybe_pushvars,
                 log_only,
                 bypass,
             )),
@@ -1228,6 +1236,7 @@ impl Hook {
         scuba: MononokeScubaSampleBuilder,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
         log_only: bool,
         bypass_by_cs: Arc<HashMap<ChangesetId, BypassDecision>>,
     ) -> HooksOutcome<'cs> {
@@ -1242,6 +1251,7 @@ impl Hook {
                     changesets,
                     cross_repo_push_source,
                     push_authored_by,
+                    maybe_pushvars,
                     log_only,
                     bypass_by_cs,
                 ),
@@ -1269,6 +1279,7 @@ impl Hook {
                                         cross_repo_push_source,
                                         push_authored_by,
                                         None,
+                                        maybe_pushvars,
                                         log_only,
                                         bypass.clone(),
                                     )

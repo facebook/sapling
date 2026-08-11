@@ -21,6 +21,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct RequireCommitMessagePatternConfig {
@@ -64,6 +65,7 @@ impl ChangesetHook for RequireCommitMessagePatternHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
             return Ok(HookExecution::accepted());

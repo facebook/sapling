@@ -30,6 +30,7 @@ pub use hook_manager::HookRepo;
 pub use hook_manager::HookResult;
 pub use hook_manager::PathContent;
 pub use hook_manager::PushAuthoredBy;
+pub use hook_manager::Pushvars;
 pub use implementations::deny_files::DenyFiles;
 pub use lua_pattern::LuaPattern;
 pub use metaconfig_types::HookConfig;

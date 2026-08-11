@@ -38,6 +38,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 const NAMED_CAPTURE_NAME: &str = "marker_capture";
 const MAX_CONCURRENCY: usize = 5;
@@ -188,6 +189,7 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let submodule_paths = get_submodule_mpaths(changeset);
         if submodule_paths.is_empty() {

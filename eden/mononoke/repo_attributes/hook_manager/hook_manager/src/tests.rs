@@ -60,6 +60,7 @@ use crate::HookOutcome;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Clone, Debug)]
 struct FnChangesetHook {
@@ -82,6 +83,7 @@ impl ChangesetHook for FnChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
     }
@@ -112,6 +114,7 @@ impl ChangesetHook for ContentIdMatchingChangesetHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         for (path, change) in changeset.simplified_file_changes() {
             // If we have a change to a path, but no expected change, fail

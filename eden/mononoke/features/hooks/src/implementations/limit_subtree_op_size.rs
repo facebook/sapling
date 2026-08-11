@@ -25,6 +25,7 @@ use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct LimitSubtreeOpSizeConfig {
@@ -77,6 +78,7 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
         changeset: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
             return Ok(HookExecution::accepted());

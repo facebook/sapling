@@ -27,6 +27,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::FutureExt;
 use futures::TryFutureExt;
@@ -47,6 +48,13 @@ use crate::manager::HooksOutcome;
 use crate::manager::annotate_agent_bypass_rejection;
 use crate::manager::annotate_unauthorized_rejection;
 pub use crate::repo::HookRepo;
+
+/// Pushvars the client supplied on this push (`hg push --pushvar KEY=VALUE`).
+///
+/// Client-controlled and carrying no authentication of their own, so a hook
+/// must never treat one as authorization without also checking the pusher's
+/// identity.
+pub type Pushvars = HashMap<String, Bytes>;
 
 /// Whether changesets were created by a user or a service.
 ///
@@ -364,9 +372,9 @@ pub trait ChangesetHook: Send + Sync {
         repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error>;
 
     async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
@@ -377,6 +385,7 @@ pub trait ChangesetHook: Send + Sync {
         changeset: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        maybe_pushvars: Option<&'cs Pushvars>,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
@@ -390,6 +399,7 @@ pub trait ChangesetHook: Send + Sync {
                 changeset,
                 cross_repo_push_source,
                 push_authored_by,
+                maybe_pushvars,
             )
             .map_ok(|exec| {
                 HookOutcome::ChangesetHook(
@@ -423,6 +433,7 @@ pub trait ChangesetHook: Send + Sync {
         changesets: Vec<&'cs BonsaiChangeset>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        maybe_pushvars: Option<&'cs Pushvars>,
         hook_name: &'cs str,
         scuba: MononokeScubaSampleBuilder,
         log_only: bool,
@@ -443,6 +454,7 @@ pub trait ChangesetHook: Send + Sync {
                         cs,
                         cross_repo_push_source,
                         push_authored_by,
+                        maybe_pushvars,
                         hook_name,
                         scuba.clone(),
                         log_only,

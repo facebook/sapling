@@ -19,6 +19,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct BlockMixedUsersChangesConfig {
@@ -55,6 +56,7 @@ impl ChangesetHook for BlockMixedUsersChangesHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
             return Ok(HookExecution::accepted());
@@ -120,6 +122,7 @@ mod test {
             bcs,
             CrossRepoPushSource::NativeToThisRepo,
             push_authored_by,
+            None,
         )
         .await
     }

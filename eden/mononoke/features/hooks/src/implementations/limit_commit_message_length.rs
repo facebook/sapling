@@ -20,6 +20,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 const DEFAULT_TITLE_LENGTH: usize = 80;
 
@@ -56,6 +57,7 @@ impl ChangesetHook for LimitCommitMessageLengthHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
             return Ok(HookExecution::accepted());

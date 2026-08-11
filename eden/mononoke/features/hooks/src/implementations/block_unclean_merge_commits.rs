@@ -39,6 +39,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockUncleanMergeCommitsConfig {
@@ -71,6 +72,7 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         if bookmark.is_tag() {
             return Ok(HookExecution::accepted());

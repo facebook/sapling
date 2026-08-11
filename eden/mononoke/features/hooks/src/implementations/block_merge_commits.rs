@@ -20,6 +20,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockMergeCommitsConfig {
@@ -55,6 +56,7 @@ impl ChangesetHook for BlockMergeCommitsHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         if !changeset.is_merge() {
             return Ok(HookExecution::accepted());

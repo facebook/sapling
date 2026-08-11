@@ -25,6 +25,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 /// Limit the size of directories to prevent very large directories from being
 /// created.  In this context, the "size" of a directory is the number of
@@ -143,6 +144,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
         changeset: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
             return Ok(HookExecution::accepted());
@@ -372,6 +374,7 @@ mod test {
                 &load_commit("B").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -383,6 +386,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -399,6 +403,7 @@ mod test {
                 &load_commit("B").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -410,6 +415,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 5 > 3.");
@@ -421,6 +427,7 @@ mod test {
                 &load_commit("D").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 6 > 3.");
@@ -432,6 +439,7 @@ mod test {
                 &load_commit("E").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 8 > 3.");
@@ -449,6 +457,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 5 > 3.");
@@ -460,6 +469,7 @@ mod test {
                 &load_commit("D").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -471,6 +481,7 @@ mod test {
                 &load_commit("E").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -490,6 +501,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 5 > 3.");
@@ -501,6 +513,7 @@ mod test {
                 &load_commit("D").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -512,6 +525,7 @@ mod test {
                 &load_commit("E").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Large directory grown too much: 8 > 6 > 3.");
@@ -523,6 +537,7 @@ mod test {
                 &load_commit("F").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -534,6 +549,7 @@ mod test {
                 &load_commit("G").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -551,6 +567,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -571,6 +588,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -582,6 +600,7 @@ mod test {
                 &load_commit("D").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -603,6 +622,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_rejected(hook_execution, "Directory too large: 5 > 3.");
@@ -624,6 +644,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::accepted());
@@ -650,6 +671,7 @@ mod test {
                 &load_commit("C").await?,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                None,
             )
             .await;
         assert!(result.is_err());

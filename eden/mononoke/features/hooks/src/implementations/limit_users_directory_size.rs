@@ -38,6 +38,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 const MAX_CONCURRENCY: usize = 100;
 
@@ -87,6 +88,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution> {
         let prefix = NonRootMPath::new(self.config.path_prefix.as_bytes())?;
         let prefix_len = prefix.num_components();
@@ -249,6 +251,7 @@ mod test {
             changeset,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            None,
         )
         .await
     }
@@ -410,6 +413,7 @@ mod test {
                 &bcs,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::Service,
+                None,
             )
             .await?;
         assert_matches!(result.result, HookResult::Rejected(_));
@@ -423,6 +427,7 @@ mod test {
                 &bcs,
                 CrossRepoPushSource::PushRedirected,
                 PushAuthoredBy::User,
+                None,
             )
             .await?;
         assert_matches!(result.result, HookResult::Rejected(_));

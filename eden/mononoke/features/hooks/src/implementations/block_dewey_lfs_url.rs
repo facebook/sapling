@@ -26,6 +26,7 @@ use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 const BLOCKED_HOST: &str = "dewey-lfs.vip.facebook.com";
 
@@ -115,6 +116,7 @@ impl ChangesetHook for BlockDeweyLfsUrlHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let path = lfsconfig_path()?;
 

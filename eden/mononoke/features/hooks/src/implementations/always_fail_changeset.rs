@@ -20,6 +20,7 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct AlwaysFailChangesetConfig {
@@ -53,6 +54,7 @@ impl ChangesetHook for AlwaysFailChangeset {
         _changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let msg = self
             .config

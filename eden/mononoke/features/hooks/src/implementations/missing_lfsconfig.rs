@@ -23,6 +23,7 @@ use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
+use crate::Pushvars;
 
 #[derive(Clone, Debug)]
 pub struct MissingLFSConfigHook {}
@@ -43,6 +44,7 @@ impl ChangesetHook for MissingLFSConfigHook {
         changeset: &'cs BonsaiChangeset,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
         let lfsconfig_path: NonRootMPath = MPathElement::new_from_slice(b".lfsconfig")?.into();
 
