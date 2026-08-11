@@ -12,7 +12,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -78,11 +77,7 @@ class DiffTest : public ::testing::Test {
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<EdenFsEventsLogger>(
-            std::make_shared<NullStructuredLogger>(),
-            nullptr,
-            nullptr,
-            makeRefPtr<EdenStats>()),
+        std::make_shared<EdenFsEventsLogger>(nullptr),
         edenConfig,
         kPathMapDefaultCaseSensitive);
   }

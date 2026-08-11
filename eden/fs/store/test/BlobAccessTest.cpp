@@ -8,7 +8,6 @@
 #include "eden/fs/store/BlobAccess.h"
 #include <gtest/gtest.h>
 #include <chrono>
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -55,11 +54,7 @@ struct BlobAccessTest : ::testing::Test {
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<EdenFsEventsLogger>(
-            std::make_shared<NullStructuredLogger>(),
-            nullptr,
-            nullptr,
-            makeRefPtr<EdenStats>()),
+        std::make_shared<EdenFsEventsLogger>(nullptr),
         edenConfig,
         kPathMapDefaultCaseSensitive);
 

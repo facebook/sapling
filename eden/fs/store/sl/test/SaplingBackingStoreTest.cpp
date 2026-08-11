@@ -20,7 +20,6 @@
 #include <memory>
 #include <optional>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -79,14 +78,8 @@ std::vector<PathComponent> getTreeNames(
   return names;
 }
 
-std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger(
-    const std::shared_ptr<ReloadableConfig>& edenConfig,
-    const EdenStatsPtr& stats) {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      /*xplatLogger=*/nullptr,
-      edenConfig,
-      stats.copy());
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(nullptr);
 }
 
 RootId addRestrictedTreeCommit(TestRepo& testRepo) {
@@ -127,7 +120,7 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
       &executor,
       edenConfig,
       std::make_unique<SaplingBackingStoreOptions>(),
-      makeTestEdenFsEventsLogger(edenConfig, stats),
+      makeTestEdenFsEventsLogger(),
       /*errorLogger=*/noopErrorLogger,
       std::make_unique<BackingStoreLogger>(),
       &faultInjector);
@@ -182,7 +175,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          makeTestEdenFsEventsLogger(edenConfig, stats),
+          makeTestEdenFsEventsLogger(),
           /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
@@ -207,7 +200,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          makeTestEdenFsEventsLogger(edenConfig, stats),
+          makeTestEdenFsEventsLogger(),
           /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
@@ -233,7 +226,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          makeTestEdenFsEventsLogger(edenConfig, stats),
+          makeTestEdenFsEventsLogger(),
           /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
@@ -966,7 +959,7 @@ struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          makeTestEdenFsEventsLogger(edenConfig, stats),
+          makeTestEdenFsEventsLogger(),
           /*errorLogger=*/errorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);

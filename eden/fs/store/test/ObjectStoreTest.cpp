@@ -12,7 +12,6 @@
 #include <fb303/ServiceData.h>
 #include <folly/coro/GtestHelpers.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -38,11 +37,7 @@ constexpr size_t kTreeCacheMinimumEntries = 0;
 constexpr folly::StringPiece kBlake3Key = "19700101-1111111111111111111111#";
 
 std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      /*xplatLogger=*/nullptr,
-      /*reloadableConfig=*/nullptr,
-      makeRefPtr<EdenStats>());
+  return std::make_shared<EdenFsEventsLogger>(nullptr);
 }
 
 struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {

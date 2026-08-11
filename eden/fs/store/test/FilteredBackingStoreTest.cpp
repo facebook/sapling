@@ -22,7 +22,6 @@
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -174,11 +173,7 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
           &executor_,
           edenConfig,
           std::move(runtimeOptions),
-          std::make_shared<EdenFsEventsLogger>(
-              std::make_shared<NullStructuredLogger>(),
-              /*xplatLogger=*/nullptr,
-              edenConfig,
-              stats.copy()),
+          std::make_shared<EdenFsEventsLogger>(nullptr),
           /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector)};
