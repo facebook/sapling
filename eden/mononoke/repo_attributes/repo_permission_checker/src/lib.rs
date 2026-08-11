@@ -16,7 +16,6 @@ use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
-use permission_checker::MononokeIdentitySetExt;
 use permission_checker::PermissionCheckResult;
 use permission_checker::PermissionCheckerBuilder;
 use tokio::join;
