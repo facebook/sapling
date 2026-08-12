@@ -92,6 +92,10 @@ struct AclManifestEntryBlob {
   /// AMP group to direct users to for access requests.
   /// Defaults to repo_region_acl if not set.
   2: optional string permission_request_group;
+  /// AMP group temporarily allowlisted to read this directory during rollout.
+  /// Unset means no allowlist. Optional so that entries predating this field
+  /// keep their existing content hash.
+  3: optional string rollout_allowlist_group;
 }
 
 struct AclManifestStageOutputEmpty {}

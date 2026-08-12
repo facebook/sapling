@@ -216,6 +216,8 @@ pub struct AclManifestEntryBlob {
     pub repo_region_acl: String,
     /// AMP group to direct users to for access requests
     pub permission_request_group: Option<String>,
+    /// AMP group temporarily allowlisted to read this directory during rollout
+    pub rollout_allowlist_group: Option<String>,
 }
 
 impl ThriftConvert for AclManifestEntryBlob {
@@ -226,6 +228,7 @@ impl ThriftConvert for AclManifestEntryBlob {
         Ok(AclManifestEntryBlob {
             repo_region_acl: t.repo_region_acl,
             permission_request_group: t.permission_request_group,
+            rollout_allowlist_group: t.rollout_allowlist_group,
         })
     }
 
@@ -233,6 +236,7 @@ impl ThriftConvert for AclManifestEntryBlob {
         thrift::acl_manifest::AclManifestEntryBlob {
             repo_region_acl: self.repo_region_acl,
             permission_request_group: self.permission_request_group,
+            rollout_allowlist_group: self.rollout_allowlist_group,
         }
     }
 }
@@ -248,5 +252,49 @@ impl BlobstoreValue for AclManifestEntryBlob {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         Self::from_bytes(blob.data())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn entry_blob() -> AclManifestEntryBlob {
+        AclManifestEntryBlob {
+            repo_region_acl: "REPO_REGION:repos/hg/fbsource/=project1".to_string(),
+            permission_request_group: Some("GROUP:project1_source_control".to_string()),
+            rollout_allowlist_group: Some("GROUP:project1_rollout".to_string()),
+        }
+    }
+
+    /// What it tests: the blob ID of an entry that leaves the optional fields
+    /// unset is stable across schema additions.
+    /// Expected: the hardcoded ID below, captured before `rollout_allowlist_group`
+    /// was added. `AclManifestEntryBlob` is content-addressed, so a change here
+    /// would silently invalidate every already-derived AclManifest and force a
+    /// derived-data version bump.
+    #[mononoke::test]
+    fn test_entry_blob_id_is_stable_for_unset_optional_fields() {
+        let blob = AclManifestEntryBlob {
+            repo_region_acl: "REPO_REGION:repos/hg/fbsource/=project1".to_string(),
+            permission_request_group: None,
+            rollout_allowlist_group: None,
+        }
+        .into_blob();
+        assert_eq!(
+            blob.id().to_string(),
+            "9697e4851178bcb8a53b86d37886e0911c069eafed8eb44af32e3be2798db5f6",
+        );
+    }
+
+    /// What it tests: thrift round-tripping preserves every field.
+    #[mononoke::test]
+    fn test_entry_blob_thrift_round_trip() -> Result<()> {
+        let original = entry_blob();
+        let round_tripped = AclManifestEntryBlob::from_thrift(original.clone().into_thrift())?;
+        assert_eq!(original, round_tripped);
+        Ok(())
     }
 }

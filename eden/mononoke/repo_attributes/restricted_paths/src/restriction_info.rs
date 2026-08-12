@@ -763,7 +763,7 @@ async fn load_acl_entry_blob_fields(
     ctx: &CoreContext,
     blobstore: &impl blobstore::KeyedBlobstore,
     restriction: &AclManifestRestriction,
-) -> Result<(String, PermissionRequestGroup)> {
+) -> Result<(String, PermissionRequestGroup, Option<MononokeIdentity>)> {
     let entry_blob: AclManifestEntryBlob = restriction
         .entry_blob_id
         .load(ctx, blobstore)
@@ -775,7 +775,21 @@ async fn load_acl_entry_blob_fields(
         .unwrap_or_else(|| repo_region_acl.clone())
         .parse()
         .with_context(|| "Failed to parse permission request group")?;
-    Ok((repo_region_acl, permission_request_group))
+    // Already stored in `GROUP:<name>` form by derivation, so parse it as an
+    // identity rather than re-applying the bare-name prefixing.
+    let rollout_allowlist_group = entry_blob
+        .rollout_allowlist_group
+        .map(|group| {
+            group
+                .parse()
+                .with_context(|| format!("Failed to parse rollout allowlist group `{group}`"))
+        })
+        .transpose()?;
+    Ok((
+        repo_region_acl,
+        permission_request_group,
+        rollout_allowlist_group,
+    ))
 }
 
 async fn load_manifest_restriction_info(
@@ -783,13 +797,13 @@ async fn load_manifest_restriction_info(
     blobstore: &impl blobstore::KeyedBlobstore,
     restriction: &AclManifestRestriction,
 ) -> Result<ManifestRestrictionInfo> {
-    let (repo_region_acl, permission_request_group) =
+    let (repo_region_acl, permission_request_group, rollout_allowlist_group) =
         load_acl_entry_blob_fields(ctx, blobstore, restriction).await?;
     Ok(ManifestRestrictionInfo {
         restriction_root: None,
         repo_region_acl,
         permission_request_group,
-        rollout_allowlist_group: None,
+        rollout_allowlist_group,
     })
 }
 
@@ -799,13 +813,13 @@ async fn load_path_restriction_info(
     restriction: &AclManifestRestriction,
     restriction_root: NonRootMPath,
 ) -> Result<PathRestrictionInfo> {
-    let (repo_region_acl, permission_request_group) =
+    let (repo_region_acl, permission_request_group, rollout_allowlist_group) =
         load_acl_entry_blob_fields(ctx, blobstore, restriction).await?;
     Ok(PathRestrictionInfo {
         restriction_root,
         repo_region_acl,
         permission_request_group,
-        rollout_allowlist_group: None,
+        rollout_allowlist_group,
     })
 }
 

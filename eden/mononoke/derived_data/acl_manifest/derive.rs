@@ -673,6 +673,7 @@ async fn store_acl_entry_from_acl_file(
     let entry_blob = AclManifestEntryBlob {
         repo_region_acl: acl_file.repo_region_acl().to_string(),
         permission_request_group: acl_file.permission_request_group().map(|g| g.to_string()),
+        rollout_allowlist_group: acl_file.rollout_allowlist_group().map(|g| g.to_string()),
     };
     entry_blob.into_blob().store(ctx, blobstore).await
 }

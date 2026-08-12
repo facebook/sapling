@@ -7,9 +7,11 @@
 
 //! Parser for restricted paths ACL files (.slacl)
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
 use metaconfig_types::RestrictedPathsAclFile;
+use metaconfig_types::parse_bare_group_name;
 use mononoke_types::FileContents;
 use permission_checker::MononokeIdentity;
 use repos::RawRestrictedPathsAclFile;
@@ -35,8 +37,18 @@ pub fn parse_acl_file(content: &FileContents) -> Result<RestrictedPathsAclFile> 
         .permission_request_group
         .map(|s| s.parse())
         .transpose()?;
+    let rollout_allowlist_group = raw
+        .rollout_allowlist_group
+        .as_deref()
+        .map(parse_bare_group_name)
+        .transpose()
+        .context("Invalid rollout_allowlist_group")?;
 
-    let acl_file = RestrictedPathsAclFile::new(repo_region_acl, permission_request_group)?;
+    let acl_file = RestrictedPathsAclFile::new(
+        repo_region_acl,
+        permission_request_group,
+        rollout_allowlist_group,
+    )?;
     Ok(acl_file)
 }
 
@@ -137,5 +149,68 @@ repo_region_acl = "REPO_REGION:repos/hg/fbsource/=project1"
         let content = file_contents(b"repo_region_acl = \"missing_colon_separator\"\n");
         let result = parse_acl_file(&content);
         assert!(result.is_err());
+    }
+
+    /// What it tests: a bare `rollout_allowlist_group` in a `.slacl` file.
+    /// Expected: it is prefixed to a `GROUP:` identity, the same spelling the
+    /// config-backed source uses.
+    #[mononoke::test]
+    fn test_parse_with_rollout_allowlist_group() {
+        let content = file_contents(
+            br#"
+repo_region_acl = "REPO_REGION:repos/hg/fbsource/=project1"
+rollout_allowlist_group = "project1_rollout"
+"#,
+        );
+        let result = parse_acl_file(&content).unwrap();
+        assert_eq!(
+            result.rollout_allowlist_group(),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "GROUP",
+                "project1_rollout"
+            ))
+            .as_ref(),
+        );
+    }
+
+    /// What it tests: a `.slacl` file that omits `rollout_allowlist_group`.
+    /// Expected: no rollout allowlist, so callers are never allowlisted for it.
+    #[mononoke::test]
+    fn test_parse_without_rollout_allowlist_group() {
+        let content =
+            file_contents(b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n");
+        let result = parse_acl_file(&content).unwrap();
+        assert_eq!(result.rollout_allowlist_group(), None);
+    }
+
+    /// What it tests: malformed `rollout_allowlist_group` values in a `.slacl`.
+    /// Expected: each is rejected, so a tent owner cannot end up with an
+    /// allowlist that silently never matches anyone.
+    #[mononoke::test]
+    fn test_parse_malformed_rollout_allowlist_group_fails() {
+        // (value, fragment the error must mention)
+        let rejected = [
+            ("", "must not be empty"),
+            ("  ", "whitespace"),
+            (" project1_rollout", "whitespace"),
+            ("GROUP:project1_rollout", "omit the `GROUP:` prefix"),
+        ];
+
+        for (value, expected_fragment) in rejected {
+            let content = file_contents_owned(format!(
+                "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n\
+                 rollout_allowlist_group = \"{value}\"\n"
+            ));
+            let err = parse_acl_file(&content).expect_err(&format!("`{value}` should be rejected"));
+            let msg = format!("{err:#}");
+            assert!(
+                msg.contains(expected_fragment),
+                "error for `{value}` should mention {expected_fragment:?}, got: {msg}"
+            );
+        }
+    }
+
+    fn file_contents_owned(contents: String) -> FileContents {
+        FileContents::new_bytes(contents.into_bytes())
     }
 }

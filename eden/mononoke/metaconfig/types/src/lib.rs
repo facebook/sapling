@@ -2759,6 +2759,12 @@ pub struct RestrictedPathsAclFile {
     /// that transitively provides access to the ACL.
     /// If not specified, will default to `repo_region_acl`.
     permission_request_group: Option<MononokeIdentity>,
+    /// AMP group whose members are temporarily allowlisted to read this
+    /// directory during rollout, so the tent owner can triage them before
+    /// granting real access in the REPO_REGION ACL. `None` means no rollout
+    /// allowlist: a caller must be allowlisted for every restricted path in a
+    /// request for the allowlist to grant access.
+    rollout_allowlist_group: Option<MononokeIdentity>,
     // TODO(T248660053): possibly add dry-run mode
 }
 
@@ -2767,10 +2773,12 @@ impl RestrictedPathsAclFile {
     pub fn new(
         repo_region_acl: MononokeIdentity,
         permission_request_group: Option<MononokeIdentity>,
+        rollout_allowlist_group: Option<MononokeIdentity>,
     ) -> Result<Self> {
         Self {
             repo_region_acl,
             permission_request_group,
+            rollout_allowlist_group,
         }
         .validate()
     }
@@ -2787,6 +2795,11 @@ impl RestrictedPathsAclFile {
     /// If not specified, will default to `repo_region_acl`.
     pub fn permission_request_group(&self) -> Option<&MononokeIdentity> {
         self.permission_request_group.as_ref()
+    }
+
+    /// AMP group temporarily allowlisted to read this directory during rollout.
+    pub fn rollout_allowlist_group(&self) -> Option<&MononokeIdentity> {
+        self.rollout_allowlist_group.as_ref()
     }
 
     /// Run all the necessary validations on the ACL file
