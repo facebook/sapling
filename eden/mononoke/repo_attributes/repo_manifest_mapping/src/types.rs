@@ -76,6 +76,24 @@ byte_string_newtype!(
     RepoBranch
 );
 
+impl RepoBranch {
+    /// Key a member branch from a git ref name, however it is spelled.
+    ///
+    /// A manifest may write a member's revision fully qualified
+    /// (`refs/heads/oculus-14.0`) or bare (`oculus-14.0`), and a land names the
+    /// same branch as a Mononoke bookmark (`heads/oculus-14.0`). Rows are keyed
+    /// by raw bytes, so writers and readers that disagree about the spelling do
+    /// not conflict — the lookup just returns nothing. Both sides construct keys
+    /// through here so they cannot drift.
+    ///
+    /// Tags keep their namespace: they are not branches, so there is no bare
+    /// branch name to reduce them to.
+    pub fn from_ref_name(name: &str) -> Self {
+        let name = name.strip_prefix("refs/").unwrap_or(name);
+        Self(name.strip_prefix("heads/").unwrap_or(name).to_string())
+    }
+}
+
 /// A single membership edge: the member repo `(repo_name, repo_branch)` belongs
 /// to a manifest branch. The owning `(manifest_repo_id, manifest_branch)` is the
 /// context in which the edge lives (it is supplied alongside a batch of edges),

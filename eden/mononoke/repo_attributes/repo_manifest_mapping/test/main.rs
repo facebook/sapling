@@ -1043,3 +1043,40 @@ fn test_schema_key_shape() {
         "read_cursor_idx must exist and be non-unique (the writer is a REPLACE INTO); got: {schema}"
     );
 }
+
+/// Rows are keyed by raw bytes, so a writer and a reader that spell the same
+/// branch differently do not conflict — the lookup silently returns nothing.
+/// Every key is built through `from_ref_name` so the two cannot drift.
+#[mononoke::test]
+fn repo_branch_keys_are_spelling_independent() {
+    for spelling in ["oculus-14.0", "heads/oculus-14.0", "refs/heads/oculus-14.0"] {
+        assert_eq!(
+            RepoBranch::from_ref_name(spelling),
+            RepoBranch("oculus-14.0".to_string()),
+            "{spelling} must key the same row"
+        );
+    }
+}
+
+#[mononoke::test]
+fn a_slash_mid_branch_name_is_not_a_namespace() {
+    assert_eq!(
+        RepoBranch::from_ref_name("heads/release/16.0"),
+        RepoBranch("release/16.0".to_string())
+    );
+}
+
+/// Tags are not branches, so there is no bare branch name to reduce them to.
+#[mononoke::test]
+fn tags_keep_their_namespace() {
+    assert_eq!(
+        RepoBranch::from_ref_name("refs/tags/v1"),
+        RepoBranch("tags/v1".to_string())
+    );
+}
+
+#[mononoke::test]
+fn keying_is_idempotent() {
+    let once = RepoBranch::from_ref_name("refs/heads/oculus-14.0");
+    assert_eq!(RepoBranch::from_ref_name(&once.0), once);
+}
