@@ -8,6 +8,8 @@ sl_rust_binary(
         "src/main.rs",
     ],
     crate_root = "src/main.rs",
+    # `codegen` spins up an interpreter to byte-compile the pure-Python modules.
+    embeds_python = True,
     deps = [
         "//eden/scm/lib/python-modules/codegen:codegen",
     ],

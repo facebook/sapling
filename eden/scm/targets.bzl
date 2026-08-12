@@ -88,11 +88,22 @@ def sl_rust_library(**kwargs):
     kwargs["rustc_flags"] = (kwargs.get("rustc_flags") or []) + ["-Funstable-features"]
     return rust_library(**kwargs)
 
-def sl_rust_binary(**kwargs):
+def sl_rust_binary(embeds_python = False, **kwargs):
     autocargo = _autocargo_overrides(**kwargs)
     if autocargo != None:
         kwargs["autocargo"] = autocargo
+    if embeds_python:
+        kwargs["deps"] = _with_libpython(kwargs.get("deps"))
     return rust_binary(**kwargs)
+
+# An embedder starts its own interpreter, so unlike an extension module it has no
+# host to borrow the Python C API from and needs the real libpython. The
+# `python3-sys` fixup deliberately supplies only `:python`, which on macOS resolves
+# the C API at extension-load time; embedders opt in to the real dylib here.
+# Concatenate rather than `list()`: `deps` may be a `select()`.
+def _with_libpython(deps):
+    libpython = ["fbsource//third-party/python:python-for-embedding"]
+    return libpython if deps == None else deps + libpython
 
 def exec_compatible_with_target():
     """Intended to be used by genrule's exec_compatible_with to force
@@ -154,6 +165,13 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
     if pyo3:
         deps3.append("fbsource//third-party/rust:pyo3")
 
+    # The generated `-unittest` binary runs standalone, with no interpreter to
+    # borrow the Python C API from, so it embeds CPython and needs the real
+    # libpython. Scoping this to `test_deps` keeps the library itself -- and the
+    # extensions built from it -- on the extension-safe `:python`.
+    if include_cpython or include_python_sys or pyo3:
+        kwargs3["test_deps"] = _with_libpython(kwargs3.get("test_deps"))
+
     kwargs3["name"] = kwargs["name"]
     kwargs3["crate"] = kwargs["name"].replace("-", "_")
     kwargs3["deps"] = deps3
@@ -186,6 +204,7 @@ def fetch_as_eden():
 def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
     sl_rust_binary(
         name = name,
+        embeds_python = True,
         srcs = glob(["exec/hgmain/src/**/*.rs"]),
         features = [
             "fb",

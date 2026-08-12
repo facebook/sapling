@@ -30,6 +30,8 @@ sl_rust_binary(
     name = "offset-codegen",
     srcs = ["src/bin/offset-codegen.rs"],
     crate_root = "src/bin/offset-codegen.rs",
+    # The probe runs a real interpreter to measure the offsets.
+    embeds_python = True,
     deps = [
         ":backtrace-python-offset-probe",
     ],
