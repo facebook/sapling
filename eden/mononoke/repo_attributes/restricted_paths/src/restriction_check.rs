@@ -391,6 +391,20 @@ pub(crate) struct SourceRestrictionSummary {
     restriction_roots: Vec<NonRootMPath>,
 }
 
+/// Aggregate per-restriction rollout-allowlist flags for one request.
+///
+/// Every restriction must allowlist the caller: being allowlisted for one tent
+/// must not authorize reads of a different tent caught by the same request.
+///
+/// The emptiness guard is load-bearing. `all()` is vacuously true, and an empty
+/// batch means nothing was restricted — already authorized via `has_acl_access`,
+/// but not *rollout-allowlisted*. Without the guard every unrestricted access
+/// would be logged as rollout-allowlisted.
+fn all_rollout_allowlisted(flags: impl IntoIterator<Item = bool>) -> bool {
+    let mut flags = flags.into_iter().peekable();
+    flags.peek().is_some() && flags.all(|allowlisted| allowlisted)
+}
+
 impl SourceRestrictionSummary {
     pub(crate) fn from_checks(checks: &[impl SourceRestrictionCheck]) -> Self {
         let has_acl_access = checks
@@ -399,9 +413,11 @@ impl SourceRestrictionSummary {
         let is_allowlisted_tooling = checks
             .iter()
             .any(|check| check.authorization().is_allowlisted_tooling());
-        let is_rollout_allowlisted = checks
-            .iter()
-            .any(|check| check.authorization().is_rollout_allowlisted());
+        let is_rollout_allowlisted = all_rollout_allowlisted(
+            checks
+                .iter()
+                .map(|check| check.authorization().is_rollout_allowlisted()),
+        );
         let is_admin_bypass = checks
             .iter()
             .any(|check| check.authorization().is_admin_bypass());
@@ -438,9 +454,11 @@ impl SourceRestrictionSummary {
         let is_allowlisted_tooling = checks
             .iter()
             .any(|check| check.authorization().is_allowlisted_tooling());
-        let is_rollout_allowlisted = checks
-            .iter()
-            .any(|check| check.authorization().is_rollout_allowlisted());
+        let is_rollout_allowlisted = all_rollout_allowlisted(
+            checks
+                .iter()
+                .map(|check| check.authorization().is_rollout_allowlisted()),
+        );
         let is_admin_bypass = checks
             .iter()
             .any(|check| check.authorization().is_admin_bypass());
