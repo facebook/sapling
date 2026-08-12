@@ -75,6 +75,42 @@ const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 /// `reserve_repos_ids`. Shared by the production call site and the tests so
 /// the two can never drift.
 const ATTACH_JK: &str = "scm/mononoke:create_repos_attach_to_inflight_mutation";
+/// Largest batch `create_repos` will accept. Clears every batch on record --
+/// p50 1, p95 66, max 139 over 32 days, and 588 all-time -- as well as the 700+
+/// the bulk-import pipeline's partner teams say they expect, so it bounds an
+/// unattended caller's blast radius rather than forbidding bulk.
+const MAX_BATCH_SIZE: usize = 1000;
+
+/// Whether an out-of-bounds batch is rejected or merely logged. Turning this
+/// off is the kill switch; the cap itself is not runtime-tunable.
+const ENFORCE_BATCH_SIZE_JK: &str = "scm/mononoke:create_repos_enforce_max_batch_size";
+
+/// Classify a batch against a cap, without deciding whether to act on it.
+///
+/// The error must be a `Request` error: `create_repos_in_mononoke` retries
+/// everything that is not `ServiceError::Request`, so an internal error here
+/// would be silently retried instead of reported to the caller.
+fn check_batch_size(count: usize, max_batch_size: usize) -> Result<(), scs_errors::ServiceError> {
+    if count == 0 {
+        return Err(scs_errors::invalid_request(
+            "create_repos was called with an empty batch, which creates nothing but still costs a \
+             configerator mutation. Omit the call instead."
+                .to_string(),
+        )
+        .into());
+    }
+
+    if count <= max_batch_size {
+        return Ok(());
+    }
+
+    Err(scs_errors::invalid_request(format!(
+        "create_repos was asked to create {count} repos, which exceeds the maximum batch size of \
+         {max_batch_size}. Split the request into smaller batches, or ask Source Control to raise \
+         the cap."
+    ))
+    .into())
+}
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -1077,6 +1113,27 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::CreateReposParams,
     ) -> Result<thrift::CreateReposToken, scs_errors::ServiceError> {
+        // Must precede `ensure_acls_allow_repo_creation`, which fans out one
+        // Hipster/Oncall RPC per requested repo with an unbounded `try_join_all`:
+        // a cap applied afterwards would already have paid the cost it bounds.
+        //
+        // Advisory unless the enforce knob is on. `create_repos` has always
+        // accepted any batch, including empty ones, and both the bulk-import
+        // pipeline and `scmadmin repo tasks` are unattended, so a rejection
+        // that arrives without a measured log-only phase fails a partner run on
+        // a number we guessed (`config_rollout_safety.md`, S578742).
+        let count = params.repos.len();
+        if let Err(error) = check_batch_size(count, MAX_BATCH_SIZE) {
+            if justknobs::eval(ENFORCE_BATCH_SIZE_JK, None, None) {
+                return Err(error);
+            }
+            warn!(
+                count,
+                max_batch_size = MAX_BATCH_SIZE,
+                "create_repos batch is outside the cap; admitting it because enforcement is off"
+            );
+        }
+
         ensure_acls_allow_repo_creation(ctx.clone(), &params.repos, self.acl_provider.as_ref())
             .await?;
         update_repos_acls(ctx.clone(), &params).await?;
@@ -2079,5 +2136,55 @@ mod attach_tests {
         )
         .await?;
         Ok(())
+    }
+
+    #[mononoke::test]
+    fn batch_at_cap_is_allowed() {
+        check_batch_size(2, 2).expect("a batch exactly at the cap must be allowed");
+    }
+
+    #[mononoke::test]
+    fn batch_over_cap_is_rejected() {
+        let err = check_batch_size(3, 2).expect_err("a batch over the cap must be rejected");
+        // An Internal error would be retried by `create_repos_in_mononoke`
+        // rather than reported to the caller.
+        let scs_errors::ServiceError::Request(request_error) = &err else {
+            panic!("expected Request error, got: {err:?}");
+        };
+        let message = format!("{request_error:?}");
+        assert!(
+            message.contains('3'),
+            "message should state the requested count, got: {message}"
+        );
+        assert!(
+            message.contains('2'),
+            "message should state the cap, got: {message}"
+        );
+    }
+
+    #[mononoke::test]
+    fn empty_batch_is_rejected() {
+        let err = check_batch_size(0, MAX_BATCH_SIZE).expect_err("an empty batch must be rejected");
+        let scs_errors::ServiceError::Request(request_error) = &err else {
+            panic!("expected Request error, got: {err:?}");
+        };
+        let message = format!("{request_error:?}");
+        assert!(
+            message.contains("empty"),
+            "message should say the batch was empty, got: {message}"
+        );
+    }
+
+    #[mononoke::test]
+    fn the_cap_admits_every_batch_on_record() {
+        // Observed over 32 days of `create_repos` traffic: p50 1, p95 66, max
+        // 139. Older and larger, from before Scuba's 33-day retention: 588
+        // (par-msl, the all-time high), 513 (MTK), 134 and 95 through the
+        // bulk-import pipeline. Plus the 700+ MTK Wearables have said they
+        // expect to need.
+        for count in [1, 66, 95, 134, 139, 513, 588, 700] {
+            check_batch_size(count, MAX_BATCH_SIZE)
+                .unwrap_or_else(|err| panic!("a batch of {count} must be allowed, got: {err:?}"));
+        }
     }
 }
