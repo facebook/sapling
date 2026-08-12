@@ -1471,9 +1471,6 @@ impl Convert for RawRestrictedPathsConfig {
         // tooling_allowlist_group is used directly as a group name for membership checking
         let tooling_allowlist_group = self.tooling_allowlist_acl;
 
-        // rollout_allowlist_group is used for tooling allowed during rollout
-        let rollout_allowlist_group = self.rollout_allowlist_acl;
-
         // admin_bypass_group is an optional group identity used for membership
         // checking when bypassing Path ACL enforcement.
         let admin_bypass_group = self
@@ -1523,7 +1520,6 @@ impl Convert for RawRestrictedPathsConfig {
             manifest_id_store_config,
             soft_path_acls,
             tooling_allowlist_group,
-            rollout_allowlist_group,
             admin_bypass_group,
             acl_file_name: self
                 .acl_file_name

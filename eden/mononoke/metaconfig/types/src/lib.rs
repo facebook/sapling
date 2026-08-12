@@ -2671,9 +2671,6 @@ pub struct RestrictedPathsConfig {
     pub soft_path_acls: Vec<SoftRestrictedPathConfig>,
     /// Group name for tooling that should be allowlisted for all restricted paths.
     pub tooling_allowlist_group: Option<String>,
-    /// Group name for tooling that is allowlisted during rollout for all restricted paths.
-    /// Used during rollout for tooling that will likely be permanently allowlisted.
-    pub rollout_allowlist_group: Option<String>,
     /// Group identity whose members may bypass all Path ACL enforcement — both
     /// read access to restricted paths and maintainer-gated `.slacl`
     /// modifications. Intended for admins fighting SEVs or debugging issues.
@@ -2699,7 +2696,6 @@ impl Default for RestrictedPathsConfig {
             manifest_id_store_config: RestrictedPathsManifestIdStoreConfig::default(),
             soft_path_acls: Vec::new(),
             tooling_allowlist_group: None,
-            rollout_allowlist_group: None,
             admin_bypass_group: None,
             acl_file_name: DEFAULT_ACL_FILE_NAME.to_string(),
             enforcement_condition_sets: Vec::new(),
