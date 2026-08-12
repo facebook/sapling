@@ -57,8 +57,8 @@ std::optional<MemoryStats> readMemoryStats();
 /**
  * Calculate the private bytes used by the eden process. The calculation
  * is done by loading, parsing and summing values in /proc/self/smaps file.
- * @return memory usage in bytes or 0 if the value could not be determined.
- * On non-linux platforms, 0 will be returned.
+ * @return memory usage in bytes on Linux, or std::nullopt on unsupported
+ * platforms.
  */
 std::optional<size_t> calculatePrivateBytes();
 

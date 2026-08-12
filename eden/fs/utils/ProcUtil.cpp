@@ -236,7 +236,7 @@ std::optional<size_t> calculatePrivateBytes(
 #endif
 
 std::optional<size_t> calculatePrivateBytes() {
-#ifndef _WIN32
+#ifdef __linux__
   try {
     std::ifstream input(kLinuxProcSmapsPath.data());
     return calculatePrivateBytes(parseProcSmaps(input));

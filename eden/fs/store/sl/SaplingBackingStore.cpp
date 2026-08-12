@@ -2727,6 +2727,21 @@ void SaplingBackingStore::flush() {
   sapling_backingstore_flush(*store_.get());
 }
 
+folly::Expected<sapling::HgCacheStats, std::string>
+SaplingBackingStore::getCacheStats() const {
+  auto result = sapling::sapling_backingstore_get_cache_stats(*store_.get());
+  if (result.error != nullptr) {
+    return folly::makeUnexpected(std::string(result.error->what()));
+  }
+  if (!result.data) {
+    // The FFI contract always pairs a null error with non-null data; this
+    // is defensive against that contract changing underneath us.
+    return folly::makeUnexpected(
+        std::string("cache stats lookup returned no data and no error"));
+  }
+  return *result.data;
+}
+
 bool SaplingBackingStore::dogfoodingHost() {
   return sapling_dogfooding_host(*store_.get());
 }

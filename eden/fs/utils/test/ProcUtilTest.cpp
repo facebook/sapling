@@ -176,4 +176,10 @@ TEST(procUtil, noProcSmapsNoThrow) {
   EXPECT_EQ(privateBytes, 0);
 }
 
+#ifdef __APPLE__
+TEST(procUtil, calculatePrivateBytesUnavailableOnMacOS) {
+  EXPECT_EQ(calculatePrivateBytes(), std::nullopt);
+}
+#endif
+
 #endif

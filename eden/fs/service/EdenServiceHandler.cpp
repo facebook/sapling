@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <algorithm>
 #include <chrono>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <system_error>
@@ -2410,6 +2411,29 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 }
 
 /**
+ * Unwraps a possible FilteredBackingStore to find the concrete
+ * SaplingBackingStore underneath, if any. Returns nullptr (never throws) if
+ * backingStore is not, and does not wrap, a SaplingBackingStore - for
+ * callers where a non-Sapling backing store is an expected, benign case
+ * (e.g. hgcache stats are simply unavailable for a Git/RE-CAS-backed mount)
+ * rather than a hard error. See castToSaplingBackingStore for the
+ * throwing variant used where a non-Sapling mount really is a caller error.
+ */
+std::shared_ptr<SaplingBackingStore> tryCastToSaplingBackingStore(
+    std::shared_ptr<BackingStore>& backingStore) {
+  // If FilteredFS is enabled, we'll see a FilteredBackingStore first
+  auto filteredBackingStore =
+      std::dynamic_pointer_cast<FilteredBackingStore>(backingStore);
+  if (filteredBackingStore) {
+    // FilteredBackingStore -> SaplingBackingStore
+    return std::dynamic_pointer_cast<SaplingBackingStore>(
+        filteredBackingStore->getBackingStore());
+  }
+  // BackingStore -> SaplingBackingStore
+  return std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
+}
+
+/**
  * Helper function to get a cast a BackingStore shared_ptr to a
  * SaplingBackingStore shared_ptr. Returns an error if the type of backingStore
  * provided is not truly an SaplingBackingStore. Used in
@@ -2420,20 +2444,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 std::shared_ptr<SaplingBackingStore> castToSaplingBackingStore(
     std::shared_ptr<BackingStore>& backingStore,
     AbsolutePathPiece mountPath) {
-  std::shared_ptr<SaplingBackingStore> saplingBackingStore{nullptr};
-
-  // If FilteredFS is enabled, we'll see a FilteredBackingStore first
-  auto filteredBackingStore =
-      std::dynamic_pointer_cast<FilteredBackingStore>(backingStore);
-  if (filteredBackingStore) {
-    // FilteredBackingStore -> SaplingBackingStore
-    saplingBackingStore = std::dynamic_pointer_cast<SaplingBackingStore>(
-        filteredBackingStore->getBackingStore());
-  } else {
-    // BackingStore -> SaplingBackingStore
-    saplingBackingStore =
-        std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
-  }
+  auto saplingBackingStore = tryCastToSaplingBackingStore(backingStore);
 
   if (!saplingBackingStore) {
     // typeid() does not evaluate expressions
@@ -5729,6 +5740,105 @@ PrefetchStats populatePrefetchStats(
 
 } // namespace
 
+// The following three functions are deliberately given external linkage
+// (not left in the anonymous namespace above) so they can be exercised
+// directly from EdenServiceHandlerTest.cpp - visible for testing.
+
+CacheUsageState toThriftCacheUsageState(sapling::CacheUsageState state) {
+  switch (state) {
+    case sapling::CacheUsageState::NotConfigured:
+      return CacheUsageState::NOT_CONFIGURED;
+    case sapling::CacheUsageState::Unsupported:
+      return CacheUsageState::UNSUPPORTED;
+    case sapling::CacheUsageState::Available:
+      return CacheUsageState::AVAILABLE;
+    case sapling::CacheUsageState::Unavailable:
+      return CacheUsageState::UNAVAILABLE;
+  }
+  return CacheUsageState::UNSUPPORTED;
+}
+
+/**
+ * Convert a plain byte count (e.g. a `*BytesUsed` field) from Rust's u64 to
+ * Thrift's signed i64. No "uncapped" sentinel applies here - only
+ * `*BytesLimit` fields carry that meaning (see `toThriftByteLimit`) - so a
+ * count is only ever clamped defensively against overflow, never mapped to
+ * -1. u64::MAX is unrealistic for a real cache byte count, but if it ever
+ * occurred it should surface as an implausibly large number, not be
+ * silently reinterpreted as "uncapped".
+ */
+int64_t toThriftByteCount(uint64_t value) {
+  if (value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+    XLOGF(
+        WARN,
+        "hgcache byte count {} exceeds INT64_MAX; clamping for Thrift",
+        value);
+    return std::numeric_limits<int64_t>::max();
+  }
+  return static_cast<int64_t>(value);
+}
+
+/**
+ * Convert a byte *limit* (e.g. a `*BytesLimit` field) from Rust's u64 to
+ * Thrift's signed i64, explicitly mapping the "uncapped" sentinel (u64::MAX,
+ * see `to_ffi_cache_usage` in ffi.rs) to -1 rather than relying on
+ * `static_cast<int64_t>` silently producing -1 via two's-complement
+ * coincidence. Any other value is delegated to `toThriftByteCount`'s
+ * overflow clamp.
+ */
+int64_t toThriftByteLimit(uint64_t value) {
+  if (value == std::numeric_limits<uint64_t>::max()) {
+    return -1;
+  }
+  return toThriftByteCount(value);
+}
+
+namespace {
+
+/**
+ * Attach hgcache disk-usage stats to a prefetch result. Only call when the
+ * client asked for stats - the lookup does real work (cache reload check
+ * plus per-repo disk usage). A mount that isn't Sapling-backed, or a
+ * genuine lookup failure, both leave result.cacheStats() unset - the
+ * distinction is only visible in the logs, since PrefetchResult has no
+ * separate "stats lookup failed" field.
+ */
+void populateHgCacheStats(EdenMount& edenMount, PrefetchResult& result) {
+  auto backingStore = edenMount.getObjectStore()->getBackingStore();
+  auto saplingBackingStore = tryCastToSaplingBackingStore(backingStore);
+  if (!saplingBackingStore) {
+    // Not a Sapling-backed mount (e.g. Git or RE-CAS) - hgcache stats simply
+    // don't apply here. This is an expected, benign case, not an error.
+    return;
+  }
+
+  auto cacheStats = saplingBackingStore->getCacheStats();
+  if (cacheStats.hasError()) {
+    XLOGF(
+        WARN,
+        "Failed to get hgcache stats for {}: {}",
+        edenMount.getPath(),
+        cacheStats.error());
+    return;
+  }
+
+  HgCacheStats hgStats;
+  hgStats.cachePath() = std::string(cacheStats->cache_path);
+  hgStats.cachePathConfigured() = cacheStats->cache_path_configured;
+  hgStats.blobState() = toThriftCacheUsageState(cacheStats->blob_state);
+  hgStats.blobBytesUsed() = toThriftByteCount(cacheStats->blob_bytes_used);
+  hgStats.blobBytesLimit() = toThriftByteLimit(cacheStats->blob_bytes_limit);
+  hgStats.treeState() = toThriftCacheUsageState(cacheStats->tree_state);
+  hgStats.treeBytesUsed() = toThriftByteCount(cacheStats->tree_bytes_used);
+  hgStats.treeBytesLimit() = toThriftByteLimit(cacheStats->tree_bytes_limit);
+  hgStats.lfsState() = toThriftCacheUsageState(cacheStats->lfs_state);
+  hgStats.lfsBytesUsed() = toThriftByteCount(cacheStats->lfs_bytes_used);
+  hgStats.lfsBytesLimit() = toThriftByteLimit(cacheStats->lfs_bytes_limit);
+  result.cacheStats() = std::move(hgStats);
+}
+
+} // namespace
+
 folly::coro::now_task<std::unique_ptr<PrefetchResult>>
 EdenServiceHandler::prefetchFilesV2Impl(
     std::unique_ptr<PrefetchParams> params) {
@@ -5787,6 +5897,7 @@ EdenServiceHandler::prefetchFilesV2Impl(
     } else {
       result->stats() = populatePrefetchStats(*statsContext, durationMs);
     }
+    populateHgCacheStats(mountHandle.getEdenMount(), *result);
   }
 
   if (returnPrefetchedFiles) {
@@ -5798,6 +5909,17 @@ EdenServiceHandler::prefetchFilesV2Impl(
 folly::coro::Task<std::unique_ptr<PrefetchResult>>
 EdenServiceHandler::co_prefetchFilesV2(std::unique_ptr<PrefetchParams> params) {
   auto isBackground = *params->background();
+
+  if (isBackground && *params->returnStats()) {
+    // The immediate response for a background prefetch is a placeholder
+    // returned before the real work finishes - stats computed by the
+    // detached coroutine would have nowhere to go, so reject the
+    // combination up front rather than silently discarding them.
+    throw newEdenError(
+        EdenErrorType::ARGUMENT_ERROR,
+        "prefetch --stats is not supported with --background: stats require "
+        "waiting for the prefetch to complete");
+  }
 
   // Build the work coroutine. Capture self via shared_from_this so the
   // coroutine outlives any background detach.

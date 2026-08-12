@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/Expected.h>
 #include <folly/Function.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -330,6 +331,15 @@ class SaplingBackingStore final
   int64_t dropAllPendingRequestsFromQueue() override;
 
   ObjectId stripObjectId(const ObjectId& id) const override;
+
+  /**
+   * Get statistics about the hgcache (Sapling disk cache). The error side
+   * (a message) is distinct from a successful result reporting "no cache
+   * configured" (see HgCacheStats::cache_path_configured and the per-cache
+   * *_state fields) - callers must not conflate a genuine lookup failure
+   * with a cache that simply isn't configured.
+   */
+  folly::Expected<sapling::HgCacheStats, std::string> getCacheStats() const;
 
  private:
   FRIEND_TEST(

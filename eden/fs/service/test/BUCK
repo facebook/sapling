@@ -119,6 +119,21 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "eden_service_handler_test",
+    srcs = ["EdenServiceHandlerTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/service:server",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/store/sl:sapling_backing_store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+    ],
+)
+
+cpp_unittest(
     name = "eden_server_test",
     srcs = ["EdenServerTest.cpp"],
     labels = ["autodeps2_generated"],

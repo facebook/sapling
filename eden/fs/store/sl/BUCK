@@ -78,6 +78,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//third-party/googletest:gtest_headers",
         ":sapling_backing_store_options",
         ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",
@@ -93,6 +94,7 @@ cpp_library(
         "//eden/scm/lib/backingstore:backingstore@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore",
         "//folly:exception_wrapper",
+        "//folly:expected",
         "//folly:function",
         "//folly:range",
         "//folly:synchronized",
