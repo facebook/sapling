@@ -53,6 +53,7 @@ import os
 import re
 import statistics
 import subprocess
+import sys
 import time
 from typing import Any, TypedDict
 
@@ -344,7 +345,13 @@ def build_sibling_stacks(
     """Build each stack as a sibling off ``base``; return (head, commit count)."""
     root = sl_out(["root"])
     built: list[tuple[str, int]] = []
-    skipped = 0
+    # Per-node skip tallies. ``filtered`` dominates on a FilteredFS checkout
+    # (Sandcastle): `sl status --change` diffs the full manifest, so grouping
+    # sees every changed path, but `sl revert` can't write filter-excluded paths
+    # (www/ and the required infosec/tent trees), so they drop out and the commit
+    # is a no-op. Reporting the breakdown keeps the throughput number honest --
+    # a silent skip would make it look like the full load landed.
+    skips = {"filtered": 0, "unmaterializable": 0, "empty": 0}
     for i, stack in enumerate(stacks):
         sl(["goto", "--clean", base], capture=False)
         tip = ""
@@ -352,17 +359,19 @@ def build_sibling_stacks(
         for node in stack:
             touched = materialize_commit(root, node, prefixes)
             if touched is None:
-                # A file couldn't be materialized; abandon this stack. The next
+                # No file could be reverted/added; abandon this stack. The next
                 # goto --clean base discards the partial working-copy state.
-                skipped += 1
+                skips["unmaterializable"] += 1
                 tip = ""
                 break
             assert_paths_allowed(touched, prefixes)
             title = sl_out(["log", "-r", node, "-T", "{desc|firstline}"])
             if sl(["commit", "-u", args.author, "-m", title], check=False).returncode:
-                # Commit failed (usually a no-op node). Discard any leftover
-                # materialized changes so the next node doesn't inherit them and
-                # break the file-disjointness invariant.
+                # No-op commit: nothing landed on disk. Empty ``touched`` means
+                # every changed path was filter-excluded; a non-empty ``touched``
+                # that still no-ops is a rarer degenerate node. Discard leftovers
+                # so the next node keeps the stack's file-disjointness invariant.
+                skips["filtered" if not touched else "empty"] += 1
                 sl(["goto", "--clean", "."], capture=False, check=False)
                 continue
             tip = sl_out(["log", "-r", ".", "-T", "{node}"])
@@ -370,9 +379,25 @@ def build_sibling_stacks(
         if tip:
             built.append((tip, n))
         if (i + 1) % 50 == 0:
-            logger.info("  built %d/%d stacks", i + 1, len(stacks))
-    if skipped:
-        logger.info("  skipped %d stacks that could not be materialized", skipped)
+            logger.info(
+                "  processed %d/%d stacks (%d built)", i + 1, len(stacks), len(built)
+            )
+    logger.info(
+        "  built %d/%d stacks; skipped commits: %d filter-excluded, "
+        "%d unmaterializable, %d no-op",
+        len(built),
+        len(stacks),
+        skips["filtered"],
+        skips["unmaterializable"],
+        skips["empty"],
+    )
+    if skips["filtered"]:
+        logger.info(
+            "  NOTE: %d commit(s) skipped because their paths are excluded by the "
+            "checkout filter (FilteredFS). Coverage is limited to in-filter paths; "
+            "run on an omniview/untented tier for full coverage.",
+            skips["filtered"],
+        )
     return built
 
 
@@ -676,7 +701,10 @@ def hide_generated(author: str) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    # Log to stdout: Sandcastle's per-step log fetch (scutil get-log) only
+    # serves a step's stdout; anything on stderr lands in a blob store its CLI
+    # can't retrieve.
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
     args = parse_args()
     if sl_out(["status"]):
         raise SystemExit("Working copy has pending changes; commit or shelve them.")
@@ -684,8 +712,9 @@ def main() -> None:
     start = sl_out(["log", "-r", ".", "-T", "{node}"])
     prefixes = bot_prefixes()
     logger.info(
-        "Replaying under %d allowed dir(s); target bookmark %s.",
+        "Replaying under %d allowed dir(s) %s; target bookmark %s.",
         len(prefixes),
+        prefixes,
         args.bookmark,
     )
 
