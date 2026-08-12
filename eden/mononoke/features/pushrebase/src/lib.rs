@@ -2825,7 +2825,7 @@ async fn collect_merge_file_info(
     if !derive_fsnodes {
         let is_derived = root_manifest_is_derived(ctx, repo, root)
             .await
-            .map_err(|e| MergeResolutionError::InternalError(e))?;
+            .map_err(MergeResolutionError::InternalError)?;
         if !is_derived {
             return Err(MergeResolutionError::Skipped(
                 "root manifest not derived for base commit".to_string(),
