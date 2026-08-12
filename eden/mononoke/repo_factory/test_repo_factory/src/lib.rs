@@ -130,6 +130,8 @@ use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
 use repo_lock::ArcRepoLock;
 use repo_lock::SqlRepoLock;
+use repo_manifest_mapping::ArcRepoManifestMapping;
+use repo_manifest_mapping::SqlRepoManifestMappingBuilder;
 use repo_metadata_checkpoint::ArcRepoMetadataCheckpoint;
 use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
@@ -636,6 +638,14 @@ impl TestRepoFactory {
         Ok(Arc::new(
             SqlGitSourceOfTruthConfigBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(),
+        ))
+    }
+
+    /// Construct the repo-manifest routing store using the in-memory metadata
+    /// database.
+    pub fn repo_manifest_mapping(&self) -> Result<ArcRepoManifestMapping> {
+        Ok(Arc::new(
+            SqlRepoManifestMappingBuilder::from_sql_connections(self.metadata_db.clone()).build(),
         ))
     }
 

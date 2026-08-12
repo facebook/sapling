@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use futures_retry::retry;
+use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::OssRemoteDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
@@ -173,6 +174,16 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlRepoManifestMappingBuilder {
         remote: &OssRemoteMetadataDatabaseConfig,
     ) -> Option<&OssRemoteDatabaseConfig> {
         Some(&remote.production)
+    }
+}
+
+/// Whether `metadata` declares the routing tier. Pure config inspection, so a
+/// caller can skip building a store without opening a connection.
+pub fn is_configured(metadata: &MetadataDatabaseConfig) -> bool {
+    match metadata {
+        MetadataDatabaseConfig::Local(_) => true,
+        MetadataDatabaseConfig::Remote(remote) => remote.repo_manifest_mapping.is_some(),
+        MetadataDatabaseConfig::OssRemote(_) => true,
     }
 }
 

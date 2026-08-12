@@ -196,6 +196,9 @@ use repo_lock::AlwaysLockedRepoLock;
 use repo_lock::ArcRepoLock;
 use repo_lock::MutableRepoLock;
 use repo_lock::SqlRepoLock;
+use repo_manifest_mapping::ArcRepoManifestMapping;
+use repo_manifest_mapping::SqlRepoManifestMappingBuilder;
+use repo_manifest_mapping::UnconfiguredRepoManifestMapping;
 use repo_metadata_checkpoint::ArcRepoMetadataCheckpoint;
 use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use repo_permission_checker::ArcRepoPermissionChecker;
@@ -346,6 +349,7 @@ pub struct RepoFactory {
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
+    repo_manifest_mappings: RepoFactoryCache<MetadataDatabaseConfig, ArcRepoManifestMapping>,
     #[cfg(fbcode_build)]
     zelos_clients: RepoFactoryCache<ZelosConfig, Arc<dyn ZeusClient>>,
     repo_event_publishers: RepoFactoryCache<Option<MetadataCacheConfig>, ArcRepoEventPublisher>,
@@ -362,6 +366,7 @@ impl RepoFactory {
             sql_factories: RepoFactoryCache::new(env.fb, "sql_factories"),
             blobstores: RepoFactoryCache::new(env.fb, "blobstore"),
             redacted_blobs: RepoFactoryCache::new(env.fb, "redacted_blobs"),
+            repo_manifest_mappings: RepoFactoryCache::new(env.fb, "repo_manifest_mappings"),
             #[cfg(fbcode_build)]
             zelos_clients: RepoFactoryCache::new(env.fb, "zelos_clients"),
             repo_event_publishers: RepoFactoryCache::new(env.fb, "repo_event_publishers"),
@@ -773,6 +778,9 @@ pub enum RepoFactoryError {
     #[error("Error opening git-push-redirect-config")]
     GitSourceOfTruthConfig,
 
+    #[error("Error opening repo-manifest-mapping")]
+    RepoManifestMapping,
+
     #[error("Error opening enabled-derived-data-types")]
     EnabledDerivedDataTypes,
 
@@ -1161,6 +1169,29 @@ impl RepoFactory {
             .context(RepoFactoryError::GitSourceOfTruthConfig)?
             .build();
         Ok(Arc::new(git_source_of_truth_config))
+    }
+
+    /// Cached per metadata config, not per repo: the store is global, and nearly
+    /// every repo resolves to the same one, so per-repo would be N identical
+    /// copies.
+    pub async fn repo_manifest_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoManifestMapping> {
+        let db_config = &repo_config.storage_config.metadata;
+        self.repo_manifest_mappings
+            .get_or_try_init(db_config, || async move {
+                if !repo_manifest_mapping::is_configured(db_config) {
+                    return Ok(Arc::new(UnconfiguredRepoManifestMapping) as ArcRepoManifestMapping);
+                }
+                let mapping = self
+                    .open_sql::<SqlRepoManifestMappingBuilder>(repo_config)
+                    .await
+                    .context(RepoFactoryError::RepoManifestMapping)?
+                    .build();
+                Ok(Arc::new(mapping) as ArcRepoManifestMapping)
+            })
+            .await
     }
 
     pub async fn enabled_derived_data_types(
