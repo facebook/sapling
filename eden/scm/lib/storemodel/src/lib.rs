@@ -56,6 +56,32 @@ pub use types::tree::TreeItemFlag;
 /// Boxed dynamic iterator. Similar to `BoxStream`.
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;
 
+/// Disk-usage state for an on-disk cache, returned by `cache_disk_usage()`.
+///
+/// Genuine read failures (e.g. a corrupted or unreadable log) are caught by
+/// the caller and mapped to `Unavailable` rather than aborting the whole
+/// `HgCacheStats` response over one broken field - `cache_disk_usage()`
+/// implementations may still return `Err` themselves; it is the caller's
+/// job to downgrade that into `Unavailable` per-field. `Err`/`Unavailable`
+/// must never be used for "no cache configured" or "cache is empty", which
+/// are represented by the `NotConfigured`/`Available{used: 0, ..}` variants
+/// below instead.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CacheUsage {
+    /// No cache is configured for this store (e.g. no `remotefilelog.cachepath`).
+    NotConfigured,
+    /// This store implementation does not support usage reporting.
+    #[default]
+    Unsupported,
+    /// A cache is configured but its usage could not be measured due to an
+    /// error (e.g. corrupted on-disk data). The failure reason is logged by
+    /// the caller, not carried on this variant, so it stays `Copy`.
+    Unavailable,
+    /// A cache is configured; `used` bytes are on disk. `limit` is the
+    /// configured cap, or `None` if the cache is uncapped.
+    Available { used: u64, limit: Option<u64> },
+}
+
 /// Boxed dynamic iterator with lifetime.
 pub type BoxRefIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
 
@@ -304,6 +330,21 @@ pub trait FileStore: KeyStore + 'static {
     /// Usually it is just `Arc::clone` under the hood.
     /// Used to relax lifetime requirements for various `BoxIterator` outputs.
     fn clone_file_store(&self) -> Box<dyn FileStore>;
+
+    /// Disk-usage state of the file/blob cache. See `CacheUsage` for the
+    /// meaning of each state.
+    fn cache_disk_usage(&self) -> anyhow::Result<CacheUsage> {
+        Ok(CacheUsage::Unsupported)
+    }
+
+    /// Disk-usage state of the LFS blob cache, if this store has one.
+    /// Measures only the indexedlog-backed portion of the LFS cache
+    /// (`lfs/blobs`, `lfs/pointers`); the loose-file `lfs/objects`
+    /// directory is intentionally excluded since there is no cheap way to
+    /// size it without a full directory walk.
+    fn lfs_cache_disk_usage(&self) -> anyhow::Result<CacheUsage> {
+        Ok(CacheUsage::Unsupported)
+    }
 }
 
 #[async_trait]
@@ -556,6 +597,12 @@ pub trait TreeStore: KeyStore {
     /// Usually it is just `Arc::clone` under the hood.
     /// Used to relax lifetime requirements for various `BoxIterator` outputs.
     fn clone_tree_store(&self) -> Box<dyn TreeStore>;
+
+    /// Disk-usage state of the tree cache. See `CacheUsage` for the meaning
+    /// of each state.
+    fn cache_disk_usage(&self) -> anyhow::Result<CacheUsage> {
+        Ok(CacheUsage::Unsupported)
+    }
 }
 
 /// Options used by `insert_data`

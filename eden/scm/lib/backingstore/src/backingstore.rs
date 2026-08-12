@@ -38,6 +38,7 @@ use repo::repo::Repo;
 use revisionstore::scmstore::KeyFetchError;
 use smallvec::SmallVec;
 use storemodel::BoxIterator;
+use storemodel::CacheUsage;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
 use storemodel::PathAclInfo;
@@ -56,6 +57,30 @@ use crate::ffi::ffi::BackingStoreErrorKind;
 use crate::ffi_errors::classify_backingstore_error;
 use crate::prefetch;
 use crate::prefetch::prefetch_manager;
+
+/// Statistics about the hgcache (Sapling disk cache). Named `HgCacheStats`
+/// (not `CacheStats`) to avoid colliding with the unrelated in-memory
+/// hit/miss-counter `CacheStats` already used by EdenFS's object caches.
+///
+/// Each of `blob`/`tree`/`lfs` independently reports one of `CacheUsage`'s
+/// states (`NotConfigured`, `Unsupported`, `Unavailable`, or
+/// `Available{used, limit}`) - these are never conflated into an ambiguous
+/// `(0, 0)`.
+#[derive(Debug, Clone, Default)]
+pub struct HgCacheStats {
+    /// The cache directory for this repo, or `None` if no cache is
+    /// configured at all (`remotefilelog.reponame`/`cachepath` unset).
+    pub cache_path: Option<PathBuf>,
+    /// Disk-usage state of the blob (file content) cache.
+    pub blob: CacheUsage,
+    /// Disk-usage state of the tree (manifest) cache.
+    pub tree: CacheUsage,
+    /// Disk-usage state of the LFS blob cache. Measures only the
+    /// indexedlog-backed portion (`lfs/blobs`, `lfs/pointers`); the
+    /// loose-file `lfs/objects` directory is excluded (see
+    /// `storemodel::FileStore::lfs_cache_disk_usage`).
+    pub lfs: CacheUsage,
+}
 
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
@@ -616,6 +641,45 @@ impl BackingStore {
         self.maybe_reload().notify_prefetch();
     }
 
+    /// Get cache statistics for the hgcache (Sapling disk cache).
+    ///
+    /// Uses the store's indexedlog `disk_usage()` / `max_bytes()` APIs, which
+    /// read small on-disk metadata files rather than scanning cache contents,
+    /// keeping this O(number of rotated logs) rather than O(cache size).
+    /// `disk_usage()` flushes pending in-memory writes first, so this
+    /// reflects data written by this process up to the moment of the call
+    /// (it cannot see writes still pending flush in another process's
+    /// handle to the same cache).
+    ///
+    /// Returns `Err` only for the cache-path resolution itself failing (rare
+    /// - a config-loading bug). Each of `blob`/`tree`/`lfs` is otherwise
+    /// infallible from the caller's perspective: a measurement failure for
+    /// one field is logged and downgraded to `CacheUsage::Unavailable`
+    /// rather than aborting the whole response, so one broken cache doesn't
+    /// suppress the other two, healthy ones.
+    #[instrument(level = "trace", skip(self))]
+    pub fn get_cache_stats(&self) -> Result<HgCacheStats> {
+        let inner = self.maybe_reload();
+        let config = inner.repo.config();
+
+        // Resolve per-repo cache path for display purposes. A read-only
+        // lookup: querying stats must never create the cache directory as a
+        // side effect, and "not configured" is a normal, non-error outcome
+        // here (unlike `get_cache_path`, which both of those things).
+        let cache_path = get_cache_path_for_stats(config)?;
+
+        let blob = cache_usage_or_unavailable(inner.filestore.cache_disk_usage(), "blob");
+        let tree = cache_usage_or_unavailable(inner.treestore.cache_disk_usage(), "tree");
+        let lfs = cache_usage_or_unavailable(inner.filestore.lfs_cache_disk_usage(), "LFS");
+
+        Ok(HgCacheStats {
+            cache_path,
+            blob,
+            tree,
+            lfs,
+        })
+    }
+
     // Fully reload the stores if:
     //   - a touch file has a newer mtime than last time we checked, or
     //   - the touch file exists and didn't exist last time, or
@@ -814,6 +878,34 @@ fn touch_file_mtime() -> Option<SystemTime> {
     tracing::debug!(?path, ?res, "statting touch file");
 
     res.ok()?.modified().ok()
+}
+
+/// Get the cache path for a repo from config, for display in cache stats.
+/// Returns `None` if no cache is configured - a normal outcome, not an
+/// error.
+///
+/// Delegates to `revisionstore::util::peek_cache_path` - the read-only
+/// sibling of `get_cache_path` (the path resolution every revisionstore
+/// cache uses) - rather than re-deriving reponame/cachepath here, so this
+/// can never drift from where the cache actually lives, while also never
+/// creating the cache directory as a side effect of a stats query.
+fn get_cache_path_for_stats(config: &dyn Config) -> Result<Option<PathBuf>> {
+    revisionstore::util::peek_cache_path(config)
+}
+
+/// Downgrade a per-field `cache_disk_usage()`/`lfs_cache_disk_usage()`
+/// failure into `CacheUsage::Unavailable` instead of letting it abort the
+/// whole `HgCacheStats` response - the failure reason is logged here so it
+/// isn't silently dropped, but the other fields still get a chance to
+/// report their (possibly healthy) state.
+fn cache_usage_or_unavailable(result: Result<CacheUsage>, field: &str) -> CacheUsage {
+    match result {
+        Ok(usage) => usage,
+        Err(err) => {
+            warn!("failed to read {field} cache disk usage: {err:#}");
+            CacheUsage::Unavailable
+        }
+    }
 }
 
 /// Given a single point local fetch function, and a "streaming" (via iterator)
@@ -1117,6 +1209,7 @@ impl Drop for BackingStore {
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
+    use std::collections::BTreeMap;
     use std::fmt;
     use std::path::Path;
 
@@ -1136,6 +1229,54 @@ mod tests {
 
         assert_eq!(path, eden_client_dir.join("walk_detector_metadata.jsonl"));
         assert!(!path.starts_with(mount));
+    }
+
+    #[test]
+    fn test_get_cache_path_for_stats_joins_reponame_and_cachepath() {
+        let config = BTreeMap::from([
+            ("remotefilelog.reponame", "test-repo"),
+            ("remotefilelog.cachepath", "/tmp/hgcache"),
+        ]);
+
+        let path = get_cache_path_for_stats(&config).unwrap();
+
+        assert_eq!(path, Some(Path::new("/tmp/hgcache").join("test-repo")));
+    }
+
+    #[test]
+    fn test_get_cache_path_for_stats_none_when_reponame_missing() {
+        let config = BTreeMap::from([("remotefilelog.cachepath", "/tmp/hgcache")]);
+
+        // Not configured is a normal outcome, not an error.
+        assert_eq!(get_cache_path_for_stats(&config).unwrap(), None);
+    }
+
+    #[test]
+    fn test_get_cache_path_for_stats_none_when_cachepath_missing() {
+        let config = BTreeMap::from([("remotefilelog.reponame", "test-repo")]);
+
+        assert_eq!(get_cache_path_for_stats(&config).unwrap(), None);
+    }
+
+    #[test]
+    fn test_cache_usage_or_unavailable_passes_through_ok() {
+        let usage = CacheUsage::Available {
+            used: 5,
+            limit: Some(10),
+        };
+        assert_eq!(cache_usage_or_unavailable(Ok(usage), "blob"), usage);
+    }
+
+    #[test]
+    fn test_cache_usage_or_unavailable_downgrades_err() {
+        // A measurement failure for one field must become `Unavailable`,
+        // not propagate as an error that would abort the other fields'
+        // results too (see `get_cache_stats`).
+        let result: Result<CacheUsage> = Err(anyhow::anyhow!("corrupted log"));
+        assert_eq!(
+            cache_usage_or_unavailable(result, "tree"),
+            CacheUsage::Unavailable
+        );
     }
 
     struct MissingBatchStore;

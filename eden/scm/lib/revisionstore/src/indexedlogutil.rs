@@ -125,6 +125,20 @@ impl Store {
         self.store_type == StoreType::Permanent
     }
 
+    /// Returns the current disk usage in bytes. Errors if the store could not
+    /// be opened, or if a rotated log's on-disk meta could not be read -
+    /// reporting 0 in either case would look like a healthy, empty cache
+    /// instead of a diagnostic failure.
+    pub fn disk_usage(&self) -> Result<u64> {
+        self.read()?.disk_usage()
+    }
+
+    /// Returns the configured maximum size in bytes. Errors if the store
+    /// could not be opened.
+    pub fn max_bytes(&self) -> Result<u64> {
+        Ok(self.read()?.max_bytes())
+    }
+
     /// Add data to the store.
     pub fn append(&self, data: impl Appendable) -> Result<()> {
         self.write()?.append(data)
@@ -139,6 +153,8 @@ impl Store {
         self.should_compress
     }
 
+    /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
+    /// lot when there is multi-threaded contention. `items` is not consumed so that the caller can reuse storage.
     pub fn append_batch<K: AsRef<[u8]> + Copy, V>(
         &self,
         items: &mut Vec<(K, V)>,
@@ -301,6 +317,23 @@ impl Inner {
         match self {
             Self::Permanent(log) => log.is_changed_on_disk(),
             Self::Rotated(log) => log.is_changed_on_disk(),
+        }
+    }
+
+    /// Returns the current disk usage in bytes.
+    pub fn disk_usage(&self) -> Result<u64> {
+        match self {
+            Self::Permanent(log) => Ok(log.disk_usage()),
+            Self::Rotated(log) => Ok(log.disk_usage()?),
+        }
+    }
+
+    /// Returns the configured maximum size in bytes.
+    /// For permanent logs, returns u64::MAX since they don't have size limits.
+    pub fn max_bytes(&self) -> u64 {
+        match self {
+            Self::Permanent(_) => u64::MAX,
+            Self::Rotated(log) => log.max_bytes(),
         }
     }
 

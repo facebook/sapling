@@ -294,6 +294,14 @@ impl LfsPointersStore {
         self.0
             .append(|buf: &mut dyn ExtendWrite| -> Result<()> { Ok(serialize_into(buf, &entry)?) })
     }
+
+    fn disk_usage(&self) -> Result<u64> {
+        self.0.disk_usage()
+    }
+
+    fn max_bytes(&self) -> Result<u64> {
+        self.0.max_bytes()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -471,6 +479,14 @@ impl LfsIndexedLogBlobsStore {
     pub fn flush(&self) -> Result<()> {
         self.inner.flush()
     }
+
+    fn disk_usage(&self) -> Result<u64> {
+        self.inner.disk_usage()
+    }
+
+    fn max_bytes(&self) -> Result<u64> {
+        self.inner.max_bytes()
+    }
 }
 
 impl LfsBlobsStore {
@@ -601,6 +617,36 @@ impl LfsBlobsStore {
             LfsBlobsStore::IndexedLog(log) => log.is_dirty(),
             LfsBlobsStore::Union(first, _) => first.is_dirty(),
             _ => false,
+        }
+    }
+
+    /// (used, limit) for the indexedlog-backed portion of this blob store,
+    /// or `None` if this variant has no indexedlog storage (a pure `Loose`
+    /// store). The loose-file portion (`lfs/objects`) is intentionally
+    /// excluded: sizing it needs a full directory walk, which conflicts with
+    /// keeping cache-stats queries cheap.
+    fn indexedlog_disk_usage(&self) -> Option<Result<(u64, u64)>> {
+        match self {
+            LfsBlobsStore::Loose(..) => None,
+            LfsBlobsStore::IndexedLog(store) => Some(
+                store
+                    .disk_usage()
+                    .and_then(|used| Ok((used, store.max_bytes()?))),
+            ),
+            LfsBlobsStore::Union(first, second) => {
+                match (
+                    first.indexedlog_disk_usage(),
+                    second.indexedlog_disk_usage(),
+                ) {
+                    (None, None) => None,
+                    (Some(r), None) | (None, Some(r)) => Some(r),
+                    (Some(a), Some(b)) => Some((|| {
+                        let (used_a, limit_a) = a?;
+                        let (used_b, limit_b) = b?;
+                        Ok((used_a + used_b, limit_a + limit_b))
+                    })()),
+                }
+            }
         }
     }
 
@@ -858,6 +904,25 @@ impl LfsStore {
     /// (if underlying store is indexedlog RotateLog).
     pub(crate) fn with_consistent_reads(&self) -> Result<Option<ConsistentReadGuard>> {
         self.blobs.with_consistent_reads()
+    }
+
+    /// (used, limit) for the indexedlog-backed portion of this LFS store:
+    /// always includes `pointers` (always indexedlog-backed), plus `blobs`
+    /// when it has an indexedlog component (see
+    /// `LfsBlobsStore::indexedlog_disk_usage`).
+    pub fn cache_disk_usage(&self) -> Result<(u64, u64)> {
+        let pointers = self
+            .pointers
+            .disk_usage()
+            .and_then(|used| Ok((used, self.pointers.max_bytes()?)));
+        match self.blobs.indexedlog_disk_usage() {
+            None => pointers,
+            Some(blobs) => {
+                let (pointers_used, pointers_limit) = pointers?;
+                let (blobs_used, blobs_limit) = blobs?;
+                Ok((pointers_used + blobs_used, pointers_limit + blobs_limit))
+            }
+        }
     }
 
     pub fn repair(path: impl AsRef<Path>) -> Result<String> {

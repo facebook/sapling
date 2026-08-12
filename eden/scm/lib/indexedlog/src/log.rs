@@ -1211,6 +1211,13 @@ impl Log {
         !self.mem_buf.is_empty()
     }
 
+    /// Returns the current disk usage in bytes.
+    ///
+    /// This returns the size of the primary log data, not including index files.
+    pub fn disk_usage(&self) -> u64 {
+        self.meta.disk_usage()
+    }
+
     /// Applies the given index function to the entry data and returns the index keys.
     pub fn index_func<'a>(
         &self,

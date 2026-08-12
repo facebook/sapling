@@ -154,6 +154,13 @@ impl LogMetadata {
     pub(crate) fn is_compatible_with(&self, other: &Self) -> bool {
         self.primary_len == other.primary_len && self.epoch == other.epoch
     }
+
+    /// Returns the primary log length in bytes.
+    ///
+    /// This represents the disk usage of the log data (not including index files).
+    pub fn disk_usage(&self) -> u64 {
+        self.primary_len
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

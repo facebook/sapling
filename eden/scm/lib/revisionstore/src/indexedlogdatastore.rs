@@ -350,6 +350,21 @@ impl IndexedLogHgIdDataStore {
         self.store.is_dirty()
     }
 
+    /// Returns the bytes used on disk, flushing first so recently
+    /// written entries still sitting in the in-memory buffer (up to the
+    /// store's auto_sync_threshold, e.g. 50MiB for the default blob/tree
+    /// cache) are reflected. The byte limit is reported separately by
+    /// `max_bytes()`. Errors if the store could not be opened/flushed
+    /// or its on-disk usage could not be determined.
+    pub fn disk_usage(&self) -> Result<u64> {
+        self.flush_log()?;
+        self.store.disk_usage()
+    }
+
+    pub fn max_bytes(&self) -> Result<u64> {
+        self.store.max_bytes()
+    }
+
     /// Flush the underlying IndexedLog
     pub fn flush_log(&self) -> Result<()> {
         self.store.write()?.flush()?;

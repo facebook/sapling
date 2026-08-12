@@ -1350,6 +1350,19 @@ impl storemodel::TreeStore for TreeStore {
             paths.record(err);
         }
     }
+
+    fn cache_disk_usage(&self) -> anyhow::Result<storemodel::CacheUsage> {
+        let cache = match self.indexedlog_cache.as_ref() {
+            Some(cache) => cache,
+            None => return Ok(storemodel::CacheUsage::NotConfigured),
+        };
+        let used = cache.disk_usage()?;
+        let limit = cache.max_bytes()?;
+        Ok(storemodel::CacheUsage::Available {
+            used,
+            limit: Some(limit),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -1362,6 +1375,7 @@ mod tests {
     use storemodel::KeyStore;
     use storemodel::Kind;
     use storemodel::SerializationFormat;
+    use storemodel::TreeStore as _;
     use tempfile::TempDir;
     use types::HgId;
     use types::RepoPathBuf;
@@ -1468,6 +1482,57 @@ mod tests {
         store.insert_data(opts, &path, b"data2"[..].into()).unwrap();
         assert_eq!(cache.to_keys().len(), 1);
         assert_eq!(local.to_keys().len(), 1);
+    }
+
+    #[test]
+    fn test_cache_disk_usage_not_configured() {
+        // No indexedlog cache configured - NotConfigured so callers can
+        // distinguish "no cache" from "cache genuinely empty".
+        let store = TreeStore::empty();
+        assert_eq!(
+            store.cache_disk_usage().unwrap(),
+            storemodel::CacheUsage::NotConfigured
+        );
+    }
+
+    #[test]
+    fn test_cache_disk_usage_reflects_freshly_written_data() {
+        let cache_dir = TempDir::new().unwrap();
+        let cache = make_data_store(&cache_dir);
+        let mut store = TreeStore::empty();
+        store.indexedlog_cache = Some(cache.clone());
+
+        // Baseline before any inserts: a freshly created log already has a
+        // small nonzero header, so this must be compared against the
+        // post-insert reading rather than asserting `used > 0` in isolation
+        // (a check that would trivially pass on the header alone and never
+        // catch a regression where new writes aren't reflected).
+        let (used_before, limit) = match store.cache_disk_usage().unwrap() {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+
+        let path = RepoPathBuf::from_string("foo".to_string()).unwrap();
+        let opts = InsertOpts {
+            kind: Kind::Tree,
+            permanent: false,
+            ..Default::default()
+        };
+        store.insert_data(opts, &path, b"data"[..].into()).unwrap();
+
+        // disk_usage() flushes before reading, so the just-inserted entry
+        // (still only in the in-memory buffer at this point) must already be
+        // reflected here rather than requiring a separate explicit flush.
+        let (used_after, limit_after) = match store.cache_disk_usage().unwrap() {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+        assert!(
+            used_after > used_before,
+            "disk usage should grow after inserting data: {used_before} -> {used_after}"
+        );
+        assert_eq!(limit, limit_after);
+        assert_eq!(limit, Some(cache.max_bytes().unwrap()));
     }
 
     #[test]

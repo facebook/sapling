@@ -25,4 +25,5 @@ mod prefetch;
 mod request;
 
 pub use crate::backingstore::BackingStore;
+pub use crate::backingstore::HgCacheStats;
 pub use crate::init::backingstore_global_init;

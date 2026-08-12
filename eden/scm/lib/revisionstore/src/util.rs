@@ -60,6 +60,23 @@ pub fn get_cache_path(
     Ok(Some(path))
 }
 
+/// Read-only variant of `get_cache_path`'s config resolution: returns the
+/// repo's cache directory path without creating it (or its parent) on disk.
+/// Use this for callers that only want to know *whether*/*where* a cache is
+/// configured (e.g. reporting cache stats) - `get_cache_path` and
+/// `get_config_cache_path` both have a `mkdir` side effect that is
+/// inappropriate for a read-only query.
+pub fn peek_cache_path(config: &dyn Config) -> Result<Option<PathBuf>> {
+    let Some(reponame) = config.get_nonempty("remotefilelog", "reponame") else {
+        return Ok(None);
+    };
+    let Some(mut path) = config.get_nonempty_opt::<PathBuf>("remotefilelog", "cachepath")? else {
+        return Ok(None);
+    };
+    path.push(encode_repo_name(reponame));
+    Ok(Some(path))
+}
+
 #[context("get_local_path")]
 pub fn get_local_path(mut path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     create_dir(&path)?;

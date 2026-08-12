@@ -188,6 +188,35 @@ impl storemodel::FileStore for ArcFileStore {
     fn clone_file_store(&self) -> Box<dyn storemodel::FileStore> {
         Box::new(self.clone())
     }
+
+    fn cache_disk_usage(&self) -> anyhow::Result<storemodel::CacheUsage> {
+        let cache = match self.0.indexedlog_cache() {
+            Some(cache) => cache,
+            None => return Ok(storemodel::CacheUsage::NotConfigured),
+        };
+        let used = cache.disk_usage()?;
+        let limit = cache.max_bytes()?;
+        Ok(storemodel::CacheUsage::Available {
+            used,
+            limit: Some(limit),
+        })
+    }
+
+    fn lfs_cache_disk_usage(&self) -> anyhow::Result<storemodel::CacheUsage> {
+        let lfs_client = match &self.0.lfs_client {
+            Some(lfs_client) => lfs_client,
+            None => return Ok(storemodel::CacheUsage::NotConfigured),
+        };
+        // Flush pending in-memory writes first - LFS blobs buffer up to
+        // `auto_sync_threshold` bytes before syncing, so a just-completed
+        // write could otherwise be missing from the on-disk usage below.
+        lfs_client.shared.flush()?;
+        let (used, limit) = lfs_client.shared.cache_disk_usage()?;
+        Ok(storemodel::CacheUsage::Available {
+            used,
+            limit: Some(limit),
+        })
+    }
 }
 
 pub(crate) fn sha1_digest(opts: &InsertOpts, data: &[u8], format: SerializationFormat) -> Id20 {
@@ -212,6 +241,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
+    use storemodel::FileStore as _;
     use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::RepoPathBuf;
@@ -279,6 +309,70 @@ mod tests {
             .unwrap();
         assert_eq!(cache.to_keys().len(), 1);
         assert_eq!(local.to_keys().len(), 1);
+    }
+
+    #[test]
+    fn test_cache_disk_usage_not_configured() {
+        // No indexedlog cache configured - NotConfigured so callers can
+        // distinguish "no cache" from "cache genuinely empty".
+        let arc_store = ArcFileStore(Arc::new(FileStore::empty()));
+        assert_eq!(
+            arc_store.cache_disk_usage().unwrap(),
+            storemodel::CacheUsage::NotConfigured
+        );
+    }
+
+    #[test]
+    fn test_lfs_cache_disk_usage_not_configured() {
+        // No LFS client configured - NotConfigured, same contract as the
+        // non-LFS cache.
+        let arc_store = ArcFileStore(Arc::new(FileStore::empty()));
+        assert_eq!(
+            arc_store.lfs_cache_disk_usage().unwrap(),
+            storemodel::CacheUsage::NotConfigured
+        );
+    }
+
+    #[test]
+    fn test_cache_disk_usage_reflects_freshly_written_data() {
+        let cache_dir = TempDir::new().unwrap();
+        let cache = make_data_store(&cache_dir);
+        let mut file_store = FileStore::empty();
+        file_store.indexedlog_cache = Some(cache.clone());
+        let arc_store = ArcFileStore(Arc::new(file_store));
+
+        // Baseline before any inserts: a freshly created log already has a
+        // small nonzero header, so this must be compared against the
+        // post-insert reading rather than asserting `used > 0` in isolation
+        // (a check that would trivially pass on the header alone and never
+        // catch a regression where new writes aren't reflected).
+        let (used_before, limit) = match arc_store.cache_disk_usage().unwrap() {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+
+        let path = RepoPathBuf::from_string("foo".to_string()).unwrap();
+        let opts = InsertOpts {
+            permanent: false,
+            ..Default::default()
+        };
+        arc_store
+            .insert_data(opts, &path, b"data"[..].into())
+            .unwrap();
+
+        // disk_usage() flushes before reading, so the just-inserted entry
+        // (still only in the in-memory buffer at this point) must already be
+        // reflected here rather than requiring a separate explicit flush.
+        let (used_after, limit_after) = match arc_store.cache_disk_usage().unwrap() {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+        assert!(
+            used_after > used_before,
+            "disk usage should grow after inserting data: {used_before} -> {used_after}"
+        );
+        assert_eq!(limit, limit_after);
+        assert_eq!(limit, Some(cache.max_bytes().unwrap()));
     }
 
     #[test]
@@ -454,6 +548,39 @@ mod tests {
         let content = arc_store.get_local_content(&path, id)?;
         assert!(content.is_some());
         assert_eq!(content.unwrap(), data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_cache_disk_usage_reflects_freshly_written_data() -> Result<()> {
+        let dir = TempDir::new()?;
+        // Set threshold to 10 bytes so the write below routes through LFS.
+        let store = make_file_store_with_lfs(&dir, Some(10))?;
+        let arc_store = ArcFileStore(Arc::new(store));
+
+        let (used_before, limit_before) = match arc_store.lfs_cache_disk_usage()? {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+
+        let path = RepoPathBuf::from_string("test/large_file.txt".to_string())?;
+        let data = Blob::from_static(b"this is a large file that exceeds the threshold");
+        let opts = InsertOpts::default();
+        arc_store.insert_data(opts, &path, data)?;
+
+        // lfs_cache_disk_usage() flushes before reading, so the just-inserted
+        // LFS blob (still only in the in-memory write buffer at this point)
+        // must already be reflected here without a separate explicit flush.
+        let (used_after, limit_after) = match arc_store.lfs_cache_disk_usage()? {
+            storemodel::CacheUsage::Available { used, limit } => (used, limit),
+            other => panic!("expected Available, got {other:?}"),
+        };
+        assert!(
+            used_after > used_before,
+            "LFS disk usage should grow after inserting an LFS blob: {used_before} -> {used_after}"
+        );
+        assert_eq!(limit_before, limit_after);
 
         Ok(())
     }
