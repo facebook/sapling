@@ -559,6 +559,36 @@ mod tests {
     }
 
     #[test]
+    fn test_disk_usage_errors_after_open_cache_loses_latest() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+            btrfs_compression: false,
+        };
+        let log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            &tempdir,
+            &config,
+            StoreType::Rotated,
+            SerializationFormat::Hg,
+        )?;
+        let delta = Delta {
+            data: Bytes::from_static(b"data"),
+            base: None,
+            key: key("a", "1"),
+        };
+        log.add(&delta, &Metadata::default())?;
+        assert!(log.disk_usage()? > 0);
+
+        remove_file(tempdir.path().join("latest"))?;
+
+        assert!(log.disk_usage().is_err());
+        Ok(())
+    }
+
+    #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
         let config = IndexedLogHgIdDataStoreConfig {

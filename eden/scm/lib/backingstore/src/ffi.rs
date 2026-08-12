@@ -31,6 +31,7 @@ use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
+use crate::backingstore::HgCacheStats;
 use crate::ffi_errors::into_backingstore_err;
 
 #[cxx::bridge(namespace = sapling)]
@@ -285,6 +286,46 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    /// Disk-usage state of one cache (blob/tree/lfs). Mirrors
+    /// `storemodel::CacheUsage`; `used`/`limit` on `HgCacheStats` are only
+    /// meaningful when the corresponding state is `Available`. `Unavailable`
+    /// is appended last (not inserted before `Available`) so its ordinal
+    /// stays aligned with the Thrift `CacheUsageState` enum, which also
+    /// appends its `UNAVAILABLE` value at the end.
+    #[repr(u8)]
+    pub enum CacheUsageState {
+        NotConfigured,
+        Unsupported,
+        Available,
+        /// Configured, but its usage could not be measured due to an error.
+        /// The failure reason is logged server-side, not carried here.
+        Unavailable,
+    }
+
+    /// Stats for per-repo hgcache disk usage. Named `HgCacheStats` (not
+    /// `CacheStats`) to avoid colliding with EdenFS's own unrelated
+    /// in-memory hit/miss-counter `CacheStats` type on the C++ side.
+    pub struct HgCacheStats {
+        /// Only meaningful when `cache_path_configured` is true.
+        pub cache_path: String,
+        pub cache_path_configured: bool,
+        pub blob_state: CacheUsageState,
+        pub blob_bytes_used: u64,
+        /// u64::MAX means uncapped.
+        pub blob_bytes_limit: u64,
+        pub tree_state: CacheUsageState,
+        pub tree_bytes_used: u64,
+        pub tree_bytes_limit: u64,
+        pub lfs_state: CacheUsageState,
+        pub lfs_bytes_used: u64,
+        pub lfs_bytes_limit: u64,
+    }
+
+    pub struct GetCacheStatsResult {
+        data: SharedPtr<HgCacheStats>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -397,6 +438,8 @@ pub(crate) mod ffi {
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
 
         pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
+
+        pub fn sapling_backingstore_get_cache_stats(store: &BackingStore) -> GetCacheStatsResult;
 
         pub fn sapling_flush_counters();
     }
@@ -875,6 +918,62 @@ pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &st
     store.set_parent_hint(parent_id);
 }
 
+/// Flatten a `CacheUsage` into (state, used, limit) for the FFI struct.
+/// `used`/`limit` are 0 unless `Available`; an uncapped `Available` limit
+/// maps to `u64::MAX`, the same "uncapped" sentinel already used internally
+/// by `indexedlogutil::Store::max_bytes()` for permanent (non-rotated) logs.
+fn to_ffi_cache_usage(usage: storemodel::CacheUsage) -> (ffi::CacheUsageState, u64, u64) {
+    match usage {
+        storemodel::CacheUsage::NotConfigured => (ffi::CacheUsageState::NotConfigured, 0, 0),
+        storemodel::CacheUsage::Unsupported => (ffi::CacheUsageState::Unsupported, 0, 0),
+        storemodel::CacheUsage::Unavailable => (ffi::CacheUsageState::Unavailable, 0, 0),
+        storemodel::CacheUsage::Available { used, limit } => (
+            ffi::CacheUsageState::Available,
+            used,
+            limit.unwrap_or(u64::MAX),
+        ),
+    }
+}
+
+fn to_ffi_cache_stats(stats: HgCacheStats) -> ffi::HgCacheStats {
+    let (blob_state, blob_bytes_used, blob_bytes_limit) = to_ffi_cache_usage(stats.blob);
+    let (tree_state, tree_bytes_used, tree_bytes_limit) = to_ffi_cache_usage(stats.tree);
+    let (lfs_state, lfs_bytes_used, lfs_bytes_limit) = to_ffi_cache_usage(stats.lfs);
+    ffi::HgCacheStats {
+        cache_path_configured: stats.cache_path.is_some(),
+        // `cache_path` is display-only (never used for path I/O), so a
+        // lossy UTF-8 conversion here only risks cosmetic corruption of an
+        // already-rare non-UTF8 path on Linux - not worth widening the cxx
+        // bridge field to raw bytes for this diagnostic-only value.
+        cache_path: stats
+            .cache_path
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        blob_state,
+        blob_bytes_used,
+        blob_bytes_limit,
+        tree_state,
+        tree_bytes_used,
+        tree_bytes_limit,
+        lfs_state,
+        lfs_bytes_used,
+        lfs_bytes_limit,
+    }
+}
+
+pub fn sapling_backingstore_get_cache_stats(store: &BackingStore) -> ffi::GetCacheStatsResult {
+    match store.get_cache_stats() {
+        Ok(stats) => ffi::GetCacheStatsResult {
+            data: SharedPtr::new(to_ffi_cache_stats(stats)),
+            error: UniquePtr::null(),
+        },
+        Err(err) => ffi::GetCacheStatsResult {
+            data: SharedPtr::null(),
+            error: into_backingstore_err(err),
+        },
+    }
+}
+
 pub fn sapling_backingstore_flush(store: &BackingStore) {
     store.flush();
     store.sync();
@@ -1036,6 +1135,8 @@ pub fn sapling_flush_counters() {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     #[test]
@@ -1047,6 +1148,120 @@ mod tests {
         let stats = batch_fetch_stats(&fctx);
         assert_eq!(stats.local_count, 2);
         assert_eq!(stats.remote_count, 3);
+    }
+
+    #[test]
+    fn test_to_ffi_cache_stats_maps_each_field_distinctly() {
+        // Distinct values per field, including three same-typed triples
+        // (blob/tree/lfs used, limit) that a copy-paste transposition would
+        // swap without a compile error.
+        let stats = HgCacheStats {
+            cache_path: Some(PathBuf::from("/tmp/hgcache/repo")),
+            blob: storemodel::CacheUsage::Available {
+                used: 111,
+                limit: Some(222),
+            },
+            tree: storemodel::CacheUsage::Available {
+                used: 333,
+                limit: Some(444),
+            },
+            lfs: storemodel::CacheUsage::Available {
+                used: 555,
+                limit: Some(666),
+            },
+        };
+
+        let ffi_stats = to_ffi_cache_stats(stats);
+
+        assert_eq!(ffi_stats.cache_path, "/tmp/hgcache/repo");
+        assert!(ffi_stats.cache_path_configured);
+        assert!(matches!(
+            ffi_stats.blob_state,
+            ffi::CacheUsageState::Available
+        ));
+        assert_eq!(ffi_stats.blob_bytes_used, 111);
+        assert_eq!(ffi_stats.blob_bytes_limit, 222);
+        assert!(matches!(
+            ffi_stats.tree_state,
+            ffi::CacheUsageState::Available
+        ));
+        assert_eq!(ffi_stats.tree_bytes_used, 333);
+        assert_eq!(ffi_stats.tree_bytes_limit, 444);
+        assert!(matches!(
+            ffi_stats.lfs_state,
+            ffi::CacheUsageState::Available
+        ));
+        assert_eq!(ffi_stats.lfs_bytes_used, 555);
+        assert_eq!(ffi_stats.lfs_bytes_limit, 666);
+    }
+
+    #[test]
+    fn test_to_ffi_cache_stats_not_configured_and_unsupported() {
+        let stats = HgCacheStats {
+            cache_path: None,
+            blob: storemodel::CacheUsage::NotConfigured,
+            tree: storemodel::CacheUsage::Unsupported,
+            lfs: storemodel::CacheUsage::Available {
+                used: 1,
+                limit: None,
+            },
+        };
+
+        let ffi_stats = to_ffi_cache_stats(stats);
+
+        assert_eq!(ffi_stats.cache_path, "");
+        assert!(!ffi_stats.cache_path_configured);
+        assert!(matches!(
+            ffi_stats.blob_state,
+            ffi::CacheUsageState::NotConfigured
+        ));
+        assert!(matches!(
+            ffi_stats.tree_state,
+            ffi::CacheUsageState::Unsupported
+        ));
+        assert!(matches!(
+            ffi_stats.lfs_state,
+            ffi::CacheUsageState::Available
+        ));
+        assert_eq!(ffi_stats.lfs_bytes_used, 1);
+        assert_eq!(
+            ffi_stats.lfs_bytes_limit,
+            u64::MAX,
+            "an uncapped Available limit must map to the u64::MAX sentinel"
+        );
+    }
+
+    #[test]
+    fn test_to_ffi_cache_stats_maps_unavailable() {
+        // A measurement failure (see `backingstore::cache_usage_or_unavailable`)
+        // must map to the `Unavailable` state, not `NotConfigured`/`Unsupported`
+        // - those mean something different (no cache / store can't report).
+        let stats = HgCacheStats {
+            cache_path: Some(PathBuf::from("/tmp/hgcache/repo")),
+            blob: storemodel::CacheUsage::Unavailable,
+            tree: storemodel::CacheUsage::Available {
+                used: 1,
+                limit: Some(2),
+            },
+            lfs: storemodel::CacheUsage::Unavailable,
+        };
+
+        let ffi_stats = to_ffi_cache_stats(stats);
+
+        assert!(matches!(
+            ffi_stats.blob_state,
+            ffi::CacheUsageState::Unavailable
+        ));
+        assert_eq!(ffi_stats.blob_bytes_used, 0);
+        assert_eq!(ffi_stats.blob_bytes_limit, 0);
+        assert!(matches!(
+            ffi_stats.tree_state,
+            ffi::CacheUsageState::Available
+        ));
+        assert!(matches!(
+            ffi_stats.lfs_state,
+            ffi::CacheUsageState::Unavailable
+        ));
     }
 
     #[test]
