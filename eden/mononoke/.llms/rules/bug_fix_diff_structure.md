@@ -1,6 +1,9 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_user_prompt: 'fix.{0,20}bug|bug.{0,20}fix|bugfix'
+name: bug-fix-diff-structure
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_user_prompt: 'fix.{0,20}bug|bug.{0,20}fix|bugfix'
 ---
 
 # Bug Fix Diff Structure
