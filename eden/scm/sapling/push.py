@@ -299,7 +299,12 @@ def get_remote_bookmark_value(repo, edenapi, bookmark, force) -> RemoteBookmarkV
 def get_remote_bookmark_node_from_server(ui, edenapi, bookmark) -> Optional[bytes]:
     """Get the remote bookmark node from the server."""
     ui.debug("getting remote bookmark %s\n" % bookmark)
-    response = edenapi.bookmarks([bookmark])
+    freshness = (
+        "MostRecent"
+        if ui.configbool("experimental", "push-use-most-recent-bookmark", default=True)
+        else None
+    )
+    response = edenapi.bookmarks([bookmark], freshness)
     hexnode = response.get(bookmark)
     return bin(hexnode) if hexnode else None
 

@@ -51,11 +51,16 @@ remote bookmark, so it is public. Then create C on top.
   $ hg add C
   $ hg commit -qm C
 
-FIXME: Push should read B from the primary instead of regressing the local
-remote bookmark to cached A and treating public B as part of the draft stack.
+Fresh bookmark reads are enabled by default, so only C is part of the stack.
 
-  $ hg push -r . --to master_bookmark > push.out 2>&1
-  [255]
-  $ sed -n '/pushrebasing stack/p;/abort:/p' push.out
-  pushrebasing stack (20ca2a4749a4, *] (2 commits) to remote bookmark master_bookmark (glob)
-  abort: Server error: Conflicts while pushrebasing: * (glob)
+  $ hg push -r . --to master_bookmark
+  pushing rev * to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (80521a640a0c, *] (1 commit) to remote bookmark master_bookmark (glob)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to * (glob)
