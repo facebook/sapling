@@ -75,15 +75,95 @@ const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 /// `reserve_repos_ids`. Shared by the production call site and the tests so
 /// the two can never drift.
 const ATTACH_JK: &str = "scm/mononoke:create_repos_attach_to_inflight_mutation";
-/// Largest batch `create_repos` will accept. Clears every batch on record --
-/// p50 1, p95 66, max 139 over 32 days, and 588 all-time -- as well as the 700+
-/// the bulk-import pipeline's partner teams say they expect, so it bounds an
-/// unattended caller's blast radius rather than forbidding bulk.
-const MAX_BATCH_SIZE: usize = 1000;
-
 /// Whether an out-of-bounds batch is rejected or merely logged. Turning this
-/// off is the kill switch; the cap itself is not runtime-tunable.
+/// off is the kill switch; the caps themselves are not runtime-tunable.
+/// Switchval'd on the tier name, so enforcement can be turned on one tier at a
+/// time.
 const ENFORCE_BATCH_SIZE_JK: &str = "scm/mononoke:create_repos_enforce_max_batch_size";
+
+/// Group granting the elevated batch tier, one step below Source Control's own.
+/// Membership is the whole mechanism:
+/// callers are added and removed there rather than here, so widening or
+/// narrowing who may create repos in bulk does not need a diff. Expected
+/// members are the automated bundle-import pipeline
+/// (`SANDCASTLE_TAG:git_repo_importer`, the tag its Skycastle workflow declares
+/// in `required_tag_identities`) and whoever is currently doing bulk onboarding
+/// by hand.
+const BULK_REPO_CREATORS_GROUP: &str = "bulk_repo_creators";
+
+/// Which batch-size cap applies to a caller.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BatchSizeTier {
+    SourceControl,
+    /// Members of the bulk-repo-creators group.
+    Elevated,
+    Default,
+}
+
+impl BatchSizeTier {
+    /// Enforcement switchval, and the tier as it appears in the advisory log.
+    fn name(self) -> &'static str {
+        match self {
+            Self::SourceControl => "source_control",
+            Self::Elevated => "elevated",
+            Self::Default => "default",
+        }
+    }
+
+    /// Only Source Control's tier covers the largest batches on record. A
+    /// delegated grant is deliberately smaller than what the team that hands it
+    /// out can do itself -- see the tests, which pin every rejection.
+    fn max_batch_size(self) -> usize {
+        match self {
+            Self::SourceControl => 1000,
+            Self::Elevated => 500,
+            Self::Default => 50,
+        }
+    }
+}
+
+/// Resolve the caller's batch-size tier.
+///
+/// A property of the caller, not of the request: the same identity gets the
+/// same cap whatever it is creating.
+///
+/// Elevated is group membership rather than anything hardcoded here, so the
+/// set of bulk creators can change without a code change.
+///
+/// Keyed on the mTLS identity set, deliberately **not** on the `client_id`
+/// header: that header is client-supplied and never verified against the
+/// identities (`source_control_impl.rs` sets it on the untrusted-proxy branch
+/// too), so it cannot carry an authorization decision. It is not keyed on an
+/// ACL action either -- a Hipster action expresses a permission, and no ACL
+/// carries one for a quota; the closest in-tree precedent for a per-caller
+/// limit is a rate-limit target on an identity set
+/// (`rate_limiting/src/config.rs`).
+///
+/// Fails *down*, never up -- a group lookup error yields the lower tier.
+async fn batch_size_tier_for_caller(
+    ctx: &CoreContext,
+    acl_provider: &dyn AclProvider,
+) -> BatchSizeTier {
+    let identities = ctx.metadata().identities();
+
+    // Checked before the group so that a Source Control member who is also in
+    // it gets the higher of the two caps rather than whichever was looked up
+    // first. It also means an edit that empties or breaks the group cannot
+    // leave the oncall holding an unrecognised caller's cap while they fix it.
+    if let Ok(admins) = acl_provider.admin_group().await {
+        if admins.is_member(identities).await {
+            return BatchSizeTier::SourceControl;
+        }
+    }
+
+    if let Ok(bulk_creators) = acl_provider.group(BULK_REPO_CREATORS_GROUP).await {
+        if bulk_creators.is_member(identities).await {
+            return BatchSizeTier::Elevated;
+        }
+    }
+
+    BatchSizeTier::Default
+}
 
 /// Classify a batch against a cap, without deciding whether to act on it.
 ///
@@ -106,8 +186,8 @@ fn check_batch_size(count: usize, max_batch_size: usize) -> Result<(), scs_error
 
     Err(scs_errors::invalid_request(format!(
         "create_repos was asked to create {count} repos, which exceeds the maximum batch size of \
-         {max_batch_size}. Split the request into smaller batches, or ask Source Control to raise \
-         the cap."
+         {max_batch_size} for this caller. Split the request into smaller batches, or ask Source \
+         Control for membership of the '{BULK_REPO_CREATORS_GROUP}' group."
     ))
     .into())
 }
@@ -1123,14 +1203,17 @@ impl SourceControlServiceImpl {
         // that arrives without a measured log-only phase fails a partner run on
         // a number we guessed (`config_rollout_safety.md`, S578742).
         let count = params.repos.len();
-        if let Err(error) = check_batch_size(count, MAX_BATCH_SIZE) {
-            if justknobs::eval(ENFORCE_BATCH_SIZE_JK, None, None) {
+        let tier = batch_size_tier_for_caller(&ctx, self.acl_provider.as_ref()).await;
+        if let Err(error) = check_batch_size(count, tier.max_batch_size()) {
+            if justknobs::eval(ENFORCE_BATCH_SIZE_JK, None, Some(tier.name())) {
                 return Err(error);
             }
             warn!(
                 count,
-                max_batch_size = MAX_BATCH_SIZE,
-                "create_repos batch is outside the cap; admitting it because enforcement is off"
+                max_batch_size = tier.max_batch_size(),
+                tier = tier.name(),
+                "create_repos batch is outside the cap for this tier; admitting it because \
+                 enforcement is off"
             );
         }
 
@@ -2164,7 +2247,8 @@ mod attach_tests {
 
     #[mononoke::test]
     fn empty_batch_is_rejected() {
-        let err = check_batch_size(0, MAX_BATCH_SIZE).expect_err("an empty batch must be rejected");
+        let err = check_batch_size(0, BatchSizeTier::Default.max_batch_size())
+            .expect_err("an empty batch must be rejected");
         let scs_errors::ServiceError::Request(request_error) = &err else {
             panic!("expected Request error, got: {err:?}");
         };
@@ -2176,15 +2260,51 @@ mod attach_tests {
     }
 
     #[mononoke::test]
-    fn the_cap_admits_every_batch_on_record() {
-        // Observed over 32 days of `create_repos` traffic: p50 1, p95 66, max
-        // 139. Older and larger, from before Scuba's 33-day retention: 588
-        // (par-msl, the all-time high), 513 (MTK), 134 and 95 through the
-        // bulk-import pipeline. Plus the 700+ MTK Wearables have said they
-        // expect to need.
-        for count in [1, 66, 95, 134, 139, 513, 588, 700] {
-            check_batch_size(count, MAX_BATCH_SIZE)
-                .unwrap_or_else(|err| panic!("a batch of {count} must be allowed, got: {err:?}"));
+    fn tiers_admit_the_batches_they_are_sized_for() {
+        let elevated = BatchSizeTier::Elevated.max_batch_size();
+        let default = BatchSizeTier::Default.max_batch_size();
+
+        // Real runs through the bulk-import pipeline: ~40, 95, 134.
+        for count in [40, 95, 134] {
+            check_batch_size(count, elevated).unwrap_or_else(|err| {
+                panic!("a pipeline batch of {count} must be allowed, got: {err:?}")
+            });
         }
+        // p50 of all observed traffic is 1: the common case is one repo.
+        check_batch_size(1, default).expect("a single-repo batch must always be allowed");
+    }
+
+    #[mononoke::test]
+    fn only_source_control_admits_the_largest_batches_on_record() {
+        // 588 (par-msl, the all-time high) and the 700+ MTK Wearables say they
+        // expect. Source Control has issued batches this size and can still do
+        // so; a delegated grant deliberately cannot, so a group member has to
+        // split, ask for the cap to be raised, or hand the batch back to Source
+        // Control. Sizing the delegated tier around its two largest outliers
+        // would leave it bounding nothing. Encoded so the decision is
+        // discoverable rather than a surprise at the flip.
+        let source_control = BatchSizeTier::SourceControl.max_batch_size();
+        let elevated = BatchSizeTier::Elevated.max_batch_size();
+        for count in [588, 700] {
+            check_batch_size(count, source_control).unwrap_or_else(|err| {
+                panic!("Source Control must still be able to issue {count}, got: {err:?}")
+            });
+            check_batch_size(count, elevated)
+                .expect_err(&format!("{count} is expected to exceed the elevated tier"));
+        }
+    }
+
+    #[mononoke::test]
+    fn the_default_tier_does_not_admit_the_observed_p95() {
+        // Also deliberate, and the sharper edge of the two. Observed over 32
+        // days: p95 66, max 139 -- both from ad-hoc Thrift Fiddle onboarding
+        // runs. Under a default of 50 those callers must split their batches,
+        // join the group, or be recognised as Source Control, which the
+        // identity check should already do for a human on the team. Anyone else
+        // doing bulk creation from an unrecognised identity is exactly what the
+        // cap is for, so this is the intended bite rather than collateral.
+        let default = BatchSizeTier::Default.max_batch_size();
+        check_batch_size(66, default).expect_err("the observed p95 is expected to exceed default");
+        check_batch_size(139, default).expect_err("the observed max is expected to exceed default");
     }
 }
