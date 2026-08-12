@@ -15,7 +15,7 @@ Configure restricted paths: "restricted" directory is restricted.
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<EOF
   > [restricted_paths_config]
-  > path_acls = { "restricted" = "SERVICE_IDENTITY:restricted_acl" }
+  > path_restriction_metadata = { "restricted" = { repo_region_acl = "SERVICE_IDENTITY:restricted_acl" } }
   > [restricted_paths_config.manifest_id_store_config]
   > use_manifest_id_cache = false
   > cache_update_interval_ms = 1000
