@@ -33,7 +33,7 @@ define_stats! {
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
 
     trees_queue_capacity: dynamic_singleton_counter("{}.trees.queue_capacity", (repo: String)),
-    trees_queue_len: dynamic_histogram("{}.trees.queue_len", (repo: String); 10, 0,  100_000, Average; P 50; P 75; P 95; P 99),
+    trees_queue_len: dynamic_quantile_stat("{}.trees.queue_len", (repo: String); Average; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     trees_queue_max_capacity: dynamic_singleton_counter("{}.trees.queue_max_capacity", (repo: String)),
 }
 

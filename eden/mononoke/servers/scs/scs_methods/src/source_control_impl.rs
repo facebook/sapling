@@ -133,7 +133,7 @@ define_stats! {
     total_request_invalid_permille: timeseries(Average),
 
     // Duration per method
-    method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
+    method_completion_time_ms: dynamic_quantile_stat("method.{}.completion_time_ms", (method: String); Average, Sum, Count; P 5, P 50, P 90; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     total_method_requests:  dynamic_timeseries("method.{}.total_method_requests", (method: String); Rate, Sum),
     total_method_internal_failure:  dynamic_timeseries("method.{}.total_method_internal_failure", (method: String); Rate, Sum),
 

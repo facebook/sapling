@@ -33,7 +33,7 @@ define_stats! {
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
 
     files_queue_capacity: dynamic_singleton_counter("{}.files.queue_capacity", (repo: String)),
-    files_queue_len: dynamic_histogram("{}.files.queue_len", (repo: String); 10, 0, 100_000, Average; P 50; P 75; P 95; P 99),
+    files_queue_len: dynamic_quantile_stat("{}.files.queue_len", (repo: String); Average; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     files_queue_max_capacity: dynamic_singleton_counter("{}.files.queue_max_capacity", (repo: String)),
 }
 
