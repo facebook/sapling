@@ -15,7 +15,6 @@ import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
-import {scrollToYouAreHere} from './CommitTreeList';
 import {CommitTreeSearchFilterButton} from './CommitTreeSearchFilter';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
@@ -76,7 +75,6 @@ export function TopBar() {
       </span>
       <span className="button-group">
         <DebugToolsButton />
-        <ScrollToYouAreHereButton />
         <CommitTreeSearchFilterButton />
         <FocusModeToggle />
         <BugButton />
@@ -84,19 +82,6 @@ export function TopBar() {
         <RefreshButton />
       </span>
     </div>
-  );
-}
-
-function ScrollToYouAreHereButton() {
-  return (
-    <Tooltip
-      delayMs={DOCUMENTATION_DELAY}
-      placement="bottom"
-      title={<T>Scroll to your current commit ("You are here")</T>}>
-      <Button icon onClick={() => scrollToYouAreHere()} data-testid="scroll-to-you-are-here-button">
-        <Icon icon="target" />
-      </Button>
-    </Tooltip>
   );
 }
 

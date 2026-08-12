@@ -65,8 +65,8 @@ const youAreHerePosition = atom<YouAreHerePosition>('visible');
  * Scroll the commit graph so the "You are here" row is visible.
  * Returns false if the anchor is not in the DOM yet (nothing scrolled).
  */
-export function scrollToYouAreHere(behavior: ScrollBehavior = 'smooth'): boolean {
-  // ponytail: getElementById avoids threading a ref from the DAG row up to the TopBar button.
+function scrollToYouAreHere(behavior: ScrollBehavior = 'smooth'): boolean {
+  // ponytail: getElementById avoids threading a ref from the DAG row up to the scroll controls.
   const anchor = document.getElementById(YOU_ARE_HERE_ANCHOR_ID);
   // The anchor is a zero-height span trailing the badge; scroll the container so the
   // badge above it isn't clipped at the top edge.
