@@ -276,7 +276,7 @@ impl PrefetchProfileCmd {
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
-                &options.checkout.display()
+                options.checkout.display()
             )
         })?;
 
@@ -315,7 +315,7 @@ impl PrefetchProfileCmd {
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
-                &options.checkout.display()
+                options.checkout.display()
             )
         })?;
 
@@ -353,7 +353,7 @@ impl PrefetchProfileCmd {
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
-                &options.checkout.display()
+                options.checkout.display()
             )
         })?;
 
@@ -385,7 +385,7 @@ impl PrefetchProfileCmd {
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
-                &options.checkout.display()
+                options.checkout.display()
             )
         })?;
 
@@ -428,7 +428,7 @@ impl PrefetchProfileCmd {
         let checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
             anyhow!(
                 "Failed to parse config located in config_dir: {}",
-                &config_dir.display()
+                config_dir.display()
             )
         })?;
         let profiles_to_prefetch = if profile_names.is_empty() {
@@ -512,7 +512,7 @@ impl PrefetchProfileCmd {
         let checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
             anyhow!(
                 "Failed to parse config located in config_dir: {}",
-                &config_dir.display()
+                config_dir.display()
             )
         })?;
 
@@ -584,8 +584,6 @@ impl PrefetchProfileCmd {
 #[async_trait]
 impl Subcommand for PrefetchProfileCmd {
     async fn run(&self) -> Result<ExitCode> {
-        #[cfg(fbcode_build)]
-        crate::init_enable_xplatlogger_events().await;
         match self {
             Self::Finish { output_path } => self.finish(output_path).await,
             Self::Record {} => self.record().await,

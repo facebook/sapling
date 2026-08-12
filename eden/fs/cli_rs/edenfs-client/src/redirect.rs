@@ -1496,7 +1496,6 @@ pub async fn try_add_redirection(
     force_remount_bind_mounts: bool,
     strict: bool,
     force: bool,
-    #[cfg(fbcode_build)] enable_xplatlogger_events: bool,
 ) -> Result<i32> {
     // Get only the explicitly configured entries for the purposes of the
     // add command, so that we avoid writing out any of the effective list
@@ -1583,7 +1582,7 @@ pub async fn try_add_redirection(
                     &redir.repo_path.to_string_lossy(),
                     &checkout.path().to_string_lossy(),
                 );
-                edenfs_telemetry::send_edenfs_event(sample, enable_xplatlogger_events);
+                edenfs_telemetry::send_edenfs_event(sample);
             }
         } else {
             eprintln!(

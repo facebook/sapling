@@ -17,8 +17,6 @@ use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::methods::EdenThriftMethod;
 
-pub const ENABLE_XPLATLOGGER_EVENTS_CONFIG_KEY: &str = "telemetry:enable-xplatlogger-events";
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ConfigSourceType {
     Default = 0,
@@ -95,24 +93,5 @@ impl EdenFsClient {
             .with_context(|| "failed to get default eden config data")
             .map(|config_data| config_data.into())
             .map_err(EdenFsError::from)
-    }
-
-    pub async fn get_enable_xplatlogger_events(&self) -> bool {
-        match self.get_config_default().await {
-            Ok(config) => {
-                let enabled = config
-                    .get_bool(ENABLE_XPLATLOGGER_EVENTS_CONFIG_KEY)
-                    .unwrap_or(false);
-                tracing::debug!(enabled, "read edenfs_events XplatLogger config from daemon");
-                enabled
-            }
-            Err(error) => {
-                tracing::debug!(
-                    ?error,
-                    "failed to read edenfs_events XplatLogger config; using legacy logger"
-                );
-                false
-            }
-        }
     }
 }

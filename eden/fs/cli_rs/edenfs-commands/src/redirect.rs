@@ -245,14 +245,12 @@ impl RedirectCmd {
             force_remount_bind_mounts,
             strict,
             force,
-            #[cfg(fbcode_build)]
-            crate::get_enable_xplatlogger_events(),
         )
         .await
         .with_context(|| {
             format!(
                 "Could not add redirection {} of type {}",
-                &repo_path.display(),
+                repo_path.display(),
                 redir_type,
             )
         })?;
@@ -273,7 +271,7 @@ impl RedirectCmd {
         let mut checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
             format!(
                 "Failed to parse checkout config using config dir {}",
-                &config_dir.display()
+                config_dir.display()
             )
         })?;
         // Remove the redirection targets from the config so that proj-fs pre-delete notification does not block deletion on symlink
@@ -344,7 +342,7 @@ impl RedirectCmd {
                 CheckoutConfig::parse_config(&config_dir).with_context(|| {
                     format!(
                         "Failed to parse checkout config using config dir {}",
-                        &config_dir.display()
+                        config_dir.display()
                     )
                 })?;
             // Remove the redirection target from the config so that proj-fs pre-delete notification does not block deletion on symlink
@@ -390,7 +388,7 @@ impl RedirectCmd {
             println!(
                 "error: {} is defined by {} and cannot be removed using `edenfsctl redirect del {}`",
                 repo_path.display(),
-                &effective_redir.source,
+                effective_redir.source,
                 repo_path.display()
             );
             return Ok(1);
@@ -597,8 +595,6 @@ impl RedirectCmd {
 #[async_trait]
 impl Subcommand for RedirectCmd {
     async fn run(&self) -> Result<ExitCode> {
-        #[cfg(fbcode_build)]
-        crate::init_enable_xplatlogger_events().await;
         match self {
             Self::List { mount, json } => self.list(mount.to_owned(), *json).await,
             Self::Add {
