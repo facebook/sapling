@@ -2605,13 +2605,34 @@ pub struct EnforcementConditionSet {
     pub client_identity_regexes: Vec<ComparableRegex>,
 }
 
+/// Parse a bare AMP group name into a `GROUP:` identity.
+///
+/// Restricted-path configs and `.slacl` files spell rollout allowlist groups as
+/// bare names, the same way `admin_bypass_group` does. Every rejection here is
+/// deliberate and fail-closed: silently accepting a malformed or already
+/// prefixed value would produce an identity that never matches any caller,
+/// leaving a tent owner believing an allowlist is active when it is not.
+pub fn parse_bare_group_name(value: &str) -> Result<MononokeIdentity> {
+    if value.is_empty() {
+        bail!("group name must not be empty");
+    }
+    if value.trim() != value {
+        bail!("group name `{value}` must not have leading or trailing whitespace");
+    }
+    if value.contains(':') {
+        bail!("expected a bare group name, got `{value}`: omit the `GROUP:` prefix");
+    }
+    MononokeIdentity::from_str(&format!("GROUP:{value}"))
+        .with_context(|| format!("Failed to parse group name `{value}`"))
+}
+
 /// Restriction metadata for a single restricted path.
 ///
-/// Supersedes the bare path -> ACL mapping that `path_acls` used to carry: it
-/// holds the REPO_REGION ACL, an optional permission-request group, and a
-/// `read_only` flag. When `read_only` is true, derivation stops recording new
-/// manifest-id-store entries for the path; enforcement on existing entries and
-/// config-based authorization are unaffected.
+/// Holds the REPO_REGION ACL, an optional permission-request group, an optional
+/// rollout allowlist group, and a `read_only` flag. When `read_only` is true,
+/// derivation stops recording new manifest-id-store entries for the path;
+/// enforcement on existing entries and config-based authorization are
+/// unaffected.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PathRestrictionMetadata {
     /// REPO_REGION ACL protecting this path.
@@ -2619,6 +2640,12 @@ pub struct PathRestrictionMetadata {
     /// AMP group clients are redirected to when requesting access, instead of
     /// exposing the REPO_REGION ACL. If `None`, defaults to `repo_region_acl`.
     pub permission_request_group: Option<MononokeIdentity>,
+    /// AMP group whose members are temporarily allowlisted to read this path
+    /// during rollout, so the tent owner can triage them before granting real
+    /// access in the REPO_REGION ACL. `None` means no rollout allowlist, which
+    /// is *not* the same as an empty group: a caller must be allowlisted for
+    /// every restricted path in a request for the allowlist to grant access.
+    pub rollout_allowlist_group: Option<MononokeIdentity>,
     /// When true, no new manifest-id-store entries are derived for this path.
     pub read_only: bool,
 }

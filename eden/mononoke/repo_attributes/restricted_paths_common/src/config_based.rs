@@ -116,6 +116,7 @@ mod tests {
         PathRestrictionMetadata {
             repo_region_acl: MononokeIdentity::from_str(acl).expect("valid identity"),
             permission_request_group: None,
+            rollout_allowlist_group: None,
             read_only,
         }
     }

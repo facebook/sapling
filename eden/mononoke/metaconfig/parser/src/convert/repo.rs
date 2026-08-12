@@ -89,6 +89,7 @@ use metaconfig_types::WalkerJobType;
 use metaconfig_types::XRepoSyncSourceConfig;
 use metaconfig_types::XRepoSyncSourceConfigMapping;
 use metaconfig_types::ZelosConfig;
+use metaconfig_types::parse_bare_group_name;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
@@ -1431,11 +1432,18 @@ fn convert_path_restriction_metadata(
                     })
                 })
                 .transpose()?;
+            let rollout_allowlist_group = raw
+                .rollout_allowlist_group
+                .as_deref()
+                .map(parse_bare_group_name)
+                .transpose()
+                .with_context(|| format!("Invalid rollout_allowlist_group for {path}"))?;
             Ok((
                 non_root_path,
                 PathRestrictionMetadata {
                     repo_region_acl,
                     permission_request_group,
+                    rollout_allowlist_group,
                     read_only: raw.read_only.unwrap_or(false),
                 },
             ))
@@ -1872,7 +1880,80 @@ mod tests {
         let md = cfg.path_restriction_metadata.get(&path).expect("entry");
         assert_eq!(md.repo_region_acl.to_string(), "REPO_REGION:acl1");
         assert_eq!(md.permission_request_group, None);
+        assert_eq!(
+            md.rollout_allowlist_group, None,
+            "no rollout allowlist when the field is unset"
+        );
         assert!(!md.read_only, "read_only defaults to false when unset");
+    }
+
+    fn raw_metadata_with_rollout_group(
+        rollout_allowlist_group: &str,
+    ) -> RawPathRestrictionMetadata {
+        RawPathRestrictionMetadata {
+            repo_region_acl: "REPO_REGION:acl1".to_string(),
+            rollout_allowlist_group: Some(rollout_allowlist_group.to_string()),
+            ..Default::default()
+        }
+    }
+
+    fn convert_with_rollout_group(rollout_allowlist_group: &str) -> Result<RestrictedPathsConfig> {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata_with_rollout_group(rollout_allowlist_group),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        raw.convert()
+    }
+
+    /// What it tests: a bare `rollout_allowlist_group` name is prefixed to a
+    /// `GROUP:` identity, matching how `admin_bypass_group` is spelled in config.
+    /// Expected: `titan_rollout` becomes `GROUP:titan_rollout`.
+    #[mononoke::test]
+    fn test_rollout_allowlist_group_is_prefixed() {
+        let cfg = convert_with_rollout_group("titan_rollout").unwrap();
+
+        let path = NonRootMPath::new("foo").unwrap();
+        let md = cfg.path_restriction_metadata.get(&path).expect("entry");
+        assert_eq!(
+            md.rollout_allowlist_group.as_ref().map(|i| i.to_string()),
+            Some("GROUP:titan_rollout".to_string()),
+        );
+    }
+
+    /// What it tests: malformed `rollout_allowlist_group` values.
+    /// Expected: every one fails config load rather than producing an identity
+    /// that silently never matches, which would leave a tent owner believing an
+    /// allowlist is active when it is not.
+    #[mononoke::test]
+    fn test_malformed_rollout_allowlist_group_fails_closed() {
+        // (value, fragment the error must mention)
+        let rejected = [
+            ("", "must not be empty"),
+            ("   ", "whitespace"),
+            (" titan_rollout", "whitespace"),
+            ("titan_rollout ", "whitespace"),
+            ("GROUP:titan_rollout", "omit the `GROUP:` prefix"),
+            ("USER:alice", "omit the `GROUP:` prefix"),
+        ];
+
+        for (value, expected_fragment) in rejected {
+            let err = convert_with_rollout_group(value)
+                .expect_err(&format!("`{value}` should be rejected"));
+            let msg = format!("{err:#}");
+            assert!(
+                msg.contains(expected_fragment),
+                "error for `{value}` should mention {expected_fragment:?}, got: {msg}"
+            );
+            assert!(
+                msg.contains("foo"),
+                "error for `{value}` should name the offending path, got: {msg}"
+            );
+        }
     }
 
     /// What it tests: a malformed `repo_region_acl` string in

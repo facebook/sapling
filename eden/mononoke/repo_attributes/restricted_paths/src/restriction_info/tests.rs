@@ -129,11 +129,13 @@ mod path_metadata_union {
             restriction_root: root.clone(),
             repo_region_acl: "REPO_REGION:config".to_string(),
             permission_request_group: "REPO_REGION:config".parse()?,
+            rollout_allowlist_group: None,
         };
         let acl_manifest = PathRestrictionInfo {
             restriction_root: root,
             repo_region_acl: "REPO_REGION:acl_manifest".to_string(),
             permission_request_group: "REPO_REGION:acl_manifest".parse()?,
+            rollout_allowlist_group: None,
         };
 
         let results = union_path_restriction_info_with_acl_manifest_precedence(
@@ -179,6 +181,7 @@ mod acl_manifest_path_lookup {
                 restriction_root: NonRootMPath::new(restriction_root)?,
                 repo_region_acl: repo_region_acl.to_string(),
                 permission_request_group: repo_region_acl.parse()?,
+                rollout_allowlist_group: None,
             }],
         );
         Ok(())
@@ -211,6 +214,7 @@ mod acl_manifest_path_lookup {
                 restriction_root: NonRootMPath::new(restriction_root)?,
                 repo_region_acl: repo_region_acl.to_string(),
                 permission_request_group: repo_region_acl.parse()?,
+                rollout_allowlist_group: None,
             }],
         );
         Ok(())
@@ -248,11 +252,13 @@ mod acl_manifest_path_lookup {
                     restriction_root: NonRootMPath::new(first_restriction_root)?,
                     repo_region_acl: first_repo_region_acl.to_string(),
                     permission_request_group: first_repo_region_acl.parse()?,
+                    rollout_allowlist_group: None,
                 },
                 PathRestrictionInfo {
                     restriction_root: NonRootMPath::new(second_restriction_root)?,
                     repo_region_acl: second_repo_region_acl.to_string(),
                     permission_request_group: second_repo_region_acl.parse()?,
+                    rollout_allowlist_group: None,
                 },
             ],
         );
@@ -297,6 +303,7 @@ mod hg_augmented_manifest_lookup {
                 restriction_root: None,
                 repo_region_acl: repo_region_acl.to_string(),
                 permission_request_group: permission_request_group.parse()?,
+                rollout_allowlist_group: None,
             }],
         );
         Ok(())
@@ -577,6 +584,7 @@ fn restricted_paths_for_repo_with_mode_and_path_acls(
                 PathRestrictionMetadata {
                     repo_region_acl: acl.parse()?,
                     permission_request_group: None,
+                    rollout_allowlist_group: None,
                     read_only: false,
                 },
             ))
@@ -725,5 +733,6 @@ fn manifest_restriction_info(
         restriction_root: restriction_root.map(NonRootMPath::new).transpose()?,
         repo_region_acl: repo_region_acl.to_string(),
         permission_request_group: repo_region_acl.parse()?,
+        rollout_allowlist_group: None,
     })
 }

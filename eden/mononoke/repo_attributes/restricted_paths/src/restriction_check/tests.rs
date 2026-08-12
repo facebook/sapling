@@ -135,8 +135,7 @@ async fn test_admin_bypass_group_member_is_authorized_and_flagged(fb: FacebookIn
     let authorization = super::check_authorization(
         &ctx,
         &acl_provider,
-        &[&acl],
-        None,
+        &[(&acl, None)],
         None,
         Some(&bypass_group),
     )
@@ -171,8 +170,7 @@ async fn test_non_member_without_acl_is_denied(fb: FacebookInit) -> Result<()> {
     let authorization = super::check_authorization(
         &ctx,
         &acl_provider,
-        &[&acl],
-        None,
+        &[(&acl, None)],
         None,
         Some(&bypass_group),
     )
@@ -207,8 +205,7 @@ async fn test_direct_acl_read_is_not_flagged_as_bypass(fb: FacebookInit) -> Resu
     let authorization = super::check_authorization(
         &ctx,
         &acl_provider,
-        &[&acl],
-        None,
+        &[(&acl, None)],
         None,
         Some(&bypass_group),
     )
@@ -336,8 +333,135 @@ fn test_summary_repo_wide_flags_use_any() -> Result<()> {
     Ok(())
 }
 
+/// What it tests: a caller in a tent's own rollout allowlist group is granted
+/// access to that tent, and the grant is attributed to the rollout allowlist
+/// rather than to direct ACL access.
+/// Expected: authorized, `is_rollout_allowlisted` set, `has_acl_access` clear.
+#[mononoke::fbinit_test]
+async fn test_per_tent_rollout_group_member_is_authorized(fb: FacebookInit) -> Result<()> {
+    let acl_provider = rollout_allowlist_acl_provider()?;
+    // dave is only in tent_a's rollout group, with no direct read access.
+    let ctx = ctx_with_identities(fb, &["USER:dave"])?;
+    let tent_a = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=tent_a")?;
+    let tent_a_rollout = MononokeIdentity::from_str("GROUP:tent_a_rollout")?;
+
+    let authorization = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[(&tent_a, Some(&tent_a_rollout))],
+        None,
+        None,
+    )
+    .await?;
+
+    assert!(
+        authorization.is_rollout_allowlisted(),
+        "rollout-group member should be flagged as rollout-allowlisted",
+    );
+    assert!(
+        !authorization.has_acl_access(),
+        "a rollout grant must not be mislabeled as direct ACL read access",
+    );
+    assert!(
+        authorization.has_authorization(),
+        "rollout-group member should be authorized overall",
+    );
+    Ok(())
+}
+
+/// What it tests: an access spanning two tents where the caller is allowlisted
+/// for only one of them.
+/// Expected: denied. Being allowlisted for `tent_a` must not authorize reads of
+/// `tent_b` caught by the same access.
+#[mononoke::fbinit_test]
+async fn test_rollout_allowlist_does_not_leak_across_tents(fb: FacebookInit) -> Result<()> {
+    let acl_provider = rollout_allowlist_acl_provider()?;
+    // dave is in tent_a's rollout group but not tent_b's.
+    let ctx = ctx_with_identities(fb, &["USER:dave"])?;
+    let tent_a = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=tent_a")?;
+    let tent_b = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=tent_b")?;
+    let tent_a_rollout = MononokeIdentity::from_str("GROUP:tent_a_rollout")?;
+    let tent_b_rollout = MononokeIdentity::from_str("GROUP:tent_b_rollout")?;
+
+    let authorization = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[
+            (&tent_a, Some(&tent_a_rollout)),
+            (&tent_b, Some(&tent_b_rollout)),
+        ],
+        None,
+        None,
+    )
+    .await?;
+
+    assert!(
+        !authorization.is_rollout_allowlisted(),
+        "allowlisted on tent_a but not tent_b must not count as rollout-allowlisted",
+    );
+    assert!(
+        !authorization.has_authorization(),
+        "the access spans a tent the caller is not allowlisted for, so it must be denied",
+    );
+    Ok(())
+}
+
+/// What it tests: a tent that configures no rollout allowlist group.
+/// Expected: the caller is never rollout-allowlisted for it. An absent group
+/// grants nothing — it must not be treated as vacuously satisfied, nor inherit
+/// another tent's group.
+#[mononoke::fbinit_test]
+async fn test_absent_rollout_group_never_allowlists(fb: FacebookInit) -> Result<()> {
+    let acl_provider = rollout_allowlist_acl_provider()?;
+    let ctx = ctx_with_identities(fb, &["USER:dave"])?;
+    let tent_b = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=tent_b")?;
+
+    let authorization =
+        super::check_authorization(&ctx, &acl_provider, &[(&tent_b, None)], None, None).await?;
+
+    assert!(
+        !authorization.is_rollout_allowlisted(),
+        "a tent with no rollout group must never report the caller as allowlisted",
+    );
+    assert!(
+        !authorization.has_authorization(),
+        "caller has neither ACL access nor an applicable allowlist",
+    );
+    Ok(())
+}
+
 fn path_restriction_check() -> Result<PathRestrictionCheckResult> {
     path_restriction_check_with("restricted", "REPO_REGION:test_acl", true)
+}
+
+/// Build an `InternalAclProvider` for the per-tent rollout allowlist tests.
+/// `tent_a` and `tent_b` are separate restrictions with separate rollout
+/// groups: `dave` is allowlisted for `tent_a` only, `erin` for `tent_b` only,
+/// and neither has direct read access to either tent.
+fn rollout_allowlist_acl_provider() -> Result<Arc<dyn AclProvider>> {
+    let acls: Acls = serde_json::from_str(
+        r#"
+        {
+            "repo_regions": {
+                "repos/hg/fbsource/=tent_a": {
+                    "actions": {
+                        "read": ["USER:alice"]
+                    }
+                },
+                "repos/hg/fbsource/=tent_b": {
+                    "actions": {
+                        "read": ["USER:alice"]
+                    }
+                }
+            },
+            "groups": {
+                "tent_a_rollout": ["USER:dave"],
+                "tent_b_rollout": ["USER:erin"]
+            }
+        }
+        "#,
+    )?;
+    Ok(InternalAclProvider::new(acls))
 }
 
 /// Build a check carrying an explicit authorization result, for the summary
@@ -353,6 +477,7 @@ fn check_with_authorization(
             restriction_root: NonRootMPath::new(restriction_root)?,
             repo_region_acl: acl.to_string(),
             permission_request_group: acl.clone(),
+            rollout_allowlist_group: None,
         },
         authorization,
         acl,
@@ -370,6 +495,7 @@ fn path_restriction_check_with(
             restriction_root: NonRootMPath::new(restriction_root)?,
             repo_region_acl: acl.to_string(),
             permission_request_group: acl.clone(),
+            rollout_allowlist_group: None,
         },
         AuthorizationCheckResult::new(has_acl_access, false, false, false),
         acl,

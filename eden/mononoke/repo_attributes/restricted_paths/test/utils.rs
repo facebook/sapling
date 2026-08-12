@@ -1312,6 +1312,7 @@ async fn setup_test_repo(
                 PathRestrictionMetadata {
                     repo_region_acl: acl,
                     permission_request_group: None,
+                    rollout_allowlist_group: None,
                     read_only: config_paths_read_only,
                 },
             )

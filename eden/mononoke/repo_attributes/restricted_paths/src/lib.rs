@@ -400,18 +400,17 @@ impl RestrictedPaths {
         // from the restricted paths store, not with changesets, so we always use
         // the config to determine which paths are restricted.
         // TODO(T248660053): support manifest-based access using AclManifests.
-        let acls = restriction_info::get_config_acls_for_paths(self, &paths);
+        let restrictions = restriction_info::get_config_restrictions_for_paths(self, &paths);
 
         log_access_to_restricted_path(
             ctx,
             self.config_based.manifest_id_store().repo_id(),
             paths,
-            acls,
+            restrictions,
             crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.config().acl_manifest_mode,
             self.acl_provider.clone(),
             self.config().tooling_allowlist_group.as_deref(),
-            self.config().rollout_allowlist_group.as_deref(),
             self.config().admin_bypass_group.as_ref(),
             self.scuba.clone(),
             vec!["manifest_db".to_string()],
@@ -454,13 +453,22 @@ impl RestrictedPaths {
             });
         }
 
-        // Find which restricted path roots match this path
-        let (restricted_path_roots, matched_acls): (Vec<_>, Vec<_>) = self
+        // Find which restricted path roots match this path, pairing each with
+        // its ACL and its own rollout allowlist group.
+        let (restricted_path_roots, matched_restrictions): (Vec<_>, Vec<_>) = self
             .config()
             .path_restriction_metadata
             .iter()
             .filter(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(&path))
-            .map(|(prefix, metadata)| (prefix.clone(), &metadata.repo_region_acl))
+            .map(|(prefix, metadata)| {
+                (
+                    prefix.clone(),
+                    (
+                        &metadata.repo_region_acl,
+                        metadata.rollout_allowlist_group.as_ref(),
+                    ),
+                )
+            })
             .unzip();
 
         // If no restricted paths match, no need to log
@@ -475,12 +483,11 @@ impl RestrictedPaths {
             ctx,
             self.config_based.manifest_id_store().repo_id(),
             restricted_path_roots,
-            matched_acls,
+            matched_restrictions,
             crate::access_log::RestrictedPathAccessData::FullPath { full_path: path },
             self.config().acl_manifest_mode,
             self.acl_provider.clone(),
             self.config().tooling_allowlist_group.as_deref(),
-            self.config().rollout_allowlist_group.as_deref(),
             self.config().admin_bypass_group.as_ref(),
             self.scuba.clone(),
             vec!["manifest_db".to_string()],

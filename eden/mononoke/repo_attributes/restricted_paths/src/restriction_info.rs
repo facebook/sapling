@@ -55,6 +55,10 @@ pub struct PathRestrictionInfo {
     pub repo_region_acl: String,
     /// Permission request group to show users. Defaults to repo_region_acl if not configured.
     pub permission_request_group: PermissionRequestGroup,
+    /// AMP group temporarily allowlisted to read this restriction during
+    /// rollout. `None` means this restriction has no allowlist, and callers are
+    /// never rollout-allowlisted for it.
+    pub rollout_allowlist_group: Option<MononokeIdentity>,
 }
 
 /// Core restriction information for a manifest access.
@@ -66,6 +70,10 @@ pub struct ManifestRestrictionInfo {
     pub repo_region_acl: String,
     /// Permission request group to show users. Defaults to repo_region_acl if not configured.
     pub permission_request_group: PermissionRequestGroup,
+    /// AMP group temporarily allowlisted to read this restriction during
+    /// rollout. `None` means this restriction has no allowlist, and callers are
+    /// never rollout-allowlisted for it.
+    pub rollout_allowlist_group: Option<MononokeIdentity>,
 }
 
 /// Get config-backed restriction info for paths that are themselves restriction roots.
@@ -205,14 +213,26 @@ pub(crate) async fn get_manifest_restricted_paths_from_config(
         .await
 }
 
-/// Get config ACLs that match manifest-id-store paths.
-pub(crate) fn get_config_acls_for_paths<'a>(
+/// Pair each config-backed restriction root matching a manifest-id-store path
+/// with its repo-region ACL and its rollout allowlist group, so the allowlist
+/// can be evaluated per tent.
+pub(crate) fn get_config_restrictions_for_paths<'a>(
     restricted_paths: &'a RestrictedPaths,
     paths: &[NonRootMPath],
-) -> Vec<&'a MononokeIdentity> {
+) -> Vec<(&'a MononokeIdentity, Option<&'a MononokeIdentity>)> {
     paths
         .iter()
-        .filter_map(|path| restricted_paths.config_based().get_acl_for_path(path))
+        .filter_map(|path| {
+            restricted_paths
+                .config_based()
+                .get_metadata_for_path(path)
+                .map(|metadata| {
+                    (
+                        &metadata.repo_region_acl,
+                        metadata.rollout_allowlist_group.as_ref(),
+                    )
+                })
+        })
         .collect()
 }
 
@@ -494,6 +514,7 @@ pub(crate) async fn get_manifest_restriction_info_from_config(
                     restriction_root: Some(path),
                     repo_region_acl: metadata.repo_region_acl.to_string(),
                     permission_request_group: metadata.effective_permission_request_group(),
+                    rollout_allowlist_group: metadata.rollout_allowlist_group.clone(),
                 })
         })
         .collect())
@@ -768,6 +789,7 @@ async fn load_manifest_restriction_info(
         restriction_root: None,
         repo_region_acl,
         permission_request_group,
+        rollout_allowlist_group: None,
     })
 }
 
@@ -783,6 +805,7 @@ async fn load_path_restriction_info(
         restriction_root,
         repo_region_acl,
         permission_request_group,
+        rollout_allowlist_group: None,
     })
 }
 
@@ -794,6 +817,7 @@ fn build_config_path_restriction_info(
         restriction_root,
         repo_region_acl: metadata.repo_region_acl.to_string(),
         permission_request_group: metadata.effective_permission_request_group(),
+        rollout_allowlist_group: metadata.rollout_allowlist_group.clone(),
     }
 }
 

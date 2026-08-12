@@ -1311,6 +1311,7 @@ async fn build_repo_with_restricted_path_config(
                         "test_acl",
                     ),
                     permission_request_group: None,
+                    rollout_allowlist_group: None,
                     read_only: false,
                 },
             )

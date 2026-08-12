@@ -67,6 +67,7 @@ impl RestrictedPathsConfigBuilder {
             PathRestrictionMetadata {
                 repo_region_acl: MononokeIdentity::from_str(identity)?,
                 permission_request_group: None,
+                rollout_allowlist_group: None,
                 read_only: false,
             },
         );

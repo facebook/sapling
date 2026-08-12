@@ -97,20 +97,25 @@ pub(crate) struct AuthorizationCheckResult {
     is_admin_bypass: bool,
 }
 
-/// Allowlist authorization shared by every restriction in one source batch.
+/// Repo-wide allowlist authorization, shared by every restriction in one source
+/// batch. The rollout allowlist is deliberately absent: it is configured per
+/// tent, so it has to be evaluated per restriction rather than once per batch.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct AllowlistAuthorization {
     is_allowlisted_tooling: bool,
-    is_rollout_allowlisted: bool,
     is_admin_bypass: bool,
 }
 
 impl AllowlistAuthorization {
-    fn into_authorization_check_result(self, has_acl_access: bool) -> AuthorizationCheckResult {
+    fn into_authorization_check_result(
+        self,
+        has_acl_access: bool,
+        is_rollout_allowlisted: bool,
+    ) -> AuthorizationCheckResult {
         AuthorizationCheckResult {
             has_acl_access,
             is_allowlisted_tooling: self.is_allowlisted_tooling,
-            is_rollout_allowlisted: self.is_rollout_allowlisted,
+            is_rollout_allowlisted,
             is_admin_bypass: self.is_admin_bypass,
         }
     }
@@ -650,7 +655,7 @@ async fn has_repo_region_access(
     }
 
     let (in_bypass_group, has_acl_access) = futures::try_join!(
-        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
+        is_in_optional_group(ctx, acl_provider, admin_bypass_group),
         has_repo_region_acls_for_action(ctx, acl_provider, acls, action),
     )?;
     Ok(in_bypass_group || has_acl_access)
@@ -689,14 +694,15 @@ async fn has_repo_region_acls_for_action(
         })
 }
 
-/// Check whether the caller is a member of the admin bypass group, if one is
-/// configured. Returns `false` when no bypass group is set.
-async fn is_in_admin_bypass_group(
+/// Check whether the caller is a member of the given group identity, if one is
+/// configured. Returns `false` when no group is set — an absent group never
+/// grants access.
+async fn is_in_optional_group(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
-    admin_bypass_group: Option<&MononokeIdentity>,
+    group: Option<&MononokeIdentity>,
 ) -> Result<bool> {
-    match admin_bypass_group {
+    match group {
         Some(group) => is_part_of_group(ctx, acl_provider, group.id_data()).await,
         None => Ok(false),
     }
@@ -725,24 +731,37 @@ pub(crate) async fn is_part_of_group(
 }
 
 /// Evaluate ACL and allowlist authorization for a restricted-path access.
+///
+/// `restrictions` pairs each matching repo-region ACL with that tent's rollout
+/// allowlist group. The caller counts as rollout-allowlisted only when every
+/// restriction allowlists them, so being allowlisted for one tent cannot
+/// authorize a different tent caught by the same access.
 pub(crate) async fn check_authorization(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
-    acls: &[&MononokeIdentity],
+    restrictions: &[(&MononokeIdentity, Option<&MononokeIdentity>)],
     tooling_allowlist_group: Option<&str>,
-    rollout_allowlist_group: Option<&str>,
     admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<AuthorizationCheckResult> {
+    let acls = restrictions.iter().map(|(acl, _)| *acl).collect::<Vec<_>>();
     let allowlist_authorization = check_allowlist_authorization(
         ctx,
         acl_provider,
         tooling_allowlist_group,
-        rollout_allowlist_group,
         admin_bypass_group,
     )
     .await?;
-    let has_acl_access = has_read_access_to_repo_region(ctx, acl_provider, acls).await?;
-    Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
+    let (has_acl_access, rollout_allowlisted) = tokio::try_join!(
+        has_read_access_to_repo_region(ctx, acl_provider, &acls),
+        stream::iter(restrictions)
+            .map(|(_, group)| is_in_optional_group(ctx, acl_provider, *group))
+            .buffered(10)
+            .try_collect::<Vec<_>>(),
+    )?;
+    Ok(allowlist_authorization.into_authorization_check_result(
+        has_acl_access,
+        all_rollout_allowlisted(rollout_allowlisted),
+    ))
 }
 
 async fn check_restricted_paths_allowlist_authorization(
@@ -753,7 +772,6 @@ async fn check_restricted_paths_allowlist_authorization(
         ctx,
         restricted_paths.acl_provider(),
         restricted_paths.config().tooling_allowlist_group.as_deref(),
-        restricted_paths.config().rollout_allowlist_group.as_deref(),
         restricted_paths.config().admin_bypass_group.as_ref(),
     )
     .await
@@ -763,17 +781,14 @@ async fn check_allowlist_authorization(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     tooling_allowlist_group: Option<&str>,
-    rollout_allowlist_group: Option<&str>,
     admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<AllowlistAuthorization> {
-    let (is_allowlisted_tooling, is_rollout_allowlisted, is_admin_bypass) = tokio::try_join!(
+    let (is_allowlisted_tooling, is_admin_bypass) = tokio::try_join!(
         check_optional_allowlist_group(ctx, acl_provider, tooling_allowlist_group),
-        check_optional_allowlist_group(ctx, acl_provider, rollout_allowlist_group),
-        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
+        is_in_optional_group(ctx, acl_provider, admin_bypass_group),
     )?;
     Ok(AllowlistAuthorization {
         is_allowlisted_tooling,
-        is_rollout_allowlisted,
         is_admin_bypass,
     })
 }
@@ -1191,6 +1206,7 @@ pub async fn check_path_restriction_infos(
                 ctx,
                 restricted_paths,
                 &restriction_info.repo_region_acl,
+                restriction_info.rollout_allowlist_group.as_ref(),
                 allowlist_authorization,
             )
             .await?;
@@ -1221,6 +1237,7 @@ pub async fn check_config_path_restriction_infos(
                     restriction_root: restriction_root.clone(),
                     permission_request_group: metadata.effective_permission_request_group(),
                     repo_region_acl: metadata.repo_region_acl.to_string(),
+                    rollout_allowlist_group: metadata.rollout_allowlist_group.clone(),
                 },
                 metadata.repo_region_acl.clone(),
             )
@@ -1238,6 +1255,7 @@ pub async fn check_config_path_restriction_infos(
                 ctx,
                 restricted_paths,
                 &acl,
+                restriction_info.rollout_allowlist_group.as_ref(),
                 allowlist_authorization,
             )
             .await?;
@@ -1269,6 +1287,7 @@ async fn check_manifest_restriction_infos(
                 ctx,
                 restricted_paths,
                 &restriction_info.repo_region_acl,
+                restriction_info.rollout_allowlist_group.as_ref(),
                 allowlist_authorization,
             )
             .await?;
@@ -1287,6 +1306,7 @@ async fn check_restriction_authorization(
     ctx: &CoreContext,
     restricted_paths: &RestrictedPaths,
     repo_region_acl: &str,
+    rollout_allowlist_group: Option<&MononokeIdentity>,
     allowlist_authorization: AllowlistAuthorization,
 ) -> Result<(AuthorizationCheckResult, MononokeIdentity)> {
     let acl = MononokeIdentity::from_str(repo_region_acl)
@@ -1295,6 +1315,7 @@ async fn check_restriction_authorization(
         ctx,
         restricted_paths,
         &acl,
+        rollout_allowlist_group,
         allowlist_authorization,
     )
     .await?;
@@ -1305,9 +1326,15 @@ async fn check_restriction_authorization_with_acl(
     ctx: &CoreContext,
     restricted_paths: &RestrictedPaths,
     acl: &MononokeIdentity,
+    rollout_allowlist_group: Option<&MononokeIdentity>,
     allowlist_authorization: AllowlistAuthorization,
 ) -> Result<AuthorizationCheckResult> {
-    let has_acl_access =
-        has_read_access_to_repo_region(ctx, restricted_paths.acl_provider(), &[acl]).await?;
-    Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
+    let acl_provider = restricted_paths.acl_provider();
+    let acls = [acl];
+    let (has_acl_access, is_rollout_allowlisted) = tokio::try_join!(
+        has_read_access_to_repo_region(ctx, acl_provider, &acls),
+        is_in_optional_group(ctx, acl_provider, rollout_allowlist_group),
+    )?;
+    Ok(allowlist_authorization
+        .into_authorization_check_result(has_acl_access, is_rollout_allowlisted))
 }

@@ -428,6 +428,7 @@ mod tests {
                         repo_region_acl: MononokeIdentity::from_str(acl_str)
                             .context("Failed to parse MononokeIdentity from ACL string")?,
                         permission_request_group: None,
+                        rollout_allowlist_group: None,
                         read_only: false,
                     },
                 ))
@@ -1127,6 +1128,7 @@ mod tests {
                     MononokeIdentity::from_str(group)
                         .context("Failed to parse permission_request_group identity")?,
                 ),
+                rollout_allowlist_group: None,
                 read_only: false,
             },
         )]))

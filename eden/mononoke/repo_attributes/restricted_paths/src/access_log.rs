@@ -986,16 +986,17 @@ mod schematized_logger {
     }
 }
 
+/// `restrictions` pairs each matched repo-region ACL with that tent's rollout
+/// allowlist group, so the allowlist is evaluated per tent rather than repo-wide.
 pub(crate) async fn log_access_to_restricted_path(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     restricted_paths: Vec<NonRootMPath>,
-    acls: Vec<&MononokeIdentity>,
+    restrictions: Vec<(&MononokeIdentity, Option<&MononokeIdentity>)>,
     access_data: RestrictedPathAccessData,
     acl_manifest_mode: AclManifestMode,
     acl_provider: Arc<dyn AclProvider>,
     tooling_allowlist_group: Option<&str>,
-    rollout_allowlist_group: Option<&str>,
     admin_bypass_group: Option<&MononokeIdentity>,
     scuba: MononokeScubaSampleBuilder,
     considered_restricted_by: Vec<String>,
@@ -1003,12 +1004,12 @@ pub(crate) async fn log_access_to_restricted_path(
     let authorization = restriction_check::check_authorization(
         ctx,
         &acl_provider,
-        &acls,
+        &restrictions,
         tooling_allowlist_group,
-        rollout_allowlist_group,
         admin_bypass_group,
     )
     .await?;
+    let acls = restrictions.into_iter().map(|(acl, _)| acl).collect();
 
     let result = restriction_check::build_restriction_check_result(
         authorization.has_authorization(),
