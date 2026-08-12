@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: 'join_all|spawn|FuturesUnordered|for_each_concurrent|buffer_unordered|tokio::spawn'
+name: unbounded-concurrency
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: 'join_all|spawn|FuturesUnordered|for_each_concurrent|buffer_unordered|tokio::spawn'
 ---
 
 # Unbounded Concurrency and Backlog Stampede
