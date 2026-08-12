@@ -36,6 +36,7 @@ python_binary(
 
 fbpkg.builder(
     name = "mononoke.merge_resolution_blame_checker",
+    architectures = ["x86_64"],
     buck_opts = fbpkg.buck_opts(
         mode = "opt",
     ),
@@ -60,6 +61,7 @@ python_binary(
 
 fbpkg.builder(
     name = "mononoke.canary_shard_pin",
+    architectures = ["x86_64"],
     buck_opts = fbpkg.buck_opts(
         mode = "opt",
     ),
