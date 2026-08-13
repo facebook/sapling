@@ -18,6 +18,7 @@ def create_pull_request_title_and_body(
     pr_numbers_index: int,
     repository: Repository,
     reviewstack: bool = True,
+    stack_list: bool = True,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
 
@@ -84,6 +85,18 @@ def create_pull_request_title_and_body(
     * __->__ #42
     * #4
 
+    Disable the stack list entirely (used for the native "stacked" workflow,
+    where GitHub renders the stack in the pull request UI itself). Note that
+    this also suppresses the ReviewStack link:
+    >>> title, body = create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
+    ...     pr_numbers_index, contributor_repo, stack_list=False)
+    >>> print(title)
+    The original commit message.
+    >>> print(body)
+    Second line of message.
+    <BLANKLINE>
+    <BLANKLINE>
+
     Single commit stack:
     >>> title, body = create_pull_request_title_and_body("Foo", [(1, 1)], 0, contributor_repo)
     >>> print(title)
@@ -106,7 +119,7 @@ def create_pull_request_title_and_body(
 
     body = _strip_stack_information(body)
     extra = []
-    if len(pr_numbers_and_num_commits) > 1:
+    if stack_list and len(pr_numbers_and_num_commits) > 1:
         if reviewstack:
             reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
             review_stack_message = f"Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url})."
