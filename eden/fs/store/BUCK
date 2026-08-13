@@ -60,6 +60,7 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//folly:range",
+        "//folly/coro:invoke",
         "//folly/coro:task",
         "//folly/coro/safe:now_task",
         "//folly/futures:core",
@@ -86,7 +87,7 @@ cpp_library(
         "//folly/coro:invoke",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
+        "fbsource//third-party/googletest:gtest_headers",
         ":backing_store_interface",
         "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
@@ -123,7 +124,7 @@ cpp_library(
         "//folly/io:iobuf",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
+        "fbsource//third-party/googletest:gtest_headers",
         ":backing_store_interface",
         ":context",
         "//eden/common/utils:case_sensitivity",
