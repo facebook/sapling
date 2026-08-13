@@ -222,7 +222,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -436,7 +436,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -563,6 +563,18 @@
         "fullname": "output",
         "default": null,
         "description": "print output to file with formatted name"
+      },
+      {
+        "shortname": "",
+        "fullname": "tar",
+        "default": false,
+        "description": "write files and content to a tar archive"
+      },
+      {
+        "shortname": "",
+        "fullname": "binary-file-size-threshold",
+        "default": null,
+        "description": "replace binary files at or above BYTES with placeholder content (EXPERIMENTAL)"
       },
       {
         "shortname": "r",
@@ -732,7 +744,7 @@
       "commit",
       "ci"
     ],
-    "doc": "save all pending changes or specified files in a new commit\n\n    Commit changes to the given files to your local repository.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. If you want to commit only some of your\n    changes, choose one of the following options:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match or exclude file names\n      using a pattern or fileset. See :prog:`help patterns` and\n      :prog:`help filesets` for details.\n\n    - Specify the ``--interactive`` flag to open a UI to select\n      individual files, hunks, or lines.\n\n    To meld pending changes into the current commit instead of creating\n    a new commit, see :prog:`amend`.\n\n    If you are committing the result of a merge, such as when merge\n    conflicts occur during :prog:`goto`, commit all pending changes.\n    Do not specify files or use ``-I``, ``-X``, or ``-i``.\n\n    Specify the ``-m`` flag to include a free-form commit message. If you do\n    not specify ``-m``, @Product@ opens your configured editor where you can\n    enter a message based on a pre-loaded commit template.\n\n    Returns 0 on success, 1 if nothing changed.\n\n    .. container:: verbose\n\n      If your commit fails, you can find a backup of your commit message in\n      ``.@prog@/last-message.txt``.\n\n      Examples:\n\n      - commit all files ending in .py::\n\n          @prog@ commit --include \"glob:**.py\"\n\n      - commit all non-binary files::\n\n          @prog@ commit --exclude \"set:binary()\"\n    ",
+    "doc": "save all pending changes or specified files in a new commit\n\n    Commit changes to the given files to your local repository.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. If you want to commit only some of your\n    changes, choose one of the following options:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match or exclude file names\n      using a pattern or fileset. See :prog:`help patterns` and\n      :prog:`help filesets` for details.\n\n    - Specify the ``--interactive`` flag to open a UI to select\n      individual files, hunks, or lines.\n\n    To meld pending changes into the current commit instead of creating\n    a new commit, see :prog:`amend`.\n\n    If you are committing the result of a merge, such as when merge\n    conflicts occur during :prog:`goto`, commit all pending changes.\n    Do not specify files or use ``-I``, ``-X``, or ``-i``.\n\n    Specify the ``-m`` flag to include a free-form commit message. Repeat\n    ``-m`` to concatenate multiple messages separated by blank lines. If you\n    do not specify ``-m``, @Product@ opens your configured editor where you\n    can enter a message based on a pre-loaded commit template.\n\n    Returns 0 on success, 1 if nothing changed.\n\n    .. container:: verbose\n\n      If your commit fails, you can find a backup of your commit message in\n      ``.@prog@/last-message.txt``.\n\n      Examples:\n\n      - commit all files ending in .py::\n\n          @prog@ commit --include \"glob:**.py\"\n\n      - commit all non-binary files::\n\n          @prog@ commit --exclude \"set:binary()\"\n    ",
     "args": [
       {
         "shortname": "A",
@@ -791,7 +803,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -1094,7 +1106,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -1279,7 +1291,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -1527,7 +1539,7 @@
     "aliases": [
       "log"
     ],
-    "doc": "show commit history\n\n    Print the revision history of the specified files or the entire\n    project.\n\n    If no revision range is specified, the default is the current commit\n    and all of its ancestors (``::.``).\n\n    File history is shown without following the rename or copy\n    history of files. To follow file history across renames and\n    copies, use the ``-f/-- follow`` option. If the ``--follow``\n    option is used without a filename, only the ancestors or\n    descendants of the starting revision are shown.\n\n    By default, :prog:`log` prints the commit's hash, non-trivial\n    parents, user, date, time, and the single-line summary. When the\n    ``-v/--verbose`` option is used, the list of changed files and\n    full commit message are shown.\n\n    With the ``--graph`` option, revisions are shown as an ASCII art\n    graph with the most recent commit at the top. The graph nodes\n    are depicted as follows: **o** is a commit, **@** is a working\n    directory parent, **x** is obsolete, and **+** represents a fork\n    where the commit from the lines below is a parent of the **o**\n    merge on the same line. Paths in the graph are represented with\n    **|**, **/** and so forth. **:** in place of a **|** indicates\n    one or more revisions in a path are omitted.\n\n\n    .. container:: verbose\n\n      Use the ``-L/--line-range FILE,M:N`` option to follow the\n      history of lines from **M** to **N** in FILE. With the ``-p/--\n      patch`` option, only diff hunks affecting specified line range\n      will be shown. The ``-L`` option can be specified multiple\n      times and requires the ``--follow`` option. Currently, the line\n      range option is not compatible with ``--graph`` and is an\n      experimental feature.\n\n    .. note::\n\n      :prog:`log --patch` may generate unexpected diff output for merge\n      commits, as it will only compare the merge commit against\n      its first parent. Also, only files different from BOTH parents\n      will appear in the **files:** section.\n\n    .. note::\n\n      For performance reasons, :prog:`log FILE` may omit duplicate changes\n      made on branches and will not show removals or mode changes. To\n      see all such changes, use the ``--removed`` switch.\n\n    .. container:: verbose\n\n       .. note::\n\n          The history resulting from ``-L/--line-range`` options depends on\n          diff options: for instance, if white-spaces are ignored,\n          respective changes with only white-spaces in specified line range\n          will not be listed.\n\n    .. container:: verbose\n\n      Some examples:\n\n      - commits with full descriptions and file lists::\n\n          @prog@ log -v\n\n      - commits ancestral to the working directory::\n\n          @prog@ log -f\n\n      - last 10 commits on the current branch::\n\n          @prog@ log -l 10 -b .\n\n      - commits showing all modifications of a file, including removals::\n\n          @prog@ log --removed file.c\n\n      - all commits that touch a directory, with diffs, excluding merges::\n\n          @prog@ log -Mp lib/\n\n      - all revision numbers that match a keyword::\n\n          @prog@ log -k bug --template \"{rev}\\n\"\n\n      - the full hash identifier of the working directory parent::\n\n          @prog@ log -r . --template \"{node}\\n\"\n\n      - list available log templates::\n\n          @prog@ log -T list\n\n      - check if a given commit is included in a bookmarked release::\n\n          @prog@ log -r \"a21ccf and ancestor(release_1.9)\"\n\n      - find all commits by some user in a date range::\n\n          @prog@ log -k alice -d \"may 2008 to jul 2008\"\n\n      - commits touching lines 13 to 23 for file.c::\n\n          @prog@ log -L file.c,13:23\n\n      - commits touching lines 13 to 23 for file.c and lines 2 to 6 of\n        main.c with patch::\n\n          @prog@ log -L file.c,13:23 -L main.c,2:6 -p\n\n    See :prog:`help dates` for a list of formats valid for ``-d/--date``.\n\n    See :prog:`help revisions` for more about specifying and ordering\n    revisions.\n\n    See :prog:`help templates` for more about pre-packaged styles and\n    specifying custom templates. The default template used by the log\n    command can be customized via the ``ui.logtemplate`` configuration\n    setting.\n\n    Returns 0 on success.\n\n    ",
+    "doc": "show commit history\n\n    Print the revision history of the specified files or the entire\n    project.\n\n    If no revision range is specified, the default revision range is the\n    current commit and all of its ancestors (``::.``). The experimental\n    ``--mutation`` option changes this default to the current commit and its\n    mutation predecessors (``predecessors(.)``).\n\n    File history is shown without following the rename or copy\n    history of files. To follow file history across renames and\n    copies, use the ``-f/-- follow`` option. If the ``--follow``\n    option is used without a filename, only the ancestors or\n    descendants of the starting revision are shown.\n\n    By default, :prog:`log` prints the commit's hash, non-trivial\n    parents, user, date, time, and the single-line summary. When the\n    ``-v/--verbose`` option is used, the list of changed files and\n    full commit message are shown.\n\n    With the ``--graph`` option, revisions are shown as an ASCII art\n    graph with the most recent commit at the top. The graph nodes\n    are depicted as follows: **o** is a commit, **@** is a working\n    directory parent, **x** is obsolete, and **+** represents a fork\n    where the commit from the lines below is a parent of the **o**\n    merge on the same line. Paths in the graph are represented with\n    **|**, **/** and so forth. **:** in place of a **|** indicates\n    one or more revisions in a path are omitted.\n\n\n    .. container:: verbose\n\n      Use the ``-L/--line-range FILE,M:N`` option to follow the\n      history of lines from **M** to **N** in FILE. With the ``-p/--\n      patch`` option, only diff hunks affecting specified line range\n      will be shown. The ``-L`` option can be specified multiple\n      times and requires the ``--follow`` option. Currently, the line\n      range option is not compatible with ``--graph`` and is an\n      experimental feature.\n\n    .. note::\n\n      :prog:`log --patch` may generate unexpected diff output for merge\n      commits, as it will only compare the merge commit against\n      its first parent. Also, only files different from BOTH parents\n      will appear in the **files:** section.\n\n    .. note::\n\n      For performance reasons, :prog:`log FILE` may omit duplicate changes\n      made on branches and will not show removals or mode changes. To\n      see all such changes, use the ``--removed`` switch.\n\n    .. container:: verbose\n\n       .. note::\n\n          The history resulting from ``-L/--line-range`` options depends on\n          diff options: for instance, if white-spaces are ignored,\n          respective changes with only white-spaces in specified line range\n          will not be listed.\n\n    .. container:: verbose\n\n      Some examples:\n\n      - commits with full descriptions and file lists::\n\n          @prog@ log -v\n\n      - commits ancestral to the working directory::\n\n          @prog@ log -f\n\n      - last 10 commits on the current branch::\n\n          @prog@ log -l 10 -b .\n\n      - commits showing all modifications of a file, including removals::\n\n          @prog@ log --removed file.c\n\n      - all commits that touch a directory, with diffs, excluding merges::\n\n          @prog@ log -Mp lib/\n\n      - all revision numbers that match a keyword::\n\n          @prog@ log -k bug --template \"{rev}\\n\"\n\n      - the full hash identifier of the working directory parent::\n\n          @prog@ log -r . --template \"{node}\\n\"\n\n      - list available log templates::\n\n          @prog@ log -T list\n\n      - check if a given commit is included in a bookmarked release::\n\n          @prog@ log -r \"a21ccf and ancestor(release_1.9)\"\n\n      - find all commits by some user in a date range::\n\n          @prog@ log -k alice -d \"may 2008 to jul 2008\"\n\n      - commits touching lines 13 to 23 for file.c::\n\n          @prog@ log -L file.c,13:23\n\n      - commits touching lines 13 to 23 for file.c and lines 2 to 6 of\n        main.c with patch::\n\n          @prog@ log -L file.c,13:23 -L main.c,2:6 -p\n\n    See :prog:`help dates` for a list of formats valid for ``-d/--date``.\n\n    See :prog:`help revisions` for more about specifying and ordering\n    revisions.\n\n    See :prog:`help templates` for more about pre-packaged styles and\n    specifying custom templates. The default template used by the log\n    command can be customized via the ``ui.logtemplate`` configuration\n    setting.\n\n    Returns 0 on success.\n\n    ",
     "args": [
       {
         "shortname": "f",
@@ -1650,6 +1662,12 @@
         "description": "display with template"
       },
       {
+        "shortname": "t",
+        "fullname": "mutation",
+        "default": false,
+        "description": "use mutation history for DAG and diffs (EXPERIMENTAL)"
+      },
+      {
         "shortname": "I",
         "fullname": "include",
         "default": [],
@@ -1724,7 +1742,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -2594,6 +2612,12 @@
         "description": "show the specified revision"
       },
       {
+        "shortname": "t",
+        "fullname": "mutation",
+        "default": false,
+        "description": "use mutation history for diffs (EXPERIMENTAL)"
+      },
+      {
         "shortname": "w",
         "fullname": "ignore-all-space",
         "default": null,
@@ -2667,7 +2691,7 @@
       {
         "shortname": "m",
         "fullname": "message",
-        "default": "",
+        "default": [],
         "description": "use text as commit message"
       },
       {
@@ -2969,7 +2993,7 @@
       "web",
       "isl"
     ],
-    "doc": "launch Sapling Web GUI on localhost\n\n    Sapling Web is a collection of web-based tools including Interactive Smartlog,\n    which is a GUI that facilitates source control operations such as creating,\n    reordering, or rebasing commits.\n    Running this command launches a web server that makes Sapling Web and\n    Interactive Smartlog available in a local web browser.\n    When possible, this command opens a separate OS window,\n    either using a webview or a Chrome-like browser with --app.\n\n    Examples:\n\n    Launch Sapling Web locally on port 8081::\n\n        $ @prog@ web --port 8081\n        Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\n        Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\n\n    Using the ``--json`` option to get the current status of Sapling Web::\n\n        $ @prog@ web --port 8081 --json | jq\n        {\n            \"url\": \"http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\",\n            \"port\": 8081,\n            \"token\": \"bbe168b7b4af1614dd5b9ddc48e7d30e\",\n            \"pid\": 1521158,\n            \"wasServerReused\": true,\n            \"logFileLocation\": \"/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\",\n            \"cwd\": \"/home/alice/sapling\"\n        }\n\n    Using the ``--kill`` option to shut down the server::\n\n        $ @prog@ web --port 8081 --kill\n        killed ISL server process 1521158\n    ",
+    "doc": "launch Sapling Web GUI on localhost or a bound address\n\n    Sapling Web is a collection of web-based tools including Interactive Smartlog,\n    which is a GUI that facilitates source control operations such as creating,\n    reordering, or rebasing commits.\n    Running this command launches a web server that makes Sapling Web and\n    Interactive Smartlog available in a local web browser.\n    With ``--bind`` (plus ``--cert`` and ``--key``), the server serves HTTPS\n    and can be reached from other machines.\n    When possible, this command opens a separate OS window,\n    either using a webview or a Chrome-like browser with --app.\n\n    Examples:\n\n    Launch Sapling Web locally on port 8081::\n\n        $ @prog@ web --port 8081\n        Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\n        Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\n\n    Serve other machines over HTTPS with ``--bind`` (requires ``--cert`` and ``--key``)::\n\n        $ @prog@ web --port 8081 --bind all --cert cert.pem --key key.pem\n        Listening on https://devbox1234.example.com:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\n\n    Using the ``--json`` option to get the current status of Sapling Web::\n\n        $ @prog@ web --port 8081 --json | jq\n        {\n            \"url\": \"http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\",\n            \"port\": 8081,\n            \"token\": \"bbe168b7b4af1614dd5b9ddc48e7d30e\",\n            \"pid\": 1521158,\n            \"wasServerReused\": true,\n            \"logFileLocation\": \"/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\",\n            \"cwd\": \"/home/alice/sapling\"\n        }\n\n    Using the ``--kill`` option to shut down the server::\n\n        $ @prog@ web --port 8081 --kill\n        killed ISL server process 1521158\n    ",
     "args": [
       {
         "shortname": "p",
@@ -3036,6 +3060,30 @@
         "fullname": "session",
         "default": "",
         "description": "Provide a specific ID for this ISL session used in analytics. (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "bind",
+        "default": "",
+        "description": "hostname or IP for the server to bind to, allowing access from other machines. Use 'all' to accept connections on all interfaces. Requires --cert and --key so the auth token is not sent in plain text. (default: localhost) (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "cert",
+        "default": "",
+        "description": "path to a TLS certificate file, to serve over HTTPS. Must be used together with --key. Required when --bind is specified. (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "key",
+        "default": "",
+        "description": "path to a TLS key file, to serve over HTTPS. Must be used together with --cert. Required when --bind is specified. (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "persist",
+        "default": false,
+        "description": "keep the server running after the last client disconnects, instead of shutting down when idle (ADVANCED)"
       }
     ],
     "subcommands": null

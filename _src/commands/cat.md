@@ -4,7 +4,7 @@ sidebar_position: 7
 
 ## cat
 <!--
-  @generated SignedSource<<2784a15077e1fbbbb458e4724f1a4011>>
+  @generated SignedSource<<f81e08ef45c335f4fc6ca48f3457e461>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -70,6 +70,7 @@ Returns 0 if there were no errors and at least one file was output.
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-o`| `--output`| | print output to file with formatted name|
+| | `--tar`| `false`| write files and content to a tar archive|
 | `-r`| `--rev`| | print the given revision|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|

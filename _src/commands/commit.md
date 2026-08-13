@@ -4,7 +4,7 @@ sidebar_position: 10
 
 ## commit | ci
 <!--
-  @generated SignedSource<<468ebe5a2087c8973f27dd899b7e1648>>
+  @generated SignedSource<<efc094d582467d6f1c228dd2892f6647>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -30,9 +30,10 @@ If you are committing the result of a merge, such as when merge
 conflicts occur during `sl goto`, commit all pending changes.
 Do not specify files or use `-I`, `-X`, or `-i`.
 
-Specify the `-m` flag to include a free-form commit message. If you do
-not specify `-m`, Sapling opens your configured editor where you can
-enter a message based on a pre-loaded commit template.
+Specify the `-m` flag to include a free-form commit message. Repeat
+`-m` to concatenate multiple messages separated by blank lines. If you
+do not specify `-m`, Sapling opens your configured editor where you
+can enter a message based on a pre-loaded commit template.
 
 Returns 0 on success, 1 if nothing changed.
 

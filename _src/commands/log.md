@@ -4,7 +4,7 @@ sidebar_position: 23
 
 ## log
 <!--
-  @generated SignedSource<<a34ecc5b436582c6feecb5493e75172d>>
+  @generated SignedSource<<103c367178d5d8e3c8cd3d2bea86fdad>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -14,8 +14,10 @@ sidebar_position: 23
 Print the revision history of the specified files or the entire
 project.
 
-If no revision range is specified, the default is the current commit
-and all of its ancestors (`::.`).
+If no revision range is specified, the default revision range is the
+current commit and all of its ancestors (`::.`). The experimental
+`--mutation` option changes this default to the current commit and its
+mutation predecessors (`predecessors(.)`).
 
 File history is shown without following the rename or copy
 history of files. To follow file history across renames and
