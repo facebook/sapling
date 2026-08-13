@@ -113,6 +113,7 @@ subtree_subcmd = subtree.subcommand(
         ),
         ("f", "force", None, _("forcibly copy over an existing file")),
         ("", "filter", "", _("filter profile path")),
+        ("", "commit", True, _("create a commit")),
     ]
     + subtree_path_opts
     + commitopts
@@ -136,6 +137,9 @@ def subtree_copy(ui, repo, *args, **opts):
     The "--filter" option allows specifying a sparse profile to filter which
     files are copied. Only files matching the sparse profile will be included
     in the copy operation.
+
+    Use ``--no-commit`` to leave the copied files and subtree metadata pending
+    for a later :prog:`commit`.
     """
     with repo.wlock(), repo.lock():
         return _docopy(ui, repo, *args, **opts)
@@ -708,6 +712,7 @@ def _subtree_merge_base(
 
 
 def _docopy(ui, repo, *args, **opts):
+    cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
 
     # if 'rev' is not specified, copy from the working copy parent
@@ -811,13 +816,15 @@ def _do_normal_copy(
         filter_matcher=filter_matcher,
     )
 
-    extra = {}
-    extra.update(
-        gen_branch_info(
-            repo, from_ctx.hex(), from_paths, to_paths, BranchType.DEEP_COPY
-        )
+    branch_info = gen_branch_info(
+        repo, from_ctx.hex(), from_paths, to_paths, BranchType.DEEP_COPY
     )
+    subtreeutil.write_subtree_copy_state(repo, branch_info)
+    if not opts.get("commit"):
+        ui.status(_("(subtree copy changes awaiting commit)\n"))
+        return
 
+    extra = branch_info
     summaryfooter = subtreeutil.gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
     editor = cmdutil.getcommiteditor(
@@ -834,7 +841,9 @@ def _do_normal_copy(
             extra=extra,
         )
 
-    cmdutil.commit(ui, repo, commitfunc, [], opts)
+    node = cmdutil.commit(ui, repo, commitfunc, [], opts)
+    subtreeutil.clear_subtree_copy_state(repo)
+    return node
 
 
 @contextlib.contextmanager

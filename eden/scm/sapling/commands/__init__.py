@@ -1770,6 +1770,15 @@ def commit(ui, repo, *pats, **opts):
 
 
 def _docommit(ui, repo, *pats, **opts):
+    subtree_copy_state = subtreeutil.read_subtree_copy_state(repo)
+    if subtree_copy_state and (
+        pats or opts.get("include") or opts.get("exclude") or opts.get("interactive")
+    ):
+        raise error.Abort(
+            _("cannot partially commit pending subtree copy changes"),
+            hint=_("run '@prog@ commit' to commit the subtree copy changes"),
+        )
+
     if opts.get(r"interactive"):
         opts.pop(r"interactive")
         ret = cmdutil.dorecord(
@@ -1808,11 +1817,27 @@ def _docommit(ui, repo, *pats, **opts):
         def commitfunc(ui, repo, message, match, opts):
             ms = mergemod.mergestate.read(repo)
             subtree_merges = ms.subtree_merges
-            extra.update(subtreeutil.gen_merge_info(repo, subtree_merges))
-            summaryfooter = subtreeutil.gen_merge_commit_msg(subtree_merges)
+            if subtree_copy_state and subtree_merges:
+                raise error.Abort(
+                    _("unexpected simultaneous subtree copy and merge state"),
+                    hint=_(
+                        "use '@prog@ goto . --clean' to recover; "
+                        "this will destroy uncommitted changes"
+                    ),
+                )
+            summaryfooter = ""
             if subtree_merges:
+                extra.update(subtreeutil.gen_merge_info(repo, subtree_merges))
+                summaryfooter = subtreeutil.gen_merge_commit_msg(subtree_merges)
                 parents = repo.working_parent_nodes()
                 repo.setparents(parents[0])
+            elif subtree_copy_state:
+                extra.update(
+                    subtreeutil.subtree_copy_state_to_extra(repo, subtree_copy_state)
+                )
+                summaryfooter = subtreeutil.gen_copy_commit_msg_from_subtree_copy_state(
+                    repo, subtree_copy_state
+                )
             # Block merge commits unless explicitly allowed. If repo state is not
             # maintained for commands like rebase, commit can end up creating a
             # merge commit, which is incorrect and has performance implications.
@@ -1840,6 +1865,8 @@ def _docommit(ui, repo, *pats, **opts):
             )
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
+        if subtree_copy_state:
+            subtreeutil.clear_subtree_copy_state(repo)
 
         if not node:
             stat = cmdutil.postcommitstatus(repo, pats, opts)
