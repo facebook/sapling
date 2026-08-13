@@ -276,6 +276,8 @@ def amend(ui, repo, *pats, **opts):
 
     - Specify ``--no-rebase`` to prevent the automatic rebasing of descendants.
     """
+    cmdutil.checkunfinished(repo, op="amend")
+
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get("rebase")
     to = opts.get("to")

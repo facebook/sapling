@@ -2,6 +2,7 @@
   $ setconfig subtree.allow-any-source-commit=True
   $ setconfig subtree.min-path-depth=1
   $ enable morestatus
+  $ enable absorb
   $ setconfig morestatus.show=True
 
 An explicit no-commit copy creates pending state without invoking the editor:
@@ -27,6 +28,21 @@ An explicit no-commit copy creates pending state without invoking the editor:
   $ cat .sl/subtree-copy-state
   [{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"foo2"}],"v":1}]
   $ sl subtree copy -r $A --from-path foo --to-path foo3 --no-commit
+  abort: subtree copy in progress
+  (use 'sl commit' to continue or
+       'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)
+  [255]
+  $ sl commit --amend -m amended
+  abort: subtree copy in progress
+  (use 'sl commit' to continue or
+       'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)
+  [255]
+  $ sl amend -m amended
+  abort: subtree copy in progress
+  (use 'sl commit' to continue or
+       'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)
+  [255]
+  $ sl absorb
   abort: subtree copy in progress
   (use 'sl commit' to continue or
        'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)

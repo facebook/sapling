@@ -883,6 +883,8 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     """
     if opts is None:
         opts = {}
+    cmdutil.checkunfinished(repo)
+
     if stack is None:
         limit = ui.configint("absorb", "maxstacksize", 50)
         stack = getdraftstack(repo["."], limit, opts.get("immutable"))

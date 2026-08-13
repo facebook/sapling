@@ -1788,7 +1788,7 @@ def _docommit(ui, repo, *pats, **opts):
         # commit(), 1 if nothing changed or None on success.
         return 1 if ret == 0 else ret
 
-    cmdutil.checkunfinished(repo, op="commit")
+    cmdutil.checkunfinished(repo, op="amend" if opts.get("amend") else "commit")
 
     extra = {}
     if opts.get("amend"):

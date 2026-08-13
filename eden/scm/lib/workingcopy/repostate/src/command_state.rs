@@ -141,9 +141,9 @@ pub static STATES: &[State] = &[
         command: "histedit",
         description: "histedit in progress",
         state_file: "histedit-state",
-        // By design, "histedit" allows committing mid-operation. Commit will
-        // still be rejected if there are unresolved conflicts.
-        allows: &[Operation::Commit],
+        // By design, "histedit" allows committing and amending mid-operation.
+        // Both will still be rejected if there are unresolved conflicts.
+        allows: &[Operation::Commit, Operation::Amend],
         proceed: "histedit --continue",
         abort: "histedit --abort",
         abort_lossy: false,
@@ -222,6 +222,7 @@ pub static UNRESOLVED_CONFLICTS: State = State {
 pub enum Operation {
     GotoClean,
     Commit,
+    Amend,
     Other,
 }
 
