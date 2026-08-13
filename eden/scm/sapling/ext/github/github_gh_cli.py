@@ -79,7 +79,13 @@ async def _make_request(
         response = None
 
     if proc.returncode == 0:
-        assert response is not None
+        if response is None:
+            # Some REST endpoints return "204 No Content" on success (e.g.,
+            # dissolving a pull request stack), in which case `gh api` prints
+            # no JSON to parse.
+            if not stdout.strip():
+                return Ok({})
+            return Err(f"could not parse JSON from response: {stdout.decode()}")
         assert "errors" not in response
         return Ok(response)
     elif response is not None:
