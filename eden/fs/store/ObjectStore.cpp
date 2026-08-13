@@ -342,38 +342,6 @@ ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
           .semi()};
 }
 
-folly::SemiFuture<BackingStore::GetTreeAuxResult>
-ObjectStore::getTreeAuxDataImpl(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context,
-    folly::stop_watch<std::chrono::milliseconds> watch) const {
-  return ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
-      .thenValue(
-          [self = shared_from_this(), id, context = context.copy(), watch](
-              BackingStore::GetTreeAuxResult result)
-              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-            if (result.treeAux) {
-              self->stats_->increment(
-                  &ObjectStoreStats::getTreeAuxDataFromBackingStore);
-              self->stats_->addDuration(
-                  &ObjectStoreStats::getTreeAuxDataBackingstoreDuration,
-                  watch.elapsed());
-              return result;
-            }
-            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
-            return BackingStore::GetTreeAuxResult{
-                nullptr, ObjectFetchContext::Origin::NotFetched};
-          })
-      .thenError(
-          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
-              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
-            XLOGF(DBG4, "unable to find aux data for {}", id);
-            return makeImmediateFuture<BackingStore::GetTreeAuxResult>(ew);
-          })
-      .semi();
-}
-
 folly::coro::now_task<BackingStore::GetTreeAuxResult>
 ObjectStore::co_getTreeAuxDataImpl(
     const ObjectId& id,

@@ -503,11 +503,6 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const BackingStore::GetTreeResult& treeResult) const;
 
-  folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxDataImpl(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context,
-      folly::stop_watch<std::chrono::milliseconds> watch) const;
-
   folly::coro::now_task<BackingStore::GetTreeAuxResult> co_getTreeAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
