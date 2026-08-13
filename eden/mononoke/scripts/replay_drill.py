@@ -69,6 +69,7 @@ class LandResult(TypedDict):
     """Outcome of one SCS repo_land_stack call."""
 
     size: int
+    head: str  # hg hex of the landed stack head
     latency: float
     submit: float  # seconds from batch start to when this land was submitted
     done: float  # seconds from batch start to when its response returned
@@ -336,52 +337,48 @@ def group_disjoint_stacks(
     return stacks, dropped, hot
 
 
-def build_sibling_stacks(
+def _build_one_stack(
     args: argparse.Namespace,
     prefixes: list[str],
-    stacks: list[list[str]],
+    root: str,
     base: str,
-) -> list[tuple[str, int]]:
-    """Build each stack as a sibling off ``base``; return (head, commit count)."""
-    root = sl_out(["root"])
-    built: list[tuple[str, int]] = []
-    # Per-node skip tallies. ``filtered`` dominates on a FilteredFS checkout
-    # (Sandcastle): `sl status --change` diffs the full manifest, so grouping
-    # sees every changed path, but `sl revert` can't write filter-excluded paths
-    # (www/ and the required infosec/tent trees), so they drop out and the commit
-    # is a no-op. Reporting the breakdown keeps the throughput number honest --
-    # a silent skip would make it look like the full load landed.
-    skips = {"filtered": 0, "unmaterializable": 0, "empty": 0}
-    for i, stack in enumerate(stacks):
-        sl(["goto", "--clean", base], capture=False)
-        tip = ""
-        n = 0
-        for node in stack:
-            touched = materialize_commit(root, node, prefixes)
-            if touched is None:
-                # No file could be reverted/added; abandon this stack. The next
-                # goto --clean base discards the partial working-copy state.
-                skips["unmaterializable"] += 1
-                tip = ""
-                break
-            assert_paths_allowed(touched, prefixes)
-            title = sl_out(["log", "-r", node, "-T", "{desc|firstline}"])
-            if sl(["commit", "-u", args.author, "-m", title], check=False).returncode:
-                # No-op commit: nothing landed on disk. Empty ``touched`` means
-                # every changed path was filter-excluded; a non-empty ``touched``
-                # that still no-ops is a rarer degenerate node. Discard leftovers
-                # so the next node keeps the stack's file-disjointness invariant.
-                skips["filtered" if not touched else "empty"] += 1
-                sl(["goto", "--clean", "."], capture=False, check=False)
-                continue
-            tip = sl_out(["log", "-r", ".", "-T", "{node}"])
-            n += 1
-        if tip:
-            built.append((tip, n))
-        if (i + 1) % 50 == 0:
-            logger.info(
-                "  processed %d/%d stacks (%d built)", i + 1, len(stacks), len(built)
-            )
+    stack: list[str],
+    skips: dict[str, int],
+) -> tuple[str, int]:
+    """Build one stack as siblings off ``base``; return (head, commits built).
+
+    Head is ``""`` when nothing landed (a node was unmaterializable, or every
+    node was filter-excluded/no-op). Mutates ``skips`` with per-reason tallies.
+    The caller's next ``goto --clean base`` discards any partial working copy.
+    """
+    sl(["goto", "--clean", base], capture=False)
+    tip = ""
+    n = 0
+    for node in stack:
+        touched = materialize_commit(root, node, prefixes)
+        if touched is None:
+            # No file could be reverted/added; abandon this stack.
+            skips["unmaterializable"] += 1
+            return "", 0
+        assert_paths_allowed(touched, prefixes)
+        title = sl_out(["log", "-r", node, "-T", "{desc|firstline}"])
+        if sl(["commit", "-u", args.author, "-m", title], check=False).returncode:
+            # No-op commit: nothing landed on disk. Empty ``touched`` means every
+            # changed path was filter-excluded; a non-empty ``touched`` that still
+            # no-ops is a rarer degenerate node. Discard leftovers so the next node
+            # keeps the stack's file-disjointness invariant.
+            skips["filtered" if not touched else "empty"] += 1
+            sl(["goto", "--clean", "."], capture=False, check=False)
+            continue
+        tip = sl_out(["log", "-r", ".", "-T", "{node}"])
+        n += 1
+    return tip, n
+
+
+def _log_build_summary(
+    built: list[tuple[str, int]], stacks: list[list[str]], skips: dict[str, int]
+) -> None:
+    """Log the built/skipped breakdown and, on FilteredFS, the coverage caveat."""
     logger.info(
         "  built %d/%d stacks; skipped commits: %d filter-excluded, "
         "%d unmaterializable, %d no-op",
@@ -398,6 +395,46 @@ def build_sibling_stacks(
             "run on an omniview/untented tier for full coverage.",
             skips["filtered"],
         )
+
+
+def build_sibling_stacks(
+    args: argparse.Namespace,
+    prefixes: list[str],
+    stacks: list[list[str]],
+    base: str,
+) -> list[tuple[str, int]]:
+    """Build each stack as a sibling off ``base``; return (head, commit count).
+
+    Logs the source-commits -> built-head mapping per stack so the Sandcastle log
+    shows exactly which commits landed under which head. Candidate commits already
+    only touch the bot's allowed directories (``prefixes``), but on a FilteredFS
+    checkout (Sandcastle) not every allowed path is materialized in the working
+    copy: `sl status --change` diffs the full server manifest so grouping still
+    sees the path, yet `sl revert` can't write one the checkout filter omits, so
+    it drops out and the commit no-ops -- tallied under ``filtered``. Reporting the
+    breakdown keeps the throughput number honest; a silent skip would make it look
+    like the full load landed.
+    """
+    root = sl_out(["root"])
+    built: list[tuple[str, int]] = []
+    skips = {"filtered": 0, "unmaterializable": 0, "empty": 0}
+    for i, stack in enumerate(stacks):
+        tip, n = _build_one_stack(args, prefixes, root, base, stack, skips)
+        if tip:
+            built.append((tip, n))
+            logger.info(
+                "  stack %d built: head %s <- %d/%d commit(s) [%s]",
+                i,
+                tip[:12],
+                n,
+                len(stack),
+                " ".join(x[:12] for x in stack),
+            )
+        if (i + 1) % 50 == 0:
+            logger.info(
+                "  processed %d/%d stacks (%d built)", i + 1, len(stacks), len(built)
+            )
+    _log_build_summary(built, stacks, skips)
     return built
 
 
@@ -422,19 +459,33 @@ def _scs_client_params(repo: str) -> ClientParams:
 
 
 async def _land_stack(
-    client: Any, repo: Any, params: Any, size: int, t0: float
+    client: Any, repo: Any, params: Any, size: int, head_hex: str, t0: float
 ) -> LandResult:
     submit = time.monotonic() - t0
     resp = await client.repo_land_stack(repo, params)
     done = time.monotonic() - t0
     outcome = resp.pushrebase_outcome
+    distance = int(outcome.pushrebase_distance)
+    retry = int(outcome.retry_num)
+    # Logs in land-completion order, so the sequence of lines is literally the
+    # order stacks landed on the bookmark; `done` is the offset from batch start.
+    logger.info(
+        "  landed %s (size %d) at +%.3fs: distance %d, retry %d, took %.3fs",
+        head_hex[:12],
+        size,
+        done,
+        distance,
+        retry,
+        done - submit,
+    )
     return {
         "size": size,
+        "head": head_hex,
         "latency": done - submit,
         "submit": submit,
         "done": done,
-        "distance": int(outcome.pushrebase_distance),
-        "retry": int(outcome.retry_num),
+        "distance": distance,
+        "retry": retry,
     }
 
 
@@ -507,6 +558,12 @@ async def _land_all(
     schemes = {scs.CommitIdentityScheme.HG}
     # Fire every stack at once (asyncio, so this parks no threads -- each land
     # just awaits its server response).
+    logger.info(
+        "Submitting %d stack head(s) to %s in parallel: %s",
+        len(heads),
+        args.bookmark,
+        " ".join(h[:12] for h, _ in heads),
+    )
     async with get_sr_client(
         SourceControlService, SCS_TIER, params=_scs_client_params(args.repo)
     ) as client:
@@ -522,6 +579,7 @@ async def _land_all(
                     identity_schemes=schemes,
                 ),
                 size,
+                head_hex,
                 t0,
             )
             for head_hex, size in heads
@@ -590,6 +648,23 @@ def _report(results: list[Any], wall: float, num_stacks: int, dropped: int) -> N
         )
 
 
+def _log_stack_composition(stacks: list[list[str]]) -> None:
+    """Log each stack's index, size, and member commits (short hashes).
+
+    One line per stack, before any build or land, so the Sandcastle log records
+    exactly which commits were grouped together. Same 0-based index as the later
+    "stack N built" lines, so the grouping and build views correlate.
+    """
+    logger.info("Stack composition (%d stacks):", len(stacks))
+    for i, stack in enumerate(stacks):
+        logger.info(
+            "  stack %d (size %d): %s",
+            i,
+            len(stack),
+            " ".join(n[:12] for n in stack),
+        )
+
+
 def run_drill(args: argparse.Namespace, prefixes: list[str]) -> None:
     nodes = commits_touching(prefixes, args.count)
     if not nodes:
@@ -631,6 +706,7 @@ def run_drill(args: argparse.Namespace, prefixes: list[str]) -> None:
             "  hot files capping parallelism: %s",
             ", ".join(f"{f} (x{c})" for f, c in hot),
         )
+    _log_stack_composition(stacks)
     if not stacks:
         logger.info("Nothing to push.")
         return
