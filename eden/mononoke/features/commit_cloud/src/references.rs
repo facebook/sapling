@@ -7,6 +7,9 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::time::Instant;
 
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -65,6 +68,13 @@ define_stats! {
     fetch_references_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     cast_references_data_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     total_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
+    // The two I/O stages inside cast_references_data, as the per-sync sum of time
+    // spent inside each stage's futures. The stages are pipelined and run
+    // concurrently, so these are sums over overlapping futures: they routinely
+    // exceed wall clock and do NOT partition cast_references_data_ms. Compare them
+    // to each other, not to it.
+    bonsai_mapping_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
+    changeset_info_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
 }
 
 const SECONDS_PER_DAY: i64 = 86400;
@@ -95,7 +105,7 @@ fn age_bucket_index(age_days: i64) -> usize {
 // `get_references`.
 //
 // `age` is `now - author_date`, matching the author-date basis the client uses
-// for its `max_sync_age` omission (default 14 days), so the histogram lines up
+// for its `max_sync_age` omission (default 28 days), so the histogram lines up
 // directly with the client-side omitted-heads line. This is pure telemetry and
 // must not affect sync results.
 fn log_head_age_metrics(heads_dates: &HashMap<CloudChangesetId, i64>) {
@@ -126,6 +136,16 @@ pub(crate) fn log_get_references_timing(fetch_ms: i64, cast_ms: i64, total_ms: i
     STATS::fetch_references_ms.add_value(fetch_ms);
     STATS::cast_references_data_ms.add_value(cast_ms);
     STATS::total_ms.add_value(total_ms);
+}
+
+// Emit the split of cast_references_data into its two I/O stages. See the counter
+// comments in define_stats!: these are sums over concurrent futures, so their
+// ratio identifies the dominant stage but their total is not comparable to
+// cast_references_data_ms. Same always-on, O(1), pure-telemetry contract as
+// log_get_references_timing.
+fn log_cast_phase_timing(bonsai_mapping_ms: i64, changeset_info_ms: i64) {
+    STATS::bonsai_mapping_ms.add_value(bonsai_mapping_ms);
+    STATS::changeset_info_ms.add_value(changeset_info_ms);
 }
 
 // Workspace information as we retrieve it form the database
@@ -190,32 +210,42 @@ pub(crate) async fn cast_references_data(
 
     let repo_derived_data = &repo_derived_data;
 
+    // The two stages below are pipelined, so neither can be bracketed by a single
+    // Instant in this function. Each future instead adds its own elapsed time here.
+    let bonsai_mapping_nanos = AtomicU64::new(0);
+    let changeset_info_nanos = AtomicU64::new(0);
+    let bonsai_mapping_nanos = &bonsai_mapping_nanos;
+    let changeset_info_nanos = &changeset_info_nanos;
+
     let heads_dates: HashMap<CloudChangesetId, i64> = stream::iter(chunks_iter)
         // map [CloudChangesetId] to [(CloudChangesetId, BonsaiChangesetId)]
         .and_then(|heads| {
             cloned!(bonsai_hg_mapping, bonsai_git_mapping);
             async move {
-                Ok(stream::iter(
-                    utils::get_bonsai_from_cloud_ids(
-                        core_ctx,
-                        cc_ctx,
-                        bonsai_hg_mapping,
-                        bonsai_git_mapping,
-                        heads,
-                    )
-                    .await?
-                    .into_iter()
-                    .map(Ok::<_, anyhow::Error>),
-                ))
+                let start = Instant::now();
+                let mapped = utils::get_bonsai_from_cloud_ids(
+                    core_ctx,
+                    cc_ctx,
+                    bonsai_hg_mapping,
+                    bonsai_git_mapping,
+                    heads,
+                )
+                .await?;
+                bonsai_mapping_nanos
+                    .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
+                Ok(stream::iter(mapped.into_iter().map(Ok::<_, anyhow::Error>)))
             }
         })
         // do up to 10 hg->bonsai mappings concurrently, flattening out results
         .try_flatten_unordered(10)
         // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
         .and_then(|(cid, bcs_id)| async move {
-            repo_derived_data
+            let start = Instant::now();
+            let derived = repo_derived_data
                 .derive::<ChangesetInfo>(core_ctx, bcs_id, DerivationPriority::LOW)
-                .await
+                .await;
+            changeset_info_nanos.fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
+            derived
                 .map_err(Into::into)
                 .map(|cs_info| future::ok((cid, cs_info.author_date().as_chrono().timestamp())))
         })
@@ -224,6 +254,11 @@ pub(crate) async fn cast_references_data(
         .try_collect()
         .boxed()
         .await?;
+
+    log_cast_phase_timing(
+        (bonsai_mapping_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
+        (changeset_info_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
+    );
 
     // Pure telemetry: emit a per-sync head-age histogram and head count from the
     // author dates we already computed above. Gated by a JustKnob so it can be
