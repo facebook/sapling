@@ -188,6 +188,10 @@ STATES = (
     # (state, rust state object with 'is_active()' and 'hint()')
     # OR
     # (state, predicate to detect states, helpful message function)
+    (
+        "subtree copy",
+        wc.commandstate.get_state("subtree copy", "subtree-copy-state"),
+    ),
     ("histedit", wc.commandstate.get_state("histedit", "histedit-state")),
     ("bisect", fileexistspredicate("bisect.state"), bisectmsg),
     ("graft", wc.commandstate.get_state("graft", "graftstate")),

@@ -1,6 +1,8 @@
   $ setconfig diff.git=True
   $ setconfig subtree.allow-any-source-commit=True
   $ setconfig subtree.min-path-depth=1
+  $ enable morestatus
+  $ setconfig morestatus.show=True
 
 An explicit no-commit copy creates pending state without invoking the editor:
 
@@ -29,6 +31,12 @@ An explicit no-commit copy creates pending state without invoking the editor:
   (use 'sl commit' to continue or
        'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
+  $ sl status
+  A foo2/x
+  
+  # The repository is in an unfinished *subtree copy* state.
+  # To continue:                sl commit
+  # To abort:                   sl goto . --clean (WARNING: will destroy uncommitted changes)
   $ test "$(sl log -r . -T '{node}')" = "$B"
   $ ls
   bar
