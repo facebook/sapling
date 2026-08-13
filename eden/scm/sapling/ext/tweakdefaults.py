@@ -613,6 +613,7 @@ def log(orig, ui, repo, *pats, **opts):
     if (
         not opts.get("rev")
         and not opts.get("all")
+        and not opts.get("mutation")
         and ui.configbool("tweakdefaults", "logdefaultfollow", True)
     ):
         opts["follow"] = True

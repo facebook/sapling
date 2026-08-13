@@ -33,11 +33,13 @@ Regular commit graph log:
   ├─╯
   o  A
 
-Tofix: Mutation graph log:
+Mutation graph log:
  
   $ sl go $B3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl log -Gt -T '{desc}\n'
   @  B3
-  
-  o  A
+  │
+  x  B2
+  │
+  x  B1
