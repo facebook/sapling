@@ -632,6 +632,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_mount",
         "//folly:exception_wrapper",
         "//folly/coro:blocking_wait",
+        "//folly/coro:gtest_helpers",
         "//folly/executors:manual_executor",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
@@ -776,6 +777,7 @@ cpp_unittest(
         "//eden/fs/store:store",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
+        "//folly/coro:gtest_helpers",
     ],
 )
 

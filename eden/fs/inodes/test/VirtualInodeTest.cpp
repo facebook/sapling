@@ -697,7 +697,7 @@ folly::coro::Task<void> testRootDirAChildren(TestMount& mount) {
   auto virtualInode = mount.getVirtualInode(RelativePathPiece{"root_dirA"});
   EXPECT_TRUE(virtualInode.isDirectory());
 
-  auto children = co_await virtualInode.co_getChildren(
+  auto children = co_await virtualInode.getChildren(
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());
@@ -782,7 +782,7 @@ CO_TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
     auto virtualInode = mount.getVirtualInode(info->path);
     EXPECT_INODE_OR(virtualInode, *info.get());
     if (virtualInode.isDirectory()) {
-      (void)co_await virtualInode.co_getChildren(
+      (void)co_await virtualInode.getChildren(
           info->path,
           mount.getEdenMount()->getObjectStore(),
           ObjectFetchContext::getNullContext());

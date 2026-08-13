@@ -247,7 +247,7 @@ class VirtualInode {
    */
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
-  co_getChildren(
+  getChildren(
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext);

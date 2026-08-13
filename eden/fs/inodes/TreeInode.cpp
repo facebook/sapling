@@ -933,62 +933,9 @@ folly::coro::now_task<VirtualInode> TreeInode::co_getOrFindChild(
   co_return VirtualInode{std::move(inode)};
 }
 
-std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
-TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
-  recheckPermissionIfExpired(context).get();
-
-  // We could optimize this to take the rlock first and try to get all the
-  // VirtualInode with out loading inodes. This would allow for higher
-  // concurrency. However, this will significantly increase code
-  // complexity and can make non concurrent requests more expensive. We should
-  //  perf in production before making this change: T125563920
-
-  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result;
-  std::vector<std::pair<PathComponent, TreeInode::LoadChildCleanUp>>
-      inodeLoadCleanUps;
-
-  {
-    // we always want to clean up the loads for as many of these inodes as we
-    // can once the contents lock is dropped. This ensures even on exception
-    // inode loads are completed. Note: the wlock must be taken after this scope
-    // exit declaration, so the scope exit will be performed after the lock is
-    // released.
-    SCOPE_EXIT {
-      for (auto& cleanUp : inodeLoadCleanUps) {
-        loadChildCleanUp(cleanUp.first, std::move(cleanUp.second));
-      }
-    };
-    auto contents = lockContentsWrite();
-    result.reserve(contents->entries.size());
-    inodeLoadCleanUps.reserve(contents->entries.size());
-    for (const auto& entry : contents->entries) {
-      auto virtualInode =
-          rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
-      if (virtualInode) {
-        result.emplace_back(entry.first, std::move(virtualInode.value()));
-      } else {
-        auto childResult = loadChild(contents, entry.first, context);
-        // inodeLoadCleanUps.push_back must be no-except to guarantee
-        // the cleanup will run if result.push_back below throws.
-        XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
-        inodeLoadCleanUps.emplace_back(
-            entry.first, std::move(childResult.second));
-
-        result.emplace_back(
-            entry.first,
-            ImmediateFuture<InodePtr>{std::move(childResult.first)}.thenValue(
-                [](auto&& inode) { return VirtualInode{std::move(inode)}; }));
-      }
-    }
-  }
-  return result;
-}
-
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
-TreeInode::co_getChildren(
-    const ObjectFetchContextPtr& context,
-    bool loadInodes) {
+TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
   auto self = inodePtrFromThis();
 
   {
@@ -1103,7 +1050,7 @@ TreeInode::co_getChildrenAttributes(
     co_await recheckPermissionIfExpired(context).semi();
   }
 
-  // Atomic snapshot under one wlock, same discipline as co_getChildren():
+  // Atomic snapshot under one wlock, same discipline as getChildren():
   // SCOPE_EXIT drains inodeLoadCleanUps after the lock is released; per-child
   // attribute tasks run in parallel via collectAllTryRange post-lock.
   std::vector<PathComponent> names;

@@ -78,20 +78,22 @@ TreeInodePtr makeTreeInodeChildWithoutParentEntry(
 }
 } // namespace
 
-TEST(RestrictedTreeInode, normalTreeInodeAllowsReaddir) {
+CO_TEST(RestrictedTreeInode, normalTreeInodeAllowsReaddir) {
   FakeTreeBuilder builder;
   builder.setFile("dir/file.txt", "content");
   TestMount testMount{builder};
 
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto context = ObjectFetchContext::getNullContext();
-  auto children = rootInode->getChildren(context, /*loadInodes=*/false);
+  auto children =
+      co_await rootInode->getChildren(context, /*loadInodes=*/false);
 
   auto iter =
       std::find_if(children.begin(), children.end(), [](const auto& entry) {
         return entry.first == "dir"_pc;
       });
-  ASSERT_NE(iter, children.end());
+  CO_ASSERT_NE(iter, children.end());
+  CO_ASSERT_TRUE(iter->second.hasValue());
 }
 
 TEST(RestrictedTreeInode, restrictedFlagDeniesAccess) {
@@ -537,7 +539,7 @@ TEST(RestrictedTreeInode, renameIntoRestrictedDirReturnsEACCES) {
   });
 }
 
-CO_TEST(RestrictedTreeInode, co_getChildrenOnRestrictedTreeReturnsEACCES) {
+CO_TEST(RestrictedTreeInode, getChildrenOnRestrictedTreeReturnsEACCES) {
   FakeTreeBuilder builder;
   builder.setFile("restricted/secret.txt", "secret");
   builder.setDirIsRestricted("restricted");
@@ -547,7 +549,7 @@ CO_TEST(RestrictedTreeInode, co_getChildrenOnRestrictedTreeReturnsEACCES) {
   auto vi = testMount.getVirtualInode("restricted"_relpath);
   auto context = ObjectFetchContext::getNullContext();
 
-  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildren(
+  auto result = co_await folly::coro::co_awaitTry(vi.getChildren(
       "restricted"_relpath, edenMount->getObjectStore(), context));
   CO_ASSERT_TRUE(result.hasException());
   EXPECT_TRUE(result.hasException<std::system_error>());
@@ -558,7 +560,7 @@ CO_TEST(RestrictedTreeInode, co_getChildrenOnRestrictedTreeReturnsEACCES) {
 
 CO_TEST(
     RestrictedTreeInode,
-    co_getChildrenSkipsBackingStoreFetchForRestrictedChild) {
+    getChildrenSkipsBackingStoreFetchForRestrictedChild) {
   // Parent is unrestricted; one child entry is restricted. The coro path
   // must hand back a synthesized restricted VirtualInode for that child
   // instead of fetching its tree from the backing store.
@@ -572,7 +574,7 @@ CO_TEST(
   auto vi = testMount.getVirtualInode("parent"_relpath);
   auto context = ObjectFetchContext::getNullContext();
 
-  auto results = co_await vi.co_getChildren(
+  auto results = co_await vi.getChildren(
       "parent"_relpath, edenMount->getObjectStore(), context);
   bool sawRestrictedChild = false;
   bool sawNormalChild = false;
@@ -584,7 +586,7 @@ CO_TEST(
       // surface EACCES — it is a real restricted view, not the underlying
       // tree contents.
       auto childResult =
-          co_await folly::coro::co_awaitTry(tryVi.value().co_getChildren(
+          co_await folly::coro::co_awaitTry(tryVi.value().getChildren(
               "parent/restricted_child"_relpath,
               edenMount->getObjectStore(),
               context));
@@ -604,7 +606,7 @@ CO_TEST(
 
 // Exercises the InodePtr branch — the dominant production path after a
 // mount has loaded inodes.
-CO_TEST(RestrictedTreeInode, co_getChildren_inodePtrBranchReturnsEntries) {
+CO_TEST(RestrictedTreeInode, getChildren_inodePtrBranchReturnsEntries) {
   FakeTreeBuilder builder;
   builder.setFile("dir/a.txt", "a");
   builder.setFile("dir/b.txt", "b");
@@ -616,7 +618,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_inodePtrBranchReturnsEntries) {
   VirtualInode vi{InodePtr{dirInode}};
   auto context = ObjectFetchContext::getNullContext();
 
-  auto results = co_await vi.co_getChildren(
+  auto results = co_await vi.getChildren(
       "dir"_relpath, edenMount->getObjectStore(), context);
   EXPECT_EQ(results.size(), 2);
   for (auto& [name, tryVi] : results) {
@@ -626,7 +628,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_inodePtrBranchReturnsEntries) {
 
 // Catches a regression where the early isDirectory() guard drifts out of
 // sync with the variant arms.
-CO_TEST(RestrictedTreeInode, co_getChildren_onFileReturnsENOTDIR) {
+CO_TEST(RestrictedTreeInode, getChildren_onFileReturnsENOTDIR) {
   FakeTreeBuilder builder;
   builder.setFile("dir/file.txt", "content");
   TestMount testMount{builder};
@@ -635,7 +637,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_onFileReturnsENOTDIR) {
   auto vi = testMount.getVirtualInode("dir/file.txt"_relpath);
   auto context = ObjectFetchContext::getNullContext();
 
-  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildren(
+  auto result = co_await folly::coro::co_awaitTry(vi.getChildren(
       "dir/file.txt"_relpath, edenMount->getObjectStore(), context));
   CO_ASSERT_TRUE(result.hasException());
   EXPECT_TRUE(result.hasException<std::system_error>());
@@ -857,13 +859,13 @@ TEST(RestrictedTreeInode, tryGetEntryAttributesSync_restrictedDirWithholdsAux) {
 }
 
 // ============================================================================
-// Coroutine readdir ACL parity (regression for TreeInode coro recheck gate).
-// Mirrors the futures-side gate in TreeInode::getChildren
-// (recheckPermissionIfExpired before lock) so the coroutine variant does not
-// stick on stale EACCES after a TTL-expired permission grant.
+// Coroutine getChildren ACL parity (regression for TreeInode recheck gate).
+// Ensures recheckPermissionIfExpired runs before the contents lock so
+// getChildren does not stick on stale EACCES after a TTL-expired permission
+// grant.
 // ============================================================================
 
-CO_TEST(RestrictedTreeInode, co_getChildren_returnsEntriesOnUnrestrictedRoot) {
+CO_TEST(RestrictedTreeInode, getChildren_returnsEntriesOnUnrestrictedRoot) {
   // Smoke test for the success path: recheck short-circuits on a
   // non-restricted directory and entries are returned without EACCES.
   FakeTreeBuilder builder;
@@ -873,7 +875,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_returnsEntriesOnUnrestrictedRoot) {
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto context = ObjectFetchContext::getNullContext();
 
-  auto results = co_await rootInode->co_getChildren(context);
+  auto results = co_await rootInode->getChildren(context);
   bool sawDir = false;
   for (auto& [name, tryVi] : results) {
     if (name == "dir"_pc) {
@@ -885,12 +887,12 @@ CO_TEST(RestrictedTreeInode, co_getChildren_returnsEntriesOnUnrestrictedRoot) {
 }
 
 // Exercises the wlock + loadChild + inodeLoadCleanUps + SCOPE_EXIT
-// discipline in TreeInode::co_getChildren that the loadInodes=false default
+// discipline in TreeInode::getChildren that the loadInodes=false default
 // never reaches (rlockCheckChild returns an inline VirtualInode for
 // unmaterialized entries). loadInodes=true forces every non-loaded entry
 // through loadChild, which queues a LoadChildCleanUp drained by SCOPE_EXIT
 // after the lock releases.
-CO_TEST(RestrictedTreeInode, co_getChildren_loadInodesTrueExercisesLoadChild) {
+CO_TEST(RestrictedTreeInode, getChildren_loadInodesTrueExercisesLoadChild) {
   FakeTreeBuilder builder;
   builder.setFile("dir/a.txt", "a");
   builder.setFile("dir/b.txt", "b");
@@ -900,8 +902,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_loadInodesTrueExercisesLoadChild) {
   auto dirInode = testMount.getTreeInode("dir"_relpath);
   auto context = ObjectFetchContext::getNullContext();
 
-  auto results =
-      co_await dirInode->co_getChildren(context, /*loadInodes=*/true);
+  auto results = co_await dirInode->getChildren(context, /*loadInodes=*/true);
   EXPECT_EQ(results.size(), 3);
   for (auto& [name, tryVi] : results) {
     CO_ASSERT_TRUE(tryVi.hasValue());
@@ -912,7 +913,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_loadInodesTrueExercisesLoadChild) {
 // Exercises the EACCES-on-lockContentsWrite path. The SCOPE_EXIT is already
 // registered when lockContentsWrite() throws — this verifies the empty
 // inodeLoadCleanUps unwind branch is benign.
-CO_TEST(RestrictedTreeInode, co_getChildren_restrictedThrowsEACCES) {
+CO_TEST(RestrictedTreeInode, getChildren_restrictedThrowsEACCES) {
   FakeTreeBuilder builder;
   builder.setFile("dir/file.txt", "content");
   TestMount testMount{builder};
@@ -921,7 +922,7 @@ CO_TEST(RestrictedTreeInode, co_getChildren_restrictedThrowsEACCES) {
   auto context = ObjectFetchContext::getNullContext();
 
   auto result = co_await folly::coro::co_awaitTry(
-      restricted->co_getChildren(context, /*loadInodes=*/false));
+      restricted->getChildren(context, /*loadInodes=*/false));
   CO_ASSERT_TRUE(result.hasException());
   auto* err = result.tryGetExceptionObject<std::system_error>();
   CO_ASSERT_NE(err, nullptr);

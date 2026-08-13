@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 
 #include "eden/common/utils/DirType.h"
@@ -180,7 +181,7 @@ TEST_F(
   EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 1);
 }
 
-TEST_F(
+CO_TEST_F(
     RestrictedTreeCachingTest,
     restrictedInode_firstStatTransitionsToUnrestricted) {
   FakeTreeBuilder builder;
@@ -193,10 +194,10 @@ TEST_F(
   backingStore->setCheckPermissionResult(restrictedObjectId, true);
 
   auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
-  ASSERT_TRUE(restrictedInode->isRestricted());
+  CO_ASSERT_TRUE(restrictedInode->isRestricted());
 
   auto context = ObjectFetchContext::getNullContext();
-  auto st = restrictedInode->stat(context).get();
+  auto st = co_await restrictedInode->co_stat(context);
 #ifndef _WIN32
   EXPECT_TRUE(S_ISDIR(st.st_mode));
   EXPECT_NE(st.st_mode & 07777, 0);
@@ -205,9 +206,10 @@ TEST_F(
   EXPECT_FALSE(restrictedInode->isRestricted());
   EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 1);
 
-  auto children = restrictedInode->getChildren(context, false);
-  EXPECT_EQ(children.size(), 1);
+  auto children = co_await restrictedInode->getChildren(context, false);
+  CO_ASSERT_EQ(children.size(), 1u);
   EXPECT_EQ(children[0].first, "secret.txt"_pc);
+  EXPECT_TRUE(children[0].second.hasValue());
 }
 
 TEST_F(
@@ -255,7 +257,7 @@ TEST_F(
   EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedTreeId), 0);
 }
 
-TEST_F(
+CO_TEST_F(
     RestrictedTreeCachingTest,
     restrictedInode_statTransitionsToUnrestricted) {
   FakeTreeBuilder builder;
@@ -269,10 +271,10 @@ TEST_F(
   // First: checkPermission returns false → stays restricted
   backingStore->setCheckPermissionResult(restrictedObjectId, false);
   auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
-  ASSERT_TRUE(restrictedInode->isRestricted());
+  CO_ASSERT_TRUE(restrictedInode->isRestricted());
 
   auto context = ObjectFetchContext::getNullContext();
-  auto st1 = restrictedInode->stat(context).get();
+  auto st1 = co_await restrictedInode->co_stat(context);
 #ifndef _WIN32
   EXPECT_TRUE(S_ISDIR(st1.st_mode));
   EXPECT_EQ(st1.st_mode & 07777, 0);
@@ -282,7 +284,7 @@ TEST_F(
 
   // Second: checkPermission returns true → transitions to unrestricted
   backingStore->setCheckPermissionResult(restrictedObjectId, true);
-  auto st2 = restrictedInode->stat(context).get();
+  auto st2 = co_await restrictedInode->co_stat(context);
 #ifndef _WIN32
   EXPECT_TRUE(S_ISDIR(st2.st_mode));
   EXPECT_NE(st2.st_mode & 07777, 0);
@@ -291,9 +293,10 @@ TEST_F(
   EXPECT_EQ(backingStore->getCheckPermissionCount(restrictedObjectId), 2);
 
   // Can now read children through the unrestricted directory
-  auto children = restrictedInode->getChildren(context, false);
-  EXPECT_EQ(children.size(), 1);
+  auto children = co_await restrictedInode->getChildren(context, false);
+  CO_ASSERT_EQ(children.size(), 1u);
   EXPECT_EQ(children[0].first, "secret.txt"_pc);
+  EXPECT_TRUE(children[0].second.hasValue());
 }
 
 TEST_F(

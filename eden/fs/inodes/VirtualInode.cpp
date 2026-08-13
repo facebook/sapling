@@ -1454,7 +1454,7 @@ folly::Try<VirtualInode> applyAncestorAcl(
 
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
-co_getChildrenHelper(
+getChildrenHelper(
     const TreePtr& tree,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
@@ -1519,7 +1519,7 @@ co_getChildrenHelper(
 
 folly::coro::now_task<
     std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
-VirtualInode::co_getChildren(
+VirtualInode::getChildren(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
@@ -1529,9 +1529,9 @@ VirtualInode::co_getChildren(
 
   static_assert(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
-      "New variant type added to VariantVirtualInode - update co_getChildren");
+      "New variant type added to VariantVirtualInode - update getChildren");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    auto children = co_await inode->asTreePtr()->co_getChildren(
+    auto children = co_await inode->asTreePtr()->getChildren(
         fetchContext, /*loadInodes=*/false);
     for (auto& child : children) {
       child.second = applyAncestorAcl(std::move(child.second), isUnderAcl());
@@ -1543,7 +1543,7 @@ VirtualInode::co_getChildren(
       co_yield folly::coro::co_error(PathError(EACCES, path));
     }
     auto children =
-        co_await co_getChildrenHelper(*tree, objectStore, fetchContext);
+        co_await getChildrenHelper(*tree, objectStore, fetchContext);
     for (auto& child : children) {
       child.second = applyAncestorAcl(std::move(child.second), isUnderAcl());
     }

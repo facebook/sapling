@@ -203,16 +203,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * inode. Otherwise, the returned VirtualInode may contain a ObjectStore
    * Tree or a DirEntry/TreeEntry representing the entry.
    */
-  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
-  getChildren(const ObjectFetchContextPtr& context, bool loadInodes);
-
-  /**
-   * Coroutine variant of getChildren() returning eagerly-resolved
-   * Try<VirtualInode> values instead of per-entry ImmediateFutures.
-   */
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
-  co_getChildren(const ObjectFetchContextPtr& context, bool loadInodes = false);
+  getChildren(const ObjectFetchContextPtr& context, bool loadInodes = false);
 
   /**
    * Pipelined coroutine version of getChildren + getEntryAttributes.
@@ -220,7 +213,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Each child task does (resolve VirtualInode → fetch attributes) in
    * sequence, and all child tasks run in parallel under a single
    * collectAllTryRange. This avoids the barrier between phases that a
-   * separate co_getChildren followed by per-attr tasks would impose,
+   * separate getChildren followed by per-attr tasks would impose,
    * preserving the latency profile of the original futures-based
    * implementation while still avoiding the ImmediateFuture wrapper
    * overhead.

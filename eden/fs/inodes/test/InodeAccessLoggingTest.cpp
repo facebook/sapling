@@ -7,6 +7,7 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/coro/BlockingWait.h>
+#include <folly/coro/GtestHelpers.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
@@ -614,7 +615,7 @@ TEST_P(InodeAccessLoggingTest, rmdirNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_P(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
+CO_TEST_P(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
   auto dirInode = mount_.getRootInode();
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -624,18 +625,18 @@ TEST_P(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
       "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
 
-  auto futures =
-      dirInode->getChildren(ObjectFetchContext::getNullContext(), true);
+  auto children = co_await dirInode->getChildren(
+      ObjectFetchContext::getNullContext(), true);
 
-  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
-    std::move(pair.second).get(0ms);
-  });
+  for (auto& [_name, child] : children) {
+    CO_ASSERT_TRUE(child.hasValue());
+  }
 
   // No accesses logged because we don't log accesses to the root tree
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_P(InodeAccessLoggingTest, getChildrenNestedLoad) {
+CO_TEST_P(InodeAccessLoggingTest, getChildrenNestedLoad) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -645,18 +646,18 @@ TEST_P(InodeAccessLoggingTest, getChildrenNestedLoad) {
       "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
 
-  auto futures =
-      dirInode->getChildren(ObjectFetchContext::getNullContext(), true);
+  auto children = co_await dirInode->getChildren(
+      ObjectFetchContext::getNullContext(), true);
 
-  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
-    std::move(pair.second).get(0ms);
-  });
+  for (auto& [_name, child] : children) {
+    CO_ASSERT_TRUE(child.hasValue());
+  }
 
   // logs the 1 existing child (1.txt) and the 4 newly created children
   EXPECT_EQ(5, getAccessCount());
 }
 
-TEST_P(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
+CO_TEST_P(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
   auto dirInode = mount_.getRootInode();
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -666,18 +667,18 @@ TEST_P(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
       "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
 
-  auto futures =
-      dirInode->getChildren(ObjectFetchContext::getNullContext(), false);
+  auto children = co_await dirInode->getChildren(
+      ObjectFetchContext::getNullContext(), false);
 
-  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
-    std::move(pair.second).get(0ms);
-  });
+  for (auto& [_name, child] : children) {
+    CO_ASSERT_TRUE(child.hasValue());
+  }
 
   // No accesses logged because we don't log accesses to the root tree
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_P(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
+CO_TEST_P(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -687,12 +688,12 @@ TEST_P(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
       "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
 
-  auto futures =
-      dirInode->getChildren(ObjectFetchContext::getNullContext(), false);
+  auto children = co_await dirInode->getChildren(
+      ObjectFetchContext::getNullContext(), false);
 
-  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
-    std::move(pair.second).get(0ms);
-  });
+  for (auto& [_name, child] : children) {
+    CO_ASSERT_TRUE(child.hasValue());
+  }
 
   EXPECT_EQ(5, getAccessCount());
 }
