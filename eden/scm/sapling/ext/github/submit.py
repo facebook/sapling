@@ -34,9 +34,15 @@ def submit(ui, repo, *args, **opts) -> int:
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
     is_open = opts.get("open")
+    is_restack = opts.get("restack")
     return asyncio.run(
         update_commits_in_stack(
-            ui, repo, github_repo, is_draft=is_draft, is_open=is_open
+            ui,
+            repo,
+            github_repo,
+            is_draft=is_draft,
+            is_open=is_open,
+            restack=is_restack,
         )
     )
 
@@ -166,7 +172,12 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
 
 
 async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False
+    ui,
+    repo,
+    github_repo: GitHubRepo,
+    is_draft: bool,
+    is_open: bool = False,
+    restack: bool = False,
 ) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
@@ -223,9 +234,136 @@ async def update_commits_in_stack(
 
     if not refs_to_update:
         ui.status_err(_("no pull requests to update\n"))
+        if workflow == SubmitWorkflow.STACKED:
+            # Even when there is nothing to push, ensure the pull requests are
+            # linked into a native GitHub stack. This makes stack creation
+            # idempotent: if it failed on a previous run (or the stack was
+            # modified on GitHub), re-running `sl pr submit` reconciles it.
+            repository = params.repository
+            if not repository:
+                repository = await get_repository_for_origin(
+                    origin, github_repo.hostname
+                )
+            await sync_github_stack(ui, partitions, repository, restack=restack)
         return 0
 
     repository = params.repository
+
+    # For the STACKED workflow, consult the native GitHub stack BEFORE making
+    # any changes:
+    #
+    # - If the stack on GitHub has diverged from the local stack and --restack
+    #   was not passed, abort now, before any base updates or pushes: partial
+    #   updates against a diverged stack can corrupt it.
+    # - With --restack, dissolve the diverged stack now, so that subsequent
+    #   base branch updates are not rejected by GitHub (GitHub does not allow
+    #   changing the base branch of a pull request that is in a stack).
+    # - If the stack matches (or is extended by) the local stack, remember its
+    #   members: their base branches are managed by the stack itself and must
+    #   not be updated via the API.
+    github_stack: Optional[gh_submit.StackDetails] = None
+    github_stack_fetched = False
+    prs_in_github_stack = set()
+    if workflow == SubmitWorkflow.STACKED:
+        if not repository:
+            repository = await get_repository_for_origin(origin, github_repo.hostname)
+        if not repository.is_fork:
+            local_stack = local_open_pr_numbers(partitions)
+            if local_stack:
+                fetched, github_stack = await query_github_stack(
+                    ui, repository, local_stack
+                )
+                if not fetched:
+                    # Fail closed: without knowing the state of the stack on
+                    # GitHub, base updates and pushes could corrupt it. (The
+                    # warning with the underlying error was already printed.)
+                    raise error.Abort(
+                        _(
+                            "could not determine the state of the stack on "
+                            "GitHub; re-run 'pr submit' to retry"
+                        )
+                    )
+                github_stack_fetched = True
+                if github_stack:
+                    stack_prs = github_stack.pull_requests
+                    new_pr_inserted = _has_new_pr_below_stack_top(
+                        partitions, set(stack_prs)
+                    )
+                    if stack_prs == local_stack[: len(stack_prs)] and not new_pr_inserted:
+                        # The stack matches the local stack (possibly extended
+                        # at the top with new pull requests).
+                        prs_in_github_stack = set(stack_prs)
+                    elif restack:
+                        # Dissolving the stack is only useful if it can be
+                        # recreated afterwards, which requires at least two
+                        # open pull requests in the local stack.
+                        num_new_prs = sum(1 for p in partitions if not p[0].pr)
+                        if len(local_stack) + num_new_prs < 2:
+                            raise error.Abort(
+                                _(
+                                    "--restack would leave stack #%d with "
+                                    "fewer than two pull requests; dissolve "
+                                    "it on GitHub instead if that is intended"
+                                )
+                                % github_stack.number
+                            )
+                        # The stacks API has no "reorder" operation, so
+                        # dissolve the diverged stack now; it is recreated
+                        # from the local stack at the end of the submit.
+                        unstack_result = await gh_submit.unstack(
+                            repository.hostname,
+                            *repository.get_upstream_owner_and_name(),
+                            github_stack.number,
+                        )
+                        if unstack_result.is_err():
+                            raise error.Abort(
+                                _("failed to dissolve stack #%d: %s")
+                                % (github_stack.number, unstack_result.unwrap_err())
+                            )
+                        # Merged or queued pull requests cannot be unstacked
+                        # and are left in place; recreating the stack is not
+                        # possible while they remain in the old one.
+                        remnant = unstack_result.unwrap()
+                        if remnant and remnant.pull_requests:
+                            raise error.Abort(
+                                _(
+                                    "stack #%d was only partially dissolved: "
+                                    "%s could not be unstacked (merged or "
+                                    "queued pull requests are left in place)"
+                                )
+                                % (remnant.number, _pr_list(remnant.pull_requests))
+                            )
+                        github_stack = None
+                    else:
+                        if new_pr_inserted:
+                            ui.status_err(
+                                _(
+                                    "new pull requests would be inserted below "
+                                    "the top of stack #%d on GitHub (%s), which "
+                                    "requires recreating the stack; not "
+                                    "updating it\n"
+                                )
+                                % (
+                                    github_stack.number,
+                                    _pr_list(github_stack.pull_requests),
+                                )
+                            )
+                        else:
+                            ui.status_err(
+                                _(
+                                    "stack #%d on GitHub (%s) does not match "
+                                    "your local stack (%s); not updating it\n"
+                                )
+                                % (
+                                    github_stack.number,
+                                    _pr_list(github_stack.pull_requests),
+                                    _pr_list(local_stack),
+                                )
+                            )
+                        hintutil.triggershow(ui, "pr-submit-restack")
+                        raise error.Abort(
+                            _("stack on GitHub has diverged from your local stack")
+                        )
 
     # For workflows with chained base branches (SINGLE, STACKED), we must
     # update the base branch on existing PRs BEFORE pushing the new branch
@@ -249,6 +387,11 @@ async def update_commits_in_stack(
                 partition = partitions[index]
                 pr = partition[0].pr
                 if not pr or pr.state != PullRequestState.OPEN:
+                    continue
+                if pr.number in prs_in_github_stack:
+                    # GitHub rejects base branch changes for pull requests
+                    # that are in a native stack; the stack manages base
+                    # branches itself.
                     continue
                 base = repository.get_base_branch()
                 # Chain to the nearest partition below whose pull request is
@@ -329,6 +472,16 @@ async def update_commits_in_stack(
     ]
     await asyncio.gather(*rewrite_and_archive_requests)
 
+    if workflow == SubmitWorkflow.STACKED:
+        await sync_github_stack(
+            ui,
+            partitions,
+            repository,
+            restack=restack,
+            stack=github_stack,
+            stack_fetched=github_stack_fetched,
+        )
+
     # Open pull requests in browser if --open flag was specified
     if is_open:
         pr_urls = [none_throws(p[0].pr).url for p in partitions if p[0].pr]
@@ -337,6 +490,198 @@ async def update_commits_in_stack(
             webbrowser.open(url)
 
     return 0
+
+
+def local_open_pr_numbers(partitions: List[List[CommitData]]) -> List[int]:
+    """Numbers of the open pull requests in the local stack, ordered from the
+    bottom of the stack to the top (as expected by the GitHub stacks API).
+    Note that `partitions` is ordered from the top of the stack to the bottom.
+    """
+    return [
+        none_throws(p[0].pr).number
+        for p in reversed(partitions)
+        if p[0].pr and p[0].pr.state == PullRequestState.OPEN
+    ]
+
+
+def _pr_list(numbers: List[int]) -> str:
+    return ", ".join(f"#{n}" for n in numbers)
+
+
+def _has_new_pr_below_stack_top(
+    partitions: List[List[CommitData]], stack_prs: set
+) -> bool:
+    """True if a commit without a pull request (i.e. one that will get a new
+    pull request) sits below a member of the native GitHub stack. Appending
+    to a stack is only possible at the top, so this requires recreating the
+    stack even when the existing members are otherwise in order.
+    """
+    seen_new = False
+    # `partitions` is ordered from the top of the stack to the bottom.
+    for p in reversed(partitions):
+        head = p[0]
+        pr = head.pr
+        if pr is None:
+            seen_new = True
+        elif (
+            seen_new
+            and pr.state == PullRequestState.OPEN
+            and pr.number in stack_prs
+        ):
+            return True
+    return False
+
+
+async def query_github_stack(
+    ui, repository: Repository, local: List[int]
+) -> Tuple[bool, Optional["gh_submit.StackDetails"]]:
+    """Queries GitHub for the native stack containing the local stack's pull
+    requests, if any. Returns (fetched, stack) where `fetched` is False if the
+    query failed (a warning is printed in that case).
+    """
+    owner, name = repository.get_upstream_owner_and_name()
+    hostname = repository.hostname
+
+    # Query with the bottom pull request first: it is the most stable member
+    # of an existing stack. Also try the top one to catch the case where the
+    # local stack was extended (or reordered) at the bottom.
+    stack = None
+    for number in dict.fromkeys([local[0], local[-1]]):
+        result = await gh_submit.get_stack_for_pull_request(
+            hostname, owner, name, number
+        )
+        if result.is_err():
+            ui.status_err(
+                _("warning, could not query stacks for #%d: %s\n")
+                % (number, result.unwrap_err())
+            )
+            return False, None
+        stack = result.unwrap()
+        if stack:
+            break
+    if stack and not stack.is_open:
+        # A closed stack cannot be appended to or dissolved; treat it the
+        # same as no stack.
+        stack = None
+    return True, stack
+
+
+async def sync_github_stack(
+    ui,
+    partitions: List[List[CommitData]],
+    repository: Repository,
+    restack: bool = False,
+    stack: Optional["gh_submit.StackDetails"] = None,
+    stack_fetched: bool = False,
+) -> None:
+    """Links the pull requests together using GitHub's native "stacked pull
+    requests" feature.
+
+    Creates the stack if it does not exist and appends new pull requests to
+    the top of an existing one. If the stack on GitHub has diverged from the
+    local stack (e.g., commits were reordered or removed), no changes are made
+    to it unless `restack` is True, in which case the stack on GitHub is
+    dissolved and recreated to match the local stack.
+
+    Failures to sync the stack are reported as warnings rather than aborting:
+    at this point, the pull requests themselves have already been created or
+    updated successfully, and re-running `sl pr submit` will retry linking.
+    """
+    if repository.is_fork:
+        # GitHub requires all branches of a stack to be in the same
+        # repository, so stacks are not supported across forks.
+        ui.status_err(
+            _(
+                "warning: GitHub does not support stacks across forks; "
+                "pull requests were submitted without a stack\n"
+            )
+        )
+        return
+
+    local = local_open_pr_numbers(partitions)
+    if len(local) < 2:
+        # A stack must contain at least two pull requests. Note that GitHub
+        # automatically removes merged pull requests from existing stacks, so
+        # there is nothing to clean up here as the stack shrinks.
+        return
+
+    owner, name = repository.get_upstream_owner_and_name()
+    hostname = repository.hostname
+    pr_list = _pr_list
+
+    if not stack_fetched:
+        fetched, stack = await query_github_stack(ui, repository, local)
+        if not fetched:
+            return
+
+    if stack is None:
+        result = await gh_submit.create_stack(hostname, owner, name, local)
+        if result.is_err():
+            ui.status_err(
+                _("warning, failed to create stack for %s: %s\n")
+                % (pr_list(local), result.unwrap_err())
+            )
+        else:
+            ui.status_err(_("created stack: %s\n") % result.unwrap().url)
+    elif stack.pull_requests == local:
+        ui.status_err(_("stack #%d is up-to-date\n") % stack.number)
+    elif stack.pull_requests == local[: len(stack.pull_requests)]:
+        # The local stack extends the stack on GitHub at the top, so the new
+        # pull requests can simply be appended.
+        to_add = local[len(stack.pull_requests) :]
+        result = await gh_submit.add_prs_to_stack(
+            hostname, owner, name, stack.number, to_add
+        )
+        if result.is_err():
+            ui.status_err(
+                _("warning, failed to add %s to stack #%d: %s\n")
+                % (pr_list(to_add), stack.number, result.unwrap_err())
+            )
+        else:
+            ui.status_err(
+                _("added %s to stack #%d\n") % (pr_list(to_add), stack.number)
+            )
+    elif restack:
+        # The stacks API has no "reorder" operation, so dissolve the stack and
+        # recreate it from the local stack.
+        unstack_result = await gh_submit.unstack(hostname, owner, name, stack.number)
+        if unstack_result.is_err():
+            ui.status_err(
+                _("warning, failed to dissolve stack #%d: %s\n")
+                % (stack.number, unstack_result.unwrap_err())
+            )
+            return
+        # Merged or queued pull requests cannot be unstacked and are left in
+        # place; recreating the stack is not possible while they remain in
+        # the old one.
+        remnant = unstack_result.unwrap()
+        if remnant and remnant.pull_requests:
+            ui.status_err(
+                _(
+                    "warning, stack #%d was only partially dissolved: %s "
+                    "could not be unstacked (merged or queued pull requests "
+                    "are left in place)\n"
+                )
+                % (remnant.number, _pr_list(remnant.pull_requests))
+            )
+            return
+        result = await gh_submit.create_stack(hostname, owner, name, local)
+        if result.is_err():
+            ui.status_err(
+                _("warning, failed to recreate stack for %s: %s\n")
+                % (pr_list(local), result.unwrap_err())
+            )
+        else:
+            ui.status_err(_("recreated stack: %s\n") % result.unwrap().url)
+    else:
+        ui.status_err(
+            _(
+                "warning: stack #%d on GitHub (%s) does not match your local "
+                "stack (%s); not updating it\n"
+            )
+            % (stack.number, pr_list(stack.pull_requests), pr_list(local))
+        )
+        hintutil.triggershow(ui, "pr-submit-restack")
 
 
 async def rewrite_pull_request_body(
@@ -351,8 +696,14 @@ async def rewrite_pull_request_body(
     # of this branch. Recall that partitions is ordered from the top of the
     # stack to the bottom.
     partition = partitions[index]
-    base = repository.get_base_branch()
-    if workflow.uses_chained_bases() and not repository.is_fork:
+    base: Optional[str] = repository.get_base_branch()
+    if workflow == SubmitWorkflow.STACKED:
+        # GitHub rejects base branch changes for pull requests that are in a
+        # native stack (the stack manages base branches itself), so leave the
+        # base untouched when updating the title/body. New pull requests get
+        # the correct base at creation time.
+        base = None
+    elif workflow.uses_chained_bases() and not repository.is_fork:
         # Chain to the nearest partition below whose pull request is open (or
         # new). Closed/merged pull requests are skipped: using their head
         # branches as bases would break the chain. For forks, chained bases
@@ -413,8 +764,11 @@ class SerialStrategyParams:
     # git push --force any heads that need updating, creating new branch names,
     # if necessary.
     refs_to_update: List[str]
-    # The str in the Tuple is the head branch name for the commit.
-    pull_requests_to_create: List[Tuple[CommitData, str]]
+    # The first str in the Tuple is the head branch name for the commit. The
+    # second is the head branch name of the partition below it in the stack
+    # (None if it is at the bottom), to be used as the base branch in
+    # workflows with chained bases.
+    pull_requests_to_create: List[Tuple[CommitData, str, Optional[str]]]
     repository: Optional[Repository]
 
 
@@ -457,7 +811,7 @@ async def create_serial_strategy_params(
     # git push --force any heads that need updating, creating new branch names,
     # if necessary.
     refs_to_update = []
-    pull_requests_to_create: List[Tuple[CommitData, str]] = []
+    pull_requests_to_create: List[Tuple[CommitData, str, Optional[str]]] = []
 
     # These are set lazily because they require GraphQL calls.
     next_pull_request_number = None
@@ -466,6 +820,9 @@ async def create_serial_strategy_params(
     # Note that `partitions` is ordered from the top of the stack to the bottom,
     # but we want to create PRs from the bottom to the top so the PR numbers are
     # created in ascending order.
+    # Head branch of the partition below the current one, i.e. the base branch
+    # to use for a new pull request in workflows with chained bases.
+    below_branch: Optional[str] = None
     for partition in reversed(partitions):
         top = partition[0]
         pr = top.pr
@@ -506,7 +863,12 @@ async def create_serial_strategy_params(
             )
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
             top.head_branch_name = branch_name
-            pull_requests_to_create.append((top, branch_name))
+            pull_requests_to_create.append((top, branch_name, below_branch))
+        if not pr or pr.state == PullRequestState.OPEN:
+            # Only open pull requests (or commits that will get a new pull
+            # request) can serve as the base for the partition above:
+            # closed/merged head branches would break the chain.
+            below_branch = top.head_branch_name
 
     return SerialStrategyParams(refs_to_update, pull_requests_to_create, repository)
 
@@ -527,7 +889,7 @@ def get_pull_request_template(commit: CommitData) -> None | str:
 
 
 async def create_pull_requests_serially(
-    commits: List[Tuple[CommitData, str]],
+    commits: List[Tuple[CommitData, str, Optional[str]]],
     workflow: SubmitWorkflow,
     repository: Repository,
     store: PullRequestStore,
@@ -546,11 +908,21 @@ async def create_pull_requests_serially(
     # Create the pull requests in order serially to give us the best chance of
     # the number in the branch name matching that of the actual pull request.
     commits_to_update = []
-    parent = None
-    for commit, branch_name in commits:
+    for commit, branch_name, below_branch in commits:
         base = repository.get_base_branch()
-        if workflow.uses_chained_bases() and parent:
-            base = none_throws(parent.head_branch_name)
+        if workflow.uses_chained_bases() and below_branch and not repository.is_fork:
+            # Use the head branch of the partition below this commit as the
+            # base branch, even if that pull request already existed. This is
+            # required for the STACKED workflow (the base branch cannot be
+            # corrected afterwards: GitHub rejects base branch changes for
+            # pull requests in a native stack) and avoids a redundant base
+            # update for the SINGLE workflow.
+            #
+            # For forks this is not possible: the head branches live on the
+            # fork, but the base branch of a pull request must be a branch on
+            # the upstream repository, so fall back to the default base
+            # branch.
+            base = below_branch
 
         commit_msg = commit.get_msg()
         title, body = title_and_body(commit_msg)
@@ -584,8 +956,6 @@ async def create_pull_requests_serially(
         pr_id = PullRequestId(hostname=hostname, owner=owner, name=name, number=number)
         store.map_commit_to_pull_request(commit.node, pr_id)
         commits_to_update.append((commit, pr_id))
-
-        parent = commit
 
     # Now that all of the pull requests have been created, update the .pr field
     # on each CommitData. We prioritize the create_pull_request() calls to try
