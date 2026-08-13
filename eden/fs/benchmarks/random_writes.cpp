@@ -81,7 +81,7 @@ void random_writes(benchmark::State& state) {
   size_t offset_index = 0;
   for (auto _ : state) {
     off_t offset = offsets[offset_index];
-    if (offset_index++ == offsets.size()) {
+    if (++offset_index == offsets.size()) {
       // Redoing the offsets is okay
       total_pages += offsets.size();
       offset_index = 0;
