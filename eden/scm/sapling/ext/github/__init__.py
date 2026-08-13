@@ -127,6 +127,25 @@ def submit_cmd(ui, repo, *args, **opts):
     ``default`` is a fork, they will be created against default's
     upstream repository.
 
+    The ``github.pr-workflow`` config option controls how a stack of
+    commits is mapped onto pull requests:
+
+    - ``overlap`` (default): every pull request targets the repository's
+      default branch, so each pull request contains its commit plus all
+      commits below it in the stack.
+
+    - ``single``: each pull request contains a single commit and targets
+      the head branch of the pull request below it in the stack.
+
+    - ``stacked``: like ``single``, but the pull requests are also linked
+      together using GitHub's native stacked pull requests feature, so
+      GitHub renders the stack in the pull request UI and can merge it
+      from the bottom up. If the stack on GitHub has diverged from your
+      local stack (e.g., commits were reordered or removed), it is not
+      modified unless ``--restack`` is passed, which dissolves the stack
+      on GitHub and recreates it to match your local stack. Note that
+      GitHub does not support stacks across forks.
+
     Returns 0 on success.
     """
     return submit.submit(ui, repo, *args, **opts)
