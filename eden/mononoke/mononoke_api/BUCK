@@ -10,7 +10,6 @@ rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "gix-hash": {"features": ["sha1"]},
                     "sapling-sparse": {"features": ["async"]},
                 }
             },

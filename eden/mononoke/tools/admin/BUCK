@@ -13,7 +13,6 @@ rust_binary(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "gix-hash": {"features": ["sha1"]},
                     "sapling-dag-types": {
                         "features": [
                             "for-tests",

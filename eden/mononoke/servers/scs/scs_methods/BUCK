@@ -6,11 +6,6 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "scs_methods",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-        }
-    },
     crate_root = "src/lib.rs",
     named_deps = (
         {}
