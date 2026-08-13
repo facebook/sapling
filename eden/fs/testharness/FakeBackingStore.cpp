@@ -153,13 +153,6 @@ SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
       .semi();
 }
 
-SemiFuture<BackingStore::GetTreeAuxResult> FakeBackingStore::getTreeAuxData(
-    const ObjectId& /*id*/,
-    const ObjectFetchContextPtr& /*context*/) {
-  return folly::makeSemiFuture<BackingStore::GetTreeAuxResult>(
-      std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
-}
-
 void FakeBackingStore::putTreeAuxData(ObjectId id, TreeAuxDataPtr treeAuxData) {
   data_.wlock()->treeAuxData.insert_or_assign(
       std::move(id), std::move(treeAuxData));
