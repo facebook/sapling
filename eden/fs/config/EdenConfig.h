@@ -1908,6 +1908,22 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls the "user.oomd_avoid" xattr the CLI writes on edenfs.slice, which
+   * asks fb-oomd to avoid killing EdenFS under memory pressure.
+   *
+   * -1 (default): leave the xattr untouched, i.e. skip setxattr completely.
+   *    Preserves existing behavior on hosts that have not opted in.
+   *  0: write "0", explicitly opting back in to oomd kills. This differs from
+   *    -1, which leaves any existing value in place.
+   *  1: write "1", asking oomd to spare edenfs.slice.
+   *
+   * Any other value is rejected and logged as an error by the CLI.
+   *
+   * Only used in the CLI, including here to get rid of warnings.
+   */
+  ConfigSetting<int32_t> oomdAvoid{"experimental:oomd_avoid", -1, this};
+
   // [coroutines]
 
   /**
