@@ -202,8 +202,10 @@ pub(crate) async fn cast_references_data(
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
     let mut snapshots: Vec<CloudChangesetId> = Vec::new();
 
-    // Start the pipeline with batches of 1000 heads.
-    let chunks_iter = raw_references_data.heads.chunks(1000).map(|chunk| {
+    // Start the pipeline with batches of 250 heads. Chunk size and the
+    // try_flatten_unordered limit below multiply out to the number of heads in
+    // flight against bonsai_hg_mapping, so they are tuned as a pair.
+    let chunks_iter = raw_references_data.heads.chunks(250).map(|chunk| {
         let chunk_heads: Vec<CloudChangesetId> = chunk.iter().map(|head| head.commit).collect();
         Ok::<_, anyhow::Error>(chunk_heads)
     });
@@ -236,8 +238,8 @@ pub(crate) async fn cast_references_data(
                 Ok(stream::iter(mapped.into_iter().map(Ok::<_, anyhow::Error>)))
             }
         })
-        // do up to 10 hg->bonsai mappings concurrently, flattening out results
-        .try_flatten_unordered(10)
+        // do up to 40 hg->bonsai mappings concurrently, flattening out results
+        .try_flatten_unordered(40)
         // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
         .and_then(|(cid, bcs_id)| async move {
             let start = Instant::now();
