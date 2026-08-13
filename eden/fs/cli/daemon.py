@@ -41,6 +41,13 @@ DEFAULT_SIGKILL_TIMEOUT = 30.0
 EDENFS_UNIT_NAME_TEMPLATE = "edenfs@{escaped_state_dir}.service"
 EDENFS_SYSTEMD_SERVICE_UNIT = Path("/usr/lib/systemd/user/edenfs@.service")
 EDENFS_SYSTEMD_SLICE_UNIT = Path("/usr/lib/systemd/user/edenfs.slice")
+EDENFS_SYSTEMD_SLICE_NAME = "edenfs.slice"
+EDENFS_OOMD_AVOID_XATTR = "user.oomd_avoid"
+EDENFS_OOMD_AVOID_CONFIG = "experimental.oomd_avoid"
+EDENFS_OOMD_AVOID_DISABLED = -1
+EDENFS_OOMD_AVOID_CLEAR = 0
+CGROUP2_ROOT = Path("/sys/fs/cgroup")
+PROC_ROOT = Path("/proc")
 
 
 def _sanitize_unit_name(eden_dir: str) -> str:
@@ -71,6 +78,85 @@ def _build_systemd_run_cmd(edenfs_cmd: List[str], eden_dir: str) -> List[str]:
         "--slice=edenfs",
         f"--unit={unit_name}",
     ] + edenfs_cmd
+
+
+def _parse_edenfs_slice_cgroup(proc_cgroup: str) -> Optional[Path]:
+    """Extract the edenfs.slice cgroup directory from /proc/<pid>/cgroup content.
+
+    The cgroup2 unified hierarchy is the line prefixed with "0::", whose path is
+    the daemon's leaf unit, e.g.
+    /user.slice/user-1000.slice/user@1000.service/edenfs.slice/edenfs@foo.service
+
+    Returns the ancestor named edenfs.slice, or None if the daemon is not under
+    it or the host has no unified hierarchy.
+    """
+    for line in proc_cgroup.splitlines():
+        if not line.startswith("0::"):
+            continue
+        parts = [part for part in line[len("0::") :].split("/") if part]
+        if EDENFS_SYSTEMD_SLICE_NAME not in parts:
+            return None
+        depth = parts.index(EDENFS_SYSTEMD_SLICE_NAME) + 1
+        return CGROUP2_ROOT.joinpath(*parts[:depth])
+    return None
+
+
+def _log_oomd_avoid_failure(instance: EdenInstance, error: str) -> None:
+    instance.log_sample(
+        "edenfs_slice_oomd_avoid",
+        success=False,
+        path="",
+        error=error,
+    )
+
+
+def _set_edenfs_slice_oomd_avoid(instance: EdenInstance) -> None:
+    oomd_avoid = instance.get_config_int(
+        EDENFS_OOMD_AVOID_CONFIG, EDENFS_OOMD_AVOID_DISABLED
+    )
+
+    # Any negative value will be indicating disabled
+    if oomd_avoid <= EDENFS_OOMD_AVOID_DISABLED:
+        return
+
+    pid = instance.check_health().pid
+    if pid is None:
+        _log_oomd_avoid_failure(instance, "edenfs is not running")
+        return
+
+    proc_cgroup_path = PROC_ROOT / str(pid) / "cgroup"
+    try:
+        proc_cgroup = proc_cgroup_path.read_text()
+    except OSError as e:
+        _log_oomd_avoid_failure(
+            instance, f"failed to read {proc_cgroup_path}: {str(e)}"
+        )
+        return
+
+    cgroup_path = _parse_edenfs_slice_cgroup(proc_cgroup)
+    if cgroup_path is None:
+        _log_oomd_avoid_failure(
+            instance,
+            f"edenfs {pid} is not under {EDENFS_SYSTEMD_SLICE_NAME}",
+        )
+        return
+
+    xattr_value = b"0" if oomd_avoid == EDENFS_OOMD_AVOID_CLEAR else b"1"
+    try:
+        os.setxattr(cgroup_path, EDENFS_OOMD_AVOID_XATTR, xattr_value)
+    except OSError as e:
+        instance.log_sample(
+            "edenfs_slice_oomd_avoid",
+            success=False,
+            path=str(cgroup_path),
+            error=str(e),
+        )
+        return
+    instance.log_sample(
+        "edenfs_slice_oomd_avoid",
+        success=True,
+        path=str(cgroup_path),
+    )
 
 
 def _ensure_dbus_env(env: Dict[str, str]) -> bool:
@@ -343,6 +429,13 @@ def _start_edenfs_service(
     maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
 
     if use_systemd_cgroup:
+        if exit_code == 0:
+            # Setting the xattr is best-effort: the daemon is already running,
+            # so nothing here may fail the start.
+            try:
+                _set_edenfs_slice_oomd_avoid(instance)
+            except Exception as e:
+                _log_oomd_avoid_failure(instance, str(e))
         instance.log_sample(
             "systemd_cgroup_start",
             success=exit_code == 0,
