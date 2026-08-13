@@ -160,12 +160,31 @@ SemiFuture<BackingStore::GetTreeAuxResult> FakeBackingStore::getTreeAuxData(
       std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
 }
 
+void FakeBackingStore::putTreeAuxData(ObjectId id, TreeAuxDataPtr treeAuxData) {
+  data_.wlock()->treeAuxData.insert_or_assign(
+      std::move(id), std::move(treeAuxData));
+}
+
 folly::coro::now_task<BackingStore::GetTreeAuxResult>
 FakeBackingStore::co_getTreeAuxData(
-    const ObjectId& /*id*/,
+    const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
-  co_yield folly::coro::co_error(
-      std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
+  std::optional<TreeAuxDataPtr> treeAuxData;
+  {
+    auto data = data_.rlock();
+    auto it = data->treeAuxData.find(id);
+    if (it != data->treeAuxData.end()) {
+      treeAuxData = it->second;
+    }
+  }
+  if (!treeAuxData) {
+    co_yield folly::coro::co_error(
+        std::domain_error(fmt::format("tree aux data {} not found", id)));
+  }
+  const auto origin = *treeAuxData
+      ? ObjectFetchContext::Origin::FromNetworkFetch
+      : ObjectFetchContext::Origin::NotFetched;
+  co_return GetTreeAuxResult{std::move(*treeAuxData), origin};
 }
 
 SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(

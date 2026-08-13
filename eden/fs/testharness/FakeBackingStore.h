@@ -205,6 +205,12 @@ class FakeBackingStore final : public BackingStore {
   }
 
   /**
+   * Configure the TreeAuxData returned for an object ID. Passing nullptr
+   * simulates aux data that is absent from the backing store.
+   */
+  void putTreeAuxData(ObjectId id, TreeAuxDataPtr treeAuxData);
+
+  /**
    * Configure the result of checkPermission for a specific manifest ID.
    * If not configured, checkPermission defaults to true (fail-open).
    */
@@ -229,6 +235,7 @@ class FakeBackingStore final : public BackingStore {
 
     std::unordered_map<RootId, size_t> commitAccessCounts;
     std::unordered_map<ObjectId, size_t> accessCounts;
+    folly::F14FastMap<ObjectId, TreeAuxDataPtr> treeAuxData;
     std::vector<ObjectId> auxDataLookups;
     folly::F14FastMap<ObjectId, bool> permissionResults;
     folly::F14FastMap<ObjectId, size_t> permissionCheckCounts;

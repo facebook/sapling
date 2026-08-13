@@ -330,54 +330,16 @@ folly::coro::now_task<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
 ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
-  if (getEdenConfig()->enableCoroutinesPhase4.getValue()) {
-    return ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](ObjectId oid, ObjectFetchContextPtr ctx)
-                -> folly::coro::Task<std::optional<TreeAuxData>> {
-              co_return co_await self->co_getTreeAuxData(oid, ctx);
-            },
-            ObjectId{id},
-            fetchContext.copy())
-            .semi()};
-  }
-  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
-  folly::stop_watch<std::chrono::milliseconds> watch;
-
-  // Check in-memory cache
-  auto inMemoryCacheTreeAuxData =
-      getTreeAuxDataFromInMemoryCache(id, fetchContext);
-  if (inMemoryCacheTreeAuxData) {
-    stats_->increment(&ObjectStoreStats::getTreeAuxDataFromMemory);
-    stats_->addDuration(
-        &ObjectStoreStats::getTreeAuxDataMemoryDuration, watch.elapsed());
-    return std::move(inMemoryCacheTreeAuxData).value();
-  }
-
-  deprioritizeWhenFetchHeavy(*fetchContext);
-
-  return ImmediateFuture<BackingStore::GetTreeAuxResult>{
-      getTreeAuxDataImpl(id, fetchContext, watch)}
-      .thenValue(
-          [self = shared_from_this(),
-           fetchContext = fetchContext.copy(),
-           id,
-           statScope =
-               std::move(statScope)](BackingStore::GetTreeAuxResult result)
-              -> ImmediateFuture<std::optional<TreeAuxData>> {
-            if (!result.treeAux) {
-              self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
-              XLOGF(DBG4, "unable to find aux data for {}", id);
-              return std::nullopt;
-            }
-            auto auxData = std::move(result.treeAux);
-            self->treeAuxDataCache_.store(id, *auxData);
-            fetchContext->didFetch(
-                ObjectFetchContext::TreeAuxData, id, result.origin);
-            self->updateProcessFetch(*fetchContext);
-            return *auxData;
-          });
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = shared_from_this()](ObjectId oid, ObjectFetchContextPtr ctx)
+              -> folly::coro::Task<std::optional<TreeAuxData>> {
+            co_return co_await self->co_getTreeAuxData(oid, ctx);
+          },
+          ObjectId{id},
+          fetchContext.copy())
+          .semi()};
 }
 
 folly::SemiFuture<BackingStore::GetTreeAuxResult>
