@@ -27,6 +27,7 @@ import {
   setConfigOverrideForTests,
   type ResolveCommandConflictOutput,
 } from '../commands';
+import {ErrorShortMessages} from '../constants';
 import {type ServerPlatform} from '../serverPlatform';
 import {type RepositoryContext} from '../serverTypes';
 
@@ -48,7 +49,12 @@ const mockTracker = makeServerSideTracker(
 );
 
 function mockEjeca(
-  cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
+  cmds: Array<
+    [
+      RegExp,
+      (() => {stdout: string; stderr?: string} | Error) | {stdout: string; stderr?: string} | Error,
+    ]
+  >,
 ) {
   return jest.spyOn(ejeca, 'ejeca').mockImplementation(((cmd: string, args: Array<string>) => {
     const argStr = cmd + ' ' + args?.join(' ');
@@ -498,6 +504,31 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       expectCalledWithRevset(
         ejecaSpy,
         'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + .)',
+      );
+    });
+
+    it('reports when smartlog finds too many commits to render', async () => {
+      const repo = new Repository(repoInfo, ctx);
+      const onChange = jest.fn();
+      repo.subscribeToSmartlogCommitsChanges(onChange);
+      mockEjeca([
+        [
+          /^sl log/,
+          {
+            stdout: '',
+            stderr:
+              'smartlog: too many (160811) commits, not rendering all of them\n' +
+              "(consider running 'sl doctor' to hide unrelated commits)\n",
+          },
+        ],
+      ]);
+
+      await repo.fetchSmartlogCommits();
+
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          commits: {error: expect.objectContaining({message: ErrorShortMessages.TooManyCommits})},
+        }),
       );
     });
 

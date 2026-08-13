@@ -21,4 +21,5 @@ export const DEFAULT_DAYS_OF_COMMITS_TO_LOAD = 14;
  */
 export enum ErrorShortMessages {
   NoCommitsFetched = 'No commits found',
+  TooManyCommits = 'Too many commits to render',
 }

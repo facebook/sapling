@@ -103,6 +103,9 @@ import {
   serializeAsyncCall,
 } from './utils';
 
+const SMARTLOG_TOO_MANY_COMMITS_WARNING =
+  /^smartlog: too many \(\d+\) commits, not rendering all of them$/m;
+
 /**
  * This class is responsible for providing information about the working copy
  * for a Sapling repository.
@@ -1047,6 +1050,9 @@ export class Repository {
         'LogCommand',
         this.initialConnectionContext,
       );
+      if (SMARTLOG_TOO_MANY_COMMITS_WARNING.test(proc.stderr)) {
+        throw new Error(ErrorShortMessages.TooManyCommits);
+      }
       const commits = parseCommitInfoOutput(
         this.initialConnectionContext.logger,
         proc.stdout.trim(),

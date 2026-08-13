@@ -6,6 +6,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {ErrorShortMessages} from 'isl-server/src/constants';
 import App from '../App';
 import {scrollToYouAreHereOnOpen} from '../CommitTreeList';
 import {writeAtom} from '../jotaiUtils';
@@ -47,6 +48,24 @@ describe('CommitTreeList', () => {
 
     expect(screen.getByTestId('bug-button')).toBeInTheDocument();
     expect(screen.getByText('invalid certificate')).toBeInTheDocument();
+  });
+
+  it('explains how to recover when there are too many commits', () => {
+    render(<App />);
+
+    act(() => {
+      simulateCommits({
+        error: new Error(ErrorShortMessages.TooManyCommits),
+      });
+    });
+
+    expect(screen.getByText('Too many commits to render')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Check your public branch configuration, or run `sl doctor` to hide unrelated commits.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
   });
 
   it('auto-scrolls to the current commit when enabled', async () => {

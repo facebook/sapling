@@ -428,5 +428,16 @@ function CommitFetchError({error}: {error: Error}) {
       />
     );
   }
+  if (error.message === ErrorShortMessages.TooManyCommits) {
+    return (
+      <ErrorNotice
+        title={t('Too many commits to render')}
+        description={t(
+          'Check your public branch configuration, or run `sl doctor` to hide unrelated commits.',
+        )}
+        error={error}
+      />
+    );
+  }
   return <ErrorNotice title={t('Failed to fetch commits')} error={error} />;
 }
