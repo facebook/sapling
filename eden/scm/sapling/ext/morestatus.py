@@ -185,7 +185,7 @@ def mergepredicate(repo):
 
 
 STATES = (
-    # (state, rust state object with 'is_active()' and 'hint()')
+    # (state, rust state object with 'is_active()' and 'status_msg()')
     # OR
     # (state, predicate to detect states, helpful message function)
     (
@@ -286,7 +286,7 @@ def getrepostate(repo):
             if statename in skip:
                 continue
             if state.is_active(repo.path):
-                msgfn = lambda _repo, ui: ui.warn(prefixlines(state.hint()))
+                msgfn = lambda _repo, ui: ui.warn(prefixlines(state.status_msg()))
                 return (statename, msgfn)
         elif len(compositestate) == 3:
             # python case

@@ -354,13 +354,12 @@ py_class!(pub class commandstate |py| {
         Ok(self.state(py).command().to_string())
     }
 
-
     def is_active(&self, path: PyPathBuf) -> PyResult<bool> {
         self.state(py).is_active(path.as_path()).map_pyerr(py)
     }
 
-    def hint(&self) -> PyResult<Option<String>> {
-        Ok(Some(self.state(py).status_msg()))
+    def status_msg(&self) -> PyResult<String> {
+        Ok(self.state(py).status_msg())
     }
 });
 
