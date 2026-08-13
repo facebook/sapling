@@ -355,6 +355,9 @@ def subtree_merge(ui, repo, **opts):
     - only-from: walk only the from-path's history
     - only-to: walk only the to-path's history
     """
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
+
     if url := opts.get("url"):
         if opts.get("merge_base_strategy"):
             raise error.Abort(_("cannot specify both url and merge-base-strategy"))

@@ -75,6 +75,32 @@ An explicit no-commit copy creates pending state without invoking the editor:
   @@ -0,0 +1,1 @@
   +aaa
 
+Subtree merge cannot start during an unfinished subtree copy:
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |   # B/bar/x = ccc\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ sl go $B -q
+  $ sl subtree copy -r $A --from-path foo --to-path foo2 --no-commit
+  copying foo to foo2
+  (subtree copy changes awaiting commit)
+  $ sl subtree merge -r $A --from-path foo --to-path bar
+  abort: subtree copy in progress
+  (use 'sl commit' to continue or
+       'sl goto . --clean' to abort - WARNING: will destroy uncommitted changes)
+  [255]
+  $ sl st
+  A foo2/x
+  
+  # The repository is in an unfinished *subtree copy* state.
+  # To continue:                sl commit
+  # To abort:                   sl goto . --clean (WARNING: will destroy uncommitted changes)
+
 An aborted commit message leaves completed copy metadata for a later commit:
 
   $ newclientrepo
