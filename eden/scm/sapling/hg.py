@@ -46,6 +46,7 @@ from . import (
     vfs as vfsmod,
 )
 from .i18n import _
+from .utils import subtreeutil
 
 release = lock.release
 
@@ -795,6 +796,7 @@ def updatetotally(
 
         if clean:
             hasunresolved = _clean(repo, checkout)
+            subtreeutil.clear_subtree_copy_state(repo)
         else:
             if updatecheck == "abort":
                 cmdutil.bailifchanged(repo, merge=False)

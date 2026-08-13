@@ -21,6 +21,7 @@ use configmodel::ConfigExt;
 use fs_err as fs;
 use repo::repo::Repo;
 use repostate::command_state::Operation;
+use repostate::command_state::SUBTREE_COPY_STATE_FILE;
 use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -220,6 +221,10 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
         ReportMode::Always,
         true,
     )?;
+
+    if ctx.opts.clean {
+        util::file::unlink_if_exists(wc.dot_hg_path().join(SUBTREE_COPY_STATE_FILE))?;
+    }
 
     Ok(0)
 }

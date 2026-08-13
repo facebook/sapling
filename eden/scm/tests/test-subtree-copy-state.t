@@ -153,3 +153,33 @@ State from one copy operation must use one source commit:
   (use 'sl goto . --clean' to discard the pending changes)
   [255]
   $ rm .sl/subtree-copy-state
+
+Clean goto restores tracked files and clears the pending copy state:
+
+  $ newclientrepo
+  $ setconfig checkout.use-rust=True
+  $ drawdag <<'EOS'
+  > A   # A/foo/x = aaa\n
+  >     # A/foo/y = bbb\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ sl go $A -q
+  $ sl subtree copy -r $A --from-path foo --to-path bar --no-commit
+  copying foo to bar
+  (subtree copy changes awaiting commit)
+  $ test -e .sl/subtree-copy-state
+  $ sl goto . --clean -q
+  $ test ! -e .sl/subtree-copy-state
+  $ sl status
+  ? bar/x
+  ? bar/y
+  $ sl clean && rm -r bar
+
+Python clean goto also clears the pending copy state:
+
+  $ sl subtree copy -r $A --from-path foo --to-path bar --no-commit
+  copying foo to bar
+  (subtree copy changes awaiting commit)
+  $ test -e .sl/subtree-copy-state
+  $ sl goto . --clean -q --config checkout.use-rust=False
+  $ test ! -e .sl/subtree-copy-state
