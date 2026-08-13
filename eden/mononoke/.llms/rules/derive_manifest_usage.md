@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'BonsaiDerivable|bounded_traversal|derive_single|ManifestOps|TreeInfoSubentries|derive_from_parents|create_tree.*create_leaf'
+name: derive-manifest-usage
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'BonsaiDerivable|bounded_traversal|derive_single|ManifestOps|TreeInfoSubentries|derive_from_parents|create_tree.*create_leaf'
 ---
 
 # Prefer `derive_manifest` for Tree-Structured Derived Data
