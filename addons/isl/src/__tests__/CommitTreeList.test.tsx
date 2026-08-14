@@ -105,6 +105,309 @@ describe('CommitTreeList', () => {
     expect(document.body.style.getPropertyValue('--top-bar-height')).toBe('');
   });
 
+  describe('scroll to current commit button', () => {
+    const defaultIntersectionObserver = global.IntersectionObserver;
+    const defaultResizeObserver = global.ResizeObserver;
+
+    class TestIntersectionObserver {
+      static instances: Array<TestIntersectionObserver> = [];
+
+      readonly root: Element | Document | null;
+      readonly rootMargin: string;
+      readonly thresholds = [0];
+      readonly targets = new Set<Element>();
+
+      constructor(
+        private callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        this.root = options?.root ?? null;
+        this.rootMargin = options?.rootMargin ?? '0px';
+        TestIntersectionObserver.instances.push(this);
+      }
+
+      observe(target: Element) {
+        this.targets.add(target);
+      }
+
+      unobserve(target: Element) {
+        this.targets.delete(target);
+      }
+
+      disconnect() {
+        this.targets.clear();
+      }
+
+      takeRecords(): Array<IntersectionObserverEntry> {
+        return [];
+      }
+
+      trigger() {
+        this.callback([], this as unknown as IntersectionObserver);
+      }
+    }
+
+    class TestResizeObserver {
+      static instances: Array<TestResizeObserver> = [];
+
+      readonly targets = new Set<Element>();
+
+      constructor(private callback: ResizeObserverCallback) {
+        TestResizeObserver.instances.push(this);
+      }
+
+      observe(target: Element) {
+        this.targets.add(target);
+      }
+
+      unobserve(target: Element) {
+        this.targets.delete(target);
+      }
+
+      disconnect() {
+        this.targets.clear();
+      }
+
+      trigger() {
+        this.callback([], this as unknown as ResizeObserver);
+      }
+    }
+
+    type Layout = {
+      clientHeight: number;
+      scrollHeight: number;
+      rootTop: number;
+      rootHeight?: number;
+      clientTop?: number;
+      offsetHeight?: number;
+      targetTop: number;
+      targetHeight: number;
+    };
+
+    function mockLayout(root: HTMLElement, target: HTMLElement, initial: Layout) {
+      const layout = {...initial};
+      Object.defineProperties(root, {
+        clientHeight: {configurable: true, get: () => layout.clientHeight},
+        clientTop: {configurable: true, get: () => layout.clientTop ?? 0},
+        offsetHeight: {
+          configurable: true,
+          get: () => layout.offsetHeight ?? layout.rootHeight ?? layout.clientHeight,
+        },
+        scrollHeight: {configurable: true, get: () => layout.scrollHeight},
+      });
+      jest.spyOn(root, 'getBoundingClientRect').mockImplementation(() => ({
+        x: 0,
+        y: layout.rootTop,
+        width: 500,
+        height: layout.rootHeight ?? layout.clientHeight,
+        top: layout.rootTop,
+        right: 500,
+        bottom: layout.rootTop + (layout.rootHeight ?? layout.clientHeight),
+        left: 0,
+        toJSON: () => ({}),
+      }));
+      jest.spyOn(target, 'getBoundingClientRect').mockImplementation(() => ({
+        x: 0,
+        y: layout.targetTop,
+        width: 200,
+        height: layout.targetHeight,
+        top: layout.targetTop,
+        right: 200,
+        bottom: layout.targetTop + layout.targetHeight,
+        left: 0,
+        toJSON: () => ({}),
+      }));
+      return (next: Partial<Layout>) => Object.assign(layout, next);
+    }
+
+    function getMarkerAndViewport() {
+      const marker = document.getElementById('isl-you-are-here-anchor')?.parentElement;
+      const viewport = document.querySelector<HTMLElement>('.main-content-area');
+      const tree = document.querySelector<HTMLElement>('.commit-tree-root');
+      if (marker == null || viewport == null || tree == null) {
+        throw new Error('Expected the current commit marker and commit viewport to be rendered');
+      }
+      return {marker, viewport, tree};
+    }
+
+    function triggerIntersection(marker: HTMLElement) {
+      const observer = TestIntersectionObserver.instances.find(instance =>
+        instance.targets.has(marker),
+      );
+      if (observer == null) {
+        throw new Error('Expected the current commit marker to be observed');
+      }
+      act(() => observer.trigger());
+    }
+
+    beforeEach(() => {
+      TestIntersectionObserver.instances = [];
+      TestResizeObserver.instances = [];
+      global.IntersectionObserver =
+        TestIntersectionObserver as unknown as typeof IntersectionObserver;
+      global.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+
+      render(<App />);
+      act(() => {
+        simulateRepoConnected();
+        closeCommitInfoSidebar();
+        simulateCommits({
+          value: [
+            COMMIT('1', 'some public base', '0', {phase: 'public'}),
+            COMMIT('a', 'My Commit', '1', {isDot: true}),
+          ],
+        });
+      });
+    });
+
+    afterAll(() => {
+      global.IntersectionObserver = defaultIntersectionObserver;
+      global.ResizeObserver = defaultResizeObserver;
+    });
+
+    it('tracks vertical intersection independently of horizontal clipping', () => {
+      const {marker} = getMarkerAndViewport();
+      const observer = TestIntersectionObserver.instances.find(instance =>
+        instance.targets.has(marker),
+      );
+
+      expect(observer?.rootMargin).toBe('0px 100000px');
+    });
+
+    it('stays hidden when the commit viewport cannot scroll', () => {
+      const {marker, viewport} = getMarkerAndViewport();
+      mockLayout(viewport, marker, {
+        clientHeight: 500,
+        scrollHeight: 500,
+        rootTop: 0,
+        targetTop: 600,
+        targetHeight: 20,
+      });
+
+      triggerIntersection(marker);
+
+      expect(screen.queryByTestId('scroll-to-current-commit-button')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      {position: 'above', targetTop: -40, expectedClass: 'floating-top'},
+      {position: 'below', targetTop: 120, expectedClass: 'floating-bottom'},
+    ])('shows the $position button when the viewport can scroll', ({targetTop, expectedClass}) => {
+      const {marker, viewport} = getMarkerAndViewport();
+      mockLayout(viewport, marker, {
+        clientHeight: 100,
+        scrollHeight: 500,
+        rootTop: 0,
+        targetTop,
+        targetHeight: 20,
+      });
+
+      triggerIntersection(marker);
+
+      expect(
+        screen.getByTestId('scroll-to-current-commit-button').closest('.scroll-to-current-commit'),
+      ).toHaveClass(expectedClass);
+    });
+
+    it('stays hidden for non-intersection that is not vertically off-screen', () => {
+      const {marker, viewport} = getMarkerAndViewport();
+      mockLayout(viewport, marker, {
+        clientHeight: 100,
+        scrollHeight: 500,
+        rootTop: 0,
+        targetTop: 40,
+        targetHeight: 20,
+      });
+
+      triggerIntersection(marker);
+
+      expect(screen.queryByTestId('scroll-to-current-commit-button')).not.toBeInTheDocument();
+    });
+
+    it('uses the inner scrollport rather than the scrollbar area', () => {
+      const {marker, viewport} = getMarkerAndViewport();
+      mockLayout(viewport, marker, {
+        clientHeight: 100,
+        scrollHeight: 500,
+        rootTop: 0,
+        rootHeight: 115,
+        targetTop: 105,
+        targetHeight: 5,
+      });
+
+      triggerIntersection(marker);
+
+      expect(
+        screen.getByTestId('scroll-to-current-commit-button').closest('.scroll-to-current-commit'),
+      ).toHaveClass('floating-bottom');
+    });
+
+    it('accounts for CSS zoom when measuring the inner scrollport', () => {
+      const {marker, viewport} = getMarkerAndViewport();
+      mockLayout(viewport, marker, {
+        clientHeight: 100,
+        scrollHeight: 500,
+        rootTop: 0,
+        rootHeight: 50,
+        offsetHeight: 100,
+        targetTop: 55,
+        targetHeight: 5,
+      });
+
+      triggerIntersection(marker);
+
+      expect(
+        screen.getByTestId('scroll-to-current-commit-button').closest('.scroll-to-current-commit'),
+      ).toHaveClass('floating-bottom');
+    });
+
+    it.each([
+      {position: 'above', offscreenTop: -21, edgeTop: -20},
+      {position: 'below', offscreenTop: 101, edgeTop: 100},
+    ])(
+      'hides the $position button when the marker reaches the viewport edge',
+      ({offscreenTop, edgeTop}) => {
+        const {marker, viewport} = getMarkerAndViewport();
+        const updateLayout = mockLayout(viewport, marker, {
+          clientHeight: 100,
+          scrollHeight: 500,
+          rootTop: 0,
+          targetTop: offscreenTop,
+          targetHeight: 20,
+        });
+        triggerIntersection(marker);
+        expect(screen.getByTestId('scroll-to-current-commit-button')).toBeInTheDocument();
+
+        updateLayout({targetTop: edgeTop});
+        triggerIntersection(marker);
+
+        expect(screen.queryByTestId('scroll-to-current-commit-button')).not.toBeInTheDocument();
+      },
+    );
+
+    it('hides when the commit tree shrinks until the viewport cannot scroll', () => {
+      const {marker, viewport, tree} = getMarkerAndViewport();
+      const updateLayout = mockLayout(viewport, marker, {
+        clientHeight: 100,
+        scrollHeight: 500,
+        rootTop: 0,
+        targetTop: 120,
+        targetHeight: 20,
+      });
+      triggerIntersection(marker);
+      expect(screen.getByTestId('scroll-to-current-commit-button')).toBeInTheDocument();
+
+      updateLayout({scrollHeight: 100});
+      const observer = TestResizeObserver.instances.find(instance => instance.targets.has(tree));
+      if (observer == null) {
+        throw new Error('Expected the commit tree to be observed for size changes');
+      }
+      act(() => observer.trigger());
+
+      expect(screen.queryByTestId('scroll-to-current-commit-button')).not.toBeInTheDocument();
+    });
+  });
+
   describe('after commits loaded', () => {
     beforeEach(() => {
       render(<App />);

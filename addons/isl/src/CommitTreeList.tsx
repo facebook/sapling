@@ -253,21 +253,50 @@ function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
     if (el == null) {
       return;
     }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPosition('visible');
-          return;
-        }
-        const bounds = entry.rootBounds;
-        const above = bounds != null && entry.boundingClientRect.top < bounds.top;
-        setPosition(above ? 'above' : 'below');
-      },
-      {root: el.closest('.main-content-area'), threshold: 0},
-    );
-    observer.observe(el);
+    const scrollRoot = el.closest<HTMLElement>('.main-content-area');
+    if (scrollRoot == null) {
+      return;
+    }
+
+    const recalculatePosition = () => {
+      if (scrollRoot.scrollHeight <= scrollRoot.clientHeight) {
+        setPosition('visible');
+        return;
+      }
+
+      const bounds = scrollRoot.getBoundingClientRect();
+      const scaleY = scrollRoot.offsetHeight === 0 ? 1 : bounds.height / scrollRoot.offsetHeight;
+      const viewportTop = bounds.top + scrollRoot.clientTop * scaleY;
+      const viewportBottom = viewportTop + scrollRoot.clientHeight * scaleY;
+      const targetBounds = el.getBoundingClientRect();
+      if (targetBounds.bottom < viewportTop) {
+        setPosition('above');
+      } else if (targetBounds.top > viewportBottom) {
+        setPosition('below');
+      } else {
+        // IntersectionObserver also reports horizontal clipping, which cannot be fixed by scrolling.
+        setPosition('visible');
+      }
+    };
+
+    const intersectionObserver = new IntersectionObserver(recalculatePosition, {
+      root: scrollRoot,
+      // Track vertical visibility even when a narrow commit graph is horizontally clipped.
+      rootMargin: '0px 100000px',
+      threshold: 0,
+    });
+    intersectionObserver.observe(el);
+
+    const resizeObserver = new ResizeObserver(recalculatePosition);
+    resizeObserver.observe(scrollRoot);
+    const commitTree = el.closest<HTMLElement>('.commit-tree-root');
+    if (commitTree != null) {
+      resizeObserver.observe(commitTree);
+    }
+
     return () => {
-      observer.disconnect();
+      intersectionObserver.disconnect();
+      resizeObserver.disconnect();
       // No "You are here" row rendered -> nothing to scroll to, so hide the button.
       setPosition('visible');
     };
