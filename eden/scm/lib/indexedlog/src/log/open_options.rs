@@ -469,15 +469,22 @@ impl OpenOptions {
             change_detector,
             prev_btrfs_metadata: None,
         };
+        let _catch_up_span = debug_span!("catch_up_indexes").entered();
         log.update_indexes_for_on_disk_entries()?;
         log.update_and_flush_disk_folds()?;
         log.all_folds = log.disk_folds.clone();
+        drop(_catch_up_span);
         let lagging_index_ids = log.lagging_index_ids();
         if !lagging_index_ids.is_empty() {
             // Update indexes.
             // NOTE: Consider ignoring failures if they are caused by permission
             // issues.
             if let Some(lock) = lock {
+                let _flush_span = debug_span!(
+                    "flush_lagging_indexes",
+                    lagging_index_count = lagging_index_ids.len()
+                )
+                .entered();
                 log.flush_lagging_indexes(&lagging_index_ids, lock)?;
                 log.dir.write_meta(&log.meta, self.fsync)?;
             } else {
