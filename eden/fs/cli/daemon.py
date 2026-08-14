@@ -24,7 +24,7 @@ from eden.fs.cli.util import (
 
 from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
-from .util import is_apple_silicon, poll_until, print_stderr, ShutdownError
+from .util import poll_until, print_stderr, ShutdownError
 
 # The amount of time to wait for the edenfs process to exit after we send SIGKILL.
 # We normally expect the process to be killed and reaped fairly quickly in this
@@ -667,12 +667,7 @@ def get_edenfs_cmd(
 ) -> Tuple[List[str], str]:
     """Get the command line arguments to use to start the edenfs daemon."""
 
-    cmd = []
-    if is_apple_silicon():
-        # Prefer native arch on ARM64, fallback to x86_64 otherwise
-        cmd += ["arch", "-arch", "arm64", "-arch", "x86_64"]
-
-    cmd += [
+    cmd = [
         daemon_binary,
         "--edenfs",
         "--edenfsctlPath",

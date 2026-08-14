@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from eden.fs.cli.util import is_apple_silicon, write_file_atomically
+from eden.fs.cli.util import write_file_atomically
 
 
 SYSTEMD_ARGS_FILENAME = ".edenfs_start_args"
@@ -64,7 +64,7 @@ def _find_default_daemon_binary() -> Optional[str]:
     if os.access(candidate, permissions):
         return candidate
 
-    if is_apple_silicon():
+    if sys.platform == "darwin":
         # This is where the binary will be found relative to this file when it is
         # run out of buck-out in debug mode for ARM64
         candidate = os.path.normpath(

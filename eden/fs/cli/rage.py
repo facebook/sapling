@@ -567,8 +567,7 @@ def print_system_info(out: IOWithRedaction, host: str) -> None:
         print_rpm_version(out)
     print_os_version(out)
     if sys.platform == "darwin":
-        cpu = "arm64" if util_mod.is_apple_silicon() else "x86_64"
-        out.write(f"Architecture            : {cpu}\n")
+        out.write("Architecture            : arm64\n")
 
 
 @timer_decorator
@@ -1207,7 +1206,7 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
     if sample_full_path is None:
         return
 
-    if util_mod.is_apple_silicon():
+    if sys.platform == "darwin":
         stack_trace_cmd += ["arch", "-arm64"]
 
     stack_trace_cmd += [sample_full_path, str(pid), "1", "100"]

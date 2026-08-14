@@ -904,13 +904,6 @@ def is_atlas() -> bool:
     return "ATLAS" in os.environ
 
 
-def is_apple_silicon() -> bool:
-    if sys.platform == "darwin":
-        return "ARM64" in os.uname().version
-    else:
-        return False
-
-
 def get_platform_default_mount_protocol() -> str:
     if sys.platform == "win32":
         return PRJFS_MOUNT_PROTOCOL_STRING
