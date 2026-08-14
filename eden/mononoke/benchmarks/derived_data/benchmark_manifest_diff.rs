@@ -640,7 +640,7 @@ struct Fixture {
 ///
 /// * `no_big`: `base_file`, `copy_source/{a,b,c}`, `wide/dir_i/file_j`
 /// * `base`: adds `large_directory/<total_files random names>` and
-///     `large_directory/subdir/{a,b,c}`
+///   `large_directory/subdir/{a,b,c}`
 /// * `small_change`, `mixed_change`, `wide_change`: children of `base`
 async fn build_fixture(
     ctx: &CoreContext,
