@@ -18,6 +18,7 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
@@ -42,6 +43,9 @@ use multi_repo_land_lib::RepinOutcome;
 use multi_repo_land_lib::RepoProvider;
 use multi_repo_land_lib::ResolveEntry;
 use multi_repo_land_lib::ResolveOutcome;
+use multi_repo_land_lib::bulk_read_bonsais_by_git_sha1;
+use multi_repo_land_lib::bulk_read_bookmarks;
+use multi_repo_land_lib::bulk_read_git_sha1s;
 use multi_repo_land_lib::create_manifest_commit;
 use multi_repo_land_lib::log_scribe_bookmark_update;
 use multi_repo_land_lib::prepare_manifest_commit;
@@ -765,5 +769,114 @@ async fn generated_from_pins_the_cas_baseline_against_a_concurrent_land(
         "without it the concurrent land is adopted as the baseline"
     );
 
+    Ok(())
+}
+
+/// The facet-free bulk reads: one call returns values for exact
+/// `(repo_id, key)` pairs across repos, and rows that do not exist are simply
+/// absent from the map.
+#[mononoke::fbinit_test]
+async fn bulk_reads_span_repos_and_omit_missing_rows(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    // One factory => one in-memory metadata DB, the single-shard precondition.
+    let mut factory = TestRepoFactory::new(fb)?;
+    let repo_a: TestRepo = factory
+        .with_id(RepositoryId::new(10))
+        .with_name("repo_a")
+        .build()
+        .await?;
+    let repo_b: TestRepo = factory
+        .with_id(RepositoryId::new(11))
+        .with_name("repo_b")
+        .build()
+        .await?;
+
+    let head_a = CreateCommitContext::new_root(&ctx, &repo_a)
+        .add_file("a", "1")
+        .commit()
+        .await?;
+    let head_b = CreateCommitContext::new_root(&ctx, &repo_b)
+        .add_file("b", "2")
+        .commit()
+        .await?;
+    bookmark(&ctx, &repo_a, "heads/main")
+        .create_publishing(head_a)
+        .await?;
+    bookmark(&ctx, &repo_b, "heads/main")
+        .create_publishing(head_b)
+        .await?;
+    let git_a = GitSha1::from_byte_array([0xAA; 20]);
+    repo_a
+        .bonsai_git_mapping()
+        .add(&ctx, BonsaiGitMappingEntry::new(git_a, head_a))
+        .await?;
+
+    let name = BookmarkName::new("heads/main")?;
+    let absent = BookmarkName::new("heads/absent")?;
+    let bookmark_values = bulk_read_bookmarks(
+        &ctx,
+        &repo_a,
+        Freshness::MostRecent,
+        &[
+            (RepositoryId::new(10), name.clone()),
+            (RepositoryId::new(11), name.clone()),
+            (RepositoryId::new(10), absent.clone()),
+        ],
+    )
+    .await?;
+    assert_eq!(
+        bookmark_values.get(&(RepositoryId::new(10), name.clone())),
+        Some(&head_a)
+    );
+    assert_eq!(
+        bookmark_values.get(&(RepositoryId::new(11), name)),
+        Some(&head_b),
+        "one call reads across repos through one connection"
+    );
+    assert!(
+        !bookmark_values.contains_key(&(RepositoryId::new(10), absent)),
+        "a bookmark with no row has no entry"
+    );
+
+    let git_values = bulk_read_git_sha1s(
+        &ctx,
+        &repo_a,
+        Freshness::MostRecent,
+        // `repo_b`'s head deliberately has no mapping row.
+        &[
+            (RepositoryId::new(10), head_a),
+            (RepositoryId::new(11), head_b),
+        ],
+    )
+    .await?;
+    assert_eq!(
+        git_values.get(&(RepositoryId::new(10), head_a)),
+        Some(&git_a)
+    );
+    assert!(
+        !git_values.contains_key(&(RepositoryId::new(11), head_b)),
+        "a commit with no mapping row has no entry"
+    );
+
+    let bonsai_values = bulk_read_bonsais_by_git_sha1(
+        &ctx,
+        &repo_a,
+        Freshness::MostRecent,
+        // The same git id is only mapped in `repo_a`.
+        &[
+            (RepositoryId::new(10), git_a),
+            (RepositoryId::new(11), git_a),
+        ],
+    )
+    .await?;
+    assert_eq!(
+        bonsai_values.get(&(RepositoryId::new(10), git_a)),
+        Some(&head_a),
+        "the reverse read returns the bonsai for a mapped git id"
+    );
+    assert!(
+        !bonsai_values.contains_key(&(RepositoryId::new(11), git_a)),
+        "a repo without the mapping row has no entry"
+    );
     Ok(())
 }

@@ -44,6 +44,140 @@ mononoke_queries! {
          FROM bonsai_git_mapping
          WHERE (repo_id, bcs_id) IN {values}"
     }
+
+    read BulkBonsaiByGitCrossRepo(
+        >tuple_list values: (repo_id: RepositoryId, git_sha1: GitSha1)
+    ) -> (RepositoryId, GitSha1, ChangesetId) {
+        "SELECT repo_id, git_sha1, bcs_id
+         FROM bonsai_git_mapping
+         WHERE (repo_id, git_sha1) IN {values}"
+    }
+}
+
+/// Bookmark values for exact `(repo_id, name)` pairs, read with chunked
+/// tuple-IN queries on `conn_repo`'s shard connection. No per-repo facet is
+/// involved, so N distinct repos still cost `ceil(pairs / 500)` queries, not
+/// N. Pairs without a row — the bookmark does not exist — are absent from the
+/// returned map.
+///
+/// # Precondition
+///
+/// Every `repo_id` MUST live on `conn_repo`'s MySQL metadata shard; a
+/// cross-shard pair silently reads as absent — there is no runtime check.
+pub async fn bulk_read_bookmarks<R>(
+    ctx: &CoreContext,
+    conn_repo: &R,
+    freshness: Freshness,
+    pairs: &[(RepositoryId, BookmarkName)],
+) -> Result<HashMap<(RepositoryId, BookmarkName), ChangesetId>>
+where
+    R: SqlBookmarksRef + Send + Sync,
+{
+    let mut seen: HashSet<&(RepositoryId, BookmarkName)> = HashSet::new();
+    let unique: Vec<(RepositoryId, BookmarkName)> = pairs
+        .iter()
+        .filter(|pair| seen.insert(*pair))
+        .cloned()
+        .collect();
+
+    let conn = conn_repo.sql_bookmarks().connection(ctx, freshness);
+    let mut values = HashMap::new();
+    for chunk in unique.chunks(BATCH_SIZE) {
+        let rows = BulkResolveBookmarksCrossRepo::query(conn, ctx.sql_query_telemetry(), chunk)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to query bookmarks for chunk of {} pairs",
+                    chunk.len()
+                )
+            })?;
+        for (repo_id, name, cs_id) in rows {
+            values.insert((repo_id, name), cs_id);
+        }
+    }
+    Ok(values)
+}
+
+/// Git identities for exact `(repo_id, changeset)` pairs, read with chunked
+/// tuple-IN queries on `conn_repo`'s shard connection. Pairs with no mapping
+/// row are absent from the returned map.
+///
+/// # Precondition
+///
+/// Same single-shard requirement as [`bulk_read_bookmarks`].
+pub async fn bulk_read_git_sha1s<R>(
+    ctx: &CoreContext,
+    conn_repo: &R,
+    freshness: Freshness,
+    pairs: &[(RepositoryId, ChangesetId)],
+) -> Result<HashMap<(RepositoryId, ChangesetId), GitSha1>>
+where
+    R: SqlBookmarksRef + Send + Sync,
+{
+    let unique: Vec<(RepositoryId, ChangesetId)> = pairs
+        .iter()
+        .copied()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    let conn = conn_repo.sql_bookmarks().connection(ctx, freshness);
+    let mut values = HashMap::new();
+    for chunk in unique.chunks(BATCH_SIZE) {
+        let rows = BulkGitMappingCrossRepo::query(conn, ctx.sql_query_telemetry(), chunk)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to query git mappings for chunk of {} pairs",
+                    chunk.len()
+                )
+            })?;
+        for (repo_id, bcs_id, git_sha1) in rows {
+            values.insert((repo_id, bcs_id), git_sha1);
+        }
+    }
+    Ok(values)
+}
+
+/// Bonsai ids for exact `(repo_id, git_sha1)` pairs — the reverse of
+/// [`bulk_read_git_sha1s`], for callers handed git ids. Pairs with no mapping
+/// row are absent from the returned map.
+///
+/// # Precondition
+///
+/// Same single-shard requirement as [`bulk_read_bookmarks`].
+pub async fn bulk_read_bonsais_by_git_sha1<R>(
+    ctx: &CoreContext,
+    conn_repo: &R,
+    freshness: Freshness,
+    pairs: &[(RepositoryId, GitSha1)],
+) -> Result<HashMap<(RepositoryId, GitSha1), ChangesetId>>
+where
+    R: SqlBookmarksRef + Send + Sync,
+{
+    let unique: Vec<(RepositoryId, GitSha1)> = pairs
+        .iter()
+        .copied()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    let conn = conn_repo.sql_bookmarks().connection(ctx, freshness);
+    let mut values = HashMap::new();
+    for chunk in unique.chunks(BATCH_SIZE) {
+        let rows = BulkBonsaiByGitCrossRepo::query(conn, ctx.sql_query_telemetry(), chunk)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to query bonsais by git sha for chunk of {} pairs",
+                    chunk.len()
+                )
+            })?;
+        for (repo_id, git_sha1, bcs_id) in rows {
+            values.insert((repo_id, git_sha1), bcs_id);
+        }
+    }
+    Ok(values)
 }
 
 /// A `(repo_name, bookmark_name)` pair to resolve.
@@ -154,25 +288,17 @@ where
     let any_repo = any_repo.ok_or_else(|| {
         anyhow::anyhow!("internal error: resolved is non-empty but no repo was found")
     })?;
-    let conn = any_repo
-        .sql_bookmarks()
-        .connection(ctx, Freshness::MostRecent);
 
-    let mut bookmark_map: HashMap<(RepositoryId, String), ChangesetId> = HashMap::new();
-
-    for chunk in bookmark_pairs.chunks(BATCH_SIZE) {
-        let rows = BulkResolveBookmarksCrossRepo::query(conn, ctx.sql_query_telemetry(), chunk)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to query bookmarks for chunk of {} pairs",
-                    chunk.len()
-                )
-            })?;
-        for (repo_id, name, cs_id) in rows {
-            bookmark_map.insert((repo_id, name.to_string()), cs_id);
-        }
-    }
+    let bookmark_map: HashMap<(RepositoryId, String), ChangesetId> = bulk_read_bookmarks(
+        ctx,
+        any_repo.as_ref(),
+        Freshness::MostRecent,
+        &bookmark_pairs,
+    )
+    .await?
+    .into_iter()
+    .map(|((repo_id, name), cs_id)| ((repo_id, name.to_string()), cs_id))
+    .collect();
 
     let mut cs_id_pairs: HashSet<(RepositoryId, ChangesetId)> = HashSet::new();
 
@@ -199,25 +325,9 @@ where
     }
 
     // Bulk git-mapping lookup, same exact-tuple IN-clause.
-    let mut git_map: HashMap<(RepositoryId, ChangesetId), GitSha1> = HashMap::new();
-
-    if !cs_id_pairs.is_empty() {
-        let git_pairs: Vec<(RepositoryId, ChangesetId)> = cs_id_pairs.iter().copied().collect();
-
-        for chunk in git_pairs.chunks(BATCH_SIZE) {
-            let rows = BulkGitMappingCrossRepo::query(conn, ctx.sql_query_telemetry(), chunk)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failed to query git mappings for chunk of {} pairs",
-                        chunk.len()
-                    )
-                })?;
-            for (repo_id, bcs_id, git_sha1) in rows {
-                git_map.insert((repo_id, bcs_id), git_sha1);
-            }
-        }
-    }
+    let git_pairs: Vec<(RepositoryId, ChangesetId)> = cs_id_pairs.iter().copied().collect();
+    let git_map =
+        bulk_read_git_sha1s(ctx, any_repo.as_ref(), Freshness::MostRecent, &git_pairs).await?;
 
     // Assemble in original request order.
     for (idx, repo_id, repo_name, bookmark_name) in &resolved {
