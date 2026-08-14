@@ -1598,14 +1598,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether to enable XplatLogger for edenfs_events telemetry.
-   */
-  ConfigSetting<bool> enableXplatLoggerEvents{
-      "telemetry:enable-xplatlogger-events",
-      false,
-      this};
-
-  /**
    * Whether to enable XplatLogger for edenfs_errors telemetry. When enabled,
    * structured errors are routed through XplatLogger to the
    * GeneratedEdenfsErrorsLoggerConfig (Hive + Scuba) instead of the legacy
