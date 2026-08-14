@@ -19,6 +19,7 @@ use crate::receiver::Receiver;
 
 type Headers = flume::Receiver<Header>;
 type Done = oneshot::Receiver<Result<(), HttpClientError>>;
+const BODY_CHUNK_QUEUE_SIZE: usize = 100;
 
 /// The receiving end of a `ChannelReceiver`.
 pub struct ResponseStreams {
@@ -36,18 +37,12 @@ pub struct ChannelReceiver {
 }
 
 impl ChannelReceiver {
-    pub fn new(limit_buffer: bool) -> (Self, ResponseStreams) {
+    pub fn new() -> (Self, ResponseStreams) {
         let (headers_tx, headers_rx) = flume::unbounded();
 
         // Arbitrary queue limit. Big enough to keep the pipeline full, but small enough
         // to not use "all" the memory with potentially hundreds of concurrent requests.
-        const BODY_CHUNK_QUEUE_SIZE: usize = 100;
-
-        let (body_tx, body_rx) = if limit_buffer {
-            flume::bounded(BODY_CHUNK_QUEUE_SIZE)
-        } else {
-            flume::unbounded()
-        };
+        let (body_tx, body_rx) = flume::bounded(BODY_CHUNK_QUEUE_SIZE);
 
         let (done_tx, done_rx) = oneshot::channel();
 
@@ -101,10 +96,51 @@ impl Receiver for ChannelReceiver {
             return false;
         }
 
-        !self.body_tx.is_full()
+        self.body_tx.is_disconnected() || !self.body_tx.is_full()
     }
 
     fn is_paused(&self) -> bool {
         self.is_paused
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dropped_body_receiver_unpauses_full_channel() -> Result<()> {
+        let (mut receiver, streams) = ChannelReceiver::new();
+
+        for _ in 0..BODY_CHUNK_QUEUE_SIZE {
+            assert!(!receiver.chunk(vec![0])?);
+        }
+        assert!(receiver.chunk(vec![0])?);
+
+        drop(streams.body_rx);
+
+        assert!(receiver.needs_unpause());
+        assert!(receiver.chunk(vec![0]).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn drained_body_receiver_unpauses_full_channel() -> Result<()> {
+        let (mut receiver, mut streams) = ChannelReceiver::new();
+
+        for _ in 0..BODY_CHUNK_QUEUE_SIZE {
+            assert!(!receiver.chunk(vec![0])?);
+        }
+        assert!(receiver.chunk(vec![0])?);
+        assert!(!receiver.needs_unpause());
+
+        assert_eq!(
+            futures::executor::block_on(streams.body_rx.next()),
+            Some(vec![0])
+        );
+
+        assert!(receiver.needs_unpause());
+        assert!(!receiver.chunk(vec![0])?);
+        Ok(())
     }
 }

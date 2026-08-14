@@ -108,13 +108,6 @@ pub fn http_config(
         hc.limit_requests = limit;
     }
 
-    if let Some(limit) = config
-        .get_opt("http", "limit-response-buffering")
-        .unwrap_or_default()
-    {
-        hc.limit_response_buffering = limit;
-    }
-
     if let Some(follow) = config
         .get_opt("http", "follow-redirects")
         .unwrap_or_default()

@@ -92,8 +92,6 @@ pub struct Config {
 
     // Escape hatch to turn off our request limiting.
     pub limit_requests: bool,
-    // Escape hatch to turn off our response body limiting.
-    pub limit_response_buffering: bool,
     pub unix_socket_domains: HashSet<String>,
     pub unix_socket_path: Option<String>,
     pub verbose: bool,
@@ -131,7 +129,6 @@ impl Default for Config {
             max_concurrent_requests_per_batch: None,
             max_concurrent_streams: None,
             limit_requests: true,
-            limit_response_buffering: true,
             unix_socket_domains: HashSet::new(),
             unix_socket_path: None,
             verbose: false,
@@ -302,7 +299,7 @@ impl HttpClient {
 
     fn prepare_async_request(&self, req: Request) -> (StreamRequest, ResponseFuture) {
         let request_info = req.ctx().info().clone();
-        let (receiver, streams) = ChannelReceiver::new(self.config.limit_response_buffering);
+        let (receiver, streams) = ChannelReceiver::new();
         let request = req.into_streaming(Box::new(receiver));
         let response = AsyncResponse::new(streams, request_info).boxed();
         (request, response)
@@ -393,8 +390,6 @@ impl HttpClient {
 
         req.set_verify_tls_cert(!self.config.disable_tls_verification);
         req.set_verify_tls_host(!self.config.disable_tls_verification);
-
-        req.set_limit_response_buffering(self.config.limit_response_buffering);
 
         req.set_read_buffer_size(self.config.read_buffer_size);
         req.set_write_buffer_size(self.config.write_buffer_size);

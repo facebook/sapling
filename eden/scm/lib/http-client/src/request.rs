@@ -192,7 +192,6 @@ pub struct Request {
     verify_tls_cert: bool,
     verbose: bool,
     convert_cert: bool,
-    limit_response_buffering: bool,
     read_buffer_size: Option<u64>,
     write_buffer_size: Option<u64>,
     follow_redirects: bool,
@@ -290,7 +289,6 @@ impl Request {
             verify_tls_cert: true,
             verbose: false,
             convert_cert: false,
-            limit_response_buffering: false,
             read_buffer_size: None,
             write_buffer_size: None,
             follow_redirects: true,
@@ -553,14 +551,6 @@ impl Request {
     /// to debug low-level protocol issues.
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.set_verbose(verbose);
-        self
-    }
-
-    /// Configure whether the response body processing should use a limited or
-    /// unlimited queue. This should always be enabled except when something is
-    /// wrong with the limiting itself.
-    pub fn set_limit_response_buffering(&mut self, limit: bool) -> &mut Self {
-        self.limit_response_buffering = limit;
         self
     }
 
