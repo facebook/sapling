@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::io::Read;
 #[cfg(not(windows))]
 use std::ops::Range;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -17,6 +19,7 @@ use quickcheck::quickcheck;
 use tempfile::tempdir;
 
 use super::*;
+use crate::config;
 
 #[derive(Debug)]
 struct DummyError(&'static str);
@@ -672,6 +675,133 @@ fn test_update_index_upon_open() {
     );
 }
 
+static INDEX_LAG_FLUSH_TIMEOUT_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+struct IndexLagFlushTimeoutGuard {
+    previous: u64,
+    _lock: MutexGuard<'static, ()>,
+}
+
+impl IndexLagFlushTimeoutGuard {
+    fn set(timeout_secs: u64) -> Self {
+        let lock = INDEX_LAG_FLUSH_TIMEOUT_TEST_LOCK.lock().unwrap();
+        let previous = config::get_index_lag_flush_timeout_secs();
+        config::set_index_lag_flush_timeout_secs(timeout_secs);
+        Self {
+            previous,
+            _lock: lock,
+        }
+    }
+}
+
+impl Drop for IndexLagFlushTimeoutGuard {
+    fn drop(&mut self) {
+        config::set_index_lag_flush_timeout_secs(self.previous);
+    }
+}
+
+#[test]
+fn test_update_index_upon_open_after_lag_timeout() {
+    let _guard = IndexLagFlushTimeoutGuard::set(60);
+    let dir = tempdir().unwrap();
+    let entry_size = 9; // 3 chars + 4 xxhash + 1 vlq length + 1 flag
+    let def =
+        IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(6 * entry_size);
+    let index_filename = def.filename();
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let get_index_size = || -> u64 {
+        let index_path = dir.path().join(&index_filename);
+        index_path.metadata().map(|m| m.len()).unwrap_or(0)
+    };
+
+    let mut log = open_opts.open(dir.path()).unwrap();
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+    assert_eq!(get_index_size(), 0);
+
+    let meta_path = dir.path().join(META_FILE);
+    let mut meta = LogMetadata::read_file(&meta_path).unwrap();
+    assert!(meta.index_lag_since_unix_secs > 0);
+    meta.index_lag_since_unix_secs = 1;
+    meta.write_file(&meta_path, false).unwrap();
+
+    let lock = ScopedDirLock::new(dir.path()).unwrap();
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        get_index_size(),
+        0,
+        "open should not wait for the write lock"
+    );
+    drop(lock);
+
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        get_index_size(),
+        41,
+        "lagging index should be flushed on open after the timeout expires"
+    );
+    let meta = LogMetadata::read_file(&meta_path).unwrap();
+    assert_eq!(meta.index_lag_since_unix_secs, 0);
+}
+
+#[test]
+fn test_open_does_not_backfill_missing_lag_timestamp() {
+    let _guard = IndexLagFlushTimeoutGuard::set(0);
+    let dir = tempdir().unwrap();
+    let entry_size = 9; // 3 chars + 4 xxhash + 1 vlq length + 1 flag
+    let def =
+        IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(6 * entry_size);
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+
+    let mut log = open_opts.open(dir.path()).unwrap();
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+
+    let meta_path = dir.path().join(META_FILE);
+    let meta_before = LogMetadata::read_file(&meta_path).unwrap();
+    config::set_index_lag_flush_timeout_secs(60);
+
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(LogMetadata::read_file(meta_path).unwrap(), meta_before);
+}
+
+#[test]
+fn test_update_index_upon_open_lag_timeout_disabled() {
+    let _guard = IndexLagFlushTimeoutGuard::set(0);
+    let dir = tempdir().unwrap();
+    let entry_size = 9; // 3 chars + 4 xxhash + 1 vlq length + 1 flag
+    let def =
+        IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(6 * entry_size);
+    let index_filename = def.filename();
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let get_index_size = || -> u64 {
+        let index_path = dir.path().join(&index_filename);
+        index_path.metadata().map(|m| m.len()).unwrap_or(0)
+    };
+
+    let mut log = open_opts.open(dir.path()).unwrap();
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+    assert_eq!(get_index_size(), 0);
+
+    let meta_path = dir.path().join(META_FILE);
+    let mut meta = LogMetadata::read_file(&meta_path).unwrap();
+    meta.index_lag_since_unix_secs = 1;
+    meta.write_file(&meta_path, false).unwrap();
+
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        get_index_size(),
+        0,
+        "timeout-based lag flushing should stay disabled when the timeout is 0"
+    );
+    let meta = LogMetadata::read_file(&meta_path).unwrap();
+    assert_eq!(meta.index_lag_since_unix_secs, 1);
+}
+
 #[test]
 fn test_flush_filter() {
     let dir = tempdir().unwrap();
@@ -715,6 +845,28 @@ fn test_flush_filter() {
     log1.append(b"dddd").unwrap(); // error
     write_by_log2();
     log1.sync().unwrap_err();
+}
+
+#[test]
+fn test_lag_timestamp_change_does_not_run_flush_filter() {
+    let dir = tempdir().unwrap();
+    let mut log = OpenOptions::new()
+        .create(true)
+        .flush_filter(Some(|_, _| panic!("flush filter should not run")))
+        .open(dir.path())
+        .unwrap();
+    log.append(b"a").unwrap();
+
+    let meta_path = dir.path().join(META_FILE);
+    let mut meta = LogMetadata::read_file(&meta_path).unwrap();
+    meta.index_lag_since_unix_secs = 1;
+    meta.write_file(meta_path, false).unwrap();
+
+    log.sync().unwrap();
+    assert_eq!(
+        log.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+        vec![&b"a"[..]]
+    );
 }
 
 /// Get a `Log` with index defined on first 8 bytes.

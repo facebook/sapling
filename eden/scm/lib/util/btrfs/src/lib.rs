@@ -7,6 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
+use std::ffi::CString;
 use std::fs::File;
 use std::io;
 use std::mem::offset_of;
@@ -199,10 +200,16 @@ pub fn physical_size(file: &File, since: Option<Metadata>) -> io::Result<Metadat
 }
 
 pub fn set_property(file: &File, name: &str, value: &str) -> io::Result<()> {
+    let name = CString::new(name).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "btrfs property name contains a NUL byte",
+        )
+    })?;
     if unsafe {
         libc::fsetxattr(
             file.as_raw_fd(),
-            name.as_ptr() as _,
+            name.as_ptr(),
             value.as_ptr() as _,
             value.len() as _,
             0,

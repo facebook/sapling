@@ -91,6 +91,16 @@ impl GenericPath {
         }
     }
 
+    pub(crate) fn try_lock(&self) -> crate::Result<Option<ScopedDirLock>> {
+        if let Some(dir) = self.as_opt_path() {
+            ScopedDirLock::try_new(dir)
+        } else {
+            Err(crate::Error::programming(
+                "try_lock() does not support GenericPath::Nothing",
+            ))
+        }
+    }
+
     pub(crate) fn read_meta(&self) -> crate::Result<LogMetadata> {
         match self {
             GenericPath::Filesystem(dir) => {

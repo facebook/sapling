@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 use std::sync::atomic;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicU64;
 
 static UMASK: LazyLock<u32> = LazyLock::new(|| {
     #[cfg(unix)]
@@ -56,6 +57,10 @@ pub static INDEX_CHECKSUM_MAX_CHAIN_LEN: AtomicU32 = AtomicU32::new(10);
 /// How many `WeakBuffers.track` calls triggers cleaning up dropped weak buffers.
 pub static WEAK_BUFFER_GC_THRESHOLD: atomic::AtomicUsize = atomic::AtomicUsize::new(16);
 
+/// How long index lag may persist on disk before `Log::open` forces a flush.
+/// A value of 0 disables the timeout-based correction.
+static INDEX_LAG_FLUSH_TIMEOUT_SECS: AtomicU64 = AtomicU64::new(60);
+
 /// Set whether to fsync globally. fsync will be performed if either the local
 /// or global fsync flag is set.
 pub fn set_global_fsync(flag: bool) {
@@ -89,6 +94,17 @@ pub fn set_page_out_threshold(threshold: i64) {
     let old_threshold = crate::page_out::THRESHOLD.swap(threshold, atomic::Ordering::AcqRel);
     let delta = threshold - old_threshold;
     crate::page_out::adjust_available(delta);
+}
+
+/// Set how long index lag may persist on disk before `Log::open` forces a flush.
+/// A value of 0 disables the timeout-based correction.
+pub fn set_index_lag_flush_timeout_secs(timeout_secs: u64) {
+    INDEX_LAG_FLUSH_TIMEOUT_SECS.store(timeout_secs, atomic::Ordering::Release);
+}
+
+/// Get how long index lag may persist on disk before `Log::open` forces a flush.
+pub fn get_index_lag_flush_timeout_secs() -> u64 {
+    INDEX_LAG_FLUSH_TIMEOUT_SECS.load(atomic::Ordering::Acquire)
 }
 
 /// Configure various settings based on a `Config`.
@@ -138,6 +154,12 @@ pub fn configure(config: &dyn configmodel::Config) -> configmodel::Result<()> {
         config.get_opt::<ByteCount>("storage", "indexedlog-page-out-threshold")?
     {
         set_page_out_threshold(threshold.value() as _);
+    }
+
+    if let Some(timeout_secs) =
+        config.get_opt::<u64>("storage", "indexedlog-lag-flush-timeout-secs")?
+    {
+        set_index_lag_flush_timeout_secs(timeout_secs);
     }
 
     let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;

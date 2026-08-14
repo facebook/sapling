@@ -36,6 +36,10 @@ pub struct LogMetadata {
     /// Used to detect non-append-only changes.
     /// Conceptually similar to "create time".
     pub(crate) epoch: u64,
+
+    /// Unix timestamp for when on-disk indexes first became known to lag
+    /// behind the primary log. A value of 0 means no lag is currently tracked.
+    pub(crate) index_lag_since_unix_secs: u64,
 }
 
 impl LogMetadata {
@@ -75,11 +79,13 @@ impl LogMetadata {
         // 'epoch' is optional - it does not exist in a previous serialization
         // format. So not being able to read it (because EOF) is not fatal.
         let epoch = reader.read_vlq().unwrap_or_default();
+        let index_lag_since_unix_secs = reader.read_vlq().unwrap_or_default();
 
         Ok(Self {
             primary_len,
             indexes,
             epoch,
+            index_lag_since_unix_secs,
         })
     }
 
@@ -109,6 +115,7 @@ impl LogMetadata {
             buf.write_vlq(*len)?;
         }
         buf.write_vlq(self.epoch)?;
+        buf.write_vlq(self.index_lag_since_unix_secs)?;
         writer.write_all(header.to_bytes())?;
         match header {
             HeaderVersion::V1 => writer.write_u64::<LittleEndian>(xxhash(&buf))?,
@@ -146,6 +153,7 @@ impl LogMetadata {
             primary_len: len,
             indexes: BTreeMap::new(),
             epoch: utils::rand_u64(),
+            index_lag_since_unix_secs: 0,
         }
     }
 
@@ -160,6 +168,13 @@ impl LogMetadata {
     /// This represents the disk usage of the log data (not including index files).
     pub fn disk_usage(&self) -> u64 {
         self.primary_len
+    }
+
+    /// Whether both values describe the same persisted log and indexes.
+    pub(crate) fn has_same_log_state(&self, other: &Self) -> bool {
+        self.primary_len == other.primary_len
+            && self.indexes == other.indexes
+            && self.epoch == other.epoch
     }
 }
 
@@ -207,7 +222,12 @@ mod tests {
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
             let mut buf = Vec::new();
-            let meta = LogMetadata { primary_len, indexes, epoch,  };
+            let meta = LogMetadata {
+                primary_len,
+                indexes,
+                epoch,
+                index_lag_since_unix_secs: 0,
+            };
             meta.write(&mut buf).expect("write");
             let mut cur = Cursor::new(buf);
             let meta_read = LogMetadata::read(&mut cur).expect("read");
@@ -216,7 +236,12 @@ mod tests {
 
         fn test_roundtrip_meta_v0(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
             let mut buf = Vec::new();
-            let meta = LogMetadata { primary_len, indexes, epoch,  };
+            let meta = LogMetadata {
+                primary_len,
+                indexes,
+                epoch,
+                index_lag_since_unix_secs: 0,
+            };
             meta.write_using_header(&mut buf, HeaderVersion::V0).expect("write");
             let mut cur = Cursor::new(buf);
             let meta_read = LogMetadata::read(&mut cur).expect("read");
@@ -225,12 +250,47 @@ mod tests {
 
         fn test_roundtrip_meta_file(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
             let dir = tempdir().unwrap();
-            let meta = LogMetadata { primary_len, indexes, epoch,  };
+            let meta = LogMetadata {
+                primary_len,
+                indexes,
+                epoch,
+                index_lag_since_unix_secs: 0,
+            };
             let path = dir.path().join("meta");
             meta.write_file(&path, false).expect("write_file");
             let meta_read = LogMetadata::read_file(&path).expect("read_file");
             meta_read == meta
         }
+    }
+
+    #[test]
+    fn test_roundtrip_meta_with_index_lag_since() {
+        let meta = LogMetadata {
+            primary_len: 7,
+            indexes: BTreeMap::from([(String::from("a"), 3)]),
+            epoch: 42,
+            index_lag_since_unix_secs: 1234,
+        };
+        let mut buf = Vec::new();
+        meta.write(&mut buf).unwrap();
+        let meta_read = LogMetadata::read(&buf[..]).unwrap();
+        assert_eq!(meta_read, meta);
+    }
+
+    #[test]
+    fn test_lag_timestamp_does_not_change_log_state() {
+        let meta = LogMetadata {
+            primary_len: 7,
+            indexes: BTreeMap::from([(String::from("a"), 3)]),
+            epoch: 42,
+            index_lag_since_unix_secs: 0,
+        };
+        let mut other = meta.clone();
+        other.index_lag_since_unix_secs = 1234;
+        assert!(meta.has_same_log_state(&other));
+
+        other.indexes.insert(String::from("b"), 5);
+        assert!(!meta.has_same_log_state(&other));
     }
 
     #[test]
@@ -241,6 +301,7 @@ mod tests {
             primary_len: 1,
             indexes: Default::default(),
             epoch: 42,
+            index_lag_since_unix_secs: 0,
         };
         let mut buf: Vec<u8> = Vec::new();
         meta.write(&mut buf).unwrap();

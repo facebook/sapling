@@ -49,6 +49,8 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
@@ -142,6 +144,10 @@ const INDEX_CHECKSUM_CHUNK_SIZE_LOGARITHM: u32 = 20;
 pub struct Log {
     pub dir: GenericPath,
     pub(crate) disk_buf: Bytes,
+    #[expect(
+        clippy::box_collection,
+        reason = "ExternalKeyBuffer points to the pinned Vec"
+    )]
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     pub(crate) meta: LogMetadata,
     indexes: Vec<Index>,
@@ -582,7 +588,7 @@ impl Log {
             if self.mem_buf.is_empty() {
                 match Self::load_or_create_meta(&self.dir, false) {
                     Ok(meta) => {
-                        let changed = self.meta != meta;
+                        let changed = !self.meta.has_same_log_state(&meta);
                         let truncated = self.meta.epoch != meta.epoch;
                         if !truncated {
                             check_append_only(self, &meta)?;
@@ -621,7 +627,7 @@ impl Log {
 
             // Step 1: Reload metadata to get the latest view of the files.
             let mut meta = Self::load_or_create_meta(&self.dir, false)?;
-            let changed = self.meta != meta;
+            let changed = !self.meta.has_same_log_state(&meta);
             let truncated = self.meta.epoch != meta.epoch;
             if !truncated {
                 check_append_only(self, &meta)?;
@@ -747,7 +753,7 @@ impl Log {
                 } else {
                     // Indexes can be reused, because they already contain all entries
                     // that were just written to disk and the on-disk files do not
-                    // have new entries (tested by "self.meta != meta" in Step 1).
+                    // have new entries (tested by `has_same_log_state` in Step 1).
                     //
                     // The indexes contain all entries, because they were previously
                     // "always-up-to-date", and the on-disk log does not have anything new.
@@ -770,6 +776,8 @@ impl Log {
             self.update_indexes_for_on_disk_entries()?;
             let lagging_index_ids = self.lagging_index_ids();
             self.flush_lagging_indexes(&lagging_index_ids, &lock)?;
+            let stale_index_ids = self.stale_index_ids();
+            self.update_index_lag_since_unix_secs(&stale_index_ids);
             self.update_and_flush_disk_folds()?;
             self.all_folds = self.disk_folds.clone();
 
@@ -830,6 +838,20 @@ impl Log {
         Ok(())
     }
 
+    fn stale_index_ids(&self) -> Vec<usize> {
+        let log_bytes = self.meta.primary_len;
+        self.open_options
+            .index_defs
+            .iter()
+            .enumerate()
+            .filter(|(i, _def)| {
+                let indexed_bytes = Self::get_index_log_len(&self.indexes[*i], false).unwrap_or(0);
+                indexed_bytes < log_bytes
+            })
+            .map(|(i, _def)| i)
+            .collect()
+    }
+
     /// Return the index to indexes that are considered lagging.
     /// This is usually followed by `update_indexes_for_on_disk_entries`.
     pub(crate) fn lagging_index_ids(&self) -> Vec<usize> {
@@ -852,6 +874,25 @@ impl Log {
             })
             .map(|(i, _def)| i)
             .collect()
+    }
+
+    fn update_index_lag_since_unix_secs(&mut self, stale_index_ids: &[usize]) {
+        if stale_index_ids.is_empty() {
+            self.meta.index_lag_since_unix_secs = 0;
+        } else if self.meta.index_lag_since_unix_secs == 0
+            && crate::config::get_index_lag_flush_timeout_secs() > 0
+        {
+            self.meta.index_lag_since_unix_secs = current_unix_secs();
+        }
+    }
+
+    fn should_force_flush_lagging_indexes_on_open(&self, stale_index_ids: &[usize]) -> bool {
+        let timeout_secs = crate::config::get_index_lag_flush_timeout_secs();
+        let lag_since = self.meta.index_lag_since_unix_secs;
+        !stale_index_ids.is_empty()
+            && timeout_secs > 0
+            && lag_since > 0
+            && current_unix_secs().saturating_sub(lag_since) >= timeout_secs
     }
 
     /// Returns `true` if `sync` will load more data on disk.
@@ -1464,6 +1505,10 @@ impl Log {
     ///
     /// The indexes loaded by this function can be lagging.
     /// Use `update_indexes_for_on_disk_entries` to update them.
+    #[expect(
+        clippy::box_collection,
+        reason = "ExternalKeyBuffer points to the pinned Vec"
+    )]
     fn load_log_and_indexes(
         dir: &GenericPath,
         meta: &LogMetadata,
@@ -1764,6 +1809,13 @@ impl Log {
             index.set_meta(&index_meta);
         }
     }
+}
+
+fn current_unix_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default()
 }
 
 // Error-related utilities

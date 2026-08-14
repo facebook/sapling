@@ -966,7 +966,7 @@ Write valid MultiMeta"#
         assert_eq!(
             repair(),
             r#"Repairing MultiMeta Log:
-  Reset log size to 111
+  Reset log size to 113
   Rebuilt index "reverse"
 Repairing Log a
   Rebuilt index "x"

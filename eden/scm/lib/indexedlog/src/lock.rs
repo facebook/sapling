@@ -106,6 +106,20 @@ impl ScopedDirLock {
         Self::new_with_options(path, &DEFAULT_OPTIONS)
     }
 
+    /// Try to lock the directory exclusively without waiting.
+    pub(crate) fn try_new(path: &Path) -> crate::Result<Option<Self>> {
+        const OPTIONS: DirLockOptions = DirLockOptions {
+            exclusive: true,
+            non_blocking: true,
+            file_name: "",
+        };
+        match Self::new_with_options(path, &OPTIONS) {
+            Ok(lock) => Ok(Some(lock)),
+            Err(err) if err.io_error_kind() == io::ErrorKind::WouldBlock => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
     /// Lock the given directory with advanced options.
     ///
     /// - `opts.file_name`: decides the lock file name. A directory can have
@@ -226,6 +240,7 @@ fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()>
         use std::os::windows::io::AsRawHandle;
 
         use winapi::shared::minwindef::DWORD;
+        use winapi::shared::winerror::ERROR_LOCK_VIOLATION;
         use winapi::um::fileapi::LockFileEx;
         use winapi::um::minwinbase::LOCKFILE_EXCLUSIVE_LOCK;
         use winapi::um::minwinbase::LOCKFILE_FAIL_IMMEDIATELY;
@@ -247,7 +262,12 @@ fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()>
         // Only lock 1 byte at the end of the u64 range, not the whole file.
         let ret = LockFileEx(file.as_raw_handle(), flags, 0, 1, 0, &mut overlapped);
         if ret == 0 {
-            return Err(io::Error::last_os_error());
+            let err = io::Error::last_os_error();
+            // Windows reports non-blocking lock contention as ERROR_LOCK_VIOLATION.
+            if non_blocking && err.raw_os_error() == Some(ERROR_LOCK_VIOLATION as i32) {
+                return Err(io::ErrorKind::WouldBlock.into());
+            }
+            return Err(err);
         }
     }
     #[cfg(not(windows))]
@@ -448,6 +468,18 @@ mod tests {
         assert!(ScopedDirLock::new_with_options(path, &opts).is_ok());
 
         drop(l4);
+    }
+
+    #[test]
+    fn test_try_dir_lock() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let lock = ScopedDirLock::new(path).unwrap();
+
+        assert!(ScopedDirLock::try_new(path).unwrap().is_none());
+
+        drop(lock);
+        assert!(ScopedDirLock::try_new(path).unwrap().is_some());
     }
 
     #[test]

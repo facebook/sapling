@@ -11,6 +11,7 @@ use std::fmt::Debug;
 use std::ops::Range;
 use std::sync::Arc;
 
+use tracing::debug;
 use tracing::debug_span;
 
 use super::fold::Fold;
@@ -474,23 +475,36 @@ impl OpenOptions {
         log.update_and_flush_disk_folds()?;
         log.all_folds = log.disk_folds.clone();
         drop(_catch_up_span);
-        let lagging_index_ids = log.lagging_index_ids();
-        if !lagging_index_ids.is_empty() {
+        let stale_index_ids = log.stale_index_ids();
+        let force_flush_due_to_timeout =
+            log.should_force_flush_lagging_indexes_on_open(&stale_index_ids);
+        let flush_index_ids = if force_flush_due_to_timeout {
+            stale_index_ids
+        } else {
+            log.lagging_index_ids()
+        };
+        if !flush_index_ids.is_empty() {
             // Update indexes.
             // NOTE: Consider ignoring failures if they are caused by permission
             // issues.
             if let Some(lock) = lock {
                 let _flush_span = debug_span!(
                     "flush_lagging_indexes",
-                    lagging_index_count = lagging_index_ids.len()
+                    lagging_index_count = flush_index_ids.len()
                 )
                 .entered();
-                log.flush_lagging_indexes(&lagging_index_ids, lock)?;
+                log.flush_lagging_indexes(&flush_index_ids, lock)?;
+                let stale_index_ids = log.stale_index_ids();
+                log.update_index_lag_since_unix_secs(&stale_index_ids);
                 log.dir.write_meta(&log.meta, self.fsync)?;
-            } else {
-                let lock = dir.lock()?;
+            } else if let Some(lock) = dir.try_lock()? {
                 // At this time the Log might be changed on-disk. Reload them.
                 return self.open_internal(dir, reuse_indexes, Some(&lock));
+            } else {
+                debug!(
+                    lagging_index_count = flush_index_ids.len(),
+                    "skipping lagging index flush because the write lock is held"
+                );
             }
         }
         log.update_change_detector_to_match_meta();
