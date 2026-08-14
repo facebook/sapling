@@ -42,10 +42,11 @@ fetch.
   $ setconfig slacl.server-acl-enforcement=true
   $ sleep 2
 
-BUG: checkout treats the newly opaque old tree as empty, reports success, and
-silently removes the user's local edit before installing the restricted tree.
-If Eden still had the real old tree, this modified tracked file would produce a
-checkout conflict instead of disappearing.
+Checkout refuses to treat the newly opaque old tree as empty. It reports the
+revoked access and leaves the local edit untouched.
 
   $ sl go $B
-  $ test ! -e restricted/file.txt
+  abort: EdenError: restricted: old source tree became restricted during checkout: Permission denied
+  [255]
+  $ cat restricted/file.txt
+  local

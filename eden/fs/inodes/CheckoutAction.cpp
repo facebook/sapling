@@ -11,10 +11,12 @@
 #include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
 #include <folly/logging/xlog.h>
+#include <cerrno>
 
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -187,6 +189,7 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
                   self->errors_[0]);
             }
 
+            self->handleOldTreeRestriction();
             return self->doAction();
           });
 }
@@ -322,6 +325,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_run(
     errors_[0].throw_exception();
   }
 
+  handleOldTreeRestriction();
   co_return co_await co_doAction();
 }
 
@@ -359,6 +363,37 @@ void CheckoutAction::error(
     folly::exception_wrapper&& ew) {
   XLOGF(ERR, "error performing checkout action: {}: {}", msg, ew);
   errors_.push_back(std::move(ew));
+}
+
+void CheckoutAction::handleOldTreeRestriction() {
+  auto treeInode = inode_.asTreePtrOrNull();
+  const bool oldTreeBecameRestricted = oldScmEntry_ &&
+      oldScmEntry_->second.isTree() && oldTree_ && oldTree_->isRestricted() &&
+      treeInode && !treeInode->isRestricted();
+  // The destination-restricted condition is load bearing, not a narrowing
+  // heuristic. A restricted tree fetches as empty, so this is the exact
+  // transition that reaches the restricted-destination local-only handling:
+  // the now-restricted old tree is taken as an authoritative empty source, and
+  // NORMAL removes the live entries before installing the placeholder, wiping
+  // locally modified files. A non-restricted destination, or a removal of the
+  // entry outright, instead runs through the existing conflict detection and
+  // non-empty-directory safeguards, which already refuse to discard that data.
+  const bool destinationIsRestricted =
+      (newScmEntry_ && newScmEntry_->second.isTree() &&
+       newScmEntry_->second.isRestricted()) ||
+      (newTree_ && newTree_->isRestricted());
+  if (!oldTreeBecameRestricted || !destinationIsRestricted) {
+    return;
+  }
+
+  if (ctx_->forceUpdate()) {
+    oldTree_.reset();
+    oldScmEntry_.reset();
+    return;
+  }
+
+  throw InodeError(
+      EACCES, inode_, "old source tree became restricted during checkout");
 }
 
 ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {

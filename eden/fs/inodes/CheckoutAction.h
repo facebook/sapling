@@ -153,6 +153,15 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   void setInode(InodePtr inode);
   void error(folly::StringPiece msg, folly::exception_wrapper&& ew);
 
+  /**
+   * Reject a newly restricted old SCM tree before it can be mistaken for an
+   * empty source directory, throwing InodeError(EACCES). FORCE checkout
+   * instead mutates this action to treat the old side as opaque, dropping
+   * oldTree_ and oldScmEntry_ before continuing with the restricted
+   * destination.
+   */
+  void handleOldTreeRestriction();
+
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
   ImmediateFuture<bool> hasConflict();
