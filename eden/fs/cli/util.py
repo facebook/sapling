@@ -1138,7 +1138,15 @@ def maybe_edensparse_migration(
         """
         SL_CONFIG_TO_ALLOW_MIGRATION = "experimental.allow-edensparse-migration"
         sl_args = ["config", "-Tjson", SL_CONFIG_TO_ALLOW_MIGRATION]
-        output = json.loads(checkout.get_backing_repo()._run_hg(sl_args))
+        try:
+            output = json.loads(checkout.get_backing_repo()._run_hg(sl_args))
+        except Exception as ex:
+            log(
+                f"failed to determine whether to migrate {checkout.name}: {ex}; "
+                "skipping migration"
+            )
+            return False
+
         if len(output) == 0:
             log(
                 f"{SL_CONFIG_TO_ALLOW_MIGRATION} not set for {checkout.name}, skipping migration"
