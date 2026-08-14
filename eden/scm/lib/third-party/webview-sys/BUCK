@@ -10,10 +10,10 @@ sl_rust_library(
     srcs = ["lib.rs"],
     autocargo = {
         "cargo_toml_config": {
-            "dependencies_override": {
-                "build-dependencies": {
-                    "cc": {"version": "1"},
-                },
+            "extra_buck_dependencies": {
+                "build-dependencies": [
+                    "fbsource//third-party/rust:cc",
+                ],
             },
             "lib": {
                 "name": "webview_sys",
