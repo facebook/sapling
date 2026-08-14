@@ -18,29 +18,48 @@ use repos::TShirtSize;
 use sha2::Digest;
 use sha2::Sha256;
 
+/// Which per-repo directory a RepoSpec `.cconf` lives under. Configerator splits
+/// them by commit identity scheme — `repos/git/` vs `repos/hg/` — while using the
+/// identical `sha256(repo_name)` sharding within each. Callers must say which,
+/// because the two trees are disjoint: looking an hg repo up under `repos/git/`
+/// finds nothing.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum RepoSpecDir {
+    Git,
+    Hg,
+}
+
+impl RepoSpecDir {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Git => "git",
+            Self::Hg => "hg",
+        }
+    }
+}
+
 /// Returns the configerator path for a RepoSpec file (no source/ prefix, no .cconf extension).
-/// E.g., "scm/mononoke/repos/git/a3/org_repo" for repo name "org/repo".
+/// E.g., "scm/mononoke/repos/git/a3/org_repo" for repo name "org/repo" under [`RepoSpecDir::Git`].
 /// Must match repo_spec_config_path() in generate_repo_index.py and
 /// repo_spec_relative_path() in migrate_qrd_to_repo_spec.py.
-pub fn make_repo_spec_config_path(repo_name: &str) -> String {
-    // IMPORTANT: this hardcodes "repos/git/" because create_repos only supports GIT today.
-    // Must match repo_spec_config_path() for GIT in generate_repo_index.py. Hg repos use
-    // "repos/hg/{hash}/{name}" via the same hash-sharding scheme — branch on identity_scheme
-    // when adding HG support.
+pub fn make_repo_spec_config_path(repo_name: &str, dir: RepoSpecDir) -> String {
     let hash = Sha256::digest(repo_name.as_bytes());
     let hash_dir = format!("{:02x}", hash[0]);
     format!(
-        "scm/mononoke/repos/git/{}/{}",
+        "scm/mononoke/repos/{}/{}/{}",
+        dir.as_str(),
         hash_dir,
         repo_name.replace('/', "_")
     )
 }
 
 /// Generates the file path for a RepoSpec file.
-/// Path format: source/scm/mononoke/repos/git/{hash_dir}/{repo_name_escaped}.cconf
-pub fn make_repo_spec_file_path(repo_name: &str) -> String {
-    // IMPORTANT: see make_repo_spec_config_path() above. Path is git-only today.
-    format!("source/{}.cconf", make_repo_spec_config_path(repo_name))
+/// Path format: source/scm/mononoke/repos/{git|hg}/{hash_dir}/{repo_name_escaped}.cconf
+pub fn make_repo_spec_file_path(repo_name: &str, dir: RepoSpecDir) -> String {
+    format!(
+        "source/{}.cconf",
+        make_repo_spec_config_path(repo_name, dir)
+    )
 }
 
 /// Returns the tier list for a new RepoSpec-based repo, as static string slices.
@@ -171,7 +190,8 @@ mod tests {
     #[mononoke::test]
     fn config_path_uses_sha256_hash_dir() {
         // Must match the actual on-disk file: repos/git/04/aosp_..._wasp_proc.cconf
-        let path = make_repo_spec_config_path("aosp/platform/vendor/qcom/wasp_proc");
+        let path =
+            make_repo_spec_config_path("aosp/platform/vendor/qcom/wasp_proc", RepoSpecDir::Git);
         assert_eq!(
             path, "scm/mononoke/repos/git/04/aosp_platform_vendor_qcom_wasp_proc",
             "hash_dir for aosp/platform/vendor/qcom/wasp_proc must be 04 to match production file"
@@ -181,7 +201,7 @@ mod tests {
     #[mononoke::test]
     fn config_path_for_osmeta_matches_production() {
         // Must match the actual on-disk file: repos/git/07/osmeta_external_androidx-media.cconf
-        let path = make_repo_spec_config_path("osmeta/external/androidx-media");
+        let path = make_repo_spec_config_path("osmeta/external/androidx-media", RepoSpecDir::Git);
         assert_eq!(
             path, "scm/mononoke/repos/git/07/osmeta_external_androidx-media",
             "hash_dir for osmeta/external/androidx-media must be 07 to match production file"
@@ -189,10 +209,41 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn config_path_for_hg_repo_matches_production() {
+        // Must match the actual on-disk file: repos/hg/e0/scs-configerator_test.cconf.
+        // Built under RepoSpecDir::Git this would resolve to repos/git/e0/..., which
+        // does not exist — the bug this parameter exists to prevent.
+        let path = make_repo_spec_config_path("scs-configerator_test", RepoSpecDir::Hg);
+        assert_eq!(
+            path, "scm/mononoke/repos/hg/e0/scs-configerator_test",
+            "hash_dir for scs-configerator_test must be e0 to match production file"
+        );
+    }
+
+    #[mononoke::test]
+    fn hg_and_git_differ_only_in_directory_segment() {
+        // The sharding scheme is identical across both trees; only the
+        // git/hg segment changes. Verified against all 10k production repos.
+        let git = make_repo_spec_config_path("chromium_test", RepoSpecDir::Git);
+        let hg = make_repo_spec_config_path("chromium_test", RepoSpecDir::Hg);
+        assert_eq!(git, "scm/mononoke/repos/git/d8/chromium_test");
+        assert_eq!(hg, "scm/mononoke/repos/hg/d8/chromium_test");
+    }
+
+    #[mononoke::test]
     fn file_path_wraps_with_source_and_cconf() {
-        let path = make_repo_spec_file_path("manus/next-agent-webapp");
+        let path = make_repo_spec_file_path("manus/next-agent-webapp", RepoSpecDir::Git);
         assert!(path.starts_with("source/scm/mononoke/repos/git/"));
         assert!(path.ends_with("/manus_next-agent-webapp.cconf"));
+    }
+
+    #[mononoke::test]
+    fn file_path_for_hg_repo_uses_hg_directory() {
+        let path = make_repo_spec_file_path("hyper_repo_test", RepoSpecDir::Hg);
+        assert_eq!(
+            path,
+            "source/scm/mononoke/repos/hg/24/hyper_repo_test.cconf"
+        );
     }
 
     #[mononoke::test]

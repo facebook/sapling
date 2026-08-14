@@ -52,6 +52,7 @@ use oncall::OncallClient;
 use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
 use repo_spec_writer::RepoIndexEntry;
+use repo_spec_writer::RepoSpecDir;
 use repo_spec_writer::append_to_repo_index;
 use repo_spec_writer::make_repo_spec_config_path;
 use repo_spec_writer::make_repo_spec_file_path;
@@ -910,7 +911,8 @@ async fn prepare_repo_configs_mutation_nowait(
             &(*repo_id, request.clone()),
             Some((*default_repo_config).clone()),
         )?;
-        let file_path = make_repo_spec_file_path(&request.repo_name);
+        // create_repos only ever creates git repos (see RepoSpecDir docs).
+        let file_path = make_repo_spec_file_path(&request.repo_name, RepoSpecDir::Git);
         txn.set_thrift_object(
             repo_spec,
             file_path,
@@ -937,7 +939,7 @@ async fn prepare_repo_configs_mutation_nowait(
     let new_entries: Vec<_> = repos_ids_and_requests
         .iter()
         .map(|(repo_id, request)| {
-            let config_path = make_repo_spec_config_path(&request.repo_name);
+            let config_path = make_repo_spec_config_path(&request.repo_name, RepoSpecDir::Git);
             let t_shirt_size = to_repo_spec_tshirt_size(request.size_bucket)?;
             Ok((
                 request.repo_name.clone(),
@@ -1484,7 +1486,7 @@ mod tests {
     fn test_make_repo_spec_file_path_simple_name() {
         // Test asserts the git-only path. When adding HG support to create_repos, add a
         // parallel test for repos/hg/ paths.
-        let path = make_repo_spec_file_path("my-repo");
+        let path = make_repo_spec_file_path("my-repo", RepoSpecDir::Git);
         assert!(
             path.starts_with("source/scm/mononoke/repos/git/"),
             "Path should start with RepoSpec base path: {path}"
@@ -1497,7 +1499,7 @@ mod tests {
 
     #[mononoke::test]
     fn test_make_repo_spec_file_path_slash_in_name() {
-        let path = make_repo_spec_file_path("org/project/repo");
+        let path = make_repo_spec_file_path("org/project/repo", RepoSpecDir::Git);
         assert!(
             path.ends_with("/org_project_repo.cconf"),
             "Slashes should be replaced with underscores: {path}"
@@ -1506,8 +1508,8 @@ mod tests {
 
     #[mononoke::test]
     fn test_make_repo_spec_file_path_no_collision_slash_vs_underscore() {
-        let path1 = make_repo_spec_file_path("org/repo");
-        let path2 = make_repo_spec_file_path("org_repo");
+        let path1 = make_repo_spec_file_path("org/repo", RepoSpecDir::Git);
+        let path2 = make_repo_spec_file_path("org_repo", RepoSpecDir::Git);
         assert_ne!(
             path1, path2,
             "Repos differing only in '/' vs '_' must produce different paths"
@@ -1516,15 +1518,15 @@ mod tests {
 
     #[mononoke::test]
     fn test_make_repo_spec_file_path_deterministic() {
-        let path1 = make_repo_spec_file_path("test/repo");
-        let path2 = make_repo_spec_file_path("test/repo");
+        let path1 = make_repo_spec_file_path("test/repo", RepoSpecDir::Git);
+        let path2 = make_repo_spec_file_path("test/repo", RepoSpecDir::Git);
         assert_eq!(path1, path2, "Hash-based path should be deterministic");
     }
 
     #[mononoke::test]
     fn test_make_repo_spec_file_path_different_repos_may_differ() {
-        let path1 = make_repo_spec_file_path("repo-alpha");
-        let path2 = make_repo_spec_file_path("repo-beta");
+        let path1 = make_repo_spec_file_path("repo-alpha", RepoSpecDir::Git);
+        let path2 = make_repo_spec_file_path("repo-beta", RepoSpecDir::Git);
         assert_ne!(
             path1, path2,
             "Different repos should produce different paths"

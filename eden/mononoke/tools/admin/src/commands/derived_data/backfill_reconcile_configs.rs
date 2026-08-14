@@ -35,6 +35,7 @@ use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
 use enabled_derived_data_types::EnabledDerivedDataTypesRef;
+use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_app::MononokeApp;
 use mononoke_types::DerivableType;
@@ -83,6 +84,15 @@ pub(super) struct BackfillReconcileConfigsArgs {
     dump_repo_config: Option<i32>,
 }
 
+/// The per-repo facts reconciliation needs: what it's called, which commit
+/// identity scheme it uses (which decides where its `.cconf` lives), and what
+/// its derived-data config currently enables.
+pub(crate) struct RepoReconcileInfo {
+    pub(crate) repo_name: String,
+    pub(crate) commit_identity_scheme: CommitIdentityScheme,
+    pub(crate) derived_data_config: DerivedDataConfig,
+}
+
 /// One unit of pending reconciliation work.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct PendingReconcile {
@@ -92,6 +102,11 @@ pub(crate) struct PendingReconcile {
     /// The active derived-data config name for this repo (the config whose
     /// `types` list gates derivation, and the one the land must edit).
     pub(crate) enabled_config_name: String,
+    /// Decides which RepoSpec tree this repo's `.cconf` is edited in:
+    /// configerator splits them into `repos/git/` and `repos/hg/`. Carried
+    /// per-repo rather than assumed — assuming git sent every hg repo's edit
+    /// to a `repos/git/...` path that doesn't exist.
+    pub(crate) commit_identity_scheme: CommitIdentityScheme,
 }
 
 /// Outcome of comparing the enablement rows against the repos' configs.
@@ -115,15 +130,16 @@ pub(crate) struct WorkList {
 /// for a repo_id not present in the configs map are recorded in `repo_not_found`.
 pub(crate) fn compute_work_list(
     enablement_rows: Vec<(RepositoryId, DerivableType)>,
-    repo_configs: &BTreeMap<RepositoryId, (String, DerivedDataConfig)>,
+    repo_configs: &BTreeMap<RepositoryId, RepoReconcileInfo>,
 ) -> WorkList {
     let mut work = WorkList::default();
     for (repo_id, ddt) in enablement_rows {
-        let Some((repo_name, ddc)) = repo_configs.get(&repo_id) else {
+        let Some(info) = repo_configs.get(&repo_id) else {
             work.repo_not_found.push(repo_id);
             continue;
         };
 
+        let ddc = &info.derived_data_config;
         let enabled_config_name = ddc.enabled_config_name.clone();
         let already_enabled = ddc
             .available_configs
@@ -135,9 +151,10 @@ pub(crate) fn compute_work_list(
         } else {
             work.pending.push(PendingReconcile {
                 repo_id,
-                repo_name: repo_name.clone(),
+                repo_name: info.repo_name.clone(),
                 derived_data_type: ddt,
                 enabled_config_name,
+                commit_identity_scheme: info.commit_identity_scheme.clone(),
             });
         }
     }
@@ -190,11 +207,20 @@ pub(super) async fn backfill_reconcile_configs(
     // "unknown repo" and skipped. `load_all_repo_configs()` unions the eager map
     // with the full tier manifest and materializes each deep-sharded repo's
     // config on demand.
-    let repo_configs: BTreeMap<RepositoryId, (String, DerivedDataConfig)> = app
+    let repo_configs: BTreeMap<RepositoryId, RepoReconcileInfo> = app
         .configs()
         .load_all_repo_configs()?
         .into_iter()
-        .map(|(name, config)| (config.repoid, (name, config.derived_data_config)))
+        .map(|(name, config)| {
+            (
+                config.repoid,
+                RepoReconcileInfo {
+                    repo_name: name,
+                    commit_identity_scheme: config.default_commit_identity_scheme,
+                    derived_data_config: config.derived_data_config,
+                },
+            )
+        })
         .collect();
 
     // Reach the global enabled-types facet via a minimal container (Gotcha 1).
@@ -356,6 +382,8 @@ mod fb {
     use configo::ConfigoClient;
     use configo_thrift_srclients::make_ConfigoService_srclient;
     use context::CoreContext;
+    use metaconfig_types::CommitIdentityScheme;
+    use repo_spec_writer::RepoSpecDir;
     use repo_spec_writer::make_repo_spec_file_path;
     use repos::RawDerivedDataTypesConfig;
     use repos::RepoSpec;
@@ -368,6 +396,27 @@ mod fb {
     const PREPARE_TIMEOUT: Duration = Duration::from_secs(600);
     // i16 selector on RawDerivedDataTypesConfig.git_delta_manifest_version; 3 => V3.
     const GDMV3_VERSION: i16 = 3;
+
+    /// Which RepoSpec tree this repo's `.cconf` lives in.
+    ///
+    /// Configerator splits per-repo configs into `repos/git/` and `repos/hg/`,
+    /// with identical `sha256(repo_name)` sharding inside each. Only GIT and HG
+    /// occur in practice — verified against every repo in `repo_index.cinc`:
+    /// 9,938 GIT under `repos/git/`, 62 HG under `repos/hg/`, no exceptions.
+    /// BONSAI/UNKNOWN have no tree of their own, so guessing one would silently
+    /// aim the edit at a nonexistent file; fail loudly instead.
+    pub(super) fn repo_spec_dir_for(p: &PendingReconcile) -> Result<RepoSpecDir> {
+        match p.commit_identity_scheme {
+            CommitIdentityScheme::GIT => Ok(RepoSpecDir::Git),
+            CommitIdentityScheme::HG => Ok(RepoSpecDir::Hg),
+            ref other => bail!(
+                "repo {} ({}) has commit identity scheme {other:?}, which has no \
+                 RepoSpec directory (expected GIT or HG); refusing to guess its .cconf path",
+                p.repo_id.id(),
+                p.repo_name,
+            ),
+        }
+    }
 
     /// Create one peer-review configerator diff covering every repo in `batch`.
     ///
@@ -389,7 +438,7 @@ mod fb {
 
         let mut edited = 0usize;
         for p in batch {
-            let cconf_path = make_repo_spec_file_path(&p.repo_name);
+            let cconf_path = make_repo_spec_file_path(&p.repo_name, repo_spec_dir_for(p)?);
 
             // Read pins the CAS version for this file. The handle borrows `txn`, so
             // clone the value out and drop the handle before mutating with
@@ -579,11 +628,20 @@ mod tests {
         }
     }
 
+    /// A git repo's reconcile info (the common case in tests).
+    fn info(repo_name: &str, config_name: &str, types: &[DerivableType]) -> RepoReconcileInfo {
+        RepoReconcileInfo {
+            repo_name: repo_name.to_string(),
+            commit_identity_scheme: CommitIdentityScheme::GIT,
+            derived_data_config: ddc_with(config_name, types),
+        }
+    }
+
     #[mononoke::test]
     fn pending_when_type_not_in_active_config() {
         let repo_id = RepositoryId::new(1);
         let configs = hashmap! {
-            repo_id => ("repo1".to_string(), ddc_with("default", &[DerivableType::Fsnodes])),
+            repo_id => info("repo1", "default", &[DerivableType::Fsnodes]),
         }
         .into_iter()
         .collect();
@@ -603,13 +661,74 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn hg_repo_carries_its_hg_identity_scheme() {
+        // Regression test: reconcile used to build every path via the git-only
+        // `make_repo_spec_file_path`, so an hg repo's edit was aimed at
+        // `repos/git/e0/scs-configerator_test.cconf` — which does not exist, and
+        // the whole batch failed with "No config entry found". The scheme has to
+        // survive into PendingReconcile for `repo_spec_dir_for` to pick repos/hg/.
+        let repo_id = RepositoryId::new(403);
+        let configs = hashmap! {
+            repo_id => RepoReconcileInfo {
+                repo_name: "scs-configerator_test".to_string(),
+                commit_identity_scheme: CommitIdentityScheme::HG,
+                derived_data_config: ddc_with("default", &[DerivableType::Fsnodes]),
+            },
+        }
+        .into_iter()
+        .collect();
+
+        let work = compute_work_list(vec![(repo_id, DerivableType::ContentManifests)], &configs);
+        assert_eq!(work.pending.len(), 1);
+        assert_eq!(
+            work.pending[0].commit_identity_scheme,
+            CommitIdentityScheme::HG,
+            "hg repo must not be reconciled as if it were a git repo",
+        );
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::test]
+    fn repo_spec_dir_follows_commit_identity_scheme() {
+        use repo_spec_writer::RepoSpecDir;
+        use repo_spec_writer::make_repo_spec_file_path;
+
+        let pending = |scheme| super::PendingReconcile {
+            repo_id: RepositoryId::new(403),
+            repo_name: "scs-configerator_test".to_string(),
+            derived_data_type: DerivableType::ContentManifests,
+            enabled_config_name: "default".to_string(),
+            commit_identity_scheme: scheme,
+        };
+
+        let hg = pending(CommitIdentityScheme::HG);
+        let hg_dir = super::fb::repo_spec_dir_for(&hg).unwrap();
+        assert_eq!(hg_dir, RepoSpecDir::Hg);
+        assert_eq!(
+            make_repo_spec_file_path(&hg.repo_name, hg_dir),
+            "source/scm/mononoke/repos/hg/e0/scs-configerator_test.cconf",
+        );
+
+        let git = pending(CommitIdentityScheme::GIT);
+        assert_eq!(
+            super::fb::repo_spec_dir_for(&git).unwrap(),
+            RepoSpecDir::Git
+        );
+
+        // No RepoSpec tree exists for these, so guessing would target the wrong file.
+        for scheme in [CommitIdentityScheme::BONSAI, CommitIdentityScheme::UNKNOWN] {
+            assert!(
+                super::fb::repo_spec_dir_for(&pending(scheme.clone())).is_err(),
+                "{scheme:?} must not resolve to a RepoSpec directory",
+            );
+        }
+    }
+
+    #[mononoke::test]
     fn skipped_when_type_already_in_active_config() {
         let repo_id = RepositoryId::new(1);
         let configs = hashmap! {
-            repo_id => (
-                "repo1".to_string(),
-                ddc_with("default", &[DerivableType::GitDeltaManifestsV3]),
-            ),
+            repo_id => info("repo1", "default", &[DerivableType::GitDeltaManifestsV3]),
         }
         .into_iter()
         .collect();
@@ -627,7 +746,7 @@ mod tests {
 
     #[mononoke::test]
     fn skipped_when_repo_not_in_configs() {
-        let configs: BTreeMap<RepositoryId, (String, DerivedDataConfig)> = BTreeMap::new();
+        let configs: BTreeMap<RepositoryId, RepoReconcileInfo> = BTreeMap::new();
         let work = compute_work_list(
             vec![(RepositoryId::new(7), DerivableType::GitDeltaManifestsV3)],
             &configs,
@@ -644,11 +763,9 @@ mod tests {
         // enabled_config_name points at a config not present in available_configs:
         // the type is certainly not enabled there, so it is pending.
         let repo_id = RepositoryId::new(3);
-        let mut ddc = ddc_with("default", &[]);
-        ddc.enabled_config_name = "nonexistent".to_string();
-        let configs = hashmap! { repo_id => ("repo3".to_string(), ddc) }
-            .into_iter()
-            .collect();
+        let mut repo3 = info("repo3", "default", &[]);
+        repo3.derived_data_config.enabled_config_name = "nonexistent".to_string();
+        let configs = hashmap! { repo_id => repo3 }.into_iter().collect();
 
         let work = compute_work_list(vec![(repo_id, DerivableType::Unodes)], &configs);
         assert_eq!(work.pending.len(), 1);
@@ -660,8 +777,8 @@ mod tests {
         let r1 = RepositoryId::new(1);
         let r2 = RepositoryId::new(2);
         let configs = hashmap! {
-            r1 => ("repo1".to_string(), ddc_with("default", &[])),
-            r2 => ("repo2".to_string(), ddc_with("default", &[])),
+            r1 => info("repo1", "default", &[]),
+            r2 => info("repo2", "default", &[]),
         }
         .into_iter()
         .collect();
