@@ -35,6 +35,8 @@ use mononoke_repos::MononokeRepos;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
+use multi_repo_land_lib::CasBaseline;
+use multi_repo_land_lib::ManifestCommitSpec;
 use multi_repo_land_lib::RepinOptions;
 use multi_repo_land_lib::RepinOutcome;
 use multi_repo_land_lib::RepoProvider;
@@ -383,11 +385,14 @@ async fn test_prepare_manifest_commit_default_parent(fb: FacebookInit) -> Result
     let prepared = prepare_manifest_commit(
         &ctx,
         &repo,
-        &bm,
-        None,
-        &manifest_path,
-        Bytes::from("<manifest/>"),
-        "svc",
+        ManifestCommitSpec {
+            bookmark: &bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from("<manifest/>"),
+            service_identity: "svc",
+            parent_override: None,
+            baseline: CasBaseline::CurrentHead,
+        },
     )
     .await?;
 
@@ -445,11 +450,14 @@ async fn test_prepare_manifest_commit_parent_override(fb: FacebookInit) -> Resul
     let prepared = prepare_manifest_commit(
         &ctx,
         &repo,
-        &bm,
-        Some(user_commit),
-        &manifest_path,
-        Bytes::from("<manifest/>"),
-        "svc",
+        ManifestCommitSpec {
+            bookmark: &bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from("<manifest/>"),
+            service_identity: "svc",
+            parent_override: Some(user_commit),
+            baseline: CasBaseline::CurrentHead,
+        },
     )
     .await?;
 
@@ -479,11 +487,14 @@ async fn test_prepare_manifest_commit_bookmark_not_found(fb: FacebookInit) -> Re
     let err = prepare_manifest_commit(
         &ctx,
         &repo,
-        &bm,
-        None,
-        &manifest_path,
-        Bytes::from("<manifest/>"),
-        "svc",
+        ManifestCommitSpec {
+            bookmark: &bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from("<manifest/>"),
+            service_identity: "svc",
+            parent_override: None,
+            baseline: CasBaseline::CurrentHead,
+        },
     )
     .await
     .expect_err("absent bookmark must error");
@@ -668,7 +679,10 @@ async fn test_repin_manifest_branch_no_scribe_still_moves(fb: FacebookInit) -> R
         &manifest_path,
         Bytes::from("<manifest/>"),
         "svc",
-        &RepinOptions { log_scribe: false },
+        &RepinOptions {
+            log_scribe: false,
+            ..RepinOptions::default()
+        },
     )
     .await?;
 
@@ -682,6 +696,73 @@ async fn test_repin_manifest_branch_no_scribe_still_moves(fb: FacebookInit) -> R
             .await?,
         Some(new_cs),
         "the branch head must move even with scribe disabled",
+    );
+
+    Ok(())
+}
+
+/// The whole point of `CasBaseline::GeneratedFrom`: a caller that generated its
+/// content from one head must CAS against THAT head. Re-reading would adopt
+/// whatever landed in between as the baseline, so the CAS would succeed and
+/// silently overwrite it.
+#[mononoke::fbinit_test]
+async fn generated_from_pins_the_cas_baseline_against_a_concurrent_land(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let generated_from = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v1")
+        .commit()
+        .await?;
+    let bm = bookmark(&ctx, &repo, "manifest")
+        .create_publishing(generated_from)
+        .await?;
+
+    // Someone else lands between our read and our write.
+    let concurrent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "v2")
+        .commit()
+        .await?;
+    bookmark(&ctx, &repo, "manifest").set_to(concurrent).await?;
+
+    let manifest_path = NonRootMPath::new("default.xml")?;
+
+    let stale = prepare_manifest_commit(
+        &ctx,
+        &repo,
+        ManifestCommitSpec {
+            bookmark: &bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from("<manifest/>"),
+            service_identity: "svc",
+            parent_override: None,
+            baseline: CasBaseline::GeneratedFrom(generated_from),
+        },
+    )
+    .await?;
+    assert_eq!(
+        stale.old_cs, generated_from,
+        "the baseline must be the head we generated from, so the CAS fails"
+    );
+
+    let adopting = prepare_manifest_commit(
+        &ctx,
+        &repo,
+        ManifestCommitSpec {
+            bookmark: &bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from("<manifest/>"),
+            service_identity: "svc",
+            parent_override: None,
+            baseline: CasBaseline::CurrentHead,
+        },
+    )
+    .await?;
+    assert_eq!(
+        adopting.old_cs, concurrent,
+        "without it the concurrent land is adopted as the baseline"
     );
 
     Ok(())

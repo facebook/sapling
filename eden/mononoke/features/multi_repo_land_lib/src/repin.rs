@@ -50,20 +50,43 @@ pub struct PreparedManifestCommit {
     pub mapped_git: MappedGitCommitId,
 }
 
-/// Read the branch head, build the manifest commit on `parent_override` (or the
-/// head when `None`), and pre-derive its git identity.
+/// Where the CAS baseline — the head the bookmark move will be compared
+/// against — comes from.
+#[derive(Debug, Clone, Copy)]
+pub enum CasBaseline {
+    /// Read the branch head now and baseline against that. Only for content
+    /// that was NOT generated from an earlier read: re-reading silently adopts
+    /// anything that landed in between, so the CAS then succeeds and
+    /// overwrites that land.
+    CurrentHead,
+    /// The head the content was generated from. A branch that moved since
+    /// then fails the CAS instead of being overwritten.
+    GeneratedFrom(ChangesetId),
+}
+
+/// The inputs for one branch's generated manifest commit.
+pub struct ManifestCommitSpec<'a> {
+    pub bookmark: &'a BookmarkKey,
+    pub manifest_path: &'a NonRootMPath,
+    pub content: Bytes,
+    /// Recorded as the author of the generated commit.
+    pub service_identity: &'a str,
+    /// Parent for the generated commit when the caller's own manifest edit
+    /// must sit between the head and the generated commit; the baseline head
+    /// otherwise. Never the CAS baseline — that stays the branch head.
+    pub parent_override: Option<ChangesetId>,
+    pub baseline: CasBaseline,
+}
+
+/// Build the manifest commit described by `spec` and pre-derive its git
+/// identity.
 ///
-/// `old_cs` is always the live head (the CAS baseline), even when
-/// `parent_override` differs. Derivation runs BEFORE the caller's transaction so
-/// a derivation failure never leaves a bookmark moved.
+/// Derivation runs BEFORE the caller's transaction so a derivation failure never
+/// leaves a bookmark moved.
 pub async fn prepare_manifest_commit<R>(
     ctx: &CoreContext,
     repo: &R,
-    bookmark: &BookmarkKey,
-    parent_override: Option<ChangesetId>,
-    manifest_path: &NonRootMPath,
-    new_content: Bytes,
-    service_identity: &str,
+    spec: ManifestCommitSpec<'_>,
 ) -> Result<PreparedManifestCommit>
 where
     R: RepoIdentityRef
@@ -74,26 +97,30 @@ where
         + CommitGraphWriterRef
         + RepoDerivedDataRef,
 {
-    let old_cs = repo
-        .bookmarks()
-        .get(ctx.clone(), bookmark, Freshness::MostRecent)
-        .await?
-        .ok_or_else(|| {
-            anyhow!(
-                "manifest bookmark not found: {bookmark} in repo {}",
-                repo.repo_identity().name()
-            )
-        })?;
+    let old_cs = match spec.baseline {
+        CasBaseline::GeneratedFrom(head) => head,
+        CasBaseline::CurrentHead => repo
+            .bookmarks()
+            .get(ctx.clone(), spec.bookmark, Freshness::MostRecent)
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "manifest bookmark not found: {} in repo {}",
+                    spec.bookmark,
+                    repo.repo_identity().name()
+                )
+            })?,
+    };
 
-    let parent = parent_override.unwrap_or(old_cs);
+    let parent = spec.parent_override.unwrap_or(old_cs);
 
     let new_cs = create_manifest_commit(
         ctx,
         repo,
         parent,
-        manifest_path,
-        new_content,
-        service_identity,
+        spec.manifest_path,
+        spec.content,
+        spec.service_identity,
     )
     .await?;
 
@@ -114,11 +141,17 @@ where
 pub struct RepinOptions {
     /// Emit fire-and-forget scribe logging for the bookmark move.
     pub log_scribe: bool,
+    /// See [`CasBaseline`]. `GeneratedFrom` whenever the caller read the
+    /// branch itself and generated the content from that read.
+    pub baseline: CasBaseline,
 }
 
 impl Default for RepinOptions {
     fn default() -> Self {
-        Self { log_scribe: true }
+        Self {
+            log_scribe: true,
+            baseline: CasBaseline::CurrentHead,
+        }
     }
 }
 
@@ -164,7 +197,6 @@ where
         + PhasesRef
         + Sync,
 {
-    // No user-manifest parent: build on the head.
     let PreparedManifestCommit {
         old_cs,
         new_cs,
@@ -172,11 +204,15 @@ where
     } = prepare_manifest_commit(
         ctx,
         repo,
-        bookmark,
-        None,
-        manifest_path,
-        new_content,
-        service_identity,
+        ManifestCommitSpec {
+            bookmark,
+            manifest_path,
+            content: new_content,
+            service_identity,
+            // No user-manifest parent: build on the head.
+            parent_override: None,
+            baseline: opts.baseline,
+        },
     )
     .await?;
 

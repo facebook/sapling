@@ -15,6 +15,8 @@ mod resolve;
 mod scribe;
 
 pub use crate::manifest_commit::create_manifest_commit;
+pub use crate::repin::CasBaseline;
+pub use crate::repin::ManifestCommitSpec;
 pub use crate::repin::PreparedManifestCommit;
 pub use crate::repin::RepinOptions;
 pub use crate::repin::RepinOutcome;
