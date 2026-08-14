@@ -274,22 +274,38 @@ impl HttpClient {
         let mut responses = Vec::new();
 
         for req in requests {
-            let request_info = req.ctx().info().clone();
-            let (receiver, streams) = ChannelReceiver::new(self.config.limit_response_buffering);
-
-            // Create a blocking streaming HTTP request to be dispatched on a
-            // separate IO task.
-            stream_requests.push(req.into_streaming(Box::new(receiver)));
-
-            // Create response Future to return to the caller. The response is
-            // linked to the request via channels, allowing async Rust code to
-            // seamlessly receive data from the IO task.
-            responses.push(AsyncResponse::new(streams, request_info).boxed());
+            let (request, response) = self.prepare_async_request(req);
+            stream_requests.push(request);
+            responses.push(response);
         }
 
         let stats = self.dispatcher.dispatch(client, stream_requests)?;
 
         Ok((responses, stats))
+    }
+
+    /// Async version of `send` for a single request.
+    pub fn send_async_single(&self, request: Request) -> Result<ResponseFuture, HttpClientError> {
+        crate::check_not_shutting_down()?;
+        let client = self.worker_client();
+        let (request, response) = self.prepare_async_request(request);
+        let stats = self.dispatcher.dispatch(client, vec![request])?;
+        Ok(async move {
+            match response.await {
+                Ok(response) => Ok(response),
+                error @ Err(HttpClientError::RequestDropped(_)) => stats.await.and(error),
+                Err(error) => Err(error),
+            }
+        }
+        .boxed())
+    }
+
+    fn prepare_async_request(&self, req: Request) -> (StreamRequest, ResponseFuture) {
+        let request_info = req.ctx().info().clone();
+        let (receiver, streams) = ChannelReceiver::new(self.config.limit_response_buffering);
+        let request = req.into_streaming(Box::new(receiver));
+        let response = AsyncResponse::new(streams, request_info).boxed();
+        (request, response)
     }
 
     fn worker_client(&self) -> WorkerClient {

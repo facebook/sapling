@@ -368,11 +368,9 @@ mod tests {
         let client = HttpClient::new();
 
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = client
-            .get(url)
-            .accept_encoding(Encoding::all())
-            .send_async()
-            .await?;
+        let req = client.get(url).accept_encoding(Encoding::all());
+        let response = client.send_async_single(req)?;
+        let res = response.await?;
 
         mock.assert();
 

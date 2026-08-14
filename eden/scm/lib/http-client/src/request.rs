@@ -45,9 +45,7 @@ use crate::event_listeners::RequestEventListeners;
 use crate::handler::Buffered;
 use crate::handler::HandlerExt;
 use crate::handler::Streaming;
-use crate::receiver::ChannelReceiver;
 use crate::receiver::Receiver;
-use crate::response::AsyncResponse;
 use crate::response::Response;
 
 pub const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
@@ -677,31 +675,6 @@ impl Request {
         Response::try_from(easy.get_mut())
     }
 
-    /// Execute this request asynchronously.
-    pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
-        let request_info = self.ctx().info().clone();
-
-        // Don't limit response buffering - we don't have a good way to unpause the
-        // transfer for this single request flow.
-        let (receiver, streams) = ChannelReceiver::new(false);
-
-        let request = self.into_streaming(Box::new(receiver));
-
-        // Spawn the request as another task, which will block
-        // the worker it is scheduled on until completion.
-        let io_task = async_runtime::spawn_blocking(move || request.send());
-
-        match AsyncResponse::new(streams, request_info).await {
-            Ok(res) => Ok(res),
-            // If the request was dropped before completion, this likely means
-            // that configuring or sending the request failed. The IO task will
-            // likely return a more meaningful error message, so return that
-            // instead of a generic "this request was dropped" error.
-            e @ Err(HttpClientError::RequestDropped(_)) => io_task.await?.and(e),
-            Err(e) => Err(e),
-        }
-    }
-
     /// Turn this `Request` into a streaming request. The
     /// received data for this request will be passed as
     /// it arrives to the given `Receiver`.
@@ -937,21 +910,6 @@ pub struct StreamRequest {
 }
 
 impl StreamRequest {
-    pub(crate) fn send(self) -> Result<(), HttpClientError> {
-        crate::check_not_shutting_down()?;
-        let claim = self.request.claimer.claim_request();
-        let mut easy: Easy2H = self.into_easy(claim)?;
-        let res = easy
-            .perform()
-            .map_err(|err| maybe_add_os_error(&easy, err).into());
-        let _ = easy
-            .get_mut()
-            .take_receiver()
-            .expect("Receiver is gone; this should never happen")
-            .done(res);
-        Ok(())
-    }
-
     pub(crate) fn into_easy(self, claim: RequestClaim) -> Result<Easy2H, HttpClientError> {
         let StreamRequest { request, receiver } = self;
         request.into_handle(|ctx| Box::new(Streaming::new(receiver, ctx, claim)))
@@ -1099,11 +1057,9 @@ mod tests {
         let client = HttpClient::new();
 
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = client
-            .get(url)
-            .header("X-Api-Key", "1234")
-            .send_async()
-            .await?;
+        let req = client.get(url).header("X-Api-Key", "1234");
+        let response = client.send_async_single(req)?;
+        let res = response.await?;
 
         mock.assert();
 

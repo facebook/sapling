@@ -579,7 +579,7 @@ impl Client {
         let name = format!("{timestamp}_{label}.log");
         let path = log_dir.join(name);
 
-        let _ = async_runtime::spawn_blocking(move || {
+        std::mem::drop(async_runtime::spawn_blocking(move || {
             if let Err(e) = || -> std::io::Result<()> {
                 create_dir_all(&log_dir)?;
                 let data = pprint::pformat_value(&value);
@@ -587,7 +587,7 @@ impl Client {
             }() {
                 tracing::warn!("Failed to log request: {:?}", &e);
             }
-        });
+        }));
     }
 
     pub(crate) async fn fetch_trees(
@@ -1492,7 +1492,8 @@ impl SaplingRemoteApi for Client {
 
                 let req =
                     client.configure_request(paths::HEALTH_CHECK, client.inner.client.get(url))?;
-                let res = raise_for_status(req.send_async().await?).await?;
+                let response = client.inner.client.send_async_single(req)?;
+                let res = raise_for_status(response.await?).await?;
 
                 Ok(ResponseMeta::from(&res))
             }
@@ -1508,7 +1509,8 @@ impl SaplingRemoteApi for Client {
                 let url = client.build_url(paths::CAPABILITIES)?;
                 let req =
                     client.configure_request(paths::CAPABILITIES, client.inner.client.get(url))?;
-                let res = raise_for_status(req.send_async().await?).await?;
+                let response = client.inner.client.send_async_single(req)?;
+                let res = raise_for_status(response.await?).await?;
                 let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
                 let caps = serde_json::from_slice(&body)
                     .map_err(|e| SaplingRemoteApiError::ParseResponse(e.to_string()))?;
