@@ -39,6 +39,7 @@ use crate::SyncedCommitMapping;
 use crate::SyncedCommitMappingEntry;
 use crate::WorkingCopyEquivalence;
 use crate::sql::BATCH_TARGET_REPOS_KNOB;
+use crate::types::get_maybe_stale_many_targets_serially;
 
 /// Caching layer for SyncedCommitMapping. The cache works as a map from
 /// `(source_repo_id, target_repo_id, bcs_id)` to a list mappings. Caching
@@ -361,16 +362,14 @@ impl SyncedCommitMapping for CachingSyncedCommitMapping {
         // lookup below is itself a behaviour change: off has to restore the
         // per-target-repo lookups, not just the query their misses turn into.
         if !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
-            let mut res = HashMap::new();
-            for target_repo_id in target_repo_ids {
-                let entries = self
-                    .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
-                    .await?;
-                if !entries.is_empty() {
-                    res.insert(*target_repo_id, entries);
-                }
-            }
-            return Ok(res);
+            return get_maybe_stale_many_targets_serially(
+                self,
+                ctx,
+                source_repo_id,
+                bcs_id,
+                target_repo_ids,
+            )
+            .await;
         }
 
         let cache_request = CacheRequest {

@@ -46,6 +46,7 @@ use crate::SyncedCommitMapping;
 use crate::SyncedCommitMappingEntry;
 use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
+use crate::types::get_maybe_stale_many_targets_serially;
 
 /// Kill switch for resolving many target repos in one query instead of one query
 /// per target repo. Off -> the previous per-target-repo behaviour. Read by every
@@ -606,16 +607,14 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         // One target has nothing to batch, so keep the rendezvous, which can still
         // coalesce it with concurrent lookups of the same repo pair.
         if target_repo_ids.len() == 1 || !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
-            let mut res = HashMap::new();
-            for target_repo_id in target_repo_ids {
-                let entries = self
-                    .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
-                    .await?;
-                if !entries.is_empty() {
-                    res.insert(*target_repo_id, entries);
-                }
-            }
-            return Ok(res);
+            return get_maybe_stale_many_targets_serially(
+                self,
+                ctx,
+                source_repo_id,
+                bcs_id,
+                target_repo_ids,
+            )
+            .await;
         }
 
         STATS::gets.add_value(1);

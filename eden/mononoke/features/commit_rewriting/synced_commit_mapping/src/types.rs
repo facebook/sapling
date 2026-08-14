@@ -277,16 +277,8 @@ pub trait SyncedCommitMapping: Send + Sync {
         bcs_id: ChangesetId,
         target_repo_ids: &[RepositoryId],
     ) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error> {
-        let mut res = HashMap::new();
-        for target_repo_id in target_repo_ids {
-            let entries = self
-                .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
-                .await?;
-            if !entries.is_empty() {
-                res.insert(*target_repo_id, entries);
-            }
-        }
-        Ok(res)
+        get_maybe_stale_many_targets_serially(self, ctx, source_repo_id, bcs_id, target_repo_ids)
+            .await
     }
 
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
@@ -347,6 +339,34 @@ pub trait SyncedCommitMapping: Send + Sync {
         large_repo_id: RepositoryId,
         large_repo_cs_id: ChangesetId,
     ) -> Result<Option<CommitSyncConfigVersion>, Error>;
+}
+
+/// Resolve the target repos one at a time, which is what
+/// `get_maybe_stale_many_targets` means when nothing can resolve them together.
+///
+/// This is both the trait default and what the implementations that can batch
+/// fall back to when the batching is turned off, so keeping it in one place
+/// keeps those fallbacks honest.
+pub(crate) async fn get_maybe_stale_many_targets_serially<M>(
+    mapping: &M,
+    ctx: &CoreContext,
+    source_repo_id: RepositoryId,
+    bcs_id: ChangesetId,
+    target_repo_ids: &[RepositoryId],
+) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error>
+where
+    M: SyncedCommitMapping + ?Sized,
+{
+    let mut res = HashMap::new();
+    for target_repo_id in target_repo_ids {
+        let entries = mapping
+            .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
+            .await?;
+        if !entries.is_empty() {
+            res.insert(*target_repo_id, entries);
+        }
+    }
+    Ok(res)
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
