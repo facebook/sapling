@@ -38,6 +38,7 @@ use crate::FetchedMappingEntry;
 use crate::SyncedCommitMapping;
 use crate::SyncedCommitMappingEntry;
 use crate::WorkingCopyEquivalence;
+use crate::sql::BATCH_TARGET_REPOS_KNOB;
 
 /// Caching layer for SyncedCommitMapping. The cache works as a map from
 /// `(source_repo_id, target_repo_id, bcs_id)` to a list mappings. Caching
@@ -132,10 +133,24 @@ impl CacheKey {
     }
 }
 
+/// How `get_from_db` should resolve the keys it is handed.
+enum FetchMode {
+    /// Many changesets, one target repo.
+    PerTargetRepo { maybe_stale: bool },
+    /// One changeset, many target repos. Always replica-only.
+    ///
+    /// Carries the changeset the keys are all for, so that `get_from_db` can
+    /// take the target repos straight off the keys instead of regrouping them.
+    ManyTargetRepos {
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+    },
+}
+
 struct CacheRequest<'a> {
     ctx: &'a CoreContext,
     mapping: &'a CachingSyncedCommitMapping,
-    maybe_stale: bool,
+    fetch_mode: FetchMode,
 }
 
 const CHUNK_SIZE: usize = 1000;
@@ -181,8 +196,39 @@ impl KeyedEntityStore<CacheKey, CacheEntry> for CacheRequest<'_> {
         let CacheRequest {
             ctx,
             mapping,
-            maybe_stale,
+            fetch_mode,
         } = self;
+
+        let maybe_stale = match fetch_mode {
+            FetchMode::PerTargetRepo { maybe_stale } => *maybe_stale,
+            FetchMode::ManyTargetRepos {
+                source_repo_id,
+                bcs_id,
+            } => {
+                let (source_repo_id, bcs_id) = (*source_repo_id, *bcs_id);
+                let target_repo_ids: Vec<_> =
+                    keys.into_iter().map(|key| key.target_repo_id).collect();
+
+                let by_target_repo = mapping
+                    .inner_mapping
+                    .get_maybe_stale_many_targets(ctx, source_repo_id, bcs_id, &target_repo_ids)
+                    .await?;
+
+                return Ok(by_target_repo
+                    .into_iter()
+                    .map(|(target_repo_id, mapping_entries)| {
+                        (
+                            CacheKey {
+                                source_repo_id,
+                                target_repo_id,
+                                bcs_id,
+                            },
+                            CacheEntry { mapping_entries },
+                        )
+                    })
+                    .collect());
+            }
+        };
 
         let keys = keys
             .into_iter()
@@ -192,7 +238,7 @@ impl KeyedEntityStore<CacheKey, CacheEntry> for CacheRequest<'_> {
         let mut res = HashMap::new();
 
         for ((source_repo_id, target_repo_id), bcs_ids) in keys {
-            let entries = if *maybe_stale {
+            let entries = if maybe_stale {
                 mapping
                     .inner_mapping
                     .get_many_maybe_stale(ctx, source_repo_id, target_repo_id, &bcs_ids)
@@ -246,7 +292,7 @@ impl SyncedCommitMapping for CachingSyncedCommitMapping {
         let cache_request = CacheRequest {
             ctx,
             mapping: self,
-            maybe_stale: false,
+            fetch_mode: FetchMode::PerTargetRepo { maybe_stale: false },
         };
 
         let entries = get_or_fill_chunked(
@@ -280,7 +326,7 @@ impl SyncedCommitMapping for CachingSyncedCommitMapping {
         let cache_request = CacheRequest {
             ctx,
             mapping: self,
-            maybe_stale: true,
+            fetch_mode: FetchMode::PerTargetRepo { maybe_stale: true },
         };
 
         let entries = get_or_fill_chunked(
@@ -299,6 +345,59 @@ impl SyncedCommitMapping for CachingSyncedCommitMapping {
         .await?
         .into_iter()
         .map(|(key, entry)| (key.bcs_id, entry.mapping_entries))
+        .collect();
+
+        Ok(entries)
+    }
+
+    async fn get_maybe_stale_many_targets(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_ids: &[RepositoryId],
+    ) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error> {
+        // Gated here as well as in the inner mapping, because the batched cache
+        // lookup below is itself a behaviour change: off has to restore the
+        // per-target-repo lookups, not just the query their misses turn into.
+        if !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
+            let mut res = HashMap::new();
+            for target_repo_id in target_repo_ids {
+                let entries = self
+                    .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
+                    .await?;
+                if !entries.is_empty() {
+                    res.insert(*target_repo_id, entries);
+                }
+            }
+            return Ok(res);
+        }
+
+        let cache_request = CacheRequest {
+            ctx,
+            mapping: self,
+            fetch_mode: FetchMode::ManyTargetRepos {
+                source_repo_id,
+                bcs_id,
+            },
+        };
+
+        let entries = get_or_fill_chunked(
+            &cache_request,
+            target_repo_ids
+                .iter()
+                .map(|target_repo_id| CacheKey {
+                    source_repo_id,
+                    target_repo_id: *target_repo_id,
+                    bcs_id,
+                })
+                .collect(),
+            CHUNK_SIZE,
+            PARALLEL_CHUNKS,
+        )
+        .await?
+        .into_iter()
+        .map(|(key, entry)| (key.target_repo_id, entry.mapping_entries))
         .collect();
 
         Ok(entries)

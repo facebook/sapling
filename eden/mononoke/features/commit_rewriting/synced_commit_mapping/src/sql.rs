@@ -48,8 +48,11 @@ use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
 
 /// Kill switch for resolving many target repos in one query instead of one query
-/// per target repo. Off -> the previous per-target-repo behaviour.
-const BATCH_TARGET_REPOS_KNOB: &str = "scm/mononoke:synced_commit_mapping_batch_target_repos";
+/// per target repo. Off -> the previous per-target-repo behaviour. Read by every
+/// layer that batches on this axis, so that turning it off restores the old
+/// behaviour of the stack as a whole and not just of this one.
+pub(crate) const BATCH_TARGET_REPOS_KNOB: &str =
+    "scm/mononoke:synced_commit_mapping_batch_target_repos";
 
 define_stats! {
     prefix = "mononoke.synced_commit_mapping";
