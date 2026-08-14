@@ -24,8 +24,8 @@ pub trait BaseApp {
 /// Lower level version of mononoke_app::subcommands that allows changing the app
 #[macro_export]
 macro_rules! subcommands {
-     ( type App = $app:ty; $( mod $command:ident $(if $env:literal)? ; )* ) => {
-         $( mod $command; )*
+     ( type App = $app:ty; $( $(#[$attr:meta])* mod $command:ident $(if $env:literal)? ; )* ) => {
+         $( $(#[$attr])* mod $command; )*
 
          $crate::macro_export::assert_impl_all!($app: $crate::BaseApp);
 
@@ -35,6 +35,7 @@ macro_rules! subcommands {
              use $crate::macro_export::heck::KebabCase;
              let mut apps = vec![];
             $(
+                $(#[$attr])*
                 $( if std::env::var($env).is_ok() )?
                 {
                     apps.push($command::CommandArgs::command()
@@ -53,6 +54,7 @@ macro_rules! subcommands {
              if let Some((name, matches)) = app.subcommand() {
                  match name.to_snake_case().as_str() {
                      $(
+                         $(#[$attr])*
                          stringify!($command) => {
                              let args = $command::CommandArgs::from_arg_matches(matches)?;
                              $command::run(app, args).await
@@ -73,6 +75,7 @@ macro_rules! subcommands {
              if let Some((name, matches)) = app.subcommand() {
                  match name.to_snake_case().as_str() {
                      $(
+                         $(#[$attr])*
                          stringify!($command) => true,
                      )*
                      _ => false,

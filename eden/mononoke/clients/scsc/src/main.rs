@@ -13,6 +13,8 @@
 // (`scmqueryclient_rust_test_support`) so it can coexist with the prod crate in
 // one build graph without a name collision; alias it back to the canonical
 // `scmqueryclient_rust::` path so submodules don't care which is linked.
+// Linux-only: it transitively depends on srclients, which is Linux-only.
+#[cfg(target_os = "linux")]
 extern crate scmqueryclient_rust_test_support as scmqueryclient_rust;
 
 use std::env;
@@ -119,6 +121,8 @@ struct ScscArgs {
     /// Path to a JustKnobs override config (JSON) to load via cached_config.
     /// Hidden: used by integration tests to flip knobs (e.g.
     /// `scm/scmquery:direct_scs`) through `merge_just_knobs`.
+    /// Linux-only: cached_config and justknobs are Linux-only deps.
+    #[cfg(target_os = "linux")]
     #[clap(long, hide = true)]
     just_knobs_config_path: Option<String>,
 
@@ -126,6 +130,7 @@ struct ScscArgs {
     connection_args: ConnectionArgs,
 }
 
+#[cfg(target_os = "linux")]
 async fn init_just_knobs_from_config_path(path: &str) -> anyhow::Result<()> {
     use anyhow::Context;
     let config_json = tokio::fs::read_to_string(path)
@@ -151,6 +156,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
         .arg_required_else_help(true);
     let matches = app.get_matches();
     let common_args = ScscArgs::from_arg_matches(&matches)?;
+    #[cfg(target_os = "linux")]
     if let Some(just_knobs_config_path) = &common_args.just_knobs_config_path {
         init_just_knobs_from_config_path(just_knobs_config_path).await?;
     }

@@ -41,6 +41,9 @@ base_app::subcommands! {
     mod repo_info;
     mod repos;
     mod run_hooks;
+    // scmqueryclient-rust-test-support transitively depends on Linux-only
+    // srclients, so this integration-test subcommand cannot build for mac/windows.
+    #[cfg(target_os = "linux")]
     mod scmqueryclient_test if "SCSC_SCMQUERY_TEST_ENABLED";
     mod sparse_profile_delta;
     mod sparse_profile_size;

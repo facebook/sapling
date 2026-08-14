@@ -8,11 +8,15 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
+#[cfg(target_os = "linux")]
 use anyhow::Context;
 use anyhow::Result;
 use commit_id_types::CommitIdArgs;
+#[cfg(target_os = "linux")]
 use percent_encoding::percent_decode;
+#[cfg(target_os = "linux")]
 use permission_checker::MononokeIdentity;
+#[cfg(target_os = "linux")]
 use permission_checker::MononokeIdentitySet;
 use scs_client_raw::thrift;
 use serde::Serialize;
@@ -41,10 +45,14 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Name of the bookmark you would push to if pushing for real
     to: String,
+    // `--run-as` / `--run-as-encoded` serialize an `AuthenticatedIdentity`
+    // envelope via permission_checker, which is Linux-only.
+    #[cfg(target_os = "linux")]
     #[clap(long = "run-as", value_name = "TYPE:DATA")]
     /// Run the hooks as if the push was performed by these identities instead
     /// of your own (format: TYPE:data, e.g. USER:alice).
     run_as: Vec<String>,
+    #[cfg(target_os = "linux")]
     #[clap(
         long = "run-as-encoded",
         value_name = "ENCODED",
@@ -62,6 +70,7 @@ pub(super) struct CommandArgs {
 /// which clap keeps mutually exclusive. Both forms are sent as a
 /// compact-encoded `AuthenticatedIdentity` list so identity attributes survive
 /// the wire.
+#[cfg(target_os = "linux")]
 fn run_as_identities(
     run_as: &[String],
     run_as_encoded: Option<&str>,
@@ -148,7 +157,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let bookmark: String = args.to.clone();
     let pushvars = args.pushvar_args.clone().into_pushvars();
+    #[cfg(target_os = "linux")]
     let run_as = run_as_identities(&args.run_as, args.run_as_encoded.as_deref())?;
+    #[cfg(not(target_os = "linux"))]
+    let run_as = None;
 
     let params = thrift::CommitRunHooksParams {
         bookmark: bookmark.clone(),
@@ -188,7 +200,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     app.target.render_one(&args, output).await
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use mononoke_macros::mononoke;
     use permission_checker::MononokeIdentitySetExt;
