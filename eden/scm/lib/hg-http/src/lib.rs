@@ -122,6 +122,13 @@ pub fn http_config(
         hc.http_worker_threads = threads;
     }
 
+    if let Some(length) = config
+        .get_opt("http", "response-buffer-length")
+        .unwrap_or_default()
+    {
+        hc.response_buffer_length = length;
+    }
+
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
             .domain()

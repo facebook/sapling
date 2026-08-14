@@ -28,6 +28,7 @@ use crate::event_listeners::HttpClientEventListeners;
 use crate::handler::HandlerExt;
 use crate::pool::Pool;
 use crate::receiver::ChannelReceiver;
+use crate::receiver::DEFAULT_RESPONSE_BUFFER_LENGTH;
 use crate::request::Method;
 use crate::request::Request;
 use crate::request::StreamRequest;
@@ -99,6 +100,7 @@ pub struct Config {
 
     pub read_buffer_size: Option<u64>,
     pub write_buffer_size: Option<u64>,
+    pub response_buffer_length: usize,
     pub follow_redirects: bool,
 
     pub http_proxy_host: Option<String>,
@@ -136,6 +138,7 @@ impl Default for Config {
 
             read_buffer_size: None,
             write_buffer_size: None,
+            response_buffer_length: DEFAULT_RESPONSE_BUFFER_LENGTH,
             follow_redirects: true,
 
             http_proxy_host: None,
@@ -299,7 +302,7 @@ impl HttpClient {
 
     fn prepare_async_request(&self, req: Request) -> (StreamRequest, ResponseFuture) {
         let request_info = req.ctx().info().clone();
-        let (receiver, streams) = ChannelReceiver::new();
+        let (receiver, streams) = ChannelReceiver::new(self.config.response_buffer_length);
         let request = req.into_streaming(Box::new(receiver));
         let response = AsyncResponse::new(streams, request_info).boxed();
         (request, response)

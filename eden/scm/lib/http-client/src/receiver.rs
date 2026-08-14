@@ -15,6 +15,7 @@ use crate::progress::Progress;
 pub mod channel;
 
 pub use channel::ChannelReceiver;
+pub(crate) use channel::DEFAULT_RESPONSE_BUFFER_LENGTH;
 pub use channel::ResponseStreams;
 
 /// Interface for streaming HTTP response handlers.

@@ -11,6 +11,7 @@ use anyhow::Result;
 use futures::Stream;
 use futures::StreamExt;
 use futures::channel::oneshot;
+use futures::stream;
 
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
@@ -19,7 +20,7 @@ use crate::receiver::Receiver;
 
 type Headers = flume::Receiver<Header>;
 type Done = oneshot::Receiver<Result<(), HttpClientError>>;
-const BODY_CHUNK_QUEUE_SIZE: usize = 100;
+pub(crate) const DEFAULT_RESPONSE_BUFFER_LENGTH: usize = 16;
 
 /// The receiving end of a `ChannelReceiver`.
 pub struct ResponseStreams {
@@ -31,18 +32,21 @@ pub struct ResponseStreams {
 /// A `Receiver` that forwards all received data into channels.
 pub struct ChannelReceiver {
     headers_tx: flume::Sender<Header>,
-    body_tx: flume::Sender<Vec<u8>>,
+    body_tx: crossfire::MTx<crossfire::mpsc::Array<Vec<u8>>>,
     done_tx: Option<oneshot::Sender<Result<(), HttpClientError>>>,
     is_paused: bool,
 }
 
 impl ChannelReceiver {
-    pub fn new() -> (Self, ResponseStreams) {
+    pub fn new(response_buffer_length: usize) -> (Self, ResponseStreams) {
         let (headers_tx, headers_rx) = flume::unbounded();
 
-        // Arbitrary queue limit. Big enough to keep the pipeline full, but small enough
-        // to not use "all" the memory with potentially hundreds of concurrent requests.
-        let (body_tx, body_rx) = flume::bounded(BODY_CHUNK_QUEUE_SIZE);
+        let (body_tx, body_rx) =
+            crossfire::mpsc::bounded_blocking_async(response_buffer_length.max(1));
+        let body_rx = stream::unfold(body_rx, |body_rx| async move {
+            body_rx.recv().await.ok().map(|chunk| (chunk, body_rx))
+        })
+        .boxed();
 
         let (done_tx, done_rx) = oneshot::channel();
 
@@ -55,7 +59,7 @@ impl ChannelReceiver {
 
         let streams = ResponseStreams {
             headers_rx,
-            body_rx: body_rx.into_stream().boxed(),
+            body_rx,
             done_rx,
         };
 
@@ -71,7 +75,7 @@ impl Receiver for ChannelReceiver {
                 self.is_paused = false;
                 Ok(false)
             }
-            Err(flume::TrySendError::Full(_)) => {
+            Err(crossfire::TrySendError::Full(_)) => {
                 // Queue is full - tell curl to pause the transfer.
                 self.is_paused = true;
                 Ok(true)
@@ -106,41 +110,37 @@ impl Receiver for ChannelReceiver {
 
 #[cfg(test)]
 mod tests {
+    use futures::executor::block_on;
+
     use super::*;
 
     #[test]
-    fn dropped_body_receiver_unpauses_full_channel() -> Result<()> {
-        let (mut receiver, streams) = ChannelReceiver::new();
+    fn bounded_body_queue_pauses_and_resumes() -> Result<()> {
+        let (mut receiver, mut streams) = ChannelReceiver::new(1);
 
-        for _ in 0..BODY_CHUNK_QUEUE_SIZE {
-            assert!(!receiver.chunk(vec![0])?);
-        }
-        assert!(receiver.chunk(vec![0])?);
+        assert!(!receiver.chunk(vec![1])?);
+        assert!(receiver.chunk(vec![2])?);
+        assert!(receiver.is_paused());
+        assert!(!receiver.needs_unpause());
 
-        drop(streams.body_rx);
-
+        assert_eq!(block_on(streams.body_rx.next()), Some(vec![1]));
         assert!(receiver.needs_unpause());
-        assert!(receiver.chunk(vec![0]).is_err());
+
+        assert!(!receiver.chunk(vec![2])?);
+        assert_eq!(block_on(streams.body_rx.next()), Some(vec![2]));
         Ok(())
     }
 
     #[test]
-    fn drained_body_receiver_unpauses_full_channel() -> Result<()> {
-        let (mut receiver, mut streams) = ChannelReceiver::new();
+    fn dropped_body_receiver_unpauses_full_channel() -> Result<()> {
+        let (mut receiver, streams) = ChannelReceiver::new(1);
 
-        for _ in 0..BODY_CHUNK_QUEUE_SIZE {
-            assert!(!receiver.chunk(vec![0])?);
-        }
-        assert!(receiver.chunk(vec![0])?);
-        assert!(!receiver.needs_unpause());
-
-        assert_eq!(
-            futures::executor::block_on(streams.body_rx.next()),
-            Some(vec![0])
-        );
+        assert!(!receiver.chunk(vec![1])?);
+        assert!(receiver.chunk(vec![2])?);
+        drop(streams.body_rx);
 
         assert!(receiver.needs_unpause());
-        assert!(!receiver.chunk(vec![0])?);
+        assert!(receiver.chunk(vec![2]).is_err());
         Ok(())
     }
 }
