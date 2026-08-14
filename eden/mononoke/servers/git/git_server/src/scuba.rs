@@ -7,6 +7,7 @@
 
 use context::CoreContext;
 use gotham::state::State;
+use gotham_ext::middleware::HttpScubaKey;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
@@ -222,7 +223,7 @@ impl MononokeGitScubaHandler {
         // TODO(T247968902) logging of status code should be consolidated in one place
         scuba.add("http_status", status_code.as_u16());
         scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id);
-        scuba.add_opt("user_agent", user_agent);
+        scuba.add_opt(HttpScubaKey::HttpUserAgent, user_agent);
         scuba.add_opt("client_correlator", client_correlator);
         scuba.add_opt("client_entry_point", client_entrypoint);
         scuba.add(
