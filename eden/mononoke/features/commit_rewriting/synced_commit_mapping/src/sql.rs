@@ -47,6 +47,10 @@ use crate::SyncedCommitMappingEntry;
 use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
 
+/// Kill switch for resolving many target repos in one query instead of one query
+/// per target repo. Off -> the previous per-target-repo behaviour.
+const BATCH_TARGET_REPOS_KNOB: &str = "scm/mononoke:synced_commit_mapping_batch_target_repos";
+
 define_stats! {
     prefix = "mononoke.synced_commit_mapping";
     gets: timeseries(Rate, Sum),
@@ -182,6 +186,22 @@ mononoke_queries! {
         SELECT small_bcs_id as source_bcs_id, large_bcs_id as target_bcs_id, sync_map_version_name, source_repo
           FROM synced_commit_mapping
           WHERE small_repo_id = {source_repo_id} AND small_bcs_id IN {bcs_ids} AND large_repo_id = {target_repo_id}"
+    }
+
+    read SelectMappingsManyTargets(
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        >list target_repo_ids: RepositoryId
+    ) -> (RepositoryId, ChangesetId, Option<CommitSyncConfigVersion>, Option<SyncedCommitSourceRepo>) {
+        "SELECT small_repo_id as target_repo_id, small_bcs_id as target_bcs_id, sync_map_version_name, source_repo
+          FROM synced_commit_mapping
+          WHERE large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id IN {target_repo_ids}
+
+        UNION
+
+        SELECT large_repo_id as target_repo_id, large_bcs_id as target_bcs_id, sync_map_version_name, source_repo
+          FROM synced_commit_mapping
+          WHERE small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id} AND large_repo_id IN {target_repo_ids}"
     }
 
     write InsertWorkingCopyEquivalence(values: (
@@ -566,6 +586,65 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             &self.read_connection,
         )
         .await
+    }
+
+    async fn get_maybe_stale_many_targets(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_ids: &[RepositoryId],
+    ) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error> {
+        if target_repo_ids.is_empty() {
+            // SQL doesn't support querying empty lists.
+            return Ok(HashMap::new());
+        }
+
+        // One target has nothing to batch, so keep the rendezvous, which can still
+        // coalesce it with concurrent lookups of the same repo pair.
+        if target_repo_ids.len() == 1 || !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
+            let mut res = HashMap::new();
+            for target_repo_id in target_repo_ids {
+                let entries = self
+                    .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
+                    .await?;
+                if !entries.is_empty() {
+                    res.insert(*target_repo_id, entries);
+                }
+            }
+            return Ok(res);
+        }
+
+        STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        // Bypasses the rendezvous on purpose: it batches one repo pair across
+        // concurrent requests, and this is already a batch across every target.
+        let rows = SelectMappingsManyTargets::query(
+            &self.read_connection.conn,
+            ctx.sql_query_telemetry(),
+            &source_repo_id,
+            &bcs_id,
+            target_repo_ids,
+        )
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(
+                |(target_repo_id, target_bcs_id, maybe_version_name, maybe_source_repo)| {
+                    (
+                        target_repo_id,
+                        FetchedMappingEntry {
+                            target_bcs_id,
+                            maybe_version_name,
+                            maybe_source_repo,
+                        },
+                    )
+                },
+            )
+            .into_group_map())
     }
 
     async fn insert_equivalent_working_copy(
