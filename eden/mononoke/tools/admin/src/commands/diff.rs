@@ -6,12 +6,12 @@
  */
 
 use std::collections::BTreeSet;
-use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::Parser;
+use futures_stats::TimedFutureExt;
 use maplit::btreeset;
 use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
@@ -137,9 +137,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         ChangesetFileOrdering::Unordered
     };
 
-    let start = Instant::now();
     // `diff` reports changes to its receiver, so `to` is the base.
-    let diff = to
+    let (stats, diff) = to
         .diff(
             &from,
             !args.skip_copies_renames,
@@ -149,7 +148,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             ordering,
             args.limit,
         )
-        .await?;
+        .timed()
+        .await;
+    let diff = diff?;
 
     for entry in &diff {
         let path = entry.path();
@@ -165,6 +166,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
     }
 
-    eprintln!("{} entries in {:?}", diff.len(), start.elapsed());
+    eprintln!("{} entries in {:?}", diff.len(), stats.completion_time);
+    // Names match the `mononoke_diff_service` scuba columns.
+    eprintln!(
+        "completion_time_us={} poll_time_us={} max_poll_time_us={} poll_count={}",
+        stats.completion_time.as_micros(),
+        stats.poll_time.as_micros(),
+        stats.max_poll_time.as_micros(),
+        stats.poll_count,
+    );
     Ok(())
 }

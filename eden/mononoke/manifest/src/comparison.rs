@@ -514,6 +514,7 @@ where
     let mut cmps =
         compare_manifest_with_stores(ctx, new_store, old_store, new_mf, vec![Some(old_mf)]).await?;
     while let Some(cmp) = cmps.try_next().await? {
+        tokio::task::consume_budget().await;
         match cmp {
             ManifestComparison::Same(..) => {}
             ManifestComparison::New(Span::Element(name, entry)) => {
@@ -522,6 +523,7 @@ where
             ManifestComparison::New(Span::Prefix(prefix, trie_map)) => {
                 let mut entries = trie_map.into_stream(ctx, new_store).await?;
                 while let Some((suffix, entry)) = entries.try_next().await? {
+                    tokio::task::consume_budget().await;
                     let name = prefix.clone().join_into_element(suffix)?;
                     result.push((name, None, Some(entry)));
                 }
@@ -533,6 +535,7 @@ where
                 if let Some(trie_map) = base_trie_maps.into_iter().flatten().next() {
                     let mut entries = trie_map.into_stream(ctx, old_store).await?;
                     while let Some((suffix, entry)) = entries.try_next().await? {
+                        tokio::task::consume_budget().await;
                         let name = prefix.clone().join_into_element(suffix)?;
                         result.push((name, Some(entry), None));
                     }
@@ -857,6 +860,7 @@ where
 
     let mut result = Vec::with_capacity(differing.len());
     for (name, old_entry, new_entry) in differing {
+        tokio::task::consume_budget().await;
         let left = weight_entry(ctx, old_store, old_mf.as_ref(), &name, old_entry).await?;
         let right = weight_entry(ctx, new_store, new_mf.as_ref(), &name, new_entry).await?;
         result.push((name, left, right));
