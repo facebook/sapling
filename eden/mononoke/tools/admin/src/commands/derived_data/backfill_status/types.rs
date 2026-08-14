@@ -121,6 +121,25 @@ pub(super) enum BackfillChildParams {
         segments: Vec<SliceSegmentDisplayData>,
         config_name: Option<String>,
     },
+    /// The per-repo fan-out node: computes slices and boundaries for one repo
+    /// and enqueues the derive_boundaries / derive_slice children beneath it.
+    DeriveBackfillRepo {
+        repo_id: i64,
+        derived_data_type: String,
+        cs_id_count: usize,
+        slice_size: i64,
+        boundaries_concurrency: i32,
+        num_boundary_requests: i32,
+        reslice: bool,
+        auto_enable: bool,
+        config_name: Option<String>,
+    },
+    /// Cascade-dependent leaf that records the type as enabled for one repo
+    /// once that repo's backfill fully succeeds.
+    MarkTypeEnabled {
+        repo_id: i64,
+        derived_data_type: String,
+    },
 }
 
 pub(super) struct SliceSegmentDisplayData {
@@ -136,6 +155,16 @@ pub(super) enum BackfillChildResult {
     },
     DeriveSlice {
         derived_count: i64,
+        error_message: Option<String>,
+    },
+    DeriveBackfillRepo {
+        total_sub_requests: i64,
+        error_message: Option<String>,
+    },
+    MarkTypeEnabled {
+        repo_id: i64,
+        derived_data_type: String,
+        enabled: bool,
         error_message: Option<String>,
     },
     Error {

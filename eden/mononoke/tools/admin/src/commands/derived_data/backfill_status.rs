@@ -18,8 +18,10 @@ use anyhow::Result;
 use anyhow::bail;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
+use async_requests::types::DeriveBackfillRepo;
 use async_requests::types::DeriveBoundaries;
 use async_requests::types::DeriveSlice;
+use async_requests::types::MarkTypeEnabled;
 use async_requests::types::RequestTypeName;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::types::ThriftAsynchronousRequestResult;
@@ -747,7 +749,13 @@ async fn load_per_repo_commit_counts(
         let derived_count = match result? {
             BackfillChildResult::DeriveBoundaries { derived_count, .. }
             | BackfillChildResult::DeriveSlice { derived_count, .. } => derived_count.max(0),
-            BackfillChildResult::Error { .. } => 0,
+            // Only derive_boundaries / derive_slice entries reach here (see the
+            // filter above), and only those carry a derived count: the per-repo
+            // fan-out node reports sub-request counts and mark_type_enabled is a
+            // bookkeeping write. Neither contributes derived commits.
+            BackfillChildResult::DeriveBackfillRepo { .. }
+            | BackfillChildResult::MarkTypeEnabled { .. }
+            | BackfillChildResult::Error { .. } => 0,
         };
         Some((repo_id, derived_count))
     })
@@ -1163,8 +1171,28 @@ fn decode_child_params(
                 config_name: p.config_name.clone(),
             })
         }
+        (
+            DeriveBackfillRepo::NAME,
+            ThriftAsynchronousRequestParams::derive_backfill_repo_params(p),
+        ) => Ok(BackfillChildParams::DeriveBackfillRepo {
+            repo_id: p.repo_id,
+            derived_data_type: p.derived_data_type.clone(),
+            cs_id_count: p.cs_ids.len(),
+            slice_size: p.slice_size,
+            boundaries_concurrency: p.boundaries_concurrency,
+            num_boundary_requests: p.num_boundary_requests,
+            reslice: p.reslice,
+            auto_enable: p.auto_enable,
+            config_name: p.config_name.clone(),
+        }),
+        (MarkTypeEnabled::NAME, ThriftAsynchronousRequestParams::mark_type_enabled_params(p)) => {
+            Ok(BackfillChildParams::MarkTypeEnabled {
+                repo_id: p.repo_id,
+                derived_data_type: p.derived_data_type.clone(),
+            })
+        }
         (request_type, _) => bail!(
-            "Request ID {} has type {}, not derive_boundaries or derive_slice",
+            "Request ID {} has type {}, which is not a backfill child request",
             entry.id.0,
             request_type,
         ),
@@ -1198,6 +1226,22 @@ async fn load_child_result(
                 error_message: result.error_message.clone(),
             }))
         }
+        (
+            DeriveBackfillRepo::NAME,
+            ThriftAsynchronousRequestResult::derive_backfill_repo_result(result),
+        ) => Ok(Some(BackfillChildResult::DeriveBackfillRepo {
+            total_sub_requests: result.total_sub_requests,
+            error_message: result.error_message.clone(),
+        })),
+        (
+            MarkTypeEnabled::NAME,
+            ThriftAsynchronousRequestResult::mark_type_enabled_result(result),
+        ) => Ok(Some(BackfillChildResult::MarkTypeEnabled {
+            repo_id: result.repo_id,
+            derived_data_type: result.derived_data_type.clone(),
+            enabled: result.enabled,
+            error_message: result.error_message.clone(),
+        })),
         (_, ThriftAsynchronousRequestResult::error(error)) => {
             Ok(Some(BackfillChildResult::Error {
                 message: format!("{error:?}"),
@@ -1301,10 +1345,23 @@ async fn show_backfill_child_request_detail(
         .context("fetching request entry")?
         .ok_or_else(|| anyhow::anyhow!("Invalid request ID: {} does not exist", row_id.0))?;
 
-    if entry.request_type.0 != DeriveBoundaries::NAME && entry.request_type.0 != DeriveSlice::NAME {
+    // Every non-root node of a backfill tree is drillable: the per-repo
+    // fan-out node (derive_backfill_repo), the derivation leaves
+    // (derive_boundaries / derive_slice), and the cascade-dependent
+    // mark_type_enabled leaf. Anything else is not part of a backfill.
+    const DRILLABLE_CHILD_TYPES: [&str; 4] = [
+        DeriveBackfillRepo::NAME,
+        DeriveBoundaries::NAME,
+        DeriveSlice::NAME,
+        MarkTypeEnabled::NAME,
+    ];
+    if !DRILLABLE_CHILD_TYPES.contains(&entry.request_type.0.as_str()) {
         bail!(
-            "Invalid request ID: {} is not a backfill root, derive_boundaries, or derive_slice request",
-            row_id.0
+            "Invalid request ID: {} has type {}, which is not a backfill root or child \
+             request (expected one of: {})",
+            row_id.0,
+            entry.request_type.0,
+            DRILLABLE_CHILD_TYPES.join(", "),
         );
     }
 
