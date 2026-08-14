@@ -262,6 +262,33 @@ pub trait SyncedCommitMapping: Send + Sync {
         bcs_ids: &[ChangesetId],
     ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error>;
 
+    /// Find the mapping entries for one source commit across many target repos.
+    ///
+    /// Target repos with no mapping are absent from the returned map. Like
+    /// `get_maybe_stale`, this doesn't query the DB master and so can return
+    /// stale data.
+    ///
+    /// Prefer this over `get_maybe_stale` once per target repo: implementations
+    /// may resolve every target in a single query.
+    async fn get_maybe_stale_many_targets(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_ids: &[RepositoryId],
+    ) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error> {
+        let mut res = HashMap::new();
+        for target_repo_id in target_repo_ids {
+            let entries = self
+                .get_maybe_stale(ctx, source_repo_id, bcs_id, *target_repo_id)
+                .await?;
+            if !entries.is_empty() {
+                res.insert(*target_repo_id, entries);
+            }
+        }
+        Ok(res)
+    }
+
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
     /// however there are a few differences:
     /// 1) For (large repo, small repo) pair, many large commits can map to the same small commit

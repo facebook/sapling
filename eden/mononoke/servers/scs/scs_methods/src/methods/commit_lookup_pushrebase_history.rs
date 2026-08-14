@@ -169,21 +169,29 @@ impl RepoChangesetsPushrebaseHistory {
         config: CommonCommitSyncConfig,
     ) -> Result<bool, scs_errors::ServiceError> {
         let mut synced_changesets = vec![];
-        let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
-            (
-                config.small_repos.keys().copied().collect(),
-                SyncedCommitSourceRepo::Small,
-            )
-        } else {
-            (vec![config.large_repo_id], SyncedCommitSourceRepo::Large)
-        };
+        let (target_repo_ids, expected_sync_origin): (Vec<_>, _) =
+            if config.large_repo_id == repo.repoid() {
+                (
+                    config.small_repos.keys().copied().collect(),
+                    SyncedCommitSourceRepo::Small,
+                )
+            } else {
+                (vec![config.large_repo_id], SyncedCommitSourceRepo::Large)
+            };
 
-        for target_repo_id in target_repo_ids.into_iter() {
-            let entries = repo
-                .synced_commit_mapping()
-                .get_maybe_stale(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
-                .await
-                .map_err(scs_errors::internal_error)?;
+        let mut by_target_repo = repo
+            .synced_commit_mapping()
+            .get_maybe_stale_many_targets(&self.ctx, repo.repoid(), bcs_id, &target_repo_ids)
+            .await
+            .map_err(scs_errors::internal_error)?;
+
+        // Driven by target_repo_ids rather than by the returned map, so that the
+        // order of synced_changesets - and so of the ambiguity error below - does
+        // not vary from request to request.
+        for target_repo_id in target_repo_ids {
+            let Some(entries) = by_target_repo.remove(&target_repo_id) else {
+                continue;
+            };
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
                 synced_changesets.extend(entries.into_iter().filter_map(|entry| {
                     let traverse = match entry.maybe_source_repo {
