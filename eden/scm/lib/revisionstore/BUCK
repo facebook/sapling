@@ -10,7 +10,6 @@ sl_rust_library(
             "dependencies_override": {
                 "dependencies": {
                     "sapling-minibytes": {"features": ["frombytes"]},
-                    "sapling-version": {"path": "../version"},
                 },
             },
             "features": {

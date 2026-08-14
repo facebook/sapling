@@ -7,7 +7,6 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "dependencies_override": {"dependencies": {"sapling-version": {"path": "../version"}}},
             "lib": {"name": "edenapi"},
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],

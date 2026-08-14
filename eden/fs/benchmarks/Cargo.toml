@@ -13,13 +13,13 @@ path = "benchmarks.rs"
 
 [dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio", "csv_output"] }
-rand = { version = "0.9", features = ["small_rng"] }
+rand = "0.10.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.186"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.186"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything", "std"] }
