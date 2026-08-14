@@ -20,7 +20,6 @@ _RUST_DEP_OVERRIDES = {
         "features": [],
         "git": None,
         "rev": None,
-        "version": "0.23.3",
     },
 }
 
