@@ -54,6 +54,7 @@ export const submittableSelection = atom(get => {
 export function SubmitSelectionButton({commit}: {commit?: CommitInfo}) {
   const submittable = useAtomValue(submittableSelection);
   const provider = useAtomValue(codeReviewProvider);
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
 
   if (
     provider == null ||
@@ -86,7 +87,11 @@ export function SubmitSelectionButton({commit}: {commit?: CommitInfo}) {
             });
           }}
           contextKey={`submit-selection-${submittable[0].hash}`}>
-          <T replace={{$count: submittable.length}}>Submit $count commits</T>
+          {shouldSubmitAsDraft ? (
+            <T replace={{$count: submittable.length}}>Submit $count drafts</T>
+          ) : (
+            <T replace={{$count: submittable.length}}>Submit $count commits</T>
+          )}
         </OperationDisabledButton>
       </HighlightCommitsWhileHovering>
     </Tooltip>

@@ -25,6 +25,7 @@ export function SubmitSingleCommitButton() {
   const provider = useAtomValue(codeReviewProvider);
   const diff = useAtomValue(diffSummary(headCommit?.diffId));
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
 
   const runOperation = useRunOperation();
 
@@ -61,7 +62,7 @@ export function SubmitSingleCommitButton() {
         icon
         data-testid="submit-button">
         <Icon icon="cloud-upload" slot="start" />
-        <T>Submit</T>
+        {shouldSubmitAsDraft ? <T>Submit Draft</T> : <T>Submit</T>}
       </Button>
     </Tooltip>
   );
