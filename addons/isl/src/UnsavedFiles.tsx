@@ -18,7 +18,7 @@ import serverAPI from './ClientToServerAPI';
 import {Column, Row} from './ComponentUtils';
 import {availableCwds} from './CwdSelector';
 import {T, t} from './i18n';
-import {readAtom, writeAtom} from './jotaiUtils';
+import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {showModal} from './useModal';
 import {registerCleanup, registerDisposable} from './utils';
@@ -43,6 +43,15 @@ registerDisposable(
     writeAtom(unsavedFiles, event.unsaved),
   ),
   import.meta.hot,
+);
+
+/**
+ * Some users intentionally leave files unsaved to keep changes out of their commits,
+ * so the warning about unsaved files can be opted out of.
+ */
+export const disableUnsavedFilesWarning = localStorageBackedAtom<boolean>(
+  'isl.disable-unsaved-files-warning',
+  false,
 );
 
 export function UnsavedFilesCount() {
@@ -86,6 +95,10 @@ export function UnsavedFilesCount() {
  * false if they cancelled.
  */
 export async function confirmUnsavedFiles(): Promise<boolean> {
+  if (readAtom(disableUnsavedFilesWarning)) {
+    return true;
+  }
+
   const unsaved = readAtom(unsavedFiles);
   if (unsaved.length === 0) {
     return true;

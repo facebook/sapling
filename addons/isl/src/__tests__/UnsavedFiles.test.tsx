@@ -8,6 +8,7 @@
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {nextTick} from 'shared/testUtils';
 import App from '../App';
+import {writeAtom} from '../jotaiUtils';
 import {
   closeCommitInfoSidebar,
   COMMIT,
@@ -19,6 +20,7 @@ import {
   simulateRepoConnected,
   simulateUncommittedChangedFiles,
 } from '../testUtils';
+import {disableUnsavedFilesWarning} from '../UnsavedFiles';
 
 describe('UnsavedFiles', () => {
   beforeEach(() => {
@@ -74,6 +76,7 @@ describe('UnsavedFiles', () => {
 
   describe('confirms before commit/amend', () => {
     beforeEach(() => {
+      act(() => writeAtom(disableUnsavedFilesWarning, false));
       act(() =>
         simulateMessageFromServer({
           type: 'platform/unsavedFiles',
@@ -111,6 +114,23 @@ describe('UnsavedFiles', () => {
       fireEvent.click(screen.getByText('Commit'));
       expect(screen.getByText('You have 1 unsaved file')).toBeInTheDocument();
       fireEvent.click(screen.getByText('Continue Without Saving'));
+      expectMessageNOTSentToServer({
+        type: 'platform/saveAllUnsavedFiles',
+      });
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: expect.arrayContaining(['commit']),
+          }),
+        }),
+      );
+    });
+
+    it('skips confirmation when the warning is disabled', async () => {
+      act(() => writeAtom(disableUnsavedFilesWarning, true));
+      fireEvent.click(screen.getByText('Commit'));
+      expect(screen.queryByText('You have 1 unsaved file')).not.toBeInTheDocument();
       expectMessageNOTSentToServer({
         type: 'platform/saveAllUnsavedFiles',
       });

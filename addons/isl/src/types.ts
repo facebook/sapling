@@ -1021,6 +1021,7 @@ export type LocalStorageName =
   | 'isl.ai-code-review-selected-option'
   | 'isl.focus-mode'
   | 'isl.scroll-to-you-are-here-on-open'
+  | 'isl.disable-unsaved-files-warning'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:';

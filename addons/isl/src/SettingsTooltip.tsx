@@ -34,6 +34,7 @@ import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
 import {Link} from './Link';
 import {RestackBehaviorSetting} from './RestackBehavior';
 import {Setting} from './Setting';
+import {disableUnsavedFilesWarning} from './UnsavedFiles';
 import {
   currentExperimentalFeaturesList,
   hasExperimentalFeatures,
@@ -233,6 +234,7 @@ function SettingsDropdown({
           <Column alignStart>
             <OpenFilesCmdSetting />
             <ExternalMergeToolSetting />
+            <DisableUnsavedFilesWarningSetting />
           </Column>
         </Setting>
       )}
@@ -564,6 +566,26 @@ function ExternalMergeToolSetting() {
         </Subtle>
         <Icon icon="question" />
       </Row>
+    </Tooltip>
+  );
+}
+
+function DisableUnsavedFilesWarningSetting() {
+  const [value, setValue] = useAtom(disableUnsavedFilesWarning);
+  return (
+    <Tooltip
+      title={t(
+        'By default, committing or amending while files are unsaved in your editor shows a confirmation, ' +
+          'which lets you save them first. Enable this to skip that confirmation, ' +
+          'for example if you intentionally leave files unsaved to keep them out of your commits.',
+      )}>
+      <Checkbox
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Don't warn about unsaved files when committing or amending</T>
+      </Checkbox>
     </Tooltip>
   );
 }
