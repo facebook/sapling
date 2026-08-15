@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 cache_warmup = { version = "0.1.0", path = "../../../features/cache_warmup" }
 cats = { version = "0.1.0", path = "../../../common/cats" }
 clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }

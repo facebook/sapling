@@ -14,7 +14,7 @@ name = "storemodel"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 blob = { version = "0.1.0", path = "../blob" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

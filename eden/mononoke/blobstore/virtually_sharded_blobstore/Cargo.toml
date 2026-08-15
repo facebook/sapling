@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 async_limiter = { version = "0.1.0", path = "../../common/async_limiter" }
 blobstore = { version = "0.1.0", path = ".." }
 bytes = { version = "1.12.1", features = ["serde"] }

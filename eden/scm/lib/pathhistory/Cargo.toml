@@ -23,7 +23,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 blob = { version = "0.1.0", path = "../blob" }
 ctor = "1.0.8"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }

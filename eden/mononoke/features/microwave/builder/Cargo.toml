@@ -13,7 +13,7 @@ path = "main.rs"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 blobrepo_override = { version = "0.1.0", path = "../../../blobrepo/override" }
 blobstore_factory = { version = "0.1.0", path = "../../../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../../repo_attributes/bonsai_hg_mapping" }

@@ -56,7 +56,7 @@ watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchm
 whoami = "1.5"
 
 [dev-dependencies]
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 blob = { version = "0.1.0", path = "../blob" }
 sapling-io = { version = "0.1.0", path = "../io" }
 tempfile = "3.27.0"

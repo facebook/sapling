@@ -13,7 +13,7 @@ license = "MIT"
 name = "revlogindex"
 
 [dependencies]
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 bit-vec = "0.9"
 byteorder = "1.5"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

@@ -11,7 +11,7 @@ autotests = false
 [dependencies]
 anyhow = "1.0.104"
 ascii = "1.1.0"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 bincode = { version = "2", features = ["serde"] }
 bytes = { version = "1.12.1", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../../common/rust/caching_ext" }

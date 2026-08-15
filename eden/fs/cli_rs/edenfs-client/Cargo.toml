@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.104"
 async-recursion = "1.1.1"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 byteorder = "1.5"
 dirs = "6.0"
 dunce = "1.0.5"

@@ -14,7 +14,7 @@ name = "edenapi"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.15.0"
