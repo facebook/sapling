@@ -34,7 +34,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 restricted_paths = { version = "0.1.0", path = "../repo_attributes/restricted_paths" }
 thiserror = "2.0.19"
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.19", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

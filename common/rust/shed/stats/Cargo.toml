@@ -16,7 +16,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 perthread = { version = "0.1.0", path = "../perthread" }
 stats_traits = { version = "0.1.0", path = "traits" }
 tokio = { version = "1.52.4", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.19", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fbcode_build)", 'cfg(stats_backend, values("noop"))']}
