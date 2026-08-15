@@ -28,7 +28,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/rep
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
-either = "1.16.0"
+either = "1.17.0"
 fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
