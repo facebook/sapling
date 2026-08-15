@@ -24,7 +24,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]

@@ -27,7 +27,7 @@ serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0.229"
 sha1 = "0.10.7"
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 
 [dev-dependencies]
 quickcheck = "1.1"

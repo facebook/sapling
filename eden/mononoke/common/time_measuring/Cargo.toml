@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.104"
 dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

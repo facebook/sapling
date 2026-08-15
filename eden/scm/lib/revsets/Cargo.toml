@@ -21,4 +21,4 @@ sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-types = { version = "0.1.0", path = "../types" }
-thiserror = "2.0.19"
+thiserror = "2.0.20"

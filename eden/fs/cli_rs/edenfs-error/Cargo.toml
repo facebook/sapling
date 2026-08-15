@@ -10,6 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.104"
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }

@@ -19,7 +19,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 nom = "8"
 pin-project = "1.1.13"
 qps = { version = "0.1.0", path = "../../servers/slapi/slapi_server/qps" }
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.19", features = ["full"] }
 

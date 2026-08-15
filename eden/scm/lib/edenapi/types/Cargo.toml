@@ -32,7 +32,7 @@ sapling-type_macros = { version = "0.1.0", path = "proc_macros" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 
 [dev-dependencies]
 quickcheck_macros = "1.2.0"
