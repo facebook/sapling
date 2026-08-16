@@ -170,6 +170,42 @@ def isloaded(name):
     return name in _extensions
 
 
+def _loadpath(path, module_name):
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _discardbytecode(path):
+    source_paths = [path]
+    if os.path.basename(path) == "__init__.py":
+        dirpath = os.path.dirname(path)
+        source_paths = (
+            os.path.join(root, name)
+            for root, _, names in os.walk(dirpath)
+            for name in names
+            if name.endswith(".py")
+        )
+
+    discarded = False
+    for source_path in source_paths:
+        bytecode_path = importlib.util.cache_from_source(source_path)
+        try:
+            os.unlink(bytecode_path)
+        except FileNotFoundError:
+            continue
+        except PermissionError as exc:
+            raise error.Abort(
+                _("cannot remove Python bytecode caches for '%s': %s")
+                % (bytecode_path, exc.strerror),
+                hint=_("remove this bytecode cache manually, then retry"),
+            ) from exc
+        discarded = True
+    return discarded
+
+
 def loadpath(path, module_name):
     """loads the given extension from the given path
 
@@ -194,11 +230,18 @@ def loadpath(path, module_name):
         if not os.path.exists(path):
             raise IOError(errno.ENOENT, "No such file or directory", path)
 
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-        return module
+        try:
+            return _loadpath(path, module_name)
+        except ValueError as exc:
+            if not str(exc).startswith("bad marshal data"):
+                raise
+            if not _discardbytecode(path):
+                raise
+            module_prefix = module_name + "."
+            for name in list(sys.modules):
+                if name == module_name or name.startswith(module_prefix):
+                    sys.modules.pop(name, None)
+            return _loadpath(path, module_name)
     except IOError as exc:
         if not exc.filename:
             exc.filename = path  # python does not fill this

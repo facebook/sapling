@@ -36,12 +36,10 @@ Force an in-memory three-way merge so the merge driver loads during rebase.
   > A  # A/FILE = 1\n2\n3\n
   > EOS
 
-FIXME: Sapling should discard the corrupt cache and load the merge driver from
-source.
+The merge driver discards the corrupt cache and loads the import from source.
 
-  $ sl rebase -q -r $C -d $B 2>/dev/null
-  loading preprocess hook failed: bad marshal data (unknown type code)
-  [1]
+  $ sl rebase -q -r $C -d $B
+  merge driver loaded from source
 
 #if no-windows
 Recreate the corrupt cache in a directory that Sapling cannot modify.
@@ -62,8 +60,10 @@ Recreate the corrupt cache in a directory that Sapling cannot modify.
   > A  # A/FILE = 1\n2\n3\n
   > EOS
 
-  $ sl rebase -q -r $C -d $B 2>/dev/null
-  loading preprocess hook failed: bad marshal data (unknown type code)
-  [1]
+  $ sl rebase -q -r $C -d $B
+  loading preprocess hook failed: cannot remove Python bytecode caches for '$TESTTMP/driver/__pycache__/privacylib.cpython-312.pyc': Permission denied
+  abort: cannot remove Python bytecode caches for '$TESTTMP/driver/__pycache__/privacylib.cpython-312.pyc': Permission denied
+  (remove this bytecode cache manually, then retry)
+  [255]
   $ chmod u+w $TESTTMP/driver/__pycache__
 #endif
