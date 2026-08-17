@@ -866,8 +866,8 @@ static int check_python_version(void) {
     return -1;
   }
   ver = PyObject_GetAttrString(sys, "hexversion");
-  Py_DECREF(sys);
   if (!ver) {
+    Py_DECREF(sys);
     return -1;
   }
   hexversion = PyInt_AsLong(ver);
@@ -876,6 +876,14 @@ static int check_python_version(void) {
    * should only occur in unusual circumstances (e.g. if sys.hexversion
    * is manually set to an invalid value). */
   if ((hexversion == -1) || (hexversion >> 16 != PY_VERSION_HEX >> 16)) {
+    /* `%V` assumes a str, but `sys.executable` may be `None` or missing.
+     * NULL there selects the fallback instead. */
+    PyObject* executable = PyObject_GetAttrString(sys, "executable");
+    if (!executable) {
+      PyErr_Clear();
+    } else if (!PyUnicode_Check(executable)) {
+      Py_CLEAR(executable);
+    }
     PyErr_Format(
         PyExc_ImportError,
         "%s: The Mercurial extension "
@@ -883,13 +891,17 @@ static int check_python_version(void) {
         ", but "
         "Mercurial is currently using Python with "
         "sys.hexversion=%ld: "
-        "Python %s\n at: %s",
+        "Python %s\n at: %V",
         versionerrortext,
         hexversion,
         Py_GetVersion(),
-        Py_GetProgramFullPath());
+        executable,
+        "<unknown>");
+    Py_XDECREF(executable);
+    Py_DECREF(sys);
     return -1;
   }
+  Py_DECREF(sys);
   return 0;
 }
 
