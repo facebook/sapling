@@ -967,8 +967,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     if (isRestricted) {
       assertRestrictedPlaceholderInvariant();
       lastPermissionCheck_.store(
-          std::chrono::steady_clock::time_point::min(),
-          std::memory_order_relaxed);
+          std::chrono::steady_clock::now(), std::memory_order_relaxed);
     }
   }
 
