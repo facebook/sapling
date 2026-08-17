@@ -54,6 +54,9 @@ CONFIG_D_TARGETS = {
     "facebook/packaging/config.d/doctor.toml": "/etc/eden/config.d/doctor.toml",
 }
 
+DAEMON_ENVIRONMENT_CONFIG_PATH = "/etc/eden/config.d/10-daemon-environment.toml"
+LINUX_DAEMON_ENVIRONMENT_CONFIG = "facebook/packaging/config.d/10-daemon-environment.toml"
+
 EDENFS_WINDOWS_DEPS = [
     "fbcode//eden/fs/cli:edenfsctl",
     "fbcode//eden/fs/cli/trace:trace_stream",
@@ -148,6 +151,16 @@ def make_rpm_features():
         features.append(rpm.install(src = target, dst = install_path, mode = 0o0755))
     for target, install_path in CONFIG_D_TARGETS.items():
         features.append(rpm.install(src = target, dst = install_path, mode = 0o0755))
+    features.append(
+        select({
+            "DEFAULT": None,
+            "ovr_config//os:linux": rpm.install(
+                src = LINUX_DAEMON_ENVIRONMENT_CONFIG,
+                dst = DAEMON_ENVIRONMENT_CONFIG_PATH,
+                mode = 0o0755,
+            ),
+        }),
+    )
 
     for target, (install_path, mode) in MAC_ONLY_TARGETS.items():
         features.append(
