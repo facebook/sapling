@@ -153,8 +153,7 @@ impl Store {
         self.should_compress
     }
 
-    /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
-    /// lot when there is multi-threaded contention. `items` is not consumed so that the caller can reuse storage.
+    /// Append the selected items and consume the input vector.
     pub fn append_batch<K: AsRef<[u8]> + Copy, V>(
         &self,
         items: &mut Vec<(K, V)>,
@@ -175,6 +174,7 @@ impl Store {
                 }
             }
             if insert_idx == 0 {
+                items.clear();
                 return Ok(());
             }
             items.truncate(insert_idx);
@@ -182,8 +182,8 @@ impl Store {
 
         let mut log = self.write()?;
 
-        for (k, v) in items {
-            log.append(|buf: &mut dyn ExtendWrite| serialize(k, v, buf))?;
+        for (k, v) in items.drain(..) {
+            log.append(|buf: &mut dyn ExtendWrite| serialize(&k, &v, buf))?;
         }
 
         Ok(())
@@ -607,6 +607,7 @@ mod tests {
                 .collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
+
         Ok(())
     }
 
@@ -627,6 +628,52 @@ mod tests {
                 .collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_batch_consumes_items() -> Result<()> {
+        let dir = TempDir::new()?;
+
+        let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
+            .index("hex", |_| vec![IndexOutput::Reference(0..2)])
+            .permanent(&dir)?;
+        let mut items = vec![
+            (b"aa".as_slice(), b"aabcd".to_vec()),
+            (b"ab".as_slice(), b"abbcd".to_vec()),
+        ];
+
+        store.append_batch(
+            &mut items,
+            |_, value, buf| -> Result<()> {
+                buf.write_all(value)?;
+                Ok(())
+            },
+            false,
+        )?;
+
+        assert!(items.is_empty());
+        assert_eq!(
+            store
+                .read()?
+                .lookup(0, b"aa")?
+                .collect::<Result<Vec<_>>>()?,
+            vec![b"aabcd"]
+        );
+
+        items.push((b"aa".as_slice(), b"different".to_vec()));
+        store.append_batch(
+            &mut items,
+            |_, value, buf| -> Result<()> {
+                buf.write_all(value)?;
+                Ok(())
+            },
+            true,
+        )?;
+
+        assert!(items.is_empty());
+        assert_eq!(store.read()?.lookup(0, b"aa")?.count(), 1);
         Ok(())
     }
 
