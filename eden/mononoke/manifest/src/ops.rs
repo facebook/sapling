@@ -34,8 +34,8 @@ use crate::PathOrPrefix;
 use crate::PathTree;
 use crate::StoreLoadable;
 use crate::TrieMapOps;
+use crate::comparison::diff_manifest_node;
 use crate::comparison::diff_manifest_node_by_listing;
-use crate::comparison::diff_manifests;
 use crate::select::select_path_tree;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -396,21 +396,46 @@ where
             None,
             None,
         ) {
-            diff_manifests(
-                ctx,
-                store,
-                self.clone(),
-                other_store,
-                other,
-                recurse_pruner,
-                manifest_replacements,
-            )
-            .filter_map(move |result| {
-                future::ready(match result {
-                    Ok(diff) => output_filter(diff).map(Ok),
-                    Err(err) => Some(Err(err)),
-                })
+            let (root_replacement, child_replacements) =
+                ReplacementsHolder::new(manifest_replacements).deconstruct();
+            let this = match root_replacement {
+                None => self.clone(),
+                Some(Entry::Tree(replacement)) => replacement,
+                Some(Entry::Leaf(_)) => {
+                    return stream::once(async move {
+                        Err(anyhow!(
+                            "Manifest replacement at root which resolves to a leaf"
+                        ))
+                    })
+                    .boxed();
+                }
+            };
+
+            if this == other {
+                return stream::empty().boxed();
+            }
+
+            let init = Some((Diff::Changed(MPath::ROOT, this, other), child_replacements));
+
+            bounded_traversal::bounded_traversal_stream(256, init, move |(work, replacements)| {
+                cloned!(ctx, output_filter, recurse_pruner, store, other_store);
+                async move {
+                    let (outs, recurse) = diff_manifest_node(
+                        &ctx,
+                        &store,
+                        &other_store,
+                        work,
+                        replacements,
+                        recurse_pruner,
+                    )
+                    .await?;
+                    let outs: Vec<Out> = outs.into_iter().filter_map(&output_filter).collect();
+                    anyhow::Ok((outs, recurse))
+                }
+                .boxed()
             })
+            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
+            .try_flatten()
             .boxed()
         } else {
             self.filtered_diff_slow(

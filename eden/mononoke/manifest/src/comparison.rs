@@ -6,12 +6,10 @@
  */
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::iter::Peekable;
 
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -443,6 +441,74 @@ where
     Ok(result)
 }
 
+/// Diff a single node, using the sharding-aware comparison engine where it
+/// applies and falling back to listing otherwise.
+///
+/// A replacement-free `Changed` node compares its children via
+/// [`compare_manifest_with_stores`], which prunes identical sub-shards by their
+/// content-addressed id without loading them. Anything else -- a subtree carrying
+/// a replacement, or an added/removed subtree -- is expanded by listing, and its
+/// replacement-free children come back to the fast path here.
+pub(crate) async fn diff_manifest_node<TreeId, Leaf, Store, Pruner>(
+    ctx: &CoreContext,
+    old_store: &Store,
+    new_store: &Store,
+    work: Diff<TreeId>,
+    replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    recurse_pruner: Pruner,
+) -> Result<(
+    Vec<Diff<Entry<TreeId, Leaf>>>,
+    Vec<RecurseWork<TreeId, Leaf>>,
+)>
+where
+    Store: Clone + Send + Sync + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
+    Pruner: Fn(&Diff<TreeId>) -> bool + Send,
+{
+    match work {
+        Diff::Changed(path, old_id, new_id) if replacements.is_empty() => {
+            let (old_mf, new_mf) =
+                future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
+            let mut outs = Vec::new();
+            let mut recurse = Vec::new();
+            for (name, old, new) in
+                diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?
+            {
+                let child_path = path.join(&name);
+                push_child(
+                    classify_child(child_path, old, new),
+                    &mut outs,
+                    &mut recurse,
+                    BTreeMap::new(),
+                    &recurse_pruner,
+                );
+            }
+            outs.push(Diff::Changed(
+                path,
+                Entry::Tree(old_id),
+                Entry::Tree(new_id),
+            ));
+            Ok((outs, recurse))
+        }
+        work => {
+            diff_manifest_node_by_listing(
+                ctx,
+                old_store,
+                new_store,
+                work,
+                replacements,
+                recurse_pruner,
+            )
+            .await
+        }
+    }
+}
+
 /// Diff a single node by listing both sides and substituting old-side entries
 /// with any `replacements`, returning the child `Diff`s plus the subtree work to
 /// recurse into (with the pruner already applied, and the replacements that
@@ -572,125 +638,6 @@ where
         }
     }
     Ok((outs, recurse))
-}
-
-/// A sharding-aware, two-store replacement for the recursion in
-/// [`crate::ManifestOps::filtered_diff`].
-///
-/// Produces the same `Diff` entries as `old_id.filtered_diff(.., new_id, ..)`
-/// with an identity output filter and the given `recurse_pruner`, but compares
-/// each changed directory's children via [`compare_manifest_with_stores`]. For
-/// sharded manifests (e.g. content manifests) this prunes identical sub-shards
-/// by their content-addressed id WITHOUT loading them, instead of re-enumerating
-/// the whole directory on both sides (which is what made content-manifest diffs
-/// pathologically expensive -- see the `derived_data_use_content_manifests` SEV).
-///
-/// `old_id` (the "old"/base side) and `new_id` (the "new" side) may live in
-/// different blobstores (cross-repo diffs); subtree-id pruning is valid across
-/// blobstores because the ids are content hashes.
-///
-/// Supports `manifest_replacements` (like `filtered_diff`): subtrees carrying a
-/// replacement are diffed by listing (the old-side entries are substituted),
-/// while replacement-free subtrees keep the fast id-pruned path -- so a huge
-/// directory off the replacement paths is still never enumerated.
-pub(crate) fn diff_manifests<TreeId, Leaf, Store, Pruner>(
-    ctx: CoreContext,
-    old_store: Store,
-    old_id: TreeId,
-    new_store: Store,
-    new_id: TreeId,
-    recurse_pruner: Pruner,
-    manifest_replacements: HashMap<MPath, Entry<TreeId, Leaf>>,
-) -> impl Stream<Item = Result<Diff<Entry<TreeId, Leaf>>>>
-where
-    Store: Clone + Send + Sync + 'static,
-    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
-    <TreeId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
-    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
-    Pruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + 'static,
-{
-    let (root_replacement, child_replacements) =
-        ReplacementsHolder::new(manifest_replacements).deconstruct();
-    let old_id = match root_replacement {
-        None => old_id,
-        Some(Entry::Tree(replacement)) => replacement,
-        Some(Entry::Leaf(_)) => {
-            return stream::once(async move {
-                Err::<Diff<Entry<TreeId, Leaf>>, _>(anyhow!(
-                    "Manifest replacement at root which resolves to a leaf"
-                ))
-            })
-            .boxed();
-        }
-    };
-
-    let init = if old_id == new_id {
-        None
-    } else {
-        Some((
-            Diff::Changed(MPath::ROOT, old_id, new_id),
-            child_replacements,
-        ))
-    };
-    bounded_traversal::bounded_traversal_stream(256, init, move |(work, replacements)| {
-        cloned!(ctx, old_store, new_store, recurse_pruner);
-        async move {
-            let ctx = &ctx;
-            let old_store = &old_store;
-            let new_store = &new_store;
-            let (outs, recurse) = match work {
-                // Fast path: a replacement-free subtree; compare children via
-                // the shared comparison engine, pruning identical sub-shards by
-                // id without loading them.
-                Diff::Changed(path, old_id, new_id) if replacements.is_empty() => {
-                    let (old_mf, new_mf) =
-                        future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store))
-                            .await?;
-                    let mut outs: Vec<Diff<Entry<TreeId, Leaf>>> = Vec::new();
-                    let mut recurse: Vec<RecurseWork<TreeId, Leaf>> = Vec::new();
-                    for (name, old, new) in
-                        diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?
-                    {
-                        let child_path = path.join(&name);
-                        push_child(
-                            classify_child(child_path, old, new),
-                            &mut outs,
-                            &mut recurse,
-                            BTreeMap::new(),
-                            &recurse_pruner,
-                        );
-                    }
-                    outs.push(Diff::Changed(
-                        path,
-                        Entry::Tree(old_id),
-                        Entry::Tree(new_id),
-                    ));
-                    (outs, recurse)
-                }
-                // A replacement applies somewhere in this subtree, or this is an
-                // added/removed subtree: diff by listing. Replacement-free
-                // children recurse back into the fast path above.
-                work => {
-                    diff_manifest_node_by_listing(
-                        ctx,
-                        old_store,
-                        new_store,
-                        work,
-                        replacements,
-                        recurse_pruner,
-                    )
-                    .await?
-                }
-            };
-            anyhow::Ok((stream::iter(outs).map(Ok), recurse))
-        }
-        .boxed()
-    })
-    .try_flatten()
-    .boxed()
 }
 
 /// Sharding-aware ordered child diff for a single directory level: returns the
