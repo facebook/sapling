@@ -96,17 +96,17 @@ export class InlineBlameProvider implements Disposable {
 
   initBasedOnConfig() {
     const config = 'sapling.showInlineBlame';
-    const enableBlameByDefault =
-      Internal?.shouldEnableBlameByDefault == null
-        ? /* OSS */ true
-        : Internal?.shouldEnableBlameByDefault();
-    if (workspace.getConfiguration().get<boolean>(config, enableBlameByDefault)) {
+    const shouldEnableBlame = () =>
+      Internal?.shouldEnableBlame == null ? /* OSS */ true : Internal?.shouldEnableBlame();
+    if (shouldEnableBlame() && workspace.getConfiguration().get<boolean>(config, true)) {
       this.init();
     }
     this.disposables.push(
       workspace.onDidChangeConfiguration(configChange => {
         if (configChange.affectsConfiguration(config)) {
-          workspace.getConfiguration().get<boolean>(config) ? this.init() : this.deinit();
+          workspace.getConfiguration().get<boolean>(config) && shouldEnableBlame()
+            ? this.init()
+            : this.deinit();
         }
       }),
     );
