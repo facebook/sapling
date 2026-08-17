@@ -11,7 +11,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use byteorder::BigEndian;
@@ -176,12 +175,12 @@ impl Entry {
         let body = if let (true, Some(compressed)) = (should_compress, &self.compressed_content) {
             compressed.clone()
         } else {
-            let content = self.content.get().ok_or_else(|| anyhow!("No content"))?;
+            let content = self.calculate_content()?;
 
             if should_compress {
-                compress(content)?.into()
+                compress(&content)?.into()
             } else {
-                content.clone()
+                content
             }
         };
 
@@ -211,6 +210,7 @@ impl Entry {
 
         if let Some(content) = self.content.get() {
             self.compressed_content = Some(compress(content)?.into());
+            self.content.take();
         }
 
         Ok(())
@@ -508,6 +508,20 @@ mod tests {
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
+
+    #[test]
+    fn test_serialize_uncompressed_after_precompression() -> Result<()> {
+        let content = Bytes::from(&[1, 2, 3, 4][..]);
+        let mut entry = Entry::new(key("a", "1").hgid, content.clone(), Metadata::default());
+        entry.compress_content()?;
+
+        let mut serialized = Vec::new();
+        entry.serialize(&mut serialized, false)?;
+        let decoded = Entry::from_bytes(Bytes::from(serialized))?;
+
+        assert_eq!(decoded.content()?, content);
+        Ok(())
+    }
 
     #[test]
     fn test_empty() {
