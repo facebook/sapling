@@ -236,6 +236,7 @@ pub enum ClientCategory {
     DevEnv,
     CiSandcastle,
     SandcastleAutomation,
+    Mast,
     FaaS,
     Automation,
     Unknown,
@@ -249,6 +250,7 @@ impl ClientCategory {
             Self::DevEnv => "dev_env",
             Self::CiSandcastle => "ci_sandcastle",
             Self::SandcastleAutomation => "sandcastle_automation",
+            Self::Mast => "mast",
             Self::FaaS => "faas",
             Self::Automation => "automation",
             Self::Unknown => "unknown",
@@ -285,6 +287,7 @@ impl TenantInfo {
             ClientCategory::CiSandcastle => self.ci_purpose.clone(),
             ClientCategory::FaaS
             | ClientCategory::SandcastleAutomation
+            | ClientCategory::Mast
             | ClientCategory::HealthCheck
             | ClientCategory::InteractiveDev
             | ClientCategory::DevEnv
