@@ -511,6 +511,7 @@ where
     Store: Send + Sync + 'static,
 {
     let mut result = Vec::new();
+    let mut pending = Vec::new();
     let mut cmps =
         compare_manifest_with_stores(ctx, new_store, old_store, new_mf, vec![Some(old_mf)]).await?;
     while let Some(cmp) = cmps.try_next().await? {
@@ -521,24 +522,14 @@ where
                 result.push((name, None, Some(entry)));
             }
             ManifestComparison::New(Span::Prefix(prefix, trie_map)) => {
-                let mut entries = trie_map.into_stream(ctx, new_store).await?;
-                while let Some((suffix, entry)) = entries.try_next().await? {
-                    tokio::task::consume_budget().await;
-                    let name = prefix.clone().join_into_element(suffix)?;
-                    result.push((name, None, Some(entry)));
-                }
+                pending.push((prefix, trie_map, true));
             }
             ManifestComparison::Removed(Span::Element(name, base_entries)) => {
                 result.push((name, base_entries.into_iter().flatten().next(), None));
             }
             ManifestComparison::Removed(Span::Prefix(prefix, base_trie_maps)) => {
                 if let Some(trie_map) = base_trie_maps.into_iter().flatten().next() {
-                    let mut entries = trie_map.into_stream(ctx, old_store).await?;
-                    while let Some((suffix, entry)) = entries.try_next().await? {
-                        tokio::task::consume_budget().await;
-                        let name = prefix.clone().join_into_element(suffix)?;
-                        result.push((name, Some(entry), None));
-                    }
+                    pending.push((prefix, trie_map, false));
                 }
             }
             ManifestComparison::Changed(name, new_entry, base_entries) => {
@@ -550,6 +541,30 @@ where
             }
         }
     }
+
+    stream::iter(pending)
+        .map(async |(prefix, trie_map, is_new)| {
+            let store = if is_new { new_store } else { old_store };
+            let mut entries = trie_map.into_stream(ctx, store).await?;
+            let mut out = Vec::new();
+            while let Some((suffix, entry)) = entries.try_next().await? {
+                tokio::task::consume_budget().await;
+                let name = prefix.clone().join_into_element(suffix)?;
+                out.push(if is_new {
+                    (name, None, Some(entry))
+                } else {
+                    (name, Some(entry), None)
+                });
+            }
+            anyhow::Ok(out)
+        })
+        .buffered(10)
+        .try_for_each(|out| {
+            result.extend(out);
+            future::ready(Ok(()))
+        })
+        .await?;
+
     Ok(result)
 }
 

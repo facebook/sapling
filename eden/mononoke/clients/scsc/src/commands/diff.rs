@@ -220,6 +220,13 @@ impl Render for SubtreeChangeOutput {
     }
 }
 
+fn compare_file_path(file: &thrift::CommitCompareFile) -> &str {
+    file.base_file
+        .as_ref()
+        .or(file.other_file.as_ref())
+        .map_or("", |f| f.path.as_str())
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
@@ -309,10 +316,16 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         follow_mutable_file_history: Some(args.follow_mutable_history),
         ..Default::default()
     };
-    let response = conn
+    let mut response = conn
         .commit_compare(&base_commit, &params)
         .await
         .map_err(|e| e.handle_selection_error(&repo))?;
+
+    response.diff_files.sort_by(|a, b| {
+        compare_file_path(a)
+            .split('/')
+            .cmp(compare_file_path(b).split('/'))
+    });
 
     if args.paths_only {
         return app
