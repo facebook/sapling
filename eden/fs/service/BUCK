@@ -69,6 +69,10 @@ cpp_binary(
     srcs = [
         "facebook/main.cpp",
     ],
+    allocator = select({
+        "DEFAULT": None,
+        "ovr_config//os:macos": "jemalloc",
+    }),
     linker_flags = select({
         "DEFAULT": [],
         "ovr_config//os:windows": [

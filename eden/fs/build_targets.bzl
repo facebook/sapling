@@ -56,6 +56,7 @@ CONFIG_D_TARGETS = {
 
 DAEMON_ENVIRONMENT_CONFIG_PATH = "/etc/eden/config.d/10-daemon-environment.toml"
 LINUX_DAEMON_ENVIRONMENT_CONFIG = "facebook/packaging/config.d/10-daemon-environment.toml"
+MACOS_DAEMON_ENVIRONMENT_CONFIG = "facebook/packaging/daemon-environment-macos.toml"
 
 EDENFS_WINDOWS_DEPS = [
     "fbcode//eden/fs/cli:edenfsctl",
@@ -156,6 +157,11 @@ def make_rpm_features():
             "DEFAULT": None,
             "ovr_config//os:linux": rpm.install(
                 src = LINUX_DAEMON_ENVIRONMENT_CONFIG,
+                dst = DAEMON_ENVIRONMENT_CONFIG_PATH,
+                mode = 0o0755,
+            ),
+            "ovr_config//os:macos": rpm.install(
+                src = MACOS_DAEMON_ENVIRONMENT_CONFIG,
                 dst = DAEMON_ENVIRONMENT_CONFIG_PATH,
                 mode = 0o0755,
             ),
