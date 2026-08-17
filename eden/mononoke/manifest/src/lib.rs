@@ -16,7 +16,6 @@ pub use crate::combined::CombinedId;
 pub use crate::comparison::ManifestComparison;
 pub use crate::comparison::Span;
 pub use crate::comparison::compare_manifest;
-pub use crate::comparison::compare_manifest_with_stores;
 pub use crate::derive::LeafInfo;
 pub use crate::derive::TreeInfo;
 pub use crate::derive::TreeInfoSubentries;

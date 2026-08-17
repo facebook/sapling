@@ -209,6 +209,27 @@ impl<Store: KeyedBlobstore> Manifest<Store> for TestManifest {
 // wrong number of child manifest expansions when this happens.
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for TestManifest {
+    type WeightedTrieMapType = SortedVectorTrieMap<Entry<(Weight, Self::TreeId), Self::Leaf>>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        let entries = self
+            .0
+            .iter()
+            .map(|(k, v)| {
+                let entry = match v.clone() {
+                    Entry::Leaf(leaf) => Entry::Leaf(leaf),
+                    Entry::Tree(tree) => Entry::Tree((10, tree)),
+                };
+                (k.clone().to_smallvec(), entry)
+            })
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
+    }
+
     async fn list_weighted(
         &self,
         _ctx: &CoreContext,

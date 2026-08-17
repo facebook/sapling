@@ -116,7 +116,7 @@ impl<Store: KeyedBlobstore> Manifest<Store> for CaseConflictSkeletonManifest {
     }
 }
 
-fn convert_ccsm_to_weighted(
+pub(crate) fn convert_ccsm_to_weighted(
     entry: Entry<CaseConflictSkeletonManifest, ()>,
 ) -> Entry<(Weight, CaseConflictSkeletonManifest), ()> {
     match entry {
@@ -133,6 +133,16 @@ fn convert_ccsm_to_weighted(
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for CaseConflictSkeletonManifest {
+    type WeightedTrieMapType = LoadableShardedMapV2Node<CcsmEntry>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+
     async fn list_weighted(
         &self,
         ctx: &CoreContext,

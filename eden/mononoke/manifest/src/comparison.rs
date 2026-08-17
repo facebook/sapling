@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::iter::Peekable;
 
-use anyhow::Context;
 use anyhow::Result;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
@@ -25,13 +23,15 @@ use mononoke_macros::mononoke;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
+use mononoke_types::prefix_tree::PrefixTree;
 
 use crate::Diff;
 use crate::Entry;
 use crate::Manifest;
 use crate::OrderedManifest;
+use crate::PathTree;
 use crate::TrieMapOps;
-use crate::ops::ReplacementsHolder;
+use crate::types::Weight;
 
 /// How much of the trie keyspace a comparison result covers: a single complete
 /// entry, or a whole unexpanded sub-trie under a byte-prefix.
@@ -77,77 +77,116 @@ where
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
     Store: Send + Sync + 'static,
 {
-    compare_manifest_with_stores(ctx, blobstore, blobstore, mf, base_mfs).await
-}
-
-/// Like [`compare_manifest`], but `mf` and the base manifests may live in
-/// different blobstores (e.g. cross-repo diffs). Subtree pruning compares
-/// trie-map node ids, which are content-addressed and therefore valid across
-/// blobstores; only diverging subtrees are expanded, each from its own store.
-pub async fn compare_manifest_with_stores<'a, M, Store>(
-    ctx: &'a CoreContext,
-    mf_store: &'a Store,
-    base_store: &'a Store,
-    mf: M,
-    base_mfs: Vec<Option<M>>,
-) -> Result<
-    impl Stream<Item = Result<ManifestComparison<M::TrieMapType, Entry<M::TreeId, M::Leaf>>>> + 'a,
->
-where
-    M: Manifest<Store>,
-    M::TreeId: Send + Sync + Eq + 'static,
-    M::Leaf: Send + Sync + Eq + 'static,
-    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
-    Store: Send + Sync + 'static,
-{
     let (mf_trie_map, base_mf_trie_maps) = future::try_join(
-        mf.into_trie_map(ctx, mf_store),
+        mf.into_trie_map(ctx, blobstore),
         future::try_join_all(base_mfs.into_iter().map(|p| async move {
             match p {
-                Some(p) => Ok(Some(p.into_trie_map(ctx, base_store).await?)),
+                Some(p) => Ok(Some(p.into_trie_map(ctx, blobstore).await?)),
                 None => Ok(None),
             }
         })),
     )
     .await?;
+    compare_tries(
+        ctx,
+        blobstore,
+        blobstore,
+        Some(mf_trie_map),
+        base_mf_trie_maps,
+        PrefixTree::default(),
+    )
+}
+
+/// Compare a trie against a number of base tries, applying `replacements` to the
+/// base side as the walk descends.
+///
+/// Generic over the trie's value type so the ordered path can drive it with a
+/// weighted view (`V = Entry<(Weight, TreeId), Leaf>`) and get the weights out of
+/// the walk itself rather than looking each one up afterwards.
+pub fn compare_tries<'a, T, V, Store>(
+    ctx: &'a CoreContext,
+    mf_store: &'a Store,
+    base_store: &'a Store,
+    mf_trie_map: Option<T>,
+    base_mf_trie_maps: Vec<Option<T>>,
+    replacements: PrefixTree<PathTree<Option<V>>>,
+) -> Result<impl Stream<Item = Result<ManifestComparison<T, V>>> + 'a>
+where
+    T: TrieMapOps<Store, V> + Eq + Send + Sync + 'static,
+    V: Eq + Send + Sync + 'static,
+    Store: Send + Sync + 'static,
+{
     Ok(bounded_traversal::bounded_traversal_stream(
         256,
-        Some((MPathElementPrefix::new(), mf_trie_map, base_mf_trie_maps)),
+        Some((
+            MPathElementPrefix::new(),
+            mf_trie_map,
+            base_mf_trie_maps,
+            replacements,
+        )),
         {
             cloned!(ctx, mf_store, base_store);
-            move |(prefix, mf_trie_map, base_mf_trie_maps)| {
+            move |(prefix, mf_trie_map, base_mf_trie_maps, replacements): (
+                MPathElementPrefix,
+                Option<T>,
+                Vec<Option<T>>,
+                PrefixTree<PathTree<Option<V>>>,
+            )| {
                 cloned!(ctx, mf_store, base_store);
                 async move {
-                    if let Some(index) = base_mf_trie_maps
-                        .iter()
-                        .position(|parent| parent.as_ref() == Some(&mf_trie_map))
-                    {
-                        return anyhow::Ok((
-                            stream::iter(vec![Ok(ManifestComparison::Same(
-                                Span::Prefix(prefix, mf_trie_map),
-                                index,
-                            ))]),
-                            vec![],
-                        ));
-                    }
+                    let mf_trie_map =
+                        if let Some(mf_trie_map) = mf_trie_map {
+                            if replacements.is_empty() {
+                                if let Some(index) = base_mf_trie_maps
+                                    .iter()
+                                    .position(|parent| parent.as_ref() == Some(&mf_trie_map))
+                                {
+                                    return anyhow::Ok((
+                                        stream::iter(vec![Ok(ManifestComparison::Same(
+                                            Span::Prefix(prefix, mf_trie_map),
+                                            index,
+                                        ))]),
+                                        vec![],
+                                    ));
+                                }
 
-                    if base_mf_trie_maps.is_empty()
-                        || base_mf_trie_maps
-                            .iter()
-                            .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
-                    {
-                        return Ok((
-                            stream::iter(vec![Ok(ManifestComparison::New(Span::Prefix(
-                                prefix,
-                                mf_trie_map,
-                            )))]),
-                            vec![],
-                        ));
-                    }
+                                if base_mf_trie_maps
+                                    .iter()
+                                    .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
+                                {
+                                    return Ok((
+                                        stream::iter(vec![Ok(ManifestComparison::New(
+                                            Span::Prefix(prefix, mf_trie_map),
+                                        ))]),
+                                        vec![],
+                                    ));
+                                }
+                            }
+                            Some(mf_trie_map)
+                        } else {
+                            if replacements.is_empty()
+                                && !base_mf_trie_maps
+                                    .iter()
+                                    .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
+                            {
+                                return Ok((
+                                    stream::iter(vec![Ok(ManifestComparison::Removed(
+                                        Span::Prefix(prefix, base_mf_trie_maps),
+                                    ))]),
+                                    vec![],
+                                ));
+                            }
+                            None
+                        };
 
-                    borrowed!(ctx);
+                    borrowed!(ctx, mf_store, base_store);
                     let ((mf_value, mf_children), expanded_base_mfs) = future::try_join(
-                        mf_trie_map.expand(ctx, mf_store),
+                        async {
+                            match mf_trie_map {
+                                Some(mf_trie_map) => mf_trie_map.expand(ctx, mf_store).await,
+                                None => anyhow::Ok((None, Vec::new())),
+                            }
+                        },
                         future::try_join_all(base_mf_trie_maps.into_iter().map({
                             |parent| async move {
                                 match parent {
@@ -158,8 +197,13 @@ where
                         })),
                     )
                     .await?;
-                    let (parent_values, parent_children): (Vec<_>, Vec<_>) =
+                    let (mut parent_values, parent_children): (Vec<_>, Vec<_>) =
                         expanded_base_mfs.into_iter().unzip();
+
+                    let (replacement_here, replacement_children) = replacements.expand();
+                    if let Some(replacement) = replacement_here.and_then(|tree| tree.value) {
+                        parent_values = vec![Some(replacement)];
+                    }
 
                     let mut out = Vec::new();
                     let mut recurse = Vec::new();
@@ -196,37 +240,20 @@ where
                         ))));
                     }
 
-                    let mut diff_iter = DiffIter::new(mf_children, parent_children);
+                    let mut diff_iter =
+                        DiffIter::new(mf_children, parent_children, replacement_children);
 
-                    while let Some((ch, child_value, child_base_mfs)) = diff_iter.next() {
+                    while let Some((ch, child_value, child_base_mfs, child_replacements)) =
+                        diff_iter.next()
+                    {
                         let mut prefix = prefix.clone();
                         prefix.push(ch)?;
-                        if let Some(value) = child_value {
-                            if let Some(index) = child_base_mfs
-                                .iter()
-                                .position(|parent| parent.as_ref() == Some(&value))
-                            {
-                                out.push(Ok(ManifestComparison::Same(
-                                    Span::Prefix(prefix, value),
-                                    index,
-                                )));
-                            } else if child_base_mfs.is_empty()
-                                || child_base_mfs.iter().all(|mf| mf.is_none())
-                            {
-                                out.push(Ok(ManifestComparison::New(Span::Prefix(prefix, value))));
-                            } else {
-                                recurse.push((prefix, value, child_base_mfs));
-                            }
-                        } else if !child_base_mfs.is_empty()
-                            && !child_base_mfs
-                                .iter()
-                                .all(|parent| parent.as_ref().is_none_or(TrieMapOps::is_empty))
-                        {
-                            out.push(Ok(ManifestComparison::Removed(Span::Prefix(
-                                prefix,
-                                child_base_mfs,
-                            ))));
-                        }
+                        recurse.push((
+                            prefix,
+                            child_value,
+                            child_base_mfs,
+                            child_replacements.unwrap_or_default(),
+                        ));
                     }
 
                     Ok((stream::iter(out), recurse))
@@ -238,35 +265,40 @@ where
     .try_flatten())
 }
 
-struct DiffIter<TrieMapType> {
+struct DiffIter<TrieMapType, R> {
     mf: Peekable<<Vec<(u8, TrieMapType)> as std::iter::IntoIterator>::IntoIter>,
     base_mfs: Vec<Peekable<<Vec<(u8, TrieMapType)> as std::iter::IntoIterator>::IntoIter>>,
+    replacements: Peekable<<Vec<(u8, R)> as std::iter::IntoIterator>::IntoIter>,
 }
 
-impl<TrieMapType> DiffIter<TrieMapType> {
-    fn new(mf: Vec<(u8, TrieMapType)>, base_mfs: Vec<Vec<(u8, TrieMapType)>>) -> Self {
+impl<TrieMapType, R> DiffIter<TrieMapType, R> {
+    fn new(
+        mf: Vec<(u8, TrieMapType)>,
+        base_mfs: Vec<Vec<(u8, TrieMapType)>>,
+        replacements: Vec<(u8, R)>,
+    ) -> Self {
         Self {
             mf: mf.into_iter().peekable(),
             base_mfs: base_mfs
                 .into_iter()
                 .map(|p| p.into_iter().peekable())
                 .collect(),
+            replacements: replacements.into_iter().peekable(),
         }
     }
 
-    fn next(&mut self) -> Option<(u8, Option<TrieMapType>, Vec<Option<TrieMapType>>)> {
-        let mf_next_ch = self.mf.peek().map(|(k, _)| k).copied();
+    fn next(&mut self) -> Option<(u8, Option<TrieMapType>, Vec<Option<TrieMapType>>, Option<R>)> {
+        let mf_next_ch = self.mf.peek().map(|(k, _)| *k);
         let min_base_mfs_next_ch = self
             .base_mfs
             .iter_mut()
             .filter_map(|p| p.peek().map(|(k, _)| *k))
             .min();
-        let next_ch = match (mf_next_ch, min_base_mfs_next_ch) {
-            (None, None) => return None,
-            (None, Some(ch)) => ch,
-            (Some(ch), None) => ch,
-            (Some(ch), Some(parent_ch)) => std::cmp::min(ch, parent_ch),
-        };
+        let replacements_next_ch = self.replacements.peek().map(|(k, _)| *k);
+        let next_ch = [mf_next_ch, min_base_mfs_next_ch, replacements_next_ch]
+            .into_iter()
+            .flatten()
+            .min()?;
         let next_mf = (Some(next_ch) == mf_next_ch)
             .then(|| self.mf.next().map(|(_, v)| v))
             .flatten();
@@ -279,15 +311,12 @@ impl<TrieMapType> DiffIter<TrieMapType> {
                     .flatten()
             })
             .collect();
-        Some((next_ch, next_mf, next_base_mfs))
+        let next_replacements = (Some(next_ch) == replacements_next_ch)
+            .then(|| self.replacements.next().map(|(_, v)| v))
+            .flatten();
+        Some((next_ch, next_mf, next_base_mfs, next_replacements))
     }
 }
-
-/// A queued subtree diff plus the manifest replacements that apply within it.
-type RecurseWork<TreeId, Leaf> = (
-    Diff<TreeId>,
-    BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
-);
 
 /// Classify a single child, given its (optional) old and new entries, into an
 /// optional leaf-level `Diff` output and an optional subtree `Diff` to recurse
@@ -327,14 +356,13 @@ pub(crate) fn classify_child<T, Leaf>(
     }
 }
 
-/// Apply a [`classify_child`] result for the unordered paths: output the leaf
-/// diff, and queue the subtree diff (carrying `replacements`) subject to the
-/// pruner.
-fn push_child<TreeId, Leaf, Pruner>(
+/// Apply a [`classify_child`] result: output the leaf diff, and queue the subtree
+/// diff (carrying `replacements`) subject to the pruner.
+fn push_child<TreeId, Leaf, Pruner, Replacements>(
     (output, recurse): (Option<Diff<Entry<TreeId, Leaf>>>, Option<Diff<TreeId>>),
     outs: &mut Vec<Diff<Entry<TreeId, Leaf>>>,
-    recurse_work: &mut Vec<RecurseWork<TreeId, Leaf>>,
-    replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    recurse_work: &mut Vec<(Diff<TreeId>, Replacements)>,
+    replacements: Replacements,
     recurse_pruner: &Pruner,
 ) where
     Pruner: Fn(&Diff<TreeId>) -> bool,
@@ -349,44 +377,44 @@ fn push_child<TreeId, Leaf, Pruner>(
     }
 }
 
-/// Compare the children of two directory manifests, returning only the children
-/// that differ as `(element, old_entry, new_entry)` tuples (`None` on a side
-/// means the child is absent there). Identical sub-shards are pruned by their
-/// content-addressed id -- never loaded -- via [`compare_manifest_with_stores`],
-/// and byte-prefix spans of new/removed children are expanded to their
-/// individual elements.
+/// Compare the children of two directory tries, returning only the children that
+/// differ as `(element, old_entry, new_entry)` tuples (`None` on a side means the
+/// child is absent there). Identical sub-shards are pruned by their
+/// content-addressed id -- never loaded -- via [`compare_tries`], and byte-prefix
+/// spans of new/removed children are expanded to their individual elements.
 ///
 /// This is the shared node-level core behind both the unordered
-/// [`diff_manifests`] and the ordered [`diff_weighted_children`]; the two differ
-/// only in how they consume these per-child differences (recursive vs. weighted
-/// ordered traversal). `old_mf` and `new_mf` may come from different blobstores.
+/// [`crate::ManifestOps::filtered_diff`] and the ordered
+/// [`diff_weighted_children`], which drive it with the unweighted and weighted
+/// views of the same directory. `old_trie` and `new_trie` may come from different
+/// blobstores, and either may be absent (an added or removed subtree).
+/// `replacements` are applied to the old side as the comparison descends.
 ///
 /// The returned children are in unspecified order; callers that need them sorted
 /// (e.g. the ordered path) must sort by element.
-async fn diff_manifest_children<M, Store>(
+async fn diff_trie_children<T, V, Store>(
     ctx: &CoreContext,
     new_store: &Store,
-    new_mf: M,
+    new_trie: Option<T>,
     old_store: &Store,
-    old_mf: M,
-) -> Result<
-    Vec<(
-        MPathElement,
-        Option<Entry<M::TreeId, M::Leaf>>,
-        Option<Entry<M::TreeId, M::Leaf>>,
-    )>,
->
+    old_trie: Option<T>,
+    replacements: PrefixTree<PathTree<Option<V>>>,
+) -> Result<Vec<(MPathElement, Option<V>, Option<V>)>>
 where
-    M: Manifest<Store>,
-    M::TreeId: Send + Sync + Eq + 'static,
-    M::Leaf: Send + Sync + Eq + 'static,
-    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
+    T: TrieMapOps<Store, V> + Eq + Send + Sync + 'static,
+    V: Eq + Send + Sync + 'static,
     Store: Send + Sync + 'static,
 {
     let mut result = Vec::new();
     let mut pending = Vec::new();
-    let mut cmps =
-        compare_manifest_with_stores(ctx, new_store, old_store, new_mf, vec![Some(old_mf)]).await?;
+    let mut cmps = compare_tries(
+        ctx,
+        new_store,
+        old_store,
+        new_trie,
+        vec![old_trie],
+        replacements,
+    )?;
     while let Some(cmp) = cmps.try_next().await? {
         tokio::task::consume_budget().await;
         match cmp {
@@ -441,24 +469,26 @@ where
     Ok(result)
 }
 
-/// Diff a single node, using the sharding-aware comparison engine where it
-/// applies and falling back to listing otherwise.
+/// Diff a single node by comparing both sides' tries, applying `replacements` to
+/// the old side as the comparison descends, returning the child `Diff`s plus the
+/// subtree work to recurse into.
 ///
-/// A replacement-free `Changed` node compares its children via
-/// [`compare_manifest_with_stores`], which prunes identical sub-shards by their
-/// content-addressed id without loading them. Anything else -- a subtree carrying
-/// a replacement, or an added/removed subtree -- is expanded by listing, and its
-/// replacement-free children come back to the fast path here.
+/// The sharding-aware counterpart of [`diff_manifest_node_by_listing`]: identical
+/// sub-shards are pruned by their content-addressed id without being loaded, and a
+/// replacement only disables that pruning along the byte path leading to it.
 pub(crate) async fn diff_manifest_node<TreeId, Leaf, Store, Pruner>(
     ctx: &CoreContext,
     old_store: &Store,
     new_store: &Store,
     work: Diff<TreeId>,
-    replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    replacements: PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
     recurse_pruner: Pruner,
 ) -> Result<(
     Vec<Diff<Entry<TreeId, Leaf>>>,
-    Vec<RecurseWork<TreeId, Leaf>>,
+    Vec<(
+        Diff<TreeId>,
+        PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
+    )>,
 )>
 where
     Store: Clone + Send + Sync + 'static,
@@ -470,43 +500,77 @@ where
         TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
     Pruner: Fn(&Diff<TreeId>) -> bool + Send,
 {
-    match work {
-        Diff::Changed(path, old_id, new_id) if replacements.is_empty() => {
-            let (old_mf, new_mf) =
-                future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
-            let mut outs = Vec::new();
-            let mut recurse = Vec::new();
-            for (name, old, new) in
-                diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?
-            {
-                let child_path = path.join(&name);
-                push_child(
-                    classify_child(child_path, old, new),
-                    &mut outs,
-                    &mut recurse,
-                    BTreeMap::new(),
-                    &recurse_pruner,
-                );
+    let (path, old_id, new_id) = match &work {
+        Diff::Changed(path, old_id, new_id) => (path, Some(old_id), Some(new_id)),
+        Diff::Added(path, new_id) => (path, None, Some(new_id)),
+        Diff::Removed(path, old_id) => (path, Some(old_id), None),
+    };
+    let (old_mf, new_mf) = future::try_join(
+        async {
+            match old_id {
+                Some(old_id) => anyhow::Ok(Some(old_id.load(ctx, old_store).watched().await?)),
+                None => anyhow::Ok(None),
             }
-            outs.push(Diff::Changed(
-                path,
-                Entry::Tree(old_id),
-                Entry::Tree(new_id),
-            ));
-            Ok((outs, recurse))
-        }
-        work => {
-            diff_manifest_node_by_listing(
-                ctx,
-                old_store,
-                new_store,
-                work,
-                replacements,
-                recurse_pruner,
-            )
-            .await
-        }
+        },
+        async {
+            match new_id {
+                Some(new_id) => anyhow::Ok(Some(new_id.load(ctx, new_store).watched().await?)),
+                None => anyhow::Ok(None),
+            }
+        },
+    )
+    .await?;
+
+    let mut outs = Vec::new();
+    let mut recurse = Vec::new();
+    let (old_trie, new_trie) = future::try_join(
+        async {
+            match old_mf {
+                Some(old_mf) => anyhow::Ok(Some(old_mf.into_trie_map(ctx, old_store).await?)),
+                None => anyhow::Ok(None),
+            }
+        },
+        async {
+            match new_mf {
+                Some(new_mf) => anyhow::Ok(Some(new_mf.into_trie_map(ctx, new_store).await?)),
+                None => anyhow::Ok(None),
+            }
+        },
+    )
+    .await?;
+
+    for (name, old, new) in diff_trie_children(
+        ctx,
+        new_store,
+        new_trie,
+        old_store,
+        old_trie,
+        replacements.clone(),
+    )
+    .await?
+    {
+        let child_path = path.join(&name);
+        let child_replacements = replacements
+            .get(name.as_ref())
+            .cloned()
+            .unwrap_or_default()
+            .subentries;
+        push_child(
+            classify_child(child_path, old, new),
+            &mut outs,
+            &mut recurse,
+            child_replacements,
+            &recurse_pruner,
+        );
     }
+    outs.push(match work {
+        Diff::Changed(path, old_id, new_id) => {
+            Diff::Changed(path, Entry::Tree(old_id), Entry::Tree(new_id))
+        }
+        Diff::Added(path, new_id) => Diff::Added(path, Entry::Tree(new_id)),
+        Diff::Removed(path, old_id) => Diff::Removed(path, Entry::Tree(old_id)),
+    });
+    Ok((outs, recurse))
 }
 
 /// Diff a single node by listing both sides and substituting old-side entries
@@ -514,22 +578,25 @@ where
 /// recurse into (with the pruner already applied, and the replacements that
 /// apply within each subtree).
 ///
-/// This is the list-based per-node core shared by [`diff_manifests`] (for
-/// replacement-bearing subtrees) and [`crate::ManifestOps::filtered_diff_slow`]
-/// (which stays generic over manifest types without `TrieMapOps`), so it must
-/// not depend on `TrieMapOps`. `work` is the node to expand: `Changed` compares
-/// both sides, `Added`/`Removed` enumerate one side (a replacement injects the
-/// opposite side).
+/// This is the list-based per-node core used by
+/// [`crate::ManifestOps::filtered_diff_slow`], which stays generic over manifest
+/// types without `TrieMapOps` (e.g. history manifests), so it must not depend on
+/// `TrieMapOps`. `work` is the node to expand: `Changed` compares both sides,
+/// `Added`/`Removed` enumerate one side (a replacement injects the opposite
+/// side).
 pub(crate) async fn diff_manifest_node_by_listing<TreeId, Leaf, Store, Pruner>(
     ctx: &CoreContext,
     old_store: &Store,
     new_store: &Store,
     work: Diff<TreeId>,
-    mut replacements: BTreeMap<MPathElement, ReplacementsHolder<Entry<TreeId, Leaf>>>,
+    replacements: PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
     recurse_pruner: Pruner,
 ) -> Result<(
     Vec<Diff<Entry<TreeId, Leaf>>>,
-    Vec<RecurseWork<TreeId, Leaf>>,
+    Vec<(
+        Diff<TreeId>,
+        PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
+    )>,
 )>
 where
     Store: Clone + Send + Sync + 'static,
@@ -542,7 +609,10 @@ where
     Pruner: Fn(&Diff<TreeId>) -> bool + Send,
 {
     let mut outs: Vec<Diff<Entry<TreeId, Leaf>>> = Vec::new();
-    let mut recurse: Vec<RecurseWork<TreeId, Leaf>> = Vec::new();
+    let mut recurse: Vec<(
+        Diff<TreeId>,
+        PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
+    )> = Vec::new();
     match work {
         Diff::Changed(path, left, right) => {
             let l = mononoke::spawn_task({
@@ -560,8 +630,10 @@ where
             while let Some((name, left)) = stream.try_next().await? {
                 tokio::task::consume_budget().await;
                 let child_path = path.join(&name);
-                let (replacement, child_replacements) =
-                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                let PathTree {
+                    value: replacement,
+                    subentries: child_replacements,
+                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
                 let left = replacement.unwrap_or(left);
                 let right = right_mf.lookup(ctx, new_store, &name).await?;
                 if right.as_ref() != Some(&left) {
@@ -580,8 +652,10 @@ where
                 tokio::task::consume_budget().await;
                 if left_mf.lookup(ctx, old_store, &name).await?.is_none() {
                     let child_path = path.join(&name);
-                    let (replacement, child_replacements) =
-                        replacements.remove(&name).unwrap_or_default().deconstruct();
+                    let PathTree {
+                        value: replacement,
+                        subentries: child_replacements,
+                    } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
                     push_child(
                         classify_child(child_path, replacement, Some(right)),
                         &mut outs,
@@ -591,8 +665,6 @@ where
                     );
                 }
             }
-            ReplacementsHolder::finalize(&path, replacements)
-                .context("Failed to finalize replacements for changed tree")?;
             outs.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
         }
         Diff::Added(path, tree) => {
@@ -601,8 +673,10 @@ where
             while let Some((name, right)) = stream.try_next().await? {
                 tokio::task::consume_budget().await;
                 let child_path = path.join(&name);
-                let (replacement, child_replacements) =
-                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                let PathTree {
+                    value: replacement,
+                    subentries: child_replacements,
+                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
                 push_child(
                     classify_child(child_path, replacement, Some(right)),
                     &mut outs,
@@ -611,8 +685,6 @@ where
                     &recurse_pruner,
                 );
             }
-            ReplacementsHolder::finalize(&path, replacements)
-                .context("Failed to finalize replacements for added tree")?;
             outs.push(Diff::Added(path, Entry::Tree(tree)));
         }
         Diff::Removed(path, tree) => {
@@ -621,8 +693,10 @@ where
             while let Some((name, entry)) = stream.try_next().await? {
                 tokio::task::consume_budget().await;
                 let child_path = path.join(&name);
-                let (replacement, child_replacements) =
-                    replacements.remove(&name).unwrap_or_default().deconstruct();
+                let PathTree {
+                    value: replacement,
+                    subentries: child_replacements,
+                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
                 let entry = replacement.unwrap_or(entry);
                 push_child(
                     classify_child(child_path, Some(entry), None),
@@ -632,34 +706,31 @@ where
                     &recurse_pruner,
                 );
             }
-            ReplacementsHolder::finalize(&path, replacements)
-                .context("Failed to finalize replacements for removed tree")?;
             outs.push(Diff::Removed(path, Entry::Tree(tree)));
         }
     }
     Ok((outs, recurse))
 }
 
-/// Sharding-aware ordered child diff for a single directory level: returns the
-/// children that differ between `old_id` and `new_id`, sorted by element name,
-/// as weighted entries (matching `OrderedManifest::list_weighted`'s shape).
+/// Sharding-aware ordered child diff for a single directory level: the children
+/// that differ between `old_id` and `new_id`, sorted by element name, as weighted
+/// entries (matching `OrderedManifest::list_weighted`'s shape).
 ///
-/// Used by the fast path of `filtered_diff_ordered`: identical sub-shards are
-/// pruned by id (via `compare_manifest_with_stores`) instead of listing both
-/// whole directories. Weights (which the ordered scheduler uses to bound its
-/// queue) are fetched via `lookup_weighted` only for the differing *tree*
-/// children -- those are few and are loaded during recursion anyway.
+/// Drives [`diff_trie_children`] with the weighted view of each directory, so the
+/// rollup weights come out of the comparison itself. Identical sub-shards are
+/// still pruned by id without being loaded.
 pub(crate) async fn diff_weighted_children<TreeId, Leaf, Store>(
     ctx: &CoreContext,
     old_store: &Store,
     old_id: &TreeId,
     new_store: &Store,
     new_id: &TreeId,
+    replacements: PrefixTree<PathTree<Option<Entry<(Weight, TreeId), Leaf>>>>,
 ) -> Result<
     Vec<(
         MPathElement,
-        Option<Entry<(crate::types::Weight, TreeId), Leaf>>,
-        Option<Entry<(crate::types::Weight, TreeId), Leaf>>,
+        Option<Entry<(Weight, TreeId), Leaf>>,
+        Option<Entry<(Weight, TreeId), Leaf>>,
     )>,
 >
 where
@@ -668,73 +739,29 @@ where
     <TreeId as StoreLoadable<Store>>::Value:
         OrderedManifest<Store> + Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
     Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
-    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
+    <<TreeId as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
+        TrieMapOps<Store, Entry<(Weight, TreeId), Leaf>> + Eq + 'static,
 {
     let (old_mf, new_mf) =
         future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
+    let (old_trie, new_trie) = future::try_join(
+        old_mf.into_weighted_trie_map(ctx, old_store),
+        new_mf.into_weighted_trie_map(ctx, new_store),
+    )
+    .await?;
 
-    // id-pruned comparison of `new` vs `old` via the shared node-level core.
-    let mut differing = diff_manifest_children(ctx, new_store, new_mf, old_store, old_mf).await?;
-    if differing.is_empty() {
-        return Ok(Vec::new());
-    }
+    let mut differing = diff_trie_children(
+        ctx,
+        new_store,
+        Some(new_trie),
+        old_store,
+        Some(old_trie),
+        replacements,
+    )
+    .await?;
     // The ordered scheduler consumes children in element order.
     differing.sort_by(|(a, ..), (b, ..)| a.cmp(b));
-
-    // Weights are only needed for tree entries. Reload the parents once if any
-    // differing child is a tree, then resolve weights via `lookup_weighted`.
-    let needs_weight = differing.iter().any(|(_, old_entry, new_entry)| {
-        matches!(old_entry, Some(Entry::Tree(_))) || matches!(new_entry, Some(Entry::Tree(_)))
-    });
-    let (old_mf, new_mf) = if needs_weight {
-        let (old_mf, new_mf) =
-            future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
-        (Some(old_mf), Some(new_mf))
-    } else {
-        (None, None)
-    };
-
-    let mut result = Vec::with_capacity(differing.len());
-    for (name, old_entry, new_entry) in differing {
-        tokio::task::consume_budget().await;
-        let left = weight_entry(ctx, old_store, old_mf.as_ref(), &name, old_entry).await?;
-        let right = weight_entry(ctx, new_store, new_mf.as_ref(), &name, new_entry).await?;
-        result.push((name, left, right));
-    }
-    Ok(result)
-}
-
-/// Attach the rollup weight to a tree entry (leaves carry no weight), fetching
-/// it from the parent manifest via `lookup_weighted`.
-async fn weight_entry<TreeId, Leaf, Store, M>(
-    ctx: &CoreContext,
-    store: &Store,
-    mf: Option<&M>,
-    name: &MPathElement,
-    entry: Option<Entry<TreeId, Leaf>>,
-) -> Result<Option<Entry<(crate::types::Weight, TreeId), Leaf>>>
-where
-    Store: Send + Sync,
-    M: OrderedManifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    TreeId: Send + Sync,
-    Leaf: Send + Sync,
-{
-    match entry {
-        None => Ok(None),
-        Some(Entry::Leaf(leaf)) => Ok(Some(Entry::Leaf(leaf))),
-        Some(Entry::Tree(tree_id)) => {
-            let weight = match mf
-                .expect("needs_weight implies parents were loaded")
-                .lookup_weighted(ctx, store, name)
-                .await?
-            {
-                Some(Entry::Tree((weight, _))) => weight,
-                _ => 0,
-            };
-            Ok(Some(Entry::Tree((weight, tree_id))))
-        }
-    }
+    Ok(differing)
 }
 
 #[cfg(test)]
@@ -867,13 +894,6 @@ mod tests {
                     ),
                     0
                 ),
-                ManifestComparison::Same(
-                    Span::Prefix(
-                        MPathElementPrefix::from_slice(b"file8")?,
-                        get_trie_map(ctx, blobstore, mf1, "", "file8").await?,
-                    ),
-                    0
-                ),
                 ManifestComparison::Changed(
                     MPathElement::new_from_slice(b"dir2")?,
                     get_entry(ctx, blobstore, mf1, "dir2").await?,
@@ -883,6 +903,13 @@ mod tests {
                     MPathElement::new_from_slice(b"dir1")?,
                     get_entry(ctx, blobstore, mf1, "dir1").await?,
                     vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?)],
+                ),
+                ManifestComparison::Same(
+                    Span::Prefix(
+                        MPathElementPrefix::from_slice(b"file8")?,
+                        get_trie_map(ctx, blobstore, mf1, "", "file8").await?,
+                    ),
+                    0
                 ),
                 ManifestComparison::Changed(
                     MPathElement::new_from_slice(b"file7")?,
@@ -1010,15 +1037,15 @@ mod tests {
             vec![
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir4")?,
-                        get_trie_map(ctx, blobstore, mf1, "", "dir4").await?,
+                        MPathElementPrefix::from_slice(b"dir5")?,
+                        get_trie_map(ctx, blobstore, mf1, "", "dir5").await?,
                     ),
                     0,
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir5")?,
-                        get_trie_map(ctx, blobstore, mf1, "", "dir5").await?,
+                        MPathElementPrefix::from_slice(b"dir4")?,
+                        get_trie_map(ctx, blobstore, mf1, "", "dir4").await?,
                     ),
                     0,
                 ),
@@ -1076,11 +1103,9 @@ mod tests {
                     MPathElementPrefix::from_slice(b"d")?,
                     vec![Some(get_trie_map(ctx, blobstore, mf0, "dir2", "d").await?),],
                 )),
-                ManifestComparison::Removed(Span::Prefix(
-                    MPathElementPrefix::from_slice(b"file3")?,
-                    vec![Some(
-                        get_trie_map(ctx, blobstore, mf0, "dir2", "file3").await?
-                    ),],
+                ManifestComparison::New(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"file9")?,
+                    get_trie_map(ctx, blobstore, mf1, "dir2", "file9").await?,
                 )),
                 ManifestComparison::Same(
                     Span::Prefix(
@@ -1089,9 +1114,11 @@ mod tests {
                     ),
                     0,
                 ),
-                ManifestComparison::New(Span::Prefix(
-                    MPathElementPrefix::from_slice(b"file9")?,
-                    get_trie_map(ctx, blobstore, mf1, "dir2", "file9").await?,
+                ManifestComparison::Removed(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"file3")?,
+                    vec![Some(
+                        get_trie_map(ctx, blobstore, mf0, "dir2", "file3").await?
+                    ),],
                 )),
             ]
         );
@@ -1109,8 +1136,8 @@ mod tests {
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir2")?,
-                        get_trie_map(ctx, blobstore, mf2, "", "dir2").await?,
+                        MPathElementPrefix::from_slice(b"dir5")?,
+                        get_trie_map(ctx, blobstore, mf2, "", "dir5").await?,
                     ),
                     0,
                 ),
@@ -1123,8 +1150,8 @@ mod tests {
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir5")?,
-                        get_trie_map(ctx, blobstore, mf2, "", "dir5").await?,
+                        MPathElementPrefix::from_slice(b"dir2")?,
+                        get_trie_map(ctx, blobstore, mf2, "", "dir2").await?,
                     ),
                     0,
                 ),
@@ -1170,20 +1197,6 @@ mod tests {
                     ),
                     1,
                 ),
-                ManifestComparison::Same(
-                    Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir1")?,
-                        get_trie_map(ctx, blobstore, mf3, "", "dir1").await?,
-                    ),
-                    1,
-                ),
-                ManifestComparison::Same(
-                    Span::Prefix(
-                        MPathElementPrefix::from_slice(b"dir4")?,
-                        get_trie_map(ctx, blobstore, mf3, "", "dir4").await?,
-                    ),
-                    0,
-                ),
                 ManifestComparison::Removed(Span::Prefix(
                     MPathElementPrefix::from_slice(b"dir5")?,
                     vec![
@@ -1191,6 +1204,13 @@ mod tests {
                         Some(get_trie_map(ctx, blobstore, mf2, "", "dir5").await?),
                     ],
                 )),
+                ManifestComparison::Same(
+                    Span::Prefix(
+                        MPathElementPrefix::from_slice(b"dir4")?,
+                        get_trie_map(ctx, blobstore, mf3, "", "dir4").await?,
+                    ),
+                    0,
+                ),
                 ManifestComparison::Changed(
                     MPathElement::new_from_slice(b"dir2")?,
                     get_entry(ctx, blobstore, mf3, "dir2").await?,
@@ -1198,6 +1218,13 @@ mod tests {
                         Some(get_entry(ctx, blobstore, mf1, "dir2").await?),
                         Some(get_entry(ctx, blobstore, mf2, "dir2").await?),
                     ],
+                ),
+                ManifestComparison::Same(
+                    Span::Prefix(
+                        MPathElementPrefix::from_slice(b"dir1")?,
+                        get_trie_map(ctx, blobstore, mf3, "", "dir1").await?,
+                    ),
+                    1,
                 ),
             ]
         );
@@ -1215,10 +1242,10 @@ mod tests {
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"file3")?,
-                        get_trie_map(ctx, blobstore, mf3, "dir2", "file3").await?,
+                        MPathElementPrefix::from_slice(b"file9")?,
+                        get_trie_map(ctx, blobstore, mf3, "dir2", "file9").await?,
                     ),
-                    1,
+                    0,
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
@@ -1229,10 +1256,10 @@ mod tests {
                 ),
                 ManifestComparison::Same(
                     Span::Prefix(
-                        MPathElementPrefix::from_slice(b"file9")?,
-                        get_trie_map(ctx, blobstore, mf3, "dir2", "file9").await?,
+                        MPathElementPrefix::from_slice(b"file3")?,
+                        get_trie_map(ctx, blobstore, mf3, "dir2", "file3").await?,
                     ),
-                    0,
+                    1,
                 ),
             ]
         );

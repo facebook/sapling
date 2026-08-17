@@ -310,6 +310,23 @@ impl<
     Store: Send + Sync,
 > OrderedManifest<Store> for Either<M, N>
 {
+    type WeightedTrieMapType = Either<M::WeightedTrieMapType, N::WeightedTrieMapType>;
+
+    async fn into_weighted_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        match self {
+            Either::Left(m) => Ok(Either::Left(
+                m.into_weighted_trie_map(ctx, blobstore).await?,
+            )),
+            Either::Right(n) => Ok(Either::Right(
+                n.into_weighted_trie_map(ctx, blobstore).await?,
+            )),
+        }
+    }
+
     async fn lookup_weighted(
         &self,
         ctx: &CoreContext,

@@ -21,9 +21,13 @@ use serde_derive::Serialize;
 
 pub(crate) use self::acl_manifests::convert_acl_manifest;
 pub(crate) use self::bssm::bssm_v3_to_mf_entry;
+pub(crate) use self::bssm::convert_bssm_v3_to_weighted;
 pub(crate) use self::ccsm::ccsm_to_mf_entry;
+pub(crate) use self::ccsm::convert_ccsm_to_weighted;
 pub(crate) use self::content_manifests::convert_content_manifest;
+pub(crate) use self::content_manifests::convert_content_manifest_weighted;
 pub(crate) use self::dbcm::dbcm_to_mf_entry;
+pub(crate) use self::skeleton_manifests::convert_skeleton_manifest_v2_to_weighted;
 pub(crate) use self::skeleton_manifests::skeleton_manifest_v2_to_mf_entry;
 pub(crate) use self::test_manifests::convert_test_sharded_manifest;
 
@@ -110,6 +114,18 @@ pub type Weight = usize;
 
 #[async_trait]
 pub trait OrderedManifest<Store: Send + Sync>: Manifest<Store> {
+    /// A view of this manifest's subentries that keeps the rollup weight the
+    /// unweighted [`Manifest::TrieMapType`] discards. Callers requiring
+    /// `TrieMapOps<Store, Entry<(Weight, Self::TreeId), Self::Leaf>>` bound it
+    /// themselves, as they do for [`Manifest::TrieMapType`].
+    type WeightedTrieMapType: Send + Sync;
+
+    async fn into_weighted_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType>;
+
     async fn list_weighted(
         &self,
         ctx: &CoreContext,

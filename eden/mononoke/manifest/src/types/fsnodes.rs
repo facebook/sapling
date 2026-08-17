@@ -75,6 +75,21 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for Fsnode {
+    type WeightedTrieMapType = SortedVectorTrieMap<Entry<(Weight, FsnodeId), FsnodeFile>>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        let entries = self
+            .into_subentries()
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), convert_fsnode_weighted(v)))
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
+    }
+
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

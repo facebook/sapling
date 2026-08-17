@@ -176,7 +176,7 @@ fn convert_skeleton_manifest(
     }
 }
 
-fn convert_skeleton_manifest_v2_to_weighted(
+pub(crate) fn convert_skeleton_manifest_v2_to_weighted(
     entry: Entry<SkeletonManifestV2, ()>,
 ) -> Entry<(Weight, SkeletonManifestV2), ()> {
     match entry {
@@ -193,6 +193,16 @@ fn convert_skeleton_manifest_v2_to_weighted(
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for SkeletonManifestV2 {
+    type WeightedTrieMapType = LoadableShardedMapV2Node<SkeletonManifestV2Entry>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+
     async fn list_weighted(
         &self,
         ctx: &CoreContext,
@@ -221,6 +231,25 @@ impl<Store: KeyedBlobstore> OrderedManifest<Store> for SkeletonManifestV2 {
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for SkeletonManifest {
+    type WeightedTrieMapType = SortedVectorTrieMap<Entry<(Weight, SkeletonManifestId), ()>>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        let entries = self
+            .list()
+            .map(|(basename, entry)| {
+                (
+                    basename.clone().to_smallvec(),
+                    convert_skeleton_manifest_weighted(entry),
+                )
+            })
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
+    }
+
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

@@ -6,10 +6,10 @@
  */
 
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::iter::Peekable;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use borrowed::borrowed;
@@ -33,12 +33,12 @@ use crate::Entry;
 use crate::Manifest;
 use crate::OrderedManifest;
 use crate::PathOrPrefix;
+use crate::PathTree;
 use crate::StoreLoadable;
 use crate::TrieMapOps;
 use crate::comparison::classify_child;
 use crate::comparison::diff_weighted_children;
 use crate::ops::Diff;
-use crate::ops::ReplacementsHolder;
 use crate::select::select_path_tree;
 use crate::types::Weight;
 
@@ -289,6 +289,15 @@ where
                 Store,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             > + Eq,
+        <<Self as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
+            TrieMapOps<
+                    Store,
+                    Entry<
+                        (Weight, Self),
+                        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf,
+                    >,
+                > + Eq
+                + 'static,
     {
         self.filtered_diff_ordered(
             ctx,
@@ -334,9 +343,24 @@ where
                 Store,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             > + Eq,
+        <<Self as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
+            TrieMapOps<
+                    Store,
+                    Entry<
+                        (Weight, Self),
+                        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf,
+                    >,
+                > + Eq
+                + 'static,
     {
-        let (replacement, child_replacements) =
-            ReplacementsHolder::new(manifest_replacements).deconstruct();
+        let PathTree {
+            value: replacement,
+            subentries: child_replacements,
+        } = PathTree::from_iter(
+            manifest_replacements
+                .into_iter()
+                .map(|(path, entry)| (path, Some(entry))),
+        );
         let this = match replacement {
             None => self.clone(),
             Some(Entry::Tree((_weight, replacement))) => replacement,
@@ -400,7 +424,7 @@ where
                 schedule_max,
                 queue_max,
                 init,
-                move |(input, after, mut replacements)| {
+                move |(input, after, replacements)| {
                     async move {
                         let mut output = Vec::new();
 
@@ -416,148 +440,110 @@ where
                             }
                         };
 
-                        match input {
-                            Diff::Changed(path, left, right) => {
-                                if after.include_self() {
-                                    push_output(
-                                        &mut output,
-                                        Diff::Changed(
-                                            path.clone(),
-                                            Entry::Tree(left.clone()),
-                                            Entry::Tree(right.clone()),
-                                        ),
-                                    );
+                        if after.include_self() {
+                            push_output(&mut output, match &input {
+                                Diff::Changed(path, left, right) => Diff::Changed(
+                                    path.clone(),
+                                    Entry::Tree(left.clone()),
+                                    Entry::Tree(right.clone()),
+                                ),
+                                Diff::Added(path, tree) => {
+                                    Diff::Added(path.clone(), Entry::Tree(tree.clone()))
                                 }
+                                Diff::Removed(path, tree) => {
+                                    Diff::Removed(path.clone(), Entry::Tree(tree.clone()))
+                                }
+                            });
+                        }
 
-                                // Fast path (gated behind the
-                                // `scm/mononoke:enable_sharding_aware_manifest_diff`
-                                // JustKnob): with no replacements, prune identical
-                                // sub-shards by id instead of listing both whole
-                                // directories. Falls back to a full weighted list
-                                // when the knob is off or replacements are present.
-                                let entries = if replacements.is_empty() && use_fast {
-                                    diff_weighted_children(ctx, store, &left, other_store, &right)
-                                        .watched()
-                                        .await?
-                                } else {
-                                    let l = mononoke::spawn_task({
-                                        cloned!(ctx, left, store);
-                                        async move { left.load(&ctx, &store).watched().await }
-                                    });
-                                    let r = mononoke::spawn_task({
-                                        cloned!(ctx, right, other_store);
-                                        async move { right.load(&ctx, &other_store).watched().await }
-                                    });
-                                    let (left_mf, right_mf) =
-                                        future::try_join(l, r).watched().await?;
-                                    let (left_mf, right_mf) = (left_mf?, right_mf?);
-                                    EntryDiffIterator::new(
-                                        left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
-                                        right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
-                                    )
-                                    .collect::<Vec<_>>()
+                        let (path, left, right) = match input {
+                            Diff::Changed(path, left, right) => (path, Some(left), Some(right)),
+                            Diff::Added(path, tree) => (path, None, Some(tree)),
+                            Diff::Removed(path, tree) => (path, Some(tree), None),
+                        };
+
+                        let entries = match (use_fast, &left, &right) {
+                            (true, Some(left), Some(right)) => {
+                                diff_weighted_children(ctx, store, left, other_store, right, replacements.clone())
+                                    .watched()
+                                    .await?
+                            }
+                            _ => {
+                                let l = mononoke::spawn_task({
+                                    cloned!(ctx, left, store);
+                                    async move {
+                                        match left {
+                                            Some(left) => anyhow::Ok(Some(left.load(&ctx, &store).watched().await?)),
+                                            None => Ok(None),
+                                        }
+                                    }
+                                });
+                                let r = mononoke::spawn_task({
+                                    cloned!(ctx, right, other_store);
+                                    async move {
+                                        match right {
+                                            Some(right) => anyhow::Ok(Some(right.load(&ctx, &other_store).watched().await?)),
+                                            None => Ok(None),
+                                        }
+                                    }
+                                });
+                                let (left_mf, right_mf) = future::try_join(l, r).watched().await?;
+                                let (left_mf, right_mf) = (left_mf?, right_mf?);
+                                let left_entries = match left_mf {
+                                    Some(left_mf) => left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?,
+                                    None => Vec::new(),
                                 };
-                                for (name, left, right) in entries {
-                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
-                                    let left = replacement.or(left);
-                                    if after.skip(&name) || left == right {
-                                        continue;
-                                    }
-                                    let path = path.join(&name);
-                                    let (child_output, child_recurse) =
-                                        classify_child(path, left, right);
-                                    if let Some(out) = child_output {
-                                        if after.include_file(&name) {
-                                            push_output(&mut output, strip_entry_weight(out));
-                                        }
-                                    }
-                                    if let Some(work) = child_recurse {
-                                        let (weight, work) = strip_weight(work);
-                                        push_recurse(
-                                            &mut output,
-                                            weight,
-                                            work,
-                                            after.enter_dir(&name),
-                                            child_replacements,
-                                        );
+                                let right_entries = match right_mf {
+                                    Some(right_mf) => right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?,
+                                    None => Vec::new(),
+                                };
+                                let mut entries: BTreeMap<_, _> = EntryDiffIterator::new(
+                                    left_entries.into_iter(),
+                                    right_entries.into_iter(),
+                                )
+                                .map(|(name, left, right)| (name, (left, right)))
+                                .collect();
+                                for (name, subtree) in replacements.clone() {
+                                    if let Some(replacement) = subtree.value {
+                                        let name = MPathElement::from_smallvec(name)?;
+                                        entries.entry(name).or_default().0 = Some(replacement);
                                     }
                                 }
-                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for changed tree")?;
+                                entries
+                                    .into_iter()
+                                    .map(|(name, (left, right))| (name, left, right))
+                                    .collect::<Vec<_>>()
                             }
-                            Diff::Added(path, tree) => {
-                                if after.include_self() {
-                                    push_output(
-                                        &mut output,
-                                        Diff::Added(path.clone(), Entry::Tree(tree.clone())),
-                                    );
-                                }
-                                let manifest = tree.load(ctx, other_store).watched().await?;
-                                let mut stream = manifest.list_weighted(ctx, store).watched().await?;
-                                while let Some((name, right)) = stream.try_next().watched().await? {
-                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
-                                    if after.skip(&name) {
-                                        // Note: we must do this *after* extracting the replacement so that the finalize
-                                        // check below doesn't see it as a leftover replacement.
-                                        continue;
-                                    }
-                                    let path = path.join(&name);
-                                    let (child_output, child_recurse) =
-                                        classify_child(path, replacement, Some(right));
-                                    if let Some(out) = child_output {
-                                        if after.include_file(&name) {
-                                            push_output(&mut output, strip_entry_weight(out));
-                                        }
-                                    }
-                                    if let Some(work) = child_recurse {
-                                        let (weight, work) = strip_weight(work);
-                                        push_recurse(
-                                            &mut output,
-                                            weight,
-                                            work,
-                                            after.enter_dir(&name),
-                                            child_replacements,
-                                        );
-                                    }
-                                }
-                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for added tree")?;
+                        };
+
+                        for (name, left, right) in entries {
+                            if after.skip(&name) || left == right {
+                                continue;
                             }
-                            Diff::Removed(path, tree) => {
-                                if after.include_self() {
-                                    push_output(
-                                        &mut output,
-                                        Diff::Removed(path.clone(), Entry::Tree(tree.clone())),
-                                    );
+                            let (child_output, child_recurse) =
+                                classify_child(path.join(&name), left, right);
+                            if let Some(out) = child_output {
+                                if after.include_file(&name) {
+                                    push_output(&mut output, strip_entry_weight(out));
                                 }
-                                let manifest = tree.load(ctx, store).watched().await?;
-                                let mut stream = manifest.list_weighted(ctx, store).watched().await?;
-                                while let Some((name, entry)) = stream.try_next().watched().await? {
-                                    if after.skip(&name) {
-                                        continue;
-                                    }
-                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
-                                    let entry = replacement.unwrap_or(entry);
-                                    let path = path.join(&name);
-                                    let (child_output, child_recurse) =
-                                        classify_child(path, Some(entry), None);
-                                    if let Some(out) = child_output {
-                                        if after.include_file(&name) {
-                                            push_output(&mut output, strip_entry_weight(out));
-                                        }
-                                    }
-                                    if let Some(work) = child_recurse {
-                                        let (weight, work) = strip_weight(work);
-                                        push_recurse(
-                                            &mut output,
-                                            weight,
-                                            work,
-                                            after.enter_dir(&name),
-                                            child_replacements,
-                                        );
-                                    }
-                                }
-                                ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for removed tree")?;
+                            }
+                            if let Some(work) = child_recurse {
+                                let (weight, work) = strip_weight(work);
+                                let child_replacements = replacements
+                                    .get(name.as_ref())
+                                    .cloned()
+                                    .unwrap_or_default()
+                                    .subentries;
+                                push_recurse(
+                                    &mut output,
+                                    weight,
+                                    work,
+                                    after.enter_dir(&name),
+                                    child_replacements,
+                                );
                             }
                         }
+
                         Ok(output)
                     }
                     .boxed()

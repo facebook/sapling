@@ -36,9 +36,9 @@ impl<V> PathTree<V> {
     pub fn get(&self, path: &MPath) -> Option<&V> {
         let mut tree = self;
         for elem in path {
-            match tree.subentries.get(elem.as_ref()) {
-                Some(subtree) => tree = subtree,
-                None => return None,
+            {
+                let subtree = tree.subentries.get(elem.as_ref())?;
+                tree = subtree
             }
         }
         Some(&tree.value)

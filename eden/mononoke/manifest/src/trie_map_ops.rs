@@ -37,6 +37,7 @@ use mononoke_types::typed_hash::AclManifestId;
 use smallvec::SmallVec;
 
 use crate::types::Entry;
+use crate::types::Weight;
 
 #[async_trait]
 pub trait TrieMapOps<Store, Value>: Sized {
@@ -376,6 +377,203 @@ impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<AclManifestId, AclManifestRe
     }
 }
 
+#[async_trait]
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<(Weight, BssmV3Directory), ()>>
+    for LoadableShardedMapV2Node<BssmV3Entry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<(Weight, BssmV3Directory), ()>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((
+            entry.map(|entry| {
+                crate::types::convert_bssm_v3_to_weighted(crate::types::bssm_v3_to_mf_entry(entry))
+            }),
+            children,
+        ))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Entry<(Weight, BssmV3Directory), ()>)>>,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| {
+                (
+                    k,
+                    crate::types::convert_bssm_v3_to_weighted(crate::types::bssm_v3_to_mf_entry(v)),
+                )
+            })
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<(Weight, CaseConflictSkeletonManifest), ()>>
+    for LoadableShardedMapV2Node<CcsmEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<(Weight, CaseConflictSkeletonManifest), ()>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((
+            entry.map(|entry| {
+                crate::types::convert_ccsm_to_weighted(crate::types::ccsm_to_mf_entry(entry))
+            }),
+            children,
+        ))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(
+                SmallVec<[u8; 24]>,
+                Entry<(Weight, CaseConflictSkeletonManifest), ()>,
+            )>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| {
+                (
+                    k,
+                    crate::types::convert_ccsm_to_weighted(crate::types::ccsm_to_mf_entry(v)),
+                )
+            })
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<(Weight, SkeletonManifestV2), ()>>
+    for LoadableShardedMapV2Node<SkeletonManifestV2Entry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<(Weight, SkeletonManifestV2), ()>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((
+            entry.map(|entry| {
+                crate::types::convert_skeleton_manifest_v2_to_weighted(
+                    crate::types::skeleton_manifest_v2_to_mf_entry(entry),
+                )
+            }),
+            children,
+        ))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(SmallVec<[u8; 24]>, Entry<(Weight, SkeletonManifestV2), ()>)>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| {
+                (
+                    k,
+                    crate::types::convert_skeleton_manifest_v2_to_weighted(
+                        crate::types::skeleton_manifest_v2_to_mf_entry(v),
+                    ),
+                )
+            })
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: KeyedBlobstore>
+    TrieMapOps<Store, Entry<(Weight, ContentManifestId), ContentManifestFile>>
+    for LoadableShardedMapV2Node<ContentManifestEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<(Weight, ContentManifestId), ContentManifestFile>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((
+            entry.map(crate::types::convert_content_manifest_weighted),
+            children,
+        ))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(
+                SmallVec<[u8; 24]>,
+                Entry<(Weight, ContentManifestId), ContentManifestFile>,
+            )>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, crate::types::convert_content_manifest_weighted(v)))
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
 /// `TrieMapOps` for `Either`, mirroring the `Manifest`/`OrderedManifest` impls
 /// for `Either` in `combined.rs`. This lets `compare_manifest` (and hence
 /// `diff_manifests`) operate over the compat `Either<ContentManifest, Fsnode>`
@@ -454,5 +652,105 @@ where
             Either::Left(a) => a.is_empty(),
             Either::Right(b) => b.is_empty(),
         }
+    }
+}
+
+/// Weighted counterpart of the `Either` impl above. The weight has to move
+/// inside the `Either` -- `(w, Left(id))` rather than `Left((w, id))` -- to match
+/// `Entry<(Weight, Self::TreeId), Self::Leaf>` for `Either<M, N>`.
+#[async_trait]
+impl<Store, A, B, TA, LA, TB, LB> TrieMapOps<Store, Entry<(Weight, Either<TA, TB>), Either<LA, LB>>>
+    for Either<A, B>
+where
+    Store: Send + Sync + 'static,
+    A: TrieMapOps<Store, Entry<(Weight, TA), LA>> + Send + 'static,
+    B: TrieMapOps<Store, Entry<(Weight, TB), LB>> + Send + 'static,
+    TA: Send + 'static,
+    LA: Send + 'static,
+    TB: Send + 'static,
+    LB: Send + 'static,
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<(Weight, Either<TA, TB>), Either<LA, LB>>>,
+        Vec<(u8, Self)>,
+    )> {
+        match self {
+            Either::Left(a) => {
+                let (entry, children) = a.expand(ctx, blobstore).await?;
+                Ok((
+                    entry.map(weighted_left_entry),
+                    children
+                        .into_iter()
+                        .map(|(byte, child)| (byte, Either::Left(child)))
+                        .collect(),
+                ))
+            }
+            Either::Right(b) => {
+                let (entry, children) = b.expand(ctx, blobstore).await?;
+                Ok((
+                    entry.map(weighted_right_entry),
+                    children
+                        .into_iter()
+                        .map(|(byte, child)| (byte, Either::Right(child)))
+                        .collect(),
+                ))
+            }
+        }
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(
+                SmallVec<[u8; 24]>,
+                Entry<(Weight, Either<TA, TB>), Either<LA, LB>>,
+            )>,
+        >,
+    > {
+        match self {
+            Either::Left(a) => Ok(a
+                .into_stream(ctx, blobstore)
+                .await?
+                .map_ok(|(key, value)| (key, weighted_left_entry(value)))
+                .boxed()),
+            Either::Right(b) => Ok(b
+                .into_stream(ctx, blobstore)
+                .await?
+                .map_ok(|(key, value)| (key, weighted_right_entry(value)))
+                .boxed()),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            Either::Left(a) => a.is_empty(),
+            Either::Right(b) => b.is_empty(),
+        }
+    }
+}
+
+fn weighted_left_entry<TA, LA, TB, LB>(
+    entry: Entry<(Weight, TA), LA>,
+) -> Entry<(Weight, Either<TA, TB>), Either<LA, LB>> {
+    match entry {
+        Entry::Tree((weight, tree)) => Entry::Tree((weight, Either::Left(tree))),
+        Entry::Leaf(leaf) => Entry::Leaf(Either::Left(leaf)),
+    }
+}
+
+fn weighted_right_entry<TA, LA, TB, LB>(
+    entry: Entry<(Weight, TB), LB>,
+) -> Entry<(Weight, Either<TA, TB>), Either<LA, LB>> {
+    match entry {
+        Entry::Tree((weight, tree)) => Entry::Tree((weight, Either::Right(tree))),
+        Entry::Leaf(leaf) => Entry::Leaf(Either::Right(leaf)),
     }
 }

@@ -116,7 +116,7 @@ impl<Store: KeyedBlobstore> Manifest<Store> for BssmV3Directory {
     }
 }
 
-fn convert_bssm_v3_to_weighted(
+pub(crate) fn convert_bssm_v3_to_weighted(
     entry: Entry<BssmV3Directory, ()>,
 ) -> Entry<(Weight, BssmV3Directory), ()> {
     match entry {
@@ -133,6 +133,16 @@ fn convert_bssm_v3_to_weighted(
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for BssmV3Directory {
+    type WeightedTrieMapType = LoadableShardedMapV2Node<BssmV3Entry>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+
     async fn list_weighted(
         &self,
         ctx: &CoreContext,

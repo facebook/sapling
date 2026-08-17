@@ -209,21 +209,19 @@ impl<V> Iterator for PrefixTreeIntoIter<V> {
                 ));
             }
 
-            match self.stack.last_mut() {
-                None => return None,
-                Some(iter) => match iter.next() {
-                    None => {
-                        self.prefixes.pop();
-                        self.stack.pop();
-                    }
-                    Some((next_byte, mut child)) => {
-                        child.prefix.insert(0, next_byte);
-                        self.prefixes.push(child.prefix);
-                        self.value = child.value;
-                        self.stack.push(child.edges.into_iter());
-                    }
-                },
-            };
+            let iter = self.stack.last_mut()?;
+            match iter.next() {
+                None => {
+                    self.prefixes.pop();
+                    self.stack.pop();
+                }
+                Some((next_byte, mut child)) => {
+                    child.prefix.insert(0, next_byte);
+                    self.prefixes.push(child.prefix);
+                    self.value = child.value;
+                    self.stack.push(child.edges.into_iter());
+                }
+            }
         }
     }
 }

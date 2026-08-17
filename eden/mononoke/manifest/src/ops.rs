@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use anyhow::Error;
@@ -24,7 +23,6 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
 use mononoke_macros::mononoke;
-use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
 
@@ -396,9 +394,15 @@ where
             None,
             None,
         ) {
-            let (root_replacement, child_replacements) =
-                ReplacementsHolder::new(manifest_replacements).deconstruct();
-            let this = match root_replacement {
+            let PathTree {
+                value: replacement,
+                subentries: child_replacements,
+            } = PathTree::from_iter(
+                manifest_replacements
+                    .into_iter()
+                    .map(|(path, entry)| (path, Some(entry))),
+            );
+            let this = match replacement {
                 None => self.clone(),
                 Some(Entry::Tree(replacement)) => replacement,
                 Some(Entry::Leaf(_)) => {
@@ -478,8 +482,14 @@ where
         RecursePruner: Fn(&Diff<Self>) -> bool + Clone + Send + 'static,
         Out: Send + 'static,
     {
-        let (replacement, child_replacements) =
-            ReplacementsHolder::new(manifest_replacements).deconstruct();
+        let PathTree {
+            value: replacement,
+            subentries: child_replacements,
+        } = PathTree::from_iter(
+            manifest_replacements
+                .into_iter()
+                .map(|(path, entry)| (path, Some(entry))),
+        );
         let this = match replacement {
             None => self.clone(),
             Some(Entry::Tree(replacement)) => replacement,
@@ -523,54 +533,6 @@ where
         .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
         .try_flatten()
         .boxed()
-    }
-}
-
-pub(crate) struct ReplacementsHolder<Entry> {
-    replacements: PathTree<Option<Entry>>,
-}
-
-impl<Entry> ReplacementsHolder<Entry> {
-    /// Create a new replacements holder for manifest entry replacements.  These entries will replace the entries at the given paths.
-    pub fn new(replacements: HashMap<MPath, Entry>) -> Self {
-        Self {
-            replacements: replacements
-                .into_iter()
-                .map(|(path, entry)| (path, Some(entry)))
-                .collect(),
-        }
-    }
-
-    /// Deconstruct one level of replacements, returning the replacement entry at the current level (if any), and a collection of child replacement holders.
-    pub fn deconstruct(self) -> (Option<Entry>, BTreeMap<MPathElement, Self>) {
-        let (replacement, child_replacements) = self.replacements.deconstruct();
-        let child_replacements: BTreeMap<_, _> = child_replacements
-            .into_iter()
-            .map(|(elem, replacements)| (elem, Self { replacements }))
-            .collect();
-        (replacement, child_replacements)
-    }
-
-    /// Complete processing of a collection of ReplacementsHolders, ensuring that all values have been consumed.
-    pub fn finalize(
-        path: &MPath,
-        mut replacements: BTreeMap<MPathElement, Self>,
-    ) -> Result<(), Error> {
-        if let Some((name, _replacement)) = replacements.pop_first() {
-            let path = path.join(&name);
-            return Err(anyhow!(
-                "Manifest replacement at {path} which doesn't exist in the comparison manifest"
-            ));
-        }
-        Ok(())
-    }
-}
-
-impl<Entry> Default for ReplacementsHolder<Entry> {
-    fn default() -> Self {
-        Self {
-            replacements: PathTree::default(),
-        }
     }
 }
 

@@ -122,6 +122,16 @@ pub(crate) fn convert_content_manifest(
 
 #[async_trait]
 impl<Store: KeyedBlobstore> OrderedManifest<Store> for ContentManifest {
+    type WeightedTrieMapType = LoadableShardedMapV2Node<ContentManifestEntry>;
+
+    async fn into_weighted_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::WeightedTrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+
     async fn lookup_weighted(
         &self,
         ctx: &CoreContext,
@@ -149,7 +159,7 @@ impl<Store: KeyedBlobstore> OrderedManifest<Store> for ContentManifest {
     }
 }
 
-fn convert_content_manifest_weighted(
+pub(crate) fn convert_content_manifest_weighted(
     entry: ContentManifestEntry,
 ) -> Entry<(Weight, ContentManifestId), ContentManifestFile> {
     match entry {

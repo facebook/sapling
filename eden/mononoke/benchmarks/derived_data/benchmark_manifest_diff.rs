@@ -452,6 +452,12 @@ where
         Clone + Send + Sync + Eq + Unpin + 'static,
     <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<Id, <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>
         + Eq,
+    <<Id as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
+        TrieMapOps<
+                Store,
+                Entry<(usize, Id), <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            > + Eq
+            + 'static,
 {
     // Path-lookup scenarios bypass the diff code entirely.
     match scenario.kind {
