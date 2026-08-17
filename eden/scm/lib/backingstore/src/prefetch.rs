@@ -48,6 +48,7 @@ macro_rules! info_if {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Config {
+    pub(crate) file_batch_size: usize,
     pub(crate) max_initial_lag: u64,
     pub(crate) min_ratio: f64,
     pub(crate) min_interval: Duration,
@@ -57,6 +58,7 @@ pub(crate) struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            file_batch_size: 4_096,
             max_initial_lag: 1000,
             min_ratio: 0.1,
             min_interval: Duration::from_millis(10),
@@ -441,7 +443,6 @@ fn prefetch(
         };
         let files = manifest.files(matcher);
 
-        const BATCH_SIZE: usize = 10_000;
         let mut batch = Vec::new();
 
         // Allow multiple concurrent file fetches to stack up.
@@ -520,7 +521,7 @@ fn prefetch(
                     // Don't propagate path to save memory.
                     batch.push(Key::new(RepoPathBuf::new(), file.meta.hgid));
 
-                    if batch.len() >= BATCH_SIZE {
+                    if batch.len() >= config.file_batch_size {
                         fetch_batch(&mut batch);
                     }
                 }
@@ -799,9 +800,9 @@ mod test {
         // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
         let handle = prefetch(
             Config::default(),
-            mf,
-            file_store,
-            detector,
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
             PrefetchWork::FileContent("dir".to_string().try_into()?, 1, Some(1)),
             None,
         );
@@ -819,6 +820,29 @@ mod test {
                 Key::new(RepoPathBuf::new(), exclude_hgid),
                 Key::new(RepoPathBuf::new(), bar_hgid),
             ]
+        );
+
+        let handle = prefetch(
+            Config {
+                file_batch_size: 2,
+                ..Default::default()
+            },
+            mf,
+            file_store,
+            detector,
+            PrefetchWork::FileContent(RepoPathBuf::new(), 2, None),
+            None,
+        );
+
+        while !handle.is_done() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        let fetches = store.fetches();
+        let fetch_sizes = fetches.iter().map(Vec::len).collect::<Vec<_>>();
+        assert!(
+            fetch_sizes.ends_with(&[2, 1]),
+            "expected final fetch sizes [2, 1], got {fetch_sizes:?}"
         );
 
         Ok(())

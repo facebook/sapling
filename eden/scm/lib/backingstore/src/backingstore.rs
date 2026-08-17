@@ -355,6 +355,11 @@ impl BackingStore {
                     "walk-prefetch-min-interval",
                     || Duration::from_millis(10),
                 )?,
+                file_batch_size: config.get_or(
+                    "backingstore",
+                    "walk-prefetch-file-batch-size",
+                    || 4_096,
+                )?,
                 skip_lfs: config.get_or("backingstore", "walk-prefetch-skip-lfs", || true)?,
             };
 
