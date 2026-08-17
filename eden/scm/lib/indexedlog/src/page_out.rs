@@ -9,24 +9,33 @@
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
+#[cfg(unix)]
+use std::sync::RwLock;
+#[cfg(unix)]
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 
 use minibytes::Bytes;
+#[cfg(unix)]
 use minibytes::WeakBytes;
 
 /// See `crate::config::set_page_out_threshold`.
 pub(crate) static THRESHOLD: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
 
 /// Track mmap regions in order to support `find_region`.
+#[cfg(unix)]
 pub(crate) static NEED_FIND_REGION: AtomicBool = AtomicBool::new(false);
 
 /// Remaining byte count to read without `page_out()`.
 static AVAILABLE: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
 
-/// Tracked buffers. Also serve as a lock for `page_out()`.
-static BUFFERS: Mutex<WeakBuffers<WeakBytes>> = Mutex::new(WeakBuffers::<WeakBytes>::new());
+/// Serialize page-out sweeps without blocking SIGBUS mmap lookup.
+static PAGE_OUT_LOCK: Mutex<()> = Mutex::new(());
+
+/// Tracked buffers used by page-out and SIGBUS recovery.
+#[cfg(unix)]
+static BUFFERS: RwLock<WeakBuffers<WeakBytes>> = RwLock::new(WeakBuffers::<WeakBytes>::new());
 
 /// By default, trigger `page_out()` after approximately 2GB of `Log` reads.
 const DEFAULT_THRESHOLD: i64 = 1i64 << 31;
@@ -43,6 +52,7 @@ pub(crate) trait WeakSlice {
     fn as_slice(v: &Self::Upgraded) -> &[u8];
 }
 
+#[cfg(unix)]
 impl WeakSlice for WeakBytes {
     type Upgraded = Bytes;
     fn upgrade(&self) -> Option<Self::Upgraded> {
@@ -92,37 +102,56 @@ fn query_page_size() -> Option<usize> {
 /// If it becomes negative when `THRESHOLD` is positive, trigger `page_out`.
 pub(crate) fn adjust_available(delta: i64) {
     let old_available = AVAILABLE.fetch_add(delta as _, Ordering::AcqRel);
-    if old_available + delta < 0 {
+    if old_available + delta < 0 && THRESHOLD.load(Ordering::Acquire) > 0 {
+        let _page_out_guard = PAGE_OUT_LOCK.lock().unwrap();
         let threshold = THRESHOLD.load(Ordering::Acquire);
-        if threshold > 0 {
-            let mut buffers = BUFFERS.lock().unwrap();
+        if threshold > 0 && AVAILABLE.load(Ordering::Acquire) < 0 {
             AVAILABLE.store(threshold, Ordering::Release);
             tracing::info!("running page_out()");
-            buffers.page_out();
+            #[cfg(unix)]
+            {
+                // Keep the mappings alive after releasing the registry lock.
+                let buffers = {
+                    let buffers = BUFFERS.read().unwrap();
+                    buffers.alive_buffers()
+                };
+                page_out(&buffers);
+            }
+            #[cfg(windows)]
+            page_out();
         }
     }
 }
 
 /// Track the mmap buffer as a weak ref.
+#[cfg(unix)]
 pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
     let threshold = THRESHOLD.load(Ordering::Acquire);
     if threshold > 0 || NEED_FIND_REGION.load(Ordering::Acquire) {
-        let mut buffers = BUFFERS.lock().unwrap();
         if let Some(weak) = bytes.downgrade() {
-            buffers.track(weak);
+            if let Ok(mut buffers) = BUFFERS.try_write() {
+                buffers.track(weak);
+                return;
+            }
+
+            // A page-out snapshot holds `PAGE_OUT_LOCK` before taking the read
+            // lock. Wait here so we do not queue a writer that blocks SIGBUS lookup.
+            let _page_out_guard = PAGE_OUT_LOCK.lock().unwrap();
+            BUFFERS.write().unwrap().track(weak);
         }
     }
 }
+
+#[cfg(not(unix))]
+pub(crate) fn track_mmap_buffer(_bytes: &Bytes) {}
 
 /// Find the mmap region that contains the given pointer. Best effort.
 /// Returns `(start, end, should_be_writable)`.
 /// Does not block. Returns `None` when unable to take the lock.
 #[cfg(unix)]
 pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
-    if let Ok(locked) = BUFFERS.try_lock() {
-        if let Some((start, end)) = locked.find_region(addr) {
-            return Some((start, end, false));
-        }
+    if let Some((start, end)) = find_log_region(&BUFFERS, addr) {
+        return Some((start, end, false));
     }
 
     // Also check the change_detect mmap buffers.
@@ -133,6 +162,14 @@ pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
     }
 
     None
+}
+
+#[cfg(unix)]
+fn find_log_region(
+    buffers: &RwLock<WeakBuffers<WeakBytes>>,
+    addr: usize,
+) -> Option<(usize, usize)> {
+    buffers.try_read().ok()?.find_region(addr)
 }
 
 impl<W: WeakSlice> WeakBuffers<W> {
@@ -147,9 +184,15 @@ impl<W: WeakSlice> WeakBuffers<W> {
         self.buffers.push(value);
         self.gc_tick += 1;
         if self.gc_tick > crate::config::WEAK_BUFFER_GC_THRESHOLD.load(Ordering::Acquire) {
-            self.for_each_alive_buffer(None); // side effect: gc
+            self.buffers
+                .retain(|weak| WeakSlice::upgrade(weak).is_some());
             self.gc_tick = 0;
         }
+    }
+
+    #[cfg(unix)]
+    fn alive_buffers(&self) -> Vec<W::Upgraded> {
+        self.buffers.iter().filter_map(WeakSlice::upgrade).collect()
     }
 
     fn find_region(&self, addr: usize) -> Option<(usize, usize)> {
@@ -167,58 +210,75 @@ impl<W: WeakSlice> WeakBuffers<W> {
         }
         None
     }
+}
 
-    /// Run logic on each buffer that is still alive.
-    /// Drops buffers that are dead.
-    fn for_each_alive_buffer(&mut self, callback: Option<fn(&[u8])>) {
-        let mut new_buffers = Vec::new();
-        for weak in self.buffers.drain(..) {
-            let bytes = match WeakSlice::upgrade(&weak) {
-                None => continue,
-                Some(bytes) => bytes,
-            };
-            if let Some(callback) = callback {
-                let slice: &[u8] = W::as_slice(&bytes);
-                callback(slice);
-            }
-            new_buffers.push(weak);
-        }
-        self.buffers = new_buffers;
-    }
-
-    #[cfg(unix)]
-    fn page_out(&mut self) {
-        self.for_each_alive_buffer(Some(|slice| {
-            let ret = unsafe {
-                libc::madvise(
-                    slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
-                    slice.len(),
-                    libc::MADV_DONTNEED,
-                )
-            };
-            tracing::debug!(
-                "madvise({} bytes, MADV_DONTNEED) returned {}",
+#[cfg(unix)]
+fn page_out(buffers: &[Bytes]) {
+    for bytes in buffers {
+        let slice: &[u8] = bytes.as_ref();
+        // SAFETY: `buffers` holds a strong owner for this mapping throughout
+        // the call, and `madvise` does not retain the pointer.
+        let ret = unsafe {
+            libc::madvise(
+                slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
                 slice.len(),
-                ret
-            );
-        }));
+                libc::MADV_DONTNEED,
+            )
+        };
+        tracing::debug!(
+            "madvise({} bytes, MADV_DONTNEED) returned {}",
+            slice.len(),
+            ret
+        );
     }
+}
 
-    #[cfg(windows)]
-    fn page_out(&mut self) {
-        use winapi::um::processthreadsapi::GetCurrentProcess;
-        use winapi::um::psapi::EmptyWorkingSet;
+#[cfg(windows)]
+fn page_out() {
+    use winapi::um::processthreadsapi::GetCurrentProcess;
+    use winapi::um::psapi::EmptyWorkingSet;
 
-        unsafe {
-            let handle = GetCurrentProcess();
-            let ret = EmptyWorkingSet(handle);
-            tracing::debug!("EmptyWorkingSet returned {}", ret);
-        }
+    // SAFETY: The current-process pseudo-handle is valid for `EmptyWorkingSet`.
+    unsafe {
+        let handle = GetCurrentProcess();
+        let ret = EmptyWorkingSet(handle);
+        tracing::debug!("EmptyWorkingSet returned {}", ret);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    #[test]
+    fn alive_buffers_keep_their_owner_alive() {
+        use minibytes::Bytes;
+
+        let bytes = Bytes::from(vec![1, 2, 3]);
+        let mut buffers = super::WeakBuffers::new();
+        buffers.track(bytes.downgrade().unwrap());
+
+        let alive = buffers.alive_buffers();
+        drop(bytes);
+
+        assert_eq!(alive[0].as_ref(), &[1, 2, 3]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn find_region_can_share_log_buffer_lock() {
+        use std::sync::RwLock;
+
+        use minibytes::Bytes;
+
+        let bytes = Bytes::from(vec![1, 2, 3]);
+        let addr = bytes.as_ref().as_ptr() as usize;
+        let buffers = RwLock::new(super::WeakBuffers::new());
+        buffers.write().unwrap().track(bytes.downgrade().unwrap());
+
+        let _snapshot = buffers.read().unwrap();
+        assert_eq!(super::find_log_region(&buffers, addr), Some((addr, 3)));
+    }
+
     #[cfg(unix)]
     #[test]
     fn find_region_checks_change_detector_when_log_buffer_lock_is_busy() {
@@ -238,7 +298,7 @@ mod tests {
 
         let _detector = SharedChangeDetector::new(mmap);
 
-        let _log_buffers = super::BUFFERS.lock().unwrap();
+        let _log_buffers = super::BUFFERS.write().unwrap();
         // Holding BUFFERS must not prevent the SIGBUS handler from finding
         // rlock mmaps tracked by change_detect::BUFFERS.
         assert_eq!(
