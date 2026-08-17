@@ -23,7 +23,7 @@ fs-err = { version = "3.3.1", features = ["tokio"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 http = "1.5.0"
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/common/lfs_protocol" }
-moka = { version = "0.12.15", features = ["future", "sync"] }
+moka = { version = "0.12.16", features = ["future", "sync"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 paste = "1.0.14"
 quickcheck = "1.1"
