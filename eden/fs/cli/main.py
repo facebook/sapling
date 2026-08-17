@@ -2492,7 +2492,7 @@ class StartCmd(Subcmd):
                 cmd = ["strace", "-fttT", "-o", args.strace] + cmd
 
         # Wrap the command in sudo, if necessary
-        eden_env = daemon.get_edenfs_environment(args.preserved_vars)
+        eden_env = daemon.get_edenfs_environment(instance, args.preserved_vars)
         cmd, eden_env = daemon.prepare_edenfs_privileges(
             daemon_binary, cmd, eden_env, privhelper
         )

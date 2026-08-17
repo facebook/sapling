@@ -22,7 +22,7 @@ from eden.fs.cli.util import (
     maybe_edensparse_migration,
 )
 
-from . import daemon_util, proc_utils as proc_utils_mod
+from . import configutil, daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
 from .util import poll_until, print_stderr, ShutdownError
 
@@ -48,6 +48,7 @@ EDENFS_OOMD_AVOID_DISABLED = -1
 EDENFS_OOMD_AVOID_CLEAR = 0
 CGROUP2_ROOT = Path("/sys/fs/cgroup")
 PROC_ROOT = Path("/proc")
+ENVIRONMENT_VARIABLE_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _sanitize_unit_name(eden_dir: str) -> str:
@@ -62,13 +63,15 @@ def _sanitize_unit_name(eden_dir: str) -> str:
     return f"edenfs_{sanitized}_{os.getpid()}_{int(time.time())}"
 
 
-def _build_systemd_run_cmd(edenfs_cmd: List[str], eden_dir: str) -> List[str]:
+def _build_systemd_run_cmd(
+    edenfs_cmd: List[str], eden_dir: str, eden_env: Dict[str, str]
+) -> List[str]:
     """Wrap an edenfs command in systemd-run for cgroup isolation.
 
     Places edenfs in a transient scope under a dedicated eden.slice
     """
     unit_name = _sanitize_unit_name(eden_dir)
-    return [
+    cmd = [
         "systemd-run",
         "--user",
         "--scope",
@@ -77,7 +80,12 @@ def _build_systemd_run_cmd(edenfs_cmd: List[str], eden_dir: str) -> List[str]:
         "--property=Delegate=yes",
         "--slice=edenfs",
         f"--unit={unit_name}",
-    ] + edenfs_cmd
+    ]
+    for name, value in eden_env.items():
+        cmd.extend(["-E", f"{name}={value}"])
+    cmd.append("--")
+    cmd.extend(edenfs_cmd)
+    return cmd
 
 
 def _parse_edenfs_slice_cgroup(proc_cgroup: str) -> Optional[Path]:
@@ -188,15 +196,15 @@ def get_systemd_user_env() -> Optional[Dict[str, str]]:
 
 
 def _try_setup_systemd_env(
-    eden_env: Dict[str, str],
+    systemd_env: Dict[str, str],
     instance: "EdenInstance",
 ) -> bool:
-    """Prepare *eden_env* for systemd --user commands via _ensure_dbus_env.
+    """Prepare *systemd_env* for systemd --user commands via _ensure_dbus_env.
 
     Logs a telemetry sample and returns False (fall back to direct daemon
     management) when the D-Bus socket is unavailable; returns True otherwise.
     """
-    if not _ensure_dbus_env(eden_env):
+    if not _ensure_dbus_env(systemd_env):
         instance.log_sample(
             "systemd_setup",
             success=False,
@@ -397,34 +405,39 @@ def _start_edenfs_service(
     if edenfs_args:
         cmd.extend(edenfs_args)
 
-    eden_env = get_edenfs_environment(preserved_env)
+    eden_env = get_edenfs_environment(instance, preserved_env)
+    systemd_env = os.environ.copy()
 
     # Wrap the command in sudo, if necessary. See help text in
     # prepare_edenfs_privileges for more info.
     cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env, privhelper)
 
     if should_use_systemd_lifecycle_management(instance) and _try_setup_systemd_env(
-        eden_env, instance
+        systemd_env, instance
     ):
-        return _systemctl_start_or_reload(instance, cmd, eden_env, takeover)
+        return _systemctl_start_or_reload(
+            instance, cmd, eden_env, systemd_env, takeover
+        )
 
     if (
         sys.platform == "linux"
         and instance.get_config_bool(
             "experimental.systemd-cgroup-isolation", default=False
         )
-        and _try_setup_systemd_env(eden_env, instance)
+        and _try_setup_systemd_env(systemd_env, instance)
     ):
-        cmd = _build_systemd_run_cmd(cmd, str(instance.state_dir))
+        cmd = _build_systemd_run_cmd(cmd, str(instance.state_dir), eden_env)
+        launch_env = systemd_env
         use_systemd_cgroup = True
     else:
+        launch_env = eden_env
         use_systemd_cgroup = False
 
     creation_flags = 0
 
     maybe_edensparse_migration(instance, EdensparseMigrationStep.PRE_EDEN_START)
     exit_code = subprocess.call(
-        cmd, stdin=subprocess.DEVNULL, env=eden_env, creationflags=creation_flags
+        cmd, stdin=subprocess.DEVNULL, env=launch_env, creationflags=creation_flags
     )
     maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
 
@@ -581,6 +594,7 @@ def _systemctl_start_or_reload(
     instance: EdenInstance,
     cmd: List[str],
     eden_env: Dict[str, str],
+    systemd_env: Dict[str, str],
     takeover: bool,
 ) -> int:
     """Start or reload the edenfs systemd service.
@@ -608,7 +622,7 @@ def _systemctl_start_or_reload(
         ["systemctl", "--user", action, unit],
         capture_output=True,
         text=True,
-        env=eden_env,
+        env=systemd_env,
     )
     rc = result.returncode
 
@@ -750,7 +764,44 @@ def prepare_edenfs_privileges(
     return cmd, env
 
 
+def _apply_configured_environment(
+    instance: EdenInstance, eden_env: Dict[str, str]
+) -> None:
+    configured_environment = instance.get_config_strs(
+        "daemon.environment", default=configutil.Strs([])
+    )
+    _apply_environment_entries(configured_environment, eden_env)
+
+
+def _apply_environment_entries(
+    configured_environment: configutil.Strs, eden_env: Dict[str, str]
+) -> None:
+    for index, entry in enumerate(configured_environment):
+        name, separator, value = entry.partition("=")
+        if not separator or not name:
+            print_stderr(
+                "warning: ignoring invalid daemon.environment entry at index "
+                f"{index}: expected NAME=value with a non-empty name"
+            )
+            continue
+        if "\0" in name or "\0" in value:
+            print_stderr(
+                f"warning: ignoring invalid daemon.environment entry at index {index}: "
+                "names and values must not contain NUL"
+            )
+            continue
+        if ENVIRONMENT_VARIABLE_NAME_RE.fullmatch(name) is None:
+            print_stderr(
+                f"warning: ignoring invalid daemon.environment entry at index {index}: "
+                "name must contain only ASCII letters, digits, and underscores, and "
+                "must not start with a digit"
+            )
+            continue
+        eden_env[name] = value
+
+
 def get_edenfs_environment(
+    instance: EdenInstance,
     extra_preserve: Optional[List[str]],
 ) -> Dict[str, str]:
     """Get the environment to use to start the edenfs daemon."""
@@ -848,13 +899,6 @@ def get_edenfs_environment(
         "CODING_AGENT_METADATA",
     ]
 
-    # Add user-specified environment variables to preserve
-    #
-    # TODO: If users specify problematic environment variables, we may consider
-    # adding a blocklist to prevent them from being preserved.
-    if extra_preserve is not None:
-        preserve.extend(extra_preserve)
-
     if sys.platform == "win32":
         preserve += [
             "APPDATA",
@@ -883,4 +927,9 @@ def get_edenfs_environment(
             # Drop any environment variable not matching the above cases
             pass
 
+    _apply_configured_environment(instance, eden_env)
+    if extra_preserve is not None:
+        for name in extra_preserve:
+            if name in os.environ:
+                eden_env[name] = os.environ[name]
     return eden_env

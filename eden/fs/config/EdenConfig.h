@@ -319,6 +319,18 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(5),
       this};
 
+  // [daemon]
+
+  /**
+   * Environment assignments applied by the launcher before starting EdenFS.
+   * The daemon registers this launcher-owned setting to accept it in shared
+   * configuration files.
+   */
+  ConfigSetting<std::vector<std::string>> daemonEnvironment{
+      "daemon:environment",
+      {},
+      this};
+
   // [config]
 
   /**

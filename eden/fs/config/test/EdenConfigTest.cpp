@@ -96,6 +96,8 @@ class EdenConfigTest : public ::testing::Test {
         "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"
         "[mononoke]\n"
         "use-mononoke=\"false\"\n"
+        "[daemon]\n"
+        "environment=[\"TEST_NAME=test_value\"]\n"
         "[thrift]\n"
         "prefetch-blob-batch-size=\"123\""};
     writeFile(userConfigPath, userConfigFileData).value();
@@ -164,6 +166,8 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(
       edenConfig->inMemoryTreeCacheMinimumItems.getValue(),
       defaultTreeCacheMinimumItems_);
+  EXPECT_EQ(
+      edenConfig->daemonEnvironment.getValue(), std::vector<std::string>{});
   EXPECT_EQ(edenConfig->prefetchBlobBatchSize.getValue(), 4096);
 }
 
@@ -426,6 +430,9 @@ TEST_F(EdenConfigTest, loadSystemDynamicUserConfigTest) {
       normalizeBestEffort(clientConfigPath.view()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
   EXPECT_EQ(edenConfig->inMemoryTreeCacheMinimumItems.getValue(), 32);
+  EXPECT_EQ(
+      edenConfig->daemonEnvironment.getValue(),
+      std::vector<std::string>{"TEST_NAME=test_value"});
   EXPECT_EQ(edenConfig->prefetchBlobBatchSize.getValue(), 123);
 }
 
