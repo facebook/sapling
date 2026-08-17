@@ -19,7 +19,7 @@ chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-fea
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_rate_limit_config = { version = "0.1.0", path = "../../repo_attributes/commit_rate_limit" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 history_traversal = { version = "0.1.0", path = "../history_traversal" }
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

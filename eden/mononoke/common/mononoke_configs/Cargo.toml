@@ -13,7 +13,7 @@ arc-swap = { version = "1.9.2", features = ["weak"] }
 async-trait = "0.1.92"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
 justknobs_ext = { version = "0.1.0", path = "../rust/justknobs_ext" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }

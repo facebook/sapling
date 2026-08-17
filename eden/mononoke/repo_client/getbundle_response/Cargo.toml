@@ -19,7 +19,7 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 faster-hex = "0.6.1"
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

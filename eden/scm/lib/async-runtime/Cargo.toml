@@ -13,6 +13,6 @@ license = "MIT"
 name = "async_runtime"
 
 [dependencies]
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 num_cpus = "1.16"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }

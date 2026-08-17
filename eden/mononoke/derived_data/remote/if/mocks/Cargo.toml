@@ -30,7 +30,7 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 filenodes_if = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if" }
 filenodes_if_clients = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if/clients" }
 filenodes_if_mocks = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if/mocks" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 git_types_thrift = { version = "0.1.0", path = "../../../../git/git_types/if" }
 git_types_thrift_clients = { version = "0.1.0", path = "../../../../git/git_types/if/clients" }
 git_types_thrift_mocks = { version = "0.1.0", path = "../../../../git/git_types/if/mocks" }

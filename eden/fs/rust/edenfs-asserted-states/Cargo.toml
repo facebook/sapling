@@ -12,7 +12,7 @@ anyhow = "1.0.104"
 edenfs-asserted-states-client = { version = "0.1.0", path = "../edenfs-asserted-states-client" }
 edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../../cli_rs/edenfs-error" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
 itertools = "0.15.0"
 sapling-spawn-ext = { version = "0.1.0", path = "../../../scm/lib/spawn-ext" }

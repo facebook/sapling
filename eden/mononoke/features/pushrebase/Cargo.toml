@@ -22,7 +22,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/rep
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"

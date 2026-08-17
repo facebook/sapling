@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 path = "lib.rs"
 
 [dependencies]
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 
 [lints.rust]

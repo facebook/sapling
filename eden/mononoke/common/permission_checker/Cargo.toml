@@ -13,7 +13,7 @@ async-trait = "0.1.92"
 base64 = { version = "0.22.1", features = ["alloc"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 itertools = "0.15.0"
 maplit = "1.0"
 openssl = "0.10.80"

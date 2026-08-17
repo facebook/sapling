@@ -14,10 +14,10 @@ license = "MIT OR Apache-2.0"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 async-io = "2.6.0"
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uds_windows = "1.2.1"

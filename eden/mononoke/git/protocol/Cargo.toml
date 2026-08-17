@@ -25,7 +25,7 @@ commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_g
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 faster-hex = "0.6.1"
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_ref_content_mapping = { version = "0.1.0", path = "../../repo_attributes/git_ref_content_mapping" }
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }

@@ -16,7 +16,7 @@ blobstore = { version = "0.1.0", path = "../../../../blobstore" }
 context = { version = "0.1.0", path = "../../../../servers/slapi/slapi_server/context" }
 fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../../../repo_attributes/filenodes" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../../../../mercurial/types" }
 microwave_if = { version = "0.1.0", path = "../../if" }
 mononoke_types = { version = "0.1.0", path = "../../../../mononoke_types" }

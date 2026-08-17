@@ -16,7 +16,7 @@ anyhow = "1.0.104"
 async-trait = "0.1.92"
 auto_impl = "1.3.0"
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

@@ -25,7 +25,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../../repo_attributes/
 executor_lib = { version = "0.1.0", path = "../../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../../derived_data/fsnodes" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 indicatif = { version = "0.18.6", features = ["futures", "improved_unicode", "rayon", "tokio"] }
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }

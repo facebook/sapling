@@ -23,7 +23,7 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 dbbookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks/dbbookmarks" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
-futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_repos = { version = "0.1.0", path = "../../common/mononoke_repos" }
