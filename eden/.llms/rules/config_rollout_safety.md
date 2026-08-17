@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*(\.rs|\.thrift|\.cconf|\.cinc)$'
-apply_to_content: 'config|ConfigValue|tunables|justknobs|JustKnobs|rate.limit|RateLimit'
+name: config-rollout-safety
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*(\.rs|\.thrift|\.cconf|\.cinc)$'
+  apply_to_content: 'config|ConfigValue|tunables|justknobs|JustKnobs|rate.limit|RateLimit'
 ---
 
 # Configuration and Rate Limit Rollout Safety
