@@ -816,6 +816,28 @@ function start_and_wait_for_land_service {
   wait_for_land_service
 }
 
+function add_repo_manifest_mapping_entry {
+  # Routes a member (repo, branch) to a manifest branch — the store the
+  # manifest tailer maintains in production.
+  # Schema copied verbatim from
+  # repo_attributes/repo_manifest_mapping/schemas/sqlite-repo-manifest-mapping.sql
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<'EOSQL'
+CREATE TABLE IF NOT EXISTS `repo_manifest_mapping` (
+  `manifest_repo_id` INTEGER NOT NULL,
+  `manifest_branch` VARBINARY(255) NOT NULL,
+  `repo_name` VARBINARY(255) NOT NULL,
+  `repo_branch` VARBINARY(255) NOT NULL,
+  PRIMARY KEY (`manifest_repo_id`, `manifest_branch`, `repo_name`, `repo_branch`)
+);
+CREATE INDEX IF NOT EXISTS `reverse_idx` ON `repo_manifest_mapping` (`repo_name`, `repo_branch`);
+EOSQL
+  local manifest_branch=${2//"'"/"''"}
+  local repo_name=${3//"'"/"''"}
+  local repo_branch=${4//"'"/"''"}
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
+    "INSERT OR REPLACE INTO repo_manifest_mapping (manifest_repo_id, manifest_branch, repo_name, repo_branch) VALUES ($1, CAST('$manifest_branch' AS BLOB), CAST('$repo_name' AS BLOB), CAST('$repo_branch' AS BLOB))"
+}
+
 function multi_repo_land_service {
   # Ensure the git_repositories_source_of_truth tables exist. These are normally
   # created by gitimport but MLR tests may use testtool_drawdag instead.
