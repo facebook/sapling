@@ -27,7 +27,6 @@ use mononoke_macros::mononoke;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
-use mononoke_types::NonRootMPath;
 
 use crate::Diff;
 use crate::Entry;
@@ -39,46 +38,11 @@ use crate::ops::ReplacementsHolder;
 /// How much of the trie keyspace a comparison result covers: a single complete
 /// entry, or a whole unexpanded sub-trie under a byte-prefix.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Span<EK, PK, TrieMapType, V> {
-    /// A single resolved entry, identified by its complete key.
-    Element(EK, V),
+pub enum Span<TrieMapType, V> {
+    /// A single resolved entry, identified by its complete name.
+    Element(MPathElement, V),
     /// A whole unexpanded sub-trie of entries sharing a byte-prefix.
-    Prefix(PK, TrieMapType),
-}
-
-impl<EK, PK, T, V> Span<EK, PK, T, V> {
-    /// Translate the keys of this span, leaving the trie/value payload untouched.
-    fn map_keys<EK2, PK2>(
-        self,
-        fe: impl FnOnce(EK) -> EK2,
-        fp: impl FnOnce(PK) -> PK2,
-    ) -> Span<EK2, PK2, T, V> {
-        match self {
-            Span::Element(ek, v) => Span::Element(fe(ek), v),
-            Span::Prefix(pk, t) => Span::Prefix(fp(pk), t),
-        }
-    }
-}
-
-/// Result of a multi-way comparison between a manifest tree and the merge of
-/// a number of base manifest trees.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Comparison<TrieMapType, V> {
-    /// The span at this path is new.
-    New(Span<NonRootMPath, (MPath, MPathElementPrefix), TrieMapType, V>),
-    /// The entry at this path has changed compared to all of the bases.
-    Changed(NonRootMPath, V, Vec<Option<V>>),
-    /// The span at this path is the same as at least one of the bases (at the
-    /// given index).
-    Same(
-        Span<NonRootMPath, (MPath, MPathElementPrefix), TrieMapType, V>,
-        /// The index of the first base manifest that this span is the same as.
-        usize,
-    ),
-    /// The span at this path has been removed.
-    Removed(
-        Span<NonRootMPath, (MPath, MPathElementPrefix), Vec<Option<TrieMapType>>, Vec<Option<V>>>,
-    ),
+    Prefix(MPathElementPrefix, TrieMapType),
 }
 
 /// Result of a multi-way comparison between a single manifest and the merge
@@ -86,18 +50,18 @@ pub enum Comparison<TrieMapType, V> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ManifestComparison<TrieMapType, V> {
     /// The span at this path is new.
-    New(Span<MPathElement, MPathElementPrefix, TrieMapType, V>),
+    New(Span<TrieMapType, V>),
     /// The entry at this path has changed compared to all of the bases.
     Changed(MPathElement, V, Vec<Option<V>>),
     /// The span at this path is the same as at least one of the bases (at the
     /// given index).
     Same(
-        Span<MPathElement, MPathElementPrefix, TrieMapType, V>,
+        Span<TrieMapType, V>,
         /// The index of the first base manifest that this span is the same as.
         usize,
     ),
     /// The span at this path has been removed.
-    Removed(Span<MPathElement, MPathElementPrefix, Vec<Option<TrieMapType>>, Vec<Option<V>>>),
+    Removed(Span<Vec<Option<TrieMapType>>, Vec<Option<V>>>),
 }
 
 pub async fn compare_manifest<'a, M, Store>(
@@ -319,95 +283,6 @@ impl<TrieMapType> DiffIter<TrieMapType> {
             .collect();
         Some((next_ch, next_mf, next_base_mfs))
     }
-}
-
-pub fn compare_manifest_tree<'a, M, Store>(
-    ctx: &'a CoreContext,
-    blobstore: &'a Store,
-    manifest_id: M::TreeId,
-    base_manifest_ids: Vec<M::TreeId>,
-) -> impl Stream<Item = Result<Comparison<M::TrieMapType, Entry<M::TreeId, M::Leaf>>>> + 'a
-where
-    Store: Send + Sync + 'static,
-    M: Manifest<Store> + Send + Sync + 'static,
-    M::TreeId: StoreLoadable<Store, Value = M> + Clone + Send + Sync + Eq + 'static,
-    M::Leaf: Send + Sync + Eq + 'static,
-    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
-{
-    let base_manifest_ids: Vec<_> = base_manifest_ids.into_iter().map(Some).collect();
-    bounded_traversal::bounded_traversal_stream(
-        256,
-        Some((MPath::ROOT, manifest_id, base_manifest_ids)),
-        {
-            move |(path, manifest_id, base_manifest_ids)| {
-                async move {
-                    let (manifest, base_manifests) = future::try_join(
-                        manifest_id.load(ctx, blobstore),
-                        future::try_join_all(base_manifest_ids.iter().map(
-                            |base_manifest_id| async move {
-                                match base_manifest_id {
-                                    Some(base_manifest_id) => {
-                                        Ok(Some(base_manifest_id.load(ctx, blobstore).await?))
-                                    }
-                                    None => Ok(None),
-                                }
-                            },
-                        )),
-                    )
-                    .await?;
-                    let mut outs = Vec::new();
-                    let mut recurse = Vec::new();
-                    let mut cmps =
-                        compare_manifest(ctx, blobstore, manifest, base_manifests).await?;
-                    while let Some(cmp) = cmps.try_next().await? {
-                        let to_tree_span = |span: Span<_, _, _, _>| {
-                            span.map_keys(
-                                |elem| path.join_into_non_root_mpath(&elem),
-                                |prefix| (path.clone(), prefix),
-                            )
-                        };
-                        outs.push(match cmp {
-                            ManifestComparison::New(span) => Comparison::New(to_tree_span(span)),
-                            ManifestComparison::Same(span, index) => {
-                                Comparison::Same(to_tree_span(span), index)
-                            }
-                            ManifestComparison::Removed(span) => {
-                                Comparison::Removed(span.map_keys(
-                                    |elem| path.join_into_non_root_mpath(&elem),
-                                    |prefix| (path.clone(), prefix),
-                                ))
-                            }
-                            ManifestComparison::Changed(elem, entry, base_entries) => {
-                                if let Entry::Tree(tree_id) = &entry {
-                                    let base_tree_ids = base_entries
-                                        .iter()
-                                        .map(|base_entry| match base_entry {
-                                            Some(Entry::Tree(tree_id)) => Some(tree_id.clone()),
-                                            Some(Entry::Leaf(_)) | None => None,
-                                        })
-                                        .collect();
-                                    recurse.push((
-                                        path.join(&elem),
-                                        tree_id.clone(),
-                                        base_tree_ids,
-                                    ));
-                                }
-
-                                Comparison::Changed(
-                                    path.join_into_non_root_mpath(&elem),
-                                    entry,
-                                    base_entries,
-                                )
-                            }
-                        });
-                    }
-                    anyhow::Ok((stream::iter(outs).map(Ok), recurse))
-                }
-                .boxed()
-            }
-        },
-    )
-    .try_flatten()
 }
 
 /// A queued subtree diff plus the manifest replacements that apply within it.
@@ -1073,12 +948,52 @@ mod tests {
         Ok(())
     }
 
+    /// Compare directory `path` of `mf` against directory `path` of each base.
+    /// A base with no tree there contributes no base manifest.
+    async fn compare_dir(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn KeyedBlobstore>,
+        mf: TestManifestId,
+        bases: Vec<TestManifestId>,
+        path: &str,
+    ) -> Result<
+        Vec<
+            ManifestComparison<
+                SortedVectorTrieMap<Entry<TestManifestId, (FileType, TestLeafId)>>,
+                Entry<TestManifestId, (FileType, TestLeafId)>,
+            >,
+        >,
+    > {
+        let mf = get_entry(ctx, blobstore, mf, path)
+            .await?
+            .into_tree()
+            .ok_or_else(|| anyhow!("path {path} is not a tree"))?
+            .load(ctx, blobstore)
+            .await?;
+        let mut base_mfs = Vec::new();
+        for base in bases {
+            base_mfs.push(
+                match base
+                    .find_entry(ctx.clone(), blobstore.clone(), MPath::new(path)?)
+                    .await?
+                {
+                    Some(Entry::Tree(tree_id)) => Some(tree_id.load(ctx, blobstore).await?),
+                    Some(Entry::Leaf(_)) | None => None,
+                },
+            );
+        }
+        compare_manifest(ctx, blobstore, mf, base_mfs)
+            .await?
+            .try_collect()
+            .await
+    }
+
     #[mononoke::fbinit_test]
-    async fn test_compare_manifest_tree(fb: FacebookInit) -> Result<()> {
+    async fn test_compare_manifest_nested(fb: FacebookInit) -> Result<()> {
         let blobstore: Arc<dyn KeyedBlobstore> =
             Arc::new(KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite)));
         let ctx = CoreContext::test_mock(fb);
-        borrowed!(ctx, blobstore);
+        let (ctx, blobstore) = (&ctx, &blobstore);
 
         let mf0 = derive_test_manifest(
             ctx,
@@ -1142,253 +1057,235 @@ mod tests {
         .await?
         .unwrap();
 
-        let diff1 = compare_manifest_tree::<crate::tests::test_manifest::TestManifest, _>(
-            ctx,
-            blobstore,
-            mf1,
-            vec![mf0],
-        )
-        .try_collect::<Vec<_>>()
-        .await?;
-
+        let root = compare_dir(ctx, blobstore, mf1, vec![mf0], "").await?;
         assert_eq!(
-            diff1,
+            root,
             vec![
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir4")?),
+                        MPathElementPrefix::from_slice(b"dir4")?,
                         get_trie_map(ctx, blobstore, mf1, "", "dir4").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir5")?),
+                        MPathElementPrefix::from_slice(b"dir5")?,
                         get_trie_map(ctx, blobstore, mf1, "", "dir5").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("dir2")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"dir2")?,
                     get_entry(ctx, blobstore, mf1, "dir2").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "dir2").await?)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir2").await?),],
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("dir1")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"dir1")?,
                     get_entry(ctx, blobstore, mf1, "dir1").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?),],
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("file7")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"file7")?,
                     get_entry(ctx, blobstore, mf1, "file7").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "file7").await?)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "file7").await?),],
                 ),
-                Comparison::New(Span::Prefix(
-                    (MPath::new("file7")?, MPathElementPrefix::from_slice(b"")?),
-                    get_trie_map(ctx, blobstore, mf1, "file7", "").await?,
-                )),
-                Comparison::Same(
+            ]
+        );
+
+        let file7_dir = compare_dir(ctx, blobstore, mf1, vec![mf0], "file7").await?;
+        assert_eq!(
+            file7_dir,
+            vec![ManifestComparison::New(Span::Prefix(
+                MPathElementPrefix::from_slice(b"")?,
+                get_trie_map(ctx, blobstore, mf1, "file7", "").await?,
+            )),]
+        );
+
+        let dir1 = compare_dir(ctx, blobstore, mf1, vec![mf0], "dir1").await?;
+        assert_eq!(
+            dir1,
+            vec![
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir1")?,
-                            MPathElementPrefix::from_slice(b"file2")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file2")?,
                         get_trie_map(ctx, blobstore, mf1, "dir1", "file2").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("dir1/file1")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"file1")?,
                     get_entry(ctx, blobstore, mf1, "dir1/file1").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1/file1").await?,)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1/file1").await?),],
                 ),
-                Comparison::Removed(Span::Prefix(
-                    (MPath::new("dir2")?, MPathElementPrefix::from_slice(b"d")?),
-                    vec![Some(get_trie_map(ctx, blobstore, mf0, "dir2", "d").await?)],
+            ]
+        );
+
+        let dir2 = compare_dir(ctx, blobstore, mf1, vec![mf0], "dir2").await?;
+        assert_eq!(
+            dir2,
+            vec![
+                ManifestComparison::Removed(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"d")?,
+                    vec![Some(get_trie_map(ctx, blobstore, mf0, "dir2", "d").await?),],
                 )),
-                Comparison::Removed(Span::Prefix(
-                    (
-                        MPath::new("dir2")?,
-                        MPathElementPrefix::from_slice(b"file3")?
-                    ),
+                ManifestComparison::Removed(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"file3")?,
                     vec![Some(
                         get_trie_map(ctx, blobstore, mf0, "dir2", "file3").await?
-                    )],
+                    ),],
                 )),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir2")?,
-                            MPathElementPrefix::from_slice(b"file4")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file4")?,
                         get_trie_map(ctx, blobstore, mf1, "dir2", "file4").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::New(Span::Prefix(
-                    (
-                        MPath::new("dir2")?,
-                        MPathElementPrefix::from_slice(b"file9")?
-                    ),
+                ManifestComparison::New(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"file9")?,
                     get_trie_map(ctx, blobstore, mf1, "dir2", "file9").await?,
                 )),
             ]
         );
 
-        let diff2 = compare_manifest_tree::<crate::tests::test_manifest::TestManifest, _>(
-            ctx,
-            blobstore,
-            mf2,
-            vec![mf0],
-        )
-        .try_collect::<Vec<_>>()
-        .await?;
-
+        let mf2_root = compare_dir(ctx, blobstore, mf2, vec![mf0], "").await?;
         assert_eq!(
-            diff2,
+            mf2_root,
             vec![
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"f")?),
+                        MPathElementPrefix::from_slice(b"f")?,
                         get_trie_map(ctx, blobstore, mf2, "", "f").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir2")?),
+                        MPathElementPrefix::from_slice(b"dir2")?,
                         get_trie_map(ctx, blobstore, mf2, "", "dir2").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir4")?),
+                        MPathElementPrefix::from_slice(b"dir4")?,
                         get_trie_map(ctx, blobstore, mf2, "", "dir4").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir5")?),
+                        MPathElementPrefix::from_slice(b"dir5")?,
                         get_trie_map(ctx, blobstore, mf2, "", "dir5").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("dir1")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"dir1")?,
                     get_entry(ctx, blobstore, mf2, "dir1").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?),],
                 ),
-                Comparison::Same(
+            ]
+        );
+
+        let mf2_dir1 = compare_dir(ctx, blobstore, mf2, vec![mf0], "dir1").await?;
+        assert_eq!(
+            mf2_dir1,
+            vec![
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir1")?,
-                            MPathElementPrefix::from_slice(b"file2")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file2")?,
                         get_trie_map(ctx, blobstore, mf2, "dir1", "file2").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Changed(
-                    NonRootMPath::new("dir1/file1")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"file1")?,
                     get_entry(ctx, blobstore, mf2, "dir1/file1").await?,
-                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1/file1").await?)],
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1/file1").await?),],
                 ),
-                Comparison::New(Span::Prefix(
-                    (
-                        MPath::new("dir1")?,
-                        MPathElementPrefix::from_slice(b"file1c")?
-                    ),
+                ManifestComparison::New(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"file1c")?,
                     get_trie_map(ctx, blobstore, mf2, "dir1", "file1c").await?,
                 )),
             ]
         );
 
-        let diff3 = compare_manifest_tree::<crate::tests::test_manifest::TestManifest, _>(
-            ctx,
-            blobstore,
-            mf3,
-            vec![mf1, mf2],
-        )
-        .try_collect::<Vec<_>>()
-        .await?;
-
+        let merge_root = compare_dir(ctx, blobstore, mf3, vec![mf1, mf2], "").await?;
         assert_eq!(
-            diff3,
+            merge_root,
             vec![
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"f")?),
+                        MPathElementPrefix::from_slice(b"f")?,
                         get_trie_map(ctx, blobstore, mf3, "", "f").await?,
                     ),
-                    1
+                    1,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir1")?),
+                        MPathElementPrefix::from_slice(b"dir1")?,
                         get_trie_map(ctx, blobstore, mf3, "", "dir1").await?,
                     ),
-                    1
+                    1,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::ROOT, MPathElementPrefix::from_slice(b"dir4")?),
+                        MPathElementPrefix::from_slice(b"dir4")?,
                         get_trie_map(ctx, blobstore, mf3, "", "dir4").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Removed(Span::Prefix(
-                    (MPath::ROOT, MPathElementPrefix::from_slice(b"dir5")?),
+                ManifestComparison::Removed(Span::Prefix(
+                    MPathElementPrefix::from_slice(b"dir5")?,
                     vec![
                         Some(get_trie_map(ctx, blobstore, mf1, "", "dir5").await?),
                         Some(get_trie_map(ctx, blobstore, mf2, "", "dir5").await?),
                     ],
                 )),
-                Comparison::Changed(
-                    NonRootMPath::new("dir2")?,
+                ManifestComparison::Changed(
+                    MPathElement::new_from_slice(b"dir2")?,
                     get_entry(ctx, blobstore, mf3, "dir2").await?,
                     vec![
                         Some(get_entry(ctx, blobstore, mf1, "dir2").await?),
-                        Some(get_entry(ctx, blobstore, mf2, "dir2").await?)
+                        Some(get_entry(ctx, blobstore, mf2, "dir2").await?),
                     ],
                 ),
-                Comparison::Same(
+            ]
+        );
+
+        let merge_dir2 = compare_dir(ctx, blobstore, mf3, vec![mf1, mf2], "dir2").await?;
+        assert_eq!(
+            merge_dir2,
+            vec![
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (MPath::new("dir2")?, MPathElementPrefix::from_slice(b"d")?),
+                        MPathElementPrefix::from_slice(b"d")?,
                         get_trie_map(ctx, blobstore, mf3, "dir2", "d").await?,
                     ),
-                    1
+                    1,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir2")?,
-                            MPathElementPrefix::from_slice(b"file3")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file3")?,
                         get_trie_map(ctx, blobstore, mf3, "dir2", "file3").await?,
                     ),
-                    1
+                    1,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir2")?,
-                            MPathElementPrefix::from_slice(b"file4")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file4")?,
                         get_trie_map(ctx, blobstore, mf3, "dir2", "file4").await?,
                     ),
-                    0
+                    0,
                 ),
-                Comparison::Same(
+                ManifestComparison::Same(
                     Span::Prefix(
-                        (
-                            MPath::new("dir2")?,
-                            MPathElementPrefix::from_slice(b"file9")?
-                        ),
+                        MPathElementPrefix::from_slice(b"file9")?,
                         get_trie_map(ctx, blobstore, mf3, "dir2", "file9").await?,
                     ),
-                    0
+                    0,
                 ),
             ]
         );

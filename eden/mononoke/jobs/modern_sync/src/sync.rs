@@ -37,17 +37,13 @@ use futures::TryStreamExt;
 use futures::channel::oneshot;
 use futures::future;
 use futures::stream;
-use manifest::Comparison;
 use manifest::Entry;
-use manifest::ManifestOps;
-use manifest::Span;
-use manifest::compare_manifest_tree;
+use manifest::find_intersection_of_diffs;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::blobs::HgBlobChangeset;
-use mercurial_types::blobs::HgBlobManifest;
 use metaconfig_types::ModernSyncConfig;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
@@ -57,7 +53,6 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
 use mononoke_types::sha1_hash::SHA1_HASH_LENGTH_BYTES;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
@@ -829,30 +824,15 @@ async fn sort_manifest_changes(
     let mut mf_ids: Vec<mercurial_types::HgManifestId> = vec![];
     let mut file_ids: Vec<HgFileNodeId> = vec![];
 
-    let comparison_stream =
-        compare_manifest_tree::<HgBlobManifest, _>(ctx, repo_blobstore, mf_id, mf_ids_p);
-    futures::pin_mut!(comparison_stream);
+    let entries = find_intersection_of_diffs(ctx.clone(), repo_blobstore.clone(), mf_id, mf_ids_p);
+    futures::pin_mut!(entries);
 
-    while let Some(mf) = comparison_stream.try_next().await? {
-        match mf {
-            Comparison::New(Span::Element(_elem, entry)) => {
-                process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore).await?;
-            }
-            Comparison::New(Span::Prefix(_prefix, map)) => {
-                for (_path, entry) in map {
-                    process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore)
-                        .await?;
-                }
-            }
-            Comparison::Changed(_path, entry, _changes) => match entry {
-                Entry::Tree(mf_id) => {
-                    mf_ids.push(mf_id);
-                }
-                Entry::Leaf((_ftype, nodeid)) => {
-                    file_ids.push(nodeid);
-                }
-            },
-            _ => (),
+    while let Some((path, entry)) = entries.try_next().await? {
+        match entry {
+            // The caller appends the root manifest itself.
+            Entry::Tree(_) if path.is_root() => {}
+            Entry::Tree(mf_id) => mf_ids.push(mf_id),
+            Entry::Leaf((_ftype, nodeid)) => file_ids.push(nodeid),
         }
     }
 
@@ -885,48 +865,6 @@ pub async fn send_messages_in_order(
         .await?;
 
     Ok(())
-}
-
-async fn process_new_entry(
-    entry: Entry<mercurial_types::HgManifestId, (mononoke_types::FileType, HgFileNodeId)>,
-    mf_ids: &mut Vec<mercurial_types::HgManifestId>,
-    file_ids: &mut Vec<HgFileNodeId>,
-    ctx: &CoreContext,
-    repo_blobstore: &RepoBlobstore,
-) -> Result<()> {
-    match entry {
-        Entry::Tree(mf_id) => {
-            let entries = mf_id
-                .list_all_entries(ctx.clone(), repo_blobstore.clone())
-                .try_collect::<Vec<_>>()
-                .await?;
-            classify_entries(entries, mf_ids, file_ids);
-        }
-        Entry::Leaf((_ftype, nodeid)) => {
-            file_ids.push(nodeid);
-        }
-    }
-    Ok(())
-}
-
-fn classify_entries(
-    entries: Vec<(
-        MPath,
-        Entry<mercurial_types::HgManifestId, (mononoke_types::FileType, HgFileNodeId)>,
-    )>,
-    mf_ids: &mut Vec<mercurial_types::HgManifestId>,
-    file_ids: &mut Vec<HgFileNodeId>,
-) {
-    for (_path, entry) in entries {
-        match entry {
-            Entry::Tree(mf_id) => {
-                mf_ids.push(mf_id);
-            }
-            Entry::Leaf((_ftype, nodeid)) => {
-                file_ids.push(nodeid);
-            }
-        }
-    }
 }
 
 pub(crate) async fn get_unsharded_repo_args(
