@@ -445,6 +445,11 @@ impl StoreOpenOptions {
         self
     }
 
+    #[cfg(test)]
+    pub(crate) fn auto_sync_threshold_for_test(&self) -> Option<u64> {
+        self.auto_sync_threshold
+    }
+
     /// Whether sync should be called on the store if it has changed on disk.
     pub fn sync_if_changed_on_disk(mut self, sync: bool) -> Self {
         self.sync_if_changed_on_disk = sync;

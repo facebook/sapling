@@ -329,7 +329,7 @@ impl LfsIndexedLogBlobsStore {
         StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(20_000_000_000 / 4)
-            .auto_sync_threshold(250 * 1024 * 1024)
+            .auto_sync_threshold(64 * 1024 * 1024)
             .load_specific_config(config, "lfs")
             .index("sha256", |_| {
                 vec![IndexOutput::Reference(0..Sha256::len() as u64)]
@@ -2229,6 +2229,25 @@ mod tests {
     #[cfg(feature = "fb")]
     use crate::testutil::nonexistent_blob;
     use crate::testutil::setconfig;
+
+    #[test]
+    fn test_indexedlog_auto_sync_threshold() -> Result<()> {
+        let dir = TempDir::new()?;
+        let server = mockito::Server::new();
+        let mut config = make_lfs_config(&server, &dir, "test_indexedlog_auto_sync_threshold");
+
+        let options = LfsIndexedLogBlobsStore::open_options(&config)?;
+        assert_eq!(
+            options.auto_sync_threshold_for_test(),
+            Some(64 * 1024 * 1024)
+        );
+
+        setconfig(&mut config, "lfs", "autosyncthreshold", "1234567");
+        let options = LfsIndexedLogBlobsStore::open_options(&config)?;
+        assert_eq!(options.auto_sync_threshold_for_test(), Some(1_234_567));
+
+        Ok(())
+    }
 
     #[test]
     fn test_new_rotated() -> Result<()> {
