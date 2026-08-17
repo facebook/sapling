@@ -14,7 +14,6 @@ use caching_ext::CacheHandlerFactory;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use context::PerfCounterType;
-use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
 use metaconfig_types::OssRemoteDatabaseConfig;
@@ -197,12 +196,28 @@ impl MutableRenames {
 
         // Check to see if any of the added renames has an src that's a
         // descendant of its dst. If so, we reject this as we cannot sanely
-        // handle cycles in history
+        // handle cycles in history.
+        //
+        // Fetch all the generation numbers we need in a single batched call
+        // instead of one `changeset_generation` round trip per src/dst pair:
+        // large restructuring commits can carry hundreds of renames (see
+        // `copy_immutable.rs`, which builds this list from every copy-from
+        // file change in a bonsai changeset), so this turns O(renames) commit
+        // graph fetches into a single one.
+        let cs_ids: Vec<ChangesetId> = renames
+            .iter()
+            .flat_map(|mre| [mre.src_cs_id, mre.dst_cs_id])
+            .collect();
+        let generations = commit_graph
+            .many_changeset_generations(ctx, &cs_ids)
+            .await?;
         for (src, dst) in renames.iter().map(|mre| (mre.src_cs_id, mre.dst_cs_id)) {
-            let (src_generation, dst_generation) = try_join!(
-                commit_graph.changeset_generation(ctx, src),
-                commit_graph.changeset_generation(ctx, dst)
-            )?;
+            let src_generation = generations
+                .get(&src)
+                .ok_or_else(|| anyhow::anyhow!("generation not found for changeset {src}"))?;
+            let dst_generation = generations
+                .get(&dst)
+                .ok_or_else(|| anyhow::anyhow!("generation not found for changeset {dst}"))?;
             if src_generation >= dst_generation {
                 // The source commit could potentially be a descendant of the target
                 // Ideally, we'd do a proper check here to see if this forms a loop

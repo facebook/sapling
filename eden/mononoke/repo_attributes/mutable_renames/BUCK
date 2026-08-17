@@ -21,7 +21,6 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bincode",
         "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/memcache_stub:memcache",
