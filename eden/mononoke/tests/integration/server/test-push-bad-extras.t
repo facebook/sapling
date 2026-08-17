@@ -46,11 +46,7 @@ create new commit in repo2 and check that push fails
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
   pushrebasing stack (b6a5e5b72f07, 78905258cfae] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: internal error: Disallowed extra change-xrepo-mapping-to-version is set on de811c645f9988b31e1ebbc3a740511c57f49011c6718242abc944ebbd50258e.
-  
-  Caused by:
-      0: Disallowed extra change-xrepo-mapping-to-version is set on de811c645f9988b31e1ebbc3a740511c57f49011c6718242abc944ebbd50258e.
-      1: Disallowed extra change-xrepo-mapping-to-version is set on de811c645f9988b31e1ebbc3a740511c57f49011c6718242abc944ebbd50258e.
+  abort: Server error: invalid request: Disallowed extra change-xrepo-mapping-to-version is set on de811c645f9988b31e1ebbc3a740511c57f49011c6718242abc944ebbd50258e.
   [255]
 
 

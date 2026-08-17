@@ -63,6 +63,10 @@ pub use pushrebase::PushrebaseOutcome;
 pub use pushrebase_hooks::PushrebaseHooksError;
 pub use pushrebase_hooks::get_pushrebase_hooks;
 
+pub use crate::affected_changesets::N_CHANGESETS_TO_LOAD_AT_ONCE;
+pub use crate::affected_changesets::check_case_conflicts;
+pub use crate::affected_changesets::newly_public_changeset_ids;
+pub use crate::affected_changesets::reject_disallowed_publishing_extras;
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::AdminBypassError;
@@ -152,6 +156,12 @@ pub enum BookmarkMovementError {
 
     #[error("Hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
     HookFailure(Vec<HookRejection>),
+
+    #[error("Disallowed extra {extra} is set on {changeset_id}.")]
+    DisallowedExtra {
+        changeset_id: ChangesetId,
+        extra: String,
+    },
 
     #[error("Pushrebase failed: {0}")]
     PushrebaseError(#[source] PushrebaseError),
