@@ -508,6 +508,34 @@ mod tests {
     }
 
     #[test]
+    fn test_tree_stats_error_does_not_fail_fetch() -> Result<()> {
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let data = delta("1234", None, k.clone()).data;
+
+        let client = FakeSaplingRemoteApi::new()
+            .trees(hashmap! { k.clone() => data })
+            .tree_stats_error()
+            .into_arc();
+        let remote_trees = SaplingRemoteApiRemoteStore::<Tree>::new(client);
+
+        let mut store = TreeStore::empty();
+        store.edenapi = Some(remote_trees);
+
+        let fetched = store.fetch_batch(
+            FetchContext::default(),
+            std::iter::once(k.clone()),
+            TreeAttributes::CONTENT,
+        );
+        let (found, missing, errors) = fetched.consume();
+
+        assert!(found.contains_key(&k));
+        assert!(missing.is_empty());
+        assert!(errors.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_file_keyed_stream_error_does_not_propagate_to_missing_keys() -> Result<()> {
         let denied_key = key("denied", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let missing_key = key("missing", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");

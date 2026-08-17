@@ -149,18 +149,14 @@ impl SaplingRemoteApiFileStore {
 }
 
 impl SaplingRemoteApiTreeStore {
-    pub fn trees_blocking(
+    pub(crate) async fn trees(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> Result<
-        BlockingResponse<Result<TreeEntry, SaplingRemoteApiServerError>>,
-        SaplingRemoteApiError,
-    > {
-        async_runtime::block_in_place(|| {
-            BlockingResponse::from_async(self.client.trees(fctx, keys, attributes))
-        })
+    ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
+    {
+        self.client.trees(fctx, keys, attributes).await
     }
 
     pub fn check_manifest_permission_blocking(

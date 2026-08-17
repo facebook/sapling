@@ -9,6 +9,8 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
+use async_runtime::stream_to_iter;
+use edenapi::Response;
 use progress_model::ProgressBar;
 use storemodel::FileAuxData;
 use storemodel::SerializationFormat;
@@ -147,11 +149,15 @@ impl<'a> FetchState<'a> {
 
         let bar = ProgressBar::new_adhoc("SLAPI", pending.len() as u64, "trees");
 
-        let response = edenapi
-            .trees_blocking(self.common.fctx.clone(), pending, Some(attributes))
-            .map_err(|e| e.tag_network())?;
+        let Response { entries, stats } = async_runtime::block_on(edenapi.trees(
+            self.common.fctx.clone(),
+            pending,
+            Some(attributes),
+        ))
+        .map_err(|e| e.tag_network())?;
 
-        for entry in response.entries {
+        for entry in stream_to_iter(entries) {
+            let entry = entry.map_err(|e| e.tag_network())?;
             bar.increase_position(1);
 
             let entry = match entry {
@@ -221,7 +227,13 @@ impl<'a> FetchState<'a> {
             );
         }
 
-        crate::util::record_edenapi_stats(&span, &response.stats);
+        match async_runtime::block_on(stats) {
+            Ok(stats) => crate::util::record_edenapi_stats(&span, &stats),
+            Err(err) => tracing::debug!(
+                error = ?err,
+                "failed to collect SaplingRemoteAPI response stats"
+            ),
+        }
 
         let _ = self
             .metrics

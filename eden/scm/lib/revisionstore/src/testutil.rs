@@ -207,6 +207,7 @@ pub struct FakeSaplingRemoteApi {
     file_errors: HashMap<Key, SaplingRemoteApiServerError>,
     trees: HashMap<Key, Bytes>,
     tree_errors: HashMap<Key, SaplingRemoteApiServerError>,
+    tree_stats_error: bool,
     history: HashMap<Key, NodeInfo>,
 }
 
@@ -252,6 +253,13 @@ impl FakeSaplingRemoteApi {
     ) -> Self {
         Self {
             tree_errors: tree_errors.into_iter().collect(),
+            ..self
+        }
+    }
+
+    pub fn tree_stats_error(self) -> Self {
+        Self {
+            tree_stats_error: true,
             ..self
         }
     }
@@ -314,6 +322,7 @@ impl FakeSaplingRemoteApi {
     fn get_trees(
         map: &HashMap<Key, Bytes>,
         errors: &HashMap<Key, SaplingRemoteApiServerError>,
+        stats_error: bool,
         keys: Vec<Key>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
@@ -336,7 +345,13 @@ impl FakeSaplingRemoteApi {
 
         Ok(Response {
             entries: Box::pin(stream::iter(entries)),
-            stats: Box::pin(future::ok(Stats::default())),
+            stats: Box::pin(future::ready(if stats_error {
+                Err(SaplingRemoteApiError::IncompleteResponse(
+                    "test stats failure".to_string(),
+                ))
+            } else {
+                Ok(Stats::default())
+            })),
         })
     }
 }
@@ -399,7 +414,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
         _attrs: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        Self::get_trees(&self.trees, &self.tree_errors, keys)
+        Self::get_trees(&self.trees, &self.tree_errors, self.tree_stats_error, keys)
     }
 }
 
