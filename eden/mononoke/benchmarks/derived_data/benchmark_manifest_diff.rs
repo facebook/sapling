@@ -255,6 +255,11 @@ struct Measurement {
     gets: u64,
     bytes: u64,
     time: Duration,
+    /// Longest single uninterrupted `poll()`. This is what starves a tokio
+    /// worker, and it is the metric the `derived_data_use_content_manifests`
+    /// SEV turned on: a slow request only cascades if it holds the executor.
+    max_poll: Duration,
+    polls: u64,
 }
 
 /// Drain `stream`, counting entries, while measuring blob gets and bytes.
@@ -287,6 +292,8 @@ async fn measure(
         gets: counters.gets(),
         bytes: counters.bytes(),
         time: stats.completion_time,
+        max_poll: stats.max_poll_time,
+        polls: stats.poll_count,
     })
 }
 
@@ -583,10 +590,18 @@ where
 
 fn print_header() {
     println!(
-        "\n{:<34} {:<10} {:<5} {:<9} {:<9} {:<12} {:<12} time",
-        "scenario", "ordering", "fast", "backend", "entries", "blob_gets", "bytes"
+        "\n{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} time",
+        "scenario",
+        "ordering",
+        "fast",
+        "backend",
+        "entries",
+        "blob_gets",
+        "bytes",
+        "max_poll",
+        "polls"
     );
-    println!("{}", "-".repeat(110));
+    println!("{}", "-".repeat(140));
 }
 
 fn print_pair(
@@ -610,8 +625,17 @@ fn print_pair(
         None => "n/a",
     };
     println!(
-        "{:<34} {:<10} {:<5} {:<9} {:<9} {:<12} {:<12} {:?}",
-        name, ordering, fast, "fsnode", fsnode.entries, fsnode.gets, fsnode.bytes, fsnode.time,
+        "{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}",
+        name,
+        ordering,
+        fast,
+        "fsnode",
+        fsnode.entries,
+        fsnode.gets,
+        fsnode.bytes,
+        format!("{:?}", fsnode.max_poll),
+        fsnode.polls,
+        fsnode.time,
     );
     let ratio = if fsnode.gets == 0 {
         String::from("n/a")
@@ -619,8 +643,17 @@ fn print_pair(
         format!("{:.1}x", content.gets as f64 / fsnode.gets as f64)
     };
     println!(
-        "{:<34} {:<10} {:<5} {:<9} {:<9} {:<12} {:<12} {:?}   ({ratio} gets)",
-        "", "", "", "content", content.entries, content.gets, content.bytes, content.time,
+        "{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}   ({ratio} gets)",
+        "",
+        "",
+        "",
+        "content",
+        content.entries,
+        content.gets,
+        content.bytes,
+        format!("{:?}", content.max_poll),
+        content.polls,
+        content.time,
     );
 }
 

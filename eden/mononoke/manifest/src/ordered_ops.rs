@@ -489,14 +489,22 @@ where
                                 });
                                 let (left_mf, right_mf) = future::try_join(l, r).watched().await?;
                                 let (left_mf, right_mf) = (left_mf?, right_mf?);
-                                let left_entries = match left_mf {
-                                    Some(left_mf) => left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?,
-                                    None => Vec::new(),
-                                };
-                                let right_entries = match right_mf {
-                                    Some(right_mf) => right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?,
-                                    None => Vec::new(),
-                                };
+                                let mut left_entries = Vec::new();
+                                if let Some(left_mf) = left_mf {
+                                    let mut stream = left_mf.list_weighted(ctx, store).watched().await?;
+                                    while let Some(entry) = stream.try_next().watched().await? {
+                                        tokio::task::consume_budget().await;
+                                        left_entries.push(entry);
+                                    }
+                                }
+                                let mut right_entries = Vec::new();
+                                if let Some(right_mf) = right_mf {
+                                    let mut stream = right_mf.list_weighted(ctx, other_store).watched().await?;
+                                    while let Some(entry) = stream.try_next().watched().await? {
+                                        tokio::task::consume_budget().await;
+                                        right_entries.push(entry);
+                                    }
+                                }
                                 let mut entries: BTreeMap<_, _> = EntryDiffIterator::new(
                                     left_entries.into_iter(),
                                     right_entries.into_iter(),
@@ -517,6 +525,7 @@ where
                         };
 
                         for (name, left, right) in entries {
+                            tokio::task::consume_budget().await;
                             if after.skip(&name) || left == right {
                                 continue;
                             }
