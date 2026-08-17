@@ -92,6 +92,12 @@ export const selectedCommitInfos = atom(get => {
   });
 });
 
+export const selectedCommitInfosInDagOrder = atom(get => {
+  const selected = get(selectedCommits);
+  const dag = get(dagWithPreviews);
+  return dag.getBatch(dag.sortAsc(dag.present(selected)));
+});
+
 /**
  * If the selected commits form a continuous ancestry chain (single root, single head,
  * no gaps), returns a CommitRange comparison. Otherwise returns null.

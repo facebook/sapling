@@ -85,6 +85,7 @@ import {isNarrowCommitTree} from './responsive';
 import {
   actioningCommit,
   selectedCommitInfos,
+  selectedCommitInfosInDagOrder,
   selectedCommits,
   selectedCommitsRangeComparison,
   useCommitCallbacks,
@@ -285,6 +286,22 @@ export const Commit = memo(
           loggingLabel: 'Copy Diff Number',
         });
       }
+      const multiDiffProvider = readAtom(codeReviewProvider);
+      if (multiDiffProvider?.getMultiDiffUrl != null) {
+        const selectedDiffIDsInDagOrder = readAtom(selectedCommitInfosInDagOrder)
+          .map(selected => selected.diffId)
+          .filter(notEmpty);
+        if (selectedDiffIDsInDagOrder.length > 1) {
+          const multiDiffUrl = multiDiffProvider.getMultiDiffUrl(selectedDiffIDsInDagOrder);
+          items.push({
+            label: <T>Open Multi-Diff in Phabricator</T>,
+            onClick: () => {
+              platform.openExternalLink(multiDiffUrl);
+            },
+            loggingLabel: 'Open Multi-Diff in Phabricator',
+          });
+        }
+      }
       if (!isPublic) {
         items.push({
           label: <T>View Changes in Commit</T>,
@@ -311,13 +328,10 @@ export const Commit = memo(
         if (provider != null) {
           const selectedInfos = readAtom(selectedCommitInfos);
           const diffSummaries = readAtom(allDiffSummaries);
-          const dag = readAtom(dagWithPreviews);
 
           const isMultiSelect =
             selectedInfos.length > 1 && selectedInfos.some(c => c.hash === commit.hash);
-          const commits = isMultiSelect
-            ? dag.getBatch(dag.sortAsc(dag.present(new Set(selectedInfos.map(c => c.hash)))))
-            : [commit];
+          const commits = isMultiSelect ? readAtom(selectedCommitInfosInDagOrder) : [commit];
           const submittable =
             (diffSummaries?.value != null
               ? provider.getSubmittableDiffs(commits, diffSummaries.value)
