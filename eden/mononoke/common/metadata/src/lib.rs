@@ -287,7 +287,7 @@ impl Metadata {
             client_id: self
                 .client_request_info()
                 .and_then(|cri| cri.main_id.clone()),
-            category: self.identities.client_category(),
+            category: self.identities.client_category(self.sandcastle_alias()),
             ci_purpose: self.ci_purpose().map(str::to_owned),
             atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
             atlas_rl: self.clientinfo_atlas_rl(),

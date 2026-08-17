@@ -217,8 +217,9 @@ pub trait MononokeIdentitySetExt {
     fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String;
 
     /// Classify this identity set into a coarse [`ClientCategory`] for
-    /// rate-limit policy and Scuba logging.
-    fn client_category(&self) -> ClientCategory;
+    /// rate-limit policy and Scuba logging. Sandcastle traffic without an
+    /// alias is classified separately from CI traffic with an alias.
+    fn client_category(&self, sandcastle_alias: Option<&str>) -> ClientCategory;
 
     fn to_string(&self) -> String;
 }
@@ -234,6 +235,7 @@ pub enum ClientCategory {
     InteractiveDev,
     DevEnv,
     CiSandcastle,
+    SandcastleAutomation,
     FaaS,
     Automation,
     Unknown,
@@ -246,6 +248,7 @@ impl ClientCategory {
             Self::InteractiveDev => "interactive_dev",
             Self::DevEnv => "dev_env",
             Self::CiSandcastle => "ci_sandcastle",
+            Self::SandcastleAutomation => "sandcastle_automation",
             Self::FaaS => "faas",
             Self::Automation => "automation",
             Self::Unknown => "unknown",
@@ -281,6 +284,7 @@ impl TenantInfo {
         match self.category {
             ClientCategory::CiSandcastle => self.ci_purpose.clone(),
             ClientCategory::FaaS
+            | ClientCategory::SandcastleAutomation
             | ClientCategory::HealthCheck
             | ClientCategory::InteractiveDev
             | ClientCategory::DevEnv

@@ -128,7 +128,7 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         String::from("PLACEHOLDER_CLIENT_IDENTITY")
     }
 
-    fn client_category(&self) -> ClientCategory {
+    fn client_category(&self, _sandcastle_alias: Option<&str>) -> ClientCategory {
         ClientCategory::Unknown
     }
 
