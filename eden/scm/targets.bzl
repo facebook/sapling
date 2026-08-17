@@ -201,6 +201,14 @@ def fetch_as_eden():
     return read_bool("sl", "fetch_as_eden", False)
 
 def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
+    kwargs.setdefault(
+        "allocator",
+        select({
+            "DEFAULT": "malloc",
+            "ovr_config//os:linux": "jemalloc",
+            "ovr_config//os:macos": "jemalloc",
+        }),
+    )
     sl_rust_binary(
         name = name,
         embeds_python = True,

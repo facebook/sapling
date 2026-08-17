@@ -7,9 +7,30 @@
 
 #![allow(unexpected_cfgs)]
 
+use std::ffi::c_char;
 use std::sync::atomic::Ordering;
 
 use clidispatch::dispatch;
+
+// jemalloc reads this symbol during allocator initialization, before main().
+// Environment configuration is applied later and can override this default.
+#[cfg(target_os = "linux")]
+#[used]
+// SAFETY: This is hgmain's only strong definition of jemalloc's
+// `extern const char *malloc_conf` slot. `static mut` matches that mutable C
+// pointer slot; it points to static, NUL-terminated storage and neither side
+// writes it.
+#[unsafe(export_name = "malloc_conf")]
+static mut JEMALLOC_CONF: *const c_char = c"narenas:16".as_ptr();
+
+#[cfg(target_os = "macos")]
+#[used]
+// SAFETY: This is hgmain's only strong definition of jemalloc's
+// `extern const char *je_malloc_conf` slot. `static mut` matches that mutable C
+// pointer slot; it points to static, NUL-terminated storage and neither side
+// writes it.
+#[unsafe(export_name = "je_malloc_conf")]
+static mut JEMALLOC_CONF: *const c_char = c"narenas:4".as_ptr();
 
 #[cfg(windows)]
 mod windows;
