@@ -1545,7 +1545,6 @@ impl Log {
             }
             None => Bytes::new(),
         };
-
         let mem_buf: &Vec<u8> = mem_buf;
         let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
         let key_buf = Arc::new(ExternalKeyBuffer {
@@ -1643,7 +1642,9 @@ impl Log {
         let result = if offset < self.meta.primary_len {
             let entry = Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?;
             if let Some(ref entry) = entry {
-                crate::page_out::adjust_available(-(entry.data.len() as i64));
+                let len =
+                    usize::try_from(entry.next_offset.saturating_sub(offset)).unwrap_or(usize::MAX);
+                crate::page_out::account_read(len);
             }
             entry
         } else {
@@ -2039,7 +2040,11 @@ impl ReadonlyBuffer for ExternalKeyBuffer {
     #[inline]
     fn slice(&self, start: u64, len: u64) -> Option<&[u8]> {
         if start < self.disk_len {
-            self.disk_buf.get((start as usize)..(start + len) as usize)
+            let slice = self.disk_buf.get((start as usize)..(start + len) as usize);
+            if slice.is_some() {
+                crate::page_out::account_read(len as usize);
+            }
+            slice
         } else {
             let start = start - self.disk_len;
             // See "UNSAFE NOTICE" in ExternalKeyBuffer definition.

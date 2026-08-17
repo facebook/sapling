@@ -8,6 +8,7 @@
 //! "Page out" logic as an attempt to reduce RSS / Working Set usage.
 
 use std::sync::Mutex;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
@@ -27,7 +28,7 @@ static AVAILABLE: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
 /// Tracked buffers. Also serve as a lock for `page_out()`.
 static BUFFERS: Mutex<WeakBuffers<WeakBytes>> = Mutex::new(WeakBuffers::<WeakBytes>::new());
 
-/// By default, trigger `page_out()` after reading 2GB `Log` entries.
+/// By default, trigger `page_out()` after approximately 2GB of `Log` reads.
 const DEFAULT_THRESHOLD: i64 = 1i64 << 31;
 
 /// Collection of weak buffers.
@@ -50,6 +51,41 @@ impl WeakSlice for WeakBytes {
     fn as_slice(v: &Bytes) -> &[u8] {
         Bytes::as_ref(v)
     }
+}
+
+pub(crate) fn account_read(len: usize) {
+    let accounted = page_size().map_or(len, |page_size| len.max(page_size));
+    adjust_available(-i64::try_from(accounted).unwrap_or(i64::MAX));
+}
+
+pub(crate) fn page_size() -> Option<usize> {
+    static PAGE_SIZE: OnceLock<Option<usize>> = OnceLock::new();
+    *PAGE_SIZE.get_or_init(query_page_size)
+}
+
+#[cfg(unix)]
+fn query_page_size() -> Option<usize> {
+    // SAFETY: `_SC_PAGESIZE` does not require any caller-provided pointers.
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    usize::try_from(page_size)
+        .ok()
+        .filter(|page_size| *page_size > 0)
+}
+
+#[cfg(windows)]
+fn query_page_size() -> Option<usize> {
+    use std::mem::MaybeUninit;
+
+    use winapi::um::sysinfoapi::GetSystemInfo;
+    use winapi::um::sysinfoapi::SYSTEM_INFO;
+
+    let mut info = MaybeUninit::<SYSTEM_INFO>::uninit();
+    // SAFETY: `info` provides writable storage that `GetSystemInfo` initializes.
+    let page_size = unsafe {
+        GetSystemInfo(info.as_mut_ptr());
+        info.assume_init().dwPageSize as usize
+    };
+    (page_size > 0).then_some(page_size)
 }
 
 /// Adjust the `AVAILABLE`.
@@ -156,7 +192,7 @@ impl<W: WeakSlice> WeakBuffers<W> {
             let ret = unsafe {
                 libc::madvise(
                     slice.as_ptr() as *const libc::c_void as *mut libc::c_void,
-                    slice.len() as _,
+                    slice.len(),
                     libc::MADV_DONTNEED,
                 )
             };

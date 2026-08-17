@@ -6,7 +6,6 @@
  */
 
 use std::mem;
-use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -76,13 +75,7 @@ unsafe extern "C" fn signal_handler(
 
 /// Zero-fill a page that contains the given address, to make it readable.
 fn zero_fill_page(addr: usize, writable: bool) -> Result<(), ()> {
-    static PAGE_SIZE: OnceLock<i64> = OnceLock::new();
-    let page_size = *PAGE_SIZE.get_or_init(|| unsafe { libc::sysconf(libc::_SC_PAGESIZE) });
-    if page_size <= 0 {
-        return Err(());
-    }
-
-    let page_size = page_size as usize;
+    let page_size = crate::page_out::page_size().ok_or(())?;
     let start: usize = addr / page_size * page_size;
 
     static LAST_START: AtomicUsize = AtomicUsize::new(0);
