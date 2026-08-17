@@ -152,11 +152,16 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
     const ObjectFetchContextPtr& fetchContext) {
-  bool prefetchOptimizations =
-      serverState->getEdenConfig()->prefetchOptimizations.getValue();
+  auto config = serverState->getEdenConfig();
+  bool prefetchOptimizations = config->prefetchOptimizations.getValue();
+  size_t prefetchBlobBatchSize = config->prefetchBlobBatchSize.getValue();
+  if (prefetchBlobBatchSize == 0) {
+    XLOG_EVERY_MS(ERR, 60'000)
+        << "thrift:prefetch-blob-batch-size must be positive";
+    prefetchBlobBatchSize = 1;
+  }
   bool dedupePrefetchFiles =
-      serverState->getEdenConfig()->globDedupePrefetchFiles.getValue() ||
-      !prefetchOptimizations;
+      config->globDedupePrefetchFiles.getValue() || !prefetchOptimizations;
 
   auto fileBlobsToPrefetch =
       prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
@@ -351,9 +356,9 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     auto range = folly::Range{blobs->data(), blobs->size()};
 
     std::vector<folly::coro::Task<void>> prefetchTasks;
-    while (range.size() > 20480) {
-      auto curRange = range.subpiece(0, 20480);
-      range.advance(20480);
+    while (range.size() > prefetchBlobBatchSize) {
+      auto curRange = range.subpiece(0, prefetchBlobBatchSize);
+      range.advance(prefetchBlobBatchSize);
       prefetchTasks.emplace_back(
           folly::coro::co_invoke(
               [store, curRange, fetchContext = fetchContext.copy()]()

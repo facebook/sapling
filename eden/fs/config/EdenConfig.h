@@ -442,6 +442,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Number of blob IDs passed to each prefetchBlobs() call.
+   */
+  ConfigSetting<uint32_t> prefetchBlobBatchSize{
+      "thrift:prefetch-blob-batch-size",
+      4096,
+      this};
+
+  /**
    * How often to collect Thrift server metrics. The default value mirrors the
    * value from facebook::fb303::TServerCounters::kDefaultSampleRate
    */
