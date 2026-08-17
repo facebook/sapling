@@ -23,7 +23,7 @@ derived_data = { version = "0.1.0", path = "../../derived_data" }
 either = "1.17.0"
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
-futures-util = { version = "0.3.30", features = ["compat"] }
+futures-util = { version = "0.3.34", features = ["compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 history_manifest = { version = "0.1.0", path = "../../derived_data/history_manifest" }
 inferred_copy_from = { version = "0.1.0", path = "../../derived_data/inferred_copy_from" }
