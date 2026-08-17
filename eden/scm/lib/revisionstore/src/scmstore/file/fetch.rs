@@ -448,6 +448,7 @@ impl<'a> FetchState<'a> {
         aux_cache: Option<Arc<AuxStore>>,
         format: SerializationFormat,
         verify_hash: bool,
+        ignore_result: bool,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>, Option<Entry>)> {
         let entry = entry.result?;
 
@@ -483,7 +484,14 @@ impl<'a> FetchState<'a> {
                     cache_entry = Some(e);
                 }
 
-                file.content = Some(LazyFile::SaplingRemoteApi(entry, format, verify_hash));
+                file.content = Some(if ignore_result {
+                    // Populate-cache callers only need to mark the request as complete. Drop the
+                    // EdenAPI response body in this worker instead of carrying it back to the
+                    // coordinator.
+                    LazyFile::Raw(Blob::Bytes(Bytes::new()))
+                } else {
+                    LazyFile::SaplingRemoteApi(entry, format, verify_hash)
+                });
             }
         }
 
@@ -545,6 +553,7 @@ impl<'a> FetchState<'a> {
 
         let format = self.format();
         let verify_hash = self.verify_hash;
+        let ignore_result = self.fctx.mode().ignore_result();
         let entries = response
             .entries
             .ready_chunks(EDENAPI_PROCESS_BATCH_SIZE)
@@ -569,6 +578,7 @@ impl<'a> FetchState<'a> {
                                         aux_cache,
                                         format,
                                         verify_hash,
+                                        ignore_result,
                                     ),
                                 )
                             })
@@ -619,23 +629,12 @@ impl<'a> FetchState<'a> {
 
                 fetching_keys.remove(&key);
                 match res {
-                    Ok((mut file, maybe_lfsptr, cache_entry)) => {
+                    Ok((file, maybe_lfsptr, cache_entry)) => {
                         if let Some(lfsptr) = maybe_lfsptr {
                             found_pointers += 1;
                             self.found_pointer(key.clone(), lfsptr, false);
                         } else {
                             found += 1;
-
-                            if self.fctx.mode().ignore_result() {
-                                // Caller doesn't care about content: swap to a stub
-                                // file to avoid needlessly shuffling data around.
-                                file = StoreFile {
-                                    content: Some(LazyFile::Raw(Blob::Bytes(
-                                        minibytes::Bytes::new(),
-                                    ))),
-                                    aux_data: file.aux_data,
-                                }
-                            }
                         }
                         if let Some(cache_entry) = cache_entry {
                             self.cache_entry(cache_entry);
