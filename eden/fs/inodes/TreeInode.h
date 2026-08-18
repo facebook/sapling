@@ -340,14 +340,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     return contents_.rlock()->isMaterialized();
   }
 
-  /**
-   * Get the digest id for this inode.
-   *
-   * DEPRECATED: Use co_getDigestHash() instead.
-   */
-  ImmediateFuture<std::optional<Hash32>> getDigestHash(
-      const ObjectFetchContextPtr& fetchContext);
-
+  /** Get the digest id for this inode. */
   folly::coro::now_task<std::optional<Hash32>> co_getDigestHash(
       const ObjectFetchContextPtr& fetchContext);
 

@@ -2130,28 +2130,8 @@ std::optional<ObjectId> TreeInode::getObjectId() const {
   return state->treeId;
 }
 
-ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
-    const ObjectFetchContextPtr& fetchContext) {
-  // DEPRECATED: use co_getDigestHash directly. Kept only because
-  // VirtualInode::getDigestHash and getxattr still consume ImmediateFuture
-  // chains; delete once those paths are migrated to coroutines.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [](TreeInodePtr self, ObjectFetchContextPtr context)
-              -> folly::coro::Task<std::optional<Hash32>> {
-            co_return co_await self->co_getDigestHash(context);
-          },
-          inodePtrFromThis(),
-          fetchContext.copy())
-          .semi()};
-}
-
 folly::coro::now_task<std::optional<Hash32>> TreeInode::co_getDigestHash(
     const ObjectFetchContextPtr& fetchContext) {
-  // Mirrors getDigestHash() — restricted directories must not expose
-  // digest hash, and materialized trees do not have backing-store digest
-  // hash available.
   if (FOLLY_UNLIKELY(isRestricted())) {
     co_return std::nullopt;
   }
@@ -2165,7 +2145,6 @@ folly::coro::now_task<std::optional<Hash32>> TreeInode::co_getDigestHash(
     // If a tree is not materialized, it should have an id value.
     treeId = state->treeId.value();
   }
-  // ObjectStore::getTreeDigestHash has no co_ version yet, bridge via .semi()
   co_return co_await getObjectStore().co_getTreeDigestHash(
       treeId, fetchContext);
 }
