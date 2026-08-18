@@ -197,6 +197,21 @@ pub async fn connection_acceptor(
             },
             sock_tuple = listener.accept().fuse() => match sock_tuple {
                 Ok((stream, addr)) => {
+                    // Disable Nagle's algorithm. Without this, the kernel holds the
+                    // response-body segment until the peer ACKs the response head,
+                    // which interlocks with the peer's delayed ACK (40ms minimum on
+                    // Linux) and stalls latency-sensitive SLAPI responses.
+                    //
+                    // The JK is a kill-switch, on by default.
+                    if justknobs::eval(
+                        "scm/mononoke:connection_acceptor_set_nodelay",
+                        None,
+                        None,
+                    ) {
+                        if let Err(err) = stream.set_nodelay(true) {
+                            warn!(error = ?err, "Failed to set TCP_NODELAY on connection from {addr}");
+                        }
+                    }
                     let conn = PendingConnection { acceptor: acceptor.clone(), addr };
                     let task = handle_connection(conn.clone(), stream);
                     conn.spawn_task(task, "Failed to handle_connection");

@@ -37,6 +37,7 @@
     "scm/mononoke:commitcloud_bulk_inserts": true,
     "scm/mononoke:commitcloud_log_head_age_metrics": true,
     "scm/mononoke:commitcloud_manager_access": true,
+    "scm/mononoke:connection_acceptor_set_nodelay": true,
     "scm/mononoke:mononoke_api_find_files_use_skeleton_manifests_v2": true,
     "scm/mononoke:changeset_diff_enable_bonsai_only_lfs": true,
     "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2": true,
