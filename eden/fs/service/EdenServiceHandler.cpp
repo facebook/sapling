@@ -6012,6 +6012,7 @@ EdenServiceHandler::co_getScmStatusV2(
     unique_ptr<GetScmStatusParams> scmParams) {
   auto* context = params.getRequestContext();
   auto rootIdOptions = scmParams->rootIdOptions().ensure();
+  static const std::string kNoFidSentinel = "(none)";
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
       false,
@@ -6021,7 +6022,8 @@ EdenServiceHandler::co_getScmStatusV2(
       folly::to<string>("listIgnored=", *scmParams->listIgnored()),
       folly::to<string>(
           "fid=",
-          rootIdOptions.fid().has_value() ? *rootIdOptions.fid() : "(none)"));
+          rootIdOptions.fid().has_value() ? *rootIdOptions.fid()
+                                          : kNoFidSentinel));
   helper->getThriftFetchContext().fillClientRequestInfo(scmParams->cri());
 
   auto& fetchContext = helper->getFetchContext();
