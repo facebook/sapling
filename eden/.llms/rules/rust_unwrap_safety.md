@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: '\.unwrap\(|\.expect\('
+name: rust-unwrap-safety
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: '\.unwrap\(|\.expect\('
 ---
 
 # Rust Unwrap/Expect Safety
