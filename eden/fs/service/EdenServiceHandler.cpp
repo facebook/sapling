@@ -1409,63 +1409,8 @@ EdenServiceHandler::semifuture_synchronizeWorkingCopy(
       .semi();
 }
 
-// DEPRECATED. Use co_getBlake3Impl instead.
-folly::SemiFuture<std::unique_ptr<std::vector<Blake3Result>>>
-EdenServiceHandler::semifuture_getBlake3Impl(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::vector<std::string>> paths,
-    std::unique_ptr<SyncBehavior> sync) {
-  TraceBlock block("getBlake3");
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
-  auto& fetchContext = helper->getFetchContext();
-  auto mountHandle = lookupMount(mountPoint);
-
-  auto notificationFuture =
-      waitForPendingWrites(mountHandle.getEdenMount(), *sync);
-  return wrapImmediateFuture(
-             std::move(helper),
-             std::move(notificationFuture)
-                 .thenValue(
-                     [mountHandle,
-                      paths = std::move(paths),
-                      fetchContext = fetchContext.copy()](auto&&) mutable {
-                       return applyToVirtualInode(
-                           mountHandle.getRootInode(),
-                           *paths,
-                           [mountHandle, fetchContext = fetchContext.copy()](
-                               const VirtualInode& inode,
-                               const RelativePath& path) {
-                             return inode
-                                 .getBlake3(
-                                     path,
-                                     mountHandle.getObjectStorePtr(),
-                                     fetchContext)
-                                 .semi();
-                           },
-                           mountHandle.getObjectStorePtr(),
-                           fetchContext);
-                     })
-                 .ensure([mountHandle] {})
-                 .thenValue([](std::vector<folly::Try<Hash32>> results) {
-                   auto out = std::make_unique<std::vector<Blake3Result>>();
-                   out->reserve(results.size());
-
-                   for (auto& result : results) {
-                     auto& blake3Result = out->emplace_back();
-                     if (result.hasValue()) {
-                       blake3Result.blake3() = thriftHash32(result.value());
-                     } else {
-                       blake3Result.error() = newEdenError(result.exception());
-                     }
-                   }
-                   return out;
-                 }))
-      .semi();
-}
-
 folly::coro::now_task<std::unique_ptr<std::vector<Blake3Result>>>
-EdenServiceHandler::co_getBlake3Impl(
+EdenServiceHandler::getBlake3Impl(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
@@ -1510,29 +1455,21 @@ EdenServiceHandler::semifuture_getBlake3(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
-  if (server_->getServerState()
-          ->getEdenConfig()
-          ->enableCoroutinesPhase5.getValue()) {
-    auto result = ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](
-                std::unique_ptr<std::string> mountPoint,
-                std::unique_ptr<std::vector<std::string>> paths,
-                std::unique_ptr<SyncBehavior> sync)
-                -> folly::coro::Task<
-                    std::unique_ptr<std::vector<Blake3Result>>> {
-              co_return co_await self->co_getBlake3Impl(
-                  std::move(mountPoint), std::move(paths), std::move(sync));
-            },
-            std::move(mountPoint),
-            std::move(paths),
-            std::move(sync))
-            .semi()};
-    return std::move(result).semi();
-  }
-  return semifuture_getBlake3Impl(
-      std::move(mountPoint), std::move(paths), std::move(sync));
+  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+  return folly::coro::co_invoke(
+             [self = shared_from_this()](
+                 std::unique_ptr<std::string> mountPoint,
+                 std::unique_ptr<std::vector<std::string>> paths,
+                 std::unique_ptr<SyncBehavior> sync)
+                 -> folly::coro::Task<
+                     std::unique_ptr<std::vector<Blake3Result>>> {
+               co_return co_await self->getBlake3Impl(
+                   std::move(mountPoint), std::move(paths), std::move(sync));
+             },
+             std::move(mountPoint),
+             std::move(paths),
+             std::move(sync))
+      .semi();
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>

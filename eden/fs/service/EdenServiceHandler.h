@@ -238,15 +238,8 @@ class EdenServiceHandler
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
-  // DEPRECATED. Use co_getBlake3Impl instead.
-  folly::SemiFuture<std::unique_ptr<std::vector<Blake3Result>>>
-  semifuture_getBlake3Impl(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths,
-      std::unique_ptr<SyncBehavior> sync);
-
   folly::coro::now_task<std::unique_ptr<std::vector<Blake3Result>>>
-  co_getBlake3Impl(
+  getBlake3Impl(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync);
