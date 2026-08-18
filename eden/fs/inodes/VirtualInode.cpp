@@ -343,29 +343,6 @@ folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
   }
 }
 
-ImmediateFuture<Hash20> VirtualInode::getSHA1(
-    RelativePathPiece path,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) const {
-  // DEPRECATED: use co_getSHA1 directly. Kept only because the futures Thrift
-  // handler and VirtualInodeLoaderTest still consume SemiFuture chains.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [](VirtualInode inode,
-             RelativePath path,
-             std::shared_ptr<ObjectStore> objectStore,
-             ObjectFetchContextPtr fetchContext) -> folly::coro::Task<Hash20> {
-            co_return co_await inode.co_getSHA1(
-                path, objectStore, fetchContext);
-          },
-          *this,
-          path.copy(),
-          objectStore,
-          fetchContext.copy())
-          .semi()};
-}
-
 folly::coro::now_task<Hash20> VirtualInode::co_getSHA1(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,

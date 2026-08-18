@@ -516,13 +516,16 @@ void verifyTreeState(
             })
                 .semi()
                 .via(mount.getServerExecutor().get())
-            : virtualInode
-                  .getSHA1(
-                      expected.path,
-                      mount.getEdenMount()->getObjectStore(),
-                      ObjectFetchContext::getNullContext())
-                  .semi()
-                  .via(mount.getServerExecutor().get());
+            : // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<Hash20> {
+              co_return co_await virtualInode.co_getSHA1(
+                  expected.path,
+                  mount.getEdenMount()->getObjectStore(),
+                  ObjectFetchContext::getNullContext());
+            })
+                .semi()
+                .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto sha1 = std::move(sha1Fut).get(0ms);
         EXPECT_EQ(sha1, expected.getSHA1()) << dbgMsg << " expected.contents=\""
@@ -863,7 +866,7 @@ TEST_P(VirtualInodeTestBase, statDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST_P(VirtualInodeTestBase, fileOpsOnCorrectObjectsOnly) {
+CO_TEST_P(VirtualInodeTestBase, fileOpsOnCorrectObjectsOnly) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   maybeEnableCoroutines(mount);
@@ -872,12 +875,10 @@ TEST_P(VirtualInodeTestBase, fileOpsOnCorrectObjectsOnly) {
   for (const auto& info_ : files.getOriginalItems()) {
     auto& info = *info_;
     auto virtualInode = mount.getVirtualInode(info.path);
-    auto hashTry = virtualInode
-                       .getSHA1(
-                           info.path,
-                           mount.getEdenMount()->getObjectStore(),
-                           ObjectFetchContext::getNullContext())
-                       .getTry();
+    auto hashTry = co_await folly::coro::co_awaitTry(virtualInode.co_getSHA1(
+        info.path,
+        mount.getEdenMount()->getObjectStore(),
+        ObjectFetchContext::getNullContext()));
     if (info.isRegularFile()) {
       EXPECT_EQ(true, hashTry.hasValue()) << " on path " << info.getLogPath();
       EXPECT_EQ(hashTry.value(), info.getSHA1())
@@ -1252,7 +1253,7 @@ TEST_P(VirtualInodeTestBase, getEntryAttributesAttributeError) {
   EXPECT_FALSE(attributes.type.value().hasException());
 }
 
-TEST_P(VirtualInodeTestBase, sha1DoesNotChangeState) {
+CO_TEST_P(VirtualInodeTestBase, sha1DoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   maybeEnableCoroutines(mount);
@@ -1268,22 +1269,17 @@ TEST_P(VirtualInodeTestBase, sha1DoesNotChangeState) {
       auto virtualInode = mount.getVirtualInode(info.path);
       EXPECT_INODE_OR(virtualInode, info);
 
+      auto sha1Try = co_await folly::coro::co_awaitTry(virtualInode.co_getSHA1(
+          info.path,
+          mount.getEdenMount()->getObjectStore(),
+          ObjectFetchContext::getNullContext()));
       if (info.isRegularFile()) {
-        virtualInode
-            .getSHA1(
-                info.path,
-                mount.getEdenMount()->getObjectStore(),
-                ObjectFetchContext::getNullContext())
-            .get();
+        EXPECT_TRUE(sha1Try.hasValue());
       } else {
-        EXPECT_THROW_ERRNO(
-            virtualInode
-                .getSHA1(
-                    info.path,
-                    mount.getEdenMount()->getObjectStore(),
-                    ObjectFetchContext::getNullContext())
-                .get(),
-            EISDIR);
+        CO_ASSERT_TRUE(sha1Try.hasException());
+        auto* error = sha1Try.tryGetExceptionObject<std::system_error>();
+        CO_ASSERT_NE(error, nullptr);
+        EXPECT_EQ(EISDIR, error->code().value());
       }
 
       VERIFY_TREE(verify_flags);

@@ -29,6 +29,12 @@ using namespace std::literals::chrono_literals;
 // compare the hashes instead.
 namespace {
 #define FILES {{"dir/a.txt", "dir/a.txt"}, {"dir/sub/b.txt", "dir/sub/b.txt"}}
+// SHA-1 of "dir/a.txt".
+constexpr Hash20 kDirATxtSha1{
+    folly::StringPiece{"cb1fe72e0440dcd1dbe205965c7b48659e8c9bbb"}};
+// SHA-1 of "dir/sub/b.txt".
+constexpr Hash20 kDirSubBTxtSha1{
+    folly::StringPiece{"cbf507d4a3137f6bbf6ecb72da9f3b79b7178e2f"}};
 
 template <typename T>
 void expectErrno(const folly::Try<T>& result, int expectedErrno) {
@@ -53,7 +59,7 @@ void expectDomainError(
 }
 } // namespace
 
-TEST(InodeLoader, load) {
+CO_TEST(CoInodeLoader, loadSHA1) {
   FakeTreeBuilder builder;
   builder.setFiles(FILES);
   TestMount mount(builder);
@@ -63,26 +69,26 @@ TEST(InodeLoader, load) {
   auto fetchContext = ObjectFetchContext::getNullContext();
 
   {
-    auto resultsFuture = applyToVirtualInode(
+    auto results = co_await co_applyToVirtualInode(
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [&](VirtualInode inode,
-            RelativePath path) -> folly::SemiFuture<Hash20> {
-          return inode.getSHA1(path, objectStore, fetchContext).semi();
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<Hash20> {
+          co_return co_await inode.co_getSHA1(path, objectStore, fetchContext);
         },
         objectStore,
         fetchContext);
 
-    auto results = std::move(resultsFuture).get(0ms);
-    EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
-    EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
-    EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
-    EXPECT_EQ(Hash20::sha1("dir/sub/b.txt"), results[3].value());
+    EXPECT_EQ(kDirATxtSha1, results[0].value());
+    expectErrno(results[1], ENOENT);
+    expectErrno(results[2], ENOENT);
+    EXPECT_EQ(kDirSubBTxtSha1, results[3].value());
   }
 
   {
-    auto resultsFuture = applyToVirtualInode(
+    auto results = co_await co_applyToVirtualInode(
         rootInode,
         std::vector<std::string>{
             "dir/sub/b.txt",
@@ -90,35 +96,36 @@ TEST(InodeLoader, load) {
             "not/exist/a",
             "not/exist/b",
             "dir/sub/b.txt"},
-        [&](VirtualInode inode, RelativePath path) {
-          return inode.getSHA1(path, objectStore, fetchContext).semi();
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<Hash20> {
+          co_return co_await inode.co_getSHA1(path, objectStore, fetchContext);
         },
         objectStore,
         fetchContext);
 
-    auto results = std::move(resultsFuture).get(0ms);
-
-    EXPECT_EQ(Hash20::sha1("dir/sub/b.txt"), results[0].value());
-    EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[1].value());
-    EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
-    EXPECT_THROW_ERRNO(results[3].value(), ENOENT);
+    EXPECT_EQ(kDirSubBTxtSha1, results[0].value());
+    EXPECT_EQ(kDirATxtSha1, results[1].value());
+    expectErrno(results[2], ENOENT);
+    expectErrno(results[3], ENOENT);
     EXPECT_EQ(results[0].value(), results[4].value())
         << "dir/sub/b.txt was requested twice and both entries are the same";
   }
 
   {
-    auto resultsFuture = applyToVirtualInode(
+    auto results = co_await co_applyToVirtualInode(
         rootInode,
         std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
-        [&](VirtualInode inode, RelativePath path) {
-          return inode.getSHA1(path, objectStore, fetchContext).semi();
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<Hash20> {
+          co_return co_await inode.co_getSHA1(path, objectStore, fetchContext);
         },
         objectStore,
         fetchContext);
 
-    auto results = std::move(resultsFuture).get(0ms);
-    EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
-    EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
+    EXPECT_EQ(kDirATxtSha1, results[0].value());
+    expectDomainError(results[1], "absolute path");
   }
 }
 
@@ -132,16 +139,31 @@ TEST(InodeLoader, notReady) {
   auto fetchContext = ObjectFetchContext::getNullContext();
 
   {
-    auto future = applyToVirtualInode(
-        rootInode,
-        std::vector<std::string>{
-            "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [&](VirtualInode inode,
-            RelativePath path) -> folly::SemiFuture<Hash20> {
-          return inode.getSHA1(path, objectStore, fetchContext).semi();
-        },
-        objectStore,
-        fetchContext);
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    auto future =
+        folly::coro::co_invoke(
+            [&]() -> folly::coro::Task<std::vector<folly::Try<Hash20>>> {
+              co_return co_await co_applyToVirtualInode(
+                  rootInode,
+                  std::vector<std::string>{
+                      "dir/a.txt",
+                      "not/exist/a",
+                      "not/exist/b",
+                      "dir/sub/b.txt"},
+                  [objectStore, fetchContext = fetchContext.copy()](
+                      VirtualInode inode,
+                      RelativePath path) -> folly::coro::now_task<Hash20> {
+                    co_return co_await inode.co_getSHA1(
+                        path, objectStore, fetchContext);
+                  },
+                  objectStore,
+                  fetchContext);
+            })
+            .semi()
+            .via(mount.getServerExecutor().get());
+
+    mount.drainServerExecutor();
+    EXPECT_FALSE(future.isReady());
 
     builder.setReady("dir");
     builder.setReady("dir/sub");
@@ -149,12 +171,13 @@ TEST(InodeLoader, notReady) {
     builder.setReady("dir/sub/b.txt");
 
     mount.drainServerExecutor();
+    EXPECT_TRUE(future.isReady());
     auto results = std::move(future).get(0ms);
 
-    EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
+    EXPECT_EQ(kDirATxtSha1, results[0].value());
     EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
     EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
-    EXPECT_EQ(Hash20::sha1("dir/sub/b.txt"), results[3].value());
+    EXPECT_EQ(kDirSubBTxtSha1, results[3].value());
   }
 }
 
