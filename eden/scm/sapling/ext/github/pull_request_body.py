@@ -6,10 +6,15 @@
 import re
 from typing import List, Tuple, Union
 
+from sapling import error
+from sapling.i18n import _
+
 from .gh_submit import Repository
 
 _HORIZONTAL_RULE = "---"
 _SAPLING_FOOTER_MARKER = "[//]: # (BEGIN SAPLING FOOTER)"
+DEFAULT_REVIEW_URL_TEMPLATE = "https://reviewstack.dev/{owner}/{repo}/pull/{number}"
+DEFAULT_REVIEW_TOOL_NAME = "ReviewStack"
 
 
 def create_pull_request_title_and_body(
@@ -18,6 +23,8 @@ def create_pull_request_title_and_body(
     pr_numbers_index: int,
     repository: Repository,
     reviewstack: bool = True,
+    review_url_template: str = DEFAULT_REVIEW_URL_TEMPLATE,
+    review_tool_name: str = DEFAULT_REVIEW_TOOL_NAME,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
 
@@ -84,6 +91,70 @@ def create_pull_request_title_and_body(
     * __->__ #42
     * #4
 
+    Customize the review link, e.g. for a self-hosted review tool:
+    >>> title, body = create_pull_request_title_and_body(
+    ...     commit_msg,
+    ...     pr_numbers_and_num_commits,
+    ...     pr_numbers_index,
+    ...     contributor_repo,
+    ...     review_url_template="https://review.example.com/{owner}/{repo}/{number}",
+    ...     review_tool_name="MyReview",
+    ... )
+    >>> print(body)
+    Second line of message.
+    <BLANKLINE>
+    <BLANKLINE>
+    ---
+    [//]: # (BEGIN SAPLING FOOTER)
+    Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [MyReview](https://review.example.com/facebook/sapling/42).
+    * #1
+    * #2 (2 commits)
+    * __->__ #42
+    * #4
+
+    A customized footer still parses as stack information:
+    >>> parse_stack_information(body)
+    [(False, 1), (False, 2), (True, 42), (False, 4)]
+
+    Customizing only the tool name keeps the default URL:
+    >>> title, body = create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
+    ...     pr_numbers_index, contributor_repo, review_tool_name="MyReview")
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    Second line of message.
+    <BLANKLINE>
+    <BLANKLINE>
+    ---
+    [//]: # (BEGIN SAPLING FOOTER)
+    Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [MyReview]({reviewstack_url}).
+    * #1
+    * #2 (2 commits)
+    * __->__ #42
+    * #4
+
+    The templates are ignored when the review link is disabled entirely:
+    >>> title, body = create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
+    ...     pr_numbers_index, contributor_repo, reviewstack=False,
+    ...     review_url_template="https://review.example.com/{owner}/{repo}/{number}",
+    ...     review_tool_name="MyReview")
+    >>> print(body)
+    Second line of message.
+    <BLANKLINE>
+    <BLANKLINE>
+    ---
+    [//]: # (BEGIN SAPLING FOOTER)
+    * #1
+    * #2 (2 commits)
+    * __->__ #42
+    * #4
+
+    An invalid URL template aborts with a message naming the config:
+    >>> create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
+    ...     pr_numbers_index, contributor_repo,
+    ...     review_url_template="https://review.example.com/{bogus}")
+    Traceback (most recent call last):
+     ...
+    sapling.error.Abort: invalid github.pull-request-review-url-template 'https://review.example.com/{bogus}': 'bogus'
+
     Single commit stack:
     >>> title, body = create_pull_request_title_and_body("Foo", [(1, 1)], 0, contributor_repo)
     >>> print(title)
@@ -108,8 +179,24 @@ def create_pull_request_title_and_body(
     extra = []
     if len(pr_numbers_and_num_commits) > 1:
         if reviewstack:
-            reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
-            review_stack_message = f"Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url})."
+            # Pull requests live in the upstream repository, so - like `owner`
+            # and `name` above (see get_upstream_owner_and_name()) - the
+            # {hostname} placeholder expands from the upstream when submitting
+            # from a fork. For non-fork clones, repository.hostname is the
+            # same host.
+            hostname = (
+                repository.upstream.hostname
+                if repository.upstream
+                else repository.hostname
+            )
+            review_url = _format_review_url(
+                review_url_template,
+                owner=owner,
+                repo=name,
+                number=pr,
+                hostname=hostname,
+            )
+            review_stack_message = f"Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [{review_tool_name}]({review_url})."
             extra.append(review_stack_message)
         bulleted_list = "\n".join(
             _format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
@@ -123,6 +210,26 @@ def create_pull_request_title_and_body(
             body += "\n"
         body += "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER] + extra)
     return title, body
+
+
+def _format_review_url(
+    template: str, *, owner: str, repo: str, number: int, hostname: str
+) -> str:
+    r"""Expands the github.pull-request-review-url-template config value.
+
+    >>> _format_review_url(DEFAULT_REVIEW_URL_TEMPLATE,
+    ...     owner="facebook", repo="sapling", number=42, hostname="github.com")
+    'https://reviewstack.dev/facebook/sapling/pull/42'
+    >>> _format_review_url("https://{hostname}/{owner}/{repo}/reviews/{number}",
+    ...     owner="facebook", repo="sapling", number=42, hostname="github.example.com")
+    'https://github.example.com/facebook/sapling/reviews/42'
+    """
+    try:
+        return template.format(owner=owner, repo=repo, number=number, hostname=hostname)
+    except (IndexError, KeyError, ValueError) as e:
+        raise error.Abort(
+            _("invalid github.pull-request-review-url-template %r: %s") % (template, e)
+        )
 
 
 _STACK_ENTRY = re.compile(r"^\* (__->__ )?#([1-9]\d*).*$")

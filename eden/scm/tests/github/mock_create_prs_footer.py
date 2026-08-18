@@ -19,33 +19,38 @@ from sapling.ext.github.pull_request_body import (
     title_and_body,
 )
 
-# An extension to mock network requests by replacing the `github_gh_cli.make_request`
-# and `submit.run_git_command` with the corresponding wrapper functions. Check `uisetup`
-# function for how wrapper functions are registered.
+# An extension to mock network requests for `sl pr submit` with customized
+# github.pull-request-review-url-template / github.pull-request-review-tool-name
+# configs. The expected review link is computed from the same configs the test
+# sets, so the mock server only matches if the customized footer was produced.
 
 
 def setup_mock_github_server(ui) -> MockGitHubServer:
-    """Setup mock GitHub Server for testing happy case of `sl pr submit` command."""
+    """Setup mock GitHub Server for testing `sl pr submit` with a custom review link."""
     github_server = MockGitHubServer()
 
     github_server.expect_get_repository_request().and_respond()
 
     github_server.expect_guess_next_pull_request_number().and_respond()
 
+    url_template = (
+        ui.config("github", "pull-request-review-url-template")
+        or DEFAULT_REVIEW_URL_TEMPLATE
+    )
+    review_tool = (
+        ui.config("github", "pull-request-review-tool-name")
+        or DEFAULT_REVIEW_TOOL_NAME
+    )
+
     prs = [
         (42, "one\n"),
         (43, "two\n"),
     ]
 
-    single = ui.config("github", "pr-workflow") == "single"
-
-    for idx, (num, msg) in enumerate(prs):
+    for num, msg in prs:
         title, body = title_and_body(msg)
         head = f"pr{num}"
-
         base = "main"
-        if single and idx > 0:
-            base = "pr%d" % prs[idx - 1][0]
 
         github_server.expect_create_pr_request(
             body=body,
@@ -57,20 +62,18 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
         pr_id = f"PR_id_{num}"
         github_server.expect_get_pr_details_request(num).and_respond(pr_id)
 
+        review_url = _format_review_url(
+            url_template, owner=OWNER, repo=REPO_NAME, number=num, hostname=GITHUB_HOSTNAME
+        )
+
         github_server.expect_update_pr_request(
             pr_id,
             num,
             msg,
             base=base,
             stack_pr_ids=[pr[0] for pr in prs],
-            review_url=_format_review_url(
-                DEFAULT_REVIEW_URL_TEMPLATE,
-                owner=OWNER,
-                repo=REPO_NAME,
-                number=num,
-                hostname=GITHUB_HOSTNAME,
-            ),
-            review_tool=DEFAULT_REVIEW_TOOL_NAME,
+            review_url=review_url,
+            review_tool=review_tool,
         ).and_respond()
 
     github_server.expect_get_username_request().and_respond()

@@ -283,6 +283,9 @@ class MockGitHubServer:
         owner: str = OWNER,
         name: str = REPO_NAME,
         stack_pr_ids: Optional[List[int]] = None,
+        *,
+        review_url: str,
+        review_tool: str,
     ) -> "UpdatePrRequest":
         if not stack_pr_ids:
             stack_pr_ids = [pr_number]
@@ -296,7 +299,7 @@ class MockGitHubServer:
                 ("" if commit_msg.endswith("\n") else "\n") + "---\n"
                 "[//]: # (BEGIN SAPLING FOOTER)\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
-                f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
+                f" with [{review_tool}]({review_url}).\n"
                 + "\n".join(pr_list)
             )
 

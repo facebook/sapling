@@ -22,7 +22,12 @@ from .gh_submit import PullRequestDetails, PullRequestState, Repository
 from .github_repo_util import check_github_repo, GitHubRepo
 from .none_throws import none_throws
 from .pr_parser import get_pull_request_for_context
-from .pull_request_body import create_pull_request_title_and_body, title_and_body
+from .pull_request_body import (
+    create_pull_request_title_and_body,
+    DEFAULT_REVIEW_TOOL_NAME,
+    DEFAULT_REVIEW_URL_TEMPLATE,
+    title_and_body,
+)
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
 from .run_git_command import run_git_command
@@ -341,12 +346,22 @@ async def rewrite_pull_request_body(
     else:
         commit_msg_or_title_body = head_commit_data.get_msg()
 
+    review_url_template = (
+        ui.config("github", "pull-request-review-url-template")
+        or DEFAULT_REVIEW_URL_TEMPLATE
+    )
+    review_tool_name = (
+        ui.config("github", "pull-request-review-tool-name")
+        or DEFAULT_REVIEW_TOOL_NAME
+    )
     title, body = create_pull_request_title_and_body(
         commit_msg_or_title_body,
         pr_numbers_and_num_commits,
         index,
         repository,
         reviewstack=ui.configbool("github", "pull-request-include-reviewstack"),
+        review_url_template=review_url_template,
+        review_tool_name=review_tool_name,
     )
 
     if pr.state != PullRequestState.OPEN:
