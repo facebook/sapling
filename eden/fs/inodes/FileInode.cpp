@@ -935,8 +935,16 @@ ImmediateFuture<string> FileInode::getxattr(
   }
 
   if (name == kXattrBlake3 || name == kXattrDigestHash) {
-    return getBlake3(context).thenValue(
-        [](Hash32 hash) { return hash.toString(); });
+    return ImmediateFuture<string>{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](FileInodePtr self,
+               ObjectFetchContextPtr context) -> folly::coro::Task<string> {
+              co_return (co_await self->co_getBlake3(context)).toString();
+            },
+            inodePtrFromThis(),
+            context.copy())
+            .semi()};
   }
 
   return makeImmediateFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
