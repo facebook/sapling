@@ -6252,7 +6252,18 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
 
     blobFutures.emplace_back(
         ImmediateFuture{
-            saplingBackingStore->getBlobAuxDataEnqueue(slOid, fetchContext)}
+            folly::coro::co_invoke(
+                [](std::shared_ptr<SaplingBackingStore> backingStore,
+                   SlOid oid,
+                   ObjectFetchContextPtr context)
+                    -> folly::coro::Task<BackingStore::GetBlobAuxResult> {
+                  co_return co_await backingStore->co_getBlobAuxDataEnqueue(
+                      oid, context);
+                },
+                std::move(saplingBackingStore),
+                std::move(slOid),
+                fetchContext.copy())
+                .semi()}
             .thenValue([edenMount, id](BackingStore::GetBlobAuxResult result) {
               return transformToBlobMetadataFromOrigin(
                   edenMount,
