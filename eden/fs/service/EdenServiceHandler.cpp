@@ -1371,11 +1371,9 @@ folly::coro::now_task<void> co_waitForPendingWrites(
 ImmediateFuture<folly::Unit> waitForPendingWrites(
     const EdenMount& mount,
     const SyncBehavior& sync) {
-  // DEPRECATED: use co_waitForPendingWrites directly. Kept only because
-  // 13 thrift handlers still consume ImmediateFuture chains (e.g.
-  // synchronizeWorkingCopy, getSHA1, getBlake3, readdir, changesSince,
-  // getAttributesFromFiles, ensureMaterialized, removeRecursively);
-  // delete once those handlers are migrated to coroutines.
+  // DEPRECATED: use co_waitForPendingWrites directly. Kept for the remaining
+  // ImmediateFuture-based Thrift handler paths; delete after they migrate to
+  // coroutines.
   auto mountHandle = EdenMountHandle{
       std::const_pointer_cast<EdenMount>(mount.shared_from_this()),
       mount.getRootInode()};
@@ -1546,11 +1544,10 @@ EdenServiceHandler::getSHA1Impl(
   auto results = co_await co_applyToVirtualInode(
       mountHandle.getRootInode(),
       *paths,
-      [mountHandle, fetchContext = fetchContext.copy()](
+      [objectStore, fetchContext = fetchContext.copy()](
           VirtualInode inode,
           RelativePath path) -> folly::coro::now_task<Hash20> {
-        co_return co_await inode.co_getSHA1(
-            path, mountHandle.getObjectStorePtr(), fetchContext);
+        co_return co_await inode.co_getSHA1(path, objectStore, fetchContext);
       },
       objectStore,
       fetchContext);
@@ -1570,26 +1567,13 @@ EdenServiceHandler::getSHA1Impl(
   co_return out;
 }
 
-folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
-EdenServiceHandler::semifuture_getSHA1(
+folly::coro::Task<std::unique_ptr<std::vector<SHA1Result>>>
+EdenServiceHandler::co_getSHA1(
     std::unique_ptr<string> mountPoint,
     std::unique_ptr<vector<string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
-  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-  return folly::coro::co_invoke(
-             [self = shared_from_this()](
-                 std::unique_ptr<std::string> mountPoint,
-                 std::unique_ptr<std::vector<std::string>> paths,
-                 std::unique_ptr<SyncBehavior> sync)
-                 -> folly::coro::Task<
-                     std::unique_ptr<std::vector<SHA1Result>>> {
-               co_return co_await self->getSHA1Impl(
-                   std::move(mountPoint), std::move(paths), std::move(sync));
-             },
-             std::move(mountPoint),
-             std::move(paths),
-             std::move(sync))
-      .semi();
+  co_return co_await getSHA1Impl(
+      std::move(mountPoint), std::move(paths), std::move(sync));
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(

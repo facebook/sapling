@@ -129,6 +129,7 @@ struct TestFileInfo {
 
   Hash20 getSHA1() const {
     auto content = getContents();
+    // patternlint-disable-next-line poor-choice-of-hash-function
     return Hash20::sha1(folly::ByteRange{content});
   }
 

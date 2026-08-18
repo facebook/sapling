@@ -213,8 +213,7 @@ class EdenServiceHandler
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> repoPath) override;
 
-  folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
-  semifuture_getSHA1(
+  folly::coro::Task<std::unique_ptr<std::vector<SHA1Result>>> co_getSHA1(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
