@@ -546,13 +546,16 @@ void verifyTreeState(
             })
                 .semi()
                 .via(mount.getServerExecutor().get())
-            : virtualInode
-                  .getBlake3(
-                      expected.path,
-                      mount.getEdenMount()->getObjectStore(),
-                      ObjectFetchContext::getNullContext())
-                  .semi()
-                  .via(mount.getServerExecutor().get());
+            : // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<Hash32> {
+              co_return co_await virtualInode.co_getBlake3(
+                  expected.path,
+                  mount.getEdenMount()->getObjectStore(),
+                  ObjectFetchContext::getNullContext());
+            })
+                .semi()
+                .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto blake3 = std::move(blake3Fut).get(0ms);
         EXPECT_EQ(blake3, expected.getBlake3(blake3Key))

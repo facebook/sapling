@@ -218,31 +218,6 @@ VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
       [](const TreeEntry&) { return ContainedType::TreeEntry; });
 }
 
-ImmediateFuture<Hash32> VirtualInode::getBlake3(
-    RelativePathPiece path,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) const {
-  // DEPRECATED: use co_getBlake3 directly. Kept only because
-  // EdenServiceHandler and getDigestHash still call this via
-  // ImmediateFuture chains; delete once those paths are migrated
-  // to coroutines.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [](VirtualInode inode,
-             RelativePath path,
-             std::shared_ptr<ObjectStore> objectStore,
-             ObjectFetchContextPtr fetchContext) -> folly::coro::Task<Hash32> {
-            co_return co_await inode.co_getBlake3(
-                path, objectStore, fetchContext);
-          },
-          *this,
-          path.copy(),
-          objectStore,
-          fetchContext.copy())
-          .semi()};
-}
-
 folly::coro::now_task<Hash32> VirtualInode::co_getBlake3(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
