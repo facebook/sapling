@@ -265,30 +265,6 @@ folly::coro::now_task<Hash32> VirtualInode::co_getBlake3(
   }
 }
 
-ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
-    RelativePathPiece path,
-    const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext) const {
-  // DEPRECATED: use co_getDigestHash directly. Kept only because the futures
-  // Thrift handler still consumes ImmediateFuture chains.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [](VirtualInode inode,
-             RelativePath path,
-             std::shared_ptr<ObjectStore> objectStore,
-             ObjectFetchContextPtr fetchContext)
-              -> folly::coro::Task<std::optional<Hash32>> {
-            co_return co_await inode.co_getDigestHash(
-                path, objectStore, fetchContext);
-          },
-          *this,
-          path.copy(),
-          objectStore,
-          fetchContext.copy())
-          .semi()};
-}
-
 folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,

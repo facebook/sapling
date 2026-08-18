@@ -784,27 +784,6 @@ TEST(RestrictedTreeInode, isRestricted_reflectsVariant) {
   EXPECT_FALSE(VirtualInode{InodePtr{normalInode}}.isRestricted());
 }
 
-TEST(RestrictedTreeInode, getDigestHash_restrictedTreePtrWithholdsDigestHash) {
-  FakeTreeBuilder builder;
-  builder.setFile("restricted/secret.txt", "secret");
-  builder.setDirIsRestricted("restricted");
-  TestMount testMount{builder};
-
-  auto restricted = testMount.getVirtualInode("restricted"_relpath);
-  ASSERT_EQ(
-      VirtualInode::ContainedType::Tree, restricted.testGetContainedType());
-  ASSERT_TRUE(restricted.isRestricted());
-
-  auto result = restricted
-                    .getDigestHash(
-                        "restricted"_relpath,
-                        testMount.getEdenMount()->getObjectStore(),
-                        ObjectFetchContext::getNullContext())
-                    .getTry();
-  ASSERT_TRUE(result.hasValue());
-  EXPECT_FALSE(result.value().has_value());
-}
-
 CO_TEST(
     RestrictedTreeInode,
     co_getDigestHash_restrictedTreePtrWithholdsDigestHash) {
