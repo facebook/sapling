@@ -1011,7 +1011,11 @@ class HgStatusAndDiffMismatch(PathsProblem):
         )
 
 
-def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[Path]:
+def normalize_path_case(path: str, case_sensitive: bool) -> Path:
+    return Path(path if case_sensitive else path.lower())
+
+
+def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[str]:
     with instance.get_thrift_client(timeout=60.0) as client:
         # We are required to pass the active FilterId to getScmStatusV2. We
         # can find the active FilterId with GetCurrentSnapshotInfo
@@ -1033,33 +1037,49 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
             )
         )
 
-    modified_files = []
-    case_sensitive = checkout.get_config().case_sensitive
-    for pathb, file_status in status.status.entries.items():
-        if file_status == ScmFileStatus.MODIFIED:
-            path = os.fsdecode(pathb)
-            if not case_sensitive:
-                path = path.lower()
-            modified_files += [Path(path)]
-
-    return modified_files
+    # Paths are returned as reported by EdenFS: repo relative, '/' separated and
+    # in their original case, so that they can be passed back to hg as patterns.
+    return [
+        os.fsdecode(pathb)
+        for pathb, file_status in status.status.entries.items()
+        if file_status == ScmFileStatus.MODIFIED
+    ]
 
 
-def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
+def get_hg_diff(checkout: EdenCheckout, modified_files: List[str]) -> Set[Path]:
+    if not modified_files:
+        return set()
+
     hg = os.environ.get("EDEN_HG_BINARY", "hg")
+    # An unscoped `hg diff` reads every modified and added file in the working
+    # copy. Only modified files can mismatch with status, so scope the diff to
+    # them. The patterns are passed on stdin rather than in argv as there may be
+    # more of them than the OS allows on a command line.
+    #
+    # "path:" keeps glob metacharacters in file names from being interpreted as
+    # patterns.
+    patterns = b"\0".join(os.fsencode(f"path:{path}") for path in modified_files)
+
     json_diff = subprocess.run(
         # --no-binary is important for performance with large binary file changes.
-        [hg, "diff", "--per-file-stat-json", "--no-binary", "--reason=eden-doctor"],
+        [
+            hg,
+            "diff",
+            "--per-file-stat-json",
+            "--no-binary",
+            "--reason=eden-doctor",
+            "listfile0:-",
+        ],
         env=dict(os.environ, HGPLAIN="1"),
+        input=patterns,
         stdout=subprocess.PIPE,
         cwd=checkout.path,
         check=True,
-        text=True,
     ).stdout
     diff = json.loads(json_diff)
 
     case_sensitive = checkout.get_config().case_sensitive
-    return {Path(path if case_sensitive else path.lower()) for path in diff.keys()}
+    return {normalize_path_case(path, case_sensitive) for path in diff.keys()}
 
 
 def check_hg_status_match_hg_diff(
@@ -1092,7 +1112,7 @@ def check_hg_status_match_hg_diff(
         return
 
     try:
-        diff = get_hg_diff(checkout)
+        diff = get_hg_diff(checkout, modified_files)
     except subprocess.CalledProcessError:
         return
 
@@ -1109,10 +1129,12 @@ def check_hg_status_match_hg_diff(
     except InProgressCheckoutError:
         return
 
-    mismatched_files = []
-    for modified_file in modified_files:
-        if modified_file not in diff:
-            mismatched_files += [modified_file]
+    case_sensitive = checkout.get_config().case_sensitive
+    mismatched_files = [
+        Path(modified_file)
+        for modified_file in modified_files
+        if normalize_path_case(modified_file, case_sensitive) not in diff
+    ]
 
     if mismatched_files != []:
         tracker.add_problem(HgStatusAndDiffMismatch(mismatched_files))

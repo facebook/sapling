@@ -2355,7 +2355,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             status=ScmStatus(entries={b"foo/bar": ScmFileStatus.MODIFIED})
         )
         mock_subprocess_run.return_value = subprocess.CompletedProcess(
-            stdout='{"foo/bar": {"adds": 2, "isbinary": false, "removes": 0}}',
+            stdout=b'{"foo/bar": {"adds": 2, "isbinary": false, "removes": 0}}',
             args=["hg", "diff", "--per-file-stat-json"],
             returncode=0,
         )
@@ -2382,7 +2382,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             status=ScmStatus(entries={b"foo/bar": ScmFileStatus.MODIFIED})
         )
         mock_subprocess_run.return_value = subprocess.CompletedProcess(
-            stdout="{}", args=["hg", "diff", "--stat"], returncode=0
+            stdout=b"{}", args=["hg", "diff", "--stat"], returncode=0
         )
 
         tracker = ProblemCollector(instance)
@@ -2394,6 +2394,50 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             tracker.problems[0].description(),
             f"{Path('foo/bar')} is present as modified in `sl status` but not in `sl diff`",
         )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
+    @patch("subprocess.run")
+    def test_hg_diff_is_scoped_to_modified_files(
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_subprocess_run,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_getScmStatusV2,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        mock_getScmStatusV2.return_value = GetScmStatusResult(
+            status=ScmStatus(
+                entries={
+                    b"foo/bar": ScmFileStatus.MODIFIED,
+                    b"untracked": ScmFileStatus.ADDED,
+                }
+            )
+        )
+
+        patterns: List[str] = []
+
+        def fake_run(
+            args: List[str], **kwargs: Any
+        ) -> "subprocess.CompletedProcess[bytes]":
+            self.assertEqual(args[-1], "listfile0:-")
+            patterns.extend(os.fsdecode(p) for p in kwargs["input"].split(b"\0"))
+            return subprocess.CompletedProcess(
+                stdout=b'{"foo/bar": {"adds": 2, "isbinary": false, "removes": 0}}',
+                args=args,
+                returncode=0,
+            )
+
+        mock_subprocess_run.side_effect = fake_run
+
+        tracker = ProblemCollector(instance)
+        # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+        # `FakeEdenInstance`.
+        check_hg_status_match_hg_diff(tracker, instance, checkout)
+
+        self.assertEqual(tracker.problems, [])
+        self.assertEqual(patterns, ["path:foo/bar"])
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
     @patch("eden.fs.cli.doctor.check_filesystems.get_hg_diff")
@@ -2423,7 +2467,8 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         check_hg_status_match_hg_diff(tracker, instance, checkout)
 
         self.assertEqual(tracker.problems, [])
-        mock_get_hg_diff.assert_called_once_with(checkout)
+        mock_get_hg_diff.assert_called_once()
+        self.assertEqual(mock_get_hg_diff.call_args.args[0], checkout)
         self.assertEqual(mock_getScmStatusV2.call_count, 2)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
@@ -2492,7 +2537,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         check_hg_status_match_hg_diff(tracker, instance, checkout)
 
         self.assertEqual(tracker.problems, [])
-        mock_get_hg_diff.assert_called_once_with(checkout)
+        mock_get_hg_diff.assert_called_once_with(checkout, ["modified"])
         self.assertEqual(mock_getScmStatusV2.call_count, 2)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
@@ -2526,7 +2571,8 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         check_hg_status_match_hg_diff(tracker, instance, checkout)
 
         self.assertEqual(tracker.problems, [])
-        mock_get_hg_diff.assert_called_once_with(checkout)
+        mock_get_hg_diff.assert_called_once()
+        self.assertEqual(mock_get_hg_diff.call_args.args[0], checkout)
         self.assertEqual(mock_getScmStatusV2.call_count, 2)
 
     def test_ignored_problems_config(self) -> None:
