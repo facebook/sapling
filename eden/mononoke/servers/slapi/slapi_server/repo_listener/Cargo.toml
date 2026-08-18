@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
-base64 = { version = "0.22.1", features = ["alloc"] }
+base64 = { version = "0.23.1", features = ["alloc"] }
 bookmarks = { version = "0.1.0", path = "../../../../repo_attributes/bookmarks" }
 bookmarks_cache = { version = "0.1.0", path = "../../../../repo_attributes/bookmarks/bookmarks_cache" }
 bytes = { version = "1.12.1", features = ["serde"] }

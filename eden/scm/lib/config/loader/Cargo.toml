@@ -19,7 +19,7 @@ harness = false
 
 [dependencies]
 anyhow = "1.0.104"
-base64 = { version = "0.22.1", features = ["alloc"], optional = true }
+base64 = { version = "0.23.1", features = ["alloc"], optional = true }
 dirs = "6.0"
 faccess = "0.2.4"
 filetime = { version = "0.2.29", optional = true }
