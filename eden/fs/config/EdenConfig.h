@@ -1948,22 +1948,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableCoroutines{"coroutines:enabled", true, this};
 
   /**
-   * Controls whether EdenFS uses getBlake3 coroutine implementations
-   */
-  ConfigSetting<bool> enableCoroutinesPhase5{
-      "coroutines:enable-phase5",
-      false,
-      this};
-
-  /**
-   * Controls whether EdenFS uses getSHA1 coroutine implementations
-   */
-  ConfigSetting<bool> enableCoroutinesPhase6{
-      "coroutines:enable-phase6",
-      false,
-      this};
-
-  /**
    * Controls whether EdenFS uses phase 8 coroutine implementations
    * (getEntryInformation).
    */
@@ -1996,14 +1980,6 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableCoroutinesPhase7{
       "coroutines:enable-phase7",
-      false,
-      this};
-
-  /**
-   * Controls whether EdenFS uses getDigestHash coroutine implementations
-   */
-  ConfigSetting<bool> enableCoroutinesPhase11{
-      "coroutines:enable-phase11",
       false,
       this};
 
