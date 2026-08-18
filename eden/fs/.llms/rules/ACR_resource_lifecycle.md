@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/.*\.(cpp|h|rs|py)$'
-apply_to_content: 'MALLOC_CONF|env_allowlist|envMap|prefetch|Prefetch|F14FastMap|unordered_map|CancellationToken|stop_token|stopWithTimeout'
+name: ACR-resource-lifecycle
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/.*\.(cpp|h|rs|py)$'
+  apply_to_content: 'MALLOC_CONF|env_allowlist|envMap|prefetch|Prefetch|F14FastMap|unordered_map|CancellationToken|stop_token|stopWithTimeout'
 ---
 
 # Resource Lifecycle and Semantic Safety
