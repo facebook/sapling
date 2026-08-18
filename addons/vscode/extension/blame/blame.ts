@@ -18,7 +18,6 @@ import type {
 } from 'vscode';
 import type {VSCodeReposList} from '../VSCodeRepo';
 
-import {getUsername} from 'isl-server/src/analytics/environment';
 import {relativeDate} from 'isl/src/relativeDate';
 import {LRU} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
@@ -28,11 +27,6 @@ import {Internal} from '../Internal';
 import {getDiffBlameHoverMarkup} from './blameHover';
 import {getRealignedBlameInfo, shortenAuthorName} from './blameUtils';
 
-function areYouTheAuthor(author: string) {
-  const you = getUsername();
-  return author.includes(you);
-}
-
 type BlameText = {
   inline: string;
   hover: string;
@@ -40,6 +34,8 @@ type BlameText = {
 type RepoCaches = {
   headHash: string;
   blameCache: LRU<string, CachedBlame>; // Caches file path -> file blame.
+  username: string | undefined;
+  usernameLoaded: Promise<void>;
 };
 type CachedBlame = {
   baseBlameLines: Array<[line: string, info: CommitInfo | undefined]>;
@@ -263,7 +259,10 @@ export class InlineBlameProvider implements Disposable {
       return false;
     }
 
-    const blame = await this.getBlame(textEditor, repoCaches?.headHash);
+    const [blame] = await Promise.all([
+      this.getBlame(textEditor, repoCaches.headHash),
+      repoCaches.usernameLoaded,
+    ]);
 
     if (blame.error) {
       this.ctx.tracker.error('BlameLoaded', 'BlameError', blame.error.message, {
@@ -399,7 +398,7 @@ export class InlineBlameProvider implements Disposable {
   }
 
   private authorHint(author: string): string {
-    if (areYouTheAuthor(author)) {
+    if (this.areYouTheAuthor(author)) {
       return '(you) ';
     }
     if (Internal?.showAuthorNameInInlineBlame?.() === false) {
@@ -409,17 +408,35 @@ export class InlineBlameProvider implements Disposable {
     return shortenAuthorName(author) + ', ';
   }
 
-  private initRepoCaches(repoUri: string): void {
+  private areYouTheAuthor(author: string): boolean {
+    const you = this.currentRepo
+      ? this.observedRepos.get(this.currentRepo.info.repoRoot)?.username
+      : undefined;
+    return you != null && you !== '' && author.includes(you);
+  }
+
+  private initRepoCaches(repo: Repository): void {
+    const repoUri = repo.info.repoRoot;
     const caches: RepoCaches = {
       headHash: '',
       blameCache: new LRU(MAX_NUM_FILES_CACHED),
+      username: undefined,
+      usernameLoaded: repo.getConfig(contextForRepo(this.ctx, repo), 'ui.username').then(
+        username => {
+          const repoCaches = this.observedRepos.get(repoUri);
+          if (repoCaches) {
+            repoCaches.username = username;
+          }
+        },
+        () => undefined,
+      ),
     };
     this.observedRepos.set(repoUri, caches);
   }
 
   private subscribeToRepo(repo: Repository): void {
     const repoUri = repo.info.repoRoot;
-    this.initRepoCaches(repoUri);
+    this.initRepoCaches(repo);
 
     this.disposables.push(
       repo.subscribeToHeadCommit(head => {
