@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/(fuse|nfs|inodes)/.*\.(cpp|h)$'
-apply_to_content: 'ENOSYS|FuseDispatcher|NfsDispatcher|fuse_entry_out|EOPNOTSUPP'
+name: ACR-fuse-handler-safety
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/(fuse|nfs|inodes)/.*\.(cpp|h)$'
+  apply_to_content: 'ENOSYS|FuseDispatcher|NfsDispatcher|fuse_entry_out|EOPNOTSUPP'
 ---
 
 # FUSE/NFS Handler Safety
