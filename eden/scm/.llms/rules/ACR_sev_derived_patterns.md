@@ -26,6 +26,9 @@ Each pattern below has caused at least one SEV.
 - Path validation using `cfg!(not(windows))` as a proxy for "case-sensitive filesystem"
   — macOS uses case-insensitive APFS by default, so `.SL`, `.Hg`, `.HG` bypass
   blocklist checks and enable `.sl/config` overwrite leading to remote code execution
+- ASCII lowercasing alone as the case-insensitive check on macOS — APFS folds via NFD +
+  Unicode case folding, so `.ſl` reaches `.sl`; `FsFeatures::APPLE_NFD` must be set
+  alongside `CASE_INSENSITIVE` for `audit_invalid_components` to reject it
 - Symlink creation that validates the symlink NAME but not where it POINTS — allows
   `Link -> .sl` to redirect writes into the repo config directory
 - Directory creation (especially for submodules) that bypasses the PathAuditor entirely
@@ -87,23 +90,12 @@ fn audit_invalid_components(path: &RepoPath) -> Result<()> {
 }
 ```
 
-**GOOD (runtime filesystem case-sensitivity check):**
+**GOOD (fold the way the filesystem does — see `lib/vfs/src/pathauditor.rs`):**
 ```rust
-fn audit_invalid_components(path: &RepoPath) -> Result<()> {
-    for component in path.components() {
-        // Compare case-insensitively on ALL platforms where the FS may be
-        // case-insensitive (macOS, Windows), not just Windows
-        let check = if is_case_sensitive_fs() {
-            component.as_str().to_string()
-        } else {
-            component.as_str().to_lowercase()
-        };
-        if BLOCKLIST.contains(&check) {
-            return Err(/* ... */);
-        }
-    }
-    Ok(())
-}
+// macOS gets HFS_STRIP | APPLE_NFD; CASE_INSENSITIVE is added when the FS is
+// case-insensitive. APPLE_NFD upgrades the case check from ASCII lowercase to
+// NFD + Unicode case folding, so `.ſl`-style aliases are caught too.
+audit_invalid_components(path.as_str(), FsFeatures::current_platform())?;
 ```
 
 **BAD (symlink target not validated — S631940):**
