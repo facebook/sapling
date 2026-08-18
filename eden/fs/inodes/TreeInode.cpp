@@ -7278,12 +7278,20 @@ ImmediateFuture<std::string> TreeInode::getxattr(
     folly::StringPiece name,
     const ObjectFetchContextPtr& context) {
   if (name == kXattrDigestHash) {
-    return getDigestHash(context).thenValue(
-        [self = inodePtrFromThis()](std::optional<Hash32> hash) {
-          return hash.has_value()
-              ? hash.value().toString()
-              : makeImmediateFuture<std::string>(InodeError(kENOATTR, self));
-        });
+    return ImmediateFuture<std::string>{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](TreeInodePtr self, ObjectFetchContextPtr context)
+                -> folly::coro::Task<std::string> {
+              auto hash = co_await self->co_getDigestHash(context);
+              if (!hash.has_value()) {
+                throw InodeError(kENOATTR, self);
+              }
+              co_return hash->toString();
+            },
+            inodePtrFromThis(),
+            context.copy())
+            .semi()};
   }
   return makeImmediateFuture<std::string>(
       InodeError(kENOATTR, inodePtrFromThis()));
