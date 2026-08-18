@@ -19,6 +19,15 @@ eden/addons/
 └── scripts/         # Build and sync scripts
 ```
 
+## Changelog
+
+When making user-facing changes to the `sapling-scm` VS Code extension, add a bullet to `eden/addons/vscode/CHANGELOG.md`:
+
+- Add it under the **topmost** `## 0.x.y` version heading — that section represents the in-progress, unreleased version. Don't create a new version heading or bump the version in `vscode/package.json`; that happens separately as part of cutting a release.
+- Write bullets as a short, capitalized, imperative-present-tense phrase (`Add`, `Fix`, `Improve`, `Show`, `Allow`, ...), e.g. `Fix optimistic state for rebase operations`. No trailing period, unless the bullet ends in a link/citation.
+- Use nested sub-bullets to group related details under one parent bullet instead of adding several top-level bullets for the same feature.
+- New bullets go at the bottom of the list under the current version heading.
+
 ## Development Commands
 
 | Task                     | Command                              |
