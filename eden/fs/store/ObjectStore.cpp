@@ -550,8 +550,8 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
     const ObjectFetchContextPtr& fetchContext,
     bool blake3Needed) const {
   // DEPRECATED: use co_getBlobAuxData directly. Kept only because
-  // EdenServiceHandler.cpp, VirtualInode.cpp, FileInode.cpp, getBlobSize,
-  // getBlobSha1, and getBlobBlake3 still consume ImmediateFuture chains;
+  // EdenServiceHandler.cpp, VirtualInode.cpp, FileInode.cpp, and getBlobSize
+  // still consume ImmediateFuture chains;
   // delete once those paths are migrated to coroutines.
   return ImmediateFuture{
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
@@ -698,9 +698,17 @@ folly::coro::now_task<uint64_t> ObjectStore::co_getBlobSize(
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  return getBlobAuxData(id, context).thenValue([](const BlobAuxData& auxData) {
-    return auxData.sha1;
-  });
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [self = shared_from_this()](
+              ObjectId id,
+              ObjectFetchContextPtr context) -> folly::coro::Task<Hash20> {
+            co_return co_await self->co_getBlobSha1(id, context);
+          },
+          ObjectId{id},
+          context.copy())
+          .semi()};
 }
 
 Hash32 ObjectStore::computeBlake3(const Blob& blob) const {
