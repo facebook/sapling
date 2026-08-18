@@ -21,7 +21,7 @@ glob = "0.3.4"
 globset = { version = "0.4.20", features = ["serde1"] }
 ignore = "0.4.33"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-regex-automata = "0.3.9"
+regex-automata = "0.4.18"
 sapling-pathmatcher-types = { version = "0.1.0", path = "types" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
