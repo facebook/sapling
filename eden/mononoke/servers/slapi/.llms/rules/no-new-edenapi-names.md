@@ -1,8 +1,11 @@
 ---
+name: no-new-edenapi-names
 description: "Prevent new code from using the old 'edenapi' naming -- it has been renamed to 'slapi'"
-oncalls: ['source_control_server']
-apply_to_regex: 'eden/mononoke/servers/slapi/.*\.rs$'
-apply_to_clients: ['code_review']
+metadata:
+  oncalls: ['source_control_server']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/slapi/.*\.rs$'
+  apply_to_clients: ['code_review']
 ---
 
 # No New EdenAPI Names
