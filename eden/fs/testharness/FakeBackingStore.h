@@ -13,6 +13,7 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -117,6 +118,23 @@ class FakeBackingStore final : public BackingStore {
   StoredTree* putRestrictedTree(
       ObjectId id,
       const std::initializer_list<TreeEntryData>& entries);
+
+  /**
+   * Replace an existing tree with an empty restricted response under the same
+   * object ID, simulating access revocation between fetches.
+   */
+  StoredTree* replaceTreeWithRestricted(ObjectId id) {
+    auto data = data_.wlock();
+    auto it = data->trees.find(id);
+    if (it == data->trees.end()) {
+      throw std::domain_error{"tree not found"};
+    }
+    it->second = std::make_unique<StoredTree>(Tree{
+        Tree::Restricted{},
+        Tree::container{kPathMapDefaultCaseSensitive},
+        std::move(id)});
+    return it->second.get();
+  }
 
   /**
    * Add a tree to the backing store, or return the StoredTree already present
