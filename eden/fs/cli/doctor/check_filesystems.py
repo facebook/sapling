@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import platform
 import random
@@ -48,6 +49,11 @@ from eden.fs.service.eden.thrift_types import (
     SyncBehavior,
     TimeSpec,
 )
+
+DEFAULT_MAX_MODIFIED_FILES_FOR_HG_DIFF = 1_000
+
+log: logging.Logger = logging.getLogger(__name__)
+
 
 try:
     from eden.fs.cli.doctor.facebook.internal_error_messages import (
@@ -1069,6 +1075,20 @@ def check_hg_status_match_hg_diff(
         return
 
     if len(modified_files) == 0:
+        return
+
+    max_modified_files = instance.get_config_int(
+        "doctor.max-modified-files-for-hg-diff",
+        DEFAULT_MAX_MODIFIED_FILES_FOR_HG_DIFF,
+    )
+    if 0 < max_modified_files < len(modified_files):
+        log.info(
+            "Skipping hg status/diff comparison for %s: %d modified files exceed "
+            "the configured limit of %d",
+            checkout.path,
+            len(modified_files),
+            max_modified_files,
+        )
         return
 
     try:
