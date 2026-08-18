@@ -1,8 +1,11 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_clients: ['code_review']
-apply_to_regex: 'eden/scm/sapling/.*\.py$'
-apply_to_content: 'error\.Abort|raise.*Abort'
+name: ACR-abort-without-hint
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/scm/sapling/.*\.py$'
+  apply_to_content: 'error\.Abort|raise.*Abort'
+  apply_to_clients: ['code_review']
 ---
 
 # Abort Without User Hint
