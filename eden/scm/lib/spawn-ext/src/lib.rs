@@ -95,8 +95,8 @@ pub struct CommandError {
 /// Skip `pre_exec` usage. When setting to `true`, it will:
 /// - No-op `avoid_inherit_handles`, `new_session`, and `detached` on unix.
 /// - Under the hood (Rust stdlib), uses `posix_spawn` instead of `fork`.
-/// `fork()` is more likely to crash on macOS. By default, this config is turned
-/// on for macOS.
+///   `fork()` is more likely to crash on macOS. By default, this config is turned
+///   on for macOS.
 pub static CONFIG_SKIP_PRE_EXEC: AtomicBool = AtomicBool::new(cfg!(target_os = "macos"));
 
 impl fmt::Display for CommandError {
