@@ -242,14 +242,8 @@ class EdenServiceHandler
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
-  folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
-  semifuture_getDigestHashImpl(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths,
-      std::unique_ptr<SyncBehavior> sync);
-
   folly::coro::now_task<std::unique_ptr<std::vector<DigestHashResult>>>
-  co_getDigestHashImpl(
+  getDigestHashImpl(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync);

@@ -1472,71 +1472,8 @@ EdenServiceHandler::semifuture_getBlake3(
       .semi();
 }
 
-folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
-EdenServiceHandler::semifuture_getDigestHashImpl(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::vector<std::string>> paths,
-    std::unique_ptr<SyncBehavior> sync) {
-  TraceBlock block("getDigestHash");
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
-  auto& fetchContext = helper->getFetchContext();
-  auto mountHandle = lookupMount(mountPoint);
-
-  auto notificationFuture =
-      waitForPendingWrites(mountHandle.getEdenMount(), *sync);
-  return wrapImmediateFuture(
-             std::move(helper),
-             std::move(notificationFuture)
-                 .thenValue(
-                     [mountHandle,
-                      paths = std::move(paths),
-                      fetchContext = fetchContext.copy()](auto&&) mutable {
-                       return applyToVirtualInode(
-                           mountHandle.getRootInode(),
-                           *paths,
-                           [mountHandle, fetchContext = fetchContext.copy()](
-                               const VirtualInode& inode, RelativePath path) {
-                             return inode
-                                 .getDigestHash(
-                                     path,
-                                     mountHandle.getObjectStorePtr(),
-                                     fetchContext)
-                                 .semi();
-                           },
-                           mountHandle.getObjectStorePtr(),
-                           fetchContext);
-                     })
-                 .ensure([mountHandle] {})
-                 .thenValue([](std::vector<folly::Try<std::optional<Hash32>>>
-                                   results) {
-                   auto out = std::make_unique<std::vector<DigestHashResult>>();
-                   out->reserve(results.size());
-
-                   for (auto& result : results) {
-                     auto& digestHashResult = out->emplace_back();
-                     if (result.hasValue()) {
-                       if (result.value().has_value()) {
-                         digestHashResult.digestHash() =
-                             thriftHash32(result.value().value());
-                       } else {
-                         digestHashResult.error() = newEdenError(
-                             ENOENT,
-                             EdenErrorType::ATTRIBUTE_UNAVAILABLE,
-                             "tree aux data missing for tree");
-                       }
-                     } else {
-                       digestHashResult.error() =
-                           newEdenError(result.exception());
-                     }
-                   }
-                   return out;
-                 }))
-      .semi();
-}
-
 folly::coro::now_task<std::unique_ptr<std::vector<DigestHashResult>>>
-EdenServiceHandler::co_getDigestHashImpl(
+EdenServiceHandler::getDigestHashImpl(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
@@ -1588,29 +1525,21 @@ EdenServiceHandler::semifuture_getDigestHash(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
-  if (server_->getServerState()
-          ->getEdenConfig()
-          ->enableCoroutinesPhase11.getValue()) {
-    auto result = ImmediateFuture{
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [self = shared_from_this()](
-                std::unique_ptr<std::string> mountPoint,
-                std::unique_ptr<std::vector<std::string>> paths,
-                std::unique_ptr<SyncBehavior> sync)
-                -> folly::coro::Task<
-                    std::unique_ptr<std::vector<DigestHashResult>>> {
-              co_return co_await self->co_getDigestHashImpl(
-                  std::move(mountPoint), std::move(paths), std::move(sync));
-            },
-            std::move(mountPoint),
-            std::move(paths),
-            std::move(sync))
-            .semi()};
-    return std::move(result).semi();
-  }
-  return semifuture_getDigestHashImpl(
-      std::move(mountPoint), std::move(paths), std::move(sync));
+  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+  return folly::coro::co_invoke(
+             [self = shared_from_this()](
+                 std::unique_ptr<std::string> mountPoint,
+                 std::unique_ptr<std::vector<std::string>> paths,
+                 std::unique_ptr<SyncBehavior> sync)
+                 -> folly::coro::Task<
+                     std::unique_ptr<std::vector<DigestHashResult>>> {
+               co_return co_await self->getDigestHashImpl(
+                   std::move(mountPoint), std::move(paths), std::move(sync));
+             },
+             std::move(mountPoint),
+             std::move(paths),
+             std::move(sync))
+      .semi();
 }
 
 folly::coro::now_task<std::unique_ptr<std::vector<SHA1Result>>>
