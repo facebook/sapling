@@ -53,6 +53,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
+        "//common/rust/build_info:build_info",
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
