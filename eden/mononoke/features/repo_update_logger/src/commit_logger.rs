@@ -37,6 +37,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::Globalrev;
 use mononoke_types::NonRootMPath;
+use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use phases::PhasesRef;
 use regex::Regex;
@@ -156,6 +157,8 @@ struct PlainCommitInfo {
     user_unix_name: Option<String>,
     #[serde(skip_serializing_if = "MononokeIdentitySet::is_empty")]
     user_identities: MononokeIdentitySet,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    user_authenticated_identities: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source_hostname: Option<String>,
     #[serde(with = "::chrono::serde::ts_seconds")]
@@ -219,6 +222,10 @@ impl PlainCommitInfo {
         )?;
         let user_unix_name = ctx.metadata().unix_name().map(|un| un.to_string());
         let user_identities = ctx.metadata().identities().clone();
+        let user_authenticated_identities = user_identities
+            .iter()
+            .map(MononokeIdentity::to_typed_string)
+            .collect();
         let source_hostname = ctx.metadata().client_hostname().map(|hn| hn.to_string());
         let (bookmark, is_public) = bookmark.map_or((None, false), |(name, kind)| {
             (Some(name.to_string()), kind.is_public())
@@ -252,6 +259,7 @@ impl PlainCommitInfo {
             bookmark,
             user_unix_name,
             user_identities,
+            user_authenticated_identities,
             source_hostname,
             received_timestamp,
             pusher_correlator,
@@ -291,6 +299,7 @@ impl Loggable for PlainCommitInfo {
                     .map(ToString::to_string)
                     .collect(),
             )
+            .set_pusher_authenticated_identities(self.user_authenticated_identities.clone())
             .set_received_timestamp(self.received_timestamp.timestamp());
 
         if let Some(bubble_id) = &self.bubble_id {
