@@ -25,6 +25,19 @@ pub enum ConfigurationError {
     /// Duplicated repo ids
     #[error("repoid {0} used more than once")]
     DuplicatedRepoId(RepositoryId),
+    /// A tier manifest entry's repo_id disagrees with the RepoSpec its
+    /// config_path points at
+    #[error(
+        "repo {repo_name}: manifest lists repo_id {manifest_repo_id} but its RepoSpec has repo_id {spec_repo_id}"
+    )]
+    RepoIdMismatch {
+        /// Name of the repo as listed in the manifest entry
+        repo_name: String,
+        /// repo_id from the manifest entry
+        manifest_repo_id: RepositoryId,
+        /// repo_id from the repo's RepoSpec
+        spec_repo_id: RepositoryId,
+    },
     /// Missing path for hook
     #[error("missing path")]
     MissingPath(),
