@@ -12,6 +12,9 @@ use std::time::Duration;
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs;
 use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_types::CommonConfig;
 use mononoke_macros::mononoke;
@@ -31,7 +34,7 @@ use repos::TierRepoEntry;
 use super::*;
 
 const TEST_TIER: &str = "scs";
-const TEST_STORAGE: &str = "test_storage";
+pub(crate) const TEST_STORAGE: &str = "test_storage";
 
 fn empty_configs() -> MononokeConfigs {
     MononokeConfigs {
@@ -229,7 +232,7 @@ fn test_remove_repo_config_handle_preserves_legacy_only_entry() {
 // --- batch_load_repo_configs_checked / load_all_repo_configs_checked ---
 
 /// A minimal valid RawStorageConfig so a RepoSpec referencing it parses.
-fn test_raw_storage_config() -> RawStorageConfig {
+pub(crate) fn test_raw_storage_config() -> RawStorageConfig {
     RawStorageConfig {
         metadata: RawMetadataConfig::local(RawDbLocal {
             local_db_path: "/tmp/test_db".to_string(),
@@ -241,7 +244,7 @@ fn test_raw_storage_config() -> RawStorageConfig {
 }
 
 /// JSON for a RepoSpec that parses successfully (references TEST_STORAGE).
-fn valid_repo_spec_json(repo_id: i32, repo_name: &str) -> String {
+pub(crate) fn valid_repo_spec_json(repo_id: i32, repo_name: &str) -> String {
     let spec = RepoSpec {
         repo_id,
         repo_name: repo_name.to_string(),
@@ -434,7 +437,7 @@ fn test_load_all_repo_configs_checked_unions_and_partitions() {
 // --- Sourcing `common`/`storage` from the manifest (common_from_manifest) ---
 
 /// A default `RawCommonConfig` is not parsable: two required fields fail conversion.
-fn test_raw_common_config(trusted_tier: &str) -> RawCommonConfig {
+pub(crate) fn test_raw_common_config(trusted_tier: &str) -> RawCommonConfig {
     RawCommonConfig {
         trusted_parties_hipster_tier: Some(trusted_tier.to_string()),
         internal_identity: RawAllowlistIdentity {
@@ -450,7 +453,7 @@ fn test_raw_common_config(trusted_tier: &str) -> RawCommonConfig {
     }
 }
 
-fn test_storage_map() -> HashMap<String, RawStorageConfig> {
+pub(crate) fn test_storage_map() -> HashMap<String, RawStorageConfig> {
     HashMap::from([(TEST_STORAGE.to_string(), test_raw_storage_config())])
 }
 
@@ -586,5 +589,195 @@ fn test_manifest_wins_over_a_diverging_blob_when_knob_on() {
         common.trusted_parties_hipster_tier,
         Some("manifest_tier".to_string()),
         "the manifest must win when the knob is on"
+    );
+}
+
+// --- Skip-mode startup semantics (skip_tier_blob_load) ---
+
+/// Configerator-style tier config path; `tier_name` derives to `scs`.
+const TEST_CONFIG_PATH: &str = "configerator://scm/mononoke/repos/tiers/scs";
+/// The store-relative path the legacy blob would be read from.
+const TEST_BLOB_PATH: &str = "scm/mononoke/repos/tiers/scs";
+const TEST_MANIFEST_PATH: &str = "scm/mononoke/repos/tiers/scs_manifest";
+
+/// Both knobs MUST be in the override map: a missing knob panics under the test facade.
+fn skip_mode_knobs(skip: bool) -> JustKnobsInMemory {
+    JustKnobsInMemory::new(HashMap::from([
+        (SKIP_TIER_BLOB_LOAD_JK.to_string(), KnobVal::Bool(skip)),
+        (COMMON_FROM_MANIFEST_JK.to_string(), KnobVal::Bool(false)),
+    ]))
+}
+
+/// Legacy tier blob whose `common` carries `trusted_tier`, to tell the two sources apart.
+pub(crate) fn valid_blob_json(trusted_tier: &str) -> String {
+    serde_json::to_string(&RawRepoConfigs {
+        common: test_raw_common_config(trusted_tier),
+        storage: test_storage_map(),
+        ..Default::default()
+    })
+    .expect("RawRepoConfigs serializes")
+}
+
+/// Runtime handle for `MononokeConfigs::new` to spawn tasks onto; tests never drive them.
+fn test_runtime() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .enable_all()
+        .build()
+        .expect("test runtime builds")
+}
+
+// Blob path deliberately absent from the store, so `Ok` proves the blob was never touched.
+#[mononoke::test]
+fn test_skip_mode_constructs_without_blob_path() {
+    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
+    let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
+    let rt = test_runtime();
+
+    let cfg = with_just_knobs(skip_mode_knobs(true), || {
+        MononokeConfigs::new(
+            TEST_CONFIG_PATH,
+            &store,
+            Some(TEST_MANIFEST_PATH),
+            rt.handle().clone(),
+        )
+    })
+    .expect("skip mode must construct without the legacy blob path registered");
+
+    assert_eq!(
+        cfg.repo_configs().common.trusted_parties_hipster_tier,
+        Some("manifest_tier".to_string()),
+        "common must be sourced from the manifest (common_from_manifest=false \
+         must NOT be consulted in skip mode)",
+    );
+    assert!(
+        cfg.storage_configs().storage.contains_key(TEST_STORAGE),
+        "storage must be sourced from the manifest",
+    );
+    assert!(
+        cfg.repo_configs().repos.is_empty(),
+        "skip mode starts with no repos; they are batch-loaded on demand",
+    );
+    assert!(
+        cfg.auto_update_enabled(),
+        "the unified watcher must still be spawned in skip mode",
+    );
+}
+
+// Fail-closed startup: an unparsable manifest aborts construction despite a valid blob.
+#[mononoke::test]
+fn test_skip_mode_fails_closed_on_unparsable_manifest() {
+    // Default RawCommonConfig is unparsable (required fields fail conversion).
+    let bad_manifest = TierManifest {
+        storage: test_storage_map(),
+        ..Default::default()
+    };
+    assert!(
+        parse_manifest_common_and_storage(&bad_manifest).is_err(),
+        "fixture must be unparsable, else this test passes for the wrong reason"
+    );
+    let manifest_json = serde_json::to_string(&bad_manifest).unwrap();
+    let blob_json = valid_blob_json("blob_tier");
+    let store = make_store(&[
+        (TEST_MANIFEST_PATH, manifest_json.as_str()),
+        (TEST_BLOB_PATH, blob_json.as_str()),
+    ]);
+    let rt = test_runtime();
+
+    let result = with_just_knobs(skip_mode_knobs(true), || {
+        MononokeConfigs::new(
+            TEST_CONFIG_PATH,
+            &store,
+            Some(TEST_MANIFEST_PATH),
+            rt.handle().clone(),
+        )
+    });
+
+    assert!(
+        result.is_err(),
+        "skip mode must fail closed on an unparsable manifest instead of \
+         falling back to the blob",
+    );
+}
+
+// manifest_path=None must never evaluate the skip knob (absent from the map, so evaluation panics).
+#[mononoke::test]
+fn test_no_manifest_short_circuits_skip_knob() {
+    let knobs = JustKnobsInMemory::new(HashMap::from([(
+        COMMON_FROM_MANIFEST_JK.to_string(),
+        KnobVal::Bool(false),
+    )]));
+    let blob_json = valid_blob_json("blob_tier");
+    let store = make_store(&[(TEST_BLOB_PATH, blob_json.as_str())]);
+    let rt = test_runtime();
+
+    let cfg = with_just_knobs(knobs, || {
+        MononokeConfigs::new(TEST_CONFIG_PATH, &store, None, rt.handle().clone())
+    })
+    .expect("legacy path must construct without evaluating the skip knob");
+
+    assert_eq!(
+        cfg.repo_configs().common.trusted_parties_hipster_tier,
+        Some("blob_tier".to_string()),
+        "without a manifest the blob is the only source",
+    );
+}
+
+// Knob off + manifest present -> legacy behavior: the blob stays authoritative.
+#[mononoke::test]
+fn test_skip_knob_off_serves_legacy_blob() {
+    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
+    let blob_json = valid_blob_json("blob_tier");
+    let store = make_store(&[
+        (TEST_MANIFEST_PATH, manifest_json.as_str()),
+        (TEST_BLOB_PATH, blob_json.as_str()),
+    ]);
+    let rt = test_runtime();
+
+    let cfg = with_just_knobs(skip_mode_knobs(false), || {
+        MononokeConfigs::new(
+            TEST_CONFIG_PATH,
+            &store,
+            Some(TEST_MANIFEST_PATH),
+            rt.handle().clone(),
+        )
+    })
+    .expect("legacy path with knob off must construct");
+
+    assert_eq!(
+        cfg.repo_configs().common.trusted_parties_hipster_tier,
+        Some("blob_tier".to_string()),
+        "knob off must keep the blob authoritative",
+    );
+    assert!(
+        cfg.config_info().is_some(),
+        "legacy mode builds config_info from the blob handle",
+    );
+}
+
+// config_info is blob content identity, so skip mode must leave it `None`.
+#[mononoke::test]
+fn test_skip_mode_config_info_is_none() {
+    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
+    let blob_json = valid_blob_json("blob_tier");
+    let store = make_store(&[
+        (TEST_MANIFEST_PATH, manifest_json.as_str()),
+        (TEST_BLOB_PATH, blob_json.as_str()),
+    ]);
+    let rt = test_runtime();
+
+    let cfg = with_just_knobs(skip_mode_knobs(true), || {
+        MononokeConfigs::new(
+            TEST_CONFIG_PATH,
+            &store,
+            Some(TEST_MANIFEST_PATH),
+            rt.handle().clone(),
+        )
+    })
+    .expect("skip mode must construct");
+
+    assert!(
+        cfg.config_info().is_none(),
+        "skip mode must not build config_info from the (skipped) blob",
     );
 }
