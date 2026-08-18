@@ -542,22 +542,23 @@ TEST_P(ObjectStoreTest, getBlobSha1) {
   EXPECT_EQ(expectedSha1.toString(), sha1.toString());
 }
 
-TEST_P(ObjectStoreTest, getBlobBlake3) {
+CO_TEST_P(ObjectStoreTest, getBlobBlake3) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
   Hash32 expectedBlake3 = Hash32::blake3(data);
-  Hash32 blake3 = objectStore->getBlobBlake3(id, context).get();
+  Hash32 blake3 = co_await objectStore->co_getBlobBlake3(id, context);
   EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
 }
 
-TEST_P(ObjectStoreTest, getBlobKeyedBlake3) {
+CO_TEST_P(ObjectStoreTest, getBlobKeyedBlake3) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
   Hash32 expectedBlake3 =
       Hash32::keyedBlake3(folly::ByteRange{kBlake3Key}, data);
-  Hash32 blake3 = objectStoreWithBlake3Key->getBlobBlake3(id, context).get();
+  Hash32 blake3 =
+      co_await objectStoreWithBlake3Key->co_getBlobBlake3(id, context);
   EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
 }
 
@@ -570,19 +571,25 @@ TEST_P(ObjectStoreTest, getBlobSha1NotFound) {
       "blob .* not found");
 }
 
-TEST_P(ObjectStoreTest, getBlobBlake3NotFound) {
+CO_TEST_P(ObjectStoreTest, getBlobBlake3NotFound) {
   ObjectId id;
 
-  EXPECT_THROW_RE(
-      objectStore->getBlobBlake3(id, context).get(),
-      std::domain_error,
-      "blob .* not found");
+  bool caught = false;
+  try {
+    co_await objectStore->co_getBlobBlake3(id, context);
+  } catch (const std::domain_error& e) {
+    caught = true;
+    EXPECT_TRUE(RE2::PartialMatch(e.what(), "blob .* not found"));
+  }
+  EXPECT_TRUE(caught);
 }
 
-TEST_P(ObjectStoreTest, get_size_and_sha1_and_blake3_only_imports_blob_once) {
+CO_TEST_P(
+    ObjectStoreTest,
+    get_size_and_sha1_and_blake3_only_imports_blob_once) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSha1(readyBlobId, context).get(0ms);
-  objectStore->getBlobBlake3(readyBlobId, context).get(0ms);
+  co_await objectStore->co_getBlobBlake3(readyBlobId, context);
 
   EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyBlobId));
 }

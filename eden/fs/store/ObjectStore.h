@@ -358,17 +358,11 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
-  /**
-   * Returns the Blake3 hash of the contents of the blob with the given ID.
-   */
-  ImmediateFuture<Hash32> getBlobBlake3(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) const;
-
   folly::coro::now_task<Hash20> co_getBlobSha1(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
+  /** Returns the Blake3 hash of the contents of the blob. */
   folly::coro::now_task<Hash32> co_getBlobBlake3(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;

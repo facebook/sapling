@@ -724,25 +724,6 @@ Hash32 ObjectStore::computeBlake3(const Blob& blob) const {
                        : Hash32::blake3(content);
 }
 
-ImmediateFuture<Hash32> ObjectStore::getBlobBlake3(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
-  // DEPRECATED: use co_getBlobBlake3 directly. Kept only because
-  // VirtualInode.cpp and FileInode.cpp still consume ImmediateFuture chains;
-  // delete once those paths are migrated to coroutines.
-  return ImmediateFuture{
-      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-      folly::coro::co_invoke(
-          [self = shared_from_this()](
-              ObjectId id,
-              ObjectFetchContextPtr context) -> folly::coro::Task<Hash32> {
-            co_return co_await self->co_getBlobBlake3(id, context);
-          },
-          ObjectId{id},
-          context.copy())
-          .semi()};
-}
-
 folly::coro::now_task<Hash20> ObjectStore::co_getBlobSha1(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
