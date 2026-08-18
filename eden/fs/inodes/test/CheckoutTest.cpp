@@ -3221,14 +3221,12 @@ TEST_P(
                             .semi()
                             .via(executor);
   testMount.drainServerExecutor();
-  // FIXME: FORCE should remove this restricted child opaquely without failing
-  // or clearing its SCM object ID.
-  try {
-    std::move(checkoutResult).get();
-    FAIL() << "expected EACCES";
-  } catch (const EdenError& error) {
-    EXPECT_EQ(EACCES, error.errorCode().value());
-  }
+  EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
+
+  EXPECT_TRUE(outer->isRestricted());
+  child = inodeMap->lookupTreeInode(childInodeNumber).get(1ms);
+  ASSERT_TRUE(child->getObjectId().has_value());
+  EXPECT_EQ(childTreeId, *child->getObjectId());
 }
 #endif
 

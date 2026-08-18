@@ -729,6 +729,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const InodePtr& inode,
       const std::optional<Tree::value_type>& newScmEntry);
 
+  [[nodiscard]] CheckoutActionResult removeOrReplaceRestrictedCheckoutEntry(
+      CheckoutContext* ctx,
+      const InodePtr& inode,
+      const std::optional<Tree::value_type>& newScmEntry);
+
   // Returns false without modifying the inode if it is not a valid empty
   // restricted placeholder.
   [[nodiscard]] bool updateRestrictedPlaceholder(

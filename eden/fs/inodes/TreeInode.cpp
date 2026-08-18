@@ -4689,6 +4689,43 @@ folly::Try<folly::Unit> TreeInode::removeOrReplaceCheckoutEntryLocked(
   return folly::Try<folly::Unit>{folly::unit};
 }
 
+CheckoutActionResult TreeInode::removeOrReplaceRestrictedCheckoutEntry(
+    CheckoutContext* ctx,
+    const InodePtr& inode,
+    const std::optional<Tree::value_type>& newScmEntry) {
+  auto treeInode = inode.asTreePtrOrNull();
+  XDCHECK(treeInode && treeInode->isRestricted());
+
+  auto currentName = inode->getLocationInfo(ctx->renameLock()).name;
+  auto contents = getContentsUnchecked().wlock();
+  auto it = contents->entries.find(currentName.piece());
+  if (it == contents->entries.end() || it->second.getInode() != inode.get()) {
+    EDEN_BUG() << "entry changed while holding rename lock during checkout: "
+               << inode->getLogPath();
+  }
+
+  bool wasDirectoryListModified = false;
+  auto descendants = treeInode->getInMemoryDescendants();
+  auto success = removeOrReplaceCheckoutEntryLocked(
+      ctx,
+      *contents,
+      contents->entries,
+      it,
+      inode,
+      newScmEntry ? &*newScmEntry : nullptr,
+      wasDirectoryListModified);
+  if (success.hasException()) {
+    ctx->addError(this, currentName.piece(), success.exception());
+    return CheckoutActionResult{
+        InvalidationRequired::No, /*hadConflicts=*/true};
+  }
+
+  ctx->increaseCheckoutCounter(1 + descendants);
+  return CheckoutActionResult{
+      wasDirectoryListModified ? InvalidationRequired::Yes
+                               : InvalidationRequired::No};
+}
+
 template <typename Contents>
 std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     CheckoutContext* ctx,
@@ -5462,6 +5499,11 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
     return replaceFileEntry(ctx, name, inode, newScmEntry);
   }
 
+  if (treeInode->isRestricted() &&
+      (!newScmEntry || !newScmEntry->second.isTree())) {
+    return removeOrReplaceRestrictedCheckoutEntry(ctx, inode, newScmEntry);
+  }
+
   // If we are going from a directory to a directory, all we need to do
   // is call checkout().
   if (newScmEntry && newScmEntry->second.isTree()) {
@@ -5630,6 +5672,11 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
       co_return CheckoutActionResult{InvalidationRequired::No};
     }
     co_return replaceFileEntry(ctx, name, inode, newScmEntry);
+  }
+
+  if (treeInode->isRestricted() &&
+      (!newScmEntry || !newScmEntry->second.isTree())) {
+    co_return removeOrReplaceRestrictedCheckoutEntry(ctx, inode, newScmEntry);
   }
 
   if (newScmEntry && newScmEntry->second.isTree()) {

@@ -425,7 +425,8 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
 
         if (!self->oldScmEntry_ && !self->newScmEntry_) {
           auto treeInode = self->inode_.asTreePtrOrNull();
-          if (!self->ctx_->isDryRun() && !treeInode) {
+          if (!self->ctx_->isDryRun() &&
+              (!treeInode || treeInode->isRestricted())) {
             auto parent = self->inode_->getParent(self->ctx_->renameLock());
             return parent
                 ->checkoutUpdateEntry(
@@ -525,7 +526,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
 
   if (!oldScmEntry_ && !newScmEntry_) {
     auto treeInode = inode_.asTreePtrOrNull();
-    if (!ctx_->isDryRun() && !treeInode) {
+    if (!ctx_->isDryRun() && (!treeInode || treeInode->isRestricted())) {
       auto parent = inode_->getParent(ctx_->renameLock());
       auto result = co_await parent
                         ->checkoutUpdateEntry(
