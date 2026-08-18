@@ -1786,26 +1786,21 @@ impl RepoFactory {
     }
 
     /// Resolve the effective bookmark cache options for a repo.
-    /// For Git repos (when the JustKnob is enabled), use local WBC
-    /// instead of the process-level default (Remote), while preserving
-    /// the configured derived data scope.
+    /// For Git repos, always use local WBC instead of the process-level
+    /// default (Remote), while preserving the configured derived data
+    /// scope.
     fn effective_bookmark_cache_options(
         &self,
-        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<(BookmarkCacheKind, BookmarkCacheDerivedData)> {
-        let use_local_for_git = justknobs::eval(
-            "scm/mononoke:use_local_wbc_for_git_repos",
-            None,
-            Some(repo_identity.name()),
-        );
-
-        if use_local_for_git
-            && repo_config.default_commit_identity_scheme == CommitIdentityScheme::GIT
+        if repo_config.default_commit_identity_scheme == CommitIdentityScheme::GIT
             // A Local WBC with no warmers (NoDerivation, e.g. gitimport) can't
             // warm anything; leave such callers on their configured cache kind.
             && self.env.bookmark_cache_options.derived_data
                 != BookmarkCacheDerivedData::NoDerivation
+            // An explicitly disabled cache never queries the Bookmark Service,
+            // so it stays disabled; only a Remote default is upgraded to Local.
+            && self.env.bookmark_cache_options.cache_kind != BookmarkCacheKind::Disabled
         {
             Ok((
                 BookmarkCacheKind::Local,
@@ -1830,7 +1825,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<Arc<dyn CombinedBookmarksCache + Send + Sync>> {
         let (effective_cache_kind, effective_derived_data) =
-            self.effective_bookmark_cache_options(repo_identity, repo_config)?;
+            self.effective_bookmark_cache_options(repo_config)?;
         let warmer_requirement: WarmerRequirement = (&effective_derived_data).into();
 
         match &effective_cache_kind {
