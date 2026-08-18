@@ -397,18 +397,6 @@ ObjectStore::co_getTreeAuxData(
   co_return *auxData;
 }
 
-ImmediateFuture<std::optional<Hash32>> ObjectStore::getTreeDigestHash(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
-  return getTreeAuxData(id, context)
-      .thenValue(
-          [id, context = context.copy(), self = shared_from_this()](
-              const std::optional<TreeAuxData>& auxData)
-              -> ImmediateFuture<std::optional<Hash32>> {
-            return auxData.has_value() ? auxData->digestHash : std::nullopt;
-          });
-}
-
 folly::coro::now_task<std::optional<Hash32>> ObjectStore::co_getTreeDigestHash(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
