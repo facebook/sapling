@@ -1411,7 +1411,7 @@ TEST_P(VirtualInodeTestBase, loadPropagation) {
   VERIFY_TREE(VERIFY_INITIAL);
 }
 
-TEST_P(VirtualInodeTestBase, getBlob) {
+CO_TEST_P(VirtualInodeTestBase, getBlob) {
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
 
   TestFileDatabase files;
@@ -1428,16 +1428,18 @@ TEST_P(VirtualInodeTestBase, getBlob) {
     EXPECT_INODE_OR(virtualInode, *info.get());
     auto objectStore = edenMount->getObjectStore();
     auto fetchContext = ObjectFetchContext::getNullContext();
+    auto blobTry = co_await folly::coro::co_awaitTry(
+        virtualInode.co_getBlob(objectStore, fetchContext));
     if (virtualInode.isDirectory()) {
       // Fetch blob and expect an error as it's a directory.
-      EXPECT_THROW_ERRNO(
-          std::move(virtualInode).getBlob(objectStore, fetchContext).get(),
-          EISDIR);
+      CO_ASSERT_TRUE(blobTry.hasException());
+      auto* error = blobTry.tryGetExceptionObject<std::system_error>();
+      CO_ASSERT_NE(error, nullptr);
+      EXPECT_EQ(EISDIR, error->code().value());
     } else {
       // Fetch blob and check the contents.
-      auto contents =
-          std::move(virtualInode).getBlob(objectStore, fetchContext).get();
-      EXPECT_EQ(contents, info.get()->getContents());
+      CO_ASSERT_TRUE(blobTry.hasValue());
+      EXPECT_EQ(std::move(blobTry).value(), info.get()->getContents());
     }
   }
   VERIFY_TREE(flags);
@@ -1455,8 +1457,7 @@ TEST_P(VirtualInodeTestBase, getBlob) {
     auto objectStore = edenMount->getObjectStore();
     auto fetchContext = ObjectFetchContext::getNullContext();
     auto virtualInode = mount.getVirtualInode(info->path);
-    auto contents =
-        std::move(virtualInode).getBlob(objectStore, fetchContext).get();
+    auto contents = co_await virtualInode.co_getBlob(objectStore, fetchContext);
     EXPECT_EQ(contents, newContents);
   }
   VERIFY_TREE(flags);
