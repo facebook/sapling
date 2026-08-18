@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(scm|fs)/.*\.rs$'
-apply_to_content: 'sort|dedup|DirEntry|inode|tree_entry|manifest|case.insensitive|case_insensitive'
+name: case-sensitivity
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(scm|fs)/.*\.rs$'
+  apply_to_content: 'sort|dedup|DirEntry|inode|tree_entry|manifest|case.insensitive|case_insensitive'
 ---
 
 # Cross-Platform Path Case Sensitivity
