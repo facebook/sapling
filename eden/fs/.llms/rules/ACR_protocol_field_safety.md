@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/.*\.(cpp|h|rs|py)$'
-apply_to_content: 'field_ref|content_id_ref|serde|CBOR|Thrift|Deserialize'
+name: ACR-protocol-field-safety
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/.*\.(cpp|h|rs|py)$'
+  apply_to_content: 'field_ref|content_id_ref|serde|CBOR|Thrift|Deserialize'
 ---
 
 # Protocol Backwards Incompatibility
