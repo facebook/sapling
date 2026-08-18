@@ -294,52 +294,24 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
-  // Ensure this is a regular file or directory.
-  // We intentionally want to refuse to compute the digestHash of symlinks
-  switch (getDtype()) {
-    case dtype_t::Symlink:
-      return makeImmediateFuture<std::optional<Hash32>>(
-          PathError(EINVAL, path, std::string_view{"file is a symlink"}));
-    case dtype_t::Dir:
-      break;
-    case dtype_t::Regular:
-      // The DigestHash of a file is the same as the Blake3 hash for that file
-      return getBlake3(path, objectStore, fetchContext)
-          .thenValue([](auto&& blake3) {
-            return std::optional<Hash32>{std::move(blake3)};
-          });
-    default:
-      return makeImmediateFuture<std::optional<Hash32>>(PathError(
-          EINVAL, path, std::string_view{"variant is of unhandled type"}));
-  }
-
-  // A restricted directory is an ACL-denied placeholder that still carries the
-  // real ObjectId, so dispatching below would fetch the backing store's tree
-  // aux data and leak a digest of contents the server refused to serve. Report
-  // "no digest" instead.
-  if (FOLLY_UNLIKELY(isRestricted())) {
-    return std::optional<Hash32>{std::nullopt};
-  }
-
-  // This is now guaranteed to be a dtype_t::Dir. This means there's no
-  // need to handle any file case
-  return match(
-      variant_,
-      [&](const InodePtr& inode) {
-        return inode.asTreePtr()->getDigestHash(fetchContext);
-      },
-      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
-        return objectStore->getTreeDigestHash(
-            entry.getObjectId(), fetchContext);
-      },
-      [&](const TreePtr& tree) {
-        return objectStore->getTreeDigestHash(
-            tree->getObjectId(), fetchContext);
-      },
-      [&](const TreeEntry& entry) {
-        return objectStore->getTreeDigestHash(
-            entry.getObjectId(), fetchContext);
-      });
+  // DEPRECATED: use co_getDigestHash directly. Kept only because the futures
+  // Thrift handler still consumes ImmediateFuture chains.
+  return ImmediateFuture{
+      // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+      folly::coro::co_invoke(
+          [](VirtualInode inode,
+             RelativePath path,
+             std::shared_ptr<ObjectStore> objectStore,
+             ObjectFetchContextPtr fetchContext)
+              -> folly::coro::Task<std::optional<Hash32>> {
+            co_return co_await inode.co_getDigestHash(
+                path, objectStore, fetchContext);
+          },
+          *this,
+          path.copy(),
+          objectStore,
+          fetchContext.copy())
+          .semi()};
 }
 
 folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
