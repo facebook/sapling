@@ -1787,38 +1787,6 @@ SaplingBackingStore::co_getBlobEnqueue(
   }
 }
 
-folly::SemiFuture<BackingStore::GetBlobAuxResult>
-SaplingBackingStore::getBlobAuxData(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context) {
-  // DEPRECATED: use co_getBlobAuxData directly. Kept only because
-  // FilteredBackingStore::getBlobAuxData still consumes ImmediateFuture
-  // chains; delete once that path is migrated to coroutines.
-  DurationScope<EdenStats> scope{
-      stats_, &SaplingBackingStoreStats::getBlobAuxData};
-
-  SlOidView slOid{id};
-
-  logBackingStoreFetch(
-      *context,
-      folly::Range{&slOid, 1},
-      ObjectFetchContext::ObjectType::BlobAuxData);
-
-  auto auxData = getLocalBlobAuxData(slOid);
-  if (auxData.hasValue() && auxData.value()) {
-    stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
-    stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataLocal);
-    return folly::makeSemiFuture(
-        GetBlobAuxResult{
-            std::move(auxData.value()),
-            ObjectFetchContext::Origin::FromDiskCache});
-  }
-
-  return getBlobAuxDataEnqueue(slOid, context)
-      .ensure([scope = std::move(scope)] {})
-      .semi();
-}
-
 folly::coro::now_task<BackingStore::GetBlobAuxResult>
 SaplingBackingStore::co_getBlobAuxData(
     const ObjectId& id,
@@ -1896,66 +1864,6 @@ SaplingBackingStore::co_getBlobAuxDataEnqueue(
 
   co_return BackingStore::GetBlobAuxResult{
       std::move(result).value(), ObjectFetchContext::Origin::FromNetworkFetch};
-}
-
-ImmediateFuture<BackingStore::GetBlobAuxResult>
-SaplingBackingStore::getBlobAuxDataEnqueue(
-    const SlOid& slOid,
-    const ObjectFetchContextPtr& context) {
-  // DEPRECATED: use co_getBlobAuxDataEnqueue directly. Kept only because
-  // SaplingBackingStore::getBlobAuxData and EdenServiceHandler
-  // still consume ImmediateFuture chains;
-  // delete once those paths are migrated to coroutines.
-  if (!config_->getEdenConfig()->fetchHgAuxMetadata.getValue()) {
-    return BackingStore::GetBlobAuxResult{
-        nullptr, ObjectFetchContext::Origin::NotFetched};
-  }
-
-  auto self = shared_from_this();
-  auto getBlobAuxFuture = makeImmediateFutureWith([&] {
-    XLOGF(DBG4, "making blob meta import request for {}", slOid);
-    auto requestContext = context.copy();
-    auto request =
-        SaplingImportRequest::makeBlobAuxImportRequest(slOid, requestContext);
-    auto unique = request->getUnique();
-
-    auto importTracker = std::make_unique<RequestMetricsScope>(
-        &self->pendingImportBlobAuxWatches_);
-    self->traceBus_->publish(
-        HgImportTraceEvent::queue(
-            unique,
-            HgImportTraceEvent::BLOB_AUX,
-            slOid,
-            context->getPriority().getClass(),
-            context->getCause(),
-            context->getClientPid()));
-
-    return self->queue_.enqueueBlobAux(std::move(request))
-        .ensure([self,
-                 unique,
-                 slOid,
-                 context = context.copy(),
-                 importTracker = std::move(importTracker)]() {
-          self->traceBus_->publish(
-              HgImportTraceEvent::finish(
-                  unique,
-                  HgImportTraceEvent::BLOB_AUX,
-                  slOid,
-                  context->getPriority().getClass(),
-                  context->getCause(),
-                  context->getClientPid(),
-                  context->getFetchedSource()));
-        });
-  });
-
-  return std::move(getBlobAuxFuture)
-      .thenTry([self, slOid](folly::Try<BlobAuxDataPtr>&& result) {
-        self->queue_.markImportAsFinished<BlobAuxDataPtr::element_type>(
-            slOid, result);
-        auto blobAux = std::move(result).value();
-        return GetBlobAuxResult{
-            std::move(blobAux), ObjectFetchContext::Origin::FromNetworkFetch};
-      });
 }
 
 folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(

@@ -235,39 +235,6 @@ folly::coro::Task<BackingStore::GetBlobResult> FakeBackingStore::co_getBlob(
       std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
 }
 
-folly::SemiFuture<BackingStore::GetBlobAuxResult>
-FakeBackingStore::getBlobAuxData(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context) {
-  {
-    auto data = data_.wlock();
-    data->auxDataLookups.push_back(id);
-  }
-
-  auto fault = ImmediateFuture<folly::Unit>{std::in_place};
-  if (serverState_) {
-    fault = serverState_->getFaultInjector().checkAsync("getBlobAuxData", id);
-  }
-
-  return std::move(fault)
-      .thenValue([this, id, context = context.copy()](auto&&) {
-        return ImmediateFuture{getBlob(id, context)};
-      })
-      .thenValue([this](BackingStore::GetBlobResult result) {
-        return BackingStore::GetBlobAuxResult{
-            std::make_shared<BlobAuxDataPtr::element_type>(
-                Hash20::sha1(result.blob->getContents()),
-                blake3Key_ ? Hash32::keyedBlake3(
-                                 folly::ByteRange{folly::StringPiece{
-                                     blake3Key_->data(), blake3Key_->size()}},
-                                 result.blob->getContents())
-                           : Hash32::blake3(result.blob->getContents()),
-                result.blob->getSize()),
-            result.origin};
-      })
-      .semi();
-}
-
 folly::coro::now_task<BackingStore::GetBlobAuxResult>
 FakeBackingStore::co_getBlobAuxData(
     const ObjectId& id,

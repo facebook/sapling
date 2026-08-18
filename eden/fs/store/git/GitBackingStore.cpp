@@ -295,12 +295,6 @@ BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
   return std::make_shared<BlobPtr::element_type>(std::move(buf));
 }
 
-folly::SemiFuture<BackingStore::GetBlobAuxResult>
-GitBackingStore::getBlobAuxData(const ObjectId&, const ObjectFetchContextPtr&) {
-  return BackingStore::GetBlobAuxResult{
-      nullptr, ObjectFetchContext::Origin::NotFetched};
-}
-
 folly::coro::now_task<BackingStore::GetBlobAuxResult>
 GitBackingStore::co_getBlobAuxData(
     const ObjectId& id,

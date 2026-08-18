@@ -511,19 +511,6 @@ FilteredBackingStore::co_getTreeAuxData(
       filteredId.object(), context);
 }
 
-folly::SemiFuture<BackingStore::GetBlobAuxResult>
-FilteredBackingStore::getBlobAuxData(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& context) {
-  if (isSlOid(id)) {
-    // Raw id from underlying backingstore, meaning unfiltered fast path.
-    return backingStore_->getBlobAuxData(id, context);
-  }
-
-  auto filteredId = FilteredObjectId::fromObjectId(id);
-  return backingStore_->getBlobAuxData(filteredId.object(), context);
-}
-
 folly::coro::now_task<BackingStore::GetBlobAuxResult>
 FilteredBackingStore::co_getBlobAuxData(
     const ObjectId& id,

@@ -307,10 +307,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    *
    * Return the blob aux data and where it was found.
    */
-  virtual folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) = 0;
-
   virtual folly::coro::now_task<GetBlobAuxResult> co_getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
