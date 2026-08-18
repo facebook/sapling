@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/servers/slapi/.*\.rs$'
-apply_to_content: 'SaplingRemoteApiHandler|SaplingRemoteApiMethod|build_router|log_stats'
+name: handler-registration-completeness
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/slapi/.*\.rs$'
+  apply_to_content: 'SaplingRemoteApiHandler|SaplingRemoteApiMethod|build_router|log_stats'
 ---
 
 # SLAPI Handler Registration Completeness
