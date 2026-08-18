@@ -964,10 +964,9 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 
 #endif
 
-// DEPRECATED: use co_getSha1 directly. Kept only because
-// VirtualInode::getSHA1, FileInode::isSameAsSlow, FileInode::isSameAs,
-// and FileInode::getxattr still consume ImmediateFuture chains;
-// delete once those paths are migrated to coroutines.
+// DEPRECATED: use co_getSha1 directly. Kept only because FileInode::getxattr
+// and the future FileInode::isSameAs implementations still consume
+// ImmediateFuture chains.
 ImmediateFuture<Hash20> FileInode::getSha1(
     const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
@@ -982,30 +981,6 @@ ImmediateFuture<Hash20> FileInode::getSha1(
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith(
           [&] { return state->materializedState.getSha1(*this); });
-  }
-
-  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
-}
-
-ImmediateFuture<Hash32> FileInode::getBlake3(
-    const ObjectFetchContextPtr& fetchContext) {
-  // DEPRECATED: use co_getBlake3 directly. Kept only because
-  // VirtualInode::getBlake3 and getxattr still consume ImmediateFuture chains;
-  // delete once those paths are migrated to coroutines.
-  auto state = LockedState{this};
-
-  logAccess(*fetchContext);
-  switch (state->tag) {
-    case State::BLOB_NOT_LOADING:
-    case State::BLOB_LOADING:
-      // If a file is not materialized, it should have a id value.
-      return getObjectStore().getBlobBlake3(
-          state->nonMaterializedState.id, fetchContext);
-    case State::MATERIALIZED_IN_OVERLAY:
-      return makeImmediateFutureWith([&] {
-        return state->materializedState.getBlake3(
-            *this, getMount()->getEdenConfig()->blake3Key.getValue());
-      });
   }
 
   XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);

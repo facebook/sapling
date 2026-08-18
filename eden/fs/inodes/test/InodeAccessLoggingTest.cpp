@@ -315,7 +315,9 @@ TEST_P(InodeAccessLoggingTest, getBlake3FileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
-  fileInode->getBlake3(ObjectFetchContext::getNullContext()).get(0ms);
+  folly::coro::blockingWait(
+      fileInode->co_getBlake3(ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   EXPECT_EQ(1, getAccessCount());
 }
@@ -324,7 +326,9 @@ TEST_P(InodeAccessLoggingTest, getBlake3FileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
-  fileInode->getBlake3(ObjectFetchContext::getNullContext()).get(0ms);
+  folly::coro::blockingWait(
+      fileInode->co_getBlake3(ObjectFetchContext::getNullContext()),
+      mount_.getServerExecutor().get());
 
   EXPECT_EQ(1, getAccessCount());
 }
