@@ -70,11 +70,9 @@ struct SizingStats {
 
 impl SizingStats {
     fn compression_benefit_pct(&self) -> u64 {
-        if self.raw == 0 {
-            0
-        } else {
-            100 * (self.raw - self.compressed) / self.raw
-        }
+        (100 * self.raw.saturating_sub(self.compressed))
+            .checked_div(self.raw)
+            .unwrap_or(0)
     }
 }
 

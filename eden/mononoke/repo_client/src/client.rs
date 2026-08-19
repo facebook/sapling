@@ -527,7 +527,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                         .collect::<Vec<_>>();
                     infos.push(b"ambiguous identifier\nsuggestions are:\n".to_vec());
                     infos.reverse();
-                    generate_lookup_resp_buf(false, &infos.join(&[b'\n'][..]))
+                    generate_lookup_resp_buf(false, &infos.join(&b"\n"[..]))
                 })
                 .boxify()
                 .compat()

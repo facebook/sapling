@@ -38,7 +38,7 @@ impl AppExtension for HooksAppExtension {
             let hook = repohook.get(1);
 
             let (repo, hook) = repo
-                .and_then(|repo| hook.map(|hook| (repo, hook)))
+                .zip(hook)
                 .context("invalid format of disabled hook, should be 'REPONAME:HOOKNAME'")?;
             res.entry(repo.to_string())
                 .or_insert_with(HashSet::new)
