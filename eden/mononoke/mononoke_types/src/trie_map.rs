@@ -30,10 +30,7 @@ impl<V> TrieMap<V> {
     pub fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<&V> {
         let mut node = self;
         for next_byte in key.as_ref() {
-            match node.edges.get(next_byte) {
-                Some(child) => node = child,
-                None => return None,
-            }
+            node = node.edges.get(next_byte)?;
         }
         node.value.as_ref().map(|value| value.as_ref())
     }
@@ -85,10 +82,7 @@ impl<V> TrieMap<V> {
     pub fn extract_prefix(self, prefix: &[u8]) -> Option<Self> {
         let mut node = self;
         for next_byte in prefix {
-            match node.edges.remove(next_byte) {
-                Some(child) => node = child,
-                None => return None,
-            }
+            node = node.edges.remove(next_byte)?;
         }
         Some(node)
     }
@@ -203,19 +197,16 @@ impl<V> Iterator for TrieMapIntoIter<V> {
                 return Some((SmallVec::from_slice(self.bytes.as_ref()), *value));
             }
 
-            match self.stack.last_mut() {
-                None => return None,
-                Some(iter) => match iter.next() {
-                    None => {
-                        self.bytes.pop();
-                        self.stack.pop();
-                    }
-                    Some((next_byte, child)) => {
-                        self.bytes.push(next_byte);
-                        self.value = child.value;
-                        self.stack.push(child.edges.into_iter());
-                    }
-                },
+            match self.stack.last_mut()?.next() {
+                None => {
+                    self.bytes.pop();
+                    self.stack.pop();
+                }
+                Some((next_byte, child)) => {
+                    self.bytes.push(next_byte);
+                    self.value = child.value;
+                    self.stack.push(child.edges.into_iter());
+                }
             };
         }
     }
@@ -241,19 +232,16 @@ impl<'a, V> Iterator for TrieMapIter<'a, V> {
                 return Some((self.bytes.clone(), value));
             }
 
-            match self.stack.last_mut() {
-                None => return None,
-                Some(iter) => match iter.next() {
-                    None => {
-                        self.bytes.pop();
-                        self.stack.pop();
-                    }
-                    Some((next_byte, child)) => {
-                        self.bytes.push(*next_byte);
-                        self.value = child.value.as_ref().map(|value| value.as_ref());
-                        self.stack.push(child.edges.iter());
-                    }
-                },
+            match self.stack.last_mut()?.next() {
+                None => {
+                    self.bytes.pop();
+                    self.stack.pop();
+                }
+                Some((next_byte, child)) => {
+                    self.bytes.push(*next_byte);
+                    self.value = child.value.as_ref().map(|value| value.as_ref());
+                    self.stack.push(child.edges.iter());
+                }
             };
         }
     }
@@ -281,19 +269,16 @@ impl<'a, V> Iterator for TrieMapKeys<'a, V> {
                 return Some(self.bytes.clone());
             }
 
-            match self.stack.last_mut() {
-                None => return None,
-                Some(iter) => match iter.next() {
-                    None => {
-                        self.bytes.pop();
-                        self.stack.pop();
-                    }
-                    Some((next_byte, child)) => {
-                        self.bytes.push(*next_byte);
-                        self.has_value = child.value.is_some();
-                        self.stack.push(child.edges.iter());
-                    }
-                },
+            match self.stack.last_mut()?.next() {
+                None => {
+                    self.bytes.pop();
+                    self.stack.pop();
+                }
+                Some((next_byte, child)) => {
+                    self.bytes.push(*next_byte);
+                    self.has_value = child.value.is_some();
+                    self.stack.push(child.edges.iter());
+                }
             };
         }
     }
@@ -316,17 +301,14 @@ impl<'a, V> Iterator for TrieMapValues<'a, V> {
                 return Some(value);
             }
 
-            match self.stack.last_mut() {
-                None => return None,
-                Some(iter) => match iter.next() {
-                    None => {
-                        self.stack.pop();
-                    }
-                    Some((_next_byte, child)) => {
-                        self.value = child.value.as_ref().map(|value| value.as_ref());
-                        self.stack.push(child.edges.iter());
-                    }
-                },
+            match self.stack.last_mut()?.next() {
+                None => {
+                    self.stack.pop();
+                }
+                Some((_next_byte, child)) => {
+                    self.value = child.value.as_ref().map(|value| value.as_ref());
+                    self.stack.push(child.edges.iter());
+                }
             };
         }
     }
