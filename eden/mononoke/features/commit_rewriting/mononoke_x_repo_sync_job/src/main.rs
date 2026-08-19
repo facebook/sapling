@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(auto_traits)]
 #![feature(trait_alias)]
 
 //! Mononoke Cross Repo sync job

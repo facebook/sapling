@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(never_type)]
-
 pub use session_id::SessionId;
 
 pub use crate::core::CoreContext;

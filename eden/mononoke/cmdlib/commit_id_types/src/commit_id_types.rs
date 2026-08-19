@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(trait_alias)]
-
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;

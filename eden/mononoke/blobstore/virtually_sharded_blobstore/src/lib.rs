@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(generic_assert)]
-// The clippy lint is not our fault and is a result of the bug https://fburl.com/7perds28
-#![allow(internal_features)]
-#![feature(core_intrinsics)]
-
 mod ratelimit;
 mod shard;
 

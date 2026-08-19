@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(auto_traits)]
-
 //! Mononoke Cross Repo validator job
 //!
 //! This is a special job used to validate that cross-repo sync,

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(never_type)]
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;

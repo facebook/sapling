@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(try_blocks)]
-
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
