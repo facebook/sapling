@@ -49,7 +49,7 @@ impl<B: std::fmt::Debug> LogBlob<B> {
 
 impl<T: std::fmt::Display> std::fmt::Display for LogBlob<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LogBlob<{}>", &self.inner)
+        write!(f, "LogBlob<{}>", self.inner)
     }
 }
 

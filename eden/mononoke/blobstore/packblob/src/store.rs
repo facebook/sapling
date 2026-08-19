@@ -50,7 +50,7 @@ pub struct PackBlob<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for PackBlob<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PackBlob<{}>", &self.inner)
+        write!(f, "PackBlob<{}>", self.inner)
     }
 }
 

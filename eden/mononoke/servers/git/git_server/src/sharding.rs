@@ -80,7 +80,7 @@ impl RepoShardedProcessExecutor for MononokeGitServerExecutor {
             .with_context(|| {
                 format!(
                     "Failure in stopping repo {}. The config for repo doesn't exist",
-                    &self.repo_name
+                    self.repo_name
                 )
             })?;
         // Check if the current repo is a deep-sharded or shallow-sharded repo. If the

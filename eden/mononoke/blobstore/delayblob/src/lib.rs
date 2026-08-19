@@ -44,7 +44,7 @@ pub struct DelayedBlobstore<B> {
 
 impl<B: std::fmt::Display> std::fmt::Display for DelayedBlobstore<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "DelayedBlobstore<{}>", &self.inner)
+        write!(f, "DelayedBlobstore<{}>", self.inner)
     }
 }
 
@@ -154,7 +154,7 @@ pub struct DelayedKeyedBlobstore<B> {
 
 impl<B: std::fmt::Display> std::fmt::Display for DelayedKeyedBlobstore<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "DelayedKeyedBlobstore<{}>", &self.inner)
+        write!(f, "DelayedKeyedBlobstore<{}>", self.inner)
     }
 }
 

@@ -68,7 +68,7 @@ impl Qps {
                 &ctr.category,
                 format!(
                     "{}:{}:{}:{}",
-                    &ctr.prefix, &ctr.top_level_tier, region_long, &self.current_region_long
+                    ctr.prefix, ctr.top_level_tier, region_long, self.current_region_long
                 ),
             );
             ctr.bump(1.0);

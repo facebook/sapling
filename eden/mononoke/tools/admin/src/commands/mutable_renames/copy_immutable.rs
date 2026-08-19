@@ -96,10 +96,7 @@ pub async fn copy_immutable_impl(
                         )
                     })?;
 
-                println!(
-                    "Creating entry for `{}` copied to `{}`",
-                    &src_path, &dst_path
-                );
+                println!("Creating entry for `{src_path}` copied to `{dst_path}`");
                 MutableRenameEntry::new(
                     dst_cs_id,
                     dst_path.into(),

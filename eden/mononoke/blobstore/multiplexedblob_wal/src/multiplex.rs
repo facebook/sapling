@@ -191,7 +191,7 @@ impl fmt::Debug for WalMultiplexedBlobstore {
         write!(
             f,
             "WalMultiplexedBlobstore: multiplex_id: {}",
-            &self.multiplex_id
+            self.multiplex_id
         )?;
         f.debug_map()
             .entries(self.blobstores.iter().map(|(v, _)| (v.id(), v)))

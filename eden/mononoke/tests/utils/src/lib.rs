@@ -508,9 +508,7 @@ impl CreateFileContext {
 
                         if !parents.contains(&cs_id) {
                             return Err(format_err!(
-                                "CopyInfo at {:?} references invalid parent: {:?}",
-                                &path,
-                                &cs_id
+                                "CopyInfo at {path:?} references invalid parent: {cs_id:?}"
                             ));
                         }
 

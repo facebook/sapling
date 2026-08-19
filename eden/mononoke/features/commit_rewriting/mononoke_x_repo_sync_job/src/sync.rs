@@ -415,7 +415,7 @@ where
         } else {
             log_info(
                 ctx,
-                format!("syncing {} via pushrebase for {}", cs_id, &target_bookmark),
+                format!("syncing {cs_id} via pushrebase for {target_bookmark}"),
             );
             let (stats, result) = pushrebase_commit(
                 ctx,

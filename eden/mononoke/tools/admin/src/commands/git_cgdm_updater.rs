@@ -535,7 +535,7 @@ async fn update_all_repos(
                 println!(
                     "Updating CGDM for repo {} with blobstore key {}",
                     repo.repo_identity().name(),
-                    &blobstore_key,
+                    blobstore_key,
                 );
 
                 // Resolve all bookmarks as heads

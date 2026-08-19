@@ -60,7 +60,7 @@ pub async fn bubble_info(
     println!(
         "BubbleID: {}\nChangesetIDs: {:?}\nRepoID: {}\nExpiryDate: {}\nStatus: {}\nBlobstorePrefix: {}",
         bubble_id,
-        &changeset_ids,
+        changeset_ids,
         repo.repo_identity.id(),
         bubble.expires_at(),
         bubble.expired(),

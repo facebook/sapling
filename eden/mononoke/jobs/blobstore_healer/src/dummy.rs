@@ -30,7 +30,7 @@ pub struct DummyBlobstore<B> {
 
 impl<B: std::fmt::Display> std::fmt::Display for DummyBlobstore<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "DummyBlobstore<{}>", &self.inner)
+        write!(f, "DummyBlobstore<{}>", self.inner)
     }
 }
 

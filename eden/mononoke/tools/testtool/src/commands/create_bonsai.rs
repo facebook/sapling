@@ -83,7 +83,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 {
                     return Err(anyhow!(
                         "file content {} is not found in the filestore",
-                        &tc.content_id()
+                        tc.content_id()
                     ));
                 }
             }

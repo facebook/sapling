@@ -78,7 +78,7 @@ pub struct RedactedBlobstoreInner<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for RedactedBlobstoreInner<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RedactedBlobstoreInner<{}>", &self.blobstore)
+        write!(f, "RedactedBlobstoreInner<{}>", self.blobstore)
     }
 }
 
@@ -91,7 +91,7 @@ pub struct RedactedBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for RedactedBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RedactedBlobstore<{}>", &self.inner.blobstore)
+        write!(f, "RedactedBlobstore<{}>", self.inner.blobstore)
     }
 }
 

@@ -59,7 +59,7 @@ pub struct ChaosBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for ChaosBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ChaosBlobstore<{}>", &self.blobstore)
+        write!(f, "ChaosBlobstore<{}>", self.blobstore)
     }
 }
 

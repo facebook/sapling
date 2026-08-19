@@ -57,7 +57,7 @@ pub struct CountedBlobstore<T> {
 
 impl<T: Display> Display for CountedBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "CountedBlob<{}>", &self.blobstore)
+        write!(f, "CountedBlob<{}>", self.blobstore)
     }
 }
 

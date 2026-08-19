@@ -189,7 +189,7 @@ pub struct VirtuallyShardedBlobstore<T> {
 
 impl<T: fmt::Display> fmt::Display for VirtuallyShardedBlobstore<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "VirtuallyShardedBlobstore<{}>", &self.inner.blobstore)
+        write!(f, "VirtuallyShardedBlobstore<{}>", self.inner.blobstore)
     }
 }
 

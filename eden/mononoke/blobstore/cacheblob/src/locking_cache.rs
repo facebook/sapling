@@ -147,7 +147,7 @@ where
         write!(
             f,
             "CacheBlobstore<{}, {}, {}>",
-            &self.cache, &self.lease, &self.blobstore
+            self.cache, self.lease, self.blobstore
         )
     }
 }

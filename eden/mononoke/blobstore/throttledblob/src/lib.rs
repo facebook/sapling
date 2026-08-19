@@ -74,7 +74,7 @@ pub struct ThrottledBlob<T: fmt::Debug> {
 
 impl<T: fmt::Display + fmt::Debug> fmt::Display for ThrottledBlob<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ThrottledBlob<{}>", &self.blobstore)
+        write!(f, "ThrottledBlob<{}>", self.blobstore)
     }
 }
 

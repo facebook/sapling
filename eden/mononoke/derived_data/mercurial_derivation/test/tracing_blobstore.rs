@@ -26,7 +26,7 @@ pub struct TracingBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for TracingBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "TracingBlobstore<{}>", &self.inner)
+        write!(f, "TracingBlobstore<{}>", self.inner)
     }
 }
 

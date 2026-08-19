@@ -33,7 +33,7 @@ impl DisabledBlob {
 
 impl std::fmt::Display for DisabledBlob {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DisabledBlob ({})", &self.reason)
+        write!(f, "DisabledBlob ({})", self.reason)
     }
 }
 

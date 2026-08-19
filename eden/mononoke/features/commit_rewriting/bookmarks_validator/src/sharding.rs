@@ -70,8 +70,7 @@ impl RepoShardedProcess for BookmarkValidateProcess {
                 .await?;
 
         let details = format!(
-            "Completed bookmark validate command setup from repo {} to repo {}",
-            &source_repo_name, &target_repo_name
+            "Completed bookmark validate command setup from repo {source_repo_name} to repo {target_repo_name}"
         );
         info!("{}", details,);
         Ok(Arc::new(executor))
@@ -114,8 +113,7 @@ impl BookmarkValidateProcessExecutor {
 
         if syncers.large_to_small.get_large_repo().repo_identity().id() != source_repo_id {
             let details = format!(
-                "Source repo must be a large repo!. Source repo: {}, Target repo: {}",
-                &source_repo_name, &target_repo_name
+                "Source repo must be a large repo!. Source repo: {source_repo_name}, Target repo: {target_repo_name}"
             );
             error!("{}", details);
             bail!("{details}");
@@ -149,7 +147,7 @@ impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
         .with_context(|| {
             format!(
                 "Error during bookmark validate command execution for repo pair {}-{}",
-                &self.source_repo_name, &self.target_repo_name,
+                self.source_repo_name, self.target_repo_name,
             )
         })?;
         info!(

@@ -30,7 +30,7 @@ pub struct PrefixBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for PrefixBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PrefixBlobstore<{}>", &self.blobstore)
+        write!(f, "PrefixBlobstore<{}>", self.blobstore)
     }
 }
 

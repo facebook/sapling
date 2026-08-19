@@ -47,12 +47,12 @@ impl SourceControlServiceImpl {
         if !commit_cloud_helpers::is_valid_linux_user(&params.user) {
             return Err(ServiceError::Request(invalid_request(format!(
                 "{} is not a valid unixname",
-                &params.user
+                params.user
             ))));
         }
 
         let repo = self.repo(ctx, &params.repo).await?;
-        let prefix = format!("{}{}/", USER_WORKSPACE_PREFIX, &params.user);
+        let prefix = format!("{}{}/", USER_WORKSPACE_PREFIX, params.user);
         let info = repo
             .cloud_workspaces(&prefix, &params.repo.name)
             .await
@@ -74,7 +74,7 @@ impl SourceControlServiceImpl {
         if !sanity_check_workspace_name(&params.workspace.name) {
             return Err(ServiceError::Request(invalid_request(format!(
                 "Invalid workspace name: {}",
-                &params.workspace.name
+                params.workspace.name
             ))));
         }
         let repo = self.repo(ctx, &params.workspace.repo).await?;

@@ -201,7 +201,7 @@ impl MononokeCasSyncProcessExecutor {
                                 .with_context(|| {
                                     format!(
                                         "Error during mononoke RE CAS sync command execution for repo {}. Attempt number {}",
-                                        &self.repo_name, attempt
+                                        self.repo_name, attempt
                                     )
                                 })?;
                             },

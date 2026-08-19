@@ -83,7 +83,7 @@ pub struct CountingBlobstore<B> {
 
 impl<B: std::fmt::Display> std::fmt::Display for CountingBlobstore<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "CountingBlobstore<{}>", &self.inner)
+        write!(f, "CountingBlobstore<{}>", self.inner)
     }
 }
 

@@ -475,7 +475,7 @@ impl CommitCloud {
                 acl_name: acl_name.clone(),
                 sharing_message: format!(
                     "'share_workspace' succeeded: workspace {} has been already shared under the acl {} {}",
-                    ctx.workspace, &acl_name, &link
+                    ctx.workspace, acl_name, link
                 ),
             });
         }
@@ -513,7 +513,7 @@ impl CommitCloud {
                 acl_name: acl_name.clone(),
                 sharing_message: format!(
                     "'share_workspace' succeeded: workspace {} is now marked for sharing through the ACL {} [{}]",
-                    ctx.workspace, &acl_name, &link
+                    ctx.workspace, acl_name, link
                 ),
             }),
         }
@@ -654,7 +654,7 @@ impl CommitCloud {
             .is_some(),
             format!(
                 "'get_historical_versions' failed: workspace {} does not exist",
-                &cc_ctx.workspace
+                cc_ctx.workspace
             ),
         );
 

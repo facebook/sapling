@@ -54,7 +54,7 @@ pub struct SamplingBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "SamplingBlobstore<{}>", &self.inner)
+        write!(f, "SamplingBlobstore<{}>", self.inner)
     }
 }
 
@@ -178,7 +178,7 @@ pub struct SamplingBlobstoreSamplingComponentBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstoreSamplingComponentBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "SamplingBlobstore<{}, {:?}>", &self.inner, self.inner_id)
+        write!(f, "SamplingBlobstore<{}, {:?}>", self.inner, self.inner_id)
     }
 }
 
