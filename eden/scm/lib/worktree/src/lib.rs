@@ -13,6 +13,7 @@
 //! other crates (e.g., `clone`, Python bindings for smartlog) can access
 //! worktree group information without pulling in command-layer dependencies.
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 #[cfg(unix)]
@@ -216,6 +217,25 @@ impl Reservation {
 const GROUP_ID_NAMESPACE: &[u8] = b"group-id";
 const WORKTREE_OP_LOCK_NAMESPACE: &[u8] = b"worktree-op-lock";
 
+std::thread_local! {
+    static REGISTRY_LOCK_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+struct RegistryLockScope;
+
+impl RegistryLockScope {
+    fn enter() -> Self {
+        REGISTRY_LOCK_DEPTH.with(|depth| depth.set(depth.get() + 1));
+        Self
+    }
+}
+
+impl Drop for RegistryLockScope {
+    fn drop(&mut self) {
+        REGISTRY_LOCK_DEPTH.with(|depth| depth.set(depth.get() - 1));
+    }
+}
+
 // These derived names must be stable outside a single process: group IDs are
 // written to the registry, and lock names are used for on-disk coordination.
 // Callers are expected to pass the same canonical path spelling they use when
@@ -346,6 +366,10 @@ fn worktree_path_lockfile_name(worktree_path: &Path) -> String {
 }
 
 pub fn lock_worktree_path_op(shared_store_path: &Path, worktree_path: &Path) -> Result<PathLock> {
+    let registry_lock_held = REGISTRY_LOCK_DEPTH.with(|depth| depth.get() > 0);
+    if registry_lock_held {
+        anyhow::bail!("cannot acquire worktree path operation lock while holding registry lock");
+    }
     let lock_path = shared_store_path.join(worktree_path_lockfile_name(worktree_path));
     Ok(PathLock::exclusive(lock_path)?)
 }
@@ -512,6 +536,7 @@ pub fn with_registry_lock<T>(
 ) -> Result<T> {
     let lock_path = shared_store_path.join("worktrees.lock");
     let _lock = PathLock::exclusive(&lock_path)?;
+    let _scope = RegistryLockScope::enter();
     let mut registry = load_registry(shared_store_path)?;
     let result = f(&mut registry)?;
     save_registry(shared_store_path, &registry)?;
@@ -564,6 +589,7 @@ pub fn with_reservations<T>(
 ) -> Result<T> {
     let lock_path = shared_store_path.join("worktrees.lock");
     let _lock = PathLock::exclusive(&lock_path)?;
+    let _scope = RegistryLockScope::enter();
     let registry = load_registry(shared_store_path)?;
     let mut reservations = load_reservations(shared_store_path)?;
     let result = f(&registry, &mut reservations)?;
@@ -917,6 +943,51 @@ mod tests {
 
         let _lock1 = lock_worktree_path_op(dir.path(), &path1).unwrap();
         let _lock2 = lock_worktree_path_op(dir.path(), &path2).unwrap();
+    }
+
+    #[test]
+    fn test_worktree_lock_then_registry_lock_is_allowed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = PathBuf::from("/tmp/worktree-lock-then-registry-lock");
+
+        with_worktree_path_op_lock(dir.path(), &path, || {
+            with_registry_lock(dir.path(), |_registry| Ok(()))
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn test_registry_lock_then_worktree_lock_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = PathBuf::from("/tmp/registry-lock-then-worktree-lock");
+
+        let err = with_registry_lock(dir.path(), |_registry| {
+            lock_worktree_path_op(dir.path(), &path).map(|_lock| ())
+        })
+        .unwrap_err();
+
+        assert!(
+            err.to_string().contains(
+                "cannot acquire worktree path operation lock while holding registry lock"
+            )
+        );
+    }
+
+    #[test]
+    fn test_reservations_lock_then_worktree_lock_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = PathBuf::from("/tmp/reservations-lock-then-worktree-lock");
+
+        let err = with_reservations(dir.path(), |_registry, _reservations| {
+            lock_worktree_path_op(dir.path(), &path).map(|_lock| ())
+        })
+        .unwrap_err();
+
+        assert!(
+            err.to_string().contains(
+                "cannot acquire worktree path operation lock while holding registry lock"
+            )
+        );
     }
 
     #[cfg(not(windows))]
