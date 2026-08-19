@@ -100,6 +100,16 @@ let hasOpenedISLWebviewBeforeState = false;
 /** Most recently selected cwd across all ISL webviews. */
 let mostRecentISLCwd: string | undefined = undefined;
 
+export function initialCwdForISL(
+  requestedCwd: string | undefined,
+  focusedEnvironmentCwd: string | undefined,
+  recentCwd: string | undefined,
+  workspaceCwd: string | undefined,
+  fallbackCwd: string,
+): string {
+  return requestedCwd ?? focusedEnvironmentCwd ?? recentCwd ?? workspaceCwd ?? fallbackCwd;
+}
+
 const islViewType = 'sapling.isl';
 const comparisonViewType = 'sapling.comparison';
 
@@ -621,11 +631,13 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
 
   const focusedEnv = Internal.basecampGetFocusedEnvironment?.();
-  const initialCwd =
-    cwd ??
-    focusedEnv?.folderPaths?.[0] ??
-    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ??
-    process.cwd();
+  const initialCwd = initialCwdForISL(
+    cwd,
+    focusedEnv?.folderPaths?.[0],
+    mostRecentISLCwd,
+    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+    process.cwd(),
+  );
   mostRecentISLCwd = initialCwd;
   let disposed = false;
 

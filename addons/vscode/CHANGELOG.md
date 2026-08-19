@@ -4,6 +4,7 @@
 
 - Reduced fetching frequency for better performance
 - Go to time in download commit menu
+- Remember the last selected ISL workspace folder within a window session
 
 ## 0.1.69
 

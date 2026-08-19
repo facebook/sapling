@@ -8,7 +8,7 @@
 import type {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import * as vscode from 'vscode';
-import {cwdForOpenISLCommand} from '../islWebviewPanel';
+import {cwdForOpenISLCommand, initialCwdForISL} from '../islWebviewPanel';
 
 jest.mock('vscode', () => {
   const actualVscode = jest.requireActual('../../__mocks__/vscode');
@@ -53,5 +53,43 @@ describe('cwdForOpenISLCommand', () => {
   it('returns undefined for an argument without a rootUri', () => {
     expect(cwdForOpenISLCommand({})).toBeUndefined();
     expect(cwdForOpenISLCommand({rootUri: undefined})).toBeUndefined();
+  });
+});
+
+describe('initialCwdForISL', () => {
+  it('reopens with the most recently selected cwd', () => {
+    expect(
+      initialCwdForISL(
+        undefined,
+        undefined,
+        '/workspace/second',
+        '/workspace/first',
+        '/process/cwd',
+      ),
+    ).toBe('/workspace/second');
+  });
+
+  it('prefers an explicitly requested cwd', () => {
+    expect(
+      initialCwdForISL(
+        '/workspace/requested',
+        undefined,
+        '/workspace/recent',
+        '/workspace/first',
+        '/process/cwd',
+      ),
+    ).toBe('/workspace/requested');
+  });
+
+  it('prefers a focused environment over the remembered cwd', () => {
+    expect(
+      initialCwdForISL(
+        undefined,
+        '/workspace/focused',
+        '/workspace/recent',
+        '/workspace/first',
+        '/process/cwd',
+      ),
+    ).toBe('/workspace/focused');
   });
 });
