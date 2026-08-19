@@ -298,6 +298,13 @@ pub struct RepoConfig {
     pub remote_diff_config: Option<RemoteDiffConfig>,
     /// Configuration for commit rate limiting.
     pub commit_rate_limit_config: Option<CommitRateLimitConfig>,
+    /// Version of the per-repo config snapshot this config was parsed from
+    /// (the last content-changing parse); `None` unless loaded via a
+    /// per-repo config handle.
+    pub config_version: Option<String>,
+    /// Mutation ID of the per-repo config snapshot; always `None` until the
+    /// configerator client exposes mutationId.
+    pub config_mutation_id: Option<i64>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -2817,6 +2824,19 @@ mod tests {
 
     fn mp(s: &str) -> MPath {
         MPath::new(s.as_bytes()).unwrap()
+    }
+
+    #[mononoke::test]
+    fn test_repo_config_default_has_no_provenance() {
+        let config = RepoConfig::default();
+        assert_eq!(
+            config.config_version, None,
+            "a default RepoConfig must carry no config version"
+        );
+        assert_eq!(
+            config.config_mutation_id, None,
+            "a default RepoConfig must carry no config mutation id"
+        );
     }
 
     /// Build a stage with the given dependency paths.

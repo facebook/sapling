@@ -434,6 +434,67 @@ fn test_load_all_repo_configs_checked_unions_and_partitions() {
     assert_eq!(failed, ["bad/repo"]);
 }
 
+// A split-loaded repo must record the source-reported config version;
+// mutation id is not plumbed yet and must stay None.
+#[mononoke::test]
+fn test_get_or_load_repo_config_records_config_version() {
+    let spec_path = "test/repos/good";
+    let manifest_path = "test/manifest";
+    let manifest = TierManifest {
+        repos: vec![entry("good/repo", 1, spec_path)],
+        storage: HashMap::from([(TEST_STORAGE.to_string(), test_raw_storage_config())]),
+        ..Default::default()
+    };
+    let manifest_json = serde_json::to_string(&manifest).unwrap();
+
+    let source = TestSource::new();
+    source.insert_config(
+        manifest_path,
+        &manifest_json,
+        ModificationTime::UnixTimestamp(0),
+    );
+    source.insert_config_with_version(
+        spec_path,
+        &valid_repo_spec_json(1, "good/repo"),
+        ModificationTime::UnixTimestamp(0),
+        "config-version-7",
+    );
+    let store = ConfigStore::new(Arc::new(source), Duration::from_secs(1), None);
+
+    let mut cfg = empty_configs();
+    cfg.maybe_manifest_handle = Some(
+        store
+            .get_config_handle::<TierManifest>(manifest_path.to_string())
+            .unwrap(),
+    );
+    cfg.config_store = Some(store);
+    cfg.tier_name = Some(TEST_TIER.to_string());
+
+    let config = cfg
+        .get_or_load_repo_config("good/repo")
+        .expect("split-loaded repo must load");
+
+    assert_eq!(
+        config.config_version.as_deref(),
+        Some("config-version-7"),
+        "split-loaded repo must record the source-reported config version"
+    );
+    assert_eq!(
+        config.config_mutation_id, None,
+        "mutation id is not plumbed yet and must stay None"
+    );
+
+    // The cached fast path must serve the same provenance.
+    let cached = cfg
+        .get_or_load_repo_config("good/repo")
+        .expect("cached repo must load");
+    assert_eq!(
+        cached.config_version.as_deref(),
+        Some("config-version-7"),
+        "the cached entry must carry the same recorded config version"
+    );
+}
+
 // --- Sourcing `common`/`storage` from the manifest (common_from_manifest) ---
 
 /// A default `RawCommonConfig` is not parsable: two required fields fail conversion.

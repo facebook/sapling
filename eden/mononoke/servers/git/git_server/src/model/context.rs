@@ -14,6 +14,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
+use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_api::Mononoke;
@@ -58,7 +59,17 @@ impl RepositoryRequestContext {
         let req_ctx = state.borrow_mut::<RequestContext>();
         let ctx = req_ctx.ctx.clone();
         let git_ctx = GitServerContext::borrow_from(state);
-        git_ctx.request_context(ctx, method_info, pushvars).await
+        let request_context = git_ctx.request_context(ctx, method_info, pushvars).await?;
+
+        // Per-repo config provenance; mutation id is always None until plumbed.
+        let repo_config = request_context.repo.repo_config();
+        ScubaMiddlewareState::try_borrow_add_repo_config_provenance(
+            state,
+            repo_config.config_version.as_deref(),
+            repo_config.config_mutation_id,
+        );
+
+        Ok(request_context)
     }
 
     pub fn bundle_uri_trusted_only(&self) -> bool {

@@ -256,6 +256,16 @@ impl SourceControlServiceImpl {
         scuba.add("method", name);
         if let Some(specifier) = specifier {
             if let Some(reponame) = specifier.scuba_reponame() {
+                // Per-repo config provenance; mutation id is always None until plumbed.
+                if let Some(repo_config) = self.configs.repo_configs().repos.get(reponame.as_str())
+                {
+                    if let Some(version) = repo_config.config_version.clone() {
+                        scuba.add("repo_config_version", version);
+                    }
+                    if let Some(mutation_id) = repo_config.config_mutation_id {
+                        scuba.add("repo_config_mutation_id", mutation_id);
+                    }
+                }
                 scuba.add("reponame", reponame);
             }
             if let Some(commit) = specifier.scuba_commit() {

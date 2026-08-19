@@ -640,6 +640,9 @@ fn build_repo_config(
         restricted_paths_config,
         remote_diff_config,
         commit_rate_limit_config,
+        // Populated by the versioned ConfigHandle load path, never at parse time.
+        config_version: None,
+        config_mutation_id: None,
     })
 }
 
@@ -1838,6 +1841,8 @@ mod test {
                 restricted_paths_config: RestrictedPathsConfig::default(),
                 remote_diff_config: None,
                 commit_rate_limit_config: None,
+                config_version: None,
+                config_mutation_id: None,
             },
         );
 
@@ -1926,6 +1931,8 @@ mod test {
                 restricted_paths_config: RestrictedPathsConfig::default(),
                 remote_diff_config: None,
                 commit_rate_limit_config: None,
+                config_version: None,
+                config_mutation_id: None,
             },
         );
         assert_eq!(

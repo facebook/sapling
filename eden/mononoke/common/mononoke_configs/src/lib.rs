@@ -656,7 +656,7 @@ impl MononokeConfigs {
             .get(repo_name)
             .context("handle not found after load")?
             .clone();
-        let repo_spec = handle.get();
+        let (repo_spec, version_info) = handle.get_with_version();
         let tier = self
             .tier_name
             .as_deref()
@@ -666,7 +666,11 @@ impl MononokeConfigs {
             .as_ref()
             .context("manifest handle required for split-loading")?
             .get();
-        parse_repo_spec(Arc::unwrap_or_clone(repo_spec), tier, &manifest.storage)
+        let mut repo_config =
+            parse_repo_spec(Arc::unwrap_or_clone(repo_spec), tier, &manifest.storage)?;
+        // Provenance comes only from the ConfigHandle accessor, never from thrift RepoSpec fields.
+        repo_config.config_version = version_info.map(|info| info.version);
+        Ok(repo_config)
     }
 
     /// Batch-load repo configs, surfacing per-repo parse failures instead of

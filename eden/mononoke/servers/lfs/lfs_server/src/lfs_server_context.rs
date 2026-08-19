@@ -31,6 +31,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::body_ext::BodyExt as _;
+use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use hostname::get_hostname;
 use http::Request;
 use http::header;
@@ -375,9 +376,19 @@ impl RepositoryRequestContext {
         let host = get_host_header(&headers)?;
 
         let lfs_ctx = LfsServerContext::borrow_from(state);
-        lfs_ctx
+        let request_context = lfs_ctx
             .request(ctx, repository, host, &headers, method)
-            .await
+            .await?;
+
+        // Per-repo config provenance; mutation id is always None until plumbed.
+        let repo_config = request_context.repo.repo_config();
+        ScubaMiddlewareState::try_borrow_add_repo_config_provenance(
+            state,
+            repo_config.config_version.as_deref(),
+            repo_config.config_mutation_id,
+        );
+
+        Ok(request_context)
     }
 
     pub fn always_wait_for_upstream(&self) -> bool {

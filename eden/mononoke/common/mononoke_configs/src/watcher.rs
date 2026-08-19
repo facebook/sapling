@@ -590,9 +590,10 @@ async fn run_reload_pass(
             let mut repos = base.repos.clone();
             for entry in &manifest.repos {
                 if let Some(handle) = handles.get(&entry.repo_name) {
-                    let spec = handle.get();
+                    let (spec, version_info) = handle.get_with_version();
                     match parse_repo_spec(Arc::unwrap_or_clone(spec), tier, &manifest.storage) {
-                        Ok(config) => {
+                        Ok(mut config) => {
+                            config.config_version = version_info.map(|info| info.version);
                             repos.insert(entry.repo_name.clone(), Arc::new(config));
                         }
                         Err(e) => {
@@ -682,20 +683,21 @@ async fn handle_per_repo_fire(
     prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
 ) {
     // Handle removed concurrently by remove_repo_config_handle (which drops
-    // the ConfigHandle, closing the watcher channel). Don't re-push.
-    let still_present = match repo_handles.read() {
-        Ok(h) => h.contains_key(&name),
+    // the ConfigHandle, closing the watcher channel). Don't re-push. The
+    // presence lookup doubles as the provenance read for this update.
+    let version_info = match repo_handles.read() {
+        Ok(h) => h.get(&name).map(|handle| handle.get_with_version().1),
         Err(e) => {
             error!("repo_handles lock poisoned dispatching per-repo update for {name}: {e:?}");
             STATS::per_repo_refresh_failure_count.add_value(1);
             return;
         }
     };
-    if !still_present {
+    let Some(version_info) = version_info else {
         debug!("Per-repo watcher fired for absent repo {name}, dropping");
         prev_specs.remove(&name);
         return;
-    }
+    };
 
     let spec = match result {
         Ok(s) => s,
@@ -738,7 +740,7 @@ async fn handle_per_repo_fire(
 
     // Cheap Arc clone; parse_repo_spec consumes the original below.
     let applied_spec = spec.clone();
-    let new_config = match parse_repo_spec(
+    let mut new_config = match parse_repo_spec(
         Arc::unwrap_or_clone(spec),
         tier,
         &manifest_for_storage.storage,
@@ -751,6 +753,8 @@ async fn handle_per_repo_fire(
             return;
         }
     };
+    // Version reflects the last content-changing parse: spurious bumps are deduped above.
+    new_config.config_version = version_info.map(|info| info.version);
 
     info!("Per-repo config refresh: {name}");
     let succeeded = apply_per_repo_update(&name, new_config, repo_configs, update_receivers).await;

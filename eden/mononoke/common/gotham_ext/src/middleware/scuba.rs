@@ -108,6 +108,10 @@ pub enum HttpScubaKey {
     ConfigStoreVersion,
     /// The config store last update time at the time of the request.
     ConfigStoreLastUpdatedAt,
+    /// The version of the per-repo config snapshot the request's repo was built from.
+    RepoConfigVersion,
+    /// The mutation ID of the per-repo config snapshot the request's repo was built from.
+    RepoConfigMutationId,
     /// Request correlator ID that is recognized and standardized across all traffic infra for E2E tracebility.
     XFBProductLog,
     /// Request correlator ID that Proxygen sends and can be used as identifier for a request in
@@ -168,6 +172,8 @@ impl AsRef<str> for HttpScubaKey {
             RequestBytesReceived => "request_bytes_received",
             ConfigStoreVersion => "config_store_version",
             ConfigStoreLastUpdatedAt => "config_store_last_updated_at",
+            RepoConfigVersion => "repo_config_version",
+            RepoConfigMutationId => "repo_config_mutation_id",
             XFBProductLog => "x_fb_product_log",
             XFBProductLogInfo => "x_fb_product_log_info",
             XFBX2PAgentRequestId => "x_fb_x2pagent_request_id",
@@ -506,6 +512,20 @@ impl ScubaMiddlewareState {
         let mut scuba = state.try_borrow_mut::<Self>();
         if let Some(ref mut scuba) = scuba {
             scuba.add(key, value);
+        }
+    }
+
+    /// Borrow the ScubaMiddlewareState, if any, and record per-repo config provenance.
+    pub fn try_borrow_add_repo_config_provenance(
+        state: &mut State,
+        config_version: Option<&str>,
+        config_mutation_id: Option<i64>,
+    ) {
+        if let Some(version) = config_version {
+            Self::try_borrow_add(state, HttpScubaKey::RepoConfigVersion, version.to_string());
+        }
+        if let Some(mutation_id) = config_mutation_id {
+            Self::try_borrow_add(state, HttpScubaKey::RepoConfigMutationId, mutation_id);
         }
     }
 
