@@ -57,10 +57,9 @@ pub mod versions;
 define_stats! {
     prefix = "mononoke.commit_cloud.get_references";
     // Total number of heads returned per sync (with a resolved author date).
+    // This is the denominator that makes the timers below per-head figures, so
+    // it stays as long as any of them do.
     heads_returned: timeseries(Sum, Average, Count),
-    // Per-sync count of returned heads falling into each age bucket, keyed by
-    // bucket label (see AGE_BUCKETS).
-    head_age_bucket: dynamic_timeseries("head_age.{}", (bucket: &'static str); Sum, Average),
     // Wall-clock latency of the get_references read path, split into its two
     // phases plus the total. Emitted as quantile_stat (not the deprecated
     // histogram, whose tail percentiles run 2-3x too high) to match the
@@ -77,52 +76,11 @@ define_stats! {
     changeset_info_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
 }
 
-const SECONDS_PER_DAY: i64 = 86400;
-
-// Age histogram buckets, ordered from youngest to oldest, as (exclusive upper
-// bound in whole days, label) pairs. The last bound is `i64::MAX` so the oldest
-// bucket catches everything. The labels are used as the ODS `head_age_bucket`
-// key, so keep them stable -- renaming them breaks existing dashboards.
-const AGE_BUCKETS: [(i64, &str); 6] = [
-    (1, "lt_1d"),
-    (7, "1d_7d"),
-    (14, "7d_14d"),
-    (28, "14d_28d"),
-    (90, "28d_90d"),
-    (i64::MAX, "gt_90d"),
-];
-
-// Map a head age (in whole days) to its `AGE_BUCKETS` index. The clamp keeps
-// this total: an age equal to the `i64::MAX` sentinel would otherwise index one
-// past the end.
-fn age_bucket_index(age_days: i64) -> usize {
-    AGE_BUCKETS
-        .partition_point(|(upper_bound, _)| age_days >= *upper_bound)
-        .min(AGE_BUCKETS.len() - 1)
-}
-
-// Emit a per-sync age histogram and head count for the heads returned by
-// `get_references`.
-//
-// `age` is `now - author_date`, matching the author-date basis the client uses
-// for its `max_sync_age` omission (default 28 days), so the histogram lines up
-// directly with the client-side omitted-heads line. This is pure telemetry and
-// must not affect sync results.
-fn log_head_age_metrics(heads_dates: &HashMap<CloudChangesetId, i64>) {
-    let now = mononoke_types::DateTime::now().timestamp_secs();
-
-    // Single pass over the heads to build the histogram (heads can number in
-    // the thousands, so avoid repeated traversals).
-    let mut buckets = [0i64; AGE_BUCKETS.len()];
-    for author_date in heads_dates.values() {
-        let age_days = (now - *author_date).max(0) / SECONDS_PER_DAY;
-        buckets[age_bucket_index(age_days)] += 1;
-    }
-
-    STATS::heads_returned.add_value(heads_dates.len() as i64);
-    for ((_, label), count) in AGE_BUCKETS.iter().zip(buckets.iter()) {
-        STATS::head_age_bucket.add_value(*count, (*label,));
-    }
+// Emit the number of heads a (non-no-op) get_references resolved author dates
+// for. Same always-on, O(1), pure-telemetry contract as the timers below, and
+// the per-head denominator for them.
+fn log_heads_returned(heads: usize) {
+    STATS::heads_returned.add_value(heads as i64);
 }
 
 // Emit the per-phase and total wall-clock timing of a (non-no-op) get_references
@@ -262,12 +220,7 @@ pub(crate) async fn cast_references_data(
         (changeset_info_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
     );
 
-    // Pure telemetry: emit a per-sync head-age histogram and head count from the
-    // author dates we already computed above. Gated by a JustKnob so it can be
-    // disabled instantly without a code push.
-    if justknobs::eval("scm/mononoke:commitcloud_log_head_age_metrics", None, None) {
-        log_head_age_metrics(&heads_dates);
-    }
+    log_heads_returned(heads_dates.len());
 
     for bookmark in raw_references_data.local_bookmarks {
         bookmarks.insert(bookmark.name().clone(), bookmark.commit().clone());
@@ -379,31 +332,4 @@ pub async fn rename_all(
     )
     .await?;
     Ok((txn, affected_rows))
-}
-
-#[cfg(test)]
-mod test {
-    use mononoke_macros::mononoke;
-
-    use super::*;
-
-    #[mononoke::test]
-    fn age_bucket_index_maps_ages_to_labels() {
-        let label = |age_days| AGE_BUCKETS[age_bucket_index(age_days)].1;
-
-        // Each bucket's lower edge, upper edge, and the boundary above it.
-        assert_eq!(label(0), "lt_1d");
-        assert_eq!(label(1), "1d_7d");
-        assert_eq!(label(6), "1d_7d");
-        assert_eq!(label(7), "7d_14d");
-        assert_eq!(label(13), "7d_14d");
-        assert_eq!(label(14), "14d_28d");
-        assert_eq!(label(27), "14d_28d");
-        assert_eq!(label(28), "28d_90d");
-        assert_eq!(label(89), "28d_90d");
-        assert_eq!(label(90), "gt_90d");
-
-        // The oldest bucket is unbounded, so no age can index past the array.
-        assert_eq!(label(i64::MAX), "gt_90d");
-    }
 }
