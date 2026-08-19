@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "eden/fs/inodes/InodeAccessLogger.h"
 
 namespace facebook::eden {
@@ -20,18 +22,18 @@ class FakeInodeAccessLogger : public InodeAccessLogger {
   FakeInodeAccessLogger() : InodeAccessLogger(nullptr, EdenStatsPtr{}) {}
 
   virtual void logInodeAccess(InodeAccess) override {
-    ++accessCount_;
+    accessCount_.fetch_add(1, std::memory_order_relaxed);
   }
 
   void reset() {
-    accessCount_ = 0;
+    accessCount_.store(0, std::memory_order_relaxed);
   }
 
   size_t getAccessCount() const {
-    return accessCount_;
+    return accessCount_.load(std::memory_order_relaxed);
   }
 
  private:
-  size_t accessCount_{0};
+  std::atomic<size_t> accessCount_{0};
 };
 } // namespace facebook::eden
