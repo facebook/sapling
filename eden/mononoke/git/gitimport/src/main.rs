@@ -52,6 +52,7 @@ use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::git_reader::GitReader;
 use import_tools::import_tree_as_single_bonsai_changeset;
+use import_tools::is_internal_only_ref;
 use import_tools::set_bookmark;
 use import_tools::upload_git_object;
 use import_tools::upload_git_tag;
@@ -558,6 +559,11 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .context("read_git_refs failed")?;
         let git_ref_mapping = refs
             .into_iter()
+            // Filtered here rather than via --exclude-refs because
+            // --cleanup-mononoke-bookmarks builds its keep-set from the
+            // unfiltered mapping: excluding later would strand a bookmark an
+            // earlier import created. Same shape as the heads/HEAD skip below.
+            .filter(|(git_ref, _)| !is_internal_only_ref(&git_ref.name))
             .map(|(git_ref, commit)| {
                 Ok((
                     git_ref.metadata,

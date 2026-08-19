@@ -25,6 +25,7 @@ use futures::stream;
 use gix_hash::ObjectId;
 use gix_object::Kind;
 use import_tools::BookmarkOperation;
+use import_tools::COMMIT_CLOUD_REF_PREFIX;
 use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::bookmark::set_bookmarks;
 use import_tools::git_reader::GitReader;
@@ -49,7 +50,6 @@ use crate::model::RepositoryRequestContext;
 use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
-const COMMIT_CLOUD_REF_PREFIX: &str = "refs/commitcloud/upload";
 
 /// Keyed by `tags/<tag>` bookmark name. `None` means the atomic path is off (the
 /// mapping was written inline). A tag ref absent from the map is a lightweight
