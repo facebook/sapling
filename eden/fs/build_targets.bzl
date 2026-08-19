@@ -62,6 +62,7 @@ EDENFS_WINDOWS_DEPS = [
     "fbcode//eden/fs/cli:edenfsctl",
     "fbcode//eden/fs/cli/trace:trace_stream",
     "fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl",
+    "fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl[pdb]",
     "fbcode//eden/fs/config/facebook:edenfs_config_manager",
     "fbcode//eden/fs/config/facebook/config_manager_rs:edenfs_config_manager_rust",
     "fbcode//eden/fs/facebook:eden-fb303-collector",
