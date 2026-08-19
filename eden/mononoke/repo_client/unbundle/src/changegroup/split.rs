@@ -73,18 +73,15 @@ pub(crate) fn split_changegroup(
         .try_filter_map({
             let mut seen_path = None;
             move |part| {
-                if let Some(seen_path) = &seen_path {
-                    match &part {
-                        &Part::CgChunk(Section::Filelog(ref path), _)
-                        | &Part::SectionEnd(Section::Filelog(ref path)) => {
-                            if seen_path != path {
-                                return future::ready(Err(anyhow!(
-                                    "Mismatched path found {seen_path} ({seen_path:?}) != {path} ({path:?}), for part: {part:?}"
-                                )));
-                            }
-                        }
-                        _ => (), // Handled in the next pattern-match
-                    }
+                // Any other part is handled in the next pattern-match
+                if let Some(seen_path) = &seen_path
+                    && let Part::CgChunk(Section::Filelog(path), _)
+                    | Part::SectionEnd(Section::Filelog(path)) = &part
+                    && seen_path != path
+                {
+                    return future::ready(Err(anyhow!(
+                        "Mismatched path found {seen_path} ({seen_path:?}) != {path} ({path:?}), for part: {part:?}"
+                    )));
                 }
 
                 future::ready(match part {
@@ -160,12 +157,10 @@ where
                     }
                     *this.seen_end = true;
                 }
-                None => {
-                    if !*this.seen_end {
-                        return Some(Err(anyhow!(
-                            "End of stream reached, but no Part::End noticed"
-                        )));
-                    }
+                None if !*this.seen_end => {
+                    return Some(Err(anyhow!(
+                        "End of stream reached, but no Part::End noticed"
+                    )));
                 }
                 _ => {} // all good, proceed
             }

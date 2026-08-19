@@ -75,19 +75,15 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .context("Failed to open repo")?;
 
     for (_, change) in bcs.simplified_file_changes() {
-        match change {
-            Some(tc) => {
-                if filestore::get_metadata(repo.repo_blobstore(), &ctx, &tc.content_id().into())
-                    .await?
-                    .is_none()
-                {
-                    return Err(anyhow!(
-                        "file content {} is not found in the filestore",
-                        tc.content_id()
-                    ));
-                }
-            }
-            None => {}
+        if let Some(tc) = change
+            && filestore::get_metadata(repo.repo_blobstore(), &ctx, &tc.content_id().into())
+                .await?
+                .is_none()
+        {
+            return Err(anyhow!(
+                "file content {} is not found in the filestore",
+                tc.content_id()
+            ));
         }
     }
     let bcs_id = bcs.get_changeset_id();

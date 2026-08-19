@@ -648,6 +648,10 @@ impl Blobstore for Sqlblob {
                                 value_len,
                             )
                             .await?;
+                        #[expect(
+                            clippy::collapsible_match,
+                            reason = "turning the inner `if` into a guard would leave the match non-exhaustive"
+                        )]
                         match chunk_gen_state {
                             Some(ChunkGenerationState::Updated) => {
                                 updated_gen = true;

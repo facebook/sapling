@@ -109,22 +109,19 @@ pub async fn abort_by_root_id(
     // in-progress, so failing it here is what actually halts further scheduling.
     // Short-lived (fan-out) roots have already completed by the time an abort
     // runs, so the in-progress guard skips them.
-    match queue
+    // A missing row is not an error: `root_id` is used purely as a grouping key for
+    // children here, so there may be no request row with this id (e.g. a
+    // synthetic/legacy root id). Nothing to abort at the root in that case -- fall
+    // through to the child cleanup.
+    if let Some((request_id, entry, params, maybe_result)) = queue
         .get_request_by_id(ctx, &root_row_id)
         .await
         .context("fetching root request")?
+        && maybe_result.is_none()
+        && entry.status == RequestStatus::InProgress
     {
-        Some((request_id, entry, params, maybe_result)) => {
-            if maybe_result.is_none() && entry.status == RequestStatus::InProgress {
-                abort_single_request(ctx, queue, &request_id, &params).await?;
-                println!("root request {root_id} aborted");
-            }
-        }
-        None => {
-            // `root_id` is used purely as a grouping key for children here; there
-            // is no request row with this id (e.g. a synthetic/legacy root id).
-            // Nothing to abort at the root -- fall through to the child cleanup.
-        }
+        abort_single_request(ctx, queue, &request_id, &params).await?;
+        println!("root request {root_id} aborted");
     }
 
     // Abort all child requests ('new' -> failed, in-progress -> error result).
