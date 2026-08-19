@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <folly/CancellationToken.h>
 #include <optional>
 #include <string_view>
@@ -172,15 +174,15 @@ class ObjectFetchContext : public RefCounted {
       ObjectType type,
       EdenStatsPtr stats) {
     // There is no stat increment for FetchedSource::Unknown
-    if (saplingStatsMap_.find({fetchedSource, type}) !=
-        saplingStatsMap_.end()) {
-      stats->increment(saplingStatsMap_[{fetchedSource, type}]);
+    const auto counterIt = saplingStatsMap_.find({fetchedSource, type});
+    if (counterIt != saplingStatsMap_.end()) {
+      stats->increment(counterIt->second);
     }
-    fetchedSource_ = fetchedSource;
+    fetchedSource_.store(fetchedSource, std::memory_order_relaxed);
   }
 
   FetchedSource getFetchedSource() const {
-    return fetchedSource_;
+    return fetchedSource_.load(std::memory_order_relaxed);
   }
 
   // RequestInfo keys used by ReCasBackingStore
@@ -283,7 +285,7 @@ class ObjectFetchContext : public RefCounted {
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
 
-  FetchedSource fetchedSource_{FetchedSource::Unknown};
+  std::atomic<FetchedSource> fetchedSource_{FetchedSource::Unknown};
 
   // Time tracer for instrumentation (may be nullptr)
   std::shared_ptr<MiniTracer> timeTracer_{nullptr};
