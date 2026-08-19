@@ -59,7 +59,10 @@ pub enum RestrictedPathAccess {
 #[error("Access denied: unauthorized access to restricted path: {access}")]
 pub struct RestrictedPathsAuthorizationError {
     access: RestrictedPathAccess,
-    permission_request_group: PermissionRequestGroup,
+    // Boxed because `PermissionRequestGroup` is a `MononokeIdentity`, i.e. a whole
+    // `AuthenticatedIdentity` thrift struct, which would otherwise make every
+    // `Result<_, MononokeError>` in the codebase 248 bytes wide.
+    permission_request_group: Box<PermissionRequestGroup>,
 }
 
 impl RestrictedPathsAuthorizationError {
@@ -69,7 +72,7 @@ impl RestrictedPathsAuthorizationError {
     ) -> Self {
         Self {
             access,
-            permission_request_group,
+            permission_request_group: Box::new(permission_request_group),
         }
     }
 
