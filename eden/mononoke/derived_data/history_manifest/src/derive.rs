@@ -928,6 +928,7 @@ async fn process_subtree_copies(
 ///
 /// `known_entries` maps absolute paths to pre-computed entries from
 /// dependency stages — used to short-circuit recursion.
+#[cfg_attr(not(test), expect(dead_code))]
 pub(crate) async fn derive_history_manifest_entry(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
