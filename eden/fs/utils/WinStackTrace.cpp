@@ -207,7 +207,13 @@ size_t backtraceFromException(
   return i;
 }
 
-LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
+// This helper must be noinline and hold all the large locals: MSVC reserves
+// a function's entire stack frame in its prologue (emitting __chkstk stack
+// probes for frames larger than a page), so if these locals lived in
+// windowsExceptionFilter itself, the prologue would fault on an exhausted
+// stack before the EXCEPTION_STACK_OVERFLOW check ever ran. This is only
+// called for exceptions that still have stack to work with.
+FOLLY_NOINLINE LONG logExceptionAndTerminate(LPEXCEPTION_POINTERS excep) {
   void* frames[kMaxFrames];
   size_t size = backtraceFromException(excep, frames, kMaxFrames);
 
@@ -256,6 +262,34 @@ LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
   // running here.  Let's also try exiting normally and see which
   // approach wins!
   _exit(3);
+}
+
+LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
+  if (excep->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
+    // This filter runs on the crashing thread's stack, and for a stack
+    // overflow that stack is exhausted: only the released guard page
+    // remains. Walking the stack and symbolizing frames with DbgHelp
+    // consumes far more stack than that, so we skip the stderr backtrace
+    // entirely. Nothing is lost: the WER minidump contains the full stack.
+    // This static WriteFile is safe as it needs almost no stack.
+    static const char kMessage[] =
+        "stack overflow detected, deferring to WER for crash dump\n";
+    WriteFile(
+        GetStdHandle(STD_ERROR_HANDLE),
+        kMessage,
+        sizeof(kMessage) - 1,
+        NULL,
+        NULL);
+    // Clear our filter and continue the search instead of re-invoking
+    // UnhandledExceptionFilter from this frame: returning lets our frame
+    // unwind first, so the OS default handling reaches WER with more stack
+    // headroom. This means the process exit code for stack overflows comes
+    // from WER/the exception code rather than our usual 3 - intentional.
+    SetUnhandledExceptionFilter(nullptr);
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  return logExceptionAndTerminate(excep);
 }
 } // namespace
 
