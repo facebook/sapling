@@ -29,6 +29,7 @@ use futures::FutureExt;
 use futures::future;
 use futures::stream;
 use futures::stream::TryStreamExt;
+use futures::try_join;
 use history::WorkspaceHistory;
 use repo_derived_data::ArcRepoDerivedData;
 use sql_ext::Transaction;
@@ -121,21 +122,28 @@ pub(crate) async fn fetch_references(
     cc_ctx: &CommitCloudContext,
     sql: &SqlCommitCloud,
 ) -> Result<RawReferencesData, anyhow::Error> {
-    let heads: Vec<WorkspaceHead> = sql
-        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
-        .await?;
-
-    let local_bookmarks: Vec<WorkspaceLocalBookmark> = sql
-        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
-        .await?;
-
-    let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = sql
-        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
-        .await?;
-
-    let snapshots: Vec<WorkspaceSnapshot> = sql
-        .get(ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone())
-        .await?;
+    // The four reads below are independent SQL queries against different
+    // tables (heads/local_bookmarks/remote_bookmarks/snapshots), keyed only
+    // by (reponame, workspace) -- none depends on another's result. Issuing
+    // them concurrently instead of sequentially cuts this function's wall
+    // time from ~4 round trips to ~1 on the `hg cloud sync` hot path (every
+    // get_references/update_references call goes through here).
+    let (heads, local_bookmarks, remote_bookmarks, snapshots) = try_join!(
+        Get::<WorkspaceHead>::get(sql, ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone()),
+        Get::<WorkspaceLocalBookmark>::get(
+            sql,
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone()
+        ),
+        Get::<WorkspaceRemoteBookmark>::get(
+            sql,
+            ctx,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone()
+        ),
+        Get::<WorkspaceSnapshot>::get(sql, ctx, cc_ctx.reponame.clone(), cc_ctx.workspace.clone()),
+    )?;
 
     Ok(RawReferencesData {
         heads,
