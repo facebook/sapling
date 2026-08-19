@@ -35,8 +35,10 @@ rust_unittest(
     srcs = ["src/integration_test.rs"],
     allow_oss_build = False,
     cpp_deps = [
+        ":channel_pipeline@header",
         "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:callback_context",
         "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:pipeline_test_helper",
+        "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:rust_type_erased_box",
     ],
     crate_root = "src/integration_test.rs",
     cxx_bridge = "src/integration_test.rs",
