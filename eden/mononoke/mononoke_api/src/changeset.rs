@@ -1756,6 +1756,7 @@ where
                     ManifestDiff::Changed(path, convert_entry(from), convert_entry(to))
                 }
             })
+            .map_err(MononokeError::from)
             .try_filter_map(|diff_entry| {
                 async {
                     let entry = match diff_entry {
