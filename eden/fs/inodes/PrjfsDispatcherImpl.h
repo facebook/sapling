@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/coro/Task.h>
+
 #include "eden/common/utils/String.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
@@ -130,13 +132,17 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
 
   bool symlinksEnabled_;
 
-  ImmediateFuture<std::variant<AbsolutePath, RelativePath>>
-  resolveSymlinkPathImpl(
+  folly::coro::Task<bool> co_isFinalSymlinkPathDirectory(
+      RelativePath symlink,
+      std::string targetString,
+      ObjectFetchContextPtr context,
+      int remainingRecursionDepth);
+
+  folly::coro::Task<std::variant<AbsolutePath, RelativePath>>
+  co_resolveSymlinkPath(
       RelativePath path,
-      const ObjectFetchContextPtr& context,
-      std::vector<RelativePath> pathParts,
-      const size_t solvedLen,
-      const size_t remainingRecursionDepth);
+      ObjectFetchContextPtr context,
+      size_t remainingRecursionDepth);
 
   int handleRedirectedPathPreDeletion(
       AbsolutePathPiece symlinkPath,

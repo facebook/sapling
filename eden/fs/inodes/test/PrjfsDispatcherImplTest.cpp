@@ -141,27 +141,25 @@ TEST_F(PrjfsDispatcherImplTest, relativeTargetJoinsSymlinkDirectory) {
   EXPECT_EQ(RelativePath{"adir/file.txt"}, std::get<RelativePath>(result));
 }
 
-// The recursive resolver crashes with STATUS_STACK_OVERFLOW when the whole
-// resolution runs on the constrained stack. The future must be driven through
-// an inline executor: a plain .get() drives the deferred chain through a
-// trampolining executor and never nests, while inline-executor completion
-// nests a native frame per continuation, like the production PrjFS callback
-// path that overflowed a 2 MB stack with ~2,500 frames (S697276).
+// The recursive implementation crashed with STATUS_STACK_OVERFLOW under this
+// same constrained stack and inline-executor drive (see the parent commit);
+// the iterative resolver keeps its state in a heap-allocated coroutine frame
+// and completes within the reservation.
 TEST_F(
     PrjfsDispatcherImplTest,
-    selfReferentialSymlinkOverflowsConstrainedStack) {
-  EXPECT_DEATH(
-      runOnConstrainedStackThread([&] {
-        return dispatcher_
-            ->isFinalSymlinkPathDirectory(
-                RelativePath{"a/b/c/d/e/f/g/loop"},
-                "loop",
-                ObjectFetchContext::getNullContext())
-            .semi()
-            .via(&folly::InlineExecutor::instance())
-            .get();
-      }),
-      "");
+    selfReferentialSymlinkFailsWithinConstrainedStack) {
+  auto result = runOnConstrainedStackThread([&] {
+    return dispatcher_
+        ->isFinalSymlinkPathDirectory(
+            RelativePath{"a/b/c/d/e/f/g/loop"},
+            "loop",
+            ObjectFetchContext::getNullContext())
+        .semi()
+        .via(&folly::InlineExecutor::instance())
+        .get();
+  });
+
+  EXPECT_FALSE(result);
 }
 
 TEST_F(PrjfsDispatcherImplTest, shallowSymlinkStillResolves) {
