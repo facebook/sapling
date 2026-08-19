@@ -224,9 +224,12 @@ std::thread_local! {
 struct RegistryLockScope;
 
 impl RegistryLockScope {
-    fn enter() -> Self {
+    fn enter() -> Result<Self> {
+        if REGISTRY_LOCK_DEPTH.with(|depth| depth.get() > 0) {
+            anyhow::bail!("cannot acquire registry lock while already holding registry lock");
+        }
         REGISTRY_LOCK_DEPTH.with(|depth| depth.set(depth.get() + 1));
-        Self
+        Ok(Self)
     }
 }
 
@@ -534,9 +537,9 @@ pub fn with_registry_lock<T>(
     shared_store_path: &Path,
     f: impl FnOnce(&mut Registry) -> Result<T>,
 ) -> Result<T> {
+    let _scope = RegistryLockScope::enter()?;
     let lock_path = shared_store_path.join("worktrees.lock");
     let _lock = PathLock::exclusive(&lock_path)?;
-    let _scope = RegistryLockScope::enter();
     let mut registry = load_registry(shared_store_path)?;
     let result = f(&mut registry)?;
     save_registry(shared_store_path, &registry)?;
@@ -587,9 +590,9 @@ pub fn with_reservations<T>(
     shared_store_path: &Path,
     f: impl FnOnce(&Registry, &mut Reservations) -> Result<T>,
 ) -> Result<T> {
+    let _scope = RegistryLockScope::enter()?;
     let lock_path = shared_store_path.join("worktrees.lock");
     let _lock = PathLock::exclusive(&lock_path)?;
-    let _scope = RegistryLockScope::enter();
     let registry = load_registry(shared_store_path)?;
     let mut reservations = load_reservations(shared_store_path)?;
     let result = f(&registry, &mut reservations)?;
@@ -987,6 +990,36 @@ mod tests {
             err.to_string().contains(
                 "cannot acquire worktree path operation lock while holding registry lock"
             )
+        );
+    }
+
+    #[test]
+    fn test_registry_lock_then_registry_lock_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let err = with_registry_lock(dir.path(), |_registry| {
+            with_registry_lock(dir.path(), |_registry| Ok(()))
+        })
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("cannot acquire registry lock while already holding registry lock")
+        );
+    }
+
+    #[test]
+    fn test_registry_lock_then_reservations_lock_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let err = with_registry_lock(dir.path(), |_registry| {
+            with_reservations(dir.path(), |_registry, _reservations| Ok(()))
+        })
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("cannot acquire registry lock while already holding registry lock")
         );
     }
 
