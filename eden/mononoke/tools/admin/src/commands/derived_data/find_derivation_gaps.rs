@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Reverse;
 use std::collections::HashSet;
 
 use anyhow::Result;
@@ -155,7 +156,7 @@ pub(super) async fn find_derivation_gaps(
             .buffered(args.concurrency.max(1))
             .try_collect()
             .await?;
-        boundaries.sort_by(|a, b| b.0.cmp(&a.0));
+        boundaries.sort_by_key(|boundary| Reverse(boundary.0));
 
         // Check derivation in concurrency-sized chunks, then scan results in
         // generation order to detect, size, and skip gaps.

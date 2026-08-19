@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
@@ -73,7 +74,7 @@ async fn find_best_pack(
     zstd_level: i32,
     container: PackContainer,
 ) -> Result<PackContainer> {
-    blobs.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    blobs.sort_by_key(|blob| Reverse(blob.1.len()));
 
     let build_packs = FuturesUnordered::new();
     build_packs.push({

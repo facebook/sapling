@@ -9,6 +9,7 @@
 //!
 //! The graph of all commits in the repository.
 
+use std::cmp::Reverse;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -581,7 +582,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                 Some((cs_id, generation))
             })
             .collect();
-        candidates_with_gen.sort_by(|a, b| b.1.cmp(&a.1));
+        candidates_with_gen.sort_by_key(|candidate| Reverse(candidate.1));
 
         // Build frontier from descendant
         let mut frontier = self.single_frontier(ctx, descendant).await?;
