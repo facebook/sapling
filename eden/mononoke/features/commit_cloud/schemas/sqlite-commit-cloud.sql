@@ -33,10 +33,14 @@ CREATE TABLE IF NOT EXISTS  `checkoutlocations` (
 
 -- heads
 -- Contains the set of heads for each workspace
+-- `author_date` is unix seconds, signed so pre-1970 dates stay in the past, and nullable
+-- because NULL means "not yet backfilled" -- a sentinel of 0 would be indistinguishable
+-- from a genuine epoch-era author date.
 CREATE TABLE IF NOT EXISTS `heads` (
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `commit` VARBINARY(32) NOT NULL,
+  `author_date` BIGINT DEFAULT NULL,
   `seq` INTEGER PRIMARY KEY AUTOINCREMENT,
   UNIQUE(`reponame`, `workspace`, `commit`)
 );
