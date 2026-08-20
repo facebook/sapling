@@ -5,6 +5,7 @@
 - Reduced fetching frequency for better performance
 - Go to time in download commit menu
 - Remember the last selected ISL workspace folder within a window session
+- Fix ISL showing `cwd webview-panel/... does not exist` when opened from the editor title bar while a webview tab was active
 
 ## 0.1.69
 

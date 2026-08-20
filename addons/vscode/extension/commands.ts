@@ -117,7 +117,7 @@ function modifiedUriFromMultiDiffArg(arg: MultiDiffResourceArg): vscode.Uri | un
 }
 
 /** Recover the working-copy `file://` URI from a multi-diff editor's modified resource URI. */
-function workingCopyUriForModifiedUri(uri: vscode.Uri): vscode.Uri {
+export function workingCopyUriForModifiedUri(uri: vscode.Uri): vscode.Uri {
   if (uri.scheme === SAPLING_DIFF_PROVIDER_SCHEME) {
     return decodeSaplingDiffUri(uri).originalUri;
   }
