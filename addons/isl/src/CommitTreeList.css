@@ -119,6 +119,10 @@
 }
 
 .commit-row-selected {
+  --commit-actions-background:
+    linear-gradient(var(--selected-commit-background), var(--selected-commit-background)),
+    var(--background);
+
   background-color: var(--selected-commit-background);
 }
 
@@ -160,6 +164,11 @@
   top: 0;
   z-index: 1;
   transition: opacity 0.1s;
+}
+
+.commit:hover .commit-narrow-right-actions,
+.commit-narrow-right-actions:focus-within {
+  background: var(--commit-actions-background, var(--background));
 }
 
 .commit-tree-narrow .commit-wide-drag-target {
