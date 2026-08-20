@@ -305,11 +305,6 @@
   transition: opacity 0.1s;
 }
 
-.goto-button button,
-.open-commit-info-button {
-  background-color: var(--background);
-}
-
 .commit:hover .goto-button,
 .commit:hover .open-commit-info-button {
   opacity: 1;

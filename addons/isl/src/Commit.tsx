@@ -655,6 +655,7 @@ export const Commit = memo(
             )}
             delayMs={250}>
             <Button
+              icon
               aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
               className={css.gotoButton}
               onClick={async event => {
