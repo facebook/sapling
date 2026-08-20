@@ -61,6 +61,10 @@
 # Run CGDM updater to build the initial mapping
 # Component 0 has 15 changesets (< 20 max), so 0 new full components
   $ mononoke_admin --blobstore-put-behaviour Overwrite git-cgdm-updater --component-max-count 20 --component-max-size 10485760 repo -R repo --all-bookmarks --blobstore-key test_cgdm_key
+  [repo] Loading existing CGDMComponents from mutable blobstore key 'test_cgdm_key'
+  [repo] Mutable blobstore lookup completed in * (miss) (glob)
+  [repo] Loading existing CGDMComponents from immutable blobstore key 'test_cgdm_key'
+  [repo] Immutable blobstore lookup completed in * (miss) (glob)
   [repo] Loaded 0 existing components with 0 changesets (rebuild: false)
   [repo] Found 15 new changesets to process
   [repo] Finished calculating GDM sizes
@@ -113,6 +117,8 @@
 # Overwrite: loads phase 1 state (1 component, 15 changesets). Finds 10 new (16-25).
 # Component 0 fills to 20 (full), overflow 5 go to component 1. 1 new full component.
   $ mononoke_admin --blobstore-put-behaviour Overwrite git-cgdm-updater --component-max-count 20 --component-max-size 10485760 repo -R repo --all-bookmarks --blobstore-key test_cgdm_key
+  [repo] Loading existing CGDMComponents from mutable blobstore key 'test_cgdm_key'
+  [repo] Mutable blobstore lookup completed in * (hit) (glob)
   [repo] Loaded 1 existing components with 15 changesets (rebuild: false)
   [repo] Found 10 new changesets to process
   [repo] Finished calculating GDM sizes
@@ -165,6 +171,8 @@
 # Overwrite: loads current state (2 components, 25 changesets). Finds 10 new (26-35).
 # Component 1 goes from 5 to 15 (not full). 0 new full components.
   $ mononoke_admin --blobstore-put-behaviour Overwrite git-cgdm-updater --component-max-count 20 --component-max-size 10485760 repo -R repo --all-bookmarks --blobstore-key test_cgdm_key
+  [repo] Loading existing CGDMComponents from mutable blobstore key 'test_cgdm_key'
+  [repo] Mutable blobstore lookup completed in * (hit) (glob)
   [repo] Loaded 2 existing components with 25 changesets (rebuild: false)
   [repo] Found 10 new changesets to process
   [repo] Finished calculating GDM sizes

@@ -37,6 +37,10 @@
 # Test single-repo mode: update CGDM with explicit blobstore key
 # Shared args (--component-max-count, --component-max-size) come before the subcommand
   $ mononoke_admin git-cgdm-updater --component-max-count 100 --component-max-size 10485760 repo -R repo --all-bookmarks --blobstore-key manual_cgdm_key
+  [repo] Loading existing CGDMComponents from mutable blobstore key 'manual_cgdm_key'
+  [repo] Mutable blobstore lookup completed in * (miss) (glob)
+  [repo] Loading existing CGDMComponents from immutable blobstore key 'manual_cgdm_key'
+  [repo] Immutable blobstore lookup completed in * (miss) (glob)
   [repo] Loaded 0 existing components with 0 changesets (rebuild: false)
   [repo] Found 3 new changesets to process
   [repo] Finished calculating GDM sizes
@@ -56,6 +60,12 @@
   [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   Updating CGDM for repo repo with blobstore key test_cgdm_key
+  [repo] Listing publishing bookmarks
+  [repo] Listed * publishing bookmarks in * (glob)
+  [repo] Loading existing CGDMComponents from mutable blobstore key 'test_cgdm_key'
+  [repo] Mutable blobstore lookup completed in * (miss) (glob)
+  [repo] Loading existing CGDMComponents from immutable blobstore key 'test_cgdm_key'
+  [repo] Immutable blobstore lookup completed in * (miss) (glob)
   [repo] Loaded 0 existing components with 0 changesets (rebuild: false)
   [repo] Found 3 new changesets to process
   [repo] Finished calculating GDM sizes
@@ -75,6 +85,8 @@
   [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   Updating CGDM for repo repo with blobstore key test_cgdm_key
+  [repo] Listing publishing bookmarks
+  [repo] Listed * publishing bookmarks in * (glob)
   [repo] Loaded 0 existing components with 0 changesets (rebuild: true)
   [repo] Found 3 new changesets to process
   [repo] Finished calculating GDM sizes

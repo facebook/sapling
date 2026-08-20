@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -204,13 +205,39 @@ async fn update_cgdm(
     let mut cgdm_components = match rebuild {
         false => {
             // Try reading from mutable blobstore first, fall back to immutable
-            let bytes = match repo
+            println!(
+                "[{repo_name}] Loading existing CGDMComponents from mutable blobstore key '{blobstore_key}'"
+            );
+            let mutable_get_start = Instant::now();
+            let mutable_bytes = repo
                 .mutable_repo_blobstore()
                 .get(ctx, &blobstore_key)
-                .await?
-            {
+                .await?;
+            println!(
+                "[{repo_name}] Mutable blobstore lookup completed in {:?} ({})",
+                mutable_get_start.elapsed(),
+                if mutable_bytes.is_some() {
+                    "hit"
+                } else {
+                    "miss"
+                },
+            );
+
+            let bytes = match mutable_bytes {
                 Some(bytes) => Some(bytes),
-                None => repo.repo_blobstore().get(ctx, &blobstore_key).await?,
+                None => {
+                    println!(
+                        "[{repo_name}] Loading existing CGDMComponents from immutable blobstore key '{blobstore_key}'"
+                    );
+                    let immutable_get_start = Instant::now();
+                    let bytes = repo.repo_blobstore().get(ctx, &blobstore_key).await?;
+                    println!(
+                        "[{repo_name}] Immutable blobstore lookup completed in {:?} ({})",
+                        immutable_get_start.elapsed(),
+                        if bytes.is_some() { "hit" } else { "miss" },
+                    );
+                    bytes
+                }
             };
             match bytes {
                 Some(bytes) => CGDMComponents::from_bytes(bytes.as_raw_bytes())?,
@@ -539,6 +566,9 @@ async fn update_all_repos(
                 );
 
                 // Resolve all bookmarks as heads
+                let repo_name = repo.repo_identity().name();
+                println!("[{repo_name}] Listing publishing bookmarks");
+                let bookmark_list_start = Instant::now();
                 let heads: Vec<_> = repo
                     .bookmarks()
                     .list(
@@ -553,6 +583,11 @@ async fn update_all_repos(
                     .map_ok(|(_name, cs_id)| cs_id)
                     .try_collect()
                     .await?;
+                println!(
+                    "[{repo_name}] Listed {} publishing bookmarks in {:?}",
+                    heads.len(),
+                    bookmark_list_start.elapsed(),
+                );
 
                 if heads.is_empty() {
                     println!(
