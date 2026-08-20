@@ -209,6 +209,10 @@ export class VSCodeReposList {
     for (const disposable of this.disposables) {
       disposable.dispose();
     }
+    for (const repo of this.knownRepos.values()) {
+      repo.unref();
+    }
+    this.knownRepos.clear();
   }
 }
 

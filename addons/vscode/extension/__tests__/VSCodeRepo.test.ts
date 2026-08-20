@@ -103,7 +103,9 @@ describe('adding and removing repositories', () => {
     await nextTick();
 
     expect(vscode.scm.createSourceControl).toHaveBeenCalledTimes(1);
+    expect(repositoryCache.numberOfActiveServers()).toBe(1);
     repos.dispose();
+    expect(repositoryCache.numberOfActiveServers()).toBe(0);
   });
 
   it('deduplicates among shared repos', async () => {
