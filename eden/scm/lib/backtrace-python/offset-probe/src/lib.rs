@@ -126,14 +126,20 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
             let last_frame = evalframe_sys::get_last_frame();
 
             for sp_offset in (0..=STACK_SIZE_THRESHOLD).step_by(std::mem::size_of::<usize>()) {
-                let stack_ptr: *const *mut libc::c_void = (sp + sp_offset) as *const _;
-                let value: *mut libc::c_void = unsafe { *stack_ptr };
+                let stack_ptr = (sp + sp_offset) as *const libc::c_void;
+                // SAFETY: `sp` comes from the unwound Sapling_PyEvalFrame frame,
+                // so it is readable and aligned to at least `align_of::<usize>()`
+                // per the platform stack-pointer ABI; `sp_offset` is a multiple
+                // of `size_of::<usize>()` bounded by STACK_SIZE_THRESHOLD, so
+                // `stack_ptr` stays within Sapling_PyEvalFrame's small stack
+                // frame (where the probe values live) and remains word-aligned.
+                let value = unsafe { evalframe_sys::probe_read_stack_word(stack_ptr) };
 
                 let mut has_code = OFFSETS.sp_code.get().is_some();
                 let mut has_line_no = OFFSETS.sp_line_no.get().is_some();
                 let mut has_frame = OFFSETS.sp_frame.get().is_some();
 
-                if !has_code && value as usize == last_code {
+                if !has_code && value == last_code {
                     OFFSETS.sp_code.get_or_init(|| sp_offset);
                     has_code = true;
                 }
@@ -141,7 +147,7 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
                     OFFSETS.sp_line_no.get_or_init(|| sp_offset);
                     has_line_no = true;
                 }
-                if !has_frame && value as usize == last_frame {
+                if !has_frame && value == last_frame {
                     OFFSETS.sp_frame.get_or_init(|| sp_offset);
                     has_frame = true;
                 }

@@ -27,6 +27,7 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h> // @manual=fbsource//third-party/python:python
+#include <stdint.h>
 
 #if defined(_WIN32)
 #define EXPORT __declspec(dllexport)
@@ -72,6 +73,9 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
     PyFrame* f,
     volatile ssize_t* pline_no) {
   if (!f) {
+    return NULL;
+  }
+  if (!pline_no) {
     return NULL;
   }
   // 3.11: f is _PyInterpreterFrame. Need Py_BUILD_CORE_MODULE to access.
@@ -120,9 +124,29 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
 
 // Only used by codegen (offset-probe) in a controlled way.
 // Not used by regular runs. Set by Sapling_PyEvalFrameProbe.
+// NOLINTNEXTLINE(facebook-avoid-non-const-global-variables)
 static size_t last_frame = 0;
+// NOLINTNEXTLINE(facebook-avoid-non-const-global-variables)
 static size_t last_code = 0;
+// NOLINTNEXTLINE(facebook-avoid-non-const-global-variables)
 static volatile ssize_t last_line_no = 0;
+
+#if defined(__clang__) || defined(__GNUC__)
+#define NO_SANITIZE_ADDRESS __attribute__((no_sanitize("address")))
+#else
+#define NO_SANITIZE_ADDRESS
+#endif
+
+// Only used by offset-probe to scan Sapling_PyEvalFrame stack slots. The
+// scanned range is bounded by the caller, but ASan poisons stack redzones and
+// reports the intentional probe reads as stack-buffer-underflow.
+EXPORT uintptr_t NO_SANITIZE_ADDRESS
+sapling_cext_evalframe_probe_read_stack_word(const void* p) {
+  if (!p) {
+    return 0;
+  }
+  return *(const volatile uintptr_t*)p;
+}
 
 // Runtime evalframe: minimal overhead, does not track last_frame.
 EXPORT PyObject* NO_OPT
@@ -208,6 +232,9 @@ EXPORT const char* sapling_cext_evalframe_resolve_code_object(
   if (!code) {
     goto out;
   }
+  if (!pfilename) {
+    goto out;
+  }
   PyObject* filename_obj = code->co_filename;
   PyObject* name_obj = code->co_name;
   if (!filename_obj || !name_obj || !PyUnicode_Check(filename_obj) ||
@@ -279,6 +306,7 @@ out:
  * if the type mismatches.
  */
 EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   PyFrame* f = (PyFrame*)address;
   ssize_t line_no = 0;
   PyCodeObject* code =

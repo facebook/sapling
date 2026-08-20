@@ -113,6 +113,19 @@ pub fn get_last_frame() -> usize {
     unsafe { sapling_cext_evalframe_get_last_frame() }
 }
 
+/// Read one machine word from a native stack address during offset probing.
+///
+/// # Safety
+/// - `ptr` must be readable for `usize` bytes.
+/// - `ptr` must be aligned to `align_of::<usize>()`: the C implementation
+///   performs a typed `*(const volatile uintptr_t*)ptr` read, and a
+///   readability check alone does not establish alignment.
+/// - This is only intended for the bounded `Sapling_PyEvalFrame` stack scan
+///   performed by the offset probe.
+pub unsafe fn probe_read_stack_word(ptr: *const libc::c_void) -> usize {
+    unsafe { sapling_cext_evalframe_probe_read_stack_word(ptr) }
+}
+
 // Raw FFI declarations for evalframe.c
 unsafe extern "C" {
     fn sapling_cext_evalframe_set_mode(mode: libc::c_int);
@@ -134,6 +147,8 @@ unsafe extern "C" {
     fn sapling_cext_evalframe_get_last_frame() -> usize;
     fn sapling_cext_evalframe_get_last_code() -> usize;
     fn sapling_cext_evalframe_get_last_line_no() -> isize;
+
+    fn sapling_cext_evalframe_probe_read_stack_word(ptr: *const libc::c_void) -> usize;
 
     // The pass-through eval frame function. We use its address and scans its stack.
     // It's not called directly.
