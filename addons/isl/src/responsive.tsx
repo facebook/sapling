@@ -61,12 +61,28 @@ export function useMainContentWidth() {
 
 export const NARROW_COMMIT_TREE_WIDTH = 800;
 export const NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT = 300;
+export const VERY_NARROW_COMMIT_TREE_WIDTH = 500;
+export const VERY_NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT = 200;
 
-export const isNarrowCommitTree = atom(
-  get =>
-    get(mainContentWidthState) <
-    (get(renderCompactAtom) ? NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT : NARROW_COMMIT_TREE_WIDTH),
-);
+export type CommitTreeWidth = 'wide' | 'narrow' | 'very-narrow';
+
+/**
+ * Categorizes the available commit-tree width so layout consumers can coordinate their behavior
+ * without independently combining overlapping breakpoint atoms.
+ */
+export const commitTreeWidth = atom<CommitTreeWidth>(get => {
+  const width = get(mainContentWidthState);
+  const compact = get(renderCompactAtom);
+  const veryNarrowWidth = compact
+    ? VERY_NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT
+    : VERY_NARROW_COMMIT_TREE_WIDTH;
+  if (width < veryNarrowWidth) {
+    return 'very-narrow';
+  }
+
+  const narrowWidth = compact ? NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT : NARROW_COMMIT_TREE_WIDTH;
+  return width < narrowWidth ? 'narrow' : 'wide';
+});
 
 /**
  * Tracks the window/viewport width. Unlike mainContentWidthState, this is

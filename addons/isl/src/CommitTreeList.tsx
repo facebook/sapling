@@ -8,6 +8,7 @@
 import type {RenderGlyphResult} from './RenderDag';
 import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
+import type {CommitTreeWidth} from './responsive';
 import type {Hash} from './types';
 
 import {Button} from 'isl-components/Button';
@@ -33,7 +34,7 @@ import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitial
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {hideIrrelevantCwdStacks, isIrrelevantToCwd, repoRelativeCwd} from './repositoryData';
-import {isNarrowCommitTree} from './responsive';
+import {commitTreeWidth} from './responsive';
 import {
   selectedCommits,
   useArrowKeysToChangeSelection,
@@ -49,7 +50,7 @@ import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
 
 type DagCommitListProps = {
-  isNarrow: boolean;
+  width: CommitTreeWidth;
 };
 
 const YOU_ARE_HERE_ANCHOR_ID = 'isl-you-are-here-anchor';
@@ -134,7 +135,7 @@ const renderSubsetUnionSelection = atom(get => {
 });
 
 function DagCommitList(props: DagCommitListProps) {
-  const {isNarrow} = props;
+  const {width} = props;
 
   const dag = useAtomValue(dagWithYouAreHere);
   const subset = useAtomValue(renderSubsetUnionSelection);
@@ -171,7 +172,11 @@ function DagCommitList(props: DagCommitListProps) {
     <RenderDag
       dag={dag}
       subset={subset}
-      className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
+      className={
+        'commit-tree-root ' +
+        (width !== 'wide' ? ' commit-tree-narrow' : '') +
+        (width === 'very-narrow' ? ' commit-tree-very-narrow' : '')
+      }
       data-testid="commit-tree-root"
       renderCommit={renderCommit}
       renderCommitExtras={renderCommitExtras}
@@ -408,7 +413,7 @@ export function CommitTreeList() {
   useBackspaceToHideSelected();
   useShortcutToRebaseSelected();
 
-  const isNarrow = useAtomValue(isNarrowCommitTree);
+  const treeWidth = useAtomValue(commitTreeWidth);
 
   const {trees} = useAtomValue(treeWithPreviews);
   const fetchError = useAtomValue(commitFetchError);
@@ -430,7 +435,7 @@ export function CommitTreeList() {
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
       <ScrollToCurrentCommitButton slot="above" />
-      <DagCommitList isNarrow={isNarrow} />
+      <DagCommitList width={treeWidth} />
       <ScrollToCurrentCommitButton slot="below" />
       <MaybeEditStackModal />
     </>

@@ -81,7 +81,7 @@ import platform from './platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate, relativeDate} from './relativeDate';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from './repositoryData';
-import {isNarrowCommitTree} from './responsive';
+import {commitTreeWidth} from './responsive';
 import {
   actioningCommit,
   selectedCommitInfos,
@@ -193,7 +193,7 @@ export const Commit = memo(
 
     const inConflicts = useAtomValue(inMergeConflicts);
 
-    const isNarrow = useAtomValue(isNarrowCommitTree);
+    const treeWidth = useAtomValue(commitTreeWidth);
 
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
 
@@ -769,10 +769,14 @@ export const Commit = memo(
               fullRepoBranch={commit.fullRepoBranch}
             />
             {isPublic ? <CommitDate date={commit.date} /> : null}
-            {isNarrow ? (
+            {treeWidth !== 'wide' ? (
               <>
                 {inlineCommitActions}
-                <div className="commit-narrow-right-actions">{floatingCommitActions}</div>
+                {treeWidth === 'very-narrow' ? (
+                  <div className="commit-narrow-right-actions">{floatingCommitActions}</div>
+                ) : (
+                  floatingCommitActions
+                )}
               </>
             ) : null}
           </DragToRebase>
@@ -786,7 +790,7 @@ export const Commit = memo(
             {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
             {commit.isFollower ? <DiffFollower commit={commit} /> : null}
           </DivIfChildren>
-          {!isNarrow ? commitActions : null}
+          {treeWidth === 'wide' ? commitActions : null}
         </div>
       </div>
     );

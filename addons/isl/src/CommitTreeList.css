@@ -143,8 +143,12 @@
 .commit-tree-narrow .commit-details {
   flex-wrap: wrap;
   margin-right: 0;
-  padding-right: 60px;
+  padding-right: 0;
   z-index: 0;
+}
+
+.commit-tree-very-narrow .commit-details {
+  padding-right: 60px;
 }
 
 .commit-narrow-right-actions {
