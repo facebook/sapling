@@ -340,7 +340,11 @@ TEST_F(EdenServerTest, TakeoverSendFailureRecoversDuringCleanup) {
   auto originalHandler = server.getHandler();
   ASSERT_NO_FATAL_FAILURE(
       driveTakeoverSendFailureToCleanup(testServer(), server));
-  EXPECT_FALSE(server.performCleanup());
+  ASSERT_FALSE(server.performCleanup());
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
   EXPECT_NE(originalHandler, server.getHandler());
 }
 
@@ -353,6 +357,11 @@ TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {
   ASSERT_NO_FATAL_FAILURE(
       driveTakeoverSendFailureToCleanup(nfsTestServer, server));
   ASSERT_FALSE(server.performCleanup());
+
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
 
   std::thread recoveryEventBaseThread(
       [&server] { server.getMainEventBase()->loop(); });
