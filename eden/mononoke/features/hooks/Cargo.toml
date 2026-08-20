@@ -26,7 +26,7 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 either = "1.17.0"
-fancy-regex = "0.18.0"
+fancy-regex = "0.19.0"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
