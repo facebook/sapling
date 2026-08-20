@@ -15,12 +15,15 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
+#include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/synchronization/CallOnce.h>
 
@@ -75,6 +78,8 @@ class IoUringFuseTransport final : public FuseTransport {
   FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
   FRIEND_TEST(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait);
   FRIEND_TEST(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait);
+  FRIEND_TEST(FuseChannelTest, ioUringStopWakeupBeforeEventFdPublished);
+  FRIEND_TEST(FuseChannelTest, ioUringRequestStopWakeupBeforeRingPoolPublished);
 
   struct RingPool;
 
@@ -112,7 +117,10 @@ class IoUringFuseTransport final : public FuseTransport {
 
     RingPool* pool{nullptr};
     size_t queueId{0};
-    int eventFd{-1};
+    // -1 until the owning worker publishes a real fd. May transiently hold
+    // IoUringFuseTransport::kStopRequestedBeforeReady if requestStopWakeup()
+    // ran before publication; see requestQueueStopWakeup().
+    std::atomic<int> eventFd{-1};
     size_t requestHeaderSize{sizeof(fuse_uring_req_header)};
     std::thread::id ownerThreadId;
     io_uring ring{};
@@ -152,7 +160,26 @@ class IoUringFuseTransport final : public FuseTransport {
     std::optional<DecodedRequest> request;
   };
 
+  // Guards ringPool_ only across the boundary between the worker thread that
+  // constructs/owns it and requestStopWakeup(), which may run on a thread
+  // that never synchronizes with that worker via folly::call_once (see
+  // initializeSession()). processSession() and its helpers read ringPool_
+  // without this lock: they always run after folly::call_once has completed
+  // initializeRingPool() for the calling thread, which already establishes
+  // the necessary happens-before edge.
+  //
+  // Those unlocked reads also depend on ringPool_ outliving every worker:
+  // destroyRingPool() is only reachable from ~IoUringFuseTransport(), which
+  // runs after the worker threads have been joined. If teardown ever moves
+  // to a point where workers can still be running, processSession() and its
+  // helpers must take the shared lock too.
+  mutable folly::SharedMutex ringPoolMutex_;
   std::unique_ptr<RingPool> ringPool_;
+
+  // Sentinel stored in RingQueue::eventFd to record that requestStopWakeup()
+  // observed the queue before its eventfd was published. See
+  // requestQueueStopWakeup().
+  static constexpr int kStopRequestedBeforeReady = -2;
 
   // io_uring error handelings are aligned with the libfuse error handling
   static bool isTransientSubmitAndWaitError(int result);
@@ -187,6 +214,7 @@ class IoUringFuseTransport final : public FuseTransport {
   bool shouldExitWorkerLoop(const FuseChannel& channel, const RingQueue& queue)
       const;
   void notifyWorker(const RingQueue& queue) const;
+  void requestQueueStopWakeup(RingQueue& queue) const;
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);

@@ -244,7 +244,7 @@ IoUringFuseTransport::RingQueue::~RingQueue() noexcept {
 IoUringFuseTransport::RingQueue::RingQueue(RingQueue&& other) noexcept
     : pool{other.pool},
       queueId{other.queueId},
-      eventFd{other.eventFd},
+      eventFd{other.eventFd.exchange(-1, std::memory_order_acq_rel)},
       requestHeaderSize{other.requestHeaderSize},
       ownerThreadId{other.ownerThreadId},
       ring{other.ring},
@@ -264,7 +264,9 @@ IoUringFuseTransport::RingQueue& IoUringFuseTransport::RingQueue::operator=(
 
   pool = other.pool;
   queueId = other.queueId;
-  eventFd = other.eventFd;
+  eventFd.store(
+      other.eventFd.exchange(-1, std::memory_order_acq_rel),
+      std::memory_order_release);
   requestHeaderSize = other.requestHeaderSize;
   ownerThreadId = other.ownerThreadId;
   ring = other.ring;
@@ -280,7 +282,7 @@ IoUringFuseTransport::RingQueue& IoUringFuseTransport::RingQueue::operator=(
 void IoUringFuseTransport::RingQueue::resetMovedFrom() noexcept {
   pool = nullptr;
   queueId = 0;
-  eventFd = -1;
+  eventFd.store(-1, std::memory_order_relaxed);
   requestHeaderSize = sizeof(fuse_uring_req_header);
   ownerThreadId = {};
   ring = {};
@@ -296,8 +298,9 @@ void IoUringFuseTransport::RingQueue::reset() noexcept {
     ring.ring_fd = -1;
   }
 
-  if (eventFd >= 0) {
-    if (close(eventFd) != 0) {
+  const auto fd = eventFd.exchange(-1, std::memory_order_acq_rel);
+  if (fd >= 0) {
+    if (close(fd) != 0) {
       const auto savedErrno = errno;
       XLOGF(
           WARN,
@@ -305,7 +308,6 @@ void IoUringFuseTransport::RingQueue::reset() noexcept {
           queueId,
           savedErrno);
     }
-    eventFd = -1;
   }
 }
 
@@ -348,6 +350,7 @@ void IoUringFuseTransport::initializeRingPool(
     queue.entries.resize(queueDepth_);
   }
 
+  std::unique_lock lock{ringPoolMutex_};
   ringPool_ = std::move(ringPool);
 }
 
@@ -363,8 +366,21 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
 }
 
 void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
+  int eventFd = -1;
   auto maybeSetupError = setupQueue(
-      queueDepth_, fuseFd, queue.eventFd, queue.ring, queue.ringInitialized);
+      queueDepth_, fuseFd, eventFd, queue.ring, queue.ringInitialized);
+  const auto previousEventFdState =
+      queue.eventFd.exchange(eventFd, std::memory_order_acq_rel);
+  if (previousEventFdState == kStopRequestedBeforeReady && eventFd >= 0) {
+    // requestStopWakeup() ran before this queue's eventfd was published, so
+    // that wakeup would otherwise have been silently dropped. Self-notify now
+    // that the fd is known -- before throwing below on setup failure -- so
+    // the worker doesn't block indefinitely in io_uring_submit_and_wait() if
+    // it somehow reached that loop despite the error, and so the pending
+    // wakeup isn't discarded by the exchange() above without ever being
+    // acted on.
+    notifyWorker(queue);
+  }
   if (maybeSetupError.has_value()) {
     throwIoUringSetupError(*maybeSetupError, queue.queueId);
   }
@@ -417,7 +433,7 @@ void IoUringFuseTransport::initializeQueueForWorker(
       queue.queueId,
       queue.entries.size(),
       rc,
-      queue.eventFd,
+      queue.eventFd.load(std::memory_order_acquire),
       queue.ring.ring_fd);
 }
 
@@ -726,13 +742,41 @@ bool IoUringFuseTransport::shouldExitWorkerLoop(
 }
 
 void IoUringFuseTransport::notifyWorker(const RingQueue& queue) const {
-  if (eventfd_write(queue.eventFd, 1) != 0) {
+  // Every caller (queueCommitAndFetch(), the self-notify in
+  // initializeQueue(), and requestQueueStopWakeup()'s fallback) already
+  // guarantees the eventfd is published before calling this. Don't silently
+  // ignore an unpublished/invalid fd here, since that would mask a genuine
+  // caller bug instead of surfacing it.
+  const auto eventFd = queue.eventFd.load(std::memory_order_acquire);
+  if (eventfd_write(eventFd, 1) != 0) {
     throw std::system_error(
         errno,
         std::generic_category(),
         fmt::format(
             "failed to notify io_uring worker for queue {}", queue.queueId));
   }
+}
+
+void IoUringFuseTransport::requestQueueStopWakeup(RingQueue& queue) const {
+  auto fd = queue.eventFd.load(std::memory_order_acquire);
+  while (fd < 0 && fd != kStopRequestedBeforeReady) {
+    // The owning worker hasn't published its eventfd yet. Record that a stop
+    // wakeup is owed so initializeQueue() can self-notify once it publishes
+    // the fd, instead of silently dropping this wakeup the way a plain
+    // load-then-write would.
+    if (queue.eventFd.compare_exchange_weak(
+            fd,
+            kStopRequestedBeforeReady,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+      return;
+    }
+  }
+  if (fd == kStopRequestedBeforeReady) {
+    // Another call already recorded the pending wakeup.
+    return;
+  }
+  notifyWorker(queue);
 }
 
 void IoUringFuseTransport::prepareCommitAndFetchSqe(
@@ -764,7 +808,17 @@ fuse_uring_ent_in_out& IoUringFuseTransport::getRingEntryInOut(
 }
 
 void IoUringFuseTransport::destroyRingPool() noexcept {
-  ringPool_.reset();
+  // Take the pool out under the exclusive lock so this waits for any
+  // requestStopWakeup() call already iterating queues under the shared lock
+  // to finish first, and so any later requestStopWakeup() call observes
+  // ringPool_ as null instead of a dangling pointer. The actual teardown
+  // (io_uring_queue_exit(), closing fds) happens after releasing the lock,
+  // since by then no reader can still be holding a reference to `pool`.
+  std::unique_ptr<RingPool> pool;
+  {
+    std::unique_lock lock{ringPoolMutex_};
+    pool = std::move(ringPool_);
+  }
 }
 
 void* IoUringFuseTransport::allocatePageAlignedBuffer(size_t size) {
@@ -959,13 +1013,20 @@ size_t IoUringFuseTransport::getWorkerThreadCount(
 
 void IoUringFuseTransport::requestStopWakeup() {
 #if EDEN_HAVE_FUSE_IO_URING
+  // May run on a thread that never called initializeSession()/
+  // initializeRingPool(), so ringPool_ itself (a plain unique_ptr) cannot be
+  // read directly here without racing its publication in initializeRingPool()
+  // or its teardown in destroyRingPool(). Hold the shared lock for the
+  // entire loop below (not just to fetch the pointer) so destroyRingPool()
+  // cannot free the pool out from under an in-progress iteration.
+  std::shared_lock lock{ringPoolMutex_};
   if (!ringPool_) {
     return;
   }
 
-  for (const auto& queue : ringPool_->queues) {
+  for (auto& queue : ringPool_->queues) {
     try {
-      notifyWorker(queue);
+      requestQueueStopWakeup(queue);
     } catch (const std::exception& ex) {
       XLOGF(
           ERR,

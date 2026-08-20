@@ -16,6 +16,7 @@
 #if EDEN_HAVE_FUSE_IO_URING
 #include <fcntl.h>
 #include <folly/File.h>
+#include <sys/eventfd.h>
 #include <sys/utsname.h>
 #endif
 #include <cerrno>
@@ -438,6 +439,42 @@ TEST_F(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait) {
   transport.initializeQueue(queue, devNull.fd());
 
   EXPECT_FALSE(queue.ring.int_flags & IORING_ENTER_NO_IOWAIT);
+}
+
+TEST_F(FuseChannelTest, ioUringRequestStopWakeupBeforeRingPoolPublished) {
+  constexpr uint32_t kQueueDepth = 4;
+  IoUringFuseTransport transport{kQueueDepth};
+  // requestStopWakeup() can run on the shutdown thread before any worker
+  // thread has called initializeSession()/initializeRingPool(), i.e. before
+  // ringPool_ is published. It must be a safe no-op in that case rather than
+  // racing the plain unique_ptr read.
+  EXPECT_NO_THROW(transport.requestStopWakeup());
+}
+
+TEST_F(FuseChannelTest, ioUringStopWakeupBeforeEventFdPublished) {
+  folly::File devNull{"/dev/null", O_RDWR};
+  constexpr uint32_t kQueueDepth = 4;
+  if (IoUringFuseTransport::getMaybeSetupError(kQueueDepth, devNull.fd())) {
+    GTEST_SKIP() << "io_uring setup unavailable in this environment";
+  }
+
+  IoUringFuseTransport transport{kQueueDepth};
+  IoUringFuseTransport::RingQueue queue;
+
+  // Simulate requestStopWakeup() racing ahead of initializeQueue(): the
+  // queue's eventfd hasn't been published yet, so this must record the
+  // pending wakeup instead of silently dropping it.
+  transport.requestQueueStopWakeup(queue);
+
+  transport.initializeQueue(queue, devNull.fd());
+
+  // initializeQueue() must self-notify the freshly published eventfd,
+  // otherwise the worker could block indefinitely in
+  // io_uring_submit_and_wait() waiting for a wakeup that was already
+  // requested.
+  eventfd_t value = 0;
+  ASSERT_EQ(0, eventfd_read(queue.eventFd.load(), &value));
+  EXPECT_EQ(1, value);
 }
 #endif
 
