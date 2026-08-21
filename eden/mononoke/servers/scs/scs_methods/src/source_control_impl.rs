@@ -132,8 +132,6 @@ define_stats! {
     total_request_internal_failure_permille: timeseries(Average),
     total_request_invalid_permille: timeseries(Average),
 
-    // Duration per method
-    method_completion_time_ms: dynamic_quantile_stat("method.{}.completion_time_ms", (method: String); Average, Sum, Count; P 5, P 50, P 90; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     total_method_requests:  dynamic_timeseries("method.{}.total_method_requests", (method: String); Rate, Sum),
     total_method_internal_failure:  dynamic_timeseries("method.{}.total_method_internal_failure", (method: String); Rate, Sum),
 
@@ -970,10 +968,6 @@ fn log_result<T: AddScubaResponse>(
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
     STATS::total_request_overloaded.add_value(overloaded);
-    STATS::method_completion_time_ms.add_value(
-        stats.completion_time.as_millis_unchecked() as i64,
-        (method.to_string(),),
-    );
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
@@ -1140,11 +1134,6 @@ fn log_stream_complete(
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
     STATS::total_request_overloaded.add_value(overloaded);
-    // Only accounts for the time to start the stream, not the overall time.
-    STATS::method_completion_time_ms.add_value(
-        initial_future_stats.completion_time.as_millis_unchecked() as i64,
-        (method.to_string(),),
-    );
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 

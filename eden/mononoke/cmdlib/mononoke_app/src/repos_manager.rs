@@ -69,11 +69,6 @@ fn repos_manager_concurrency() -> Result<usize> {
 
 define_stats! {
     prefix = "mononoke.app";
-    initialization_time_millisecs: dynamic_timeseries(
-        "initialization_time_millisecs.{}",
-        (reponame: String);
-        Average, Sum, Count
-    ),
     completion_duration_secs: timeseries(Average, Sum, Count),
     // Deep-shard repo load failures (config load or facet build) via add_repo,
     // the chokepoint every deep-shard load funnels through.
@@ -278,11 +273,6 @@ impl<Repo> MononokeReposManager<Repo> {
                         .with_context(|| format!("Failed to initialize repo '{repo_name}'"))?;
                     let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
                     info!("Initialized repo: {} ({}/{})", &repo_name, n, total);
-                    STATS::initialization_time_millisecs.add_value(
-                        start.elapsed().as_millis().try_into().unwrap_or(i64::MAX),
-                        (repo_name.to_string(),),
-                    );
-
                     #[cfg(fbcode_build)]
                     let instrument = Instrument_MononokeAppStats::new();
                     #[cfg(fbcode_build)]
