@@ -28,14 +28,14 @@ describe('FileLogger', () => {
   });
 
   it('appends log lines to the file', async () => {
+    const appendFile = jest.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined);
     const logger = new FileLogger(logFile);
-    logger.info('hello');
-    logger.error('goodbye');
+    logger.write('info', '[time]', 'hello');
+    logger.write('error', '[time]', 'goodbye');
     await logger.flushForTests();
 
-    const contents = await fs.promises.readFile(logFile, 'utf-8');
-    expect(contents).toContain(' [INFO] hello\n');
-    expect(contents).toContain('[ERROR] goodbye\n');
+    expect(appendFile).toHaveBeenNthCalledWith(1, logFile, '[time]  [INFO] hello\n');
+    expect(appendFile).toHaveBeenNthCalledWith(2, logFile, '[time] [ERROR] goodbye\n');
   });
 
   it('does not reject when the log directory has been deleted', async () => {
