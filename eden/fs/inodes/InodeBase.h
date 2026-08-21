@@ -32,6 +32,7 @@
 namespace facebook::eden {
 
 class EdenMount;
+class InodeMap;
 class ObjectFetchContext;
 class ObjectStore;
 class ParentInodeInfo;
@@ -536,7 +537,12 @@ class InodeBase {
 
   template <typename InodeType>
   friend class InodePtrImpl;
+  friend class InodeMap;
   friend class InodePtrTestHelper;
+
+  void restoreLastFsRequestTime(EdenTimestamp timestamp) {
+    lastFsRequestTime_.store(timestamp, std::memory_order_relaxed);
+  }
 
   // Forbid copies and moves (we cannot be moved since we contain mutexes)
   InodeBase(InodeBase const&) = delete;

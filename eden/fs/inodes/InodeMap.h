@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
@@ -454,7 +455,8 @@ class InodeMap {
     UnloadedInode(
         InodeNumber parentNum,
         PathComponentPiece entryName,
-        mode_t mode);
+        mode_t mode,
+        EdenTimestamp lastFsRequestTime);
 
     UnloadedInode(
         InodeNumber parentNum,
@@ -462,13 +464,8 @@ class InodeMap {
         bool isUnlinked,
         mode_t mode,
         std::optional<ObjectId> id,
-        uint32_t fsRefcount);
-    UnloadedInode(
-        TreeInode* parent,
-        PathComponentPiece entryName,
-        bool isUnlinked,
-        std::optional<ObjectId> id,
-        uint32_t fsRefcount);
+        uint32_t fsRefcount,
+        EdenTimestamp lastFsRequestTime);
     UnloadedInode(
         FileInode* inode,
         TreeInode* parent,
@@ -504,6 +501,8 @@ class InodeMap {
      * If the entry is materialized, this field is not set.
      */
     std::optional<ObjectId> const id;
+
+    EdenTimestamp const lastFsRequestTime;
 
     /**
      * A list of promises waiting on this inode to be loaded.

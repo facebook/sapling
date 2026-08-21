@@ -30,6 +30,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/NotImplemented.h"
 
 using folly::Future;
@@ -43,8 +44,12 @@ namespace facebook::eden {
 InodeMap::UnloadedInode::UnloadedInode(
     InodeNumber parentNum,
     PathComponentPiece entryName,
-    mode_t mode)
-    : parent(parentNum), name(entryName), mode{mode} {}
+    mode_t mode,
+    EdenTimestamp lastFsRequestTime)
+    : parent(parentNum),
+      name(entryName),
+      mode{mode},
+      lastFsRequestTime{lastFsRequestTime} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     InodeNumber parentNum,
@@ -52,33 +57,14 @@ InodeMap::UnloadedInode::UnloadedInode(
     bool isUnlinked,
     mode_t mode,
     std::optional<ObjectId> id,
-    uint32_t fsRefcount)
+    uint32_t fsRefcount,
+    EdenTimestamp lastFsRequestTime)
     : parent(parentNum),
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
       id{std::move(id)},
-      numFsReferences{fsRefcount} {
-  if (folly::kIsWindows) {
-    XDCHECK_LE(numFsReferences, 1u);
-  }
-}
-
-InodeMap::UnloadedInode::UnloadedInode(
-    TreeInode* parent,
-    PathComponentPiece entryName,
-    bool isUnlinked,
-    std::optional<ObjectId> id,
-    uint32_t fsRefcount)
-    : parent{parent->getNodeId()},
-      name{entryName},
-      isUnlinked{isUnlinked},
-      // There is no asTree->getMode() we can call,
-      // however, directories are always represented with
-      // this specific mode bit pattern in eden so we can
-      // force the value down here.
-      mode{S_IFDIR | 0755},
-      id{std::move(id)},
+      lastFsRequestTime{lastFsRequestTime},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -96,6 +82,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
       id{inode->getObjectId()},
+      lastFsRequestTime{inode->getLastFsRequestTime()},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -248,7 +235,10 @@ void InodeMap::initializeFromTakeover(
         *entry.isUnlinked(),
         *entry.mode(),
         std::move(id),
-        folly::to<uint32_t>(*entry.numFsReferences()));
+        folly::to<uint32_t>(*entry.numFsReferences()),
+        entry.lastFsRequestTime().has_value()
+            ? EdenTimestamp::fromSerializedValue(*entry.lastFsRequestTime())
+            : EdenTimestamp{mount_->getClock().getRealtime()});
   }
 
   XLOGF(
@@ -298,7 +288,8 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
           false,
           dirent.getInitialMode(),
           dirent.getOptionalObjectId(),
-          1);
+          1,
+          EdenTimestamp{mount_->getClock().getRealtime()});
     }
   }
 
@@ -530,6 +521,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
       swap(promises, it->second.promises);
 
       inode->setChannelRefcount(it->second.numFsReferences);
+      inode->restoreLastFsRequestTime(it->second.lastFsRequestTime);
 
       // Insert the entry into loadedInodes_ and remove it from unloadedInodes_
       insertLoadedInode(data, inode);
@@ -1044,6 +1036,8 @@ Future<SerializedInodeMap> InodeMap::shutdown(
       }
       // If entry.id is empty, the inode is materialized.
       serializedEntry.mode() = entry.mode;
+      serializedEntry.lastFsRequestTime() =
+          entry.lastFsRequestTime.toSerializedValue();
 
       result.unloadedInodes()->emplace_back(std::move(serializedEntry));
     }
@@ -1271,6 +1265,18 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     // guaranteed not held. Therefore, it's not necessary to synchronize, and
     // the contents can be directly accessed here.
     auto& treeContents = asTree->getContentsUnchecked().unsafeGetUnlocked();
+    auto makeUnloadedTree = [&] {
+      // TreeInode does not expose a mode; Eden directories use this mode when
+      // represented in the unloaded inode map.
+      return UnloadedInode(
+          parent->getNodeId(),
+          name,
+          isUnlinked,
+          S_IFDIR | 0755,
+          treeContents.treeId,
+          fsCount,
+          asTree->getLastFsRequestTime());
+    };
 
     // If the fs refcount is non-zero we have to remember this inode.
     if (fsCount > 0) {
@@ -1280,8 +1286,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
           inode->getNodeId(),
           fsCount,
           inode->getLogPath());
-      return UnloadedInode(
-          parent, name, isUnlinked, treeContents.treeId, fsCount);
+      return makeUnloadedTree();
     }
 
     // If any of this inode's children are in unloadedInodes_, then this
@@ -1296,8 +1301,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
             asTree->getNodeId(),
             asTree->getLogPath(),
             childName);
-        return UnloadedInode(
-            parent, name, isUnlinked, treeContents.treeId, fsCount);
+        return makeUnloadedTree();
       }
     }
     return std::nullopt;
@@ -1340,7 +1344,11 @@ bool InodeMap::startLoadingChildIfNotLoading(
       // T127459236: not all attributes of the UnloadedInode are set here. For
       // example, isUnlinked, id, and numFsReferences are set to default
       // values
-      auto newUnloadedData = UnloadedInode(parentNumber, name, mode);
+      auto newUnloadedData = UnloadedInode(
+          parentNumber,
+          name,
+          mode,
+          EdenTimestamp{mount_->getClock().getRealtime()});
       unloadedData =
           &insertUnloadedInode(data, childInode, std::move(newUnloadedData));
     } else {

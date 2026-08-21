@@ -737,6 +737,26 @@ TEST_F(
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
 
+#ifndef _WIN32
+TEST_F(InodePersistenceTreeTest, preservesLastFsRequestTimeDuringTakeover) {
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
+  auto file = testMount.getInode("dir/file1.txt"_relpath);
+  file->incFsRefcount();
+  const auto inodeNumber = file->getNodeId();
+  const auto expectedLastFsRequestTime = file->getLastFsRequestTime();
+
+  testMount.getClock().advance(120s);
+  edenMount.reset();
+  file.reset();
+  testMount.remountGracefully();
+
+  auto reloaded =
+      testMount.getEdenMount()->getInodeMap()->lookupInode(inodeNumber).get();
+  EXPECT_EQ(expectedLastFsRequestTime, reloaded->getLastFsRequestTime());
+}
+#endif
+
 // Verify createInodeLoadFailEvent publishes a FAIL event when a load fails
 // for an inode in unloadedInodes_.
 TEST(InodeMap, createInodeLoadFailEventPublishesFailEvent) {

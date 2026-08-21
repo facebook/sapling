@@ -87,6 +87,21 @@ class EdenTimestamp {
    */
   timespec toFileTime() const noexcept;
 
+  using SerializedValue = uint64_t;
+
+  /**
+   * Converts the timestamp to and from EdenFS's persistent wire encoding.
+   * The value is an opaque nanosecond offset from the earliest timestamp
+   * representable by EdenTimestamp.
+   */
+  SerializedValue toSerializedValue() const noexcept {
+    return nsec_;
+  }
+
+  static EdenTimestamp fromSerializedValue(SerializedValue value) noexcept {
+    return EdenTimestamp{value};
+  }
+
   /**
    * Returns the raw representation -- should be for testing only.  :)
    */

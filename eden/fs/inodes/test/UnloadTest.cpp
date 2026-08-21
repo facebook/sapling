@@ -266,6 +266,31 @@ TEST(UnloadLastAccessedBefore, cancellationStopsUnloading) {
       edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
 }
 
+TEST(UnloadLastAccessedBefore, preservesLastFsRequestTimeAcrossReload) {
+  FakeTreeBuilder builder;
+  builder.setFile("file.txt", "contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  auto inode = testMount.getInode("file.txt"_relpath);
+  auto inodeNumber = inode->getNodeId();
+  inode->incFsRefcount();
+  auto lastFsRequestTime = inode->getLastFsRequestTime();
+
+  testMount.getClock().advance(120s);
+  auto cutoff = testMount.getClock().getRealtime();
+  inode.reset();
+
+  EXPECT_GT(
+      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
+  EXPECT_FALSE(inodeMap->lookupLoadedInode(inodeNumber));
+  EXPECT_GT(inodeMap->getInodeCounts().unloadedInodeCount, 0);
+
+  auto reloaded = inodeMap->lookupInode(inodeNumber).get();
+  EXPECT_EQ(lastFsRequestTime, reloaded->getLastFsRequestTime());
+}
+
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

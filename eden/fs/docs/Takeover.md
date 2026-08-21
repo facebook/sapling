@@ -89,6 +89,7 @@ The thrift file defines the message types exchanged over the takeover socket:
   - `numFsReferences` - Number of filesystem references
   - `hash` - Optional object hash (unset means materialized)
   - `mode` - The inode mode bits
+  - `lastFsRequestTime` - Optional `EdenTimestamp` persistent wire value
 
 - `enum FileDescriptorType` - Types of file descriptors transferred:
   - `LOCK_FILE` - The EdenFS lock file
