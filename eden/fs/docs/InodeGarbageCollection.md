@@ -80,6 +80,11 @@ filesystem. This function:
 2. Unloads any inode whose filesystem reference count is zero
 3. Removes the inode from memory and the InodeMap
 
+For pressure-based FUSE GC, a zero-reference tree remains loaded when unloading
+it would immediately recreate an `unloadedInodes_` record because it still
+anchors a remembered child. This avoids repeatedly loading and unloading the
+same directory ancestry between GC cycles.
+
 ---
 
 ## Platform-Specific GC Behavior

@@ -599,6 +599,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   size_t unloadChildrenUnreferencedByFs(
       const folly::CancellationToken& cancellationToken = {});
 
+  struct InodeGCUnloadResult {
+    size_t unloaded{0};
+    size_t zeroFsRefTreesRetained{0};
+  };
+
+  InodeGCUnloadResult unloadChildrenUnreferencedByFsForInodeGC(
+      const folly::CancellationToken& cancellationToken = {});
+
 #ifndef _WIN32
   /**
    * Unload all unreferenced inodes under this tree whose last access time is

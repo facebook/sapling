@@ -6182,16 +6182,21 @@ ImmediateFuture<InodePtr> TreeInode::loadChildLocked(
 
 namespace {
 /**
- * WARNING: predicate is called while the InodeMap and TreeInode contents
- * locks are held.
+ * WARNING: predicate and shouldKeep are called while the InodeMap and
+ * TreeInode contents locks are held.
  */
-template <typename Recurse, typename Predicate, typename ShouldCancel>
+template <
+    typename Recurse,
+    typename Predicate,
+    typename ShouldKeep,
+    typename ShouldCancel>
 size_t unloadChildrenIf(
     TreeInode* const self,
     InodeMap* const inodeMap,
     std::vector<TreeInodePtr>& treeChildren,
     Recurse&& recurse,
     Predicate&& predicate,
+    ShouldKeep&& shouldKeep,
     ShouldCancel&& shouldCancel) {
   size_t unloadCount = 0;
 
@@ -6231,6 +6236,10 @@ size_t unloadChildrenIf(
       // on x86 and if the predicate calls getFuseRefcount(), it will assert
       // if isPtrAcquireCountZero() is false.
       if (entryInode->isPtrAcquireCountZero() && predicate(entryInode)) {
+        if (shouldKeep(entryInode, inodeMapLock)) {
+          continue;
+        }
+
         // If it's a tree and it has a loaded child, its refcount will never
         // be zero because the child holds a reference to its parent.
 
@@ -6294,6 +6303,7 @@ size_t TreeInode::unloadChildrenNow() {
       treeChildren,
       [](TreeInode& child) { return child.unloadChildrenNow(); },
       [](InodeBase*) { return true; },
+      [](InodeBase*, const InodeMapLock&) { return false; },
       neverCancel);
 }
 
@@ -6311,7 +6321,40 @@ size_t TreeInode::unloadChildrenUnreferencedByFs(
         return child.unloadChildrenUnreferencedByFs(cancellationToken);
       },
       [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      [](InodeBase*, const InodeMapLock&) { return false; },
       shouldCancel);
+}
+
+TreeInode::InodeGCUnloadResult
+TreeInode::unloadChildrenUnreferencedByFsForInodeGC(
+    const folly::CancellationToken& cancellationToken) {
+  InodeGCUnloadResult result;
+  auto shouldCancel = [&] {
+    return cancellationToken.isCancellationRequested();
+  };
+  auto treeChildren = getTreeChildren(this, shouldCancel);
+  result.unloaded = unloadChildrenIf(
+      this,
+      getInodeMap(),
+      treeChildren,
+      [&cancellationToken, &result](TreeInode& child) {
+        auto childResult =
+            child.unloadChildrenUnreferencedByFsForInodeGC(cancellationToken);
+        result.zeroFsRefTreesRetained += childResult.zeroFsRefTreesRetained;
+        return childResult.unloaded;
+      },
+      [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      [inodeMap = getInodeMap(), &result](
+          InodeBase* child, const InodeMapLock& lock) {
+        auto* tree = dynamic_cast<TreeInode*>(child);
+        if (!tree || !inodeMap->hasRememberedChildForUnload(*tree, lock)) {
+          return false;
+        }
+        result.zeroFsRefTreesRetained++;
+        return true;
+      },
+      shouldCancel);
+  return result;
 }
 
 namespace {
@@ -7172,6 +7215,7 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(
             cutoff, cancellationToken);
       },
       [&](InodeBase* child) { return toUnload.count(child->getNodeId()) != 0; },
+      [](InodeBase*, const InodeMapLock&) { return false; },
       shouldCancel);
 }
 

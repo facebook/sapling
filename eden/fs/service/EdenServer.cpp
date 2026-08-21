@@ -3271,6 +3271,8 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
       totalNumberOfInodesBeforeGC);
   auto gcToken = folly::cancellation_token_merge(
       shutdownToken, lease.getCancellationToken());
+  auto keepRememberedParentTreesLoaded =
+      pressureBased && mount.getFuseChannel() != nullptr;
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
@@ -3293,9 +3295,14 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
                 });
           })
       // Second step of garbage collection deletes all the unreferenced inodes
-      .thenTry([inode, gcToken](folly::Try<uint64_t>&& invalidatedTry) {
+      .thenTry([inode, gcToken, keepRememberedParentTreesLoaded](
+                   folly::Try<uint64_t>&& invalidatedTry) {
         if (!gcToken.isCancellationRequested()) {
-          inode->unloadChildrenUnreferencedByFs(gcToken);
+          if (keepRememberedParentTreesLoaded) {
+            inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken);
+          } else {
+            inode->unloadChildrenUnreferencedByFs(gcToken);
+          }
         }
         return std::move(invalidatedTry);
       })

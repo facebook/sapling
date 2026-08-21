@@ -387,4 +387,36 @@ TEST(UnloadUnreferencedByFuse, cancellationStopsUnloading) {
   EXPECT_GT(edenMount->getRootInode()->unloadChildrenUnreferencedByFs(), 0);
 }
 
+TEST(UnloadUnreferencedByFuse, inodeGcKeepsTreesWithRememberedChildrenLoaded) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  auto dir = testMount.getTreeInode("dir"_relpath);
+  auto file = testMount.getInode("dir/file.txt"_relpath);
+  auto dirNumber = dir->getNodeId();
+  auto fileNumber = file->getNodeId();
+  file->incFsRefcount();
+
+  testMount.getClock().advance(120s);
+  auto cutoff = testMount.getClock().getRealtime();
+  file.reset();
+  dir.reset();
+  EXPECT_GT(
+      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
+  ASSERT_FALSE(inodeMap->lookupLoadedInode(dirNumber));
+  ASSERT_FALSE(inodeMap->lookupLoadedInode(fileNumber));
+
+  dir = testMount.getTreeInode("dir"_relpath);
+  dir.reset();
+  auto result =
+      edenMount->getRootInode()->unloadChildrenUnreferencedByFsForInodeGC();
+
+  EXPECT_EQ(1, result.zeroFsRefTreesRetained);
+  EXPECT_TRUE(inodeMap->lookupLoadedInode(dirNumber));
+  EXPECT_FALSE(inodeMap->lookupLoadedInode(fileNumber));
+}
+
 #endif

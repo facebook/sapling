@@ -344,6 +344,17 @@ class InodeMap {
       bool isUnlinked,
       const InodeMapLock& lock);
 
+  /**
+   * Return whether unloading this tree would preserve it in unloadedInodes_.
+   *
+   * This reads the tree's contents without acquiring its lock, so the caller
+   * must guarantee that no other thread can acquire the inode: its pointer
+   * acquire count is zero and its parent's contents lock is held.
+   */
+  bool hasRememberedChildForUnload(
+      const TreeInode& inode,
+      const InodeMapLock& lock) const;
+
   /////////////////////////////////////////////////////////////////////////
   // The following public APIs should only be used by TreeInode
   /////////////////////////////////////////////////////////////////////////
@@ -717,6 +728,10 @@ class InodeMap {
       PathComponentPiece name,
       bool isUnlinked,
       const folly::Synchronized<Members>::LockedPtr& lock);
+
+  bool hasRememberedChildForUnload(
+      const TreeInode& inode,
+      const folly::Synchronized<Members>::LockedPtr& lock) const;
 
   void insertLoadedInode(
       const folly::Synchronized<Members>::LockedPtr& data,

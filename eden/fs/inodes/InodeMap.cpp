@@ -1196,6 +1196,31 @@ void InodeMap::unloadInode(
   eraseLoadedInode(data, inode);
 }
 
+bool InodeMap::hasRememberedChildForUnload(
+    const TreeInode& inode,
+    const InodeMapLock& lock) const {
+  return hasRememberedChildForUnload(inode, lock.data_);
+}
+
+bool InodeMap::hasRememberedChildForUnload(
+    const TreeInode& inode,
+    const folly::Synchronized<Members>::LockedPtr& data) const {
+  // After unmount nothing is remembered, so unloading always forgets the
+  // tree; see the matching check in updateOverlayForUnload().
+  if (data->isUnmounted_) {
+    return false;
+  }
+  // The caller has established that nobody can acquire this inode, matching
+  // the exception to the lock hierarchy used by updateOverlayForUnload().
+  const auto& contents = inode.getContentsUnchecked().unsafeGetUnlocked();
+  for (const auto& [_, entry] : contents.entries) {
+    if (data->unloadedInodes_.contains(entry.getInodeNumber())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     InodeBase* inode,
     TreeInode* parent,
@@ -1291,18 +1316,13 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
 
     // If any of this inode's children are in unloadedInodes_, then this
     // inode, as its parent, must not be forgotten.
-    for (const auto& pair : treeContents.entries) {
-      const auto& childName = pair.first;
-      const auto& entry = pair.second;
-      if (data->unloadedInodes_.contains(entry.getInodeNumber())) {
-        XLOGF(
-            DBG5,
-            "remembering inode {} ({}) because its child {} was remembered",
-            asTree->getNodeId(),
-            asTree->getLogPath(),
-            childName);
-        return makeUnloadedTree();
-      }
+    if (hasRememberedChildForUnload(*asTree, data)) {
+      XLOGF(
+          DBG5,
+          "remembering inode {} ({}) because one of its children was remembered",
+          asTree->getNodeId(),
+          asTree->getLogPath());
+      return makeUnloadedTree();
     }
     return std::nullopt;
   } else {
