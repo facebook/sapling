@@ -54,6 +54,17 @@
     border-left-color: hsl(from var(--button-secondary-foreground) h s l / 0.3);
   }
 
+  /* The select control hides its own label via font-size: 0, but on Windows and
+   * Linux Chromium renders the popup list itself, so options inherit those styles,
+   * collapsing the popup and making its text invisible. Options need explicit
+   * metrics and themed colors of their own. */
+  .select option {
+    font-size: var(--vscode-font-size, 13px);
+    line-height: normal;
+    background-color: var(--dropdown-background, var(--background));
+    color: var(--dropdown-foreground, var(--foreground));
+  }
+
   .select:hover {
     background-color: var(--_hover-bg, var(--button-secondary-hover-background));
   }

@@ -6,6 +6,7 @@
 - Go to time in download commit menu
 - Remember the last selected ISL workspace folder within a window session
 - Fix ISL showing `cwd webview-panel/... does not exist` when opened from the editor title bar while a webview tab was active
+- Fix the cwd quick-switch dropdown on Windows and Linux
 
 ## 0.1.69
 

@@ -28,6 +28,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {Suspense, useState} from 'react';
 import {cn} from 'shared/cn';
+import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {basename} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
@@ -40,7 +41,7 @@ import {configBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo, submodulesByRoot} from './serverAPIState';
-import {registerCleanup, registerDisposable} from './utils';
+import {arraysEqual, registerCleanup, registerDisposable} from './utils';
 import {WorktreeSection} from './WorktreeSection';
 
 /**
@@ -115,7 +116,10 @@ registerCleanup(
 registerDisposable(
   availableCwds,
   serverAPI.onMessageOfType('platform/availableCwds', event =>
-    writeAtom(availableCwds, event.options),
+    writeAtom(availableCwds, last => {
+      const reused = reuseEqualObjects(last, event.options, opt => opt.cwd);
+      return arraysEqual(last, reused) ? last : reused;
+    }),
   ),
   import.meta.hot,
 );
