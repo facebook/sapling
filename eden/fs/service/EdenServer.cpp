@@ -3281,7 +3281,8 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
-      ->handleChildrenNotAccessedRecently(cutoff, context, gcToken)
+      ->handleChildrenNotAccessedRecently(
+          cutoff, context, pressureBased, gcToken)
       // Wait for queued filesystem invalidations to drain before the unload
       // sweep. On FUSE, invalidation-triggered FORGETs may arrive too late for
       // this GC cycle if we start unloading immediately.

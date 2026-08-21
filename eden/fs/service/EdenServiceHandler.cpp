@@ -6902,8 +6902,15 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
           .thenValue(
               [this, mountHandle, cutoff, fetchContext = fetchContext.copy()](
                   TreeInodePtr inode) mutable {
+                auto pressureBased = mountHandle.getEdenMount()
+                                         .getEdenConfig()
+                                         ->enablePressureBasedGc.getValue();
                 return server_->garbageCollectInodes(
-                    mountHandle.getEdenMount(), inode, cutoff, fetchContext);
+                    mountHandle.getEdenMount(),
+                    inode,
+                    cutoff,
+                    fetchContext,
+                    pressureBased);
               })
           .thenValue([](uint64_t numInvalidated) {
             auto ret = std::make_unique<DebugInvalidateResponse>();

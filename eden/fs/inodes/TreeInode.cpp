@@ -6494,6 +6494,7 @@ ImmediateFuture<uint64_t /* numInvalidated */>
 TreeInode::handleChildrenNotAccessedRecently(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
+    [[maybe_unused]] bool pressureBased,
     folly::CancellationToken cancellationToken) {
   if (getMount()->getNfsdChannel()) {
     return invalidateChildrenNotMaterializedNFS(
@@ -6506,15 +6507,12 @@ TreeInode::handleChildrenNotAccessedRecently(
         cutoff, context, cancellationToken);
   }
 #ifndef _WIN32
-  {
-    auto config = getMount()->getEdenConfig();
-    if (config->enablePressureBasedGc.getValue()) {
-      // Pressure-based GC: actively invalidate old FUSE dcache entries.
-      // This triggers FORGET from the kernel, which decrements fsRefcount
-      // and allows subsequent unloading.
-      return invalidateChildrenNotAccessedRecentlyFuse(
-          cutoff, context, cancellationToken);
-    }
+  if (pressureBased) {
+    // Pressure-based GC: actively invalidate old FUSE dcache entries.
+    // This triggers FORGET from the kernel, which decrements fsRefcount
+    // and allows subsequent unloading.
+    return invalidateChildrenNotAccessedRecentlyFuse(
+        cutoff, context, cancellationToken);
   }
   // Legacy FUSE path: passively unload inodes that are no longer referenced.
   // FUSE decreases the FS ref count by itself. On FUSE, we don't invalidate

@@ -621,10 +621,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /**
    * The first step of inode garbage collection.
-   * This step behaves differently depending on the platform:
-   * - On Linux, FUSE decreases the FS ref couunt by itself. Therefore we don't
-   *   need to decrease FS ref count manually. We only unload not recently used
-   *   inodes here
+   * This step behaves differently depending on the platform and GC policy:
+   * - On Linux, pressure-based FUSE GC invalidates old directory entries to
+   *   trigger FORGET. Config-based FUSE GC only unloads old inodes.
    * - On Windows and macOS, it recursively collects all child inodes,
    *   then decreases the filesystem reference count to zero for inodes
    *   that have not been accessed since the specified cutoff time.
@@ -636,6 +635,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   handleChildrenNotAccessedRecently(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
+      bool pressureBased,
       folly::CancellationToken cancellationToken = {});
 
   /*

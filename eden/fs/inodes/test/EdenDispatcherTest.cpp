@@ -22,7 +22,6 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
@@ -328,7 +327,7 @@ TEST(
   TestMount mount{builder};
 
   mount.updateEdenConfig({
-      {"experimental:enable-pressure-based-gc", "true"},
+      {"experimental:enable-pressure-based-gc", "false"},
   });
 
   auto fuse = std::make_shared<FakeFuse>();
@@ -365,7 +364,9 @@ TEST(
   auto numInvalidated = mount.getEdenMount()
                             ->getRootInode()
                             ->handleChildrenNotAccessedRecently(
-                                cutoff, ObjectFetchContext::getNullContext())
+                                cutoff,
+                                ObjectFetchContext::getNullContext(),
+                                /*pressureBased=*/true)
                             .get(10s);
   EXPECT_EQ(2u, numInvalidated);
   EXPECT_TRUE(
@@ -441,7 +442,9 @@ TEST(
   auto numInvalidated = mount.getEdenMount()
                             ->getRootInode()
                             ->handleChildrenNotAccessedRecently(
-                                cutoff, ObjectFetchContext::getNullContext())
+                                cutoff,
+                                ObjectFetchContext::getNullContext(),
+                                /*pressureBased=*/true)
                             .get(30s);
   mount.getEdenMount()->flushInvalidations().get(30s);
   doneInvalidating.store(true, std::memory_order_release);

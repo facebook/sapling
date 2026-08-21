@@ -490,7 +490,9 @@ TEST_F(EdenServerTest, StopAllGarbageCollectionsDoesNotPoisonFutureGC) {
   FakeTreeBuilder builder;
   builder.setFile("hello", "world");
   TestMount mount{builder};
-  mount.updateEdenConfig({{"experimental:enable-pressure-based-gc", "true"}});
+  // The function argument is the snapshot for this GC run, even if reloadable
+  // config has changed since the run was scheduled.
+  mount.updateEdenConfig({{"experimental:enable-pressure-based-gc", "false"}});
 
   auto fuse = std::make_shared<FakeFuse>();
   mount.startFuseAndWait(fuse);
