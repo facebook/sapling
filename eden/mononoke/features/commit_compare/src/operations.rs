@@ -61,9 +61,22 @@ pub fn unordered_max_paths() -> Result<usize> {
 pub async fn commit_compare<R: crate::Repo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
+    base_changeset: ChangesetContext<R>,
+    other_changeset: Option<ChangesetContext<R>>,
+    params: &source_control_thrift::CommitCompareParams,
+) -> Result<CommitCompareResult> {
+    commit_compare_with_generation_logging(ctx, repo, base_changeset, other_changeset, params, true)
+        .await
+}
+
+/// Variant that lets internal paging emit generation telemetry only once.
+pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
+    ctx: &CoreContext,
+    repo: &RepoContext<R>,
     mut base_changeset: ChangesetContext<R>,
     other_changeset: Option<ChangesetContext<R>>,
     params: &source_control_thrift::CommitCompareParams,
+    log_generation_difference: bool,
 ) -> Result<CommitCompareResult> {
     add_mutable_renames(&mut base_changeset, params).await?;
 
@@ -72,18 +85,19 @@ pub async fn commit_compare<R: crate::Repo>(
         None => find_commit_compare_parent(repo, &mut base_changeset, params).await?,
     };
 
-    // Log generation difference
-    let base_generation = base_changeset.generation().await?.value();
-    let other_generation = match other_changeset {
-        Some(ref cs) => cs.generation().await?.value(),
-        None => base_generation,
-    };
-    let generation_diff = base_generation.abs_diff(other_generation);
-    let mut scuba = ctx.scuba().clone();
-    scuba.log_with_msg(
-        "Commit compare generation difference",
-        format!("{generation_diff}"),
-    );
+    if log_generation_difference {
+        let base_generation = base_changeset.generation().await?.value();
+        let other_generation = match other_changeset {
+            Some(ref cs) => cs.generation().await?.value(),
+            None => base_generation,
+        };
+        let generation_diff = base_generation.abs_diff(other_generation);
+        let mut scuba = ctx.scuba().clone();
+        scuba.log_with_msg(
+            "Commit compare generation difference",
+            format!("{generation_diff}"),
+        );
+    }
 
     // Parse diff items
     let mut last_path = None;

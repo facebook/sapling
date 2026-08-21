@@ -205,6 +205,7 @@
     "scm/mononoke:streaming_clone_chunk_aggregation_factor": 4,
     "scm/mononoke:diff_service_memory_multiplier": 3,
     "scm/mononoke:diff_service_commit_compare_estimated_bytes_per_path": 1024,
+    "scm/mononoke:diff_service_commit_compare_internal_page_size": 1,
     "scm/mononoke:async_requests_max_concurrent": 0,
     "scm/mononoke:land_service_batch_time_ms": 50,
     "scm/mononoke:land_service_batch_max_commits": 20,
