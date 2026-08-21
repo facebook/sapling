@@ -90,6 +90,11 @@ where
     /// Return a borrowed or copied version of the next n bytes.
     #[inline]
     pub fn read_bytes<'s>(&'s mut self, len: i64) -> Result<Reference<'de, 's, [u8]>> {
+        if len < 0 {
+            // A negative wire-supplied length would cast to a huge `usize`
+            // below and panic in the underlying reader.
+            return Err(Error::DeNegativeLength { len });
+        }
         let len = len as usize;
         self.read
             .next_bytes(len, &mut self.scratch)
