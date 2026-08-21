@@ -8,14 +8,21 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo} from 'isl/src/types';
+import type {TextEditor} from 'vscode';
+import type {VSCodeReposList} from '../../VSCodeRepo';
 
 import {GitHubCodeReviewProvider} from 'isl-server/src/github/githubCodeReviewProvider';
 import {mockLogger} from 'shared/testUtils';
-import {contextForRepo} from '../blame';
+import {contextForRepo, InlineBlameProvider} from '../blame';
 import {getDiffBlameHoverMarkup} from '../blameHover';
 import {getRealignedBlameInfo, shortenAuthorName} from '../blameUtils';
 
 jest.mock('vscode', () => jest.requireActual('../../../__mocks__/vscode'));
+
+// OS username that appears inside other authors' emails, e.g. bob@coder.com.
+jest.mock('isl-server/src/analytics/environment', () => ({
+  getUsername: () => 'coder',
+}));
 
 describe('blame', () => {
   describe('contextForRepo', () => {
@@ -159,3 +166,175 @@ describe('blame utils', () => {
     });
   });
 });
+
+describe('InlineBlameProvider (you)', () => {
+  const repoRoot = '/workspace/repo';
+  const filePath = '/workspace/repo/file.ts';
+  const alice = 'Alice <alice@company.com>';
+  const bob = 'Bob <bob@coder.com>';
+
+  type TestableBlameProvider = {
+    authorHint(author: string): string;
+    getBlameText(line: number): {inline: string; hover: string} | undefined;
+    fetchBlameIfMissing(textEditor: TextEditor): Promise<boolean>;
+    currentRepo: Repository | undefined;
+    currentEditor: TextEditor | undefined;
+    observedRepos: Map<
+      string,
+      {
+        username: string | undefined;
+        usernameLoaded: Promise<void>;
+        blameCache: {
+          set: (
+            key: string,
+            value: {
+              baseBlameLines: Array<[string, CommitInfo | undefined]>;
+              currentBlameLines: Array<[string, CommitInfo | undefined]> | undefined;
+            },
+          ) => void;
+        };
+      }
+    >;
+    dispose(): void;
+  };
+
+  let provider: TestableBlameProvider;
+  let getConfig: jest.Mock;
+  let blame: jest.Mock;
+
+  beforeEach(() => {
+    getConfig = jest.fn().mockResolvedValue(alice);
+    blame = jest.fn().mockResolvedValue([['line\n', {author: alice} as CommitInfo]]);
+    const repo = {
+      info: {repoRoot},
+      getConfig,
+      subscribeToHeadCommit: jest.fn().mockReturnValue({dispose: jest.fn()}),
+      blame,
+    } as unknown as Repository;
+    const reposList = {
+      repoForPath: jest.fn().mockReturnValue({repo}),
+    } as unknown as VSCodeReposList;
+    const ctx = {
+      cmd: 'sl',
+      cwd: repoRoot,
+      logger: mockLogger,
+      tracker: {error: jest.fn(), track: jest.fn()},
+    } as unknown as RepositoryContext;
+
+    provider = new InlineBlameProvider(reposList, ctx) as unknown as TestableBlameProvider;
+    provider.currentRepo = repo;
+  });
+
+  afterEach(() => {
+    provider.dispose();
+  });
+
+  function loadBlame(textEditor: TextEditor = editorFor(filePath)): Promise<boolean> {
+    return provider.fetchBlameIfMissing(textEditor);
+  }
+
+  it('does not mark another author as (you) when the OS username appears in their email', async () => {
+    await loadBlame();
+
+    expect(provider.authorHint(bob)).toEqual('Bob, ');
+  });
+
+  it('marks the configured Sapling username as (you)', async () => {
+    await loadBlame();
+
+    expect(provider.authorHint(alice)).toEqual('(you) ');
+  });
+
+  it('does not mark anyone as (you) when ui.username is missing', async () => {
+    getConfig.mockResolvedValue(undefined);
+    await loadBlame();
+
+    expect(provider.authorHint(alice)).toEqual('Alice, ');
+    expect(provider.authorHint(bob)).toEqual('Bob, ');
+  });
+
+  it('does not mark anyone as (you) when ui.username is empty', async () => {
+    getConfig.mockResolvedValue('');
+    await loadBlame();
+
+    expect(provider.authorHint(alice)).toEqual('Alice, ');
+    expect(provider.authorHint(bob)).toEqual('Bob, ');
+  });
+
+  it('fetches ui.username once per repository', async () => {
+    await loadBlame();
+    provider.authorHint(alice);
+    provider.authorHint(bob);
+    await loadBlame(editorFor('/workspace/repo/other.ts'));
+    provider.authorHint(alice);
+
+    expect(getConfig).toHaveBeenCalledTimes(1);
+    expect(getConfig).toHaveBeenCalledWith(expect.objectContaining({cwd: repoRoot}), 'ui.username');
+  });
+
+  it('waits for ui.username before finishing the first blame fetch', async () => {
+    let resolveConfig: (value: string | undefined) => void = () => undefined;
+    getConfig.mockImplementation(
+      () =>
+        new Promise<string | undefined>(resolve => {
+          resolveConfig = resolve;
+        }),
+    );
+
+    let finished = false;
+    const fetchPromise = loadBlame().then(result => {
+      finished = true;
+      return result;
+    });
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    expect(provider.authorHint(alice)).toEqual('Alice, ');
+
+    resolveConfig(alice);
+    await fetchPromise;
+    expect(finished).toBe(true);
+    expect(provider.authorHint(alice)).toEqual('(you) ');
+  });
+
+  it('shares one ui.username fetch across concurrent blame loads', async () => {
+    let resolveConfig: (value: string | undefined) => void = () => undefined;
+    getConfig.mockImplementation(
+      () =>
+        new Promise<string | undefined>(resolve => {
+          resolveConfig = resolve;
+        }),
+    );
+
+    const first = loadBlame(editorFor('/workspace/repo/a.ts'));
+    const second = loadBlame(editorFor('/workspace/repo/b.ts'));
+    expect(getConfig).toHaveBeenCalledTimes(1);
+
+    resolveConfig(alice);
+    await Promise.all([first, second]);
+    expect(getConfig).toHaveBeenCalledTimes(1);
+    expect(provider.authorHint(alice)).toEqual('(you) ');
+  });
+
+  it('still shows (you) for local uncommitted changes', async () => {
+    await loadBlame();
+    const textEditor = editorFor(filePath);
+    provider.currentEditor = textEditor;
+    provider.observedRepos.get(repoRoot)?.blameCache.set(filePath, {
+      baseBlameLines: [['line\n', undefined]],
+      currentBlameLines: [['line\n', undefined]],
+    });
+
+    expect(provider.getBlameText(0)).toEqual({
+      inline: `(you) \u2022 Local Changes`,
+      hover: '',
+    });
+  });
+});
+
+function editorFor(fsPath: string): TextEditor {
+  return {
+    document: {
+      uri: {fsPath, scheme: 'file'},
+    },
+  } as unknown as TextEditor;
+}
