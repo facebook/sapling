@@ -48,7 +48,7 @@ sl_rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
-        "fbsource//third-party/rust:whoami",
+        "fbsource//third-party/rust:whoami-1",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",

@@ -20,7 +20,7 @@ rust_binary(
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:whoami",
+            "fbsource//third-party/rust:whoami-1",
         ],
     }),
 )
@@ -46,7 +46,7 @@ rust_binary(
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:whoami",
+            "fbsource//third-party/rust:whoami-1",
         ],
     }),
 )
