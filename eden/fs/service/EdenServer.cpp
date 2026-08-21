@@ -3257,6 +3257,11 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
     EdenMount::InodeGCLease lease,
     folly::CancellationToken shutdownToken,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger) {
+  struct InodeGCResult {
+    uint64_t numInvalidated;
+    size_t zeroFsRefTreesRetained;
+  };
+
   folly::stop_watch<> inodeGCRuntime;
 
   auto mountPath = mount.getPath();
@@ -3295,29 +3300,35 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
                 });
           })
       // Second step of garbage collection deletes all the unreferenced inodes
-      .thenTry([inode, gcToken, keepRememberedParentTreesLoaded](
-                   folly::Try<uint64_t>&& invalidatedTry) {
-        if (!gcToken.isCancellationRequested()) {
-          if (keepRememberedParentTreesLoaded) {
-            inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken);
-          } else {
-            inode->unloadChildrenUnreferencedByFs(gcToken);
-          }
-        }
-        return std::move(invalidatedTry);
-      })
+      .thenTry(
+          [inode, gcToken, keepRememberedParentTreesLoaded](
+              folly::Try<uint64_t>&& invalidatedTry) -> InodeGCResult {
+            size_t zeroFsRefTreesRetained = 0;
+            if (!gcToken.isCancellationRequested()) {
+              if (keepRememberedParentTreesLoaded) {
+                zeroFsRefTreesRetained =
+                    inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken)
+                        .zeroFsRefTreesRetained;
+              } else {
+                inode->unloadChildrenUnreferencedByFs(gcToken);
+              }
+            }
+            return {invalidatedTry.value(), zeroFsRefTreesRetained};
+          })
       .ensure([lease = std::move(lease)] {})
       .thenTry([inodeGCRuntime,
                 edenFsEventsLogger = std::move(edenFsEventsLogger),
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC,
-                pressureBased](folly::Try<uint64_t> invalidatedTry) {
+                pressureBased](folly::Try<InodeGCResult> resultTry) {
         auto runtime = std::chrono::duration<double>{inodeGCRuntime.elapsed()};
 
-        bool success = invalidatedTry.hasValue();
+        bool success = resultTry.hasValue();
         int64_t numInvalidated =
-            success ? folly::to_signed(invalidatedTry.value()) : 0;
+            success ? folly::to_signed(resultTry.value().numInvalidated) : 0;
+        size_t zeroFsRefTreesRetained =
+            success ? resultTry.value().zeroFsRefTreesRetained : 0;
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
@@ -3329,17 +3340,20 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
             WorkingCopyGc{
                 runtime.count(), numInvalidated, success, inodeDelta});
         auto shouldLogAtDbg2 = runtime > std::chrono::seconds{5} ||
-            numInvalidated > 10'000 || inodeDelta > 10'000;
+            numInvalidated > 10'000 || inodeDelta > 10'000 ||
+            zeroFsRefTreesRetained > 10'000;
         auto logMessage = [&] {
           return fmt::format(
               "{} GC for: {}, completed in: {} seconds, "
-              "invalidated: {}, inodes before: {}, inodes after: {}",
+              "invalidated: {}, inodes before: {}, inodes after: {}, "
+              "fsRefCount==0 trees retained: {}",
               pressureBased ? "Pressure-based" : "Config-based",
               mountPath,
               runtime.count(),
               numInvalidated,
               totalNumberOfInodesBeforeGC,
-              totalNumberOfInodesAfterGC);
+              totalNumberOfInodesAfterGC,
+              zeroFsRefTreesRetained);
         };
         if (shouldLogAtDbg2) {
           XLOG(DBG2) << logMessage();
@@ -3347,7 +3361,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
           XLOG(DBG4) << logMessage();
         }
 
-        return invalidatedTry.value();
+        return resultTry.value().numInvalidated;
       });
 }
 } // namespace
