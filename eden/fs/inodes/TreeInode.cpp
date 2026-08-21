@@ -6445,6 +6445,9 @@ TreeInode::handleChildrenNotAccessedRecently(
 
 #ifndef _WIN32
 namespace {
+constexpr size_t kFuseGcDirectoryScanBatchSize = 1'024;
+constexpr size_t kMaxQueuedFuseGcInvalidations = 1'024;
+
 folly::Expected<std::shared_ptr<GcBarrierTrie>, int> getGcBarrierTrie(
     EdenMount* mount) {
   auto gcBarrier = std::make_shared<GcBarrierTrie>();
@@ -6500,9 +6503,23 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     return ImmediateFuture<uint64_t>{0ULL};
   }
   auto* currentGcBarrier = gcBarrier.value()->getDescendant(*path);
+  auto fuseChannel = getMount()->getFuseChannelShared();
+  if (!fuseChannel) {
+    return ImmediateFuture<uint64_t>{0ULL};
+  }
+  auto invalidationExecutor =
+      getMount()->getWorkingCopyGCInvalidationExecutor();
 
   return invalidateChildrenNotAccessedRecentlyFuseImpl(
-      cutoff, context, cancellationToken, gcBarrier.value(), currentGcBarrier);
+             cutoff,
+             context,
+             cancellationToken,
+             gcBarrier.value(),
+             currentGcBarrier,
+             fuseChannel.get(),
+             folly::getKeepAliveToken(invalidationExecutor.get()))
+      .ensure([fuseChannel = std::move(fuseChannel),
+               invalidationExecutor = std::move(invalidationExecutor)] {});
 }
 
 ImmediateFuture<uint64_t>
@@ -6511,7 +6528,9 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken,
     const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
-    const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier) {
+    const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
+    FuseChannel* fuseChannel,
+    folly::Executor::KeepAlive<> invalidationExecutor) {
   if (shouldCancelGC(cancellationToken, getMount())) {
     return uint64_t{0};
   }
@@ -6531,7 +6550,10 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
               gcBarrier,
               currentGcBarrier,
               context = context.copy(),
-              cancellationToken](PathComponentPiece name, TreeInodePtr tree) {
+              cancellationToken,
+              fuseChannel,
+              invalidationExecutor](
+                 PathComponentPiece name, TreeInodePtr tree) {
                const GcBarrierTrie* FOLLY_NULLABLE childGcBarrier = nullptr;
                if (currentGcBarrier != nullptr) {
                  childGcBarrier = currentGcBarrier->getChild(name);
@@ -6542,17 +6564,22 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                        context,
                        cancellationToken,
                        gcBarrier,
-                       childGcBarrier)
+                       childGcBarrier,
+                       fuseChannel,
+                       invalidationExecutor)
                    .thenValue([name = PathComponent{name}](
                                   uint64_t numInvalidated) mutable {
                      return std::make_pair(std::move(name), numInvalidated);
                    });
              })
+      .semi()
+      .via(std::move(invalidationExecutor))
       .thenValue([self = inodePtrFromThis(),
                   cutoff,
                   cancellationToken,
                   gcBarrier,
-                  currentGcBarrier](
+                  currentGcBarrier,
+                  fuseChannel](
                      const std::vector<std::pair<PathComponent, uint64_t>>&
                          childResults) {
         // Keep the trie alive while this continuation uses raw pointers into
@@ -6568,65 +6595,89 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
           numInvalidated += childInvalidated;
         }
 
-        auto* fuseChannel = self->getMount()->getFuseChannel();
-        if (!fuseChannel) {
-          return numInvalidated;
-        }
-
-        // Now inspect our own children. We need to hold the contents lock to
-        // iterate entries, and call invalidateEntry for each stale child.
-        auto contents = self->getContentsUnchecked().rlock();
-        auto selfFsRefcount = self->debugGetFsRefcount();
         uint64_t numSkippedParentNoFsRef = 0;
         uint64_t numSkippedChildNoFsRef = 0;
-        std::vector<std::pair<PathComponentPiece, InodeBase*>>
-            staleEntriesToInvalidate;
-        staleEntriesToInvalidate.reserve(contents->entries.size());
-        for (const auto& entry : contents->entries) {
-          auto* entryInode = entry.second.getInode();
-          if (!entryInode) {
-            continue;
+        std::optional<PathComponent> lastExamined;
+        std::vector<PathComponent> staleEntriesToInvalidate;
+        bool reachedEnd = false;
+        while (!reachedEnd && !shouldCancelGC(cancellationToken)) {
+          staleEntriesToInvalidate.clear();
+          const bool parentHasFsRef = self->debugGetFsRefcount() != 0;
+          {
+            auto contents = self->getContentsUnchecked().rlock();
+            if (!lastExamined) {
+              staleEntriesToInvalidate.reserve(
+                  std::min(
+                      contents->entries.size(), kFuseGcDirectoryScanBatchSize));
+            }
+            auto entry = contents->entries.begin();
+            if (lastExamined) {
+              entry = contents->entries.find(lastExamined->piece());
+              if (entry != contents->entries.end()) {
+                ++entry;
+              } else {
+                entry = contents->entries.lower_bound(lastExamined->piece());
+              }
+            }
+
+            size_t numExamined = 0;
+            for (; entry != contents->entries.end() &&
+                 numExamined < kFuseGcDirectoryScanBatchSize;
+                 ++entry, ++numExamined) {
+              lastExamined = PathComponent{entry->first};
+              auto* entryInode = entry->second.getInode();
+              if (!entryInode) {
+                continue;
+              }
+
+              if (shouldCancelGC(cancellationToken)) {
+                break;
+              }
+
+              const GcBarrierTrie* FOLLY_NULLABLE childGcBarrier = nullptr;
+              if (currentGcBarrier != nullptr) {
+                childGcBarrier =
+                    currentGcBarrier->getChild(entry->first.piece());
+              }
+              if (childGcBarrier) {
+                continue;
+              }
+
+              auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+                  entryInode->getLastFsRequestTime().toTimespec().tv_sec);
+              if (lastFsRequestTime >= cutoff) {
+                continue;
+              }
+
+              // These refcount checks are racy best-effort optimizations. An
+              // invalidation cannot produce a FORGET if the kernel has already
+              // dropped either the parent or child reference.
+              if (!parentHasFsRef) {
+                numSkippedParentNoFsRef++;
+                continue;
+              }
+              if (entryInode->debugGetFsRefcount() == 0) {
+                numSkippedChildNoFsRef++;
+                continue;
+              }
+              staleEntriesToInvalidate.emplace_back(entry->first);
+            }
+            reachedEnd = entry == contents->entries.end();
           }
 
-          if (shouldCancelGC(cancellationToken)) {
-            return uint64_t{0};
+          // Queue backpressure can block, so submit only after releasing the
+          // inode contents lock. Each queued invalidation causes the kernel to
+          // drop its dcache entry and asynchronously send FORGET.
+          for (const auto& name : staleEntriesToInvalidate) {
+            if (!fuseChannel->invalidateEntryWithQueueLimit(
+                    self->getNodeId(),
+                    name.piece(),
+                    kMaxQueuedFuseGcInvalidations,
+                    cancellationToken)) {
+              return numInvalidated;
+            }
+            numInvalidated++;
           }
-
-          const GcBarrierTrie* FOLLY_NULLABLE childGcBarrier = nullptr;
-          if (currentGcBarrier != nullptr) {
-            childGcBarrier = currentGcBarrier->getChild(entry.first.piece());
-          }
-          if (childGcBarrier) {
-            continue;
-          }
-
-          auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-              entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-          if (lastFsRequestTime < cutoff) {
-            staleEntriesToInvalidate.emplace_back(
-                entry.first.piece(), entryInode);
-          }
-        }
-
-        for (const auto& [name, entryInode] : staleEntriesToInvalidate) {
-          // This is a racy best-effort optimization. If the kernel has already
-          // dropped the parent inode, FUSE_NOTIFY_INVAL_ENTRY cannot identify
-          // the entry to invalidate. If the child inode has no kernel
-          // references, invalidating it cannot produce more FORGETs.
-          if (selfFsRefcount == 0) {
-            numSkippedParentNoFsRef++;
-            continue;
-          }
-          if (entryInode->debugGetFsRefcount() == 0) {
-            numSkippedChildNoFsRef++;
-            continue;
-          }
-          // Send FUSE_NOTIFY_INVAL_ENTRY. This causes the kernel to drop its
-          // dcache entry and asynchronously send FORGET, which decrements
-          // fsRefcount. The inode can then be unloaded by a subsequent
-          // unloadChildrenUnreferencedByFs pass.
-          fuseChannel->invalidateEntry(self->getNodeId(), name);
-          numInvalidated++;
         }
 
         if (numInvalidated > 0) {

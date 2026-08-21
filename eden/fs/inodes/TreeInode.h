@@ -9,6 +9,7 @@
 
 #include <folly/CancellationToken.h>
 #include <folly/CppAttributes.h>
+#include <folly/Executor.h>
 #include <folly/File.h>
 #include <folly/Function.h>
 #include <folly/Portability.h>
@@ -37,6 +38,7 @@ class CheckoutContext;
 class MiniTracer;
 class DeferredDiffEntry;
 class DiffContext;
+class FuseChannel;
 class FuseDirList;
 class NfsDirList;
 class EdenMount;
@@ -840,7 +842,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken,
       const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
-      const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier);
+      const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
+      FuseChannel* fuseChannel,
+      folly::Executor::KeepAlive<> invalidationExecutor);
 #endif
 
   /**

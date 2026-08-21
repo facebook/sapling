@@ -133,6 +133,7 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inodes",

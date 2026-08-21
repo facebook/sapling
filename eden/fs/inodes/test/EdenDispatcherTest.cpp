@@ -9,7 +9,10 @@
 
 #include "eden/fs/fuse/FuseDispatcher.h"
 
+#include <fmt/format.h>
+#include <atomic>
 #include <limits>
+#include <thread>
 
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
@@ -356,6 +359,80 @@ TEST(
   EXPECT_EQ(2u, numInvalidated);
 
   mount.getEdenMount()->flushInvalidations().get(10s);
+  fuse->close();
+  mount.getEdenMount()->getFsChannelCompletionFuture().within(10s).getVia(
+      mount.getServerExecutor().get());
+#endif
+}
+
+TEST(
+    RawEdenDispatcherTest,
+    pressure_gc_invalidates_directories_larger_than_one_scan_batch) {
+#ifndef __linux__
+  GTEST_SKIP() << "FakeFuse invalidation tests are Linux-only";
+#else
+  // Larger than both the 1,024-entry directory scan batch and the
+  // 1,024-entry invalidation queue limit.
+  constexpr size_t kFileCount = 1'100;
+  FakeTreeBuilder builder;
+  for (size_t i = 0; i < kFileCount; ++i) {
+    builder.setFile(fmt::format("dir/file{:04}.txt", i), "contents");
+  }
+  TestMount mount{builder};
+
+  mount.updateEdenConfig({
+      {"experimental:enable-pressure-based-gc", "true"},
+  });
+
+  auto fuse = std::make_shared<FakeFuse>();
+  mount.startFuseAndWait(fuse);
+
+  auto dirEntry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "dir"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  for (size_t i = 0; i < kFileCount; ++i) {
+    PathComponent name{fmt::format("file{:04}.txt", i)};
+    mount.getDispatcher()
+        ->lookup(
+            0,
+            InodeNumber{dirEntry.nodeid},
+            name.piece(),
+            ObjectFetchContext::getNullContext())
+        .get(0ms);
+  }
+
+  mount.getClock().advance(11s);
+  auto cutoff = folly::to<std::chrono::system_clock::time_point>(
+                    mount.getClock().getRealtime()) -
+      10s;
+
+  // Queue backpressure blocks GC submission until the invalidation workers
+  // write notifications to the FUSE device, and the device's socket buffer
+  // holds far fewer than kFileCount messages, so drain it concurrently.
+  fuse->setTimeout(100ms);
+  std::atomic<bool> doneInvalidating{false};
+  std::thread drainer([&] {
+    while (!doneInvalidating.load(std::memory_order_acquire)) {
+      try {
+        fuse->recvResponse();
+      } catch (const std::exception&) {
+        // Timed out waiting for the next notification; check for completion.
+      }
+    }
+  });
+
+  auto numInvalidated = mount.getEdenMount()
+                            ->getRootInode()
+                            ->handleChildrenNotAccessedRecently(
+                                cutoff, ObjectFetchContext::getNullContext())
+                            .get(30s);
+  mount.getEdenMount()->flushInvalidations().get(30s);
+  doneInvalidating.store(true, std::memory_order_release);
+  drainer.join();
+  EXPECT_EQ(kFileCount + 1, numInvalidated);
+
   fuse->close();
   mount.getEdenMount()->getFsChannelCompletionFuture().within(10s).getVia(
       mount.getServerExecutor().get());

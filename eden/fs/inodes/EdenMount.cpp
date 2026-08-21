@@ -1229,6 +1229,26 @@ FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
 #endif
 }
 
+#ifndef _WIN32
+std::shared_ptr<FuseChannel> EdenMount::getFuseChannelShared() const {
+  auto channel = channel_.load().getStdShared();
+  auto* fuseChannel = dynamic_cast<FuseChannel*>(channel.get());
+  if (fuseChannel == nullptr) {
+    return {};
+  }
+  return {std::move(channel), fuseChannel};
+}
+
+std::shared_ptr<UnboundedQueueExecutor>
+EdenMount::getWorkingCopyGCInvalidationExecutor() const {
+  folly::call_once(workingCopyGCInvalidationExecutorOnce_, [this] {
+    workingCopyGCInvalidationExecutor_ =
+        std::make_shared<UnboundedQueueExecutor>(1, "wc-gc-inval");
+  });
+  return workingCopyGCInvalidationExecutor_;
+}
+#endif
+
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
 #ifdef _WIN32
   return dynamic_cast<PrjfsChannel*>(channel_.load().get());

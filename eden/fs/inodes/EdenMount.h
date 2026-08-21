@@ -20,6 +20,7 @@
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
 #include <folly/stop_watch.h>
+#include <folly/synchronization/CallOnce.h>
 #include <gflags/gflags.h>
 #include <chrono>
 #include <cstdint>
@@ -486,6 +487,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   void setTestFsChannel(FsChannelPtr channel);
 
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
+#ifndef _WIN32
+  std::shared_ptr<FuseChannel> getFuseChannelShared() const;
+  std::shared_ptr<UnboundedQueueExecutor> getWorkingCopyGCInvalidationExecutor()
+      const;
+#endif
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 
   /**
@@ -1349,6 +1355,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * On Windows, directory invalidation will run on this executor.
    */
   std::shared_ptr<UnboundedQueueExecutor> invalidationExecutor_;
+#else
+  /** Runs bounded FUSE GC submissions away from shared executors. */
+  mutable folly::once_flag workingCopyGCInvalidationExecutorOnce_;
+  mutable std::shared_ptr<UnboundedQueueExecutor>
+      workingCopyGCInvalidationExecutor_;
 #endif
 
   /**

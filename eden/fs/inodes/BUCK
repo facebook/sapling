@@ -257,6 +257,7 @@ cpp_library(
         "//folly:cancellation_token",
         "//folly:cpp_attributes",
         "//folly:exception_wrapper",
+        "//folly:executor",
         "//folly:expected",
         "//folly:fbvector",
         "//folly:file",
