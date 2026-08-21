@@ -5806,30 +5806,27 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
     if (path.has_value()) {
       // The contents lock is held by invalidateChildrenNotMaterialized
       auto mode = getMetadataLocked(state.entries).mode;
+      std::vector<InodeNumber> childInodes;
+      childInodes.reserve(state.entries.size());
+      for (const auto& entry : state.entries) {
+        childInodes.push_back(entry.second.getInodeNumber());
+      }
       auto stats = getMount()->getStats().copy();
       nfsdChannel->invalidate(
           getMount()->getPath() + *path,
           mode,
           [inodeMapWeak = getInodeMapWeak(),
            stats = std::move(stats),
-           &state]() {
+           childInodes = std::move(childInodes)]() {
             // Code to run after successful invalidation
             if (auto inodeMap = inodeMapWeak.lock()) {
               // The directory got invalidated, now we can dereference all of
               // its contents
-              for (auto& entry : state.entries) {
-                auto ino = entry.second.getInodeNumber();
+              for (auto ino : childInodes) {
                 stats->increment(
                     &NfsStats::nfsInvalidationGcClearFsRefcountAttempt);
                 if (inodeMap->isInodeLoadedOrRemembered(ino)) {
-                  XLOGF(
-                      DBG9,
-                      "GC invalidated inode {} with last fs request time: {}",
-                      ino,
-                      entry.second.getInode()
-                          ->getLastFsRequestTime()
-                          .toTimespec()
-                          .tv_sec);
+                  XLOGF(DBG9, "GC invalidated inode {}", ino);
                   inodeMap->clearFsRefcount(ino);
                   stats->increment(
                       &NfsStats::nfsInvalidationGcClearFsRefcountCleared);
