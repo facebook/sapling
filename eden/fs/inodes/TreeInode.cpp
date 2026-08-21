@@ -138,6 +138,7 @@ struct GcBarrierTrie {
     return node;
   }
 };
+
 #endif
 
 namespace {
@@ -6322,7 +6323,7 @@ ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken) {
   std::vector<ImmediateFuture<NamedTreeInode>> res;
-  std::vector<PathComponent> toLoad;
+  std::vector<InodeMap::UnloadedInodeGcCandidate> unloadedCandidates;
   {
     auto contents = self->getContentsUnchecked().rlock();
     for (auto& entry : contents->entries) {
@@ -6339,27 +6340,44 @@ ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
         continue;
       }
 
-      auto inodeNumber = entry.second.getInodeNumber();
       // In invalidateChildrenNotMaterialized we want to walk all the directory
       // inodes that are present on disk so we can have a chance to invalidate
       // them. Since inodes can be unloaded but still have an fs refcount set,
       // we need to make sure to load them so we can crawl them.
-      if (inodeMap->isInodeRemembered(inodeNumber)) {
-        toLoad.push_back(entry.first);
-      }
+      unloadedCandidates.push_back(
+          {entry.second.getInodeNumber(), PathComponent{entry.first}});
     }
   }
 
   // TODO(xavierd): We could use VirtualInode here to avoid loading inodes
   // unnecessarily.
-  for (const auto& name : toLoad) {
+  //
+  // Look up unloaded children in bounded batches so one wide directory cannot
+  // hold the InodeMap lock for its entire entry list.
+  constexpr size_t kUnloadedChildLookupBatchSize = 1'024;
+  std::vector<InodeMap::UnloadedInodeGcCandidate> lookupBatch;
+  for (size_t begin = 0; begin < unloadedCandidates.size();
+       begin += kUnloadedChildLookupBatchSize) {
     if (cancellationToken.isCancellationRequested()) {
       break;
     }
-    res.push_back(self->getOrLoadChildTree(name, context)
-                      .thenValue([name](TreeInodePtr tree) {
-                        return std::make_pair(name, std::move(tree));
-                      }));
+    auto end = std::min(
+        begin + kUnloadedChildLookupBatchSize, unloadedCandidates.size());
+    lookupBatch.assign(
+        std::make_move_iterator(unloadedCandidates.begin() + begin),
+        std::make_move_iterator(unloadedCandidates.begin() + end));
+    auto unloadedChildren =
+        inodeMap->getUnloadedChildrenForGc(self->getNodeId(), lookupBatch);
+    for (auto& child : unloadedChildren) {
+      if (cancellationToken.isCancellationRequested()) {
+        break;
+      }
+      auto name = std::move(child.name);
+      res.push_back(self->getOrLoadChildTree(name, context)
+                        .thenValue([name](TreeInodePtr tree) {
+                          return std::make_pair(name, std::move(tree));
+                        }));
+    }
   }
   return collectAllSafe(std::move(res));
 }
@@ -6629,9 +6647,11 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
         uint64_t numSkippedChildNoFsRef = 0;
         std::optional<PathComponent> lastExamined;
         std::vector<PathComponent> staleEntriesToInvalidate;
+        std::vector<InodeMap::UnloadedInodeGcCandidate> unloadedCandidates;
         bool reachedEnd = false;
         while (!reachedEnd && !shouldCancelGC(cancellationToken)) {
           staleEntriesToInvalidate.clear();
+          unloadedCandidates.clear();
           const bool parentHasFsRef = self->debugGetFsRefcount() != 0;
           {
             auto contents = self->getContentsUnchecked().rlock();
@@ -6655,11 +6675,6 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                  numExamined < kFuseGcDirectoryScanBatchSize;
                  ++entry, ++numExamined) {
               lastExamined = PathComponent{entry->first};
-              auto* entryInode = entry->second.getInode();
-              if (!entryInode) {
-                continue;
-              }
-
               if (shouldCancelGC(cancellationToken)) {
                 break;
               }
@@ -6670,6 +6685,16 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                     currentGcBarrier->getChild(entry->first.piece());
               }
               if (childGcBarrier) {
+                continue;
+              }
+
+              auto* entryInode = entry->second.getInode();
+              if (!entryInode) {
+                if (!entry->second.isDirectory()) {
+                  unloadedCandidates.push_back(
+                      {entry->second.getInodeNumber(),
+                       PathComponent{entry->first}});
+                }
                 continue;
               }
 
@@ -6693,6 +6718,28 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
               staleEntriesToInvalidate.emplace_back(entry->first);
             }
             reachedEnd = entry == contents->entries.end();
+          }
+
+          auto unloadedChildren = self->getInodeMap()->getUnloadedChildrenForGc(
+              self->getNodeId(), unloadedCandidates);
+          for (auto& child : unloadedChildren) {
+            if (shouldCancelGC(cancellationToken)) {
+              return numInvalidated;
+            }
+            auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+                child.lastFsRequestTime.toTimespec().tv_sec);
+            if (lastFsRequestTime >= cutoff) {
+              continue;
+            }
+            if (!parentHasFsRef) {
+              numSkippedParentNoFsRef++;
+              continue;
+            }
+            if (child.numFsReferences == 0) {
+              numSkippedChildNoFsRef++;
+              continue;
+            }
+            staleEntriesToInvalidate.push_back(std::move(child.name));
           }
 
           // Queue backpressure can block, so submit only after releasing the

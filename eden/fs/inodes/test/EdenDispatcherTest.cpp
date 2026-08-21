@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
@@ -317,7 +318,7 @@ TEST(RawEdenDispatcherTest, getattr_returns_dynamic_ttl_with_pressure_gc) {
 
 TEST(
     RawEdenDispatcherTest,
-    pressure_gc_invalidates_stale_entries_individually) {
+    pressure_gc_loads_unloaded_trees_and_invalidates_unloaded_stale_files) {
 #ifndef __linux__
   GTEST_SKIP() << "FakeFuse invalidation tests are Linux-only";
 #else
@@ -338,18 +339,28 @@ TEST(
           ->lookup(
               0, kRootNodeId, "dir"_pc, ObjectFetchContext::getNullContext())
           .get(0ms);
-  mount.getDispatcher()
-      ->lookup(
-          0,
-          InodeNumber{dirEntry.nodeid},
-          "file.txt"_pc,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
+  auto fileEntry = mount.getDispatcher()
+                       ->lookup(
+                           0,
+                           InodeNumber{dirEntry.nodeid},
+                           "file.txt"_pc,
+                           ObjectFetchContext::getNullContext())
+                       .get(0ms);
 
   mount.getClock().advance(11s);
   auto cutoff = folly::to<std::chrono::system_clock::time_point>(
                     mount.getClock().getRealtime()) -
       10s;
+  auto dirNumber = InodeNumber{dirEntry.nodeid};
+  auto fileNumber = InodeNumber{fileEntry.nodeid};
+  EXPECT_GT(
+      mount.getEdenMount()->getRootInode()->unloadChildrenLastAccessedBefore(
+          folly::to<timespec>(cutoff)),
+      0);
+  EXPECT_FALSE(
+      mount.getEdenMount()->getInodeMap()->lookupLoadedInode(dirNumber));
+  EXPECT_FALSE(
+      mount.getEdenMount()->getInodeMap()->lookupLoadedInode(fileNumber));
 
   auto numInvalidated = mount.getEdenMount()
                             ->getRootInode()
@@ -357,6 +368,10 @@ TEST(
                                 cutoff, ObjectFetchContext::getNullContext())
                             .get(10s);
   EXPECT_EQ(2u, numInvalidated);
+  EXPECT_TRUE(
+      mount.getEdenMount()->getInodeMap()->lookupLoadedInode(dirNumber));
+  EXPECT_FALSE(
+      mount.getEdenMount()->getInodeMap()->lookupLoadedInode(fileNumber));
 
   mount.getEdenMount()->flushInvalidations().get(10s);
   fuse->close();

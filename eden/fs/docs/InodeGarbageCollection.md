@@ -65,27 +65,9 @@ function:
 **File:** `eden/fs/inodes/TreeInode.cpp`
 
 This function dispatches to platform-specific implementations based on the
-filesystem channel type:
-
-```cpp
-ImmediateFuture<uint64_t> TreeInode::handleChildrenNotAccessedRecently(
-    std::chrono::system_clock::time_point cutoff,
-    const ObjectFetchContextPtr& context,
-    folly::CancellationToken cancellationToken) {
-
-  if (getMount()->getNfsdChannel()) {
-    // NFS path (currently only supported on macOS)
-    return invalidateChildrenNotMaterializedNFS(cutoff, context, cancellationToken);
-  } else if (getMount()->getPrjfsChannel()) {
-    // PrjFS path (currently only supported on Windows)
-    return invalidateChildrenNotMaterializedPrjFS(cutoff, context, cancellationToken);
-  }
-
-  // FUSE path (currently only supported on Linux)
-  auto unloaded = unloadChildrenLastAccessedBefore(folly::to<timespec>(cutoff));
-  return ImmediateFuture<uint64_t>{0ULL};
-}
-```
+filesystem channel type. Pressure-based FUSE GC actively invalidates stale
+entries. Legacy FUSE GC only unloads stale inode objects whose references have
+already been released by the kernel.
 
 ## Phase 2: `unloadChildrenUnreferencedByFs`
 
@@ -104,16 +86,24 @@ filesystem. This function:
 
 ### FUSE (Currently only supported on Linux)
 
-**Behavior:** FUSE automatically manages FS refcounts. The kernel sends
-`FUSE_FORGET` messages when files are no longer referenced, which decreases the
-FS refcount. Therefore, EdenFS doesn't need to explicitly invalidate inodes.
+**Behavior:** FUSE sends `FUSE_FORGET` after dropping a cached entry. Under inode
+pressure, EdenFS invalidates stale entries to prompt those FORGET messages
+rather than waiting for normal kernel cache eviction.
 
 **GC Strategy:**
 
-1. Call `unloadChildrenLastAccessedBefore()` to unload inodes based on their
-   access time (atime)
-2. Skip the invalidation step entirely
-3. Return 0 as the invalidation count
+1. Load remembered `TreeInode` objects to walk their directory contents
+2. Copy unloaded file candidates in bounded directory batches and retrieve
+   their timestamps and filesystem reference counts with one `InodeMap` lookup
+   per batch
+3. Invalidate stale loaded and unloaded entries bottom-up through the bounded
+   FUSE invalidation queue
+4. Wait for invalidations to drain, then unload loaded inodes whose FORGET has
+   reduced their filesystem reference count to zero
+
+GC reconstructs remembered trees because their contents are needed to discover
+descendants. It does not reconstruct unloaded `FileInode` objects before
+invalidating their parent/name entries.
 
 ---
 
@@ -178,7 +168,8 @@ support.
 ### `getLoadedOrRememberedTreeChildren`
 
 A helper function that is called from `processTreeChildren` to get the list of
-tree's children (both loaded and unloaded).
+tree's children (both loaded and unloaded). Pressure-based FUSE GC uses this to
+reconstruct remembered trees before scanning their contents.
 
 ### `shouldCancelGC`
 
@@ -192,12 +183,12 @@ Checks for early termination conditions.
 | ------------------------- | ------------------------------------ | ---------------------------------------- | -------------------------------------------------------------- |
 | **Kernel Notification**   | Yes (`FUSE_FORGET`)                  | No                                       | No                                                             |
 | **Refcount Management**   | Automatic by kernel                  | Manual via GC                            | Manual via GC                                                  |
-| **Invalidation Required** | No                                   | Yes                                      | Yes                                                            |
-| **Time Tracking**         | In-memory atime                      | `lastUsedTime` field                     | On-disk atime                                                  |
-| **First GC Phase**        | `unloadChildrenLastAccessedBefore()` | `invalidateChildrenNotMaterializedNFS()` | `invalidateChildrenNotMaterializedPrjFS()`                     |
-| **Invalidation Method**   | N/A                                  | `nfsInvalidateCacheEntryForGC()`         | `invalidateChannelEntryCache()`                                |
-| **Invalidation Scope**    | N/A                                  | Non-materialized directories             | Non-materialized files/directories                             |
-| **Data Safety**           | N/A                                  | Skip materialized inodes                 | Skip materialized inodes; relies on failure for non-empty dirs |
+| **Invalidation Required** | Under pressure                       | Yes                                      | Yes                                                            |
+| **Time Tracking**         | Last filesystem request             | Last filesystem request                  | On-disk atime                                                  |
+| **First GC Phase**        | `invalidateChildrenNotAccessedRecentlyFuse()` | `invalidateChildrenNotMaterializedNFS()` | `invalidateChildrenNotMaterializedPrjFS()`                     |
+| **Invalidation Method**   | Bounded FUSE entry invalidation      | `nfsInvalidateCacheEntryForGC()`         | `invalidateChannelEntryCache()`                                |
+| **Invalidation Scope**    | Stale loaded and unloaded entries    | Non-materialized directories             | Non-materialized files/directories                             |
+| **Data Safety**           | Skip configured and mounted barriers | Skip materialized inodes                 | Skip materialized inodes; relies on failure for non-empty dirs |
 
 ---
 
