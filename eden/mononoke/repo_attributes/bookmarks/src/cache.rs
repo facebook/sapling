@@ -31,22 +31,14 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
-use mononoke_types::RepositoryId;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
-use stats::prelude::*;
 
 use crate::Bookmarks;
 use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
 use crate::transaction::BookmarkTransaction;
 use crate::transaction::BookmarkTransactionHook;
-
-define_stats! {
-    prefix = "mononoke.bookmarks.cache";
-    cached_bookmarks_hits: dynamic_timeseries("{}.hit", (repo: String); Rate, Sum),
-    cached_bookmarks_misses: dynamic_timeseries("{}.miss", (repo: String); Rate, Sum),
-}
 
 type CacheData = BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>;
 
@@ -110,7 +102,6 @@ impl Cache {
 
 #[derive(Clone)]
 pub struct CachedBookmarks {
-    repo_id: RepositoryId,
     cache: Arc<Mutex<Option<Cache>>>,
     bookmarks: Arc<dyn Bookmarks>,
 }
@@ -126,9 +117,8 @@ fn ttl() -> Option<Duration> {
 }
 
 impl CachedBookmarks {
-    pub fn new(bookmarks: Arc<dyn Bookmarks>, repo_id: RepositoryId) -> Self {
+    pub fn new(bookmarks: Arc<dyn Bookmarks>) -> Self {
         Self {
-            repo_id,
             bookmarks,
             cache: Arc::new(Mutex::new(None)),
         }
@@ -142,9 +132,7 @@ impl CachedBookmarks {
             Some(ref mut cache) => {
                 // create new cache if the old one has either expired or failed
                 let cache_failed = cache.is_failed();
-                let mut cache_hit = true;
                 if cache.expires <= now || cache_failed {
-                    cache_hit = false;
                     *cache = Cache::new(
                         ctx,
                         self.bookmarks.clone(),
@@ -163,12 +151,6 @@ impl CachedBookmarks {
                             _ => Freshness::MaybeStale,
                         },
                     );
-                }
-
-                if cache_hit {
-                    STATS::cached_bookmarks_hits.add_value(1, (self.repo_id.id().to_string(),))
-                } else {
-                    STATS::cached_bookmarks_misses.add_value(1, (self.repo_id.id().to_string(),))
                 }
 
                 cache.clone()
@@ -781,12 +763,10 @@ mod tests {
             .build()
             .unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let repo_id = RepositoryId::new(0);
-
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let bookmarks = CachedBookmarks::new(Arc::new(mock), repo_id);
+        let bookmarks = CachedBookmarks::new(Arc::new(mock));
 
         let spawn_query = |prefix: &'static str, ttl: Option<i64>, rt: &Runtime| {
             let (sender, receiver) = oneshot::channel();
@@ -983,12 +963,10 @@ mod tests {
             .build()
             .unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let repo_id = RepositoryId::new(0);
-
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let store = CachedBookmarks::new(Arc::new(mock), repo_id);
+        let store = CachedBookmarks::new(Arc::new(mock));
 
         let (sender, receiver) = oneshot::channel();
 

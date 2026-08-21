@@ -109,7 +109,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
-        "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",

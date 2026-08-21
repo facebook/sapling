@@ -901,15 +901,8 @@ impl RepoFactory {
         Ok(Arc::new(sql_bookmarks))
     }
 
-    pub fn bookmarks(
-        &self,
-        sql_bookmarks: &ArcSqlBookmarks,
-        repo_identity: &ArcRepoIdentity,
-    ) -> ArcBookmarks {
-        Arc::new(CachedBookmarks::new(
-            sql_bookmarks.clone(),
-            repo_identity.id(),
-        ))
+    pub fn bookmarks(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarks {
+        Arc::new(CachedBookmarks::new(sql_bookmarks.clone()))
     }
 
     pub fn bookmark_update_log(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarkUpdateLog {

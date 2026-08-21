@@ -102,7 +102,6 @@ define_stats! {
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
     push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); Rate, Sum),
-    rate_limits_exceeded: dynamic_timeseries("rate_limits_exceeded.{}", (reponame: String); Rate, Sum),
     push_error: dynamic_timeseries("push_error.{}", (reponame: String); Rate, Sum),
 }
 

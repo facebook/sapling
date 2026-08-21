@@ -43,7 +43,6 @@ use mercurial_types::RepoPath;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use stats::prelude::*;
 use thiserror::Error;
 use tracing::debug;
 
@@ -63,11 +62,6 @@ pub enum FilenodesRelatedResult {
     Unrelated,
     FirstAncestorOfSecond,
     SecondAncestorOfFirst,
-}
-
-define_stats! {
-    prefix = "mononoke.file_history";
-    too_big: dynamic_timeseries("{}.too_big", (repo: String); Rate, Sum),
 }
 
 pub trait Repo = RepoIdentityRef
@@ -260,7 +254,6 @@ pub async fn get_file_history(
         FilenodeResult::Present(FilenodeRange::TooBig) => {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::FilenodesTooBigHistory);
-            STATS::too_big.add_value(1, (repo.repo_identity().name().to_string(),));
             let history = get_file_history_using_prefetched(
                 ctx,
                 repo,
