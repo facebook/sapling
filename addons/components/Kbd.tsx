@@ -40,6 +40,18 @@ function keycodeToString(keycode: KeyCode): string {
       return '+';
     case KeyCode.Minus:
       return '-';
+    case KeyCode.Enter:
+      return 'Enter';
+    case KeyCode.Backspace:
+      return 'Backspace';
+    case KeyCode.LeftArrow:
+      return '←';
+    case KeyCode.UpArrow:
+      return '↑';
+    case KeyCode.RightArrow:
+      return '→';
+    case KeyCode.DownArrow:
+      return '↓';
     default:
       return String.fromCharCode(keycode).toUpperCase();
   }

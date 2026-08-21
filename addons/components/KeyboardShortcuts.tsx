@@ -25,6 +25,7 @@ export enum Modifier {
 }
 
 export enum KeyCode {
+  Enter = 13,
   Escape = 27,
   One = 49,
   Two = 50,
