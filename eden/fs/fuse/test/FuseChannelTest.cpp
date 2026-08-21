@@ -10,6 +10,7 @@
 #include "eden/fs/fuse/IoUringFuseTransport.h"
 
 #include <folly/Random.h>
+#include <folly/ScopeGuard.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -21,6 +22,7 @@
 #endif
 #include <cerrno>
 #include <system_error>
+#include <thread>
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/EnumValue.h"
@@ -83,7 +85,8 @@ class FuseChannelTest : public ::testing::Test {
       size_t numThreads = 2,
       uint32_t fuseMaxPages = 0,
       bool useIoUring = false,
-      std::string ioUringKernelReleaseRegex = {}) {
+      std::string ioUringKernelReleaseRegex = {},
+      size_t numInvalidationThreads = 4) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
@@ -112,7 +115,9 @@ class FuseChannelTest : public ::testing::Test {
         /*fuseMaxPages=*/fuseMaxPages,
         /*useIoUring=*/useIoUring,
         std::move(ioUringKernelReleaseRegex),
-        /*ioUringQueueDepth=*/8);
+        /*ioUringQueueDepth=*/8,
+        /*ioUringDisableIoWait=*/true,
+        numInvalidationThreads);
   }
 
   FuseChannel::StopFuture performInit(
@@ -859,4 +864,221 @@ TEST_F(FuseChannelTest, testAllowIdmapNotSetWhenKernelLacksSupport) {
 }
 #endif
 
+TEST_F(FuseChannelTest, flushPreventsLaterDispatchWhileWaiting) {
+  auto channelPtr = createChannel();
+  if (!channelPtr) {
+    FAIL() << "createChannel returned null";
+  }
+  auto& channel = *channelPtr;
+  channel.inflightInvalidations_.store(1, std::memory_order_release);
+
+  channel.invalidationThreads_.emplace_back(
+      [&] { channel.invalidationThread(); });
+  channel.invalidationThreads_.emplace_back(
+      [&] { channel.invalidationThread(); });
+  SCOPE_EXIT {
+    channel.inflightInvalidations_.store(0, std::memory_order_release);
+    {
+      std::lock_guard lock{channel.inflightInvalidationsMutex_};
+      channel.inflightInvalidationsCV_.notify_all();
+    }
+    if (!channel.invalidationThreads_.empty()) {
+      channel.stopInvalidationThread();
+    }
+  };
+
+  auto firstFlush = channel.completeInvalidations();
+
+  auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (channel.invalidationQueue_.lock()->flushInProgress) {
+      break;
+    }
+    std::this_thread::yield();
+  }
+  ASSERT_TRUE(channel.invalidationQueue_.lock()->flushInProgress);
+
+  auto secondFlush = channel.completeInvalidations();
+
+  EXPECT_FALSE(firstFlush.isReady());
+  EXPECT_FALSE(secondFlush.isReady());
+  {
+    auto queue = channel.invalidationQueue_.lock();
+    EXPECT_TRUE(queue->flushInProgress);
+    ASSERT_EQ(1, queue->queue.size());
+    EXPECT_EQ(FuseChannel::InvalidationType::FLUSH, queue->queue.front().type);
+  }
+
+  channel.inflightInvalidations_.store(0, std::memory_order_release);
+  {
+    std::lock_guard lock{channel.inflightInvalidationsMutex_};
+    channel.inflightInvalidationsCV_.notify_all();
+  }
+
+  std::move(firstFlush).get(kTimeout);
+  std::move(secondFlush).get(kTimeout);
+}
+
+TEST_F(FuseChannelTest, stopEntryDrainsQueuedFlushes) {
+  auto channelPtr = createChannel();
+  if (!channelPtr) {
+    FAIL() << "createChannel returned null";
+  }
+  auto& channel = *channelPtr;
+  channel.inflightInvalidations_.store(1, std::memory_order_release);
+
+  channel.invalidationThreads_.emplace_back(
+      [&] { channel.invalidationThread(); });
+  channel.invalidationThreads_.emplace_back(
+      [&] { channel.invalidationThread(); });
+  std::thread stopper;
+  SCOPE_EXIT {
+    channel.inflightInvalidations_.store(0, std::memory_order_release);
+    {
+      std::lock_guard lock{channel.inflightInvalidationsMutex_};
+      channel.inflightInvalidationsCV_.notify_all();
+    }
+    if (stopper.joinable()) {
+      stopper.join();
+    }
+    if (!channel.invalidationThreads_.empty()) {
+      channel.stopInvalidationThread();
+    }
+  };
+
+  auto firstFlush = channel.completeInvalidations();
+  auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (channel.invalidationQueue_.lock()->flushInProgress) {
+      break;
+    }
+    std::this_thread::yield();
+  }
+  ASSERT_TRUE(channel.invalidationQueue_.lock()->flushInProgress);
+
+  auto secondFlush = channel.completeInvalidations();
+  std::atomic<bool> stopFinished{false};
+  stopper = std::thread([&] {
+    channel.stopInvalidationThread();
+    stopFinished.store(true, std::memory_order_release);
+  });
+
+  deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (channel.invalidationQueue_.lock()->state ==
+        FuseChannel::InvalidationQueueState::DRAINING) {
+      break;
+    }
+    std::this_thread::yield();
+  }
+  ASSERT_EQ(
+      FuseChannel::InvalidationQueueState::DRAINING,
+      channel.invalidationQueue_.lock()->state);
+  EXPECT_FALSE(stopFinished.load(std::memory_order_acquire));
+
+  const auto queueSizeBeforeRejectedEntry =
+      channel.invalidationQueue_.lock()->queue.size();
+  channel.invalidateEntry(InodeNumber{1}, "new"_pc);
+  EXPECT_EQ(
+      queueSizeBeforeRejectedEntry,
+      channel.invalidationQueue_.lock()->queue.size());
+  std::move(channel.completeInvalidations()).get(kTimeout);
+
+  channel.inflightInvalidations_.store(0, std::memory_order_release);
+  {
+    std::lock_guard lock{channel.inflightInvalidationsMutex_};
+    channel.inflightInvalidationsCV_.notify_all();
+  }
+  stopper.join();
+
+  EXPECT_TRUE(stopFinished.load(std::memory_order_acquire));
+  std::move(firstFlush).get(kTimeout);
+  std::move(secondFlush).get(kTimeout);
+  auto queue = channel.invalidationQueue_.lock();
+  EXPECT_EQ(FuseChannel::InvalidationQueueState::STOPPED, queue->state);
+  EXPECT_TRUE(queue->queue.empty());
+}
+
+TEST_F(FuseChannelTest, singleInvalidationThreadUsesSerialFlush) {
+  auto channelPtr = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/false,
+      /*ioUringKernelReleaseRegex=*/{},
+      /*numInvalidationThreads=*/1);
+  if (!channelPtr) {
+    FAIL() << "createChannel returned null";
+  }
+  auto& channel = *channelPtr;
+  channel.inflightInvalidations_.store(1, std::memory_order_release);
+
+  channel.invalidationThreads_.emplace_back(
+      [&] { channel.invalidationThread(); });
+  SCOPE_EXIT {
+    if (!channel.invalidationThreads_.empty()) {
+      channel.stopInvalidationThread();
+    }
+  };
+
+  auto flush = channel.completeInvalidations();
+  std::move(flush).get(kTimeout);
+  EXPECT_FALSE(channel.invalidationQueue_.lock()->flushInProgress);
+}
+
+TEST_F(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker) {
+  auto channelPtr = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/false,
+      /*ioUringKernelReleaseRegex=*/{},
+      /*numInvalidationThreads=*/0);
+  if (!channelPtr) {
+    FAIL() << "createChannel returned null";
+  }
+  auto& channel = *channelPtr;
+
+  EXPECT_EQ(1, channel.numInvalidationThreads_);
+}
+
+TEST_F(FuseChannelTest, excessiveInvalidationThreadsAreCapped) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/false,
+      /*ioUringKernelReleaseRegex=*/{},
+      /*numInvalidationThreads=*/1'000);
+
+  EXPECT_EQ(64, channel->numInvalidationThreads_);
+}
+
+TEST_F(FuseChannelTest, concurrentInvalidationStopsAreSerialized) {
+  auto channel = createChannel();
+  channel->invalidationThreads_.emplace_back(
+      [&] { channel->invalidationThread(); });
+  channel->invalidationThreads_.emplace_back(
+      [&] { channel->invalidationThread(); });
+
+  std::atomic<size_t> ready{0};
+  std::atomic<bool> start{false};
+  auto stop = [&] {
+    ready.fetch_add(1, std::memory_order_release);
+    while (!start.load(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+    channel->stopInvalidationThread();
+  };
+  std::thread first{stop};
+  std::thread second{stop};
+  while (ready.load(std::memory_order_acquire) != 2) {
+    std::this_thread::yield();
+  }
+  start.store(true, std::memory_order_release);
+  first.join();
+  second.join();
+
+  EXPECT_TRUE(channel->invalidationThreads_.empty());
+  EXPECT_EQ(
+      FuseChannel::InvalidationQueueState::STOPPED,
+      channel->invalidationQueue_.lock()->state);
+}
 } // namespace facebook::eden

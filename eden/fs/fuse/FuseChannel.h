@@ -16,6 +16,7 @@
 #include <gtest/gtest_prod.h>
 #include <stdlib.h>
 #include <condition_variable>
+#include <deque>
 #include <iosfwd>
 #include <memory>
 #include <optional>
@@ -336,7 +337,8 @@ class FuseChannel final : public FsChannel {
       bool useIoUring = false,
       std::string ioUringKernelReleaseRegex = {},
       uint32_t ioUringQueueDepth = 8,
-      bool ioUringDisableIoWait = true);
+      bool ioUringDisableIoWait = true,
+      size_t numInvalidationThreads = 4);
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -712,28 +714,39 @@ class FuseChannel final : public FsChannel {
     INODE,
     DIR_ENTRY,
     FLUSH,
+    STOP,
   };
   struct InvalidationEntry {
+    InvalidationEntry();
     InvalidationEntry(InodeNumber inode, int64_t offset, int64_t length);
     InvalidationEntry(InodeNumber inode, PathComponentPiece name);
     explicit InvalidationEntry(folly::Promise<folly::Unit> promise);
+    InvalidationEntry(const InvalidationEntry&) = delete;
+    InvalidationEntry& operator=(const InvalidationEntry&) = delete;
     InvalidationEntry(InvalidationEntry&& other) noexcept(
         std::is_nothrow_move_constructible_v<PathComponent> &&
         std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>> &&
         std::is_nothrow_move_constructible_v<DataRange>);
+    InvalidationEntry& operator=(InvalidationEntry&&) = delete;
     ~InvalidationEntry();
 
     InvalidationType type;
     InodeNumber inode;
     union {
       PathComponent name;
-      DataRange range;
+      DataRange range{0, 0};
       folly::Promise<folly::Unit> promise;
     };
   };
+  enum class InvalidationQueueState : uint32_t {
+    ACCEPTING,
+    DRAINING,
+    STOPPED,
+  };
   struct InvalidationQueue {
-    std::vector<InvalidationEntry> queue;
-    bool stop{false};
+    std::deque<InvalidationEntry> queue;
+    bool flushInProgress{false};
+    InvalidationQueueState state{InvalidationQueueState::ACCEPTING};
   };
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
@@ -741,6 +754,12 @@ class FuseChannel final : public FsChannel {
   FRIEND_TEST(FuseChannelTest, formatting_dir);
   FRIEND_TEST(FuseChannelTest, formatting_flush);
   FRIEND_TEST(FuseChannelTest, formatting_unknown);
+  FRIEND_TEST(FuseChannelTest, flushPreventsLaterDispatchWhileWaiting);
+  FRIEND_TEST(FuseChannelTest, stopEntryDrainsQueuedFlushes);
+  FRIEND_TEST(FuseChannelTest, singleInvalidationThreadUsesSerialFlush);
+  FRIEND_TEST(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker);
+  FRIEND_TEST(FuseChannelTest, excessiveInvalidationThreadsAreCapped);
+  FRIEND_TEST(FuseChannelTest, concurrentInvalidationStopsAreSerialized);
   /**
    * Private destructor.
    *
@@ -961,6 +980,7 @@ class FuseChannel final : public FsChannel {
   // The number of worker threads that are actually created. When using
   // io_uring, this is the number of CPU cores on the machine.
   size_t effectiveWorkerThreadCount_{0};
+  const size_t numInvalidationThreads_;
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;
   const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
@@ -1050,11 +1070,20 @@ class FuseChannel final : public FsChannel {
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
 
-  // State for sending inode invalidation requests to the kernel
-  // These are processed in their own dedicated thread.
+  // State for sending inode invalidation requests to the kernel. Entries must
+  // be safe to complete out of dequeue order because dedicated threads process
+  // them concurrently.
   folly::Synchronized<InvalidationQueue, std::mutex> invalidationQueue_;
   std::condition_variable invalidationCV_;
-  std::thread invalidationThread_;
+  std::vector<std::thread> invalidationThreads_;
+  folly::once_flag stopInvalidationThreadsFlag_;
+  // Tracks the number of invalidation entries currently being processed.
+  // Used by FLUSH entries to wait until all prior work is complete.
+  // Uses a separate mutex from invalidationQueue_ to avoid blocking
+  // other threads from taking entries while a FLUSH waits.
+  std::atomic<uint64_t> inflightInvalidations_{0};
+  std::mutex inflightInvalidationsMutex_;
+  std::condition_variable inflightInvalidationsCV_;
 
   ProcessAccessLog processAccessLog_;
 
@@ -1130,6 +1159,8 @@ struct formatter<facebook::eden::FuseChannel::InvalidationEntry>
             out, "(inode {}, child \"{}\")", entry.inode, entry.name);
       case facebook::eden::FuseChannel::InvalidationType::FLUSH:
         return fmt::format_to(out, "(invalidation flush)");
+      case facebook::eden::FuseChannel::InvalidationType::STOP:
+        return fmt::format_to(out, "(invalidation stop)");
       default:
         return fmt::format_to(
             out,

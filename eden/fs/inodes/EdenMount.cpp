@@ -2712,7 +2712,8 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       edenConfig->fuseUseIoUring.getValue(),
       edenConfig->fuseIoUringKernelReleaseRegex.getValue(),
       edenConfig->fuseIoUringQueueDepth.getValue(),
-      edenConfig->fuseIoUringDisableIoWait.getValue());
+      edenConfig->fuseIoUringDisableIoWait.getValue(),
+      edenConfig->fuseNumInvalidationThreads.getValue());
 }
 } // namespace
 #endif

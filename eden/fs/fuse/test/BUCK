@@ -24,6 +24,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_dispatcher",
         "//folly:file",
         "//folly:random",
+        "//folly:scope_guard",
         "//folly/executors:global_executor",
         "//folly/test:test_utils",
     ],

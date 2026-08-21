@@ -21,6 +21,7 @@ cpp_library(
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:thread",
         "//folly:exception",
+        "//folly:scope_guard",
         "//folly/executors:global_executor",
         "//folly/logging:logging",
         "//folly/system:thread_name",

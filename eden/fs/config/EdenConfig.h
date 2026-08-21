@@ -809,6 +809,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The number of FUSE invalidation threads to spawn per mount.
+   */
+  ConfigSetting<uint32_t> fuseNumInvalidationThreads{
+      "fuse:num-invalidation-threads",
+      4,
+      this};
+
+  /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to
    * avoid blocking forever.
