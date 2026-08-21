@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/CancellationToken.h>
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -493,6 +494,21 @@ class FuseChannel final : public FsChannel {
    */
   void invalidateEntry(InodeNumber parent, PathComponentPiece name);
 
+  /**
+   * Enqueue a directory entry invalidation, waiting when necessary to keep the
+   * queue below maxQueueSize. Returns false if cancellation or channel
+   * shutdown occurs before the invalidation is enqueued, or if maxQueueSize is
+   * zero (a zero-capacity queue can never accept an entry).
+   *
+   * The caller must not hold inode locks because this method may wait for
+   * invalidation workers to make room in the queue.
+   */
+  bool invalidateEntryWithQueueLimit(
+      InodeNumber parent,
+      PathComponentPiece name,
+      size_t maxQueueSize,
+      const folly::CancellationToken& cancellationToken);
+
   /*
    * Request that the kernel invalidate its cached data for the specified
    * inodes.
@@ -760,6 +776,9 @@ class FuseChannel final : public FsChannel {
   FRIEND_TEST(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker);
   FRIEND_TEST(FuseChannelTest, excessiveInvalidationThreadsAreCapped);
   FRIEND_TEST(FuseChannelTest, concurrentInvalidationStopsAreSerialized);
+  FRIEND_TEST(FuseChannelTest, invalidationWaitsForQueueCapacity);
+  FRIEND_TEST(FuseChannelTest, invalidationQueueWaitIsCancellable);
+  FRIEND_TEST(FuseChannelTest, invalidationQueueShutdownUnblocksProducer);
   /**
    * Private destructor.
    *
@@ -912,6 +931,7 @@ class FuseChannel final : public FsChannel {
   void fuseWorkerThread() noexcept;
   void invalidationThread() noexcept;
   void stopInvalidationThread();
+  void notifyInvalidationCapacityWaiters();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
@@ -1075,6 +1095,8 @@ class FuseChannel final : public FsChannel {
   // them concurrently.
   folly::Synchronized<InvalidationQueue, std::mutex> invalidationQueue_;
   std::condition_variable invalidationCV_;
+  std::condition_variable invalidationCapacityCV_;
+  std::atomic<size_t> invalidationCapacityWaiters_{0};
   std::vector<std::thread> invalidationThreads_;
   folly::once_flag stopInvalidationThreadsFlag_;
   // Tracks the number of invalidation entries currently being processed.

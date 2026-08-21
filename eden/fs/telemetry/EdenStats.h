@@ -312,6 +312,8 @@ struct FuseStats : StatsGroup<FuseStats> {
 
   Counter ioUringReplySameThread{"fuse.io_uring_reply_same_thread"};
   Counter ioUringReplyCrossThread{"fuse.io_uring_reply_cross_thread"};
+  Counter invalidationQueueThrottleWait{
+      "fuse.invalidation.queue_throttle_wait"};
 };
 
 struct NfsStats : StatsGroup<NfsStats> {

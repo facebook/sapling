@@ -1384,6 +1384,47 @@ void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
   invalidationCV_.notify_one();
 }
 
+bool FuseChannel::invalidateEntryWithQueueLimit(
+    InodeNumber parent,
+    PathComponentPiece name,
+    size_t maxQueueSize,
+    const folly::CancellationToken& cancellationToken) {
+  if (maxQueueSize == 0) {
+    return false;
+  }
+  folly::CancellationCallback cancellationCallback{
+      cancellationToken, [this] {
+        // Synchronize with the wait predicate so cancellation cannot notify
+        // immediately before the producer starts waiting.
+        auto queue = invalidationQueue_.lock();
+        queue.unlock();
+        invalidationCapacityCV_.notify_all();
+      }};
+  auto queue = invalidationQueue_.lock();
+  if (queue->queue.size() >= maxQueueSize &&
+      queue->state == InvalidationQueueState::ACCEPTING &&
+      !cancellationToken.isCancellationRequested()) {
+    getStats()->increment(&FuseStats::invalidationQueueThrottleWait);
+    invalidationCapacityWaiters_.fetch_add(1, std::memory_order_relaxed);
+    SCOPE_EXIT {
+      invalidationCapacityWaiters_.fetch_sub(1, std::memory_order_relaxed);
+    };
+    invalidationCapacityCV_.wait(queue.as_lock(), [&] {
+      return queue->queue.size() < maxQueueSize ||
+          queue->state != InvalidationQueueState::ACCEPTING ||
+          cancellationToken.isCancellationRequested();
+    });
+  }
+  if (queue->state != InvalidationQueueState::ACCEPTING ||
+      cancellationToken.isCancellationRequested()) {
+    return false;
+  }
+  queue->queue.emplace_back(parent, name);
+  queue.unlock();
+  invalidationCV_.notify_one();
+  return true;
+}
+
 void FuseChannel::invalidateInodes(folly::Range<InodeNumber*> range) {
   {
     auto queue = invalidationQueue_.lock();
@@ -1827,6 +1868,7 @@ void FuseChannel::invalidationThread() noexcept {
           return;
         }
         queue->queue.swap(entries);
+        notifyInvalidationCapacityWaiters();
       }
 
       for (auto& entry : entries) {
@@ -1859,6 +1901,7 @@ void FuseChannel::invalidationThread() noexcept {
       }
       entry.emplace(std::move(lockedQueue->queue.front()));
       lockedQueue->queue.pop_front();
+      notifyInvalidationCapacityWaiters();
 
       if (entry->type == InvalidationType::STOP) {
         lockedQueue.unlock();
@@ -1920,6 +1963,15 @@ void FuseChannel::invalidationThread() noexcept {
   }
 }
 
+void FuseChannel::notifyInvalidationCapacityWaiters() {
+  // Waiters increment the count under the queue lock before waiting, so a
+  // blocked waiter is always visible to a worker that dequeued under the same
+  // lock; skipping the broadcast when the count is zero cannot lose a wakeup.
+  if (invalidationCapacityWaiters_.load(std::memory_order_relaxed) != 0) {
+    invalidationCapacityCV_.notify_all();
+  }
+}
+
 void FuseChannel::stopInvalidationThread() {
   folly::call_once(stopInvalidationThreadsFlag_, [this] {
     {
@@ -1937,6 +1989,7 @@ void FuseChannel::stopInvalidationThread() {
       }
     }
     invalidationCV_.notify_all();
+    invalidationCapacityCV_.notify_all();
 
     for (auto& thread : invalidationThreads_) {
       thread.join();
@@ -1957,6 +2010,7 @@ void FuseChannel::stopInvalidationThread() {
         sendInvalidation(entry);
       }
     }
+    invalidationCapacityCV_.notify_all();
   });
 }
 

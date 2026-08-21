@@ -51,6 +51,7 @@ folly::Logger straceLogger{"eden.strace"};
 // to pass even when the system is under fairly heavy CPU load.
 constexpr auto kTimeout = 1s;
 constexpr size_t kTraceBusCapacity = 25000;
+constexpr size_t kTestInvalidationQueueLimit = 4;
 
 fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
   fuse_entry_out response;
@@ -1077,6 +1078,153 @@ TEST_F(FuseChannelTest, concurrentInvalidationStopsAreSerialized) {
   second.join();
 
   EXPECT_TRUE(channel->invalidationThreads_.empty());
+  EXPECT_EQ(
+      FuseChannel::InvalidationQueueState::STOPPED,
+      channel->invalidationQueue_.lock()->state);
+}
+
+TEST_F(FuseChannelTest, invalidationWaitsForQueueCapacity) {
+  auto channel = createChannel();
+  {
+    auto queue = channel->invalidationQueue_.lock();
+    for (size_t i = 0; i < kTestInvalidationQueueLimit; ++i) {
+      queue->queue.emplace_back(InodeNumber{1}, "queued"_pc);
+    }
+  }
+
+  folly::CancellationSource cancellationSource;
+  std::atomic<bool> finished{false};
+  bool enqueued = false;
+  std::thread producer([&] {
+    enqueued = channel->invalidateEntryWithQueueLimit(
+        InodeNumber{1},
+        "new"_pc,
+        kTestInvalidationQueueLimit,
+        cancellationSource.getToken());
+    finished.store(true, std::memory_order_release);
+  });
+  SCOPE_EXIT {
+    cancellationSource.requestCancellation();
+    channel->invalidationCapacityCV_.notify_all();
+    if (producer.joinable()) {
+      producer.join();
+    }
+  };
+
+  auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (channel->invalidationCapacityWaiters_.load(
+             std::memory_order_relaxed) == 0 &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  ASSERT_EQ(
+      1, channel->invalidationCapacityWaiters_.load(std::memory_order_relaxed));
+  EXPECT_FALSE(finished.load(std::memory_order_acquire));
+
+  {
+    auto queue = channel->invalidationQueue_.lock();
+    queue->queue.pop_front();
+  }
+  channel->invalidationCapacityCV_.notify_one();
+  producer.join();
+
+  EXPECT_TRUE(enqueued);
+  EXPECT_EQ(
+      0, channel->invalidationCapacityWaiters_.load(std::memory_order_relaxed));
+  EXPECT_EQ(
+      kTestInvalidationQueueLimit,
+      channel->invalidationQueue_.lock()->queue.size());
+}
+
+TEST_F(FuseChannelTest, zeroInvalidationQueueCapacityRejectsEntry) {
+  auto channel = createChannel();
+  folly::CancellationSource cancellationSource;
+
+  EXPECT_FALSE(channel->invalidateEntryWithQueueLimit(
+      InodeNumber{1}, "new"_pc, 0, cancellationSource.getToken()));
+}
+
+TEST_F(FuseChannelTest, invalidationQueueWaitIsCancellable) {
+  auto channel = createChannel();
+  {
+    auto queue = channel->invalidationQueue_.lock();
+    for (size_t i = 0; i < kTestInvalidationQueueLimit; ++i) {
+      queue->queue.emplace_back(InodeNumber{1}, "queued"_pc);
+    }
+  }
+
+  folly::CancellationSource cancellationSource;
+  std::atomic<bool> started{false};
+  bool enqueued = true;
+  std::thread producer([&] {
+    started.store(true, std::memory_order_release);
+    enqueued = channel->invalidateEntryWithQueueLimit(
+        InodeNumber{1},
+        "new"_pc,
+        kTestInvalidationQueueLimit,
+        cancellationSource.getToken());
+  });
+  SCOPE_EXIT {
+    cancellationSource.requestCancellation();
+    channel->invalidationCapacityCV_.notify_all();
+    if (producer.joinable()) {
+      producer.join();
+    }
+  };
+
+  auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (!started.load(std::memory_order_acquire) &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  ASSERT_TRUE(started.load(std::memory_order_acquire));
+  cancellationSource.requestCancellation();
+  producer.join();
+
+  EXPECT_FALSE(enqueued);
+  EXPECT_EQ(
+      kTestInvalidationQueueLimit,
+      channel->invalidationQueue_.lock()->queue.size());
+}
+
+TEST_F(FuseChannelTest, invalidationQueueShutdownUnblocksProducer) {
+  auto channel = createChannel();
+  {
+    auto queue = channel->invalidationQueue_.lock();
+    for (size_t i = 0; i < kTestInvalidationQueueLimit; ++i) {
+      queue->queue.emplace_back(InodeNumber{1}, "queued"_pc);
+    }
+  }
+
+  folly::CancellationSource cancellationSource;
+  std::atomic<bool> started{false};
+  bool enqueued = true;
+  std::thread producer([&] {
+    started.store(true, std::memory_order_release);
+    enqueued = channel->invalidateEntryWithQueueLimit(
+        InodeNumber{1},
+        "new"_pc,
+        kTestInvalidationQueueLimit,
+        cancellationSource.getToken());
+  });
+  SCOPE_EXIT {
+    cancellationSource.requestCancellation();
+    if (producer.joinable()) {
+      producer.join();
+    }
+  };
+
+  auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (!started.load(std::memory_order_acquire) &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  ASSERT_TRUE(started.load(std::memory_order_acquire));
+
+  channel->stopInvalidationThread();
+  producer.join();
+
+  EXPECT_FALSE(enqueued);
   EXPECT_EQ(
       FuseChannel::InvalidationQueueState::STOPPED,
       channel->invalidationQueue_.lock()->state);

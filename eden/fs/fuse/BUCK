@@ -51,6 +51,7 @@ cpp_library(
         "//eden/fs/utils:bufvec",
         "//eden/fs/utils:fs_channel_types",
         "//eden/fs/utils:process_access_log",
+        "//folly:cancellation_token",
         "//folly:file",
         "//folly:portability",
         "//folly:range",
