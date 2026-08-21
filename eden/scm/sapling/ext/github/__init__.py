@@ -50,6 +50,13 @@ def unlink_closed_pr_hint() -> str:
     )
 
 
+@hint("pr-submit-restack")
+def pr_submit_restack_hint() -> str:
+    return _(
+        "use '@prog@ pr submit --restack' to dissolve the stack on GitHub and recreate it to match your local stack"
+    )
+
+
 def reposetup(ui, repo):
     ui.setconfig("hooks", "post-pull.prmarker", pr_marker.cleanup_landed_pr_hook)
 
@@ -99,6 +106,15 @@ subcmd = pull_request_command.subcommand(
         ("m", "message", None, _("message describing changes to updated commits")),
         ("d", "draft", False, _("mark new pull requests as draft")),
         ("o", "open", False, _("open pull requests in browser after creation")),
+        (
+            "",
+            "restack",
+            False,
+            _(
+                "with github.pr-workflow=stacked, dissolve and recreate the "
+                "stack on GitHub if it has diverged from the local stack"
+            ),
+        ),
     ],
 )
 def submit_cmd(ui, repo, *args, **opts):
