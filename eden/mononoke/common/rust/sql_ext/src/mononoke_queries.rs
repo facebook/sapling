@@ -639,7 +639,7 @@ macro_rules! mononoke_queries {
                     $( $lname: &[ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     // Prepare cache data
-                    let mut hasher = Hash128::with_seed(0);
+                    let mut hasher = XxHash3_128::with_seed(0);
                     $(
                         $pname.hash(&mut hasher);
                     )*
@@ -649,7 +649,7 @@ macro_rules! mononoke_queries {
                     stringify!($name).hash(&mut hasher);
                     stringify!($mysql_q).hash(&mut hasher);
                     stringify!($sqlite_q).hash(&mut hasher);
-                    let key = hasher.finish_ext();
+                    let key = hasher.finish_128();
                     let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
                     let query_name = stringify!($name);

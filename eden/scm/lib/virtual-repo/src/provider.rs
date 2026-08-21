@@ -19,7 +19,7 @@ use minibytes::Bytes;
 use minibytes::Text;
 use tracing::debug;
 use tracing::trace;
-use twox_hash::Xxh3Hash64;
+use twox_hash::XxHash3_64;
 use types::Id20;
 use types::PathComponentBuf;
 use types::SerializationFormat;
@@ -219,7 +219,7 @@ impl VirtualRepoProvider {
 fn calculate_file_length(seed: u64, name_id: u64, blob_id: u64) -> u64 {
     // Use xxhash to get a (roughly) uniform distribution.
     let x = {
-        let mut hash = Xxh3Hash64::default();
+        let mut hash = XxHash3_64::default();
         hash.write(&seed.to_le_bytes());
         hash.write(&name_id.to_le_bytes());
         hash.write(&(blob_id >> 8).to_le_bytes());

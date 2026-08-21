@@ -22,7 +22,7 @@ use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use twox_hash::XxHash;
+use twox_hash::XxHash64;
 use types::hgid::ReadHgIdExt;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
@@ -231,7 +231,7 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
 
 #[inline]
 fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
-    let mut xx = XxHash::default();
+    let mut xx = XxHash64::default();
     xx.write(buf.as_ref());
     xx.finish()
 }

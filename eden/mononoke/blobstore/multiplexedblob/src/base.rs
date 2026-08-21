@@ -30,7 +30,7 @@ use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
 use tokio::time::timeout;
-use twox_hash::XxHash;
+use twox_hash::XxHash64;
 
 use crate::scrub::SrubWriteOnly;
 
@@ -156,7 +156,7 @@ pub fn scrub_parse_results(
                 }
             }
             Ok(Some(value)) => {
-                let mut content_hash = XxHash::with_seed(0);
+                let mut content_hash = XxHash64::with_seed(0);
                 content_hash.write(value.as_raw_bytes());
                 let content_hash = content_hash.finish();
                 let (all_values, _) = get_data.get_or_insert_with(|| (HashMap::new(), value));

@@ -24,4 +24,4 @@ strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-twox-hash = "1.6.1"
+twox-hash = "2.1.3"

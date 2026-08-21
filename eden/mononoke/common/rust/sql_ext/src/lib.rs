@@ -7,6 +7,7 @@
 
 #![feature(once_cell_try)]
 
+mod hasher;
 mod mononoke_queries;
 #[cfg(not(fbcode_build))]
 mod oss;
@@ -71,14 +72,13 @@ pub mod _macro_internal {
     pub use sql_ext_proc_macros::extract_repo_ids_from_values;
     pub use sql_query_config::SqlQueryConfig;
     pub use sql_query_telemetry::SqlQueryTelemetry;
-    pub use twox_hash::xxh3::Hash128;
-    pub use twox_hash::xxh3::HasherExt;
 
     pub use crate::Connection;
     pub use crate::ConsistentReadError;
     pub use crate::ConsistentReadOptions;
     pub use crate::SqlConnections;
     pub use crate::Transaction;
+    pub use crate::hasher::XxHash3_128;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
     pub use crate::mononoke_queries::query_with_consistency_no_cache;

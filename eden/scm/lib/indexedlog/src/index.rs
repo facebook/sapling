@@ -92,7 +92,7 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use minibytes::Bytes;
 use tracing::debug_span;
-use twox_hash::XxHash;
+use twox_hash::XxHash64;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
@@ -1651,7 +1651,7 @@ impl MemChecksum {
         for i in start_chunk_index..self.xxhash_list.len() {
             let start = (i as u64) << self.chunk_size_logarithm;
             let end = (start + chunk_size).min(new_total_len);
-            let mut xx = XxHash::default();
+            let mut xx = XxHash64::default();
             // Hash portions of file_buf that intersect with start..end.
             let file_buf_start = ((start - start_chunk_offset) as usize).min(file_buf.len());
             let file_buf_end = ((end - start_chunk_offset) as usize).min(file_buf.len());

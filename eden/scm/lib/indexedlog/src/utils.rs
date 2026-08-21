@@ -17,8 +17,8 @@ use std::sync::atomic;
 
 use memmap2::MmapOptions;
 use minibytes::Bytes;
-use twox_hash::XxHash;
 use twox_hash::XxHash32;
+use twox_hash::XxHash64;
 
 use crate::config;
 use crate::errors::IoResultExt;
@@ -112,7 +112,7 @@ pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
 
 #[inline]
 pub fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
-    let mut xx = XxHash::default();
+    let mut xx = XxHash64::default();
     xx.write(buf.as_ref());
     xx.finish()
 }

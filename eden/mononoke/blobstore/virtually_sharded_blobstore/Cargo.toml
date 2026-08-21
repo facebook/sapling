@@ -27,7 +27,7 @@ shared_error = { version = "0.1.0", git = "https://github.com/facebookexperiment
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
-twox-hash = "1.6.1"
+twox-hash = "2.1.3"
 
 [dev-dependencies]
 assert_matches = "1.5"
