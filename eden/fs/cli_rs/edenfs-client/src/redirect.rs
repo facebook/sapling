@@ -484,7 +484,7 @@ impl Redirection {
                 format!(
                     "Failed to execute command `{} {}`",
                     APFS_HELPER,
-                    shlex::join(args.iter().copied())
+                    shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                 )
             })?;
         if output.status.success() {
@@ -551,7 +551,7 @@ impl Redirection {
                 .with_context(|| {
                     format!(
                         "Failed to execute command `hdiutil {}`",
-                        shlex::join(args.iter().copied())
+                        shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                     )
                 })?;
             if !create_output.status.success() {
@@ -589,7 +589,7 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to execute command `hdiutil {}`",
-                    shlex::join(args.iter().copied())
+                    shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                 )
             })?;
         if !attach_output.status.success() {
@@ -713,7 +713,7 @@ impl Redirection {
                 .with_context(|| {
                     format!(
                         "Failed to execute command `diskutil {}`",
-                        shlex::join(args.iter().copied())
+                        shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                     )
                 })?;
             if !output.status.success() {

@@ -57,7 +57,7 @@ pub fn expand_aliases<S: ToString>(
         args = if let Some(suffix) = alias.strip_prefix('!') {
             // Alias starting with "!" is "shell alias". It is a string that should
             // be passed "as-is" to the shell (after $1/$2/$@ substitutions).
-            // Round-trip through shlex::split and shlex::quote is not lossless.
+            // Round-trip through shlex::split and shlex::try_quote is not lossless.
             // Therefore use a different alias handling function that does not
             // use shlex::split.
             expand_shell_alias_args(&args, suffix)
