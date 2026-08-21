@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -435,6 +436,22 @@ class InodeMap {
    * fs references is greater than zero).
    */
   std::vector<InodeNumber> getReferencedInodes() const;
+
+  struct UnloadedInodeGcCandidate {
+    InodeNumber inodeNumber;
+    PathComponent name;
+  };
+
+  struct UnloadedInodeGcEntry {
+    PathComponent name;
+    EdenTimestamp lastFsRequestTime;
+    uint32_t numFsReferences;
+  };
+
+  /** Return copies of unloaded child state for one inode GC scan batch. */
+  std::vector<UnloadedInodeGcEntry> getUnloadedChildrenForGc(
+      InodeNumber parent,
+      const std::vector<UnloadedInodeGcCandidate>& candidates) const;
 
  private:
   friend class InodeMapLock;

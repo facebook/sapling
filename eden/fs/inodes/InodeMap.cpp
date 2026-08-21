@@ -1424,4 +1424,31 @@ std::vector<InodeNumber> InodeMap::getReferencedInodes() const {
 
   return inodes;
 }
+
+std::vector<InodeMap::UnloadedInodeGcEntry> InodeMap::getUnloadedChildrenForGc(
+    InodeNumber parent,
+    const std::vector<UnloadedInodeGcCandidate>& candidates) const {
+  std::vector<UnloadedInodeGcEntry> result;
+  result.reserve(candidates.size());
+
+  auto data = data_.rlock();
+  for (const auto& candidate : candidates) {
+    auto iter = data->unloadedInodes_.find(candidate.inodeNumber);
+    if (iter == data->unloadedInodes_.end()) {
+      continue;
+    }
+
+    const auto& inode = iter->second;
+    if (inode.isUnlinked || !inode.promises.empty() || inode.parent != parent ||
+        inode.name != candidate.name) {
+      continue;
+    }
+    result.push_back(
+        UnloadedInodeGcEntry{
+            PathComponent{inode.name},
+            inode.lastFsRequestTime,
+            inode.numFsReferences});
+  }
+  return result;
+}
 } // namespace facebook::eden

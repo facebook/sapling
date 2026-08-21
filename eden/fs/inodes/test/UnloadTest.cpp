@@ -291,6 +291,43 @@ TEST(UnloadLastAccessedBefore, preservesLastFsRequestTimeAcrossReload) {
   EXPECT_EQ(lastFsRequestTime, reloaded->getLastFsRequestTime());
 }
 
+TEST(UnloadLastAccessedBefore, getsUnloadedChildrenForGcInOneBatch) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "contents");
+  builder.setFile("dir/other.txt", "other contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  auto dir = testMount.getTreeInode("dir"_relpath);
+  auto file = testMount.getInode("dir/file.txt"_relpath);
+  auto other = testMount.getInode("dir/other.txt"_relpath);
+  auto dirNumber = dir->getNodeId();
+  auto fileNumber = file->getNodeId();
+  auto otherNumber = other->getNodeId();
+  file->incFsRefcount();
+  other->incFsRefcount();
+  auto expectedLastFsRequestTime = file->getLastFsRequestTime();
+
+  testMount.getClock().advance(120s);
+  auto cutoff = testMount.getClock().getRealtime();
+  file.reset();
+  other.reset();
+  EXPECT_GT(
+      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
+
+  const std::vector<InodeMap::UnloadedInodeGcCandidate> candidates{
+      {fileNumber, PathComponent{"file.txt"_pc}},
+      {otherNumber, PathComponent{"wrong-name.txt"_pc}},
+      {InodeNumber{999'999}, PathComponent{"missing.txt"_pc}}};
+  auto children = inodeMap->getUnloadedChildrenForGc(dirNumber, candidates);
+
+  ASSERT_EQ(1, children.size());
+  EXPECT_EQ("file.txt"_pc, children.front().name);
+  EXPECT_EQ(expectedLastFsRequestTime, children.front().lastFsRequestTime);
+  EXPECT_EQ(1, children.front().numFsReferences);
+}
+
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("src");
