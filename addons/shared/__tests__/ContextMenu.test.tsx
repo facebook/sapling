@@ -14,12 +14,17 @@ import {computeContextMenuStyle, ContextMenus, useContextMenu} from '../ContextM
 
 const onClick1 = jest.fn();
 const onClick2 = jest.fn();
+const onOpen = jest.fn();
+const onDismiss = jest.fn();
 
 function TestComponent() {
-  const menu = useContextMenu(() => [
-    {label: 'Context item 1', onClick: onClick1},
-    {label: 'Context item 2', onClick: onClick2},
-  ]);
+  const menu = useContextMenu(
+    () => [
+      {label: 'Context item 1', onClick: onClick1},
+      {label: 'Context item 2', onClick: onClick2},
+    ],
+    {onOpen, onDismiss},
+  );
   return (
     <div data-testid="test-component" onContextMenu={menu}>
       Hello click me
@@ -43,6 +48,11 @@ function rightClick(el: HTMLElement) {
 }
 
 describe('Context Menu', () => {
+  beforeEach(() => {
+    onOpen.mockClear();
+    onDismiss.mockClear();
+  });
+
   it('shows context menu items on right click', () => {
     render(<TestApp />);
 
@@ -53,6 +63,8 @@ describe('Context Menu', () => {
 
     expect(screen.getByText('Context item 1')).toBeInTheDocument();
     expect(screen.getByText('Context item 2')).toBeInTheDocument();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 
   it('runs callbacks on clicking an item', () => {
@@ -68,6 +80,7 @@ describe('Context Menu', () => {
     });
     expect(onClick1).toHaveBeenCalled();
     expect(onClick2).not.toHaveBeenCalled();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('dismisses on escape key', () => {
@@ -84,6 +97,7 @@ describe('Context Menu', () => {
 
     expect(screen.queryByText('Context item 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Context item 2')).not.toBeInTheDocument();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('dismisses on click outside', () => {
@@ -100,6 +114,7 @@ describe('Context Menu', () => {
 
     expect(screen.queryByText('Context item 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Context item 2')).not.toBeInTheDocument();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });
 

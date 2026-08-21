@@ -28,6 +28,7 @@ import './ContextMenu.css';
  */
 export function useContextMenu<T>(
   creator: () => Array<ContextMenuItem>,
+  lifecycle?: {onOpen?: () => void; onDismiss?: () => void},
 ): React.MouseEventHandler<T> {
   const setState = useSetAtom(contextMenuState);
   return e => {
@@ -36,14 +37,25 @@ export function useContextMenu<T>(
     if (items.length === 0) {
       return;
     }
-    setState({x: e.clientX / zoom, y: e.clientY / zoom, items});
+    setState({
+      x: e.clientX / zoom,
+      y: e.clientY / zoom,
+      items,
+      onDismiss: lifecycle?.onDismiss,
+    });
+    lifecycle?.onOpen?.();
 
     e.preventDefault();
     e.stopPropagation();
   };
 }
 
-type ContextMenuData = {x: number; y: number; items: Array<ContextMenuItem>};
+type ContextMenuData = {
+  x: number;
+  y: number;
+  items: Array<ContextMenuItem>;
+  onDismiss?: () => void;
+};
 export type ContextMenuItem =
   | {
       type?: undefined;
@@ -58,7 +70,14 @@ export type ContextMenuItem =
     }
   | {type: 'divider'};
 
-export const contextMenuState = atom<null | ContextMenuData>(null);
+const contextMenuData = atom<null | ContextMenuData>(null);
+export const contextMenuState = atom(
+  get => get(contextMenuData),
+  (get, set, value: ContextMenuData | null) => {
+    get(contextMenuData)?.onDismiss?.();
+    set(contextMenuData, value);
+  },
+);
 
 /**
  * Compute the absolute placement for the context menu overlay from the click

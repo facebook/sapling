@@ -91,6 +91,34 @@ describe('CommitTreeList', () => {
     });
   });
 
+  it('highlights only the commit with an open context menu', () => {
+    render(<App />);
+    act(() => {
+      closeCommitInfoSidebar();
+      simulateCommits({
+        value: [
+          COMMIT('a', 'Commit A', '1'),
+          COMMIT('b', 'Commit B', 'a', {isDot: true}),
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+        ],
+      });
+    });
+
+    const commitA = screen.getByTestId('commit-a');
+    const commitB = screen.getByTestId('commit-b');
+
+    fireEvent.contextMenu(commitA);
+    expect(commitA.querySelector('.commit-rows')).toHaveClass('commit-row-actioning');
+    expect(commitB.querySelector('.commit-rows')).not.toHaveClass('commit-row-actioning');
+
+    fireEvent.contextMenu(commitB);
+    expect(commitA.querySelector('.commit-rows')).not.toHaveClass('commit-row-actioning');
+    expect(commitB.querySelector('.commit-rows')).toHaveClass('commit-row-actioning');
+
+    fireEvent.keyUp(window, {key: 'Escape'});
+    expect(commitB.querySelector('.commit-rows')).not.toHaveClass('commit-row-actioning');
+  });
+
   it('clears the top bar height when it unmounts', () => {
     const {unmount} = render(<App />);
     act(() => {

@@ -17,9 +17,9 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
-import React, {memo, useEffect} from 'react';
+import React, {memo, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {contextMenuState, useContextMenu} from 'shared/ContextMenu';
+import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty, nullthrows} from 'shared/utils';
@@ -83,7 +83,6 @@ import {RelativeDate, relativeDate} from './relativeDate';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from './repositoryData';
 import {commitTreeWidth} from './responsive';
 import {
-  actioningCommit,
   selectedCommitInfos,
   selectedCommitInfosInDagOrder,
   selectedCommits,
@@ -182,14 +181,7 @@ export const Commit = memo(
     const {isSelected, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
 
-    const isActioning = useAtomValue(actioningCommit) === commit.hash;
-    const isContextMenuOpen = useAtomValue(contextMenuState) != null;
-
-    useEffect(() => {
-      if (!isContextMenuOpen && isActioning) {
-        writeAtom(actioningCommit, null);
-      }
-    }, [isContextMenuOpen, isActioning]);
+    const [isActioning, setIsActioning] = useState(false);
 
     const inConflicts = useAtomValue(inMergeConflicts);
 
@@ -591,22 +583,25 @@ export const Commit = memo(
       return items;
     };
 
-    const contextMenu = useContextMenu((): Array<ContextMenuItem> => {
-      return makeContextMenuOptions().map((item: ContextMenuItem & {loggingLabel?: string}) => {
-        if (item.type == null && notEmpty(item.loggingLabel)) {
-          return {
-            ...item,
-            onClick: () => {
-              tracker.track('CommitContextMenuItemClick', {
-                extras: {choice: item.loggingLabel},
-              });
-              item.onClick?.();
-            },
-          };
-        }
-        return item;
-      });
-    });
+    const contextMenu = useContextMenu(
+      (): Array<ContextMenuItem> => {
+        return makeContextMenuOptions().map((item: ContextMenuItem & {loggingLabel?: string}) => {
+          if (item.type == null && notEmpty(item.loggingLabel)) {
+            return {
+              ...item,
+              onClick: () => {
+                tracker.track('CommitContextMenuItemClick', {
+                  extras: {choice: item.loggingLabel},
+                });
+                item.onClick?.();
+              },
+            };
+          }
+          return item;
+        });
+      },
+      {onOpen: () => setIsActioning(true), onDismiss: () => setIsActioning(false)},
+    );
 
     const inlineCommitActions = [];
     const floatingCommitActions = [];
@@ -720,10 +715,7 @@ export const Commit = memo(
           (commit.successorInfo != null ? ' obsolete' : '') +
           (isIrrelevantToCwd ? ' irrelevant' : '')
         }
-        onContextMenu={e => {
-          writeAtom(actioningCommit, commit.hash);
-          contextMenu(e);
-        }}
+        onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
         <div
           className={'commit-rows' + (isActioning ? ' commit-row-actioning' : '')}
