@@ -239,6 +239,33 @@ TEST(
   EXPECT_TRUE(inodeMap->lookupInode(newIno).get());
 }
 
+TEST(UnloadLastAccessedBefore, cancellationStopsUnloading) {
+  FakeTreeBuilder builder;
+  builder.setFile("src/file.txt", "contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  testMount.getInode("src/file.txt"_relpath).reset();
+
+  testMount.getClock().advance(120s);
+  auto cutoff = testMount.getClock().getRealtime();
+
+  auto countsBefore = inodeMap->getInodeCounts();
+  folly::CancellationSource cancellationSource;
+  cancellationSource.requestCancellation();
+
+  EXPECT_EQ(
+      0,
+      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(
+          cutoff, cancellationSource.getToken()));
+  auto countsAfterCancellation = inodeMap->getInodeCounts();
+  EXPECT_EQ(countsBefore.treeCount, countsAfterCancellation.treeCount);
+  EXPECT_EQ(countsBefore.fileCount, countsAfterCancellation.fileCount);
+  EXPECT_GT(
+      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
+}
+
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("src");
@@ -265,6 +292,37 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   EXPECT_EQ(2, counts.treeCount);
   EXPECT_EQ(1, counts.fileCount);
   EXPECT_EQ(0, counts.unloadedInodeCount);
+}
+
+TEST(UnloadUnreferencedByFuse, cancellationStopsUnloading) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/file.txt", "contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  auto inode = testMount.getInode("src/file.txt"_relpath);
+  auto inodeNumber = inode->getNodeId();
+  inode->incFsRefcount();
+  inode.reset();
+  inodeMap->decFsRefcount(inodeNumber, 1);
+
+  auto countsBefore = inodeMap->getInodeCounts();
+  folly::CancellationSource cancellationSource;
+  cancellationSource.requestCancellation();
+
+  EXPECT_EQ(
+      0,
+      edenMount->getRootInode()->unloadChildrenUnreferencedByFs(
+          cancellationSource.getToken()));
+  auto countsAfterCancellation = inodeMap->getInodeCounts();
+  EXPECT_EQ(countsBefore.treeCount, countsAfterCancellation.treeCount);
+  EXPECT_EQ(countsBefore.fileCount, countsAfterCancellation.fileCount);
+  EXPECT_EQ(
+      countsBefore.unloadedInodeCount,
+      countsAfterCancellation.unloadedInodeCount);
+  EXPECT_GT(edenMount->getRootInode()->unloadChildrenUnreferencedByFs(), 0);
 }
 
 #endif

@@ -3274,8 +3274,6 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       pressureBased ? "pressure-based" : "config-based",
       mountPath,
       totalNumberOfInodesBeforeGC);
-  // Use the member cancellation source for this operation
-
   auto gcToken = gcCancelSource_.rlock()->getToken();
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
@@ -3285,10 +3283,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       // sweep. On FUSE, invalidation-triggered FORGETs may arrive too late for
       // this GC cycle if we start unloading immediately.
       .thenTry(
-          [&mount](folly::Try<uint64_t>&& invalidatedTry)
+          [&mount, gcToken](folly::Try<uint64_t>&& invalidatedTry)
               -> ImmediateFuture<uint64_t> {
             if (invalidatedTry.hasException()) {
               return makeFuture<uint64_t>(invalidatedTry.exception());
+            }
+            if (gcToken.isCancellationRequested()) {
+              return invalidatedTry.value();
             }
             return mount.flushInvalidations().thenValue(
                 [numInvalidated = invalidatedTry.value()](folly::Unit) {
@@ -3296,9 +3297,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
                 });
           })
       // Second step of garbage collection deletes all the unreferenced inodes
-      .ensure([inode, lease = std::move(lease)] {
-        inode->unloadChildrenUnreferencedByFs();
+      .thenTry([inode, gcToken](folly::Try<uint64_t>&& invalidatedTry) {
+        if (!gcToken.isCancellationRequested()) {
+          inode->unloadChildrenUnreferencedByFs(gcToken);
+        }
+        return std::move(invalidatedTry);
       })
+      .ensure([lease = std::move(lease)] {})
       .thenTry([workingCopyRuntime,
                 edenFsEventsLogger = serverState_->getEdenFsEventsLogger(),
                 mountPath,

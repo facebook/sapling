@@ -596,7 +596,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Returns the number of inodes unloaded.
    */
-  size_t unloadChildrenUnreferencedByFs();
+  size_t unloadChildrenUnreferencedByFs(
+      const folly::CancellationToken& cancellationToken = {});
 
 #ifndef _WIN32
   /**
@@ -605,7 +606,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Returns the number of inodes unloaded.
    */
-  size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
+  size_t unloadChildrenLastAccessedBefore(
+      const timespec& cutoff,
+      const folly::CancellationToken& cancellationToken = {});
 #endif
 
   /**

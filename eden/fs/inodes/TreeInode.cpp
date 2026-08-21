@@ -6187,13 +6187,14 @@ namespace {
  * WARNING: predicate is called while the InodeMap and TreeInode contents
  * locks are held.
  */
-template <typename Recurse, typename Predicate>
+template <typename Recurse, typename Predicate, typename ShouldCancel>
 size_t unloadChildrenIf(
     TreeInode* const self,
     InodeMap* const inodeMap,
     std::vector<TreeInodePtr>& treeChildren,
     Recurse&& recurse,
-    Predicate&& predicate) {
+    Predicate&& predicate,
+    ShouldCancel&& shouldCancel) {
   size_t unloadCount = 0;
 
   if (self->isRestricted()) {
@@ -6204,6 +6205,9 @@ size_t unloadChildrenIf(
   // parent trees, so unloading children can cause the parent to become
   // unreferenced.
   for (auto& child : treeChildren) {
+    if (shouldCancel()) {
+      break;
+    }
     unloadCount += recurse(*child);
   }
 
@@ -6217,6 +6221,9 @@ size_t unloadChildrenIf(
     auto inodeMapLock = inodeMap->lockForUnload();
 
     for (auto& entry : contents->entries) {
+      if (shouldCancel()) {
+        break;
+      }
       auto* entryInode = entry.second.getInode();
       if (!entryInode) {
         continue;
@@ -6252,11 +6259,17 @@ size_t unloadChildrenIf(
   return unloadCount;
 }
 
-std::vector<TreeInodePtr> getTreeChildren(TreeInode* self) {
+template <typename ShouldCancel>
+std::vector<TreeInodePtr> getTreeChildren(
+    TreeInode* self,
+    ShouldCancel&& shouldCancel) {
   std::vector<TreeInodePtr> treeChildren;
   {
     auto contents = self->getContentsUnchecked().rlock();
     for (auto& entry : contents->entries) {
+      if (shouldCancel()) {
+        break;
+      }
       if (!entry.second.getInode()) {
         continue;
       }
@@ -6275,23 +6288,32 @@ std::vector<TreeInodePtr> getTreeChildren(TreeInode* self) {
 } // namespace
 
 size_t TreeInode::unloadChildrenNow() {
-  auto treeChildren = getTreeChildren(this);
+  auto neverCancel = [] { return false; };
+  auto treeChildren = getTreeChildren(this, neverCancel);
   return unloadChildrenIf(
       this,
       getInodeMap(),
       treeChildren,
       [](TreeInode& child) { return child.unloadChildrenNow(); },
-      [](InodeBase*) { return true; });
+      [](InodeBase*) { return true; },
+      neverCancel);
 }
 
-size_t TreeInode::unloadChildrenUnreferencedByFs() {
-  auto treeChildren = getTreeChildren(this);
+size_t TreeInode::unloadChildrenUnreferencedByFs(
+    const folly::CancellationToken& cancellationToken) {
+  auto shouldCancel = [&] {
+    return cancellationToken.isCancellationRequested();
+  };
+  auto treeChildren = getTreeChildren(this, shouldCancel);
   return unloadChildrenIf(
       this,
       getInodeMap(),
       treeChildren,
-      [](TreeInode& child) { return child.unloadChildrenUnreferencedByFs(); },
-      [](InodeBase* child) { return child->getFsRefcount() == 0; });
+      [&cancellationToken](TreeInode& child) {
+        return child.unloadChildrenUnreferencedByFs(cancellationToken);
+      },
+      [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      shouldCancel);
 }
 
 namespace {
@@ -6300,12 +6322,16 @@ using NamedTreeInode = std::pair<PathComponent, TreeInodePtr>;
 ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
     TreeInode* self,
     InodeMap* const inodeMap,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    const folly::CancellationToken& cancellationToken) {
   std::vector<ImmediateFuture<NamedTreeInode>> res;
   std::vector<PathComponent> toLoad;
   {
     auto contents = self->getContentsUnchecked().rlock();
     for (auto& entry : contents->entries) {
+      if (cancellationToken.isCancellationRequested()) {
+        break;
+      }
       if (!entry.second.isDirectory()) {
         continue;
       }
@@ -6330,6 +6356,9 @@ ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
   // TODO(xavierd): We could use VirtualInode here to avoid loading inodes
   // unnecessarily.
   for (const auto& name : toLoad) {
+    if (cancellationToken.isCancellationRequested()) {
+      break;
+    }
     res.push_back(self->getOrLoadChildTree(name, context)
                       .thenValue([name](TreeInodePtr tree) {
                         return std::make_pair(name, std::move(tree));
@@ -6368,7 +6397,8 @@ processTreeChildren(
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken,
     Func&& childProcessor) {
-  return getLoadedOrRememberedTreeChildren(self, inodeMap, context)
+  return getLoadedOrRememberedTreeChildren(
+             self, inodeMap, context, cancellationToken)
       .thenValue([childProcessor = std::forward<Func>(childProcessor),
                   cancellationToken](
                      const std::vector<NamedTreeInode>& treeChildren) mutable {
@@ -6384,6 +6414,9 @@ processTreeChildren(
         std::vector<ImmediateFuture<ResultType>> futures;
         futures.reserve(treeChildren.size());
         for (auto& [name, tree] : treeChildren) {
+          if (shouldCancelGC(cancellationToken)) {
+            break;
+          }
           futures.push_back(childProcessor(name.piece(), tree));
         }
 
@@ -6429,7 +6462,8 @@ TreeInode::handleChildrenNotAccessedRecently(
   // FUSE decreases the FS ref count by itself. On FUSE, we don't invalidate
   // any inode as the first step of GC. However, we can unload not recently
   // used inodes to save eden resident memory.
-  auto unloaded = unloadChildrenLastAccessedBefore(folly::to<timespec>(cutoff));
+  auto unloaded = unloadChildrenLastAccessedBefore(
+      folly::to<timespec>(cutoff), cancellationToken);
   if (unloaded) {
     XLOGF(
         DBG6,
@@ -7005,7 +7039,12 @@ ImmediateFuture<folly::Unit> TreeInode::ensureMaterialized(
 #endif
 
 #ifndef _WIN32
-size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
+size_t TreeInode::unloadChildrenLastAccessedBefore(
+    const timespec& cutoff,
+    const folly::CancellationToken& cancellationToken) {
+  auto shouldCancel = [&] {
+    return cancellationToken.isCancellationRequested();
+  };
   // Unloading children by criteria is a bit of an intricate operation. The
   // InodeMap and tree's contents lock must be held simultaneously when
   // checking if an inode's refcount is zero. But the child's lock cannot be
@@ -7029,6 +7068,9 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   {
     auto contents = lockContentsRead();
     for (auto& entry : contents->entries) {
+      if (shouldCancel()) {
+        break;
+      }
       if (!entry.second.getInode()) {
         continue;
       }
@@ -7083,11 +7125,11 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
       getInodeMap(),
       treeChildren,
       [&](TreeInode& child) {
-        return child.unloadChildrenLastAccessedBefore(cutoff);
+        return child.unloadChildrenLastAccessedBefore(
+            cutoff, cancellationToken);
       },
-      [&](InodeBase* child) {
-        return toUnload.count(child->getNodeId()) != 0;
-      });
+      [&](InodeBase* child) { return toUnload.count(child->getNodeId()) != 0; },
+      shouldCancel);
 }
 
 InodeMetadata TreeInode::getMetadata() const {
