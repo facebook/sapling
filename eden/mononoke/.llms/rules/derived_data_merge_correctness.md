@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'BonsaiDerivable|derive_single|merge.*reuse|parents.*disagree|first.parent|Reuse.*entry|content_id.*file_type'
+name: derived-data-merge-correctness
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'BonsaiDerivable|derive_single|merge.*reuse|parents.*disagree|first.parent|Reuse.*entry|content_id.*file_type'
 ---
 
 # Derived Data Merge Correctness
