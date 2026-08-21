@@ -13,6 +13,7 @@
 #include <unistd.h>
 #endif
 
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <cstring>
@@ -458,6 +459,27 @@ TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {
     serverThread.join();
     ASSERT_NO_THROW(serverThread.throwIfServeFailed());
     EXPECT_TRUE(server.performCleanup());
+  }
+}
+#endif
+
+#ifdef __linux__
+TEST_F(EdenServerTest, GarbageCollectionReportsBusyWhileInhibited) {
+  auto& server = testServer().getServer();
+  TestMount mount{FakeTreeBuilder{}};
+  auto inhibitor = mount.getEdenMount()->stealInodeGCLease();
+
+  auto gc = server.garbageCollectInodes(
+      *mount.getEdenMount(),
+      mount.getRootInode(),
+      std::chrono::system_clock::now(),
+      ObjectFetchContext::getNullContext(),
+      /*pressureBased=*/false);
+  try {
+    std::move(gc).get(10s);
+    FAIL() << "expected inode GC admission to fail";
+  } catch (const EdenError& error) {
+    EXPECT_EQ(EBUSY, *error.errorCode());
   }
 }
 #endif

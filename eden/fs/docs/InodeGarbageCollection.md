@@ -52,7 +52,7 @@ The GC process is initiated by `EdenServer::garbageCollectInodes()`. This
 function:
 
 1. **Acquires a GC lease** - Prevents concurrent GC operations on the same mount
-   using `mount.tryStartInodeGC(inode)`
+   using `mount.tryStartInodeGC()`
 2. **Calls the first phase** - `handleChildrenNotAccessedRecently()` on the root
    TreeInode
 3. **Calls the second phase** - `unloadChildrenUnreferencedByFs()` for final

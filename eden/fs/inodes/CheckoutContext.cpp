@@ -48,6 +48,11 @@ CheckoutContext::~CheckoutContext() {
   mount_->getOverlay()->exitCheckoutDeferral();
 }
 
+void CheckoutContext::inhibitInodeGC() {
+  XCHECK(!inodeGCLease_);
+  inodeGCLease_.emplace(mount_->stealInodeGCLease());
+}
+
 void CheckoutContext::start(
     RenameLock&& renameLock,
     EdenMount::ParentLock::LockedPtr&& parentLock,

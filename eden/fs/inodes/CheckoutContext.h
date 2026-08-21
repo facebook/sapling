@@ -152,6 +152,8 @@ class CheckoutContext {
 
   void increaseCheckoutCounter(int64_t inc) const;
 
+  void inhibitInodeGC();
+
   /**
    * Throws an exception if cancellation has been requested and throwOnCancel
    * is enabled in EdenConfig.
@@ -182,6 +184,7 @@ class CheckoutContext {
   RefPtr<StatsFetchContext> fetchContext_;
 
   std::shared_ptr<std::atomic<uint64_t>> checkoutProgress_;
+  std::optional<EdenMount::InodeGCLease> inodeGCLease_;
 
   // The checkout processing may occur across many threads,
   // if some data load operations complete asynchronously on other threads.

@@ -860,6 +860,9 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         nullptr,
         context->getRequestInfo(),
         context->getCancellationToken());
+    if (!ctx->isDryRun()) {
+      ctx->inhibitInodeGC();
+    }
 
     /**
      * This will update the timestamp for the entire mount,
@@ -1741,6 +1744,10 @@ folly::Try<EdenMount::CheckoutSetup> EdenMount::beginCheckout(
     setup.ctx->getFetchContext()->setDetachedExecutor(
         fetchContext->getDetachedExecutor());
   } // parentState_ wlock released here.
+
+  if (!setup.ctx->isDryRun()) {
+    setup.ctx->inhibitInodeGC();
+  }
 
   // Eagerly register the first fault check so unblock() can find it.
   // See struct comment for details. Done OUTSIDE the wlock scope so
@@ -3297,19 +3304,68 @@ std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
   }
 }
 
-std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC(
-    TreeInodePtr inode) {
-  bool expectedInProgress = false;
-  if (!inodeGCInProgress_.compare_exchange_strong(
-          expectedInProgress, true, std::memory_order_acq_rel)) {
+std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC() {
+  auto mount = shared_from_this();
+  auto state = inodeGCState_.wlock();
+  if (state->gcRunning || state->inhibitorCount != 0) {
     return std::nullopt;
   }
 
-  return EdenMount::InodeGCLease{&inodeGCInProgress_, std::move(inode)};
+  state->cancellationSource = folly::CancellationSource{};
+  auto cancellationToken = state->cancellationSource.getToken();
+  state->gcRunning = true;
+  return InodeGCLease{
+      std::move(mount),
+      /*representsRunningGc=*/true,
+      std::move(cancellationToken)};
 }
 
 bool EdenMount::isInodeGCRunning() const {
-  return inodeGCInProgress_.load(std::memory_order_acquire);
+  return inodeGCState_.rlock()->gcRunning;
+}
+
+EdenMount::InodeGCLease EdenMount::stealInodeGCLease() {
+  auto mount = shared_from_this();
+  folly::CancellationSource cancellationSource;
+  {
+    auto state = inodeGCState_.wlock();
+    cancellationSource = state->cancellationSource;
+    ++state->inhibitorCount;
+  }
+  // Cancellation callbacks may run inline, so request cancellation only after
+  // reserving GC admission and releasing the state lock.
+  cancellationSource.requestCancellation();
+  return InodeGCLease{
+      std::move(mount),
+      /*representsRunningGc=*/false,
+      folly::CancellationToken{}};
+}
+
+EdenMount::InodeGCLease::~InodeGCLease() {
+  release();
+}
+
+EdenMount::InodeGCLease::InodeGCLease(InodeGCLease&& other) noexcept
+    : mount_{std::move(other.mount_)},
+      representsRunningGc_{other.representsRunningGc_},
+      cancellationToken_{std::move(other.cancellationToken_)} {}
+
+void EdenMount::InodeGCLease::release() noexcept {
+  if (mount_) {
+    mount_->releaseInodeGCLease(representsRunningGc_);
+    mount_.reset();
+  }
+}
+
+void EdenMount::releaseInodeGCLease(bool representsRunningGc) noexcept {
+  auto state = inodeGCState_.wlock();
+  if (representsRunningGc) {
+    XDCHECK(state->gcRunning);
+    state->gcRunning = false;
+  } else {
+    XDCHECK_GT(state->inhibitorCount, 0u);
+    --state->inhibitorCount;
+  }
 }
 
 void EdenMount::treePrefetchFinished() noexcept {

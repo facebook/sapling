@@ -3247,22 +3247,17 @@ void EdenServer::manageOverlay() {
   }
 }
 
-ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
+namespace {
+ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
     EdenMount& mount,
     TreeInodePtr inode,
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
-    bool pressureBased) {
+    bool pressureBased,
+    EdenMount::InodeGCLease lease,
+    folly::CancellationToken shutdownToken,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger) {
   folly::stop_watch<> inodeGCRuntime;
-
-  auto lease = mount.tryStartInodeGC(inode);
-  if (!lease) {
-    XLOGF(
-        DBG6,
-        "Not running GC for: {}, another GC is already in progress",
-        mount.getPath());
-    return 0u;
-  }
 
   auto mountPath = mount.getPath();
   auto inodeCountsBeforeGC = mount.getInodeMap()->getInodeCounts();
@@ -3274,7 +3269,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
       pressureBased ? "pressure-based" : "config-based",
       mountPath,
       totalNumberOfInodesBeforeGC);
-  auto gcToken = gcCancelSource_.rlock()->getToken();
+  auto gcToken = folly::cancellation_token_merge(
+      shutdownToken, lease.getCancellationToken());
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
@@ -3305,7 +3301,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
       })
       .ensure([lease = std::move(lease)] {})
       .thenTry([inodeGCRuntime,
-                edenFsEventsLogger = serverState_->getEdenFsEventsLogger(),
+                edenFsEventsLogger = std::move(edenFsEventsLogger),
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC,
@@ -3347,6 +3343,36 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
         return invalidatedTry.value();
       });
 }
+} // namespace
+
+ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
+    EdenMount& mount,
+    TreeInodePtr inode,
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context,
+    bool pressureBased) {
+  auto lease = mount.tryStartInodeGC();
+  if (!lease) {
+    XLOGF(
+        DBG6,
+        "Not running GC for: {}, GC is already running or checkout holds its lease",
+        mount.getPath());
+    return ImmediateFuture<uint64_t>{folly::Try<uint64_t>{newEdenError(
+        EBUSY,
+        EdenErrorType::POSIX_ERROR,
+        "inode GC is already running or inhibited by checkout")}};
+  }
+
+  return garbageCollectInodesWithLease(
+      mount,
+      std::move(inode),
+      cutoff,
+      context,
+      pressureBased,
+      std::move(*lease),
+      gcCancelSource_.rlock()->getToken(),
+      serverState_->getEdenFsEventsLogger());
+}
 
 void EdenServer::garbageCollectAllMounts() {
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
@@ -3376,10 +3402,10 @@ void EdenServer::garbageCollectAllMounts() {
     lastPressureBasedGcTimes_.clear();
   }
   for (auto& mountHandle : mountPoints) {
+    auto& mount = mountHandle.getEdenMount();
     if (pressureBasedGc) {
       // Use the pressure-based policy to compute a dynamic cutoff based on
       // the current inode count for this mount.
-      auto& mount = mountHandle.getEdenMount();
       auto policy = mount.getInodePressurePolicy();
       auto inodeCount = mount.getInodeMap()->getTotalInodeCountFast();
       auto gcPeriod = policy->getGcPeriod(inodeCount);
@@ -3395,15 +3421,6 @@ void EdenServer::garbageCollectAllMounts() {
                 .count());
         continue;
       }
-      if (mount.isInodeGCRunning()) {
-        XLOGF(
-            DBG6,
-            "Skipping pressure-based GC for: {}, another GC is already in progress",
-            mount.getPath());
-        continue;
-      }
-      lastPressureBasedGcTimes_[mount.getPath()] = steadyNow;
-
       auto gcCutoffDuration = policy->getGcCutoff(inodeCount);
 
       if constexpr (folly::kIsWindows) {
@@ -3416,8 +3433,7 @@ void EdenServer::garbageCollectAllMounts() {
 
       cutoff = std::chrono::system_clock::now() - gcCutoffDuration;
     } else {
-      auto inodeCountsBeforeGc =
-          mountHandle.getEdenMount().getInodeMap()->getInodeCounts();
+      auto inodeCountsBeforeGc = mount.getInodeMap()->getInodeCounts();
       auto totalNumberOfInodesBeforeGc = inodeCountsBeforeGc.fileCount +
           inodeCountsBeforeGc.treeCount +
           inodeCountsBeforeGc.unloadedInodeCount;
@@ -3433,18 +3449,42 @@ void EdenServer::garbageCollectAllMounts() {
         cutoff = std::chrono::system_clock::now() - cutoffConfig;
       }
     }
+
+    auto lease = mount.tryStartInodeGC();
+    if (!lease) {
+      XLOGF(
+          DBG6,
+          "Skipping GC for: {}, GC is already running or checkout holds its lease",
+          mount.getPath());
+      continue;
+    }
+    if (pressureBasedGc) {
+      lastPressureBasedGcTimes_[mount.getPath()] = steadyNow;
+    }
+
+    auto inodeGCLease = std::move(*lease);
+    auto shutdownToken = gcCancelSource_.rlock()->getToken();
+    auto edenFsEventsLogger = serverState_->getEdenFsEventsLogger();
     folly::via(
         getServerState()->getThreadPool().get(),
-        [this, mountHandle, cutoff, pressureBasedGc]() mutable {
+        [mountHandle,
+         cutoff,
+         pressureBasedGc,
+         inodeGCLease = std::move(inodeGCLease),
+         shutdownToken = std::move(shutdownToken),
+         edenFsEventsLogger = std::move(edenFsEventsLogger)]() mutable {
           static auto context =
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
-          return garbageCollectInodes(
+          return garbageCollectInodesWithLease(
                      mountHandle.getEdenMount(),
                      mountHandle.getRootInode(),
                      cutoff,
                      context,
-                     pressureBasedGc)
+                     pressureBasedGc,
+                     std::move(inodeGCLease),
+                     std::move(shutdownToken),
+                     std::move(edenFsEventsLogger))
               .semi();
         })
         .ensure([mountHandle] {});

@@ -1094,33 +1094,36 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       TreeInodePtr treeInode,
       const ObjectFetchContext& context);
 
-  /**
-   * Lease to be held for the duration of a background GC.
-   *
-   * Only a single background GC can be running at a given time.
-   */
+  /** Holds GC admission for either a background GC or checkout. */
   class InodeGCLease {
    public:
-    explicit InodeGCLease(std::atomic<bool>* gcRunning, TreeInodePtr inode)
-        : gcRunning_{gcRunning}, inode_{std::move(inode)} {}
+    ~InodeGCLease();
 
-    ~InodeGCLease() {
-      if (inode_) {
-        gcRunning_->store(false, std::memory_order_release);
-      }
+    const folly::CancellationToken& getCancellationToken() const {
+      return cancellationToken_;
     }
 
     InodeGCLease(const InodeGCLease&) = delete;
     InodeGCLease& operator=(const InodeGCLease&) = delete;
-    InodeGCLease(InodeGCLease&&) = default;
-    InodeGCLease& operator=(InodeGCLease&&) = default;
+    InodeGCLease(InodeGCLease&& other) noexcept;
+    InodeGCLease& operator=(InodeGCLease&&) = delete;
 
    private:
-    std::atomic<bool>* gcRunning_;
-    // Store the inode for the duration of the GC, this ensures that the mount
-    // cannot be unmounted and thus that gcRunning_ will live for at least as
-    // long as the lease.
-    TreeInodePtr inode_;
+    friend class EdenMount;
+
+    InodeGCLease(
+        std::shared_ptr<EdenMount> mount,
+        bool representsRunningGc,
+        folly::CancellationToken cancellationToken)
+        : mount_{std::move(mount)},
+          representsRunningGc_{representsRunningGc},
+          cancellationToken_{std::move(cancellationToken)} {}
+
+    void release() noexcept;
+
+    std::shared_ptr<EdenMount> mount_;
+    bool representsRunningGc_;
+    folly::CancellationToken cancellationToken_;
   };
 
   /**
@@ -1129,9 +1132,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * The returned lease must be held for the duration of the GC to ensure that
    * no other concurrent background GC can be started.
    *
-   * This returns a std::nullopt if a background GC is already in progress.
+   * This returns a std::nullopt if a background GC is still running or
+   * checkout currently holds the GC lease.
    */
-  std::optional<InodeGCLease> tryStartInodeGC(TreeInodePtr inode);
+  std::optional<InodeGCLease> tryStartInodeGC();
+
+  /**
+   * Cancel the active GC and supersede its lease. The returned lease prevents
+   * new GCs from starting while the canceled GC finishes asynchronously.
+   */
+  InodeGCLease stealInodeGCLease();
 
   /**
    * Returns true if a GC is currently running. This is used to determine if
@@ -1327,6 +1337,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   friend class TreePrefetchLease;
   void treePrefetchFinished() noexcept;
+  void releaseInodeGCLease(bool representsRunningGc) noexcept;
 
   const std::unique_ptr<const CheckoutConfig> checkoutConfig_;
 
@@ -1490,10 +1501,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
-  /**
-   * Whether a periodic inode GC is ongoing for this mount.
-   */
-  std::atomic<bool> inodeGCInProgress_{false};
+  struct InodeGCState {
+    bool gcRunning{false};
+    uint64_t inhibitorCount{0};
+    folly::CancellationSource cancellationSource;
+  };
+  folly::Synchronized<InodeGCState> inodeGCState_;
 
   /**
    * Fixed sized buffer containing recent inode events that have occurred within
