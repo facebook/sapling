@@ -484,7 +484,7 @@ TEST_F(EdenServerTest, StopAllGarbageCollectionsDoesNotPoisonFutureGC) {
       /*maxRetries=*/0, /*retryInterval=*/std::chrono::seconds{0}));
 
   auto numInvalidated = server
-                            .garbageCollectWorkingCopy(
+                            .garbageCollectInodes(
                                 *mount.getEdenMount(),
                                 mount.getRootInode(),
                                 std::chrono::system_clock::now() + 1h,

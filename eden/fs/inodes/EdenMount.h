@@ -489,7 +489,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
 #ifndef _WIN32
   std::shared_ptr<FuseChannel> getFuseChannelShared() const;
-  std::shared_ptr<UnboundedQueueExecutor> getWorkingCopyGCInvalidationExecutor()
+  std::shared_ptr<UnboundedQueueExecutor> getInodeGCInvalidationExecutor()
       const;
 #endif
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
@@ -1099,23 +1099,21 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * Only a single background GC can be running at a given time.
    */
-  class WorkingCopyGCLease {
+  class InodeGCLease {
    public:
-    explicit WorkingCopyGCLease(
-        std::atomic<bool>* gcRunning,
-        TreeInodePtr inode)
+    explicit InodeGCLease(std::atomic<bool>* gcRunning, TreeInodePtr inode)
         : gcRunning_{gcRunning}, inode_{std::move(inode)} {}
 
-    ~WorkingCopyGCLease() {
+    ~InodeGCLease() {
       if (inode_) {
         gcRunning_->store(false, std::memory_order_release);
       }
     }
 
-    WorkingCopyGCLease(const WorkingCopyGCLease&) = delete;
-    WorkingCopyGCLease& operator=(const WorkingCopyGCLease&) = delete;
-    WorkingCopyGCLease(WorkingCopyGCLease&&) = default;
-    WorkingCopyGCLease& operator=(WorkingCopyGCLease&&) = default;
+    InodeGCLease(const InodeGCLease&) = delete;
+    InodeGCLease& operator=(const InodeGCLease&) = delete;
+    InodeGCLease(InodeGCLease&&) = default;
+    InodeGCLease& operator=(InodeGCLease&&) = default;
 
    private:
     std::atomic<bool>* gcRunning_;
@@ -1126,20 +1124,20 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   };
 
   /**
-   * Attempt to start a background working copy GC.
+   * Attempt to start a background inode GC.
    *
    * The returned lease must be held for the duration of the GC to ensure that
    * no other concurrent background GC can be started.
    *
    * This returns a std::nullopt if a background GC is already in progress.
    */
-  std::optional<WorkingCopyGCLease> tryStartWorkingCopyGC(TreeInodePtr inode);
+  std::optional<InodeGCLease> tryStartInodeGC(TreeInodePtr inode);
 
   /**
    * Returns true if a GC is currently running. This is used to determine if
    * we should wait for a GC to complete before graceful restart.
    */
-  bool isWorkingCopyGCRunning() const;
+  bool isInodeGCRunning() const;
 
   /**
    * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
@@ -1357,9 +1355,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<UnboundedQueueExecutor> invalidationExecutor_;
 #else
   /** Runs bounded FUSE GC submissions away from shared executors. */
-  mutable folly::once_flag workingCopyGCInvalidationExecutorOnce_;
-  mutable std::shared_ptr<UnboundedQueueExecutor>
-      workingCopyGCInvalidationExecutor_;
+  mutable folly::once_flag inodeGCInvalidationExecutorOnce_;
+  mutable std::shared_ptr<UnboundedQueueExecutor> inodeGCInvalidationExecutor_;
 #endif
 
   /**
@@ -1494,9 +1491,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
   /**
-   * Whether a periodic working copy GC is ongoing for this mount.
+   * Whether a periodic inode GC is ongoing for this mount.
    */
-  std::atomic<bool> workingCopyGCInProgress_{false};
+  std::atomic<bool> inodeGCInProgress_{false};
 
   /**
    * Fixed sized buffer containing recent inode events that have occurred within

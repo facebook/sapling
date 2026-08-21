@@ -6902,7 +6902,7 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
           .thenValue(
               [this, mountHandle, cutoff, fetchContext = fetchContext.copy()](
                   TreeInodePtr inode) mutable {
-                return server_->garbageCollectWorkingCopy(
+                return server_->garbageCollectInodes(
                     mountHandle.getEdenMount(), inode, cutoff, fetchContext);
               })
           .thenValue([](uint64_t numInvalidated) {

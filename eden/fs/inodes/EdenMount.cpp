@@ -1240,12 +1240,12 @@ std::shared_ptr<FuseChannel> EdenMount::getFuseChannelShared() const {
 }
 
 std::shared_ptr<UnboundedQueueExecutor>
-EdenMount::getWorkingCopyGCInvalidationExecutor() const {
-  folly::call_once(workingCopyGCInvalidationExecutorOnce_, [this] {
-    workingCopyGCInvalidationExecutor_ =
-        std::make_shared<UnboundedQueueExecutor>(1, "wc-gc-inval");
+EdenMount::getInodeGCInvalidationExecutor() const {
+  folly::call_once(inodeGCInvalidationExecutorOnce_, [this] {
+    inodeGCInvalidationExecutor_ =
+        std::make_shared<UnboundedQueueExecutor>(1, "inode-gc-inval");
   });
-  return workingCopyGCInvalidationExecutor_;
+  return inodeGCInvalidationExecutor_;
 }
 #endif
 
@@ -3297,20 +3297,19 @@ std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
   }
 }
 
-std::optional<EdenMount::WorkingCopyGCLease> EdenMount::tryStartWorkingCopyGC(
+std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC(
     TreeInodePtr inode) {
   bool expectedInProgress = false;
-  if (!workingCopyGCInProgress_.compare_exchange_strong(
+  if (!inodeGCInProgress_.compare_exchange_strong(
           expectedInProgress, true, std::memory_order_acq_rel)) {
     return std::nullopt;
   }
 
-  return EdenMount::WorkingCopyGCLease{
-      &workingCopyGCInProgress_, std::move(inode)};
+  return EdenMount::InodeGCLease{&inodeGCInProgress_, std::move(inode)};
 }
 
-bool EdenMount::isWorkingCopyGCRunning() const {
-  return workingCopyGCInProgress_.load(std::memory_order_acquire);
+bool EdenMount::isInodeGCRunning() const {
+  return inodeGCInProgress_.load(std::memory_order_acquire);
 }
 
 void EdenMount::treePrefetchFinished() noexcept {

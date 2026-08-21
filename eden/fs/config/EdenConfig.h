@@ -542,7 +542,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * How often will a garbage collection on the working copy will run.
+   * How often inode garbage collection will run.
    *
    * Default to every hour.
    */

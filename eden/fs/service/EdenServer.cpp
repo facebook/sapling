@@ -3247,15 +3247,15 @@ void EdenServer::manageOverlay() {
   }
 }
 
-ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
+ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
     EdenMount& mount,
     TreeInodePtr inode,
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     bool pressureBased) {
-  folly::stop_watch<> workingCopyRuntime;
+  folly::stop_watch<> inodeGCRuntime;
 
-  auto lease = mount.tryStartWorkingCopyGC(inode);
+  auto lease = mount.tryStartInodeGC(inode);
   if (!lease) {
     XLOGF(
         DBG6,
@@ -3304,14 +3304,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
         return std::move(invalidatedTry);
       })
       .ensure([lease = std::move(lease)] {})
-      .thenTry([workingCopyRuntime,
+      .thenTry([inodeGCRuntime,
                 edenFsEventsLogger = serverState_->getEdenFsEventsLogger(),
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC,
                 pressureBased](folly::Try<uint64_t> invalidatedTry) {
-        auto runtime =
-            std::chrono::duration<double>{workingCopyRuntime.elapsed()};
+        auto runtime = std::chrono::duration<double>{inodeGCRuntime.elapsed()};
 
         bool success = invalidatedTry.hasValue();
         int64_t numInvalidated =
@@ -3396,7 +3395,7 @@ void EdenServer::garbageCollectAllMounts() {
                 .count());
         continue;
       }
-      if (mount.isWorkingCopyGCRunning()) {
+      if (mount.isInodeGCRunning()) {
         XLOGF(
             DBG6,
             "Skipping pressure-based GC for: {}, another GC is already in progress",
@@ -3440,7 +3439,7 @@ void EdenServer::garbageCollectAllMounts() {
           static auto context =
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
-          return garbageCollectWorkingCopy(
+          return garbageCollectInodes(
                      mountHandle.getEdenMount(),
                      mountHandle.getRootInode(),
                      cutoff,
@@ -3467,12 +3466,12 @@ bool EdenServer::stopAllGarbageCollections(
   gcCancelSource_.wlock()->requestCancellation();
   XLOGF(DBG1, "Cancel request sent to all ongoing garbage collections");
 
-  bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
+  bool isGCRunning = isInodeGCRunningForAnyMount();
   uint8_t currentAttempts = 0;
 
   while (isGCRunning && currentAttempts < maxRetries) {
     std::this_thread::sleep_for(retryInterval);
-    isGCRunning = isWorkingCopyGCRunningForAnyMount();
+    isGCRunning = isInodeGCRunningForAnyMount();
     currentAttempts++;
   }
 
@@ -3481,10 +3480,10 @@ bool EdenServer::stopAllGarbageCollections(
   return gcStopped;
 }
 
-bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {
+bool EdenServer::isInodeGCRunningForAnyMount() const {
   auto mountPoints = getMountPoints();
   for (auto& mountHandle : mountPoints) {
-    if (mountHandle.getEdenMount().isWorkingCopyGCRunning()) {
+    if (mountHandle.getEdenMount().isInodeGCRunning()) {
       return true;
     }
   }

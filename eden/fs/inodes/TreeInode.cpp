@@ -6541,8 +6541,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
   if (!fuseChannel) {
     return ImmediateFuture<uint64_t>{0ULL};
   }
-  auto invalidationExecutor =
-      getMount()->getWorkingCopyGCInvalidationExecutor();
+  auto invalidationExecutor = getMount()->getInodeGCInvalidationExecutor();
 
   return invalidateChildrenNotAccessedRecentlyFuseImpl(
              cutoff,

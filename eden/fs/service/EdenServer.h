@@ -352,9 +352,9 @@ class EdenServer : private TakeoverHandler {
       CheckoutMode checkoutMode);
 
   /**
-   * Garbage collect the working copy of the passed in mount.
+   * Garbage collect inodes in the passed-in mount.
    */
-  ImmediateFuture<uint64_t> garbageCollectWorkingCopy(
+  ImmediateFuture<uint64_t> garbageCollectInodes(
       EdenMount& mount,
       TreeInodePtr rootInode,
       std::chrono::system_clock::time_point cutoff,
@@ -377,7 +377,7 @@ class EdenServer : private TakeoverHandler {
       uint8_t maxRetries,
       std::chrono::seconds retryInterval);
 
-  bool isWorkingCopyGCRunningForAnyMount() const;
+  bool isInodeGCRunningForAnyMount() const;
 
   const std::shared_ptr<BlobCache>& getBlobCache() const {
     return blobCache_;
@@ -1022,7 +1022,7 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
   PeriodicFnTask<&EdenServer::garbageCollectAllMounts> gcTask_{
       this,
-      "working_copy_gc"};
+      "inode_gc"};
   PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
       this,
       "detect_nfs_crawl"};

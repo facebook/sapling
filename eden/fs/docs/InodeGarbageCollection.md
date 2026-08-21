@@ -14,7 +14,7 @@ interfaces: **FUSE**, **NFS**, and **PrjFS**.
 │                              EdenServer                                     │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                    garbageCollectWorkingCopy()                       │   │
+│  │                       garbageCollectInodes()                         │   │
 │  │                                                                      │   │
 │  │  1. Acquire GC lease (prevents concurrent GC on same mount)          │   │
 │  │  2. Call handleChildrenNotAccessedRecently() on root TreeInode       │   │
@@ -44,15 +44,15 @@ interfaces: **FUSE**, **NFS**, and **PrjFS**.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Entry Point: `garbageCollectWorkingCopy`
+## Entry Point: `garbageCollectInodes`
 
 **File:** `eden/fs/service/EdenServer.cpp`
 
-The GC process is initiated by `EdenServer::garbageCollectWorkingCopy()`. This
+The GC process is initiated by `EdenServer::garbageCollectInodes()`. This
 function:
 
 1. **Acquires a GC lease** - Prevents concurrent GC operations on the same mount
-   using `mount.tryStartWorkingCopyGC(inode)`
+   using `mount.tryStartInodeGC(inode)`
 2. **Calls the first phase** - `handleChildrenNotAccessedRecently()` on the root
    TreeInode
 3. **Calls the second phase** - `unloadChildrenUnreferencedByFs()` for final
@@ -209,7 +209,7 @@ Checks for early termination conditions.
 │             │     │   (Root)     │     │              │     │          │
 └──────┬──────┘     └──────┬───────┘     └──────┬───────┘     └────┬─────┘
        │                   │                    │                  │
-       │ garbageCollectWorkingCopy()            │                  │
+       │ garbageCollectInodes()                 │                  │
        │──────────────────>│                    │                  │
        │                   │                    │                  │
        │                   │ handleChildrenNotAccessedRecently()   │
