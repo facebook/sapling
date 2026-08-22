@@ -9,6 +9,7 @@
 - Fix the cwd quick-switch dropdown on Windows and Linux
 - Label Enter and other special keys properly in keyboard shortcut hints
 - Improve performance by skipping re-renders when refetched data is unchanged
+- Don't dismiss tooltips on scroll while focus is inside them
 
 ## 0.1.69
 
