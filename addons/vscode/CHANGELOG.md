@@ -8,6 +8,7 @@
 - Fix ISL showing `cwd webview-panel/... does not exist` when opened from the editor title bar while a webview tab was active
 - Fix the cwd quick-switch dropdown on Windows and Linux
 - Label Enter and other special keys properly in keyboard shortcut hints
+- Improve performance by skipping re-renders when refetched data is unchanged
 
 ## 0.1.69
 
