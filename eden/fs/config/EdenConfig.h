@@ -2571,6 +2571,11 @@ class EdenConfig : private ConfigSettingManager {
 
   // [xplat-logger]
 
+  ConfigSetting<bool> xplatLoggerPeriodicUsernameRefresh{
+      "telemetry:periodic-username-refresh",
+      true,
+      this};
+
   ConfigSetting<size_t> xplatLoggerQueueLimitBytes{
       "xplat-logger:queue-limit-bytes",
       128 * 1024,
