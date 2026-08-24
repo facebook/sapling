@@ -3053,10 +3053,20 @@ Any programs using files or directories inside the EdenFS mounts will need to
 re-open these files after EdenFS is restarted.
 """
         )
-        if not self.args.force_restart and sys.stdin.isatty():
+        # Only prompt when the user can actually see the prompt. If stdout is
+        # redirected (e.g. to a log file) the prompt is invisible and input()
+        # would block forever, so fall through to the same non-interactive
+        # behavior used for non-TTY stdin instead, with a notice so the skip
+        # is visible in the log or pipe output.
+        if not self.args.force_restart and sys.stdin.isatty() and sys.stdout.isatty():
             if prompt and not prompt_confirmation("Proceed?"):
                 print("Not confirmed.")
                 return 1
+        elif not self.args.force_restart and prompt and sys.stdin.isatty():
+            print(
+                "stdout is not a terminal; skipping confirmation and proceeding "
+                "with full restart"
+            )
 
         self._do_stop(instance, old_pid, timeout=DEFAULT_STOP_TIMEOUT)
         if migrate_to is not None:

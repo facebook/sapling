@@ -171,6 +171,7 @@ class RestartTest(unittest.TestCase):
         restart_cmd.args = argparse.Namespace(
             allow_root=False,
             daemon_binary=None,
+            force_restart=False,
             migrate_to=None,
             preserved_vars=None,
             prompt=False,
@@ -264,6 +265,56 @@ class RestartTest(unittest.TestCase):
         telemetry_sample = telemetry_logger.samples[0]
         self.assertNotIn("reason", telemetry_sample.strings)
         self.assertNotIn("transport_name", telemetry_sample.strings)
+
+    def make_std_stream_mock(self, isatty: bool) -> MagicMock:
+        stream = MagicMock()
+        stream.isatty.return_value = isatty
+        return stream
+
+    def test_full_restart_skips_prompt_when_stdout_is_not_a_tty(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        instance = MagicMock()
+        stdout_mock = self.make_std_stream_mock(False)
+
+        with (
+            patch.object(main_mod.sys, "stdin", self.make_std_stream_mock(True)),
+            patch.object(main_mod.sys, "stdout", stdout_mock),
+            patch.object(main_mod, "prompt_confirmation") as prompt_confirmation,
+            patch.object(restart_cmd, "_do_stop") as do_stop,
+            patch.object(
+                restart_cmd, "_finish_restart", return_value=0
+            ) as finish_restart,
+        ):
+            self.assertEqual(
+                0, restart_cmd._full_restart(instance, 1234, None, True, False)
+            )
+
+        prompt_confirmation.assert_not_called()
+        do_stop.assert_called_once_with(
+            instance, 1234, timeout=main_mod.DEFAULT_STOP_TIMEOUT
+        )
+        finish_restart.assert_called_once_with(instance, allow_root=False)
+        written = "".join(str(c.args[0]) for c in stdout_mock.write.call_args_list)
+        self.assertIn("skipping confirmation", written)
+
+    def test_full_restart_prompts_when_stdin_and_stdout_are_ttys(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        instance = MagicMock()
+
+        with (
+            patch.object(main_mod.sys, "stdin", self.make_std_stream_mock(True)),
+            patch.object(main_mod.sys, "stdout", self.make_std_stream_mock(True)),
+            patch.object(
+                main_mod, "prompt_confirmation", return_value=False
+            ) as prompt_confirmation,
+            patch.object(restart_cmd, "_do_stop") as do_stop,
+        ):
+            self.assertEqual(
+                1, restart_cmd._full_restart(instance, 1234, None, True, False)
+            )
+
+        prompt_confirmation.assert_called_once_with("Proceed?")
+        do_stop.assert_not_called()
 
 
 class ListTest(unittest.TestCase):
