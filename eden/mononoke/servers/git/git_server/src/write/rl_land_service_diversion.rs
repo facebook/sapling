@@ -54,11 +54,6 @@ const MRL_THRIFT_PROCESSING_TIMEOUT: Duration = Duration::from_secs(300);
 /// Total client-side wall clock across SR retries; fits one retry.
 const MRL_THRIFT_OVERALL_TIMEOUT: Duration = Duration::from_secs(600);
 
-/// Emergency-notify budget: the push already succeeded, so a hung land
-/// service must not stall the emergency push response.
-const MRL_NOTIFY_PROCESSING_TIMEOUT: Duration = Duration::from_secs(30);
-const MRL_NOTIFY_OVERALL_TIMEOUT: Duration = Duration::from_secs(60);
-
 /// Check whether this push should be diverted.
 ///
 /// Repos whose name *contains* the value configured in
@@ -292,8 +287,6 @@ fn plan_mrl_submit(
 fn mrl_client(
     request_context: &RepositoryRequestContext,
     service_address: Option<String>,
-    processing_timeout: Duration,
-    overall_timeout: Duration,
 ) -> anyhow::Result<MononokeThriftClient<make_MultiRepoLandService>> {
     let fb = request_context.ctx.fb;
     let client = if let Some(host_port) = service_address {
@@ -302,8 +295,8 @@ fn mrl_client(
         MononokeThriftClient::from_tier_name(fb, MRL_TIER.to_string(), make_MultiRepoLandService)?
     };
     Ok(client
-        .with_processing_timeout(processing_timeout)
-        .with_overall_timeout(overall_timeout))
+        .with_processing_timeout(MRL_THRIFT_PROCESSING_TIMEOUT)
+        .with_overall_timeout(MRL_THRIFT_OVERALL_TIMEOUT))
 }
 
 /// Divert branch creates/moves to the Multi-Repo Land Service: one
@@ -368,13 +361,7 @@ pub async fn divert_to_rl_land_service(
         remaining.len(),
     );
 
-    let service = mrl_client(
-        &request_context,
-        service_address,
-        MRL_THRIFT_PROCESSING_TIMEOUT,
-        MRL_THRIFT_OVERALL_TIMEOUT,
-    )?
-    .get_service_client(Some(ctx))?;
+    let service = mrl_client(&request_context, service_address)?.get_service_client(Some(ctx))?;
     match service.submit_manifest_land(&params).await {
         Ok(response) => {
             let mut scuba = ctx.scuba().clone();
@@ -429,98 +416,6 @@ pub async fn divert_to_rl_land_service(
                     .collect(),
                 remaining,
             })
-        }
-    }
-}
-
-/// Best-effort notify after an emergency push: the branches have already
-/// moved, so members resolve as already-at-target and the call's real work
-/// is manifest regeneration. Failures are logged, never propagated.
-pub async fn fire_and_forget_submit_land(
-    ref_updates: &[(RefUpdate, anyhow::Result<()>)],
-    request_context: &RepositoryRequestContext,
-    service_address: Option<String>,
-) {
-    let ctx = &request_context.ctx;
-    let repo_name = request_context.repo.repo_identity().name().to_string();
-    let manifest_repo = match mrl_manifest_repo(request_context) {
-        Ok(r) => r,
-        Err(e) => {
-            error!("Emergency push for repo {repo_name}: {e:#}");
-            return;
-        }
-    };
-
-    let succeeded: Vec<RefUpdate> = ref_updates
-        .iter()
-        .filter(|(ref_update, result)| result.is_ok() && is_divertable_ref(ref_update))
-        .map(|(ref_update, _)| ref_update.clone())
-        .collect();
-
-    let caller_request_id = format!("git-push-emergency:{}", ctx.metadata().session_id());
-    let params = match plan_mrl_submit(
-        &repo_name,
-        &manifest_repo,
-        succeeded,
-        request_context.pushvars.as_ref(),
-        request_context.pushvars.allow_non_fast_forward(),
-        caller_request_id,
-    ) {
-        Ok(plan) => match plan.params {
-            Some(params) => params,
-            None => {
-                info!(
-                    "Emergency push for repo {repo_name}: no branch updates to notify Multi-Repo Land about"
-                );
-                return;
-            }
-        },
-        Err(e) => {
-            error!("Emergency push for repo {repo_name}: cannot build MRL notify: {e:#}");
-            return;
-        }
-    };
-
-    let service = match mrl_client(
-        request_context,
-        service_address,
-        MRL_NOTIFY_PROCESSING_TIMEOUT,
-        MRL_NOTIFY_OVERALL_TIMEOUT,
-    )
-    .and_then(|client| client.get_service_client(Some(ctx)))
-    {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Emergency push for repo {repo_name}: failed to create MRL client: {e:#}");
-            return;
-        }
-    };
-
-    match service.submit_manifest_land(&params).await {
-        Ok(response) => {
-            info!(
-                "Emergency push for repo {}: Multi-Repo Land notified, request_id={}",
-                repo_name, response.request_id,
-            );
-        }
-        Err(e) if e.as_manifest_branch_not_enabled().is_some() => {
-            // Expected for non-onboarded branches; not alert-worthy.
-            info!(
-                "Emergency push for repo {repo_name}: branch not enabled for Multi-Repo Land, nothing to notify"
-            );
-        }
-        Err(e) => {
-            // A branch that moved again before the notify CAS-fails here and
-            // the manifest stays stale until the reconciler sweeps.
-            let mut scuba = ctx.scuba().clone();
-            scuba.add("log_tag", "mrl_emergency_notify_failed");
-            scuba.add("repo", repo_name.as_str());
-            scuba.add("error", format!("{e:#}"));
-            scuba.unsampled();
-            scuba.log();
-            error!(
-                "Emergency push for repo {repo_name}: MRL submit_manifest_land failed (best-effort): {e:#}"
-            );
         }
     }
 }

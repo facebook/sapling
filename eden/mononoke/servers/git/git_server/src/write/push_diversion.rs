@@ -19,8 +19,8 @@ pub enum PushDiversionMode {
     /// to the Multi-Repo Land Service.
     RlLandServiceDiversion,
     /// Diverted repo, emergency push — process directly through the normal
-    /// git server path, then send a best-effort notify to the Multi-Repo
-    /// Land Service.
+    /// git server path. Stale manifest pins are repaired by the reconciler
+    /// within its interval.
     EmergencyPush,
 }
 

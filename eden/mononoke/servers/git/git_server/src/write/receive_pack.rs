@@ -452,19 +452,8 @@ async fn refs_update(
         .await?
     };
 
-    // For emergency pushes, send a best-effort notify to Multi-Repo Land.
-    #[cfg(fbcode_build)]
-    if matches!(diversion_mode, PushDiversionMode::EmergencyPush)
-        && results.iter().any(|(_, r)| r.is_ok())
-    {
-        super::rl_land_service_diversion::fire_and_forget_submit_land(
-            &results,
-            &request_context,
-            _multi_repo_land_service_address,
-        )
-        .await;
-    }
-
+    // An emergency push leaves manifest pins stale; the reconciler re-pins
+    // within its interval.
     Ok(results)
 }
 
