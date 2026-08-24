@@ -154,6 +154,14 @@ impl MercurialMatcher {
         // The filtered files are put in the [exclude] section of the file. So, if something is
         // recursively unfiltered, then it means that there are no exclude patterns that match it.
         let res = self.matcher.matches_directory(repo_path)?;
+        // EdenFS asks about paths of unknown type (journal entries, tree
+        // entries of either type). `DirectoryMatch::Nothing` only says
+        // nothing *under* the path matches -- ex. rule `*.cpp` and path
+        // `a.cpp` -- so a path that itself matches as a file must not be
+        // reported as recursively filtered.
+        if res == DirectoryMatch::Nothing && self.matcher.matches_file(repo_path)? {
+            return Ok(ffi::FilterDirectoryMatch::Unfiltered);
+        }
         Ok(res.into())
     }
 
@@ -334,7 +342,7 @@ fn _profile_contents_from_repo(
                 .with_context(|| {
                     anyhow!(
                         "Failed to get root tree id for commit {:?}: {:?}",
-                        &filter.commit_id,
+                        filter.commit_id,
                         e
                     )
                 })?
@@ -426,4 +434,49 @@ pub fn profile_from_filter_id(
     profile_contents_from_repo(id, abs_repo_path, promise);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn glob_matcher(globs: &[&str]) -> MercurialMatcher {
+        MercurialMatcher {
+            matcher: Box::new(TreeMatcher::from_rules(globs.iter(), true).unwrap()),
+        }
+    }
+
+    #[test]
+    fn fixed_depth_globs_keep_matching_file_paths() {
+        let matcher = glob_matcher(&["*.cpp"]);
+        // A file path matched by a fixed-depth rule is not recursively
+        // filtered even though nothing under `a.cpp/` could match.
+        assert!(
+            matcher.matches_directory("a.cpp").ok().unwrap()
+                == ffi::FilterDirectoryMatch::Unfiltered
+        );
+        assert!(matcher.matches_file("a.cpp").ok().unwrap());
+        // Unmatched paths with no matching subpaths stay filtered.
+        assert!(
+            matcher.matches_directory("a.txt").ok().unwrap()
+                == ffi::FilterDirectoryMatch::RecursivelyFiltered
+        );
+        assert!(
+            matcher.matches_directory("dir").ok().unwrap()
+                == ffi::FilterDirectoryMatch::RecursivelyFiltered
+        );
+    }
+
+    #[test]
+    fn recursive_globs_report_directory_coverage() {
+        let matcher = glob_matcher(&["foo/**"]);
+        assert!(
+            matcher.matches_directory("foo").ok().unwrap()
+                == ffi::FilterDirectoryMatch::RecursivelyUnfiltered
+        );
+        assert!(
+            matcher.matches_directory("bar").ok().unwrap()
+                == ffi::FilterDirectoryMatch::RecursivelyFiltered
+        );
+    }
 }

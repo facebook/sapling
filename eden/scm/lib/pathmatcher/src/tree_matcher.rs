@@ -33,6 +33,10 @@ bitflags! {
 
         // Mark a rule as "recursive" (ex. ending with "/**").
         const RECURSIVE = 4;
+
+        // Mark a rule as matching a fixed number of path components (no
+        // "**"), so it can never match strictly below a path it matches.
+        const FIXED_DEPTH = 8;
     }
 }
 
@@ -152,6 +156,11 @@ impl TreeMatcher {
             // matches or nothing matches) can be used.
             if rule.ends_with("/**") || rule.ends_with("**/*") || rule == "**" {
                 flag |= RuleFlags::RECURSIVE;
+            } else if !rule.contains("**") {
+                // Substring detection is approximate for escapes (ex. "a\**"
+                // contains "**" but has no recursive glob); mistakes only
+                // skip the fixed-depth fast path, never add it wrongly.
+                flag |= RuleFlags::FIXED_DEPTH;
             }
             // Insert the rule.
             // NOTE: This crate depends on the fact that "a/**" matches "a", although
@@ -213,6 +222,13 @@ impl TreeMatcher {
                     subpath_may_match = true;
                 }
             } else {
+                // A fixed-depth rule matched all of `dir`, so it cannot match
+                // anything strictly inside `dir` and does not affect the
+                // result. Ex. "a/*" matches the directory "a/b" but nothing
+                // under "a/b/".
+                if flag.contains(RuleFlags::FIXED_DEPTH) {
+                    continue;
+                }
                 // If it is not RECURSIVE, then fast paths (i.e. claim everything
                 // matches, or nothing matches) cannot be used.
                 if !flag.contains(RuleFlags::RECURSIVE) {
@@ -583,7 +599,7 @@ mod tests {
         assert!(!m.matches("b/a"));
         assert!(!m.matches("a"));
         assert_eq!(m.match_recursive("a"), None);
-        assert_eq!(m.match_recursive("a/b"), None);
+        assert_eq!(m.match_recursive("a/b"), Some(false));
         assert_eq!(m.match_recursive("a/b/c"), Some(false));
         assert_eq!(m.match_recursive("b"), Some(false));
 
@@ -591,7 +607,7 @@ mod tests {
         assert!(m.matches("aa"));
         assert!(!m.matches("aa/b"));
         assert!(!m.matches("b"));
-        assert_eq!(m.match_recursive("aa"), None);
+        assert_eq!(m.match_recursive("aa"), Some(false));
         assert_eq!(m.match_recursive("a/a"), Some(false));
         assert_eq!(m.match_recursive("b"), Some(false));
 
@@ -604,6 +620,29 @@ mod tests {
         assert_eq!(m.match_recursive("aa"), Some(false));
         assert_eq!(m.match_recursive("b/a/b"), None);
         assert_eq!(m.match_recursive("b/a/b/a"), None);
+    }
+
+    #[test]
+    fn test_fixed_depth_rules_do_not_force_traversal() {
+        // Ex. "rootfilesin:a" produces "a/*": files directly in "a" match
+        // without requiring a visit into "a"'s subdirectories.
+        let m = TreeMatcher::from_rules(["*", "a/*"].iter(), true).unwrap();
+        assert_eq!(m.match_recursive("b"), Some(false));
+        assert_eq!(m.match_recursive("a"), None);
+        assert_eq!(m.match_recursive("a/b"), Some(false));
+        assert!(m.matches("b"));
+        assert!(m.matches("a/b"));
+        assert!(!m.matches("a/b/c"));
+
+        // A "**" anywhere in the rule disables the fixed-depth fast path.
+        let m = TreeMatcher::from_rules(["a/**/b"].iter(), true).unwrap();
+        assert_eq!(m.match_recursive("a/b"), None);
+
+        // Fixed-depth negative rules do not affect subtree decisions.
+        let m = TreeMatcher::from_rules(["a/**", "!a/b"].iter(), true).unwrap();
+        assert_eq!(m.match_recursive("a/b"), Some(true));
+        assert!(!m.matches("a/b"));
+        assert!(m.matches("a/b/c"));
     }
 
     #[test]
