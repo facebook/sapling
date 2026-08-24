@@ -168,6 +168,7 @@ Show aliases with -v
   identify
   import patch
   init
+  lint
   locate
   log history
   manifest
