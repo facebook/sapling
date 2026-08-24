@@ -136,7 +136,7 @@ Only when Tiers 1-2 are insufficient — e.g., tracing across multiple subsystem
 
 ## Detailed References
 
-For component-specific information (component overview, quick reference, key concepts), load the appropriate reference:
+For component-specific information (component overview, quick reference, key concepts), load the appropriate reference from `eden/.llms/skills`:
 
 | Component | Reference | When to Load |
 |-----------|-----------|--------------|
