@@ -17,6 +17,12 @@
   >     ("left.txt", "left"): "LEFT",
   >     ("right.txt", "right"): "RIGHT",
   >     ("redo.txt", "redo"): "REDO",
+  >     ("clean.txt", "clean"): "CLEAN",
+  >     ("stack.txt", "stack"): "STACK",
+  >     ("stack.txt", "local"): "LOCAL",
+  >     ("dirty.txt", "dirty"): "DIRTY",
+  >     ("mid.txt", "mid"): "MID",
+  >     ("top.txt", "top"): "TOP",
   >     ("s.txt", "three"): "THREE",
   >     ("batch1.txt", "b1"): "B1",
   >     ("batch2.txt", "b2"): "B2",
@@ -37,6 +43,7 @@
   >         path.write_bytes(Path("linked-tools/marker.txt").read_bytes())
   >     elif (logical_path, content) in replacements:
   >         path.write_bytes((replacements[(logical_path, content)] + "\n").encode())
+  >         sys.stderr.write(f"fixed {logical_path}\n")
   >     elif logical_path.startswith("many-") and content == "many":
   >         path.write_bytes(b"MANY\n")
   > with open(Path(os.environ["TESTTMP"]) / "lint-calls", "a") as output:
@@ -329,3 +336,128 @@ Merge commits are rejected before linting or replay begins.
   $ sl lint -r .
   abort: cannot lint merge commits
   [255]
+
+Working copy tests use a fresh repo so the default revision set stays small.
+
+  $ newclientrepo wdir-repo
+  $ printf '{}\n' > .arcconfig
+  $ sl add .arcconfig
+  $ sl commit -qm bootstrap
+
+Dirty files are fixed in place while clean stack-fixed files follow the
+rewritten working-copy parent.
+
+  $ printf 'clean\n' > clean.txt
+  $ printf 'stack\n' > stack.txt
+  $ sl add clean.txt stack.txt
+  $ sl commit -qm D
+  $ printf 'local\n' > stack.txt
+  $ printf 'dirty\n' > dirty.txt
+  $ sl add dirty.txt
+
+  $ sl lint
+  running linters: test
+  Found 2 "test" issues:
+    clean.txt
+    stack.txt
+  warning: can't lint 1 linter configuration file(s)
+  fixed clean.txt
+  fixed dirty.txt
+  fixed stack.txt
+  fixed 2 files and rewrote 1 commits
+  $ sl cat -r . clean.txt
+  CLEAN
+  $ sl cat -r . stack.txt
+  STACK
+  $ cat clean.txt
+  CLEAN
+  $ cat stack.txt
+  LOCAL
+  $ cat dirty.txt
+  DIRTY
+  $ sl status
+  M stack.txt
+  A dirty.txt
+
+  $ sl revert -qC --all
+  $ rm -f dirty.txt
+
+Dirty files are still fixed when the stack is already clean, but not with
+--no-fix.
+
+  $ printf 'local\n' > stack.txt
+  $ sl lint -r .
+  nothing changed
+  $ sl lint --no-fix -r 'wdir()'
+  nothing changed
+  $ cat stack.txt
+  local
+  $ sl lint -r 'wdir()'
+  fixed stack.txt
+  linted working copy files; no commits rewritten
+  $ cat stack.txt
+  LOCAL
+  $ sl revert -qC --all
+
+Linting from a mid-stack checkout with pending changes rewrites the whole
+stack, fixes dirty files in place, and moves the working copy to the
+rewritten parent without touching local edits.
+
+  $ sl goto -q 'desc(bootstrap)'
+  $ printf 'mid\n' > mid.txt
+  $ sl add mid.txt
+  $ sl commit -qm MID
+  $ printf 'top\n' > top.txt
+  $ sl add top.txt
+  $ sl commit -qm TOP
+  $ sl goto -q 'desc(MID)'
+  $ printf 'dirty\n' > dirty.txt
+  $ sl add dirty.txt
+  $ sl lint
+  running linters: test
+  Found 2 "test" issues:
+    mid.txt
+    top.txt
+  warning: can't lint 1 linter configuration file(s)
+  fixed dirty.txt
+  fixed mid.txt
+  fixed 2 files and rewrote 2 commits
+  $ sl log -r . -T '{desc}\n'
+  MID
+  $ sl cat -r . mid.txt
+  MID
+  $ sl cat -r 'desc(TOP)' top.txt
+  TOP
+  $ cat mid.txt
+  MID
+  $ cat dirty.txt
+  DIRTY
+  $ sl status
+  A dirty.txt
+
+Selecting wdir() alongside a commit unrelated to the working copy rewrites
+that commit and fixes dirty files without moving the working copy parent.
+
+  $ sl revert -qC --all
+  $ rm -f dirty.txt
+  $ sl goto -q 'desc(bootstrap)'
+  $ printf 'clean\n' > clean.txt
+  $ sl add clean.txt
+  $ sl commit -qm UNRELATED
+  $ sl goto -q 'desc(MID)'
+  $ printf 'dirty\n' > dirty.txt
+  $ sl add dirty.txt
+  $ sl lint -r 'wdir()' -r 'desc(UNRELATED)'
+  running linters: test
+  Found 1 "test" issue:
+    clean.txt
+  fixed dirty.txt
+  fixed 1 files and rewrote 1 commits
+  $ sl cat -r 'desc(UNRELATED)' clean.txt
+  CLEAN
+  $ cat dirty.txt
+  DIRTY
+  $ sl log -r . -T '{desc}\n'
+  MID
+  $ sl status
+  A dirty.txt
