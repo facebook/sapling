@@ -937,6 +937,8 @@ void EdenServer::registerXplatTransforms() {
   // Bind the shared telemetry identity into each transform via a capturing
   // lambda so the generic core stays identity-agnostic.
   const auto& identity = xplatLogger_->getTelemetryIdentity();
+  const auto periodicUsernameProvider =
+      xplatLogger_->getPeriodicUsernameProvider();
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kFileAccessCategory},
       "GeneratedEdenfsFileAccessesLoggerConfig",
@@ -946,8 +948,9 @@ void EdenServer::registerXplatTransforms() {
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kEventsCategory},
       "GeneratedEdenfsEventsLoggerConfig",
-      [identity](const DynamicEvent& event) {
-        return edenfsEventsTransform(identity, event);
+      [identity, periodicUsernameProvider](const DynamicEvent& event) {
+        return edenfsEventsTransform(
+            identity, event, periodicUsernameProvider.get());
       });
   xplatLogger_->registerTransform(
       std::string{xplat_keys::kErrorsCategory},
