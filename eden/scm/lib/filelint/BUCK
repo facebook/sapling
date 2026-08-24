@@ -1,0 +1,38 @@
+load("//eden/scm:targets.bzl", "sl_rust_library")
+
+oncall("sapling")
+
+sl_rust_library(
+    name = "filelint",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "filelint"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Format repository files across commits.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "GPL-2.0-only",
+                "name": "filelint",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/blob:blob",
+        "//eden/scm/lib/filewalk:filewalk",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/slex:slex",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vfs:vfs",
+    ],
+)

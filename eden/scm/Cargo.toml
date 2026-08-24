@@ -113,6 +113,7 @@ members = [
   "lib/edenfs_ffi/cxxerror",
   "lib/encoding",
   "lib/exchange",
+  "lib/filelint",
   "lib/filewalk",
   "lib/filters",
   "lib/formatter",
