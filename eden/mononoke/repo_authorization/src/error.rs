@@ -13,6 +13,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
 use permission_checker::MononokeIdentitySet;
+use permission_checker::PermissionDenial;
 use thiserror::Error;
 
 use crate::context::AuthorizationContext;
@@ -66,31 +67,31 @@ impl fmt::Display for DeniedAction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Error)]
+#[error(
+    "{denied_action} in repo '{denied_repo_name}' is not permitted with {context:?} for [{}]{}",
+    .identities.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "),
+    describe_denial(.denial)
+)]
 pub struct PermissionDenied {
     pub(crate) denied_action: DeniedAction,
     pub(crate) denied_repo_name: String,
     pub(crate) context: AuthorizationContext,
     pub(crate) identities: MononokeIdentitySet,
+    /// What the access checker said, when the denial came from an ACL check
+    /// that reported a reason.
+    pub(crate) denial: Option<PermissionDenial>,
 }
 
-impl fmt::Display for PermissionDenied {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} in repo '{}' is not permitted with {:?} for [",
-            self.denied_action, self.denied_repo_name, self.context
-        )?;
-        let mut delim = "";
-        for id in self.identities.iter() {
-            write!(f, "{delim}{id}")?;
-            delim = ", ";
-        }
-        f.write_str("]")
+/// Only checkers that report a reason add one; otherwise the message is
+/// unchanged. Without this the user is left to guess whether they are missing a
+/// grant or were rejected by a policy.
+fn describe_denial(denial: &Option<PermissionDenial>) -> String {
+    match denial {
+        Some(denial) if denial.is_informative() => format!(": {denial}"),
+        _ => String::new(),
     }
 }
-
-impl std::error::Error for PermissionDenied {}
 
 #[derive(Debug, Error)]
 pub enum AuthorizationError {

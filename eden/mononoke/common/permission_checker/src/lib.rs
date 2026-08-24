@@ -18,9 +18,11 @@ mod provider;
 
 pub use checker::ArcPermissionChecker;
 pub use checker::BoxPermissionChecker;
+pub use checker::DenialReason;
 pub use checker::PermissionCheckResult;
 pub use checker::PermissionChecker;
 pub use checker::PermissionCheckerBuilder;
+pub use checker::PermissionDenial;
 #[cfg(fbcode_build)]
 pub use facebook::AccessCheckerProvider;
 pub use identity::ClientCategory;

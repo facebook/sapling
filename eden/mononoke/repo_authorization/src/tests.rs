@@ -25,7 +25,10 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use mononoke_macros::mononoke;
 use mononoke_types::PrefixTrie;
+use permission_checker::DenialReason;
 use permission_checker::MononokeIdentitySet;
+use permission_checker::PermissionCheckResult;
+use permission_checker::PermissionDenial;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
@@ -89,6 +92,9 @@ struct TestPermissionChecker {
     any_region_read: bool,
     service_writes: HashMap<String, bool>,
     mirror_upload: bool,
+    /// What the ACL check reports when it denies a write, mimicking a checker
+    /// backed by the real access checker.
+    write_denial: Option<PermissionDenial>,
 }
 
 #[async_trait]
@@ -115,11 +121,11 @@ impl RepoPermissionChecker for TestPermissionChecker {
     async fn check_if_read_access_allowed_with_result(
         &self,
         _identities: &MononokeIdentitySet,
-    ) -> permission_checker::PermissionCheckResult {
+    ) -> PermissionCheckResult {
         if self.read {
-            permission_checker::PermissionCheckResult::Allowed(None)
+            PermissionCheckResult::Allowed(None)
         } else {
-            permission_checker::PermissionCheckResult::Denied
+            PermissionCheckResult::denied()
         }
     }
 
@@ -127,8 +133,19 @@ impl RepoPermissionChecker for TestPermissionChecker {
         &'a self,
         _acls: &'a [&'a str],
         _identities: &'a MononokeIdentitySet,
-    ) -> permission_checker::PermissionCheckResult {
-        permission_checker::PermissionCheckResult::Denied
+    ) -> PermissionCheckResult {
+        PermissionCheckResult::denied()
+    }
+
+    async fn check_if_write_access_allowed_with_result(
+        &self,
+        _identities: &MononokeIdentitySet,
+    ) -> PermissionCheckResult {
+        if self.write {
+            PermissionCheckResult::Allowed(None)
+        } else {
+            PermissionCheckResult::Denied(self.write_denial.clone().unwrap_or_default())
+        }
     }
 
     async fn check_if_draft_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
@@ -203,6 +220,85 @@ async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
     authz
         .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
         .await?;
+
+    Ok(())
+}
+
+/// A push rejected by a contextual-attribute policy must say so. Without the
+/// reason the user only learns that some identity in their set was not
+/// permitted, which does not distinguish "ask for write access" from "this
+/// agent may not push".
+#[mononoke::fbinit_test]
+async fn test_write_denial_reports_reason(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let checker = Arc::new(TestPermissionChecker {
+        read: true,
+        draft: true,
+        write: false,
+        write_denial: Some(PermissionDenial {
+            acl: Some(String::from("REPO:repos/git/mzr-test")),
+            action: Some(String::from("write")),
+            reason: DenialReason::AttributeBasedAccessControl {
+                attribute: Some(String::from("agent.id")),
+            },
+        }),
+        ..Default::default()
+    });
+    let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+        .with_permission_checker(checker)
+        .build()
+        .await?;
+    let authz = AuthorizationContext::new(&ctx);
+
+    let err = authz
+        .require_repo_write(
+            &ctx,
+            &repo,
+            RepoWriteOperation::UpdateBookmark(BookmarkKind::Publishing),
+        )
+        .await
+        .expect_err("public write should be denied");
+
+    assert_eq!(
+        err.to_string(),
+        "Repo write access for UpdateBookmark(Publishing) in repo 'repo' \
+         is not permitted with Identity for []: attribute-based access control \
+         rejected attribute 'agent.id' (action 'write' on REPO:repos/git/mzr-test)"
+    );
+
+    Ok(())
+}
+
+/// Checkers that report no reason must leave the message exactly as it was.
+#[mononoke::fbinit_test]
+async fn test_write_denial_without_reason_is_unchanged(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let checker = Arc::new(TestPermissionChecker {
+        read: true,
+        draft: true,
+        write: false,
+        ..Default::default()
+    });
+    let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+        .with_permission_checker(checker)
+        .build()
+        .await?;
+    let authz = AuthorizationContext::new(&ctx);
+
+    let err = authz
+        .require_repo_write(
+            &ctx,
+            &repo,
+            RepoWriteOperation::UpdateBookmark(BookmarkKind::Publishing),
+        )
+        .await
+        .expect_err("public write should be denied");
+
+    assert_eq!(
+        err.to_string(),
+        "Repo write access for UpdateBookmark(Publishing) in repo 'repo' \
+         is not permitted with Identity for []"
+    );
 
     Ok(())
 }

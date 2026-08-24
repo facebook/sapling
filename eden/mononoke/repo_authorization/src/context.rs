@@ -23,6 +23,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::path::MPath;
 use permission_checker::AclProvider;
+use permission_checker::PermissionDenial;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
@@ -125,6 +126,7 @@ impl AuthorizationContext {
             denied_repo_name: repo_name.to_string(),
             context: self.clone(),
             identities: ctx.metadata().identities().clone(),
+            denial: None,
         }))
     }
 
@@ -136,6 +138,24 @@ impl AuthorizationContext {
         denied_action: DeniedAction,
     ) -> AuthorizationError {
         self.permission_denied_name(ctx, repo.repo_identity().name(), denied_action)
+    }
+
+    /// Create a permission denied error that reports what the access checker
+    /// said, so the user can tell a missing grant from a policy rejection.
+    fn permission_denied_with_reason(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl RepoIdentityRef,
+        denied_action: DeniedAction,
+        denial: Option<PermissionDenial>,
+    ) -> AuthorizationError {
+        AuthorizationError::from(Box::new(PermissionDenied {
+            denied_action,
+            denied_repo_name: repo.repo_identity().name().to_string(),
+            context: self.clone(),
+            identities: ctx.metadata().identities().clone(),
+            denial,
+        }))
     }
 
     /// Check if user has read access to the full repo.
@@ -475,6 +495,31 @@ impl AuthorizationContext {
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
+    /// As check_repo_write, but also returns what the access checker said when
+    /// it denied a public write. That is the check a rejected `git push` or
+    /// `hg push` to a public bookmark fails, and the one whose reason is worth
+    /// reporting back to the user.
+    async fn check_repo_write_with_reason(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+        op: RepoWriteOperation,
+    ) -> (AuthorizationCheckOutcome, Option<PermissionDenial>) {
+        match self {
+            AuthorizationContext::Identity if !op.is_draft() => {
+                let result = repo
+                    .repo_permission_checker()
+                    .check_if_write_access_allowed_with_result(ctx.metadata().identities())
+                    .await;
+                (
+                    AuthorizationCheckOutcome::from_permitted(result.is_allowed()),
+                    result.into_denial(),
+                )
+            }
+            _ => (self.check_repo_write(ctx, repo, op).await, None),
+        }
+    }
+
     /// Require that the user has general write access to the repo, and return
     /// and error if they do not.
     ///
@@ -486,9 +531,15 @@ impl AuthorizationContext {
         repo: &(impl RepoPermissionCheckerRef + RepoConfigRef + RepoIdentityRef),
         op: RepoWriteOperation,
     ) -> Result<(), AuthorizationError> {
-        self.check_repo_write(ctx, repo, op)
-            .await
-            .permitted_or_else(|| self.permission_denied(ctx, repo, DeniedAction::RepoWrite(op)))
+        let (outcome, denial) = self.check_repo_write_with_reason(ctx, repo, op).await;
+        outcome.permitted_or_else(|| {
+            self.permission_denied_with_reason(
+                ctx,
+                repo,
+                DeniedAction::RepoWrite(op),
+                denial.clone(),
+            )
+        })
     }
 
     /// Check whether a user with write permissions may write to any path in the repo.
