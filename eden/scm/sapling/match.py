@@ -550,6 +550,28 @@ class exactmatcher(basematcher):
         return "<exactmatcher files=%r>" % self._files
 
 
+class basenamematcher(basematcher):
+    """Matches files whose basename is in the given names, in any directory.
+
+    Directory visits are unrestricted; intersect with another matcher to
+    also limit traversal.
+    """
+
+    def __init__(self, root, cwd, names, badfn=None, casesensitive=True):
+        super(basenamematcher, self).__init__(root, cwd, badfn)
+        self._names = sorted(set(names))
+        self._matcher = pathmatcher.basenamematcher(self._names, casesensitive)
+
+    def matchfn(self, f):
+        return self._matcher.matches_file(f)
+
+    def visitdir(self, dir):
+        return True
+
+    def __repr__(self):
+        return "<basenamematcher names=%r>" % self._names
+
+
 def intersectmatchers(m1, m2):
     """Composes two matchers by matching if both of them match.
 

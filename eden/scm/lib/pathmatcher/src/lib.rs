@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod basename_matcher;
 mod depth_matcher;
 mod error;
 mod exact_matcher;
@@ -29,6 +30,7 @@ pub use pathmatcher_types::UnionMatcher;
 pub use pathmatcher_types::XorMatcher;
 pub use types::RepoPath;
 
+pub use crate::basename_matcher::BasenameMatcher;
 pub use crate::depth_matcher::DepthMatcher;
 pub use crate::error::Error;
 pub use crate::exact_matcher::ExactMatcher;

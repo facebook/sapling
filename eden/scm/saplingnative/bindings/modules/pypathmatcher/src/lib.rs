@@ -20,6 +20,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::error::AnyhowResultExt;
 use cpython_ext::error::ResultPyErrExt;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::BasenameMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
@@ -42,6 +43,7 @@ use types::RepoPathBuf;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");
     let m = PyModule::new(py, &name)?;
+    m.add_class::<basenamematcher>(py)?;
     m.add_class::<gitignorematcher>(py)?;
     m.add_class::<treematcher>(py)?;
     m.add_class::<hintedmatcher>(py)?;
@@ -77,6 +79,27 @@ py_class!(class gitignorematcher |py| {
 
 impl ExtractInnerRef for gitignorematcher {
     type Inner = Arc<GitignoreMatcher>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.matcher(py)
+    }
+}
+
+py_class!(pub class basenamematcher |py| {
+    data matcher: Arc<BasenameMatcher>;
+
+    def __new__(_cls, names: Vec<String>, case_sensitive: bool) -> PyResult<Self> {
+        Self::create_instance(py, Arc::new(BasenameMatcher::new(names, case_sensitive)))
+    }
+
+    def matches_file(&self, path: &PyPath) -> PyResult<bool> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        self.matcher(py).matches_file(repo_path).map_pyerr(py)
+    }
+});
+
+impl ExtractInnerRef for basenamematcher {
+    type Inner = Arc<BasenameMatcher>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.matcher(py)
@@ -350,6 +373,10 @@ pub fn extract_matcher(
         debug!("treematcher downcast");
         return Ok((matcher.extract_inner(py), true));
     }
+    if let Ok(matcher) = basenamematcher::downcast_from(py, matcher.clone_ref(py)) {
+        debug!("basenamematcher downcast");
+        return Ok((matcher.extract_inner(py), true));
+    }
     if let Ok(matcher) = gitignorematcher::downcast_from(py, matcher.clone_ref(py)) {
         debug!("gitignorematcher downcast");
         return Ok((matcher.extract_inner(py), true));
@@ -372,9 +399,8 @@ pub fn extract_matcher(
     debug!(%type_name);
 
     match type_name.as_ref() {
-        "treematcher" | "gitignorematcher" | "hintedmatcher" | "sparsematcher" | "graftmatcher" => {
-            extract_matcher(py, matcher.getattr(py, "_matcher")?)
-        }
+        "treematcher" | "basenamematcher" | "gitignorematcher" | "hintedmatcher"
+        | "sparsematcher" | "graftmatcher" => extract_matcher(py, matcher.getattr(py, "_matcher")?),
         "unionmatcher" => {
             let py_matchers = matcher.getattr(py, "_matchers")?;
             let py_matchers = PyList::extract(py, &py_matchers)?;
