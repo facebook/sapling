@@ -21,6 +21,8 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use slex::Batch;
 use slex::Items;
+use slex::Work as SlexWork;
+use slex::WorkOptions;
 use smallvec::SmallVec;
 use storemodel::FileStore;
 use types::Blake3;
@@ -33,6 +35,7 @@ use vfs::VFS;
 use vfs::VfsBatchError;
 use vfs::Work;
 
+use crate::CacheKey;
 use crate::LintCache;
 
 const VFS_WORKERS: usize = 16;
@@ -151,6 +154,109 @@ pub fn materialize_files(
     }
 
     Ok(written_files)
+}
+
+/// Comparison results, identified by staged destination path (relative to
+/// the comparison root), not repository source path. Changed files carry
+/// the fingerprint of their new content so callers can compare again after
+/// running another tool over the same staged files.
+#[derive(Debug, Default)]
+pub struct CompareResult {
+    pub changed_files: Vec<(RepoPathBuf, ContentFingerprint)>,
+    pub oversized_files: Vec<RepoPathBuf>,
+}
+
+enum CompareOutcome {
+    Oversized(RepoPathBuf),
+    Compared {
+        changed: Option<(RepoPathBuf, ContentFingerprint)>,
+        clean_key: CacheKey,
+    },
+}
+
+/// A staged linter output to compare with its original content.
+///
+/// Fields follow [`MaterializeFile`]'s source-before-destination order so
+/// callers translating between the two cannot silently swap the paths.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompareFile {
+    /// Repository path the staged file was materialized from.
+    pub source_path: RepoPathBuf,
+    /// Path of the staged file relative to the comparison root.
+    pub destination: RepoPathBuf,
+    /// Fingerprint of the content before linting.
+    pub fingerprint: ContentFingerprint,
+}
+
+/// Compare materialized files with their original fingerprints in parallel.
+///
+/// Since lint fixes are idempotent, every non-oversized output is lint
+/// clean regardless of whether it changed, so its fingerprint is recorded in
+/// `cache` under `epoch`. Cache write failures are logged, not fatal. Staged
+/// files must exist: linters are expected to rewrite in place, so a
+/// missing output fails the comparison.
+pub fn compare_files(
+    output_root: PathBuf,
+    files: Vec<CompareFile>,
+    cache: Option<&mut LintCache>,
+    epoch: &[u8],
+    max_file_size: usize,
+) -> anyhow::Result<CompareResult> {
+    let vfs = VFS::new(output_root)?;
+    let epoch = epoch.to_vec();
+    let outcomes = SlexWork::try_map(
+        WorkOptions::new().max_workers(VFS_WORKERS),
+        Items::ready(files),
+        move |file| -> anyhow::Result<CompareOutcome> {
+            let CompareFile {
+                source_path,
+                destination,
+                fingerprint,
+            } = file;
+            if vfs
+                .metadata(&destination)
+                .with_context(|| format!("reading staged file metadata `{destination}`"))?
+                .len()
+                > max_file_size as u64
+            {
+                return Ok(CompareOutcome::Oversized(destination));
+            }
+            let data = vfs
+                .read(&destination)
+                .with_context(|| format!("reading staged file `{destination}`"))?;
+            if data.len() > max_file_size {
+                // The metadata check above is not atomic with the read; a
+                // file that grew in between is still treated as oversized.
+                return Ok(CompareOutcome::Oversized(destination));
+            }
+            let output = ContentFingerprint::from_blob(&Blob::Bytes(data));
+            let clean_key = LintCache::key(&source_path, &output.blake3, &epoch);
+            Ok(CompareOutcome::Compared {
+                changed: (output != fingerprint).then_some((destination, output)),
+                clean_key,
+            })
+        },
+    )
+    .into_iter()
+    .collect::<anyhow::Result<Vec<_>>>()?;
+
+    let mut result = CompareResult::default();
+    let mut clean_keys = Vec::new();
+    for outcome in outcomes {
+        match outcome {
+            CompareOutcome::Oversized(path) => result.oversized_files.push(path),
+            CompareOutcome::Compared { changed, clean_key } => {
+                result.changed_files.extend(changed);
+                clean_keys.push(clean_key);
+            }
+        }
+    }
+    if let Some(cache) = cache {
+        if let Err(err) = cache.record(clean_keys) {
+            tracing::warn!(?err, "error recording lint clean-content cache entries");
+        }
+    }
+    Ok(result)
 }
 
 /// Outcome of dropping unlintable file versions before any content fetch.
@@ -346,6 +452,71 @@ mod tests {
     }
 
     #[test]
+    fn compares_linted_files_and_records_clean_outputs() -> anyhow::Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("same.py"), b"same\n")?;
+        fs::write(temp.path().join("changed.py"), b"changed\n")?;
+        fs::write(temp.path().join("large.py"), b"too large\n")?;
+        let cache_dir = tempdir()?;
+        let mut cache = LintCache::open(
+            cache_dir.path(),
+            &std::collections::BTreeMap::<&str, &str>::new(),
+        )?;
+
+        let result = compare_files(
+            temp.path().to_owned(),
+            vec![
+                compare_file("src/same.py", "same.py", b"same\n"),
+                compare_file("src/changed.py", "changed.py", b"original\n"),
+                compare_file("src/large.py", "large.py", b"small\n"),
+            ],
+            Some(&mut cache),
+            b"epoch",
+            9,
+        )?;
+
+        assert_eq!(
+            result.changed_files,
+            vec![(
+                repo_path_buf("changed.py"),
+                ContentFingerprint::from_blob(&Blob::from_static(b"changed\n")),
+            )]
+        );
+        assert_eq!(result.oversized_files, vec![repo_path_buf("large.py")]);
+        // Both compared outputs are lint clean and get recorded under
+        // their source path and output content; the oversized file does not.
+        assert!(cache.contains(&LintCache::key(
+            repo_path("src/same.py"),
+            &Blob::from_static(b"same\n").blake3(),
+            b"epoch",
+        ))?);
+        assert!(cache.contains(&LintCache::key(
+            repo_path("src/changed.py"),
+            &Blob::from_static(b"changed\n").blake3(),
+            b"epoch",
+        ))?);
+        assert!(!cache.contains(&LintCache::key(
+            repo_path("src/changed.py"),
+            &Blob::from_static(b"original\n").blake3(),
+            b"epoch",
+        ))?);
+        assert!(!cache.contains(&LintCache::key(
+            repo_path("src/large.py"),
+            &Blob::from_static(b"too large\n").blake3(),
+            b"epoch",
+        ))?);
+        Ok(())
+    }
+
+    fn compare_file(source_path: &str, destination: &str, original: &[u8]) -> CompareFile {
+        CompareFile {
+            source_path: repo_path_buf(source_path),
+            destination: repo_path_buf(destination),
+            fingerprint: ContentFingerprint::from_blob(&Blob::from(original.to_vec())),
+        }
+    }
+
+    #[test]
     fn prefilters_oversized_files_before_content_fetch() -> anyhow::Result<()> {
         let store = Arc::new(TestStore::new());
         insert(&store, "small.py", "41", b"ok\n")?;
@@ -368,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn prefilters_versions_recorded_as_formatter_clean() -> anyhow::Result<()> {
+    fn prefilters_versions_recorded_as_lint_clean() -> anyhow::Result<()> {
         let store = Arc::new(TestStore::new());
         insert(&store, "clean.py", "51", b"clean\n")?;
         insert(&store, "new.py", "52", b"new\n")?;
