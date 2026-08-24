@@ -422,7 +422,12 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             out=out,
         )
 
-        self.assertEqual("EdenFS is not in use.\n", out.getvalue())
+        self.assertEqual(
+            "EdenFS daemon is not running. No Eden checkouts are configured, "
+            "so this is not considered an issue. If you need Eden checkouts, "
+            "create one with 'fbclone <repo> --eden'.\n",
+            out.getvalue(),
+        )
         self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")

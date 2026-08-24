@@ -520,7 +520,12 @@ class EdenDoctor(EdenDoctorChecker):
 
         if fixer.num_problems == 0:
             if not fixer.using_edenfs:
-                out.writeln("EdenFS is not in use.")
+                out.writeln(
+                    "EdenFS daemon is not running. No Eden checkouts are "
+                    "configured, so this is not considered an issue. "
+                    "If you need Eden checkouts, create one with "
+                    "'fbclone <repo> --eden'."
+                )
             else:
                 out.writeln("No issues detected.", fg=out.GREEN)
             return 0

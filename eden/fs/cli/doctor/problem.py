@@ -113,7 +113,8 @@ class UnexpectedCheckError(Problem):
 
 class ProblemTracker(abc.ABC):
     # using_edenfs will be set to False if EdenFS is not running and there
-    # are no configured EdenFS checkouts.
+    # are no configured EdenFS checkouts. doctor treats this as success,
+    # since there is no active checkout to diagnose.
     using_edenfs: bool = True
 
     def __init__(self, instance: AbstractEdenInstance) -> None:
