@@ -16,6 +16,7 @@ use std::sync::Arc;
 use blob::Blob;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
@@ -149,7 +150,34 @@ pub fn walk_and_fetch(
         work_options(options),
         file_nodes,
         WorkShape::batch(move |batch, scope| {
-            fetch_files(batch?, scope, &file_store, FetchContext::sapling_default())
+            fetch_batch(batch?, scope, &file_store, FetchContext::sapling_default())
+        }),
+    )
+}
+
+/// Fetch an explicit stream of file nodes in parallel.
+///
+/// This is useful when callers already know the file nodes and need one fetch pipeline spanning
+/// files from multiple manifests.
+pub fn fetch_file_nodes(
+    file_nodes: Items<(RepoPathBuf, FileMetadata), anyhow::Error>,
+    file_store: &Arc<dyn FileStore>,
+    fetch_context: FetchContext,
+    options: WalkOptions,
+) -> FileItems {
+    let options = options.normalized();
+    let file_store = file_store.clone();
+    let file_nodes = file_nodes.map_batch(|batch| {
+        Ok(batch?
+            .into_iter()
+            .map(|(path, metadata)| (path, FsNodeMetadata::File(metadata)))
+            .collect::<Vec<_>>())
+    });
+    Work::run(
+        work_options(options),
+        file_nodes,
+        WorkShape::batch(move |batch, scope| {
+            fetch_batch(batch?, scope, &file_store, fetch_context.clone())
         }),
     )
 }
@@ -218,7 +246,7 @@ fn diff_manifest_items(
     }
 }
 
-fn fetch_files(
+fn fetch_batch(
     work: Vec<FetchWork>,
     scope: &mut WorkScope<'_, FetchWork, FileResult, anyhow::Error>,
     file_store: &Arc<dyn FileStore>,
@@ -245,7 +273,15 @@ fn fetch_files(
             return Ok(());
         }
 
-        let batch = batch?;
+        let batch = match batch {
+            Ok(batch) => batch,
+            Err(err) => {
+                if !scope.send_error(err) {
+                    return Ok(());
+                }
+                continue;
+            }
+        };
 
         for (key, data) in batch {
             let file_type = file_info
@@ -320,6 +356,13 @@ impl FileStats {
 mod tests {
     use std::collections::BTreeMap;
 
+    use manifest_tree::testutil::TestStore;
+    use storemodel::InsertOpts;
+    use storemodel::KeyStore;
+    use types::testutil::hgid;
+    use types::testutil::repo_path;
+    use types::testutil::repo_path_buf;
+
     use super::*;
 
     #[test]
@@ -379,5 +422,42 @@ mod tests {
                 remote_files: 5,
             }
         );
+    }
+
+    #[test]
+    fn test_fetch_file_nodes() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+        let id = hgid("11");
+        store.insert_data(
+            InsertOpts {
+                forced_id: Some(Box::new(id)),
+                ..Default::default()
+            },
+            repo_path("a.txt"),
+            Blob::from(b"a\n".to_vec()),
+        )?;
+        let files = Items::ready(vec![(
+            repo_path_buf("a.txt"),
+            FileMetadata {
+                hgid: id,
+                file_type: FileType::Regular,
+                ignore_unless_conflict: false,
+            },
+        )]);
+
+        let results = fetch_file_nodes(
+            files,
+            &(store.clone() as Arc<dyn FileStore>),
+            FetchContext::sapling_default(),
+            WalkOptions::default(),
+        )
+        .into_iter()
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].path, repo_path_buf("a.txt"));
+        assert_eq!(results[0].data.to_bytes().as_ref(), b"a\n");
+        assert_eq!(store.key_fetch_count(), 1);
+        Ok(())
     }
 }
