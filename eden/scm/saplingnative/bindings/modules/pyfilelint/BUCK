@@ -1,0 +1,23 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("sapling")
+
+rust_python_library(
+    name = "pyfilelint",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:cpython",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/filelint:filelint",
+        "//eden/scm/lib/filewalk:filewalk",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/revisionstore:revisionstore",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/saplingnative/bindings/modules/pyrepo:pyrepo",
+    ],
+)

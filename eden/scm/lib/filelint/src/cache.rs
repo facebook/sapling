@@ -79,6 +79,20 @@ impl LintCache {
         }
     }
 
+    /// Remove the cache directory and every recorded entry.
+    ///
+    /// This is best effort: an open `LintCache` in this or another
+    /// process can recreate the directory and re-persist its in-memory
+    /// entries on its next sync.
+    pub fn clear(dir: &Path) -> anyhow::Result<()> {
+        match std::fs::remove_dir_all(dir) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err)
+                .with_context(|| format!("clearing formatted file cache `{}`", dir.display())),
+        }
+    }
+
     /// Persist keys that are not already present.
     pub fn record(&mut self, keys: impl IntoIterator<Item = CacheKey>) -> anyhow::Result<()> {
         let mut added = false;
@@ -130,6 +144,58 @@ mod tests {
             reopened.contains(&key)?,
             "cache entries should survive reopening"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn clear_removes_recorded_entries() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let key = LintCache::key(
+            repo_path("src/a.py"),
+            &Blob::from_static(b"formatted\n").blake3(),
+            b"epoch",
+        );
+        let mut cache = LintCache::open(dir.path(), &test_config())?;
+        cache.record([key])?;
+        drop(cache);
+
+        LintCache::clear(dir.path())?;
+        // Clearing a missing directory succeeds.
+        LintCache::clear(dir.path())?;
+
+        let cache = LintCache::open(dir.path(), &test_config())?;
+        assert!(!cache.contains(&key)?, "cleared entries should be gone");
+        Ok(())
+    }
+
+    // Windows can refuse to remove files another handle has mmap-ed, which
+    // `clear` reports as an error, so this only asserts unix behavior.
+    #[cfg(unix)]
+    #[test]
+    fn clear_succeeds_while_another_cache_is_open() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let key = LintCache::key(
+            repo_path("src/a.py"),
+            &Blob::from_static(b"formatted\n").blake3(),
+            b"epoch",
+        );
+        let mut open_cache = LintCache::open(dir.path(), &test_config())?;
+        open_cache.record([key])?;
+
+        LintCache::clear(dir.path())?;
+
+        let reopened = LintCache::open(dir.path(), &test_config())?;
+        assert!(
+            !reopened.contains(&key)?,
+            "cleared entries should be gone for new readers"
+        );
+        // The documented caveat: the still-open handle keeps working and can
+        // recreate the directory with its in-memory entries on a later sync.
+        open_cache.record([LintCache::key(
+            repo_path("src/b.py"),
+            &Blob::from_static(b"formatted\n").blake3(),
+            b"epoch",
+        )])?;
         Ok(())
     }
 
