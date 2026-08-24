@@ -164,6 +164,9 @@ pub struct CommonConfig {
     pub async_requests_config: AsyncRequestsConfig,
     /// Repo name prefix for RL Land Service push diversion.
     pub rl_land_service_repo_prefix: Option<String>,
+    /// Repo-name marker -> manifest repo, routing diverted pushes to the
+    /// manifest repo named in their submit_manifest_land request.
+    pub multi_repo_land_manifest_repos: BTreeMap<String, String>,
 }
 
 /// Configuration for logging of censored blobstore accesses

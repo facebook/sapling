@@ -7,6 +7,7 @@
 
 //! Functions to load and parse Mononoke configuration.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
@@ -726,6 +727,12 @@ fn parse_common_config(
     };
 
     let rl_land_service_repo_prefix = common.rl_land_service_repo_prefix.filter(|p| !p.is_empty());
+    let multi_repo_land_manifest_repos: BTreeMap<String, String> = common
+        .multi_repo_land_manifest_repos
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(marker, repo)| !marker.is_empty() && !repo.is_empty())
+        .collect();
 
     Ok(CommonConfig {
         trusted_parties_hipster_tier,
@@ -740,6 +747,7 @@ fn parse_common_config(
         edenapi_dumper_scuba_table,
         async_requests_config,
         rl_land_service_repo_prefix,
+        multi_repo_land_manifest_repos,
     })
 }
 
@@ -1965,6 +1973,7 @@ mod test {
                     blobstore: None
                 },
                 rl_land_service_repo_prefix: None,
+                multi_repo_land_manifest_repos: BTreeMap::new(),
             }
         );
 
