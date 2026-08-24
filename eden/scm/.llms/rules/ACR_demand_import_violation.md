@@ -1,8 +1,11 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_clients: ['code_review']
-apply_to_regex: 'eden/scm/sapling/(commands/|ext/).*\.py$'
-apply_to_content: 'hgdemandimport|cmdtable'
+name: ACR-demand-import-violation
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/scm/sapling/(commands/|ext/).*\.py$'
+  apply_to_content: 'hgdemandimport|cmdtable'
+  apply_to_clients: ['code_review']
 ---
 
 # Demand Import Violation
