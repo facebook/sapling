@@ -23,7 +23,6 @@
 #include <folly/portability/Windows.h>
 
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -198,12 +197,11 @@ TEST_F(PrjfsDispatcherImplTest, shallowSymlinkStillResolves) {
   EXPECT_TRUE(std::move(future).get());
 }
 
-// Characterization of the current cost of a self-referential symlink: there
-// is no cycle detection, so the resolver re-follows the loop until the
-// kMaxSymlinkChainDepth follow budget is exhausted, fetching the symlink blob
-// once per follow (and re-resolving all eight path components each time)
-// before giving up and returning the original path.
-TEST_F(PrjfsDispatcherImplTest, selfReferentialSymlinkExhaustsFollowBudget) {
+// A self-referential symlink reproduces the same resolution state after one
+// follow, so cycle detection gives up right there: one blob fetch instead of
+// exhausting the kMaxSymlinkChainDepth (40) follow budget, with the same
+// give-up value (the original path) that depth exhaustion produces.
+TEST_F(PrjfsDispatcherImplTest, selfReferentialSymlinkDetectedAfterOneFollow) {
   auto context = makeRefPtr<CountingFetchContext>();
 
   auto result = dispatcher_
@@ -214,8 +212,7 @@ TEST_F(PrjfsDispatcherImplTest, selfReferentialSymlinkExhaustsFollowBudget) {
 
   ASSERT_TRUE(std::holds_alternative<RelativePath>(result));
   EXPECT_EQ(RelativePath{"a/b/c/d/e/f/g/loop"}, std::get<RelativePath>(result));
-  EXPECT_EQ(
-      static_cast<size_t>(kMaxSymlinkChainDepth), context->getBlobFetchCount());
+  EXPECT_EQ(1u, context->getBlobFetchCount());
 }
 
 // The "again" symlink is legitimately followed twice while resolving

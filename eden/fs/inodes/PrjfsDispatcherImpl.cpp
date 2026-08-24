@@ -256,7 +256,20 @@ PrjfsDispatcherImpl::co_resolveSymlinkPath(
     size_t remainingRecursionDepth) {
   using ResolvedPath = std::variant<AbsolutePath, RelativePath>;
 
+  // Resolution is deterministic: revisiting an identical resolution state
+  // (the full path being resolved) can only repeat forever, so give up
+  // immediately with the same return-the-path-being-resolved value that
+  // depth exhaustion produces. The depth limit below is retained as a final
+  // safety guard for non-repeating chains (S697276).
+  std::vector<RelativePath> seenPaths;
+
   while (remainingRecursionDepth != 0) {
+    if (std::find(seenPaths.begin(), seenPaths.end(), path) !=
+        seenPaths.end()) {
+      co_return ResolvedPath{std::move(path)};
+    }
+    seenPaths.push_back(path.copy());
+
     std::vector<RelativePath> pathParts;
     std::transform(
         path.paths().begin(),
