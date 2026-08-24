@@ -338,13 +338,16 @@ def getmaxrss():
 
 if sysutil.isdarwin:
 
-    def normcase(path):
+    def normcase(path, casesensitive=False):
         """
         Normalize a filename for OS X-compatible comparison:
         - escape-encode invalid characters
         - decompose to NFD
         - lowercase
         - omit ignored characters [200c-200f, 202a-202e, 206a-206f,feff]
+
+        A true `casesensitive` disables normalization for comparisons on a
+        filesystem known to be case sensitive.
 
         >>> normcase('UPPER')
         'upper'
@@ -355,7 +358,8 @@ if sysutil.isdarwin:
         >>> normcase('\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
         '¸êãê¾è.jpg'
         """
-
+        if casesensitive:
+            return path
         try:
             bytepath = path.encode()
             return encoding.asciilower(bytepath).decode()  # exception for non-ASCII
@@ -375,7 +379,14 @@ if sysutil.isdarwin:
 else:
     # os.path.normcase is a no-op, which doesn't help us on non-native
     # filesystems
-    def normcase(path):
+    def normcase(path, casesensitive=False):
+        """Normalize a filename for comparison.
+
+        A true `casesensitive` disables normalization for comparisons on a
+        filesystem known to be case sensitive.
+        """
+        if casesensitive:
+            return path
         return path.lower()
 
     # what normcase does to ASCII strings

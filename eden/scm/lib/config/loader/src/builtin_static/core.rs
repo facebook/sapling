@@ -26,6 +26,9 @@ ignorerevnum=True
 [checkout]
 resumable=true
 
+[filelint]
+max-file-size=10MB
+
 [tracing]
 stderr=false
 threshold=10

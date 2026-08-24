@@ -308,7 +308,14 @@ def normpath(path):
     return pconvert(os.path.normpath(path))
 
 
-def normcase(path):
+def normcase(path, casesensitive=False):
+    """Normalize a filename for comparison.
+
+    A true `casesensitive` disables normalization for comparisons on a
+    filesystem known to be case sensitive.
+    """
+    if casesensitive:
+        return path
     return path.upper()  # NTFS compares via upper()
 
 
