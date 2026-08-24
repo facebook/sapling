@@ -47,6 +47,22 @@ TEST(InodeMap, invalidInodeNumber) {
       std::move(future).get(), std::runtime_error, "unknown inode number");
 }
 
+#ifdef __linux__
+TEST(InodeMap, forgetMultipleReferencesFromLoadedInode) {
+  FakeTreeBuilder builder;
+  builder.setFile("file.txt", "contents\n");
+  TestMount testMount{builder};
+
+  auto file = testMount.getFileInode("file.txt"_relpath);
+  file->incFsRefcount(3);
+  testMount.getEdenMount()->getInodeMap()->decFsRefcount(file->getNodeId(), 3);
+
+  // FIXME: A batched FORGET must release all three references. The loaded
+  // inode path currently discards the count and decrements only once.
+  EXPECT_EQ(2, file->debugGetFsRefcount());
+}
+#endif
+
 TEST(InodeMap, simpleLookups) {
   // Test simple lookups that succeed immediately from the LocalStore
   FakeTreeBuilder builder;
