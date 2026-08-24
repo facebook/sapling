@@ -57,9 +57,7 @@ TEST(InodeMap, forgetMultipleReferencesFromLoadedInode) {
   file->incFsRefcount(3);
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(file->getNodeId(), 3);
 
-  // FIXME: A batched FORGET must release all three references. The loaded
-  // inode path currently discards the count and decrements only once.
-  EXPECT_EQ(2, file->debugGetFsRefcount());
+  EXPECT_EQ(0, file->debugGetFsRefcount());
 }
 #endif
 

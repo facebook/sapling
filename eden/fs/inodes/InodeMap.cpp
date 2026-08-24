@@ -724,7 +724,7 @@ void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
   // Now release our lock before decrementing the inode's FS reference
   // count and immediately releasing our pointer reference.
   if (inodePtr) {
-    inodePtr->decFsRefcount();
+    inodePtr->decFsRefcount(count);
   }
 }
 
