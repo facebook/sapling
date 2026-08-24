@@ -103,7 +103,7 @@ pub struct GitServerContextInner {
     tls_args: Option<TLSArgs>,
     // ACL provider for checking group membership
     acl_provider: Arc<dyn AclProvider>,
-    // Optional address (host:port) for the RL Land Service
+    // Optional address (host:port) for the Multi-Repo Land Service
     multi_repo_land_service_address: Option<String>,
     // See `GitimportPreferences::persist_partial_mappings`.
     persist_partial_mappings: bool,

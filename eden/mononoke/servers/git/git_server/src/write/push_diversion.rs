@@ -15,12 +15,12 @@ use crate::model::RepositoryRequestContext;
 pub enum PushDiversionMode {
     /// Not a diverted repo — process through the normal git server path.
     NoDiversion,
-    /// Diverted repo, normal flow — route through the RL Land Service
-    /// (submitLand + poll).
+    /// Diverted repo, normal flow — one synchronous `submit_manifest_land`
+    /// to the Multi-Repo Land Service.
     RlLandServiceDiversion,
     /// Diverted repo, emergency push — process directly through the normal
-    /// git server path, then send a best-effort notification to the RL Land
-    /// Service.
+    /// git server path, then send a best-effort notify to the Multi-Repo
+    /// Land Service.
     EmergencyPush,
 }
 

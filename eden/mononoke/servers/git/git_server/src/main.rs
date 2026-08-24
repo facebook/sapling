@@ -199,10 +199,10 @@ struct GitServerArgs {
     /// before deciding that the file is missing.
     #[clap(long, default_value_t = 5)]
     lfs_import_max_attempts: u32,
-    /// Address (host:port) of the RL Land Service for push diversion.
-    /// When set, pushes to repos matching the configured prefix will be
-    /// diverted to this service instead of the normal bookmark movement path.
-    /// If not set, SMC tier lookup is used in production.
+    /// Address (host:port) of the Multi-Repo Land Service for push
+    /// diversion. When set, pushes to repos matching the configured marker
+    /// are landed through this service instead of the normal bookmark
+    /// movement path. If not set, SMC tier lookup is used in production.
     #[clap(long)]
     multi_repo_land_service_address: Option<String>,
     /// Mark this instance as a shadow tier. Shadow tiers never forward

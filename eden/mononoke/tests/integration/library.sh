@@ -909,44 +909,6 @@ function multi_repo_land_service_client {
     "$@"
 }
 
-function mock_rl_land_service {
-  rm -f "$TESTTMP/mock_rl_land_service_addr.txt"
-  GLOG_minloglevel=5 \
-    THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
-    THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
-    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
-    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
-    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
-    THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
-    "$MOCK_RL_LAND_SERVICE" "$@" \
-    --host "$LOCALIP" \
-    --port 0 \
-    --bound-address-file "$TESTTMP/mock_rl_land_service_addr.txt" \
-    --backend-address "$(multi_repo_land_service_address)" \
-    >> "$TESTTMP/mock_rl_land_service.out" 2>&1 &
-  export MOCK_RL_LAND_SERVICE_PID=$!
-  echo "$MOCK_RL_LAND_SERVICE_PID" >> "$DAEMON_PIDS"
-}
-
-MOCK_RL_LAND_SERVICE_DEFAULT_START_TIMEOUT=60
-
-function wait_for_mock_rl_land_service {
-  export MOCK_RL_LAND_SERVICE_PORT
-  wait_for_server "Mock RL land service" MOCK_RL_LAND_SERVICE_PORT "$TESTTMP/mock_rl_land_service.out" \
-    "${MOCK_RL_LAND_SERVICE_START_TIMEOUT:-"$MOCK_RL_LAND_SERVICE_DEFAULT_START_TIMEOUT"}" "$TESTTMP/mock_rl_land_service_addr.txt" \
-    sleep 5
-}
-
-function mock_rl_land_service_address {
-  # shellcheck disable=SC2119
-  echo -n "$(mononoke_host):$MOCK_RL_LAND_SERVICE_PORT"
-}
-
-function start_and_wait_for_mock_rl_land_service {
-  mock_rl_land_service "$@"
-  wait_for_mock_rl_land_service
-}
-
 function _megarepo_async_worker_cmd {
   GLOG_minloglevel=5 \
     RUST_LOG="warm_bookmarks_cache=WARN,dbbookmarks=WARN" \
