@@ -11,6 +11,8 @@ import logging
 import os
 import pathlib
 import shutil
+import subprocess
+import sys
 import tempfile
 import types
 import typing
@@ -27,6 +29,50 @@ from typing import (
     TypeVar,
     Union,
 )
+
+
+def _unmount_leaked_mounts(tmp_dir: Path) -> None:
+    """Lazily unmount any mounts left behind under tmp_dir.
+
+    A mount can be left behind when a test kills the EdenFS daemon and its
+    privhelper without unmounting (e.g. tests exercising recovery from an
+    unclean shutdown), or when unmounting fails during normal daemon cleanup.
+    shutil.rmtree() cannot remove a mount point, and a leaked mount whose
+    server is gone stalls every process that scans the mount table (df, and
+    through it chef) until the client request times out.
+    """
+    if sys.platform != "linux":
+        return
+    prefix = str(tmp_dir) + "/"
+    try:
+        with open("/proc/mounts") as f:
+            # The mount point is the second space-separated field, with
+            # special characters octal-escaped (e.g. "\040" for space).
+            mount_points = [
+                line.split(" ")[1].encode().decode("unicode_escape") for line in f
+            ]
+    except OSError as ex:
+        logging.warning(f"error listing mounts under {tmp_dir}: {ex}")
+        return
+
+    leaked = sorted((m for m in mount_points if m.startswith(prefix)), reverse=True)
+    for mount_point in leaked:
+        # Sorted in reverse so that nested mounts are unmounted before their
+        # parents. Lazy unmount (MNT_DETACH) always detaches the mount from
+        # the mount table, even if the mount is wedged or still in use.
+        cmd = ["umount", "-l", mount_point]
+        if os.geteuid() != 0:
+            cmd = ["sudo", "-n"] + cmd
+        result = subprocess.run(
+            cmd, capture_output=True, encoding="utf-8", errors="replace"
+        )
+        if result.returncode == 0:
+            logging.warning(f"unmounted mount leaked by test: {mount_point}")
+        else:
+            logging.warning(
+                f"failed to unmount mount leaked by test: {mount_point}: "
+                f"{result.stderr.strip()}"
+            )
 
 
 def cleanup_tmp_dir(tmp_dir: Path) -> None:
@@ -79,6 +125,11 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             return
 
     shutil.rmtree(tmp_dir, onerror=_remove_readonly)
+    if tmp_dir.exists():
+        # rmtree cannot remove mount points; unmount anything left mounted
+        # under tmp_dir and try once more.
+        _unmount_leaked_mounts(tmp_dir)
+        shutil.rmtree(tmp_dir, onerror=_remove_readonly)
 
 
 class TempFileManager:
