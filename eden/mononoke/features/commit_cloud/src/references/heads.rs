@@ -26,6 +26,7 @@ pub fn heads_from_list(s: &Vec<String>) -> anyhow::Result<Vec<WorkspaceHead>> {
         .map(|s| {
             Sha1::from_str(s).map(|commit_id| WorkspaceHead {
                 commit: CloudChangesetId(commit_id),
+                author_date: None,
             })
         })
         .collect()
@@ -62,7 +63,10 @@ pub async fn update_heads(
         if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
             let heads: Vec<WorkspaceHead> = new_heads
                 .into_iter()
-                .map(|commit| WorkspaceHead { commit })
+                .map(|commit| WorkspaceHead {
+                    commit,
+                    author_date: None,
+                })
                 .collect();
             txn = InsertMany::<WorkspaceHead>::insert_many(
                 sql_commit_cloud,
@@ -79,7 +83,10 @@ pub async fn update_heads(
                     txn,
                     cc_ctx.reponame.clone(),
                     cc_ctx.workspace.clone(),
-                    WorkspaceHead { commit: head },
+                    WorkspaceHead {
+                        commit: head,
+                        author_date: None,
+                    },
                 )
                 .await?;
             }

@@ -30,6 +30,7 @@ fn test_heads_from_list_valid() {
         commit: CloudChangesetId(
             Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         ),
+        author_date: None,
     }];
     let result = heads_from_list(&input).unwrap();
     assert_eq!(result, expected);
@@ -48,6 +49,7 @@ fn test_heads_to_list() {
         commit: CloudChangesetId(
             Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         ),
+        author_date: None,
     }];
     let expected = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
     let result = heads_to_list(&input);
@@ -68,12 +70,14 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
         commit: CloudChangesetId(
             Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         ),
+        author_date: None,
     };
 
     let head2 = WorkspaceHead {
         commit: CloudChangesetId(
             Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
         ),
+        author_date: None,
     };
     let mut txn = sql
         .connections

@@ -45,6 +45,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         commit: CloudChangesetId(
             Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         ),
+        author_date: None,
     };
 
     let remote_bookmark1 = WorkspaceRemoteBookmark::new(

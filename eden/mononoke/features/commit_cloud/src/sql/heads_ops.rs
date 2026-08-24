@@ -26,9 +26,9 @@ pub struct DeleteArgs {
 }
 
 mononoke_queries! {
-    read GetHeads(reponame: String, workspace: String) -> (String, CloudChangesetId){
-        mysql("SELECT `reponame`, `node` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
-        sqlite("SELECT `reponame`, `commit` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
+    read GetHeads(reponame: String, workspace: String) -> (String, CloudChangesetId, Option<i64>){
+        mysql("SELECT `reponame`, `node`, `author_date` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
+        sqlite("SELECT `reponame`, `commit`, `author_date` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
     }
 
     write DeleteHead(reponame: String, workspace: String, >list commits: CloudChangesetId) {
@@ -37,16 +37,16 @@ mononoke_queries! {
         sqlite("DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}")
     }
 
-    write InsertHead(reponame: String, workspace: String, commit: CloudChangesetId) {
+    write InsertHead(reponame: String, workspace: String, commit: CloudChangesetId, author_date: Option<i64>) {
         none,
-        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
-        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
+        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`, `author_date`) VALUES ({reponame}, {workspace}, {commit}, {author_date})")
+        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`, `author_date`) VALUES ({reponame}, {workspace}, {commit}, {author_date})")
     }
 
-    write BulkInsertHeads(values: (reponame: String, workspace: String, commit: CloudChangesetId)) {
+    write BulkInsertHeads(values: (reponame: String, workspace: String, commit: CloudChangesetId, author_date: Option<i64>)) {
         none,
-        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES {values}")
-        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES {values}")
+        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`, `author_date`) VALUES {values}")
+        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`, `author_date`) VALUES {values}")
     }
 
     write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
@@ -71,7 +71,12 @@ impl Get<WorkspaceHead> for SqlCommitCloud {
         )
         .await?;
         rows.into_iter()
-            .map(|(_reponame, commit)| Ok(WorkspaceHead { commit }))
+            .map(|(_reponame, commit, author_date)| {
+                Ok(WorkspaceHead {
+                    commit,
+                    author_date,
+                })
+            })
             .collect::<anyhow::Result<Vec<WorkspaceHead>>>()
     }
 }
@@ -85,8 +90,14 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
         workspace: String,
         data: WorkspaceHead,
     ) -> anyhow::Result<Transaction> {
-        let (txn, _) =
-            InsertHead::query_with_transaction(txn, &reponame, &workspace, &data.commit).await?;
+        let (txn, _) = InsertHead::query_with_transaction(
+            txn,
+            &reponame,
+            &workspace,
+            &data.commit,
+            &data.author_date,
+        )
+        .await?;
         Ok(txn)
     }
 }
@@ -145,12 +156,12 @@ impl InsertMany<WorkspaceHead> for SqlCommitCloud {
         if data.is_empty() {
             return Ok(txn);
         }
-        let rows: Vec<(String, String, CloudChangesetId)> = data
+        let rows: Vec<(String, String, CloudChangesetId, Option<i64>)> = data
             .into_iter()
-            .map(|h| (reponame.clone(), workspace.clone(), h.commit))
+            .map(|h| (reponame.clone(), workspace.clone(), h.commit, h.author_date))
             .collect();
-        let rows_ref: Vec<(&String, &String, &CloudChangesetId)> =
-            rows.iter().map(|(r, w, c)| (r, w, c)).collect();
+        let rows_ref: Vec<(&String, &String, &CloudChangesetId, &Option<i64>)> =
+            rows.iter().map(|(r, w, c, a)| (r, w, c, a)).collect();
         let (txn, _) = BulkInsertHeads::query_with_transaction(txn, rows_ref.as_slice()).await?;
         Ok(txn)
     }

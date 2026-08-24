@@ -18,6 +18,7 @@ use crate::changeset::CloudChangesetId;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceHead {
     pub commit: CloudChangesetId,
+    pub author_date: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
