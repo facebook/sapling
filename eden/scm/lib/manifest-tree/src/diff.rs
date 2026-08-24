@@ -10,10 +10,12 @@ use std::mem;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use manifest::DiffEntry;
 use manifest::DiffType;
 use manifest::DirDiffEntry;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use progress_model::ProgressBarBuilder;
@@ -50,8 +52,8 @@ enum Side {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum DiffWork {
     // bool is whether this diff was the result of a path conflict
-    Single(DirLink, Side, bool),
-    Changed(DirLink, DirLink),
+    Single(usize, DirLink, Side, bool),
+    Changed(usize, DirLink, DirLink),
 }
 
 impl DiffWork {
@@ -63,17 +65,32 @@ impl DiffWork {
         results: &mut Vec<T>,
     ) -> Result<()> {
         match self {
-            DiffWork::Single(dir, side, path_conflict) => {
-                diff_single(dir, side, path_conflict, store, matcher, work, results)
+            DiffWork::Single(pair, dir, side, path_conflict) => diff_single(
+                pair,
+                dir,
+                side,
+                path_conflict,
+                store,
+                matcher,
+                work,
+                results,
+            ),
+            DiffWork::Changed(pair, left, right) => {
+                diff_dirs(pair, left, right, store, matcher, work, results)
             }
-            DiffWork::Changed(left, right) => diff_dirs(left, right, store, matcher, work, results),
+        }
+    }
+
+    fn pair(&self) -> usize {
+        match self {
+            DiffWork::Single(pair, ..) | DiffWork::Changed(pair, ..) => *pair,
         }
     }
 
     fn path(&self) -> &RepoPath {
         match self {
-            DiffWork::Single(d, _, _) => &d.path,
-            DiffWork::Changed(d, _) => &d.path,
+            DiffWork::Single(_, d, _, _) => &d.path,
+            DiffWork::Changed(_, d, _) => &d.path,
         }
     }
 }
@@ -119,7 +136,7 @@ impl DiffOutput for DirDiffEntry {
 
 #[derive(Clone)]
 struct DiffContext {
-    matcher: Arc<dyn Matcher + Sync + Send>,
+    matchers: Vec<DynMatcher>,
     store: InnerStore,
     progress_bar: Arc<ProgressBar>,
 }
@@ -128,44 +145,43 @@ struct DiffContext {
 // tree deserialization. 1000 was faster than 100 and 5000 in testing.
 const BATCH_SIZE: usize = 1000;
 
-/// A parallel iterator over two trees.
+/// A parallel iterator over manifest pairs.
 ///
 /// The iteration is breadth first but in parallel, so different depths can be processed
 /// at the same time.
 pub(crate) fn diff<'a, T>(
-    pairs: impl IntoIterator<Item = (&'a TreeManifest, &'a TreeManifest)>,
-    matcher: Arc<dyn Matcher + Send + Sync>,
-) -> Items<T, anyhow::Error>
+    pairs: Vec<(&'a TreeManifest, &'a TreeManifest, DynMatcher)>,
+) -> Items<(usize, T), anyhow::Error>
 where
     T: DiffOutput,
 {
-    let pairs: Vec<_> = pairs
-        .into_iter()
-        .filter_map(|(left, right)| {
-            let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
-            let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
-
-            // Don't even attempt to perform a diff if these trees are the same.
-            if lroot.hgid() == rroot.hgid() && lroot.hgid().is_some() {
-                None
-            } else {
-                Some([left, right])
-            }
-        })
-        .collect();
-
-    if pairs.is_empty() {
+    let Some((first_left, _, _)) = pairs.first() else {
+        return Items::empty();
+    };
+    // All trees are fetched through the first pair's store, preserving the
+    // single-pair behavior of fetching the right side through the left
+    // manifest's store. Operands are not required to hold identical store
+    // instances: cross-repo subtree merges diff manifests from different
+    // repos, relying on the needed trees resolving through the first store.
+    let matchers = pairs
+        .iter()
+        .map(|(_, _, matcher)| Arc::clone(matcher))
+        .collect::<Vec<_>>();
+    let mut input = Vec::new();
+    for (index, (left, right, _)) in pairs.iter().enumerate() {
+        let Some(left) = DirLink::from_root(&left.root) else {
+            return Items::error(anyhow!("left manifest root is not a directory"));
+        };
+        let Some(right) = DirLink::from_root(&right.root) else {
+            return Items::error(anyhow!("right manifest root is not a directory"));
+        };
+        if left.hgid() != right.hgid() || left.hgid().is_none() {
+            input.push(DiffWork::Changed(index, left, right));
+        }
+    }
+    if input.is_empty() {
         return Items::empty();
     }
-
-    let input: Vec<_> = pairs
-        .iter()
-        .map(|[left, right]| {
-            let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
-            let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
-            DiffWork::Changed(lroot, rroot)
-        })
-        .collect();
 
     let progress_bar = ProgressBarBuilder::new()
         .topic("diffing manifest")
@@ -175,8 +191,8 @@ where
         .pending();
 
     let ctx = DiffContext {
-        matcher,
-        store: pairs[0][0].store.clone(),
+        matchers,
+        store: first_left.store.clone(),
         progress_bar: progress_bar.clone(),
     };
 
@@ -192,7 +208,7 @@ where
 
 fn run_diff_worker<T: DiffOutput>(
     work: Result<Vec<DiffWork>>,
-    scope: &mut WorkScope<'_, DiffWork, T, anyhow::Error>,
+    scope: &mut WorkScope<'_, DiffWork, (usize, T), anyhow::Error>,
     ctx: &DiffContext,
 ) -> Result<()> {
     let _active = ProgressBar::push_active(ctx.progress_bar.clone(), Registry::main());
@@ -214,22 +230,35 @@ fn run_diff_worker<T: DiffOutput>(
         .iter()
         .flat_map(diff_work_prefetch_trees)
         .inspect(|_| durable_entry_count += 1);
-    if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
+    if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, &ctx.matchers) {
         let _ = scope.send_error(err);
         return Ok(());
     }
     ctx.progress_bar.increase_position(durable_entry_count);
 
     let mut to_send = Vec::new();
-    let mut results = Vec::new();
+    let mut results = Vec::<T>::new();
     for item in work {
-        if let Err(err) = item.process(&ctx.store, &ctx.matcher, &mut to_send, &mut results) {
+        let pair = item.pair();
+        let Some(matcher) = ctx.matchers.get(pair) else {
+            let _ = scope.send_error(anyhow!("missing matcher for manifest pair {pair}"));
+            return Ok(());
+        };
+        if let Err(err) = item.process(&ctx.store, matcher.as_ref(), &mut to_send, &mut results) {
             if !scope.send_error(err) {
                 return Ok(());
             }
         }
 
-        if !results.is_empty() && !scope.send_result(mem::take(&mut results)) {
+        // Results are tagged with this item's pair index, so they must be
+        // drained before moving to the next item.
+        if !results.is_empty()
+            && !scope.send_result(
+                mem::take(&mut results)
+                    .into_iter()
+                    .map(|result| (pair, result)),
+            )
+        {
             return Ok(());
         }
 
@@ -242,23 +271,32 @@ fn run_diff_worker<T: DiffOutput>(
 }
 
 fn diff_work_prefetch_trees(item: &DiffWork) -> impl Iterator<Item = bfs::PrefetchTree<'_>> {
+    let matcher_index = item.pair();
     let entries = match item {
-        DiffWork::Single(dir, _, _) => [durable_link_prefetch(&dir.path, &dir.link), None],
-        DiffWork::Changed(left, right) => [
-            durable_link_prefetch(&left.path, &left.link),
-            durable_link_prefetch(&right.path, &right.link),
+        DiffWork::Single(_, dir, _, _) => [
+            durable_link_prefetch(&dir.path, &dir.link, matcher_index),
+            None,
+        ],
+        DiffWork::Changed(_, left, right) => [
+            durable_link_prefetch(&left.path, &left.link, matcher_index),
+            durable_link_prefetch(&right.path, &right.link, matcher_index),
         ],
     };
     entries.into_iter().flatten()
 }
 
-fn durable_link_prefetch<'a>(path: &'a RepoPath, link: &'a Link) -> Option<bfs::PrefetchTree<'a>> {
+fn durable_link_prefetch<'a>(
+    path: &'a RepoPath,
+    link: &'a Link,
+    matcher_index: usize,
+) -> Option<bfs::PrefetchTree<'a>> {
     match link.as_ref() {
         Durable(entry) if !entry.links_initialized() && !entry.is_permission_denied() => {
             Some(bfs::PrefetchTree {
                 path,
                 entry,
                 subtree_matches_everything: false,
+                matcher_index,
             })
         }
         _ => None,
@@ -268,6 +306,7 @@ fn durable_link_prefetch<'a>(path: &'a RepoPath, link: &'a Link) -> Option<bfs::
 /// Process a directory that is only present on one side of the diff.
 /// Adds diff entries to `results` and more work items to `work`.
 fn diff_single<T: DiffOutput>(
+    pair: usize,
     dir: DirLink,
     side: Side,
     path_conflict: bool,
@@ -299,7 +338,7 @@ fn diff_single<T: DiffOutput>(
 
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
-            work.push(DiffWork::Single(d, side, path_conflict));
+            work.push(DiffWork::Single(pair, d, side, path_conflict));
         }
     }
 
@@ -325,6 +364,7 @@ fn diff_single<T: DiffOutput>(
 /// The directories should correspond to the same path on either side of the
 /// diff. Adds diff entries to `results` and more work items to `work`.
 fn diff_dirs<T: DiffOutput>(
+    pair: usize,
     left: DirLink,
     right: DirLink,
     store: &InnerStore,
@@ -354,10 +394,19 @@ fn diff_dirs<T: DiffOutput>(
         return Ok(());
     }
     if left_denied {
-        return diff_single(right, Side::Right, false, store, matcher, work, results);
+        return diff_single(
+            pair,
+            right,
+            Side::Right,
+            false,
+            store,
+            matcher,
+            work,
+            results,
+        );
     }
     if right_denied {
-        return diff_single(left, Side::Left, false, store, matcher, work, results);
+        return diff_single(pair, left, Side::Left, false, store, matcher, work, results);
     }
 
     // Returns whether the parent directory is considered as modified:
@@ -371,7 +420,7 @@ fn diff_dirs<T: DiffOutput>(
             }
         }
 
-        let (file_diff, dir_diff) = diff_links(&left.path, l, r);
+        let (file_diff, dir_diff) = diff_links(pair, &left.path, l, r);
 
         let dir_changed = T::need_dir_diff()
             && match (l, r) {
@@ -432,6 +481,7 @@ fn diff_dirs<T: DiffOutput>(
 // the same name. Returns a file diff and directory diff. There can be no diffs returned,
 // just a file diff, just a directory diff, or both.
 fn diff_links(
+    pair: usize,
     parent_path: &RepoPath,
     left: Option<(&PathComponentBuf, &Link)>,
     right: Option<(&PathComponentBuf, &Link)>,
@@ -474,6 +524,7 @@ fn diff_links(
 
             if !equal {
                 dir_diff = Some(DiffWork::Changed(
+                    pair,
                     DirLink::from_link(left.unwrap(), path()).unwrap(),
                     DirLink::from_link(right.unwrap(), path()).unwrap(),
                 ));
@@ -500,7 +551,7 @@ fn diff_links(
                         .expect("non-leaf node must be a valid directory");
 
                     let is_conflict = side != Side::Left || right.is_some();
-                    dir_diff = Some(DiffWork::Single(dir_link, side, is_conflict));
+                    dir_diff = Some(DiffWork::Single(pair, dir_link, side, is_conflict));
                 }
             };
 
@@ -576,6 +627,7 @@ mod tests {
 
         let matcher = AlwaysMatcher::new();
         diff_single(
+            0,
             dir,
             Side::Left,
             false,
@@ -601,11 +653,13 @@ mod tests {
         let dummy = Link::ephemeral();
         let expected_next = vec![
             DiffWork::Single(
+                0,
                 DirLink::from_link(&dummy, repo_path_buf("b")).unwrap(),
                 Side::Left,
                 false,
             ),
             DiffWork::Single(
+                0,
                 DirLink::from_link(&dummy, repo_path_buf("d")).unwrap(),
                 Side::Left,
                 false,
@@ -719,6 +773,54 @@ mod tests {
             repo_path_buf("d1/rightonly"),
         ];
         assert_eq!(entries, expected);
+    }
+
+    #[test]
+    fn test_diff_manifests_tags_pairs_and_uses_their_matchers() {
+        let store = Arc::new(TestStore::new());
+        let first = make_tree_manifest(store.clone(), &[("first/changed", "1"), ("ignored", "1")]);
+        let first_base =
+            make_tree_manifest(store.clone(), &[("first/changed", "2"), ("ignored", "2")]);
+        let second = make_tree_manifest(store, &[("second/added", "3"), ("ignored", "3")]);
+        let empty = second.empty();
+        let pairs = vec![
+            (
+                &first,
+                &first_base,
+                TreeMatcher::from_rules(["first/**"].iter(), true).unwrap(),
+            ),
+            (
+                &second,
+                &empty,
+                TreeMatcher::from_rules(["second/**"].iter(), true).unwrap(),
+            ),
+        ];
+
+        let mut entries = crate::diff_manifests(pairs)
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        entries.sort_by_key(|entry| entry.0);
+
+        assert_eq!(
+            entries,
+            vec![
+                (
+                    0,
+                    DiffEntry::new(
+                        repo_path_buf("first/changed"),
+                        DiffType::Changed(make_meta("1"), make_meta("2")),
+                    ),
+                ),
+                (
+                    1,
+                    DiffEntry::new(
+                        repo_path_buf("second/added"),
+                        DiffType::LeftOnly(make_meta("3")),
+                    ),
+                ),
+            ]
+        );
     }
 
     #[test]

@@ -45,6 +45,10 @@ use regex::Regex;
 use types::Node;
 use types::RepoPathBuf;
 
+#[expect(
+    clippy::manual_strip,
+    reason = "false positive in cpython's py_fn macro"
+)]
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "manifest"].join(".");
     let m = PyModule::new(py, &name)?;
@@ -82,6 +86,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             prefetch_diff(
+                pairs: &PyList
+            )
+        ),
+    )?;
+    m.add(
+        py,
+        "diff_manifests",
+        py_fn!(
+            py,
+            diff_manifests(
                 pairs: &PyList
             )
         ),
@@ -225,6 +239,11 @@ py_class!(pub class treemanifest |py| {
             Err(err) if err.is::<types::errors::PermissionDenied>() => Ok(py.None()),
             Err(err) => Err(err).map_pyerr(py),
         }
+    }
+
+    /// Return an empty manifest backed by the same store.
+    def empty(&self) -> PyResult<treemanifest> {
+        treemanifest::from_rust(py, self.underlying(py).read().empty())
     }
 
     /// Count the number of files that match the predicate passed to the function.
@@ -393,19 +412,6 @@ py_class!(pub class treemanifest |py| {
     def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None, nodes_only: bool = false) -> PyResult<PyDict> {
         let span = tracing::info_span!("pymanifest::diff", results_len = tracing::field::Empty);
         let _enter = span.enter();
-        fn convert_side_diff(
-            py: Python,
-            entry: Option<FileMetadata>
-        ) -> (Option<PyBytes>, PyString) {
-            match entry {
-                None => (None, PyString::new(py, "")),
-                Some(file_metadata) => (
-                    Some(node_to_pybytes(py, file_metadata.hgid)),
-                    file_type_to_pystring(py, file_metadata.file_type)
-                )
-            }
-        }
-
         let result = PyDict::new(py);
         let matcher: Arc<dyn Matcher + Sync + Send> = extract_option_matcher(py, matcher)?;
         let this_tree = self.underlying(py);
@@ -421,8 +427,8 @@ py_class!(pub class treemanifest |py| {
             } else {
                 PyPathBuf::from(entry.path)
             };
-            let diff_left = convert_side_diff(py, entry.diff_type.left());
-            let diff_right = convert_side_diff(py, entry.diff_type.right());
+            let diff_left = file_metadata_to_py_diff(py, entry.diff_type.left());
+            let diff_right = file_metadata_to_py_diff(py, entry.diff_type.right());
             result.set_item(py, path, (diff_left, diff_right))?;
         }
         span.record("results_len", result.len(py));
@@ -855,6 +861,63 @@ pub fn prefetch_diff(py: Python, pairs: &PyList) -> PyResult<PyNone> {
     Ok(PyNone)
 }
 
+type PyDiffEntry = (
+    usize,
+    PyPathBuf,
+    (Option<PyBytes>, PyString),
+    (Option<PyBytes>, PyString),
+);
+
+/// Diff several manifest pairs in one native traversal and retain their input indices.
+pub fn diff_manifests(py: Python, pairs: &PyList) -> PyResult<Vec<PyDiffEntry>> {
+    let mut manifests = Vec::with_capacity(pairs.len(py));
+    for item in pairs.iter(py) {
+        let pair: PyTuple = item.extract(py)?;
+        if pair.len(py) != 3 {
+            return Err(PyErr::new::<exc::ValueError, _>(
+                py,
+                "diff_manifests expects (left, right, matcher) tuples",
+            ));
+        }
+
+        let left: treemanifest = pair.get_item(py, 0).extract(py)?;
+        let right: treemanifest = pair.get_item(py, 1).extract(py)?;
+        let matcher = extract_matcher(py, pair.get_item(py, 2))?.0;
+        manifests.push((left.get_underlying(py), right.get_underlying(py), matcher));
+    }
+
+    let results = py
+        .allow_threads(move || -> Result<_> {
+            let guards = manifests
+                .iter()
+                .map(|(left, right, _)| (left.read(), right.read()))
+                .collect::<Vec<_>>();
+            let pairs = guards
+                .iter()
+                .zip(&manifests)
+                .map(|((left, right), (_, _, matcher))| {
+                    (left.deref(), right.deref(), Arc::clone(matcher))
+                })
+                .collect();
+            manifest_tree::diff_manifests(pairs)
+                .into_iter()
+                .collect::<Result<Vec<_>>>()
+        })
+        .map_pyerr(py)?;
+
+    Ok(results
+        .into_iter()
+        .map(|(pair, entry)| {
+            (
+                pair,
+                entry.path.into(),
+                file_metadata_to_py_diff(py, entry.diff_type.left()),
+                file_metadata_to_py_diff(py, entry.diff_type.right()),
+            )
+        })
+        .collect())
+}
+
 fn test_treemanifest(py: Python) -> PyResult<treemanifest> {
     let store = Arc::new(TestStore::new());
     let manifest = TreeManifest::ephemeral(store);
@@ -977,6 +1040,19 @@ fn pybytes_to_node(py: Python, pybytes: &PyBytes) -> PyResult<Node> {
 
 fn node_to_pybytes(py: Python, node: Node) -> PyBytes {
     PyBytes::new(py, node.as_ref())
+}
+
+fn file_metadata_to_py_diff(
+    py: Python,
+    metadata: Option<FileMetadata>,
+) -> (Option<PyBytes>, PyString) {
+    match metadata {
+        None => (None, PyString::new(py, "")),
+        Some(metadata) => (
+            Some(node_to_pybytes(py, metadata.hgid)),
+            file_type_to_pystring(py, metadata.file_type),
+        ),
+    }
 }
 
 fn pystring_to_file_type(py: Python, pystring: &PyString) -> PyResult<FileType> {

@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use manifest::FsNodeMetadata;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use slex::Items;
 use slex::Work;
@@ -62,7 +63,7 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
 
 #[derive(Clone)]
 struct IterContext {
-    matcher: Arc<dyn Matcher + Sync + Send>,
+    matcher: DynMatcher,
     store: InnerStore,
 }
 
@@ -86,11 +87,12 @@ fn run_worker(
                     path: path.as_repo_path(),
                     entry,
                     subtree_matches_everything: *subtree_matches_everything,
+                    matcher_index: 0,
                 }),
                 _ => None,
             },
         ),
-        ctx.matcher.as_ref(),
+        std::slice::from_ref(&ctx.matcher),
     ) {
         return Err(e).context("prefetch in bfs_iter");
     }

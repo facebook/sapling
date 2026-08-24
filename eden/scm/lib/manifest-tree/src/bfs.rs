@@ -10,9 +10,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use edenapi_types::errors::find_permission_denied;
 use manifest::FileMetadata;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use slex::Batch;
 use slex::Items;
@@ -71,6 +73,7 @@ pub(crate) struct PrefetchTree<'a> {
     pub path: &'a RepoPath,
     pub entry: &'a Arc<DurableEntry>,
     pub subtree_matches_everything: bool,
+    pub matcher_index: usize,
 }
 
 #[derive(Clone)]
@@ -78,6 +81,7 @@ struct PrefetchWork {
     path: RepoPathBuf,
     entry: Arc<DurableEntry>,
     subtree_matches_everything: bool,
+    matcher_index: usize,
 }
 
 impl PrefetchWork {
@@ -86,6 +90,7 @@ impl PrefetchWork {
             path: self.path.as_repo_path(),
             entry: &self.entry,
             subtree_matches_everything: self.subtree_matches_everything,
+            matcher_index: self.matcher_index,
         }
     }
 }
@@ -96,6 +101,7 @@ impl<'a> From<PrefetchTree<'a>> for PrefetchWork {
             path: entry.path.to_owned(),
             entry: Arc::clone(entry.entry),
             subtree_matches_everything: entry.subtree_matches_everything,
+            matcher_index: entry.matcher_index,
         }
     }
 }
@@ -104,10 +110,10 @@ fn build_links(
     parent_path: &types::RepoPath,
     tree_entry: Arc<dyn TreeEntry>,
     entries: &[PrefetchTree<'_>],
-    matcher: &dyn Matcher,
+    matchers: &[DynMatcher],
 ) -> Result<MaybeLinks> {
     let mut denied_hgids = HashMap::new();
-    match filter_acl_children(tree_entry.as_ref(), entries, matcher)
+    match filter_acl_children(tree_entry.as_ref(), entries, matchers)
         .and_then(|children_with_acl| tree_entry.filter_permission_denied(children_with_acl))
     {
         Ok(iter) => {
@@ -145,7 +151,7 @@ enum LocalPrefetch {
 pub(crate) fn prefetch_trees<'a>(
     store: &InnerStore,
     entries: impl IntoIterator<Item = PrefetchTree<'a>>,
-    matcher: &dyn Matcher,
+    matchers: &[DynMatcher],
 ) -> Result<()> {
     let entries = entries
         .into_iter()
@@ -185,7 +191,7 @@ pub(crate) fn prefetch_trees<'a>(
             LocalPrefetch::Hit { work, tree_entry } => {
                 let prefetch = work.as_prefetch_tree();
                 let links =
-                    build_links(work.path.as_repo_path(), tree_entry, &[prefetch], matcher)?;
+                    build_links(work.path.as_repo_path(), tree_entry, &[prefetch], matchers)?;
                 work.entry.links.get_or_init(|| links);
             }
             LocalPrefetch::Miss(work) => {
@@ -212,7 +218,7 @@ pub(crate) fn prefetch_trees<'a>(
                     };
                     let prefetch = work.as_prefetch_tree();
                     let links =
-                        build_links(work.path.as_repo_path(), tree_entry, &[prefetch], matcher)?;
+                        build_links(work.path.as_repo_path(), tree_entry, &[prefetch], matchers)?;
                     work.entry.links.get_or_init(|| links);
                 }
                 Err(err) => {
@@ -254,7 +260,7 @@ pub(crate) fn prefetch_trees<'a>(
 fn filter_acl_children(
     tree_entry: &dyn TreeEntry,
     entries: &[PrefetchTree<'_>],
-    matcher: &dyn Matcher,
+    matchers: &[DynMatcher],
 ) -> Result<Vec<(PathComponentBuf, HgId)>> {
     let children_with_acls = tree_entry.children_with_acls()?;
     let mut should_check = vec![false; children_with_acls.len()];
@@ -269,6 +275,9 @@ fn filter_acl_children(
             break;
         }
 
+        let matcher = matchers
+            .get(entry.matcher_index)
+            .ok_or_else(|| anyhow!("missing matcher {} for tree prefetch", entry.matcher_index))?;
         let mut child_path = None;
         for (should_check, (component, _hgid)) in
             should_check.iter_mut().zip(children_with_acls.iter())
