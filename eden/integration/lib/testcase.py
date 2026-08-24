@@ -46,7 +46,7 @@ from eden.fs.service.eden.thrift_types import (
 )
 from eden.test_support.testcase import EdenTestCaseBase
 
-from . import edenclient, gitrepo, hgrepo, repobase, skip
+from . import edenclient, gitrepo, hgrepo, mount_namespace, repobase, skip
 from .find_executables import FindExe
 
 
@@ -54,6 +54,8 @@ if not FindExe.is_buck_build() or os.environ.get("EDENFS_SUFFIX", "") != "":
     _build_flavor = "open_source"
 else:
     _build_flavor = "facebook"
+
+mount_namespace.maybe_reexec_in_private_mount_namespace()
 
 
 class IntegrationTestCase(EdenTestCaseBase):
