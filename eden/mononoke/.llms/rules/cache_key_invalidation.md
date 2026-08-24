@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'memcache|cachelib|CacheKey|cache_key|blobstore|shard|routing|RocksDB'
+name: cache-key-invalidation
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'memcache|cachelib|CacheKey|cache_key|blobstore|shard|routing|RocksDB'
 ---
 
 # Cache and Routing State Invalidation
