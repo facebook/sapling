@@ -9,4 +9,6 @@ mod materialize;
 
 pub use materialize::ContentFingerprint;
 pub use materialize::MaterializeFile;
+pub use materialize::PrefilterResult;
 pub use materialize::materialize_files;
+pub use materialize::prefilter_files;

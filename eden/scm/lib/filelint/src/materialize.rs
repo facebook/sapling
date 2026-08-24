@@ -151,6 +151,36 @@ pub fn materialize_files(
     Ok(written_files)
 }
 
+/// Outcome of dropping unlintable file versions before any content fetch.
+#[derive(Debug, Default)]
+pub struct PrefilterResult {
+    /// Versions that still need linting.
+    pub keep: Vec<Key>,
+    /// Number of versions dropped because their content exceeds the size limit.
+    pub oversized_files: usize,
+}
+
+/// Filter candidate file versions by size using batched aux metadata.
+///
+/// Aux data describes content without fetching it, so oversized files are
+/// dropped before any content transfer.
+pub fn prefilter_files(
+    file_store: &Arc<dyn FileStore>,
+    files: Vec<Key>,
+    max_file_size: usize,
+) -> anyhow::Result<PrefilterResult> {
+    let mut result = PrefilterResult::default();
+    for entry in file_store.get_aux_iter(FetchContext::sapling_default(), files)? {
+        let (key, aux) = entry.context("fetching aux data for lint prefilter")?;
+        if aux.total_size > max_file_size as u64 {
+            result.oversized_files += 1;
+        } else {
+            result.keep.push(key);
+        }
+    }
+    Ok(result)
+}
+
 /// Fan each fetched source node out to its requested VFS writes.
 fn prepare_work_batch(
     files: Batch<FileResult>,
@@ -286,6 +316,25 @@ mod tests {
             0
         );
         assert_eq!(store.key_fetch_count(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn prefilters_oversized_files_before_content_fetch() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+        insert(&store, "small.py", "41", b"ok\n")?;
+        insert(&store, "large.py", "42", b"very large content\n")?;
+        let small = Key::new(repo_path_buf("small.py"), hgid("41"));
+        let large = Key::new(repo_path_buf("large.py"), hgid("42"));
+
+        let result = prefilter_files(
+            &(store as Arc<dyn FileStore>),
+            vec![small.clone(), large],
+            10,
+        )?;
+
+        assert_eq!(result.keep, vec![small], "only the small file should pass");
+        assert_eq!(result.oversized_files, 1);
         Ok(())
     }
 
