@@ -1,8 +1,11 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_clients: ['code_review']
-apply_to_regex: 'eden/scm/sapling/.*\.py$'
-apply_to_content: 'wlock|repo\.lock|release\(lock'
+name: ACR-wlock-ordering
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/scm/sapling/.*\.py$'
+  apply_to_content: 'wlock|repo\.lock|release\(lock'
+  apply_to_clients: ['code_review']
 ---
 
 # Working Copy Lock Ordering
