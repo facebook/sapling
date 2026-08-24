@@ -1170,10 +1170,15 @@ def check_running_mount(
         except Exception as ex:
             raise RuntimeError("Failed to check Sapling status") from ex
 
-        try:
-            check_filesystems.check_hg_status_match_hg_diff(tracker, instance, checkout)
-        except Exception as ex:
-            raise RuntimeError("Failed to compare `sl status` with `sl diff`") from ex
+        if not fast:
+            try:
+                check_filesystems.check_hg_status_match_hg_diff(
+                    tracker, instance, checkout
+                )
+            except Exception as ex:
+                raise RuntimeError(
+                    "Failed to compare `sl status` with `sl diff`"
+                ) from ex
 
 
 class CheckoutNotConfigured(Problem):

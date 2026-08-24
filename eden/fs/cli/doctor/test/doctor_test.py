@@ -222,6 +222,8 @@ Unmounting and remounting {path}...<green>fixed<reset>
         mock_check_hg: MagicMock,
         mock_check_nfs: MagicMock,
         mock_check_inode: MagicMock,
+        *,
+        fast: bool = False,
     ) -> Tuple[doctor.ProblemFixer, TestOutput, EdenCheckout]:
         instance = FakeEdenInstance(self.make_temporary_directory())
         checkout = instance.create_test_mount("path1")
@@ -261,9 +263,17 @@ Unmounting and remounting {path}...<green>fixed<reset>
             set(),
             check_network.NetworkChecker(),
             False,
-            False,
+            fast,
         )
+        if fast:
+            mock_check_hg_status.assert_not_called()
+        else:
+            mock_check_hg_status.assert_called_once()
         return fixer, out, checkout
+
+    def test_fast_skips_hg_status_and_diff_check(self) -> None:
+        _, out, _ = self.setUpEdenNetworkTest(fast=True)
+        self.assertEqual(out.getvalue(), "")
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_end_to_end_test_with_various_scenarios(
