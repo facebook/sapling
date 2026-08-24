@@ -47,9 +47,13 @@ fn connect_watchman(config: &dyn Config) -> Result<Arc<watchman_client::Client>>
 
 pub(crate) async fn connect_watchman_async(config: &dyn Config) -> Result<watchman_client::Client> {
     let sockpath: Option<OsString> = std::env::var_os("WATCHMAN_SOCK").or_else(|| {
-        config
-            .get_nonempty("fsmonitor", "sockpath")
-            .map(|p| p.replace("%i", &whoami::username()).into())
+        config.get_nonempty("fsmonitor", "sockpath").map(|p| {
+            p.replace(
+                "%i",
+                &whoami::username().unwrap_or_else(|_| "unknown".to_owned()),
+            )
+            .into()
+        })
     });
 
     let mut connector = watchman_client::Connector::new();

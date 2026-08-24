@@ -17,4 +17,4 @@ name = "sysutil"
 anyhow = "1.0.104"
 shell-escape = "0.1.5"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-whoami = "1.5"
+whoami = "2.1.3"

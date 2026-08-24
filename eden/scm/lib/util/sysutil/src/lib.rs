@@ -16,7 +16,7 @@ pub fn hostname() -> String {
         // Also, this may fix some debugruntest issues on mac due to whoami issues.
         "test-hostname".to_owned()
     } else {
-        match whoami::fallible::hostname() {
+        match whoami::hostname() {
             Ok(hostname) => hostname,
             Err(err) => {
                 tracing::error!(?err, "error getting hostname");
@@ -44,7 +44,7 @@ pub fn username() -> Result<String> {
     }
 
     // For windows and unix-missing-env-vars, use system library calls.
-    whoami::fallible::username().context("fetching username")
+    whoami::username().context("fetching username")
 }
 
 pub fn shell_escape(args: &[impl AsRef<str>]) -> String {
