@@ -11,16 +11,19 @@
 
 #include <process.h>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <variant>
 
 #include <folly/executors/InlineExecutor.h>
 #include <folly/portability/Windows.h>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -39,6 +42,32 @@ namespace {
 // reservation with STATUS_STACK_OVERFLOW. An iterative resolver keeps its
 // state in a heap-allocated coroutine frame and stays around 1 KiB.
 constexpr unsigned int kConstrainedStackSize = 256 * 1024;
+
+class CountingFetchContext final : public ObjectFetchContext {
+ public:
+  void didFetch(ObjectType type, const ObjectId&, Origin, uint64_t = 0)
+      override {
+    if (type == ObjectType::Blob) {
+      blobFetchCount_.fetch_add(1, std::memory_order_relaxed);
+    }
+  }
+
+  Cause getCause() const override {
+    return Cause::Unknown;
+  }
+
+  const std::unordered_map<std::string, std::string>* getRequestInfo()
+      const override {
+    return nullptr;
+  }
+
+  size_t getBlobFetchCount() const {
+    return blobFetchCount_.load(std::memory_order_relaxed);
+  }
+
+ private:
+  std::atomic<size_t> blobFetchCount_{0};
+};
 
 struct ConstrainedStackTask {
   std::function<bool()> fn;
@@ -167,6 +196,45 @@ TEST_F(PrjfsDispatcherImplTest, shallowSymlinkStillResolves) {
       RelativePath{"shallow"}, "adir", ObjectFetchContext::getNullContext());
 
   EXPECT_TRUE(std::move(future).get());
+}
+
+// Characterization of the current cost of a self-referential symlink: there
+// is no cycle detection, so the resolver re-follows the loop until the
+// kMaxSymlinkChainDepth follow budget is exhausted, fetching the symlink blob
+// once per follow (and re-resolving all eight path components each time)
+// before giving up and returning the original path.
+TEST_F(PrjfsDispatcherImplTest, selfReferentialSymlinkExhaustsFollowBudget) {
+  auto context = makeRefPtr<CountingFetchContext>();
+
+  auto result = dispatcher_
+                    ->resolveSymlinkPath(
+                        RelativePath{"a/b/c/d/e/f/g/loop"},
+                        context.as<ObjectFetchContext>())
+                    .get();
+
+  ASSERT_TRUE(std::holds_alternative<RelativePath>(result));
+  EXPECT_EQ(RelativePath{"a/b/c/d/e/f/g/loop"}, std::get<RelativePath>(result));
+  EXPECT_EQ(
+      static_cast<size_t>(kMaxSymlinkChainDepth), context->getBlobFetchCount());
+}
+
+// The "again" symlink is legitimately followed twice while resolving
+// again/again/adir: the same symlink is hit in two different resolution
+// states (again/again/adir, then again/adir). Pinning the exact follow count
+// rules out any cycle detection that naively bails on "already followed this
+// symlink".
+TEST_F(PrjfsDispatcherImplTest, repeatedSymlinkFollowsCountedExactly) {
+  auto context = makeRefPtr<CountingFetchContext>();
+
+  auto result = dispatcher_
+                    ->resolveSymlinkPath(
+                        RelativePath{"again/again/adir"},
+                        context.as<ObjectFetchContext>())
+                    .get();
+
+  ASSERT_TRUE(std::holds_alternative<RelativePath>(result));
+  EXPECT_EQ(RelativePath{"adir"}, std::get<RelativePath>(result));
+  EXPECT_EQ(2u, context->getBlobFetchCount());
 }
 
 TEST_F(PrjfsDispatcherImplTest, repeatedSymlinkWithShrinkingSuffixResolves) {
