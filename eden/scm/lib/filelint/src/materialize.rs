@@ -33,6 +33,8 @@ use vfs::VFS;
 use vfs::VfsBatchError;
 use vfs::Work;
 
+use crate::LintCache;
+
 const VFS_WORKERS: usize = 16;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -158,15 +160,21 @@ pub struct PrefilterResult {
     pub keep: Vec<Key>,
     /// Number of versions dropped because their content exceeds the size limit.
     pub oversized_files: usize,
+    /// Number of versions dropped because they are recorded as lint clean.
+    pub clean_files: usize,
 }
 
-/// Filter candidate file versions by size using batched aux metadata.
+/// Filter candidate file versions by size and format history using batched
+/// aux metadata.
 ///
-/// Aux data describes content without fetching it, so oversized files are
-/// dropped before any content transfer.
+/// Aux data describes content without fetching it, so oversized files and
+/// versions recorded as lint clean under `epoch` are dropped before any
+/// content transfer.
 pub fn prefilter_files(
     file_store: &Arc<dyn FileStore>,
     files: Vec<Key>,
+    mut cache: Option<&LintCache>,
+    epoch: &[u8],
     max_file_size: usize,
 ) -> anyhow::Result<PrefilterResult> {
     let mut result = PrefilterResult::default();
@@ -174,6 +182,24 @@ pub fn prefilter_files(
         let (key, aux) = entry.context("fetching aux data for lint prefilter")?;
         if aux.total_size > max_file_size as u64 {
             result.oversized_files += 1;
+            continue;
+        }
+        // The cache only skips work, so read failures (ex. a log corrupted
+        // mid-rotation) stop the lookups instead of failing the lint run,
+        // matching how an unopenable cache disables itself.
+        let clean = match cache
+            .map(|cache| cache.contains(&LintCache::key(&key.path, &aux.blake3, epoch)))
+        {
+            Some(Ok(clean)) => clean,
+            Some(Err(err)) => {
+                tracing::warn!(?err, "error reading lint clean-content cache; ignoring it");
+                cache = None;
+                false
+            }
+            None => false,
+        };
+        if clean {
+            result.clean_files += 1;
         } else {
             result.keep.push(key);
         }
@@ -330,11 +356,62 @@ mod tests {
         let result = prefilter_files(
             &(store as Arc<dyn FileStore>),
             vec![small.clone(), large],
+            None,
+            b"epoch",
             10,
         )?;
 
         assert_eq!(result.keep, vec![small], "only the small file should pass");
         assert_eq!(result.oversized_files, 1);
+        assert_eq!(result.clean_files, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn prefilters_versions_recorded_as_formatter_clean() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+        insert(&store, "clean.py", "51", b"clean\n")?;
+        insert(&store, "new.py", "52", b"new\n")?;
+        let store = store as Arc<dyn FileStore>;
+        let clean = Key::new(repo_path_buf("clean.py"), hgid("51"));
+        let new = Key::new(repo_path_buf("new.py"), hgid("52"));
+
+        let cache_dir = tempdir()?;
+        let mut cache = LintCache::open(
+            cache_dir.path(),
+            &std::collections::BTreeMap::<&str, &str>::new(),
+        )?;
+        // Record from locally hashed content; the lookup below goes through aux
+        // data, so this also asserts both derive the same keyed blake3.
+        cache.record([LintCache::key(
+            repo_path("clean.py"),
+            &Blob::from_static(b"clean\n").blake3(),
+            b"epoch",
+        )])?;
+
+        let result = prefilter_files(
+            &store,
+            vec![clean.clone(), new.clone()],
+            Some(&cache),
+            b"epoch",
+            1024,
+        )?;
+        assert_eq!(result.keep, vec![new.clone()]);
+        assert_eq!(result.clean_files, 1);
+
+        let result = prefilter_files(
+            &store,
+            vec![clean.clone(), new.clone()],
+            Some(&cache),
+            b"other-epoch",
+            1024,
+        )?;
+        assert_eq!(
+            result.keep,
+            vec![clean, new],
+            "an epoch change should invalidate recorded entries"
+        );
+        assert_eq!(result.clean_files, 0);
         Ok(())
     }
 

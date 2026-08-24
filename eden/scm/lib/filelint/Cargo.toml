@@ -14,6 +14,8 @@ license = "GPL-2.0-only"
 anyhow = "1.0.104"
 blob = { version = "0.1.0", path = "../blob" }
 filewalk = { version = "0.1.0", path = "../filewalk" }
+sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }

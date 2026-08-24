@@ -5,8 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod cache;
 mod materialize;
 
+pub use cache::CacheKey;
+pub use cache::LintCache;
 pub use materialize::ContentFingerprint;
 pub use materialize::MaterializeFile;
 pub use materialize::PrefilterResult;
