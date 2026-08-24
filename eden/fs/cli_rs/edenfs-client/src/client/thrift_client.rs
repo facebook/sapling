@@ -148,8 +148,11 @@ impl Client for ThriftClient {
             sample.add_string("use_case", self.use_case.name());
             sample.add_string("session_id", &self.session_id);
             sample.add_string("request_id", generate_id().as_str());
-            sample.add_string("user", whoami::username());
-            sample.add_string("host", whoami::fallible::hostname().unwrap_or_default());
+            sample.add_string(
+                "user",
+                whoami::username().unwrap_or_else(|_| "unknown".to_owned()),
+            );
+            sample.add_string("host", whoami::hostname().unwrap_or_default());
             sample.add_string("type", "thrift");
             let (error, method) = match result {
                 Ok((stats, (result, method))) => {

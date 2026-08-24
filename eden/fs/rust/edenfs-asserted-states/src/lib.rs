@@ -74,8 +74,11 @@ impl StreamingChangesClient {
         sample.add_string("method", method);
         sample.add_string("session_id", &self.session_id);
         sample.add_string("type", "notifications");
-        sample.add_string("user", whoami::username());
-        sample.add_string("host", whoami::fallible::hostname().unwrap_or_default());
+        sample.add_string(
+            "user",
+            whoami::username().unwrap_or_else(|_| "unknown".to_owned()),
+        );
+        sample.add_string("host", whoami::hostname().unwrap_or_default());
         let _ = SCUBA_CLIENT.log(sample);
     }
 
