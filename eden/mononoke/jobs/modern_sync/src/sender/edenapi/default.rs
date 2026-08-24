@@ -26,6 +26,7 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::SetBookmarkResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
 use edenapi_types::bookmark::Freshness;
@@ -263,8 +264,7 @@ impl EdenapiSender for DefaultEdenapiSender {
             )
             .await
             .with_context(|| "setting bookmark")?;
-        tracing::info!("Moved bookmark with result {:?}", res);
-        Ok(())
+        handle_set_bookmark_response(res)
     }
 
     async fn upload_identical_changeset(
@@ -348,6 +348,16 @@ impl EdenapiSender for DefaultEdenapiSender {
     }
 }
 
+fn handle_set_bookmark_response(response: SetBookmarkResponse) -> Result<()> {
+    if response.data.is_err() {
+        return response
+            .data
+            .with_context(|| "server rejected bookmark update");
+    }
+    tracing::info!("Moved bookmark with result {:?}", response);
+    Ok(())
+}
+
 fn get_missing_in_order(
     lookup_res: Vec<LookupResponse>,
     ids: Vec<(HgChangesetId, ChangesetId)>,
@@ -381,9 +391,25 @@ mod test {
 
     use edenapi_types::IndexableId;
     use edenapi_types::LookupResponse;
+    use edenapi_types::ServerError;
     use mononoke_macros::mononoke;
 
     use super::*;
+
+    #[mononoke::test]
+    fn rejected_set_bookmark_response_returns_error() {
+        let response = SetBookmarkResponse {
+            data: Err(ServerError::generic("Bookmark transaction failed")),
+        };
+
+        let error = handle_set_bookmark_response(response)
+            .expect_err("a rejected bookmark update must fail");
+
+        assert_eq!(
+            format!("{error:#}"),
+            "server rejected bookmark update: server error (code 0): Bookmark transaction failed"
+        );
+    }
 
     #[mononoke::test]
     fn test_mpath_element_size() {
