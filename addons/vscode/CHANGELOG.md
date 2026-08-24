@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.71
+
+- Fix inline blame `(you)` annotations using Sapling `ui.username` instead of the OS username
+
 ## 0.1.70
 
 - Reduced fetching frequency for better performance
