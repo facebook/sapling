@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/servers/slapi/.*\.rs$'
-apply_to_content: 'SUPPORTED_FLAVOURS|SlapiCommitIdentityScheme|slapi_flavour'
+name: flavour-support-completeness
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/slapi/.*\.rs$'
+  apply_to_content: 'SUPPORTED_FLAVOURS|SlapiCommitIdentityScheme|slapi_flavour'
 ---
 
 # Flavour (Hg/Git) Support Completeness
