@@ -79,6 +79,7 @@ import {
   getConfigs,
   getExecParams,
   listWorktrees,
+  narrowToSubmoduleChain,
   runCommand,
   setConfig,
 } from './commands';
@@ -525,7 +526,7 @@ export class Repository {
    */
   static async getRepoInfo(ctx: RepositoryContext): Promise<RepoInfo> {
     const {cmd, cwd, logger} = ctx;
-    const [repoRoot, repoRoots, dotdir, configs] = await Promise.all([
+    const [repoRoot, allRepoRoots, dotdir, configs] = await Promise.all([
       findRoot(ctx).catch((err: Error) => err),
       findRoots(ctx),
       findDotDir(ctx),
@@ -561,6 +562,13 @@ export class Repository {
       }
       return {type: 'cwdNotARepository', cwd};
     }
+
+    // `debugroots` reports every repo above the cwd, including unrelated ones that happen to
+    // contain this checkout, so keep only the genuine submodule chain.
+    const repoRoots =
+      allRepoRoots != null && allRepoRoots.length > 1
+        ? await narrowToSubmoduleChain(ctx, allRepoRoots)
+        : allRepoRoots;
 
     const isEdenFs = await isEdenFsRepo(repoRoot as AbsolutePath);
 
