@@ -38,6 +38,7 @@ base_app::subcommands! {
     mod restricted_paths if "SCSC_ADMIN_ENABLED";
     mod git_mutation_history;
     mod hg_mutation_history;
+    mod repo_exists;
     mod repo_info;
     mod repos;
     mod run_hooks;
