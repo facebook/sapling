@@ -70,6 +70,7 @@ import {parseAlerts} from './alerts';
 import {
   MAX_SIMULTANEOUS_CAT_CALLS,
   READ_COMMAND_TIMEOUT_MS,
+  codeReviewRepoUrls,
   computeNewConflicts,
   extractRepoInfoFromUrl,
   findDotDir,
@@ -533,8 +534,10 @@ export class Repository {
       // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
       getConfigs(ctx, [
         'paths.default',
+        'paths.upstream',
         'github.pull_request_domain',
         'github.preferred_submit_command',
+        'github.pull_request_repo',
         'phrevset.callsign',
       ]),
     ]);
@@ -573,11 +576,27 @@ export class Repository {
     } else if (pathsDefault === '') {
       codeReviewSystem = {type: 'none'};
     } else {
-      const repoInfo = extractRepoInfoFromUrl(pathsDefault);
-      if (
-        repoInfo != null &&
-        (repoInfo.hostname === 'github.com' || (await isGithubEnterprise(repoInfo.hostname)))
-      ) {
+      const candidates = codeReviewRepoUrls({
+        pathsDefault,
+        pathsUpstream: configs.get('paths.upstream') ?? '',
+        pullRequestRepo: configs.get('github.pull_request_repo'),
+      })
+        .map(url => extractRepoInfoFromUrl(url))
+        .filter(info => info != null);
+      // A fork and its upstream share a host, so resolve each host once rather than per candidate:
+      // `isGithubEnterprise` shells out to `gh`.
+      const hostnames = [...new Set(candidates.map(info => info.hostname))];
+      const githubHostnames = new Set(
+        (
+          await Promise.all(
+            hostnames.map(async hostname =>
+              hostname === 'github.com' || (await isGithubEnterprise(hostname)) ? hostname : null,
+            ),
+          )
+        ).filter(hostname => hostname != null),
+      );
+      const repoInfo = candidates.find(info => githubHostnames.has(info.hostname));
+      if (repoInfo != null) {
         const {owner, repo, hostname} = repoInfo;
         codeReviewSystem = {
           type: 'github',
