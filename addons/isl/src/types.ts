@@ -934,6 +934,7 @@ export const allConfigNames = [
   'isl.hold-off-refresh-ms',
   'isl.sl-progress-enabled',
   'isl.use-sl-graphql',
+  'isl.use-in-process-graphql',
   'github.preferred_submit_command',
   'isl.open-file-cmd',
   'isl.generated-files-regex',
