@@ -41,7 +41,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 counting_blob = { version = "0.1.0", path = "../../blobstore/counting_blob" }
-criterion = { version = "0.7.0", features = ["async_tokio", "csv_output"] }
+criterion = { version = "0.8.2", features = ["async_tokio", "csv_output"] }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
