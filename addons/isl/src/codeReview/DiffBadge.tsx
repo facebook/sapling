@@ -12,8 +12,8 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import {Component, lazy, Suspense, useEffect, useState} from 'react';
+import {useAtomValue} from 'jotai';
+import {Component, lazy, Suspense, useRef, useState} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
@@ -325,12 +325,19 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
   );
 }
 
-const diffSignalCountFamily = atomFamilyWeak((diffId: DiffId) =>
-  atomLoadableWithRefresh(async () => {
+/** A null key resolves to null without fetching, so ineligible diffs cost no requests. */
+const diffSignalCountFamily = atomFamilyWeak((diffId: DiffId | null) =>
+  atomLoadableWithRefresh(async get => {
     const {fetchDiffSignalCount} = Internal;
-    if (fetchDiffSignalCount == null) {
+    if (diffId == null || fetchDiffSignalCount == null) {
       return null;
     }
+    // Read before awaiting so the dependency registers: every summary fetch produces a new summary
+    // object, which re-runs this and re-asks for the count. Counts move as CI advances, so without
+    // a dependency the first answer would be the only one this window ever shows. Re-asking is
+    // cheap because the server caches and coalesces, and a forced refresh drops that cache when it
+    // kicks off the refetch.
+    get(diffSummary(diffId));
     const count = await fetchDiffSignalCount(diffId);
     return count;
   }),
@@ -345,26 +352,45 @@ function DiffSignalSummary({
   diff: DiffSummary;
   diffId?: DiffId;
 }) {
-  const [countLoadable, refreshCount] = useAtom(diffSignalCountFamily(diffId ?? ''));
   const repo = useAtomValue(repositoryInfo);
 
-  // We fetch for all signal states except 'no-signal' and 'deferred' since even 'pass'
-  // diffs can have INFO signals we want to count.
+  // Only Phabricator answers this ask, and nothing on the client times out one that never gets a
+  // reply — but GitHub summaries carry a signal summary too, so the provider has to be part of the
+  // condition. Every state but 'no-signal' and 'deferred' is worth asking about: even a 'pass' diff
+  // can have INFO signals we want to count.
   const shouldFetchCount =
+    repo?.codeReviewSystem.type === 'phabricator' &&
     diffId != null &&
     diff.signalSummary != null &&
     diff.signalSummary !== 'no-signal' &&
     diff.signalSummary !== 'deferred';
 
-  // Trigger fetch on mount when conditions are met
-  useEffect(() => {
-    if (shouldFetchCount) {
-      refreshCount();
-    }
-  }, [shouldFetchCount, refreshCount]);
+  // Eligibility is part of the key, so flipping it re-keys the atom and refetches on its own.
+  const countLoadable = useAtomValue(diffSignalCountFamily(shouldFetchCount ? diffId : null));
 
+  // Each re-run produces a promise `loadable` has not seen, which it reports as `loading` with no
+  // memory of the last value. Rendering that as "no count" would unmount the digit on every summary
+  // push, so show the previous answer until the new one lands. Keyed so a reused component
+  // instance cannot inherit another diff's count.
+  const countKey = shouldFetchCount ? diffId : null;
+  const lastCount = useRef<{key: DiffId | null | undefined; count: number | null}>({
+    key: undefined,
+    count: null,
+  });
+  if (countLoadable.state === 'hasData') {
+    lastCount.current = {key: countKey, count: countLoadable.data};
+  } else if (countLoadable.state === 'hasError') {
+    // A rejected ask carries no answer, so holding the previous digit would keep asserting a count
+    // nothing stands behind. Today the server turns every failure into `count: null`, so this is
+    // only reachable if that ever stops being true.
+    lastCount.current = {key: countKey, count: null};
+  }
   const signalCount =
-    shouldFetchCount && countLoadable.state === 'hasData' ? countLoadable.data : null;
+    countLoadable.state === 'hasData'
+      ? countLoadable.data
+      : lastCount.current.key === countKey
+        ? lastCount.current.count
+        : null;
 
   if (!diff.signalSummary) {
     return null;
