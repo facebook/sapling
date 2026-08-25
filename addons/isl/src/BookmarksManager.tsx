@@ -239,6 +239,11 @@ function AddStableLocation() {
             <Typeahead
               tokenString={query}
               setTokenString={setQuery}
+              // Opts out of Typeahead's default debounce. That default exists because a fetch is a
+              // subprocess on some platforms; this one awaits a memoized promise and then filters
+              // an in-memory array, so there is no work to coalesce and waiting only puts the
+              // filter behind the cursor.
+              debounceInterval={0}
               fetchTokens={async (query: string) => {
                 const fetchStartTimestamp = Date.now();
                 const options = await readAtom(stableLocationsTypeaheadOptions);
