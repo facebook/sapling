@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Atom} from 'jotai';
+
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
@@ -12,12 +14,53 @@ import {KeyCode} from 'isl-components/KeyboardShortcuts';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import {debounce} from 'shared/debounce';
 import css from './CommitTreeSearchFilter.module.css';
 import {DropdownFields} from './DropdownFields';
 import {CMD, useCommandEvent} from './ISLShortcuts';
 import {T, t} from './i18n';
+import {atomWithOnChange, writeAtom} from './jotaiUtils';
 
-export const commitTreeSearchFilter = atom<string>('');
+/** How long typing has to pause before the commit graph is re-filtered. */
+const FILTER_DEBOUNCE_MS = 150;
+
+const appliedFilter = atom<string>('');
+
+const applyFilter = (value: string) => writeAtom(appliedFilter, value);
+const applyFilterWhenTypingStops = debounce(applyFilter, FILTER_DEBOUNCE_MS);
+
+/**
+ * What the filter box contains. Updates on every keystroke.
+ *
+ * Applying a filter walks the whole dag, so a fast typist would otherwise pay for one
+ * full-graph pass per character. Anything expensive should read
+ * `appliedCommitTreeSearchFilter` instead; this atom is for the box itself and for
+ * "is a filter set?" checks that must feel instant.
+ */
+export const commitTreeSearchFilter = atomWithOnChange(
+  atom<string>(''),
+  value => {
+    if (value === '') {
+      // Clearing is one deliberate action rather than a burst, so there is nothing to
+      // coalesce. Cancel the pending keystrokes so they cannot re-apply a filter the
+      // user just dismissed, and bring the full graph back right away.
+      applyFilterWhenTypingStops.reset();
+      applyFilter(value);
+    } else {
+      applyFilterWhenTypingStops(value);
+    }
+  },
+  /* skipInitialCall */ true, // Both atoms already start empty.
+);
+
+/**
+ * `commitTreeSearchFilter`, lagging by up to {@link FILTER_DEBOUNCE_MS} while typing.
+ * Both atoms settle on the same value; this one just gets there later.
+ *
+ * Read-only on purpose: the `onChange` above is the only thing that should write it, so the
+ * two can only ever disagree about timing.
+ */
+export const appliedCommitTreeSearchFilter: Atom<string> = appliedFilter;
 
 export function CommitTreeSearchFilterButton() {
   const filter = useAtomValue(commitTreeSearchFilter);

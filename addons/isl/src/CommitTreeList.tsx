@@ -19,7 +19,7 @@ import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useRef} from 'react';
 import {Commit, InlineProgressSpan} from './Commit';
-import {commitTreeSearchFilter} from './CommitTreeSearchFilter';
+import {appliedCommitTreeSearchFilter, commitTreeSearchFilter} from './CommitTreeSearchFilter';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
@@ -113,7 +113,9 @@ const renderSubsetUnionSelection = atom(get => {
     subset = dag.filter(commit => commit.isDot || !isIrrelevantToCwd(commit, cwd), subset);
   }
 
-  const searchFilter = get(commitTreeSearchFilter).trim().toLowerCase();
+  // Deliberately the debounced atom, not `commitTreeSearchFilter`: recomputing this walks
+  // the whole dag, so reading the per-keystroke one costs a full pass per character typed.
+  const searchFilter = get(appliedCommitTreeSearchFilter).trim().toLowerCase();
   if (searchFilter.length > 0) {
     const matchesSearch = (commit: DagCommitInfo) => {
       if (commit.isYouAreHere) {
@@ -139,11 +141,14 @@ function DagCommitList(props: DagCommitListProps) {
 
   const dag = useAtomValue(dagWithYouAreHere);
   const subset = useAtomValue(renderSubsetUnionSelection);
-  const searchFilter = useAtomValue(commitTreeSearchFilter);
+  // `hasNoResults` below describes `subset`, so it reads the same filter `subset` was built
+  // from rather than whatever has been typed since. Clearing, though, writes the atom the
+  // text box is bound to.
+  const appliedSearchFilter = useAtomValue(appliedCommitTreeSearchFilter);
   const setSearchFilter = useSetAtom(commitTreeSearchFilter);
 
   // Check if filter is active and no commits (excluding "You are here") match
-  const filter = searchFilter.trim().toLowerCase();
+  const filter = appliedSearchFilter.trim().toLowerCase();
   let hasNoResults = false;
   if (filter.length > 0) {
     let hasMatchingCommit = false;
