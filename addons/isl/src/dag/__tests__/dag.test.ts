@@ -10,7 +10,7 @@
 import type {CommitInfo, CommitPhaseType, Hash, SuccessorInfo} from '../../types';
 import type {SetLike} from '../set';
 
-import {BaseDag} from '../base_dag';
+import {__TEST__, BaseDag} from '../base_dag';
 import {Dag, DagCommitInfo, REBASE_SUCC_PREFIX} from '../dag';
 import {HashSet} from '../set';
 
@@ -619,6 +619,64 @@ describe('Dag', () => {
       │
       ~"
     `);
+  });
+
+  // c0--c1--c2--...--c9. Rendering only the even commits leaves every rendered row but the
+  // last one with an indirect (dashed-edge) parent.
+  const chainLength = 10;
+  const chainDag = new Dag().add(
+    Array.from({length: chainLength}, (_, i) =>
+      toInfo({...info, hash: `c${i}`, parents: i === 0 ? [] : [`c${i - 1}`]}),
+    ),
+  );
+  const evenChainHashes = Array.from({length: chainLength / 2}, (_, i) => `c${i * 2}`);
+
+  it('reuses the ancestors cache for indirect parents while rendering', () => {
+    // `ancestors` bypasses (rather than misses) its LRU when handed an argument that does not
+    // pass `isCachable`, so `skip` staying at 0 is what proves the cache is reachable from
+    // this path at all.
+    const {ancestorsCache} = __TEST__;
+    const previousStats = ancestorsCache.stats;
+    ancestorsCache.clear();
+    ancestorsCache.stats = {hit: 0, miss: 0, skip: 0};
+    try {
+      const coldPass = [...chainDag.dagWalkerForRendering(evenChainHashes)];
+      expect(ancestorsCache.stats.skip).toBe(0);
+      expect(ancestorsCache.stats.miss).toBeGreaterThan(0);
+
+      ancestorsCache.stats = {hit: 0, miss: 0, skip: 0};
+      const warmPass = [...chainDag.dagWalkerForRendering(evenChainHashes)];
+      expect(ancestorsCache.stats).toMatchObject({miss: 0, skip: 0});
+      expect(ancestorsCache.stats.hit).toBeGreaterThan(0);
+
+      // Serving the walk from the cache does not change what it renders.
+      expect(warmPass).toEqual(coldPass);
+    } finally {
+      ancestorsCache.stats = previousStats;
+    }
+  });
+
+  it('builds the HashSet form of the render set at most once per walk', () => {
+    const fromHashes = jest.spyOn(HashSet, 'fromHashes');
+    // The render set is the only native `Set` these walks hand to `fromHashes`, so this
+    // counts just the conversion `intersect` used to redo on every row that has an
+    // `indirectParents` entry.
+    const renderSetConversions = () =>
+      fromHashes.mock.calls.filter(([arg]) => arg instanceof Set).length;
+    try {
+      const subsetRows = Array.from(chainDag.dagWalkerForRendering(evenChainHashes));
+      expect(subsetRows.filter(([kind]) => kind === 'row')).toHaveLength(chainLength / 2);
+      expect(renderSetConversions()).toBe(1);
+
+      fromHashes.mockClear();
+      // A whole-dag walk never populates `indirectParents`, so nothing asks for the
+      // conversion and the lazy initializer must not run.
+      const fullRows = Array.from(chainDag.dagWalkerForRendering(undefined));
+      expect(fullRows.filter(([kind]) => kind === 'row')).toHaveLength(chainLength);
+      expect(renderSetConversions()).toBe(0);
+    } finally {
+      fromHashes.mockRestore();
+    }
   });
 });
 

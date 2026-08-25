@@ -595,6 +595,9 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         ? this.sortAsc(this, {gap: false}).reverse()
         : this.sortAsc(HashSet.fromHashes(set)).reverse();
     const renderSet = new Set<Hash>(sorted);
+    // Lazy: `intersect` copies `renderSet` into an `ImSet` on every call, so this was rebuilt
+    // once per row with an `indirectParents` entry. A whole-dag walk has none.
+    let renderHashSet: HashSet | undefined;
     // Reserve a column for the public branch.
     for (const hash of sorted) {
       if (this.get(hash)?.phase === 'public') {
@@ -632,8 +635,16 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         // Indirect parents might connect to "renderSet". Calculate it.
         // This can be expensive.
         // PERF: This is currently a dumb implementation and can probably be optimized.
+        if (renderHashSet === undefined) {
+          renderHashSet = HashSet.fromHashes(renderSet);
+        }
+        // `ancestors` consults its LRU only when every argument passes `isCachable`, which a
+        // plain `Hash[]` does not -- handing the array over would bypass the cache rather than
+        // merely miss it.
         const grandParents = this.heads(
-          this.ancestors(this.ancestors(indirectParents).intersect(renderSet)),
+          this.ancestors(
+            this.ancestors(HashSet.fromHashes(indirectParents)).intersect(renderHashSet),
+          ),
         );
         // Exclude duplication with faked grand parents, since they are already in typedParents.
         const newGrandParents = grandParents.subtract(directParents);

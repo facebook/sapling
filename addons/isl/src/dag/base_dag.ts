@@ -6,6 +6,7 @@
  */
 
 import type {RecordOf} from 'immutable';
+import type {LRUWithStats} from 'shared/LRU';
 import type {Hash} from '../types';
 import type {SetLike} from './set';
 
@@ -318,7 +319,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
   }
 }
 
-const ancestorsCache = new LRU(1000);
+const ancestorsCache: LRUWithStats = new LRU(1000);
+export const __TEST__ = {ancestorsCache};
 
 function flatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
   return new HashSet(
