@@ -15,7 +15,7 @@ import type {Disposable, RepoRelativePath} from '../src/types';
 
 import {fireEvent, render, screen} from '@testing-library/react';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
-import {runCommand} from 'isl-server/src/commands';
+import {runCommand, setConfigOverrideForTests} from 'isl-server/src/commands';
 import {StdoutLogger} from 'isl-server/src/logger';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -119,12 +119,30 @@ class TaggedStdoutLogger extends StdoutLogger {
   }
 }
 
+export type InitRepoOptions = {
+  /**
+   * Configs the server should see for this repo, the way `getConfigs` would report them.
+   *
+   * Under jest `getConfigs` answers from a process-wide override map and never shells out, so the
+   * repo's on-disk config is invisible to the server — this is the only way to give it one. Merged
+   * into the override rather than replacing it, and reset by `cleanup` so it cannot leak into the
+   * next test file sharing this jest process.
+   *
+   * The load-bearing one is `paths.default`: `getRepoInfo` only reports
+   * `codeReviewSystem: {type: 'phabricator'}` for a Mononoke-shaped path, and that type is what
+   * builds a `PhabricatorCodeReviewProvider` and what switches the `sl log` template's diff id
+   * field to `{phabdiff}`. Without it no commit can have a diff id, so anything about diffs is
+   * vacuous.
+   */
+  configs?: Iterable<[string, string]>;
+};
+
 /**
  * Creates an sl repository in a temp dir on disk,
  * creates a single initial commit,
  * then performs an initial render, running both server and client in the same process.
  */
-export async function initRepo() {
+export async function initRepo(options?: InitRepoOptions) {
   const repoDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-integration-test-repo-'));
   const testLogger = new TaggedStdoutLogger('[ test ]');
 
@@ -214,6 +232,11 @@ commit(date='now')
 
   const serverLogger = new TaggedStdoutLogger('[server]');
 
+  if (options?.configs != null) {
+    // Before the connection, because `getRepoInfo` runs inside it and is what reads `paths.default`.
+    setConfigOverrideForTests(options.configs, /* override */ false);
+  }
+
   // start "server" in the same process, connected to fake client message bus via eventEmitters
   const disposeServer = onClientConnection({
     cwd: repoDir,
@@ -260,8 +283,18 @@ commit(date='now')
       testLogger.log(' -------- cleaning up -------- ');
       disposeServer();
       disposeClientConnection();
+      if (options?.configs != null) {
+        // Undo the override. It is process-wide and jest keeps this process for later test FILES
+        // (see the chdir note below), so leaving it set hands the next file a repo that claims to
+        // be Phabricator-hosted. An empty map is exactly what `commands.ts` starts with under jest,
+        // so this restores the default rather than inventing a state.
+        setConfigOverrideForTests([], /* override */ true);
+      }
       if (!IS_CI) {
         testLogger.log('removing repo dir');
+        // Step out of it first. `initRepo` chdir'd in, jest keeps running in this process, and a
+        // removed cwd makes every later test file fail to load at all with `uv_cwd`.
+        process.chdir(os.tmpdir());
         // rm -rf the temp dir with the repo in it
         // skip on CI because it can cause flakiness, and the job will get cleaned up anyway
         await retry(() => fs.promises.rm(repoDir, {recursive: true, force: true})).catch(() => {
