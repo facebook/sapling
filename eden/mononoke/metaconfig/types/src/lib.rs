@@ -2372,15 +2372,6 @@ pub enum UriGeneratorType {
     LocalFS,
 }
 
-/// Information on a loaded config
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct ConfigInfo {
-    /// A hash of the raw config content
-    pub content_hash: String,
-    /// The time when the config was last updated
-    pub last_updated_at: u64,
-}
-
 /// The concurrency setting to be used during git protocol
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct GitConcurrencyParams {

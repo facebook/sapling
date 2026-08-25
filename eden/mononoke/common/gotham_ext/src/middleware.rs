@@ -12,7 +12,6 @@ use gotham::state::State;
 use http::Response;
 
 pub mod artillery;
-pub mod config_info;
 pub mod load;
 pub mod log;
 pub mod metadata;
@@ -24,8 +23,6 @@ pub mod timer;
 pub mod tls_session_data;
 
 pub use self::artillery::ArtilleryMiddleware;
-pub use self::config_info::ConfigInfo;
-pub use self::config_info::ConfigInfoMiddleware;
 pub use self::load::LoadMiddleware;
 pub use self::load::RequestLoad;
 pub use self::log::LogMiddleware;

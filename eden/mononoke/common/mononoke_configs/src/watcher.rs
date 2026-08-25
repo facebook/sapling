@@ -45,7 +45,6 @@ use metaconfig_parser::configerator_repo_spec_handle;
 use metaconfig_parser::parse_manifest_common_and_storage;
 use metaconfig_parser::parse_repo_spec;
 use metaconfig_types::CommonConfig;
-use metaconfig_types::ConfigInfo;
 use metaconfig_types::RepoConfig;
 use repos::RawRepoConfigs;
 use repos::RepoSpec;
@@ -59,7 +58,6 @@ use tracing::warn;
 
 use crate::STATS;
 use crate::Swappable;
-use crate::config_info::build_config_info;
 use crate::receiver::ConfigUpdateReceiver;
 
 const LIVENESS_INTERVAL: Duration = Duration::from_secs(300);
@@ -262,7 +260,6 @@ pub(crate) async fn unified_config_watcher(
     config_store: ConfigStore,
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
-    config_info: Swappable<Option<ConfigInfo>>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     mut repo_handle_event_rx: Option<mpsc::UnboundedReceiver<RepoHandleEvent>>,
 ) {
@@ -310,7 +307,6 @@ pub(crate) async fn unified_config_watcher(
         &config_store,
         &repo_configs,
         &storage_configs,
-        &config_info,
         &update_receivers,
         &mut state,
         &mut prev_specs,
@@ -374,7 +370,6 @@ pub(crate) async fn unified_config_watcher(
             &config_store,
             &repo_configs,
             &storage_configs,
-            &config_info,
             &update_receivers,
             &mut state,
             &mut prev_specs,
@@ -407,7 +402,6 @@ async fn run_reload_pass(
     config_store: &ConfigStore,
     repo_configs: &Swappable<RepoConfigs>,
     storage_configs: &Swappable<StorageConfigs>,
-    config_info: &Swappable<Option<ConfigInfo>>,
     update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     state: &mut ReloadState,
     prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
@@ -434,7 +428,6 @@ async fn run_reload_pass(
                 handle,
                 repo_configs,
                 storage_configs,
-                config_info,
                 update_receivers,
                 &mut state.prev_blob,
             )
@@ -448,7 +441,6 @@ async fn run_blob_reload_pass(
     blob_handle: &ConfigHandle<RawRepoConfigs>,
     repo_configs: &Swappable<RepoConfigs>,
     storage_configs: &Swappable<StorageConfigs>,
-    config_info: &Swappable<Option<ConfigInfo>>,
     update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     prev_blob: &mut Option<Arc<RawRepoConfigs>>,
 ) {
@@ -470,10 +462,6 @@ async fn run_blob_reload_pass(
                 return;
             }
         };
-    match build_config_info(current_blob.clone()) {
-        Ok(info) => config_info.store(Arc::new(Some(info))),
-        Err(e) => warn!("Could not compute new config_info: {e:?}"),
-    }
     *prev_blob = Some(current_blob);
 
     storage_configs.store(Arc::new(new_storage));

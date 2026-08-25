@@ -42,7 +42,6 @@ rust_library(
         "//eden/mononoke/common/gotham_ext:gotham_ext",
         "//eden/mononoke/common/hgproto:hgproto",
         "//eden/mononoke/common/metadata:metadata",
-        "//eden/mononoke/common/mononoke_configs:mononoke_configs",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/ods_counters:ods_counters",
         "//eden/mononoke/common/permission_checker:permission_checker",

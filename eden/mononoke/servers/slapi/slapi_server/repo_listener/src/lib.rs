@@ -30,7 +30,6 @@ use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_app::monitoring::ReadyFlagService;
-use mononoke_configs::MononokeConfigs;
 use ods_counters::OdsCounterManager;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
@@ -43,7 +42,6 @@ pub use crate::connection_acceptor::wait_for_connections_closed;
 
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
-    configs: Arc<MononokeConfigs>,
     common_config: CommonConfig,
     mononoke: Arc<Mononoke<Repo>>,
     sockname: String,
@@ -92,7 +90,6 @@ pub async fn create_repo_listeners<'a>(
             false,
             None,
             rate_limiter.clone(),
-            configs.clone(),
             &common_config,
             readonly,
             mtls_disabled,
@@ -106,7 +103,6 @@ pub async fn create_repo_listeners<'a>(
 
     connection_acceptor(
         fb,
-        configs,
         common_config,
         sockname,
         service,

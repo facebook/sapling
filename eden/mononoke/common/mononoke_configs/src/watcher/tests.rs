@@ -638,7 +638,6 @@ struct ReloadFixture {
     repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RepoSpec>>>>,
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
-    config_info: Swappable<Option<ConfigInfo>>,
     receiver: Arc<BulkRecordingReceiver>,
     receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     state: ReloadState,
@@ -676,7 +675,6 @@ impl ReloadFixture {
             storage_configs: Arc::new(ArcSwap::from_pointee(StorageConfigs {
                 storage: HashMap::new(),
             })),
-            config_info: Arc::new(ArcSwap::from_pointee(None)),
             receiver,
             receivers,
             state: ReloadState::default(),
@@ -714,7 +712,6 @@ impl ReloadFixture {
             &self.store,
             &self.repo_configs,
             &self.storage_configs,
-            &self.config_info,
             &self.receivers,
             &mut self.state,
             &mut self.prev_specs,
@@ -844,7 +841,7 @@ async fn test_manifest_reload_preserves_concurrently_loaded_repo() {
     );
 }
 
-// Blob-backed pass: the blob is the sole source; config_info is built from it.
+// Blob-backed pass: the blob is the sole source.
 #[mononoke::test]
 async fn test_blob_reload_serves_blob() {
     // The fixture's manifest is irrelevant to a Blob source; only its state
@@ -861,7 +858,6 @@ async fn test_blob_reload_serves_blob() {
         &fx.store,
         &fx.repo_configs,
         &fx.storage_configs,
-        &fx.config_info,
         &fx.receivers,
         &mut fx.state,
         &mut fx.prev_specs,
@@ -877,10 +873,6 @@ async fn test_blob_reload_serves_blob() {
     assert!(
         fx.storage_configs.load().storage.contains_key(TEST_STORAGE),
         "storage must come from the blob"
-    );
-    assert!(
-        fx.config_info.load().is_some(),
-        "a blob pass must build config_info from the blob content"
     );
     assert_eq!(
         fx.receiver.commons.lock().await.len(),

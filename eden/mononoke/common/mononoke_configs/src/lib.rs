@@ -14,12 +14,9 @@
 //! - The unified watcher task (single tokio task that owns the config source —
 //!   tier manifest or legacy blob — plus the per-repo control channel and
 //!   per-repo wait fan-in) is in [`watcher`]
-//! - The deterministic content-hash + last-updated-at helper used to expose
-//!   stable config identity is in [`config_info`]
 //!
 //! `MononokeConfigs` itself owns the `ArcSwap` state and the task handles.
 
-mod config_info;
 mod receiver;
 mod watcher;
 
@@ -43,7 +40,6 @@ use metaconfig_parser::configerator_manifest_handle;
 use metaconfig_parser::configerator_repo_spec_handle;
 use metaconfig_parser::parse_manifest_common_and_storage;
 use metaconfig_parser::parse_repo_spec;
-use metaconfig_types::ConfigInfo;
 use metaconfig_types::RepoConfig;
 use repos::RepoSpec;
 use repos::TierManifest;
@@ -55,7 +51,6 @@ use tracing::error;
 use tracing::info;
 use tracing::warn;
 
-use crate::config_info::build_config_info;
 pub use crate::receiver::ConfigUpdateReceiver;
 use crate::watcher::ConfigSource;
 use crate::watcher::RepoHandleEvent;
@@ -101,7 +96,6 @@ pub struct MononokeConfigs {
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
-    config_info: Swappable<Option<ConfigInfo>>,
     maybe_config_updater: Option<JoinHandle<()>>,
     maybe_liveness_updater: Option<JoinHandle<()>>,
     // Per-repo split-loading fields
@@ -152,48 +146,26 @@ impl MononokeConfigs {
         }
 
         // Manifest-backed processes never touch the legacy blob; blob-backed is unchanged.
-        let (maybe_config_handle, config_info, resolved_repo_configs, storage) =
-            if let Some(manifest_handle) = maybe_manifest_handle.as_ref() {
-                // The manifest is the sole source of common/storage; fail closed at startup.
-                let manifest = manifest_handle.get();
-                let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
-                    "common/storage could not be parsed from the tier manifest; \
+        let (maybe_config_handle, resolved_repo_configs, storage) = if let Some(manifest_handle) =
+            maybe_manifest_handle.as_ref()
+        {
+            // The manifest is the sole source of common/storage; fail closed at startup.
+            let manifest = manifest_handle.get();
+            let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
+                "common/storage could not be parsed from the tier manifest; \
                          refusing to start",
-                )?;
-                STATS::tier_blob_skipped.add_value(1);
-                // Repos load on demand; config_info is blob content identity, so None here.
-                (
-                    None,
-                    None,
-                    RepoConfigs::new(HashMap::new(), common),
-                    storage,
-                )
-            } else {
-                let blob_storage =
-                    metaconfig_parser::load_storage_configs(&config_path, config_store)?;
-                let blob_repo_configs =
-                    metaconfig_parser::load_repo_configs(&config_path, config_store)?;
-                let maybe_config_handle =
-                    configerator_config_handle(config_path.as_ref(), config_store)?;
-                let config_info = if let Some(config_handle) = maybe_config_handle.as_ref() {
-                    match build_config_info(config_handle.get()) {
-                        Ok(new_config_info) => Some(new_config_info),
-                        Err(e) => {
-                            warn!("Could not compute new config_info: {e:?}");
-                            None
-                        }
-                    }
-                } else {
-                    None
-                };
-                (
-                    maybe_config_handle,
-                    config_info,
-                    blob_repo_configs,
-                    blob_storage,
-                )
-            };
-        let config_info = Arc::new(ArcSwap::from_pointee(config_info));
+            )?;
+            STATS::tier_blob_skipped.add_value(1);
+            // Repos load on demand.
+            (None, RepoConfigs::new(HashMap::new(), common), storage)
+        } else {
+            let blob_storage = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
+            let blob_repo_configs =
+                metaconfig_parser::load_repo_configs(&config_path, config_store)?;
+            let maybe_config_handle =
+                configerator_config_handle(config_path.as_ref(), config_store)?;
+            (maybe_config_handle, blob_repo_configs, blob_storage)
+        };
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage));
         let repo_configs = Arc::new(ArcSwap::from_pointee(resolved_repo_configs));
 
@@ -232,7 +204,6 @@ impl MononokeConfigs {
                 repo_handles,
                 repo_configs,
                 storage_configs,
-                config_info,
                 update_receivers,
             );
             let config_store_clone = config_store.clone();
@@ -242,7 +213,6 @@ impl MononokeConfigs {
                 config_store_clone,
                 repo_configs,
                 storage_configs,
-                config_info,
                 update_receivers,
                 repo_handle_event_rx,
             )))
@@ -254,7 +224,6 @@ impl MononokeConfigs {
             repo_configs,
             storage_configs,
             update_receivers,
-            config_info,
             maybe_config_updater,
             maybe_liveness_updater,
             maybe_manifest_handle,
@@ -275,11 +244,6 @@ impl MononokeConfigs {
     pub fn storage_configs(&self) -> Arc<StorageConfigs> {
         // Load full since there could be lots of calls to storage_configs.
         self.storage_configs.load_full()
-    }
-
-    /// The info on the latest config fetched from the underlying configuration store.
-    pub fn config_info(&self) -> Arc<Option<ConfigInfo>> {
-        self.config_info.load_full()
     }
 
     /// Returns the ConfigStore, if available (configerator-backed configs only).

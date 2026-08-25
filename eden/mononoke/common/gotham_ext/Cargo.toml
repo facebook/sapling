@@ -36,7 +36,6 @@ justknobs_ext = { version = "0.1.0", path = "../rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../metadata" }
 mime = "0.3.14"
-mononoke_configs = { version = "0.1.0", path = "../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 openssl = "0.10.80"
 percent-encoding = "2.1"

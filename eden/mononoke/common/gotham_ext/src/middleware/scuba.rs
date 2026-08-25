@@ -29,7 +29,6 @@ use time_ext::DurationExt;
 
 use super::HeadersDuration;
 use super::request_context::RequestContext;
-use crate::middleware::ConfigInfo;
 use crate::middleware::MetadataState;
 use crate::middleware::Middleware;
 use crate::middleware::PostResponseCallbacks;
@@ -104,10 +103,6 @@ pub enum HttpScubaKey {
     ResponseBytesSent,
     /// How many bytes were received from the client (should normally equal the content length)
     RequestBytesReceived,
-    /// The config store version at the time of the request.
-    ConfigStoreVersion,
-    /// The config store last update time at the time of the request.
-    ConfigStoreLastUpdatedAt,
     /// The version of the per-repo config snapshot the request's repo was built from.
     RepoConfigVersion,
     /// The mutation ID of the per-repo config snapshot the request's repo was built from.
@@ -170,8 +165,6 @@ impl AsRef<str> for HttpScubaKey {
             ClientHostname => "client_hostname",
             ResponseBytesSent => "response_bytes_sent",
             RequestBytesReceived => "request_bytes_received",
-            ConfigStoreVersion => "config_store_version",
-            ConfigStoreLastUpdatedAt => "config_store_last_updated_at",
             RepoConfigVersion => "repo_config_version",
             RepoConfigMutationId => "repo_config_mutation_id",
             XFBProductLog => "x_fb_product_log",
@@ -412,17 +405,6 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         scuba.add(
             HttpScubaKey::ClientCategory,
             ClientCategory::Unknown.as_str(),
-        );
-    }
-
-    if let Some(config_version) = ConfigInfo::try_borrow_from(state) {
-        scuba.add(
-            HttpScubaKey::ConfigStoreVersion,
-            config_version.version.clone(),
-        );
-        scuba.add(
-            HttpScubaKey::ConfigStoreLastUpdatedAt,
-            config_version.last_updated_at.clone(),
         );
     }
 

@@ -33,7 +33,6 @@ use futures::future::try_select;
 use futures::pin_mut;
 use gotham_ext::handler::MononokeHttpHandler;
 use gotham_ext::middleware::ArtilleryMiddleware;
-use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
@@ -320,8 +319,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 force_http_for_header,
             )?;
 
-            let repos_config = repos.config.clone();
-
             let bandwidth = get_bandwidth();
 
             let ctx = LfsServerContext::new(
@@ -343,7 +340,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-                .add(ConfigInfoMiddleware::new(repos_config))
                 .add(MetadataMiddleware::new(
                     fb,
                     internal_identity,

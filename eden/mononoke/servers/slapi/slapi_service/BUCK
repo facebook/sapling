@@ -62,7 +62,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/common/gotham_ext:gotham_ext",
-        "//eden/mononoke/common/mononoke_configs:mononoke_configs",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/rate_limiting:rate_limiting",

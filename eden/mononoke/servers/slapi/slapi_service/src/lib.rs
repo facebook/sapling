@@ -27,7 +27,6 @@ use fbinit::FacebookInit;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
 use gotham_ext::middleware::ArtilleryMiddleware;
-use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
@@ -40,7 +39,6 @@ use gotham_ext::middleware::TlsSessionDataMiddleware;
 use http::HeaderValue;
 use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
-use mononoke_configs::MononokeConfigs;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
 #[cfg(fbcode_build)]
@@ -63,7 +61,6 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     test_friendly_logging: bool,
     tls_session_data_log_path: Option<&Path>,
     rate_limiter: Option<RateLimitEnvironment>,
-    configs: Arc<MononokeConfigs>,
     common_config: &CommonConfig,
     readonly: bool,
     mtls_disabled: bool,
@@ -96,7 +93,6 @@ pub fn build<R: Send + Sync + Clone + 'static>(
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log_path)?)
-        .add(ConfigInfoMiddleware::new(configs))
         .add(MetadataMiddleware::new(
             fb,
             common_config.internal_identity.clone(),

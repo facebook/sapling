@@ -277,11 +277,6 @@ impl SourceControlServiceImpl {
             }
         }
 
-        if let Some(config_info) = self.configs.as_ref().config_info().as_ref() {
-            scuba.add("config_store_version", config_info.content_hash.clone());
-            scuba.add("config_store_last_updated_at", config_info.last_updated_at);
-        }
-
         let sampling_rate = NonZeroU64::new(justknobs::get_as::<u64>(
             "scm/mononoke:scs_method_sampling_rate",
             Some(name),

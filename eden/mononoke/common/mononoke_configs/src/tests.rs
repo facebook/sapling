@@ -43,7 +43,6 @@ fn empty_configs() -> MononokeConfigs {
             storage: HashMap::new(),
         })),
         update_receivers: Arc::new(ArcSwap::from_pointee(vec![])),
-        config_info: Arc::new(ArcSwap::from_pointee(None)),
         maybe_config_updater: None,
         maybe_liveness_updater: None,
         maybe_manifest_handle: None,
@@ -668,10 +667,6 @@ fn test_no_manifest_serves_legacy_blob() {
         Some("blob_tier".to_string()),
         "without a manifest the blob is the only source",
     );
-    assert!(
-        cfg.config_info().is_some(),
-        "blob-backed mode builds config_info from the blob handle",
-    );
 }
 
 // The bootstrap pass is the sole seeder of the watcher's manifest snapshot:
@@ -722,25 +717,4 @@ fn test_watcher_bootstrap_serves_manifest_repos_without_a_change() {
         );
         std::thread::sleep(Duration::from_millis(20));
     }
-}
-
-// config_info is blob content identity, so manifest mode must leave it `None`.
-#[mononoke::test]
-fn test_manifest_mode_config_info_is_none() {
-    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
-    let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
-    let rt = test_runtime();
-
-    let cfg = MononokeConfigs::new(
-        TEST_CONFIG_PATH,
-        &store,
-        Some(TEST_MANIFEST_PATH),
-        rt.handle().clone(),
-    )
-    .expect("manifest mode must construct");
-
-    assert!(
-        cfg.config_info().is_none(),
-        "manifest mode must not build config_info from the (never loaded) blob",
-    );
 }
