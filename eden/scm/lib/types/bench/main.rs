@@ -74,7 +74,7 @@ fn main() {
         let hashes = make_hashes();
         b.iter(|| {
             for hash in hashes.iter() {
-                criterion::black_box(hgid_from_hex(hash.as_bytes()));
+                std::hint::black_box(hgid_from_hex(hash.as_bytes()));
             }
         })
     });
@@ -83,7 +83,7 @@ fn main() {
         let hashes = make_hashes();
         b.iter(|| {
             for hash in hashes.iter() {
-                criterion::black_box(from_hex_faster_hex(hash.as_bytes()));
+                std::hint::black_box(from_hex_faster_hex(hash.as_bytes()));
             }
         })
     });
@@ -92,7 +92,7 @@ fn main() {
         let hashes = make_hashes();
         b.iter(|| {
             for hash in hashes.iter() {
-                criterion::black_box(from_hex_lookup_table(hash.as_bytes()));
+                std::hint::black_box(from_hex_lookup_table(hash.as_bytes()));
             }
         })
     });
@@ -101,7 +101,7 @@ fn main() {
         let hashes = make_hashes();
         b.iter(|| {
             for hash in hashes.iter() {
-                criterion::black_box(from_hex_bitwise(hash.as_bytes()));
+                std::hint::black_box(from_hex_bitwise(hash.as_bytes()));
             }
         })
     });
@@ -114,7 +114,7 @@ fn main() {
             .try_into()
             .unwrap();
         b.iter(|| {
-            criterion::black_box(path.components().count());
+            std::hint::black_box(path.components().count());
         })
     });
 
@@ -124,7 +124,7 @@ fn main() {
             .try_into()
             .unwrap();
         b.iter(|| {
-            criterion::black_box(path.depth());
+            std::hint::black_box(path.depth());
         })
     });
 
@@ -134,13 +134,13 @@ fn main() {
 
     validate_group.bench_function("PathComponent short", |b| {
         b.iter(|| {
-            criterion::black_box(PathComponent::from_str("foo").unwrap());
+            std::hint::black_box(PathComponent::from_str("foo").unwrap());
         })
     });
 
     validate_group.bench_function("PathComponent long", |b| {
         b.iter(|| {
-            criterion::black_box(
+            std::hint::black_box(
                 PathComponent::from_str("very_long_file_name_with_underscores_and_numbers_123456")
                     .unwrap(),
             );
