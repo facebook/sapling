@@ -160,6 +160,65 @@ describe('ServerToClientAPI disposable scoping', () => {
   });
 });
 
+describe('ServerToClientAPI refresh', () => {
+  let platform: ServerPlatform;
+  let connection: ReturnType<typeof createMockConnection>;
+  let api: ServerToClientAPI;
+  let triggerDiffSummariesFetch: jest.Mock;
+
+  beforeEach(async () => {
+    platform = {
+      platformName: 'test',
+      handleMessageFromClient: jest.fn(),
+    };
+
+    triggerDiffSummariesFetch = jest.fn();
+    const repo = Object.assign(Object.create(Repository.prototype), {
+      info: mockRepoInfo,
+      initialConnectionContext: {logger: mockLogger, tracker: mockTracker},
+      codeReviewProvider: {
+        triggerDiffSummariesFetch,
+        getSummaryName: () => 'test',
+        onChangeDiffSummaries: () => ({dispose: jest.fn()}),
+      },
+      getAllDiffIds: () => ['D1', 'D2'],
+      ref: jest.fn(),
+      unref: jest.fn(),
+      dispose: jest.fn(),
+      fetchAndSetRecommendedBookmarks: jest.fn(),
+      fetchAndSetHiddenMasterConfig: jest.fn(),
+      pullFetchedDiffs: jest.fn().mockResolvedValue(undefined),
+      fetchSmartlogCommits: jest.fn(),
+      fetchUncommittedChanges: jest.fn(),
+      fetchSubmoduleMap: jest.fn(),
+      checkForMergeConflicts: jest.fn(),
+    });
+    (repositoryCache.getOrCreate as jest.Mock).mockReturnValue({
+      promise: Promise.resolve(repo),
+      unref: jest.fn(),
+    });
+
+    connection = createMockConnection();
+    api = new ServerToClientAPI(platform, connection, mockTracker, mockLogger);
+    api.setActiveRepoForCwd('/path/to/repo/cwd');
+    await nextTick();
+  });
+
+  afterEach(() => {
+    api.dispose();
+    jest.clearAllMocks();
+  });
+
+  it('forces the diff summary refetch', async () => {
+    connection.triggerMessage({type: 'refresh'});
+    await nextTick();
+
+    // Unforced, the server answers from its signal count cache, so the one gesture a user has for
+    // "CI moved but the diff did not" leaves the badge showing the same stale count.
+    expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D1', 'D2'], true);
+  });
+});
+
 describe('ServerToClientAPI QE flags without an Internal implementation (OSS)', () => {
   let platform: ServerPlatform;
   let connection: ReturnType<typeof createMockConnection>;

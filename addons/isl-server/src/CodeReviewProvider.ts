@@ -27,7 +27,13 @@ export type DiffSummaries = Map<DiffId, DiffSummary>;
  * API to fetch data from Remote Code Review system, like GitHub and Phabricator.
  */
 export interface CodeReviewProvider {
-  triggerDiffSummariesFetch(diffs: Array<DiffId>): unknown;
+  /**
+   * For when something moved that the inputs don't show. Where it is honored, `force` skips
+   * whatever the provider would otherwise serve from its own state — debouncing, and for
+   * Phabricator the signal count cache. It is a request, not a guarantee: the GitHub provider
+   * ignores it and stays on its own debounce.
+   */
+  triggerDiffSummariesFetch(diffs: Array<DiffId>, force?: boolean): unknown;
 
   onChangeDiffSummaries(callback: (result: Result<DiffSummaries>) => unknown): Disposable;
 

@@ -669,7 +669,9 @@ export default class ServerToClientAPI {
         repo.fetchSubmoduleMap();
         repo.checkForMergeConflicts();
         repo.fullRepoBranchModule?.pullSubscribedFullRepoBranches();
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        // Forced: an explicit refresh is the gesture for "CI moved but the diff did not", and
+        // that is exactly the case a cached count answers wrongly.
+        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds(), true);
         repo.initialConnectionContext.tracker.track('DiffFetchSource', {
           extras: {source: 'manual_refresh'},
         });
