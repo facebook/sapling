@@ -107,7 +107,6 @@
     "scm/mononoke:remote_commit_compare": true,
     "scm/mononoke:request_log_enabled": false,
     "scm/mononoke:use_target_locality_for_location_service": false,
-    "scm/metagit:check_if_enabled_in_unsharded_smc": true,
     "scm/mononoke_hooks:disable_check_write_permissions_hook": false,
     "scm/mononoke_hooks:log_only_for_users_in_cwp_hook": false,
     "scm/mononoke_hooks:log_only_for_services_in_cwp_hook": true,
