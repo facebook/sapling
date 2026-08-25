@@ -6736,7 +6736,11 @@ void EdenServiceHandler::debugGetInodePath(
   info.loaded() = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
   // If getPathForInode returned none then the inode is unlinked
   info.linked() = relativePath != std::nullopt;
-  info.path() = relativePath ? relativePath->asString() : "";
+  if (relativePath) {
+    info.path() = relativePath->asString();
+  } else {
+    info.path() = "";
+  }
 }
 
 void EdenServiceHandler::clearFetchCounts() {
