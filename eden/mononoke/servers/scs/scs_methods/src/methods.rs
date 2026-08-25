@@ -55,4 +55,20 @@ impl SourceControlServiceImpl {
             })
             .collect())
     }
+
+    pub(crate) async fn repo_exists(
+        &self,
+        _ctx: CoreContext,
+        params: thrift::RepoExistsParams,
+    ) -> Result<thrift::RepoExistsResponse, scs_errors::ServiceError> {
+        let exists = self
+            .mononoke
+            .repo_names_in_tier
+            .load()
+            .contains_key(&params.repo_name);
+        Ok(thrift::RepoExistsResponse {
+            exists,
+            ..Default::default()
+        })
+    }
 }

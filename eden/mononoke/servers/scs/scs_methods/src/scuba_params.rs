@@ -40,6 +40,8 @@ impl AddScubaParams for BTreeSet<thrift::CommitIdentityScheme> {
 
 impl AddScubaParams for thrift::ListReposParams {}
 
+impl AddScubaParams for thrift::RepoExistsParams {}
+
 impl AddScubaParams for thrift::RepoCreateCommitParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(

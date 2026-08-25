@@ -402,6 +402,7 @@ macro_rules! impl_into_thrift_error {
 }
 
 impl_into_thrift_error!(service::ListReposExn);
+impl_into_thrift_error!(service::RepoExistsExn);
 impl_into_thrift_error!(service::RepoInfoExn);
 impl_into_thrift_error!(service::GitRepoStateExn);
 impl_into_thrift_error!(service::RepoResolveBookmarkExn);

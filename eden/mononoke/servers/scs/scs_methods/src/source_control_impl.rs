@@ -1455,6 +1455,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::ListReposParams,
         ) -> Result<Vec<thrift::Repo>, service::ListReposExn>;
 
+        async fn repo_exists(
+            params: thrift::RepoExistsParams,
+        ) -> Result<thrift::RepoExistsResponse, service::RepoExistsExn>;
+
         async fn repo_info(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoInfoParams,
