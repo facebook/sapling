@@ -77,16 +77,27 @@ pub fn build_error_response<F: ErrorFormatter>(
     mut state: State,
     formatter: &F,
 ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-    let formatted = formatter.format(&err.error, &state);
+    match build_error_response_in_place(err, &mut state, formatter) {
+        Ok(response) => Ok((state, response)),
+        Err(error) => Err((state, error)),
+    }
+}
+
+pub fn build_error_response_in_place<F: ErrorFormatter>(
+    err: HttpError,
+    state: &mut State,
+    formatter: &F,
+) -> Result<Response<Body>, HandlerError> {
+    let formatted = formatter.format(&err.error, state);
 
     state.put(PendingResponseMeta::error(err.error));
 
     match formatted {
         Ok((body, mime)) => {
-            let res = create_response(&state, err.status_code, mime, body);
-            Ok((state, res))
+            let res = create_response(state, err.status_code, mime, body);
+            Ok(res)
         }
-        Err(error) => Err((state, error.into())),
+        Err(error) => Err(error.into()),
     }
 }
 

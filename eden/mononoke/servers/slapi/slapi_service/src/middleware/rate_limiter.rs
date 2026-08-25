@@ -6,26 +6,30 @@
  */
 
 #[cfg(fbcode_build)]
+use anyhow::anyhow;
+#[cfg(fbcode_build)]
 use backend_if::RimBackend;
 #[cfg(fbcode_build)]
 use context::CoreContext;
-#[cfg(fbcode_build)]
-use gotham::handler::IntoBody as _;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
+#[cfg(fbcode_build)]
+use gotham_ext::error::HttpError;
 #[cfg(fbcode_build)]
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 #[cfg(fbcode_build)]
 use gotham_ext::middleware::request_context::RequestContext;
-use http::Response;
 #[cfg(fbcode_build)]
-use http::StatusCode;
+use gotham_ext::response::build_error_response_in_place;
+use http::Response;
 use http::Uri;
 #[cfg(fbcode_build)]
 use permission_checker::TenantInfo;
 
+#[cfg(fbcode_build)]
+use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimQpsDecision;
 #[cfg(fbcode_build)]
@@ -37,15 +41,21 @@ use crate::utils::rim_rate_limiter::report_qps;
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
 
 #[cfg(fbcode_build)]
-fn too_many_requests(message: impl ToString) -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::TOO_MANY_REQUESTS)
-        .body(message.to_string().into_body())
-        .expect("Couldn't build http response")
+const RIM_REJECTION_MESSAGE: &str = "RIM QPS rate limit exceeded";
+
+#[cfg(fbcode_build)]
+fn too_many_requests(state: &mut State, message: impl ToString) -> Response<Body> {
+    build_error_response_in_place(
+        HttpError::e429(anyhow!(message.to_string())),
+        state,
+        &JsonErrorFormatter,
+    )
+    .expect("serializing the static RIM rejection should succeed")
 }
 
 #[cfg(fbcode_build)]
 async fn apply_rim_decision(
+    state: &mut State,
     ctx: &CoreContext,
     tenant: &TenantInfo,
     rim_backend: RimBackend,
@@ -57,7 +67,7 @@ async fn apply_rim_decision(
             None
         }
         RimQpsDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
-            Some(too_many_requests("RIM QPS rate limit exceeded"))
+            Some(too_many_requests(state, RIM_REJECTION_MESSAGE))
         }
         RimQpsDecision::Reject => {
             let mut scuba = ctx.scuba().clone();
@@ -110,7 +120,7 @@ impl Middleware for ThrottleMiddleware {
             let tenant = metadata.tenant_info();
             let rim_decision = check_qps(&ctx, &tenant, rim_backend).await;
 
-            apply_rim_decision(&ctx, &tenant, rim_backend, rim_decision).await
+            apply_rim_decision(state, &ctx, &tenant, rim_backend, rim_decision).await
         }
 
         #[cfg(not(fbcode_build))]

@@ -22,6 +22,7 @@ pub use response::EmptyBody;
 pub use response::StreamBody;
 pub use response::TryIntoResponse;
 pub use response::build_error_response;
+pub use response::build_error_response_in_place;
 pub use response::build_response;
 pub use response_meta::BodyMeta;
 pub use response_meta::HeadersMeta;
