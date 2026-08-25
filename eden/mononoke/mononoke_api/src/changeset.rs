@@ -538,6 +538,12 @@ impl<R: RepoDerivedDataArc + RepoIdentityRef> ChangesetContext<R> {
             })
             .await
     }
+
+    /// Derive the root content manifest, memoizing it on this context and its clones.
+    pub async fn prewarm_root_content_manifest(&self) -> Result<(), MononokeError> {
+        self.root_content_manifest_id().await?;
+        Ok(())
+    }
 }
 
 impl<R: RepoBlobstoreArc> ChangesetContext<R> {
