@@ -13,6 +13,7 @@ import concurrent.futures
 import enum
 import errno
 import inspect
+import io
 import json
 import os
 import platform
@@ -948,6 +949,9 @@ class ReloadConfigCmd(Subcmd):
         raise NotImplementedError("Stub -- only implemented in Rust")
 
 
+CLAUDE_TIMEOUT_SECS = 120
+
+
 @subcmd("doctor", "Debug and fix issues with EdenFS")
 class DoctorCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -1000,6 +1004,93 @@ class DoctorCmd(Subcmd):
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
+
+
+@subcmd("doctor-ai", "Run eden doctor and, on failure, ask local AI for diagnosis")
+class DoctorAICmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--claude-timeout-secs",
+            type=int,
+            default=CLAUDE_TIMEOUT_SECS,
+            help="Timeout for the local claude diagnosis subprocess.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        doctor_output = io.StringIO()
+        doctor_returncode = doctor_mod.cure_what_ails_you(
+            instance,
+            dry_run=False,
+            debug=args.debug,
+            fast=False,
+            wait=False,
+            min_severity_to_report=ProblemSeverity.ALL,
+            out=ui.PlainOutput(doctor_output),
+        )
+
+        doctor_text = doctor_output.getvalue()
+        if doctor_text:
+            sys.stdout.write(doctor_text)
+            if not doctor_text.endswith("\n"):
+                sys.stdout.write("\n")
+        if doctor_returncode == 0:
+            return doctor_returncode
+
+        print("\nAI diagnosis follows.\n", file=sys.stderr)
+        prompt = f"""Use the local `diagnose-sapling` skill on this `eden doctor` output.
+
+{doctor_text.strip()}
+"""
+        claude_env = os.environ.copy()
+        claude_env.pop("CLAUDECODE", None)
+        try:
+            claude_result = subprocess.run(
+                ["claude", "--print"],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=args.claude_timeout_secs,
+                env=claude_env,
+                check=False,
+            )
+        except FileNotFoundError:
+            print(
+                "Local `claude` was not found on PATH; skipping AI diagnosis.",
+                file=sys.stderr,
+            )
+            return doctor_returncode
+        except subprocess.TimeoutExpired as ex:
+            stdout = (
+                ex.stdout.decode(errors="replace")
+                if isinstance(ex.stdout, bytes)
+                else (ex.stdout or "")
+            )
+            stderr = (
+                ex.stderr.decode(errors="replace")
+                if isinstance(ex.stderr, bytes)
+                else (ex.stderr or "")
+            )
+            print(
+                "Local `claude` timed out while generating the diagnosis.",
+                file=sys.stderr,
+            )
+            if stdout:
+                sys.stdout.write(stdout)
+            if stderr:
+                sys.stderr.write(stderr)
+            return doctor_returncode
+
+        if claude_result.returncode != 0:
+            print(
+                "Local `claude` failed while generating the diagnosis.",
+                file=sys.stderr,
+            )
+        if claude_result.stdout:
+            sys.stdout.write(claude_result.stdout)
+        if claude_result.stderr:
+            sys.stderr.write(claude_result.stderr)
+        return doctor_returncode
 
 
 @subcmd("health-report", "Notify critical eden issues")
