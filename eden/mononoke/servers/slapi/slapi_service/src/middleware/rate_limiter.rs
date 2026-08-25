@@ -125,6 +125,10 @@ impl Middleware for ThrottleMiddleware {
         let rctx: RequestContext = RequestContext::borrow_from(state).clone();
         let ctx: CoreContext = rctx.ctx;
 
+        if let Some(response) = load_shedding_response(state, &ctx) {
+            return Some(response);
+        }
+
         #[cfg(fbcode_build)]
         if let Some(rim_backend) = self.rim_backend {
             let tenant = state
@@ -141,6 +145,6 @@ impl Middleware for ThrottleMiddleware {
             }
         }
 
-        load_shedding_response(state, &ctx)
+        None
     }
 }
