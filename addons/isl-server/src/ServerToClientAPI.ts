@@ -671,7 +671,7 @@ export default class ServerToClientAPI {
         repo.fullRepoBranchModule?.pullSubscribedFullRepoBranches();
         // Forced: an explicit refresh is the gesture for "CI moved but the diff did not", and
         // that is exactly the case a cached count answers wrongly.
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds(), true);
+        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds(), /* force */ true);
         repo.initialConnectionContext.tracker.track('DiffFetchSource', {
           extras: {source: 'manual_refresh'},
         });
@@ -863,7 +863,14 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchDiffSummaries': {
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
+        // Taken from the message rather than inferred from `diffIds`: clients outside this repo
+        // send the whole smartlog that way, and reading that as a handful of diffs of interest
+        // would leave the server with nothing recorded to refetch after a submit.
+        repo.codeReviewProvider?.triggerDiffSummariesFetch(
+          data.diffIds ?? repo.getAllDiffIds(),
+          /* force */ false,
+          /* partial */ data.partial === true,
+        );
         break;
       }
       case 'fetchLandInfo': {

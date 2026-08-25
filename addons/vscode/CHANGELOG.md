@@ -10,6 +10,13 @@
 - Label Enter and other special keys properly in keyboard shortcut hints
 - Improve performance by skipping re-renders when refetched data is unchanged
 - Don't dismiss tooltips on scroll while focus is inside them
+- Improve performance of the CI signal count on diff badges
+  - Only fetch a count for diffs whose badge can display one
+  - Batch every badge's count into a single query, and cache it per diff version
+  - Query InternGraph in-process instead of spawning a subprocess per query
+- Re-filter the commit graph once typing stops, rather than on every keystroke
+- Debounce typeahead suggestion fetches, so typing a reviewer or tag no longer fetches per keystroke
+- Fix a diff's review status going stale after selecting a different commit
 
 ## 0.1.69
 

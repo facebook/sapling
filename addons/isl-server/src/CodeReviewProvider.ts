@@ -29,11 +29,19 @@ export type DiffSummaries = Map<DiffId, DiffSummary>;
 export interface CodeReviewProvider {
   /**
    * For when something moved that the inputs don't show. Where it is honored, `force` skips
-   * whatever the provider would otherwise serve from its own state — debouncing, and for
-   * Phabricator the signal count cache. It is a request, not a guarantee: the GitHub provider
-   * ignores it and stays on its own debounce.
+   * whatever the provider would otherwise serve from its own state, such as debouncing.
+   *
+   * `partial` says `diffs` names particular diffs of interest rather than every diff on screen, so
+   * a provider that remembers what to refetch later does not mistake it for the whole set.
+   *
+   * The two together mean "this diff moved", which is not enough to discard state held about the
+   * others: the Phabricator provider skips the cache-wide invalidation it does for `force` alone,
+   * and since that cache has no per-diff eviction, the named diffs' cached counts survive too.
+   *
+   * Both are requests rather than guarantees: the GitHub provider takes no arguments at all and
+   * stays on its own debounce.
    */
-  triggerDiffSummariesFetch(diffs: Array<DiffId>, force?: boolean): unknown;
+  triggerDiffSummariesFetch(diffs: Array<DiffId>, force?: boolean, partial?: boolean): unknown;
 
   onChangeDiffSummaries(callback: (result: Result<DiffSummaries>) => unknown): Disposable;
 

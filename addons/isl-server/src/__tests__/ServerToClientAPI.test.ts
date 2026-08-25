@@ -160,7 +160,7 @@ describe('ServerToClientAPI disposable scoping', () => {
   });
 });
 
-describe('ServerToClientAPI refresh', () => {
+describe('ServerToClientAPI diff summary fetches', () => {
   let platform: ServerPlatform;
   let connection: ReturnType<typeof createMockConnection>;
   let api: ServerToClientAPI;
@@ -216,6 +216,32 @@ describe('ServerToClientAPI refresh', () => {
     // Unforced, the server answers from its signal count cache, so the one gesture a user has for
     // "CI moved but the diff did not" leaves the badge showing the same stale count.
     expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D1', 'D2'], true);
+  });
+
+  it('passes on a request that marks itself partial', async () => {
+    connection.triggerMessage({type: 'fetchDiffSummaries', diffIds: ['D2'], partial: true});
+    await nextTick();
+
+    // Selecting a commit asks about the diff it carries. Unmarked, a provider that remembers what
+    // to refetch after a submit takes that one diff for the whole smartlog.
+    expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D2'], false, true);
+  });
+
+  it('treats a request that names diffs but not itself as the whole smartlog', async () => {
+    connection.triggerMessage({type: 'fetchDiffSummaries', diffIds: ['D2']});
+    await nextTick();
+
+    // Clients outside this repo build `diffIds` from every commit they hold and send no `partial`.
+    // Inferring it from the presence of `diffIds` would leave the server with nothing recorded as
+    // the smartlog, and no post-submit refetch to make from it.
+    expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D2'], false, false);
+  });
+
+  it('treats a request that names no diffs as the whole smartlog', async () => {
+    connection.triggerMessage({type: 'fetchDiffSummaries'});
+    await nextTick();
+
+    expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D1', 'D2'], false, false);
   });
 });
 

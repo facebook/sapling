@@ -196,6 +196,7 @@ function useFetchActiveDiffDetails(diffId?: string) {
       serverAPI.postMessage({
         type: 'fetchDiffSummaries',
         diffIds: [diffId],
+        partial: true,
       });
       tracker.track('DiffFetchSource', {extras: {source: 'active_diff_details'}});
     }
