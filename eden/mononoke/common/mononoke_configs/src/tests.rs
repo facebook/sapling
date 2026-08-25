@@ -12,9 +12,6 @@ use std::time::Duration;
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::with_just_knobs;
 use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_types::CommonConfig;
 use mononoke_macros::mononoke;
@@ -495,7 +492,7 @@ fn test_get_or_load_repo_config_records_config_version() {
     );
 }
 
-// --- Sourcing `common`/`storage` from the manifest (common_from_manifest) ---
+// --- Sourcing `common`/`storage` from the manifest ---
 
 /// A default `RawCommonConfig` is not parsable: two required fields fail conversion.
 pub(crate) fn test_raw_common_config(trusted_tier: &str) -> RawCommonConfig {
@@ -532,72 +529,7 @@ fn parseable_manifest(trusted_tier: &str) -> TierManifest {
     manifest
 }
 
-#[mononoke::test]
-fn test_manifest_common_and_storage_none_without_manifest() {
-    assert!(
-        manifest_common_and_storage(None, &CommonConfig::default(), None, true).is_none(),
-        "No manifest means the blob stays authoritative, even with the knob on"
-    );
-}
-
-#[mononoke::test]
-fn test_manifest_common_and_storage_none_when_knob_off() {
-    let manifest = parseable_manifest("manifest_tier");
-    assert!(
-        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, false)
-            .is_none(),
-        "Knob off must keep the blob authoritative even though the manifest parses"
-    );
-}
-
-#[mononoke::test]
-fn test_manifest_common_and_storage_returns_manifest_when_knob_on() {
-    let manifest = parseable_manifest("manifest_tier");
-
-    let (common, storage) =
-        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, true)
-            .expect("knob on and manifest parses");
-
-    assert_eq!(
-        common.trusted_parties_hipster_tier,
-        Some("manifest_tier".to_string()),
-        "common must come from the manifest, not the blob"
-    );
-    assert!(
-        storage.storage.contains_key(TEST_STORAGE),
-        "storage must come from the manifest"
-    );
-}
-
-/// The only deliberately fail-safe path: fall back rather than propagate.
-#[mononoke::test]
-fn test_manifest_common_and_storage_falls_back_when_manifest_unparsable() {
-    let manifest = TierManifest {
-        storage: test_storage_map(),
-        ..Default::default()
-    };
-    assert!(
-        parse_manifest_common_and_storage(&manifest).is_err(),
-        "this fixture is meant to be unparsable"
-    );
-
-    assert!(
-        manifest_common_and_storage(Some(&manifest), &CommonConfig::default(), None, true)
-            .is_none(),
-        "An unparsable manifest must fall back to the blob even with the knob on"
-    );
-}
-
-/// `justknobs_ext::eval` panics on an unknown knob, so a typo is a startup crash.
-#[mononoke::test]
-fn test_common_from_manifest_knob_resolves() {
-    assert!(
-        !use_manifest_source(),
-        "knob must resolve and default to false"
-    );
-}
-
-/// This equivalence is what makes the knob safe to enable.
+/// The cutover-safety equivalence; must hold while the file-backed blob path exists.
 #[mononoke::test]
 fn test_manifest_and_blob_agree_on_common_and_storage() {
     let common = test_raw_common_config("test_trusted_tier");
@@ -626,48 +558,13 @@ fn test_manifest_and_blob_agree_on_common_and_storage() {
     );
 }
 
-/// Divergence must be observable through the real entry point.
-#[mononoke::test]
-fn test_manifest_wins_over_a_diverging_blob_when_knob_on() {
-    let manifest = parseable_manifest("manifest_tier");
-
-    let (blob_configs, _) = load_configs_from_raw(RawRepoConfigs {
-        common: test_raw_common_config("blob_tier"),
-        storage: test_storage_map(),
-        ..Default::default()
-    })
-    .expect("blob parses");
-
-    let (common, _) =
-        manifest_common_and_storage(Some(&manifest), &blob_configs.common, None, true)
-            .expect("knob on and manifest parses");
-
-    assert_ne!(
-        common, blob_configs.common,
-        "the two sources genuinely diverge in this fixture"
-    );
-    assert_eq!(
-        common.trusted_parties_hipster_tier,
-        Some("manifest_tier".to_string()),
-        "the manifest must win when the knob is on"
-    );
-}
-
-// --- Skip-mode startup semantics (skip_tier_blob_load) ---
+// --- Manifest-mode startup semantics (manifest_path ⇒ manifest authoritative) ---
 
 /// Configerator-style tier config path; `tier_name` derives to `scs`.
 const TEST_CONFIG_PATH: &str = "configerator://scm/mononoke/repos/tiers/scs";
 /// The store-relative path the legacy blob would be read from.
 const TEST_BLOB_PATH: &str = "scm/mononoke/repos/tiers/scs";
 const TEST_MANIFEST_PATH: &str = "scm/mononoke/repos/tiers/scs_manifest";
-
-/// Both knobs MUST be in the override map: a missing knob panics under the test facade.
-fn skip_mode_knobs(skip: bool) -> JustKnobsInMemory {
-    JustKnobsInMemory::new(HashMap::from([
-        (SKIP_TIER_BLOB_LOAD_JK.to_string(), KnobVal::Bool(skip)),
-        (COMMON_FROM_MANIFEST_JK.to_string(), KnobVal::Bool(false)),
-    ]))
-}
 
 /// Legacy tier blob whose `common` carries `trusted_tier`, to tell the two sources apart.
 pub(crate) fn valid_blob_json(trusted_tier: &str) -> String {
@@ -690,26 +587,23 @@ fn test_runtime() -> tokio::runtime::Runtime {
 
 // Blob path deliberately absent from the store, so `Ok` proves the blob was never touched.
 #[mononoke::test]
-fn test_skip_mode_constructs_without_blob_path() {
+fn test_manifest_mode_constructs_without_blob_path() {
     let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
     let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
     let rt = test_runtime();
 
-    let cfg = with_just_knobs(skip_mode_knobs(true), || {
-        MononokeConfigs::new(
-            TEST_CONFIG_PATH,
-            &store,
-            Some(TEST_MANIFEST_PATH),
-            rt.handle().clone(),
-        )
-    })
-    .expect("skip mode must construct without the legacy blob path registered");
+    let cfg = MononokeConfigs::new(
+        TEST_CONFIG_PATH,
+        &store,
+        Some(TEST_MANIFEST_PATH),
+        rt.handle().clone(),
+    )
+    .expect("manifest mode must construct without the legacy blob path registered");
 
     assert_eq!(
         cfg.repo_configs().common.trusted_parties_hipster_tier,
         Some("manifest_tier".to_string()),
-        "common must be sourced from the manifest (common_from_manifest=false \
-         must NOT be consulted in skip mode)",
+        "common must be sourced from the manifest",
     );
     assert!(
         cfg.storage_configs().storage.contains_key(TEST_STORAGE),
@@ -717,17 +611,17 @@ fn test_skip_mode_constructs_without_blob_path() {
     );
     assert!(
         cfg.repo_configs().repos.is_empty(),
-        "skip mode starts with no repos; they are batch-loaded on demand",
+        "manifest mode starts with no repos; they are batch-loaded on demand",
     );
     assert!(
         cfg.auto_update_enabled(),
-        "the unified watcher must still be spawned in skip mode",
+        "the unified watcher must still be spawned in manifest mode",
     );
 }
 
 // Fail-closed startup: an unparsable manifest aborts construction despite a valid blob.
 #[mononoke::test]
-fn test_skip_mode_fails_closed_on_unparsable_manifest() {
+fn test_manifest_mode_fails_closed_on_unparsable_manifest() {
     // Default RawCommonConfig is unparsable (required fields fail conversion).
     let bad_manifest = TierManifest {
         storage: test_storage_map(),
@@ -745,100 +639,108 @@ fn test_skip_mode_fails_closed_on_unparsable_manifest() {
     ]);
     let rt = test_runtime();
 
-    let result = with_just_knobs(skip_mode_knobs(true), || {
-        MononokeConfigs::new(
-            TEST_CONFIG_PATH,
-            &store,
-            Some(TEST_MANIFEST_PATH),
-            rt.handle().clone(),
-        )
-    });
+    let result = MononokeConfigs::new(
+        TEST_CONFIG_PATH,
+        &store,
+        Some(TEST_MANIFEST_PATH),
+        rt.handle().clone(),
+    );
 
     assert!(
         result.is_err(),
-        "skip mode must fail closed on an unparsable manifest instead of \
+        "manifest mode must fail closed on an unparsable manifest instead of \
          falling back to the blob",
     );
 }
 
-// manifest_path=None must never evaluate the skip knob (absent from the map, so evaluation panics).
+// manifest_path=None is the only path that reads the legacy blob.
 #[mononoke::test]
-fn test_no_manifest_short_circuits_skip_knob() {
-    let knobs = JustKnobsInMemory::new(HashMap::from([(
-        COMMON_FROM_MANIFEST_JK.to_string(),
-        KnobVal::Bool(false),
-    )]));
+fn test_no_manifest_serves_legacy_blob() {
     let blob_json = valid_blob_json("blob_tier");
     let store = make_store(&[(TEST_BLOB_PATH, blob_json.as_str())]);
     let rt = test_runtime();
 
-    let cfg = with_just_knobs(knobs, || {
-        MononokeConfigs::new(TEST_CONFIG_PATH, &store, None, rt.handle().clone())
-    })
-    .expect("legacy path must construct without evaluating the skip knob");
+    let cfg = MononokeConfigs::new(TEST_CONFIG_PATH, &store, None, rt.handle().clone())
+        .expect("blob-backed path must construct");
 
     assert_eq!(
         cfg.repo_configs().common.trusted_parties_hipster_tier,
         Some("blob_tier".to_string()),
         "without a manifest the blob is the only source",
     );
-}
-
-// Knob off + manifest present -> legacy behavior: the blob stays authoritative.
-#[mononoke::test]
-fn test_skip_knob_off_serves_legacy_blob() {
-    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
-    let blob_json = valid_blob_json("blob_tier");
-    let store = make_store(&[
-        (TEST_MANIFEST_PATH, manifest_json.as_str()),
-        (TEST_BLOB_PATH, blob_json.as_str()),
-    ]);
-    let rt = test_runtime();
-
-    let cfg = with_just_knobs(skip_mode_knobs(false), || {
-        MononokeConfigs::new(
-            TEST_CONFIG_PATH,
-            &store,
-            Some(TEST_MANIFEST_PATH),
-            rt.handle().clone(),
-        )
-    })
-    .expect("legacy path with knob off must construct");
-
-    assert_eq!(
-        cfg.repo_configs().common.trusted_parties_hipster_tier,
-        Some("blob_tier".to_string()),
-        "knob off must keep the blob authoritative",
-    );
     assert!(
         cfg.config_info().is_some(),
-        "legacy mode builds config_info from the blob handle",
+        "blob-backed mode builds config_info from the blob handle",
     );
 }
 
-// config_info is blob content identity, so skip mode must leave it `None`.
+// The bootstrap pass is the sole seeder of the watcher's manifest snapshot:
+// a manifest repo must become served with zero config changes after startup.
 #[mononoke::test]
-fn test_skip_mode_config_info_is_none() {
-    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
-    let blob_json = valid_blob_json("blob_tier");
+fn test_watcher_bootstrap_serves_manifest_repos_without_a_change() {
+    let spec_path = "test/repos/good";
+    let manifest = TierManifest {
+        repos: vec![TierRepoEntry {
+            repo_name: "good/repo".to_string(),
+            repo_id: 1,
+            config_path: spec_path.to_string(),
+            is_deep_sharded: false,
+            ..Default::default()
+        }],
+        storage: test_storage_map(),
+        common: test_raw_common_config("manifest_tier"),
+        ..Default::default()
+    };
+    assert!(
+        parse_manifest_common_and_storage(&manifest).is_ok(),
+        "fixture must parse, else construction fails closed and the test \
+         cannot observe the bootstrap"
+    );
+    let manifest_json = serde_json::to_string(&manifest).unwrap();
+    let spec_json = valid_repo_spec_json(1, "good/repo");
     let store = make_store(&[
         (TEST_MANIFEST_PATH, manifest_json.as_str()),
-        (TEST_BLOB_PATH, blob_json.as_str()),
+        (spec_path, spec_json.as_str()),
     ]);
     let rt = test_runtime();
 
-    let cfg = with_just_knobs(skip_mode_knobs(true), || {
-        MononokeConfigs::new(
-            TEST_CONFIG_PATH,
-            &store,
-            Some(TEST_MANIFEST_PATH),
-            rt.handle().clone(),
-        )
-    })
-    .expect("skip mode must construct");
+    let cfg = MononokeConfigs::new(
+        TEST_CONFIG_PATH,
+        &store,
+        Some(TEST_MANIFEST_PATH),
+        rt.handle().clone(),
+    )
+    .expect("manifest mode must construct");
+
+    // Poll: the bootstrap needs no config fire, only scheduling on the watcher task.
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    while !cfg.repo_configs().repos.contains_key("good/repo") {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "bootstrap pass never subscribed+served the manifest repo; \
+             without it every per-repo reload defers forever"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+// config_info is blob content identity, so manifest mode must leave it `None`.
+#[mononoke::test]
+fn test_manifest_mode_config_info_is_none() {
+    let manifest_json = serde_json::to_string(&parseable_manifest("manifest_tier")).unwrap();
+    let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
+    let rt = test_runtime();
+
+    let cfg = MononokeConfigs::new(
+        TEST_CONFIG_PATH,
+        &store,
+        Some(TEST_MANIFEST_PATH),
+        rt.handle().clone(),
+    )
+    .expect("manifest mode must construct");
 
     assert!(
         cfg.config_info().is_none(),
-        "skip mode must not build config_info from the (skipped) blob",
+        "manifest mode must not build config_info from the (never loaded) blob",
     );
 }

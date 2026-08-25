@@ -559,13 +559,8 @@ async fn test_handle_per_repo_fire_skips_unchanged_spec() {
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::with_just_knobs_async;
 use repos::RawCommonConfig;
 
-use crate::COMMON_FROM_MANIFEST_JK;
-use crate::SKIP_TIER_BLOB_LOAD_JK;
 use crate::tests::TEST_STORAGE;
 use crate::tests::test_raw_common_config;
 use crate::tests::test_storage_map;
@@ -708,13 +703,15 @@ impl ReloadFixture {
         self.store.force_update_configs();
     }
 
-    async fn run(&mut self, blob_source: &BlobSource) {
+    async fn run(&mut self) {
+        let source = ConfigSource::Manifest {
+            handle: self.manifest_handle.clone(),
+            tier: "test_tier".to_string(),
+        };
         run_reload_pass(
-            blob_source,
-            Some(&self.manifest_handle),
+            &source,
             &self.repo_handles,
             &self.store,
-            Some("test_tier"),
             &self.repo_configs,
             &self.storage_configs,
             &self.config_info,
@@ -735,15 +732,15 @@ impl ReloadFixture {
     }
 }
 
-// Skip-mode keep-last-known-good: a failed pass mutates nothing and must not dedup away the retry.
+// Manifest keep-last-known-good: a failed pass mutates nothing and must not dedup away the retry.
 #[mononoke::test]
-async fn test_skipped_reload_keeps_last_known_good_on_parse_failure() {
+async fn test_manifest_reload_keeps_last_known_good_on_parse_failure() {
     // "foo" is deep-sharded (no RepoSpec path needed) and pre-seeded to detect an incorrect sync run.
     let v0 = good_manifest("tier_v0", vec![tier_entry("foo", true)]);
     let mut fx = ReloadFixture::new(&v0, &["foo"]);
 
     // Pass 1: initial good manifest applies.
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
     assert_eq!(
         fx.served_trusted_tier(),
         Some("tier_v0".to_string()),
@@ -762,7 +759,7 @@ async fn test_skipped_reload_keeps_last_known_good_on_parse_failure() {
     // Pass 2: unparsable manifest that also drops "foo" (detects a sync run before the bail).
     let bad = unparsable_manifest(vec![]);
     fx.swap_manifest(&bad, 1);
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
 
     assert_eq!(
         fx.served_trusted_tier(),
@@ -793,7 +790,7 @@ async fn test_skipped_reload_keeps_last_known_good_on_parse_failure() {
 
     // Pass 3: same bad content, new version — the dedup must not swallow the retry.
     fx.swap_manifest(&bad, 2);
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
     assert_eq!(
         fx.served_trusted_tier(),
         Some("tier_v0".to_string()),
@@ -803,7 +800,7 @@ async fn test_skipped_reload_keeps_last_known_good_on_parse_failure() {
     // Pass 4: recovery — a good manifest applies normally.
     let v2 = good_manifest("tier_v2", vec![tier_entry("foo", true)]);
     fx.swap_manifest(&v2, 3);
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
     assert_eq!(
         fx.served_trusted_tier(),
         Some("tier_v2".to_string()),
@@ -821,68 +818,80 @@ async fn test_skipped_reload_keeps_last_known_good_on_parse_failure() {
     );
 }
 
-// then_some trap: Skipped resolution must never consult use_manifest_source().
+// Commit overlay: a manifest member rcu-inserted mid-pass survives; a non-member drops.
 #[mononoke::test]
-async fn test_skipped_reload_ignores_common_from_manifest_knob() {
-    let knobs = JustKnobsInMemory::new(HashMap::from([
-        (SKIP_TIER_BLOB_LOAD_JK.to_string(), KnobVal::Bool(true)),
-        (COMMON_FROM_MANIFEST_JK.to_string(), KnobVal::Bool(false)),
-    ]));
-    with_just_knobs_async(
-        knobs,
-        Box::pin(async {
-            let v0 = good_manifest("tier_v0", vec![]);
-            let mut fx = ReloadFixture::new(&v0, &[]);
+async fn test_manifest_reload_preserves_concurrently_loaded_repo() {
+    let v0 = good_manifest("tier_v0", vec![tier_entry("concurrent/repo", true)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    // Simulate a concurrent get_or_load landing between the handle snapshot and the commit.
+    fx.repo_configs.rcu(|current| {
+        let mut next = (**current).clone();
+        next.insert_repo("concurrent/repo".to_string(), repo_config_with_id(1));
+        next.insert_repo("gone/repo".to_string(), repo_config_with_id(2));
+        next
+    });
 
-            fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
 
-            assert_eq!(
-                fx.served_trusted_tier(),
-                Some("tier_v0".to_string()),
-                "skip mode must serve manifest values even with \
-                 common_from_manifest=false"
-            );
-            assert!(
-                fx.storage_configs.load().storage.contains_key(TEST_STORAGE),
-                "skip mode must serve manifest storage even with \
-                 common_from_manifest=false"
-            );
-        }),
-    )
-    .await;
+    let served = fx.repo_configs.load();
+    assert!(
+        served.repos.contains_key("concurrent/repo"),
+        "a concurrently loaded manifest member must survive the bulk commit"
+    );
+    assert!(
+        !served.repos.contains_key("gone/repo"),
+        "a repo absent from the manifest must be dropped by the bulk commit"
+    );
 }
 
-// Loaded-arm contract: knob off keeps the blob authoritative, exactly today's behavior.
+// Blob-backed pass: the blob is the sole source; config_info is built from it.
 #[mononoke::test]
-async fn test_loaded_reload_knob_off_keeps_blob_authoritative() {
-    let knobs = JustKnobsInMemory::new(HashMap::from([
-        (SKIP_TIER_BLOB_LOAD_JK.to_string(), KnobVal::Bool(false)),
-        (COMMON_FROM_MANIFEST_JK.to_string(), KnobVal::Bool(false)),
-    ]));
-    with_just_knobs_async(
-        knobs,
-        Box::pin(async {
-            let v0 = good_manifest("manifest_tier", vec![]);
-            let mut fx = ReloadFixture::new(&v0, &[]);
-            let blob_handle: ConfigHandle<RawRepoConfigs> =
-                ConfigHandle::from_json(&valid_blob_json("blob_tier"))
-                    .expect("blob fixture deserializes");
+async fn test_blob_reload_serves_blob() {
+    // The fixture's manifest is irrelevant to a Blob source; only its state
+    // slots and receivers are used.
+    let v0 = good_manifest("manifest_tier", vec![]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    let blob_handle: ConfigHandle<RawRepoConfigs> =
+        ConfigHandle::from_json(&valid_blob_json("blob_tier")).expect("blob fixture deserializes");
+    let source = ConfigSource::Blob(blob_handle);
 
-            fx.run(&BlobSource::Loaded(blob_handle)).await;
-
-            assert_eq!(
-                fx.served_trusted_tier(),
-                Some("blob_tier".to_string()),
-                "knob off must keep the blob authoritative in Loaded mode"
-            );
-        }),
+    run_reload_pass(
+        &source,
+        &fx.repo_handles,
+        &fx.store,
+        &fx.repo_configs,
+        &fx.storage_configs,
+        &fx.config_info,
+        &fx.receivers,
+        &mut fx.state,
+        &mut fx.prev_specs,
+        &mut fx.futs,
     )
     .await;
+
+    assert_eq!(
+        fx.served_trusted_tier(),
+        Some("blob_tier".to_string()),
+        "the blob must be authoritative for a Blob source"
+    );
+    assert!(
+        fx.storage_configs.load().storage.contains_key(TEST_STORAGE),
+        "storage must come from the blob"
+    );
+    assert!(
+        fx.config_info.load().is_some(),
+        "a blob pass must build config_info from the blob content"
+    );
+    assert_eq!(
+        fx.receiver.commons.lock().await.len(),
+        1,
+        "exactly one bulk update must reach receivers"
+    );
 }
 
-// Bulk merge: a transiently bad RepoSpec keeps the served entry (skip-mode base.repos is empty).
+// Bulk merge: a transiently bad RepoSpec keeps the served entry (the merge starts from an empty map).
 #[mononoke::test]
-async fn test_skipped_reload_retains_served_repo_on_spec_parse_failure() {
+async fn test_manifest_reload_retains_served_repo_on_spec_parse_failure() {
     const X_PATH: &str = "test/repos/x";
     const Y_PATH: &str = "test/repos/y";
 
@@ -891,7 +900,7 @@ async fn test_skipped_reload_retains_served_repo_on_spec_parse_failure() {
     fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
 
     // Pass 1: X subscribes (sync_repo_handles) and parses into serving.
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
     assert_eq!(
         fx.repo_configs
             .load()
@@ -915,7 +924,7 @@ async fn test_skipped_reload_retains_served_repo_on_spec_parse_failure() {
         ],
     );
     fx.swap_manifest(&v1, 2);
-    fx.run(&BlobSource::Skipped).await;
+    fx.run().await;
 
     let served = fx.repo_configs.load();
     assert_eq!(
@@ -938,32 +947,4 @@ async fn test_skipped_reload_retains_served_repo_on_spec_parse_failure() {
         2,
         "repo/y must be served from its freshly parsed spec"
     );
-}
-
-// Loaded-arm contract: knob on routes the manifest values, same as today.
-#[mononoke::test]
-async fn test_loaded_reload_knob_on_serves_manifest() {
-    let knobs = JustKnobsInMemory::new(HashMap::from([
-        (SKIP_TIER_BLOB_LOAD_JK.to_string(), KnobVal::Bool(false)),
-        (COMMON_FROM_MANIFEST_JK.to_string(), KnobVal::Bool(true)),
-    ]));
-    with_just_knobs_async(
-        knobs,
-        Box::pin(async {
-            let v0 = good_manifest("manifest_tier", vec![]);
-            let mut fx = ReloadFixture::new(&v0, &[]);
-            let blob_handle: ConfigHandle<RawRepoConfigs> =
-                ConfigHandle::from_json(&valid_blob_json("blob_tier"))
-                    .expect("blob fixture deserializes");
-
-            fx.run(&BlobSource::Loaded(blob_handle)).await;
-
-            assert_eq!(
-                fx.served_trusted_tier(),
-                Some("manifest_tier".to_string()),
-                "knob on must route manifest values in Loaded mode"
-            );
-        }),
-    )
-    .await;
 }

@@ -7,24 +7,24 @@
 
 //! `unified_config_watcher` + its supporting helpers.
 //!
-//! The watcher is a single tokio task that owns four event sources:
+//! The watcher is a single tokio task that owns three event sources:
 //!
-//! 1. **Legacy blob** [`BlobSource`] — `Loaded` fires on tier-blob changes;
-//!    `Skipped` (skip_tier_blob_load) parks this arm forever
-//! 2. **Tier manifest** `ConfigHandle<TierManifest>` — fires on manifest changes
-//!    (repo add/remove, sharding mode flips)
-//! 3. **Per-repo control channel** `mpsc::UnboundedReceiver<RepoHandleEvent>` —
+//! 1. **Config source** [`ConfigSource`] — `Manifest` fires on `TierManifest`
+//!    changes (repo add/remove, sharding mode flips); `Blob` fires on legacy
+//!    tier-blob changes (`manifest_path = None` processes only)
+//! 2. **Per-repo control channel** `mpsc::UnboundedReceiver<RepoHandleEvent>` —
 //!    notifies the loop when a new per-repo `ConfigHandle<RepoSpec>` is installed
 //!    by `load_repo_config_handle` / `ensure_repo_config_handle` (ShardManager
 //!    on_add_shard, startup batch loading)
-//! 4. **Per-repo wait fan-in** `FuturesUnordered<wait_one>` — one in-flight
+//! 3. **Per-repo wait fan-in** `FuturesUnordered<wait_one>` — one in-flight
 //!    future per per-repo watcher; fires when a repo's RepoSpec content changes
 //!
-//! All four arms feed a single `tokio::select!` so config-application work
+//! All three arms feed a single `tokio::select!` so config-application work
 //! serializes within one task.
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -61,13 +61,8 @@ use crate::STATS;
 use crate::Swappable;
 use crate::config_info::build_config_info;
 use crate::receiver::ConfigUpdateReceiver;
-use crate::resolve_manifest_common_and_storage;
-use crate::use_manifest_source;
 
 const LIVENESS_INTERVAL: Duration = Duration::from_secs(300);
-
-/// Nothing else wakes the loop on a JustKnob change, so this bounds rollback latency.
-const KNOB_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Result of awaiting one per-repo watcher fire. Owns the watcher so the
 /// caller can re-push a fresh wait future for it without re-subscribing.
@@ -84,12 +79,15 @@ pub(crate) enum RepoHandleEvent {
     Added(String, ConfigUpdateWatcher<RepoSpec>),
 }
 
-/// Where the watcher sources the legacy tier blob from; the two arms demand different reload failure policies.
-pub(crate) enum BlobSource {
-    /// Legacy: blob loaded and watched; manifest parse failures fall back to the blob.
-    Loaded(ConfigHandle<RawRepoConfigs>),
-    /// skip_tier_blob_load: manifest is authoritative; parse failures keep last known good.
-    Skipped,
+/// Where the watcher sources bulk config from.
+pub(crate) enum ConfigSource {
+    /// Configerator tiers: the manifest is authoritative; `tier` resolves `tier_overrides`.
+    Manifest {
+        handle: ConfigHandle<TierManifest>,
+        tier: String,
+    },
+    /// `manifest_path = None` (tests, OSS, AWS helm): the legacy blob is the sole source.
+    Blob(ConfigHandle<RawRepoConfigs>),
 }
 
 /// Background task that periodically bumps the `liveness_count` stat so
@@ -102,14 +100,11 @@ pub(crate) async fn liveness_updater() {
     }
 }
 
-/// `==` comparison that treats both-`None` as "no change" and any other
-/// missing-side combination as "changed". Used to dedupe spurious reloads
-/// where the underlying configerator version bumped but the content didn't.
-fn content_changed<T: PartialEq>(prev: &Option<Arc<T>>, current: &Option<Arc<T>>) -> bool {
-    match (prev, current) {
-        (Some(a), Some(b)) => **a != **b,
-        (None, None) => false,
-        _ => true,
+/// Spurious-reload dedup; `None` (nothing applied yet) counts as changed.
+fn content_changed<T: PartialEq>(prev: &Option<Arc<T>>, current: &Arc<T>) -> bool {
+    match prev {
+        Some(p) => **p != **current,
+        None => true,
     }
 }
 
@@ -257,44 +252,47 @@ async fn apply_per_repo_update(
     !had_failure
 }
 
-/// Unified config watcher: monitors the legacy blob `ConfigHandle`, the
-/// `TierManifest` `ConfigHandle`, and a dynamic set of per-repo
-/// `ConfigHandle<RepoSpec>` watchers via `tokio::select!`, applying changes
-/// exactly once.
+/// Unified config watcher: monitors the config source (tier manifest or legacy
+/// blob) and a dynamic set of per-repo `ConfigHandle<RepoSpec>` watchers via
+/// `tokio::select!`, applying changes exactly once.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn unified_config_watcher(
-    blob_source: BlobSource,
-    manifest_handle: Option<ConfigHandle<TierManifest>>,
+    config_source: ConfigSource,
     repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RepoSpec>>>>,
     config_store: ConfigStore,
-    tier_name: Option<String>,
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
     config_info: Swappable<Option<ConfigInfo>>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     mut repo_handle_event_rx: Option<mpsc::UnboundedReceiver<RepoHandleEvent>>,
 ) {
-    // Skipped yields no watcher: the blob select! arm parks forever.
-    let mut blob_watcher = match &blob_source {
-        BlobSource::Loaded(handle) => handle.watcher().map(Some).unwrap_or_else(|e| {
-            error!("Failed to create blob config watcher: {e:?}");
-            None
-        }),
-        BlobSource::Skipped => None,
+    // Exactly one is `Some` (distinct item types force two slots); the other arm parks forever.
+    let (mut manifest_watcher, mut blob_watcher) = match &config_source {
+        ConfigSource::Manifest { handle, .. } => (
+            handle.watcher().map(Some).unwrap_or_else(|e| {
+                error!("Failed to create manifest watcher: {e:?}");
+                None
+            }),
+            None,
+        ),
+        ConfigSource::Blob(handle) => (
+            None,
+            handle.watcher().map(Some).unwrap_or_else(|e| {
+                error!("Failed to create blob config watcher: {e:?}");
+                None
+            }),
+        ),
     };
-    let mut manifest_watcher = manifest_handle
-        .as_ref()
-        .map(|h| h.watcher())
-        .transpose()
-        .unwrap_or_else(|e| {
-            error!("Failed to create manifest watcher: {e:?}");
-            None
-        });
 
     if blob_watcher.is_none() && manifest_watcher.is_none() {
         warn!("No config watchers available, unified_config_watcher exiting");
         return;
     }
+
+    let tier_name = match &config_source {
+        ConfigSource::Manifest { tier, .. } => Some(tier.clone()),
+        ConfigSource::Blob(_) => None,
+    };
 
     let mut state = ReloadState::default();
 
@@ -305,12 +303,20 @@ pub(crate) async fn unified_config_watcher(
     // Per-repo watcher set, fed by the control-channel arm and sync_repo_handles.
     let mut per_repo_wait_futures: FuturesUnordered<PerRepoFuture> = FuturesUnordered::new();
 
-    // Hoisted: a `sleep` inside the `select!` is rebuilt each iteration and starves.
-    let mut knob_poll = tokio::time::interval_at(
-        tokio::time::Instant::now() + KNOB_POLL_INTERVAL,
-        KNOB_POLL_INTERVAL,
-    );
-    knob_poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    // Bootstrap: seeds `prev_manifest` (per-repo fires defer until set) + subscribes manifest repos.
+    run_reload_pass(
+        &config_source,
+        &repo_handles,
+        &config_store,
+        &repo_configs,
+        &storage_configs,
+        &config_info,
+        &update_receivers,
+        &mut state,
+        &mut prev_specs,
+        &mut per_repo_wait_futures,
+    )
+    .await;
 
     loop {
         tokio::select! {
@@ -360,27 +366,12 @@ pub(crate) async fn unified_config_watcher(
                 ).await;
                 continue;
             }
-            _ = knob_poll.tick() => {
-                // Fall through only on a flip -- a full pass re-parses every RepoSpec.
-                // `last_use_manifest` starts `None`, so the FIRST tick always falls
-                // through. Deliberate: that pass is what sets `prev_manifest`, and
-                // `handle_per_repo_fire` defers every per-repo reload until it is set.
-                // Do not seed this to suppress that pass, and never seed it from a
-                // second `use_manifest_source()` read -- `MononokeConfigs::new` already
-                // read the knob and applied it, so a flip in between would be recorded
-                // as "already applied" and never reconciled.
-                if state.last_use_manifest == Some(effective_use_manifest(&blob_source)) {
-                    continue;
-                }
-            }
         }
 
         run_reload_pass(
-            &blob_source,
-            manifest_handle.as_ref(),
+            &config_source,
             &repo_handles,
             &config_store,
-            tier_name.as_deref(),
             &repo_configs,
             &storage_configs,
             &config_info,
@@ -396,48 +387,24 @@ pub(crate) async fn unified_config_watcher(
 /// State one reload pass hands to the next; extracted so `run_reload_pass` is unit-testable.
 #[derive(Default)]
 struct ReloadState {
-    /// Last applied blob content, for spurious-reload dedup.
+    /// Last applied blob content, for dedup (Blob source only).
     prev_blob: Option<Arc<RawRepoConfigs>>,
-    /// Last applied manifest content; advanced only by a successful pass.
+    /// Last applied manifest; advanced only by a fully successful pass (Manifest source only).
     prev_manifest: Option<Arc<TierManifest>>,
-    /// Parsed blob configs, reused when only the manifest changed.
-    cached_parsed: Option<RepoConfigs>,
-    /// Kept for comparison and fallback. `Arc` because `StorageConfigs` isn't `Clone`.
-    cached_blob_storage: Option<Arc<StorageConfigs>>,
-    /// Last applied knob value, so a flip alone forces a resolution pass.
-    last_use_manifest: Option<bool>,
-    /// Reused when a re-parse yields equal content, to keep pointer identity stable.
+    /// Reused on equal re-parse to keep pointer identity stable.
     cached_manifest_storage: Option<Arc<StorageConfigs>>,
 }
 
-/// Flip detection is Loaded-arm-only: skip mode never reads the knob (no blob to route back to).
-fn effective_use_manifest(blob_source: &BlobSource) -> bool {
-    match blob_source {
-        BlobSource::Loaded(_) => use_manifest_source(),
-        BlobSource::Skipped => true,
-    }
-}
-
-/// How a reload pass sources `common`/`storage`.
-enum ManifestValues {
-    /// Skip mode: authoritative — must not consult `use_manifest_source()` or fall back.
-    Authoritative((CommonConfig, StorageConfigs)),
-    /// Loaded mode: legacy resolution (divergence stats + knob routing).
-    Resolve(Option<Result<(CommonConfig, StorageConfigs)>>),
-}
-
-/// One reload pass. Everything fallible returns BEFORE the commit section, so a failed pass never mixes sources.
+/// One reload pass, dispatched by source; everything fallible returns before the commit.
 #[expect(
     clippy::too_many_arguments,
-    reason = "pass body extracted verbatim from the watcher loop for testability; \
+    reason = "pass body extracted from the watcher loop for testability; \
               the arguments are the loop's captured environment"
 )]
 async fn run_reload_pass(
-    blob_source: &BlobSource,
-    manifest_handle: Option<&ConfigHandle<TierManifest>>,
+    config_source: &ConfigSource,
     repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
     config_store: &ConfigStore,
-    tier_name: Option<&str>,
     repo_configs: &Swappable<RepoConfigs>,
     storage_configs: &Swappable<StorageConfigs>,
     config_info: &Swappable<Option<ConfigInfo>>,
@@ -446,191 +413,215 @@ async fn run_reload_pass(
     prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
     per_repo_wait_futures: &mut FuturesUnordered<PerRepoFuture>,
 ) {
-    let current_blob = match blob_source {
-        BlobSource::Loaded(handle) => Some(handle.get()),
-        BlobSource::Skipped => None,
-    };
-    let current_manifest = manifest_handle.map(|h| h.get());
+    match config_source {
+        ConfigSource::Manifest { handle, tier } => {
+            run_manifest_reload_pass(
+                handle,
+                tier,
+                repo_handles,
+                config_store,
+                repo_configs,
+                storage_configs,
+                update_receivers,
+                state,
+                prev_specs,
+                per_repo_wait_futures,
+            )
+            .await
+        }
+        ConfigSource::Blob(handle) => {
+            run_blob_reload_pass(
+                handle,
+                repo_configs,
+                storage_configs,
+                config_info,
+                update_receivers,
+                &mut state.prev_blob,
+            )
+            .await
+        }
+    }
+}
 
-    let blob_changed = content_changed(&state.prev_blob, &current_blob);
-    let manifest_changed = content_changed(&state.prev_manifest, &current_manifest);
-
-    let use_manifest = effective_use_manifest(blob_source);
-    let source_changed = state.last_use_manifest != Some(use_manifest);
-
-    if !blob_changed && !manifest_changed && !source_changed {
+/// Blob-backed pass; a parse failure retries on the next fire (`prev_blob` does not advance).
+async fn run_blob_reload_pass(
+    blob_handle: &ConfigHandle<RawRepoConfigs>,
+    repo_configs: &Swappable<RepoConfigs>,
+    storage_configs: &Swappable<StorageConfigs>,
+    config_info: &Swappable<Option<ConfigInfo>>,
+    update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+    prev_blob: &mut Option<Arc<RawRepoConfigs>>,
+) {
+    let current_blob = blob_handle.get();
+    if !content_changed(prev_blob, &current_blob) {
         STATS::spurious_reload_suppressed.add_value(1);
         debug!("Config version bumped but content identical, skipping reload");
         return;
     }
 
-    info!(
-        "Config content changed (blob={blob_changed}, manifest={manifest_changed}, source={source_changed}), applying update",
-    );
+    info!("Blob config content changed, applying update");
 
-    // Single parse site feeding both arms; computed pre-mutation so skip mode can fail closed.
-    let manifest_parsed = current_manifest
-        .as_deref()
-        .map(parse_manifest_common_and_storage);
+    let (configs, new_storage) =
+        match load_configs_from_raw(Arc::unwrap_or_clone(current_blob.clone())) {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                error!("Failed to parse blob config: {e:?}");
+                STATS::refresh_failure_count.add_value(1);
+                return;
+            }
+        };
+    match build_config_info(current_blob.clone()) {
+        Ok(info) => config_info.store(Arc::new(Some(info))),
+        Err(e) => warn!("Could not compute new config_info: {e:?}"),
+    }
+    *prev_blob = Some(current_blob);
 
-    // Skipped: bail before any state mutation so the retry survives the dedup; Loaded: blob fallback.
-    let manifest_values = match (blob_source, manifest_parsed) {
-        (BlobSource::Skipped, Some(Ok(parsed))) => ManifestValues::Authoritative(parsed),
-        (BlobSource::Skipped, Some(Err(e))) => {
+    storage_configs.store(Arc::new(new_storage));
+    let new_configs = Arc::new(configs);
+    repo_configs.store(new_configs.clone());
+    notify_receivers(new_configs, storage_configs, update_receivers).await;
+}
+
+/// Manifest-authoritative pass: a parse failure aborts before any state
+/// mutation (keep-last-known-good; the retry survives the content dedup).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "pass body extracted from the watcher loop for testability; \
+              the arguments are the loop's captured environment"
+)]
+async fn run_manifest_reload_pass(
+    manifest_handle: &ConfigHandle<TierManifest>,
+    tier: &str,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
+    config_store: &ConfigStore,
+    repo_configs: &Swappable<RepoConfigs>,
+    storage_configs: &Swappable<StorageConfigs>,
+    update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+    state: &mut ReloadState,
+    prev_specs: &mut HashMap<String, Arc<RepoSpec>>,
+    per_repo_wait_futures: &mut FuturesUnordered<PerRepoFuture>,
+) {
+    let current_manifest = manifest_handle.get();
+    if !content_changed(&state.prev_manifest, &current_manifest) {
+        STATS::spurious_reload_suppressed.add_value(1);
+        debug!("Config version bumped but content identical, skipping reload");
+        return;
+    }
+
+    info!("Manifest config content changed, applying update");
+
+    // Parse first: fail closed before any state mutation.
+    let (common, storage) = match parse_manifest_common_and_storage(&current_manifest) {
+        Ok(parsed) => parsed,
+        Err(e) => {
             error!(
-                "Failed to parse common/storage from tier manifest in skip mode, \
+                "Failed to parse common/storage from tier manifest, \
                  keeping last known good config: {e:?}"
             );
             STATS::manifest_common_parse_failure.add_value(1);
             STATS::refresh_failure_count.add_value(1);
             return;
         }
-        (BlobSource::Skipped, None) => {
-            // Unreachable (skip mode requires a manifest handle); keep last known good, don't panic.
-            error!("No tier manifest available in skip mode, keeping last known good config");
+    };
+
+    match sync_repo_handles(&current_manifest, repo_handles, config_store) {
+        Ok(new_watchers) => {
+            // Register new watchers so per-repo changes propagate without a bulk reload.
+            for (name, watcher) in new_watchers {
+                push_per_repo_watcher(
+                    name,
+                    watcher,
+                    repo_handles,
+                    prev_specs,
+                    per_repo_wait_futures,
+                );
+            }
+        }
+        Err(e) => {
+            // Don't advance prev_manifest: transient failures retry on the next fire.
+            error!("Failed to sync repo handles: {e:?}");
             STATS::refresh_failure_count.add_value(1);
             return;
         }
-        (BlobSource::Loaded(_), parsed) => ManifestValues::Resolve(parsed),
-    };
-
-    if blob_changed {
-        if let Some(ref raw) = current_blob {
-            match load_configs_from_raw(Arc::unwrap_or_clone(raw.clone())) {
-                Ok((configs, new_storage)) => {
-                    state.cached_blob_storage = Some(Arc::new(new_storage));
-                    match build_config_info(raw.clone()) {
-                        Ok(info) => config_info.store(Arc::new(Some(info))),
-                        Err(e) => warn!("Could not compute new config_info: {e:?}"),
-                    }
-                    state.cached_parsed = Some(configs);
-                }
-                Err(e) => {
-                    error!("Failed to parse blob config: {e:?}");
-                    STATS::refresh_failure_count.add_value(1);
-                    return;
-                }
-            }
-        } else {
-            state.cached_parsed = None;
-        }
-        state.prev_blob = current_blob;
     }
 
-    if manifest_changed {
-        if let Some(ref manifest) = current_manifest {
-            match sync_repo_handles(manifest, repo_handles, config_store) {
-                Ok(new_watchers) => {
-                    // Register new watchers so per-repo changes propagate without a bulk reload.
-                    for (name, watcher) in new_watchers {
-                        push_per_repo_watcher(
-                            name,
-                            watcher,
-                            repo_handles,
-                            prev_specs,
-                            per_repo_wait_futures,
+    // Reuse the previous Arc on equal content to keep pointer identity stable.
+    let storage = match state.cached_manifest_storage.take() {
+        Some(cached) if *cached == storage => cached,
+        _ => Arc::new(storage),
+    };
+    state.cached_manifest_storage = Some(storage.clone());
+
+    // Scoped so the repo_handles read guard is dropped before any await below.
+    let merged = {
+        let handles = match repo_handles.read() {
+            Ok(h) => h,
+            Err(e) => {
+                error!("Failed to read repo handles lock: {e:?}");
+                STATS::refresh_failure_count.add_value(1);
+                return;
+            }
+        };
+        // Served snapshot for per-repo keep-last-known-good below.
+        let served = repo_configs.load_full();
+        let mut repos = RepoConfigs::new(HashMap::new(), CommonConfig::default()).repos;
+        for entry in &current_manifest.repos {
+            if let Some(handle) = handles.get(&entry.repo_name) {
+                let (spec, version_info) = handle.get_with_version();
+                match parse_repo_spec(Arc::unwrap_or_clone(spec), tier, &current_manifest.storage) {
+                    Ok(mut config) => {
+                        config.config_version = version_info.map(|info| info.version);
+                        repos.insert(entry.repo_name.clone(), Arc::new(config));
+                    }
+                    Err(e) => {
+                        error!(
+                            "Failed to parse RepoSpec for repo '{}', keeping last \
+                             served config if any: {e:?}",
+                            entry.repo_name,
                         );
-                    }
-                }
-                Err(e) => {
-                    // Don't advance prev_manifest: transient failures retry on the next fire.
-                    error!("Failed to sync repo handles: {e:?}");
-                    STATS::refresh_failure_count.add_value(1);
-                    return;
-                }
-            }
-        }
-        state.prev_manifest = current_manifest;
-    }
-
-    let base = state
-        .cached_parsed
-        .clone()
-        .unwrap_or_else(|| RepoConfigs::new(HashMap::new(), CommonConfig::default()));
-
-    // Resolve only -- committing before the `return`s below could mix sources.
-    let routed = match manifest_values {
-        // Authoritative bypasses use_manifest_source() — then_some would default common on failure.
-        ManifestValues::Authoritative(parsed) => Some(parsed),
-        ManifestValues::Resolve(parsed) => resolve_manifest_common_and_storage(
-            parsed,
-            &base.common,
-            state.cached_blob_storage.as_deref(),
-            use_manifest,
-        ),
-    };
-    let (resolved_common, resolved_storage) = match routed {
-        Some((common, storage)) => {
-            let storage = match state.cached_manifest_storage.take() {
-                Some(cached) if *cached == storage => cached,
-                _ => Arc::new(storage),
-            };
-            state.cached_manifest_storage = Some(storage.clone());
-            (common, Some(storage))
-        }
-        None => {
-            state.cached_manifest_storage = None;
-            (base.common.clone(), state.cached_blob_storage.clone())
-        }
-    };
-
-    let merged = match (&state.prev_manifest, tier_name) {
-        (Some(manifest), Some(tier)) => {
-            let handles = match repo_handles.read() {
-                Ok(h) => h,
-                Err(e) => {
-                    error!("Failed to read repo handles lock: {e:?}");
-                    STATS::refresh_failure_count.add_value(1);
-                    return;
-                }
-            };
-            // Served snapshot for per-repo keep-last-known-good below.
-            let served = repo_configs.load_full();
-            // O(1) clone of the persistent map (structural sharing).
-            let mut repos = base.repos.clone();
-            for entry in &manifest.repos {
-                if let Some(handle) = handles.get(&entry.repo_name) {
-                    let (spec, version_info) = handle.get_with_version();
-                    match parse_repo_spec(Arc::unwrap_or_clone(spec), tier, &manifest.storage) {
-                        Ok(mut config) => {
-                            config.config_version = version_info.map(|info| info.version);
-                            repos.insert(entry.repo_name.clone(), Arc::new(config));
-                        }
-                        Err(e) => {
-                            error!(
-                                "Failed to parse RepoSpec for repo '{}', keeping last \
-                                 served config if any: {e:?}",
-                                entry.repo_name,
-                            );
-                            STATS::per_repo_refresh_failure_count.add_value(1);
-                            // Keep-last-known-good: served entry wins over blob-base on parse
-                            // failure — never drop the repo (skip-mode base.repos is empty).
-                            if let Some(served_config) = served.repos.get(&entry.repo_name) {
-                                repos.insert(entry.repo_name.clone(), served_config.clone());
-                            }
+                        STATS::per_repo_refresh_failure_count.add_value(1);
+                        // Keep-last-known-good: never drop a served repo on a transient failure.
+                        if let Some(served_config) = served.repos.get(&entry.repo_name) {
+                            repos.insert(entry.repo_name.clone(), served_config.clone());
                         }
                     }
-                } else {
-                    STATS::merge_skipped_no_handle.add_value(1);
                 }
+            } else {
+                STATS::merge_skipped_no_handle.add_value(1);
             }
-            // from_arc_map rebuilds repos_by_id from the merged map.
-            RepoConfigs::from_arc_map(repos, resolved_common)
         }
-        _ => RepoConfigs {
-            common: resolved_common,
-            ..base
-        },
+        // from_arc_map rebuilds repos_by_id from the merged map.
+        RepoConfigs::from_arc_map(repos, common)
     };
 
     // Commit only now: everything above can `return`.
-    state.last_use_manifest = Some(use_manifest);
-    if let Some(storage) = resolved_storage {
-        storage_configs.store(storage);
-    }
+    // rcu overlay, not a blind store: keep repos rcu-inserted by concurrent
+    // loads after the merge snapshot; non-members still drop.
+    let manifest_names: HashSet<&str> = current_manifest
+        .repos
+        .iter()
+        .map(|e| e.repo_name.as_str())
+        .collect();
+    repo_configs.rcu(|current| {
+        let mut repos = merged.repos.clone();
+        for (name, config) in current.repos.iter() {
+            if manifest_names.contains(name.as_str()) && !repos.contains_key(name) {
+                repos.insert(name.clone(), config.clone());
+            }
+        }
+        RepoConfigs::from_arc_map(repos, merged.common.clone())
+    });
+    state.prev_manifest = Some(current_manifest);
+    storage_configs.store(storage);
+    notify_receivers(repo_configs.load_full(), storage_configs, update_receivers).await;
+}
 
-    let new_configs = Arc::new(merged);
-    repo_configs.store(new_configs.clone());
+/// Fan the committed bulk update out to receivers and bump the refresh stats.
+async fn notify_receivers(
+    new_configs: Arc<RepoConfigs>,
+    storage_configs: &Swappable<StorageConfigs>,
+    update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+) {
     let current_storage = storage_configs.load_full();
     let receivers = update_receivers.load();
     let results = join_all(
@@ -662,13 +653,8 @@ async fn run_reload_pass(
 /// the per-repo dispatch logic can be unit-tested directly without spinning
 /// up the watcher's full `select!` loop. See `tests::handle_per_repo_fire_*`.
 ///
-/// Note on `result: Err`: `wait_for_next` wraps `tokio::sync::watch::Receiver`,
-/// which only errors when the corresponding `watch::Sender` is dropped. The
-/// only path that drops the Sender (without dropping the whole process) is
-/// `remove_repo_config_handle` removing the handle from `repo_handles`. So
-/// `Err` always means "handle gone, don't re-push." There is no transient
-/// error class to retry against — unlike `broadcast::Receiver` there is no
-/// `Lagged` variant.
+/// `Err` = the watch Sender dropped (repo removed, or a duplicate handle lost
+/// an insert race): the watcher is dead, don't re-push. Never transient.
 #[allow(clippy::too_many_arguments)]
 async fn handle_per_repo_fire(
     name: String,
@@ -702,9 +688,8 @@ async fn handle_per_repo_fire(
     let spec = match result {
         Ok(s) => s,
         Err(e) => {
-            // Sender closed: handle dropped. Don't re-push.
+            // Dead watcher; a live handle may remain (checked above), so leave its dedup seed.
             debug!("Per-repo watcher for {name} closed: {e:?}");
-            prev_specs.remove(&name);
             return;
         }
     };
@@ -836,18 +821,31 @@ pub(crate) fn sync_repo_handles(
         })
         .collect();
 
-    if !new_handles.is_empty() || !to_remove.is_empty() {
+    // A concurrent ensure/load insert wins; our duplicate handle+watcher drop, never registered.
+    let installed_watchers = if !new_handles.is_empty() || !to_remove.is_empty() {
         let mut handles = repo_handles
             .write()
             .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?;
-        handles.extend(new_handles);
+        let mut installed: HashSet<String> = HashSet::new();
+        for (name, handle) in new_handles {
+            if let Entry::Vacant(entry) = handles.entry(name) {
+                installed.insert(entry.key().clone());
+                entry.insert(handle);
+            }
+        }
         for repo_name in &to_remove {
             handles.remove(repo_name);
             info!("Removed config handle for repo: {repo_name}");
         }
-    }
+        new_watchers
+            .into_iter()
+            .filter(|(name, _)| installed.contains(name))
+            .collect()
+    } else {
+        new_watchers
+    };
 
-    Ok(new_watchers)
+    Ok(installed_watchers)
 }
 
 /// Names in `current_repos` no longer present in the manifest. Pure helper
