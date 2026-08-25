@@ -43,7 +43,6 @@
 #include "eden/fs/testharness/InodeUnloader.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/EdenError.h"
 
 using namespace facebook::eden;

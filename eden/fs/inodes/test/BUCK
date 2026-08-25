@@ -28,7 +28,6 @@ cpp_unittest(
         "//eden/fs/testharness:inode_unloader",
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
-        "//eden/fs/testharness:test_util",
         "//eden/fs/utils:eden_error",
         "//folly:conv",
         "//folly:scope_guard",
