@@ -47,5 +47,6 @@ thrift_rust_unittest(
         "//thrift/lib/rust/any:any",
         "//thrift/lib/rust/any/tests/if:test_structs-rust",
         "//thrift/lib/thrift:any-rust",
+        "//thrift/lib/thrift:standard-rust",
     ],
 )
