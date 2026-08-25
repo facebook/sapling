@@ -9,26 +9,22 @@
 use anyhow::anyhow;
 #[cfg(fbcode_build)]
 use backend_if::RimBackend;
-#[cfg(fbcode_build)]
 use context::CoreContext;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
-#[cfg(fbcode_build)]
 use gotham_ext::error::HttpError;
 #[cfg(fbcode_build)]
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
-#[cfg(fbcode_build)]
 use gotham_ext::middleware::request_context::RequestContext;
-#[cfg(fbcode_build)]
 use gotham_ext::response::build_error_response_in_place;
 use http::Response;
+use http::StatusCode;
 use http::Uri;
 #[cfg(fbcode_build)]
 use permission_checker::TenantInfo;
 
-#[cfg(fbcode_build)]
 use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimQpsDecision;
@@ -44,13 +40,20 @@ const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
 const RIM_REJECTION_MESSAGE: &str = "RIM QPS rate limit exceeded";
 
 #[cfg(fbcode_build)]
-fn too_many_requests(state: &mut State, message: impl ToString) -> Response<Body> {
-    build_error_response_in_place(
-        HttpError::e429(anyhow!(message.to_string())),
-        state,
-        &JsonErrorFormatter,
-    )
-    .expect("serializing the static RIM rejection should succeed")
+fn rim_rejection_response(state: &mut State) -> Response<Body> {
+    error_response(state, HttpError::e429(anyhow!(RIM_REJECTION_MESSAGE)))
+}
+
+fn error_response(state: &mut State, error: HttpError) -> Response<Body> {
+    match build_error_response_in_place(error, state, &JsonErrorFormatter) {
+        Ok(response) => response,
+        Err(error) => {
+            tracing::error!(?error, "Failed to build error response");
+            let mut response = Response::new(Body::default());
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            response
+        }
+    }
 }
 
 #[cfg(fbcode_build)]
@@ -67,7 +70,7 @@ async fn apply_rim_decision(
             None
         }
         RimQpsDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
-            Some(too_many_requests(state, RIM_REJECTION_MESSAGE))
+            Some(rim_rejection_response(state))
         }
         RimQpsDecision::Reject => {
             let mut scuba = ctx.scuba().clone();
@@ -81,6 +84,14 @@ async fn apply_rim_decision(
         }
         RimQpsDecision::FailOpen => None,
     }
+}
+
+fn load_shedding_response(state: &mut State, ctx: &CoreContext) -> Option<Response<Body>> {
+    let mut scuba = ctx.scuba().clone();
+    ctx.session()
+        .check_load_shed(&mut scuba)
+        .err()
+        .map(|error| error_response(state, error.into()))
 }
 
 // NOTE: Our Throttling middleware is implemented as Gotham middleware for 3 reasons:
@@ -111,21 +122,25 @@ impl Middleware for ThrottleMiddleware {
             }
         }
 
+        let rctx: RequestContext = RequestContext::borrow_from(state).clone();
+        let ctx: CoreContext = rctx.ctx;
+
         #[cfg(fbcode_build)]
-        {
-            let rim_backend = self.rim_backend?;
-            let rctx: RequestContext = RequestContext::borrow_from(state).clone();
-            let ctx: CoreContext = rctx.ctx;
-            let metadata = state.try_borrow::<MetadataState>()?.metadata();
-            let tenant = metadata.tenant_info();
-            let rim_decision = check_qps(&ctx, &tenant, rim_backend).await;
+        if let Some(rim_backend) = self.rim_backend {
+            let tenant = state
+                .try_borrow::<MetadataState>()
+                .map(|metadata| metadata.metadata().tenant_info());
+            if let Some(tenant) = tenant {
+                let rim_decision = check_qps(&ctx, &tenant, rim_backend).await;
 
-            apply_rim_decision(state, &ctx, &tenant, rim_backend, rim_decision).await
+                if let Some(response) =
+                    apply_rim_decision(state, &ctx, &tenant, rim_backend, rim_decision).await
+                {
+                    return Some(response);
+                }
+            }
         }
 
-        #[cfg(not(fbcode_build))]
-        {
-            None
-        }
+        load_shedding_response(state, &ctx)
     }
 }
