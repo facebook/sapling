@@ -553,6 +553,14 @@ class rebaseruntime:
                 "rebase",
                 checkmerge=False,
             )
+            if self.collapsef and self.collapsemsg:
+                # Validate the collapse message before any commit is rewritten
+                # so a rejection cannot leave an interrupted rebase behind.
+                rewriteutil.precheckmessage(
+                    repo,
+                    [repo[rev] for rev in sorted(precheckrevs)],
+                    self.collapsemsg,
+                )
 
         # Keep track of the active bookmarks in order to reset them later
         self.activebookmark = self.activebookmark or repo._activebookmark

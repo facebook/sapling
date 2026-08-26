@@ -607,9 +607,13 @@ Agent: rebase collapse dropping every predecessor Differential Revision should a
   $ sl log -r "$FIRST + $SECOND" -T '[{phabdiff}]\n'
   [D12345]
   [D23456]
+
+The rejection happens before the rebase starts, so no rebase is in progress:
+
   $ sl rebase --abort
   no remote bookmarks, cleanup skipped.
-  rebase aborted
+  abort: no rebase in progress
+  [255]
 
 Rebase collapse may deliberately retain either predecessor Differential Revision:
 

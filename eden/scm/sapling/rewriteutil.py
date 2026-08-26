@@ -30,6 +30,10 @@ def copycommitmessage(repo, message, operation, source):
     return message
 
 
+def precheckmessage(repo, predecessors, message):
+    """Allow extensions to validate a rewrite's final message upfront."""
+
+
 def precheck(repo, revs, action="rewrite", checkmerge=True):
     """check if revs can be rewritten
     action is used to control the error message.

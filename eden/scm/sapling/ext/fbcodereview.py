@@ -89,6 +89,7 @@ autopullpredicate = registrar.autopullpredicate()
 
 
 _COPY_DIFF_APPROVALS = "fbcodereview.copy-diff-approved-revisions"
+_MESSAGE_PRECHECK_APPROVALS = "fbcodereview.message-precheck-approvals"
 
 DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "Commit r"  # Prefix
@@ -323,14 +324,14 @@ def copycommitmessage(orig, repo, message, operation, source):
     raise error.Abort(_("aborted by user"))
 
 
-def _validate_commit_set(repo, successors, predecessors):
+def _validate_commit_set(repo, successor_messages, predecessor_messages):
     # Consume any pending copy approval regardless of which branch validates
     # this commit, so a stale approval cannot leak to a later commit.
     approved_copy_revisions = repo.volatile_state.pop(_COPY_DIFF_APPROVALS, set())
     successor_revisions = []
     multiple_revisions = set()
-    for successor in successors:
-        revisions = _commit_revisions(successor)
+    for successor_message in successor_messages:
+        revisions = _message_revisions(successor_message)
         if len(revisions) > 1:
             multiple_revisions.update(revisions)
         successor_revisions.extend(revisions)
@@ -349,8 +350,8 @@ def _validate_commit_set(repo, successors, predecessors):
 
     predecessor_revisions = {
         revision
-        for predecessor in predecessors
-        for revision in _commit_revisions(predecessor)
+        for predecessor_message in predecessor_messages
+        for revision in _message_revisions(predecessor_message)
     }
     successor_revision_set = set(successor_revisions)
     duplicates = {
@@ -425,7 +426,7 @@ def _validate_commit_set(repo, successors, predecessors):
             _format_diff_numbers(predecessor_revisions)
         )
     hint = None
-    if len(predecessors) > 1 or len(predecessor_revisions) > 1:
+    if len(predecessor_messages) > 1 or len(predecessor_revisions) > 1:
         hint = _(
             "choose one of the predecessor diff numbers (%s) for the final commit; "
             "to keep no diff number after folding, collapsing, or editing history, "
@@ -439,13 +440,59 @@ def _validate_commit_set(repo, successors, predecessors):
     _confirm_message_change(repo, message, hint=hint)
 
 
+def _message_approval_key(successor_messages, predecessor_messages):
+    return (
+        frozenset(
+            revision
+            for message in successor_messages
+            for revision in _message_revisions(message)
+        ),
+        frozenset(
+            revision
+            for message in predecessor_messages
+            for revision in _message_revisions(message)
+        ),
+    )
+
+
+def precheckmessage(orig, repo, predecessors, message):
+    """Validate a rewrite's final message before any commit is rewritten."""
+    orig(repo, predecessors, message)
+    predecessor_messages = [predecessor.description() for predecessor in predecessors]
+    _validate_commit_set(repo, [message], predecessor_messages)
+    # Do not re-prompt for the same outcome when the rewrite commits. A key
+    # with no diff numbers at all is not worth recording: validating such a
+    # rewrite is a no-op anyway.
+    key = _message_approval_key([message], predecessor_messages)
+    if not any(key):
+        return
+    if _MESSAGE_PRECHECK_APPROVALS not in repo.volatile_state:
+        repo.volatile_state[_MESSAGE_PRECHECK_APPROVALS] = set()
+        repo.ui.atexit(
+            lambda: repo.volatile_state.pop(_MESSAGE_PRECHECK_APPROVALS, None)
+        )
+    repo.volatile_state[_MESSAGE_PRECHECK_APPROVALS].add(key)
+
+
 def validate_commit(orig, repo, ctx):
     """Enforce Differential Revision invariants for a commit being written."""
     predecessors, split_successors = orig(repo, ctx)
     if rewriteutil.issplitting(repo) and not predecessors:
         return predecessors, split_successors
 
-    _validate_commit_set(repo, [*split_successors, ctx], predecessors)
+    successor_messages = [
+        successor.description() for successor in [*split_successors, ctx]
+    ]
+    predecessor_messages = [predecessor.description() for predecessor in predecessors]
+    if predecessors:
+        approvals = repo.volatile_state.get(_MESSAGE_PRECHECK_APPROVALS, set())
+        key = _message_approval_key(successor_messages, predecessor_messages)
+        if key in approvals:
+            approvals.discard(key)
+            # Keep the copy-approval invariant: consumed on every validation.
+            repo.volatile_state.pop(_COPY_DIFF_APPROVALS, None)
+            return predecessors, split_successors
+    _validate_commit_set(repo, successor_messages, predecessor_messages)
     return predecessors, split_successors
 
 
@@ -528,6 +575,7 @@ def extsetup(ui) -> None:
     extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)
     extensions.wrapfunction(commands, "_makegraftmessage", makegraftmessage)
     extensions.wrapfunction(rewriteutil, "commitcheck", validate_commit)
+    extensions.wrapfunction(rewriteutil, "precheckmessage", precheckmessage)
     extensions.wrapfunction(rewriteutil, "copycommitmessage", copycommitmessage)
 
     smartset.prefetchtemplatekw.update(
