@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: 'let mut.*=.*new\(\)|let mut.*=.*default|let mut.*=.*String|\.push\(|for .* in .*\{.*\.push'
+name: prefer-functional
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: 'let mut.*=.*new\(\)|let mut.*=.*default|let mut.*=.*String|\.push\(|for .* in .*\{.*\.push'
 ---
 
 # Prefer Immutable, Expression-Oriented Code
