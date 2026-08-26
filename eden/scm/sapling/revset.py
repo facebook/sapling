@@ -13,7 +13,6 @@
 
 import re
 import sys
-import time
 
 from . import (
     autopull,
@@ -146,7 +145,7 @@ def parseage(age):
 
 
 def parseagerange(agerange):
-    now = time.time()
+    now = util.parsedate("now")[0]
     if agerange.startswith("<"):
         start = now - parseage(agerange[1:])
         end = None

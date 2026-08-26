@@ -252,6 +252,10 @@ Test debugpathcomplete
 Test debugnamecomplete
 
   $ sl debugnamecomplete
+  dc23a057b1
+  b0f809bad8
+  80316c6c1f
+  10b0c0482e
   Fum
   fee
   fo
@@ -259,6 +263,10 @@ Test debugnamecomplete
   fee
   fo
   $ sl debugnamecomplete --config zsh.completion-description=true --description
+  dc23a057b1:fee
+  b0f809bad8:fie
+  80316c6c1f:fo
+  10b0c0482e:Fum
   Fum:Fum
   fee:fee
   fo:Fum
@@ -267,6 +275,10 @@ Test debuglabelcomplete, a deprecated name for debugnamecomplete that is still
 used for completions in some shells.
 
   $ sl debuglabelcomplete
+  dc23a057b1
+  b0f809bad8
+  80316c6c1f
+  10b0c0482e
   Fum
   fee
   fo
