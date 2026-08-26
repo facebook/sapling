@@ -756,6 +756,7 @@ class rebaseruntime:
             destphase = max(ctx.phase(), phases.draft)
             overrides = {("phases", "new-commit"): destphase}
         with repo.ui.configoverride(overrides, "rebase"):
+            commitmsg = _adjustrebasecopymessage(repo, commitmsg, self.keepf, ctx)
             # # Replicates the empty check in ``repo.commit``.
             # if wctx.isempty() and not repo.ui.configbool("ui", "allowemptycommit"):
             #     return None
@@ -1729,6 +1730,13 @@ def externalparent(repo, state, destancestors):
     )
 
 
+def _adjustrebasecopymessage(repo, message, keepf, source):
+    # Ordinary rebase rewrites its source; only --keep creates a second live copy.
+    if keepf:
+        return rewriteutil.copycommitmessage(repo, message, "rebase --keep", source)
+    return message
+
+
 def concludememorynode(
     repo,
     rev,
@@ -1775,6 +1783,7 @@ def concludememorynode(
         if date is None:
             date = ctx.date()
 
+        commitmsg = _adjustrebasecopymessage(repo, commitmsg, keepf, ctx)
         memctx = wctx.tomemctx(
             commitmsg,
             parents=(repo[p1], repo[p2]),
@@ -1785,7 +1794,6 @@ def concludememorynode(
             loginfo=loginfo,
             mutinfo=mutinfo,
         )
-
         commitres = repo.commitctx(memctx)
         wctx.clean()  # Might be reused
         return commitres
@@ -1831,6 +1839,7 @@ def concludenode(
         destphase = max(ctx.phase(), phases.draft)
         overrides = {("phases", "new-commit"): destphase}
         with repo.ui.configoverride(overrides, "rebase"):
+            commitmsg = _adjustrebasecopymessage(repo, commitmsg, keepf, ctx)
             # Commit might fail if unresolved files exist
             if date is None:
                 date = ctx.date()

@@ -22,6 +22,14 @@ _SPLIT_IN_PROGRESS = "rewriteutil.split-in-progress"
 _OBSOLETE_REWRITE_APPROVALS = "rewriteutil.obsolete-rewrite-approvals"
 
 
+def copycommitmessage(repo, message, operation, source):
+    """Allow extensions to adjust a copied commit's message.
+
+    ``source`` is the commit being copied.
+    """
+    return message
+
+
 def precheck(repo, revs, action="rewrite", checkmerge=True):
     """check if revs can be rewritten
     action is used to control the error message.

@@ -2846,9 +2846,11 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message, _is_from_user = _makegraftmessage(
+        message, is_from_user = _makegraftmessage(
             to_repo, ctx, opts, from_paths, to_paths, from_repo
         )
+        if not is_from_user and to_repo[None].dirty():
+            message = rewriteutil.copycommitmessage(to_repo, message, "graft", ctx)
         node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
