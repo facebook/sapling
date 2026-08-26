@@ -245,16 +245,33 @@ pub async fn verify_pipeline_first_then_canonical<F: PipelineTestFixture + Send>
     fb: FacebookInit,
     types: &[DerivableType],
 ) -> Result<()> {
+    verify_pipeline_first_then_canonical_with_repo::<F>(fb, types, false)
+        .await
+        .map(|_| ())
+}
+
+async fn verify_pipeline_first_then_canonical_with_repo<F: PipelineTestFixture + Send>(
+    fb: FacebookInit,
+    types: &[DerivableType],
+    use_terminal_mapping: bool,
+) -> Result<(TestRepo, Vec<ChangesetId>)> {
     let ctx = &CoreContext::test_mock(fb);
-    let (repo, commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
+    let (repo, _commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
     let manager = repo.repo_derived_data().manager();
 
-    let head = *commits
-        .get("master")
-        .or_else(|| commits.get("Q"))
-        .ok_or_else(|| anyhow!("fixture {} has no master bookmark head", F::REPO_NAME))?;
+    let head = repo
+        .bookmarks()
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new("master")?,
+            bookmarks::Freshness::MostRecent,
+        )
+        .await?
+        .ok_or_else(|| anyhow!("fixture {} has no master bookmark", F::REPO_NAME))?;
 
-    let config = pipeline_config_from_stages(F::pipeline_stages())?;
+    let mut config = pipeline_config_from_stages(F::pipeline_stages())?;
+    config.types = types.iter().copied().collect();
+    config.validate()?;
 
     let mut all_commits = repo
         .commit_graph()
@@ -281,10 +298,19 @@ pub async fn verify_pipeline_first_then_canonical<F: PipelineTestFixture + Send>
                 "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
                 KnobVal::Bool(true),
             ),
+            (
+                "scm/mononoke:add_acl_manifest_pointer".to_string(),
+                KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(use_terminal_mapping),
+            ),
         ])),
         run.boxed(),
     )
-    .await
+    .await?;
+    Ok((repo, all_commits))
 }
 
 /// The planned, payload-agnostic pipeline work: batches (split at chokepoints),
@@ -481,7 +507,10 @@ async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
 
 #[cfg(test)]
 mod tests {
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use fixtures::AclNestedDirectories;
+    use fixtures::AugmentedManifestV2AclNoHgMapping;
+    use fixtures::AugmentedManifestV2NoHgMapping;
     use fixtures::CrossStageDirectoryCopy;
     use fixtures::CrossStageFileCopy;
     use fixtures::NestedAncestorSubtreeCopy;
@@ -509,6 +538,10 @@ mod tests {
     /// pipeline derivation is self-sufficient for every dependency still in the
     /// transitionary state.
     const PIPELINE_FIRST_TYPES: [DerivableType; 1] = [DerivableType::HgChangesets];
+    const AUGMENTED_MANIFEST_V2_TYPES: [DerivableType; 2] = [
+        DerivableType::AclManifests,
+        DerivableType::HgAugmentedManifestsV2,
+    ];
 
     impl PipelineTestFixture for NestedDirectories {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
@@ -523,6 +556,17 @@ mod tests {
         }
     }
 
+    impl PipelineTestFixture for AugmentedManifestV2NoHgMapping {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1", "top2"]),
+                ("top1", vec!["nested"]),
+                ("top1/nested", vec![]),
+                ("top2", vec![]),
+            ]
+        }
+    }
+
     impl PipelineTestFixture for AclNestedDirectories {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
@@ -530,6 +574,16 @@ mod tests {
                 ("top1", vec!["sub"]),
                 ("top1/sub", vec![]),
                 ("top2", vec![]),
+            ]
+        }
+    }
+
+    impl PipelineTestFixture for AugmentedManifestV2AclNoHgMapping {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1"]),
+                ("top1", vec!["docs"]),
+                ("top1/docs", vec![]),
             ]
         }
     }
@@ -594,6 +648,60 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_acl(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<AclNestedDirectories>(fb).await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_augmented_manifest_v2_without_hg_mapping(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: a multi-stage fixture that starts and ends empty without Hg mappings.
+        let ctx = &CoreContext::test_mock(fb);
+
+        // When: exactly ACL and V2 run pipeline-first, then canonical direct V2.
+        let (repo, commits) = verify_pipeline_first_then_canonical_with_repo::<
+            AugmentedManifestV2NoHgMapping,
+        >(fb, &AUGMENTED_MANIFEST_V2_TYPES, false)
+        .await?;
+
+        // Then: every stage and root matched without deriving an Hg mapping.
+        assert!(
+            repo.bonsai_hg_mapping()
+                .get(ctx, commits.into())
+                .await?
+                .is_empty(),
+            "pipeline and canonical direct V2 should not create Bonsai-Hg mappings",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_augmented_manifest_v2_empty_root_terminal_publication(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: both forms of an empty repository root.
+        // When: the pipeline publishes terminal stages to the production mapping.
+        // Then: each empty root is a directory that terminal storage accepts.
+        verify_pipeline_first_then_canonical_with_repo::<AugmentedManifestV2NoHgMapping>(
+            fb,
+            &AUGMENTED_MANIFEST_V2_TYPES,
+            true,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_augmented_manifest_v2_non_root_acl(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: a copy-free merge with an ACL rooted at the nested pipeline stage.
+        // When: ACL and V2 run pipeline-first before canonical direct V2.
+        // Then: every non-root stage and terminal root matches canonical output.
+        verify_pipeline_first_then_canonical::<AugmentedManifestV2AclNoHgMapping>(
+            fb,
+            &AUGMENTED_MANIFEST_V2_TYPES,
+        )
+        .await
     }
 
     // Boundary commit `E` is derived canonically only; the pipeline derives just

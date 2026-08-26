@@ -34,6 +34,7 @@ use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
 use mononoke_types::PipelineDerivableVariant;
 use mononoke_types::ThriftConvert;
 use mononoke_types::acl_manifest::AclManifest;
@@ -41,7 +42,11 @@ use mononoke_types::acl_manifest::AclManifestRestriction;
 use mononoke_types::path::MPath;
 use mononoke_types::typed_hash::AclManifestId;
 
+use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
+use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
+use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
 use crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged;
+use crate::derive_hg_augmented_manifest::finalize_augmented_manifest_root;
 use crate::mapping::MappedHgChangesetId;
 use crate::mapping::RootHgAugmentedManifestId;
 use crate::mapping::format_key;
@@ -49,8 +54,6 @@ use crate::mapping::format_key;
 #[derive(Clone, Copy)]
 enum AugmentedManifestPipelineKind {
     V1,
-    // The V2 pipeline implementation is the next slice; its storage is exercised here first.
-    #[cfg_attr(not(test), allow(dead_code))]
     V2,
 }
 
@@ -470,6 +473,249 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         .try_collect::<HashMap<_, _>>()
         .await?;
         Ok(results)
+    }
+}
+
+#[async_trait]
+impl PipelineDerivable for RootHgAugmentedManifestV2Id {
+    const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
+        PipelineDerivableVariant::HgAugmentedManifestsV2;
+
+    const HAS_FINALIZE: bool = false;
+
+    type StageOutput = Option<HgAugmentedManifestEntry>;
+
+    async fn derive_stage_batch(
+        ctx: &CoreContext,
+        derivation: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+        payload: &DerivationStagePayload,
+        parents: HashMap<ChangesetId, Self::StageOutput>,
+        dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
+    ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let DerivationStagePayload::Manifest(payload) = payload else {
+            anyhow::bail!("{} has no finalize derive", Self::NAME);
+        };
+        let stage_path = &payload.path;
+
+        let csids = bonsais
+            .iter()
+            .map(BonsaiChangeset::get_changeset_id)
+            .collect();
+
+        let acl_outputs = RootAclManifestId::fetch_stage_outputs(
+            ctx,
+            derivation,
+            &StageId::Manifest(stage_path.clone()),
+            csids,
+        )
+        .await?;
+
+        let mut results: HashMap<ChangesetId, Self::StageOutput> = HashMap::new();
+        for bonsai in &bonsais {
+            let cs_id = bonsai.get_changeset_id();
+
+            let parent_entries = bonsai
+                .parents()
+                .map(|parent_csid| {
+                    results
+                        .get(&parent_csid)
+                        .or_else(|| parents.get(&parent_csid))
+                        .cloned()
+                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let root_parent_entries = stage_path.is_root().then(|| parent_entries.clone());
+
+            let known_entries = dependency_outputs.get(&cs_id).cloned().unwrap_or_default();
+            let acl_overlay = normalize_acl_stage(acl_outputs.get(&cs_id), cs_id, stage_path)?;
+
+            let file_changes = bonsai
+                .file_changes()
+                .filter(|(path, _)| stage_path.is_prefix_of(*path))
+                .map(|(path, file_change)| {
+                    Ok((
+                        path.clone(),
+                        match file_change {
+                            FileChange::Change(change) => Some(change.clone()),
+                            FileChange::Deletion => None,
+                            FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
+                                anyhow::bail!("Can't derive manifest for snapshot")
+                            }
+                        },
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let content_ids = file_changes
+                .iter()
+                .filter_map(|(_, change)| change.as_ref().map(|change| change.content_id()))
+                .collect::<HashSet<_>>();
+
+            let content_metadata_fut =
+                prefetch_content_metadata(ctx, derivation.blobstore(), content_ids);
+            let source_aug_roots = HashMap::new();
+            let subtree_replacements_fut = build_augmented_subtree_replacements(
+                ctx,
+                derivation.blobstore(),
+                bonsai,
+                &source_aug_roots,
+            );
+            let (content_metadata, subtree_replacements) =
+                futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
+            let mut parent_csids = bonsai.parents();
+            let parent_bonsai_csids = (parent_csids.next(), parent_csids.next());
+
+            let output = derive_augmented_manifest_entry_from_bonsai(
+                ctx,
+                derivation.blobstore(),
+                stage_path.clone(),
+                parent_entries,
+                known_entries,
+                file_changes,
+                subtree_replacements,
+                parent_bonsai_csids,
+                &content_metadata,
+                &derivation.restricted_paths(),
+                acl_overlay,
+            )
+            .await?;
+            let output = match root_parent_entries {
+                Some(root_parent_entries) => Some(HgAugmentedManifestEntry::DirectoryNode(
+                    finalize_augmented_manifest_root(
+                        ctx,
+                        derivation.blobstore(),
+                        output,
+                        root_parent_entries,
+                        &derivation.restricted_paths(),
+                        acl_overlay,
+                    )
+                    .await?,
+                )),
+                None => output,
+            };
+            results.insert(cs_id, output);
+        }
+
+        Ok(results)
+    }
+
+    async fn extract_stage_output_from_derived(
+        ctx: &CoreContext,
+        derivation: &DerivationContext,
+        derived: &RootHgAugmentedManifestV2Id,
+        stage: &StageId,
+    ) -> Result<Self::StageOutput> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
+        extract_stage_entry(
+            ctx,
+            derivation,
+            derived.hg_augmented_manifest_id(),
+            stage_path,
+        )
+        .await
+    }
+
+    async fn store_stage_outputs(
+        ctx: &CoreContext,
+        derivation: &DerivationContext,
+        stage: &StageId,
+        outputs: HashMap<ChangesetId, Self::StageOutput>,
+    ) -> Result<()> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
+        let pipeline_kind = AugmentedManifestPipelineKind::V2;
+        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestV2Id>();
+
+        stream::iter(outputs.into_iter().map(|(cs_id, output)| async move {
+            if use_normal_mapping {
+                let Some(HgAugmentedManifestEntry::DirectoryNode(dir)) = output else {
+                    return Err(anyhow!(
+                        "terminal stage output for {cs_id} should be a directory, got {output:?}",
+                    ));
+                };
+                derivation
+                    .blobstore()
+                    .put(
+                        ctx,
+                        format_key(derivation, cs_id),
+                        RootHgAugmentedManifestId::new(HgAugmentedManifestId::new(dir.treenode))
+                            .into(),
+                    )
+                    .await
+            } else {
+                store_intermediate_stage_output(
+                    ctx,
+                    derivation.blobstore().as_ref(),
+                    pipeline_kind,
+                    stage_path,
+                    key_prefix,
+                    cs_id,
+                    output,
+                )
+                .await
+            }
+        }))
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+        Ok(())
+    }
+
+    async fn fetch_stage_outputs(
+        ctx: &CoreContext,
+        derivation: &DerivationContext,
+        stage: &StageId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
+        let pipeline_kind = AugmentedManifestPipelineKind::V2;
+        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestV2Id>();
+
+        stream::iter(cs_ids.into_iter().map(|cs_id| async move {
+            if use_normal_mapping {
+                let Some(blob_data) = derivation
+                    .blobstore()
+                    .get(ctx, &format_key(derivation, cs_id))
+                    .await?
+                else {
+                    return Ok::<_, Error>(None);
+                };
+                let root: RootHgAugmentedManifestId = blob_data.try_into()?;
+                let entry = extract_stage_entry(
+                    ctx,
+                    derivation,
+                    root.hg_augmented_manifest_id(),
+                    stage_path,
+                )
+                .await?;
+                Ok(Some((cs_id, entry)))
+            } else {
+                let Some(output) = fetch_intermediate_stage_output(
+                    ctx,
+                    derivation.blobstore().as_ref(),
+                    pipeline_kind,
+                    stage_path,
+                    key_prefix,
+                    cs_id,
+                )
+                .await?
+                else {
+                    return Ok(None);
+                };
+                Ok(Some((cs_id, output)))
+            }
+        }))
+        .buffer_unordered(100)
+        .try_filter_map(|output| async move { Ok(output) })
+        .try_collect()
+        .await
     }
 }
 

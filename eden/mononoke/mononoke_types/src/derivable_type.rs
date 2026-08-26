@@ -96,6 +96,7 @@ pub enum PipelineDerivableVariant {
     AclManifests,
     HgChangesets,
     HgAugmentedManifests,
+    HgAugmentedManifestsV2,
     ContentManifests,
     DeletedManifests,
 }
@@ -277,6 +278,9 @@ impl DerivableType {
             DerivableType::HgAugmentedManifests => {
                 Ok(PipelineDerivableVariant::HgAugmentedManifests)
             }
+            DerivableType::HgAugmentedManifestsV2 => {
+                Ok(PipelineDerivableVariant::HgAugmentedManifestsV2)
+            }
             DerivableType::ContentManifests => Ok(PipelineDerivableVariant::ContentManifests),
             DerivableType::DeletedManifests => Ok(PipelineDerivableVariant::DeletedManifests),
             _ => bail!("{} does not support derivation pipeline", self.name()),
@@ -296,6 +300,9 @@ impl PipelineDerivableVariant {
             PipelineDerivableVariant::AclManifests => DerivableType::AclManifests,
             PipelineDerivableVariant::HgChangesets => DerivableType::HgChangesets,
             PipelineDerivableVariant::HgAugmentedManifests => DerivableType::HgAugmentedManifests,
+            PipelineDerivableVariant::HgAugmentedManifestsV2 => {
+                DerivableType::HgAugmentedManifestsV2
+            }
             PipelineDerivableVariant::ContentManifests => DerivableType::ContentManifests,
             PipelineDerivableVariant::DeletedManifests => DerivableType::DeletedManifests,
         }
