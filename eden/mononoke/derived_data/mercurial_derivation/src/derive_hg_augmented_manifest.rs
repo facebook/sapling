@@ -1340,7 +1340,7 @@ async fn reemit_root_envelope(
     root_acl_id: Option<AclManifestId>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
-) -> Result<HgAugmentedManifestId> {
+) -> Result<IndexedAugmentedDirectory> {
     let parents = dedup_root_parents_for_reemit(root_parents);
     let (_, final_dir) = finalize_envelope(
         ctx,
@@ -1353,7 +1353,101 @@ async fn reemit_root_envelope(
         restricted_paths_enabled,
     )
     .await?;
-    Ok(indexed_augmented_manifest_id(&final_dir))
+    Ok(final_dir)
+}
+
+pub(crate) async fn finalize_augmented_manifest_root<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    root: Option<HgAugmentedManifestEntry>,
+    parents: Vec<Option<HgAugmentedManifestEntry>>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    acl_root_overlay: Option<AclManifestId>,
+) -> Result<HgAugmentedDirectoryNode>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    let root_parents: Vec<_> = parents
+        .into_iter()
+        .enumerate()
+        .map(|(index, parent)| {
+            let node = match parent {
+                Some(HgAugmentedManifestEntry::DirectoryNode(node)) => node,
+                Some(HgAugmentedManifestEntry::FileNode(_)) => {
+                    bail!("root augmented manifest parent {index} is a file")
+                }
+                None => bail!("root augmented manifest parent {index} is absent"),
+            };
+            Ok(IndexedAugmentedDirectory {
+                node,
+                index: Some(ParentIndex(index)),
+            })
+        })
+        .collect::<Result<_>>()?;
+
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
+    let restricted_paths = Arc::clone(restricted_paths);
+    match root {
+        Some(HgAugmentedManifestEntry::DirectoryNode(root_dir)) => {
+            let candidate_root_id = HgAugmentedManifestId::new(root_dir.treenode);
+            let candidate_envelope = candidate_root_id.load(ctx, &blobstore).await?;
+            let root_acl_pointer_matches = candidate_envelope
+                .augmented_manifest
+                .acl_manifest_directory_id
+                == acl_root_overlay;
+            if root_envelope_is_content_derived(&candidate_envelope) && root_acl_pointer_matches {
+                Ok(root_dir)
+            } else {
+                let restricted_paths_enabled = justknobs::eval(
+                    "scm/mononoke:enabled_restricted_paths_access_logging",
+                    None,
+                    Some("hg_augmented_manifest_write"),
+                );
+                Ok(reemit_root_envelope(
+                    ctx,
+                    &blobstore,
+                    root_parents,
+                    candidate_envelope,
+                    acl_root_overlay,
+                    &restricted_paths,
+                    restricted_paths_enabled,
+                )
+                .await?
+                .node)
+            }
+        }
+        Some(HgAugmentedManifestEntry::FileNode(_)) => {
+            bail!("root augmented manifest entry must be a directory")
+        }
+        None => {
+            let restricted_paths_enabled = justknobs::eval(
+                "scm/mononoke:enabled_restricted_paths_access_logging",
+                None,
+                Some("hg_augmented_manifest_write"),
+            );
+            let acl_map = Arc::new(
+                acl_root_overlay
+                    .into_iter()
+                    .map(|id| (MPath::ROOT, id))
+                    .collect(),
+            );
+            let tree_info = TreeInfo {
+                path: MPath::ROOT,
+                parents: root_parents,
+                subentries: Default::default(),
+            };
+            let (_, root_dir) = create_augmented_tree(
+                ctx.clone(),
+                Arc::clone(&blobstore),
+                restricted_paths,
+                restricted_paths_enabled,
+                acl_map,
+                tree_info,
+            )
+            .await?;
+            Ok(root_dir.node)
+        }
+    }
 }
 
 /// Prepare the Bonsai-specific inputs and derive an augmented manifest directly,
@@ -1467,6 +1561,7 @@ where
         Some("hg_augmented_manifest_write"),
     );
 
+    let acl_root_path = stage_path.clone();
     let (acl_map, merge_acl_root_overlay) = match acl_root_overlay {
         None => (Arc::new(HashMap::new()), None),
         // A merge can rebuild a directory where its parents diverge even when no
@@ -1492,7 +1587,10 @@ where
                 }
             }
             (
-                Arc::new(targeted_acl_overlay_map(ctx, blobstore, root_id, &target_dirs).await?),
+                Arc::new(
+                    targeted_acl_overlay_map(ctx, blobstore, &acl_root_path, root_id, &target_dirs)
+                        .await?,
+                ),
                 None,
             )
         }
@@ -1554,7 +1652,8 @@ where
                 blobstore_arc,
                 restricted_paths_arc,
                 acl_map,
-                merge_acl_root_overlay
+                merge_acl_root_overlay,
+                acl_root_path
             );
             move |tree_info| {
                 cloned!(
@@ -1562,7 +1661,8 @@ where
                     blobstore_arc,
                     restricted_paths_arc,
                     acl_map,
-                    merge_acl_root_overlay
+                    merge_acl_root_overlay,
+                    acl_root_path
                 );
                 async move {
                     let acl_map = match merge_acl_root_overlay {
@@ -1570,6 +1670,7 @@ where
                             rebuilt_tree_acl_overlay_map(
                                 &ctx,
                                 &blobstore_arc,
+                                &acl_root_path,
                                 root_id,
                                 &tree_info.path,
                             )
@@ -1632,7 +1733,7 @@ where
         .buffered(100)
         .try_collect()
         .await?;
-    let parent_entries = root_parents_indexed
+    let parent_entries: Vec<Option<HgAugmentedManifestEntry>> = root_parents_indexed
         .iter()
         .map(|parent| Some(HgAugmentedManifestEntry::DirectoryNode(parent.node.clone())))
         .collect();
@@ -1641,7 +1742,7 @@ where
         ctx,
         blobstore,
         MPath::ROOT,
-        parent_entries,
+        parent_entries.clone(),
         HashMap::new(),
         file_changes,
         subtree_replacements,
@@ -1651,72 +1752,16 @@ where
         acl_root_overlay,
     )
     .await?;
-
-    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
-    let restricted_paths_arc = Arc::clone(restricted_paths);
-    let final_root_id = match root {
-        Some(HgAugmentedManifestEntry::DirectoryNode(root_dir)) => {
-            let candidate_root_id = HgAugmentedManifestId::new(root_dir.treenode);
-            let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
-            let root_acl_pointer_matches = candidate_envelope
-                .augmented_manifest
-                .acl_manifest_directory_id
-                == acl_root_overlay;
-            if root_envelope_is_content_derived(&candidate_envelope) && root_acl_pointer_matches {
-                candidate_root_id
-            } else {
-                let restricted_paths_enabled = justknobs::eval(
-                    "scm/mononoke:enabled_restricted_paths_access_logging",
-                    None,
-                    Some("hg_augmented_manifest_write"),
-                );
-                reemit_root_envelope(
-                    ctx,
-                    &blobstore_arc,
-                    root_parents_indexed,
-                    candidate_envelope,
-                    acl_root_overlay,
-                    &restricted_paths_arc,
-                    restricted_paths_enabled,
-                )
-                .await?
-            }
-        }
-        Some(HgAugmentedManifestEntry::FileNode(_)) => {
-            bail!("root augmented manifest entry must be a directory")
-        }
-        None => {
-            // Empty manifest — all files deleted. Create empty augmented manifest.
-            let restricted_paths_enabled = justknobs::eval(
-                "scm/mononoke:enabled_restricted_paths_access_logging",
-                None,
-                Some("hg_augmented_manifest_write"),
-            );
-            let acl_map = Arc::new(
-                acl_root_overlay
-                    .into_iter()
-                    .map(|id| (MPath::ROOT, id))
-                    .collect(),
-            );
-            let tree_info = TreeInfo {
-                path: MPath::ROOT,
-                parents: root_parents_indexed,
-                subentries: Default::default(),
-            };
-            let (_, root_dir) = create_augmented_tree(
-                ctx.clone(),
-                Arc::clone(&blobstore_arc),
-                restricted_paths_arc,
-                restricted_paths_enabled,
-                acl_map,
-                tree_info,
-            )
-            .await?;
-            indexed_augmented_manifest_id(&root_dir)
-        }
-    };
-
-    Ok(final_root_id)
+    let root = finalize_augmented_manifest_root(
+        ctx,
+        blobstore,
+        root,
+        parent_entries,
+        restricted_paths,
+        acl_root_overlay,
+    )
+    .await?;
+    Ok(HgAugmentedManifestId::new(root.treenode))
 }
 
 /// Try to reuse a parent's augmented-manifest envelope if its subentries
@@ -1977,10 +2022,16 @@ async fn acl_manifest_id_at_path(
 async fn rebuilt_tree_acl_overlay_map(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
+    acl_root_path: &MPath,
     root_acl_id: AclManifestId,
     tree_path: &MPath,
 ) -> Result<HashMap<MPath, AclManifestId>> {
-    let Some(tree_acl_id) = acl_manifest_id_at_path(ctx, blobstore, root_acl_id, tree_path).await?
+    if !acl_root_path.is_prefix_of(tree_path) {
+        bail!("ACL root path {acl_root_path} is not a prefix of rebuilt tree path {tree_path}");
+    }
+    let relative_tree_path = tree_path.remove_prefix_component(acl_root_path);
+    let Some(tree_acl_id) =
+        acl_manifest_id_at_path(ctx, blobstore, root_acl_id, &relative_tree_path).await?
     else {
         return Ok(HashMap::new());
     };
@@ -1995,7 +2046,8 @@ async fn rebuilt_tree_acl_overlay_map(
 }
 
 /// Build the `MPath -> AclManifestId` overlay map, scoped to the ACL directories
-/// on the paths `derive_manifest` will rebuild (`target_dirs`).
+/// on the paths `derive_manifest` will rebuild (`target_dirs`). `acl_root_path`
+/// is the absolute path represented by `root_acl_id`.
 ///
 /// Unlike [`pre_walk_acl_tree`], this descends only the branches that lead to a
 /// rebuilt directory, so its cost is O(changed paths) rather than O(total ACL
@@ -2013,12 +2065,13 @@ async fn rebuilt_tree_acl_overlay_map(
 pub async fn targeted_acl_overlay_map(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
+    acl_root_path: &MPath,
     root_acl_id: AclManifestId,
     target_dirs: &HashSet<MPath>,
 ) -> Result<HashMap<MPath, AclManifestId>> {
     let nested: Vec<Vec<(MPath, AclManifestId)>> = bounded_traversal::bounded_traversal_stream(
         100,
-        std::iter::once((MPath::ROOT, root_acl_id)),
+        std::iter::once((acl_root_path.clone(), root_acl_id)),
         move |(path, acl_id): (MPath, AclManifestId)| {
             async move {
                 let children = load_acl_child_directory_map(ctx, blobstore, &acl_id).await?;

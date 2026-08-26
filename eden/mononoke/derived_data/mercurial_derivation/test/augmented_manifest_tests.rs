@@ -1455,45 +1455,90 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_root_commit(
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_entry(
+async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_acl_entry(
     fb: FacebookInit,
 ) -> Result<()> {
-    // Given: a root commit with files inside and outside a non-root stage.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let commit = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("README.md", "hello")
-        .add_file("src/lib.rs", "pub fn value() -> u8 { 1 }")
-        .add_file("src/nested/mod.rs", "pub mod nested {}")
-        .commit()
-        .await?;
-    let canonical_root =
-        derive_augmented_manifest_directly_for_test(&ctx, &repo, commit, vec![], (None, None))
-            .await?;
-    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
-        .await?
-        .context("fixture must contain src")?;
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:add_acl_manifest_pointer".to_string(),
+            KnobVal::Bool(true),
+        )])),
+        async move {
+            // Given: a root commit whose non-root stage has a nested ACL subtree.
+            let ctx = CoreContext::test_mock(fb);
+            let repo: Repo = test_repo_factory::build_empty(fb).await?;
+            let commit = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("README.md", "hello")
+                .add_file(
+                    "src/restricted/.slacl",
+                    b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+                )
+                .add_file("src/restricted/lib.rs", "pub fn value() -> u8 { 1 }")
+                .commit()
+                .await?;
+            let root_acl_id = derive_acl_overlay(&ctx, &repo, commit)
+                .await?
+                .context("fixture must have a non-empty ACL manifest")?;
+            let stage_path = MPath::new("src")?;
+            let stage_acl_id = root_acl_id
+                .find_entry(
+                    ctx.clone(),
+                    repo.repo_blobstore().clone(),
+                    stage_path.clone(),
+                )
+                .await?
+                .and_then(Entry::into_tree)
+                .context("fixture must have an ACL tree at src")?;
+            let canonical_root =
+                derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![],
+                    file_changes_from_bonsai(&ctx, &repo, commit).await?,
+                    vec![],
+                    (None, None),
+                    &Default::default(),
+                    repo.restricted_paths().config_based(),
+                    Some(root_acl_id),
+                )
+                .await?;
+            let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+                .await?
+                .context("fixture must contain src")?;
+            let HgAugmentedManifestEntry::DirectoryNode(expected_dir) = &expected_entry else {
+                return Err(anyhow!("fixture src entry must be a directory"));
+            };
+            assert_eq!(
+                expected_dir.acl_manifest_directory_id,
+                Some(stage_acl_id),
+                "canonical V2 must retain the ACL pointer for src",
+            );
 
-    // When: deriving only the entry rooted at the non-root stage path.
-    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        MPath::new("src")?,
-        vec![],
-        HashMap::new(),
-        file_changes_from_bonsai(&ctx, &repo, commit).await?,
-        vec![],
-        (None, None),
-        &Default::default(),
-        repo.restricted_paths().config_based(),
-        None,
+            // When: deriving only src from the ACL id already rooted at src.
+            let stage_entry =
+                derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    stage_path,
+                    vec![],
+                    HashMap::new(),
+                    file_changes_from_bonsai(&ctx, &repo, commit).await?,
+                    vec![],
+                    (None, None),
+                    &Default::default(),
+                    repo.restricted_paths().config_based(),
+                    Some(stage_acl_id),
+                )
+                .await?;
+
+            // Then: the stage entry retains the same ACL pointer as canonical V2.
+            assert_eq!(stage_entry, Some(expected_entry));
+
+            Ok(())
+        }
+        .boxed(),
     )
-    .await?;
-
-    // Then: the stage entry is identical to the same entry in canonical direct V2.
-    assert_eq!(stage_entry, Some(expected_entry));
-
-    Ok(())
+    .await
 }
 
 #[mononoke::fbinit_test]
@@ -3646,6 +3691,7 @@ async fn test_direct_merge_acl_lookup_does_not_load_unrelated_acl_subtree(
     let root_only_acl_map = derive_hg_augmented_manifest::targeted_acl_overlay_map(
         &ctx,
         repo.repo_blobstore(),
+        &MPath::ROOT,
         acl_root_overlay,
         &[MPath::ROOT].into_iter().collect(),
     )
@@ -3720,6 +3766,7 @@ async fn test_targeted_acl_overlay_map_is_scoped_to_changed_frontier(
     let map = derive_hg_augmented_manifest::targeted_acl_overlay_map(
         &ctx,
         repo.repo_blobstore(),
+        &MPath::ROOT,
         root_acl_id,
         &target_dirs,
     )
