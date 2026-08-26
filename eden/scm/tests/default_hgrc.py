@@ -28,6 +28,9 @@ mergemarkers=detailed
 promptecho=True
 ignore.test=$RUNTESTDIR/gitignore
 
+[agent]
+ignore-quiet=False
+
 [devel]
 all-warnings=True
 default-date=0 0

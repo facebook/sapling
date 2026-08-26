@@ -685,6 +685,24 @@ def _parse(ui, args):
         options[n] = cmdoptions[n]
         del cmdoptions[n]
 
+    if (
+        options.get("quiet")
+        and specifiedopts.get("quiet", 0) == 1
+        and ui.agent()
+        and not ui.plain()
+        and ui.configbool("agent", "ignore-quiet", True)
+    ):
+        # A lone --quiet from an agent is ignored: output can contain
+        # important details. --quiet --quiet forces quiet.
+        options["quiet"] = False
+        options["agent_quiet_ignored"] = True
+        ui.write_err(
+            _(
+                "note: --quiet ignored for agents since output can contain "
+                "important details (pass --quiet --quiet to force quiet)\n"
+            )
+        )
+
     return (cmd, cmd and entry[0] or None, args, options, cmdoptions, aliases)
 
 

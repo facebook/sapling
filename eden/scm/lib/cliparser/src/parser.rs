@@ -815,6 +815,11 @@ impl ParseOutput {
         self.first_arg_index
     }
 
+    /// Override a parsed option value.
+    pub fn set_opt(&mut self, name: &str, value: Value) {
+        self.opts.insert(name.to_string(), value);
+    }
+
     /// How many times an option was explicitly specified on the command
     /// line. 0 when only the default value applies. For boolean flags a
     /// polarity flip (e.g. `-q --no-quiet`) restarts the count, so this is

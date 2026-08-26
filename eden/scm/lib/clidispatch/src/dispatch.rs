@@ -19,9 +19,11 @@ use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use cliparser::parser::Value;
 use configloader::config::ConfigSet;
+use configloader::hg::PinnedConfig;
 use configloader::hg::RepoInfo;
 use configloader::hg::set_pinned;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use repo::CoreRepo;
 use repo::repo::Repo;
 
@@ -340,15 +342,39 @@ impl Dispatcher {
         new_args.extend_from_slice(&expanded[command_arg_len..]);
 
         let def = command_table.get(&command_name).unwrap();
-        let parsed = parse(def, &new_args)?;
+        let mut parsed = parse(def, &new_args)?;
 
-        let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
+        let mut global_opts: HgGlobalOpts = parsed.clone().try_into()?;
         last_chance_to_abort(&self.early_global_opts, &global_opts)?;
+
+        // A lone --quiet from an agent is ignored: output can contain
+        // important details. --quiet --quiet forces quiet.
+        let quiet_ignored = global_opts.quiet
+            && parsed.opt_count("quiet") == 1
+            && agentdetect::is_agent()
+            && !hgplain::is_plain(None)
+            && self.config().get_or("agent", "ignore-quiet", || true)?;
+        if quiet_ignored {
+            parsed.set_opt("quiet", Value::Bool(Some(false)));
+            global_opts.quiet = false;
+            let _ = io.write_err(
+                "note: --quiet ignored for agents since output can contain important details (pass --quiet --quiet to force quiet)\n",
+            );
+        }
 
         // Update pinned config values using the "true" global opts. The early global are
         // parsed conservatively (i.e. incompletely) because they can't read aliases from
         // the config yet, and in general don't know which command is being run yet.
-        let pinned_configs = pinned_configs(&global_opts);
+        let mut pinned_configs = pinned_configs(&global_opts);
+        if quiet_ignored {
+            // Override any ui.quiet pinned from the conservative early parse.
+            pinned_configs.push(PinnedConfig::KeyValue(
+                "ui".into(),
+                "quiet".into(),
+                "false".into(),
+                "--quiet".into(),
+            ));
+        }
         if !pinned_configs.is_empty() {
             let mut config = ConfigSet::wrap(self.config().clone()).named("root:pin");
             set_pinned(&mut config, &pinned_configs)?;
