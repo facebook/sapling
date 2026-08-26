@@ -428,11 +428,12 @@ pub struct RebasedStack {
 
 /// Rebases the linear stack `root..head` onto `onto` with pushrebase's
 /// conflict detection and commit rewrite, moving no bookmark and writing
-/// nothing. Runs no hooks; requires `ForceOff` merge resolution (checked)
-/// so overlapping edits always surface as `Conflicts`; rejects merge
+/// nothing. Runs no hooks; requires `ForceOff` merge resolution and
+/// `rewritedates == false` (both checked) — overlapping edits always
+/// surface as `Conflicts`, and the rewrite is deterministic, which is
+/// what makes callers' contention retries terminate. Rejects merge
 /// commits in the stack; uses content-manifest range diffs so repos
-/// without HG derived data work. With `rewritedates == false` the rewrite
-/// is deterministic.
+/// without HG derived data work.
 pub async fn rebase_stack_onto(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -450,6 +451,12 @@ pub async fn rebase_stack_onto(
              merge resolution results would be silently discarded"
         )));
     }
+    if config.rewritedates {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto requires rewritedates to be off: date stamping \
+             makes the rewrite non-deterministic, breaking retry termination"
+        )));
+    }
 
     let (root_is_ancestor_of_head, root_is_ancestor_of_onto) = try_join(
         repo.commit_graph().is_ancestor(ctx, root, head),
@@ -457,9 +464,15 @@ pub async fn rebase_stack_onto(
     )
     .await
     .map_err(PushrebaseError::Error)?;
-    if !root_is_ancestor_of_head || !root_is_ancestor_of_onto {
+    if !root_is_ancestor_of_head {
         return Err(PushrebaseError::Error(anyhow!(
-            "rebase_stack_onto: root {root} must be an ancestor of both head {head} and onto {onto}"
+            "rebase_stack_onto: root {root} must be an ancestor of head {head}, but is not"
+        )));
+    }
+    if !root_is_ancestor_of_onto {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto: root {root} must be an ancestor of onto {onto}, but is not \
+             (was the destination force-moved off the shared history?)"
         )));
     }
 
@@ -496,8 +509,18 @@ pub async fn rebase_stack_onto(
     .await?;
 
     let mut no_hooks: Vec<Box<dyn PushrebaseCommitHook>> = Vec::new();
-    let (new_head, rebased_changesets, rebased_bonsais) =
-        create_rebased_changesets(ctx, repo, config, root, head, onto, &mut no_hooks, None).await?;
+    let (new_head, rebased_changesets, rebased_bonsais) = create_rebased_changesets(
+        ctx,
+        repo,
+        config,
+        client_bcs,
+        root,
+        head,
+        onto,
+        &mut no_hooks,
+        None,
+    )
+    .await?;
 
     Ok(RebasedStack {
         new_head,
@@ -686,16 +709,21 @@ pub async fn do_batched_pushrebase(
 
         // Rebase this stack onto the running head using the immutable root.
         let onto = running_head.unwrap_or(request.root);
-        let rebase_result = create_rebased_changesets(
-            ctx,
-            repo,
-            config,
-            request.root,
-            request.head,
-            onto,
-            &mut commit_hooks,
-            reconciled_overrides,
-        )
+        let rebase_result = async {
+            let rebased_set = find_rebased_set(ctx, repo, request.root, request.head).await?;
+            create_rebased_changesets(
+                ctx,
+                repo,
+                config,
+                rebased_set,
+                request.root,
+                request.head,
+                onto,
+                &mut commit_hooks,
+                reconciled_overrides,
+            )
+            .await
+        }
         .await;
 
         match rebase_result {
@@ -1336,10 +1364,12 @@ async fn try_rebase_under_lock(
         .as_ref()
         .map(|overrides| overrides.iter().map(|info| info.path.clone()).collect());
 
+    let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
     let (new_head, rebased_changesets, rebased_bonsais) = create_rebased_changesets(
         ctx,
         repo,
         config,
+        rebased_set,
         root,
         head,
         auth_cs,
@@ -1747,16 +1777,21 @@ async fn rebase_batch_under_lock(
 
         let request_old_bookmark_value = running_head;
         let onto = running_head.unwrap_or(request.root);
-        let rebase_result = create_rebased_changesets(
-            ctx,
-            repo,
-            config,
-            request.root,
-            request.head,
-            onto,
-            commit_hooks,
-            reconciled_overrides,
-        )
+        let rebase_result = async {
+            let rebased_set = find_rebased_set(ctx, repo, request.root, request.head).await?;
+            create_rebased_changesets(
+                ctx,
+                repo,
+                config,
+                rebased_set,
+                request.root,
+                request.head,
+                onto,
+                commit_hooks,
+                reconciled_overrides,
+            )
+            .await
+        }
         .await;
 
         match rebase_result {
@@ -2140,10 +2175,12 @@ async fn do_rebase(
     )>,
     PushrebaseError,
 > {
+    let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
     let (new_head, rebased_changesets, rebased_bonsais) = create_rebased_changesets(
         ctx,
         repo,
         config,
+        rebased_set,
         root,
         head,
         old_bookmark_value.unwrap_or(root),
@@ -3217,14 +3254,15 @@ async fn create_rebased_changesets(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
+    // `root..head` in topological order, so holders of the stack need not
+    // fetch it twice.
+    rebased_set: Vec<BonsaiChangeset>,
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
     hooks: &mut [Box<dyn PushrebaseCommitHook>],
     merged_file_overrides: Option<Vec<MergedFileInfo>>,
 ) -> Result<(ChangesetId, RebasedChangesets, Vec<BonsaiChangeset>), PushrebaseError> {
-    let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
-
     let rebased_set_ids: HashSet<_> = rebased_set.iter().map(|cs| cs.get_changeset_id()).collect();
 
     let date = if config.rewritedates {

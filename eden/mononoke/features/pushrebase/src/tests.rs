@@ -811,6 +811,21 @@ async fn rebase_stack_onto_requires_merge_resolution_force_off(
         "unexpected error: {err}"
     );
 
+    // Date rewriting breaks the determinism the callers' retry loops rely
+    // on, so it is rejected too.
+    let date_rewriting_flags = PushrebaseFlags {
+        rewritedates: true,
+        merge_resolution_override: MergeResolutionOverride::ForceOff,
+        ..Default::default()
+    };
+    let err = rebase_stack_onto(&ctx, &repo, &date_rewriting_flags, root, head, root)
+        .await
+        .expect_err("date rewriting should be rejected");
+    assert!(
+        err.to_string().contains("rewritedates"),
+        "unexpected error: {err}"
+    );
+
     Ok(())
 }
 
@@ -3053,6 +3068,7 @@ line 8
         &ctx,
         &repo,
         &Default::default(),
+        find_rebased_set(&ctx, &repo, base, client).await?,
         base,
         client,
         s2,
@@ -3193,6 +3209,7 @@ async fn pushrebase_merge_resolution_carry_forward_with_new_server_changes(
         &ctx,
         &repo,
         &Default::default(),
+        find_rebased_set(&ctx, &repo, base, client).await?,
         base,
         client,
         s2,
@@ -3685,6 +3702,7 @@ async fn pushrebase_merge_resolution_no_conflict_in_delta(fb: FacebookInit) -> R
         &ctx,
         &repo,
         &Default::default(),
+        find_rebased_set(&ctx, &repo, base, client).await?,
         base,
         client,
         s2,
