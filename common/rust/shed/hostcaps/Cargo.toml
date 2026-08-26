@@ -14,7 +14,7 @@ name = "test_hostcaps"
 path = "src/bin/test.rs"
 
 [dependencies]
-derive_more = { version = "1.0.0", features = ["full"] }
+derive_more = { version = "2.1.1", features = ["full"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fbcode_build)"]}

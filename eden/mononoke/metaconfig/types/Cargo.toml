@@ -13,7 +13,7 @@ ascii = "1.1.0"
 bincode = { version = "2", features = ["serde"] }
 bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-derive_more = { version = "1.0.0", features = ["full"] }
+derive_more = { version = "2.1.1", features = ["full"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mysql_common = { version = "0.31.0", features = ["chrono", "default"] }
