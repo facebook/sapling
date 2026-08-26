@@ -36,8 +36,8 @@ use manifest::ManifestParentReplacement;
 use manifest::Span;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
-use manifest::derive_manifest;
 use manifest::derive_manifest_from_predecessor;
+use manifest::derive_manifest_with_known_entries;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
@@ -89,6 +89,7 @@ use crate::indexed_augmented_manifest::IndexedAugmentedDirectory;
 use crate::indexed_augmented_manifest::IndexedAugmentedEntry;
 use crate::indexed_augmented_manifest::IndexedAugmentedFile;
 use crate::indexed_augmented_manifest::IndexedAugmentedTrieMap;
+use crate::indexed_augmented_manifest::indexed_augmented_entry;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 ///
@@ -1414,22 +1415,52 @@ where
     .await
 }
 
-/// Derive an augmented manifest directly from prepared Bonsai inputs and parent
-/// augmented manifests, bypassing HgManifest construction entirely.
-pub async fn derive_augmented_manifest_from_bonsai<Store>(
+/// Derive the augmented manifest entry at `stage_path` directly from prepared
+/// Bonsai inputs, bypassing HgManifest construction entirely.
+///
+/// `parents` are positional in Bonsai parent order and may be absent at the
+/// stage path. `known_entries` contains child-stage results keyed by absolute
+/// path; those entries are reused without traversing below them.
+///
+/// Non-root stages reject p1/p2 copy-from changes that they would derive because
+/// stage-local parent entries cannot resolve repository-root copy source paths.
+pub async fn derive_augmented_manifest_entry_from_bonsai<Store>(
     ctx: &CoreContext,
     blobstore: &Store,
-    parents: Vec<HgAugmentedManifestId>,
+    stage_path: MPath,
+    parents: Vec<Option<HgAugmentedManifestEntry>>,
+    known_entries: HashMap<MPath, Option<HgAugmentedManifestEntry>>,
     file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
     subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
-) -> Result<HgAugmentedManifestId>
+) -> Result<Option<HgAugmentedManifestEntry>>
 where
     Store: KeyedBlobstore + Clone + 'static,
 {
+    if !stage_path.is_root() {
+        let is_hg_parent = |copy_csid: &ChangesetId| {
+            parent_bonsai_csids.0.as_ref() == Some(copy_csid)
+                || parent_bonsai_csids.1.as_ref() == Some(copy_csid)
+        };
+        if let Some((path, _)) = file_changes.iter().find(|(path, file_change)| {
+            stage_path.is_prefix_of(path)
+                && !known_entries
+                    .keys()
+                    .any(|known_path| known_path.is_prefix_of(path))
+                && file_change
+                    .as_ref()
+                    .and_then(TrackedFileChange::copy_from)
+                    .is_some_and(|(_, copy_csid)| is_hg_parent(copy_csid))
+        }) {
+            bail!(
+                "Cannot derive Hg augmented manifest directly at non-root stage {stage_path} with copy-from change at {path}"
+            );
+        }
+    }
+
     let restricted_paths_enabled = justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None,
@@ -1467,34 +1498,56 @@ where
         }
     };
 
-    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
+    let parent_aug_id = |index| {
+        parents
+            .get(index)
+            .and_then(Option::as_ref)
+            .and_then(|entry| match entry {
+                HgAugmentedManifestEntry::DirectoryNode(dir) => {
+                    Some(HgAugmentedManifestId::new(dir.treenode))
+                }
+                HgAugmentedManifestEntry::FileNode(_) => None,
+            })
+    };
     let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
-        parent_bonsai_csids.0.zip(parents.first().copied()),
-        parent_bonsai_csids.1.zip(parents.get(1).copied()),
+        parent_bonsai_csids.0.zip(parent_aug_id(0)),
+        parent_bonsai_csids.1.zip(parent_aug_id(1)),
     ];
     let copy_from_filenodes =
         resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?;
 
+    let parents: Vec<_> = parents
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, entry)| {
+            entry.map(|entry| indexed_augmented_entry(entry, Some(ParentIndex(index))))
+        })
+        .collect();
+    let known_entries = known_entries
+        .into_iter()
+        .map(|(path, entry)| {
+            (
+                path,
+                entry.map(|entry| indexed_augmented_entry(entry, None)),
+            )
+        })
+        .collect();
+    let subtree_replacements =
+        index_augmented_subtree_replacements(ctx, blobstore, subtree_replacements).await?;
+
+    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
     let restricted_paths_arc = Arc::clone(restricted_paths);
 
-    let parents_indexed: Vec<_> = stream::iter(parents.into_iter().enumerate())
-        .map(|(i, m)| indexed_augmented_directory_from_id(ctx, blobstore, m, Some(ParentIndex(i))))
-        .buffered(100)
-        .try_collect()
-        .await?;
-    let root_parents_indexed = parents_indexed.clone();
-
-    let subtree_replacements =
-        index_augmented_subtree_replacements(ctx, blobstore, subtree_replacements).await?;
-
-    let root = derive_manifest(
+    let entry = derive_manifest_with_known_entries(
         ctx.clone(),
         blobstore.clone(),
-        parents_indexed,
+        parents,
         file_changes,
         subtree_replacements,
+        known_entries,
+        stage_path,
         {
             cloned!(
                 ctx,
@@ -1553,9 +1606,57 @@ where
     )
     .await?;
 
+    Ok(entry.map(augmented_entry_from_indexed))
+}
+
+/// Derive an augmented manifest directly from prepared Bonsai inputs and parent
+/// augmented manifests, bypassing HgManifest construction entirely.
+pub async fn derive_augmented_manifest_from_bonsai<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    parents: Vec<HgAugmentedManifestId>,
+    file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
+    subtree_replacements: AugmentedSubtreeReplacements,
+    parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
+    content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    acl_root_overlay: Option<AclManifestId>,
+) -> Result<HgAugmentedManifestId>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    let root_parents_indexed: Vec<_> = stream::iter(parents.into_iter().enumerate())
+        .map(|(index, parent)| {
+            indexed_augmented_directory_from_id(ctx, blobstore, parent, Some(ParentIndex(index)))
+        })
+        .buffered(100)
+        .try_collect()
+        .await?;
+    let parent_entries = root_parents_indexed
+        .iter()
+        .map(|parent| Some(HgAugmentedManifestEntry::DirectoryNode(parent.node.clone())))
+        .collect();
+
+    let root = derive_augmented_manifest_entry_from_bonsai(
+        ctx,
+        blobstore,
+        MPath::ROOT,
+        parent_entries,
+        HashMap::new(),
+        file_changes,
+        subtree_replacements,
+        parent_bonsai_csids,
+        content_metadata_cache,
+        restricted_paths,
+        acl_root_overlay,
+    )
+    .await?;
+
+    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
+    let restricted_paths_arc = Arc::clone(restricted_paths);
     let final_root_id = match root {
-        Some(root_dir) => {
-            let candidate_root_id = indexed_augmented_manifest_id(&root_dir);
+        Some(HgAugmentedManifestEntry::DirectoryNode(root_dir)) => {
+            let candidate_root_id = HgAugmentedManifestId::new(root_dir.treenode);
             let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
             let root_acl_pointer_matches = candidate_envelope
                 .augmented_manifest
@@ -1564,6 +1665,11 @@ where
             if root_envelope_is_content_derived(&candidate_envelope) && root_acl_pointer_matches {
                 candidate_root_id
             } else {
+                let restricted_paths_enabled = justknobs::eval(
+                    "scm/mononoke:enabled_restricted_paths_access_logging",
+                    None,
+                    Some("hg_augmented_manifest_write"),
+                );
                 reemit_root_envelope(
                     ctx,
                     &blobstore_arc,
@@ -1576,8 +1682,22 @@ where
                 .await?
             }
         }
+        Some(HgAugmentedManifestEntry::FileNode(_)) => {
+            bail!("root augmented manifest entry must be a directory")
+        }
         None => {
             // Empty manifest — all files deleted. Create empty augmented manifest.
+            let restricted_paths_enabled = justknobs::eval(
+                "scm/mononoke:enabled_restricted_paths_access_logging",
+                None,
+                Some("hg_augmented_manifest_write"),
+            );
+            let acl_map = Arc::new(
+                acl_root_overlay
+                    .into_iter()
+                    .map(|id| (MPath::ROOT, id))
+                    .collect(),
+            );
             let tree_info = TreeInfo {
                 path: MPath::ROOT,
                 parents: root_parents_indexed,
@@ -1586,7 +1706,7 @@ where
             let (_, root_dir) = create_augmented_tree(
                 ctx.clone(),
                 Arc::clone(&blobstore_arc),
-                Arc::clone(&restricted_paths_arc),
+                restricted_paths_arc,
                 restricted_paths_enabled,
                 acl_map,
                 tree_info,

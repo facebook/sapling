@@ -38,6 +38,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
+use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
@@ -48,6 +49,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SubtreeChange;
@@ -1373,6 +1375,23 @@ async fn derive_augmented_manifest_directly_for_test(
     .await
 }
 
+async fn lookup_augmented_root_child(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root: HgAugmentedManifestId,
+    child: &[u8],
+) -> Result<Option<HgAugmentedManifestEntry>> {
+    root.load(ctx, repo.repo_blobstore())
+        .await?
+        .augmented_manifest
+        .lookup(
+            ctx,
+            repo.repo_blobstore(),
+            &MPathElement::new_from_slice(child)?,
+        )
+        .await
+}
+
 async fn store_augmented_manifest_with_supplied_root(
     ctx: &CoreContext,
     repo: &Repo,
@@ -1430,6 +1449,330 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_root_commit(
     assert!(
         direct_id.load(&ctx, repo.repo_blobstore()).await.is_ok(),
         "directly derived root envelope should be loadable",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_entry(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a root commit with files inside and outside a non-root stage.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("README.md", "hello")
+        .add_file("src/lib.rs", "pub fn value() -> u8 { 1 }")
+        .add_file("src/nested/mod.rs", "pub mod nested {}")
+        .commit()
+        .await?;
+    let canonical_root =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, commit, vec![], (None, None))
+            .await?;
+    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+        .await?
+        .context("fixture must contain src")?;
+
+    // When: deriving only the entry rooted at the non-root stage path.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src")?,
+        vec![],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, commit).await?,
+        vec![],
+        (None, None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: the stage entry is identical to the same entry in canonical direct V2.
+    assert_eq!(stage_entry, Some(expected_entry));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_preserves_absent_parent_position(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: only p2 has an entry at the non-root stage path.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("p1-only", "p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/p2-only", "p2")
+        .commit()
+        .await?;
+    let p1_aug =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, p1, vec![], (None, None)).await?;
+    let p2_aug =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, p2, vec![], (None, None)).await?;
+    assert!(
+        lookup_augmented_root_child(&ctx, &repo, p1_aug, b"src")
+            .await?
+            .is_none(),
+        "fixture p1 must not contain src",
+    );
+    let p2_entry = lookup_augmented_root_child(&ctx, &repo, p2_aug, b"src")
+        .await?
+        .context("fixture p2 must contain src")?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .add_file("src/merged", "merge")
+        .commit()
+        .await?;
+    let canonical_root = derive_augmented_manifest_directly_for_test(
+        &ctx,
+        &repo,
+        merge,
+        vec![p1_aug, p2_aug],
+        (Some(p1), Some(p2)),
+    )
+    .await?;
+    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+        .await?
+        .context("canonical merge must contain src")?;
+
+    // When: deriving the stage with the absent p1 slot preserved.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src")?,
+        vec![None, Some(p2_entry)],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, merge).await?,
+        vec![],
+        (Some(p1), Some(p2)),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: p2 remains p2 and the staged entry matches canonical direct V2.
+    assert_eq!(stage_entry, Some(expected_entry));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_reuses_known_child(fb: FacebookInit) -> Result<()> {
+    // Given: a nested child stage has already produced its augmented entry.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("outside", "outside")
+        .add_file("src/lib.rs", "lib")
+        .add_file("src/generated/output.rs", "generated")
+        .commit()
+        .await?;
+    let file_changes = file_changes_from_bonsai(&ctx, &repo, commit).await?;
+    let known_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src/generated")?,
+        vec![],
+        HashMap::new(),
+        file_changes.clone(),
+        vec![],
+        (None, None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?
+    .context("generated stage must produce an entry")?;
+    let denied_key = match &known_entry {
+        HgAugmentedManifestEntry::DirectoryNode(dir) => {
+            HgAugmentedManifestId::new(dir.treenode).blobstore_key()
+        }
+        HgAugmentedManifestEntry::FileNode(_) => {
+            return Err(anyhow!("generated stage must produce a directory"));
+        }
+    };
+    let denying_blobstore = DenyGetKeyedBlobstore::new(repo.repo_blobstore().clone(), denied_key);
+    let canonical_root =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, commit, vec![], (None, None))
+            .await?;
+    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+        .await?
+        .context("canonical manifest must contain src")?;
+
+    // When: deriving the parent stage with the nested result supplied as known.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        &denying_blobstore,
+        MPath::new("src")?,
+        vec![],
+        HashMap::from([(MPath::new("src/generated")?, Some(known_entry))]),
+        file_changes,
+        vec![],
+        (None, None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: the known child is reused without loading it and output stays canonical.
+    assert_eq!(stage_entry, Some(expected_entry));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_matches_canonical_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: the non-root stage path is itself a file.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("outside", "outside")
+        .add_file("src", "contents")
+        .commit()
+        .await?;
+    let canonical_root =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, commit, vec![], (None, None))
+            .await?;
+    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+        .await?
+        .context("canonical manifest must contain src")?;
+    assert!(
+        matches!(expected_entry, HgAugmentedManifestEntry::FileNode(_)),
+        "canonical src entry must be a file",
+    );
+
+    // When: deriving directly at the file path.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src")?,
+        vec![],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, commit).await?,
+        vec![],
+        (None, None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: the staged file entry matches canonical direct V2.
+    assert_eq!(stage_entry, Some(expected_entry));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_matches_canonical_absence(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a child commit deletes the file at the non-root stage path.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("outside", "outside")
+        .add_file("src", "contents")
+        .commit()
+        .await?;
+    let parent_aug =
+        derive_augmented_manifest_directly_for_test(&ctx, &repo, parent, vec![], (None, None))
+            .await?;
+    let parent_entry = lookup_augmented_root_child(&ctx, &repo, parent_aug, b"src")
+        .await?
+        .context("parent manifest must contain src")?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .delete_file("src")
+        .commit()
+        .await?;
+    let canonical_root = derive_augmented_manifest_directly_for_test(
+        &ctx,
+        &repo,
+        child,
+        vec![parent_aug],
+        (Some(parent), None),
+    )
+    .await?;
+    assert!(
+        lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+            .await?
+            .is_none(),
+        "canonical child must not contain src",
+    );
+
+    // When: deriving the deleted stage from its parent file entry.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src")?,
+        vec![Some(parent_entry)],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, child).await?,
+        vec![],
+        (Some(parent), None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: the stage reports absence rather than inventing a directory.
+    assert_eq!(stage_entry, None);
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_rejects_non_root_copy(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a child copies a file from its p1 inside a non-root stage.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/original", "contents")
+        .commit()
+        .await?;
+    let parent_augmented_manifest_id = derive_parent_aug(&ctx, &repo, parent).await?;
+    let parent_entry =
+        lookup_augmented_root_child(&ctx, &repo, parent_augmented_manifest_id, b"src")
+            .await?
+            .context("fixture must contain parent src")?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file_with_copy_info("src/copied", "contents", (parent, "src/original"))
+        .commit()
+        .await?;
+
+    // When: deriving the child directly at the non-root stage.
+    let error = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        MPath::new("src")?,
+        vec![Some(parent_entry)],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, child).await?,
+        vec![],
+        (Some(parent), None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await
+    .expect_err("non-root direct derivation must reject copy-from changes");
+
+    // Then: the unsupported input fails instead of silently dropping copy metadata.
+    assert_eq!(
+        format!("{error:#}"),
+        "Cannot derive Hg augmented manifest directly at non-root stage src with copy-from change at src/copied",
     );
 
     Ok(())
