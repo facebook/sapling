@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use anyhow::anyhow;
 use borrowed::borrowed;
@@ -133,47 +131,43 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     .fetch_many_edges(ctx, &cs_ids, prefetch)
                     .await?;
 
-                let property_map = stream::iter(frontier_edges.clone())
-                    .map(|(cs_id, edges)| {
+                let decisions = stream::iter(frontier_edges)
+                    .map(|(_cs_id, edges)| {
                         borrowed!(property);
-                        async move { anyhow::Ok((cs_id, property(edges.node()).await?)) }
+                        async move {
+                            if property(edges.node()).await? {
+                                return anyhow::Ok((Some(edges.node().cs_id), vec![]));
+                            }
+
+                            let next_nodes = match edges
+                                .lowest_skip_tree_edge_with::<E, _, _>(|node| {
+                                    borrowed!(property);
+                                    async move { Ok(!property(node).await?) }
+                                })
+                                .await?
+                                .copied()
+                            {
+                                Some(ancestor) => vec![ancestor],
+                                None => edges.parents::<E>().copied().collect(),
+                            };
+                            anyhow::Ok((None, next_nodes))
+                        }
                     })
-                    .buffered(100)
-                    .try_collect::<HashMap<_, _>>()
+                    .buffer_unordered(100)
+                    .try_collect::<Vec<(Option<ChangesetId>, Vec<ChangesetNode>)>>()
                     .await?;
 
                 let mut property_frontier: Vec<_> = Default::default();
 
-                for (cs_id, edges) in frontier_edges {
-                    if *property_map.get(&cs_id).ok_or_else(|| {
-                        anyhow!(
-                            "Missing changeset id {cs_id} from property_map (in ancestors_frontier)"
-                        )
-                    })? {
-                        property_frontier.push(edges.node().cs_id);
-                    } else {
-                        let lowest_ancestor = edges
-                            .lowest_skip_tree_edge_with::<E, _, _>(|node| {
-                                borrowed!(property);
-                                async move { Ok(!property(node).await?) }
-                            })
-                            .await?;
-                        match lowest_ancestor {
-                            Some(ancestor) => {
-                                frontier
-                                    .entry(ancestor.generation::<E>())
-                                    .or_default()
-                                    .insert(ancestor.cs_id);
-                            }
-                            None => {
-                                for parent in edges.parents::<E>() {
-                                    frontier
-                                        .entry(parent.generation::<E>())
-                                        .or_default()
-                                        .insert(parent.cs_id);
-                                }
-                            }
-                        }
+                for (property_match, next_nodes) in decisions {
+                    if let Some(cs_id) = property_match {
+                        property_frontier.push(cs_id);
+                    }
+                    for node in next_nodes {
+                        frontier
+                            .entry(node.generation::<E>())
+                            .or_default()
+                            .insert(node.cs_id);
                     }
                 }
 
