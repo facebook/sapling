@@ -1504,6 +1504,73 @@ def hyperlink(context, mapping, args):
     return title
 
 
+@dataclass(slots=True)
+class _SummaryDir:
+    # None means this directory already reached the limit, so descent stopped.
+    children: Optional[Dict[str, "_SummaryDir"]] = field(default_factory=dict)
+    files: List[str] = field(default_factory=list)
+    # Descendant files, excluding files directly in this directory.
+    count: int = 0
+
+
+class _PathSummary:
+    def __init__(self, limit):
+        self.root = _SummaryDir()
+        self.limit = limit
+
+    def add(self, path):
+        target = self.root
+        elems = path.split("/")
+        for elem in elems[:-1]:
+            target.count += 1
+            if target.children is None or len(target.children) == self.limit:
+                # Deeper names can no longer affect this directory's summary.
+                target.children = None
+                return
+            if elem not in target.children:
+                target.children[elem] = _SummaryDir()
+            target = target.children[elem]
+        target.files.append(elems[-1])
+
+    def buildchildren(self, limit, directory, prefix):
+        # Reserve one line per child and, if needed, one for direct files.
+        havefiles = 1 if directory.files else 0
+        if directory.children is None or len(directory.children) + havefiles > limit:
+            total = directory.count + len(directory.files)
+            return [f"{prefix}… ({total} files)"]
+
+        # Each child already owns one line; distribute remaining lines recursively.
+        items = []
+        surplus = limit - len(directory.children) - havefiles
+        for childelem, childdir in sorted(directory.children.items()):
+            childlimit = surplus + 1
+            childprefix = prefix + childelem + "/"
+            childitems = self.buildchildren(childlimit, childdir, childprefix)
+            surplus -= len(childitems) - 1
+            items.extend(childitems)
+
+        # Spend any remaining lines on files directly in this directory.
+        filecount = len(directory.files)
+        if surplus + 1 >= filecount:
+            items.extend(f"{prefix}{f}" for f in directory.files)
+        elif prefix:
+            items.append(f"{prefix} ({filecount} files)")
+        else:
+            items.append(f"({filecount} files)")
+
+        return items
+
+    def build(self):
+        return self.buildchildren(self.limit, self.root, "")
+
+
+def summarizepaths(files, limit=5):
+    summary = _PathSummary(limit)
+    for path in files:
+        summary.add(path)
+    return summary.build()
+
+
 @templatefunc("pathsummary(files, limit)")
 def pathsummary(context, mapping, args):
     """List of files.  Returns a summary of those files' paths.
@@ -1517,77 +1584,6 @@ def pathsummary(context, mapping, args):
     summarized as `path/to/top/dir/… (70 files)`.
     """
 
-    @dataclass(slots=True)
-    class SummaryDir:
-        # Subdirectories of this directory.  If `None`, then the directory has reached the limit already.
-        children: Optional[Dict[str, "SummaryDir"]] = field(default_factory=dict)
-
-        # Files in this directory.
-        files: List[str] = field(default_factory=list)
-
-        # Count of descendant files (excluding the files directly in this directory)
-        count: int = 0
-
-    class Summary:
-        def __init__(self, limit):
-            self.root = SummaryDir()
-            self.limit = limit
-
-        def add(self, path):
-            """add a file to the summary"""
-            target = self.root
-            elems = path.split("/")
-            for elem in elems[:-1]:
-                target.count += 1
-                if target.children is None or len(target.children) == self.limit:
-                    # This path has already reached the limit, so no need to go further.
-                    target.children = None
-                    return
-                if elem not in target.children:
-                    target.children[elem] = SummaryDir()
-                target = target.children[elem]
-            target.files.append(elems[-1])
-
-        def buildchildren(self, limit, directory, prefix):
-            # See if we have enough lines to show all children plus a summary
-            # line for the files inside this directory.
-            havefiles = 1 if directory.files else 0
-            if (
-                directory.children is None
-                or len(directory.children) + havefiles > limit
-            ):
-                # We do not have enough lines to show all of our children.
-                # Summarise this whole tree in a single line.
-                total = directory.count + len(directory.files)
-                return [f"{prefix}… ({total} files)"]
-
-            # We have sufficient lines for our own files and each of our
-            # children, plus potentially a surplus.
-            items = []
-            surplus = limit - len(directory.children) - havefiles
-            for childelem, childdir in sorted(directory.children.items()):
-                # Limit the child to the remaining surplus, plus the 1 line we
-                # reserved for it.
-                childlimit = surplus + 1
-                childprefix = prefix + childelem + "/"
-                childitems = self.buildchildren(childlimit, childdir, childprefix)
-                surplus -= len(childitems) - 1
-                items.extend(childitems)
-            # Now add the files in this directory, one per line if there is
-            # enough surplus.
-            filecount = len(directory.files)
-            if surplus + 1 >= filecount:
-                items.extend(f"{prefix}{f}" for f in directory.files)
-            elif prefix:
-                items.append(f"{prefix} ({filecount} files)")
-            else:
-                items.append(f"({filecount} files)")
-
-            return items
-
-        def build(self):
-            return self.buildchildren(self.limit, self.root, "")
-
     if len(args) not in (1, 2):
         raise error.ParseError(
             "pathsummary expects one or two arguments, got %s" % len(args)
@@ -1596,10 +1592,7 @@ def pathsummary(context, mapping, args):
     limit = 5
     if len(args) == 2:
         limit = evalinteger(context, mapping, args[1])
-    summary = Summary(limit)
-    for f in files:
-        summary.add(f)
-    return templatekw.hybridlist(summary.build(), "path")
+    return templatekw.hybridlist(summarizepaths(files, limit), "path")
 
 
 # methods to interpret function arguments or inner expressions (e.g. {_(x)})
