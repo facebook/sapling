@@ -86,11 +86,6 @@ templatekeyword = registrar.templatekeyword()
 autopullpredicate = registrar.autopullpredicate()
 
 
-DIFFERENTIAL_REGEX: Pattern[str] = re.compile(
-    "Differential Revision: http.+?/"  # Line start, URL
-    "D(?P<id>[0-9]+)"  # Differential ID, just numeric part
-)
-
 DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "Commit r"  # Prefix
     "(?P<callsign>[A-Z]{1,})"  # Callsign
@@ -1264,10 +1259,7 @@ def localgetdiff(repo, diffid):
 
     def check(repo, rev, diffid):
         changectx = repo[rev]
-        desc = changectx.description()
-        match = DIFFERENTIAL_REGEX.search(desc)
-
-        if match and match.group("id") == diffid:
+        if diffprops.parserevfromcommitmsg(changectx.description()) == diffid:
             return changectx.node()
         else:
             return None

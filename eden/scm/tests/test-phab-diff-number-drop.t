@@ -158,6 +158,25 @@ Ordinary rebase preserves the Differential Revision across repeated rebases:
   $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
   [D12345] source
 
+A bare D number binds the commit the same way jf parses it:
+
+  $ newclientrepo
+  $ echo bare > bare
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'bare\n\nDifferential Revision: D12345')"
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -m "drops bare diff number"
+  abort: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  [255]
+
+Indented or quoted Differential Revision lines are not bindings, matching jf:
+
+  $ sl amend -m "$(printf 'bare\n\nSummary: quoting another commit message:\n  Differential Revision: https://phabricator.intern.facebook.com/D99999\n\nDifferential Revision: D12345')"
+  * -> * "bare" (glob)
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
 Agent: fold dropping every predecessor Differential Revision should abort:
 
   $ newclientrepo
