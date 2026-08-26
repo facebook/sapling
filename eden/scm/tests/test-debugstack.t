@@ -486,6 +486,20 @@ Import stack:
         $ cat dir2/A
         A (no-eol)
 
+      # Reproduce a split stack that retains its Differential Revision.
+
+        $ newrepo
+        $ CODING_AGENT_METADATA=id=test_agent sl debugimportstack --config extensions.fbcodereview= <<'EOS'
+        > [["commit", {"text": "original\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345", "mark": ":1"}],
+        >  ["commit", {"text": "first split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345", "mark": ":2", "predecessors": [":1"]}],
+        >  ["commit", {"text": "second split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345", "mark": ":3", "parents": [":2"], "predecessors": [":1"], "operation": "split"}],
+        >  ["goto", {"mark": ":3"}]]
+        > EOS
+        {":1": "*", ":2": "*", ":3": "*"} (glob)
+        $ sl log -r '.^ + .' -T '{desc|firstline}\n'
+        first split
+        second split
+
       # Error cases.
 
         $ sl debugimportstack << EOS
@@ -511,5 +525,3 @@ Import stack:
         > EOS
         {"error": "'mark'"}
         [1]
-
-

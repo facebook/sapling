@@ -23,6 +23,7 @@ from sapling import (
     hintutil,
     mutation,
     registrar,
+    rewriteutil,
     scmutil,
     visibility,
 )
@@ -137,31 +138,32 @@ def split(ui, repo, *revs, **opts):
         opts["edit"] = True
         opts["_commitmutinfofunc"] = mutinfo
         try:
-            while haschanges():
-                pats = ()
-                with repo.transaction("split"):
-                    cmdutil.dorecord(
-                        ui,
-                        repo,
-                        commands.commit,
-                        "commit",
-                        False,
-                        recordfilter,
-                        *pats,
-                        **opts,
-                    )
-                # TODO: Does no seem like the best way to do this
-                # We should make dorecord return the newly created commit
-                newcommits.append(repo["."])
-                if haschanges():
-                    if ui.prompt("Done splitting? [yN]", default="n") == "y":
-                        shouldrecordmutation[0] = True
-                        with repo.transaction("split"):
-                            commands.commit(ui, repo, **opts)
-                        newcommits.append(repo["."])
-                        break
-                else:
-                    ui.status(_("no more change to split\n"))
+            with rewriteutil.splitting(repo):
+                while haschanges():
+                    pats = ()
+                    with repo.transaction("split"):
+                        cmdutil.dorecord(
+                            ui,
+                            repo,
+                            commands.commit,
+                            "commit",
+                            False,
+                            recordfilter,
+                            *pats,
+                            **opts,
+                        )
+                    # TODO: Does no seem like the best way to do this
+                    # We should make dorecord return the newly created commit
+                    newcommits.append(repo["."])
+                    if haschanges():
+                        if ui.prompt("Done splitting? [yN]", default="n") == "y":
+                            shouldrecordmutation[0] = True
+                            with repo.transaction("split"):
+                                commands.commit(ui, repo, **opts)
+                            newcommits.append(repo["."])
+                            break
+                    else:
+                        ui.status(_("no more change to split\n"))
         except Exception:
             # Rollback everything
             hg.updaterepo(repo, r, True)  # overwrite=True

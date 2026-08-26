@@ -371,7 +371,15 @@ def _import(repo, actions):
     wnode = repo["."].node()
     marks = Marks(wnode)
 
-    with repo.wlock(), repo.lock(), repo.transaction("importstack"):
+    # Imported mutations may reproduce diff bindings across replacement commits.
+    with (
+        repo.ui.configoverride(
+            {("fbcodereview", "allow-diff-revision-drop"): True}, "importstack"
+        ),
+        repo.wlock(),
+        repo.lock(),
+        repo.transaction("importstack"),
+    ):
         # Create commits.
         commit_infos = [action[1] for action in actions if action[0] in "commit"]
         _create_commits(repo, commit_infos, marks)

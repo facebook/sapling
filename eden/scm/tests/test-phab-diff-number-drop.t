@@ -225,7 +225,7 @@ Rebase --keep can currently copy a Differential Revision:
   [D12345]
   [D12345]
 
-Split currently copies one Differential Revision to every successor:
+Agent: split copying one Differential Revision to every successor should abort:
 
   $ newclientrepo
   $ echo first > first
@@ -237,17 +237,79 @@ Split currently copies one Differential Revision to every successor:
   > n
   > y
   > EOF
-  hint[split-phabricator]: some split commits have the same Phabricator Diff associated with them
-  hint[hint-ack]: use 'sl hint --ack split-phabricator' to silence these hints
+  transaction abort!
+  rollback completed
+  abort: commit rewrite creates duplicate phabricator diff number(s) 'D12345'
+  (keep the Differential Revision line on exactly one successor and remove it from the other successor commit messages)
+  [255]
   $ sl log -r '.^ + .' -T '{desc}\n---\n'
   to split
   
   Differential Revision: https://phabricator.intern.facebook.com/D12345
   ---
-  to split
-  
-  Differential Revision: https://phabricator.intern.facebook.com/D12345
-  ---
+
+A split may retain the Differential Revision on exactly one successor:
+
+  $ cat > edit-second-split-message.py <<'EOF'
+  > import sys
+  > from pathlib import Path
+  > state = Path("split-message-edited")
+  > if state.exists():
+  >     message = Path(sys.argv[1])
+  >     lines = message.read_text().splitlines()
+  >     message.write_text(
+  >         "\n".join(
+  >             line
+  >             for line in lines
+  >             if not line.startswith("Differential Revision:")
+  >         )
+  >         + "\n"
+  >     )
+  > state.touch()
+  > EOF
+  $ HGEDITOR="$PYTHON edit-second-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  $ sl log -r '.^ + .' -T '[{phabdiff}]\n'
+  [D12345]
+  []
+
+Agent: single-successor split dropping the Differential Revision should abort:
+
+  $ newclientrepo
+  $ echo first > first
+  $ echo second > second
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'to split once\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ cat > drop-split-message.py <<'EOF'
+  > import sys
+  > from pathlib import Path
+  > message = Path(sys.argv[1])
+  > lines = message.read_text().splitlines()
+  > message.write_text(
+  >     "\n".join(
+  >         line
+  >         for line in lines
+  >         if not line.startswith("Differential Revision:")
+  >     )
+  >     + "\n"
+  > )
+  > EOF
+  $ HGEDITOR="$PYTHON drop-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  > y
+  > y
+  > y
+  > y
+  > EOF
+  transaction abort!
+  rollback completed
+  abort: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  [255]
+  $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
+  [D12345] to split once
 
 Agent: rebase collapse dropping every predecessor Differential Revision should abort:
 

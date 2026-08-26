@@ -10,11 +10,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from contextlib import contextmanager
+
 from bindings import agentdetect
 
 from . import error, mutation, node, slacl
 from .i18n import _
 from .node import short
+
+_SPLIT_IN_PROGRESS = "rewriteutil.split-in-progress"
 
 
 def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
@@ -71,6 +75,23 @@ def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
                     raise error.Abort(_("aborted by user"))
 
 
+@contextmanager
+def splitting(repo):
+    # Intermediate split commits lack mutation metadata. Mark the split in
+    # progress so hooks can defer validation until the terminal split commit.
+    if _SPLIT_IN_PROGRESS in repo.volatile_state:
+        raise error.ProgrammingError("split is already in progress")
+    repo.volatile_state[_SPLIT_IN_PROGRESS] = True
+    try:
+        yield
+    finally:
+        repo.volatile_state.pop(_SPLIT_IN_PROGRESS)
+
+
+def issplitting(repo):
+    return _SPLIT_IN_PROGRESS in repo.volatile_state
+
+
 def _localcontexts(repo, nodes):
     return [
         repo[commit_node]
@@ -84,4 +105,7 @@ def commitcheck(repo, ctx):
     predecessors = _localcontexts(
         repo, mutation.nodesfrominfo(mutinfo.get("mutpred")) or []
     )
-    return predecessors, []
+    split_successors = _localcontexts(
+        repo, mutation.nodesfrominfo(mutinfo.get("mutsplit")) or []
+    )
+    return predecessors, split_successors

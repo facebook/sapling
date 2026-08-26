@@ -41,6 +41,7 @@ import re
 import socket
 import ssl
 import sys
+from collections import Counter
 from typing import Any, List, Optional, Pattern, Set, Sized
 
 from bindings import agentdetect
@@ -159,18 +160,36 @@ def _validate_commit_set(repo, successors, predecessors):
         for predecessor in predecessors
         for revision in _commit_revisions(predecessor)
     }
-    successor_revisions = {
+    successor_revisions = [
         revision
         for successor in successors
         for revision in _commit_revisions(successor)
-    }
+    ]
+    successor_revision_set = set(successor_revisions)
     if not predecessor_revisions:
         return
 
     if successor_revisions:
+        if len(successors) > 1:
+            duplicates = {
+                revision
+                for revision, count in Counter(successor_revisions).items()
+                if count > 1
+            }
+            if duplicates:
+                _confirm_message_change(
+                    repo,
+                    _("commit rewrite creates duplicate phabricator diff number(s) %s")
+                    % _format_diff_numbers(duplicates),
+                    _(
+                        "keep the Differential Revision line on exactly one successor "
+                        "and remove it from the other successor commit messages"
+                    ),
+                )
+                return
         if (
-            len(successor_revisions) == 1
-            and successor_revisions <= predecessor_revisions
+            len(successor_revision_set) == 1
+            and successor_revision_set <= predecessor_revisions
         ):
             return
         _confirm_message_change(
@@ -178,7 +197,7 @@ def _validate_commit_set(repo, successors, predecessors):
             _("commit rewrite changes phabricator diff number(s) from %s to %s")
             % (
                 _format_diff_numbers(predecessor_revisions),
-                _format_diff_numbers(successor_revisions),
+                _format_diff_numbers(successor_revision_set),
             ),
             _(
                 "keep exactly one predecessor Differential Revision line; "
@@ -220,7 +239,10 @@ def validate_commit(orig, repo, ctx):
         # should not block automation like `jf unlink`
         return predecessors, split_successors
 
-    _validate_commit_set(repo, [ctx], predecessors)
+    if rewriteutil.issplitting(repo) and not predecessors:
+        return predecessors, split_successors
+
+    _validate_commit_set(repo, [*split_successors, ctx], predecessors)
     return predecessors, split_successors
 
 
