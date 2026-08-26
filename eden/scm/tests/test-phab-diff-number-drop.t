@@ -1,5 +1,5 @@
 
-  $ enable amend morestatus
+  $ enable amend fbcodereview histedit morestatus rebase
   $ setconfig tweakdefaults.showupdated=true
 
 Create a commit with a Differential Revision line:
@@ -119,3 +119,118 @@ New commit without Differential Revision should not be affected:
   $ sl commit -m "plain commit without diff number"
   $ sl amend -m "updated plain commit"
   3e03e53c536f -> cc642c658d2a "updated plain commit"
+
+Fold currently permits every predecessor Differential Revision to be dropped:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ echo first > first
+  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ echo second > second
+  $ sl commit -Aqm second
+  $ CODING_AGENT_METADATA=id=test_agent sl fold --from .^ -m folded >/dev/null
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+Fresh commit can currently reuse a Differential Revision:
+
+  $ newclientrepo
+  $ echo first > first
+  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ echo second > second
+  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ sl log -r '.^ + .' -T '[{phabdiff}]\n'
+  [D12345]
+  [D12345]
+
+Rewriting one existing duplicate currently succeeds:
+
+  $ echo amended >> second
+  $ CODING_AGENT_METADATA=id=test_agent sl amend
+  * -> * "second" (glob)
+  $ sl log -r '.^ + .' -T '[{phabdiff}]\n'
+  [D12345]
+  [D12345]
+
+HGPLAIN can create a duplicate Differential Revision:
+
+  $ echo plain > plain
+  $ HGPLAIN=1 CODING_AGENT_METADATA=id=test_agent sl commit -Aqm "$(printf 'plain\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ sl log -r '.~2 + .^ + .' -T '[{phabdiff}]\n'
+  [D12345]
+  [D12345]
+  [D12345]
+
+Rebase --keep can currently copy a Differential Revision:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo source > source
+  $ sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ SOURCE=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo destination > destination
+  $ sl commit -Aqm destination
+  $ DESTINATION=$(sl log -r . -T '{node}')
+  $ sl rebase --keep -r $SOURCE -d $DESTINATION >/dev/null
+  $ COPY=$(sl log -r "children($DESTINATION)" -T '{node}')
+  $ sl log -r "$SOURCE + $COPY" -T '[{phabdiff}]\n'
+  [D12345]
+  [D12345]
+
+Split currently copies one Differential Revision to every successor:
+
+  $ newclientrepo
+  $ echo first > first
+  $ echo second > second
+  $ sl commit -Aqm "$(printf 'to split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  hint[split-phabricator]: some split commits have the same Phabricator Diff associated with them
+  hint[hint-ack]: use 'sl hint --ack split-phabricator' to silence these hints
+  $ sl log -r '.^ + .' -T '{desc}\n---\n'
+  to split
+  
+  Differential Revision: https://phabricator.intern.facebook.com/D12345
+  ---
+  to split
+  
+  Differential Revision: https://phabricator.intern.facebook.com/D12345
+  ---
+
+Rebase collapse currently permits every predecessor Differential Revision to be dropped:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ echo first > first
+  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ echo second > second
+  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase --collapse -s .^ -d .~2 -m collapsed >/dev/null
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+Histedit mess currently permits the Differential Revision to be dropped:
+
+  $ newclientrepo
+  $ echo first > first
+  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ cat > drop-message.py <<'EOF'
+  > import sys
+  > with open(sys.argv[1], "wb") as message_file:
+  >     message_file.write(b"changed\n")
+  > EOF
+  $ NODE=$(sl log -r . -T '{node}')
+  $ HGEDITOR="$PYTHON drop-message.py" CODING_AGENT_METADATA=id=test_agent sl histedit --commands - <<EOF >/dev/null
+  > mess $NODE
+  > EOF
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
