@@ -13,14 +13,14 @@ Agent: amend -m dropping diff number should abort:
 
   $ CODING_AGENT_METADATA=id=test_agent sl amend -m "new message without diff number"
   abort: commit message drops phabricator diff number 'D12345'
-  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   [255]
 
 Agent: commit --amend -m dropping diff number should abort:
 
   $ CODING_AGENT_METADATA=id=test_agent sl ci --amend -m "ci amend message without diff number"
   abort: commit message drops phabricator diff number 'D12345'
-  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   [255]
 
 Agent: commit --amend -l dropping diff number should abort:
@@ -28,14 +28,14 @@ Agent: commit --amend -l dropping diff number should abort:
   $ printf 'commit amend logfile message without diff number\n' > commit-message.txt
   $ CODING_AGENT_METADATA=id=test_agent sl commit --amend -l commit-message.txt
   abort: commit message drops phabricator diff number 'D12345'
-  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   [255]
 
 Agent: metaedit -m dropping diff number should abort:
 
   $ CODING_AGENT_METADATA=id=test_agent sl metaedit -m "another message without diff number"
   abort: commit message drops phabricator diff number 'D12345'
-  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   [255]
 
 Interactive user choosing No should abort (amend):
@@ -98,6 +98,13 @@ Metaedit -m preserving Differential Revision should succeed:
   $ sl metaedit -m "$(printf 'another message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   334772907fae -> ded7f3602a29 "another message"
 
+Agent: changing to an unrelated Differential Revision should abort:
+
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -m "$(printf 'unrelated diff\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  abort: commit rewrite changes phabricator diff number(s) from 'D12345' to 'D23456'
+  (keep exactly one predecessor Differential Revision line; to change the association, run 'jf unlink' before the rewrite and 'jf link D<number>' afterward)
+  [255]
+
 Config override should allow dropping:
 
   $ sl amend --config fbcodereview.allow-diff-revision-drop=true -m "message without diff number"
@@ -120,7 +127,28 @@ New commit without Differential Revision should not be affected:
   $ sl amend -m "updated plain commit"
   3e03e53c536f -> cc642c658d2a "updated plain commit"
 
-Fold currently permits every predecessor Differential Revision to be dropped:
+Ordinary rebase preserves the Differential Revision across repeated rebases:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo dest1 > dest1
+  $ sl commit -Aqm dest1
+  $ DEST1=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo dest2 > dest2
+  $ sl commit -Aqm dest2
+  $ DEST2=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo source > source
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase -q -r . -d $DEST1
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase -q -r . -d $DEST2
+  $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
+  [D12345] source
+
+Agent: fold dropping every predecessor Differential Revision should abort:
 
   $ newclientrepo
   $ echo base > base
@@ -130,8 +158,24 @@ Fold currently permits every predecessor Differential Revision to be dropped:
   $ echo second > second
   $ sl commit -Aqm second
   $ CODING_AGENT_METADATA=id=test_agent sl fold --from .^ -m folded >/dev/null
+  abort: commit message drops phabricator diff number 'D12345'
+  (choose one of the predecessor diff numbers ('D12345') for the final commit; to keep no diff number after folding, collapsing, or editing history, run 'jf unlink' before the rewrite)
+  [255]
+  $ sl log -r .^ -T '[{phabdiff}]\n'
+  [D12345]
+
+Fold may deliberately retain one Differential Revision from two linked predecessors:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ echo first > first
+  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ echo second > second
+  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  $ CODING_AGENT_METADATA=id=test_agent sl fold --from .^ --reuse-message .^ >/dev/null
   $ sl log -r . -T '[{phabdiff}]\n'
-  []
+  [D12345]
 
 Fresh commit can currently reuse a Differential Revision:
 
@@ -205,7 +249,7 @@ Split currently copies one Differential Revision to every successor:
   Differential Revision: https://phabricator.intern.facebook.com/D12345
   ---
 
-Rebase collapse currently permits every predecessor Differential Revision to be dropped:
+Agent: rebase collapse dropping every predecessor Differential Revision should abort:
 
   $ newclientrepo
   $ echo base > base
@@ -214,11 +258,26 @@ Rebase collapse currently permits every predecessor Differential Revision to be 
   $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
   $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  $ FIRST=$(sl log -r .^ -T '{node}')
+  $ SECOND=$(sl log -r . -T '{node}')
   $ CODING_AGENT_METADATA=id=test_agent sl rebase --collapse -s .^ -d .~2 -m collapsed >/dev/null
-  $ sl log -r . -T '[{phabdiff}]\n'
-  []
+  abort: commit rewrite loses phabricator diff number(s) 'D12345', 'D23456'
+  (choose one of the predecessor diff numbers ('D12345', 'D23456') for the final commit; to keep no diff number after folding, collapsing, or editing history, run 'jf unlink' before the rewrite)
+  [255]
+  $ sl log -r "$FIRST + $SECOND" -T '[{phabdiff}]\n'
+  [D12345]
+  [D23456]
+  $ sl rebase --abort
+  no remote bookmarks, cleanup skipped.
+  rebase aborted
 
-Histedit mess currently permits the Differential Revision to be dropped:
+Rebase collapse may deliberately retain either predecessor Differential Revision:
+
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase --collapse -s .^ -d .~2 -m "$(printf 'collapsed\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')" >/dev/null
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D23456]
+
+Agent: histedit mess dropping the Differential Revision should abort:
 
   $ newclientrepo
   $ echo first > first
@@ -232,5 +291,62 @@ Histedit mess currently permits the Differential Revision to be dropped:
   $ HGEDITOR="$PYTHON drop-message.py" CODING_AGENT_METADATA=id=test_agent sl histedit --commands - <<EOF >/dev/null
   > mess $NODE
   > EOF
+  abort: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  [255]
+  $ sl log -r $NODE -T '[{phabdiff}]\n'
+  [D12345]
+
+Agent and human modes can warn instead of blocking or prompting:
+
+  $ newclientrepo
+  $ echo first > first
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config fbcodereview.bad-diff-id-agent-mode=warn -m "agent warning"
+  warning: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  * -> * "agent warning" (glob)
   $ sl log -r . -T '[{phabdiff}]\n'
   []
+
+Unrecognized agent and human modes should ignore the guard:
+
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  * -> * "restored" (glob)
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config fbcodereview.bad-diff-id-agent-mode=off -m "agent mode off"
+  * -> * "agent mode off" (glob)
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored again\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  * -> * "restored again" (glob)
+  $ sl amend --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=false -m "human mode false"
+  * -> * "human mode false" (glob)
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored for warning\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  * -> * "restored for warning" (glob)
+  $ sl amend --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=warn -m "human warning"
+  warning: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  * -> * "human warning" (glob)
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+Humans may opt into abort mode and agents may opt into prompt mode:
+
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored for abort\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  * -> * "restored for abort" (glob)
+  $ sl amend --config fbcodereview.bad-diff-id-human-mode=abort -m "human abort"
+  abort: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  [255]
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config ui.interactive=true --config fbcodereview.bad-diff-id-agent-mode=prompt -m "agent prompt" <<EOF
+  > n
+  > EOF
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  n
+  abort: aborted by user
+  [255]
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]

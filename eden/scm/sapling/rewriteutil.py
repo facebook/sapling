@@ -10,7 +10,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-
 from bindings import agentdetect
 
 from . import error, mutation, node, slacl
@@ -70,3 +69,19 @@ def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
                 )
                 if choice != 0:
                     raise error.Abort(_("aborted by user"))
+
+
+def _localcontexts(repo, nodes):
+    return [
+        repo[commit_node]
+        for commit_node in repo.changelog.filternodes(nodes, local=True)
+    ]
+
+
+def commitcheck(repo, ctx):
+    """Run extension checks for one commit being written."""
+    mutinfo = ctx.mutinfo() or {}
+    predecessors = _localcontexts(
+        repo, mutation.nodesfrominfo(mutinfo.get("mutpred")) or []
+    )
+    return predecessors, []

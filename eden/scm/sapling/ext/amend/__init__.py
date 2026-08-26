@@ -356,10 +356,6 @@ def amend(ui, repo, *pats, **opts):
     # contents have been copied into opts['message'] by logmessage
     opts["logfile"] = ""
 
-    from sapling.ext.fbcodereview import validate_message_change
-
-    validate_message_change(repo, old.description(), opts["message"])
-
     oldbookmarks = old.bookmarks()
     with repo.wlock(), repo.lock():
         node = cmdutil.amend(ui, repo, old, {}, pats, opts)

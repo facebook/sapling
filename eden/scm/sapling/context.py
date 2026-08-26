@@ -1529,7 +1529,7 @@ class committablectx(basectx):
         return str(self).encode()
 
     def __str__(self):
-        return str(self._parents[0]) + "+"
+        return (str(self._parents[0]) if self._parents else "<no parent>") + "+"
 
     def __nonzero__(self):
         return True

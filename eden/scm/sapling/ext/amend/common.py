@@ -243,10 +243,6 @@ def metarewrite(repo, old, newbases, commitopts):
         if not message:
             message = old.description()
 
-        from sapling.ext.fbcodereview import validate_message_change
-
-        validate_message_change(repo, old.description(), message)
-
         user = commitopts.get("user") or old.user()
         date = commitopts.get("date") or None  # old.date()
         extra = dict(commitopts.get("extra", old.extra()))

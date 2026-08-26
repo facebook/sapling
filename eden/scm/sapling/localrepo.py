@@ -62,6 +62,7 @@ from . import (
     repository,
     revset,
     revsetlang,
+    rewriteutil,
     scmutil,
     signing,
     smallcommitmetadata,
@@ -2822,6 +2823,7 @@ class localrepository:
         user = ctx.user()
 
         isgit = git.isgitformat(self)
+        rewriteutil.commitcheck(self, ctx)
         lock = self.lock()
         try:
             tr = self.transaction("commit")

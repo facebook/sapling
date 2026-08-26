@@ -27,6 +27,12 @@ Config::
     [fbcodereview]
     # Whether to automatically hide landed draft commits after "pull".
     hide-landed-commits = true
+    # How invalid diff IDs are handled for agents: abort, prompt, or warn.
+    # Other values ignore the guard.
+    bad-diff-id-agent-mode = abort
+    # How invalid diff IDs are handled for humans: abort, prompt, or warn.
+    # Other values ignore the guard.
+    bad-diff-id-human-mode = prompt
 """
 
 import http.client
@@ -51,6 +57,7 @@ from sapling import (
     node,
     registrar,
     revset,
+    rewriteutil,
     scmutil,
     smartset,
     templatekw,
@@ -104,39 +111,117 @@ svnrevre: Pattern[str] = re.compile(r"^r[A-Z]+(\d+)$")
 phabhashre: Pattern[str] = re.compile(r"^r([A-Z]+)([0-9a-f]{12,40})$")
 
 
-def validate_message_change(repo, old_desc, new_desc):
-    """Abort or prompt if new commit message drops a Differential Revision line present in old.
+def _bad_diff_id_mode(repo):
+    if agentdetect.is_agent():
+        mode = repo.ui.config("fbcodereview", "bad-diff-id-agent-mode", "abort")
+    else:
+        mode = repo.ui.config("fbcodereview", "bad-diff-id-human-mode", "prompt")
+    # Unrecognized values (e.g. "off") disable the guard so emergency
+    # rollback configs fail open.
+    return mode if mode in ("abort", "warn", "prompt") else "ignore"
 
-    - If running as an agent, abort unconditionally.
-    - Otherwise, prompt the user to confirm whether to proceed.
-    """
-    if repo.ui.configbool("fbcodereview", "allow-diff-revision-drop"):
+
+def _confirm_message_change(repo, message, hint=None):
+    if hint is None:
+        hint = _(
+            "use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff"
+        )
+    mode = _bad_diff_id_mode(repo)
+    if mode == "ignore":
         return
+    if mode == "warn":
+        repo.ui.warn(_("warning: %s\n(%s)\n") % (message, hint))
+        return
+    if mode == "abort":
+        raise error.Abort(message, hint=hint)
+
+    # Default to proceeding so scripted or non-interactive human invocations
+    # keep working; the prompt is a speed bump, not a wall.
+    choice = repo.ui.promptchoice(
+        _("%s, proceed (Yn)? $$ &Yes $$ &No") % message,
+        default=0,
+    )
+    if choice != 0:
+        raise error.Abort(_("aborted by user"))
+
+
+def _format_diff_numbers(revisions):
+    return ", ".join("'D%s'" % revision for revision in sorted(revisions, key=int))
+
+
+def _commit_revisions(ctx):
+    return diffprops.diffrevisionregex.findall(ctx.description())
+
+
+def _validate_commit_set(repo, successors, predecessors):
+    predecessor_revisions = {
+        revision
+        for predecessor in predecessors
+        for revision in _commit_revisions(predecessor)
+    }
+    successor_revisions = {
+        revision
+        for successor in successors
+        for revision in _commit_revisions(successor)
+    }
+    if not predecessor_revisions:
+        return
+
+    if successor_revisions:
+        if (
+            len(successor_revisions) == 1
+            and successor_revisions <= predecessor_revisions
+        ):
+            return
+        _confirm_message_change(
+            repo,
+            _("commit rewrite changes phabricator diff number(s) from %s to %s")
+            % (
+                _format_diff_numbers(predecessor_revisions),
+                _format_diff_numbers(successor_revisions),
+            ),
+            _(
+                "keep exactly one predecessor Differential Revision line; "
+                "to change the association, run 'jf unlink' before the rewrite "
+                "and 'jf link D<number>' afterward"
+            ),
+        )
+        return
+
+    if len(predecessor_revisions) == 1:
+        message = _("commit message drops phabricator diff number %s") % (
+            _format_diff_numbers(predecessor_revisions)
+        )
+    else:
+        message = _("commit rewrite loses phabricator diff number(s) %s") % (
+            _format_diff_numbers(predecessor_revisions)
+        )
+    hint = None
+    if len(predecessors) > 1 or len(predecessor_revisions) > 1:
+        hint = _(
+            "choose one of the predecessor diff numbers (%s) for the final commit; "
+            "to keep no diff number after folding, collapsing, or editing history, "
+            "run 'jf unlink' before the rewrite"
+        ) % _format_diff_numbers(predecessor_revisions)
+    else:
+        hint = _(
+            "run 'jf unlink' to intentionally remove the associated diff; use "
+            "'jf template' to edit other commit message fields"
+        )
+    _confirm_message_change(repo, message, hint=hint)
+
+
+def validate_commit(orig, repo, ctx):
+    """Enforce Differential Revision invariants for a commit being written."""
+    predecessors, split_successors = orig(repo, ctx)
+    if repo.ui.configbool("fbcodereview", "allow-diff-revision-drop"):
+        return predecessors, split_successors
     if repo.ui.plain():
         # should not block automation like `jf unlink`
-        return
-    if not new_desc:
-        return
-    old_rev = diffprops.parserevfromcommitmsg(old_desc)
-    new_rev = diffprops.parserevfromcommitmsg(new_desc)
-    if old_rev and not new_rev:
-        if agentdetect.is_agent():
-            raise error.Abort(
-                _("commit message drops phabricator diff number 'D%s'") % old_rev,
-                hint=_(
-                    "use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff"
-                ),
-            )
-        else:
-            choice = repo.ui.promptchoice(
-                _(
-                    "commit message drops phabricator diff number 'D%s', proceed (Yn)? $$ &Yes $$ &No"
-                )
-                % old_rev,
-                default=0,
-            )
-            if choice != 0:
-                raise error.Abort(_("aborted by user"))
+        return predecessors, split_successors
+
+    _validate_commit_set(repo, [ctx], predecessors)
+    return predecessors, split_successors
 
 
 @templatekeyword("phabdiff")
@@ -217,6 +302,7 @@ def makegraftmessage(orig, repo, ctx, opts, from_paths, to_paths, from_repo):
 def extsetup(ui) -> None:
     extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)
     extensions.wrapfunction(commands, "_makegraftmessage", makegraftmessage)
+    extensions.wrapfunction(rewriteutil, "commitcheck", validate_commit)
 
     smartset.prefetchtemplatekw.update(
         {
