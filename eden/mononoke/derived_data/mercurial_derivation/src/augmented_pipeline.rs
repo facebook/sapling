@@ -43,6 +43,7 @@ use mononoke_types::path::MPath;
 use mononoke_types::typed_hash::AclManifestId;
 
 use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
+use crate::augmented_manifest_v2::fetch_augmented_roots_with_fallback;
 use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
 use crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged;
@@ -95,6 +96,38 @@ fn use_normal_mapping(pipeline_kind: AugmentedManifestPipelineKind, stage_path: 
             None,
             Some(pipeline_kind.derivation_name()),
         )
+}
+
+async fn fetch_v2_source_augmented_roots(
+    ctx: &CoreContext,
+    derivation: &DerivationContext,
+    source_csids: HashSet<ChangesetId>,
+) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
+    if source_csids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let source_csids: Vec<_> = source_csids.into_iter().collect();
+    let pipeline_outputs = RootHgAugmentedManifestV2Id::fetch_stage_outputs(
+        ctx,
+        derivation,
+        &StageId::Manifest(MPath::ROOT),
+        source_csids.clone(),
+    )
+    .await?;
+    let roots = pipeline_outputs
+        .into_iter()
+        .map(|(csid, output)| match output {
+            Some(HgAugmentedManifestEntry::DirectoryNode(dir)) => {
+                Ok((csid, HgAugmentedManifestId::new(dir.treenode)))
+            }
+            output => Err(anyhow!(
+                "V2 terminal stage output for copy source {csid} should be a directory, got {output:?}",
+            )),
+        })
+        .collect::<Result<_>>()?;
+    fetch_augmented_roots_with_fallback(ctx, derivation, source_csids, roots, "V2 copy source")
+        .await
 }
 
 async fn store_intermediate_stage_output(
@@ -553,17 +586,31 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
 
             let content_metadata_fut =
                 prefetch_content_metadata(ctx, derivation.blobstore(), content_ids);
-            let source_aug_roots = HashMap::new();
+            let mut parent_csids = bonsai.parents();
+            let parent_bonsai_csids = (parent_csids.next(), parent_csids.next());
+            let is_hg_parent = |copy_csid: &ChangesetId| {
+                parent_bonsai_csids.0.as_ref() == Some(copy_csid)
+                    || parent_bonsai_csids.1.as_ref() == Some(copy_csid)
+            };
+            let source_csids: HashSet<_> = file_changes
+                .iter()
+                .filter_map(|(_, change)| change.as_ref()?.copy_from())
+                .filter(|(copy_path, copy_csid)| {
+                    !stage_path.is_prefix_of(copy_path) && is_hg_parent(copy_csid)
+                })
+                .map(|(_, copy_csid)| *copy_csid)
+                .collect();
+            let source_aug_roots =
+                fetch_v2_source_augmented_roots(ctx, derivation, source_csids).await?;
+            let subtree_source_aug_roots = HashMap::new();
             let subtree_replacements_fut = build_augmented_subtree_replacements(
                 ctx,
                 derivation.blobstore(),
                 bonsai,
-                &source_aug_roots,
+                &subtree_source_aug_roots,
             );
             let (content_metadata, subtree_replacements) =
                 futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
-            let mut parent_csids = bonsai.parents();
-            let parent_bonsai_csids = (parent_csids.next(), parent_csids.next());
 
             let output = derive_augmented_manifest_entry_from_bonsai(
                 ctx,
@@ -574,6 +621,7 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
                 file_changes,
                 subtree_replacements,
                 parent_bonsai_csids,
+                &source_aug_roots,
                 &content_metadata,
                 &derivation.restricted_paths(),
                 acl_overlay,

@@ -875,11 +875,55 @@ mod tests {
         verify_pipeline_matches_canonical::<CrossStageDirectoryCopy>(fb).await
     }
 
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_augmented_manifest_v2_drops_invalid_copy_sources(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: cross-stage copies whose source is a directory or is missing.
+        // When: ACL and V2 derive the fixture through the pipeline.
+        // Then: V2 drops the invalid copy metadata and matches canonical output.
+        verify_pipeline_matches_canonical_impl::<CrossStageDirectoryCopy>(
+            fb,
+            vec![],
+            &AUGMENTED_MANIFEST_V2_TYPES,
+        )
+        .await
+        .map(|_| ())
+    }
+
     // Success path of cross-stage copy resolution: a real file copied across a
     // stage boundary, canonical-first.
     #[mononoke::fbinit_test]
     async fn test_pipeline_cross_stage_file_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<CrossStageFileCopy>(fb).await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_augmented_manifest_v2_copy_sources(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: stage-local, file-valued stage-root, and cross-stage copies.
+        // When: ACL and V2 run pipeline-first across the stage-shape transitions.
+        // Then: every stage matches canonical direct V2 without a Bonsai-Hg mapping.
+        verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<NestedDirectories>(
+            fb, true,
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_augmented_manifest_v2_copy_from_canonical_parent(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: the copy source parent exists only in canonical V2.
+        // When: the pipeline derives the cross-stage copy in its child.
+        // Then: V2 falls back to the canonical parent root and remains equivalent.
+        verify_pipeline_matches_canonical_with_canonical_ancestors::<CrossStageFileCopy>(
+            fb,
+            "P",
+            &AUGMENTED_MANIFEST_V2_TYPES,
+        )
+        .await
     }
 
     // Pipeline-first: derives the pipeline before any canonical derivation, so a

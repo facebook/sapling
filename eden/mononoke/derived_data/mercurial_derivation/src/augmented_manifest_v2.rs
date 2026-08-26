@@ -75,40 +75,59 @@ impl From<RootHgAugmentedManifestV2Id> for BlobstoreBytes {
     }
 }
 
+pub(crate) async fn fetch_augmented_roots_with_fallback(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    source_csids: Vec<ChangesetId>,
+    mut roots: HashMap<ChangesetId, HgAugmentedManifestId>,
+    source_description: &str,
+) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
+    let missing_sources: Vec<_> = source_csids
+        .iter()
+        .copied()
+        .filter(|csid| !roots.contains_key(csid))
+        .collect();
+    if !missing_sources.is_empty() {
+        roots.extend(
+            derivation_ctx
+                .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(ctx, missing_sources)
+                .await?
+                .into_iter()
+                .map(|(csid, root)| (csid, root.hg_augmented_manifest_id())),
+        );
+    }
+    if let Some(csid) = source_csids.iter().find(|csid| !roots.contains_key(csid)) {
+        bail!(
+            "{source_description} augmented manifest for changeset {csid} not found; \
+             it must be derived before the changeset that copies from it",
+        );
+    }
+    Ok(roots)
+}
+
 async fn get_subtree_source_aug_roots(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
     known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestV2Id>>,
 ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-    let mut sources = HashMap::new();
-    let mut missing_sources = Vec::new();
-
-    for from_cs_id in subtree_copy_source_changesets(bonsai) {
-        if let Some(aug) = known_aug_roots.and_then(|m| m.get(&from_cs_id)) {
-            sources.insert(from_cs_id, aug.hg_augmented_manifest_id());
-        } else {
-            missing_sources.push(from_cs_id);
-        }
-    }
-
-    if !missing_sources.is_empty() {
-        let fetched_sources = derivation_ctx
-            .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(ctx, missing_sources.clone())
-            .await?;
-        for from_cs_id in missing_sources {
-            if let Some(aug) = fetched_sources.get(&from_cs_id) {
-                sources.insert(from_cs_id, aug.hg_augmented_manifest_id());
-            } else {
-                bail!(
-                    "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
-                     it must be derived before the changeset that copies from it",
-                );
-            }
-        }
-    }
-
-    Ok(sources)
+    let source_csids = subtree_copy_source_changesets(bonsai);
+    let roots = source_csids
+        .iter()
+        .filter_map(|csid| {
+            known_aug_roots
+                .and_then(|known| known.get(csid))
+                .map(|root| (*csid, root.hg_augmented_manifest_id()))
+        })
+        .collect();
+    fetch_augmented_roots_with_fallback(
+        ctx,
+        derivation_ctx,
+        source_csids,
+        roots,
+        "Subtree copy source",
+    )
+    .await
 }
 
 async fn lookup_mapped_root_hg_manifest_ids(

@@ -955,6 +955,17 @@ impl TestRepoFixture for NestedDirectories {
                  # modify: A "root_file" "root\n"
                  # modify: A "top1/main" "main\n"
     "#;
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        let ctx = CoreContext::test_mock(fb);
+        extend_from_dag_with_actions(&ctx, repo, Self::DAG).await
+    }
 }
 
 /// A copy-free nested-directory fixture for proving Bonsai-direct pipeline

@@ -671,8 +671,11 @@ async fn test_resolve_copy_from_filenodes(fb: FacebookInit) -> Result<()> {
     let result = derive_hg_augmented_manifest::resolve_copy_from_filenodes(
         &ctx,
         repo.repo_blobstore(),
+        &MPath::new("copied_file")?,
         &file_changes,
-        &[Some((root, root_aug)), None],
+        (Some(root), None),
+        &[],
+        &HashMap::from([(root, root_aug)]),
     )
     .await?;
 
@@ -777,8 +780,11 @@ async fn test_resolve_copy_from_filenodes_missing_source(fb: FacebookInit) -> Re
     let result = derive_hg_augmented_manifest::resolve_copy_from_filenodes(
         &ctx,
         repo.repo_blobstore(),
+        &MPath::new("new_file")?,
         &file_changes,
-        &[Some((child, child_aug)), None],
+        (Some(child), None),
+        &[],
+        &HashMap::from([(child, child_aug)]),
     )
     .await?;
 
@@ -1525,6 +1531,7 @@ async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_acl_ent
                     file_changes_from_bonsai(&ctx, &repo, commit).await?,
                     vec![],
                     (None, None),
+                    &HashMap::new(),
                     &Default::default(),
                     repo.restricted_paths().config_based(),
                     Some(stage_acl_id),
@@ -1589,6 +1596,7 @@ async fn test_direct_augmented_manifest_entry_writes_restricted_paths_like_canon
                     file_changes_from_bonsai(&ctx, &staged_repo, staged_commit).await?,
                     vec![],
                     (None, None),
+                    &HashMap::new(),
                     &Default::default(),
                     staged_repo.restricted_paths().config_based(),
                     None,
@@ -1670,6 +1678,7 @@ async fn test_direct_augmented_manifest_entry_preserves_absent_parent_position(
         file_changes_from_bonsai(&ctx, &repo, merge).await?,
         vec![],
         (Some(p1), Some(p2)),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
@@ -1703,6 +1712,7 @@ async fn test_direct_augmented_manifest_entry_reuses_known_child(fb: FacebookIni
         file_changes.clone(),
         vec![],
         (None, None),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
@@ -1735,6 +1745,7 @@ async fn test_direct_augmented_manifest_entry_reuses_known_child(fb: FacebookIni
         file_changes,
         vec![],
         (None, None),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
@@ -1780,6 +1791,7 @@ async fn test_direct_augmented_manifest_entry_matches_canonical_file(
         file_changes_from_bonsai(&ctx, &repo, commit).await?,
         vec![],
         (None, None),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
@@ -1839,6 +1851,7 @@ async fn test_direct_augmented_manifest_entry_matches_canonical_absence(
         file_changes_from_bonsai(&ctx, &repo, child).await?,
         vec![],
         (Some(parent), None),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
@@ -1852,10 +1865,10 @@ async fn test_direct_augmented_manifest_entry_matches_canonical_absence(
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_entry_rejects_non_root_copy(
+async fn test_direct_augmented_manifest_entry_skips_copy_lookup_without_copies(
     fb: FacebookInit,
 ) -> Result<()> {
-    // Given: a child copies a file from its p1 inside a non-root stage.
+    // Given: an unchanged directory stage with no copy-from changes.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
     let parent = CreateCommitContext::new_root(&ctx, &repo)
@@ -1866,34 +1879,36 @@ async fn test_direct_augmented_manifest_entry_rejects_non_root_copy(
     let parent_entry =
         lookup_augmented_root_child(&ctx, &repo, parent_augmented_manifest_id, b"src")
             .await?
-            .context("fixture must contain parent src")?;
-    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
-        .add_file_with_copy_info("src/copied", "contents", (parent, "src/original"))
-        .commit()
-        .await?;
+            .context("parent manifest must contain src")?;
+    let denied_key = match &parent_entry {
+        HgAugmentedManifestEntry::DirectoryNode(dir) => {
+            HgAugmentedManifestId::new(dir.treenode).blobstore_key()
+        }
+        HgAugmentedManifestEntry::FileNode(_) => {
+            return Err(anyhow!("parent src must be a directory"));
+        }
+    };
+    let denying_blobstore = DenyGetKeyedBlobstore::new(repo.repo_blobstore().clone(), denied_key);
 
-    // When: deriving the child directly at the non-root stage.
-    let error = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+    // When: deriving the unchanged stage while denying loads of its parent envelope.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
         &ctx,
-        repo.repo_blobstore(),
+        &denying_blobstore,
         MPath::new("src")?,
-        vec![Some(parent_entry)],
+        vec![Some(parent_entry.clone())],
         HashMap::new(),
-        file_changes_from_bonsai(&ctx, &repo, child).await?,
+        vec![],
         vec![],
         (Some(parent), None),
+        &HashMap::new(),
         &Default::default(),
         repo.restricted_paths().config_based(),
         None,
     )
-    .await
-    .expect_err("non-root direct derivation must reject copy-from changes");
+    .await?;
 
-    // Then: the unsupported input fails instead of silently dropping copy metadata.
-    assert_eq!(
-        format!("{error:#}"),
-        "Cannot derive Hg augmented manifest directly at non-root stage src with copy-from change at src/copied",
-    );
+    // Then: the parent entry is reused without a copy-source manifest lookup.
+    assert_eq!(stage_entry, Some(parent_entry));
 
     Ok(())
 }
