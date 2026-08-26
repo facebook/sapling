@@ -23,6 +23,9 @@ Config::
     graphqlonly = True
     # Automatically pull Dxxx.
     autopull = True
+    # Prompt humans and abort agents when a diff has multiple visible local
+    # successors; when false, silently select the newest revision.
+    prompt-ambiguous-successors = true
 
     [fbcodereview]
     # Whether to automatically hide landed draft commits after "pull".
@@ -1202,6 +1205,14 @@ def debuginternusername(ui, **opts):
 def graphqlgetdiff(repo, diffid, version=None):
     """Resolves a phabricator Diff number to a commit hash of it's latest version"""
     if util.istest():
+        hexnode = repo.ui.config("phrevset", "mock-local-D%s" % diffid)
+        if hexnode:
+            return {
+                "source_control_system": "hg",
+                "description": None,
+                "commit_hash_best_effort": hexnode,
+                "commits": {},
+            }
         hexnode = repo.ui.config("phrevset", "mock-D%s" % diffid)
         if hexnode:
             return {
@@ -1349,6 +1360,58 @@ def _gitrevtohgnode(repo, rev) -> Optional[List[bytes]]:
     return None
 
 
+def _select_ambiguous_successor(repo, diffid, successors):
+    prompt = not repo.ui.plain() and repo.ui.configbool(
+        "phrevset", "prompt-ambiguous-successors", True
+    )
+    repo.ui.metrics.inc("phrevset.ambiguous_successors", 1)
+    repo.ui.log(
+        "phrevset_ambiguous_successors",
+        diffid=diffid,
+        successor_count=len(successors),
+        prompt=prompt,
+    )
+    if not prompt:
+        repo.ui.metrics.inc("phrevset.ambiguous_successors.auto_selected", 1)
+        return successors[0]
+
+    repo.ui.warn(_("D%s resolves ambiguously to multiple local commits:\n") % diffid)
+    for index, successor in enumerate(successors, 1):
+        ctx = repo[successor]
+        title = next(iter(ctx.description().splitlines()), "")
+        date = util.datestr(ctx.date(), "%Y-%m-%d %H:%M:%S %1%2")
+        repo.ui.warn("  %d: %s %s %s\n" % (index, short(successor), date, title))
+
+    if agentdetect.is_agent():
+        repo.ui.metrics.inc("phrevset.ambiguous_successors.agent_rejected", 1)
+        raise error.Abort(
+            _("ambiguous commit for D%s") % diffid,
+            hint=_(
+                "specify one of the commit hashes directly, or set "
+                "'phrevset.prompt-ambiguous-successors=false' to select the "
+                "newest revision automatically"
+            ),
+        )
+
+    count = len(successors)
+    choices = " $$ &" + " $$ &".join(map(str, range(1, count + 1)))
+    choices = " [1-%d/(c)ancel]? $$ &cancel%s" % (count, choices)
+    choice = repo.ui.promptchoice(_("which commit to select%s") % choices, default=1)
+    if choice == 0:
+        repo.ui.metrics.inc("phrevset.ambiguous_successors.cancelled", 1)
+        raise error.Abort(
+            _("ambiguous commit for D%s") % diffid,
+            hint=_(
+                "set 'phrevset.prompt-ambiguous-successors=false' to restore automatic selection"
+            ),
+        )
+
+    selected = successors[choice - 1]
+    repo.ui.metrics.inc("phrevset.ambiguous_successors.selected", 1)
+    repo.ui.warn(_("warning: selected %s for D%s\n") % (short(selected), diffid))
+    return selected
+
+
 @util.lrucachefunc
 def diffidtonode(repo, diffid, localreponame=None, version=None):
     """Return node that matches a given Differential ID or None.
@@ -1473,12 +1536,20 @@ def diffidtonode(repo, diffid, localreponame=None, version=None):
                 # successors() skips hidden commits. We don't subtract obsolete() because we want to
                 # return obsolete-but-visible commits (if that happens to be the newest local
                 # version of a diff).
-                for successor in unfi.nodes("sort(successors(%n)-%n,-rev)", node, node):
+                successors = [
+                    successor
+                    for successor in unfi.nodes(
+                        "sort(successors(%n)-%n,-rev)", node, node
+                    )
                     if (
                         diffprops.parserevfromcommitmsg(repo[successor].description())
                         == diffid
-                    ):
-                        return successor
+                    )
+                ]
+                if len(successors) == 1:
+                    return successors[0]
+                if len(successors) > 1:
+                    return _select_ambiguous_successor(repo, diffid, successors)
             if (
                 vcs == "git"
                 and repo.ui.configbool("phrevset", "abort-if-git-diff-unavailable")
