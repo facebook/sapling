@@ -107,6 +107,85 @@ fn log_cast_phase_timing(bonsai_mapping_ms: i64, changeset_info_ms: i64) {
     STATS::changeset_info_ms.add_value(changeset_info_ms);
 }
 
+// Chunk size and the try_flatten_unordered limit below multiply out to the
+// number of heads in flight against bonsai_hg_mapping, so they are tuned as a
+// pair.
+const HEADS_CHUNK_SIZE: usize = 250;
+const BONSAI_MAPPING_CONCURRENCY: usize = 40;
+const CHANGESET_INFO_CONCURRENCY: usize = 100;
+
+/// The stage timings are returned rather than logged here so that each caller
+/// attributes them to its own series.
+pub(crate) struct ResolvedHeadAuthorDates {
+    pub dates: HashMap<CloudChangesetId, i64>,
+    pub bonsai_mapping_ms: i64,
+    pub changeset_info_ms: i64,
+}
+
+pub(crate) async fn resolve_head_author_dates(
+    core_ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    repo_derived_data: &ArcRepoDerivedData,
+    cloud_ids: Vec<CloudChangesetId>,
+) -> Result<ResolvedHeadAuthorDates, anyhow::Error> {
+    let chunks_iter = cloud_ids
+        .chunks(HEADS_CHUNK_SIZE)
+        .map(|chunk| Ok::<_, anyhow::Error>(chunk.to_vec()));
+
+    // The two stages below are pipelined, so neither can be bracketed by a single
+    // Instant; each future adds its own elapsed time here instead.
+    let bonsai_mapping_nanos = AtomicU64::new(0);
+    let changeset_info_nanos = AtomicU64::new(0);
+    let bonsai_mapping_nanos = &bonsai_mapping_nanos;
+    let changeset_info_nanos = &changeset_info_nanos;
+
+    // A failed derive still fails the whole read via `?`: the client treats the
+    // head set it gets back as authoritative, so a dateless head is worse.
+    let dates: HashMap<CloudChangesetId, i64> = stream::iter(chunks_iter)
+        // map [CloudChangesetId] to [(CloudChangesetId, BonsaiChangesetId)]
+        .and_then(|heads| {
+            cloned!(bonsai_hg_mapping, bonsai_git_mapping);
+            async move {
+                let start = Instant::now();
+                let mapped = utils::get_bonsai_from_cloud_ids(
+                    core_ctx,
+                    cc_ctx,
+                    bonsai_hg_mapping,
+                    bonsai_git_mapping,
+                    heads,
+                )
+                .await?;
+                bonsai_mapping_nanos
+                    .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
+                Ok(stream::iter(mapped.into_iter().map(Ok::<_, anyhow::Error>)))
+            }
+        })
+        .try_flatten_unordered(BONSAI_MAPPING_CONCURRENCY)
+        // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
+        .and_then(|(cid, bcs_id)| async move {
+            let start = Instant::now();
+            let derived = repo_derived_data
+                .derive::<ChangesetInfo>(core_ctx, bcs_id, DerivationPriority::LOW)
+                .await;
+            changeset_info_nanos.fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
+            derived
+                .map_err(Into::into)
+                .map(|cs_info| future::ok((cid, cs_info.author_date().as_chrono().timestamp())))
+        })
+        .try_buffer_unordered(CHANGESET_INFO_CONCURRENCY)
+        .try_collect()
+        .boxed()
+        .await?;
+
+    Ok(ResolvedHeadAuthorDates {
+        dates,
+        bonsai_mapping_ms: (bonsai_mapping_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
+        changeset_info_ms: (changeset_info_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
+    })
+}
+
 // Workspace information as we retrieve it form the database
 #[derive(Debug, Clone)]
 pub struct RawReferencesData {
@@ -168,65 +247,25 @@ pub(crate) async fn cast_references_data(
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
     let mut snapshots: Vec<CloudChangesetId> = Vec::new();
 
-    // Start the pipeline with batches of 250 heads. Chunk size and the
-    // try_flatten_unordered limit below multiply out to the number of heads in
-    // flight against bonsai_hg_mapping, so they are tuned as a pair.
-    let chunks_iter = raw_references_data.heads.chunks(250).map(|chunk| {
-        let chunk_heads: Vec<CloudChangesetId> = chunk.iter().map(|head| head.commit).collect();
-        Ok::<_, anyhow::Error>(chunk_heads)
-    });
+    let heads_to_derive: Vec<CloudChangesetId> = raw_references_data
+        .heads
+        .iter()
+        .map(|head| head.commit)
+        .collect();
 
-    let repo_derived_data = &repo_derived_data;
+    let resolved = resolve_head_author_dates(
+        core_ctx,
+        cc_ctx,
+        bonsai_hg_mapping,
+        bonsai_git_mapping,
+        &repo_derived_data,
+        heads_to_derive,
+    )
+    .await?;
 
-    // The two stages below are pipelined, so neither can be bracketed by a single
-    // Instant in this function. Each future instead adds its own elapsed time here.
-    let bonsai_mapping_nanos = AtomicU64::new(0);
-    let changeset_info_nanos = AtomicU64::new(0);
-    let bonsai_mapping_nanos = &bonsai_mapping_nanos;
-    let changeset_info_nanos = &changeset_info_nanos;
+    log_cast_phase_timing(resolved.bonsai_mapping_ms, resolved.changeset_info_ms);
 
-    let heads_dates: HashMap<CloudChangesetId, i64> = stream::iter(chunks_iter)
-        // map [CloudChangesetId] to [(CloudChangesetId, BonsaiChangesetId)]
-        .and_then(|heads| {
-            cloned!(bonsai_hg_mapping, bonsai_git_mapping);
-            async move {
-                let start = Instant::now();
-                let mapped = utils::get_bonsai_from_cloud_ids(
-                    core_ctx,
-                    cc_ctx,
-                    bonsai_hg_mapping,
-                    bonsai_git_mapping,
-                    heads,
-                )
-                .await?;
-                bonsai_mapping_nanos
-                    .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
-                Ok(stream::iter(mapped.into_iter().map(Ok::<_, anyhow::Error>)))
-            }
-        })
-        // do up to 40 hg->bonsai mappings concurrently, flattening out results
-        .try_flatten_unordered(40)
-        // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
-        .and_then(|(cid, bcs_id)| async move {
-            let start = Instant::now();
-            let derived = repo_derived_data
-                .derive::<ChangesetInfo>(core_ctx, bcs_id, DerivationPriority::LOW)
-                .await;
-            changeset_info_nanos.fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
-            derived
-                .map_err(Into::into)
-                .map(|cs_info| future::ok((cid, cs_info.author_date().as_chrono().timestamp())))
-        })
-        // do up to 100 derived data fetches concurrently
-        .try_buffer_unordered(100)
-        .try_collect()
-        .boxed()
-        .await?;
-
-    log_cast_phase_timing(
-        (bonsai_mapping_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
-        (changeset_info_nanos.load(Ordering::Relaxed) / 1_000_000) as i64,
-    );
+    let heads_dates = resolved.dates;
 
     log_heads_returned(heads_dates.len());
 
