@@ -6,6 +6,8 @@
  */
 
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -21,6 +23,7 @@ use futures::future;
 use futures::future::FutureExt;
 use futures::join;
 use futures::stream::StreamExt;
+use futures_stats::futures03::TimedFutureExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use parking_lot::Mutex;
@@ -55,14 +58,16 @@ pub async fn build_underived_batched_graph<'a>(
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
     let commit_graph = ddm.commit_graph_arc();
+    let commits_walked = Arc::new(AtomicU64::new(0));
+    let items_enqueued = Arc::new(AtomicU64::new(0));
     let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(
         future::ok(false).boxed(),
     ))));
-    let _ = bounded_traversal::bounded_traversal_dag(
+    let (stats, traversal_res) = bounded_traversal::bounded_traversal_dag(
         100,
         head,
         |cs| {
-            cloned!(commit_graph, derived_data_type);
+            cloned!(commit_graph, derived_data_type, commits_walked);
             async move {
                 // Walk down by parent until batch full or found merge or derived
                 let mut root = cs;
@@ -73,6 +78,7 @@ pub async fn build_underived_batched_graph<'a>(
                 let mut next = Vec::new();
                 loop {
                     let parents = commit_graph.changeset_parents(ctx, root).await?;
+                    commits_walked.fetch_add(1, Ordering::Relaxed);
                     // Gather underived parents for the current changeset.
                     let mut underived_parents = Vec::new();
                     for parent_cs in parents.clone() {
@@ -114,7 +120,8 @@ pub async fn build_underived_batched_graph<'a>(
                 config_name,
                 queue,
                 commit_graph,
-                watch
+                watch,
+                items_enqueued
             );
             async move {
                 let item = DerivationDagItem::new(
@@ -154,6 +161,7 @@ pub async fn build_underived_batched_graph<'a>(
                         let enqueue_res = queue.enqueue(ctx, item.clone()).await;
                         match enqueue_res {
                             Ok(resp) => {
+                                items_enqueued.fetch_add(1, Ordering::Relaxed);
                                 *watch.lock() = Some(resp);
                                 None
                             }
@@ -255,7 +263,19 @@ pub async fn build_underived_batched_graph<'a>(
             .boxed()
         },
     )
-    .await?;
+    .timed()
+    .await;
+    let _ = traversal_res?;
+
+    let mut scuba = ctx.scuba().clone();
+    scuba.unsampled();
+    scuba.add_future_stats(&stats);
+    scuba.add("derived_data_type", derived_data_type.name());
+    scuba.add("head_cs_id", head.to_string());
+    scuba.add("commits_walked", commits_walked.load(Ordering::Relaxed));
+    scuba.add("items_enqueued", items_enqueued.load(Ordering::Relaxed));
+    scuba.log_with_msg("Underived graph built", None);
+
     let mut res = watch.lock();
     Ok(res.take())
 }

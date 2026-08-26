@@ -20,6 +20,7 @@ rust_library(
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/zeus:zeus_client",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
