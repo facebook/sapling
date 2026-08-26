@@ -43,6 +43,7 @@ mononoke_app::subcommands! {
     mod derivation_queue;
     mod derived_data;
     mod diff;
+    mod drill;
     mod ephemeral_store;
     mod fetch;
     mod filestore;
