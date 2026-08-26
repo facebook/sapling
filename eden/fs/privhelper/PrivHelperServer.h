@@ -48,6 +48,24 @@ struct FileAccessMonitorProcess {
         shouldUpload(shouldUpload) {}
 };
 
+/**
+ * Move the calling process into its own session (and therefore its own
+ * process group), away from the process group it was spawned into.
+ *
+ * The privhelper must only exit when the EdenFS daemon's connection
+ * closes: it unmounts the daemon's mounts on the way out. The daemon
+ * detaches itself into a new process group during startup, but the
+ * privhelper is spawned earlier and would otherwise remain in the group
+ * of whatever launched `eden start`/`eden restart`. Tools that clean up
+ * by killing the process group they spawned (e.g. agent command runners)
+ * would then SIGKILL the privhelper — which cannot be caught — while the
+ * daemon survives, leaving EdenFS unable to mount or unmount.
+ *
+ * Failure (e.g. the process is already a process-group leader, so there
+ * is no foreign group to escape from) is logged and ignored.
+ */
+void detachFromParentProcessGroup();
+
 /*
  * PrivHelperServer runs the main loop for the privhelper server process.
  *

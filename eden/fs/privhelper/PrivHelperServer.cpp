@@ -337,6 +337,15 @@ PrivHelperServer::PrivHelperServer() = default;
 
 PrivHelperServer::~PrivHelperServer() = default;
 
+void detachFromParentProcessGroup() {
+  if (setsid() == static_cast<pid_t>(-1)) {
+    XLOGF(
+        WARN,
+        "privhelper failed to detach into a new session: {}",
+        folly::errnoStr(errno));
+  }
+}
+
 void PrivHelperServer::init(folly::File socket, uid_t uid, gid_t gid) {
   initPartial(std::move(socket), uid, gid);
 }
@@ -1593,12 +1602,11 @@ void PrivHelperServer::bindUnmount(
 
 void PrivHelperServer::run() {
   // Ignore SIGINT and SIGTERM.
-  // We should only exit when our parent process does.
-  // (Normally if someone hits Ctrl-C in their terminal this will send SIGINT
-  // to both our parent process and to us.  The parent process should exit due
-  // to this signal.  We don't want to exit immediately--we want to wait until
-  // the parent exits and then umount all outstanding mount points before we
-  // exit.)
+  // We should only exit when the daemon's connection closes, so that we
+  // can umount all outstanding mount points before we exit. The privhelper
+  // binary detaches into its own session at startup, which keeps terminal
+  // signals (e.g. Ctrl-C) and process-group-wide kills away from us, but
+  // anything signaling this process directly must not terminate it either.
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
     XLOGF(
         FATAL,

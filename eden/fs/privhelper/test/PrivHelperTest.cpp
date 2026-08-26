@@ -18,6 +18,7 @@
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sys/wait.h>
 #include <atomic>
 #include <chrono>
 #include <optional>
@@ -1120,4 +1121,35 @@ TEST_F(PrivHelperTest, setLogFile) {
   folly::checkUnixError(fstat(tempFile1.fd(), &s2));
   EXPECT_EQ(s1.st_dev, s2.st_dev);
   EXPECT_EQ(s1.st_ino, s2.st_ino);
+}
+
+TEST(PrivHelperSessionTest, detachesFromParentProcessGroup) {
+  // The privhelper binary calls detachFromParentProcessGroup() at startup
+  // so that killing the process group it was spawned into (as agent
+  // command runners do when cleaning up an `eden restart` invocation)
+  // cannot take the privhelper down with it. Verify in a forked child
+  // that the call moves the process into its own session and group.
+  // The child only makes raw syscalls, so forking with test threads
+  // running is safe.
+  pid_t childPid = fork();
+  folly::checkUnixError(childPid, "fork failed");
+  if (childPid == 0) {
+    if (getpgid(0) == getpid()) {
+      // The child must start out in its parent's process group for this
+      // test to prove anything.
+      _exit(2);
+    }
+    detachFromParentProcessGroup();
+    if (getpgid(0) != getpid()) {
+      _exit(3);
+    }
+    if (getsid(0) != getpid()) {
+      _exit(4);
+    }
+    _exit(0);
+  }
+  int status = 0;
+  folly::checkUnixError(waitpid(childPid, &status, 0), "waitpid failed");
+  ASSERT_TRUE(WIFEXITED(status));
+  EXPECT_EQ(0, WEXITSTATUS(status));
 }

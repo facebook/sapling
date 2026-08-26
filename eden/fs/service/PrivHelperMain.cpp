@@ -84,6 +84,12 @@ int main(int argc, char** argv) {
       "WARN:default, eden=DBG2; default:stream=stderr,async=false");
   folly::LoggerDB::get().updateConfig(loggingConfig);
 
+  // Escape the process group of whatever launched EdenFS, so that
+  // process-group-wide cleanup (e.g. by agent command runners that
+  // launched `eden restart`) cannot SIGKILL the privhelper out from under
+  // a running daemon. See detachFromParentProcessGroup() for details.
+  detachFromParentProcessGroup();
+
   PrivHelperServer server;
   try {
     // Redirect stdin
