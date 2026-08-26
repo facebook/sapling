@@ -36,6 +36,8 @@ Config::
     # How invalid diff IDs are handled for humans: abort, prompt, or warn.
     # Other values ignore the guard.
     bad-diff-id-human-mode = prompt
+    # Remove Differential Revision lines when agents copy commits.
+    unlink-copied-diff-revisions = true
 """
 
 import http.client
@@ -85,6 +87,8 @@ namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 autopullpredicate = registrar.autopullpredicate()
 
+
+_COPY_DIFF_APPROVALS = "fbcodereview.copy-diff-approved-revisions"
 
 DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "Commit r"  # Prefix
@@ -180,7 +184,149 @@ def _commit_revisions(ctx):
     return diffprops.diffrevisionregex.findall(ctx.description())
 
 
+def _message_revisions(message):
+    return diffprops.diffrevisionregex.findall(message)
+
+
+def _remove_diff_revision_lines(message):
+    stripped = diffprops.diffrevisionlineregex.sub("", message)
+    # Removing a line that had blank lines on both sides leaves a double
+    # blank line behind; collapse it. If the message was nothing but binding
+    # lines, keep it rather than produce an empty commit message.
+    return re.sub(r"\n{3,}", "\n\n", stripped).rstrip() or message.rstrip()
+
+
+def _warn_unlinked_copy(repo, operation, revisions):
+    diff_numbers = _format_diff_numbers(revisions)
+    description = (
+        _n(
+            "phabricator diff number %s",
+            "phabricator diff numbers %s",
+            len(revisions),
+        )
+        % diff_numbers
+    )
+    repo.ui.warn(
+        _(
+            "note: removed %s from the commit copied by %s; the new commit is "
+            "not linked to a phabricator diff\n"
+        )
+        % (description, operation)
+    )
+
+
+def _warn_copied_diff_association(repo, operation, revisions):
+    repo.ui.warn(
+        _(
+            "warning: copying this commit with %s associates multiple commits "
+            "with %s\n(run 'jf unlink' from the new commit to remove the "
+            "duplicate association)\n"
+        )
+        % (operation, _format_diff_numbers(revisions))
+    )
+
+
+def _approve_copied_diff_revisions(repo, revisions):
+    # Commit validation consumes this approval after the hook returns.
+    if _COPY_DIFF_APPROVALS not in repo.volatile_state:
+        repo.ui.atexit(lambda: repo.volatile_state.pop(_COPY_DIFF_APPROVALS, None))
+    repo.volatile_state[_COPY_DIFF_APPROVALS] = revisions
+
+
+def _is_recovery_copy(repo, source, revisions):
+    """Whether copying ``source`` re-binds diff numbers no visible draft holds.
+
+    Copying a hidden or obsolete commit is how lost work is recovered. The
+    copied binding is only a duplicate when the source itself remains visible
+    or some other visible draft still carries one of the diff numbers.
+    """
+    if source.repo() is not repo:
+        # Cross-repo graft sources cannot be resolved against this repo's
+        # visibility or mutation data.
+        return False
+    hidden = next(iter(repo.nodes("%n & hidden()", source.node())), None) is not None
+    if not (hidden or source.obsolete()):
+        return False
+    # The draft set is small, and the copy hook never runs in plain mode, so
+    # automation does not pay for this scan.
+    for rev in repo.revs("draft() - %n", source.node()):
+        if set(_commit_revisions(repo[rev])) & revisions:
+            return False
+    return True
+
+
+def copycommitmessage(orig, repo, message, operation, source):
+    message = orig(repo, message, operation, source)
+    revisions = set(_message_revisions(message))
+    if not revisions or repo.ui.plain():
+        return message
+
+    mode = _bad_diff_id_mode(repo)
+    if mode == "ignore" or not repo.ui.configbool(
+        "fbcodereview", "unlink-copied-diff-revisions", True
+    ):
+        # Rolled back or disabled: restore the old copy behavior entirely,
+        # including exempting the copy from the untracked-introduction check.
+        _approve_copied_diff_revisions(repo, revisions)
+        return message
+
+    if _is_recovery_copy(repo, source, revisions):
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_recovery_kept", 1)
+        _approve_copied_diff_revisions(repo, revisions)
+        return message
+
+    if mode == "warn":
+        repo.ui.metrics.inc(
+            rewriteutil.actormetric(_BADDIFFID_PREFIX + "copy_", "warned"), 1
+        )
+        _warn_copied_diff_association(repo, operation, revisions)
+        _approve_copied_diff_revisions(repo, revisions)
+        return message
+
+    if agentdetect.is_agent():
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_agent_unlinked", 1)
+        _warn_unlinked_copy(repo, operation, revisions)
+        return _remove_diff_revision_lines(message)
+
+    if mode == "abort":
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_human_rejected", 1)
+        raise error.Abort(
+            _("copying this commit with %s would associate multiple commits with %s")
+            % (operation, _format_diff_numbers(revisions)),
+            hint=_(
+                "run 'jf unlink' on the source commit first, or set "
+                "'fbcodereview.bad-diff-id-human-mode=prompt' to choose interactively"
+            ),
+        )
+
+    choice = repo.ui.promptchoice(
+        _(
+            "copying this commit would associate multiple commits with %s; "
+            "[r]emove the diff number from the new commit, [p]roceed with "
+            "the duplicate association, or [c]ancel?"
+            " $$ &Remove $$ &Proceed $$ &Cancel"
+        )
+        % _format_diff_numbers(revisions),
+        default=1,
+    )
+    if choice == 0:
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_human_unlinked", 1)
+        _warn_unlinked_copy(repo, operation, revisions)
+        return _remove_diff_revision_lines(message)
+    if choice == 1:
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_human_proceeded", 1)
+        _warn_copied_diff_association(repo, operation, revisions)
+        _approve_copied_diff_revisions(repo, revisions)
+        return message
+
+    repo.ui.metrics.inc(_BADDIFFID_PREFIX + "copy_human_cancelled", 1)
+    raise error.Abort(_("aborted by user"))
+
+
 def _validate_commit_set(repo, successors, predecessors):
+    # Consume any pending copy approval regardless of which branch validates
+    # this commit, so a stale approval cannot leak to a later commit.
+    approved_copy_revisions = repo.volatile_state.pop(_COPY_DIFF_APPROVALS, set())
     successor_revisions = []
     multiple_revisions = set()
     for successor in successors:
@@ -213,6 +359,17 @@ def _validate_commit_set(repo, successors, predecessors):
         if count > 1
     }
     if not predecessor_revisions:
+        if successor_revision_set and successor_revision_set != approved_copy_revisions:
+            _confirm_message_change(
+                repo,
+                _("commit introduces phabricator diff number(s) %s")
+                % _format_diff_numbers(successor_revision_set),
+                _(
+                    "create the commit without a Differential Revision line, then "
+                    "%s to associate it intentionally"
+                )
+                % _format_diff_link_guidance(successor_revision_set),
+            )
         return
 
     unexpected = successor_revision_set - predecessor_revisions
@@ -371,6 +528,7 @@ def extsetup(ui) -> None:
     extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)
     extensions.wrapfunction(commands, "_makegraftmessage", makegraftmessage)
     extensions.wrapfunction(rewriteutil, "commitcheck", validate_commit)
+    extensions.wrapfunction(rewriteutil, "copycommitmessage", copycommitmessage)
 
     smartset.prefetchtemplatekw.update(
         {

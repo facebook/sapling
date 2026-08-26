@@ -101,6 +101,7 @@ HGPLAIN should allow restoring a Differential Revision:
 
   $ HGPLAIN=1 sl amend --config devel.print-metrics=commit.baddiffid -m "$(printf 'new message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   cad5328c7ead -> 334772907fae "new message"
+  commit.baddiffid.automation_allowed: 1
 
 Metaedit -m preserving Differential Revision should succeed:
 
@@ -206,13 +207,20 @@ Fold may deliberately retain one Differential Revision from two linked predecess
   $ sl log -r . -T '[{phabdiff}]\n'
   [D12345]
 
-Fresh commit can currently reuse a Differential Revision:
+Agent: fresh commit introducing a Differential Revision should abort:
 
   $ newclientrepo
   $ echo first > first
   $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
   $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  abort: commit introduces phabricator diff number(s) 'D12345'
+  (create the commit without a Differential Revision line, then run 'jf link --diff D12345' to associate it intentionally)
+  [255]
+
+Config override should allow introducing a Differential Revision:
+
+  $ CODING_AGENT_METADATA=id=test_agent sl commit --config fbcodereview.allow-diff-revision-drop=true -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ sl log -r '.^ + .' -T '[{phabdiff}]\n'
   [D12345]
   [D12345]
@@ -255,7 +263,207 @@ Agent guidance uses a non-literal placeholder when several diff numbers are pres
   (keep exactly one Differential Revision line in the commit message; to change the association, run 'jf unlink' before the rewrite and 'jf link --diff D<number>' afterward)
   [255]
 
-Rebase --keep can currently copy a Differential Revision:
+Graft should not invoke the copied-message hook when it has no changes:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo source > source
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ SOURCE=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo source > source
+  $ sl commit -Aqm same-tree
+  $ NOOP_DESTINATION=$(sl log -r . -T '{node}')
+  $ sl graft -q $SOURCE
+  note: graft of * created no changes to commit (glob)
+  $ test "$(sl log -r . -T '{node}')" = "$NOOP_DESTINATION"
+
+Agent: graft should unlink the copied commit:
+
+  $ sl go -q $BASE
+  $ echo destination > destination
+  $ sl commit -Aqm destination
+  $ DESTINATION=$(sl log -r . -T '{node}')
+  $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $SOURCE >/dev/null
+  note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_agent_unlinked: 1
+  $ sl log -r "$SOURCE + ." -T '[{phabdiff}]\n'
+  [D12345]
+  []
+
+Agent warn mode should keep the copied diff number with a warning:
+
+  $ sl go -q $DESTINATION
+  $ CODING_AGENT_METADATA=id=test_agent sl graft -q --config fbcodereview.bad-diff-id-agent-mode=warn --config devel.print-metrics=commit.baddiffid $SOURCE
+  warning: copying this commit with graft associates multiple commits with 'D12345'
+  (run 'jf unlink' from the new commit to remove the duplicate association)
+  commit.baddiffid.copy_agent_warned: 1
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Unrecognized agent mode should keep the copied diff number:
+
+  $ sl go -q $DESTINATION
+  $ CODING_AGENT_METADATA=id=test_agent sl graft -q --config fbcodereview.bad-diff-id-agent-mode=false $SOURCE
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Agent: graft should not transform a user-supplied message:
+
+  $ sl go -q $DESTINATION
+  $ CODING_AGENT_METADATA=id=test_agent sl graft -q -m "$(printf 'custom\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')" $SOURCE
+  abort: commit introduces phabricator diff number(s) 'D12345'
+  (create the commit without a Differential Revision line, then run 'jf link --diff D12345' to associate it intentionally)
+  [255]
+  $ test "$(sl log -r . -T '{node}')" = "$DESTINATION"
+  $ sl go -qC $DESTINATION
+
+Human graft prompt should offer to remove the diff number:
+
+  $ sl go -q $DESTINATION
+  $ sl graft -q --config ui.interactive=true --config devel.print-metrics=commit.baddiffid $SOURCE <<EOF
+  > r
+  > EOF
+  copying this commit would associate multiple commits with 'D12345'; [r]emove the diff number from the new commit, [p]roceed with the duplicate association, or [c]ancel?  r
+  note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_human_unlinked: 1
+  $ sl log -r . -T '[{phabdiff}]\n'
+  []
+
+Human warning mode should keep the copied diff number without prompting:
+
+  $ sl go -q $DESTINATION
+  $ sl graft -q --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=warn --config devel.print-metrics=commit.baddiffid $SOURCE
+  warning: copying this commit with graft associates multiple commits with 'D12345'
+  (run 'jf unlink' from the new commit to remove the duplicate association)
+  commit.baddiffid.copy_human_warned: 1
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Unrecognized human mode should keep the copied diff number without prompting:
+
+  $ sl go -q $DESTINATION
+  $ sl graft -q --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=off $SOURCE
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Human graft prompt should default to proceeding with a warning:
+
+  $ sl go -q $DESTINATION
+  $ sl graft -q --config devel.print-metrics=commit.baddiffid $SOURCE
+  copying this commit would associate multiple commits with 'D12345'; [r]emove the diff number from the new commit, [p]roceed with the duplicate association, or [c]ancel?  p
+  warning: copying this commit with graft associates multiple commits with 'D12345'
+  (run 'jf unlink' from the new commit to remove the duplicate association)
+  commit.baddiffid.copy_human_proceeded: 1
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Human graft prompt should allow cancelling:
+
+  $ sl go -q $DESTINATION
+  $ sl graft -q --config ui.interactive=true --config devel.print-metrics=commit.baddiffid $SOURCE <<EOF
+  > c
+  > EOF
+  copying this commit would associate multiple commits with 'D12345'; [r]emove the diff number from the new commit, [p]roceed with the duplicate association, or [c]ancel?  c
+  abort: aborted by user
+  commit.baddiffid.copy_human_cancelled: 1
+  [255]
+  $ test "$(sl log -r . -T '{node}')" = "$DESTINATION"
+
+Disabling unlink-copied-diff-revisions should restore the old copy behavior:
+
+  $ sl go -qC $DESTINATION
+  $ CODING_AGENT_METADATA=id=test_agent sl graft -q --config fbcodereview.unlink-copied-diff-revisions=false $SOURCE
+  $ sl log -r . -T '[{phabdiff}]\n'
+  [D12345]
+
+Human abort mode should reject the copy outright:
+
+  $ sl go -qC $DESTINATION
+  $ sl graft -q --config fbcodereview.bad-diff-id-human-mode=abort --config devel.print-metrics=commit.baddiffid $SOURCE
+  abort: copying this commit with graft would associate multiple commits with 'D12345'
+  (run 'jf unlink' on the source commit first, or set 'fbcodereview.bad-diff-id-human-mode=prompt' to choose interactively)
+  commit.baddiffid.copy_human_rejected: 1
+  [255]
+  $ test "$(sl log -r . -T '{node}')" = "$DESTINATION"
+
+Agent: graft of an obsolete commit should keep an otherwise-lost diff number:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo lost > lost
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'lost\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ LOST=$(sl log -r . -T '{node}')
+  $ echo keepalive > keepalive
+  $ sl commit -Aqm keepalive
+  $ sl go -q $LOST
+  $ HGPLAIN=1 sl amend -q --no-rebase -m "lost without diff number"
+  $ sl go -q $BASE
+  $ echo elsewhere > elsewhere
+  $ sl commit -Aqm elsewhere
+  hint[amend-restack]: descendants of eabcd03bef92 are left behind - use 'sl restack' to rebase them
+  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
+  $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
+  commit.baddiffid.copy_recovery_kept: 1
+  $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
+  [D12345] lost
+
+Agent: graft of an obsolete commit should unlink when a successor keeps the diff number:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo lost > lost
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'lost\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ LOST=$(sl log -r . -T '{node}')
+  $ echo keepalive > keepalive
+  $ sl commit -Aqm keepalive
+  $ sl go -q $LOST
+  $ HGPLAIN=1 sl amend -q --no-rebase -m "$(printf 'lost v2\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ sl go -q $BASE
+  $ echo elsewhere > elsewhere
+  $ sl commit -Aqm elsewhere
+  hint[amend-restack]: descendants of eabcd03bef92 are left behind - use 'sl restack' to rebase them
+  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
+  $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
+  note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_agent_unlinked: 1
+  $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
+  [] lost
+
+Agent: graft should unlink when an unrelated draft carries the diff number:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo lost > lost
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'lost\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ LOST=$(sl log -r . -T '{node}')
+  $ echo keepalive > keepalive
+  $ sl commit -Aqm keepalive
+  $ sl go -q $LOST
+  $ HGPLAIN=1 sl amend -q --no-rebase -m "lost without diff number"
+  $ sl go -q $BASE
+  $ echo unrelated > unrelated
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'unrelated carrier\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ sl go -q $BASE
+  $ echo elsewhere > elsewhere
+  $ sl commit -Aqm elsewhere
+  hint[amend-restack]: descendants of * are left behind - use 'sl restack' to rebase them (glob)
+  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
+  $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
+  note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_agent_unlinked: 1
+  $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
+  [] lost
+
+Agent: rebase --keep should unlink the copied commit:
 
   $ newclientrepo
   $ echo base > base
@@ -268,10 +476,32 @@ Rebase --keep can currently copy a Differential Revision:
   $ echo destination > destination
   $ sl commit -Aqm destination
   $ DESTINATION=$(sl log -r . -T '{node}')
-  $ CODING_AGENT_METADATA=id=test_agent sl rebase --keep -r $SOURCE -d $DESTINATION >/dev/null
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase --keep --config devel.print-metrics=commit.baddiffid -r $SOURCE -d $DESTINATION >/dev/null
+  note: removed phabricator diff number 'D12345' from the commit copied by rebase --keep; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_agent_unlinked: 1
   $ sl log -r "$SOURCE + children($DESTINATION)" -T '[{phabdiff}]\n'
   [D12345]
+  []
+
+Agent: native rebase --keep should unlink the copied commit:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo source > source
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ SOURCE=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo destination > destination
+  $ sl commit -Aqm destination
+  $ DESTINATION=$(sl log -r . -T '{node}')
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase --keep --config nativecheckout.rebaseonenative=true --config devel.print-metrics=commit.baddiffid -r $SOURCE -d $DESTINATION >/dev/null
+  note: removed phabricator diff number 'D12345' from the commit copied by rebase --keep; the new commit is not linked to a phabricator diff
+  commit.baddiffid.copy_agent_unlinked: 1
+  $ sl log -r "$SOURCE + children($DESTINATION)" -T '[{phabdiff}]\n'
   [D12345]
+  []
 
 Agent: split copying one Differential Revision to every successor should abort:
 

@@ -4,6 +4,7 @@ Setup
   $ configure mutation-norecord dummyssh
   $ enable amend fbcodereview pushrebase rebase
   $ setconfig fbcodereview.allow-diff-revision-drop=true
+  $ setconfig fbcodereview.unlink-copied-diff-revisions=false
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
