@@ -2453,6 +2453,17 @@ def remotebookmarkrevset(repo, subset, x):
     return subset & smartset.baseset(sorted(remoterevs), repo=repo)
 
 
+@predicate("_interestingdraft()", takeorder=True)
+def _interestingdraft(repo, subset, x, order):
+    """Subset of draft() used by the `titles` namespace."""
+    getargs(x, 0, 0, "_interestingdraft takes no arguments")
+    revs = repo.revs("limit(sort(draft(),-rev), 1000)")
+    if order == followorder:
+        return subset & revs
+    else:
+        return revs & subset
+
+
 def _getremoterevs(repo, namespacename, matchpattern=None):
     try:
         ns = repo.names[namespacename]

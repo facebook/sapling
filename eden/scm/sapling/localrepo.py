@@ -1668,8 +1668,8 @@ class localrepository:
           RGenerator) so they won't be read again by the next iteration
           via `draft_titles`.
         """
-        limit = self.ui.configint("experimental", "draft-title-limit") or 1000
-        draftrevs = self.revs("limit(reverse(draft()),%z)", limit).prefetch("text")
+        # allow user override via revsetalias._interestingdraft config.
+        draftrevs = self.anyrevs(["_interestingdraft()"], user=True).prefetch("text")
 
         def gen():
             for c in draftrevs.iterctx():
