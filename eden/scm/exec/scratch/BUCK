@@ -33,6 +33,9 @@ sl_rust_binary(
             "name": "mkscratch",
         },
     },
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",

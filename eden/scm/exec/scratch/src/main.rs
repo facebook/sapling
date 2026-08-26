@@ -516,7 +516,9 @@ fn path_command(
 
     // Get the base scratch path for this repo
     let mut result = scratch_root(config, repo_root, encoder)?;
-    readme_in_scratch_path(&result)?;
+    if !no_create {
+        readme_in_scratch_path(&result)?;
+    }
     let repo_owner = get_file_owner(repo_root)?;
 
     // If they asked for a subdir, compute it
@@ -553,4 +555,48 @@ fn path_command(
 
     println!("{}", result.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_create_does_not_write_to_existing_scratch_namespace() {
+        let temp_dir = tempfile::tempdir().expect("temporary directory should be created");
+        let repo = temp_dir.path().join("repo");
+        let scratch_base = temp_dir.path().join("scratch");
+        fs::create_dir(&repo).expect("repository directory should be created");
+
+        let config = Config {
+            template: Some(scratch_base.display().to_string()),
+            ..Config::default()
+        };
+        let scratch_namespace =
+            scratch_root(&config, &repo, &zzencode).expect("scratch path should resolve");
+        fs::create_dir_all(&scratch_namespace)
+            .expect("existing scratch namespace should be created");
+
+        path_command(
+            &config,
+            true,
+            Some("buck-out"),
+            true,
+            repo.to_str(),
+            &zzencode,
+        )
+        .expect("read-only scratch path resolution should succeed");
+
+        assert!(
+            !scratch_namespace.join("README.txt").exists(),
+            "--no-create must not create README.txt"
+        );
+        assert_eq!(
+            fs::read_dir(&scratch_namespace)
+                .expect("scratch namespace should remain readable")
+                .count(),
+            0,
+            "--no-create must not create directories or metadata"
+        );
+    }
 }
