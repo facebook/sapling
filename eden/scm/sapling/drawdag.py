@@ -434,7 +434,7 @@ def drawdag(repo, text: str, **opts) -> None:
     # Mutation annotations intentionally construct obsolete topology.
     with (
         repo.ui.configoverride(
-            {("commit", "reject-modifying-obsolete"): False}, "drawdag"
+            {("commit", "modify-obsolete-mode"): "ignore"}, "drawdag"
         ),
         repo.wlock(),
         repo.lock(),

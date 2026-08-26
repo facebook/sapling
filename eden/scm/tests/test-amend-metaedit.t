@@ -5,7 +5,7 @@
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
-  $ setconfig commit.reject-modifying-obsolete=false
+  $ setconfig commit.modify-obsolete-mode=ignore
   $ enable amend rebase
   $ readconfig <<EOF
   > [defaults]

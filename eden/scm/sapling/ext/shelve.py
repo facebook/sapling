@@ -437,7 +437,7 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
         # may be created on an obsolete parent.
         with (
             repo.ui.configoverride(
-                {("commit", "reject-modifying-obsolete"): False}, "shelve"
+                {("commit", "modify-obsolete-mode"): "ignore"}, "shelve"
             ),
             repo.lock(),
             repo.transaction("commit", report=None),
@@ -722,7 +722,7 @@ def unshelvecontinue(ui, repo, state, opts) -> None:
             with ui.configoverride(
                 {
                     ("experimental", "rebaseskipobsolete"): "off",
-                    ("commit", "reject-modifying-obsolete"): False,
+                    ("commit", "modify-obsolete-mode"): "ignore",
                 },
                 "unshelve",
             ):
@@ -769,7 +769,7 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     with ui.configoverride(
         {
             ("ui", "quiet"): True,
-            ("commit", "reject-modifying-obsolete"): False,
+            ("commit", "modify-obsolete-mode"): "ignore",
         }
     ):
         node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
@@ -1062,7 +1062,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         rebaseconfigoverrides = {
             ("ui", "forcemerge"): opts.get("tool", ""),
             ("experimental", "rebaseskipobsolete"): "off",
-            ("commit", "reject-modifying-obsolete"): False,
+            ("commit", "modify-obsolete-mode"): "ignore",
         }
         with ui.configoverride(rebaseconfigoverrides, "unshelve"):
             shelvectx = _rebaserestoredcommit(

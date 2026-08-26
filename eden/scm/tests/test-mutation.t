@@ -9,7 +9,7 @@
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true
-  $ setconfig commit.reject-modifying-obsolete=false
+  $ setconfig commit.modify-obsolete-mode=ignore
 
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]

@@ -5,7 +5,7 @@
   $ configure modern
   $ enable smartlog rebase
   $ disable commitcloud
-  $ setconfig commit.reject-modifying-obsolete=false
+  $ setconfig commit.modify-obsolete-mode=ignore
 
   $ newrepo
   $ drawdag << 'EOS'

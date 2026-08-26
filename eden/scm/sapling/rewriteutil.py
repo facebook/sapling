@@ -52,9 +52,7 @@ def precheck(repo, revs, action="rewrite", checkmerge=True):
 
     slacl.abort_if_restricted(repo, (repo[rev] for rev in revs))
 
-    _record_obsolete_approvals(
-        repo, _checkobsolete(repo, [repo[rev] for rev in revs], action)
-    )
+    _record_obsolete_approvals(repo, _checkobsolete(repo, [repo[rev] for rev in revs]))
 
 
 def _record_obsolete_approvals(repo, approved):
@@ -86,22 +84,33 @@ def _hasvisibledescendant(repo, ctx):
     return next(iter(descendants), None) is not None
 
 
+# Boolean configs the mode configs replaced, still honored for rollback.
+_LEGACY_BOOLEAN_CONFIGS = {
+    ("commit", "modify-obsolete-mode"): ("commit", "reject-modifying-obsolete"),
+}
+
+
 def _obsolete_mode(repo, config):
     default = "abort" if agentdetect.is_agent() else "warn"
-    mode = repo.ui.config(config[0], config[1], default)
-    return mode if mode in ("warn", "abort") else "ignore"
+    mode = repo.ui.config(config[0], config[1])
+    if mode is None:
+        legacy = _LEGACY_BOOLEAN_CONFIGS.get(config)
+        if legacy is not None and repo.ui.config(legacy[0], legacy[1]) is not None:
+            return default if repo.ui.configbool(legacy[0], legacy[1]) else "ignore"
+        return default
+    # Unrecognized values (e.g. "off") disable the guard so emergency
+    # rollback configs fail open.
+    return mode if mode in ("warn", "prompt", "abort") else "ignore"
 
 
 def _checkobsolete(
     repo,
     contexts,
-    action,
     message=None,
     hint=None,
     allow_public_successors=False,
     allow_visible_descendants=False,
-    config=("commit", "reject-modifying-obsolete"),
-    mode_config=None,
+    mode_config=("commit", "modify-obsolete-mode"),
 ):
     if not mutation.enabled(repo):
         return []
@@ -112,7 +121,7 @@ def _checkobsolete(
 
     # Counters are namespaced by the guard: commit.obsolete.* for rewrite and
     # commit guards, checkout.obsolete.* for the goto guard.
-    prefix = (mode_config[0] if mode_config is not None else config[0]) + ".obsolete."
+    prefix = mode_config[0] + ".obsolete."
 
     # All bypasses below come before the per-context fate and visibility
     # queries, so automation, explicit opt-ins, and disabled modes only pay
@@ -128,16 +137,10 @@ def _checkobsolete(
         repo.ui.metrics.inc(prefix + "config_allowed", 1)
         return obsolete_contexts
 
-    if mode_config is None:
-        if not repo.ui.configbool(config[0], config[1], True):
-            repo.ui.metrics.inc(prefix + "config_allowed", 1)
-            return obsolete_contexts
-        mode = "abort" if agentdetect.is_agent() else "prompt"
-    else:
-        mode = _obsolete_mode(repo, mode_config)
-        if mode == "ignore":
-            repo.ui.metrics.inc(prefix + "mode_ignored", 1)
-            return obsolete_contexts
+    mode = _obsolete_mode(repo, mode_config)
+    if mode == "ignore":
+        repo.ui.metrics.inc(prefix + "mode_ignored", 1)
+        return obsolete_contexts
 
     ispublic = mutation.getispublicfunc(repo) if allow_public_successors else None
     obsolete = []
@@ -186,17 +189,15 @@ def _checkobsolete(
         raise error.Abort(message, hint=hint)
 
     repo.ui.warn(_("warning: %s\n") % message)
-    if mode == "warn":
-        repo.ui.metrics.inc(actormetric(prefix, "warned"), 1)
+    if mode == "prompt":
+        choice = repo.ui.promptchoice(_("proceed (Yn)? $$ &Yes $$ &No"), default=0)
+        if choice != 0:
+            repo.ui.metrics.inc(actormetric(prefix, "prompt_no"), 1)
+            raise error.Abort(_("aborted by user"))
+        repo.ui.metrics.inc(actormetric(prefix, "prompt_yes"), 1)
         return [ctx for ctx, _fates in obsolete]
 
-    choice = repo.ui.promptchoice(
-        _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
-    )
-    if choice != 0:
-        repo.ui.metrics.inc(actormetric(prefix, "prompt_no"), 1)
-        raise error.Abort(_("aborted by user"))
-    repo.ui.metrics.inc(actormetric(prefix, "prompt_yes"), 1)
+    repo.ui.metrics.inc(actormetric(prefix, "warned"), 1)
     return [ctx for ctx, _fates in obsolete]
 
 
@@ -243,9 +244,7 @@ def commitcheck(repo, ctx):
     ]
     # Record approvals granted here too, so rewrite paths without a command
     # precheck also prompt at most once per predecessor.
-    _record_obsolete_approvals(
-        repo, _checkobsolete(repo, unapproved_predecessors, "rewrite")
-    )
+    _record_obsolete_approvals(repo, _checkobsolete(repo, unapproved_predecessors))
     predecessor_parents = {
         parent.node()
         for predecessor in predecessors
@@ -258,7 +257,6 @@ def commitcheck(repo, ctx):
             for parent in ctx.parents()
             if parent.node() != node.nullid and parent.node() not in predecessor_parents
         ],
-        "commit",
         _("creating a child of an old version of a commit will diverge your stack"),
         _(
             "switch to the newer version listed above first -- '@prog@ goto' "
@@ -285,7 +283,6 @@ def gotocheck(repo, targets):
     _checkobsolete(
         repo,
         hidden_targets,
-        "goto",
         _("checking out an old version of a commit risks diverging your stack"),
         _(
             "check out the newer version listed above instead, or run "

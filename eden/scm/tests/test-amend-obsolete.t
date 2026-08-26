@@ -41,27 +41,33 @@ Agent: commit --amend on obsolete commit should abort:
   (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
   [255]
 
-Interactive user choosing No should abort:
+Human abort mode should reject rewriting an obsolete commit:
 
-  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.obsolete -m "user amend no" <<EOF
+  $ sl amend --config commit.modify-obsolete-mode=abort --config devel.print-metrics=commit.obsolete -m "user amend abort"
+  abort: changing an old version of a commit will diverge your stack:
+  - 87ce07975dfa -> 58bce2fd05ef (rewrite)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
+  commit.obsolete.human_rejected: 1
+  [255]
+
+Prompt mode should ask before rewriting an obsolete commit:
+
+  $ sl amend --config commit.modify-obsolete-mode=prompt --config ui.interactive=true --config devel.print-metrics=commit.obsolete -m "prompt amend no" <<EOF
   > n
   > EOF
   warning: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
-  proceed with amend (Yn)?  n
+  proceed (Yn)?  n
   abort: aborted by user
   commit.obsolete.human_prompt_no: 1
   [255]
 
-Interactive user choosing Yes should proceed:
+Human default should warn and proceed:
 
-  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.obsolete -m "user amend yes" <<EOF
-  > y
-  > EOF
+  $ sl amend --config devel.print-metrics=commit.obsolete -m "user amend warning"
   warning: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
-  proceed with amend (Yn)?  y
-  commit.obsolete.human_prompt_yes: 1
+  commit.obsolete.human_warned: 1
 
 Should not block SL_AUTOMATION
 
@@ -78,8 +84,17 @@ Config override should allow amending obsolete commits:
   0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo d > d
   $ sl add d
-  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false --config devel.print-metrics=commit.obsolete -m "config override amend"
-  commit.obsolete.config_allowed: 1
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.modify-obsolete-mode=ignore --config devel.print-metrics=commit.obsolete -m "config override amend"
+  commit.obsolete.mode_ignored: 1
+
+The legacy boolean config should remain an effective override:
+
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
+  0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
+  $ echo f > f
+  $ sl add f
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false --config devel.print-metrics=commit.obsolete -m "legacy override amend"
+  commit.obsolete.mode_ignored: 1
 
 Explicitly allowing divergence should allow amending obsolete commits:
 
@@ -117,6 +132,26 @@ Set up an obsolete commit with one live successor:
   >   SUCCESSOR=$(sl log -r . -T '{node}')
   >   sl debugobsolete "$SOURCE" "$SUCCESSOR"
   > }
+
+Agent warn mode should allow rewriting an obsolete commit:
+
+  $ make_obsolete_commit
+  $ sl go -q --config checkout.obsolete-mode=ignore $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -q --config commit.modify-obsolete-mode=warn --config devel.print-metrics=commit.obsolete -m "agent warning"
+  warning: changing an old version of a commit will diverge your stack:
+  - * -> * (amend) (glob)
+  commit.obsolete.agent_warned: 1
+  $ sl log -r . -T '{desc|firstline}\n'
+  agent warning
+
+Unrecognized commit modes should ignore the guard:
+
+  $ make_obsolete_commit
+  $ sl go -q --config checkout.obsolete-mode=ignore $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -q --config commit.modify-obsolete-mode=off --config devel.print-metrics=commit.obsolete -m "agent mode off"
+  commit.obsolete.mode_ignored: 1
+  $ sl log -r . -T '{desc|firstline}\n'
+  agent mode off
 
 Agent: uncommit should reject rewriting an obsolete commit:
 
@@ -340,7 +375,7 @@ Unrecognized checkout modes should also ignore the guard:
 The commit rewrite override should not disable checkout protection:
 
   $ make_obsolete_commit
-  $ CODING_AGENT_METADATA=id=test_agent sl go --config commit.reject-modifying-obsolete=false $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config commit.modify-obsolete-mode=ignore $SOURCE
   abort: checking out an old version of a commit risks diverging your stack:
   - * -> * (amend) (glob)
   (check out the newer version listed above instead, or run 'sl unhide *' to explicitly allow checking out this old commit) (glob)

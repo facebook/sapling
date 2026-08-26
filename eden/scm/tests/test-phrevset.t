@@ -68,7 +68,7 @@
   $ setconfig mutation.record=true mutation.enabled=true phrevset.mock-local-D1234=$A
   $ sl goto -q $A
   $ HGPLAIN=1 sl amend -q -d "1000 0" -m "$(printf 'older successor\n\nDifferential Revision: https://phabricator.intern.facebook.com/D1234')"
-  $ sl goto -q --hidden --config commit.reject-modifying-obsolete=false $A
+  $ sl goto -q --hidden --config commit.modify-obsolete-mode=ignore $A
   $ HGPLAIN=1 sl amend -q -d "2000 0" -m "$(printf 'newer successor\n\nDifferential Revision: https://phabricator.intern.facebook.com/D1234')"
 
   $ sl log -r D1234 -T '{desc|firstline}\n'

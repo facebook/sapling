@@ -62,11 +62,10 @@
   o  a24b40a3340f A branch=default
 
 
-  $ sl go -q --config commit.reject-modifying-obsolete=false 57c4b16efbb2
+  $ sl go -q --config checkout.obsolete-mode=ignore --config commit.modify-obsolete-mode=ignore 57c4b16efbb2
   $ sl amend -m nope
   warning: changing an old version of a commit will diverge your stack:
   - 57c4b16efbb2 -> ccf2db2c8709 (rebase)
-  proceed with amend (Yn)?  y
   abort: operating on lossily synced commit 57c4b16efbb23b68cbef2f5748e20688a1ebb5f8 disallowed by default
   (perform operation in source-of-truth repo, or specify '--config megarepo.lossy-commit-action=ignore' to bypass)
   [255]

@@ -376,7 +376,7 @@ def _import(repo, actions):
     with (
         repo.ui.configoverride(
             {
-                ("commit", "reject-modifying-obsolete"): False,
+                ("commit", "modify-obsolete-mode"): "ignore",
                 ("fbcodereview", "allow-diff-revision-drop"): True,
             },
             "importstack",
