@@ -7,6 +7,7 @@
   $ configure mutation-norecord dummyssh
   $ enable rebase amend
   $ setconfig 'hint.ack=amend-restack'
+  $ setconfig commit.reject-modifying-obsolete=false
   $ readconfig <<EOF
   > [ui]
   > logtemplate= {node|short} {desc|firstline}{if(obsolete,' {mutation_nodes}')}

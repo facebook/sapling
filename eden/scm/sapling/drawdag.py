@@ -431,7 +431,15 @@ def drawdag(repo, text: str, **opts) -> None:
     Note that the revset cannot have confusing characters which can be seen as
     the part of the graph edges, like `|/+-\`.
     """
-    with repo.wlock(), repo.lock(), repo.transaction("drawdag") as tr:
+    # Mutation annotations intentionally construct obsolete topology.
+    with (
+        repo.ui.configoverride(
+            {("commit", "reject-modifying-obsolete"): False}, "drawdag"
+        ),
+        repo.wlock(),
+        repo.lock(),
+        repo.transaction("drawdag") as tr,
+    ):
         return _drawdagintransaction(repo, text, tr, **opts)
 
 

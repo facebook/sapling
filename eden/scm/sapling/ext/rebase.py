@@ -551,7 +551,6 @@ class rebaseruntime:
                 repo,
                 precheckrevs,
                 "rebase",
-                checkobsolete=False,
                 checkmerge=False,
             )
 

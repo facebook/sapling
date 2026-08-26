@@ -29,7 +29,7 @@ Agent: amend on obsolete commit should abort:
   $ CODING_AGENT_METADATA=id=test_agent sl amend -m "agent amend"
   abort: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
-  (run 'sl sl' for the latest commit graph view)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
   [255]
 
 Agent: commit --amend on obsolete commit should abort:
@@ -37,7 +37,7 @@ Agent: commit --amend on obsolete commit should abort:
   $ CODING_AGENT_METADATA=id=test_agent sl commit --amend -m "agent commit --amend"
   abort: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
-  (run 'sl sl' for the latest commit graph view)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
   [255]
 
 Interactive user choosing No should abort:
@@ -76,6 +76,14 @@ Config override should allow amending obsolete commits:
   $ sl add d
   $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=False -m "config override amend"
 
+Explicitly allowing divergence should allow amending obsolete commits:
+
+  $ sl go 87ce07975dfa
+  0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
+  $ echo e > e
+  $ sl add e
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config experimental.evolution.allowdivergence=true -m "allowdivergence amend"
+
 Set up an obsolete commit with one live successor:
 
   $ make_obsolete_commit() {
@@ -112,12 +120,12 @@ Agent: uncommit should reject rewriting an obsolete commit:
   $ CODING_AGENT_METADATA=id=test_agent sl uncommit
   abort: changing an old version of a commit will diverge your stack:
   - * -> * (amend) (glob)
-  (run 'sl sl' for the latest commit graph view)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
   [255]
   $ sl log -r . -T '{desc|firstline}\n'
   original
 
-Agent: rebase currently starts rewriting before reaching a later obsolete commit:
+Agent: rebase should reject all rewrites before starting when a later commit is obsolete:
 
   $ newclientrepo
   $ echo foundation > foundation
@@ -133,15 +141,44 @@ Agent: rebase currently starts rewriting before reaching a later obsolete commit
   $ echo destination > destination
   $ sl commit -Aqm destination
   $ CODING_AGENT_METADATA=id=test_agent sl rebase -r "$FIRST::$SOURCE" -d .
-  rebasing * "first" (glob)
-  rebasing * "original" (glob)
+  abort: changing an old version of a commit will diverge your stack:
+  - * -> * (amend) (glob)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
+  [255]
   $ sl log -r "successors($FIRST) - $FIRST" -T '{desc|firstline}\n'
-  first
   $ sl log -r . -T '{desc|firstline}\n'
   destination
   $ sl log -r "successors($SOURCE) - obsolete()" -T '{desc|firstline}\n'
   successor
+
+Agent should reject rewriting an obsolete commit after its successor lands:
+
+  $ make_obsolete_commit
+  $ SUCCESSOR=$(sl log -r . -T '{node}')
+  $ sl debugmakepublic $SUCCESSOR
+  $ sl go -q $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -qm "post-land rewrite"
+  abort: changing an old version of a commit will diverge your stack:
+  - * -> * (amend) (glob)
+  (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
+  [255]
+  $ sl log -r . -T '{desc|firstline}\n'
   original
+
+Direct commitctx should ignore a mutation predecessor that is not stored locally:
+
+  $ cat > $TESTTMP/commitctx-missing-predecessor.py <<'EOF'
+  > from sapling import context, hg, mutation, node, ui as uimod
+  > ui = uimod.ui.load()
+  > repo = hg.repository(ui, ".")
+  > unknown = node.bin("f" * 40)
+  > mutinfo = mutation.record(repo, {}, [unknown], op="rewrite")
+  > ctx = context.memctx(repo, [repo["."]], "missing predecessor", [], lambda *args: None, mutinfo=mutinfo)
+  > committed = repo.commitctx(ctx)
+  > print(repo[committed].description())
+  > EOF
+  $ sl debugpython -- $TESTTMP/commitctx-missing-predecessor.py
+  missing predecessor
 
 Agent: commit currently creates a child on an obsolete parent:
 

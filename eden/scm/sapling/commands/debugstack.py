@@ -371,10 +371,15 @@ def _import(repo, actions):
     wnode = repo["."].node()
     marks = Marks(wnode)
 
-    # Imported mutations may reproduce diff bindings across replacement commits.
+    # Imported mutation actions intentionally construct obsolete topology and
+    # may reproduce diff bindings across replacement commits.
     with (
         repo.ui.configoverride(
-            {("fbcodereview", "allow-diff-revision-drop"): True}, "importstack"
+            {
+                ("commit", "reject-modifying-obsolete"): False,
+                ("fbcodereview", "allow-diff-revision-drop"): True,
+            },
+            "importstack",
         ),
         repo.wlock(),
         repo.lock(),

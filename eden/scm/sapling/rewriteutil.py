@@ -19,9 +19,10 @@ from .i18n import _
 from .node import short
 
 _SPLIT_IN_PROGRESS = "rewriteutil.split-in-progress"
+_OBSOLETE_REWRITE_APPROVALS = "rewriteutil.obsolete-rewrite-approvals"
 
 
-def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
+def precheck(repo, revs, action="rewrite", checkmerge=True):
     """check if revs can be rewritten
     action is used to control the error message.
 
@@ -43,36 +44,71 @@ def precheck(repo, revs, action="rewrite", checkobsolete=True, checkmerge=True):
 
     slacl.abort_if_restricted(repo, (repo[rev] for rev in revs))
 
+    _record_obsolete_approvals(
+        repo, _checkobsolete(repo, [repo[rev] for rev in revs], action)
+    )
+
+
+def _record_obsolete_approvals(repo, approved):
+    if not approved:
+        return
+    if _OBSOLETE_REWRITE_APPROVALS not in repo.volatile_state:
+        repo.volatile_state[_OBSOLETE_REWRITE_APPROVALS] = set()
+        repo.ui.atexit(
+            lambda: repo.volatile_state.pop(_OBSOLETE_REWRITE_APPROVALS, None)
+        )
+    approvals = repo.volatile_state[_OBSOLETE_REWRITE_APPROVALS]
+    approvals.update(ctx.node() for ctx in approved)
+
+
+def _checkobsolete(repo, contexts, action):
     if (
-        checkobsolete
-        and mutation.enabled(repo)
-        and not repo.ui.plain()
-        and repo.ui.configbool("commit", "reject-modifying-obsolete", True)
+        not mutation.enabled(repo)
+        or repo.ui.plain()
+        or not repo.ui.configbool("commit", "reject-modifying-obsolete", True)
+        # allowdivergence is the established opt-in for operations that
+        # deliberately rewrite obsolete commits.
+        or repo.ui.configbool("experimental", "evolution.allowdivergence")
     ):
-        obsrevs = repo.revs("%ld and obsolete()", revs)
-        if obsrevs:
-            msg = _("changing an old version of a commit will diverge your stack")
-            details = []
-            for rev in obsrevs:
-                ctx = repo[rev]
-                fates = mutation.fate(repo, ctx.node())
-                for succs, op in fates:
-                    succids = ", ".join(short(s) for s in succs)
-                    details.append("- %s -> %s (%s)" % (short(ctx.node()), succids, op))
-                if not fates:
-                    details.append("- %s is obsolete" % short(ctx.node()))
-            if details:
-                msg += ":\n" + "\n".join(details)
-            hint = _("run '@prog@ sl' for the latest commit graph view")
-            if agentdetect.is_agent():
-                raise error.Abort(msg, hint=hint)
-            else:
-                repo.ui.warn(_("warning: %s\n") % msg)
-                choice = repo.ui.promptchoice(
-                    _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
-                )
-                if choice != 0:
-                    raise error.Abort(_("aborted by user"))
+        return []
+
+    obsolete = []
+    for ctx in contexts:
+        if not ctx.obsolete():
+            continue
+        fates = mutation.fate(repo, ctx.node())
+        obsolete.append((ctx, fates))
+    if not obsolete:
+        return []
+
+    msg = _("changing an old version of a commit will diverge your stack")
+    details = []
+    for ctx, fates in obsolete:
+        for successors, operation in fates:
+            successor_ids = ", ".join(short(successor) for successor in successors)
+            details.append(
+                "- %s -> %s (%s)" % (short(ctx.node()), successor_ids, operation)
+            )
+        if not fates:
+            details.append("- %s is obsolete" % short(ctx.node()))
+    if details:
+        msg += ":\n" + "\n".join(details)
+
+    hint = _(
+        "switch to the newer version listed above, or run '@prog@ graft' with "
+        "the old commit hash to deliberately fork it; '@prog@ sl' shows the "
+        "latest graph"
+    )
+    if agentdetect.is_agent():
+        raise error.Abort(msg, hint=hint)
+
+    repo.ui.warn(_("warning: %s\n") % msg)
+    choice = repo.ui.promptchoice(
+        _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
+    )
+    if choice != 0:
+        raise error.Abort(_("aborted by user"))
+    return [ctx for ctx, _fates in obsolete]
 
 
 @contextmanager
@@ -107,5 +143,18 @@ def commitcheck(repo, ctx):
     )
     split_successors = _localcontexts(
         repo, mutation.nodesfrominfo(mutinfo.get("mutsplit")) or []
+    )
+    # An approval covers the whole command: one approved predecessor may be
+    # rewritten into several successors (e.g. a split), each reaching here.
+    approvals = repo.volatile_state.get(_OBSOLETE_REWRITE_APPROVALS, set())
+    unapproved_predecessors = [
+        predecessor
+        for predecessor in predecessors
+        if predecessor.node() not in approvals
+    ]
+    # Record approvals granted here too, so rewrite paths without a command
+    # precheck also prompt at most once per predecessor.
+    _record_obsolete_approvals(
+        repo, _checkobsolete(repo, unapproved_predecessors, "rewrite")
     )
     return predecessors, split_successors
