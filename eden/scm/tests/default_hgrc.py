@@ -40,6 +40,9 @@ ipv6={use_ipv6}
 status.relative=True
 update.check=noconflict
 
+[checkout]
+show-destination=false
+
 [commit]
 show-status=false
 

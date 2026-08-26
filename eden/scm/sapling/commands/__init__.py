@@ -6322,6 +6322,15 @@ def update(
             ui, repo, rev, brev, clean=clean, updatecheck=updatecheck
         )
 
+        if (
+            ui.configbool("checkout", "show-destination", True)
+            and not ui.plain()
+            and not ui.quiet
+        ):
+            destctx = repo[rev]
+            title = next(iter(destctx.description().splitlines()), "")
+            ui.write(_('checked out %s "%s"\n') % (short(destctx.node()), title))
+
         if merge:
             mergemod.try_conclude_merge_state(repo)
 

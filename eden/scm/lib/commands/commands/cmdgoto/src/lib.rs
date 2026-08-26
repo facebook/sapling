@@ -10,6 +10,7 @@ use std::io;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
+use async_runtime::block_on;
 use checkout::BookmarkAction;
 use checkout::ReportMode;
 use clidispatch::ReqCtx;
@@ -18,10 +19,12 @@ use clidispatch::fallback;
 use cliparser::define_flags;
 use cmdutil::MergeToolOpts;
 use configmodel::ConfigExt;
+use dag::Vertex;
 use fs_err as fs;
 use repo::repo::Repo;
 use repostate::command_state::Operation;
 use repostate::command_state::SUBTREE_COPY_STATE_FILE;
+use types::HgId;
 use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -238,7 +241,38 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
         util::file::unlink_if_exists(wc.dot_hg_path().join(SUBTREE_COPY_STATE_FILE))?;
     }
 
+    // Informational only: never fail a completed checkout over it.
+    if let Err(err) = show_destination(&ctx, repo, target) {
+        tracing::debug!(?err, "error showing checkout destination");
+    }
+
     Ok(0)
+}
+
+fn show_destination(ctx: &ReqCtx<GotoOpts>, repo: &Repo, target: HgId) -> Result<()> {
+    if ctx.global_opts().quiet
+        || hgplain::is_plain(None)
+        || !repo
+            .config()
+            .get_or("checkout", "show-destination", || true)?
+    {
+        return Ok(());
+    }
+    let commits = repo.dag_commits()?;
+    let fields = block_on(
+        commits
+            .read()
+            .get_commit_fields(&Vertex::copy_from(target.as_ref())),
+    )?;
+    if let Some(fields) = fields {
+        let title = fields.description()?.lines().next().unwrap_or("");
+        ctx.io().write(format!(
+            "checked out {} \"{}\"\n",
+            &target.to_hex()[..12],
+            title
+        ))?;
+    }
+    Ok(())
 }
 
 enum GotoMergeState {

@@ -210,7 +210,9 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     # If we have both --clean and --rebase, we need to discard any outstanding
     # changes now before we attempt to perform any rebases.
     if opts.get("clean") and opts.get("rebase"):
-        commands.update(ui, repo, rev=repo["."].hex(), clean=True)
+        # prev/next print their own destination line via _showchangesets.
+        with ui.configoverride({("checkout", "show-destination"): False}, "movement"):
+            commands.update(ui, repo, rev=repo["."].hex(), clean=True)
 
     with repo.wlock(), repo.lock():
         # Record the active bookmark, if any.
@@ -233,15 +235,19 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             if movebookmark and bookmark is not None:
                 _setbookmark(repo, tr, bookmark, target)
 
-            # Update to the target commit.
-            commands.update(
-                ui,
-                repo,
-                rev=hex(target),
-                clean=opts.get("clean", False),
-                merge=opts.get("merge", False),
-                check=opts.get("check", False),
-            )
+            # Update to the target commit. _showchangesets below prints the
+            # destination, so suppress goto's own destination line.
+            with ui.configoverride(
+                {("checkout", "show-destination"): False}, "movement"
+            ):
+                commands.update(
+                    ui,
+                    repo,
+                    rev=hex(target),
+                    clean=opts.get("clean", False),
+                    merge=opts.get("merge", False),
+                    check=opts.get("check", False),
+                )
 
             # Print out the commit we landed on.
             _showchangesets(ui, repo, nodes=[target])
