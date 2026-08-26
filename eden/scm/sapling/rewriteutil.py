@@ -61,6 +61,12 @@ def _record_obsolete_approvals(repo, approved):
     approvals.update(ctx.node() for ctx in approved)
 
 
+def actormetric(prefix, suffix):
+    """Metric name split by whether an agent or a human drove the command."""
+    actor = "agent_" if agentdetect.is_agent() else "human_"
+    return prefix + actor + suffix
+
+
 def _hasvisibledescendant(repo, ctx):
     # wdir() is a virtual descendant of the checked-out commit, not an
     # existing committed stack.
@@ -89,20 +95,45 @@ def _checkobsolete(
     config=("commit", "reject-modifying-obsolete"),
     mode_config=None,
 ):
-    if (
-        not mutation.enabled(repo)
-        or repo.ui.plain()
-        # allowdivergence is the established opt-in for operations that
-        # deliberately rewrite obsolete commits.
-        or repo.ui.configbool("experimental", "evolution.allowdivergence")
-    ):
+    if not mutation.enabled(repo):
         return []
+
+    obsolete_contexts = [ctx for ctx in contexts if ctx.obsolete()]
+    if not obsolete_contexts:
+        return []
+
+    # Counters are namespaced by the guard: commit.obsolete.* for rewrite and
+    # commit guards, checkout.obsolete.* for the goto guard.
+    prefix = (mode_config[0] if mode_config is not None else config[0]) + ".obsolete."
+
+    # All bypasses below come before the per-context fate and visibility
+    # queries, so automation, explicit opt-ins, and disabled modes only pay
+    # for the obsolete() checks. Their counters may therefore include
+    # contexts the allowances would have exempted anyway.
+    if repo.ui.plain():
+        repo.ui.metrics.inc(prefix + "automation_allowed", 1)
+        return obsolete_contexts
+
+    # allowdivergence is the established opt-in for operations that
+    # deliberately rewrite obsolete commits.
+    if repo.ui.configbool("experimental", "evolution.allowdivergence"):
+        repo.ui.metrics.inc(prefix + "config_allowed", 1)
+        return obsolete_contexts
+
+    if mode_config is None:
+        if not repo.ui.configbool(config[0], config[1], True):
+            repo.ui.metrics.inc(prefix + "config_allowed", 1)
+            return obsolete_contexts
+        mode = "abort" if agentdetect.is_agent() else "prompt"
+    else:
+        mode = _obsolete_mode(repo, mode_config)
+        if mode == "ignore":
+            repo.ui.metrics.inc(prefix + "mode_ignored", 1)
+            return obsolete_contexts
 
     ispublic = mutation.getispublicfunc(repo) if allow_public_successors else None
     obsolete = []
-    for ctx in contexts:
-        if not ctx.obsolete():
-            continue
+    for ctx in obsolete_contexts:
         if allow_visible_descendants and _hasvisibledescendant(repo, ctx):
             continue
         fates = mutation.fate(repo, ctx.node())
@@ -121,15 +152,6 @@ def _checkobsolete(
         obsolete.append((ctx, fates))
     if not obsolete:
         return []
-
-    if mode_config is None:
-        if not repo.ui.configbool(config[0], config[1], True):
-            return []
-        mode = "abort" if agentdetect.is_agent() else "prompt"
-    else:
-        mode = _obsolete_mode(repo, mode_config)
-        if mode == "ignore":
-            return []
 
     if message is None:
         message = _("changing an old version of a commit will diverge your stack")
@@ -152,17 +174,21 @@ def _checkobsolete(
             "shows the latest graph"
         )
     if mode == "abort":
+        repo.ui.metrics.inc(actormetric(prefix, "rejected"), 1)
         raise error.Abort(message, hint=hint)
 
     repo.ui.warn(_("warning: %s\n") % message)
     if mode == "warn":
+        repo.ui.metrics.inc(actormetric(prefix, "warned"), 1)
         return [ctx for ctx, _fates in obsolete]
 
     choice = repo.ui.promptchoice(
         _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
     )
     if choice != 0:
+        repo.ui.metrics.inc(actormetric(prefix, "prompt_no"), 1)
         raise error.Abort(_("aborted by user"))
+    repo.ui.metrics.inc(actormetric(prefix, "prompt_yes"), 1)
     return [ctx for ctx, _fates in obsolete]
 
 

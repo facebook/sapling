@@ -125,22 +125,35 @@ def _bad_diff_id_mode(repo):
     return mode if mode in ("abort", "warn", "prompt") else "ignore"
 
 
+_BADDIFFID_PREFIX = "commit.baddiffid."
+
+
 def _warn_message_change(repo, message, hint):
     repo.ui.warn(_("warning: %s\n(%s)\n") % (message, hint))
 
 
 def _confirm_message_change(repo, message, hint=None):
+    if repo.ui.plain():
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "automation_allowed", 1)
+        return
+    if repo.ui.configbool("fbcodereview", "allow-diff-revision-drop"):
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "config_allowed", 1)
+        return
+
     if hint is None:
         hint = _(
             "use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff"
         )
     mode = _bad_diff_id_mode(repo)
     if mode == "ignore":
+        repo.ui.metrics.inc(_BADDIFFID_PREFIX + "mode_ignored", 1)
         return
     if mode == "warn":
+        repo.ui.metrics.inc(rewriteutil.actormetric(_BADDIFFID_PREFIX, "warned"), 1)
         _warn_message_change(repo, message, hint)
         return
     if mode == "abort":
+        repo.ui.metrics.inc(rewriteutil.actormetric(_BADDIFFID_PREFIX, "rejected"), 1)
         raise error.Abort(message, hint=hint)
 
     # Default to proceeding so scripted or non-interactive human invocations
@@ -150,7 +163,9 @@ def _confirm_message_change(repo, message, hint=None):
         default=0,
     )
     if choice != 0:
+        repo.ui.metrics.inc(rewriteutil.actormetric(_BADDIFFID_PREFIX, "prompt_no"), 1)
         raise error.Abort(_("aborted by user"))
+    repo.ui.metrics.inc(rewriteutil.actormetric(_BADDIFFID_PREFIX, "prompt_yes"), 1)
     _warn_message_change(repo, message, hint)
 
 
@@ -275,12 +290,6 @@ def _validate_commit_set(repo, successors, predecessors):
 def validate_commit(orig, repo, ctx):
     """Enforce Differential Revision invariants for a commit being written."""
     predecessors, split_successors = orig(repo, ctx)
-    if repo.ui.configbool("fbcodereview", "allow-diff-revision-drop"):
-        return predecessors, split_successors
-    if repo.ui.plain():
-        # should not block automation like `jf unlink`
-        return predecessors, split_successors
-
     if rewriteutil.issplitting(repo) and not predecessors:
         return predecessors, split_successors
 

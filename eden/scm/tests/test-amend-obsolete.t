@@ -26,10 +26,11 @@ Agent: amend on obsolete commit should abort:
 
   $ echo b > b
   $ sl add b
-  $ CODING_AGENT_METADATA=id=test_agent sl amend -m "agent amend"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config devel.print-metrics=commit.obsolete -m "agent amend"
   abort: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
   (switch to the newer version listed above, or run 'sl graft' with the old commit hash to deliberately fork it; 'sl sl' shows the latest graph)
+  commit.obsolete.agent_rejected: 1
   [255]
 
 Agent: commit --amend on obsolete commit should abort:
@@ -42,23 +43,25 @@ Agent: commit --amend on obsolete commit should abort:
 
 Interactive user choosing No should abort:
 
-  $ sl amend --config ui.interactive=true -m "user amend no" <<EOF
+  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.obsolete -m "user amend no" <<EOF
   > n
   > EOF
   warning: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
   proceed with amend (Yn)?  n
   abort: aborted by user
+  commit.obsolete.human_prompt_no: 1
   [255]
 
 Interactive user choosing Yes should proceed:
 
-  $ sl amend --config ui.interactive=true -m "user amend yes" <<EOF
+  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.obsolete -m "user amend yes" <<EOF
   > y
   > EOF
   warning: changing an old version of a commit will diverge your stack:
   - 87ce07975dfa -> 58bce2fd05ef (rewrite)
   proceed with amend (Yn)?  y
+  commit.obsolete.human_prompt_yes: 1
 
 Should not block SL_AUTOMATION
 
@@ -66,7 +69,8 @@ Should not block SL_AUTOMATION
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ sl add c
-  $ SL_AUTOMATION=true sl am -m "automation script amend"
+  $ SL_AUTOMATION=true sl am --config devel.print-metrics=commit.obsolete -m "automation script amend"
+  commit.obsolete.automation_allowed: 1
 
 Config override should allow amending obsolete commits:
 
@@ -74,7 +78,8 @@ Config override should allow amending obsolete commits:
   0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo d > d
   $ sl add d
-  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false -m "config override amend"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false --config devel.print-metrics=commit.obsolete -m "config override amend"
+  commit.obsolete.config_allowed: 1
 
 Explicitly allowing divergence should allow amending obsolete commits:
 
@@ -256,20 +261,22 @@ Agent should allow creating a child on an obsolete parent with visible descendan
 Human default should warn before going to an obsolete commit:
 
   $ make_obsolete_commit
-  $ sl go $SOURCE
+  $ sl go --config devel.print-metrics=checkout.obsolete $SOURCE
   warning: checking out an old version of a commit risks diverging your stack:
   - * -> * (amend) (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  checkout.obsolete.human_warned: 1
   $ sl log -r . -T '{desc|firstline}\n'
   original
 
 Human abort mode should reject going to an obsolete commit:
 
   $ make_obsolete_commit
-  $ sl go --config checkout.obsolete-mode=abort $SOURCE
+  $ sl go --config checkout.obsolete-mode=abort --config devel.print-metrics=checkout.obsolete $SOURCE
   abort: checking out an old version of a commit risks diverging your stack:
   - * -> * (amend) (glob)
   (check out the newer version listed above instead, or run 'sl unhide *' to explicitly allow checking out this old commit) (glob)
+  checkout.obsolete.human_rejected: 1
   [255]
   $ sl log -r . -T '{desc|firstline}\n'
   successor
@@ -296,10 +303,11 @@ Explicitly unhiding an obsolete commit should allow agent goto:
 Agent warn mode should allow going to an obsolete commit:
 
   $ make_obsolete_commit
-  $ CODING_AGENT_METADATA=id=test_agent sl go --config checkout.obsolete-mode=warn $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config checkout.obsolete-mode=warn --config devel.print-metrics=checkout.obsolete $SOURCE
   warning: checking out an old version of a commit risks diverging your stack:
   - * -> * (amend) (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  checkout.obsolete.agent_warned: 1
   $ sl log -r . -T '{desc|firstline}\n'
   original
 

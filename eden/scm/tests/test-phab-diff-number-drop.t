@@ -11,9 +11,10 @@ Create a commit with a Differential Revision line:
 
 Agent: amend -m dropping diff number should abort:
 
-  $ CODING_AGENT_METADATA=id=test_agent sl amend -m "new message without diff number"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config devel.print-metrics=commit.baddiffid -m "new message without diff number"
   abort: commit message drops phabricator diff number 'D12345'
   (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
+  commit.baddiffid.agent_rejected: 1
   [255]
 
 Agent: commit --amend -m dropping diff number should abort:
@@ -40,11 +41,12 @@ Agent: metaedit -m dropping diff number should abort:
 
 Interactive user choosing No should abort (amend):
 
-  $ sl amend --config ui.interactive=true -m "drop diff number" <<EOF
+  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.baddiffid -m "drop diff number" <<EOF
   > n
   > EOF
   commit message drops phabricator diff number 'D12345', proceed (Yn)?  n
   abort: aborted by user
+  commit.baddiffid.human_prompt_no: 1
   [255]
 
 Interactive user choosing No should abort (metaedit):
@@ -58,13 +60,14 @@ Interactive user choosing No should abort (metaedit):
 
 Interactive user choosing Yes should proceed (amend):
 
-  $ sl amend --config ui.interactive=true -m "drop diff number via amend" <<EOF
+  $ sl amend --config ui.interactive=true --config devel.print-metrics=commit.baddiffid -m "drop diff number via amend" <<EOF
   > y
   > EOF
   commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
   warning: commit message drops phabricator diff number 'D12345'
   (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   5a4d097da8bb -> 78d316c8be37 "drop diff number via amend"
+  commit.baddiffid.human_prompt_yes: 1
 
 Restore diff number for next test:
 
@@ -96,7 +99,7 @@ Restore diff number:
 
 HGPLAIN should allow restoring a Differential Revision:
 
-  $ HGPLAIN=1 sl amend -m "$(printf 'new message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl amend --config devel.print-metrics=commit.baddiffid -m "$(printf 'new message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   cad5328c7ead -> 334772907fae "new message"
 
 Metaedit -m preserving Differential Revision should succeed:
@@ -113,8 +116,9 @@ Agent: changing to an unrelated Differential Revision should abort:
 
 Config override should allow dropping:
 
-  $ sl amend --config fbcodereview.allow-diff-revision-drop=true -m "message without diff number"
+  $ sl amend --config fbcodereview.allow-diff-revision-drop=true --config devel.print-metrics=commit.baddiffid -m "message without diff number"
   ded7f3602a29 -> 1704a68c6e26 "message without diff number"
+  commit.baddiffid.config_allowed: 1
 
 Restore diff number before testing amend without -m:
 
@@ -389,10 +393,11 @@ Agent and human modes can warn instead of blocking or prompting:
   $ newclientrepo
   $ echo first > first
   $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
-  $ CODING_AGENT_METADATA=id=test_agent sl amend --config fbcodereview.bad-diff-id-agent-mode=warn -m "agent warning"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config fbcodereview.bad-diff-id-agent-mode=warn --config devel.print-metrics=commit.baddiffid -m "agent warning"
   warning: commit message drops phabricator diff number 'D12345'
   (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   * -> * "agent warning" (glob)
+  commit.baddiffid.agent_warned: 1
   $ sl log -r . -T '[{phabdiff}]\n'
   []
 
@@ -414,10 +419,11 @@ Unrecognized agent and human modes should ignore the guard:
 
   $ HGPLAIN=1 sl amend -m "$(printf 'restored for warning\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   * -> * "restored for warning" (glob)
-  $ sl amend --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=warn -m "human warning"
+  $ sl amend --config ui.interactive=true --config fbcodereview.bad-diff-id-human-mode=warn --config devel.print-metrics=commit.baddiffid -m "human warning"
   warning: commit message drops phabricator diff number 'D12345'
   (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   * -> * "human warning" (glob)
+  commit.baddiffid.human_warned: 1
   $ sl log -r . -T '[{phabdiff}]\n'
   []
 
