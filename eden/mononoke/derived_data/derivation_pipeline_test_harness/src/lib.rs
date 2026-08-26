@@ -854,6 +854,20 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
+    async fn test_pipeline_augmented_manifest_v2_subtree_copy(fb: FacebookInit) -> Result<()> {
+        // Given: a subtree copy whose source and destination are separate stages.
+        // When: ACL and V2 run through the existing global chokepoint.
+        // Then: every V2 stage matches canonical without scheduling HgChangesets.
+        verify_pipeline_matches_canonical_impl::<NestedSubtreeCopy>(
+            fb,
+            vec![],
+            &AUGMENTED_MANIFEST_V2_TYPES,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
     }

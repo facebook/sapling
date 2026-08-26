@@ -136,7 +136,7 @@ impl<'a> Verifier<'a> {
         derivation_ctx: &DerivationContext,
         bonsai: &BonsaiChangeset,
     ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-        let source_csids = subtree_copy_source_changesets(bonsai);
+        let source_csids = subtree_copy_source_changesets(bonsai, &MPath::ROOT);
         if source_csids.is_empty() {
             return Ok(HashMap::new());
         }

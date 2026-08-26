@@ -32,6 +32,7 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 
 use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use crate::mapping::RootHgAugmentedManifestId;
@@ -111,7 +112,7 @@ async fn get_subtree_source_aug_roots(
     bonsai: &BonsaiChangeset,
     known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestV2Id>>,
 ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-    let source_csids = subtree_copy_source_changesets(bonsai);
+    let source_csids = subtree_copy_source_changesets(bonsai, &MPath::ROOT);
     let roots = source_csids
         .iter()
         .filter_map(|csid| {

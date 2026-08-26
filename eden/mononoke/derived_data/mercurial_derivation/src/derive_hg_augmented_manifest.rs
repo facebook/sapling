@@ -776,10 +776,20 @@ where
     .await
 }
 
-pub fn subtree_copy_source_changesets(bonsai: &BonsaiChangeset) -> Vec<ChangesetId> {
+fn subtree_change_overlaps_stage(dest_path: &MPath, stage_path: &MPath) -> bool {
+    stage_path.is_prefix_of(dest_path) || dest_path.is_prefix_of(stage_path)
+}
+
+pub fn subtree_copy_source_changesets(
+    bonsai: &BonsaiChangeset,
+    stage_path: &MPath,
+) -> Vec<ChangesetId> {
     let mut sources = Vec::new();
     let mut seen_sources = HashSet::new();
-    for (_dest_path, change) in bonsai.subtree_changes() {
+    for (dest_path, change) in bonsai.subtree_changes() {
+        if !subtree_change_overlaps_stage(dest_path, stage_path) {
+            continue;
+        }
         let Some((from_cs_id, _from_path)) = change.copy_source() else {
             continue;
         };
@@ -791,12 +801,14 @@ pub fn subtree_copy_source_changesets(bonsai: &BonsaiChangeset) -> Vec<Changeset
 }
 
 /// Build manifest replacements for `SubtreeCopy` entries using already-derived
-/// source augmented roots. Other subtree-change variants are metadata-only for
-/// manifests, matching `HgSubtreeChanges::to_manifest_replacements`.
+/// source augmented roots. Only destinations that overlap `stage_path` affect the
+/// stage. Other subtree-change variants are metadata-only for manifests, matching
+/// `HgSubtreeChanges::to_manifest_replacements`.
 pub async fn build_augmented_subtree_replacements<Store>(
     ctx: &CoreContext,
     blobstore: &Store,
     bonsai: &mononoke_types::BonsaiChangeset,
+    stage_path: &MPath,
     source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
 ) -> Result<AugmentedSubtreeReplacements>
 where
@@ -804,6 +816,9 @@ where
 {
     let mut replacements = Vec::new();
     for (dest_path, change) in bonsai.subtree_changes() {
+        if !subtree_change_overlaps_stage(dest_path, stage_path) {
+            continue;
+        }
         let Some((from_cs_id, from_path)) = change.copy_source() else {
             continue;
         };
@@ -1568,10 +1583,17 @@ where
     };
 
     let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
-    let subtree_replacements_fut =
-        build_augmented_subtree_replacements(ctx, blobstore, bonsai, source_aug_roots);
-    let (content_metadata, subtree_replacements) =
-        future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
+    let (content_metadata, subtree_replacements) = future::try_join(
+        content_metadata_fut,
+        build_augmented_subtree_replacements(
+            ctx,
+            blobstore,
+            bonsai,
+            &MPath::ROOT,
+            source_aug_roots,
+        ),
+    )
+    .await?;
 
     derive_augmented_manifest_from_bonsai(
         ctx,

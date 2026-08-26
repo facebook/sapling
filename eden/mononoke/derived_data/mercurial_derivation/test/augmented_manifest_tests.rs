@@ -3160,6 +3160,7 @@ where
         ctx,
         overlay,
         &bonsai,
+        &MPath::ROOT,
         subtree_source_augs,
     )
     .await?;
@@ -4089,6 +4090,120 @@ fn subtree_copy(
         MPath::new(to_path)?,
         SubtreeChange::copy(MPath::new(from_path)?, from_cs_id),
     ))
+}
+
+#[mononoke::fbinit_test]
+async fn test_augmented_subtree_copy_skips_disjoint_stage(fb: FacebookInit) -> Result<()> {
+    // Given: a subtree copy into top1 and a sibling top2 pipeline stage.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/file", "contents")
+        .commit()
+        .await?;
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![subtree_copy("top1/copied", "src", source)?],
+        vec![],
+    )
+    .await?;
+    let bonsai = child.load(&ctx, repo.repo_blobstore()).await?;
+    let stage_path = MPath::new("top2")?;
+
+    // When: collecting sources and replacements for the disjoint stage.
+    let source_csids =
+        derive_hg_augmented_manifest::subtree_copy_source_changesets(&bonsai, &stage_path);
+    let replacements = derive_hg_augmented_manifest::build_augmented_subtree_replacements(
+        &ctx,
+        repo.repo_blobstore(),
+        &bonsai,
+        &stage_path,
+        &HashMap::new(),
+    )
+    .await?;
+
+    // Then: the stage does not fetch or inspect the unrelated subtree source.
+    assert!(source_csids.is_empty());
+    assert!(replacements.is_empty());
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_augmented_subtree_copy_applies_to_stage_below_destination(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a subtree copy whose destination contains a nested pipeline stage.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/nested/file", "contents")
+        .commit()
+        .await?;
+    let source_aug = derive_parent_aug(&ctx, &repo, source).await?;
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![subtree_copy("top1", "src", source)?],
+        vec![],
+    )
+    .await?;
+    let bonsai = child.load(&ctx, repo.repo_blobstore()).await?;
+    let stage_path = MPath::new("top1/nested")?;
+    let source_csids =
+        derive_hg_augmented_manifest::subtree_copy_source_changesets(&bonsai, &stage_path);
+    assert_eq!(source_csids, vec![source]);
+    let source_aug_roots = HashMap::from([(source, source_aug)]);
+    let subtree_replacements = derive_hg_augmented_manifest::build_augmented_subtree_replacements(
+        &ctx,
+        repo.repo_blobstore(),
+        &bonsai,
+        &stage_path,
+        &source_aug_roots,
+    )
+    .await?;
+
+    // When: deriving the nested stage below the subtree-copy destination.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        stage_path,
+        vec![None],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, child).await?,
+        subtree_replacements,
+        (Some(source), None),
+        &HashMap::new(),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        None,
+    )
+    .await?;
+
+    // Then: the stage reuses the matching nested tree from the copy source.
+    let expected = source_aug
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            MPath::new("src/nested")?,
+        )
+        .await?
+        .and_then(Entry::into_tree)
+        .context("source must contain src/nested")?;
+    let actual = stage_entry
+        .and_then(|entry| match entry {
+            HgAugmentedManifestEntry::DirectoryNode(dir) => {
+                Some(HgAugmentedManifestId::new(dir.treenode))
+            }
+            HgAugmentedManifestEntry::FileNode(_) => None,
+        })
+        .context("nested stage must produce a directory")?;
+    assert_eq!(actual, expected);
+
+    Ok(())
 }
 
 /// Exact directory subtree copy.

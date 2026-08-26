@@ -48,6 +48,7 @@ use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
 use crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged;
 use crate::derive_hg_augmented_manifest::finalize_augmented_manifest_root;
+use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use crate::mapping::MappedHgChangesetId;
 use crate::mapping::RootHgAugmentedManifestId;
 use crate::mapping::format_key;
@@ -599,15 +600,16 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
                     !stage_path.is_prefix_of(copy_path) && is_hg_parent(copy_csid)
                 })
                 .map(|(_, copy_csid)| *copy_csid)
+                .chain(subtree_copy_source_changesets(bonsai, stage_path))
                 .collect();
             let source_aug_roots =
                 fetch_v2_source_augmented_roots(ctx, derivation, source_csids).await?;
-            let subtree_source_aug_roots = HashMap::new();
             let subtree_replacements_fut = build_augmented_subtree_replacements(
                 ctx,
                 derivation.blobstore(),
                 bonsai,
-                &subtree_source_aug_roots,
+                stage_path,
+                &source_aug_roots,
             );
             let (content_metadata, subtree_replacements) =
                 futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
