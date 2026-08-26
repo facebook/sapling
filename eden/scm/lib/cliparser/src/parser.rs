@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use ::serde::Serialize;
 #[cfg(feature = "python")]
 use cpython::*;
-use indexmap::set::IndexSet;
+use indexmap::map::IndexMap;
 use thiserror::Error;
 
 use crate::utils::get_prefix_bounds;
@@ -494,7 +494,7 @@ impl Parser {
 
         let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
         let mut iter = args.into_iter().enumerate().peekable();
         let mut positional_args = Vec::new();
 
@@ -549,7 +549,7 @@ impl Parser {
             opts,
             args: positional_args.iter().map(|s| s.to_string()).collect(),
             first_arg_index,
-            specified_opts: specified_opts.into_iter().collect(),
+            specified_opts,
             raw_args,
         })
     }
@@ -558,7 +558,7 @@ impl Parser {
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
-        specified_opts: &mut IndexSet<String>,
+        specified_opts: &mut IndexMap<String, usize>,
     ) -> Result<(), ParseError> {
         let arg = iter.next().unwrap().1;
 
@@ -581,10 +581,13 @@ impl Parser {
 
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
-            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(b)) => *b = Some(positive_flag),
+                Some(Value::Bool(b)) => {
+                    update_bool_opt_count(specified_opts, name, *b, positive_flag);
+                    *b = Some(positive_flag);
+                }
                 Some(ref mut value) => {
+                    *specified_opts.entry(name.to_string()).or_insert(0) += 1;
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
@@ -599,10 +602,13 @@ impl Parser {
 
         if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
-            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(b)) => *b = Some(!positive_flag),
+                Some(Value::Bool(b)) => {
+                    update_bool_opt_count(specified_opts, name, *b, !positive_flag);
+                    *b = Some(!positive_flag);
+                }
                 Some(ref mut value) => {
+                    *specified_opts.entry(name.to_string()).or_insert(0) += 1;
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
@@ -637,10 +643,13 @@ impl Parser {
         } else {
             let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
-            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
-                Some(Value::Bool(b)) => *b = Some(positive_flag),
+                Some(Value::Bool(b)) => {
+                    update_bool_opt_count(specified_opts, name, *b, positive_flag);
+                    *b = Some(positive_flag);
+                }
                 Some(ref mut value) => {
+                    *specified_opts.entry(name.to_string()).or_insert(0) += 1;
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
@@ -656,7 +665,7 @@ impl Parser {
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
-        specified_opts: &mut IndexSet<String>,
+        specified_opts: &mut IndexMap<String, usize>,
     ) -> Result<(), ParseError> {
         let clean_arg = iter.next().unwrap().1.trim_start_matches('-');
 
@@ -667,10 +676,13 @@ impl Parser {
                 let flag_name = self.parsing_options.flags[known_flag_id]
                     .long_name
                     .to_string();
-                specified_opts.insert(flag_name.clone());
                 match opts.get_mut(&flag_name) {
-                    Some(Value::Bool(b)) => *b = Some(true),
+                    Some(Value::Bool(b)) => {
+                        update_bool_opt_count(specified_opts, &flag_name, *b, true);
+                        *b = Some(true);
+                    }
                     Some(ref mut value) => {
+                        *specified_opts.entry(flag_name.clone()).or_insert(0) += 1;
                         if char_iter.peek().is_none() {
                             let next = iter.next().map(|(_i, arg)| arg);
                             value.accept(next).map_err(|e| {
@@ -730,6 +742,22 @@ impl Parser {
     }
 }
 
+/// Track how many consecutive times a boolean flag was specified with its
+/// current polarity. A flip (e.g. `-q --no-quiet`) restarts the count.
+fn update_bool_opt_count(
+    specified_opts: &mut IndexMap<String, usize>,
+    name: &str,
+    old_value: Option<bool>,
+    new_value: bool,
+) {
+    let count = specified_opts.entry(name.to_string()).or_insert(0);
+    if old_value == Some(new_value) {
+        *count += 1;
+    } else {
+        *count = 1;
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseOutput {
     /// The opts
@@ -738,8 +766,11 @@ pub struct ParseOutput {
     pub args: Vec<String>,
     pub first_arg_index: usize,
 
-    // Long name of options actually specified (vs. default value).
-    specified_opts: Vec<String>,
+    // Options actually specified (vs. default value), in command-line order,
+    // mapped to how many times each appeared. For boolean flags, a polarity
+    // flip (e.g. `-q --no-quiet`) restarts the count, so it reflects
+    // consecutive occurrences of the final value.
+    specified_opts: IndexMap<String, usize>,
 
     // The original args before parsing
     pub raw_args: Vec<String>,
@@ -755,7 +786,7 @@ impl ParseOutput {
             opts: self.opts.clone(),
             args: Vec::new(),
             first_arg_index: 0,
-            specified_opts: Vec::new(),
+            specified_opts: IndexMap::new(),
             raw_args: Vec::new(),
         }
     }
@@ -784,7 +815,15 @@ impl ParseOutput {
         self.first_arg_index
     }
 
-    pub fn specified_opts(&self) -> &[String] {
+    /// How many times an option was explicitly specified on the command
+    /// line. 0 when only the default value applies. For boolean flags a
+    /// polarity flip (e.g. `-q --no-quiet`) restarts the count, so this is
+    /// the number of consecutive occurrences of the final value.
+    pub fn opt_count(&self, name: &str) -> usize {
+        self.specified_opts.get(name).copied().unwrap_or(0)
+    }
+
+    pub fn specified_opts(&self) -> &IndexMap<String, usize> {
         &self.specified_opts
     }
 }
@@ -850,12 +889,37 @@ mod tests {
     }
 
     #[test]
+    fn test_opt_count() {
+        let parser = ParseOptions::new().flags(flags()).into_parser();
+        let result = parser
+            .parse_args(&["-q", "--quiet", "-c", "a", "log"])
+            .unwrap();
+        assert_eq!(result.opt_count("quiet"), 2);
+        assert_eq!(result.opt_count("config"), 1);
+        assert_eq!(result.opt_count("verbose"), 0);
+    }
+
+    #[test]
+    fn test_opt_count_resets_when_bool_flips() {
+        let parser = ParseOptions::new().flags(flags()).into_parser();
+
+        let result = parser.parse_args(&["-q", "-q", "--no-quiet"]).unwrap();
+        assert_eq!(result.opt_count("quiet"), 1);
+
+        let result = parser.parse_args(&["--no-quiet", "-q"]).unwrap();
+        assert_eq!(result.opt_count("quiet"), 1);
+
+        let result = parser.parse_args(&["-q", "--no-quiet", "-qq"]).unwrap();
+        assert_eq!(result.opt_count("quiet"), 2);
+    }
+
+    #[test]
     fn test_parse_single_no_value_flag() {
         let flag = ('q', "quiet", "silences the output", false, "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
 
         let args = vec!["-q"];
 
@@ -876,7 +940,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["-c", PATH];
@@ -892,7 +956,7 @@ mod tests {
     fn test_parse_single_cluster_with_end_value() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
         const PATH: &str = "$HOME/path/to/config/file";
         const CLUSTER: &str = "-qhvc";
 
@@ -915,7 +979,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
 
         let args = vec!["--quiet"];
 
@@ -936,7 +1000,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["--config", PATH];
@@ -960,7 +1024,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
-        let mut specified_opts = IndexSet::new();
+        let mut specified_opts = IndexMap::new();
 
         let args = vec!["--number", "60"];
 
@@ -1530,6 +1594,9 @@ mod tests {
             .into_parser()
             .parse_args(&["-l", "one", "--no-bool", "-s=", "--list=two"])
             .unwrap();
-        assert_eq!(parsed.specified_opts(), &["list", "bool", "str"]);
+        assert_eq!(
+            parsed.specified_opts().keys().collect::<Vec<_>>(),
+            ["list", "bool", "str"]
+        );
     }
 }

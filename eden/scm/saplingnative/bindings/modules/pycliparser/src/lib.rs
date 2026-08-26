@@ -120,7 +120,7 @@ fn parse_command(
     py: Python,
     args: Vec<String>,
     definitions: Vec<FlagDef>,
-) -> PyResult<(Vec<String>, HashMap<String, Value>, Vec<String>)> {
+) -> PyResult<(Vec<String>, HashMap<String, Value>, PyDict)> {
     let flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
 
     let result = ParseOptions::new()
@@ -136,7 +136,11 @@ fn parse_command(
         .map(|(k, v)| (k.replace('-', "_"), v.clone()))
         .collect();
 
-    let specified = result.specified_opts().to_vec();
+    // Ordered name -> occurrence-count map of explicitly specified options.
+    let specified = PyDict::new(py);
+    for (name, count) in result.specified_opts() {
+        specified.set_item(py, name, count)?;
+    }
 
     Ok((result.args, options, specified))
 }

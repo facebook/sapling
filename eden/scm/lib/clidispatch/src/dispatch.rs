@@ -384,7 +384,7 @@ impl Dispatcher {
 
         // Logged directly to sampling since `tracing` doesn't support structured data.
         {
-            let opt_names = parsed.specified_opts();
+            let opt_names: Vec<&String> = parsed.specified_opts().keys().collect();
             let _ = sampling::log!(
                 target: "command_info",
                 positional_args=parsed.args(),
@@ -392,7 +392,7 @@ impl Dispatcher {
                 option_values={
                     opt_names
                         .iter()
-                        .map(|n| opt_value_to_str(parsed.opts().get(n)))
+                        .map(|n| opt_value_to_str(parsed.opts().get(n.as_str())))
                         .collect::<Vec<_>>()
                 }
             );

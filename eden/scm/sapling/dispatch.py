@@ -665,7 +665,7 @@ def _parse(ui, args):
         ui.log(
             "command_info",
             positional_args=args,
-            option_names=specifiedopts,
+            option_names=list(specifiedopts),
             option_values=[cmdoptions.get(o) for o in specifiedopts],
         )
 
