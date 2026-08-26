@@ -64,6 +64,7 @@
     "scm/mononoke:enable_bonsai_tag_mapping_caching": false,
     "scm/mononoke:pushrebase_dry_run_merge_resolution": false,
     "scm/mononoke:pushrebase_enable_merge_resolution": false,
+    "scm/mononoke:pushrebase_range_diff_use_content_manifests": false,
     "scm/mononoke:pushrebase_reject_noop_merge_commits": false,
     "scm/mononoke:wireproto_force_local_pushrebase": false,
     "rl_source_control/mgs_super_safe_lands:mgs_symbolic_manifest_read_from_top_level_ssl_jk": true,

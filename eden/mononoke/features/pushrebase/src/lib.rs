@@ -964,7 +964,7 @@ async fn check_pushrebase_conflicts(
         descendant,
         client_bcs,
         client_cf,
-        RangeDiffManifests::Hg,
+        RangeDiffManifests::FromKnob,
     )
     .await
 }
@@ -2314,8 +2314,10 @@ async fn find_closest_ancestor_root(
 /// parent lies outside the range.
 #[derive(Copy, Clone)]
 enum RangeDiffManifests {
-    Hg,
     ContentCompat,
+    /// HG historically; the knob rolls repos onto the content compat.
+    /// Resolved lazily so the knob is read only when a merge is in range.
+    FromKnob,
 }
 
 async fn find_changed_files_between_manifests(
@@ -2444,7 +2446,14 @@ async fn find_changed_files(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<MPath>, PushrebaseError> {
-    find_changed_files_with(ctx, repo, ancestor, descendant, RangeDiffManifests::Hg).await
+    find_changed_files_with(
+        ctx,
+        repo,
+        ancestor,
+        descendant,
+        RangeDiffManifests::FromKnob,
+    )
+    .await
 }
 
 async fn find_changed_files_with(
@@ -2489,15 +2498,19 @@ async fn find_changed_files_with(
                             // one of the parents is not in the rebase set, to calculate
                             // changed files in this case we will compute manifest diff
                             // between elements that are in rebase set.
-                            match manifests {
-                                RangeDiffManifests::Hg => {
-                                    find_changed_files_between_manifests(ctx, repo, id, *p_id)
-                                        .await
-                                }
-                                RangeDiffManifests::ContentCompat => {
-                                    find_changed_files_between_root_manifests(ctx, repo, id, *p_id)
-                                        .await
-                                }
+                            let use_content_manifests = match manifests {
+                                RangeDiffManifests::ContentCompat => true,
+                                RangeDiffManifests::FromKnob => justknobs::eval(
+                                    "scm/mononoke:pushrebase_range_diff_use_content_manifests",
+                                    None,
+                                    Some(repo.repo_identity().name()),
+                                ),
+                            };
+                            if use_content_manifests {
+                                find_changed_files_between_root_manifests(ctx, repo, id, *p_id)
+                                    .await
+                            } else {
+                                find_changed_files_between_manifests(ctx, repo, id, *p_id).await
                             }
                         }
                         (None, None) => panic!(
@@ -3847,6 +3860,7 @@ mod tests {
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
             "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -4238,6 +4252,63 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
+    async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let side = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("side", "side")
+            .commit()
+            .await?;
+        let s1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![s1, side])
+            .add_file("merge_file", "merge")
+            .commit()
+            .await?;
+
+        // Knob off: the standard entry uses HG manifests.
+        let hg = find_changed_files(&ctx, &repo, root, merge).await?;
+        let content =
+            find_changed_files_with(&ctx, &repo, root, merge, RangeDiffManifests::ContentCompat)
+                .await?;
+        assert_eq!(
+            hg, content,
+            "HG and content manifests must report the same changed files"
+        );
+        assert!(
+            !hg.is_empty(),
+            "the merge-range diff must see the server and side changes"
+        );
+
+        // The override is process-global: carry the full standard map.
+        override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(true),
+        }));
+        let via_enabled_knob = find_changed_files(&ctx, &repo, root, merge).await?;
+        assert_eq!(
+            via_enabled_knob, content,
+            "knob on routes to content manifests"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
     async fn rebase_stack_onto_moves_stack_and_is_deterministic(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -4543,6 +4614,10 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn pushrebase_multi_root(fb: FacebookInit) -> Result<(), Error> {
+        // This test calls find_changed_files directly on a merge range,
+        // which resolves the range-diff knob before do_pushrebase installs
+        // the map.
+        init_just_knobs_for_test();
         //
         // master -> o
         //           |
@@ -6534,6 +6609,7 @@ mod tests {
             "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -7690,6 +7766,7 @@ line 5.1
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_reject_noop_merge_commits".to_string() => KnobVal::Bool(reject),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -8116,6 +8193,7 @@ line 5.1
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -8316,6 +8394,7 @@ line 5.1
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
 
         let config = PushrebaseFlags {
@@ -8352,6 +8431,7 @@ line 5.1
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
 
         let config = PushrebaseFlags {
