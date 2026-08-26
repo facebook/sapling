@@ -307,6 +307,16 @@ impl MutationStore {
         Ok(successors_sets)
     }
 
+    /// Return whether a node has any recorded successors.
+    pub fn has_successors(&self, node: Node) -> Result<bool> {
+        Ok(self
+            .log
+            .lookup(INDEX_PRED, node)?
+            .next()
+            .transpose()?
+            .is_some())
+    }
+
     /// Query predecessors by a successor. Consider split.
     pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
         let mut lookup = self
@@ -509,6 +519,8 @@ mod tests {
                     .expect("can get successors sets"),
                 Vec::<Vec<Node>>::new()
             );
+            assert!(ms.has_successors(nodes[0]).expect("can check successors"));
+            assert!(!ms.has_successors(nodes[1]).expect("can check successors"));
             assert_eq!(
                 ms.get_predecessors(nodes[1]).expect("can get predecessors"),
                 vec![nodes[0], nodes[2], nodes[3]]

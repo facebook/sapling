@@ -62,7 +62,7 @@
   o  a24b40a3340f A branch=default
 
 
-  $ sl go -q 57c4b16efbb2
+  $ sl go -q --config commit.reject-modifying-obsolete=false 57c4b16efbb2
   $ sl amend -m nope
   warning: changing an old version of a commit will diverge your stack:
   - 57c4b16efbb2 -> ccf2db2c8709 (rebase)

@@ -6,6 +6,8 @@
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true visibility.verbose=true
   $ setconfig mutation.enabled=true
+  $ setconfig commit.reject-modifying-obsolete=false
+  $ setconfig checkout.obsolete-mode=ignore
   $ setconfig hint.ack=undo
 
 Useful functions

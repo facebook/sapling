@@ -72,6 +72,12 @@ def _hasvisibledescendant(repo, ctx):
     return next(iter(descendants), None) is not None
 
 
+def _obsolete_mode(repo, config):
+    default = "abort" if agentdetect.is_agent() else "warn"
+    mode = repo.ui.config(config[0], config[1], default)
+    return mode if mode in ("warn", "abort") else "ignore"
+
+
 def _checkobsolete(
     repo,
     contexts,
@@ -80,11 +86,12 @@ def _checkobsolete(
     hint=None,
     allow_public_successors=False,
     allow_visible_descendants=False,
+    config=("commit", "reject-modifying-obsolete"),
+    mode_config=None,
 ):
     if (
         not mutation.enabled(repo)
         or repo.ui.plain()
-        or not repo.ui.configbool("commit", "reject-modifying-obsolete", True)
         # allowdivergence is the established opt-in for operations that
         # deliberately rewrite obsolete commits.
         or repo.ui.configbool("experimental", "evolution.allowdivergence")
@@ -115,6 +122,15 @@ def _checkobsolete(
     if not obsolete:
         return []
 
+    if mode_config is None:
+        if not repo.ui.configbool(config[0], config[1], True):
+            return []
+        mode = "abort" if agentdetect.is_agent() else "prompt"
+    else:
+        mode = _obsolete_mode(repo, mode_config)
+        if mode == "ignore":
+            return []
+
     if message is None:
         message = _("changing an old version of a commit will diverge your stack")
     details = []
@@ -135,10 +151,13 @@ def _checkobsolete(
             "with the old commit hash to deliberately fork it; '@prog@ sl' "
             "shows the latest graph"
         )
-    if agentdetect.is_agent():
+    if mode == "abort":
         raise error.Abort(message, hint=hint)
 
     repo.ui.warn(_("warning: %s\n") % message)
+    if mode == "warn":
+        return [ctx for ctx, _fates in obsolete]
+
     choice = repo.ui.promptchoice(
         _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
     )
@@ -216,3 +235,30 @@ def commitcheck(repo, ctx):
         allow_visible_descendants=not predecessors,
     )
     return predecessors, split_successors
+
+
+def gotocheck(repo, targets):
+    """Guard checkouts of hidden obsolete commits.
+
+    Depending on `checkout.obsolete-mode` and whether the caller is an agent,
+    this warns, prompts, or aborts; visible obsolete commits are not guarded.
+    """
+    hidden_nodes = set(repo.nodes("%ln & hidden()", [ctx.node() for ctx in targets]))
+    hidden_targets = [ctx for ctx in targets if ctx.node() in hidden_nodes]
+    if not hidden_targets:
+        return
+    target_args = " ".join(short(ctx.node()) for ctx in hidden_targets)
+    _checkobsolete(
+        repo,
+        hidden_targets,
+        "goto",
+        _("checking out an old version of a commit risks diverging your stack"),
+        _(
+            "check out the newer version listed above instead, or run "
+            "'@prog@ unhide %s' to explicitly allow checking out this old commit"
+        )
+        % target_args,
+        allow_public_successors=True,
+        allow_visible_descendants=True,
+        mode_config=("checkout", "obsolete-mode"),
+    )

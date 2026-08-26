@@ -5,6 +5,7 @@
 
   $ configure dummyssh mutation-norecord
   $ enable amend commitcloud rebase share
+  $ setconfig commit.reject-modifying-obsolete=false
   $ setconfig infinitepush.branchpattern="re:scratch/.*" commitcloud.hostname=testhost
   $ readconfig <<EOF
   > [alias]

@@ -434,7 +434,7 @@ This test amends revision 41f3b9359864 2 times in the client1
 The client2 original position points also to the revision 41f3b9359864
 Expected result: move should not happen, expect a message that move is ambiguous
   $ cd client1
-  $ sl up 41f3b9359864 -q
+  $ sl up 41f3b9359864 -q --config commit.reject-modifying-obsolete=false --config checkout.obsolete-mode=ignore
   $ echo 1 > filea.txt && sl addremove && sl amend -m "`sl descr | head -n1` amended"
   adding filea.txt
   warning: changing an old version of a commit will diverge your stack:
@@ -442,7 +442,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   proceed with amend (Yn)?  y
   $ sl id -i
   abd5311ab3c6
-  $ sl up 41f3b9359864 -q
+  $ sl up 41f3b9359864 -q --config commit.reject-modifying-obsolete=false --config checkout.obsolete-mode=ignore
   $ echo 1 > fileb.txt && sl addremove && sl amend -m "`sl descr | head -n1` amended"
   adding fileb.txt
   warning: changing an old version of a commit will diverge your stack:
@@ -466,7 +466,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ cd ..
 
   $ cd client2
-  $ sl up 41f3b9359864 -q
+  $ sl up 41f3b9359864 -q --config commit.reject-modifying-obsolete=false --config checkout.obsolete-mode=ignore
   $ sl cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: nothing to upload

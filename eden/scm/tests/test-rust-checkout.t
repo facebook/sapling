@@ -112,6 +112,24 @@ Can continue interrupted checkout:
   [255]
 
 
+Continue checkout if its saved target became obsolete after checkout started:
+  $ newclientrepo obsolete_continue
+  $ drawdag <<'EOS'
+  > B A
+  > EOS
+
+  $ sl go -q null
+  $ FAILPOINTS=checkout-post-progress=return sl go $A
+  abort: checkout errors:
+   Error set by checkout-post-progress FAILPOINTS
+  [255]
+  $ sl debugobsolete $A $B 2>/dev/null
+  $ CODING_AGENT_METADATA=id=test_agent sl go --continue
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  A
+
+
 Don't fail with open files that can't be deleted:
   $ newclientrepo unlink_fail
   $ drawdag <<'EOS'

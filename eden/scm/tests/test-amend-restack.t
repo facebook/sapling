@@ -18,6 +18,7 @@
 
   $ enable amend rebase
   $ setconfig visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
+  $ setconfig commit.reject-modifying-obsolete=false
   $ sl init restack
   $ cd restack
 

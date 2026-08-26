@@ -24,7 +24,7 @@ onto the newest successor of their parent.
   $ sl amend -m "successor 1" --no-rebase
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'sl restack' to rebase them
   hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
-  $ sl up 7c3bad9141dcb46ff89abf5f61856facd56e476c
+  $ sl up --config commit.reject-modifying-obsolete=false 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl amend -m "successor 2" --no-rebase
   warning: changing an old version of a commit will diverge your stack:
@@ -32,7 +32,7 @@ onto the newest successor of their parent.
   proceed with amend (Yn)?  y
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'sl restack' to rebase them
   hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
-  $ sl up 7c3bad9141dcb46ff89abf5f61856facd56e476c
+  $ sl up --config commit.reject-modifying-obsolete=false 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  cef323f40828 successor 2
@@ -77,7 +77,7 @@ since the successor is obsolete.
   │ x  7c3bad9141dc add b
   ├─╯
   o  1f0dee641bb7 add a
-  $ sl up 7c3bad9141dcb46ff89abf5f61856facd56e476c
+  $ sl up --config commit.reject-modifying-obsolete=false 7c3bad9141dcb46ff89abf5f61856facd56e476c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> b
   $ sl amend

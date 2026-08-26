@@ -18,6 +18,7 @@ use configloader::Config;
 use configloader::config::ConfigSet;
 use configloader::hg::PinnedConfig;
 use configloader::hg::RepoInfo;
+use configmodel::ConfigExt;
 use context::CoreContext;
 use eagerepo::EagerRepoStore;
 use edenapi::SaplingRemoteApi;
@@ -28,6 +29,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeResolver;
 use metalog::MetaLog;
 use metalog::RefName;
+use mutationstore::MutationStore;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use repo_minimal_info::RepoMinimalInfo;
@@ -71,6 +73,7 @@ pub struct Repo {
     config: Arc<dyn Config>,
     repo_name: Option<String>,
     metalog: OnceLock<Arc<RwLock<MetaLog>>>,
+    mutation_store: OnceLock<Option<Arc<MutationStore>>>,
     eden_api: OnceLock<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>,
     dag_commits: OnceLock<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: OnceLock<Arc<dyn FileStore>>,
@@ -186,6 +189,7 @@ impl Repo {
             config: Arc::new(config),
             repo_name,
             metalog: Default::default(),
+            mutation_store: Default::default(),
             eden_api: Default::default(),
             dag_commits: Default::default(),
             file_store: Default::default(),
@@ -284,6 +288,16 @@ impl Repo {
 
     pub fn metalog_path(&self) -> PathBuf {
         self.store_path.join("metalog")
+    }
+
+    #[cached_field]
+    pub fn mutation_store(&self) -> Result<Option<Arc<MutationStore>>> {
+        if !self.config.get_or("mutation", "enabled", || false)? {
+            return Ok(None);
+        }
+        Ok(Some(Arc::new(MutationStore::open(
+            self.store_path.join("mutation"),
+        )?)))
     }
 
     /// Constructs the SaplingRemoteAPI client. Errors out if the SaplingRemoteAPI should not be

@@ -6,6 +6,7 @@
   $ configure dummyssh
   $ enable commitcloud
   $ enable amend
+  $ setconfig commit.reject-modifying-obsolete=false
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig experimental.graphstyle.grandparent=2.

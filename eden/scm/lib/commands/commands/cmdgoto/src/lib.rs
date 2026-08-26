@@ -194,6 +194,19 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
         }
     };
 
+    let _lock = repo.lock()?;
+    if !ctx.opts.r#continue
+        && !hgplain::is_plain(None)
+        && matches!(
+            repo.config().get("checkout", "obsolete-mode").as_deref(),
+            None | Some("warn") | Some("abort")
+        )
+        && let Some(store) = repo.mutation_store()?
+        && store.has_successors(target)?
+    {
+        fallback!("checkout target has mutation successors");
+    }
+
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
     let checkout_mode = if ctx.opts.clean {
@@ -206,7 +219,6 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
         checkout::CheckoutMode::AbortIfConflicts
     };
 
-    let _lock = repo.lock()?;
     checkout::checkout(
         &ctx.core,
         repo,

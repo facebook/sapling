@@ -19,7 +19,7 @@ Create a commit and amend it to produce an obsolete predecessor:
 
 Go back to the obsolete commit:
 
-  $ sl go 87ce07975dfa
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Agent: amend on obsolete commit should abort:
@@ -62,7 +62,7 @@ Interactive user choosing Yes should proceed:
 
 Should not block SL_AUTOMATION
 
-  $ sl go 87ce07975dfa
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ sl add c
@@ -70,15 +70,15 @@ Should not block SL_AUTOMATION
 
 Config override should allow amending obsolete commits:
 
-  $ sl go 87ce07975dfa
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
   0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo d > d
   $ sl add d
-  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=False -m "config override amend"
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false -m "config override amend"
 
 Explicitly allowing divergence should allow amending obsolete commits:
 
-  $ sl go 87ce07975dfa
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
   0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo e > e
   $ sl add e
@@ -116,7 +116,7 @@ Set up an obsolete commit with one live successor:
 Agent: uncommit should reject rewriting an obsolete commit:
 
   $ make_obsolete_commit
-  $ sl go -q $SOURCE
+  $ sl go -q --config checkout.obsolete-mode=ignore $SOURCE
   $ CODING_AGENT_METADATA=id=test_agent sl uncommit
   abort: changing an old version of a commit will diverge your stack:
   - * -> * (amend) (glob)
@@ -218,7 +218,7 @@ Agent should allow creating a child after the obsolete parent's successor lands:
 Agent: commit should reject creating a child on an obsolete parent:
 
   $ make_obsolete_commit
-  $ sl go -q $SOURCE
+  $ sl go -q --config checkout.obsolete-mode=ignore $SOURCE
   $ echo child > child
   $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm child
   abort: creating a child of an old version of a commit will diverge your stack:
@@ -246,17 +246,104 @@ Agent: shelve and unshelve should work on an obsolete parent:
 Agent should allow creating a child on an obsolete parent with visible descendants:
 
   $ make_obsolete_commit_with_visible_descendant
-  $ sl go -q --config commit.reject-modifying-obsolete=false "$SOURCE"
+  $ sl go -q --config checkout.obsolete-mode=ignore "$SOURCE"
   $ echo another-child > another-child
   $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm another-child
   $ sl log -r '.^ + .' -T '{desc|firstline}\n'
   original
   another-child
 
-Agent: goto currently checks out an obsolete commit without warning:
+Human default should warn before going to an obsolete commit:
+
+  $ make_obsolete_commit
+  $ sl go $SOURCE
+  warning: checking out an old version of a commit risks diverging your stack:
+  - * -> * (amend) (glob)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+Human abort mode should reject going to an obsolete commit:
+
+  $ make_obsolete_commit
+  $ sl go --config checkout.obsolete-mode=abort $SOURCE
+  abort: checking out an old version of a commit risks diverging your stack:
+  - * -> * (amend) (glob)
+  (check out the newer version listed above instead, or run 'sl unhide *' to explicitly allow checking out this old commit) (glob)
+  [255]
+  $ sl log -r . -T '{desc|firstline}\n'
+  successor
+
+Agent should reject going to an obsolete commit:
 
   $ make_obsolete_commit
   $ CODING_AGENT_METADATA=id=test_agent sl go $SOURCE
+  abort: checking out an old version of a commit risks diverging your stack:
+  - * -> * (amend) (glob)
+  (check out the newer version listed above instead, or run 'sl unhide *' to explicitly allow checking out this old commit) (glob)
+  [255]
+  $ sl log -r . -T '{desc|firstline}\n'
+  successor
+
+Explicitly unhiding an obsolete commit should allow agent goto:
+
+  $ sl unhide $SOURCE
+  $ CODING_AGENT_METADATA=id=test_agent sl go $SOURCE
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+Agent warn mode should allow going to an obsolete commit:
+
+  $ make_obsolete_commit
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config checkout.obsolete-mode=warn $SOURCE
+  warning: checking out an old version of a commit risks diverging your stack:
+  - * -> * (amend) (glob)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+Agent should allow going to an obsolete commit after its successor lands:
+
+  $ make_obsolete_commit
+  $ SUCCESSOR=$(sl log -r . -T '{node}')
+  $ sl debugmakepublic $SUCCESSOR
+  $ CODING_AGENT_METADATA=id=test_agent sl go $SOURCE
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+Config override should allow agent goto of an obsolete commit:
+
+  $ make_obsolete_commit
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config checkout.obsolete-mode=ignore $SOURCE
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+Unrecognized checkout modes should also ignore the guard:
+
+  $ make_obsolete_commit
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config checkout.obsolete-mode=false $SOURCE
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+
+The commit rewrite override should not disable checkout protection:
+
+  $ make_obsolete_commit
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config commit.reject-modifying-obsolete=false $SOURCE
+  abort: checking out an old version of a commit risks diverging your stack:
+  - * -> * (amend) (glob)
+  (check out the newer version listed above instead, or run 'sl unhide *' to explicitly allow checking out this old commit) (glob)
+  [255]
+  $ sl log -r . -T '{desc|firstline}\n'
+  successor
+
+Disabling mutation tracking should allow agent goto of an obsolete commit:
+
+  $ make_obsolete_commit
+  $ CODING_AGENT_METADATA=id=test_agent sl go --config mutation.enabled=false $SOURCE
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl log -r . -T '{desc|firstline}\n'
   original

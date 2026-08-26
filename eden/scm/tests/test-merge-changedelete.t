@@ -11,6 +11,7 @@ b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
 Make sure HGMERGE doesn't interfere with the test
   $ unset HGMERGE
   $ setconfig commit.reject-modifying-obsolete=false
+  $ setconfig checkout.obsolete-mode=ignore
 
   $ status() {
   >     echo "--- status ---"

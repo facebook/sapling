@@ -6304,6 +6304,8 @@ def update(
         else:
             brev = rev
         rev = scmutil.revsingle(repo, rev, rev).rev()
+        if not opts.get("continue"):
+            rewriteutil.gotocheck(repo, [repo[rev]])
 
         repo.ui.setconfig("ui", "forcemerge", tool, "update")
 
