@@ -418,6 +418,94 @@ pub async fn index_pushrebase_request(
     })
 }
 
+#[derive(Debug)]
+pub struct RebasedStack {
+    pub new_head: ChangesetId,
+    pub rebased_changesets: Vec<PushrebaseChangesetPair>,
+    /// NOT yet saved; the caller must persist before referencing.
+    pub rebased_bonsais: Vec<BonsaiChangeset>,
+}
+
+/// Rebases the linear stack `root..head` onto `onto` with pushrebase's
+/// conflict detection and commit rewrite, moving no bookmark and writing
+/// nothing. Runs no hooks; requires `ForceOff` merge resolution (checked)
+/// so overlapping edits always surface as `Conflicts`; rejects merge
+/// commits in the stack; uses content-manifest range diffs so repos
+/// without HG derived data work. With `rewritedates == false` the rewrite
+/// is deterministic.
+pub async fn rebase_stack_onto(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    root: ChangesetId,
+    head: ChangesetId,
+    onto: ChangesetId,
+) -> Result<RebasedStack, PushrebaseError> {
+    if !matches!(
+        config.merge_resolution_override,
+        MergeResolutionOverride::ForceOff
+    ) {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto requires MergeResolutionOverride::ForceOff: \
+             merge resolution results would be silently discarded"
+        )));
+    }
+
+    let (root_is_ancestor_of_head, root_is_ancestor_of_onto) = try_join(
+        repo.commit_graph().is_ancestor(ctx, root, head),
+        repo.commit_graph().is_ancestor(ctx, root, onto),
+    )
+    .await
+    .map_err(PushrebaseError::Error)?;
+    if !root_is_ancestor_of_head || !root_is_ancestor_of_onto {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto: root {root} must be an ancestor of both head {head} and onto {onto}"
+        )));
+    }
+
+    let client_bcs = fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head).await?;
+    if client_bcs.is_empty() {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto: empty stack between root {root} and head {head}"
+        )));
+    }
+    if let Some(merge) = client_bcs.iter().find(|bcs| bcs.is_merge()) {
+        return Err(PushrebaseError::Error(anyhow!(
+            "rebase_stack_onto does not support merge commits in the stack: {}",
+            merge.get_changeset_id()
+        )));
+    }
+
+    let mut client_cf: Vec<MPath> = client_bcs
+        .iter()
+        .flat_map(extract_conflict_files_from_bonsai_changeset)
+        .collect();
+    client_cf.extend(find_subtree_changes(&client_bcs)?);
+
+    check_pushrebase_conflicts_with(
+        ctx,
+        repo,
+        config,
+        root,
+        root,
+        onto,
+        &client_bcs,
+        &client_cf,
+        RangeDiffManifests::ContentCompat,
+    )
+    .await?;
+
+    let mut no_hooks: Vec<Box<dyn PushrebaseCommitHook>> = Vec::new();
+    let (new_head, rebased_changesets, rebased_bonsais) =
+        create_rebased_changesets(ctx, repo, config, root, head, onto, &mut no_hooks, None).await?;
+
+    Ok(RebasedStack {
+        new_head,
+        rebased_changesets: rebased_changesets_into_pairs(rebased_changesets),
+        rebased_bonsais,
+    })
+}
+
 /// A successfully rebased request pending the CAS bookmark update.
 struct PendingRebase {
     request: PushrebaseRequest,
@@ -867,6 +955,31 @@ async fn check_pushrebase_conflicts(
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
 ) -> Result<ConflictCheckResult, PushrebaseError> {
+    check_pushrebase_conflicts_with(
+        ctx,
+        repo,
+        config,
+        root,
+        ancestor,
+        descendant,
+        client_bcs,
+        client_cf,
+        RangeDiffManifests::Hg,
+    )
+    .await
+}
+
+async fn check_pushrebase_conflicts_with(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    root: ChangesetId,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    client_bcs: &[BonsaiChangeset],
+    client_cf: &[MPath],
+    manifests: RangeDiffManifests,
+) -> Result<ConflictCheckResult, PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
     let server_bcs_len = server_bcs.len();
@@ -888,7 +1001,7 @@ async fn check_pushrebase_conflicts(
         }
     }
 
-    let mut server_cf = find_changed_files(ctx, repo, ancestor, descendant).await?;
+    let mut server_cf = find_changed_files_with(ctx, repo, ancestor, descendant, manifests).await?;
     server_cf.extend(find_subtree_changes(&server_bcs)?);
 
     match intersect_changed_files(server_cf, client_cf.to_vec()) {
@@ -2197,7 +2310,14 @@ async fn find_closest_ancestor_root(
     }
 }
 
-/// find changed files by comparing manifests of `ancestor` and `descendant`
+/// Backing manifests for the range diff of a merge commit whose other
+/// parent lies outside the range.
+#[derive(Copy, Clone)]
+enum RangeDiffManifests {
+    Hg,
+    ContentCompat,
+}
+
 async fn find_changed_files_between_manifests(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -2209,6 +2329,31 @@ async fn find_changed_files_between_manifests(
         .map_ok(|diff| MPath::from(diff.into_path()))
         .try_collect()
         .await?;
+
+    Ok(paths)
+}
+
+async fn find_changed_files_between_root_manifests(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+) -> Result<Vec<MPath>, PushrebaseError> {
+    let (d_mf, a_mf) = try_join(
+        id_to_root_manifest_id(ctx, repo, descendant),
+        id_to_root_manifest_id(ctx, repo, ancestor),
+    )
+    .await?;
+
+    let paths = bonsai_diff(
+        ctx.clone(),
+        repo.repo_blobstore().clone(),
+        d_mf,
+        Some(a_mf).into_iter().collect(),
+    )
+    .map_ok(|diff| MPath::from(diff.into_path()))
+    .try_collect()
+    .await?;
 
     Ok(paths)
 }
@@ -2245,6 +2390,36 @@ async fn id_to_manifestid(
     Ok(hg_cs.manifestid())
 }
 
+/// Content-manifest or fsnode root, per the JustKnobs compat gate.
+async fn id_to_root_manifest_id(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    bcs_id: ChangesetId,
+) -> Result<compat::ContentManifestId, Error> {
+    let repo_name = repo.repo_identity().name();
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        Some(repo_name),
+    );
+
+    if use_content_manifests {
+        Ok(repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, bcs_id, DerivationPriority::HIGH)
+            .await?
+            .into_content_manifest_id()
+            .into())
+    } else {
+        Ok(repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, bcs_id, DerivationPriority::HIGH)
+            .await?
+            .into_fsnode_id()
+            .into())
+    }
+}
+
 // from smaller generation number to larger
 async fn fetch_bonsai_range_ancestor_not_included(
     ctx: &CoreContext,
@@ -2269,6 +2444,16 @@ async fn find_changed_files(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<MPath>, PushrebaseError> {
+    find_changed_files_with(ctx, repo, ancestor, descendant, RangeDiffManifests::Hg).await
+}
+
+async fn find_changed_files_with(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    manifests: RangeDiffManifests,
+) -> Result<Vec<MPath>, PushrebaseError> {
     let id_to_bcs = repo
         .commit_graph()
         .range_stream(ctx, ancestor, descendant)
@@ -2289,13 +2474,13 @@ async fn find_changed_files(
         .map(async |(id, bcs)| {
             let parents: Vec<_> = bcs.parents().collect();
             match *parents {
-                [] | [_] => Ok(extract_conflict_files_from_bonsai_changeset(bcs)),
+                [] | [_] => Ok(extract_conflict_files_from_bonsai_changeset(&bcs)),
                 [p0_id, p1_id] => {
                     match (ids.get(&p0_id), ids.get(&p1_id)) {
                         (Some(_), Some(_)) => {
                             // both parents are in the rebase set, so we can just take
                             // filechanges from bonsai changeset
-                            Ok(extract_conflict_files_from_bonsai_changeset(bcs))
+                            Ok(extract_conflict_files_from_bonsai_changeset(&bcs))
                         }
                         (Some(p_id), None) | (None, Some(p_id)) => {
                             // TODO(stash, T40460159) - include copy sources in the list of
@@ -2304,7 +2489,16 @@ async fn find_changed_files(
                             // one of the parents is not in the rebase set, to calculate
                             // changed files in this case we will compute manifest diff
                             // between elements that are in rebase set.
-                            find_changed_files_between_manifests(ctx, repo, id, *p_id).await
+                            match manifests {
+                                RangeDiffManifests::Hg => {
+                                    find_changed_files_between_manifests(ctx, repo, id, *p_id)
+                                        .await
+                                }
+                                RangeDiffManifests::ContentCompat => {
+                                    find_changed_files_between_root_manifests(ctx, repo, id, *p_id)
+                                        .await
+                                }
+                            }
                         }
                         (None, None) => panic!(
                             "`range_stream` produced invalid result for: ({descendant}, {ancestor})",
@@ -2329,7 +2523,7 @@ async fn find_changed_files(
     Ok(file_changes_union)
 }
 
-fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
+fn extract_conflict_files_from_bonsai_changeset(bcs: &BonsaiChangeset) -> Vec<MPath> {
     bcs.file_changes()
         .flat_map(|(path, file_change)| {
             let mut v = vec![];
@@ -2426,26 +2620,7 @@ async fn fetch_manifest_file(
 ) -> Result<Option<compat::ContentManifestFile>> {
     use manifest::Entry;
 
-    let repo_name = repo.repo_identity().name();
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo_name),
-    );
-
-    let root_id: compat::ContentManifestId = if use_content_manifests {
-        repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::HIGH)
-            .await?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::HIGH)
-            .await?
-            .into_fsnode_id()
-            .into()
-    };
+    let root_id = id_to_root_manifest_id(ctx, repo, cs_id).await?;
 
     let entry = root_id
         .find_entry(
@@ -3671,6 +3846,7 @@ mod tests {
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -4049,6 +4225,318 @@ mod tests {
             &hashset![hg_cs_1, hg_cs_2],
         )
         .await?;
+
+        Ok(())
+    }
+
+    fn stack_rebase_flags() -> PushrebaseFlags {
+        PushrebaseFlags {
+            rewritedates: false,
+            merge_resolution_override: MergeResolutionOverride::ForceOff,
+            ..Default::default()
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_moves_stack_and_is_deterministic(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let stack_a = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file_a", "a")
+            .commit()
+            .await?;
+        let stack_b = CreateCommitContext::new(&ctx, &repo, vec![stack_a])
+            .add_file("file_b", "b")
+            .commit()
+            .await?;
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+
+        let rebased =
+            rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, stack_b, onto).await?;
+
+        assert_eq!(
+            rebased.rebased_changesets.len(),
+            2,
+            "both stack commits should be rebased"
+        );
+        changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+
+        let new_a = rebased
+            .rebased_changesets
+            .iter()
+            .find(|pair| pair.id_old == stack_a)
+            .expect("should have a mapping for the bottom commit")
+            .id_new;
+        let new_a_bcs = new_a.load(&ctx, repo.repo_blobstore()).await?;
+        assert_eq!(
+            new_a_bcs.parents().collect::<Vec<_>>(),
+            vec![onto],
+            "rebased bottom commit should sit on onto"
+        );
+        let new_head = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+        assert_eq!(
+            new_head.parents().collect::<Vec<_>>(),
+            vec![new_a],
+            "rebased head should sit on the rebased bottom commit"
+        );
+        assert!(
+            new_head
+                .file_changes_map()
+                .contains_key(&NonRootMPath::new("file_b")?),
+            "rebased head keeps its file change"
+        );
+
+        let again =
+            rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, stack_b, onto).await?;
+        assert_eq!(
+            again.new_head, rebased.new_head,
+            "rebasing the same stack onto the same head twice should produce identical ids"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_conflict(fb: FacebookInit) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("conflict_file", "base")
+            .commit()
+            .await?;
+        let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("conflict_file", "client")
+            .commit()
+            .await?;
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("conflict_file", "server")
+            .commit()
+            .await?;
+
+        let res = rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, head, onto).await;
+        let conflict_path = MPath::new("conflict_file")?;
+        match res {
+            Err(PushrebaseError::Conflicts(conflicts)) => {
+                assert!(
+                    conflicts.iter().any(|c| c.left == conflict_path),
+                    "conflict should name the overlapping path, got {conflicts:?}"
+                );
+            }
+            other => panic!("expected a conflict, got {:?}", other.map(|r| r.new_head)),
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_rejects_merge_in_stack(fb: FacebookInit) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let d1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("d1", "d1")
+            .commit()
+            .await?;
+        let d2 = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("d2", "d2")
+            .commit()
+            .await?;
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![d1, d2])
+            .add_file("m", "m")
+            .commit()
+            .await?;
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+
+        let err = rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, merge, onto)
+            .await
+            .expect_err("a stack containing a merge commit should be rejected");
+        assert!(
+            err.to_string().contains("merge commits"),
+            "unexpected error: {err}"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_rejects_non_ancestor_root(fb: FacebookInit) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let base = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let root = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("file_a", "a")
+            .commit()
+            .await?;
+        let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file_b", "b")
+            .commit()
+            .await?;
+        // A force-moved branch: onto is NOT a descendant of root.
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+
+        let err = rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, head, onto)
+            .await
+            .expect_err("a root that is not an ancestor of onto should be rejected");
+        assert!(
+            err.to_string().contains("must be an ancestor"),
+            "unexpected error: {err}"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_remaps_copy_info(fb: FacebookInit) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let stack_a = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file", "content")
+            .commit()
+            .await?;
+        let stack_b = CreateCommitContext::new(&ctx, &repo, vec![stack_a])
+            .add_file_with_copy_info("file_renamed", "content", (stack_a, "file"))
+            .commit()
+            .await?;
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+
+        let rebased =
+            rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, stack_b, onto).await?;
+        changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+
+        let new_a = rebased
+            .rebased_changesets
+            .iter()
+            .find(|pair| pair.id_old == stack_a)
+            .expect("should have a mapping for the bottom commit")
+            .id_new;
+        let new_head = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+        let fc = new_head
+            .file_changes_map()
+            .get(&NonRootMPath::new("file_renamed")?)
+            .expect("rebased head should keep the renamed file");
+        match fc {
+            FileChange::Change(tc) => {
+                assert_eq!(
+                    tc.copy_from().map(|(path, cs)| (path.clone(), *cs)),
+                    Some((NonRootMPath::new("file")?, new_a)),
+                    "copy_from should point at the REBASED source commit"
+                );
+            }
+            other => panic!("expected a tracked change, got {other:?}"),
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_server_merge_range_without_hg(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        // The server range root..onto contains a merge commit whose other
+        // parent lies outside the range: the range diff for it must come
+        // from the derived content manifests, not HG manifests.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let side_root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("side", "side")
+            .commit()
+            .await?;
+        let s1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("server_file", "server")
+            .commit()
+            .await?;
+        let onto = CreateCommitContext::new(&ctx, &repo, vec![s1, side_root])
+            .add_file("merge_file", "merge")
+            .commit()
+            .await?;
+        let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file_a", "a")
+            .commit()
+            .await?;
+
+        let rebased =
+            rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, head, onto).await?;
+        changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+        let new_head = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+        assert_eq!(
+            new_head.parents().collect::<Vec<_>>(),
+            vec![onto],
+            "stack should land on top of the server merge"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn rebase_stack_onto_requires_merge_resolution_force_off(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        init_just_knobs_for_test();
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+        let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("file_a", "a")
+            .commit()
+            .await?;
+
+        // Default flags leave merge resolution at UseJk, which this entry
+        // cannot honor (it would discard the merged content).
+        let err = rebase_stack_onto(&ctx, &repo, &PushrebaseFlags::default(), root, head, root)
+            .await
+            .expect_err("UseJk merge resolution should be rejected");
+        assert!(
+            err.to_string().contains("ForceOff"),
+            "unexpected error: {err}"
+        );
 
         Ok(())
     }
