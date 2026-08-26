@@ -1,6 +1,6 @@
 #require no-eden
 
-  $ enable amend rebase
+  $ enable amend rebase shelve
 
 Create a commit and amend it to produce an obsolete predecessor:
 
@@ -180,16 +180,68 @@ Direct commitctx should ignore a mutation predecessor that is not stored locally
   $ sl debugpython -- $TESTTMP/commitctx-missing-predecessor.py
   missing predecessor
 
-Agent: commit currently creates a child on an obsolete parent:
+Amending an orphan should allow retaining its already-obsolete parent:
+
+  $ newclientrepo
+  $ echo base > base
+  $ sl commit -Aqm base
+  $ BASE=$(sl log -r . -T '{node}')
+  $ echo parent > parent
+  $ sl commit -Aqm parent
+  $ PARENT=$(sl log -r . -T '{node}')
+  $ echo child > child
+  $ sl commit -Aqm child
+  $ CHILD=$(sl log -r . -T '{node}')
+  $ sl go -q $BASE
+  $ echo successor > successor
+  $ sl commit -Aqm successor
+  $ SUCCESSOR=$(sl log -r . -T '{node}')
+  $ sl debugobsolete $PARENT $SUCCESSOR
+  $ sl go -q $CHILD
+  $ echo amended >> child
+  $ CODING_AGENT_METADATA=id=test_agent sl amend -q
+  $ sl log -r . -T '{desc|firstline}\n'
+  child
+
+Agent should allow creating a child after the obsolete parent's successor lands:
+
+  $ make_obsolete_commit
+  $ SUCCESSOR=$(sl log -r . -T '{node}')
+  $ sl debugmakepublic $SUCCESSOR
+  $ sl go -q $SOURCE
+  $ echo child > child
+  $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm child
+  $ sl log -r '.^ + .' -T '{desc|firstline}\n'
+  original
+  child
+
+Agent: commit should reject creating a child on an obsolete parent:
 
   $ make_obsolete_commit
   $ sl go -q $SOURCE
   $ echo child > child
   $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm child
-  $ sl log -r '.^ & obsolete()' -T '{desc|firstline}\n'
-  original
+  abort: creating a child of an old version of a commit will diverge your stack:
+  - * -> * (amend) (glob)
+  (switch to the newer version listed above first -- 'sl goto' carries uncommitted changes along, or use 'sl shelve' and 'sl unshelve' to move them)
+  [255]
   $ sl log -r . -T '{desc|firstline}\n'
-  child
+  original
+  $ sl status child
+  ? child
+
+Agent: shelve and unshelve should work on an obsolete parent:
+
+  $ sl add child
+  $ CODING_AGENT_METADATA=id=test_agent sl shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ sl log -r . -T '{desc|firstline}\n'
+  original
+  $ CODING_AGENT_METADATA=id=test_agent sl unshelve
+  unshelving change 'default'
+  $ sl status
+  A child
 
 Agent should allow creating a child on an obsolete parent with visible descendants:
 

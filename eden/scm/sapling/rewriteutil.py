@@ -61,7 +61,26 @@ def _record_obsolete_approvals(repo, approved):
     approvals.update(ctx.node() for ctx in approved)
 
 
-def _checkobsolete(repo, contexts, action):
+def _hasvisibledescendant(repo, ctx):
+    # wdir() is a virtual descendant of the checked-out commit, not an
+    # existing committed stack.
+    descendants = repo.nodes(
+        "limit((((%n::) - %n) - hidden()) - wdir(), 1)",
+        ctx.node(),
+        ctx.node(),
+    )
+    return next(iter(descendants), None) is not None
+
+
+def _checkobsolete(
+    repo,
+    contexts,
+    action,
+    message=None,
+    hint=None,
+    allow_public_successors=False,
+    allow_visible_descendants=False,
+):
     if (
         not mutation.enabled(repo)
         or repo.ui.plain()
@@ -72,16 +91,32 @@ def _checkobsolete(repo, contexts, action):
     ):
         return []
 
+    ispublic = mutation.getispublicfunc(repo) if allow_public_successors else None
     obsolete = []
     for ctx in contexts:
         if not ctx.obsolete():
             continue
+        if allow_visible_descendants and _hasvisibledescendant(repo, ctx):
+            continue
         fates = mutation.fate(repo, ctx.node())
+        # After every successor lands, working on top of the old draft is a
+        # routine post-land state rather than new divergence. A fate with no
+        # successors (e.g. a prune) is not "landed", so it does not qualify.
+        if (
+            allow_public_successors
+            and fates
+            and all(
+                successors and all(ispublic(successor) for successor in successors)
+                for successors, _operation in fates
+            )
+        ):
+            continue
         obsolete.append((ctx, fates))
     if not obsolete:
         return []
 
-    msg = _("changing an old version of a commit will diverge your stack")
+    if message is None:
+        message = _("changing an old version of a commit will diverge your stack")
     details = []
     for ctx, fates in obsolete:
         for successors, operation in fates:
@@ -92,17 +127,18 @@ def _checkobsolete(repo, contexts, action):
         if not fates:
             details.append("- %s is obsolete" % short(ctx.node()))
     if details:
-        msg += ":\n" + "\n".join(details)
+        message += ":\n" + "\n".join(details)
 
-    hint = _(
-        "switch to the newer version listed above, or run '@prog@ graft' with "
-        "the old commit hash to deliberately fork it; '@prog@ sl' shows the "
-        "latest graph"
-    )
+    if hint is None:
+        hint = _(
+            "switch to the newer version listed above, or run '@prog@ graft' "
+            "with the old commit hash to deliberately fork it; '@prog@ sl' "
+            "shows the latest graph"
+        )
     if agentdetect.is_agent():
-        raise error.Abort(msg, hint=hint)
+        raise error.Abort(message, hint=hint)
 
-    repo.ui.warn(_("warning: %s\n") % msg)
+    repo.ui.warn(_("warning: %s\n") % message)
     choice = repo.ui.promptchoice(
         _("proceed with %s (Yn)? $$ &Yes $$ &No") % action, default=0
     )
@@ -156,5 +192,27 @@ def commitcheck(repo, ctx):
     # precheck also prompt at most once per predecessor.
     _record_obsolete_approvals(
         repo, _checkobsolete(repo, unapproved_predecessors, "rewrite")
+    )
+    predecessor_parents = {
+        parent.node()
+        for predecessor in predecessors
+        for parent in predecessor.parents()
+    }
+    _checkobsolete(
+        repo,
+        [
+            parent
+            for parent in ctx.parents()
+            if parent.node() != node.nullid and parent.node() not in predecessor_parents
+        ],
+        "commit",
+        _("creating a child of an old version of a commit will diverge your stack"),
+        _(
+            "switch to the newer version listed above first -- '@prog@ goto' "
+            "carries uncommitted changes along, or use '@prog@ shelve' and "
+            "'@prog@ unshelve' to move them"
+        ),
+        allow_public_successors=not predecessors,
+        allow_visible_descendants=not predecessors,
     )
     return predecessors, split_successors

@@ -433,7 +433,15 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
 
     activebookmark = None
     try:
-        with repo.lock(), repo.transaction("commit", report=None):
+        # Shelf commits are hidden bookkeeping, not stack children, so they
+        # may be created on an obsolete parent.
+        with (
+            repo.ui.configoverride(
+                {("commit", "reject-modifying-obsolete"): False}, "shelve"
+            ),
+            repo.lock(),
+            repo.transaction("commit", report=None),
+        ):
             interactive = opts.get("interactive", False)
             includeunknown = opts.get("unknown", False) and not opts.get(
                 "addremove", False
@@ -712,7 +720,11 @@ def unshelvecontinue(ui, repo, state, opts) -> None:
             # if shelve is obs-based, we want rebase to be able
             # to create markers to already-obsoleted commits
             with ui.configoverride(
-                {("experimental", "rebaseskipobsolete"): "off"}, "unshelve"
+                {
+                    ("experimental", "rebaseskipobsolete"): "off",
+                    ("commit", "reject-modifying-obsolete"): False,
+                },
+                "unshelve",
             ):
                 rebase.rebase(ui, repo, **{"continue": True})
         except Exception:
@@ -754,7 +766,12 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     tempopts = {}
     tempopts["message"] = "pending changes temporary commit"
     tempopts["date"] = opts.get("date")
-    with ui.configoverride({("ui", "quiet"): True}):
+    with ui.configoverride(
+        {
+            ("ui", "quiet"): True,
+            ("commit", "reject-modifying-obsolete"): False,
+        }
+    ):
         node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
     tmpwctx = repo[node]
     ui.debug(
@@ -1045,6 +1062,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         rebaseconfigoverrides = {
             ("ui", "forcemerge"): opts.get("tool", ""),
             ("experimental", "rebaseskipobsolete"): "off",
+            ("commit", "reject-modifying-obsolete"): False,
         }
         with ui.configoverride(rebaseconfigoverrides, "unshelve"):
             shelvectx = _rebaserestoredcommit(
