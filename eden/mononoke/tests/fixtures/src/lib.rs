@@ -1008,6 +1008,220 @@ impl TestRepoFixture for AugmentedManifestV2NoHgMapping {
     }
 }
 
+/// A copy-free merge fixture whose two parents have the same entry at `top1`.
+/// The parents differ only under `top2`, then the merge changes `top1`, forcing
+/// direct V2 derivation to handle duplicate parent entries at that stage.
+pub struct AugmentedManifestV2DuplicateParentEntriesNoHgMapping;
+
+#[async_trait]
+impl TestRepoFixture for AugmentedManifestV2DuplicateParentEntriesNoHgMapping {
+    const REPO_NAME: &'static str = "augmented_manifest_v2_duplicate_parent_entries_no_hg_mapping";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+        let a = CreateCommitContext::new_root(&ctx, repo)
+            .set_message("A")
+            .add_file("top1/base", "base\n")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("B")
+            .add_file("top2/left", "left\n")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("C")
+            .add_file("top2/right", "right\n")
+            .commit()
+            .await?;
+        let d = CreateCommitContext::new(&ctx, repo, vec![b, c])
+            .set_message("D")
+            .add_file("top1/merged", "merged\n")
+            .commit()
+            .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            d,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        Ok((
+            BTreeMap::from([
+                ("A".to_string(), a),
+                ("B".to_string(), b),
+                ("C".to_string(), c),
+                ("D".to_string(), d),
+                ("master".to_string(), d),
+            ]),
+            BTreeMap::from([
+                ("A".to_string(), BTreeSet::new()),
+                ("B".to_string(), BTreeSet::from(["A".to_string()])),
+                ("C".to_string(), BTreeSet::from(["A".to_string()])),
+                (
+                    "D".to_string(),
+                    BTreeSet::from(["B".to_string(), "C".to_string()]),
+                ),
+            ]),
+        ))
+    }
+}
+
+/// A copy-free merge fixture whose first parent has no `top1` entry while its
+/// second parent does. The merge changes `top1`, so the second parent's stage
+/// entry must retain its original parent position.
+pub struct AugmentedManifestV2AbsentParentStageNoHgMapping;
+
+#[async_trait]
+impl TestRepoFixture for AugmentedManifestV2AbsentParentStageNoHgMapping {
+    const REPO_NAME: &'static str = "augmented_manifest_v2_absent_parent_stage_no_hg_mapping";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+        let a = CreateCommitContext::new_root(&ctx, repo)
+            .set_message("A")
+            .add_file("top2/base", "base\n")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("B")
+            .add_file("top1/from_second_parent", "second\n")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("C")
+            .add_file("top2/from_first_parent", "first\n")
+            .commit()
+            .await?;
+        let d = CreateCommitContext::new(&ctx, repo, vec![c, b])
+            .set_message("D")
+            .add_file("top1/merged", "merged\n")
+            .commit()
+            .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            d,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        Ok((
+            BTreeMap::from([
+                ("A".to_string(), a),
+                ("B".to_string(), b),
+                ("C".to_string(), c),
+                ("D".to_string(), d),
+                ("master".to_string(), d),
+            ]),
+            BTreeMap::from([
+                ("A".to_string(), BTreeSet::new()),
+                ("B".to_string(), BTreeSet::from(["A".to_string()])),
+                ("C".to_string(), BTreeSet::from(["A".to_string()])),
+                (
+                    "D".to_string(),
+                    BTreeSet::from(["B".to_string(), "C".to_string()]),
+                ),
+            ]),
+        ))
+    }
+}
+
+/// A copy-free octopus merge fixture whose three parents have different
+/// `top1` entries. Direct V2 must merge all three while using only p1 and p2 as
+/// Mercurial manifest parents.
+pub struct AugmentedManifestV2P3PlusParentsNoHgMapping;
+
+#[async_trait]
+impl TestRepoFixture for AugmentedManifestV2P3PlusParentsNoHgMapping {
+    const REPO_NAME: &'static str = "augmented_manifest_v2_p3_plus_parents_no_hg_mapping";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+        let a = CreateCommitContext::new_root(&ctx, repo)
+            .set_message("A")
+            .add_file("top1/base", "base\n")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("B")
+            .add_file("top1/p1", "p1\n")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("C")
+            .add_file("top1/p2", "p2\n")
+            .commit()
+            .await?;
+        let d = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("D")
+            .add_file("top1/p3", "p3\n")
+            .commit()
+            .await?;
+        let e = CreateCommitContext::new(&ctx, repo, vec![b, c, d])
+            .set_message("E")
+            .add_file("top1/merged", "merged\n")
+            .commit()
+            .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            e,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        Ok((
+            BTreeMap::from([
+                ("A".to_string(), a),
+                ("B".to_string(), b),
+                ("C".to_string(), c),
+                ("D".to_string(), d),
+                ("E".to_string(), e),
+                ("master".to_string(), e),
+            ]),
+            BTreeMap::from([
+                ("A".to_string(), BTreeSet::new()),
+                ("B".to_string(), BTreeSet::from(["A".to_string()])),
+                ("C".to_string(), BTreeSet::from(["A".to_string()])),
+                ("D".to_string(), BTreeSet::from(["A".to_string()])),
+                (
+                    "E".to_string(),
+                    BTreeSet::from(["B".to_string(), "C".to_string(), "D".to_string()]),
+                ),
+            ]),
+        ))
+    }
+}
+
 /// A copy-free merge fixture with an ACL rooted below the repository root.
 /// Used to compare pipeline-first augmented manifest V2 stages with canonical
 /// derivation without creating a Bonsai-Hg mapping.
