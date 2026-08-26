@@ -1223,6 +1223,8 @@ impl TestRepoFixture for AugmentedManifestV2P3PlusParentsNoHgMapping {
 }
 
 /// A copy-free merge fixture with an ACL rooted below the repository root.
+/// The merge rebuilds directories without direct file changes, and its child
+/// removes the only ACL so staged normalization also sees the canonical empty ACL.
 /// Used to compare pipeline-first augmented manifest V2 stages with canonical
 /// derivation without creating a Bonsai-Hg mapping.
 pub struct AugmentedManifestV2AclNoHgMapping;
@@ -1261,11 +1263,16 @@ impl TestRepoFixture for AugmentedManifestV2AclNoHgMapping {
             .set_message("D")
             .commit()
             .await?;
+        let e = CreateCommitContext::new(&ctx, repo, vec![d])
+            .set_message("E")
+            .delete_file("top1/docs/inner/.slacl")
+            .commit()
+            .await?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.force_set(
             &BookmarkKey::new("master")?,
-            d,
+            e,
             BookmarkUpdateReason::TestMove,
         )?;
         txn.commit().await?;
@@ -1276,7 +1283,8 @@ impl TestRepoFixture for AugmentedManifestV2AclNoHgMapping {
                 ("B".to_string(), b),
                 ("C".to_string(), c),
                 ("D".to_string(), d),
-                ("master".to_string(), d),
+                ("E".to_string(), e),
+                ("master".to_string(), e),
             ]),
             BTreeMap::from([
                 ("A".to_string(), BTreeSet::new()),
@@ -1286,6 +1294,7 @@ impl TestRepoFixture for AugmentedManifestV2AclNoHgMapping {
                     "D".to_string(),
                     BTreeSet::from(["B".to_string(), "C".to_string()]),
                 ),
+                ("E".to_string(), BTreeSet::from(["D".to_string()])),
             ]),
         ))
     }

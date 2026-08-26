@@ -1542,6 +1542,81 @@ async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_acl_ent
 }
 
 #[mononoke::fbinit_test]
+async fn test_direct_augmented_manifest_entry_writes_restricted_paths_like_canonical(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(true),
+        async move {
+            // Given: equivalent repos with one configured restricted directory.
+            let ctx = CoreContext::test_mock(fb);
+            let canonical_repo =
+                build_repo_with_restricted_path_config(fb, vec![NonRootMPath::new("restricted")?])
+                    .await?;
+            let staged_repo =
+                build_repo_with_restricted_path_config(fb, vec![NonRootMPath::new("restricted")?])
+                    .await?;
+            let canonical_commit = CreateCommitContext::new_root(&ctx, &canonical_repo)
+                .add_file("restricted/secret.txt", "hidden")
+                .commit()
+                .await?;
+            let staged_commit = CreateCommitContext::new_root(&ctx, &staged_repo)
+                .add_file("restricted/secret.txt", "hidden")
+                .commit()
+                .await?;
+
+            // When: one repo derives the canonical root and the other derives only
+            // the non-root stage containing the restricted directory.
+            let canonical_root = derive_augmented_manifest_directly_for_test(
+                &ctx,
+                &canonical_repo,
+                canonical_commit,
+                vec![],
+                (None, None),
+            )
+            .await?;
+            let expected_entry =
+                lookup_augmented_root_child(&ctx, &canonical_repo, canonical_root, b"restricted")
+                    .await?
+                    .context("canonical fixture must contain restricted")?;
+            let staged_entry =
+                derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+                    &ctx,
+                    staged_repo.repo_blobstore(),
+                    MPath::new("restricted")?,
+                    vec![],
+                    HashMap::new(),
+                    file_changes_from_bonsai(&ctx, &staged_repo, staged_commit).await?,
+                    vec![],
+                    (None, None),
+                    &Default::default(),
+                    staged_repo.restricted_paths().config_based(),
+                    None,
+                )
+                .await?;
+            let canonical_entries =
+                hg_augmented_restricted_path_entries(&ctx, &canonical_repo).await?;
+            let staged_entries = hg_augmented_restricted_path_entries(&ctx, &staged_repo).await?;
+
+            // Then: the staged entry and its restricted-path row match canonical.
+            assert_eq!(staged_entry, Some(expected_entry));
+            assert_eq!(staged_entries, canonical_entries);
+            assert_eq!(
+                staged_entries
+                    .iter()
+                    .map(RestrictedPathManifestIdEntry::repo_path)
+                    .collect::<Result<Vec<_>>>()?,
+                vec![RepoPath::dir("restricted")?],
+            );
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+#[mononoke::fbinit_test]
 async fn test_direct_augmented_manifest_entry_preserves_absent_parent_position(
     fb: FacebookInit,
 ) -> Result<()> {

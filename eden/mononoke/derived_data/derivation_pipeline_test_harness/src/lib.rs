@@ -269,7 +269,7 @@ pub async fn verify_pipeline_first_then_canonical<F: PipelineTestFixture + Send>
     fb: FacebookInit,
     types: &[DerivableType],
 ) -> Result<()> {
-    verify_pipeline_first_then_canonical_with_repo::<F>(fb, types, false)
+    verify_pipeline_first_then_canonical_with_repo::<F>(fb, types, true, false)
         .await
         .map(|_| ())
 }
@@ -277,6 +277,7 @@ pub async fn verify_pipeline_first_then_canonical<F: PipelineTestFixture + Send>
 async fn verify_pipeline_first_then_canonical_with_repo<F: PipelineTestFixture + Send>(
     fb: FacebookInit,
     types: &[DerivableType],
+    add_acl_manifest_pointer: bool,
     use_terminal_mapping: bool,
 ) -> Result<(TestRepo, Vec<ChangesetId>)> {
     let ctx = &CoreContext::test_mock(fb);
@@ -324,7 +325,7 @@ async fn verify_pipeline_first_then_canonical_with_repo<F: PipelineTestFixture +
             ),
             (
                 "scm/mononoke:add_acl_manifest_pointer".to_string(),
-                KnobVal::Bool(true),
+                KnobVal::Bool(add_acl_manifest_pointer),
             ),
             (
                 "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
@@ -699,11 +700,13 @@ mod tests {
         F: PipelineTestFixture + Send,
     >(
         fb: FacebookInit,
+        add_acl_manifest_pointer: bool,
     ) -> Result<()> {
         let ctx = &CoreContext::test_mock(fb);
         let (repo, commits) = verify_pipeline_first_then_canonical_with_repo::<F>(
             fb,
             &AUGMENTED_MANIFEST_V2_TYPES,
+            add_acl_manifest_pointer,
             false,
         )
         .await?;
@@ -725,7 +728,7 @@ mod tests {
     ) -> Result<()> {
         verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
             AugmentedManifestV2NoHgMapping,
-        >(fb)
+        >(fb, true)
         .await
     }
 
@@ -735,7 +738,7 @@ mod tests {
     ) -> Result<()> {
         verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
             AugmentedManifestV2DuplicateParentEntriesNoHgMapping,
-        >(fb)
+        >(fb, true)
         .await
     }
 
@@ -745,7 +748,7 @@ mod tests {
     ) -> Result<()> {
         verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
             AugmentedManifestV2AbsentParentStageNoHgMapping,
-        >(fb)
+        >(fb, true)
         .await
     }
 
@@ -755,7 +758,7 @@ mod tests {
     ) -> Result<()> {
         verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
             AugmentedManifestV2P3PlusParentsNoHgMapping,
-        >(fb)
+        >(fb, true)
         .await
     }
 
@@ -796,6 +799,7 @@ mod tests {
             fb,
             &AUGMENTED_MANIFEST_V2_TYPES,
             true,
+            true,
         )
         .await
         .map(|_| ())
@@ -805,13 +809,26 @@ mod tests {
     async fn test_pipeline_first_augmented_manifest_v2_non_root_acl(
         fb: FacebookInit,
     ) -> Result<()> {
-        // Given: a copy-free merge with an ACL rooted at the nested pipeline stage.
-        // When: ACL and V2 run pipeline-first before canonical direct V2.
-        // Then: every non-root stage and terminal root matches canonical output.
-        verify_pipeline_first_then_canonical::<AugmentedManifestV2AclNoHgMapping>(
-            fb,
-            &AUGMENTED_MANIFEST_V2_TYPES,
-        )
+        // Given: nested ACL stages, a no-change merge that rebuilds directories,
+        // and a final commit that removes the repository's only ACL.
+        // When: ACL and V2 run pipeline-first with ACL pointers enabled.
+        // Then: every stage and terminal root matches canonical direct V2.
+        verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
+            AugmentedManifestV2AclNoHgMapping,
+        >(fb, true)
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_augmented_manifest_v2_non_root_acl_pointer_disabled(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: the same nested ACL and merge-only directory shapes.
+        // When: ACL and V2 run pipeline-first with ACL pointers disabled.
+        // Then: every stage matches canonical direct V2 without ACL pointers.
+        verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
+            AugmentedManifestV2AclNoHgMapping,
+        >(fb, false)
         .await
     }
 
