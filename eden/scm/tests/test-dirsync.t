@@ -206,6 +206,7 @@ Test amending a change where there has already been a sync before
   dir2/subdir/b
   committing manifest
   committing changelog
+  committed * (glob)
   $ sl diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -810,4 +811,3 @@ Match and exclude rules can match individual files
   +++ b/x/y/z/foo.txt
   @@ -0,0 +1,1 @@
   +f
-

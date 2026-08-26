@@ -4960,15 +4960,41 @@ def buildcommittext(repo, ctx, summaryfooter=""):
     return "\n".join(edittext)
 
 
-def commitstatus(repo, node, opts=None):
+def commitstatus(repo, node, opts=None, predecessor=None):
+    ui = repo.ui
     if opts is None:
         opts = {}
     ctx = repo[node]
+    show_status = ui.configbool("commit", "show-status", True)
+    # ui.quiet is false when debug output is enabled, so inspect the raw option.
+    quiet = ui.configbool("ui", "quiet")
 
-    if repo.ui.debugflag:
+    if ui.debugflag:
+        # --debug always reports at least the legacy full-hash line, even in
+        # otherwise suppressed modes.
+        if quiet or ui.plain() or not show_status:
+            ui.write(_("committed %s\n") % ctx.hex())
+            return
+    elif quiet or (ui.plain() and not ui.verbose):
+        return
+    elif not show_status:
+        if ui.verbose:
+            ui.write(_("committed %s\n") % ctx)
+        return
+
+    if predecessor is not None:
+        repo.ui.write(_("amended %s -> %s\n") % (predecessor.hex(), ctx.hex()))
+        status = repo.status(predecessor, ctx)
+        files = status.modified + status.added + status.removed
+    else:
         repo.ui.write(_("committed %s\n") % (ctx.hex()))
-    elif repo.ui.verbose:
-        repo.ui.write(_("committed %s\n") % (ctx))
+        files = ctx.files()
+
+    if files:
+        limit = max(1, repo.ui.configint("commit", "status-path-limit", 5))
+        repo.ui.write(_("changed %d file(s):\n") % len(files))
+        for path in templater.summarizepaths(files, limit):
+            repo.ui.write("  %s\n" % path)
 
 
 def postcommitstatus(repo, pats, opts):

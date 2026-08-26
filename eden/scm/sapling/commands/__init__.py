@@ -1792,8 +1792,10 @@ def _docommit(ui, repo, *pats, **opts):
     cmdutil.checkunfinished(repo, op="amend" if opts.get("amend") else "commit")
 
     extra = {}
+    predecessor = None
     if opts.get("amend"):
         old = repo["."]
+        predecessor = old
         rewriteutil.precheck(repo, [old.rev()], "amend")
 
         # Currently histedit gets confused if an amend happens while histedit
@@ -1880,7 +1882,7 @@ def _docommit(ui, repo, *pats, **opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-    cmdutil.commitstatus(repo, node, opts=opts)
+    cmdutil.commitstatus(repo, node, opts=opts, predecessor=predecessor)
 
 
 @command(

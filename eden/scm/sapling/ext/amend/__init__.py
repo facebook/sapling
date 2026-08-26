@@ -364,6 +364,8 @@ def amend(ui, repo, *pats, **opts):
             ui.status(_("nothing changed\n"))
             return 1
 
+        cmdutil.commitstatus(repo, node, opts=opts, predecessor=old)
+
         conf = ui.config("amend", "autorestack", RESTACK_DEFAULT)
         noconflict = None
 
@@ -527,6 +529,7 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
             parentnode = memctx.commit()
             mapping[mappednodes[i]] = (parentnode,)
 
+        amendednode = mapping[dest.node()][0]
         scmutil.cleanupnodes(repo, {dest.node(): mapping.pop(dest.node())}, "amend")
         scmutil.cleanupnodes(repo, mapping, "rebase")
 
@@ -535,6 +538,9 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
             repo.dirstate.rebuild(
                 parentnode, repo[parentnode].manifest(), wctx.files(), exact=True
             )
+
+    if amendednode != dest.node():
+        cmdutil.commitstatus(repo, amendednode, opts=opts, predecessor=dest)
 
 
 def inmemorymerge(ui, repo, src, dest, base):
