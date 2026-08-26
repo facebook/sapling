@@ -1,6 +1,7 @@
 
   $ eagerepo
   $ enable fbcodereview
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
 
 Setup repo
 

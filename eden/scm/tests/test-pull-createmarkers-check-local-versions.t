@@ -5,6 +5,7 @@
 Setup
   $ configure modern
   $ enable fbcodereview
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
   $ setconfig pullcreatemarkers.check-local-versions=True
 
 Configure arc...

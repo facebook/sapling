@@ -14,7 +14,7 @@
   $ echo 1 > foo
   $ sl ci -qAm 'base'
   $ echo 2 > foo
-  $ sl amend -qm 'Differential Revision: https://phabricator.fb.com/D1'
+  $ HGPLAIN=1 sl amend -qm 'Differential Revision: https://phabricator.fb.com/D1'
   $ echo 3 > foo
   $ sl amend -q
   $ echo 4 > foo

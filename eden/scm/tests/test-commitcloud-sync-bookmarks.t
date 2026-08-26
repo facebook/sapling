@@ -3,6 +3,7 @@
 #require no-eden
 
   $ enable amend commitcloud rebase fbcodereview
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server

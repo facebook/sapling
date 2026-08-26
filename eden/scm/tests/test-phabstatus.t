@@ -6,6 +6,7 @@
 Setup
 
   $ enable fbcodereview smartlog
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
   $ sl init repo
   $ cd repo

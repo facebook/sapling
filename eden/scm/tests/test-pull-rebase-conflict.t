@@ -2,6 +2,7 @@
 
   $ configure mutation-norecord
   $ enable rebase amend fbcodereview commitcloud
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
   $ setconfig experimental.rebaseskipobsolete=true
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
 

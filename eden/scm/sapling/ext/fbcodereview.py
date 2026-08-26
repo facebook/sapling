@@ -122,6 +122,10 @@ def _bad_diff_id_mode(repo):
     return mode if mode in ("abort", "warn", "prompt") else "ignore"
 
 
+def _warn_message_change(repo, message, hint):
+    repo.ui.warn(_("warning: %s\n(%s)\n") % (message, hint))
+
+
 def _confirm_message_change(repo, message, hint=None):
     if hint is None:
         hint = _(
@@ -131,7 +135,7 @@ def _confirm_message_change(repo, message, hint=None):
     if mode == "ignore":
         return
     if mode == "warn":
-        repo.ui.warn(_("warning: %s\n(%s)\n") % (message, hint))
+        _warn_message_change(repo, message, hint)
         return
     if mode == "abort":
         raise error.Abort(message, hint=hint)
@@ -144,10 +148,19 @@ def _confirm_message_change(repo, message, hint=None):
     )
     if choice != 0:
         raise error.Abort(_("aborted by user"))
+    _warn_message_change(repo, message, hint)
 
 
 def _format_diff_numbers(revisions):
     return ", ".join("'D%s'" % revision for revision in sorted(revisions, key=int))
+
+
+def _format_diff_link_guidance(revisions):
+    if len(revisions) == 1:
+        return _("run 'jf link --diff D%s'") % min(revisions, key=int)
+    return _(
+        "run 'jf link --diff D<number>' from each successor commit that should be linked"
+    )
 
 
 def _commit_revisions(ctx):
@@ -155,56 +168,82 @@ def _commit_revisions(ctx):
 
 
 def _validate_commit_set(repo, successors, predecessors):
+    successor_revisions = []
+    multiple_revisions = set()
+    for successor in successors:
+        revisions = _commit_revisions(successor)
+        if len(revisions) > 1:
+            multiple_revisions.update(revisions)
+        successor_revisions.extend(revisions)
+    if multiple_revisions:
+        _confirm_message_change(
+            repo,
+            _("commit message contains multiple phabricator diff numbers %s")
+            % _format_diff_numbers(multiple_revisions),
+            _(
+                "keep exactly one Differential Revision line in the commit message; "
+                "to change the association, run 'jf unlink' before the rewrite and "
+                "'jf link --diff D<number>' afterward"
+            ),
+        )
+        return
+
     predecessor_revisions = {
         revision
         for predecessor in predecessors
         for revision in _commit_revisions(predecessor)
     }
-    successor_revisions = [
-        revision
-        for successor in successors
-        for revision in _commit_revisions(successor)
-    ]
     successor_revision_set = set(successor_revisions)
+    duplicates = {
+        revision
+        for revision, count in Counter(successor_revisions).items()
+        if count > 1
+    }
     if not predecessor_revisions:
         return
 
-    if successor_revisions:
-        if len(successors) > 1:
-            duplicates = {
-                revision
-                for revision, count in Counter(successor_revisions).items()
-                if count > 1
-            }
-            if duplicates:
-                _confirm_message_change(
-                    repo,
-                    _("commit rewrite creates duplicate phabricator diff number(s) %s")
-                    % _format_diff_numbers(duplicates),
-                    _(
-                        "keep the Differential Revision line on exactly one successor "
-                        "and remove it from the other successor commit messages"
-                    ),
-                )
-                return
-        if (
-            len(successor_revision_set) == 1
-            and successor_revision_set <= predecessor_revisions
-        ):
-            return
+    unexpected = successor_revision_set - predecessor_revisions
+    if unexpected:
+        if duplicates:
+            message = _(
+                "commit rewrite introduces unexpected phabricator diff number(s) %s "
+                "and duplicates %s across successor commits; predecessor diff "
+                "number(s): %s"
+            ) % (
+                _format_diff_numbers(unexpected),
+                _format_diff_numbers(duplicates),
+                _format_diff_numbers(predecessor_revisions),
+            )
+        else:
+            message = _(
+                "commit rewrite introduces unexpected phabricator diff number(s) %s; "
+                "predecessor diff number(s): %s"
+            ) % (
+                _format_diff_numbers(unexpected),
+                _format_diff_numbers(predecessor_revisions),
+            )
         _confirm_message_change(
             repo,
-            _("commit rewrite changes phabricator diff number(s) from %s to %s")
-            % (
-                _format_diff_numbers(predecessor_revisions),
-                _format_diff_numbers(successor_revision_set),
-            ),
+            message,
             _(
-                "keep exactly one predecessor Differential Revision line; "
-                "to change the association, run 'jf unlink' before the rewrite "
-                "and 'jf link D<number>' afterward"
-            ),
+                "run 'jf unlink' before the rewrite, then %s afterward to change "
+                "the association intentionally"
+            )
+            % _format_diff_link_guidance(unexpected),
         )
+        return
+
+    if successor_revision_set:
+        if duplicates:
+            _confirm_message_change(
+                repo,
+                _("commit rewrite creates duplicate phabricator diff number(s) %s")
+                % _format_diff_numbers(duplicates),
+                _(
+                    "keep the Differential Revision line on exactly one successor "
+                    "and remove it from the other successor commit messages"
+                ),
+            )
         return
 
     if len(predecessor_revisions) == 1:

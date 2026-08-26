@@ -15,6 +15,7 @@
   > fbcodereview=
   > smartlog=
   > EOF
+  $ setconfig fbcodereview.allow-diff-revision-drop=true
   $ sl init repo
   $ cd repo
   $ touch foo

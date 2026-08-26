@@ -7,7 +7,7 @@ Create a commit with a Differential Revision line:
   $ newclientrepo
   $ echo a > a
   $ sl add a
-  $ sl commit -m "$(printf 'first commit\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -m "$(printf 'first commit\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
 
 Agent: amend -m dropping diff number should abort:
 
@@ -62,11 +62,13 @@ Interactive user choosing Yes should proceed (amend):
   > y
   > EOF
   commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
+  warning: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   5a4d097da8bb -> 78d316c8be37 "drop diff number via amend"
 
 Restore diff number for next test:
 
-  $ sl amend -m "$(printf 'restored\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   78d316c8be37 -> 9ea48f174b42 "restored"
 
 Interactive user choosing Yes should proceed (metaedit):
@@ -75,22 +77,26 @@ Interactive user choosing Yes should proceed (metaedit):
   > y
   > EOF
   commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
+  warning: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   9ea48f174b42 -> 8f89e739bba4 "drop diff number via metaedit"
 
 Non-interactive defaults to Yes (amend):
 
 Restore diff number:
 
-  $ sl amend -m "$(printf 'restored again\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored again\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   8f89e739bba4 -> f6c732d5b9eb "restored again"
 
   $ sl amend -m "non-interactive drop"
   commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
+  warning: commit message drops phabricator diff number 'D12345'
+  (run 'jf unlink' to intentionally remove the associated diff; use 'jf template' to edit other commit message fields)
   f6c732d5b9eb -> cad5328c7ead "non-interactive drop"
 
-Amend -m preserving Differential Revision should succeed:
+HGPLAIN should allow restoring a Differential Revision:
 
-  $ sl amend -m "$(printf 'new message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl amend -m "$(printf 'new message\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   cad5328c7ead -> 334772907fae "new message"
 
 Metaedit -m preserving Differential Revision should succeed:
@@ -101,8 +107,8 @@ Metaedit -m preserving Differential Revision should succeed:
 Agent: changing to an unrelated Differential Revision should abort:
 
   $ CODING_AGENT_METADATA=id=test_agent sl amend -m "$(printf 'unrelated diff\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
-  abort: commit rewrite changes phabricator diff number(s) from 'D12345' to 'D23456'
-  (keep exactly one predecessor Differential Revision line; to change the association, run 'jf unlink' before the rewrite and 'jf link D<number>' afterward)
+  abort: commit rewrite introduces unexpected phabricator diff number(s) 'D23456'; predecessor diff number(s): 'D12345'
+  (run 'jf unlink' before the rewrite, then run 'jf link --diff D23456' afterward to change the association intentionally)
   [255]
 
 Config override should allow dropping:
@@ -112,7 +118,7 @@ Config override should allow dropping:
 
 Restore diff number before testing amend without -m:
 
-  $ sl amend -m "$(printf 'restored for amend test\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl amend -m "$(printf 'restored for amend test\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   1704a68c6e26 -> 9d95226810a0 "restored for amend test"
   $ echo b > b
   $ sl add b
@@ -154,7 +160,7 @@ Agent: fold dropping every predecessor Differential Revision should abort:
   $ echo base > base
   $ sl commit -Aqm base
   $ echo first > first
-  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
   $ sl commit -Aqm second
   $ CODING_AGENT_METADATA=id=test_agent sl fold --from .^ -m folded >/dev/null
@@ -170,9 +176,9 @@ Fold may deliberately retain one Differential Revision from two linked predecess
   $ echo base > base
   $ sl commit -Aqm base
   $ echo first > first
-  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
-  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
   $ CODING_AGENT_METADATA=id=test_agent sl fold --from .^ --reuse-message .^ >/dev/null
   $ sl log -r . -T '[{phabdiff}]\n'
   [D12345]
@@ -181,14 +187,14 @@ Fresh commit can currently reuse a Differential Revision:
 
   $ newclientrepo
   $ echo first > first
-  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
-  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ sl log -r '.^ + .' -T '[{phabdiff}]\n'
   [D12345]
   [D12345]
 
-Rewriting one existing duplicate currently succeeds:
+Rewriting one existing duplicate should succeed:
 
   $ echo amended >> second
   $ CODING_AGENT_METADATA=id=test_agent sl amend
@@ -206,6 +212,26 @@ HGPLAIN can create a duplicate Differential Revision:
   [D12345]
   [D12345]
 
+Human approval of repeated Differential Revision lines should prompt once:
+
+  $ newclientrepo
+  $ echo first > first
+  $ sl commit --config ui.interactive=true -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')" <<EOF
+  > y
+  > EOF
+  commit message contains multiple phabricator diff numbers 'D12345', proceed (Yn)?  y
+  warning: commit message contains multiple phabricator diff numbers 'D12345'
+  (keep exactly one Differential Revision line in the commit message; to change the association, run 'jf unlink' before the rewrite and 'jf link --diff D<number>' afterward)
+
+Agent guidance uses a non-literal placeholder when several diff numbers are present:
+
+  $ newclientrepo
+  $ echo first > first
+  $ CODING_AGENT_METADATA=id=test_agent sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  abort: commit message contains multiple phabricator diff numbers 'D12345', 'D23456'
+  (keep exactly one Differential Revision line in the commit message; to change the association, run 'jf unlink' before the rewrite and 'jf link --diff D<number>' afterward)
+  [255]
+
 Rebase --keep can currently copy a Differential Revision:
 
   $ newclientrepo
@@ -213,15 +239,14 @@ Rebase --keep can currently copy a Differential Revision:
   $ sl commit -Aqm base
   $ BASE=$(sl log -r . -T '{node}')
   $ echo source > source
-  $ sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'source\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ SOURCE=$(sl log -r . -T '{node}')
   $ sl go -q $BASE
   $ echo destination > destination
   $ sl commit -Aqm destination
   $ DESTINATION=$(sl log -r . -T '{node}')
-  $ sl rebase --keep -r $SOURCE -d $DESTINATION >/dev/null
-  $ COPY=$(sl log -r "children($DESTINATION)" -T '{node}')
-  $ sl log -r "$SOURCE + $COPY" -T '[{phabdiff}]\n'
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase --keep -r $SOURCE -d $DESTINATION >/dev/null
+  $ sl log -r "$SOURCE + children($DESTINATION)" -T '[{phabdiff}]\n'
   [D12345]
   [D12345]
 
@@ -230,7 +255,7 @@ Agent: split copying one Differential Revision to every successor should abort:
   $ newclientrepo
   $ echo first > first
   $ echo second > second
-  $ sl commit -Aqm "$(printf 'to split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'to split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
   > y
   > y
@@ -317,9 +342,9 @@ Agent: rebase collapse dropping every predecessor Differential Revision should a
   $ echo base > base
   $ sl commit -Aqm base
   $ echo first > first
-  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ echo second > second
-  $ sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'second\n\nDifferential Revision: https://phabricator.intern.facebook.com/D23456')"
   $ FIRST=$(sl log -r .^ -T '{node}')
   $ SECOND=$(sl log -r . -T '{node}')
   $ CODING_AGENT_METADATA=id=test_agent sl rebase --collapse -s .^ -d .~2 -m collapsed >/dev/null
@@ -343,7 +368,7 @@ Agent: histedit mess dropping the Differential Revision should abort:
 
   $ newclientrepo
   $ echo first > first
-  $ sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
+  $ HGPLAIN=1 sl commit -Aqm "$(printf 'first\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
   $ cat > drop-message.py <<'EOF'
   > import sys
   > with open(sys.argv[1], "wb") as message_file:

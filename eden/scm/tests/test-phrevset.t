@@ -15,7 +15,7 @@
   $ cd repo
   $ echo 1 > 1
   $ sl add 1
-  $ sl commit -m "$(printf 'title\n\nDifferential Revision: http.ololo.com/D1234')"
+  $ HGPLAIN=1 sl commit -m "$(printf 'title\n\nDifferential Revision: http.ololo.com/D1234')"
   $ sl up -q 'desc(title)'
   $ sl up D1234
   phrevset.callsign is not set - doing a linear search
