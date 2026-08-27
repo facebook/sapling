@@ -102,8 +102,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   void run();
 
  private:
-  void cleanupMountPoints();
-
   // UnixSocket::ReceiveCallback methods
   void messageReceived(UnixSocket::Message&& message) noexcept override;
   void eofReceived() noexcept override;
@@ -234,6 +232,9 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   folly::File openBindMountTarget(
       folly::StringPiece mountRoot,
       folly::StringPiece mountPath);
+
+  // Virtual so that a test can observe whether a code path skipped it.
+  virtual void cleanupMountPoints();
 
  private:
 #ifndef __APPLE__
