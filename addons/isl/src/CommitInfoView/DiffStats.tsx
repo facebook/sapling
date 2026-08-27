@@ -5,13 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from '../types';
+import type {CommitInfo, SlocDelta} from '../types';
 
 import {ErrorBoundary} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
+import {cn} from 'shared/cn';
 import {Row} from '../ComponentUtils';
-import {T, t} from '../i18n';
+import {t} from '../i18n';
 import {
   useFetchPendingSignificantLinesOfCode,
   useFetchSignificantLinesOfCode,
@@ -23,20 +24,21 @@ export function LoadingDiffStatsView() {
   return (
     <DiffStatsView>
       <Icon icon="loading" size="XS" />
-      <T>lines</T>
+      <span className={cn(css.insertions, css.placeholder)}>+–</span>
+      <span className={cn(css.deletions, css.placeholder)}>−–</span>
     </DiffStatsView>
   );
 }
 export function DiffStats({commit}: Props) {
   const {slocInfo, isLoading} = useFetchSignificantLinesOfCode(commit);
-  const significantLinesOfCode = slocInfo?.sloc;
+  const sloc = slocInfo?.sloc;
 
-  if (isLoading && significantLinesOfCode == null) {
+  if (isLoading && sloc == null) {
     return <LoadingDiffStatsView />;
-  } else if (!isLoading && significantLinesOfCode == null) {
+  } else if (!isLoading && sloc == null) {
     return null;
   }
-  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+  return <ResolvedDiffStatsView sloc={sloc} />;
 }
 
 export function PendingDiffStats() {
@@ -49,28 +51,25 @@ export function PendingDiffStats() {
 
 export function PendingDiffStatsView() {
   const {slocInfo, isLoading} = useFetchPendingSignificantLinesOfCode();
-  const significantLinesOfCode = slocInfo?.sloc;
+  const sloc = slocInfo?.sloc;
 
-  if (isLoading && significantLinesOfCode == null) {
+  if (isLoading && sloc == null) {
     return <LoadingDiffStatsView />;
-  } else if (!isLoading && significantLinesOfCode == null) {
+  } else if (!isLoading && sloc == null) {
     return null;
   }
-  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+  return <ResolvedDiffStatsView sloc={sloc} />;
 }
 
-function ResolvedDiffStatsView({
-  significantLinesOfCode,
-}: {
-  significantLinesOfCode: number | undefined;
-}) {
-  if (significantLinesOfCode == null) {
+function ResolvedDiffStatsView({sloc}: {sloc: SlocDelta | undefined}) {
+  if (sloc == null) {
     return null;
   }
 
   return (
     <DiffStatsView>
-      <T replace={{$num: significantLinesOfCode}}>$num lines</T>
+      <span className={css.insertions}>+{sloc.insertions}</span>
+      <span className={css.deletions}>−{sloc.deletions}</span>
     </DiffStatsView>
   );
 }
@@ -82,7 +81,7 @@ function DiffStatsView({extras, children}: {extras?: React.ReactNode; children: 
       {children}
       <Tooltip
         title={t(
-          'This number reflects significant lines of code: non-blank, non-generated additions + deletions',
+          'These numbers reflect significant lines of code: non-blank, non-generated additions and deletions',
         )}>
         <Icon icon="info" />
       </Tooltip>

@@ -424,7 +424,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
 
       const ejecaSpy = mockEjeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
       const results = repo.fetchSignificantLinesOfCode(ctx, 'abcdef', ['generated.file']);
-      await expect(results).resolves.toEqual(45);
+      await expect(results).resolves.toEqual({insertions: 45, deletions: 0});
       expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining([

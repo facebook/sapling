@@ -763,7 +763,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {
@@ -784,7 +784,7 @@ export default class ServerToClientAPI {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {
@@ -805,7 +805,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingAmendSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {

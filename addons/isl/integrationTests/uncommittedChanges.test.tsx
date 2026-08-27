@@ -13,6 +13,7 @@ describe('uncommitted changes integration test', () => {
     const {cleanup, writeFileInRepo} = await initRepo();
     const {ignoreRTL} = await import('../src/testQueries');
     await act(async () => {
+      // initRepo commits file.txt containing 'hello', so this rewrites its only line.
       await writeFileInRepo('file.txt', 'hello, world!');
     });
 
@@ -20,6 +21,13 @@ describe('uncommitted changes integration test', () => {
     await waitFor(() =>
       within(screen.getByTestId('commit-tree-root')).getByText(ignoreRTL('file.txt')),
     );
+
+    // ...alongside its added and removed line counts
+    await waitFor(() => {
+      const smartlog = within(screen.getByTestId('commit-tree-root'));
+      expect(smartlog.getByText('+1')).toBeInTheDocument();
+      expect(smartlog.getByText('−1')).toBeInTheDocument();
+    });
 
     await act(cleanup);
   });

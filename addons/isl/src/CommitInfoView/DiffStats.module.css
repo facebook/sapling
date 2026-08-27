@@ -13,3 +13,15 @@
   opacity: 0.9;
   gap: var(--halfpad);
 }
+
+.insertions {
+  color: var(--scm-added-foreground);
+}
+
+.deletions {
+  color: var(--scm-removed-foreground);
+}
+
+.placeholder {
+  opacity: 0.5;
+}

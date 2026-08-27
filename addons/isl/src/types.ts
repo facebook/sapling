@@ -378,9 +378,16 @@ export type StableInfo = {
   date: Date;
 };
 
+export type SlocDelta = {
+  /** Significant lines of code added */
+  insertions: number;
+  /** Significant lines of code removed */
+  deletions: number;
+};
+
 export type SlocInfo = {
   /** Significant lines of code for commit */
-  sloc: number | undefined;
+  sloc: SlocDelta | undefined;
 };
 
 export type CommitInfo = {
@@ -1297,19 +1304,19 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedSignificantLinesOfCode';
       hash: Hash;
-      result: Result<number>;
+      result: Result<SlocDelta>;
     }
   | {
       type: 'fetchedPendingSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      result: Result<number>;
+      result: Result<SlocDelta>;
     }
   | {
       type: 'fetchedPendingAmendSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      result: Result<number>;
+      result: Result<SlocDelta>;
     }
   | {
       type: 'fetchedGkDetails';

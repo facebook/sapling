@@ -132,7 +132,7 @@ const fetchPendingAmendSloc = async (
   }
 
   if (filteredFiles.length === 0) {
-    return {sloc: 0};
+    return {sloc: {insertions: 0, deletions: 0}};
   }
 
   //the calculation here is a bit tricky but in nutshell it is:
@@ -170,7 +170,12 @@ const fetchPendingAmendSloc = async (
   }
 
   const slocInfo = {
-    sloc: (unselectedCommittedSlocInfo.sloc ?? 0) + (pendingLoc.sloc ?? 0),
+    sloc: {
+      insertions:
+        (unselectedCommittedSlocInfo.sloc?.insertions ?? 0) + (pendingLoc.sloc?.insertions ?? 0),
+      deletions:
+        (unselectedCommittedSlocInfo.sloc?.deletions ?? 0) + (pendingLoc.sloc?.deletions ?? 0),
+    },
   };
 
   return slocInfo;
@@ -212,7 +217,7 @@ const fetchPendingSloc = async (
   }
 
   if (filteredFiles.length === 0) {
-    return {sloc: 0};
+    return {sloc: {insertions: 0, deletions: 0}};
   }
 
   serverAPI.postMessage({

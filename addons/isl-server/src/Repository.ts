@@ -30,6 +30,7 @@ import type {
   RunnableOperation,
   SettableConfigName,
   ShelvedChange,
+  SlocDelta,
   StableInfo,
   Submodule,
   SubmodulesByRoot,
@@ -1506,7 +1507,7 @@ export class Repository {
     ctx: RepositoryContext,
     hash: Hash,
     excludedFiles: string[],
-  ): Promise<number | undefined> {
+  ): Promise<SlocDelta | undefined> {
     const exclusions = excludedFiles.flatMap(file => [
       '-X',
       absolutePathForFileInRepo(file, this) ?? file,
@@ -1522,7 +1523,12 @@ export class Repository {
 
     const sloc = this.parseSlocFrom(output);
 
-    ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    ctx.logger.info(
+      'Fetched SLOC for commit:',
+      hash,
+      output,
+      `SLOC: +${sloc.insertions} -${sloc.deletions}`,
+    );
     return sloc;
   }
 
@@ -1530,7 +1536,7 @@ export class Repository {
     ctx: RepositoryContext,
     hash: Hash,
     includedFiles: string[],
-  ): Promise<number | undefined> {
+  ): Promise<SlocDelta | undefined> {
     if (includedFiles.length === 0) {
       return undefined;
     }
@@ -1553,7 +1559,12 @@ export class Repository {
 
     const sloc = this.parseSlocFrom(output);
 
-    ctx.logger.info('Fetched Pending AMEND SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    ctx.logger.info(
+      'Fetched Pending AMEND SLOC for commit:',
+      hash,
+      output,
+      `SLOC: +${sloc.insertions} -${sloc.deletions}`,
+    );
     return sloc;
   }
 
@@ -1561,7 +1572,7 @@ export class Repository {
     ctx: RepositoryContext,
     hash: Hash,
     includedFiles: string[],
-  ): Promise<number | undefined> {
+  ): Promise<SlocDelta | undefined> {
     if (includedFiles.length === 0) {
       return undefined; // don't bother running sl diff if there are no files to include
     }
@@ -1580,19 +1591,24 @@ export class Repository {
 
     const sloc = this.parseSlocFrom(output);
 
-    ctx.logger.info('Fetched Pending SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    ctx.logger.info(
+      'Fetched Pending SLOC for commit:',
+      hash,
+      output,
+      `SLOC: +${sloc.insertions} -${sloc.deletions}`,
+    );
     return sloc;
   }
 
-  private parseSlocFrom(output: string) {
+  private parseSlocFrom(output: string): SlocDelta {
     const lines = output.trim().split('\n');
     const changes = lines[lines.length - 1];
     const diffStatRe = /\d+ files changed, (\d+) insertions\(\+\), (\d+) deletions\(-\)/;
     const diffStatMatch = changes.match(diffStatRe);
-    const insertions = parseInt(diffStatMatch?.[1] ?? '0', 10);
-    const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
-    const sloc = insertions + deletions;
-    return sloc;
+    return {
+      insertions: parseInt(diffStatMatch?.[1] ?? '0', 10),
+      deletions: parseInt(diffStatMatch?.[2] ?? '0', 10),
+    };
   }
 
   private parseSubscribedBookmarks(output: string): Set<string> {
