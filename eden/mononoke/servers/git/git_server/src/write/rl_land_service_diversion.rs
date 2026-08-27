@@ -8,11 +8,11 @@
 //! Push diversion to the Multi-Repo Land Service.
 //!
 //! When a push targets a repo whose name contains the configured marker
-//! (`rl_land_service_repo_prefix` in CommonConfig, a substring match) and
-//! the JustKnob `scm/mononoke:divert_aosp_push_to_rl_land_service` is on,
+//! (`rl_land_service_repo_prefix` in CommonConfig, a substring match),
 //! branch creates and moves land through one synchronous
 //! `submit_manifest_land` call; other refs (deletes, tags, non-branch
-//! refs) take the normal git server path.
+//! refs) take the normal git server path. Per-branch enablement is owned
+//! entirely by the server's `scm/mononoke:sslv2_enabled` gate.
 //!
 //! `#[cfg(fbcode_build)]`: the Thrift client is fbcode-only.
 
@@ -57,9 +57,11 @@ const MRL_THRIFT_OVERALL_TIMEOUT: Duration = Duration::from_secs(600);
 /// Check whether this push should be diverted.
 ///
 /// Repos whose name *contains* the value configured in
-/// `rl_land_service_repo_prefix` (CommonConfig) are diverted when the
-/// JustKnob `scm/mononoke:divert_aosp_push_to_rl_land_service` is enabled.
-/// The `_repo_prefix` name is historical; both `aosp/foo` and
+/// `rl_land_service_repo_prefix` (CommonConfig) are diverted. The marker is
+/// topology, not rollout state: which BRANCHES actually land through
+/// Multi-Repo Land is decided by the server's `scm/mononoke:sslv2_enabled`
+/// gate, and a fully-gated push falls back to the normal path. The
+/// `_repo_prefix` name is historical; both `aosp/foo` and
 /// `oculus/aosp/vendor/oculus` match a configured `aosp/`.
 pub fn should_divert_to_rl_land_service(
     request_context: &RepositoryRequestContext,
@@ -73,13 +75,7 @@ pub fn should_divert_to_rl_land_service(
         _ => return Ok(false),
     };
     let repo_name = request_context.repo.repo_identity().name();
-    let divert = repo_name.contains(marker)
-        && justknobs::eval(
-            "scm/mononoke:divert_aosp_push_to_rl_land_service",
-            None,
-            Some(repo_name),
-        );
-    Ok(divert)
+    Ok(repo_name.contains(marker))
 }
 
 fn branch_name(ref_update: &RefUpdate) -> String {

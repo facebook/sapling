@@ -27,7 +27,6 @@
     "scm/mononoke:use_local_wbc_for_git_repos": false,
     "scm/mononoke:sql_disable_auto_retries": false,
     "scm/mononoke:disable_running_hooks_in_pushredirected_repo": false,
-    "scm/mononoke:divert_aosp_push_to_rl_land_service": false,
     "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change": false,
     "scm/mononoke:fastlog_disable_mutable_renames": false,
     "scm/mononoke:derived_data_use_background_session_class": false,
