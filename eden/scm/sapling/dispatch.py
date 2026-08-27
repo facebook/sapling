@@ -280,6 +280,7 @@ def _check_permission_denied_paths(req, ret):
 
 def dispatch(req):
     "run the command specified in req.args"
+    hintutil.clear()
     if req.ferr:
         ferr = req.ferr
     elif req.ui:

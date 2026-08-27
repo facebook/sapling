@@ -6,6 +6,7 @@
   $ newext showhint << EOF
   > from sapling import (
   >     cmdutil,
+  >     error,
   >     hintutil,
   >     registrar,
   > )
@@ -33,8 +34,25 @@
   >     hintutil.triggershow(ui, 'slow', 'date(x)')
   >     hintutil.trigger('next', 'X', 'Y')
   >     hintutil.trigger('export', 'Q')
+  > 
+  > @command('showhintabort', norepo=True)
+  > def showhintabort(ui):
+  >     hintutil.triggershow(ui, 'slow', 'date(x)')
+  >     raise error.Abort('stopped after showing hint')
   > EOF
 
+  $ sl showhint
+  hint[slow]: 'date(x)' is slow - be patient
+  hint[export]: use 'sl export P' to show commit content
+  hint[next]: use 'sl next' to go from X to Y
+  hint[hint-ack]: use 'sl hint --ack export next' to silence these hints
+
+An aborted command does not suppress the same hint in the next command:
+
+  $ sl showhintabort
+  hint[slow]: 'date(x)' is slow - be patient
+  abort: stopped after showing hint
+  [255]
   $ sl showhint
   hint[slow]: 'date(x)' is slow - be patient
   hint[export]: use 'sl export P' to show commit content
