@@ -603,7 +603,7 @@ def _systemctl_start_or_reload(
     systemctl start (fresh start) or systemctl reload (takeover).
     """
     instance.state_dir.mkdir(parents=True, exist_ok=True)
-    daemon_util.write_systemd_args_file(instance.state_dir, cmd, eden_env)
+    daemon_util.write_daemon_args_file(instance.state_dir, cmd, eden_env)
     unit = _get_systemd_unit(instance)
     if takeover and _is_systemd_unit_active(unit):
         action = "reload"

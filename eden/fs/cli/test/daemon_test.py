@@ -195,7 +195,7 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
             instance.state_dir = Path(temp_dir)
             with (
                 patch.object(
-                    daemon.daemon_util, "write_systemd_args_file"
+                    daemon.daemon_util, "write_daemon_args_file"
                 ) as write_args,
                 patch.object(daemon, "_get_systemd_unit", return_value="edenfs@test"),
                 patch.object(daemon.subprocess, "run", return_value=completed) as run,

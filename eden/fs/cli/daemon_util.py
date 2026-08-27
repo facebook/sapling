@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 from eden.fs.cli.util import write_file_atomically
 
 
-SYSTEMD_ARGS_FILENAME = ".edenfs_start_args"
+DAEMON_ARGS_FILENAME = ".edenfs_start_args"
 SYSTEMD_STARTUP_LOG_FILENAME = ".edenfs_startup.log"
 
 
@@ -90,7 +90,7 @@ def _find_default_daemon_binary() -> Optional[str]:
     return None
 
 
-def write_systemd_args_file(
+def write_daemon_args_file(
     state_dir: Path, cmd: List[str], eden_env: Dict[str, str]
 ) -> Path:
     """Write the daemon command and environment to a JSON file.
@@ -98,7 +98,7 @@ def write_systemd_args_file(
     This file is read by the 'eden systemd-start' subcommand which is invoked
     by systemd's ExecStart/ExecReload.
     """
-    args_file = state_dir / SYSTEMD_ARGS_FILENAME
+    args_file = state_dir / DAEMON_ARGS_FILENAME
     data = {"cmd": cmd, "env": eden_env}
     write_file_atomically(args_file, json.dumps(data).encode())
     return args_file
