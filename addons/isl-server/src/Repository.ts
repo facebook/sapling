@@ -641,7 +641,7 @@ export class Repository {
     ctx: RepositoryContext,
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
-  ): Promise<void> {
+  ): Promise<'ran' | 'skipped'> {
     const result = await this.operationQueue.runOrQueueOperation(ctx, operation, onProgress);
 
     if (result !== 'skipped') {
@@ -649,6 +649,8 @@ export class Repository {
       // so the UI is guaranteed to get the latest data.
       this.watchForChanges.poll('force');
     }
+
+    return result;
   }
 
   /**

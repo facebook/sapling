@@ -14,7 +14,27 @@ export const Uri = URI;
 export const env = proxyMissingFieldsWithJestFn({
   sessionId: 'test-session-id',
 });
-export const window = proxyMissingFieldsWithJestFn({});
+export const window = proxyMissingFieldsWithJestFn({
+  activeTextEditor: undefined as vscode.TextEditor | undefined,
+  withProgress: jest.fn(
+    (
+      _options: vscode.ProgressOptions,
+      task: (
+        progress: vscode.Progress<{message?: string; increment?: number}>,
+        token: vscode.CancellationToken,
+      ) => unknown,
+    ) =>
+      task({report: jest.fn()}, {
+        isCancellationRequested: false,
+        onCancellationRequested: jest.fn(),
+      } as never),
+  ),
+});
+export const ProgressLocation = {
+  SourceControl: 1,
+  Window: 10,
+  Notification: 15,
+};
 export const languages = proxyMissingFieldsWithJestFn({
   getDiagnostics: jest.fn().mockReturnValue([]),
 });

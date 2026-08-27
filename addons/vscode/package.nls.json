@@ -33,5 +33,9 @@
   "settings.isl.inlineSignalsRenderMode.enumDescriptions.diagnostics": "Render inline signals as standard VS Code diagnostics and squiggles.",
   "sapling.open-comments-command": "Open Code Review Comments Panel",
   "sapling.toggle-inline-comments-command": "Toggle Show/Hide Inline Code Review Comments",
-  "sapling.open-multi-diff-file-head-command": "Open Working Copy File"
+  "sapling.open-multi-diff-file-head-command": "Open Working Copy File",
+  "sapling.worktree.switch-command": "Switch Worktree",
+  "sapling.worktree.add-command": "Add Worktree",
+  "sapling.worktree.remove-command": "Remove Worktree",
+  "sapling.worktree.rename-command": "Rename Worktree"
 }

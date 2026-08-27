@@ -9,12 +9,15 @@ import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Operation} from 'isl/src/operations/Operation';
 import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
-import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
+import type {AbsolutePath, OperationProgress, RepoRelativePath, WorktreeInfo} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {findPublicAncestor} from 'isl-server/src/utils';
+import {AddWorktreeOperation} from 'isl/src/operations/AddWorktreeOperation';
+import {RemoveWorktreeOperation} from 'isl/src/operations/RemoveWorktreeOperation';
+import {RenameWorktreeOperation} from 'isl/src/operations/RenameWorktreeOperation';
 import {RevertOperation} from 'isl/src/operations/RevertOperation';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -76,6 +79,193 @@ export const vscodeCommands = {
     }
     return runOperation(this, repo, new RevertOperation([path]));
   }),
+
+  ['sapling.worktree.switch']: async function (this: RepositoryContext) {
+    const resolved = await resolveWorktreeRepo();
+    if (resolved == null) {
+      return;
+    }
+    const {repo, worktreeInfo} = resolved;
+    const others = worktreeInfo.worktrees.filter(wt => wt.path !== repo.info.repoRoot);
+    if (others.length === 0) {
+      vscode.window.showInformationMessage(t('No other worktrees to switch to'));
+      return;
+    }
+    const picked = await vscode.window.showQuickPick(
+      others.map(wt => ({
+        label: wt.label || path.basename(wt.path),
+        description: wt.path,
+        worktree: wt,
+      })),
+      {placeHolder: t('Select a worktree to switch to')},
+    );
+    if (picked == null) {
+      return;
+    }
+    const choice = await vscode.window.showQuickPick(
+      [
+        {label: t('Open in Current Window'), forceNewWindow: false},
+        {label: t('Open in New Window'), forceNewWindow: true},
+      ],
+      {placeHolder: t('Opening in current window will reload the editor.')},
+    );
+    if (choice == null) {
+      return;
+    }
+    await vscode.commands.executeCommand(
+      'vscode.openFolder',
+      vscode.Uri.file(picked.worktree.path),
+      {forceNewWindow: choice.forceNewWindow},
+    );
+  },
+
+  ['sapling.worktree.add']: async function (this: RepositoryContext) {
+    const resolved = await resolveWorktreeRepo();
+    if (resolved == null) {
+      return;
+    }
+    const {repo, worktreeInfo} = resolved;
+
+    const label = await vscode.window.showInputBox({prompt: t('Label (optional)')});
+    if (label == null) {
+      return;
+    }
+
+    const mainRoot =
+      worktreeInfo.worktrees.find(wt => wt.role === 'main')?.path ?? repo.info.repoRoot;
+    const repoName = path.basename(mainRoot);
+    const worktreesDir = path.join(path.dirname(mainRoot), `${repoName}.worktrees`);
+    const existingBasenamesInDir = new Set(
+      worktreeInfo.worktrees
+        .filter(wt => path.dirname(wt.path) === worktreesDir)
+        .map(wt => path.basename(wt.path)),
+    );
+    const MAX_WORKTREE_SUFFIX = 25;
+    let suffix = 2;
+    let defaultDest = path.join(worktreesDir, `${repoName}_${suffix}`);
+    // Find a free suffix, checking both known worktrees in the same dir and on-disk existence.
+    // The suffix range 2..MAX_WORKTREE_SUFFIX inclusive is tried.
+    while (true) {
+      const basename = `${repoName}_${suffix}`;
+      if (!existingBasenamesInDir.has(basename)) {
+        // eslint-disable-next-line no-await-in-loop
+        const existsOnDisk = await fileExists(vscode.Uri.file(defaultDest));
+        if (!existsOnDisk) {
+          break;
+        }
+      }
+      suffix++;
+      if (suffix > MAX_WORKTREE_SUFFIX) {
+        throw new Error(t('Could not add worktree, exceeded maximum allowed worktrees.'));
+      }
+      defaultDest = path.join(worktreesDir, `${repoName}_${suffix}`);
+    }
+
+    const destPath = await vscode.window.showInputBox({
+      prompt: t('Worktree root path'),
+      value: defaultDest,
+    });
+    if (destPath == null) {
+      return;
+    }
+    const trimmedDestPath = destPath.trim();
+    if (trimmedDestPath === '') {
+      return;
+    }
+
+    await runOperationWithProgress(
+      this,
+      repo,
+      new AddWorktreeOperation(trimmedDestPath, label.trim() || undefined),
+      t('Creating worktree...'),
+    );
+
+    const openChoice = await vscode.window.showQuickPick(
+      [
+        {label: t('Open in New Window'), action: 'open' as const, forceNewWindow: true},
+        {label: t('Open in Current Window'), action: 'open' as const, forceNewWindow: false},
+        {label: t("Don't open"), action: 'skip' as const, forceNewWindow: false},
+      ],
+      {placeHolder: t('Open the new worktree?')},
+    );
+    if (openChoice?.action === 'open') {
+      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(trimmedDestPath), {
+        forceNewWindow: openChoice.forceNewWindow,
+      });
+    }
+  },
+
+  ['sapling.worktree.remove']: async function (this: RepositoryContext) {
+    const resolved = await resolveWorktreeRepo();
+    if (resolved == null) {
+      return;
+    }
+    const {repo, worktreeInfo} = resolved;
+    const removable = worktreeInfo.worktrees.filter(
+      wt => wt.role !== 'main' && wt.path !== repo.info.repoRoot,
+    );
+    if (removable.length === 0) {
+      vscode.window.showInformationMessage(t('No worktrees to remove'));
+      return;
+    }
+    const picked = await vscode.window.showQuickPick(
+      removable.map(wt => ({
+        label: wt.label || path.basename(wt.path),
+        description: wt.path,
+        worktree: wt,
+      })),
+      {placeHolder: t('Select a worktree to remove')},
+    );
+    if (picked == null) {
+      return;
+    }
+    const choice = await vscode.window.showWarningMessage(
+      t('Are you sure you want to remove this worktree?'),
+      t('Cancel'),
+      t('Remove'),
+    );
+    if (choice !== t('Remove')) {
+      return;
+    }
+    return runOperationWithProgress(
+      this,
+      repo,
+      new RemoveWorktreeOperation(picked.worktree.path),
+      t('Removing worktree...'),
+    );
+  },
+
+  ['sapling.worktree.rename']: async function (this: RepositoryContext) {
+    const resolved = await resolveWorktreeRepo();
+    if (resolved == null) {
+      return;
+    }
+    const {repo, worktreeInfo} = resolved;
+    const picked = await vscode.window.showQuickPick(
+      worktreeInfo.worktrees.map(wt => ({
+        label: wt.label || path.basename(wt.path),
+        description: wt.path,
+        worktree: wt,
+      })),
+      {placeHolder: t('Select a worktree to rename')},
+    );
+    if (picked == null) {
+      return;
+    }
+    const newLabel = await vscode.window.showInputBox({
+      prompt: t('Label (leave empty to remove)'),
+      value: picked.worktree.label ?? '',
+    });
+    if (newLabel == null) {
+      return;
+    }
+    return runOperationWithProgress(
+      this,
+      repo,
+      new RenameWorktreeOperation(picked.worktree.path, newLabel.trim() || undefined),
+      t('Renaming worktree...'),
+    );
+  },
 
   // Open the working-copy / head version of a file row in VS Code's native multi-diff
   // editor. Only contributed for committed comparisons: there the editor's built-in
@@ -190,12 +380,15 @@ export function executeVSCodeCommand<K extends keyof VSCodeCommand>(
   return vscode.commands?.executeCommand(id, ...args) as ReturnType<VSCodeCommand[K]>;
 }
 
-const runOperation = (
+const runOperation = async (
   ctx: RepositoryContext,
   repo: Repository,
   operation: Operation,
-): undefined => {
-  repo.runOrQueueOperation(
+): Promise<void> => {
+  let exitCode: number | undefined;
+  let errorMessage: string | undefined;
+
+  const result = await repo.runOrQueueOperation(
     ctx,
     {
       args: operation.getArgs(),
@@ -203,10 +396,41 @@ const runOperation = (
       runner: operation.runner,
       trackEventName: operation.trackEventName,
     },
-    () => undefined, // TODO: Send this progress info to any existing ISL webview if there is one
+    (progress: OperationProgress) => {
+      // TODO: Send this progress info to any existing ISL webview if there is one
+      if (progress.kind === 'exit') {
+        exitCode = progress.exitCode;
+      } else if (progress.kind === 'error') {
+        errorMessage = progress.error;
+      }
+    },
   );
-  return undefined;
+
+  if (errorMessage != null) {
+    throw new Error(errorMessage);
+  }
+  if (result === 'skipped') {
+    throw new Error(t('Operation was skipped because a previous operation failed'));
+  }
+  if (exitCode != null && exitCode !== 0) {
+    throw new Error(t('Command exited with code $code').replace('$code', String(exitCode)));
+  }
 };
+
+/**
+ * Like `runOperation`, but shows a progress notification while the operation runs.
+ * Palette-invoked worktree operations otherwise give no feedback until they finish.
+ */
+async function runOperationWithProgress(
+  ctx: RepositoryContext,
+  repo: Repository,
+  operation: Operation,
+  title: string,
+): Promise<void> {
+  await vscode.window.withProgress({location: vscode.ProgressLocation.Notification, title}, () =>
+    runOperation(ctx, repo, operation),
+  );
+}
 
 export function registerCommands(ctx: RepositoryContext): Array<vscode.Disposable> {
   const disposables: Array<vscode.Disposable> = Object.entries(vscodeCommands).map(
@@ -320,6 +544,70 @@ function openRemoteFileLink(
       vscode.env.openExternal(vscode.Uri.parse(url));
     }
   }
+}
+
+/**
+ * Resolve a `Repository` for a command invoked from the palette with no file/URI argument,
+ * by listing every repository currently known to the cache and prompting via quick pick
+ * if there's more than one.
+ */
+async function resolveRepoForWorktreeCommand(): Promise<Repository | undefined> {
+  const repos = repositoryCache.getAllRepositories();
+
+  if (repos.length === 0) {
+    vscode.window.showErrorMessage(t('No Sapling repository found in the current workspace'));
+    return undefined;
+  }
+  if (repos.length === 1) {
+    return repos[0];
+  }
+
+  const picked = await vscode.window.showQuickPick(
+    repos.map(repo => ({
+      label: path.basename(repo.info.repoRoot),
+      description: repo.info.repoRoot,
+      repo,
+    })),
+    {placeHolder: t('Select a repository')},
+  );
+  return picked?.repo;
+}
+
+/**
+ * Resolve a `Repository` and its `WorktreeInfo` for a worktree palette command, checking
+ * that worktrees are supported/available for the resolved repo and showing an error
+ * message otherwise.
+ */
+async function resolveWorktreeRepo(): Promise<
+  {repo: Repository; worktreeInfo: WorktreeInfo} | undefined
+> {
+  const repo = await resolveRepoForWorktreeCommand();
+  if (repo == null) {
+    return undefined;
+  }
+  if (repo.info.isEdenFs !== true) {
+    vscode.window.showErrorMessage(
+      t('Worktrees require EdenFS. This repository is not backed by EdenFS'),
+    );
+    return undefined;
+  }
+  if (repo.info.codeReviewSystem.type === 'github') {
+    vscode.window.showErrorMessage(t('Worktrees are not supported for GitHub repositories'));
+    return undefined;
+  }
+  try {
+    await repo.refreshWorktreeInfo();
+  } catch (err) {
+    repo.initialConnectionContext.logger.error('Failed to refresh worktree info:', err);
+    vscode.window.showErrorMessage(t('Failed to refresh worktree info'));
+    return undefined;
+  }
+  const worktreeInfo = repo.getWorktreeInfo();
+  if (worktreeInfo == null) {
+    vscode.window.showErrorMessage(t('Worktrees are not available for this repository'));
+    return undefined;
+  }
+  return {repo, worktreeInfo};
 }
 
 /**

@@ -253,6 +253,26 @@
         "title": "%sapling.open-multi-diff-file-head-command%",
         "category": "%sapling.command-category%",
         "icon": "$(file-symlink-file)"
+      },
+      {
+        "command": "sapling.worktree.switch",
+        "title": "%sapling.worktree.switch-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.worktree.add",
+        "title": "%sapling.worktree.add-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.worktree.remove",
+        "title": "%sapling.worktree.remove-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.worktree.rename",
+        "title": "%sapling.worktree.rename-command%",
+        "category": "%sapling.command-category%"
       }
     ],
     "keybindings": [

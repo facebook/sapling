@@ -210,6 +210,11 @@ class RepositoryCache {
     return ref?.value;
   }
 
+  /** Return all currently active repositories known to this cache. */
+  public getAllRepositories(): Array<Repository> {
+    return [...this.repoMap.values()].map(ref => ref.value);
+  }
+
   public onChangeActiveRepos(cb: (repos: Array<Repository>) => unknown): () => unknown {
     const onChange = () => {
       cb([...this.repoMap.values()].map(ref => ref.value));

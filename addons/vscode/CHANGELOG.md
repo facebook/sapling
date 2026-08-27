@@ -17,6 +17,7 @@
 - Re-filter the commit graph once typing stops, rather than on every keystroke
 - Debounce typeahead suggestion fetches, so typing a reviewer or tag no longer fetches per keystroke
 - Fix a diff's review status going stale after selecting a different commit
+- Add command palette entries for worktree operations
 
 ## 0.1.69
 
