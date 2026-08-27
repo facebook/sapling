@@ -5,7 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary, Hash, PageVisibility, Result, ValidatedRepoInfo} from '../types';
+import type {
+  DiffId,
+  DiffSignalSummary,
+  DiffSummary,
+  Hash,
+  PageVisibility,
+  Result,
+  ValidatedRepoInfo,
+} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import {atom} from 'jotai';
@@ -24,7 +32,13 @@ import {
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
-import {atomFamilyWeak, atomWithOnChange, configBackedAtom, writeAtom} from '../jotaiUtils';
+import {
+  atomFamilyWeak,
+  atomWithOnChange,
+  configBackedAtom,
+  readAtom,
+  writeAtom,
+} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import platform from '../platform';
 import {browserPageVisibility, combinePageVisibility} from '../platformVisibility';
@@ -72,6 +86,33 @@ export const diffSummary = atomFamilyWeak((diffId: DiffId | undefined) =>
     return {value: all.value?.get(diffId)};
   }),
 );
+
+/**
+ * Whether a DiffSignalSummary represents actionable (failed or warning) signals.
+ * Includes `running-failed` / `running-warnings` so summary-based gating stays
+ * consistent with detail-based gating (`fail`/`warning` details) while signals
+ * are still in progress. Keep this predicate in one place so all "Fix signals"
+ * entry points evolve together.
+ */
+export function isSignalSummaryActionable(summary: DiffSignalSummary | undefined): boolean {
+  return (
+    summary === 'failed' ||
+    summary === 'warning' ||
+    summary === 'running-failed' ||
+    summary === 'running-warnings'
+  );
+}
+
+/**
+ * Whether the diff for `diffId` has actionable signals, based on `diffSummary`.
+ * Shared predicate for SmartActionsMenu, actionConfigs, and any other
+ * summary-based gating. Uses `readAtom` so it can be called outside React
+ * (e.g. in `actionConfigs.shouldShow`).
+ */
+export function hasDiffActionableSignals(diffId: DiffId): boolean {
+  const result = readAtom(diffSummary(diffId));
+  return result.error == null && isSignalSummaryActionable(result.value?.signalSummary);
+}
 
 export const branchingDiffInfos = atomFamilyWeak((branchName: string) =>
   atom<Result<DiffSummary | undefined>>(get => {

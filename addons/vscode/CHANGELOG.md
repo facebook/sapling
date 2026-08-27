@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.70
+## Unreleased
 
 - Reduced fetching frequency for better performance
 - Go to time in download commit menu
@@ -18,6 +18,7 @@
 - Debounce typeahead suggestion fetches, so typing a reviewer or tag no longer fetches per keystroke
 - Fix a diff's review status going stale after selecting a different commit
 - Add command palette entries for worktree operations
+- Show the Devmate "Fix signals" button for diffs with only warning-level signals, not just failures
 
 ## 0.1.69
 

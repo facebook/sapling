@@ -14,7 +14,7 @@ import {randomId} from 'shared/utils';
 import {tracker} from '../analytics';
 import serverAPI from '../ClientToServerAPI';
 import {diffCommentData} from '../codeReview/codeReviewAtoms';
-import {diffSummary} from '../codeReview/CodeReviewInfo';
+import {diffSummary, isSignalSummaryActionable} from '../codeReview/CodeReviewInfo';
 import {DropdownFields} from '../DropdownFields';
 import {useFeatureFlagAsync, useFeatureFlagSync} from '../featureFlags';
 import {T} from '../i18n';
@@ -261,11 +261,10 @@ function ResolveFailedSignalsButton({
   const repoPath = repo?.repoRoot;
   const diffSummaryResult = useAtomValue(diffSummary(diffId));
 
-  // Only show the button if there are failed signals
+  // Only show the button if there are failing or warning signals
   if (
     diffSummaryResult.error ||
-    !diffSummaryResult.value?.signalSummary ||
-    diffSummaryResult.value.signalSummary !== 'failed'
+    !isSignalSummaryActionable(diffSummaryResult.value?.signalSummary)
   ) {
     return null;
   }
@@ -290,7 +289,7 @@ function ResolveFailedSignalsButton({
       }}
       disabled={disabled || diffVersionNumber === undefined}>
       <Icon icon="sparkle" />
-      <T>Fix failed signals</T>
+      <T>Fix signals</T>
     </Button>
   );
 
