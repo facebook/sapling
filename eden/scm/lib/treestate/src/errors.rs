@@ -23,6 +23,8 @@ pub enum ErrorKind {
     InvalidStoreId(u64),
     #[error("store is read-only")]
     ReadOnlyStore,
+    #[error("treestate loaded from dirstate.pending is read-only")]
+    ReadOnlyTreeState,
     #[error("treedirstate is corrupt")]
     CorruptTree,
     #[error("callback error: {0}")]

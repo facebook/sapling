@@ -51,6 +51,7 @@ pub struct TreeState {
     // overlay_dirstate_path is only used in the case the case that the treestate is
     // wrapping a legacy eden dirstate which is necessary for EdenFS compatibility.
     overlay_dirstate_path: Option<PathBuf>,
+    read_only: bool,
     case_sensitive: bool,
     pending_change_count: u64,
 }
@@ -80,6 +81,7 @@ impl TreeState {
             root,
             original_root_id: root_id,
             overlay_dirstate_path: None,
+            read_only: false,
             case_sensitive,
             pending_change_count: 0,
         })
@@ -101,6 +103,7 @@ impl TreeState {
             root,
             original_root_id: BlockId(0),
             overlay_dirstate_path: None,
+            read_only: false,
             case_sensitive,
             pending_change_count: 0,
         };
@@ -112,6 +115,7 @@ impl TreeState {
     }
 
     pub fn reset(&mut self) -> Result<BlockId> {
+        self.ensure_writable()?;
         let directory = self
             .store
             .path()
@@ -145,6 +149,7 @@ impl TreeState {
             root,
             original_root_id: BlockId(0),
             overlay_dirstate_path: Some(path),
+            read_only: overlay_dirstate_path.ends_with("dirstate.pending"),
             case_sensitive,
             pending_change_count: 0,
         };
@@ -182,6 +187,7 @@ impl TreeState {
             root,
             original_root_id: BlockId(0),
             overlay_dirstate_path: Some(path),
+            read_only: overlay_dirstate_path.ends_with("dirstate.pending"),
             case_sensitive,
             pending_change_count: 0,
         };
@@ -226,6 +232,7 @@ impl TreeState {
 
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
     pub fn flush(&mut self) -> Result<BlockId> {
+        self.ensure_writable()?;
         let _lock = self.store.lock()?;
         let tree_block_id = { self.tree.write_delta(&mut self.store)? };
         self.write_root(tree_block_id)
@@ -233,6 +240,7 @@ impl TreeState {
 
     /// Save as a new file.
     pub fn write_new(&mut self, directory: &Path) -> Result<BlockId> {
+        self.ensure_writable()?;
         let name = format!("{:x}", uuid::Uuid::new_v4());
         let path = directory.join(name);
         tracing::trace!(target: "treestate::write_new", ?path);
@@ -262,6 +270,13 @@ impl TreeState {
         self.original_root_id = result;
         self.pending_change_count = 0;
         Ok(result)
+    }
+
+    fn ensure_writable(&self) -> Result<()> {
+        if self.read_only {
+            return Err(crate::ErrorKind::ReadOnlyTreeState.into());
+        }
+        Ok(())
     }
 
     fn flatten_tree(&mut self) -> Result<HashMap<Box<[u8]>, FileStateV2>> {
@@ -996,6 +1011,31 @@ mod tests {
 
         ts.flush()?;
         assert_eq!(ts.pending_change_count(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pending_overlay_dirstate_is_read_only() -> Result<()> {
+        let dir = tempdir()?;
+        let dirstate_path = dir.path().join("dirstate.pending");
+        let metadata = BTreeMap::from([("p1".to_owned(), HgId::null_id().to_string())]);
+        write_overlay_dirstate(&dirstate_path, metadata, HashMap::new())?;
+
+        let mut state = TreeState::from_overlay_dirstate(&dirstate_path, true)?;
+        let errors = [
+            state.flush().expect_err("flush should fail"),
+            state
+                .write_new(dir.path())
+                .expect_err("write_new should fail"),
+            state.reset().expect_err("reset should fail"),
+        ];
+        for error in errors {
+            assert_eq!(
+                error.downcast_ref::<crate::ErrorKind>(),
+                Some(&crate::ErrorKind::ReadOnlyTreeState)
+            );
+        }
 
         Ok(())
     }
