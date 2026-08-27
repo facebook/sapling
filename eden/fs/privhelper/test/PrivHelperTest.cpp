@@ -366,6 +366,14 @@ class RawPrivHelperClient : private UnixSocket::ReceiveCallback {
     });
   }
 
+  /** Sends without expecting a reply, as a one-way request does. */
+  void send(UnixSocket::Message request) {
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [this, request = std::move(request)]() mutable {
+          conn_->send(std::move(request));
+        });
+  }
+
   UnixSocket::Message sendAndRecv(UnixSocket::Message request) {
     Promise<UnixSocket::Message> promise;
     auto future = promise.getFuture();
@@ -515,6 +523,19 @@ TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
       makeLegacyMacFuseConfigRequest(2, PrivHelperConn::REQ_SET_USE_EDENFS, 1));
   PrivHelperConn::parseEmptyResponse(
       PrivHelperConn::REQ_SET_USE_EDENFS, useEdenFsResponse);
+}
+
+TEST_F(PrivHelperRawProtocolTest, cleanShutdownNotificationIsNotAnswered) {
+  client_->send(
+      PrivHelperConn::serializeNotifyCleanShutdownRequest(/*xid=*/1, "stop"));
+
+  // Nothing came back for the notification, so this reply is the next one on
+  // the wire. Answering a one-way request would make it arrive here instead,
+  // and parseEmptyResponse() rejects the mismatched type.
+  auto response = client_->sendAndRecv(
+      makeLegacyMacFuseConfigRequest(2, PrivHelperConn::REQ_SET_USE_EDENFS, 1));
+  PrivHelperConn::parseEmptyResponse(
+      PrivHelperConn::REQ_SET_USE_EDENFS, response);
 }
 
 TEST_F(PrivHelperTest, fuseMount) {

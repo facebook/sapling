@@ -1646,6 +1646,7 @@ void PrivHelperServer::messageReceived(UnixSocket::Message&& message) noexcept {
 void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
   Cursor cursor{&message.data};
   PrivHelperConn::PrivHelperPacket packet = PrivHelperConn::parsePacket(cursor);
+  const PrivHelperConn::MsgType requestType{packet.metadata.msg_type};
 
   UnixSocket::Message response;
   try {
@@ -1659,6 +1660,13 @@ void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
     response = makeResponse();
     Appender appender(&response.data, 1024);
     PrivHelperConn::serializeErrorResponse(appender, ex);
+  }
+
+  // The client sends a one-way request without registering a transaction ID,
+  // so any reply -- including an error reply -- would be unmatched and raise an
+  // EDEN_BUG on the client.
+  if (PrivHelperConn::isOneWayRequest(requestType)) {
+    return;
   }
 
   // Put the version, transaction ID, and message type in the response.
