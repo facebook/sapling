@@ -44,6 +44,7 @@ use crate::filesystem::PendingChange;
 use crate::util::added_files;
 use crate::util::dirstate_path;
 use crate::util::may_have_pending;
+use crate::util::use_pending_dirstate;
 
 enum DeraceMode {
     Off,
@@ -73,7 +74,10 @@ impl EdenFileSystem {
         store: Arc<dyn FileStore>,
     ) -> Result<Self> {
         let journal_position = Cell::new(None);
-        let dirstate_path = dirstate_path(dot_dir, may_have_pending(vfs.root()))?;
+        let dirstate_path = dirstate_path(
+            dot_dir,
+            use_pending_dirstate(config.as_ref())? && may_have_pending(vfs.root()),
+        )?;
         tracing::trace!("loading edenfs dirstate");
         let treestate = TreeState::from_overlay_dirstate(&dirstate_path, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));

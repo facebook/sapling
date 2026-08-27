@@ -54,3 +54,17 @@ open.
   snapshot: restored snapshot in * seconds (glob)
   $ sl log -r . -T '{desc}\n'
   B
+
+Disabling the pending dirstate restores the old behavior.
+
+  $ setconfig experimental.use-pending-dirstate=false
+  $ sl debugsnapshotrestore "$A"
+  snapshot: will restore snapshot 0000000000000000000000000000000000000000
+  snapshot: updating to parent * (glob)
+  hook parent: B
+  hook status: ok
+  update complete
+  snapshot: updated to parent * in * seconds (glob)
+  snapshot: restored snapshot in * seconds (glob)
+  $ sl log -r . -T '{desc}\n'
+  A

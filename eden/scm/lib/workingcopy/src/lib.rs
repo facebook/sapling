@@ -21,4 +21,5 @@ mod watchman_client;
 pub mod workingcopy;
 
 pub use util::fast_path_wdir_parents;
+pub use util::fast_path_wdir_parents_with_config;
 pub use workingcopy::WorkingCopy;

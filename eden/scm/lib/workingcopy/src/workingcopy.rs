@@ -73,7 +73,7 @@ use crate::filesystem::grepo::parse_grepo_manifest;
 use crate::manifest::apply_status;
 use crate::status::compute_status;
 use crate::util::added_files;
-use crate::util::fast_path_wdir_parents;
+use crate::util::fast_path_wdir_parents_with_config;
 use crate::util::walk_treestate;
 use crate::watchman_client::DeferredWatchmanClient;
 
@@ -616,9 +616,13 @@ impl WorkingCopy {
                         FsNodeMetadata::Directory(_) => None,
                     });
                     // The submodule working copy should use the same dotdir.
-                    let file_node = fast_path_wdir_parents(&subm_path, self.ident)?
-                        .p1()
-                        .copied();
+                    let file_node = fast_path_wdir_parents_with_config(
+                        &subm_path,
+                        self.ident,
+                        self.config.as_ref(),
+                    )?
+                    .p1()
+                    .copied();
                     if file_node == tree_node {
                         status_builder.forget(path);
                         continue;

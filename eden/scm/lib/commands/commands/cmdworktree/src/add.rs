@@ -257,7 +257,11 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         .get_or("worktree", "snapshot-direct-copy", || false)?;
 
     if ctx.opts.snapshot {
-        let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
+        let parents = workingcopy::fast_path_wdir_parents_with_config(
+            repo.path(),
+            repo.ident(),
+            repo.config(),
+        )?;
         if parents.p2().is_some() {
             bail!(
                 "working copy has two parents; \
@@ -277,7 +281,11 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
     let (target, source_sparse_config, source_user_config, source_status) =
         with_worktree_path_op_lock(&shared_store_path, &canonical_repo_path, || {
             let source_client_dir = edenfs_client::get_client_dir(repo.path())?;
-            let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
+            let parents = workingcopy::fast_path_wdir_parents_with_config(
+                repo.path(),
+                repo.ident(),
+                repo.config(),
+            )?;
             let target = requested_target.or_else(|| parents.p1().copied());
             let source_sparse_config = clone::snapshot_sparse_config(repo.dot_hg_path())?;
             let source_user_config = clone::snapshot_eden_user_config(&source_client_dir)?;

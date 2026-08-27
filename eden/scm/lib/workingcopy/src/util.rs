@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use fs_err as fs;
 use gitcompat::BareGit;
 use identity::Identity;
@@ -192,6 +193,10 @@ pub(crate) fn dirstate_path(dot_dir: &Path, try_pending: bool) -> std::io::Resul
     Ok(dot_dir.join("dirstate"))
 }
 
+pub(crate) fn use_pending_dirstate(config: &dyn Config) -> Result<bool> {
+    Ok(config.get_or("experimental", "use-pending-dirstate", || true)?)
+}
+
 /// Return whether `HG_PENDING` applies to this working copy root.
 pub(crate) fn may_have_pending(root: &Path) -> bool {
     std::env::var_os("HG_PENDING").is_some_and(|pending_root| Path::new(&pending_root) == root)
@@ -203,6 +208,25 @@ pub(crate) fn may_have_pending(root: &Path) -> bool {
 ///
 /// This function does not consider locking or other special cases.
 pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
+    fast_path_wdir_parents_impl(path, ident, may_have_pending(path))
+}
+
+/// Like [`fast_path_wdir_parents`], but allows the pending dirstate behavior to
+/// be disabled by configuration.
+pub fn fast_path_wdir_parents_with_config(
+    path: &Path,
+    ident: Identity,
+    config: &dyn Config,
+) -> Result<Parents> {
+    let try_pending = if ident.dot_dir().starts_with(".git") {
+        false
+    } else {
+        use_pending_dirstate(config)? && may_have_pending(path)
+    };
+    fast_path_wdir_parents_impl(path, ident, try_pending)
+}
+
+fn fast_path_wdir_parents_impl(path: &Path, ident: Identity, try_pending: bool) -> Result<Parents> {
     if ident.dot_dir().starts_with(".git") {
         // dotgit mode. Use gitcompat to resolve HEAD.
         let repo = BareGit::from_git_dir(path.join(".git"));
@@ -211,7 +235,7 @@ pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
     } else {
         // dotsl mode. Use the visible dirstate to answer the question.
         let dot_dir = ident.resolve_full_dot_dir(path);
-        let dirstate_path = dirstate_path(&dot_dir, may_have_pending(path))?;
+        let dirstate_path = dirstate_path(&dot_dir, try_pending)?;
         let mut dirstate_file = match fs::File::open(&dirstate_path) {
             Ok(f) => f,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {

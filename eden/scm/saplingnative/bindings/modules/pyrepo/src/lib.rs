@@ -110,7 +110,13 @@ py_class!(pub class repo |py| {
             None => {
                 // Use a fast path without constructing the working copy.
                 let repo = self.inner(py).read();
-                workingcopy::fast_path_wdir_parents(repo.path(), repo.ident()).map_pyerr(py)?.to_vec()
+                workingcopy::fast_path_wdir_parents_with_config(
+                    repo.path(),
+                    repo.ident(),
+                    repo.config(),
+                )
+                .map_pyerr(py)?
+                .to_vec()
             }
         };
         Ok(Serde(parents))
