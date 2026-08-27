@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode_mode_win")
 load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 load("//antlir/fbpkg/fetch:defs.bzl", "fbpkg_fetch")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
@@ -40,6 +41,7 @@ python_binary(
     # which include modules like sapling.*, and that makes the linter confused about it
     labels = ["noautodeps"],
     main_function = "eden.scm.tests.run-tests.main",
+    package_style = "outplace" if is_fbcode_mode_win() else None,
 )
 
 python_binary(
@@ -55,6 +57,7 @@ python_binary(
     # which include modules like sapling.*, and that makes the linter confused about it
     labels = ["noautodeps"],
     main_function = "eden.scm.tests.run-tests.main",
+    package_style = "outplace" if is_fbcode_mode_win() else None,
     deps = [
         "//eden/integration/lib:lib",
     ],
