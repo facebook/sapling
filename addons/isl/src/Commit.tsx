@@ -290,6 +290,13 @@ export const Commit = memo(
         if (selectedDiffIDsInDagOrder.length > 1) {
           const multiDiffUrl = multiDiffProvider.getMultiDiffUrl(selectedDiffIDsInDagOrder);
           items.push({
+            label: <T>Copy Multi-Diff URL</T>,
+            onClick: () => {
+              clipboardCopy(multiDiffUrl);
+            },
+            loggingLabel: 'Copy Multi-Diff URL',
+          });
+          items.push({
             label: <T>Open Multi-Diff in Phabricator</T>,
             onClick: () => {
               platform.openExternalLink(multiDiffUrl);
