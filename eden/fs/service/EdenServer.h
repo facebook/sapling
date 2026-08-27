@@ -800,6 +800,17 @@ class EdenServer : private TakeoverHandler {
   };
   folly::Synchronized<RunStateData> runningState_;
 
+  /**
+   * Move the server into RunState::SHUTTING_DOWN.
+   *
+   * The single entry point for that transition, so that everything which has
+   * to happen once a shutdown is intended happens on every path that intends
+   * one.
+   *
+   * Caller must hold runningState_ write-locked.
+   */
+  void markShuttingDownLocked(RunStateData& state);
+
 #ifdef __APPLE__
   folly::dynamic nfsStatOutput_;
   std::optional<std::string> mapCounterNameForNFSStat(

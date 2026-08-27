@@ -2011,7 +2011,10 @@ bool EdenServer::performCleanup() {
       shutdownFuture = std::move(state->shutdownFuture);
     }
     XDCHECK_EQ(state->state, RunState::SHUTTING_DOWN);
-    state->state = RunState::SHUTTING_DOWN;
+    // A no-op today: every path that reaches performCleanup has already
+    // transitioned. Routed through the helper so that a future path which has
+    // not still picks up whatever the helper does.
+    markShuttingDownLocked(*state);
   }
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
@@ -3002,6 +3005,10 @@ void EdenServer::prepareThriftAddress() const {
   server_->useExistingSocket(std::move(sock));
 }
 
+void EdenServer::markShuttingDownLocked(RunStateData& state) {
+  state.state = RunState::SHUTTING_DOWN;
+}
+
 void EdenServer::stop() {
   {
     auto state = runningState_.wlock();
@@ -3012,7 +3019,7 @@ void EdenServer::stop() {
       XLOG(INFO, "stop was called while server was already shutting down");
       return;
     }
-    state->state = RunState::SHUTTING_DOWN;
+    markShuttingDownLocked(*state);
   }
 
   handler_->cancelAllActiveRequests("EdenServer::stop() called");
@@ -3094,7 +3101,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // if the takeover was unsuccessful.
     XCHECK(!state->shutdownFuture.valid());
     state->shutdownFuture = takeoverPromise.getFuture();
-    state->state = RunState::SHUTTING_DOWN;
+    markShuttingDownLocked(*state);
   }
 
   return serverState_->getFaultInjector()
