@@ -771,6 +771,62 @@ TEST_P(RawOverlayTest, allocateInodeNumbers) {
   EXPECT_EQ(12_ino, overlay->allocateInodeNumber());
 }
 
+TEST_P(RawOverlayTest, persistsInodeReservation) {
+  constexpr uint64_t reservationSize = 4096;
+  const auto reservationPath =
+      (getLocalDir() + "inode-reservation"_pc).asString();
+  const auto initialReservation = std::to_string(2 + reservationSize);
+  const auto secondReservation = std::to_string(2 + 2 * reservationSize);
+  EXPECT_TRUE(boost::filesystem::is_symlink(reservationPath));
+  EXPECT_EQ(
+      initialReservation,
+      boost::filesystem::read_symlink(reservationPath).string());
+
+  EXPECT_EQ(2_ino, overlay->allocateInodeNumbers(reservationSize));
+  EXPECT_EQ(
+      initialReservation,
+      boost::filesystem::read_symlink(reservationPath).string());
+
+  EXPECT_EQ(InodeNumber{2 + reservationSize}, overlay->allocateInodeNumber());
+  EXPECT_EQ(
+      secondReservation,
+      boost::filesystem::read_symlink(reservationPath).string());
+
+  overlay->close();
+  ASSERT_EQ(0, unlink((getLocalDir() + "next-inode-number"_pc).c_str()));
+  EXPECT_TRUE(boost::filesystem::is_symlink(reservationPath));
+  EXPECT_EQ(
+      secondReservation,
+      boost::filesystem::read_symlink(reservationPath).string());
+}
+
+TEST_P(RawOverlayTest, replacesInvalidInodeReservation) {
+  constexpr uint64_t reservationSize = 4096;
+  const auto reservationPath =
+      (getLocalDir() + "inode-reservation"_pc).asString();
+  overlay->close();
+  overlay = nullptr;
+  ASSERT_EQ(0, unlink(reservationPath.c_str()));
+  ASSERT_EQ(0, symlink("invalid", reservationPath.c_str()));
+
+  EXPECT_NO_THROW(loadOverlay());
+  EXPECT_EQ(
+      std::to_string(2 + reservationSize),
+      boost::filesystem::read_symlink(reservationPath).string());
+}
+
+TEST_P(RawOverlayTest, inodeReservationWriteFailureFailsInitialization) {
+  const auto reservationPath =
+      (getLocalDir() + "inode-reservation"_pc).asString();
+  const auto tempPath = (getLocalDir() + "inode-reservation.tmp"_pc).asString();
+  overlay->close();
+  overlay = nullptr;
+  ASSERT_EQ(0, unlink(reservationPath.c_str()));
+  ASSERT_TRUE(boost::filesystem::create_directory(tempPath));
+
+  EXPECT_THROW(loadOverlay(), std::system_error);
+}
+
 TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);

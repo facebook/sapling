@@ -2293,6 +2293,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> overlayUseWal{"overlay:use-wal", false, this};
 
   /**
+   * Persist an upper bound on allocated inode numbers so an unclean startup
+   * can eventually avoid discovering the next inode number by scanning the
+   * overlay. Only applies to Legacy and LegacyDev catalog types.
+   */
+  ConfigSetting<bool> overlayInodeReservation{
+      "overlay:inode-reservation",
+      true,
+      this};
+
+  /**
    * Multiplier applied to a directory's base size when computing the
    * inline-compaction threshold. A compaction is triggered when the WAL
    * entry count for a parent exceeds `multiplier * max(baseSize, 10)`,

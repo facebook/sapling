@@ -9,7 +9,14 @@
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
+#include <array>
+#include <charconv>
 
+#ifndef _WIN32
+#include <fcntl.h>
+#endif
+
+#include <fmt/format.h>
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -53,6 +60,41 @@ namespace facebook::eden {
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
+
+#ifndef _WIN32
+constexpr folly::StringPiece kInodeReservationFile{"inode-reservation"};
+constexpr folly::StringPiece kInodeReservationTempFile{"inode-reservation.tmp"};
+constexpr uint64_t kInodeReservationSize = 4096;
+
+// Load on-disk inode reservation state. Returns nullopt on unexpected on-disk
+// state.
+std::optional<uint64_t> loadInodeReservation(AbsolutePathPiece localDir) {
+  const auto path = localDir + PathComponentPiece{kInodeReservationFile};
+  std::array<char, 32> target{};
+  const auto size = ::readlink(path.c_str(), target.data(), target.size());
+  if (size < 0) {
+    if (errno == ENOENT) {
+      return std::nullopt;
+    }
+    XLOGF(
+        WARN,
+        "Failed to read inode reservation {}: {}",
+        path,
+        folly::errnoStr(errno));
+    return std::nullopt;
+  }
+
+  uint64_t reservation;
+  const auto result = std::from_chars(
+      target.data(), target.data() + size, reservation, /*base=*/10);
+  if (result.ec != std::errc{} || result.ptr != target.data() + size ||
+      reservation <= kRootNodeId.get()) {
+    XLOGF(WARN, "Invalid inode reservation in {}", path);
+    return std::nullopt;
+  }
+  return reservation;
+}
+#endif
 
 bool getOverlayEntryIsRestricted(const overlay::OverlayEntry& entry) {
   return apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
@@ -267,6 +309,10 @@ Overlay::Overlay(
       errorLogger_(errorLogger),
       stats_{std::move(stats)},
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
+      useInodeReservation_{
+          !folly::kIsWindows && config.overlayInodeReservation.getValue() &&
+          (inodeCatalogType == InodeCatalogType::Legacy ||
+           inodeCatalogType == InodeCatalogType::LegacyDev)},
       useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},
       walCompactionMultiplier_{
           config.overlayWalCompactionMultiplier.getValue()},
@@ -526,7 +572,13 @@ void Overlay::initOverlay(
             false /*attempted_repair*/});
   }
 
-  nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
+  auto nextInodeNumber = optNextInodeNumber->get();
+#ifndef _WIN32
+  if (useInodeReservation_) {
+    initializeInodeReservation(nextInodeNumber);
+  }
+#endif
+  nextInodeNumber_.store(nextInodeNumber, std::memory_order_relaxed);
 
 #ifndef _WIN32
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
@@ -554,6 +606,11 @@ InodeNumber Overlay::allocateInodeNumber() {
   // might on ARM.
   auto previous = nextInodeNumber_++;
   XDCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
+#ifndef _WIN32
+  if (useInodeReservation_) {
+    ensureInodeReservation(previous + 1);
+  }
+#endif
   return InodeNumber{previous};
 }
 
@@ -566,8 +623,78 @@ InodeNumber Overlay::allocateInodeNumbers(uint64_t count) {
 
   auto previous = nextInodeNumber_.fetch_add(count);
   XDCHECK_NE(0u, previous) << "allocateInodeNumbers called before initialize";
+#ifndef _WIN32
+  if (useInodeReservation_ && count != 0) {
+    ensureInodeReservation(previous + count);
+  }
+#endif
   return InodeNumber{previous};
 }
+
+#ifndef _WIN32
+void Overlay::initializeInodeReservation(uint64_t nextInodeNumber) {
+  auto reservation = loadInodeReservation(localDir_);
+  // Inode reservation should be >= nextInodeNumber.
+  if (!reservation || *reservation <= nextInodeNumber) {
+    reservation = nextInodeNumber + kInodeReservationSize;
+    saveInodeReservation(*reservation);
+  }
+  inodeReservation_.store(*reservation, std::memory_order_release);
+}
+
+void Overlay::ensureInodeReservation(uint64_t allocatedEnd) {
+  auto reservation = inodeReservation_.load(std::memory_order_acquire);
+  if (allocatedEnd <= reservation) {
+    return;
+  }
+
+  auto reservationUpdateLock = inodeReservationUpdateLock_.lock();
+  reservation = inodeReservation_.load(std::memory_order_relaxed);
+  if (allocatedEnd <= reservation) {
+    return;
+  }
+
+  auto reservationsNeeded =
+      (allocatedEnd - reservation) / kInodeReservationSize + 1;
+  reservation += reservationsNeeded * kInodeReservationSize;
+  saveInodeReservation(reservation);
+  inodeReservation_.store(reservation, std::memory_order_release);
+}
+
+// Update on-disk inode reservation state. Throws on I/O error.
+void Overlay::saveInodeReservation(uint64_t reservation) {
+  const auto path = localDir_ + PathComponentPiece{kInodeReservationFile};
+  const auto tempPath =
+      localDir_ + PathComponentPiece{kInodeReservationTempFile};
+  if (::unlink(tempPath.c_str()) != 0 && errno != ENOENT) {
+    folly::throwSystemError(
+        "Failed to remove temporary inode reservation ", tempPath.view());
+  }
+
+  SCOPE_FAIL {
+    ::unlink(tempPath.c_str());
+  };
+
+  const auto target = fmt::format("{}", reservation);
+  folly::checkUnixError(
+      ::symlink(target.c_str(), tempPath.c_str()),
+      "Failed to create temporary inode reservation ",
+      tempPath.view());
+  folly::checkUnixError(
+      ::rename(tempPath.c_str(), path.c_str()),
+      "Failed to replace inode reservation ",
+      path.view());
+
+  folly::File directory{localDir_.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC};
+#ifdef __APPLE__
+  const auto fsyncResult = ::fcntl(directory.fd(), F_FULLFSYNC);
+#else
+  const auto fsyncResult = ::fsync(directory.fd());
+#endif
+  folly::checkUnixError(
+      fsyncResult, "Failed to persist inode reservation in ", localDir_.view());
+}
+#endif
 
 bool Overlay::buildDirEntries(
     OverlayEntrySource source,

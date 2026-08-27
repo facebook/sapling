@@ -19,6 +19,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <unordered_map>
@@ -551,15 +552,34 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void decOutstandingIORequests();
   void closeAndWaitForOutstandingIO();
 
+#ifndef _WIN32
+  void initializeInodeReservation(uint64_t nextInodeNumber);
+  void ensureInodeReservation(uint64_t allocatedEnd);
+  void saveInodeReservation(uint64_t reservation);
+#endif
+
   bool hadCleanStartup_{false};
 
   /**
    * The next inode number to allocate.  Zero indicates that neither
    * initializeFromTakeover nor getMaxRecordedInode have been called.
    *
+   * Persists on disk on clean exit.
+   *
    * This value will never be 1.
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
+
+#ifndef _WIN32
+  /**
+   * Inode reservation state, like `(nextInodeNumber / N + 1) * N`.
+   *
+   * Persists (+fsync-ed) on disk in all cases.
+   * The on-disk state is designed to be always >= `nextInodeNumber`.
+   */
+  std::atomic<uint64_t> inodeReservation_{0};
+  folly::Synchronized<folly::Unit, std::mutex> inodeReservationUpdateLock_;
+#endif
 
   std::unique_ptr<FileContentStore> fileContentStore_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
@@ -631,6 +651,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 
   bool useDirectFileWrites_;
+
+  bool useInodeReservation_;
 
   bool useWal_{false};
   size_t walCompactionMultiplier_{3};
