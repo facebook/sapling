@@ -50,6 +50,11 @@ hinttable = {
         " (if you want to disable title matching, run '@prog@ config --edit experimental.titles-namespace=false')"
     )
     % name,
+    "rel-path-typo": lambda path: _(
+        "path '%s' does not exist relative to the current directory\n"
+        " (use 'path:%s' to specify the matching repo-root-relative path)"
+    )
+    % (path, path),
 }
 messages = []
 triggered = set()

@@ -744,6 +744,50 @@ def match(
     return m
 
 
+def maybe_show_path_typo_hint(ui, repo, pats, *, rev=None, limit=5) -> None:
+    hintname = "rel-path-typo"
+    cwd = repo.getcwd()
+    if (
+        not pats
+        or not cwd
+        or ui.quiet
+        or ui.plain("hint")
+        or hintutil.isacked(ui, hintname)
+    ):
+        return
+
+    checked = 0
+    if not rev:  # None or []
+        exists = repo.wvfs.exists
+    else:
+        startrev = revrange(repo, rev).fastmax()
+        if startrev is None:
+            # Avoid slow revset iteration.
+            return
+        exists = repo[startrev].__contains__
+
+    for pat in pats:
+        if matchmod.patkind(pat):
+            continue
+        if checked >= limit:
+            return
+        checked += 1
+
+        try:
+            cwdpath = pathutil.canonpath(repo.root, cwd, pat)
+            rootpath = pathutil.canonpath(repo.root, "", pat)
+            if cwdpath == rootpath:
+                continue
+            cwdpath_exists = exists(cwdpath)
+            rootpath_exists = exists(rootpath)
+        except (OSError, error.Abort):
+            continue
+
+        if not cwdpath_exists and rootpath_exists:
+            hintutil.triggershow(ui, hintname, rootpath)
+            return
+
+
 def matchall(repo):
     """Return a matcher that will efficiently match everything."""
     return matchmod.always(repo.root, repo.getcwd())
