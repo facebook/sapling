@@ -218,6 +218,26 @@ impl HookManager {
         self.employee_service = Some(service);
     }
 
+    /// Test-only: resolve the eager bypass decision for a registered hook.
+    /// `hooks` is private to this module, and the decision is otherwise only
+    /// observable through the Scuba columns it produces.
+    #[cfg(test)]
+    pub(crate) async fn compute_bypass_decision_for_test(
+        &self,
+        hook_name: &str,
+        ctx: &CoreContext,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cs_msg: Option<&str>,
+        changeset_author: Option<&str>,
+    ) -> Result<BypassDecision> {
+        let hook = self
+            .hooks
+            .get(hook_name)
+            .ok_or_else(|| HookManagerError::NoSuchHook(hook_name.to_string()))?;
+        self.compute_bypass_decision(hook, ctx, maybe_pushvars, cs_msg, changeset_author)
+            .await
+    }
+
     pub fn register_bookmark_hook(
         &mut self,
         hook_name: &str,

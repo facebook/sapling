@@ -51,6 +51,8 @@ use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
 
+use crate::BypassDecision;
+use crate::BypassIdentitySource;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
@@ -1386,6 +1388,172 @@ impl BypassScenario {
         )
         .await
         .unwrap()
+    }
+}
+
+// =========================================================================
+// Bypass identity-check provenance
+//
+// A denied bypass names the required group but not whose membership was
+// actually tested, so these pin the `CheckedBypassIdentities` that backs the
+// `bypass_identity_source` / `bypass_identities_checked` Scuba columns.
+// =========================================================================
+
+/// Resolve the eager bypass decision for one always-rejecting hook registered
+/// with a group-gated commit-message bypass, under the given JustKnobs path.
+async fn bypass_decision(
+    fb: FacebookInit,
+    client_identities: MononokeIdentitySet,
+    checker: Option<ArcMembershipChecker>,
+    author: &str,
+    use_client_identities: bool,
+) -> BypassDecision {
+    let ctx = ctx_with_identities(fb, client_identities);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        checker,
+    );
+
+    justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(use_client_identities),
+        Box::pin(hook_manager.compute_bypass_decision_for_test(
+            "hook1",
+            &ctx,
+            None,
+            Some("This commit has @bypass_hook in the message"),
+            Some(author),
+        )),
+    )
+    .await
+    .unwrap()
+}
+
+/// The recorded provenance is that of the check that actually decided. On the
+/// client-identities path a *miss* is not the decision -- it falls through to
+/// the commit author -- so a denial there records `CommitAuthor`, the check that
+/// produced it, and the author's identity rather than the pusher's.
+#[mononoke::fbinit_test]
+async fn test_bypass_check_records_the_deciding_check(fb: FacebookInit) {
+    let decision = bypass_decision(
+        fb,
+        user_identities(&["alice"]),
+        Some(allowlist(&[])),
+        "Test User <test@fb.com>",
+        true,
+    )
+    .await;
+
+    match decision {
+        BypassDecision::UnauthorizedUser {
+            reason,
+            group,
+            check,
+        } => {
+            assert_eq!(group, "test_bypass_group");
+            assert!(
+                !reason.is_empty(),
+                "the bypass reason backs the `bypass_reason` column on denials",
+            );
+            assert_eq!(check.source, BypassIdentitySource::CommitAuthor);
+            assert_eq!(check.identities, vec!["USER:test".to_string()]);
+        }
+        other => panic!("expected UnauthorizedUser, got {other:?}"),
+    }
+}
+
+/// On the commit-author path, a denied bypass records the identity derived from
+/// the author -- not the pusher's.
+#[mononoke::fbinit_test]
+async fn test_bypass_check_records_commit_author_source(fb: FacebookInit) {
+    let decision = bypass_decision(
+        fb,
+        user_identities(&["alice"]),
+        Some(allowlist(&[])),
+        "Test User <test@fb.com>",
+        false,
+    )
+    .await;
+
+    match decision {
+        BypassDecision::UnauthorizedUser { check, .. } => {
+            assert_eq!(check.source, BypassIdentitySource::CommitAuthor);
+            assert_eq!(check.identities, vec!["USER:test".to_string()]);
+        }
+        other => panic!("expected UnauthorizedUser, got {other:?}"),
+    }
+}
+
+/// An unparsable author (a Sandcastle container's `root@<host>` default) makes
+/// the author path silently fall back to the pusher's identities. That is the
+/// case this provenance exists to make visible: the group named in the
+/// rejection was never checked against the author at all.
+#[mononoke::fbinit_test]
+async fn test_bypass_check_records_author_fallback_to_client(fb: FacebookInit) {
+    let decision = bypass_decision(
+        fb,
+        user_identities(&["svcscm"]),
+        Some(allowlist(&[])),
+        "root@0ed7-b93c-0004-0000.twshared29495.01.snb2.tw.fbinfra.net",
+        false,
+    )
+    .await;
+
+    match decision {
+        BypassDecision::UnauthorizedUser { check, .. } => {
+            assert_eq!(
+                check.source,
+                BypassIdentitySource::CommitAuthorFallbackToClient,
+            );
+            assert_eq!(check.identities, vec!["USER:svcscm".to_string()]);
+        }
+        other => panic!("expected UnauthorizedUser, got {other:?}"),
+    }
+}
+
+/// An authorized bypass carries the same provenance, so accepted and denied
+/// bypasses are comparable in one query.
+#[mononoke::fbinit_test]
+async fn test_authorized_bypass_records_identity_check(fb: FacebookInit) {
+    let decision = bypass_decision(
+        fb,
+        user_identities(&["alice"]),
+        Some(allowlist(&["alice"])),
+        "Test User <test@fb.com>",
+        true,
+    )
+    .await;
+
+    match decision {
+        BypassDecision::Authorized { check, .. } => {
+            let check = check.expect("a membership check ran");
+            assert_eq!(check.source, BypassIdentitySource::ClientIdentities);
+            assert_eq!(check.identities, vec!["USER:alice".to_string()]);
+        }
+        other => panic!("expected Authorized, got {other:?}"),
+    }
+}
+
+/// With no permission checker configured no membership check runs, so there is
+/// no provenance to record and the Scuba columns stay unset.
+#[mononoke::fbinit_test]
+async fn test_bypass_without_checker_has_no_identity_check(fb: FacebookInit) {
+    let decision = bypass_decision(
+        fb,
+        user_identities(&["alice"]),
+        None,
+        "Test User <test@fb.com>",
+        true,
+    )
+    .await;
+
+    match decision {
+        BypassDecision::Authorized { check, .. } => {
+            assert!(check.is_none(), "no membership check ran, got {check:?}");
+        }
+        other => panic!("expected Authorized, got {other:?}"),
     }
 }
 
