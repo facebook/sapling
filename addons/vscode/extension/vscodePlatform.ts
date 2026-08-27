@@ -23,7 +23,7 @@ import type {CodeReviewIssue} from 'isl/src/firstPassCodeReview/types';
 import {arraysEqual} from 'isl/src/utils';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
-import {executeVSCodeCommand} from './commands';
+import {executeVSCodeCommand, openFolderInWindowOrTile} from './commands';
 import {PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
@@ -51,6 +51,7 @@ function diagnosticSeverity(severity: vscode.DiagnosticSeverity): DiagnosticSeve
 export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServerPlatform => ({
   platformName: 'vscode',
   sessionId: vscode.env.sessionId,
+  isBasecamp: Internal.isBasecamp?.() ?? false,
   panelOrView: undefined,
   async handleMessageFromClient(
     this: VSCodeServerPlatform,
@@ -141,8 +142,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/openInNewWindow': {
-          const folderUri = vscode.Uri.file(message.path);
-          vscode.commands.executeCommand('vscode.openFolder', folderUri, {forceNewWindow: true});
+          await openFolderInWindowOrTile(message.path, true);
           break;
         }
         case 'platform/openFolder': {

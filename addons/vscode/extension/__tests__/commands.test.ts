@@ -17,6 +17,7 @@ import {vscodeCommands} from '../commands';
 import {shouldOpenBeside} from '../config';
 import {encodeDeletedFileUri} from '../DeletedFileContentProvider';
 import {encodeSaplingDiffUri} from '../DiffContentProvider';
+import {Internal} from '../Internal';
 
 // Mock vscode command
 jest.mock('vscode', () => {
@@ -45,6 +46,20 @@ jest.mock('../config', () => ({
   shouldOpenBeside: jest.fn(),
 }));
 const mockShouldOpenBeside = shouldOpenBeside as jest.MockedFunction<typeof shouldOpenBeside>;
+
+// Mock Internal (fb-only) API used for Basecamp tile detection.
+jest.mock('../Internal', () => ({
+  Internal: {
+    isBasecamp: jest.fn(),
+    basecampOpenFolderAsNewTile: jest.fn(),
+  },
+}));
+const mockIsBasecamp = Internal.isBasecamp as jest.MockedFunction<
+  NonNullable<typeof Internal.isBasecamp>
+>;
+const mockBasecampOpenFolderAsNewTile = Internal.basecampOpenFolderAsNewTile as jest.MockedFunction<
+  NonNullable<typeof Internal.basecampOpenFolderAsNewTile>
+>;
 
 describe('open-file-diff', () => {
   const openDiffView = vscodeCommands['sapling.open-file-diff'];
@@ -403,6 +418,7 @@ describe('worktree commands', () => {
     // Default to "nothing exists on disk" so default destination path computation
     // in sapling.worktree.add isn't affected unless a test overrides this.
     mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+    mockIsBasecamp.mockReturnValue(false);
   });
 
   describe('sapling.worktree.switch', () => {
@@ -435,6 +451,55 @@ describe('worktree commands', () => {
         'vscode.openFolder',
         expect.anything(),
         expect.anything(),
+      );
+    });
+
+    it('opens the selected worktree as a new tile inside Basecamp without asking which window', async () => {
+      mockIsBasecamp.mockReturnValue(true);
+      mockBasecampOpenFolderAsNewTile.mockResolvedValue(true);
+      mockShowQuickPick.mockResolvedValueOnce({
+        label: 'sibling',
+        description: siblingWorktree.path,
+        worktree: siblingWorktree,
+      } as never);
+
+      await switchCommand.apply(ctx);
+
+      // Only the worktree picker is shown; there's no "current window" choice in Basecamp.
+      expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
+      expect(mockBasecampOpenFolderAsNewTile).toHaveBeenCalledWith(
+        siblingWorktree.path,
+        siblingWorktree.label,
+      );
+      expect(mockExecuteVSCodeCommand).not.toHaveBeenCalledWith(
+        'vscode.openFolder',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('shows an error and does not fall back to a new window when Basecamp tile creation fails', async () => {
+      mockIsBasecamp.mockReturnValue(true);
+      mockBasecampOpenFolderAsNewTile.mockResolvedValue(false);
+      mockShowQuickPick.mockResolvedValueOnce({
+        label: 'sibling',
+        description: siblingWorktree.path,
+        worktree: siblingWorktree,
+      } as never);
+
+      await switchCommand.apply(ctx);
+
+      expect(mockBasecampOpenFolderAsNewTile).toHaveBeenCalledWith(
+        siblingWorktree.path,
+        siblingWorktree.label,
+      );
+      expect(mockExecuteVSCodeCommand).not.toHaveBeenCalledWith(
+        'vscode.openFolder',
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(mockShowErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining(siblingWorktree.path),
       );
     });
   });
@@ -513,6 +578,58 @@ describe('worktree commands', () => {
         'vscode.openFolder',
         expect.anything(),
         expect.anything(),
+      );
+    });
+
+    it('opens the new worktree as a new tile inside Basecamp, without offering current window', async () => {
+      mockIsBasecamp.mockReturnValue(true);
+      mockBasecampOpenFolderAsNewTile.mockResolvedValue(true);
+      mockShowInputBox
+        .mockResolvedValueOnce('my-label')
+        .mockResolvedValueOnce('/repo/root.worktrees/root_3');
+      mockShowQuickPick.mockResolvedValueOnce({
+        label: 'Open in New Tile',
+        action: 'open',
+        forceNewWindow: true,
+      } as never);
+
+      await addCommand.apply(ctx);
+
+      expect(mockShowQuickPick.mock.calls[0][0]).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({label: 'Open in Current Window'})]),
+      );
+      expect(mockBasecampOpenFolderAsNewTile).toHaveBeenCalledWith(
+        '/repo/root.worktrees/root_3',
+        'my-label',
+      );
+      expect(mockExecuteVSCodeCommand).not.toHaveBeenCalledWith(
+        'vscode.openFolder',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('shows an error and does not fall back to a new window when Basecamp tile creation is unavailable', async () => {
+      mockIsBasecamp.mockReturnValue(true);
+      mockBasecampOpenFolderAsNewTile.mockResolvedValue(false);
+      mockShowInputBox
+        .mockResolvedValueOnce('my-label')
+        .mockResolvedValueOnce('/repo/root.worktrees/root_3');
+      mockShowQuickPick.mockResolvedValueOnce({
+        label: 'Open in New Tile',
+        action: 'open',
+        forceNewWindow: true,
+      } as never);
+
+      await addCommand.apply(ctx);
+
+      expect(mockExecuteVSCodeCommand).not.toHaveBeenCalledWith(
+        'vscode.openFolder',
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(mockShowErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('/repo/root.worktrees/root_3'),
       );
     });
   });

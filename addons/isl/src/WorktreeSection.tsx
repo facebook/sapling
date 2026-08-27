@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {WorktreeEntry} from './types';
 
 import {Badge} from 'isl-components/Badge';
@@ -30,7 +31,7 @@ import {RemoveWorktreeOperation} from './operations/RemoveWorktreeOperation';
 import {RenameWorktreeOperation} from './operations/RenameWorktreeOperation';
 import {useRunOperation} from './operationsState';
 import platform from './platform';
-import {repositoryInfo, worktreeInfoData} from './serverAPIState';
+import {applicationinfo, repositoryInfo, worktreeInfoData} from './serverAPIState';
 import {useModal} from './useModal';
 
 export function WorktreeSection({dismiss}: {dismiss: () => unknown}) {
@@ -129,6 +130,7 @@ function WorktreeRowWithHover({
   showModal: ReturnType<typeof useModal>;
   dismiss: () => unknown;
 }) {
+  const appInfo = useAtomValue(applicationinfo);
   return (
     <div
       key={wt.path}
@@ -179,6 +181,8 @@ function WorktreeRowWithHover({
                   changeCwd(wt.path);
                   return;
                 }
+                const isBasecamp = appInfo?.isBasecamp === true;
+                const newWindowLabel = isBasecamp ? t('Open in New Tile') : t('Open in New Window');
                 const choice = await showModal({
                   type: 'confirm',
                   title: <T>Switch Worktree</T>,
@@ -190,20 +194,24 @@ function WorktreeRowWithHover({
                           Switch to worktree $path?
                         </T>
                       </Row>
-                      <Row>
-                        <Subtle>
-                          <T>Opening in current window will reload the editor.</T>
-                        </Subtle>
-                      </Row>
+                      {!isBasecamp && (
+                        <Row>
+                          <Subtle>
+                            <T>Opening in current window will reload the editor.</T>
+                          </Subtle>
+                        </Row>
+                      )}
                     </Column>
                   ),
-                  buttons: [
-                    {label: t('Open in Current Window')},
-                    {label: t('Open in New Window'), primary: true},
-                  ],
+                  buttons: isBasecamp
+                    ? [{label: newWindowLabel, primary: true}]
+                    : [
+                        {label: t('Open in Current Window')},
+                        {label: newWindowLabel, primary: true},
+                      ],
                 });
                 if (choice != null) {
-                  openWorktreeInWindow(wt.path, choice.label === t('Open in New Window'));
+                  openWorktreeInWindow(wt.path, choice.label === newWindowLabel);
                 }
               }}>
               <Icon icon="arrow-swap" />
@@ -367,6 +375,7 @@ function AddWorktreeModal({
 }) {
   const [destPath, setDestPath] = useState(defaultDest);
   const [label, setLabel] = useState('');
+  const appInfo = useAtomValue(applicationinfo);
   const isVSCode = platform.platformName === 'vscode';
   const [openIn, setOpenIn] = useState<AddWorktreeResult['openIn']>(isVSCode ? 'new' : 'none');
   const [activate, setActivate] = useState(false);
@@ -411,18 +420,17 @@ function AddWorktreeModal({
               {
                 title: (
                   <Row>
-                    <T>Open in new window</T>
+                    {appInfo?.isBasecamp ? <T>Open in new tile</T> : <T>Open in new window</T>}
                     <Badge>Recommended</Badge>
                   </Row>
                 ),
                 value: 'new',
               },
-              {
-                title: <T>Open in current window</T>,
-                value: 'current',
-              },
+              ...(appInfo?.isBasecamp
+                ? []
+                : [{title: <T>Open in current window</T>, value: 'current'}]),
               {title: <T>Don't open</T>, value: 'none'},
-            ] as const
+            ] as Array<{value: AddWorktreeResult['openIn']; title: ReactNode}>
           }
           current={openIn}
           onChange={setOpenIn}

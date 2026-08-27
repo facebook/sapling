@@ -93,7 +93,7 @@ import {
   selectedCommitsRangeComparison,
   useCommitCallbacks,
 } from './selection';
-import {inMergeConflicts, mergeConflicts} from './serverAPIState';
+import {applicationinfo, inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
 import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
@@ -868,14 +868,19 @@ export function CheckedOutElsewhereBadge({wt}: {wt: WorktreeEntry}) {
  * concept of "windows") it switches cwd directly.
  */
 function OpenWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
+  const appInfo = useAtomValue(applicationinfo);
   const isVSCode = platform.platformName === 'vscode';
   const openMenu = useContextMenu<HTMLButtonElement>((): Array<ContextMenuItem> => [
+    ...(appInfo?.isBasecamp
+      ? []
+      : [
+          {
+            label: t('Open in Current Window'),
+            onClick: () => openWorktreeInWindow(wt.path, false),
+          } as ContextMenuItem,
+        ]),
     {
-      label: t('Open in Current Window'),
-      onClick: () => openWorktreeInWindow(wt.path, false),
-    },
-    {
-      label: t('Open in New Window'),
+      label: appInfo?.isBasecamp ? t('Open in New Tile') : t('Open in New Window'),
       onClick: () => openWorktreeInWindow(wt.path, true),
     },
   ]);

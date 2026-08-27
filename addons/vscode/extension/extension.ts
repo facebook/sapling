@@ -34,6 +34,7 @@ export async function activate(
   const start = Date.now();
   const [outputChannel, logger] = createOutputChannelLogger();
   const platform = getVSCodePlatform(context);
+  vscode.commands.executeCommand('setContext', 'sapling:isBasecamp', platform.isBasecamp ?? false);
   const extensionTracker = makeServerSideTracker(
     logger,
     platform as ServerPlatform,

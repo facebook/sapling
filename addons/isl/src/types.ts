@@ -306,6 +306,7 @@ export type ApplicationInfo = {
   platformName: string;
   version: string;
   logFilePath: string;
+  isBasecamp?: boolean;
 };
 
 /**

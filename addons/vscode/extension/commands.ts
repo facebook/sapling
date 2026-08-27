@@ -28,6 +28,7 @@ import {
   labelForComparison,
 } from 'shared/Comparison';
 import * as vscode from 'vscode';
+import {shouldOpenBeside} from './config';
 import {
   DELETED_FILE_DIFF_VIEW_PROVIDER_SCHEME,
   encodeDeletedFileUri,
@@ -37,8 +38,37 @@ import {
   encodeSaplingDiffUri,
   SAPLING_DIFF_PROVIDER_SCHEME,
 } from './DiffContentProvider';
-import {shouldOpenBeside} from './config';
 import {t} from './i18n';
+import {Internal} from './Internal';
+
+/**
+ * Open a folder in the current window, a new window, or (inside Basecamp) a new tile
+ * in the current window.
+ */
+export async function openFolderInWindowOrTile(
+  path: string,
+  forceNewWindow: boolean,
+  label?: string,
+): Promise<void> {
+  if (Internal.isBasecamp?.() === true) {
+    const openedTile = await Internal.basecampOpenFolderAsNewTile?.(path, label);
+    if (openedTile !== true) {
+      vscode.window.showErrorMessage(
+        t('Failed to open $path as a new Basecamp tile').replace('$path', path),
+      );
+    }
+    return;
+  }
+  try {
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(path), {
+      forceNewWindow,
+    });
+  } catch (err) {
+    vscode.window.showErrorMessage(
+      t('Failed to open folder ($path)').replace('$path', path) + `: ${err}`,
+    );
+  }
+}
 
 /**
  * VS Code Commands registered by the Sapling extension.
@@ -102,21 +132,25 @@ export const vscodeCommands = {
     if (picked == null) {
       return;
     }
-    const choice = await vscode.window.showQuickPick(
-      [
-        {label: t('Open in Current Window'), forceNewWindow: false},
-        {label: t('Open in New Window'), forceNewWindow: true},
-      ],
-      {placeHolder: t('Opening in current window will reload the editor.')},
-    );
-    if (choice == null) {
-      return;
+    const isBasecamp = Internal.isBasecamp?.() === true;
+    let forceNewWindow: boolean;
+    if (isBasecamp) {
+      // Basecamp always opens worktrees as a new tile; there's no "current window" to switch.
+      forceNewWindow = true;
+    } else {
+      const choice = await vscode.window.showQuickPick(
+        [
+          {label: t('Open in Current Window'), forceNewWindow: false},
+          {label: t('Open in New Window'), forceNewWindow: true},
+        ],
+        {placeHolder: t('Opening in current window will reload the editor.')},
+      );
+      if (choice == null) {
+        return;
+      }
+      forceNewWindow = choice.forceNewWindow;
     }
-    await vscode.commands.executeCommand(
-      'vscode.openFolder',
-      vscode.Uri.file(picked.worktree.path),
-      {forceNewWindow: choice.forceNewWindow},
-    );
+    await openFolderInWindowOrTile(picked.worktree.path, forceNewWindow, picked.worktree.label);
   },
 
   ['sapling.worktree.add']: async function (this: RepositoryContext) {
@@ -180,18 +214,27 @@ export const vscodeCommands = {
       t('Creating worktree...'),
     );
 
+    const isBasecamp = Internal.isBasecamp?.() === true;
     const openChoice = await vscode.window.showQuickPick(
       [
-        {label: t('Open in New Window'), action: 'open' as const, forceNewWindow: true},
-        {label: t('Open in Current Window'), action: 'open' as const, forceNewWindow: false},
+        {
+          label: isBasecamp ? t('Open in New Tile') : t('Open in New Window'),
+          action: 'open' as const,
+          forceNewWindow: true,
+        },
+        ...(isBasecamp
+          ? []
+          : [{label: t('Open in Current Window'), action: 'open' as const, forceNewWindow: false}]),
         {label: t("Don't open"), action: 'skip' as const, forceNewWindow: false},
       ],
       {placeHolder: t('Open the new worktree?')},
     );
     if (openChoice?.action === 'open') {
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(trimmedDestPath), {
-        forceNewWindow: openChoice.forceNewWindow,
-      });
+      await openFolderInWindowOrTile(
+        trimmedDestPath,
+        openChoice.forceNewWindow,
+        label.trim() || undefined,
+      );
     }
   },
 

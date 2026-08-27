@@ -27,6 +27,8 @@ export interface ServerPlatform {
   platformName: string;
   /** Override the analytics Session ID. Should be globally unique. */
   sessionId?: string;
+  /** Whether this platform is running inside Basecamp. */
+  isBasecamp?: boolean;
   handleMessageFromClient(
     this: ServerPlatform,
     repo: Repository | undefined,
