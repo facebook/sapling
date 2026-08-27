@@ -45,6 +45,14 @@ void PrivHelper::setMemoryPriorityForProcessBlocking(
   std::move(future).get();
 }
 
+folly::Future<folly::Unit> PrivHelper::setRestartArgs(
+    const EdenFsRestartArgs& /* args */) {
+  return folly::makeFuture();
+}
+
+void PrivHelper::notifyCleanShutdown(folly::StringPiece /* reason */) noexcept {
+}
+
 NamespaceInfo PrivHelper::getNamespaceInfoBlocking(pid_t daemonPid) {
   folly::EventBase evb;
   attachEventBase(&evb);

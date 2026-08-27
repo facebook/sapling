@@ -280,6 +280,24 @@ class PrivHelper {
   virtual void setEdenFsEventsLogger(
       std::shared_ptr<EdenFsEventsLogger> /* logger */) {}
 
+  /**
+   * Give the privhelper what it needs to relaunch edenfs if this daemon dies
+   * without first calling notifyCleanShutdown().
+   *
+   * Default no-op so that FakePrivHelper and StubPrivHelper need no changes.
+   */
+  [[nodiscard]] virtual folly::Future<folly::Unit> setRestartArgs(
+      const EdenFsRestartArgs& args);
+
+  /**
+   * Tell the privhelper that this daemon is shutting down deliberately.
+   *
+   * One-way and best effort: there is no response, and a failure to deliver
+   * must not block shutdown. Default no-op so that FakePrivHelper and
+   * StubPrivHelper need no changes.
+   */
+  virtual void notifyCleanShutdown(folly::StringPiece reason) noexcept;
+
   /*
    * Explicitly stop the privhelper process.
    *
