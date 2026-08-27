@@ -19,6 +19,7 @@
 - Fix a diff's review status going stale after selecting a different commit
 - Add command palette entries for worktree operations
 - Show the Devmate "Fix signals" button for diffs with only warning-level signals, not just failures
+- Fix background polling accumulating after changing workspace folders
 
 ## 0.1.69
 

@@ -14,6 +14,33 @@ describe('ClientToServer', () => {
     resetTestMessages();
   });
 
+  describe('onSetup', () => {
+    it('disposes the active setup before rerunning or unsubscribing', () => {
+      const cleanup = jest.fn();
+      const setup = jest.fn(() => cleanup);
+      const dispose = clientToServerAPI.onSetup(setup);
+
+      expect(setup).toHaveBeenCalledTimes(1);
+
+      clientToServerAPI.cwdChanged();
+
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(setup).toHaveBeenCalledTimes(2);
+
+      resetTestMessages();
+
+      expect(cleanup).toHaveBeenCalledTimes(2);
+      expect(setup).toHaveBeenCalledTimes(3);
+
+      dispose();
+
+      expect(cleanup).toHaveBeenCalledTimes(3);
+
+      clientToServerAPI.cwdChanged();
+      expect(setup).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe('nextMessageMatching', () => {
     it('resolves when it sees a matching message', async () => {
       let isResolved = false;

@@ -222,12 +222,24 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
    * or the current working directory (and therefore usually repository) changes.
    */
   onSetup(cb: () => (() => unknown) | unknown): () => void {
-    const disposeConnectionSubscription = this.onConnectOrReconnect(cb);
-    const disposeCwdChange = this.onCwdChanged(cb);
+    let disposeSetup: (() => unknown) | unknown;
+    const disposeCurrentSetup = () => {
+      const dispose = disposeSetup;
+      disposeSetup = undefined;
+      typeof dispose === 'function' && dispose();
+    };
+    const setup = () => {
+      disposeCurrentSetup();
+      disposeSetup = cb();
+    };
+
+    const disposeConnectionSubscription = this.onConnectOrReconnect(setup);
+    const disposeCwdChange = this.onCwdChanged(setup);
 
     return () => {
       disposeConnectionSubscription();
       disposeCwdChange();
+      disposeCurrentSetup();
     };
   }
 }
