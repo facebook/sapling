@@ -39,6 +39,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
+use permission_checker::MononokeIdentitySet;
 use scuba::ScubaValue;
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -134,6 +135,60 @@ pub enum TagType {
     LightweightTag,
     /// The bookmark is an annotated tag with an associated object with GitSha1 hash
     AnnotatedTag(GitSha1),
+}
+
+/// Where the identity set tested against a hook's bypass permission group came
+/// from. A denied bypass is otherwise ambiguous: the group name alone does not
+/// say whose membership was actually checked, and the commit-author path can
+/// silently fall back to the pusher.
+///
+/// Up to two checks can run for one decision (client identities, then the commit
+/// author). This records the one that *decided*, so a client-identity miss that
+/// falls through reports the author check.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BypassIdentitySource {
+    /// The pusher's own request identities.
+    ClientIdentities,
+    /// An identity derived from the commit author.
+    CommitAuthor,
+    /// The commit author was absent or unparsable, so the pusher's request
+    /// identities were tested instead. These are usually *not* the author's.
+    CommitAuthorFallbackToClient,
+    /// The author's canonical unixname, resolved via the EmployeeService after
+    /// the author's own identity missed.
+    CommitAuthorResolvedUnixname,
+}
+
+impl BypassIdentitySource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::ClientIdentities => "client_identities",
+            Self::CommitAuthor => "commit_author",
+            Self::CommitAuthorFallbackToClient => "commit_author_fallback_to_client",
+            Self::CommitAuthorResolvedUnixname => "commit_author_resolved_unixname",
+        }
+    }
+}
+
+/// The identity set a bypass permission-group check ran against, and where it
+/// came from. Logged to Scuba for debugging; deliberately not surfaced in the
+/// pusher-facing rejection message.
+///
+/// `identities` holds `TYPE:data` strings only, never typed/CAT-bearing
+/// renderings.
+#[derive(Clone, Debug)]
+pub struct CheckedBypassIdentities {
+    pub source: BypassIdentitySource,
+    pub identities: Vec<String>,
+}
+
+impl CheckedBypassIdentities {
+    pub fn new(source: BypassIdentitySource, identities: &MononokeIdentitySet) -> Self {
+        Self {
+            source,
+            identities: identities.iter().map(|id| id.to_string()).collect(),
+        }
+    }
 }
 
 /// A bypass decision computed eagerly (before the hook runs) for a single
