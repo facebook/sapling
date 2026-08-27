@@ -312,11 +312,16 @@ fn record_outcome_and_apply_bypass(
         BypassDecision::Authorized {
             reason,
             permission_group,
-            ..
+            check,
         } => {
             scuba.add("bypass_reason", reason.clone());
             if let Some(group) = permission_group {
                 scuba.add("bypass_permission_group", group.clone());
+            }
+            if let Some(check) = check {
+                scuba
+                    .add("bypass_identity_source", check.source.as_str())
+                    .add("bypass_identities_checked", check.identities.clone());
             }
             scuba
                 .add("errorcode", 0)
@@ -334,18 +339,35 @@ fn record_outcome_and_apply_bypass(
                 .add("outcome", "rejected");
             Ok(outcome)
         }
-        BypassDecision::UnauthorizedUser { group, .. } => {
+        // Record the bypass columns here too, so a denied bypass is
+        // distinguishable from a rejection where none was attempted:
+        // `outcome='rejected' AND bypass_reason IS NOT NULL` selects exactly the
+        // denials. `bypass_blocked_for_agent` stays unset -- that flag is what
+        // separates these from the agent case below.
+        BypassDecision::UnauthorizedUser {
+            reason,
+            group,
+            check,
+        } => {
             scuba
                 .add("stderr", long_description)
                 .add("errorcode", 1)
                 .add("failed_hooks", 1)
+                .add("bypass_reason", reason.clone())
+                .add("bypass_permission_group", group.clone())
+                .add("bypass_identity_source", check.source.as_str())
+                .add("bypass_identities_checked", check.identities.clone())
                 .add("outcome", "rejected");
             Ok(annotate_unauthorized_rejection(outcome, group))
         }
         // The pusher was in the group, so the bypass is worth recording in full:
         // `bypass_blocked_for_agent` is what makes agent bypass attempts
         // countable, separately from ordinary rejections.
-        BypassDecision::UnauthorizedAgent { reason, group, .. } => {
+        BypassDecision::UnauthorizedAgent {
+            reason,
+            group,
+            check,
+        } => {
             scuba
                 .add("stderr", long_description)
                 .add("errorcode", 1)
@@ -354,6 +376,11 @@ fn record_outcome_and_apply_bypass(
                 .add("bypass_permission_group", group.clone())
                 .add("bypass_blocked_for_agent", true)
                 .add("outcome", "rejected");
+            if let Some(check) = check {
+                scuba
+                    .add("bypass_identity_source", check.source.as_str())
+                    .add("bypass_identities_checked", check.identities.clone());
+            }
             Ok(annotate_agent_bypass_rejection(outcome, group))
         }
     }
