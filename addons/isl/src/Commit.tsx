@@ -9,12 +9,13 @@ import type {JSX, ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
-import type {CommitInfo, SuccessorInfo} from './types';
+import type {CommitInfo, SuccessorInfo, WorktreeEntry} from './types';
 import {succeedableRevset, WarningCheckResult} from './types';
 
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
+import {Tag} from 'isl-components/Tag';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
 import React, {memo, useState} from 'react';
@@ -22,7 +23,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
-import {notEmpty, nullthrows} from 'shared/utils';
+import {basename, guessPathSep, notEmpty, nullthrows} from 'shared/utils';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import css from './Commit.module.css';
@@ -39,6 +40,7 @@ import {SubmitSingleCommitButton} from './SubmitSingleCommitButton';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
+import {changeCwd, openWorktreeInWindow, RenameWorktreeModal} from './WorktreeSection';
 import {tracker} from './analytics';
 import {clipboardLinkHtml} from './clipboard';
 import {
@@ -70,6 +72,8 @@ import {CommitCloudMoveCommitsOperation} from './operations/CommitCloudMoveCommi
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
+import {RemoveWorktreeOperation} from './operations/RemoveWorktreeOperation';
+import {RenameWorktreeOperation} from './operations/RenameWorktreeOperation';
 import {
   inlineProgressByHash,
   operationBeingPreviewed,
@@ -707,6 +711,10 @@ export const Commit = memo(
       );
     }
 
+    if ((commit as DagCommitInfo).isCheckedOutElsewhere) {
+      return null;
+    }
+
     return (
       <div
         className={
@@ -826,6 +834,153 @@ function BranchingPr({bookmark, provider}: {bookmark: string; provider: UICodeRe
 
 function CommitLabel({children}: {children?: ReactNode}) {
   return <div className={css.commitLabel}>{children}</div>;
+}
+
+/**
+ * A label naming a sibling worktree currently checked out (`.`) at this commit,
+ * followed by buttons to open, rename, and (for linked worktrees) remove it.
+ */
+export function CheckedOutElsewhereBadge({wt}: {wt: WorktreeEntry}) {
+  const name =
+    wt.label != null && wt.label !== '' ? wt.label : basename(wt.path, guessPathSep(wt.path));
+  const hoverTitle = t('Checked out in worktree $name', {replace: {$name: name}});
+
+  return (
+    <span className={css.checkedOutElsewhereGroup}>
+      <Tooltip title={hoverTitle}>
+        <Tag
+          className={css.checkedOutElsewhereTag}
+          data-testid="checked-out-elsewhere-badge"
+          aria-label={hoverTitle}>
+          <Icon icon="worktree" size="XS" aria-hidden="true" />
+          {name}
+        </Tag>
+      </Tooltip>
+      <OpenWorktreeButton wt={wt} name={name} />
+      <RenameWorktreeButton wt={wt} name={name} />
+      {wt.role === 'main' ? null : <RemoveWorktreeButton wt={wt} name={name} />}
+    </span>
+  );
+}
+
+/**
+ * On VS Code, opens a menu to choose current vs. new window; elsewhere (no
+ * concept of "windows") it switches cwd directly.
+ */
+function OpenWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
+  const isVSCode = platform.platformName === 'vscode';
+  const openMenu = useContextMenu<HTMLButtonElement>((): Array<ContextMenuItem> => [
+    {
+      label: t('Open in Current Window'),
+      onClick: () => openWorktreeInWindow(wt.path, false),
+    },
+    {
+      label: t('Open in New Window'),
+      onClick: () => openWorktreeInWindow(wt.path, true),
+    },
+  ]);
+  const title = isVSCode
+    ? t('Open worktree $name', {replace: {$name: name}})
+    : t('Switch to worktree $name', {replace: {$name: name}});
+  return (
+    <Tooltip title={title} delayMs={250}>
+      <Button
+        icon
+        aria-label={title}
+        aria-haspopup={isVSCode ? 'menu' : undefined}
+        data-testid="checked-out-elsewhere-open-button"
+        onClick={e => {
+          if (isVSCode) {
+            // useContextMenu already stops propagation and prevents default.
+            openMenu(e);
+            return;
+          }
+          e.stopPropagation();
+          e.preventDefault();
+          changeCwd(wt.path);
+        }}>
+        <Icon icon="arrow-swap" />
+      </Button>
+    </Tooltip>
+  );
+}
+
+function RenameWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
+  const runOperation = useRunOperation();
+  const title = t('Rename worktree $name', {replace: {$name: name}});
+  return (
+    <Tooltip title={title} delayMs={250}>
+      <Button
+        icon
+        aria-label={title}
+        data-testid="checked-out-elsewhere-rename-button"
+        onClick={async e => {
+          e.stopPropagation();
+          e.preventDefault();
+          const result = await showModal<string | undefined>({
+            type: 'custom',
+            title: <T>Rename Worktree</T>,
+            icon: 'worktree',
+            component: ({returnResultAndDismiss}) => (
+              <RenameWorktreeModal
+                returnResultAndDismiss={returnResultAndDismiss}
+                currentLabel={wt.label ?? ''}
+                wtBasename={name}
+              />
+            ),
+          });
+          if (result !== undefined) {
+            await runOperation(new RenameWorktreeOperation(wt.path, result || undefined), true);
+          }
+        }}>
+        <Icon icon="edit" />
+      </Button>
+    </Tooltip>
+  );
+}
+
+function RemoveWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
+  const runOperation = useRunOperation();
+  const title = t('Remove worktree $name', {replace: {$name: name}});
+  return (
+    <Tooltip title={title} delayMs={250}>
+      <Button
+        icon
+        aria-label={title}
+        data-testid="checked-out-elsewhere-remove-button"
+        onClick={async e => {
+          e.stopPropagation();
+          e.preventDefault();
+          const confirmed = await showModal({
+            type: 'confirm',
+            title: <T>Remove Worktree</T>,
+            icon: 'worktree',
+            message: (
+              <span>
+                <Row>
+                  <T replace={{$path: <code>{name}</code>}}>
+                    Are you sure you want to remove the worktree $path?
+                  </T>
+                </Row>
+                <Row style={{marginTop: 'var(--pad)'}}>
+                  <Subtle>
+                    <T>
+                      Any uncommitted changes and shelves in this worktree will be lost forever.
+                    </T>
+                  </Subtle>
+                </Row>
+              </span>
+            ),
+            buttons: [{label: t('Cancel')}, {label: t('Remove'), primary: true}],
+          });
+          if (confirmed?.label === t('Remove')) {
+            await runOperation(new RemoveWorktreeOperation(wt.path), true);
+          }
+        }}>
+        <Icon icon="trash" />
+      </Button>
+    </Tooltip>
+  );
 }
 
 export function InlineProgressSpan(props: {message: string}) {

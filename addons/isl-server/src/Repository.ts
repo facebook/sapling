@@ -61,7 +61,7 @@ import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {ejeca, simplifyEjecaError} from 'shared/ejeca';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
-import {notEmpty, nullthrows, randomId} from 'shared/utils';
+import {isHexHash, notEmpty, nullthrows, pathsAreIdentical, randomId} from 'shared/utils';
 import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
@@ -81,6 +81,7 @@ import {
   listWorktrees,
   runCommand,
   setConfig,
+  whereami,
 } from './commands';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
@@ -939,6 +940,22 @@ export class Repository {
     return this.worktreeInfo;
   }
 
+  /** Hashes checked out (`.`) in sibling worktrees, excluding this worktree, deduped. */
+  getOtherWorktreeDotHashes(): Hash[] {
+    const repoRoot = this.info.repoRoot;
+    const hashes = (this.worktreeInfo?.worktrees ?? []).flatMap(entry => {
+      if (pathsAreIdentical(entry.path, repoRoot) || entry.node == null) {
+        return [];
+      }
+      const trimmed = entry.node.trim();
+      if (trimmed === '' || !isHexHash(trimmed)) {
+        return [];
+      }
+      return [trimmed as Hash];
+    });
+    return [...new Set(hashes)];
+  }
+
   subscribeToWorktreeInfoChanges(
     callback: (result: WorktreeInfo | undefined) => unknown,
   ): Disposable {
@@ -961,11 +978,22 @@ export class Repository {
       const repoRoot = this.info.repoRoot;
       const worktreeEntries =
         worktrees.length > 0 ? worktrees : [{path: repoRoot, role: 'main' as const}];
+      // Fetch the checked-out hash for sibling worktrees only; our own is already
+      // tracked via `.` in the smartlog revset.
+      const worktreeEntriesWithNodes = await Promise.all(
+        worktreeEntries.map(async entry => {
+          if (pathsAreIdentical(entry.path, repoRoot)) {
+            return entry;
+          }
+          const node = await whereami(ctx, entry.path);
+          return node == null ? entry : {...entry, node};
+        }),
+      );
       const worktreeInfo: WorktreeInfo | undefined =
         sharedRoot != null
           ? {
               sharedRoot,
-              worktrees: worktreeEntries,
+              worktrees: worktreeEntriesWithNodes,
             }
           : undefined;
       this.worktreeInfo = worktreeInfo;
@@ -1041,6 +1069,9 @@ export class Repository {
         ...this.stableLocations.map(location => `present(${location.hash})`),
         ...(this.recommendedBookmarks ?? []).map(bookmark => `present(${bookmark})`),
         ...(this.fullRepoBranchModule?.genRevset() ?? []),
+        // sibling worktrees' checkouts happen outside this process's file watcher,
+        // so they may not otherwise be "interesting"; include them explicitly.
+        ...this.getOtherWorktreeDotHashes().map(hash => `present(${hash})`),
       ]
         .filter(notEmpty)
         .join(' + ')})`;

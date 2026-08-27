@@ -36,6 +36,9 @@ type DagExt = {
   /** If true, this is a virtual "You are here" commit. */
   isYouAreHere?: boolean;
 
+  /** If true, this is a virtual "checked out elsewhere" commit. */
+  isCheckedOutElsewhere?: boolean;
+
   /** If constructed from a "CommitStack", the "Rev" of the commit. */
   stackRev?: CommitRev;
 };
@@ -76,6 +79,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   ancestors: undefined,
   seqNumber: undefined,
   isYouAreHere: undefined,
+  isCheckedOutElsewhere: undefined,
   stackRev: undefined,
 });
 type CommitInfoExtRecord = RecordOf<CommitInfoExtProps>;
@@ -204,6 +208,10 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   get isYouAreHere(): boolean | undefined {
     return this.inner.isYouAreHere;
+  }
+
+  get isCheckedOutElsewhere(): boolean | undefined {
+    return this.inner.isCheckedOutElsewhere;
   }
 
   get stackRev(): CommitRev | undefined {

@@ -18,7 +18,9 @@ import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useRef} from 'react';
-import {Commit, InlineProgressSpan} from './Commit';
+import {normalizeForComparison} from 'shared/utils';
+import {currentWorktreeName, otherWorktreeCheckoutsByHash} from './CheckedOutElsewhere';
+import {CheckedOutElsewhereBadge, Commit, InlineProgressSpan} from './Commit';
 import {appliedCommitTreeSearchFilter, commitTreeSearchFilter} from './CommitTreeSearchFilter';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
@@ -27,7 +29,10 @@ import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
-import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
+import {
+  makeCheckedOutElsewhereVirtualCommit,
+  YOU_ARE_HERE_VIRTUAL_COMMIT,
+} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
@@ -79,12 +84,23 @@ function scrollToYouAreHere(behavior: ScrollBehavior = 'smooth'): boolean {
   return true;
 }
 
-const dagWithYouAreHere = atom(get => {
+const dagWithVirtualCommits = atom(get => {
   let dag = get(dagWithPreviews);
+  const virtualCommits = [];
   // Insert a virtual "You are here" as a child of ".".
   const dot = dag.resolve('.');
   if (dot != null) {
-    dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash])]);
+    virtualCommits.push(YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash]));
+  }
+  // Insert a virtual "checked out elsewhere" commit as a child of each hash
+  // that has sibling worktree checkouts, skipping hashes not present in the dag.
+  for (const hash of get(otherWorktreeCheckoutsByHash).keys()) {
+    if (dag.has(hash)) {
+      virtualCommits.push(makeCheckedOutElsewhereVirtualCommit(hash));
+    }
+  }
+  if (virtualCommits.length > 0) {
+    dag = dag.add(virtualCommits);
   }
   return dag;
 });
@@ -101,7 +117,7 @@ export const scrollToYouAreHereOnOpen = localStorageBackedAtom<boolean>(
 );
 
 const renderSubsetUnionSelection = atom(get => {
-  const dag = get(dagWithYouAreHere);
+  const dag = get(dagWithVirtualCommits);
   const condense = get(condenseObsoleteStacks);
   let subset = dag.subsetForRendering(undefined, /* condenseObsoleteStacks */ condense !== false);
   // If selectedCommits includes commits unknown to dag (ex. in tests), ignore them to avoid errors.
@@ -118,7 +134,7 @@ const renderSubsetUnionSelection = atom(get => {
   const searchFilter = get(appliedCommitTreeSearchFilter).trim().toLowerCase();
   if (searchFilter.length > 0) {
     const matchesSearch = (commit: DagCommitInfo) => {
-      if (commit.isYouAreHere) {
+      if (commit.isYouAreHere || commit.isCheckedOutElsewhere) {
         return true;
       }
       const renderedTitle = get(latestCommitMessageTitle(commit.hash));
@@ -139,7 +155,7 @@ const renderSubsetUnionSelection = atom(get => {
 function DagCommitList(props: DagCommitListProps) {
   const {width} = props;
 
-  const dag = useAtomValue(dagWithYouAreHere);
+  const dag = useAtomValue(dagWithVirtualCommits);
   const subset = useAtomValue(renderSubsetUnionSelection);
   // `hasNoResults` below describes `subset`, so it reads the same filter `subset` was built
   // from rather than whatever has been typed since. Clearing, though, writes the atom the
@@ -154,7 +170,7 @@ function DagCommitList(props: DagCommitListProps) {
     let hasMatchingCommit = false;
     for (const hash of subset) {
       const commit = dag.get(hash);
-      if (commit && !commit.isYouAreHere) {
+      if (commit && !commit.isYouAreHere && !commit.isCheckedOutElsewhere) {
         hasMatchingCommit = true;
         break;
       }
@@ -209,7 +225,10 @@ function FocusModeIndicator() {
   );
 }
 
-function renderCommit(info: DagCommitInfo) {
+function renderCommit(info: DagCommitInfo): React.JSX.Element | null {
+  if (info.isCheckedOutElsewhere) {
+    return null;
+  }
   return <DagCommitBody info={info} />;
 }
 
@@ -236,6 +255,8 @@ function CommitExtras({info, row}: {info: DagCommitInfo; row: ExtendedGraphRow})
 function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
   if (info.isYouAreHere) {
     return ['replace-tile', <YouAreHereGlyphWithProgress key="glyph" info={info} />];
+  } else if (info.isCheckedOutElsewhere) {
+    return ['replace-tile', <CheckedOutElsewhereGlyph key="glyph" info={info} />];
   } else {
     return ['inside-tile', <HighlightedGlyph key="glyph" info={info} />];
   }
@@ -311,8 +332,20 @@ function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
       setPosition('visible');
     };
   }, [setPosition]);
+  const worktreeName = useAtomValue(currentWorktreeName);
   return (
-    <YouAreHereGlyph info={info}>
+    <YouAreHereGlyph
+      info={info}
+      badgeChildren={
+        worktreeName != null && (
+          <Tooltip title={t('Current worktree')}>
+            <span className="current-worktree-label">
+              <Icon icon="worktree" aria-hidden="true" />
+              {worktreeName}
+            </span>
+          </Tooltip>
+        )
+      }>
       <span id={YOU_ARE_HERE_ANCHOR_ID} ref={anchorRef} />
       {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
     </YouAreHereGlyph>
@@ -344,6 +377,32 @@ function ScrollToCurrentCommitButton({slot}: {slot: 'above' | 'below'}) {
           <T>Scroll to current commit</T>
         </Button>
       </Tooltip>
+    </div>
+  );
+}
+
+function CheckedOutElsewhereGlyph({info}: {info: DagCommitInfo}) {
+  const map = useAtomValue(otherWorktreeCheckoutsByHash);
+  const worktrees = info.parents.flatMap(p => map.get(p) ?? []);
+  if (worktrees.length === 0) {
+    return null;
+  }
+  const dedupeKey = (p: string) => {
+    // Case-fold Windows absolute paths so drive-letter case differences dedupe,
+    // matching pathsAreIdentical's comparison semantics.
+    const normalized = normalizeForComparison(p);
+    return /^[A-Za-z]:\//.test(normalized) ? normalized.toLowerCase() : normalized;
+  };
+  const seen = new Set<string>();
+  const deduped = worktrees.filter(wt => {
+    const k = dedupeKey(wt.path);
+    return seen.has(k) ? false : (seen.add(k), true);
+  });
+  return (
+    <div className="checked-out-elsewhere-container">
+      {deduped.map(wt => (
+        <CheckedOutElsewhereBadge key={wt.path} wt={wt} />
+      ))}
     </div>
   );
 }

@@ -668,6 +668,7 @@ export default class ServerToClientAPI {
         repo.fetchUncommittedChanges();
         repo.fetchSubmoduleMap();
         repo.checkForMergeConflicts();
+        repo.refreshWorktreeInfo();
         repo.fullRepoBranchModule?.pullSubscribedFullRepoBranches();
         // Forced: an explicit refresh is the gesture for "CI moved but the diff did not", and
         // that is exactly the case a cached count answers wrongly.
@@ -676,6 +677,13 @@ export default class ServerToClientAPI {
           extras: {source: 'manual_refresh'},
         });
         generatedFilesDetector.clear(); // allow generated files to be rechecked
+        break;
+      }
+      case 'refreshWorktreeInfo': {
+        // A sibling worktree's checkout happens outside this process's file
+        // watcher (each worktree has its own `.sl` dir), so it needs an
+        // explicit poke rather than relying on `onChange('everything')`.
+        repo.refreshWorktreeInfo();
         break;
       }
       case 'pageVisibility': {

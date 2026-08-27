@@ -41,7 +41,7 @@ type RenderFunctionProps = {
    * then use hooks (ex. recoil selector) to trigger re-rendering inside
    * the static function.
    */
-  renderCommit?: (info: DagCommitInfo) => JSX.Element;
+  renderCommit?: (info: DagCommitInfo) => JSX.Element | null;
 
   /**
    * How to render extra stuff below a commit. Default: nothing.
@@ -708,9 +708,24 @@ export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps)
  * that seem "extra" (like code review states, operation-related progress state), consider
  * passing the `renderGlyph` prop to `RenderDag` instead. See `CommitTreeList` for example.
  */
-export function YouAreHereGlyph({info, children}: {info: DagCommitInfo; children?: ReactNode}) {
+export function YouAreHereGlyph({
+  info,
+  title,
+  badgeChildren,
+  children,
+}: {
+  info: DagCommitInfo;
+  /** Override the default label text (`info.description`, i.e. "You are here"). */
+  title?: string;
+  /** Rendered inside the blue badge, after the label text. */
+  badgeChildren?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
-    <YouAreHereLabel title={info.description} style={{marginLeft: -defaultStrokeWidth * 1.5}}>
+    <YouAreHereLabel
+      title={title ?? info.description}
+      badgeChildren={badgeChildren}
+      style={{marginLeft: -defaultStrokeWidth * 1.5}}>
       {children}
     </YouAreHereLabel>
   );

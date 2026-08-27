@@ -17,7 +17,7 @@ import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useCallback, useState} from 'react';
-import {basename, dirname} from 'shared/utils';
+import {basename, dirname, guessPathSep, pathsAreIdentical} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {Column, Row} from './ComponentUtils';
 import css from './CwdSelector.module.css';
@@ -203,11 +203,7 @@ function WorktreeRowWithHover({
                   ],
                 });
                 if (choice != null) {
-                  if (choice.label === t('Open in New Window')) {
-                    serverAPI.postMessage({type: 'platform/openInNewWindow', path: wt.path});
-                  } else {
-                    serverAPI.postMessage({type: 'platform/openFolder', path: wt.path});
-                  }
+                  openWorktreeInWindow(wt.path, choice.label === t('Open in New Window'));
                 }
               }}>
               <Icon icon="arrow-swap" />
@@ -460,7 +456,7 @@ function AddWorktreeModal({
   );
 }
 
-function RenameWorktreeModal({
+export function RenameWorktreeModal({
   returnResultAndDismiss,
   currentLabel,
   wtBasename,
@@ -495,7 +491,7 @@ function RenameWorktreeModal({
   );
 }
 
-function changeCwd(newCwd: string) {
+export function changeCwd(newCwd: string) {
   serverAPI.postMessage({
     type: 'changeCwd',
     cwd: newCwd,
@@ -503,22 +499,11 @@ function changeCwd(newCwd: string) {
   serverAPI.cwdChanged();
 }
 
-function guessPathSep(path: string): '/' | '\\' {
-  if (path.includes('\\')) {
-    return '\\';
+/** Ask the host platform to open `path` either in the current window or a new one. */
+export function openWorktreeInWindow(path: string, newWindow: boolean) {
+  if (newWindow) {
+    serverAPI.postMessage({type: 'platform/openInNewWindow', path});
   } else {
-    return '/';
+    serverAPI.postMessage({type: 'platform/openFolder', path});
   }
-}
-
-function pathsAreIdentical(path1: string, path2: string): boolean {
-  const normalizedPath1 = path1.replaceAll('\\', '/');
-  const normalizedPath2 = path2.replaceAll('\\', '/');
-
-  const isWindowsAbsolutePath = (path: string) => /^[A-Za-z]:\//.test(path);
-  if (isWindowsAbsolutePath(normalizedPath1) && isWindowsAbsolutePath(normalizedPath2)) {
-    return normalizedPath1.toLowerCase() === normalizedPath2.toLowerCase();
-  }
-
-  return normalizedPath1 === normalizedPath2;
 }

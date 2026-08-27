@@ -192,6 +192,7 @@ describe('ServerToClientAPI diff summary fetches', () => {
       fetchUncommittedChanges: jest.fn(),
       fetchSubmoduleMap: jest.fn(),
       checkForMergeConflicts: jest.fn(),
+      refreshWorktreeInfo: jest.fn(),
     });
     (repositoryCache.getOrCreate as jest.Mock).mockReturnValue({
       promise: Promise.resolve(repo),

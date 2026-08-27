@@ -10,11 +10,20 @@ import {InlineBadge} from './InlineBadge';
 import {t} from './i18n';
 
 /** The "(You are here)" blue label. Supports customized styles and children. */
-export function YouAreHereLabel(props: {title?: string} & React.HTMLAttributes<HTMLDivElement>) {
-  const {title = t('You are here'), children, ...rest} = props;
+export function YouAreHereLabel(
+  props: {
+    title?: string;
+    /** Rendered inside the blue badge, after the title. */
+    badgeChildren?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLDivElement>,
+) {
+  const {title = t('You are here'), badgeChildren, children, ...rest} = props;
   return (
     <div className="you-are-here-container" {...rest}>
-      <InlineBadge kind="primary">{title}</InlineBadge>
+      <InlineBadge kind="primary">
+        {title}
+        {badgeChildren}
+      </InlineBadge>
       {children}
     </div>
   );

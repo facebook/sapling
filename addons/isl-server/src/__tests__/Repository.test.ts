@@ -12,6 +12,7 @@ import {
   type RunnableOperation,
   type Submodule,
   type ValidatedRepoInfo,
+  type WorktreeInfo,
 } from 'isl/src/types';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -578,6 +579,39 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
         ejecaSpy,
         'smartlog((interestingbookmarks() + heads(draft())) + . + present(aaa) + present(bbb))',
       );
+    });
+
+    it('includes other worktrees checked-out hashes in revset, excluding own worktree', async () => {
+      const repo = new Repository(repoInfo, ctx);
+      (repo as unknown as {worktreeInfo: WorktreeInfo}).worktreeInfo = {
+        sharedRoot: repoInfo.repoRoot,
+        worktrees: [
+          {path: repoInfo.repoRoot, role: 'main', node: 'abc123'},
+          {path: '/path/to/other', role: 'linked', node: 'def456'},
+          {path: '/path/to/no-hash', role: 'linked'},
+        ],
+      };
+
+      const ejecaSpy = mockEjeca([]);
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        ejecaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(def456))',
+      );
+    });
+
+    it('getOtherWorktreeDotHashes dedupes and excludes own worktree', () => {
+      const repo = new Repository(repoInfo, ctx);
+      (repo as unknown as {worktreeInfo: WorktreeInfo}).worktreeInfo = {
+        sharedRoot: repoInfo.repoRoot,
+        worktrees: [
+          {path: repoInfo.repoRoot, role: 'main', node: 'abc123'},
+          {path: '/path/to/other', role: 'linked', node: 'def456'},
+          {path: '/path/to/other2', role: 'linked', node: 'def456'},
+        ],
+      };
+
+      expect(repo.getOtherWorktreeDotHashes()).toEqual(['def456']);
     });
   });
 
@@ -1253,6 +1287,8 @@ describe('fetchSubmoduleMap', () => {
             ]),
           },
         ],
+        // checked-out hash for the *other* worktree, fetched via `sl whereami -R <path>`
+        [/^sl whereami/, {stdout: 'bbb'}],
       ]);
 
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
@@ -1263,7 +1299,7 @@ describe('fetchSubmoduleMap', () => {
         sharedRoot: '/repo/main',
         worktrees: [
           {path: '/repo/main', role: 'main'},
-          {path: '/repo/feature', label: 'feature-x', role: 'linked'},
+          {path: '/repo/feature', label: 'feature-x', role: 'linked', node: 'bbb'},
         ],
       });
     });
@@ -1327,6 +1363,8 @@ describe('fetchSubmoduleMap', () => {
             ]),
           },
         ],
+        // this repo is /repo/feature, so /repo/main is the "other" worktree queried
+        [/^sl whereami/, {stdout: 'aaa'}],
       ]);
 
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
@@ -1336,9 +1374,39 @@ describe('fetchSubmoduleMap', () => {
       expect(worktreeInfo).toBeDefined();
       expect(worktreeInfo!.sharedRoot).toBe('/repo/main');
       expect(worktreeInfo!.worktrees).toEqual([
-        {path: '/repo/main', role: 'main'},
+        {path: '/repo/main', role: 'main', node: 'aaa'},
         {path: '/repo/feature', label: 'feature-x', role: 'linked'},
       ]);
+    });
+
+    it('leaves node unset when `sl whereami` fails for a sibling worktree', async () => {
+      mockEjeca([
+        [/^sl root --dotdir/, {stdout: '/repo/main/.sl'}],
+        [/^sl root --shared/, {stdout: '/repo/main'}],
+        [/^sl root/, {stdout: '/repo/main'}],
+        [/^sl debugroots/, {stdout: '/repo/main'}],
+        [
+          /^sl --config worktree\.enabled=true worktree list/,
+          {
+            stdout: JSON.stringify([
+              {path: '/repo/main', role: 'main'},
+              {path: '/repo/feature', label: 'feature-x', role: 'linked'},
+            ]),
+          },
+        ],
+        [/^sl whereami/, new Error('worktree mid-checkout')],
+      ]);
+
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      const repo = new Repository(info, ctx);
+      await repo.refreshWorktreeInfo();
+      expect(repo.getWorktreeInfo()).toEqual({
+        sharedRoot: '/repo/main',
+        worktrees: [
+          {path: '/repo/main', role: 'main'},
+          {path: '/repo/feature', label: 'feature-x', role: 'linked'},
+        ],
+      });
     });
 
     it('leaves worktreeInfo undefined when sharedRoot is unavailable', async () => {

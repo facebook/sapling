@@ -25,3 +25,13 @@
   background-color: var(--button-primary-hover-background);
   color: var(--button-primary-foreground);
 }
+
+.inline-badge.badge-attention {
+  background-color: var(--scm-modified-foreground);
+  color: var(--background);
+}
+
+.inline-badge:focus-visible {
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
+}

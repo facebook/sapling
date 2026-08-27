@@ -234,3 +234,42 @@ export function base64Decode(data: string): ArrayBuffer {
 export function dedup<T>(arr: Array<T>): Array<T> {
   return Array.from(new Set(arr));
 }
+
+/** Normalize a filesystem path for comparison (slash, trailing slash). */
+export function normalizeForComparison(p: string): string {
+  // Drive root `C:/` must stay `C:/` (or `C:\`) — not `C:` — so Windows
+  // detection `^[A-Za-z]:/` still matches after trailing-slash removal.
+  const slashed = p.replace(/\\/g, '/');
+  if (/^[A-Za-z]:\/$/.test(slashed)) {
+    return slashed;
+  }
+  return slashed.replace(/\/+$/, '') || '/';
+}
+
+/**
+ * Compare two filesystem paths for equality, tolerating '/' vs '\\' separators,
+ * trailing slashes, and (on Windows-style absolute paths only) drive-letter
+ * case differences.
+ */
+export function pathsAreIdentical(path1: string, path2: string): boolean {
+  const normalizedPath1 = normalizeForComparison(path1);
+  const normalizedPath2 = normalizeForComparison(path2);
+
+  const isWindowsAbsolutePath = (path: string) => /^[A-Za-z]:\//.test(path);
+  if (isWindowsAbsolutePath(normalizedPath1) && isWindowsAbsolutePath(normalizedPath2)) {
+    return normalizedPath1.toLowerCase() === normalizedPath2.toLowerCase();
+  }
+
+  return normalizedPath1 === normalizedPath2;
+}
+
+/** Whether a string looks like a Sapling commit hash (hex, 6-40 chars). */
+export const HEX_HASH_RE = /^[0-9a-f]{6,40}$/i;
+export function isHexHash(s: string): boolean {
+  return HEX_HASH_RE.test(s);
+}
+
+/** Guess whether a path uses '/' or '\\' as its separator, based on its contents. */
+export function guessPathSep(path: string): '/' | '\\' {
+  return path.includes('\\') ? '\\' : '/';
+}

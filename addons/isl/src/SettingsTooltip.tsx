@@ -20,6 +20,7 @@ import {useAtom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {nullthrows, tryJsonParse} from 'shared/utils';
 import {clickToOpenDiffViewAtom} from './ChangedFile';
+import {showWorktreeLabels} from './CheckedOutElsewhere';
 import {
   copyCommitHashFormatAtom,
   distantRebaseWarningEnabled,
@@ -144,6 +145,7 @@ function SettingsDropdown({
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
           <ScrollToYouAreHereSetting />
+          <ShowWorktreeLabelsSetting />
           <RebaseOffWarmWarningSetting />
           <DistantRebaseWarningSetting />
           <RebaseOntoMasterWarningSetting />
@@ -373,6 +375,25 @@ function ScrollToYouAreHereSetting() {
           setValue(checked);
         }}>
         <T>Auto scroll to "You are here" on open</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function ShowWorktreeLabelsSetting() {
+  const [value, setValue] = useAtom(showWorktreeLabels);
+  return (
+    <Tooltip
+      title={t(
+        'Show worktree name labels next to commits, such as "You are here" and badges for commits checked out in other worktrees.',
+      )}>
+      <Checkbox
+        data-testid="show-worktree-labels"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show Worktree Labels</T>
       </Checkbox>
     </Tooltip>
   );

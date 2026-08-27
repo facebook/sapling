@@ -12,6 +12,26 @@
   font-size: 90%;
 }
 
+.checkedOutElsewhereGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-quarter);
+}
+
+.checkedOutElsewhereTag {
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-quarter);
+}
+
+/* Codicons are `inline-block` with a hard-coded `16px/1` font, so the glyph
+   baseline-aligns on a 16px strut and sits low next to the 11px tag text. */
+.checkedOutElsewhereTag :global(.codicon) {
+  display: flex;
+  align-items: center;
+}
+
 .gotoButton {
   gap: var(--spacing-half);
 }

@@ -14,6 +14,27 @@
   align-items: center;
 }
 
+.current-worktree-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+  font-weight: normal;
+}
+
+/* Codicons are `inline-block` with a hard-coded `16px/1` font, so the glyph
+   baseline-aligns on a 16px strut and sits low next to the label text. */
+.current-worktree-label .codicon {
+  display: flex;
+  align-items: center;
+}
+
+.checked-out-elsewhere-container {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .uncommitted-changes {
   padding: var(--halfpad) 0;
   display: flex;

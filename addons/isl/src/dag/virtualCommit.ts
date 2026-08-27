@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Hash} from '../types';
+
 import {t} from '../i18n';
 import {DagCommitInfo} from './dagCommitInfo';
 
@@ -29,3 +31,28 @@ export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromComm
   totalFileCount: 0,
   isYouAreHere: true,
 });
+
+/**
+ * Creates a virtual commit representing sibling worktree(s) checked out at `parentHash`.
+ * Rendered as its own row directly above the real commit, mirroring `YOU_ARE_HERE_VIRTUAL_COMMIT`.
+ */
+export function makeCheckedOutElsewhereVirtualCommit(parentHash: Hash): DagCommitInfo {
+  return DagCommitInfo.fromCommitInfo({
+    hash: `checked-out-elsewhere:${parentHash}`,
+    title: '',
+    parents: [parentHash],
+    phase: 'draft',
+    isDot: false,
+    // Slightly earlier than YOU_ARE_HERE_VIRTUAL_COMMIT's date so that if a sibling
+    // is checked out at the same hash as your own dot, "You are here" sorts above
+    // "checked out elsewhere".
+    date: new Date(8640000000000000 - 1),
+    bookmarks: [],
+    remoteBookmarks: [],
+    author: '',
+    description: '',
+    filePathsSample: [],
+    totalFileCount: 0,
+    isCheckedOutElsewhere: true,
+  });
+}

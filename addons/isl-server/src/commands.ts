@@ -11,6 +11,7 @@ import type {RepositoryContext} from './serverTypes';
 import {
   ConflictType,
   type AbsolutePath,
+  type Hash,
   type MergeConflicts,
   type WorktreeEntry,
 } from 'isl/src/types';
@@ -170,6 +171,26 @@ export async function listWorktrees(ctx: RepositoryContext): Promise<WorktreeEnt
   } catch (error) {
     ctx.logger.error(`Failed to list worktrees for ${ctx.cwd}`, error);
     return [];
+  }
+}
+
+/**
+ * Find the hash checked out (`.`) in another worktree, via `sl whereami -R <path>`.
+ * During an unresolved merge, `whereami` prints both parents newline-separated;
+ * only the first (p1) is returned. Returns undefined if the command fails
+ * (e.g. the worktree is mid-checkout).
+ */
+export async function whereami(
+  ctx: RepositoryContext,
+  worktreePath: AbsolutePath,
+): Promise<Hash | undefined> {
+  try {
+    const stdout = (await runCommand(ctx, ['whereami', '-R', worktreePath])).stdout;
+    const hash = stdout.trim().split('\n')[0]?.trim();
+    return hash ? (hash as Hash) : undefined;
+  } catch (error) {
+    ctx.logger.error(`Failed to find checked-out hash for worktree ${worktreePath}`, error);
+    return undefined;
   }
 }
 

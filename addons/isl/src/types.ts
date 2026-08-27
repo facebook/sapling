@@ -298,6 +298,8 @@ export type WorktreeEntry = {
   label?: string;
   /** Whether this is the main (original) worktree. */
   role: 'main' | 'linked';
+  /** Hash checked out (`.`) in this worktree, best-effort. Absent if it couldn't be read. */
+  node?: Hash;
 };
 
 export type ApplicationInfo = {
@@ -1023,6 +1025,7 @@ export type LocalStorageName =
   | 'isl.focus-mode'
   | 'isl.scroll-to-you-are-here-on-open'
   | 'isl.disable-unsaved-files-warning'
+  | 'isl.show-worktree-labels'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:';
@@ -1031,6 +1034,7 @@ export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
   | {type: 'stress'; id: number; time: number; message: string}
   | {type: 'refresh'}
+  | {type: 'refreshWorktreeInfo'}
   | {type: 'clientReady'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: SettableConfigName; value: string}
