@@ -42,6 +42,8 @@ use crate::client::WorkingCopyClient;
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
 use crate::util::added_files;
+use crate::util::dirstate_path;
+use crate::util::may_have_pending;
 
 enum DeraceMode {
     Off,
@@ -71,7 +73,9 @@ impl EdenFileSystem {
         store: Arc<dyn FileStore>,
     ) -> Result<Self> {
         let journal_position = Cell::new(None);
-        let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
+        let dirstate_path = dirstate_path(dot_dir, may_have_pending(vfs.root()))?;
+        tracing::trace!("loading edenfs dirstate");
+        let treestate = TreeState::from_overlay_dirstate(&dirstate_path, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));
 
         let derace_mode = if cfg!(windows) {
@@ -348,12 +352,6 @@ fn log_checkout_wait_metric(checkout_start: Instant) {
         target: "status_info",
         eden_checkout_wait_elapsed = checkout_wait_elapsed.as_millis(),
     );
-}
-
-fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<TreeState> {
-    let dirstate_path = dot_dir.join("dirstate");
-    tracing::trace!("loading edenfs dirstate");
-    TreeState::from_overlay_dirstate(&dirstate_path, case_sensitive)
 }
 
 impl FileSystem for EdenFileSystem {

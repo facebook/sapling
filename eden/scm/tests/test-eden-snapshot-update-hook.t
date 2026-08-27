@@ -24,6 +24,8 @@ update and its hook while the snapshot transaction is open.
   > #!/bin/sh
   > printf 'hook parent: '
   > sl log -r . -T '{desc}\n'
+  > sl status
+  > echo 'hook status: ok'
   > EOF
 
   $ setconfig extensions.snapshotrestore="$TESTTMP/snapshotrestore.py"
@@ -39,13 +41,14 @@ update and its hook while the snapshot transaction is open.
   $ sl goto -q "$A"
   $ setconfig hooks.update="sh $TESTTMP/update-hook.sh"
 
-EdenFS reports the old parent to the hook while the snapshot transaction is
+The hook reads the pending dirstate parent while the snapshot transaction is
 open.
 
   $ sl debugsnapshotrestore "$B"
   snapshot: will restore snapshot 0000000000000000000000000000000000000000
   snapshot: updating to parent * (glob)
-  hook parent: A
+  hook parent: B
+  hook status: ok
   update complete
   snapshot: updated to parent * in * seconds (glob)
   snapshot: restored snapshot in * seconds (glob)

@@ -6,6 +6,7 @@
  */
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use configmodel::Config;
@@ -180,11 +181,27 @@ pub(crate) fn added_files(ts: &mut TreeState) -> Result<Vec<RepoPathBuf>> {
     Ok(added_files)
 }
 
+/// Select the pending dirstate when requested, falling back to the normal dirstate.
+pub(crate) fn dirstate_path(dot_dir: &Path, try_pending: bool) -> std::io::Result<PathBuf> {
+    if try_pending {
+        let pending_path = dot_dir.join("dirstate.pending");
+        if pending_path.try_exists()? {
+            return Ok(pending_path);
+        }
+    }
+    Ok(dot_dir.join("dirstate"))
+}
+
+/// Return whether `HG_PENDING` applies to this working copy root.
+pub(crate) fn may_have_pending(root: &Path) -> bool {
+    std::env::var_os("HG_PENDING").is_some_and(|pending_root| Path::new(&pending_root) == root)
+}
+
 /// Returns the first parent of a working copy, without constructing the working copy.
 /// `path` is the working copy root without the dot dir.
 /// `ident` is the desired working copy identity to skip sniffing.
 ///
-/// This function does not consider locking, pending changes and other special cases.
+/// This function does not consider locking or other special cases.
 pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
     if ident.dot_dir().starts_with(".git") {
         // dotgit mode. Use gitcompat to resolve HEAD.
@@ -192,8 +209,9 @@ pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
         let head = repo.resolve_head()?;
         Ok(Parents::One(head))
     } else {
-        // dotsl mode. Use "dirstate" to answer the question.
-        let dirstate_path = ident.resolve_full_dot_dir(path).join("dirstate");
+        // dotsl mode. Use the visible dirstate to answer the question.
+        let dot_dir = ident.resolve_full_dot_dir(path);
+        let dirstate_path = dirstate_path(&dot_dir, may_have_pending(path))?;
         let mut dirstate_file = match fs::File::open(&dirstate_path) {
             Ok(f) => f,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
@@ -203,5 +221,32 @@ pub fn fast_path_wdir_parents(path: &Path, ident: Identity) -> Result<Parents> {
         };
         let parsed = treestate::dirstate::Dirstate::deserialize(&mut dirstate_file)?;
         Ok(Parents::new(parsed.p1, parsed.p2))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use tempfile::tempdir;
+
+    use super::dirstate_path;
+
+    #[test]
+    fn test_dirstate_path_with_pending() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path().join("repo");
+        let dot_dir = root.join(".hg");
+        fs::create_dir_all(&dot_dir)?;
+
+        assert_eq!(dirstate_path(&dot_dir, false)?, dot_dir.join("dirstate"));
+
+        fs::write(dot_dir.join("dirstate.pending"), [])?;
+        assert_eq!(
+            dirstate_path(&dot_dir, true)?,
+            dot_dir.join("dirstate.pending")
+        );
+        assert_eq!(dirstate_path(&dot_dir, false)?, dot_dir.join("dirstate"));
+        Ok(())
     }
 }
