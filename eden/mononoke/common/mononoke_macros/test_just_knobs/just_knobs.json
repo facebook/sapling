@@ -18,6 +18,7 @@
     "scm/mononoke:derivation_queue_evict_sync_after_dep_delete": false,
     "scm/mononoke:derivation_queue_read_priority_queue": false,
     "scm/mononoke:derivation_queue_write_priority_queue": false,
+    "scm/mononoke:build_underived_batched_graph_v2": false,
     "scm/mononoke:disable_hooks_on_plain_push": false,
     "scm/mononoke:disable_git_symbolic_refs_caching": false,
     "scm/mononoke:ignore_change_xrepo_mapping_extra": false,
