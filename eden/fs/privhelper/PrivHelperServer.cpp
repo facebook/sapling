@@ -1754,6 +1754,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetMemoryPriorityForProcess(cursor);
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
       return processSetFuseReadAhead(cursor);
+    case PrivHelperConn::REQ_SET_RESTART_ARGS:
+    case PrivHelperConn::REQ_NOTIFY_CLEAN_SHUTDOWN:
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

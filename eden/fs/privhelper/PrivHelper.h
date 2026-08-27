@@ -12,6 +12,7 @@
 #include <folly/SocketAddress.h>
 #include <sys/types.h>
 #include <memory>
+#include <string>
 
 namespace folly {
 class EventBase;
@@ -76,6 +77,34 @@ struct StopFileAccessMonitorResponse {
   std::string tmpOutputPath;
   std::string specifiedOutputPath;
   bool shouldUpload;
+};
+
+/*
+ * Everything the privhelper needs in order to relaunch edenfs after a crash.
+ *
+ * The privhelper reads no configuration of its own: edenfs delivers the backoff
+ * policy here and the command to relaunch with in the sentinel below.
+ */
+struct EdenFsRestartArgs {
+  bool enabled = false;
+  // The daemon's restart sentinel. Its existence is the "still armed" flag:
+  // edenfs removes it when it shuts down on purpose. Its contents are the
+  // relaunch command, as {"argv": [...], "env": {...}, "nonce": N} JSON.
+  std::string sentinelPath;
+  // Identifies the generation that wrote the sentinel. The path is fixed per
+  // state dir, so without this a privhelper that outlives its daemon can read a
+  // sentinel a newer generation has since overwritten.
+  uint64_t sentinelNonce = 0;
+  // Restarts already performed within the current window. The privhelper exits
+  // after restarting, so the count travels to the new daemon through the
+  // environment and comes back here from the new daemon.
+  uint32_t restartCount = 0;
+  uint64_t firstRestartEpochSec = 0;
+  uint32_t maxRestarts = 0;
+  uint32_t windowSeconds = 0;
+
+  friend bool operator==(const EdenFsRestartArgs&, const EdenFsRestartArgs&) =
+      default;
 };
 
 struct NamespaceInfo {
