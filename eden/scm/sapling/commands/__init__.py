@@ -4113,6 +4113,8 @@ def log(ui, repo, *pats, **opts):
         opts["rev"] = [revsetlang.formatspec("reverse(::%lr)", opts.get("rev"))]
         del opts["follow"]
 
+    scmutil.maybe_show_path_typo_hint(ui, repo, pats, rev=opts.get("rev"))
+
     if opts.get("graph"):
         if linerange:
             raise error.Abort(_("graph not supported with line range patterns"))
