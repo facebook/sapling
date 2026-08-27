@@ -451,9 +451,11 @@ class EdenInstance(AbstractEdenInstance):
 
         try:
             # pyre-fixme [21]: Undefined import Could not find a module corresponding to import
-            from eden.fs.cli.facebook.xplat_logger import XplatLogger  # @manual
+            from eden.fs.cli.facebook.xplat_logger import get_xplat_logger  # @manual
 
-            return XplatLogger()
+            # Python CLI telemetry continues to use edenfs_events. Other
+            # destinations request their own view from the same transport.
+            return get_xplat_logger()
         except ImportError:
             # OSS / non-internal builds do not ship XplatLogger; use the legacy loggers.
             pass
