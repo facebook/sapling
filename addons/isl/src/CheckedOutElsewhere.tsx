@@ -9,6 +9,7 @@ import type {Hash, WorktreeEntry} from './types';
 
 import {atom} from 'jotai';
 import {basename, guessPathSep, isHexHash, pathsAreIdentical} from 'shared/utils';
+import {focusMode} from './atoms/FocusModeState';
 import {featureFlagLoadable} from './featureFlags';
 import {Internal} from './Internal';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
@@ -49,13 +50,14 @@ const enabledWorktreeInfo = atom(get => {
  * Map from commit hash -> sibling worktrees (excluding this repo's own worktree)
  * currently checked out (`.`) at that commit. Empty unless the worktrees feature
  * is enabled and this is an EdenFS repo, so it adds no overhead/visual noise
- * elsewhere.
+ * elsewhere. Also empty in focus mode, whose whole point is to hide commits
+ * outside your current stack.
  */
 export const otherWorktreeCheckoutsByHash = atom(get => {
   const empty = new Map<Hash, Array<WorktreeEntry>>();
 
   const enabled = get(enabledWorktreeInfo);
-  if (enabled == null) {
+  if (enabled == null || get(focusMode)) {
     return empty;
   }
   const {info, worktreeInfo} = enabled;
