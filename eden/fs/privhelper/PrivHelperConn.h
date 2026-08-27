@@ -232,6 +232,26 @@ class PrivHelperConn {
       std::string& mountPath,
       uint32_t& readAheadKb);
 
+  static UnixSocket::Message serializeSetRestartArgsRequest(
+      uint32_t xid,
+      const EdenFsRestartArgs& args);
+  static void parseSetRestartArgsRequest(
+      folly::io::Cursor& cursor,
+      EdenFsRestartArgs& args);
+
+  static UnixSocket::Message serializeNotifyCleanShutdownRequest(
+      uint32_t xid,
+      folly::StringPiece reason);
+  static void parseNotifyCleanShutdownRequest(
+      folly::io::Cursor& cursor,
+      std::string& reason);
+
+  /**
+   * Whether a request type is sent without a registered transaction ID, and so
+   * must not be replied to.
+   */
+  static bool isOneWayRequest(MsgType type);
+
   static void serializeSanityCheckResult(
       folly::io::Appender& appender,
       const SanityCheckResult& result);

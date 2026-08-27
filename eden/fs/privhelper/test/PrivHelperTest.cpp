@@ -293,7 +293,57 @@ UnixSocket::Message makeLegacyMacFuseConfigRequest(
 static_assert(PrivHelperConn::REQ_SET_DAEMON_TIMEOUT == 9);
 static_assert(PrivHelperConn::REQ_SET_USE_EDENFS == 10);
 
+// An arbitrary fixed point in time, so that the restart window can be aged
+// without sleeping.
+constexpr uint64_t kFakeNow = 1'700'000'000ull;
+
+// Distinct bytes above 2^32, so a truncated width or a swapped field fails.
+constexpr uint64_t kSentinelNonce = 0x0123456789abcdefull;
+
+EdenFsRestartArgs makeRestartArgs(std::string sentinelPath) {
+  EdenFsRestartArgs args;
+  args.enabled = true;
+  args.sentinelPath = std::move(sentinelPath);
+  args.sentinelNonce = kSentinelNonce;
+  args.restartCount = 1;
+  args.firstRestartEpochSec = kFakeNow;
+  args.maxRestarts = 3;
+  args.windowSeconds = 600;
+  return args;
+}
+
+EdenFsRestartArgs roundTrip(const EdenFsRestartArgs& args) {
+  auto msg = PrivHelperConn::serializeSetRestartArgsRequest(/*xid=*/42, args);
+  folly::io::Cursor cursor{&msg.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  EdenFsRestartArgs parsed;
+  PrivHelperConn::parseSetRestartArgsRequest(cursor, parsed);
+  return parsed;
+}
+
 } // namespace
+
+TEST(PrivHelperConnRestartArgs, roundTripPreservesAwkwardValues) {
+  auto expected =
+      makeRestartArgs("/var/eden dir/.edenfs_restart_armed \xc3\xa9");
+  // Above 2^32, to catch a truncated width on the wire.
+  expected.firstRestartEpochSec = uint64_t{1} << 33;
+
+  EXPECT_EQ(expected, roundTrip(expected));
+}
+
+TEST(PrivHelperConnRestartArgs, notifyCleanShutdownRoundTrip) {
+  constexpr folly::StringPiece kReason{"graceful restart"};
+  auto msg = PrivHelperConn::serializeNotifyCleanShutdownRequest(
+      /*xid=*/7, kReason);
+  folly::io::Cursor cursor{&msg.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  std::string reason;
+  PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
+  EXPECT_EQ(kReason, reason);
+}
 
 class RawPrivHelperClient : private UnixSocket::ReceiveCallback {
  public:
