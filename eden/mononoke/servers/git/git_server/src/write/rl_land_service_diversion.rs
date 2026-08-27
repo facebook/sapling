@@ -153,6 +153,12 @@ pub async fn check_emergency_push(
             request_context.repo.repo_identity().name(),
             identities.to_string(),
         );
+        let mut scuba = request_context.ctx.scuba().clone();
+        scuba.add("log_tag", "mrl_emergency_push_authorized");
+        scuba.add("repo", request_context.repo.repo_identity().name());
+        scuba.add("identities", identities.to_string());
+        scuba.unsampled();
+        scuba.log();
         Ok(EmergencyPushStatus::Authorized)
     } else {
         anyhow::bail!(
@@ -370,6 +376,18 @@ pub async fn divert_to_rl_land_service(
             scuba.add("request_id", response.request_id.as_str());
             scuba.add("attempts", response.attempts);
             scuba.add("skipped_branches", response.skipped_branches.len());
+            // The names exist only here: the server logs a count, and scribe
+            // records changed branches, never skipped ones.
+            scuba.add(
+                "skipped_branch_names",
+                response
+                    .skipped_branches
+                    .iter()
+                    .take(100)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
             scuba.unsampled();
             scuba.log();
             Ok(DiversionResult {
