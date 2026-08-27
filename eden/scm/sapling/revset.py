@@ -2456,7 +2456,7 @@ def remotebookmarkrevset(repo, subset, x):
 def _interestingdraft(repo, subset, x, order):
     """Subset of draft() used by the `titles` namespace."""
     getargs(x, 0, 0, "_interestingdraft takes no arguments")
-    revs = repo.revs("limit(sort(draft(),-rev), 1000)")
+    revs = repo.revs("limit(reverse(draft()) & age('<30d'), 1000)")
     if order == followorder:
         return subset & revs
     else:

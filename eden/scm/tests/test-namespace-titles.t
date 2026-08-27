@@ -9,6 +9,7 @@
 Prepare a repo
 
   $ newrepo
+  $ setconfig devel.default-date="2026-08-06T12:00Z"
   $ sl ci -m 'A: foo bar'
   $ sl ci -m 'B: bar-baz'
   $ sl go -q 'desc("A: foo")'
@@ -17,6 +18,8 @@ Prepare a repo
   $ sl ci -m 'E: not top() commit'
   $ sl ci -m 'F: not bottom() commit'
   $ sl ci -m 'G: stack() commit'
+  $ sl go -q 'desc("A: foo")'
+  $ sl ci -d '2026-07-06T12:00Z' -m 'H: old draft'
 
   $ sl go -q 'desc("D: not public")'
 
@@ -61,6 +64,17 @@ Match the "max" commit
 
   $ log bar
   B: bar-baz
+
+Does not match old commits
+
+  $ log old
+  abort: unknown revision 'old'!
+  [255]
+
+Users can override search range with a revset alias
+
+  $ log old "--config=revsetalias._interestingdraft()=draft()"
+  H: old draft
 
 Disabled for plain or agent
 
