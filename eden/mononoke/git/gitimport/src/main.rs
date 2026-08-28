@@ -49,6 +49,7 @@ use import_tools::GitimportTarget;
 use import_tools::LfsServerUrlFormat;
 use import_tools::ReuploadCommits;
 use import_tools::bookmark::BookmarkOperationErrorReporting;
+use import_tools::bookmark::set_bookmarks;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::git_reader::GitReader;
 use import_tools::import_tree_as_single_bonsai_changeset;
@@ -92,6 +93,11 @@ const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
 // Retry policy for the one-shot bulk bookmark listing.
 const BOOKMARK_LIST_RETRY_DELAY: Duration = Duration::from_secs(1);
 const BOOKMARK_LIST_RETRY_ATTEMPTS: usize = 4;
+// Cleanup deletions per bookmark transaction. One transaction per bookmark
+// makes a large backlog take hours (a full commit round-trip each); one
+// transaction for everything makes a single stale CAS fail the whole batch
+// and unboundedly widens the transaction.
+const CLEANUP_DELETE_BATCH_SIZE: usize = 100;
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
@@ -775,24 +781,49 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     .filter(|ref_name| *ref_name != "heads/HEAD")
                     .map(str::to_owned)
                     .collect();
-                for (bookmark_key, old_changeset) in existing_bookmarks.iter() {
-                    if git_ref_names.contains(bookmark_key.name().as_str()) {
-                        continue;
-                    }
-                    let allow_non_fast_forward = true;
-                    let operation =
-                        BookmarkOperation::new(bookmark_key.clone(), Some(*old_changeset), None)?;
+                // Each operation is paired with its log line up front; the line
+                // is emitted only after its batch's transaction commits, so a
+                // logged deletion is always a durable one.
+                let delete_operations = existing_bookmarks
+                    .iter()
+                    .filter(|(bookmark_key, _)| {
+                        !git_ref_names.contains(bookmark_key.name().as_str())
+                    })
+                    .map(|(bookmark_key, old_changeset)| {
+                        anyhow::Ok((
+                            BookmarkOperation::new(
+                                bookmark_key.clone(),
+                                Some(*old_changeset),
+                                None,
+                            )?,
+                            format!(
+                                "Bookmark: \"{}\": {:?} (deleted)",
+                                bookmark_key.name(),
+                                old_changeset
+                            ),
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
 
-                    set_bookmark(
+                let allow_non_fast_forward = true;
+                let mut remaining = delete_operations.into_iter().peekable();
+                while remaining.peek().is_some() {
+                    let (batch, batch_log_lines): (Vec<_>, Vec<_>) =
+                        remaining.by_ref().take(CLEANUP_DELETE_BATCH_SIZE).unzip();
+                    set_bookmarks(
                         &ctx,
                         &repo_context,
-                        &operation,
+                        batch,
                         pushvars.as_ref(),
                         allow_non_fast_forward,
                         BookmarkOperationErrorReporting::WithContext,
                         None,
+                        vec![],
                     )
                     .await?;
+                    for line in batch_log_lines {
+                        info!("{line}");
+                    }
                 }
             }
         };
