@@ -94,8 +94,7 @@ CPU threads.
 
 Eden can use a dedicated executor for the `prefetchFilesV2` Thrift endpoint
 (`EdenServer::prefetchFilesV2Executor_`). This is controlled by the
-`thrift:use-prefetch-executor` config setting (defaults to true) and is also
-currently gated by the `experimental.prefetch-optimizations-v2` flag. When enabled,
+`thrift:use-prefetch-executor` config setting (defaults to true). When enabled,
 prefetch requests are offloaded to a dedicated thread pool to avoid overloading
 the Thrift CPU worker pool, similar to how checkout operations use a dedicated
 executor.

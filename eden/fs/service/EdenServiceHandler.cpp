@@ -3422,8 +3422,7 @@ EdenServiceHandler::streamSelectedChangesSince(
         std::make_shared<FilteredBackingStore>(
             mountHandle.getEdenMountPtr()->getObjectStore()->getBackingStore(),
             std::move(filter),
-            server_->getServerState()->getReloadableConfig(),
-            false);
+            server_->getServerState()->getReloadableConfig());
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,
@@ -5348,8 +5347,7 @@ folly::coro::Task<void> EdenServiceHandler::co_prefetchFiles(
   }
 
   auto serverState = server_->getServerState();
-  ThriftGlobImpl globber{
-      *params, serverState->getEdenConfig()->prefetchOptimizations.getValue()};
+  ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *params->mountPoint(),
@@ -5624,11 +5622,7 @@ EdenServiceHandler::prefetchFilesV2Impl(
     params->revisions() =
         resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
   }
-  ThriftGlobImpl globber{
-      *params,
-      server_->getServerState()
-          ->getEdenConfig()
-          ->prefetchOptimizations.getValue()};
+  ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS(
       DBG2,
       params->returnStats().value(),

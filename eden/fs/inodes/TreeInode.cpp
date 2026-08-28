@@ -4520,8 +4520,7 @@ void TreeInode::computeCheckoutActions(
     }
   };
 
-  if (getMount()->getEdenConfig()->batchCheckoutDirMutations.getValue() &&
-      !reportLocalOnlyAsConflicts) {
+  if (!reportLocalOnlyAsConflicts) {
     PathMapMutator<DirEntry> mutator(std::move(contents->entries));
     try {
       diffLoop(mutator);
@@ -4533,22 +4532,21 @@ void TreeInode::computeCheckoutActions(
     contents->entries = DirContents(mutator.finalize());
   } else {
     diffLoop(contents->entries);
-    if (reportLocalOnlyAsConflicts) {
-      auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
-        return tree && tree->find(name) != tree->cend();
-      };
 
-      for (auto it = contents->entries.begin(); it != contents->entries.end();
-           ++it) {
-        if (existsInTree(fromTree, it->first) ||
-            existsInTree(toTree, it->first)) {
-          continue;
-        }
-        auto action =
-            processLocalOnlyCheckoutEntry(ctx, it, pendingLoads, hadConflicts);
-        if (action) {
-          actions.push_back(std::move(action));
-        }
+    auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
+      return tree && tree->find(name) != tree->cend();
+    };
+
+    for (auto it = contents->entries.begin(); it != contents->entries.end();
+         ++it) {
+      if (existsInTree(fromTree, it->first) ||
+          existsInTree(toTree, it->first)) {
+        continue;
+      }
+      auto action =
+          processLocalOnlyCheckoutEntry(ctx, it, pendingLoads, hadConflicts);
+      if (action) {
+        actions.push_back(std::move(action));
       }
     }
   }
@@ -5551,9 +5549,7 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
                   ctx->renameLock(),
                   currentName.piece(),
                   restrictedTreeId,
-                  !getMount()
-                       ->getEdenConfig()
-                       ->skipCheckoutChildOverlayWrites.getValue(),
+                  /*writeOverlay=*/false,
                   /*isRestricted=*/true,
                   restrictedHasACL);
             }
@@ -5721,9 +5717,7 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
                   ctx->renameLock(),
                   currentName.piece(),
                   restrictedTreeId,
-                  !getMount()
-                       ->getEdenConfig()
-                       ->skipCheckoutChildOverlayWrites.getValue(),
+                  /*writeOverlay=*/false,
                   /*isRestricted=*/true,
                   restrictedHasACL);
             }
@@ -6120,25 +6114,22 @@ void TreeInode::saveOverlayPostCheckout(
   if (stateChanged) {
     // If our state changed, tell our parent.
     //
-    // When skipCheckoutChildOverlayWrites is true, we pass
-    // writeOverlay=false because each directory's overlay is written once by
-    // its own saveOverlayPostCheckout() call. The in-memory materialization
-    // state is still propagated up the tree so that each ancestor knows it's
-    // materialized, but the overlay writes are deferred until each ancestor's
-    // own saveOverlayPostCheckout() runs.
+    // We pass writeOverlay=false because each directory's overlay is written
+    // once by its own saveOverlayPostCheckout() call. The in-memory
+    // materialization state is still propagated up the tree so that each
+    // ancestor knows it's materialized, but the overlay writes are deferred
+    // until each ancestor's own saveOverlayPostCheckout() runs.
     //
     // If we get an error during checkout (or eden crashes) we can be in an
     // inconsistent state where the parent has updated in-memory state that has
     // not been persisted to the overlay. I think this is okay since the user
     // must continue the interrupted checkout, which will re-checkout the parent
     // directory.
-    bool writeOverlay =
-        !getMount()->getEdenConfig()->skipCheckoutChildOverlayWrites.getValue();
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
       if (isMaterialized) {
         loc.parent->childMaterialized(
-            ctx->renameLock(), loc.name, writeOverlay);
+            ctx->renameLock(), loc.name, /*writeOverlay=*/false);
       } else {
         if (tree == nullptr) {
           return;
@@ -6147,7 +6138,7 @@ void TreeInode::saveOverlayPostCheckout(
             ctx->renameLock(),
             loc.name,
             tree->getObjectId(),
-            writeOverlay,
+            /*writeOverlay=*/false,
             tree->isRestricted(),
             tree->hasACL());
       }

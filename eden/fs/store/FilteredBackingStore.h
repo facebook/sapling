@@ -37,8 +37,7 @@ class FilteredBackingStore
   FilteredBackingStore(
       std::shared_ptr<BackingStore> backingStore,
       std::unique_ptr<Filter> filter,
-      std::shared_ptr<ReloadableConfig> config,
-      bool optimizeUnfilteredTrees);
+      std::shared_ptr<ReloadableConfig> config);
 
   ~FilteredBackingStore() override;
 
@@ -129,10 +128,6 @@ class FilteredBackingStore
    * Reference to the eden config, may be a null pointer in unit tests.
    */
   std::shared_ptr<ReloadableConfig> config_;
-
-  // Whether we should optimize unfiltered trees to directly use underlying
-  // SaplingBackingStore's ObjectIds.
-  bool optimizeUnfilteredTrees_ = false;
 
   // Allows FilteredBackingStore creator to specify how they want to filter
   // paths. This returns true if the given path is filtered in the given

@@ -29,11 +29,9 @@ namespace facebook::eden {
 FilteredBackingStore::FilteredBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::unique_ptr<Filter> filter,
-    std::shared_ptr<ReloadableConfig> config,
-    bool optimizeUnfilteredTrees)
+    std::shared_ptr<ReloadableConfig> config)
     : backingStore_{std::move(backingStore)},
       config_{std::move(config)},
-      optimizeUnfilteredTrees_{optimizeUnfilteredTrees},
       filter_{std::move(filter)} {
   isSaplingBackingStore_ =
       dynamic_cast<SaplingBackingStore*>(backingStore_.get()) != nullptr;
@@ -436,7 +434,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
                    filteredId = std::move(filteredId)](GetTreeResult&& result) {
         auto treeType = filteredId.objectType();
         if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE &&
-            self->isSaplingBackingStore_ && self->optimizeUnfilteredTrees_) {
+            self->isSaplingBackingStore_) {
           // Tree is recursively unfiltered - activate fast path by not
           // rewriting ids within the tree entries. We still copy the tree so we
           // can modify its oid to match the requested oid.
@@ -477,7 +475,7 @@ FilteredBackingStore::co_getTree(
 
   auto treeType = filteredId.objectType();
   if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE &&
-      isSaplingBackingStore_ && optimizeUnfilteredTrees_) {
+      isSaplingBackingStore_) {
     // Tree is recursively unfiltered - activate fast path by not
     // rewriting ids within the tree entries. We still copy the tree so we
     // can modify its oid to match the requested oid.

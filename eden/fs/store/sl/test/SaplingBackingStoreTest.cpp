@@ -596,47 +596,7 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
 
-TEST_F(
-    SaplingBackingStoreNoFaultInjectorTest,
-    prefetchBlobsWithDuplicatesNoOptimizations) {
-  testEdenConfig->ignorePrefetchResult.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->prefetchOptimizations.setValue(
-      false, ConfigSourceType::UserConfig);
-
-  auto tree = folly::coro::blockingWait(
-      folly::coro::timeout(
-          queuedBackingStore->co_getRootTree(
-              commit1, ObjectFetchContext::getNullContext()),
-          kTestTimeout));
-
-  std::vector<ObjectId> blobIds;
-  for (auto& [name, entry] : *tree.tree) {
-    if (!entry.isTree()) {
-      blobIds.push_back(entry.getObjectId());
-      blobIds.push_back(entry.getObjectId());
-    }
-  }
-
-  ASSERT_FALSE(blobIds.empty());
-
-  auto prefetchResult =
-      queuedBackingStore
-          ->prefetchBlobs(
-              folly::range(blobIds), ObjectFetchContext::getNullContext())
-          .get(kTestTimeout);
-
-  EXPECT_EQ(prefetchResult, folly::unit);
-}
-
-TEST_F(
-    SaplingBackingStoreNoFaultInjectorTest,
-    prefetchBlobsWithDuplicatesWithOptimizations) {
-  testEdenConfig->ignorePrefetchResult.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->prefetchOptimizations.setValue(
-      true, ConfigSourceType::UserConfig);
-
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, prefetchBlobsWithDuplicates) {
   auto tree = folly::coro::blockingWait(
       folly::coro::timeout(
           queuedBackingStore->co_getRootTree(

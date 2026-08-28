@@ -107,7 +107,7 @@ class FakeSubstringFilteredBackingStoreTest
     wrappedStore_ = std::make_shared<FakeBackingStore>();
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter), edenConfig, true);
+        wrappedStore_, std::move(fakeFilter), edenConfig);
   }
 
   void TearDown() override {
@@ -124,7 +124,7 @@ class FakePrefixFilteredBackingStoreTest : public FilteredBackingStoreTestBase {
     wrappedStore_ = std::make_shared<FakeBackingStore>();
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter), edenConfig, true);
+        wrappedStore_, std::move(fakeFilter), edenConfig);
   }
 
   void TearDown() override {
@@ -141,7 +141,7 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
     filteredStoreFFI_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(hgFilter), edenConfig, true);
+        wrappedStore_, std::move(hgFilter), edenConfig);
   }
 
   void TearDown() override {

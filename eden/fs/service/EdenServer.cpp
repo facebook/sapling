@@ -795,8 +795,7 @@ EdenServer::EdenServer(
       checkoutRevisionExecutor_{
           makeCheckoutRevisionThreads(thriftUseCheckoutExecutor_, edenConfig)},
       thriftUsePrefetchExecutor_{
-          edenConfig->thriftUsePrefetchExecutor.getValue() &&
-          edenConfig->prefetchOptimizations.getValue()},
+          edenConfig->thriftUsePrefetchExecutor.getValue()},
       prefetchFilesV2Executor_{
           makePrefetchFilesV2Threads(thriftUsePrefetchExecutor_, edenConfig)},
       runningMountHealthChecks_{std::make_shared<

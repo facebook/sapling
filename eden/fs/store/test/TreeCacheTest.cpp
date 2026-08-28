@@ -91,6 +91,10 @@ struct TreeCacheTest : ::testing::Test {
         cacheMaxSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         cacheMinEntries, ConfigSourceType::Default, true);
+    // These tests assert exact size-based eviction behavior, which requires a
+    // single shard: with multiple shards the tiny per-shard capacity evicts
+    // entries immediately.
+    rawEdenConfig->treeCacheShards.setValue(1, ConfigSourceType::Default, true);
 
     edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
 

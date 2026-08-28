@@ -1838,13 +1838,13 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Unified flag to control all the prefetch optimizations I'm working on so we
-   * can run an experiment using a single config flag. The various optimizations
-   * are also controlled by separate config flags that are enabled by default.
+   * The prefetch optimizations this flag used to gate are now unconditional.
+   * The setting is retained (but unread) so that remote configs which still
+   * set it don't trigger unknown-config-key warnings.
    */
   ConfigSetting<bool> prefetchOptimizations{
       "experimental:prefetch-optimizations-v2",
-      false,
+      true,
       this};
 
   /**
@@ -2065,9 +2065,6 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Number of shards for the tree cache. Higher number means lower lock
    * contention, but less perfect eviction.
-   *
-   * Currently the shards>1 cache behavior is also gated by
-   * experimental.prefetch-optimizations-v2=true.
    */
   ConfigSetting<uint64_t> treeCacheShards{"treecache:shards", 16, this};
 

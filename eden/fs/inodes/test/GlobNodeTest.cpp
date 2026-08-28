@@ -445,8 +445,13 @@ CO_TEST(GlobNodeTest, treeLoadError) {
   builder.setReady("dir");
   builder.setReady("dir/a");
 
+  // Disable async rescheduling of the recursive descent: the fault-injection
+  // choreography below assumes subtree loads are requested synchronously, so
+  // that the dir/a/b load is already pending when the error is triggered.
   GlobNode globRoot(
-      /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
+      /*includeDotfiles=*/false,
+      mount.getConfig()->getCaseSensitive(),
+      /*recursiveAsyncDepth=*/0);
   globRoot.parse("dir/**/a.txt");
 
   auto rootInode = mount.getTreeInode(RelativePathPiece());

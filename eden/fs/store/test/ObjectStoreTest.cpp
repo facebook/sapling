@@ -52,6 +52,9 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         kTreeCacheMaximumSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
+    // The tests rely on deterministic caching of small trees, so use a single
+    // shard to avoid the tiny per-shard capacity evicting entries immediately.
+    rawEdenConfig->treeCacheShards.setValue(1, ConfigSourceType::Default, true);
     auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
     stats = makeRefPtr<EdenStats>();
     treeCache = TreeCache::create(edenConfig, stats.copy());

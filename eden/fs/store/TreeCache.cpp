@@ -51,13 +51,9 @@ TreeCache::TreeCache(std::shared_ptr<ReloadableConfig> config, EdenStatsPtr stat
             config->getEdenConfig()->inMemoryTreeCacheMinimumItems.getValue(),
             std::move(stats),
             [&config]() -> size_t {
-              auto edenConfig = config->getEdenConfig();
-              auto shards = edenConfig->treeCacheShards.getValue();
-              if (edenConfig->prefetchOptimizations.getValue() && shards > 0) {
-                return shards;
-              } else {
-                return 1;
-              }
+              auto shards =
+                  config->getEdenConfig()->treeCacheShards.getValue();
+              return shards > 0 ? shards : 1;
             }()},
         config_{config} {
   registerStats();

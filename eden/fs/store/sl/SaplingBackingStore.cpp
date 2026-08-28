@@ -139,64 +139,6 @@ void reportPrefetchStats(
   }
 }
 
-/**
- * Aggregate per-origin blob counts/bytes from a completed prefetch and feed
- * them to the stats context. Shared by the futures and coroutine fallback
- * paths of prefetchBlobs so the two implementations cannot drift.
- *
- * Origin attribution here is best-effort: the import queue currently labels
- * every queued blob fetch FromNetworkFetch (per-request origin is not plumbed
- * through SaplingImportRequest), so warm-cache prefetches over-attribute to
- * network on this path. The prefetch-optimizations path reports accurate
- * local/remote splits via reportPrefetchStats instead.
- */
-void aggregatePrefetchBlobStats(
-    const ObjectFetchContextPtr& context,
-    const std::vector<BackingStore::GetBlobResult>& results) {
-  auto* statsCtx = dynamic_cast<StatsFetchContext*>(context.get());
-  if (!statsCtx || !statsCtx->shouldCollectStats()) {
-    return;
-  }
-
-  // Aggregate blob stats by origin for efficient batch reporting.
-  uint64_t counts[ObjectFetchContext::kOriginEnumMax] = {};
-  uint64_t bytes[ObjectFetchContext::kOriginEnumMax] = {};
-  size_t missingBlobCount = 0;
-
-  for (auto& blobResult : results) {
-    if (!blobResult.blob) {
-      ++missingBlobCount;
-      continue;
-    }
-    auto origin = blobResult.origin;
-    if (origin < ObjectFetchContext::kOriginEnumMax) {
-      counts[origin]++;
-      bytes[origin] += blobResult.blob->getSize();
-    }
-  }
-
-  if (missingBlobCount > 0) {
-    // Logged once for the whole batch rather than per-blob: a single
-    // problematic prefetch glob can otherwise flood the log with one line
-    // per missing blob.
-    XLOGF(
-        ERR,
-        "prefetch stats unavailable for {} of {} blobs: no blob in result",
-        missingBlobCount,
-        results.size());
-  }
-
-  for (unsigned o = 0; o < ObjectFetchContext::kOriginEnumMax; ++o) {
-    if (counts[o] > 0) {
-      statsCtx->didFetchBatch(
-          ObjectFetchContext::Blob,
-          static_cast<ObjectFetchContext::Origin>(o),
-          counts[o],
-          bytes[o]);
-    }
-  }
-}
-
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -2113,9 +2055,6 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
 folly::coro::now_task<folly::Unit> SaplingBackingStore::co_prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
-  bool prefetchOptimizations =
-      config_->getEdenConfig()->prefetchOptimizations.getValue();
-
   std::vector<SlOidView> slOids;
   slOids.reserve(ids.size());
   for (const auto& id : ids) {
@@ -2131,85 +2070,62 @@ folly::coro::now_task<folly::Unit> SaplingBackingStore::co_prefetchBlobs(
       folly::Range{slOids.data(), slOids.size()},
       ObjectFetchContext::ObjectType::Blob);
 
-  if (prefetchOptimizations &&
-      config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
-    std::vector<sapling::SaplingRequest> requests;
-    requests.reserve(ids.size());
-    for (size_t i = 0; i < ids.size(); i++) {
-      requests.emplace_back(slOids[i], context->getCause(), context.copy());
-    }
-
-    co_await folly::coro::co_reschedule_on_current_executor;
-
-    auto importTracker = RequestMetricsScope{&pendingImportPrefetchWatches_};
-
-    auto unique = generateUniqueID();
-    traceBus_->publish(
-        HgImportTraceEvent::start(
-            unique,
-            HgImportTraceEvent::BLOB_BATCH,
-            slOids[0],
-            context->getPriority().getClass(),
-            context->getCause(),
-            context->getClientPid()));
-
-    folly::stop_watch<std::chrono::milliseconds> watch;
-    XLOGF(DBG4, "Batch fetching {} blobs from Sapling", requests.size());
-
-    size_t failureCount = 0;
-    auto fetchStats = nativeGetBlobBatch(
-        folly::range(requests),
-        sapling::FetchMode::AllowRemote,
-        true, // IGNORE_RESULT
-        [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
-          if (content.hasException()) {
-            failureCount++;
-            XLOGF(
-                ERR,
-                "Failed to batch import {} from Sapling: {}",
-                requests[index].oid,
-                content.exception().what().toStdString());
-          }
-        });
-    reportPrefetchStats(context, fetchStats, /*totalBytes=*/0, failureCount);
-
-    traceBus_->publish(
-        HgImportTraceEvent::finish(
-            unique,
-            HgImportTraceEvent::BLOB_BATCH,
-            slOids[0],
-            context->getPriority().getClass(),
-            context->getCause(),
-            context->getClientPid(),
-            context->getFetchedSource()));
-
-    stats_->increment(
-        &SaplingBackingStoreStats::prefetchBlobFailure, failureCount);
-    stats_->increment(
-        &SaplingBackingStoreStats::prefetchBlobSuccess,
-        requests.size() - failureCount);
-    stats_->addDuration(
-        &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
-  } else {
-    std::vector<folly::coro::Task<GetBlobResult>> tasks;
-    tasks.reserve(ids.size());
-
-    for (size_t i = 0; i < ids.size(); i++) {
-      tasks.emplace_back(
-          folly::coro::co_invoke(
-              [this](SlOid slOid, ObjectFetchContextPtr ctx)
-                  -> folly::coro::Task<GetBlobResult> {
-                co_return co_await co_getBlobEnqueue(
-                    slOid, ctx, SaplingImportRequest::FetchType::Prefetch);
-              },
-              SlOid{slOids[i]},
-              context.copy()));
-    }
-
-    auto results = co_await folly::coro::collectAllRange(std::move(tasks));
-    // Keep stats behavior identical to the futures fallback path above.
-    aggregatePrefetchBlobStats(context, results);
+  std::vector<sapling::SaplingRequest> requests;
+  requests.reserve(ids.size());
+  for (size_t i = 0; i < ids.size(); i++) {
+    requests.emplace_back(slOids[i], context->getCause(), context.copy());
   }
+
+  co_await folly::coro::co_reschedule_on_current_executor;
+
+  auto importTracker = RequestMetricsScope{&pendingImportPrefetchWatches_};
+
+  auto unique = generateUniqueID();
+  traceBus_->publish(
+      HgImportTraceEvent::start(
+          unique,
+          HgImportTraceEvent::BLOB_BATCH,
+          slOids[0],
+          context->getPriority().getClass(),
+          context->getCause(),
+          context->getClientPid()));
+
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  XLOGF(DBG4, "Batch fetching {} blobs from Sapling", requests.size());
+
+  size_t failureCount = 0;
+  auto fetchStats = nativeGetBlobBatch(
+      folly::range(requests),
+      sapling::FetchMode::AllowRemote,
+      true, // IGNORE_RESULT
+      [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+        if (content.hasException()) {
+          failureCount++;
+          XLOGF(
+              ERR,
+              "Failed to batch import {} from Sapling: {}",
+              requests[index].oid,
+              content.exception().what().toStdString());
+        }
+      });
+  reportPrefetchStats(context, fetchStats, /*totalBytes=*/0, failureCount);
+
+  traceBus_->publish(
+      HgImportTraceEvent::finish(
+          unique,
+          HgImportTraceEvent::BLOB_BATCH,
+          slOids[0],
+          context->getPriority().getClass(),
+          context->getCause(),
+          context->getClientPid(),
+          context->getFetchedSource()));
+
+  stats_->increment(
+      &SaplingBackingStoreStats::prefetchBlobFailure, failureCount);
+  stats_->increment(
+      &SaplingBackingStoreStats::prefetchBlobSuccess,
+      requests.size() - failureCount);
+  stats_->addDuration(&SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
   co_return folly::unit;
 }
 

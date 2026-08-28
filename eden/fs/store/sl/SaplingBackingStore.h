@@ -358,10 +358,7 @@ class SaplingBackingStore final
       sameRequestsDifferentFetchCause);
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
-      prefetchBlobsWithDuplicatesNoOptimizations);
-  FRIEND_TEST(
-      SaplingBackingStoreNoFaultInjectorTest,
-      prefetchBlobsWithDuplicatesWithOptimizations);
+      prefetchBlobsWithDuplicates);
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       prefetchBlobsWithDuplicatesResolvesAllCallbacks);

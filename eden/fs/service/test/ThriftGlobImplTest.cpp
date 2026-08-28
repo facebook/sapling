@@ -143,7 +143,7 @@ CO_TEST_F(ThriftGlobImplTest, suppressesResultPathsForPrefetch) {
   PrefetchParams params;
   params.returnPrefetchedFiles() = false;
 
-  auto globber = ThriftGlobImpl{params, true};
+  auto globber = ThriftGlobImpl{params};
   auto result = co_await globber.glob(
       edenMount,
       serverState,
