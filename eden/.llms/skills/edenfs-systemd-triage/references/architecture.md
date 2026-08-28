@@ -39,6 +39,7 @@ ExecReload=/usr/local/bin/edenfsctl systemd-start --args-file /%I/.edenfs_start_
 Restart=on-failure
 RestartSec=5s
 Slice=edenfs.slice
+ManagedOOMPreference=avoid
 KillMode=process
 TimeoutStartSec=600
 TimeoutStopSec=300
@@ -63,6 +64,7 @@ WantedBy=default.target
 | `TimeoutStartSec=600` | 10 minutes for startup (EdenFS can take a long time with many checkouts). |
 | `TimeoutStopSec=300` | 5 minutes for shutdown before SIGKILL. |
 | `Slice=edenfs.slice` | Isolates EdenFS in its own cgroup slice for memory control. |
+| `ManagedOOMPreference=avoid` | Deprioritizes EdenFS in `systemd-oomd` victim selection. Only honored for units whose cgroup systemd owns; no effect on the kernel OOM killer. |
 
 ### The Args File
 
@@ -159,7 +161,7 @@ user.slice/
           └── scribe_cat (multiple)
 ```
 
-The `edenfs.slice` provides cgroup isolation. Memory knobs (`MemoryLow`, `MemoryHigh`) can be set on this slice to protect EdenFS from OOM or throttle it to prevent dominating memory.
+The `edenfs.slice` provides cgroup isolation. Memory knobs (`MemoryLow`, `MemoryHigh`) can be set on this slice to protect EdenFS from OOM or throttle it to prevent dominating memory. The slice also carries `ManagedOOMPreference=avoid`: `systemd-oomd` selects victims at the cgroup it monitors, and since `edenfs@.service` is the only unit in `edenfs.slice`, setting the preference on the service alone does not protect against a kill decision made at the slice level — the slice must be marked to avoid too.
 
 ## Memory Protection
 
