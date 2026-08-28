@@ -148,6 +148,34 @@ TEST(EdenMount, initFailure) {
       "commit 1 not found");
 }
 
+TEST(EdenMount, pressureGcStallTracking) {
+  FakeTreeBuilder builder;
+  builder.setFile("src/test.c", "testy tests");
+  TestMount testMount{builder};
+  const auto& edenMount = testMount.getEdenMount();
+
+  EXPECT_FALSE(edenMount->isPressureGcStalled());
+
+  // A large run that drops nothing stalls the mount.
+  edenMount->recordPressureGcOutcome(100'000, 1'000'000, 1'000'000);
+  EXPECT_TRUE(edenMount->isPressureGcStalled());
+
+  // A run that drops more than 10% of what it invalidated clears the stall.
+  edenMount->recordPressureGcOutcome(100'000, 1'000'000, 989'999);
+  EXPECT_FALSE(edenMount->isPressureGcStalled());
+
+  // Dropping 10% or less counts as stalled, including when the inode count
+  // grew because concurrent lookups outpaced the sweep.
+  edenMount->recordPressureGcOutcome(100'000, 1'000'000, 990'000);
+  EXPECT_TRUE(edenMount->isPressureGcStalled());
+  edenMount->recordPressureGcOutcome(100'000, 1'000'000, 1'050'000);
+  EXPECT_TRUE(edenMount->isPressureGcStalled());
+
+  // Small runs never count as stalled, and clear an existing stall.
+  edenMount->recordPressureGcOutcome(5'000, 50'000, 50'000);
+  EXPECT_FALSE(edenMount->isPressureGcStalled());
+}
+
 TEST(EdenMount, getTreeOrTreeEntry) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

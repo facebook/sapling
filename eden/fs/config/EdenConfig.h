@@ -579,6 +579,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether to fall back to the regular garbage-collection-period cadence
+   * for a mount whose pressure-based GC runs are not reclaiming the inodes
+   * they invalidate (see EdenMount::isPressureGcStalled). This avoids
+   * re-invalidating a large set of stuck inodes at the pressure-derived
+   * rate when doing so has no effect.
+   */
+  ConfigSetting<bool> pressureBasedGcBackoff{
+      "mount:pressure-gc-backoff",
+      true,
+      this};
+
+  /**
    * If the number of inodes is greater than this threshold, the garbage
    * collection cutoff will be more aggressive.
    *

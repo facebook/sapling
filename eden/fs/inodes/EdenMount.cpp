@@ -1195,6 +1195,47 @@ void EdenMount::updateInodePressurePolicy() {
       gcPeriodMax.count());
 }
 
+// Below this many invalidations, rerunning GC is cheap enough that stall
+// tracking isn't worthwhile.
+constexpr uint64_t kPressureGcStallMinInvalidated = 10'000;
+
+void EdenMount::recordPressureGcOutcome(
+    uint64_t numInvalidated,
+    uint64_t inodesBefore,
+    uint64_t inodesAfter) {
+  // GC flushes the invalidation queue between invalidating entries and
+  // sweeping, and the kernel FORGETs triggered by the invalidations arrive
+  // quickly in practice, so most of a run's invalidations should be dropped
+  // from the inode count by the run's own sweep. Concurrent lookups can
+  // offset some of the drop, but a healthy run reclaims far more than 10%;
+  // should a run be misjudged anyway, the cost is one cycle at the regular
+  // GC cadence.
+  auto numDropped =
+      static_cast<int64_t>(inodesBefore) - static_cast<int64_t>(inodesAfter);
+  bool stalled = numInvalidated >= kPressureGcStallMinInvalidated &&
+      numDropped <= static_cast<int64_t>(numInvalidated / 10);
+
+  if (pressureGcStalled_.exchange(stalled, std::memory_order_relaxed) !=
+      stalled) {
+    if (stalled) {
+      XLOGF(
+          INFO,
+          "Pressure-based GC for {} invalidated {} inodes but only dropped "
+          "{}; the kernel may no longer hold the invalidated entries. "
+          "Falling back to the regular GC period.",
+          getPath(),
+          numInvalidated,
+          numDropped);
+    } else {
+      XLOGF(
+          INFO,
+          "Pressure-based GC for {} is reclaiming inodes again, resuming "
+          "the pressure-based GC period",
+          getPath());
+    }
+  }
+}
+
 std::optional<int64_t> EdenMount::getCheckoutProgress() const {
   auto parentLock = parentState_.rlock();
   if (!std::holds_alternative<ParentCommitState::CheckoutInProgress>(

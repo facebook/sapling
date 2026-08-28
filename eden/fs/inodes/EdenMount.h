@@ -668,6 +668,26 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   void updateInodePressurePolicy();
 
+  /**
+   * Record the outcome of a completed pressure-based GC run, updating
+   * isPressureGcStalled().
+   */
+  void recordPressureGcOutcome(
+      uint64_t numInvalidated,
+      uint64_t inodesBefore,
+      uint64_t inodesAfter);
+
+  /**
+   * Whether the most recent pressure-based GC run failed to reclaim the
+   * inodes it invalidated. When EdenFS tracks FS refcounts the kernel no
+   * longer holds, GC invalidations fail (silently) with ENOENT and produce
+   * no FORGETs, so rerunning pressure GC just re-invalidates the same
+   * inodes to no effect.
+   */
+  bool isPressureGcStalled() const {
+    return pressureGcStalled_.load(std::memory_order_relaxed);
+  }
+
   const CheckoutConfig* getCheckoutConfig() const {
     return checkoutConfig_.get();
   }
@@ -1539,6 +1559,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   folly::AtomicReadMostlyMainPtr<const InodePressurePolicy>
       cachedPressurePolicy_;
+
+  /**
+   * Whether the most recent pressure-based GC run failed to reclaim the
+   * inodes it invalidated. See recordPressureGcOutcome().
+   */
+  std::atomic<bool> pressureGcStalled_{false};
 };
 
 /**

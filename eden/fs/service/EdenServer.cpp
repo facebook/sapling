@@ -3276,6 +3276,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger) {
   struct InodeGCResult {
     uint64_t numInvalidated;
+    size_t numUnloaded;
     size_t zeroFsRefTreesRetained;
   };
 
@@ -3321,21 +3322,25 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
       .thenTry(
           [inode, gcToken, keepRememberedParentTreesLoaded](
               folly::Try<uint64_t>&& invalidatedTry) -> InodeGCResult {
+            size_t numUnloaded = 0;
             size_t zeroFsRefTreesRetained = 0;
             if (!gcToken.isCancellationRequested()) {
               if (keepRememberedParentTreesLoaded) {
-                zeroFsRefTreesRetained =
-                    inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken)
-                        .zeroFsRefTreesRetained;
+                auto unloadResult =
+                    inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken);
+                numUnloaded = unloadResult.unloaded;
+                zeroFsRefTreesRetained = unloadResult.zeroFsRefTreesRetained;
               } else {
-                inode->unloadChildrenUnreferencedByFs(gcToken);
+                numUnloaded = inode->unloadChildrenUnreferencedByFs(gcToken);
               }
             }
-            return {invalidatedTry.value(), zeroFsRefTreesRetained};
+            return {
+                invalidatedTry.value(), numUnloaded, zeroFsRefTreesRetained};
           })
       .ensure([lease = std::move(lease)] {})
       .thenTry([inodeGCRuntime,
                 edenFsEventsLogger = std::move(edenFsEventsLogger),
+                &mount,
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC,
@@ -3345,6 +3350,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         bool success = resultTry.hasValue();
         int64_t numInvalidated =
             success ? folly::to_signed(resultTry.value().numInvalidated) : 0;
+        size_t numUnloaded = success ? resultTry.value().numUnloaded : 0;
         size_t zeroFsRefTreesRetained =
             success ? resultTry.value().zeroFsRefTreesRetained : 0;
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
@@ -3363,12 +3369,14 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         auto logMessage = [&] {
           return fmt::format(
               "{} GC for: {}, completed in: {} seconds, "
-              "invalidated: {}, inodes before: {}, inodes after: {}, "
+              "invalidated: {}, unloaded: {}, "
+              "inodes before: {}, inodes after: {}, "
               "fsRefCount==0 trees retained: {}",
               pressureBased ? "Pressure-based" : "Config-based",
               mountPath,
               runtime.count(),
               numInvalidated,
+              numUnloaded,
               totalNumberOfInodesBeforeGC,
               totalNumberOfInodesAfterGC,
               zeroFsRefTreesRetained);
@@ -3377,6 +3385,13 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
           XLOG(DBG2) << logMessage();
         } else {
           XLOG(DBG4) << logMessage();
+        }
+
+        if (success && pressureBased) {
+          mount.recordPressureGcOutcome(
+              resultTry.value().numInvalidated,
+              totalNumberOfInodesBeforeGC,
+              totalNumberOfInodesAfterGC);
         }
 
         return resultTry.value().numInvalidated;
@@ -3448,6 +3463,18 @@ void EdenServer::garbageCollectAllMounts() {
       auto policy = mount.getInodePressurePolicy();
       auto inodeCount = mount.getInodeMap()->getTotalInodeCountFast();
       auto gcPeriod = policy->getGcPeriod(inodeCount);
+      if (config->pressureBasedGcBackoff.getValue() &&
+          mount.isPressureGcStalled()) {
+        // Pressure GC is not reclaiming the inodes it invalidates (e.g.
+        // EdenFS is tracking FS refcounts the kernel no longer holds, so
+        // invalidations produce no FORGETs). Re-invalidating a large set of
+        // stuck inodes at the pressure-derived rate is wasted work, so fall
+        // back to the regular GC cadence until a run makes progress again.
+        gcPeriod = std::max(
+            gcPeriod,
+            std::chrono::duration_cast<std::chrono::seconds>(
+                config->gcPeriod.getValue()));
+      }
       auto lastGcTime = lastPressureBasedGcTimes_.find(mount.getPath());
       if (lastGcTime != lastPressureBasedGcTimes_.end() &&
           steadyNow - lastGcTime->second < gcPeriod) {
