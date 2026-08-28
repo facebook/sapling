@@ -66,6 +66,12 @@ struct UnderivedSegment {
     batches: Vec<BatchRange>,
 }
 
+struct UnderivedGraphBuildResult {
+    response: Option<EnqueueResponse>,
+    commits_walked: u64,
+    items_enqueued: u64,
+}
+
 async fn split_segment_into_batches(
     ctx: &CoreContext,
     commit_graph: Arc<CommitGraph>,
@@ -211,35 +217,54 @@ pub async fn build_underived_batched_graph<'a>(
     batch_size: u64,
     priority: Option<DerivationPriority>,
 ) -> Result<Option<EnqueueResponse>> {
-    if justknobs::eval(
+    let use_v2 = justknobs::eval(
         "scm/mononoke:build_underived_batched_graph_v2",
         None,
         Some(ddm.repo_name()),
-    ) {
-        build_underived_batched_graph_v2(
-            ctx,
-            queue,
-            ddm,
-            derived_data_type,
-            head,
-            bubble_id,
-            batch_size,
-            priority,
-        )
-        .await
-    } else {
-        build_underived_batched_graph_v1(
-            ctx,
-            queue,
-            ddm,
-            derived_data_type,
-            head,
-            bubble_id,
-            batch_size,
-            priority,
-        )
-        .await
+    );
+    let builder_version = if use_v2 { "v2" } else { "v1" };
+    let (stats, build_result) = async {
+        if use_v2 {
+            build_underived_batched_graph_v2(
+                ctx,
+                queue,
+                ddm,
+                derived_data_type,
+                head,
+                bubble_id,
+                batch_size,
+                priority,
+            )
+            .await
+        } else {
+            build_underived_batched_graph_v1(
+                ctx,
+                queue,
+                ddm,
+                derived_data_type,
+                head,
+                bubble_id,
+                batch_size,
+                priority,
+            )
+            .await
+        }
     }
+    .timed()
+    .await;
+    let build_result = build_result?;
+
+    let mut scuba = ctx.scuba().clone();
+    scuba.unsampled();
+    scuba.add_future_stats(&stats);
+    scuba.add("graph_builder_version", builder_version);
+    scuba.add("derived_data_type", derived_data_type.name());
+    scuba.add("head_cs_id", head.to_string());
+    scuba.add("commits_walked", build_result.commits_walked);
+    scuba.add("items_enqueued", build_result.items_enqueued);
+    scuba.log_with_msg("Underived graph built", None);
+
+    Ok(build_result.response)
 }
 
 async fn build_underived_batched_graph_v1<'a>(
@@ -251,7 +276,7 @@ async fn build_underived_batched_graph_v1<'a>(
     bubble_id: Option<BubbleId>,
     batch_size: u64,
     priority: Option<DerivationPriority>,
-) -> Result<Option<EnqueueResponse>> {
+) -> Result<UnderivedGraphBuildResult> {
     let priority = priority.unwrap_or(DerivationPriority::LOW);
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
@@ -261,7 +286,7 @@ async fn build_underived_batched_graph_v1<'a>(
     let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(
         future::ok(false).boxed(),
     ))));
-    let (stats, traversal_res) = bounded_traversal::bounded_traversal_dag(
+    bounded_traversal::bounded_traversal_dag(
         100,
         head,
         |cs| {
@@ -461,21 +486,14 @@ async fn build_underived_batched_graph_v1<'a>(
             .boxed()
         },
     )
-    .timed()
-    .await;
-    let _ = traversal_res?;
-
-    let mut scuba = ctx.scuba().clone();
-    scuba.unsampled();
-    scuba.add_future_stats(&stats);
-    scuba.add("derived_data_type", derived_data_type.name());
-    scuba.add("head_cs_id", head.to_string());
-    scuba.add("commits_walked", commits_walked.load(Ordering::Relaxed));
-    scuba.add("items_enqueued", items_enqueued.load(Ordering::Relaxed));
-    scuba.log_with_msg("Underived graph built", None);
+    .await?;
 
     let mut res = watch.lock();
-    Ok(res.take())
+    Ok(UnderivedGraphBuildResult {
+        response: res.take(),
+        commits_walked: commits_walked.load(Ordering::Relaxed),
+        items_enqueued: items_enqueued.load(Ordering::Relaxed),
+    })
 }
 
 async fn build_underived_batched_graph_v2<'a>(
@@ -487,7 +505,7 @@ async fn build_underived_batched_graph_v2<'a>(
     bubble_id: Option<BubbleId>,
     batch_size: u64,
     priority: Option<DerivationPriority>,
-) -> Result<Option<EnqueueResponse>> {
+) -> Result<UnderivedGraphBuildResult> {
     let priority = priority.unwrap_or(DerivationPriority::LOW);
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
@@ -504,7 +522,11 @@ async fn build_underived_batched_graph_v2<'a>(
     let segments =
         collect_underived_segments(ctx, ddm, &commit_graph, derived_data_type, head).await?;
     if segments.is_empty() {
-        return Ok(Some(EnqueueResponse::new(future::ok(true).boxed())));
+        return Ok(UnderivedGraphBuildResult {
+            response: Some(EnqueueResponse::new(future::ok(true).boxed())),
+            commits_walked: 0,
+            items_enqueued: 0,
+        });
     }
 
     let commits_walked = segments.iter().map(|segment| segment.length).sum::<u64>();
@@ -566,7 +588,7 @@ async fn build_underived_batched_graph_v2<'a>(
         .ok_or_else(|| anyhow!("underived head segment has no batches"))?
         .root;
     let batches = Arc::new(batches);
-    let (stats, traversal_res) = bounded_traversal::bounded_traversal_dag(
+    bounded_traversal::bounded_traversal_dag(
         100,
         root,
         {
@@ -754,21 +776,14 @@ async fn build_underived_batched_graph_v2<'a>(
             .boxed()
         },
     )
-    .timed()
-    .await;
-    let _ = traversal_res?;
-
-    let mut scuba = ctx.scuba().clone();
-    scuba.unsampled();
-    scuba.add_future_stats(&stats);
-    scuba.add("derived_data_type", derived_data_type.name());
-    scuba.add("head_cs_id", head.to_string());
-    scuba.add("commits_walked", commits_walked);
-    scuba.add("items_enqueued", items_enqueued.load(Ordering::Relaxed));
-    scuba.log_with_msg("Underived graph built", None);
+    .await?;
 
     let mut res = watch.lock();
-    Ok(res.take())
+    Ok(UnderivedGraphBuildResult {
+        response: res.take(),
+        commits_walked,
+        items_enqueued: items_enqueued.load(Ordering::Relaxed),
+    })
 }
 
 async fn deduplicate(
