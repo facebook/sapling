@@ -338,6 +338,25 @@ impl RedirectCmd {
         // provide a way to remove bogus redirection paths.  After we've deployed
         // the improved `add` validation for a while, we can use it here also.
         if let Some(redir) = redirs.get(repo_path) {
+            if redir.source == REPO_SOURCE {
+                // The deletion of a repo-defined redirection cannot be
+                // persisted: the persistence step only writes user-sourced
+                // entries, and this CLI cannot edit the source-controlled
+                // redirection file. Accepting it would tear the redirection
+                // down only for `redirect fixup` (which the daemon runs on
+                // every mount) to silently bring it back.
+                eprintln!(
+                    "error: {} is defined by {} and cannot be removed using \
+                    `edenfsctl redirect del {}`. To temporarily unmount it, use \
+                    `edenfsctl redirect unmount`; to remove it permanently, \
+                    delete it from {}.",
+                    repo_path.display(),
+                    REPO_SOURCE,
+                    repo_path.display(),
+                    REPO_SOURCE
+                );
+                return Ok(1);
+            }
             let mut checkout_config =
                 CheckoutConfig::parse_config(&config_dir).with_context(|| {
                     format!(

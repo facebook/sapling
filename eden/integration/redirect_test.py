@@ -359,34 +359,29 @@ via-profile = "bind"
     def test_del_rejects_repo_source_redirect(self) -> None:
         repo_path = "via-profile"
 
-        # FIXME: deleting a redirection defined by the repo's
-        # .eden-redirections file should be rejected: the CLI cannot edit the
-        # source-controlled file, so nothing can persist the deletion.
-        # Currently the deletion claims success and tears the redirection
-        # down, and a routine `redirect fixup` (which the daemon runs on
-        # every mount) silently brings it back.
-        output = self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
-        self.assertEqual(output, "", msg="del claims success")
-
-        list_output = self.eden.run_cmd(
-            "redirect", "list", "--json", "--mount", self.mount
+        # A redirection defined by the repo's .eden-redirections file cannot
+        # be deleted: the CLI cannot edit the source-controlled file, so
+        # nothing could persist the deletion, and `redirect fixup` (which the
+        # daemon runs on every mount) would silently bring it back.
+        proc = self.eden.run_unchecked(
+            "redirect",
+            "del",
+            "--mount",
+            self.mount,
+            repo_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
         )
-        entries = {r["repo_path"]: r["state"] for r in json.loads(list_output)}
-        self.assertIn(repo_path, entries, msg="the repo still defines the redirection")
-        self.assertNotEqual(
-            "ok", entries[repo_path], msg="del tore the redirection down"
-        )
-
-        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+        self.assertNotEqual(0, proc.returncode, msg="del is rejected")
+        self.assertIn("cannot be removed", proc.stderr + proc.stdout)
 
         list_output = self.eden.run_cmd(
             "redirect", "list", "--json", "--mount", self.mount
         )
         entries = {r["repo_path"]: r["state"] for r in json.loads(list_output)}
         self.assertEqual(
-            "ok",
-            entries.get(repo_path),
-            msg="fixup resurrected the deleted redirection",
+            "ok", entries.get(repo_path), msg="the redirection is untouched"
         )
 
     async def test_list_with_thrift(self) -> None:

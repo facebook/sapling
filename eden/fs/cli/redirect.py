@@ -1395,6 +1395,22 @@ class DelCmd(Subcmd):
         # the improved `add` validation for a while, we can use it here also.
         redir = redirs.get(args.repo_path)
         if redir:
+            if redir.source == REPO_SOURCE:
+                # The deletion of a repo-defined redirection cannot be
+                # persisted: the persistence step only writes user-sourced
+                # entries, and this CLI cannot edit the source-controlled
+                # redirection file. Accepting it would tear the redirection
+                # down only for `redirect fixup` (which the daemon runs on
+                # every mount) to silently bring it back.
+                print(
+                    f"error: {args.repo_path} is defined by {REPO_SOURCE} and "
+                    f"cannot be removed using `edenfsctl redirect del "
+                    f"{args.repo_path}`. To temporarily unmount it, use "
+                    f"`edenfsctl redirect unmount`; to remove it permanently, "
+                    f"delete it from {REPO_SOURCE}.",
+                    file=sys.stderr,
+                )
+                return 1
             redir.remove_existing(checkout)
             del redirs[args.repo_path]
             config = apply_redirection_configs_to_checkout_config(
