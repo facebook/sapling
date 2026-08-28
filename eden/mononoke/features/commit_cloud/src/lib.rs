@@ -62,6 +62,7 @@ use sql::versions_ops::UpdateVersionArgs;
 use crate::ctx::CommitCloudContext;
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
+use crate::references::resolve_write_head_author_dates;
 use crate::references::update_references_data;
 use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Delete;
@@ -291,6 +292,18 @@ impl CommitCloud {
             .map_err(CommitCloudError::internal_error);
         }
 
+        // Resolved before the transaction opens: deriving inside it would hold a
+        // never-retried XDB transaction across N blobstore round trips.
+        let head_author_dates = resolve_write_head_author_dates(
+            &self.ctx,
+            cc_ctx,
+            self.bonsai_hg_mapping.clone(),
+            self.bonsai_git_mapping.clone(),
+            &self.repo_derived_data,
+            &params.new_heads,
+        )
+        .await;
+
         let mut txn = self
             .storage
             .connections
@@ -308,13 +321,20 @@ impl CommitCloud {
                 .is_none_or(|x| x.is_empty());
 
         if !initiate_workspace {
-            txn = update_references_data(&self.storage, txn, &self.ctx, params.clone(), cc_ctx)
-                .await
-                .context(format!(
-                    "Failed to update references for request {:?}",
-                    params.clone()
-                ))
-                .map_err(CommitCloudInternalError::Error)?;
+            txn = update_references_data(
+                &self.storage,
+                txn,
+                &self.ctx,
+                params.clone(),
+                cc_ctx,
+                &head_author_dates,
+            )
+            .await
+            .context(format!(
+                "Failed to update references for request {:?}",
+                params.clone()
+            ))
+            .map_err(CommitCloudInternalError::Error)?;
         }
 
         let new_version_timestamp = Timestamp::now();

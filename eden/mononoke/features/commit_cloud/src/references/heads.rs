@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use commit_cloud_types::WorkspaceHead;
@@ -44,6 +45,7 @@ pub async fn update_heads(
     cc_ctx: &CommitCloudContext,
     removed_heads: Vec<CloudChangesetId>,
     new_heads: Vec<CloudChangesetId>,
+    head_author_dates: &HashMap<CloudChangesetId, i64>,
 ) -> anyhow::Result<Transaction> {
     if !removed_heads.is_empty() {
         let delete_args = DeleteArgs {
@@ -65,7 +67,7 @@ pub async fn update_heads(
                 .into_iter()
                 .map(|commit| WorkspaceHead {
                     commit,
-                    author_date: None,
+                    author_date: head_author_dates.get(&commit).copied(),
                 })
                 .collect();
             txn = InsertMany::<WorkspaceHead>::insert_many(
@@ -85,7 +87,7 @@ pub async fn update_heads(
                     cc_ctx.workspace.clone(),
                     WorkspaceHead {
                         commit: head,
-                        author_date: None,
+                        author_date: head_author_dates.get(&head).copied(),
                     },
                 )
                 .await?;

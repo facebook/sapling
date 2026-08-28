@@ -191,6 +191,56 @@ pub(crate) async fn resolve_head_author_dates(
     })
 }
 
+/// Must run before the transaction opens: deriving inside one would hold an XDB
+/// transaction -- which `query_with_transaction` never retries -- across N
+/// blobstore round trips.
+///
+/// Unlike the read path, a failed derive is swallowed here: it must never fail
+/// an upload.
+pub(crate) async fn resolve_write_head_author_dates(
+    core_ctx: &CoreContext,
+    cc_ctx: &CommitCloudContext,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    repo_derived_data: &ArcRepoDerivedData,
+    new_heads: &[CloudChangesetId],
+) -> HashMap<CloudChangesetId, i64> {
+    if new_heads.is_empty()
+        || !justknobs::eval(
+            "scm/mononoke:commitcloud_write_head_author_date",
+            None,
+            None,
+        )
+    {
+        return HashMap::new();
+    }
+
+    let resolved = match resolve_head_author_dates(
+        core_ctx,
+        cc_ctx,
+        bonsai_hg_mapping,
+        bonsai_git_mapping,
+        repo_derived_data,
+        new_heads.to_vec(),
+    )
+    .await
+    {
+        Ok(resolved) => resolved,
+        Err(e) => {
+            core_ctx.scuba().clone().log_with_msg(
+                "commit cloud: failed to resolve head author dates on write",
+                format!(
+                    "For workspace {} in repo {}: {:#}",
+                    cc_ctx.workspace, cc_ctx.reponame, e
+                ),
+            );
+            return HashMap::new();
+        }
+    };
+
+    resolved.dates
+}
+
 // Workspace information as we retrieve it form the database
 #[derive(Debug, Clone)]
 pub struct RawReferencesData {
@@ -321,6 +371,7 @@ pub(crate) async fn update_references_data(
     ctx: &CoreContext,
     params: UpdateReferencesParams,
     cc_ctx: &CommitCloudContext,
+    head_author_dates: &HashMap<CloudChangesetId, i64>,
 ) -> anyhow::Result<Transaction> {
     let mut txn = txn;
     txn = update_heads(
@@ -330,6 +381,7 @@ pub(crate) async fn update_references_data(
         cc_ctx,
         params.removed_heads,
         params.new_heads,
+        head_author_dates,
     )
     .await?;
     txn = update_bookmarks(
