@@ -53,7 +53,7 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
-            "HG_REAL_BIN": "//eden/scm:hg_universal_binary",
+            "HG_REAL_BIN": "//eden/scm:hg",
         })
     elif read_bool("fbcode", "mode_win_enabled", False):
         suffix = get_oss_suffix()
@@ -73,7 +73,6 @@ def get_test_env_and_deps(suffix = ""):
             "HG_REAL_BIN": "//eden/scm:hg",
         })
 
-    daemon_target = "//eden/fs/service:edenfs%s" % suffix
     env_to_target.update({
         "BLAKE3_SUM": "//eden/integration/helpers:blake3_sum",
         "EDENFSCTL_REAL_PATH": "//eden/fs/cli:edenfsctl",

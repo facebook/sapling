@@ -11,7 +11,6 @@ load("@fbcode_macros//build_defs:link_group_registry.bzl", "EVICT_FBCODE_DEFAULT
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule", "buck_sh_binary")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
-load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
 load("@fbsource//tools/build_defs:check_dependencies_test.bzl", "check_dependencies_test")
 
 oncall("sapling")
@@ -187,12 +186,6 @@ hg_binary(
     autocargo = {"ignore_rule": True},
 )
 
-rust_universal_binary(
-    name = "hg_universal_binary",
-    source = ":hg",
-    visibility = ["PUBLIC"],
-)
-
 sl_binary(
     name = "sl",
     autocargo = {"ignore_rule": True},
@@ -210,12 +203,6 @@ sl_binary(
     name = "sl_test",
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
-)
-
-rust_universal_binary(
-    name = "sl_universal_binary",
-    source = ":sl",
-    visibility = ["PUBLIC"],
 )
 
 # Sapling is a performance sensitive CLI tool. It must not pull in heavyweight C++ infra
