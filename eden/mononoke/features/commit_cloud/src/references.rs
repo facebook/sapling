@@ -61,6 +61,7 @@ define_stats! {
     // This is the denominator that makes the timers below per-head figures, so
     // it stays as long as any of them do.
     heads_returned: timeseries(Sum, Average, Count),
+    heads_derived: timeseries(Sum, Average, Count),
     // Wall-clock latency of the get_references read path, split into its two
     // phases plus the total. Emitted as quantile_stat (not the deprecated
     // histogram, whose tail percentiles run 2-3x too high) to match the
@@ -82,6 +83,10 @@ define_stats! {
 // the per-head denominator for them.
 fn log_heads_returned(heads: usize) {
     STATS::heads_returned.add_value(heads as i64);
+}
+
+fn log_heads_derived(heads: usize) {
+    STATS::heads_derived.add_value(heads as i64);
 }
 
 // Emit the per-phase and total wall-clock timing of a (non-no-op) get_references
@@ -247,11 +252,16 @@ pub(crate) async fn cast_references_data(
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
     let mut snapshots: Vec<CloudChangesetId> = Vec::new();
 
+    let read_stored_author_date =
+        justknobs::eval("scm/mononoke:commitcloud_read_head_author_date", None, None);
+
     let heads_to_derive: Vec<CloudChangesetId> = raw_references_data
         .heads
         .iter()
+        .filter(|head| !read_stored_author_date || head.author_date.is_none())
         .map(|head| head.commit)
         .collect();
+    let heads_derived_count = heads_to_derive.len();
 
     let resolved = resolve_head_author_dates(
         core_ctx,
@@ -265,7 +275,18 @@ pub(crate) async fn cast_references_data(
 
     log_cast_phase_timing(resolved.bonsai_mapping_ms, resolved.changeset_info_ms);
 
-    let heads_dates = resolved.dates;
+    log_heads_derived(heads_derived_count);
+
+    let mut heads_dates = resolved.dates;
+    if read_stored_author_date {
+        heads_dates.reserve(raw_references_data.heads.len() - heads_derived_count);
+        heads_dates.extend(
+            raw_references_data
+                .heads
+                .iter()
+                .filter_map(|head| head.author_date.map(|date| (head.commit, date))),
+        );
+    }
 
     log_heads_returned(heads_dates.len());
 
