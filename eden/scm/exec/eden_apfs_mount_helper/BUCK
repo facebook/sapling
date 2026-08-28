@@ -62,6 +62,6 @@ sl_rust_library(
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:plist",
         "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:sha2-010",
     ],
 )

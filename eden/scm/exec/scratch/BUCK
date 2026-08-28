@@ -21,7 +21,7 @@ sl_rust_library(
     },
     deps = [
         "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:sha2-010",
     ],
 )
 

@@ -10,7 +10,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:sha2-010",
         "//configerator/structs/scm/mononoke/repos:repos-rust",
     ],
 )

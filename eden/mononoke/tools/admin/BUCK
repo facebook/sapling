@@ -59,7 +59,7 @@ rust_binary(
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
-        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:sha2-010",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
