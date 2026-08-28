@@ -2502,10 +2502,26 @@ void EdenServer::mountFinished(
 
   std::move(shutdownFuture)
       .via(getMainEventBase())
-      .thenTry([unmountPromise = std::move(unmountPromise),
+      .thenTry([this,
+                mountPath = mountPath,
+                unmountPromise = std::move(unmountPromise),
                 takeoverPromise = std::move(takeoverPromise),
                 takeoverData = std::move(takeover)](
                    folly::Try<SerializedInodeMap>&& result) mutable {
+        // Erase the EdenMount from mountPoints_ before fulfilling the
+        // promises. Fulfilling unmountPromise releases the unmountV2
+        // response on another thread, and a caller that was told the
+        // unmount succeeded must not still see the mount in listMounts():
+        // `eden rm` relies on that to delete the checkout's configuration
+        // without leaving the daemon serving a mount that no on-disk
+        // configuration describes.
+        {
+          const auto mountPoints = mountPoints_->wlock();
+          const auto it = mountPoints->find(mountPath);
+          if (it != mountPoints->end()) {
+            mountPoints->erase(it);
+          }
+        }
         if (takeoverPromise) {
           takeoverPromise.value().setWith([&]() mutable {
             takeoverData.value().inodeMap = std::move(result.value());
@@ -2517,14 +2533,6 @@ void EdenServer::mountFinished(
               result.throwUnlessValue();
               return Unit{};
             }));
-      })
-      .ensure([this, mountPath] {
-        // Erase the EdenMount from our mountPoints_ map
-        const auto mountPoints = mountPoints_->wlock();
-        const auto it = mountPoints->find(mountPath);
-        if (it != mountPoints->end()) {
-          mountPoints->erase(it);
-        }
       });
 }
 
