@@ -355,9 +355,11 @@ pub(crate) fn prefetch_manager(
     send
 }
 
-// Arbitrary cutoffs for more verbose logging.
-const INTERESTING_DEPTH: usize = 7;
-const INTERESTING_NUMBER_OF_SMALL_WALKS: usize = 50;
+// Arbitrary cutoff for more verbose (INFO level) logging. Deep walks are rare
+// and expensive enough to be worth logging; shallow walks (including the big
+// batches of shallow directory prefetches) are routine and only logged at
+// DEBUG level.
+const INTERESTING_DEPTH: usize = 10;
 
 enum PrefetchWork {
     DirectoriesOnly(Vec<(RepoPathBuf, usize)>),
@@ -383,17 +385,29 @@ fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let (file_content_root, mut matcher, span) = match work {
+        let (file_content_root, mut matcher, _span, interesting_walk, walk_desc) = match work {
             PrefetchWork::DirectoriesOnly(walks) => {
                 let Some((first_root, first_depth)) = walks.first() else {
                     return;
                 };
 
-                let span = info_if!(
-                    walks.len() >= INTERESTING_NUMBER_OF_SMALL_WALKS || *first_depth >= INTERESTING_DEPTH,
-                    span,
+                let interesting_walk = *first_depth >= INTERESTING_DEPTH;
+                // Only interesting walks log the INFO events that use walk_desc;
+                // routine walks skip the allocation. Their DEBUG events get the
+                // same context from the (debug enabled) span instead.
+                let walk_desc = if interesting_walk {
+                    format!(
+                        "root={} depth={} num_dir_walks={}",
+                        first_root,
+                        first_depth,
+                        walks.len()
+                    )
+                } else {
+                    String::new()
+                };
+                let span = tracing::debug_span!(
                     "dir prefetch",
-                    num_dir_walks=walks.len(),
+                    num_dir_walks = walks.len(),
                     %first_root,
                     first_depth,
                 )
@@ -409,30 +423,32 @@ fn prefetch(
                         None,
                     )) as DynMatcher);
                 }
-                (None, UnionMatcher::new_or_single(matchers), span)
+                (
+                    None,
+                    UnionMatcher::new_or_single(matchers),
+                    span,
+                    interesting_walk,
+                    walk_desc,
+                )
             }
             PrefetchWork::FileContent(walk_root, depth, depth_offset) => {
-                let span = info_if!(
-                    depth >= INTERESTING_DEPTH,
-                    span,
-                    "file prefetch",
-                    %walk_root,
-                    depth,
-                )
-                .entered();
+                let interesting_walk = depth >= INTERESTING_DEPTH;
+                let walk_desc = if interesting_walk {
+                    format!("root={walk_root} depth={depth}")
+                } else {
+                    String::new()
+                };
+                let span = tracing::debug_span!("file prefetch", %walk_root, depth).entered();
 
                 (
                     Some(walk_root.clone()),
                     Arc::new(WalkMatcher::new(walk_root, depth, depth_offset)) as DynMatcher,
                     span,
+                    interesting_walk,
+                    walk_desc,
                 )
             }
         };
-
-        // Piggy back on the original decision of whether this is an interesting (info level) prefetch or not.
-        let interesting_walk = span
-            .metadata()
-            .is_some_and(|m| m.level() == &tracing::Level::INFO);
 
         let mut file_count = 0;
         let start_time = Instant::now();
@@ -456,7 +472,7 @@ fn prefetch(
                 walk_detector.files_preloaded(walk_root, fctx.remote_fetch_count());
 
                 if should_pause_prefetch(&walk_detector, &config, walk_root) {
-                    info_if!(interesting_walk, event, "pausing prefetch");
+                    info_if!(interesting_walk, event, walk = %walk_desc, "pausing prefetch");
                     my_handle.pause();
                 }
             }
@@ -479,7 +495,7 @@ fn prefetch(
 
             // Check for cancellation since the consume_file_fetch() call can cancel the prefetch.
             if !my_handle.is_in_progress() {
-                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
 
@@ -507,7 +523,7 @@ fn prefetch(
 
         for file in files {
             if !my_handle.is_in_progress() {
-                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
 
@@ -536,7 +552,7 @@ fn prefetch(
         // Wait for any remaining file fetches to finish.
         for fetch in file_fetches {
             if !my_handle.is_in_progress() {
-                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
 
@@ -546,7 +562,7 @@ fn prefetch(
         // Make sure this doesn't get dropped early.
         drop(my_handle);
 
-        info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch complete");
+        info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch complete");
     });
 
     handle
