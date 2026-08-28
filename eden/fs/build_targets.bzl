@@ -86,6 +86,15 @@ DIRS = [
     "/etc/eden/config.d",
 ]
 
+# macOS has no "root" group (its gid 0 group is "wheel"), so rpm prints
+# "warning: group root does not exist - using wheel" for every file at install
+# time. Bake "wheel" into the mac RPM header instead; ownership is unchanged
+# since both groups map to gid 0 on macOS.
+RPM_GROUP = select({
+    "DEFAULT": None,
+    "ovr_config//os:macos": rpm.group.wheel,
+})
+
 SYSTEMD_STATIC_TARGETS = {
     "facebook/packaging/systemd/edenfs.slice": "/usr/lib/systemd/user/edenfs.slice",
     "facebook/packaging/systemd/edenfs@.service": "/usr/lib/systemd/user/edenfs@.service",
@@ -97,8 +106,8 @@ MAC_ONLY_TARGETS = {
 
 def _rpm_install(src, dst, mode = None):
     if mode != None:
-        return rpm.install(src = src, dst = dst, mode = mode)
-    return rpm.install(src = src, dst = dst)
+        return rpm.install(src = src, dst = dst, group = RPM_GROUP, mode = mode)
+    return rpm.install(src = src, dst = dst, group = RPM_GROUP)
 
 def make_rpm_features():
     features = []
@@ -137,10 +146,7 @@ def make_rpm_features():
     for dir in DIRS:
         features.append(rpm.ensure_dirs_exist(dir))
     for target, install_path in STATIC_TARGETS.items():
-        if target in TARGET_MODES:
-            features.append(rpm.install(src = target, dst = install_path, mode = TARGET_MODES.get(target)))
-        else:
-            features.append(rpm.install(src = target, dst = install_path))
+        features.append(_rpm_install(src = target, dst = install_path, mode = TARGET_MODES.get(target)))
     for target, install_path in SYSTEMD_STATIC_TARGETS.items():
         features.append(
             select({
@@ -150,9 +156,9 @@ def make_rpm_features():
             }),
         )
     for target, install_path in SCRIPTS_TARGETS.items():
-        features.append(rpm.install(src = target, dst = install_path, mode = 0o0755))
+        features.append(_rpm_install(src = target, dst = install_path, mode = 0o0755))
     for target, install_path in CONFIG_D_TARGETS.items():
-        features.append(rpm.install(src = target, dst = install_path, mode = 0o0755))
+        features.append(_rpm_install(src = target, dst = install_path, mode = 0o0755))
     features.append(
         select({
             "DEFAULT": None,
@@ -164,6 +170,7 @@ def make_rpm_features():
             "ovr_config//os:macos": rpm.install(
                 src = MACOS_DAEMON_ENVIRONMENT_CONFIG,
                 dst = DAEMON_ENVIRONMENT_CONFIG_PATH,
+                group = rpm.group.wheel,
                 mode = 0o0755,
             ),
         }),
