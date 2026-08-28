@@ -4071,8 +4071,21 @@ folly::coro::now_task<DirListAttributeDataOrError> co_getAllEntryAttributes(
   // are stable across concurrent checkout.
   auto lastCheckoutTime = edenMount.getLastCheckoutTime().toTimespec();
 
+  // RelativePath construction throws for malformed input (e.g. an absolute
+  // path). That failure must land in this path's slot of the result rather
+  // than escape the per-path task, which would fail the whole readdir batch.
+  std::optional<RelativePath> relativePath;
+  try {
+    relativePath = RelativePath{path};
+  } catch (const std::exception& e) {
+    DirListAttributeDataOrError result;
+    result.error() =
+        newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what());
+    co_return result;
+  }
+
   auto viTry = co_await folly::coro::co_awaitTry(
-      edenMount.co_getVirtualInode(RelativePathPiece{path}, fetchContext));
+      edenMount.co_getVirtualInode(*relativePath, fetchContext));
   if (viTry.hasException()) {
     DirListAttributeDataOrError result;
     result.error() = newEdenError(viTry.exception());
@@ -4092,7 +4105,7 @@ folly::coro::now_task<DirListAttributeDataOrError> co_getAllEntryAttributes(
   auto entriesTry =
       co_await folly::coro::co_awaitTry(virtualInode.co_getChildrenAttributes(
           requestedAttributes,
-          RelativePath{path},
+          std::move(*relativePath),
           edenMount.getObjectStore(),
           lastCheckoutTime,
           fetchContext));
