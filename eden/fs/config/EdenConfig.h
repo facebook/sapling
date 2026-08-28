@@ -1814,50 +1814,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether FilteredBackingStore uses the underlying BackingStore's
-   * ObjectIds for unfiltered trees. This speeds up tree fetching a lot, but is
-   * somewhat risky.
-   *
-   * Note that once we start using the optimization, we can't downgrade EdenFS
-   * to before this change since the old version of EdenFS won't understand the
-   * underlying BackingStore's ObjectIds.
-   */
-  ConfigSetting<bool> filteredfsOptimizeUnfiltered{
-      "experimental:filteredfs-optimize-unfiltered",
-      false,
-      this};
-
-  /**
-   * Controls whether we optimize blob prefetching with the Sapling
-   * IGNORE_RESULT flag, which reduces work by not propagating the actual
-   * blob result.
-   */
-  ConfigSetting<bool> ignorePrefetchResult{
-      "experimental:ignore-prefetch-result",
-      true,
-      this};
-
-  /**
-   * The prefetch optimizations this flag used to gate are now unconditional.
-   * The setting is retained (but unread) so that remote configs which still
-   * set it don't trigger unknown-config-key warnings.
-   */
-  ConfigSetting<bool> prefetchOptimizations{
-      "experimental:prefetch-optimizations-v2",
-      true,
-      this};
-
-  /**
-   * When true, skip populating originHashes in glob results when there are
-   * 0 or 1 revisions. In that case every entry has the same origin, so the
-   * per-file origin hash carries no information and is wasted work.
-   */
-  ConfigSetting<bool> globSkipRedundantOriginHashes{
-      "experimental:glob-skip-redundant-origin-hashes",
-      true,
-      this};
-
-  /**
    * When true, EdenFS will convert the backing store to a FilteredBackingStore
    * with the "null" filter when it restarts. The real filter info will be
    * written to a special file under .hg folder and will be applied next time
@@ -1869,32 +1825,11 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * When true, checkout avoids O(n^2) overlay writes by skipping per-child
-   * overlay writes during childMaterialized/childDematerialized, instead
-   * writing each directory's overlay once in its own saveOverlayPostCheckout()
-   * call. Set to false to revert to the old behavior of writing overlay data
-   * on every child state change.
-   */
-  ConfigSetting<bool> skipCheckoutChildOverlayWrites{
-      "experimental:skip-checkout-child-overlay-writes",
-      true,
-      this};
-
-  /**
    * When true, checkout removes stale overlay directory data in the background
    * GC thread instead of synchronously on the checkout thread.
    */
   ConfigSetting<bool> backgroundOverlayCleanupDuringCheckout{
       "experimental:background-overlay-cleanup-during-checkout",
-      true,
-      this};
-
-  /**
-   * When true, checkout uses PathMapMutator to batch directory entry
-   * mutations, reducing O(n*k) cost to O(n + k log k) for large directories.
-   */
-  ConfigSetting<bool> batchCheckoutDirMutations{
-      "experimental:batch-checkout-dir-mutations",
       true,
       this};
 

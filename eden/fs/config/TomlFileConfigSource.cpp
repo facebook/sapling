@@ -14,6 +14,7 @@
 #include <folly/MapUtil.h>
 
 #include "eden/fs/config/ConfigSetting.h"
+#include "eden/fs/config/DeadConfigKeys.h"
 
 namespace facebook::eden {
 
@@ -163,12 +164,14 @@ void TomlFileConfigSource::parseAndApply(
     for (const auto& [entryKey, entryValue] : *sectionTable) {
       auto* configMapKeyEntry = folly::get_ptr(*configMapEntry, entryKey);
       if (!configMapKeyEntry) {
-        XLOGF(
-            WARNING,
-            "Ignoring unknown key in eden config: {}, {}:{}",
-            path_,
-            sectionName,
-            entryKey);
+        if (!isDeadConfigKey(sectionName, entryKey)) {
+          XLOGF(
+              WARNING,
+              "Ignoring unknown key in eden config: {}, {}:{}",
+              path_,
+              sectionName,
+              entryKey);
+        }
         continue;
       }
       if (auto valueStr = valueAsString(*entryValue)) {
