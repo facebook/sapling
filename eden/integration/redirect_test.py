@@ -356,6 +356,39 @@ via-profile = "bind"
 
         self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
 
+    def test_del_rejects_repo_source_redirect(self) -> None:
+        repo_path = "via-profile"
+
+        # FIXME: deleting a redirection defined by the repo's
+        # .eden-redirections file should be rejected: the CLI cannot edit the
+        # source-controlled file, so nothing can persist the deletion.
+        # Currently the deletion claims success and tears the redirection
+        # down, and a routine `redirect fixup` (which the daemon runs on
+        # every mount) silently brings it back.
+        output = self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
+        self.assertEqual(output, "", msg="del claims success")
+
+        list_output = self.eden.run_cmd(
+            "redirect", "list", "--json", "--mount", self.mount
+        )
+        entries = {r["repo_path"]: r["state"] for r in json.loads(list_output)}
+        self.assertIn(repo_path, entries, msg="the repo still defines the redirection")
+        self.assertNotEqual(
+            "ok", entries[repo_path], msg="del tore the redirection down"
+        )
+
+        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+
+        list_output = self.eden.run_cmd(
+            "redirect", "list", "--json", "--mount", self.mount
+        )
+        entries = {r["repo_path"]: r["state"] for r in json.loads(list_output)}
+        self.assertEqual(
+            "ok",
+            entries.get(repo_path),
+            msg="fixup resurrected the deleted redirection",
+        )
+
     async def test_list_with_thrift(self) -> None:
         # Redirection via profile
         profile_repo_path = "via-profile"
