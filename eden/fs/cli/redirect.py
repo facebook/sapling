@@ -1272,6 +1272,10 @@ class AddCmd(Subcmd):
                 existing_redir
                 and existing_redir.type == RedirectionType.SYMLINK
                 and existing_redir.repo_path == relative_path
+                # A configured symlink is not necessarily effective: eden
+                # stop/rm and `eden redirect unmount` delete the symlink from
+                # disk while leaving it configured, and add must repair it.
+                and (checkout_path / relative_path).is_symlink()
             ):
                 return True
         return False
@@ -1290,9 +1294,8 @@ class AddCmd(Subcmd):
         redirs = get_configured_redirections(checkout)
 
         # We are only checking for pre-existing symlinks in this method, so we
-        # can use the configured mounts instead of the effective mounts. This is
-        # because the symlinks contained in these lists should be the same. I.e.
-        # if a symlink is configured, it is also effective.
+        # can use the configured mounts instead of the effective mounts; the
+        # check verifies the symlink's on-disk presence itself.
         if self._should_return_success_early(
             redir_type, redirs, checkout.path, Path(args.repo_path)
         ):

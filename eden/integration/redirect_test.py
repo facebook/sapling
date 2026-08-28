@@ -349,12 +349,9 @@ via-profile = "bind"
         output = self.eden.run_cmd(
             "redirect", "add", "--mount", self.mount, repo_path, "symlink"
         )
-        # FIXME: `redirect add` reports success without recreating the missing
-        # symlink, so a tool that trusts the exit code writes into the virtual
-        # checkout instead of the redirection target.
-        self.assertFalse(
+        self.assertTrue(
             os.path.islink(link_path),
-            msg="the redirection symlink is still missing after a successful add",
+            msg="the redirection symlink was recreated by add",
         )
 
         self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
