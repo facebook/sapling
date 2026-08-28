@@ -5,7 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {basename, generatorContains, group, mapObject, partition, truncate} from '../utils';
+import {
+  basename,
+  generatorContains,
+  group,
+  mapObject,
+  partition,
+  splitCommitMessage,
+  truncate,
+} from '../utils';
 
 describe('basename', () => {
   it('/path/to/foo.txt -> foo.txt', () => {
@@ -26,6 +34,24 @@ describe('basename', () => {
 
   it('delimiter not in string', () => {
     expect(basename('hello world')).toEqual('hello world');
+  });
+});
+
+describe('splitCommitMessage', () => {
+  it('splits a title and description separated by a blank line', () => {
+    expect(splitCommitMessage('Title\n\nDescription')).toEqual(['Title', 'Description']);
+  });
+
+  it('also accepts a single newline separator', () => {
+    expect(splitCommitMessage('Title\nDescription')).toEqual(['Title', 'Description']);
+  });
+
+  it('handles a title without a description', () => {
+    expect(splitCommitMessage('Title')).toEqual(['Title', '']);
+  });
+
+  it('preserves additional leading blank lines in the description', () => {
+    expect(splitCommitMessage('Title\n\n\nDescription')).toEqual(['Title', '\nDescription']);
   });
 });
 

@@ -8,6 +8,7 @@
 import type {Dag} from '../previews';
 import type {CommandArg, ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from '../types';
 
+import {splitCommitMessage} from 'shared/utils';
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
@@ -48,8 +49,7 @@ export class AmendMessageOperation extends Operation {
         // Note: this assumes we always restack children and never render old commit as obsolete.
         return c;
       }
-      const [title] = this.message.split(/\n+/, 1);
-      const description = this.message.slice(title.length);
+      const [title, description] = splitCommitMessage(this.message);
       return c?.merge({title, description});
     });
   }

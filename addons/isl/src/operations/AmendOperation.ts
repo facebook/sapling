@@ -15,6 +15,7 @@ import type {
 } from '../previews';
 import type {CommandArg, CommitInfo, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
+import {splitCommitMessage} from 'shared/utils';
 import {restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
@@ -101,8 +102,7 @@ export class AmendOperation extends Operation {
       if (this.message == null) {
         return c;
       }
-      const [title] = this.message.split(/\n+/, 1);
-      const description = this.message.slice(title.length);
+      const [title, description] = splitCommitMessage(this.message);
       // TODO: we should also update `filesSample` after amending.
       // These files are visible in the commit info view during optimistic state.
       return c?.merge({title, description});

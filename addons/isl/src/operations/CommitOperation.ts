@@ -21,6 +21,7 @@ import type {
   UncommittedChanges,
 } from '../types';
 
+import {splitCommitMessage} from 'shared/utils';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
@@ -90,7 +91,7 @@ export class CommitOperation extends CommitBaseOperation {
       return dag;
     }
 
-    const [title] = this.message.split(/\n+/, 1);
+    const [title, description] = splitCommitMessage(this.message);
     const children = dag.children(base);
     const hasWantedChild = children.toHashes().some(h => {
       const info = dag.get(h);
@@ -111,7 +112,6 @@ export class CommitOperation extends CommitBaseOperation {
     // NOTE: We might want to check the "active bookmark" state
     // and update bookmarks accordingly.
     const hash = `OPTIMISTIC_COMMIT_${base}`;
-    const description = this.message.slice(title.length);
     const author = readAtom(authorString);
     const info = DagCommitInfo.fromCommitInfo({
       author: author ?? baseInfo?.author ?? '',

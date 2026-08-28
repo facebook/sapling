@@ -11,7 +11,7 @@ import type {CommitMessageFields} from './types';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {atom} from 'jotai';
 import {InternalFieldName} from 'shared/constants';
-import {firstLine} from 'shared/utils';
+import {firstLine, splitCommitMessage} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {tracker} from '../analytics';
@@ -250,8 +250,7 @@ registerDisposable(
         continue;
       }
 
-      const [title] = message.split(/\n+/, 1);
-      const description = message.slice(title.length);
+      const [title, description] = splitCommitMessage(message);
 
       tracker.track('RecoverCommitMessageFromOperationError');
 

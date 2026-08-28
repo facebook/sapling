@@ -108,6 +108,17 @@ export function firstLine(s: string): string {
 }
 
 /**
+ * Split a serialized commit message into its title and description.
+ *
+ * The title and description are normally separated by a blank line. Remove that structural
+ * separator while preserving any additional leading blank lines that are part of the description.
+ */
+export function splitCommitMessage(message: string): [title: string, description: string] {
+  const title = firstLine(message);
+  return [title, message.slice(title.length).replace(/^\n\n?/, '')];
+}
+
+/**
  * Applies a function to each key & value in an Object.
  * ```
  * mapObject(
