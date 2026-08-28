@@ -68,7 +68,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, repo: Option<&Repo>) -> Result<u8> 
             true,
             config
                 .get("experimental", "dynamic-config-domain-override")
-                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref()).ok()),
+                .and_then(|d| configloader::fb::ClientNetwork::from_str(d.as_ref()).ok()),
             repo.map(|r| r.deref()),
         )?;
 

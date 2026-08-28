@@ -33,8 +33,9 @@ mod mode;
 pub use dynamic_system::config_url;
 pub use dynamic_system::fetch_canary_config;
 pub use dynamic_system::get_http_config;
-pub use internalconfig::Domain;
-pub use internalconfig::get_domain;
+pub use internalconfig::get_client_network;
 pub use mode::FbConfigMode;
 // Re-exports for cross-crate consumers (EdenFS).
 pub use routing::ClientNetwork;
+pub use routing::CloudTier;
+pub use routing::ProdTier;

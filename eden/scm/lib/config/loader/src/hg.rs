@@ -776,7 +776,7 @@ pub fn calculate_internalconfig(
     user_name: String,
     proxy_sock_path: Option<String>,
     allow_remote_snapshot: bool,
-    domain_override: Option<crate::fb::internalconfig::Domain>,
+    client_network_override: Option<crate::fb::routing::ClientNetwork>,
     info: Option<&RepoMinimalInfo>,
 ) -> Result<ConfigSet> {
     use crate::fb::internalconfig::Generator;
@@ -790,8 +790,8 @@ pub fn calculate_internalconfig(
         allow_remote_snapshot,
         info,
     )?;
-    if let Some(domain) = domain_override {
-        g.domain = domain;
+    if let Some(client_network) = client_network_override {
+        g.client_network = client_network;
     }
     g.execute(canary)
 }
@@ -808,7 +808,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
     user_name: String,
     proxy_sock_path: Option<String>,
     allow_remote_snapshot: bool,
-    domain_override: Option<crate::fb::internalconfig::Domain>,
+    client_network_override: Option<crate::fb::routing::ClientNetwork>,
 ) -> Result<()> {
     use std::io::Write;
 
@@ -856,8 +856,8 @@ pub fn maybe_refresh_internalconfig_on_disk(
         repo_name.as_ref().map_or("no_repo", |r| r.as_ref()),
         canary.as_ref(),
         &user_name,
-        domain_override
-            .map(|d| format!("# domain-override={}\n", d.to_str()))
+        client_network_override
+            .map(|client_network| format!("# domain-override={}\n", client_network.to_str()))
             .unwrap_or_default(),
         identity::cli_name(),
     );
@@ -883,7 +883,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
         user_name,
         proxy_sock_path,
         allow_remote_snapshot,
-        domain_override,
+        client_network_override,
         info,
     )?;
     let config_str = format!("{header}{config}");
@@ -913,14 +913,14 @@ fn load_dynamic(
     opts: Options,
     identity: &Identity,
     proxy_sock_path: Option<String>,
-    domain_override: Option<Text>,
+    client_network_override: Option<Text>,
     errors: &mut Vec<Error>,
 ) -> Result<ConfigSet> {
     use std::sync::atomic::Ordering;
 
     use crate::fb::dynamic_system::remote_cache_path;
-    use crate::fb::internalconfig::Domain;
     use crate::fb::internalconfig::vpnless_config_path;
+    use crate::fb::routing::ClientNetwork;
 
     let mut mode = FbConfigMode::from_identity(identity);
 
@@ -972,7 +972,8 @@ fn load_dynamic(
         _ => false,
     };
 
-    let domain_override = domain_override.and_then(|d| Domain::from_str(d.as_ref()).ok());
+    let client_network_override = client_network_override
+        .and_then(|client_network| ClientNetwork::from_str(client_network.as_ref()).ok());
 
     // Only eagerly regenerate config if we are the "sl" binary so we avoid flapping the generated
     // config back and forth. The dynamic config depends on the Sapling code version, and the "sl"
@@ -985,7 +986,10 @@ fn load_dynamic(
         // VPNLess changed - need to regenerate.
         || vpnless_changed
         // Repo has entered or left AWS mode - need to regenerate.
-        || headers.get("domain-override").copied() != domain_override.as_ref().map(|d| d.to_str())
+        || headers.get("domain-override").copied()
+            != client_network_override
+                .as_ref()
+                .map(|client_network| client_network.to_str())
         // In-hand repo name differs from repo name in file.
         || repo_name.as_deref() != repo_name_in_file
         // Version mismatch between us and already generated - optionally generate.
@@ -996,7 +1000,7 @@ fn load_dynamic(
             ?dynamic_path,
             ?headers,
             version=%this_version,
-            ?domain_override,
+            ?client_network_override,
             vpnless_changed,
             "regenerating (sync) dynamic config (version mismatch)",
         );
@@ -1018,7 +1022,7 @@ fn load_dynamic(
             proxy_sock_path,
             // Allow using baked in remote config snapshot in case remote fetch fails.
             true,
-            domain_override,
+            client_network_override,
         );
         if let Err(e) = res {
             tracing::warn!(error=?e, "failed to regenerate (sync)");

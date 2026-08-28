@@ -58,7 +58,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&Repo>) -> Result<u
             false,
             config
                 .get("experimental", "dynamic-config-domain-override")
-                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref()).ok()),
+                .and_then(|d| configloader::fb::ClientNetwork::from_str(d.as_ref()).ok()),
         )?;
     }
     #[cfg(not(feature = "fb"))]
