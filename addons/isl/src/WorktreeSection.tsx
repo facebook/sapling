@@ -22,7 +22,7 @@ import {basename, dirname, guessPathSep, pathsAreIdentical} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {Column, Row} from './ComponentUtils';
 import css from './CwdSelector.module.css';
-import {DropdownField} from './DropdownFields';
+import {DropdownField, DropdownFields} from './DropdownFields';
 import {Internal} from './Internal';
 import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
@@ -34,12 +34,44 @@ import platform from './platform';
 import {applicationinfo, repositoryInfo, worktreeInfoData} from './serverAPIState';
 import {useModal} from './useModal';
 
-export function WorktreeSection({dismiss}: {dismiss: () => unknown}) {
+function useWorktreesEnabled(): boolean {
   const worktreesEnabled = useFeatureFlagSync(Internal.featureFlags?.Worktrees);
   const info = useAtomValue(repositoryInfo);
 
   // Only show worktrees for EdenFS repos that are not git-based
-  if (!worktreesEnabled || info?.isEdenFs !== true || info?.codeReviewSystem.type === 'github') {
+  return worktreesEnabled && info?.isEdenFs === true && info?.codeReviewSystem.type !== 'github';
+}
+
+/** Top-bar button, next to the branches button, showing the same worktree info as the repo dropdown. */
+export function WorktreeButton() {
+  const enabled = useWorktreesEnabled();
+  if (!enabled) {
+    return null;
+  }
+  return (
+    <Tooltip
+      title={<T>Worktrees</T>}
+      trigger="click"
+      placement="bottom"
+      group="topbar"
+      component={dismiss => (
+        <DropdownFields
+          title={<T>Worktrees</T>}
+          icon="worktree"
+          data-testid="worktree-details-dropdown">
+          <WorktreeSection dismiss={dismiss} />
+        </DropdownFields>
+      )}>
+      <Button icon data-testid="worktree-button">
+        <Icon icon="worktree" />
+      </Button>
+    </Tooltip>
+  );
+}
+
+export function WorktreeSection({dismiss}: {dismiss: () => unknown}) {
+  const enabled = useWorktreesEnabled();
+  if (!enabled) {
     return null;
   }
   return (

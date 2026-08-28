@@ -23,6 +23,7 @@ import {generatedFileCache} from './GeneratedFile';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {ShelvedChangesMenu} from './ShelvedChanges';
+import {WorktreeButton} from './WorktreeSection';
 import {tracker} from './analytics';
 import {DebugToolsButton} from './debug/DebugToolsButton';
 import {T} from './i18n';
@@ -71,6 +72,7 @@ export function TopBar() {
         <BulkActionsMenu />
         <BookmarksManagerMenu />
         {Internal.FullRepoBranchButton && <Internal.FullRepoBranchButton />}
+        <WorktreeButton />
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
