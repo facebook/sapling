@@ -1,15 +1,6 @@
-#require python3 xargs
+#require python3
 
-#testcases rust python
-
-Test that biggrep integration works correctly and that Python and Rust
-implementations pass the same arguments and produce the same output.
-
-#if python
-  $ setconfig grep.use-rust=false
-#else
-  $ setconfig grep.use-rust=true
-#endif
+Test that biggrep integration works correctly.
 
 Set up the repository with files that match fake-biggrep-client.py:
   $ newclientrepo
@@ -187,8 +178,7 @@ Clean up uncommitted changes:
   $ sl revert --all -q
   $ rm grepdir/uncommitted_file
 
-#if rust
-Test manifest diff with --rev to search an older revision (Rust only):
+Test manifest diff with --rev to search an older revision:
 When searching an older rev, the diff is between corpus and that rev.
 
 Search the first commit when corpus points to current commit:
@@ -203,4 +193,3 @@ The output should include:
 - grepfile2: grepped locally (exists in target but not corpus) - no _bg suffix
 - newfile: excluded (doesn't exist in target rev)
 - subdir1/subfile1 and subdir2/subfile2: from biggrep (unchanged) - has _bg suffix
-#endif

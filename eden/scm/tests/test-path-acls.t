@@ -91,7 +91,7 @@ tree should still have acl_children_indices for the unchanged restricted directo
                           ),
 
 Rust commands also warn about restricted paths:
-  $ sl grep --config grep.use-rust=true -r $A 'content'
+  $ sl grep -r $A 'content'
   regular/file.txt:regular content
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'

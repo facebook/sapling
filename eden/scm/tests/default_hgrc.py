@@ -101,9 +101,6 @@ min-path-depth=2
 
 [pull]
 buffer-commit-count = 5
-
-[grep]
-use-rust=true
 """
     if use_watchman:
         content += """

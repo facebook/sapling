@@ -345,9 +345,6 @@ maxheadstobackup=-1
 [infinitepush]
 httpbookmarks=True
 
-[grep]
-command=xargs -0 grep
-
 [globalrevs]
 onlypushrebase=True
 startrev=0

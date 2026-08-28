@@ -1,7 +1,5 @@
   $ setconfig drawdag.defaultfiles=false
 
-  $ setconfig grep.use-rust=true
-
   $ newclientrepo
   $ drawdag <<EOS
   > A  # A/apple = apple\n

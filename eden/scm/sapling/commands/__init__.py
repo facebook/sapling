@@ -2906,52 +2906,6 @@ def _makegraftmessage(to_repo, ctx, opts, from_paths, to_paths, from_repo):
 
 
 @command(
-    "grep|gre",
-    [
-        ("A", "after-context", "", "print NUM lines of trailing context", "NUM"),
-        ("B", "before-context", "", "print NUM lines of leading context", "NUM"),
-        ("C", "context", "", "print NUM lines of output context", "NUM"),
-        ("i", "ignore-case", None, "ignore case when matching"),
-        ("l", "files-with-matches", None, "print only filenames that match"),
-        ("n", "line-number", None, "print matching line numbers"),
-        ("V", "invert-match", None, "select non-matching lines"),
-        ("w", "word-regexp", None, "match whole words only"),
-        ("E", "extended-regexp", None, "use POSIX extended regexps"),
-        ("F", "fixed-strings", None, "interpret pattern as fixed string"),
-        ("P", "perl-regexp", None, "use Perl-compatible regexps"),
-        (
-            "I",
-            "include",
-            [],
-            _("include files matching the given patterns"),
-            _("PATTERN"),
-        ),
-        (
-            "X",
-            "exclude",
-            [],
-            _("exclude files matching the given patterns"),
-            _("PATTERN"),
-        ),
-    ],
-    inferrepo=True,
-)
-def grep(ui, repo, pattern, *pats, **opts):
-    # Copy match specific options
-    match_opts = {}
-    for k in ("include", "exclude"):
-        if k in opts:
-            match_opts[k] = opts.get(k)
-
-    # Search everything in the current directory, or using the specified
-    # patterns instead.
-    wctx = repo[None]
-    matcher = scmutil.match(wctx, pats or ["."], match_opts)
-
-    return cmdutil.grep(ui, repo, table, matcher, pattern, **opts)
-
-
-@command(
     "heads|hea|head",
     [
         (

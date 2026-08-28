@@ -21,8 +21,6 @@ use blob::Blob;
 use clidispatch::ReqCtx;
 use clidispatch::abort;
 use clidispatch::abort_if;
-use clidispatch::fallback;
-use cmdutil::ConfigExt;
 use cmdutil::FormatterOpts;
 use cmdutil::Result;
 use cmdutil::WalkOpts;
@@ -781,15 +779,6 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
-    if !repo.config().get_or("grep", "use-rust", || false)? && ctx.opts.external {
-        abort_if!(
-            ctx.opts.rev.is_some(),
-            "--rev requires --config grep.use-rust=true"
-        );
-
-        fallback!("grep.use-rust");
-    }
-
     let pattern = &ctx.opts.grep_pattern;
     let include_unknown = ctx.opts.unknown;
 
