@@ -329,6 +329,36 @@ via-profile = "bind"
             msg="symlink is gone",
         )
 
+    def test_add_symlink_redirect_recreates_missing_symlink(self) -> None:
+        repo_path = os.path.join("a", "new-symlink")
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
+        )
+        self.assertEqual(output, "", msg="we believe we created a symlink redirection")
+        link_path = os.path.join(self.mount, repo_path)
+        self.assertTrue(
+            os.path.islink(link_path), msg="the redirection symlink exists on disk"
+        )
+
+        # The symlink can go missing while staying configured: `eden stop`,
+        # `eden rm`, and `eden redirect unmount` all delete symlink
+        # redirections from disk without touching the configuration, as can a
+        # user's cleaning script.
+        os.remove(link_path)
+
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
+        )
+        # FIXME: `redirect add` reports success without recreating the missing
+        # symlink, so a tool that trusts the exit code writes into the virtual
+        # checkout instead of the redirection target.
+        self.assertFalse(
+            os.path.islink(link_path),
+            msg="the redirection symlink is still missing after a successful add",
+        )
+
+        self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
+
     async def test_list_with_thrift(self) -> None:
         # Redirection via profile
         profile_repo_path = "via-profile"
