@@ -35,6 +35,18 @@ const {EventEmitter} = require('events');
 const path = require('path');
 
 /**
+ * `edenfsctl` is a console program. When the parent process owns no console to
+ * lend it -- an Electron main process, a VS Code extension host, or any other
+ * GUI-launched Node host -- Windows allocates a fresh, visible one for it. Set
+ * `windowsHide` so those children get CREATE_NO_WINDOW instead. This is a
+ * no-op on macOS and Linux, so it is safe to apply unconditionally.
+ */
+const WINDOWS_HIDE = true;
+
+/** Options shared by every one-shot `edenfsctl` invocation below. */
+const EXEC_OPTIONS = timeout => ({timeout, windowsHide: WINDOWS_HIDE});
+
+/**
  * EdenFS Notifications Client
  * Provides methods to interact with EdenFS notifications via the EdenFS CLI
  */
@@ -70,7 +82,7 @@ class EdenFSNotificationsClient extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      execFile(this.edenBinaryPath, args, {timeout: this.timeout}, (error, stdout, stderr) => {
+      execFile(this.edenBinaryPath, args, EXEC_OPTIONS(this.timeout), (error, stdout, stderr) => {
         if (error) {
           reject(
             new Error(
@@ -148,7 +160,7 @@ class EdenFSNotificationsClient extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      execFile(this.edenBinaryPath, args, {timeout: this.timeout}, (error, stdout, stderr) => {
+      execFile(this.edenBinaryPath, args, EXEC_OPTIONS(this.timeout), (error, stdout, stderr) => {
         if (error) {
           reject(
             new Error(
@@ -247,7 +259,7 @@ class EdenFSNotificationsClient extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      execFile(this.edenBinaryPath, args, {timeout: this.timeout}, (error, stdout, stderr) => {
+      execFile(this.edenBinaryPath, args, EXEC_OPTIONS(this.timeout), (error, stdout, stderr) => {
         if (error) {
           reject(new Error(`Failed to get changes: ${error.message}\nStderr: ${stderr}`));
           return;
@@ -329,7 +341,7 @@ class EdenFSNotificationsClient extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      execFile(this.edenBinaryPath, args, {timeout: this.timeout}, (error, stdout, stderr) => {
+      execFile(this.edenBinaryPath, args, EXEC_OPTIONS(this.timeout), (error, stdout, stderr) => {
         if (error) {
           reject(
             new Error(
@@ -448,6 +460,9 @@ class EdenFSSubscription extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.process = spawn(this.edenBinaryPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
+        // See WINDOWS_HIDE. The subscription outlives the call, so without
+        // this the console window stays up for as long as the watch does.
+        windowsHide: WINDOWS_HIDE,
       });
 
       let buffer = '';
