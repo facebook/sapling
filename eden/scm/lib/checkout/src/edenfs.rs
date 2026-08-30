@@ -538,6 +538,14 @@ pub fn edenfs_redirect_fixup(
     if is_okay {
         cmd.spawn_detached()?;
     } else {
+        // The background branch above hides the console window as part of
+        // `spawn_detached`. This one runs `edenfsctl` in the foreground, so it
+        // cannot take `CREATE_NO_WINDOW` unconditionally without risking the
+        // output an interactive user is waiting on — hence the headless gate,
+        // which only fires when there is no console to print to anyway. Without
+        // it, a checkout driven from an IDE (ISL in VS Code spawns `sl` with no
+        // console) pops a console window for the length of the fixup.
+        cmd.hide_console_if_headless();
         lgr.io().disable_progress(true)?;
         let status = cmd.status();
         lgr.io().disable_progress(false)?;
