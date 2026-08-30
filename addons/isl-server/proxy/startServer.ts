@@ -360,6 +360,12 @@ function callStartServer(args: StartServerArgs): Promise<StartServerResult> {
         // terminate because the child process will keep stdout from the
         // parent process open, so jq will continue to read from it.
         stdio: 'ignore' as IOType,
+        // The forked child is `node.exe`, a console program. When the parent
+        // has no console of its own to lend it -- which is the case whenever
+        // run-proxy is launched from a GUI host rather than a terminal --
+        // Windows gives the child a fresh, visible one that lives as long as
+        // the ISL server does. No-op on other platforms.
+        windowsHide: true,
       };
       const pathToChildModule = path.join(path.dirname(__filename), 'child');
       const child = child_process.fork(pathToChildModule, [], options);
