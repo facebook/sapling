@@ -156,10 +156,20 @@ class PrivHelperClientImpl : public PrivHelper,
   using PendingRequestMap =
       std::unordered_map<uint32_t, folly::Promise<UnixSocket::Message>>;
   enum class Status : uint32_t {
+    /**
+     * Never attached, or detached again when the EventBase was destroyed.
+     * The only state attachEventBase() accepts.
+     */
     NOT_STARTED,
+    /** Attached and usable. The only state that accepts new requests. */
     RUNNING,
-    CLOSED,
-    WAITED,
+    /**
+     * The connection ended without us asking: EOF, a send or receive error, or
+     * the socket being closed. Teardown still owes the process a reap.
+     */
+    CONNECTION_LOST,
+    /** Teardown has been entered, so a second attempt has nothing to do. */
+    SHUT_DOWN,
   };
   struct ThreadSafeData {
     Status status;
@@ -179,14 +189,14 @@ class PrivHelperClientImpl : public PrivHelper,
     EventBase* eventBase{nullptr};
     {
       auto state = state_.wlock();
-      if (state->status == Status::WAITED) {
+      if (state->status == Status::SHUT_DOWN) {
         return false;
       }
       if (state->status == Status::RUNNING) {
         eventBase = state->eventBase;
         state->eventBase = nullptr;
       }
-      state->status = Status::WAITED;
+      state->status = Status::SHUT_DOWN;
     }
 
     // If the state was still RUNNING detach from the EventBase.
@@ -335,8 +345,8 @@ class PrivHelperClientImpl : public PrivHelper,
   }
 
   void handleSocketError(const std::exception& ex) {
-    // If we are RUNNING, move to the CLOSED state and then close the socket and
-    // fail all pending requests.
+    // If we are RUNNING, move to the CONNECTION_LOST state and then close the
+    // socket and fail all pending requests.
     //
     // If we are in any other state just return early.
     // This can occur if handleSocketError() is invoked multiple times (e.g.,
@@ -351,7 +361,7 @@ class PrivHelperClientImpl : public PrivHelper,
       if (state->status != Status::RUNNING) {
         return;
       }
-      state->status = Status::CLOSED;
+      state->status = Status::CONNECTION_LOST;
       state->eventBase = nullptr;
     }
     closeSocket(ex);
