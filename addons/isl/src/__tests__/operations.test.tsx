@@ -676,6 +676,50 @@ describe('operations', () => {
       ).toBeInTheDocument();
     });
 
+    it('hides progress bar info when the command exits', async () => {
+      await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      const id = message.operation.id;
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id,
+          kind: 'spawn',
+          queue: [],
+        });
+
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id,
+          kind: 'progress',
+          progress: {
+            message: 'doing the thing',
+            progress: 3,
+            progressTotal: 7,
+            unit: 'files',
+          },
+        });
+      });
+
+      expect(screen.getByText('doing the thing - 3/7 files')).toBeInTheDocument();
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id,
+          kind: 'exit',
+          exitCode: -1,
+          timestamp: 1234,
+        });
+      });
+
+      expect(screen.queryByText('doing the thing - 3/7 files')).not.toBeInTheDocument();
+      expect(screen.getByText('doing the thing')).toBeInTheDocument();
+    });
+
     it('hide progress on new stdout', async () => {
       await clickGoto('c');
       const message = await waitFor(() =>

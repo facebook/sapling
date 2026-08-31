@@ -172,6 +172,7 @@ export function CommandHistoryAndProgress() {
     showLastLineOfOutput && processedLines.length > 0 ? processedLines.at(-1) : undefined;
 
   const progressInfo =
+    isRunning &&
     showLastLineOfOutput &&
     progress.currentProgress != null &&
     progress.currentProgress.unit != null
