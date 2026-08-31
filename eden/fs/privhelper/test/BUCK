@@ -30,6 +30,7 @@ cpp_unittest(
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",
+        "//folly:portability",
         "//folly:range",
         "//folly/futures:core",
         "//folly/io:iobuf",

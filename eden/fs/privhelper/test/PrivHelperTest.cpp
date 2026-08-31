@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
+#include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -1223,4 +1224,45 @@ TEST(PrivHelperSessionTest, detachesFromParentProcessGroup) {
   folly::checkUnixError(waitpid(childPid, &status, 0), "waitpid failed");
   ASSERT_TRUE(WIFEXITED(status));
   EXPECT_EQ(0, WEXITSTATUS(status));
+}
+
+TEST(
+    PrivHelperClientLifetimeDeathTest,
+    destroyingTheClientRunsQueuedWorkOnFreedMemory) {
+  if (!folly::kIsSanitizeAddress) {
+    // Without a sanitizer the read of freed memory is silent, so there is
+    // nothing to assert on.
+    GTEST_SKIP() << "the use-after-free is only detectable under ASAN";
+  }
+
+  // FIXME: flip this to assert a clean completion once work queued on the
+  // EventBase holds the session, which makes the late run defined.
+  // ASAN aborts the forked child; the parent asserts on that abort.
+  EXPECT_DEATH(
+      {
+        File clientConn;
+        File serverConn;
+        PrivHelperConn::createConnPair(clientConn, serverConn);
+
+        PrivHelperThreadedTestServer server;
+        std::thread serverThread(
+            [&server, conn = std::move(serverConn)]() mutable noexcept {
+              server.initPartial(std::move(conn), getuid(), getgid());
+              server.run();
+            });
+
+        // Declared before the client so that it outlives it, leaving the
+        // request queued against a client that is already gone.
+        EventBase eventBase;
+        auto pid = Future<pid_t>::makeEmpty();
+        {
+          auto client = createTestPrivHelper(std::move(clientConn));
+          client->attachEventBase(&eventBase);
+          pid = client->getServerPid();
+        }
+
+        eventBase.loopOnce(EVLOOP_NONBLOCK);
+        serverThread.join();
+      },
+      "heap-use-after-free");
 }
