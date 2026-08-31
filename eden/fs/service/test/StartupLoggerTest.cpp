@@ -122,7 +122,8 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
     auto args = originalCommandLine;
     args.push_back(name.str());
     args.push_back(logPath().asString());
-    auto child = logger.spawnImpl(logPath().view(), nullptr, args);
+    auto child = logger.spawnImpl(
+        logPath().view(), nullptr, args, /*disclaimTccResponsibility=*/true);
     auto result = logger.waitForChildStatus(
         child.exitStatusPipe, child.process, logPath().view());
     child.process.kill();
@@ -180,7 +181,8 @@ void successWritesStartedMessageToStandardErrorDaemonChild() {
       logFile.path().string(),
       nullptr,
       originalCommandLine,
-      startupStatusChannel);
+      startupStatusChannel,
+      /*disclaimTccResponsibility=*/true);
   logger->success(17);
   exit(0);
 }
@@ -207,7 +209,8 @@ void programExitsUnsuccessfullyIfLogFileIsInaccessibleChild() {
       badLogFilePath.string(),
       nullptr,
       originalCommandLine,
-      startupStatusChannel);
+      startupStatusChannel,
+      /*disclaimTccResponsibility=*/true);
   logger->success(19);
   exit(0);
 }
@@ -391,7 +394,8 @@ void daemonClosesStandardFileDescriptorsChild() {
       logFile.path().string(),
       nullptr,
       originalCommandLine,
-      startupStatusChannel);
+      startupStatusChannel,
+      /*disclaimTccResponsibility=*/true);
   logger->success(29);
   std::this_thread::sleep_for(30s);
   exit(1);

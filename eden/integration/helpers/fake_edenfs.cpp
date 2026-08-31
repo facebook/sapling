@@ -348,7 +348,11 @@ int main(int argc, char** argv) {
   auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
   auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto startupLogger = daemonizeIfRequested(
-      logPath.value(), nullptr, originalCommandArguments, startupStatusChannel);
+      logPath.value(),
+      nullptr,
+      originalCommandArguments,
+      startupStatusChannel,
+      edenConfig->disclaimTccResponsibility.getValue());
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {

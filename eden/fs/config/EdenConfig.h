@@ -319,6 +319,20 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(5),
       this};
 
+  /**
+   * On macOS, TCC evaluates permissions such as
+   * kTCCServiceSystemPolicyNetworkVolumes against a process's "responsible
+   * process", which the daemon normally inherits from whatever launched it,
+   * so filesystem access can fail depending on launch context. If true, the
+   * daemonizing parent spawns the long-lived daemon with TCC responsibility
+   * disclaimed, making the daemon its own responsible process so grants keyed
+   * to its code signature apply deterministically. Only used on macOS.
+   */
+  ConfigSetting<bool> disclaimTccResponsibility{
+      "core:disclaim-tcc-responsibility",
+      true,
+      this};
+
   // [daemon]
 
   /**

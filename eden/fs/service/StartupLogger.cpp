@@ -64,7 +64,8 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath,
     PrivHelper* privHelper,
     const std::vector<std::string>& argv,
-    std::shared_ptr<StartupStatusChannel> startupStatusChannel) {
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel,
+    bool disclaimTccResponsibility) {
   if (!FLAGS_foreground && FLAGS_startupLoggerFd == -1) {
     auto startupLogger =
         std::make_shared<DaemonStartupLogger>(std::move(startupStatusChannel));
@@ -72,7 +73,7 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
       startupLogger->warn(
           "Ignoring --startupLogPath because --foreground was not specified");
     }
-    startupLogger->spawn(logPath, privHelper, argv);
+    startupLogger->spawn(logPath, privHelper, argv, disclaimTccResponsibility);
     /* NOTREACHED */
   }
   if (FLAGS_startupLoggerFd != -1) {
@@ -173,8 +174,9 @@ void DaemonStartupLogger::sendResult(ResultType result) {
 void DaemonStartupLogger::spawn(
     StringPiece logPath,
     PrivHelper* privHelper,
-    const std::vector<std::string>& argv) {
-  auto child = spawnImpl(logPath, privHelper, argv);
+    const std::vector<std::string>& argv,
+    bool disclaimTccResponsibility) {
+  auto child = spawnImpl(logPath, privHelper, argv, disclaimTccResponsibility);
   runParentProcess(std::move(child), logPath);
 }
 
@@ -214,7 +216,8 @@ DaemonStartupLogger::ChildHandler::~ChildHandler() {
 DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     StringPiece logPath,
     [[maybe_unused]] PrivHelper* privHelper,
-    const std::vector<std::string>& argv) {
+    const std::vector<std::string>& argv,
+    [[maybe_unused]] bool disclaimTccResponsibility) {
   XDCHECK(!logPath.empty());
 
   auto exePath = executablePath();
@@ -232,6 +235,14 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   SpawnedProcess::Options opts;
   opts.executablePath(exePath);
   opts.nullStdin();
+
+#ifdef __APPLE__
+  if (disclaimTccResponsibility) {
+    // Make the daemon its own TCC responsible process so that TCC grants
+    // keyed to edenfs's code signature apply regardless of what launched us.
+    opts.disclaimTccResponsibility();
+  }
+#endif
 
 #ifdef _WIN32
   // Redirect to a pipe. See `StartupLogger::ChildHandler` for detail.

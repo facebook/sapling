@@ -507,7 +507,11 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
   auto startupLogger = daemonizeIfRequested(
-      logPath, privHelper.get(), originalCommandLine, startupStatusChannel);
+      logPath,
+      privHelper.get(),
+      originalCommandLine,
+      startupStatusChannel,
+      edenConfig->disclaimTccResponsibility.getValue());
   std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {

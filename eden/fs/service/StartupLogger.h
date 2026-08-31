@@ -52,12 +52,18 @@ class StartupStatusChannel;
  * In the non-daemonizing case, no child is spawned and this function
  * will return a `StartupLogger` that simply writes to the configured
  * log location.
+ *
+ * If `disclaimTccResponsibility` is set, the daemon is spawned as its own
+ * macOS TCC responsible process (see
+ * SpawnedProcess::Options::disclaimTccResponsibility). It has no effect on
+ * other platforms or when not daemonizing.
  */
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath,
     PrivHelper* privHelper,
     const std::vector<std::string>& argv,
-    std::shared_ptr<StartupStatusChannel> startupStatusChannel);
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel,
+    bool disclaimTccResponsibility);
 
 /**
  * StartupLogger provides an API for logging messages that should be displayed
@@ -167,7 +173,8 @@ class DaemonStartupLogger : public StartupLogger {
   [[noreturn]] void spawn(
       folly::StringPiece logPath,
       PrivHelper* privHelper,
-      const std::vector<std::string>& argv);
+      const std::vector<std::string>& argv,
+      bool disclaimTccResponsibility);
 
   /** Configure the logger to act as a client of it parent.
    * `pipe` is the file descriptor passed down via `--startupLoggerFd`
@@ -229,7 +236,8 @@ class DaemonStartupLogger : public StartupLogger {
   ChildHandler spawnImpl(
       folly::StringPiece logPath,
       PrivHelper* privHelper,
-      const std::vector<std::string>& argv);
+      const std::vector<std::string>& argv,
+      bool disclaimTccResponsibility);
 
   [[noreturn]] void runParentProcess(
       ChildHandler&& child,
