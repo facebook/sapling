@@ -66,9 +66,11 @@ namespace {
  * Distinct from PrivHelperClientImpl: what the event loop points at is not the
  * object the caller owns and destroys.
  */
-class PrivHelperClientSession : private UnixSocket::ReceiveCallback,
-                                private UnixSocket::SendCallback,
-                                private EventBase::OnDestructionCallback {
+class PrivHelperClientSession
+    : public std::enable_shared_from_this<PrivHelperClientSession>,
+      private UnixSocket::ReceiveCallback,
+      private UnixSocket::SendCallback,
+      private EventBase::OnDestructionCallback {
  public:
   explicit PrivHelperClientSession(File conn)
       : state_{ThreadSafeData{
@@ -361,7 +363,7 @@ class PrivHelperClientImpl : public PrivHelper {
  public:
   PrivHelperClientImpl(File conn, std::optional<SpawnedProcess> proc)
       : helperProc_(std::move(proc)),
-        session_(std::make_unique<PrivHelperClientSession>(std::move(conn))) {
+        session_(std::make_shared<PrivHelperClientSession>(std::move(conn))) {
     pid_ = -1;
     if (helperProc_.has_value()) {
       pid_ = helperProc_->pid();
@@ -452,7 +454,7 @@ class PrivHelperClientImpl : public PrivHelper {
   // Must be set (via setEdenFsEventsLogger) before attachEventBase() is called.
   // Read from EventBase thread thereafter; do not modify after attach.
   std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
-  const std::unique_ptr<PrivHelperClientSession> session_;
+  const std::shared_ptr<PrivHelperClientSession> session_;
 };
 
 /**
