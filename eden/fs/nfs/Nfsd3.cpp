@@ -2503,6 +2503,7 @@ Nfsd3::Nfsd3(
             highNfsRequestsLogInterval);
       }()),
       processAccessLog_(std::move(processInfoCache)),
+      edenFsEventsLogger_{edenFsEventsLogger},
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
       traceDetailedArguments_{0},
@@ -2592,7 +2593,8 @@ void Nfsd3::invalidate(
                               mode,
                               onSuccess = std::move(onSuccess),
                               source,
-                              stats = std::move(stats)]() mutable {
+                              stats = std::move(stats),
+                              logger = edenFsEventsLogger_]() mutable {
     XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
     const auto chmodResult = chmod(path.c_str(), mode);
     const auto error = errno;
@@ -2637,6 +2639,14 @@ void Nfsd3::invalidate(
           "counter.",
           path,
           mode);
+      // Emit the telemetry event on every EPERM failure so the event table
+      // carries the true failure count; the log line above stays
+      // once-per-daemon to avoid log spam. Per-failure emission is cheap and
+      // non-blocking: XplatLogger enqueues into a bounded queue (dropping,
+      // never blocking, when full) drained by a background Scribe producer.
+      if (logger) {
+        logger->logEvent(TccInvalidationDenied{error, path.asString()});
+      }
 #endif
     } else {
       incrementNfsGcInvalidationCounter(

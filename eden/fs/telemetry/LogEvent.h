@@ -521,6 +521,23 @@ struct NfsParsingError : public EdenFSEvent {
   }
 };
 
+struct TccInvalidationDenied : public EdenFSEvent {
+  int err;
+  std::string path;
+
+  TccInvalidationDenied(int err, std::string path)
+      : err(err), path(std::move(path)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addInt("errno", err);
+    event.addString("path", path);
+  }
+
+  const char* getType() const override {
+    return "tcc_invalidation_denied";
+  }
+};
+
 struct TooManyNfsClients : public EdenFSEvent {
   void populate(DynamicEvent& /*event*/) const override {}
 
