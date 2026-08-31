@@ -24,10 +24,6 @@ export const showWorktreeLabels = localStorageBackedAtom<boolean>('isl.show-work
  * for the atoms below, so non-EdenFs/flag-off repos never pay for the extra reads.
  */
 const enabledWorktreeInfo = atom(get => {
-  if (!get(showWorktreeLabels)) {
-    return undefined;
-  }
-
   const info = get(repositoryInfo);
   if (info?.isEdenFs !== true) {
     return undefined;
@@ -46,18 +42,12 @@ const enabledWorktreeInfo = atom(get => {
   return {info, worktreeInfo};
 });
 
-/**
- * Map from commit hash -> sibling worktrees (excluding this repo's own worktree)
- * currently checked out (`.`) at that commit. Empty unless the worktrees feature
- * is enabled and this is an EdenFS repo, so it adds no overhead/visual noise
- * elsewhere. Also empty in focus mode, whose whole point is to hide commits
- * outside your current stack.
- */
-export const otherWorktreeCheckoutsByHash = atom(get => {
+/** All sibling-worktree checkout locations, independent of whether labels are visible. */
+export const allOtherWorktreeCheckoutsByHash = atom(get => {
   const empty = new Map<Hash, Array<WorktreeEntry>>();
 
   const enabled = get(enabledWorktreeInfo);
-  if (enabled == null || get(focusMode)) {
+  if (enabled == null) {
     return empty;
   }
   const {info, worktreeInfo} = enabled;
@@ -85,6 +75,18 @@ export const otherWorktreeCheckoutsByHash = atom(get => {
 });
 
 /**
+ * Sibling-worktree checkout locations that should be rendered as labels. Focus
+ * mode and the display preference suppress the labels without discarding the
+ * underlying checkout identity used by focus-mode filtering.
+ */
+export const otherWorktreeCheckoutsByHash = atom(get => {
+  if (!get(showWorktreeLabels) || get(focusMode)) {
+    return new Map<Hash, Array<WorktreeEntry>>();
+  }
+  return get(allOtherWorktreeCheckoutsByHash);
+});
+
+/**
  * The sibling worktree(s) currently checked out at this commit, if any.
  * Analogous to `isHighlightedCommit` in `HighlightedCommits.tsx`.
  */
@@ -98,6 +100,9 @@ export const isCheckedOutElsewhere = atomFamilyWeak((hash: Hash) =>
  * solo checkout or the main worktree, so "You are here" stays plain there.
  */
 export const currentWorktreeName = atom(get => {
+  if (!get(showWorktreeLabels)) {
+    return undefined;
+  }
   const enabled = get(enabledWorktreeInfo);
   if (enabled == null || enabled.worktreeInfo.worktrees.length <= 1) {
     return undefined;

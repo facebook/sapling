@@ -14,9 +14,9 @@ import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} 
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {notEmpty, nullthrows} from 'shared/utils';
-import {latestSuccessorsMapAtom} from './SuccessionTracker';
 import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
+import {allOtherWorktreeCheckoutsByHash} from './CheckedOutElsewhere';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
@@ -30,6 +30,7 @@ import {
   latestUncommittedChangesData,
   mergeConflicts,
 } from './serverAPIState';
+import {latestSuccessorsMapAtom} from './SuccessionTracker';
 
 export enum CommitPreview {
   REBASE_ROOT = 'rebase-root',
@@ -257,6 +258,7 @@ export const dagWithPreviews = atom(get => {
   if (focus) {
     const current = dag.resolve('.');
     if (current) {
+      const currentAncestors = dag.ancestors(current.hash);
       const currentStack = dag.descendants(
         dag.ancestors(dag.draft(current.hash), {within: dag.draft()}),
       );
@@ -266,7 +268,13 @@ export const dagWithPreviews = atom(get => {
       const toKeep = currentStack
         .union(YOU_ARE_HERE_VIRTUAL_COMMIT.hash) // ensure we always show "You Are Here"
         .union(related);
-      const toRemove = dag.draft().subtract(toKeep);
+      // A sibling checkout parked on our ancestry is already part of this worktree's
+      // visible stack. Every other sibling head seeds a branch that focus mode must hide.
+      const foreignWorktreeHeads = dag
+        .present(get(allOtherWorktreeCheckoutsByHash).keys())
+        .subtract(currentAncestors);
+      const foreignWorktreeCommits = dag.descendants(foreignWorktreeHeads);
+      const toRemove = dag.draft().subtract(toKeep).union(foreignWorktreeCommits);
       dag = dag.remove(toRemove);
     }
   }
