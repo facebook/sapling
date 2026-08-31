@@ -63,8 +63,9 @@ namespace {
  * The privhelper connection: the socket, the state guarding it, and every
  * callback the UnixSocket and the EventBase hold a pointer to.
  *
- * Distinct from PrivHelperClientImpl: what the event loop points at is not the
- * object the caller owns and destroys.
+ * Held by shared_ptr, and work posted to the EventBase captures a share.
+ * Nothing joins that work, so the session outlives the caller's PrivHelper
+ * whenever a task is still queued against it.
  */
 class PrivHelperClientSession
     : public std::enable_shared_from_this<PrivHelperClientSession>,
@@ -178,13 +179,13 @@ class PrivHelperClientSession
     // already been destroyed.
     folly::Promise<UnixSocket::Message> promise;
     auto future = promise.getFuture();
-    eventBase->runInEventBaseThread([this,
+    eventBase->runInEventBaseThread([self = shared_from_this(),
                                      xid,
                                      msg = std::move(msg),
                                      promise = std::move(promise)]() mutable {
       // Double check that the connection is still open
       {
-        auto state = state_.rlock();
+        auto state = self->state_.rlock();
         if (!state->conn_) {
           promise.setException(
               std::runtime_error(
@@ -192,11 +193,11 @@ class PrivHelperClientSession
           return;
         }
       }
-      pendingRequests_.emplace(xid, std::move(promise));
-      ++sendPending_;
+      self->pendingRequests_.emplace(xid, std::move(promise));
+      ++self->sendPending_;
       {
-        auto state = state_.wlock();
-        state->conn_->send(std::move(msg), this);
+        auto state = self->state_.wlock();
+        state->conn_->send(std::move(msg), self.get());
       }
     });
     return future;

@@ -1227,42 +1227,39 @@ TEST(PrivHelperSessionTest, detachesFromParentProcessGroup) {
 }
 
 TEST(
-    PrivHelperClientLifetimeDeathTest,
-    destroyingTheClientRunsQueuedWorkOnFreedMemory) {
-  if (!folly::kIsSanitizeAddress) {
-    // Without a sanitizer the read of freed memory is silent, so there is
-    // nothing to assert on.
-    GTEST_SKIP() << "the use-after-free is only detectable under ASAN";
+    PrivHelperClientLifetime,
+    destroyingTheClientLeavesRequestsQueuedOnItsEventBaseSafeToRun) {
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+
+  PrivHelperThreadedTestServer server;
+  std::thread serverThread(
+      [&server, conn = std::move(serverConn)]() mutable noexcept {
+        server.initPartial(std::move(conn), getuid(), getgid());
+        server.run();
+      });
+
+  // Declared before the client so that it outlives it, leaving the request
+  // queued against a client that is already gone.
+  EventBase eventBase;
+  auto pid = Future<pid_t>::makeEmpty();
+  {
+    auto client = createTestPrivHelper(std::move(clientConn));
+    client->attachEventBase(&eventBase);
+    pid = client->getServerPid();
   }
 
-  // FIXME: flip this to assert a clean completion once work queued on the
-  // EventBase holds the session, which makes the late run defined.
-  // ASAN aborts the forked child; the parent asserts on that abort.
-  EXPECT_DEATH(
-      {
-        File clientConn;
-        File serverConn;
-        PrivHelperConn::createConnPair(clientConn, serverConn);
+  // Destroying the client does not drain the queue, and does not have to: the
+  // request holds the session alive, so running it late is defined.
+  EXPECT_EQ(1u, eventBase.getNotificationQueueSize());
 
-        PrivHelperThreadedTestServer server;
-        std::thread serverThread(
-            [&server, conn = std::move(serverConn)]() mutable noexcept {
-              server.initPartial(std::move(conn), getuid(), getgid());
-              server.run();
-            });
+  eventBase.loopOnce(EVLOOP_NONBLOCK);
+  EXPECT_EQ(0u, eventBase.getNotificationQueueSize());
+  EXPECT_THROW_RE(
+      std::move(pid).get(1s),
+      std::runtime_error,
+      "cannot send new requests on closed privhelper connection");
 
-        // Declared before the client so that it outlives it, leaving the
-        // request queued against a client that is already gone.
-        EventBase eventBase;
-        auto pid = Future<pid_t>::makeEmpty();
-        {
-          auto client = createTestPrivHelper(std::move(clientConn));
-          client->attachEventBase(&eventBase);
-          pid = client->getServerPid();
-        }
-
-        eventBase.loopOnce(EVLOOP_NONBLOCK);
-        serverThread.join();
-      },
-      "heap-use-after-free");
+  serverThread.join();
 }
