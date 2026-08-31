@@ -60,35 +60,27 @@ namespace facebook::eden {
 namespace {
 
 /**
- * PrivHelperClientImpl contains the client-side logic (in the parent process)
- * for talking to the remote privileged process.
+ * The privhelper connection: the socket, the state guarding it, and every
+ * callback the UnixSocket and the EventBase hold a pointer to.
+ *
+ * Distinct from PrivHelperClientImpl: what the event loop points at is not the
+ * object the caller owns and destroys.
  */
-class PrivHelperClientImpl : public PrivHelper,
-                             private UnixSocket::ReceiveCallback,
-                             private UnixSocket::SendCallback,
-                             private EventBase::OnDestructionCallback {
+class PrivHelperClientSession : private UnixSocket::ReceiveCallback,
+                                private UnixSocket::SendCallback,
+                                private EventBase::OnDestructionCallback {
  public:
-  PrivHelperClientImpl(File conn, std::optional<SpawnedProcess> proc)
-      : helperProc_(std::move(proc)),
-        state_{ThreadSafeData{
+  explicit PrivHelperClientSession(File conn)
+      : state_{ThreadSafeData{
             Status::NOT_STARTED,
             nullptr,
-            UnixSocket::makeUnique(nullptr, std::move(conn))}} {
-    pid_ = -1;
-    if (helperProc_.has_value()) {
-      pid_ = helperProc_->pid();
-    }
-    // If we need to get the pid from the server, we need to
-    // wait until the connection is started
-  }
-  ~PrivHelperClientImpl() override {
-    if (cleanup()) {
-      waitForHelperProcess();
-    }
+            UnixSocket::makeUnique(nullptr, std::move(conn))}} {}
+
+  ~PrivHelperClientSession() override {
     XDCHECK_EQ(sendPending_, 0ul);
   }
 
-  void attachEventBase(EventBase* eventBase) override {
+  void attachEventBase(EventBase* eventBase) {
     {
       auto state = state_.wlock();
       if (state->status != Status::NOT_STARTED) {
@@ -104,88 +96,31 @@ class PrivHelperClientImpl : public PrivHelper,
     eventBase->runOnDestruction(*this);
   }
 
-  void detachEventBase() override {
+  void detachEventBase() {
     detachWithinEventBaseDestructor();
     cancel();
   }
 
-  Future<File> fuseMount(
-      folly::StringPiece mountPath,
-      bool readOnly,
-      StringPiece vfsType) override;
-  Future<Unit> fuseUnmount(StringPiece mountPath, const UnmountOptions& options)
-      override;
-  Future<Unit> nfsMount(
-      folly::StringPiece mountPath,
-      const NFSMountOptions& options) override;
-  Future<Unit> nfsUnmount(StringPiece mountPath) override;
-  Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
-      override;
-  folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
-  Future<Unit> takeoverShutdown(StringPiece mountPath) override;
-  Future<Unit> takeoverStartup(
-      StringPiece mountPath,
-      const vector<string>& bindMounts) override;
-  Future<Unit> setLogFile(folly::File logFile) override;
-  Future<pid_t> getServerPid() override;
-  Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
-  Future<pid_t> startFam(
-      const std::vector<std::string>& paths,
-      const std::string& tmpOutputPath,
-      const std::string& specifiedOutputPath,
-      const bool shouldUpload) override;
-  Future<StopFileAccessMonitorResponse> stopFam() override;
-  Future<folly::Unit> setMemoryPriorityForProcess(pid_t pid, int priority)
-      override;
-  Future<folly::Unit> setFuseReadAhead(
-      StringPiece mountPath,
-      uint32_t readAheadKb) override;
-  void setEdenFsEventsLogger(
-      std::shared_ptr<EdenFsEventsLogger> logger) override {
-    edenFsEventsLogger_ = std::move(logger);
+  bool checkConnection() {
+    auto state = state_.rlock();
+    return state->status == Status::RUNNING && state->conn_;
   }
-  int stop() override;
-  int getRawClientFd() const override {
+
+  int getRawClientFd() const {
     auto state = state_.rlock();
     return state->conn_->getRawFd();
   }
-  bool checkConnection() override;
-  int getPid() override;
-
- private:
-  using PendingRequestMap =
-      std::unordered_map<uint32_t, folly::Promise<UnixSocket::Message>>;
-  enum class Status : uint32_t {
-    /**
-     * Never attached, or detached again when the EventBase was destroyed.
-     * The only state attachEventBase() accepts.
-     */
-    NOT_STARTED,
-    /** Attached and usable. The only state that accepts new requests. */
-    RUNNING,
-    /**
-     * The connection ended without us asking: EOF, a send or receive error, or
-     * the socket being closed. Teardown still owes the process a reap.
-     */
-    CONNECTION_LOST,
-    /** Teardown has been entered, so a second attempt has nothing to do. */
-    SHUT_DOWN,
-  };
-  struct ThreadSafeData {
-    Status status;
-    EventBase* eventBase;
-    UnixSocket::UniquePtr conn_;
-  };
 
   uint32_t getNextXid() {
     return nextXid_.fetch_add(1, std::memory_order_acq_rel);
   }
+
   /**
    * Close the socket to the privhelper server and fail outstanding requests.
    *
-   * Returns false if the client was already shut down.
+   * Returns false if the session was already shut down.
    */
-  bool cleanup() {
+  bool shutdown() {
     EventBase* eventBase{nullptr};
     {
       auto state = state_.wlock();
@@ -214,18 +149,6 @@ class PrivHelperClientImpl : public PrivHelper,
     // Closing the socket will signal the privhelper process to exit.
     closeSocket(std::runtime_error("privhelper client being destroyed"));
     return true;
-  }
-
-  /**
-   * Wait for the privhelper process to exit, and return its exit status.
-   */
-  ProcessStatus waitForHelperProcess() {
-    if (helperProc_.has_value()) {
-      return helperProc_->wait();
-    }
-    // helperProc_ can be nullopt during the unit tests, where we aren't
-    // actually running the privhelper in a separate process.
-    return ProcessStatus(ProcessStatus::State::Exited, 0);
   }
 
   /**
@@ -276,6 +199,31 @@ class PrivHelperClientImpl : public PrivHelper,
     });
     return future;
   }
+
+ private:
+  using PendingRequestMap =
+      std::unordered_map<uint32_t, folly::Promise<UnixSocket::Message>>;
+  enum class Status : uint32_t {
+    /**
+     * Never attached, or detached again when the EventBase was destroyed.
+     * The only state attachEventBase() accepts.
+     */
+    NOT_STARTED,
+    /** Attached and usable. The only state that accepts new requests. */
+    RUNNING,
+    /**
+     * The connection ended without us asking: EOF, a send or receive error, or
+     * the socket being closed. Teardown still owes the process a reap.
+     */
+    CONNECTION_LOST,
+    /** Teardown has been entered, so a second attempt has nothing to do. */
+    SHUT_DOWN,
+  };
+  struct ThreadSafeData {
+    Status status;
+    EventBase* eventBase;
+    UnixSocket::UniquePtr conn_;
+  };
 
   void messageReceived(UnixSocket::Message&& message) noexcept override {
     try {
@@ -396,18 +344,115 @@ class PrivHelperClientImpl : public PrivHelper,
     }
   }
 
-  std::optional<SpawnedProcess> helperProc_;
   std::atomic<uint32_t> nextXid_{1};
   folly::Synchronized<ThreadSafeData> state_;
-  pid_t pid_;
-  // Must be set (via setEdenFsEventsLogger) before attachEventBase() is called.
-  // Read from EventBase thread thereafter; do not modify after attach.
-  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   // sendPending_, and pendingRequests_ are only accessed from the
   // EventBase thread.
   size_t sendPending_{0};
   PendingRequestMap pendingRequests_;
+};
+
+/**
+ * PrivHelperClientImpl contains the client-side logic (in the parent process)
+ * for talking to the remote privileged process.
+ */
+class PrivHelperClientImpl : public PrivHelper {
+ public:
+  PrivHelperClientImpl(File conn, std::optional<SpawnedProcess> proc)
+      : helperProc_(std::move(proc)),
+        session_(std::make_unique<PrivHelperClientSession>(std::move(conn))) {
+    pid_ = -1;
+    if (helperProc_.has_value()) {
+      pid_ = helperProc_->pid();
+    }
+    // If we need to get the pid from the server, we need to
+    // wait until the connection is started
+  }
+  ~PrivHelperClientImpl() override {
+    if (session_->shutdown()) {
+      waitForHelperProcess();
+    }
+  }
+
+  void attachEventBase(EventBase* eventBase) override {
+    session_->attachEventBase(eventBase);
+  }
+
+  void detachEventBase() override {
+    session_->detachEventBase();
+  }
+
+  Future<File> fuseMount(
+      folly::StringPiece mountPath,
+      bool readOnly,
+      StringPiece vfsType) override;
+  Future<Unit> fuseUnmount(StringPiece mountPath, const UnmountOptions& options)
+      override;
+  Future<Unit> nfsMount(
+      folly::StringPiece mountPath,
+      const NFSMountOptions& options) override;
+  Future<Unit> nfsUnmount(StringPiece mountPath) override;
+  Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
+      override;
+  folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
+  Future<Unit> takeoverShutdown(StringPiece mountPath) override;
+  Future<Unit> takeoverStartup(
+      StringPiece mountPath,
+      const vector<string>& bindMounts) override;
+  Future<Unit> setLogFile(folly::File logFile) override;
+  Future<pid_t> getServerPid() override;
+  Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
+  Future<pid_t> startFam(
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload) override;
+  Future<StopFileAccessMonitorResponse> stopFam() override;
+  Future<folly::Unit> setMemoryPriorityForProcess(pid_t pid, int priority)
+      override;
+  Future<folly::Unit> setFuseReadAhead(
+      StringPiece mountPath,
+      uint32_t readAheadKb) override;
+  void setEdenFsEventsLogger(
+      std::shared_ptr<EdenFsEventsLogger> logger) override {
+    edenFsEventsLogger_ = std::move(logger);
+  }
+  int stop() override;
+  int getRawClientFd() const override {
+    return session_->getRawClientFd();
+  }
+  bool checkConnection() override {
+    return session_->checkConnection();
+  }
+  int getPid() override;
+
+ private:
+  uint32_t getNextXid() {
+    return session_->getNextXid();
+  }
+
+  Future<UnixSocket::Message> sendAndRecv(
+      uint32_t xid,
+      UnixSocket::Message&& msg) {
+    return session_->sendAndRecv(xid, std::move(msg));
+  }
+
+  ProcessStatus waitForHelperProcess() {
+    if (helperProc_.has_value()) {
+      return helperProc_->wait();
+    }
+    // helperProc_ can be nullopt during the unit tests, where we aren't
+    // actually running the privhelper in a separate process.
+    return ProcessStatus(ProcessStatus::State::Exited, 0);
+  }
+
+  std::optional<SpawnedProcess> helperProc_;
+  pid_t pid_;
+  // Must be set (via setEdenFsEventsLogger) before attachEventBase() is called.
+  // Read from EventBase thread thereafter; do not modify after attach.
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  const std::unique_ptr<PrivHelperClientSession> session_;
 };
 
 /**
@@ -686,7 +731,7 @@ Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
 }
 
 int PrivHelperClientImpl::stop() {
-  if (!cleanup()) {
+  if (!session_->shutdown()) {
     // Already torn down, so there is no process left to wait for.
     folly::throwSystemErrorExplicit(
         ESRCH, "error shutting down privhelper process");
@@ -696,11 +741,6 @@ int PrivHelperClientImpl::stop() {
     return -status.killSignal();
   }
   return status.exitStatus();
-}
-
-bool PrivHelperClientImpl::checkConnection() {
-  auto state = state_.rlock();
-  return state->status == Status::RUNNING && state->conn_;
 }
 
 int PrivHelperClientImpl::getPid() {
