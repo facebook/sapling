@@ -48,6 +48,17 @@ using folly::test::TemporaryFile;
 using std::string;
 using testing::UnorderedElementsAre;
 
+TEST(TccDisclaimKillswitch, presentWhenFileExists) {
+  TemporaryFile killswitch;
+  EXPECT_TRUE(tccDisclaimKillswitchPresent(killswitch.path().c_str()));
+}
+
+TEST(TccDisclaimKillswitch, absentWhenFileDoesNotExist) {
+  TemporaryDirectory dir;
+  auto missing = (dir.path() / "disable-tcc-disclaim").string();
+  EXPECT_FALSE(tccDisclaimKillswitchPresent(missing.c_str()));
+}
+
 /**
  * A PrivHelperServer implementation intended to be used in a separate thread in
  * the same process.

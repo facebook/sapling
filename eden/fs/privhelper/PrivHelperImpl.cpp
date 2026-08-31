@@ -761,6 +761,10 @@ int PrivHelperClientImpl::getPid() {
 
 } // unnamed namespace
 
+bool tccDisclaimKillswitchPresent(const char* path) {
+  return access(path, F_OK) == 0;
+}
+
 unique_ptr<PrivHelper>
 startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   std::string helperPathFromArgs;
@@ -797,6 +801,20 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   }
 
   SpawnedProcess::Options opts;
+
+#ifdef __APPLE__
+  if (tccDisclaimKillswitchPresent()) {
+    XLOGF(
+        INFO,
+        "not disclaiming TCC responsibility for the privhelper: killswitch "
+        "file {} is present",
+        kTccDisclaimKillswitchPath);
+  } else {
+    // Make the privhelper its own TCC responsible process so that TCC grants
+    // keyed to its code signature apply regardless of what launched EdenFS.
+    opts.disclaimTccResponsibility();
+  }
+#endif
 
   // If EdenFS is running as setuid-root, it needs to be cautious about the
   // privhelper process that it's about start. Note: from a standard release
