@@ -643,9 +643,10 @@ where
         .find_entries(
             ctx,
             blobstore,
-            paths.iter().filter_map(|(_, lookup_path)| {
-                (!lookup_path.is_root()).then(|| manifest::PathOrPrefix::Path(lookup_path.clone()))
-            }),
+            paths
+                .iter()
+                .filter(|&(_, lookup_path)| (!lookup_path.is_root()))
+                .map(|(_, lookup_path)| manifest::PathOrPrefix::Path(lookup_path.clone())),
         )
         .try_filter_map(|(path, entry)| async move {
             Ok(entry
