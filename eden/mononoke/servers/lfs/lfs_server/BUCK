@@ -59,7 +59,6 @@ rust_binary(
         "//eden/mononoke/common/gotham_ext:gotham_ext",
         "//eden/mononoke/common/lfs_protocol:lfs_protocol",
         "//eden/mononoke/common/metadata:metadata",
-        "//eden/mononoke/common/mononoke_configs:mononoke_configs",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/mononoke_repos:mononoke_repos",
         "//eden/mononoke/common/ods_counters:ods_counters",

@@ -54,7 +54,6 @@ use mononoke_app::args::TLSArgs;
 use mononoke_app::args::parse_config_spec_to_path;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
@@ -181,7 +180,6 @@ struct LfsServerArgs {
 #[derive(Clone)]
 pub struct LfsRepos {
     pub(crate) repos: Arc<MononokeRepos<Repo>>,
-    pub(crate) config: Arc<MononokeConfigs>,
 }
 
 impl LfsRepos {
@@ -190,8 +188,7 @@ impl LfsRepos {
             .open_managed_repos(Some(ShardedService::LargeFilesService))
             .await?;
         let repos = repos_mgr.repos().clone();
-        let config = repos_mgr.configs().clone();
-        Ok(Self { repos, config })
+        Ok(Self { repos })
     }
 
     pub(crate) fn get(&self, repo_name: &str) -> Option<Arc<Repo>> {
