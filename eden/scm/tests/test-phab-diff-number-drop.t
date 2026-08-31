@@ -405,8 +405,6 @@ Agent: graft of an obsolete commit should keep an otherwise-lost diff number:
   $ sl go -q $BASE
   $ echo elsewhere > elsewhere
   $ sl commit -Aqm elsewhere
-  hint[amend-restack]: descendants of eabcd03bef92 are left behind - use 'sl restack' to rebase them
-  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
   $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
   commit.baddiffid.copy_recovery_kept: 1
   $ sl log -r . -T '[{phabdiff}] {desc|firstline}\n'
@@ -428,8 +426,6 @@ Agent: graft of an obsolete commit should unlink when a successor keeps the diff
   $ sl go -q $BASE
   $ echo elsewhere > elsewhere
   $ sl commit -Aqm elsewhere
-  hint[amend-restack]: descendants of eabcd03bef92 are left behind - use 'sl restack' to rebase them
-  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
   $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
   note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
   commit.baddiffid.copy_agent_unlinked: 1
@@ -455,8 +451,6 @@ Agent: graft should unlink when an unrelated draft carries the diff number:
   $ sl go -q $BASE
   $ echo elsewhere > elsewhere
   $ sl commit -Aqm elsewhere
-  hint[amend-restack]: descendants of * are left behind - use 'sl restack' to rebase them (glob)
-  hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
   $ CODING_AGENT_METADATA=id=test_agent sl graft --config devel.print-metrics=commit.baddiffid $LOST >/dev/null
   note: removed phabricator diff number 'D12345' from the commit copied by graft; the new commit is not linked to a phabricator diff
   commit.baddiffid.copy_agent_unlinked: 1
