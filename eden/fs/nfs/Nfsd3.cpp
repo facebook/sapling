@@ -2615,6 +2615,29 @@ void Nfsd3::invalidate(
       // invalidate the NFS client cache.
       XLOGF(
           DBG9, "Finished invalidating (permission denied): {}", path.c_str());
+#ifdef __APPLE__
+    } else if (error == EPERM) {
+      incrementNfsGcInvalidationCounter(
+          stats, source, &NfsStats::nfsInvalidationGcFailure);
+      // On macOS, EPERM is a known operational condition rather than a
+      // programming error: it typically means TCC denied the synthetic chmod
+      // because the daemon's responsible process lacks the
+      // SystemPolicyNetworkVolumes grant. When that happens every GC
+      // invalidation fails identically, so one line per daemon lifetime
+      // carries all the information. On other platforms EPERM stays in the
+      // generic DFATAL branch below: there it is a genuine anomaly.
+      XLOGF_FIRST_N(
+          ERR,
+          1,
+          "Permission denied invalidating path {} to mode {} using chmod. "
+          "This usually means TCC denied SystemPolicyNetworkVolumes "
+          "for the daemon's responsible process. Run `eden doctor`, or "
+          "restart EdenFS with `eden restart` to recover. Further EPERM "
+          "failures will not be logged; see the nfs.invalidation.gc.failure "
+          "counter.",
+          path,
+          mode);
+#endif
     } else {
       incrementNfsGcInvalidationCounter(
           stats, source, &NfsStats::nfsInvalidationGcFailure);
