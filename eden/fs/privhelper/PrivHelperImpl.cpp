@@ -15,7 +15,6 @@
 #endif
 
 #include <folly/Exception.h>
-#include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
@@ -83,7 +82,9 @@ class PrivHelperClientImpl : public PrivHelper,
     // wait until the connection is started
   }
   ~PrivHelperClientImpl() override {
-    cleanup();
+    if (cleanup()) {
+      waitForHelperProcess();
+    }
     XDCHECK_EQ(sendPending_, 0ul);
   }
 
@@ -170,18 +171,16 @@ class PrivHelperClientImpl : public PrivHelper,
     return nextXid_.fetch_add(1, std::memory_order_acq_rel);
   }
   /**
-   * Close the socket to the privhelper server, and wait for it to exit.
+   * Close the socket to the privhelper server and fail outstanding requests.
    *
-   * Returns the exit status of the privhelper process, or an errno value on
-   * error.
+   * Returns false if the client was already shut down.
    */
-  folly::Expected<ProcessStatus, int> cleanup() {
+  bool cleanup() {
     EventBase* eventBase{nullptr};
     {
       auto state = state_.wlock();
       if (state->status == Status::WAITED) {
-        // We have already waited on the privhelper process.
-        return folly::makeUnexpected(ESRCH);
+        return false;
       }
       if (state->status == Status::RUNNING) {
         eventBase = state->eventBase;
@@ -204,16 +203,19 @@ class PrivHelperClientImpl : public PrivHelper,
     // Make sure the socket is closed, and fail any outstanding requests.
     // Closing the socket will signal the privhelper process to exit.
     closeSocket(std::runtime_error("privhelper client being destroyed"));
+    return true;
+  }
 
-    // Wait until the privhelper process exits.
+  /**
+   * Wait for the privhelper process to exit, and return its exit status.
+   */
+  ProcessStatus waitForHelperProcess() {
     if (helperProc_.has_value()) {
-      return folly::makeExpected<int>(helperProc_->wait());
-    } else {
-      // helperProc_ can be nullopt during the unit tests, where we aren't
-      // actually running the privhelper in a separate process.
-      return folly::makeExpected<int>(
-          ProcessStatus(ProcessStatus::State::Exited, 0));
+      return helperProc_->wait();
     }
+    // helperProc_ can be nullopt during the unit tests, where we aren't
+    // actually running the privhelper in a separate process.
+    return ProcessStatus(ProcessStatus::State::Exited, 0);
   }
 
   /**
@@ -674,12 +676,12 @@ Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
 }
 
 int PrivHelperClientImpl::stop() {
-  const auto result = cleanup();
-  if (result.hasError()) {
+  if (!cleanup()) {
+    // Already torn down, so there is no process left to wait for.
     folly::throwSystemErrorExplicit(
-        result.error(), "error shutting down privhelper process");
+        ESRCH, "error shutting down privhelper process");
   }
-  auto status = result.value();
+  const auto status = waitForHelperProcess();
   if (status.killSignal() != 0) {
     return -status.killSignal();
   }
