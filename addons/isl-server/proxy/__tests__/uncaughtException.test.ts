@@ -6,8 +6,6 @@
  */
 
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import {
   UNCAUGHT_EXCEPTION_EXIT_CODE,
   logUncaughtExceptionAndExit,
@@ -15,47 +13,42 @@ import {
 } from '../uncaughtException';
 
 describe('uncaught exception handler', () => {
-  let tmp: string;
-  let logFile: string;
+  const logFile = 'isl-server.log';
 
-  beforeEach(async () => {
-    tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-uncaught-exception-test'));
-    logFile = path.join(tmp, 'isl-server.log');
-  });
-
-  afterEach(async () => {
+  afterEach(() => {
     jest.restoreAllMocks();
-    await fs.promises.rm(tmp, {recursive: true, force: true});
   });
 
   it('records the exception and exits non-zero', async () => {
+    const appendFile = jest.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined);
     const exit = jest.fn();
 
     await logUncaughtExceptionAndExit(new Error('kaboom'), logFile, exit);
 
-    const contents = await fs.promises.readFile(logFile, 'utf8');
-    expect(contents).toContain('ISL server child process got an uncaught exception');
-    expect(contents).toContain('kaboom');
+    expect(appendFile).toHaveBeenCalledWith(
+      logFile,
+      expect.stringMatching(/ISL server child process got an uncaught exception:[\s\S]*kaboom/),
+      'utf8',
+    );
     expect(exit).toHaveBeenCalledTimes(1);
     expect(exit).toHaveBeenCalledWith(UNCAUGHT_EXCEPTION_EXIT_CODE);
     expect(UNCAUGHT_EXCEPTION_EXIT_CODE).not.toEqual(0);
   });
 
-  it('does not truncate what the server already logged', async () => {
-    await fs.promises.writeFile(logFile, 'earlier log line\n', 'utf8');
+  it('appends rather than truncating what the server already logged', async () => {
+    const appendFile = jest.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined);
+    const writeFile = jest.spyOn(fs.promises, 'writeFile');
 
     await logUncaughtExceptionAndExit(new Error('kaboom'), logFile, jest.fn());
 
-    expect(await fs.promises.readFile(logFile, 'utf8')).toContain('earlier log line');
+    expect(appendFile).toHaveBeenCalledTimes(1);
+    expect(writeFile).not.toHaveBeenCalled();
   });
 
   it('still exits when the exception cannot be recorded', async () => {
-    // An aggressive /tmp sweeper deleting the per-spawn mkdtemp log directory is the case that
-    // originally livelocked this handler.
-    await fs.promises.rm(tmp, {recursive: true});
-    await expect(fs.promises.appendFile(logFile, 'precondition', 'utf8')).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
+    jest
+      .spyOn(fs.promises, 'appendFile')
+      .mockRejectedValue(Object.assign(new Error('no such file or directory'), {code: 'ENOENT'}));
     const exit = jest.fn();
 
     await expect(
@@ -88,21 +81,22 @@ describe('uncaught exception handler', () => {
     });
 
     it('records the exception and exits the process', async () => {
+      const appendFile = jest.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined);
       const exit = jest
         .spyOn(process, 'exit')
         .mockImplementation((() => undefined) as unknown as typeof process.exit);
 
       await register(logFile)(new Error('kaboom'));
 
-      expect(await fs.promises.readFile(logFile, 'utf8')).toContain('kaboom');
+      expect(appendFile).toHaveBeenCalledWith(logFile, expect.stringContaining('kaboom'), 'utf8');
       expect(exit).toHaveBeenCalledWith(UNCAUGHT_EXCEPTION_EXIT_CODE);
     });
 
     it('settles rather than rejecting when the log write fails', async () => {
+      jest.spyOn(fs.promises, 'appendFile').mockRejectedValue(new Error('write failed'));
       jest
         .spyOn(process, 'exit')
         .mockImplementation((() => undefined) as unknown as typeof process.exit);
-      await fs.promises.rm(tmp, {recursive: true});
       const handler = register(logFile);
 
       // A rejection here is what Node feeds back into this very handler, which is how the

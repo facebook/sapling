@@ -12,17 +12,17 @@ import {exists} from 'shared/fs';
 import rmtree from '../rmtree';
 
 describe('rmtree', () => {
-  let tmp: string;
-
-  beforeEach(async () => {
-    tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'rmtree-test'));
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('does not complain about a non-existent file', async () => {
+    const tmp = await makeTmpDir();
     await rmtree(path.join(tmp, 'foo'));
   });
 
   it('removes a file', async () => {
+    const tmp = await makeTmpDir();
     const file = path.join(tmp, 'foo');
     await fs.promises.writeFile(file, 'foobar');
     await rmtree(file);
@@ -31,6 +31,7 @@ describe('rmtree', () => {
   });
 
   it('removes an empty folder', async () => {
+    const tmp = await makeTmpDir();
     const folder = path.join(tmp, 'foo');
     await fs.promises.mkdir(folder);
     await rmtree(folder);
@@ -39,6 +40,7 @@ describe('rmtree', () => {
   });
 
   it('removes a folder with files', async () => {
+    const tmp = await makeTmpDir();
     const folder = path.join(tmp, 'foo');
     await fs.promises.mkdir(folder);
     await fs.promises.writeFile(path.join(folder, '1'), '1');
@@ -51,20 +53,43 @@ describe('rmtree', () => {
   });
 
   it('removes a deeper tree of folders and files', async () => {
-    const folder = path.join(tmp, 'tree');
-    await fs.promises.mkdir(path.join(folder, '1/2/3/4/5'), {recursive: true});
-    await fs.promises.writeFile(path.join(folder, '1/A'), 'A');
-    await fs.promises.writeFile(path.join(folder, '1/2/B'), 'B');
-    await fs.promises.writeFile(path.join(folder, '1/2/B'), 'B');
-    await fs.promises.writeFile(path.join(folder, '1/2/3/C'), 'C');
-    await fs.promises.writeFile(path.join(folder, '1/2/3/4/D'), 'D');
-    await fs.promises.writeFile(path.join(folder, '1/2/3/4/5/E'), 'E');
+    const folder = 'tree';
+    const child = path.join(folder, 'child');
+    const grandchild = path.join(child, 'grandchild');
+    const directory = {isDirectory: () => true} as fs.Stats;
+    const file = {isDirectory: () => false} as fs.Stats;
+    jest
+      .spyOn(fs.promises, 'lstat')
+      .mockResolvedValueOnce(directory)
+      .mockResolvedValueOnce(file)
+      .mockResolvedValueOnce(directory)
+      .mockResolvedValueOnce(file)
+      .mockResolvedValueOnce(directory)
+      .mockResolvedValueOnce(file);
+    const readdir = jest.spyOn(fs.promises, 'readdir') as unknown as jest.MockedFunction<
+      (folder: string) => Promise<Array<string>>
+    >;
+    readdir
+      .mockResolvedValueOnce(['root-file', 'child'])
+      .mockResolvedValueOnce(['child-file', 'grandchild'])
+      .mockResolvedValueOnce(['deep-file'])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    const unlink = jest.spyOn(fs.promises, 'unlink').mockResolvedValue(undefined);
+    const rmdir = jest.spyOn(fs.promises, 'rmdir').mockResolvedValue(undefined);
+
     await rmtree(folder);
 
-    expect(await exists(folder)).toBe(false);
+    expect(unlink.mock.calls.map(([file]) => file)).toEqual([
+      path.join(folder, 'root-file'),
+      path.join(child, 'child-file'),
+      path.join(grandchild, 'deep-file'),
+    ]);
+    expect(rmdir.mock.calls.map(([folder]) => folder)).toEqual([grandchild, child, folder]);
   });
 
   it('does not follow argument if it is a symlink', async () => {
+    const tmp = await makeTmpDir();
     const target = path.join(tmp, 'target');
     const link = path.join(tmp, 'link');
     await fs.promises.writeFile(target, 'target file');
@@ -78,6 +103,7 @@ describe('rmtree', () => {
   });
 
   it('does not follow symlink in the tree', async () => {
+    const tmp = await makeTmpDir();
     const target = path.join(tmp, 'target');
     await fs.promises.writeFile(target, 'target file');
 
@@ -92,3 +118,7 @@ describe('rmtree', () => {
     expect(await exists(target)).toBe(true);
   });
 });
+
+function makeTmpDir(): Promise<string> {
+  return fs.promises.mkdtemp(path.join(os.tmpdir(), 'rmtree-test'));
+}

@@ -71,8 +71,10 @@ describe('AmendMessageOperation', () => {
     });
     act(() => {
       const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.clear(title);
       userEvent.type(title, 'My Commit');
       const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.clear(desc);
       userEvent.type(desc, 'My description');
     });
 
@@ -87,7 +89,9 @@ describe('AmendMessageOperation', () => {
     CommitInfoTestUtils.expectIsNOTEditingTitle();
 
     act(() => CommitInfoTestUtils.clickToSelectCommit('bbbbbbbbbbbb'));
-    expect(CommitInfoTestUtils.withinCommitInfo().getByText('You are here')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('You are here')).toBeInTheDocument(),
+    );
 
     act(() => {
       simulateMessageFromServer({
@@ -99,9 +103,9 @@ describe('AmendMessageOperation', () => {
       });
     });
 
-    waitFor(() => {
+    await waitFor(() => {
       expect(
-        CommitInfoTestUtils.withinCommitInfo().getByText('You are here'),
+        CommitInfoTestUtils.withinCommitInfo().queryByText('You are here'),
       ).not.toBeInTheDocument();
       CommitInfoTestUtils.expectIsEditingTitle();
       const title = CommitInfoTestUtils.getTitleEditor();

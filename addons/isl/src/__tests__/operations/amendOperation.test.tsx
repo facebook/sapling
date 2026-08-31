@@ -56,8 +56,10 @@ describe('AmendOperation', () => {
     });
     act(() => {
       const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.clear(title);
       userEvent.type(title, 'My Commit');
       const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.clear(desc);
       userEvent.type(desc, 'My description');
     });
 
@@ -79,7 +81,7 @@ describe('AmendOperation', () => {
       });
     });
 
-    waitFor(() => {
+    await waitFor(() => {
       CommitInfoTestUtils.expectIsEditingTitle();
       const title = CommitInfoTestUtils.getTitleEditor();
       expect(title).toHaveValue('My Commit');
@@ -98,8 +100,10 @@ describe('AmendOperation', () => {
     });
     act(() => {
       const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.clear(title);
       userEvent.type(title, 'My Commit');
       const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.clear(desc);
       userEvent.type(desc, 'My description');
     });
 
@@ -120,8 +124,10 @@ describe('AmendOperation', () => {
     });
     act(() => {
       const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.clear(title);
       userEvent.type(title, 'other title');
       const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.clear(desc);
       userEvent.type(desc, 'other description');
     });
 
@@ -135,13 +141,13 @@ describe('AmendOperation', () => {
       });
     });
 
-    waitFor(() => {
+    await waitFor(() => {
       CommitInfoTestUtils.expectIsEditingTitle();
       const title = CommitInfoTestUtils.getTitleEditor();
       expect(title).toHaveValue('other title, My Commit');
       CommitInfoTestUtils.expectIsEditingDescription();
       const desc = CommitInfoTestUtils.getDescriptionEditor();
-      expect(desc).toHaveValue('other description, My description');
+      expect(desc).toHaveValue('other description\nMy description');
     });
   });
 });
