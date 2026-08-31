@@ -1,8 +1,11 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_clients: ['code_review']
-apply_to_regex: 'eden/scm/sapling/ext/.*\.py$'
-apply_to_content: 'uisetup|extsetup|reposetup|wrapfunction|wrapcommand'
+name: ACR-extension-lifecycle
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/scm/sapling/ext/.*\.py$'
+  apply_to_content: 'uisetup|extsetup|reposetup|wrapfunction|wrapcommand'
+  apply_to_clients: ['code_review']
 ---
 
 # Extension Lifecycle Ordering
