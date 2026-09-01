@@ -360,6 +360,27 @@ impl BackingStore {
                     "walk-prefetch-file-batch-size",
                     || 4_096,
                 )?,
+                max_concurrent_file_fetches: config
+                    .get_or(
+                        "backingstore",
+                        "walk-prefetch-max-concurrent-file-fetches",
+                        || 4,
+                    )?
+                    .max(1),
+                max_concurrent_manifest_walks: config
+                    .get_or(
+                        "backingstore",
+                        "walk-prefetch-max-concurrent-manifest-walks",
+                        || 4,
+                    )?
+                    .max(1),
+                max_concurrent_prefetches: config
+                    .get_or(
+                        "backingstore",
+                        "walk-prefetch-max-concurrent-prefetches",
+                        || 4,
+                    )?
+                    .max(1),
                 skip_lfs: config.get_or("backingstore", "walk-prefetch-skip-lfs", || true)?,
             };
 

@@ -49,6 +49,12 @@ macro_rules! info_if {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Config {
     pub(crate) file_batch_size: usize,
+    /// Maximum outstanding file-fetch batches across all prefetches.
+    pub(crate) max_concurrent_file_fetches: usize,
+    /// Maximum concurrent manifest walks across all prefetches.
+    pub(crate) max_concurrent_manifest_walks: usize,
+    /// Maximum active logical prefetches across roots and shallow batches.
+    pub(crate) max_concurrent_prefetches: usize,
     pub(crate) max_initial_lag: u64,
     pub(crate) min_ratio: f64,
     pub(crate) min_interval: Duration,
@@ -59,6 +65,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             file_batch_size: 4_096,
+            max_concurrent_file_fetches: 4,
+            max_concurrent_manifest_walks: 4,
+            max_concurrent_prefetches: 4,
             max_initial_lag: 1000,
             min_ratio: 0.1,
             min_interval: Duration::from_millis(10),
@@ -68,6 +77,146 @@ impl Default for Config {
 }
 
 type SparseMatcherResult = anyhow::Result<Option<DynMatcher>>;
+type ActivePrefetches = HashMap<(RepoPathBuf, bool), Vec<(usize, PrefetchHandle)>>;
+
+#[derive(Clone)]
+struct ConcurrencyLimiter {
+    available: flume::Receiver<()>,
+    release: flume::Sender<()>,
+}
+
+impl ConcurrencyLimiter {
+    fn new(limit: usize) -> Self {
+        let limit = limit.max(1);
+        let (release, available) = flume::bounded(limit);
+        for _ in 0..limit {
+            release
+                .try_send(())
+                .expect("new limiter channel should have capacity for its initial permits");
+        }
+
+        Self { available, release }
+    }
+
+    fn try_acquire(&self) -> Option<ConcurrencyPermit> {
+        self.available.try_recv().ok().map(|()| ConcurrencyPermit {
+            release: self.release.clone(),
+        })
+    }
+
+    fn acquire(&self, handle: &PrefetchHandle) -> Option<ConcurrencyPermit> {
+        if !handle.is_in_progress() {
+            return None;
+        }
+
+        enum Selection {
+            Permit(Result<(), flume::RecvError>),
+            Canceled,
+        }
+
+        match flume::Selector::new()
+            .recv(&self.available, Selection::Permit)
+            .recv(handle.cancellation_receiver(), |_| Selection::Canceled)
+            .wait()
+        {
+            Selection::Permit(Ok(())) => {
+                let permit = ConcurrencyPermit {
+                    release: self.release.clone(),
+                };
+                handle.is_in_progress().then_some(permit)
+            }
+            Selection::Permit(Err(_)) | Selection::Canceled => None,
+        }
+    }
+}
+
+struct ConcurrencyPermit {
+    release: flume::Sender<()>,
+}
+
+impl Drop for ConcurrencyPermit {
+    fn drop(&mut self) {
+        match self.release.try_send(()) {
+            Ok(()) | Err(flume::TrySendError::Disconnected(())) => {}
+            Err(flume::TrySendError::Full(())) => {
+                tracing::error!("concurrency limiter permit channel unexpectedly full");
+            }
+        }
+    }
+}
+
+struct FileFetchQueue {
+    file_store: Arc<dyn FileStore>,
+    limiter: ConcurrencyLimiter,
+    fetches: VecDeque<(
+        FetchContext,
+        storemodel::ContentFetchItems,
+        ConcurrencyPermit,
+    )>,
+}
+
+impl FileFetchQueue {
+    fn new(file_store: Arc<dyn FileStore>, limiter: ConcurrencyLimiter) -> Self {
+        Self {
+            file_store,
+            limiter,
+            fetches: VecDeque::new(),
+        }
+    }
+
+    fn acquire_slot(
+        &mut self,
+        handle: &PrefetchHandle,
+        on_complete: &mut impl FnMut(FetchContext),
+    ) -> Option<ConcurrencyPermit> {
+        loop {
+            if !handle.is_in_progress() {
+                return None;
+            }
+            if let Some(permit) = self.limiter.try_acquire() {
+                return Some(permit);
+            }
+            if !self.consume_one(on_complete) {
+                return self.limiter.acquire(handle);
+            }
+        }
+    }
+
+    fn start(
+        &mut self,
+        permit: ConcurrencyPermit,
+        keys: Vec<Key>,
+        skip_lfs: bool,
+    ) -> anyhow::Result<()> {
+        let fctx = FetchContext::new_with_mode_and_cause(
+            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+            FetchCause::EdenWalkPrefetch,
+        )
+        .with_skip_lfs(skip_lfs);
+        let iter = self.file_store.get_content_iter(fctx.clone(), keys)?;
+        self.fetches.push_back((fctx, iter, permit));
+        Ok(())
+    }
+
+    fn consume_one(&mut self, on_complete: &mut impl FnMut(FetchContext)) -> bool {
+        let Some((fctx, iter, _permit)) = self.fetches.pop_front() else {
+            return false;
+        };
+        iter.into_iter().for_each(drop);
+        on_complete(fctx);
+        true
+    }
+}
+
+fn remaining_prefetch_slots(
+    config: Config,
+    prefetches: &ActivePrefetches,
+    batch_dir_prefetches: &[PrefetchHandle],
+) -> usize {
+    config
+        .max_concurrent_prefetches
+        .saturating_sub(batch_dir_prefetches.len() + prefetches.len())
+}
 
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
 /// returned channel. The prefetches are based on active fs walks, according to the walk detector
@@ -85,13 +234,11 @@ pub(crate) fn prefetch_manager(
     // We don't need to queue up lots of kicks. A single one will suffice.
     let (send, recv) = flume::bounded(1);
 
-    const MAX_CONCURRENT_PREFETCHES: usize = 5;
-
     std::thread::spawn(move || {
         // Map in-progress walks to corresponding in-progress prefetch. We allow multiple
         // in-progress prefetches for the same root path at different depths. This happens as the walk
         // detector witnesses deeper accesses and expands the depth boundary.
-        let mut prefetches = HashMap::<(RepoPathBuf, bool), Vec<(usize, PrefetchHandle)>>::new();
+        let mut prefetches = ActivePrefetches::new();
 
         // Big batches of shallow depth directory prefetches. We don't address the prefetches
         // per-walk because, since they are batched, there is no way to cancel individual
@@ -112,6 +259,9 @@ pub(crate) fn prefetch_manager(
         let mut last_iteration_time = None;
 
         let mut sparse_matcher: Option<DynMatcher> = None;
+
+        let manifest_walk_limiter = ConcurrencyLimiter::new(config.max_concurrent_manifest_walks);
+        let file_fetch_limiter = ConcurrencyLimiter::new(config.max_concurrent_file_fetches);
 
         // Wait for kicks, or otherwise check every second. The intermittent check is important
         // to notice that walks have stopped (because the kicks only happen on file/dir access,
@@ -225,6 +375,9 @@ pub(crate) fn prefetch_manager(
 
             batch_dir_prefetches.retain(|handle| !handle.is_done());
 
+            let mut available_prefetch_slots =
+                remaining_prefetch_slots(config, &prefetches, &batch_dir_prefetches);
+
             // Reuse a cached TreeManifest if available. It is thread safe and cheaply cloneable
             // when used read-only.
             let mf: TreeManifest = match current_manifest {
@@ -244,28 +397,42 @@ pub(crate) fn prefetch_manager(
             const SHALLOW_PREFETCH_BATCH_SIZE: usize = 100;
             let mut batchable_walks = Vec::<(RepoPathBuf, usize)>::new();
             let mut batch_prefetch =
-                |batch: &mut Vec<(RepoPathBuf, usize)>, handled: &mut HashSet<_>| {
+                |batch: &mut Vec<(RepoPathBuf, usize)>,
+                 handled: &mut HashSet<_>,
+                 available_prefetch_slots: &mut usize| {
                     if batch.is_empty() {
                         return;
                     }
 
-                    if batch_dir_prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
+                    if *available_prefetch_slots == 0 {
                         tracing::debug!(
                             batch_size = batch.len(),
                             "not kicking off new batch of shallow dir walks - prefetches full"
                         );
                     } else {
-                        for (root, depth) in batch.iter() {
-                            handled.insert(((root.clone(), false), *depth));
-                        }
-                        batch_dir_prefetches.push(prefetch(
+                        let handled_walks = batch.clone();
+                        let handle = prefetch_with_limiter(
                             config,
                             mf.clone(),
                             file_store.clone(),
+                            manifest_walk_limiter.clone(),
+                            file_fetch_limiter.clone(),
                             detector.clone(),
                             PrefetchWork::DirectoriesOnly(std::mem::take(batch)),
                             sparse_matcher.clone(),
-                        ));
+                        );
+                        if let Some(handle) = handle {
+                            for (root, depth) in handled_walks {
+                                handled.insert(((root, false), depth));
+                            }
+                            batch_dir_prefetches.push(handle);
+                            *available_prefetch_slots -= 1;
+                        } else {
+                            tracing::debug!(
+                                batch_size = handled_walks.len(),
+                                "not kicking off new batch of shallow dir walks - manifest walks full"
+                            );
+                        }
                     }
                 };
 
@@ -279,7 +446,11 @@ pub(crate) fn prefetch_manager(
                 if !new_walk.0.1 && new_walk.1 <= 2 {
                     batchable_walks.push((new_walk.0.0, new_walk.1));
                     if batchable_walks.len() >= SHALLOW_PREFETCH_BATCH_SIZE {
-                        batch_prefetch(&mut batchable_walks, &mut handled_prefetches);
+                        batch_prefetch(
+                            &mut batchable_walks,
+                            &mut handled_prefetches,
+                            &mut available_prefetch_slots,
+                        );
                     }
                     continue;
                 }
@@ -308,7 +479,10 @@ pub(crate) fn prefetch_manager(
                         ?new_walk,
                         "starting walk with additional depth offset due to existing walk"
                     );
-                } else if prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
+                }
+
+                let is_new_prefetch = !prefetches.contains_key(&new_walk.0);
+                if is_new_prefetch && available_prefetch_slots == 0 {
                     tracing::debug!(?new_walk, "not kicking off new walk - prefetches full");
                     continue;
                 }
@@ -318,37 +492,45 @@ pub(crate) fn prefetch_manager(
                     continue;
                 }
 
-                handled_prefetches.insert(new_walk.clone());
-
-                let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
-
-                tracing::debug!(?new_walk, "kicking off prefetch");
-
                 let work = if new_walk.0.1 {
-                    PrefetchWork::FileContent(new_walk.0.0, new_walk.1, depth_offset)
+                    PrefetchWork::FileContent(new_walk.0.0.clone(), new_walk.1, depth_offset)
                 } else {
-                    PrefetchWork::DirectoriesOnly(vec![(new_walk.0.0, new_walk.1)])
+                    PrefetchWork::DirectoriesOnly(vec![(new_walk.0.0.clone(), new_walk.1)])
                 };
 
-                // Kick off the actual prefetch and store its handle. The prefetch will be canceled
-                // when we drop its handle.
-                prefetches_for_this_root.push((
-                    new_walk.1,
-                    prefetch(
-                        config,
-                        mf.clone(),
-                        file_store.clone(),
-                        detector.clone(),
-                        work,
-                        sparse_matcher.clone(),
-                    ),
-                ));
+                let Some(handle) = prefetch_with_limiter(
+                    config,
+                    mf.clone(),
+                    file_store.clone(),
+                    manifest_walk_limiter.clone(),
+                    file_fetch_limiter.clone(),
+                    detector.clone(),
+                    work,
+                    sparse_matcher.clone(),
+                ) else {
+                    tracing::debug!(?new_walk, "not kicking off new walk - manifest walks full");
+                    continue;
+                };
+
+                tracing::debug!(?new_walk, "kicking off prefetch");
+                handled_prefetches.insert(new_walk.clone());
+
+                // Store the active prefetch handle. The prefetch will be canceled when we drop it.
+                let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
+                prefetches_for_this_root.push((new_walk.1, handle));
+                if is_new_prefetch {
+                    available_prefetch_slots -= 1;
+                }
 
                 // Make sure the prefetches stay ordered by depth.
                 prefetches_for_this_root.sort_by_key(|(depth, _handle)| *depth);
             }
 
-            batch_prefetch(&mut batchable_walks, &mut handled_prefetches);
+            batch_prefetch(
+                &mut batchable_walks,
+                &mut handled_prefetches,
+                &mut available_prefetch_slots,
+            );
         }
     });
 
@@ -366,9 +548,7 @@ enum PrefetchWork {
     FileContent(RepoPathBuf, usize, Option<usize>),
 }
 
-/// Start an async prefetch of file content by walking `manifest` using `matcher`,
-/// fetching file content of resultant files via `file_store`. Returns a handle
-/// that will cancel the prefetch on drop.
+#[cfg(test)]
 fn prefetch(
     config: Config,
     manifest: impl Manifest + Send + Sync + 'static,
@@ -377,6 +557,36 @@ fn prefetch(
     work: PrefetchWork,
     sparse_matcher: Option<Arc<dyn Matcher + Send + Sync>>,
 ) -> PrefetchHandle {
+    let manifest_walk_limiter = ConcurrencyLimiter::new(config.max_concurrent_manifest_walks);
+    let file_fetch_limiter = ConcurrencyLimiter::new(config.max_concurrent_file_fetches);
+    prefetch_with_limiter(
+        config,
+        manifest,
+        file_store,
+        manifest_walk_limiter,
+        file_fetch_limiter,
+        walk_detector,
+        work,
+        sparse_matcher,
+    )
+    .unwrap()
+}
+
+/// Start an async prefetch if a manifest-walk slot is available.
+fn prefetch_with_limiter(
+    config: Config,
+    manifest: impl Manifest + Send + Sync + 'static,
+    file_store: Arc<dyn FileStore>,
+    manifest_walk_limiter: ConcurrencyLimiter,
+    file_fetch_limiter: ConcurrencyLimiter,
+    walk_detector: walkdetector::Detector,
+    work: PrefetchWork,
+    sparse_matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+) -> Option<PrefetchHandle> {
+    // Reserve the expensive work before spawning so queued depths cannot create
+    // an unbounded number of native threads. Unhandled walks are retried by the manager.
+    let manifest_walk_permit = manifest_walk_limiter.try_acquire()?;
+
     // The cancellation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
     // operations to cancel themselves the next time they fail sending on their result channels.
@@ -457,17 +667,16 @@ fn prefetch(
         if let Some(sparse_matcher) = sparse_matcher {
             matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]))
         };
+        if !my_handle.is_in_progress() {
+            return;
+        }
         let files = manifest.files(matcher);
 
         let mut batch = Vec::new();
 
-        // Allow multiple concurrent file fetches to stack up.
-        const MAX_CONCURRENT_FILE_FETCHES: usize = 5;
-        let mut file_fetches: VecDeque<(FetchContext, Box<dyn Iterator<Item = _>>)> =
-            VecDeque::new();
+        let mut file_fetches = FileFetchQueue::new(file_store, file_fetch_limiter);
 
-        let consume_file_fetch = |(fctx, iter): (FetchContext, Box<dyn Iterator<Item = _>>)| {
-            iter.for_each(drop);
+        let mut consume_file_fetch = |fctx: FetchContext| {
             if let Some(walk_root) = &file_content_root {
                 walk_detector.files_preloaded(walk_root, fctx.remote_fetch_count());
 
@@ -488,10 +697,11 @@ fn prefetch(
 
             file_count += batch.len();
 
-            // If file fetches are full, wait for first one to finish.
-            if file_fetches.len() >= MAX_CONCURRENT_FILE_FETCHES {
-                consume_file_fetch(file_fetches.pop_front().unwrap());
-            }
+            let Some(permit) = file_fetches.acquire_slot(&my_handle, &mut consume_file_fetch)
+            else {
+                info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                return;
+            };
 
             // Check for cancellation since the consume_file_fetch() call can cancel the prefetch.
             if !my_handle.is_in_progress() {
@@ -500,24 +710,11 @@ fn prefetch(
             }
 
             // Use IGNORE_RESULT optimization since we don't care about the data.
-            let fctx = FetchContext::new_with_mode_and_cause(
-                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
-                FetchCause::EdenWalkPrefetch,
-            )
-            .with_skip_lfs(config.skip_lfs);
-
             // An important implementation detail for us: the scmstore FileStore operates
             // asynchronously when you fetch more than 1_000 keys. If that assumption changes, we
             // will need to change what we do here.
-            let fetch_res = file_store.get_content_iter(fctx.clone(), mem::take(batch));
-
-            match fetch_res {
-                Ok(iter) => {
-                    file_fetches.push_back((fctx, Box::new(iter.into_iter())));
-                }
-                Err(err) => {
-                    tracing::error!(?err, "error prefetching file content");
-                }
+            if let Err(err) = file_fetches.start(permit, mem::take(batch), config.skip_lfs) {
+                tracing::error!(?err, "error prefetching file content");
             }
         };
 
@@ -548,15 +745,14 @@ fn prefetch(
         }
 
         fetch_batch(&mut batch);
+        drop(manifest_walk_permit);
 
         // Wait for any remaining file fetches to finish.
-        for fetch in file_fetches {
-            if !my_handle.is_in_progress() {
-                info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
-                return;
-            }
+        while my_handle.is_in_progress() && file_fetches.consume_one(&mut consume_file_fetch) {}
 
-            consume_file_fetch(fetch);
+        if !my_handle.is_in_progress() {
+            info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+            return;
         }
 
         // Make sure this doesn't get dropped early.
@@ -565,7 +761,7 @@ fn prefetch(
         info_if!(interesting_walk, event, walk = %walk_desc, elapsed=?start_time.elapsed(), file_count, "prefetch complete");
     });
 
-    handle
+    Some(handle)
 }
 
 /// Determine whether prefetching for `walk_root` should be paused by considering how much we have
@@ -635,9 +831,29 @@ impl Matcher for WalkMatcher {
     }
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Debug)]
+struct PrefetchState {
+    status: AtomicU8,
+    cancellation_send: flume::Sender<()>,
+    cancellation_recv: flume::Receiver<()>,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct PrefetchHandle {
-    state: Arc<AtomicU8>,
+    state: Arc<PrefetchState>,
+}
+
+impl Default for PrefetchHandle {
+    fn default() -> Self {
+        let (cancellation_send, cancellation_recv) = flume::bounded(1);
+        Self {
+            state: Arc::new(PrefetchState {
+                status: AtomicU8::new(Self::IN_PROGRESS),
+                cancellation_send,
+                cancellation_recv,
+            }),
+        }
+    }
 }
 
 impl PrefetchHandle {
@@ -646,33 +862,46 @@ impl PrefetchHandle {
     const PAUSED: u8 = 2;
 
     pub(crate) fn cancel(&self) {
-        let _ = self.state.compare_exchange(
-            Self::IN_PROGRESS,
-            Self::DONE,
-            Ordering::AcqRel,
-            Ordering::Relaxed,
-        );
+        self.transition_to(Self::DONE);
     }
 
     pub(crate) fn pause(&self) {
-        let _ = self.state.compare_exchange(
-            Self::IN_PROGRESS,
-            Self::PAUSED,
-            Ordering::AcqRel,
-            Ordering::Relaxed,
-        );
+        self.transition_to(Self::PAUSED);
+    }
+
+    fn transition_to(&self, new_status: u8) {
+        if self
+            .state
+            .status
+            .compare_exchange(
+                Self::IN_PROGRESS,
+                new_status,
+                Ordering::AcqRel,
+                Ordering::Relaxed,
+            )
+            .is_ok()
+        {
+            self.state
+                .cancellation_send
+                .try_send(())
+                .expect("newly canceled prefetch should have an empty notification channel");
+        }
+    }
+
+    fn cancellation_receiver(&self) -> &flume::Receiver<()> {
+        &self.state.cancellation_recv
     }
 
     pub(crate) fn is_done(&self) -> bool {
-        self.state.load(Ordering::Acquire) == Self::DONE
+        self.state.status.load(Ordering::Acquire) == Self::DONE
     }
 
     pub(crate) fn is_paused(&self) -> bool {
-        self.state.load(Ordering::Acquire) == Self::PAUSED
+        self.state.status.load(Ordering::Acquire) == Self::PAUSED
     }
 
     pub(crate) fn is_in_progress(&self) -> bool {
-        self.state.load(Ordering::Acquire) == Self::IN_PROGRESS
+        self.state.status.load(Ordering::Acquire) == Self::IN_PROGRESS
     }
 }
 
@@ -1373,9 +1602,87 @@ mod test {
     }
 
     #[test]
-    fn test_config_skip_lfs_defaults_true() {
+    fn test_prefetch_config_defaults() {
         let config = Config::default();
+        assert_eq!(config.max_concurrent_prefetches, 4);
+        assert_eq!(config.max_concurrent_manifest_walks, 4);
+        assert_eq!(config.max_concurrent_file_fetches, 4);
         assert!(config.skip_lfs);
+    }
+
+    #[test]
+    fn test_remaining_prefetch_slots_counts_logical_prefetches() {
+        let prefetches = HashMap::from([(
+            (RepoPathBuf::new(), false),
+            vec![
+                (1, PrefetchHandle::default()),
+                (2, PrefetchHandle::default()),
+            ],
+        )]);
+        let batch_dir_prefetches = vec![PrefetchHandle::default()];
+        let config = Config {
+            max_concurrent_prefetches: 4,
+            ..Config::default()
+        };
+
+        assert_eq!(
+            remaining_prefetch_slots(config, &prefetches, &batch_dir_prefetches),
+            2
+        );
+        assert_eq!(
+            remaining_prefetch_slots(
+                Config {
+                    max_concurrent_prefetches: 2,
+                    ..Config::default()
+                },
+                &prefetches,
+                &batch_dir_prefetches,
+            ),
+            0
+        );
+    }
+
+    #[test]
+    fn test_concurrency_limiter_is_shared() {
+        let limiter = ConcurrencyLimiter::new(2);
+        let first = limiter.try_acquire().unwrap();
+        let second = limiter.clone().try_acquire().unwrap();
+        assert!(limiter.try_acquire().is_none());
+
+        drop(first);
+        let third = limiter.try_acquire().unwrap();
+        assert!(limiter.try_acquire().is_none());
+
+        drop(second);
+        drop(third);
+        assert!(limiter.try_acquire().is_some());
+    }
+
+    #[test]
+    fn test_concurrency_limiter_wait_is_cancelable() {
+        let limiter = ConcurrencyLimiter::new(1);
+        let held_permit = limiter.try_acquire().unwrap();
+        let handle = PrefetchHandle::default();
+        let waiting_handle = handle.clone();
+        let waiting_limiter = limiter.clone();
+        let (result_send, result_recv) = std::sync::mpsc::channel();
+
+        let waiter = std::thread::spawn(move || {
+            result_send
+                .send(waiting_limiter.acquire(&waiting_handle).is_none())
+                .unwrap();
+        });
+
+        assert_eq!(
+            result_recv.recv_timeout(Duration::from_millis(20)),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        );
+        handle.cancel();
+        assert_eq!(result_recv.recv_timeout(Duration::from_secs(1)), Ok(true));
+        waiter.join().unwrap();
+
+        drop(held_permit);
+        assert!(limiter.try_acquire().is_some());
     }
 
     #[test]
