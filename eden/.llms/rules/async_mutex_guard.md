@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: '\.lock\(\)|\.read\(\)|\.write\(\)|RwLock|Mutex'
+name: async-mutex-guard
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: '\.lock\(\)|\.read\(\)|\.write\(\)|RwLock|Mutex'
 ---
 
 # Async Mutex Guard Across Await
