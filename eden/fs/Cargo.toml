@@ -39,7 +39,7 @@ arrow-row = { version = "57", git = "https://github.com/apache/arrow-rs", rev = 
 arrow-schema = { version = "57", git = "https://github.com/apache/arrow-rs", rev = "fcfe2b4160f6c99107dc89edecdfcd3ff9a4c867" }
 arrow-select = { version = "57", git = "https://github.com/apache/arrow-rs", rev = "fcfe2b4160f6c99107dc89edecdfcd3ff9a4c867" }
 arrow-string = { version = "57", git = "https://github.com/apache/arrow-rs", rev = "fcfe2b4160f6c99107dc89edecdfcd3ff9a4c867" }
-audio_streams = { git = "https://github.com/google/crosvm", rev = "299c1e7c3d5a1b98106212c20f58b9fdb7b1b1ea" }
+audio_streams = { git = "https://github.com/google/crosvm", rev = "379428d1e2b6a09b9e05325df112c76a9455867d" }
 backtrace = { git = "https://github.com/rust-lang/backtrace-rs", rev = "df979dcf80027eb047d7bb9e0874710c15009f31" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 bf-tree = { git = "https://github.com/fbsource/bf-tree", rev = "da3f2364e8f9fe002a85c19de8a879fc2c05f12c" }
@@ -53,7 +53,6 @@ gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "ebad63b48e960270
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
-libcras = { git = "https://github.com/google/crosvm", rev = "299c1e7c3d5a1b98106212c20f58b9fdb7b1b1ea" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minijail", rev = "fc020fd4672b3340ee706e192d043e12df8c8578" }
 modcholesky = { git = "https://github.com/argmin-rs/modcholesky", rev = "0ef5ed8f589ec77ff348d98747431aefa369f942" }
