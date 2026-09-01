@@ -32,11 +32,6 @@ pub enum MergeResolutionSummary {
     #[strum(serialize = "not_needed")]
     NotNeeded,
 
-    /// Conflicts present but the MR feature is disabled by JK
-    /// `scm/mononoke:pushrebase_enable_merge_resolution`.
-    #[strum(serialize = "disabled_by_jk")]
-    DisabledByJk { conflict_files_count: u64 },
-
     /// MR resolved every conflicting file.
     #[strum(serialize = "succeeded")]
     Succeeded {
@@ -81,10 +76,7 @@ impl MergeResolutionSummary {
     pub fn conflict_files_count(&self) -> u64 {
         match self {
             Self::NotNeeded => 0,
-            Self::DisabledByJk {
-                conflict_files_count,
-            }
-            | Self::Succeeded {
+            Self::Succeeded {
                 conflict_files_count,
                 ..
             }
