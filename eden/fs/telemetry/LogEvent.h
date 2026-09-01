@@ -290,6 +290,23 @@ struct PrivhelperShutdown : public EdenFSEvent {
   }
 };
 
+struct PrivhelperRequestStall : public EdenFSEvent {
+  std::string method;
+  double duration = 0.0; // seconds
+
+  PrivhelperRequestStall(std::string method, double duration)
+      : method(std::move(method)), duration(duration) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("method", method);
+    event.addDouble("duration", duration);
+  }
+
+  const char* getType() const override {
+    return "privhelper_request_stall";
+  }
+};
+
 struct FinishedCheckout : public EdenFSEvent {
   std::string mode;
   double duration = 0.0;

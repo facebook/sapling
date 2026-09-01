@@ -10,11 +10,13 @@
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
+#include <folly/synchronization/SaturatingSemaphore.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
@@ -23,14 +25,19 @@
 #include <atomic>
 #include <chrono>
 #include <optional>
+#include <thread>
 #include <unordered_map>
 
+#include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/privhelper/test/PrivHelperTestServer.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
+#include "eden/fs/telemetry/XplatKeys.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -434,6 +441,37 @@ class RawPrivHelperClient : private UnixSocket::ReceiveCallback {
   std::optional<Promise<UnixSocket::Message>> responsePromise_;
 };
 
+/**
+ * An IXplatLogger that records logged events so tests can assert on the
+ * telemetry the privhelper client emits. logEvent() is called from the
+ * client's EventBase thread.
+ */
+class RecordingXplatLogger : public IXplatLogger {
+ public:
+  void logEvent(std::string_view category, const DynamicEvent& event) override {
+    recordedEvents_.wlock()->emplace_back(std::string{category}, event);
+    eventRecorded_.post();
+  }
+
+  std::vector<std::pair<std::string, DynamicEvent>> getEvents() const {
+    return *recordedEvents_.rlock();
+  }
+
+  /**
+   * Block until at least one event has been recorded. Returns false if none
+   * was recorded within the timeout.
+   */
+  bool waitForEvent(std::chrono::milliseconds timeout) {
+    return eventRecorded_.try_wait_for(timeout);
+  }
+
+ private:
+  folly::Synchronized<std::vector<std::pair<std::string, DynamicEvent>>>
+      recordedEvents_;
+  // Saturating (multi-post safe), unlike folly::Baton.
+  folly::SaturatingSemaphore<true /* MayBlock */> eventRecorded_;
+};
+
 class PrivHelperTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -447,6 +485,8 @@ class PrivHelperTest : public ::testing::Test {
           server_.run();
         });
     client_ = createTestPrivHelper(std::move(clientConn));
+    client_->setEdenFsEventsLogger(
+        std::make_shared<EdenFsEventsLogger>(xplatLogger_));
     clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
         [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
   }
@@ -466,6 +506,8 @@ class PrivHelperTest : public ::testing::Test {
   PrivHelperThreadedTestServer server_;
   std::thread serverThread_;
   EventBaseThread clientIoThread_;
+  std::shared_ptr<RecordingXplatLogger> xplatLogger_{
+      std::make_shared<RecordingXplatLogger>()};
 };
 
 class PrivHelperFdUnmountTest : public ::testing::Test {
@@ -596,6 +638,39 @@ TEST_F(PrivHelperTest, fuseMount) {
   // We could register a result for the unmount operation here, but seems nice
   // for now to test that the privhelper server gracefully handles the exception
   // from the unmount operation.
+}
+
+TEST_F(PrivHelperTest, stalledRequestIsLoggedAndStillSucceeds) {
+  auto mountPoint = makeTempDir("bar");
+  auto path = mountPoint.path().string();
+
+  client_->setRequestStallThresholdForTest(50ms);
+
+  auto filePromise = server_.setFuseMountResult(path);
+  auto result = client_->fuseMount(path, false, "fuse");
+  EXPECT_FALSE(result.isReady());
+
+  // Hold the response until the stall watchdog has fired and recorded its
+  // event. The watchdog is scheduled for 50ms; the generous timeout only
+  // bounds how long we wait on a starved host.
+  ASSERT_TRUE(xplatLogger_->waitForEvent(10s));
+
+  TemporaryFile tempFile;
+  filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The stall watchdog is log-only: the request must still succeed.
+  auto resultFile = std::move(result).get(1s);
+  EXPECT_GE(resultFile.fd(), 0);
+
+  auto events = xplatLogger_->getEvents();
+  ASSERT_EQ(1u, events.size());
+  EXPECT_EQ(std::string{xplat_keys::kEventsCategory}, events[0].first);
+  const auto& strings = events[0].second.getStringMap();
+  EXPECT_EQ(
+      "privhelper_request_stall", strings.at(std::string{xplat_keys::kType}));
+  EXPECT_EQ("fuse_mount", strings.at(std::string{xplat_keys::kMethod}));
+  const auto& doubles = events[0].second.getDoubleMap();
+  EXPECT_GE(doubles.at(std::string{xplat_keys::kDuration}), 0.05);
 }
 
 TEST_F(PrivHelperTest, fuseMountCustomVfsType) {

@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <sys/types.h>
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -297,6 +298,14 @@ class PrivHelper {
    * StubPrivHelper need no changes.
    */
   virtual void notifyCleanShutdown(folly::StringPiece reason) noexcept;
+
+  /**
+   * Override the threshold after which a pending privhelper request is
+   * reported as stalled. Test-only. Default no-op so that FakePrivHelper and
+   * StubPrivHelper need no changes.
+   */
+  virtual void setRequestStallThresholdForTest(
+      std::chrono::milliseconds /* threshold */) {}
 
   /*
    * Explicitly stop the privhelper process.
