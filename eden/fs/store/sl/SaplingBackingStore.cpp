@@ -547,7 +547,7 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
   }
 
   if (result.data != nullptr) {
-    if (context->getCause() != FetchCause::Prefetch) {
+    if (ObjectFetchContext::shouldTriggerWalkDetection(context->getCause())) {
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{path.view().data(), path.view().size()},
@@ -1540,7 +1540,8 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
 
     facebook::eden::TreePtr tree = tb.build();
 
-    if (tree && context->getCause() != FetchCause::Prefetch) {
+    if (tree &&
+        ObjectFetchContext::shouldTriggerWalkDetection(context->getCause())) {
       sapling_backingstore_witness_dir_read(
           *store_.get(),
           rust::Slice<const uint8_t>{
@@ -2159,7 +2160,7 @@ sapling::BatchFetchStats SaplingBackingStore::nativeGetBlobBatch(
             request.context->getClientPid().valueOrZero().get(),
         });
 
-    if (request.cause != FetchCause::Prefetch) {
+    if (ObjectFetchContext::shouldTriggerWalkDetection(request.cause)) {
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{
@@ -2328,7 +2329,7 @@ void SaplingBackingStore::logBackingStoreFetch(
 
   if (type != ObjectFetchContext::ObjectType::Tree &&
       isRecordingFetch_.load(std::memory_order_relaxed) &&
-      context.getCause() != ObjectFetchContext::Cause::Prefetch) {
+      ObjectFetchContext::shouldTriggerWalkDetection(context.getCause())) {
     auto guard = fetchedFilePaths_.wlock();
     for (auto& slOid : slOids) {
       guard->emplace(slOid.path().view());

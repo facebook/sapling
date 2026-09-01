@@ -106,11 +106,17 @@ class ObjectFetchContext : public RefCounted {
     Unknown = 0,
     /** The request originated from a Thrift prefetch endpoint */
     Prefetch = 1,
+    /** The request originated from a Thrift glob endpoint */
+    Glob = 2,
     /** The request originated from a Thrift endpoint */
-    Thrift = 2,
+    Thrift = 3,
     /** Highest Priority - The request originated from FUSE/NFS/PrjFS */
-    Fs = 3,
+    Fs = 4,
   };
+
+  static constexpr bool shouldTriggerWalkDetection(Cause cause) {
+    return cause != Cause::Prefetch && cause != Cause::Glob;
+  }
 
   ObjectFetchContext() = default;
 

@@ -228,6 +228,9 @@ void InodeAccessLogger::processInodeAccessEvents() {
         case ObjectFetchContext::Prefetch:
           source = "prefetch";
           break;
+        case ObjectFetchContext::Glob:
+          source = "glob";
+          break;
       }
 
       std::string sourceDetail;

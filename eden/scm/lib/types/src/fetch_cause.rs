@@ -11,6 +11,8 @@ pub enum FetchCause {
     EdenUnknown,
     // The fetch originated from a Eden Thrift prefetch endpoint
     EdenPrefetch,
+    // The fetch originated from an Eden Thrift glob endpoint
+    EdenGlob,
     // The fetch originated from a Eden Thrift endpoint
     EdenThrift,
     // The fetch originated from FUSE/NFS/PrjFS
@@ -42,6 +44,7 @@ impl FetchCause {
         match self {
             FetchCause::EdenUnknown => "edenfs-unknown",
             FetchCause::EdenPrefetch => "edenfs-prefetch",
+            FetchCause::EdenGlob => "edenfs-glob",
             FetchCause::EdenThrift => "edenfs-thrift",
             FetchCause::EdenFs => "edenfs-fs",
             FetchCause::EdenMixed => "edenfs-mixed",
@@ -64,6 +67,7 @@ impl FetchCause {
             FetchCause::EdenWalkPrefetch => true,
 
             FetchCause::EdenUnknown => false,
+            FetchCause::EdenGlob => false,
             FetchCause::EdenThrift => false,
             FetchCause::EdenFs => false,
             FetchCause::EdenMixed => false,
@@ -85,6 +89,7 @@ impl std::str::FromStr for FetchCause {
         match s {
             "edenfs-unknown" => Ok(FetchCause::EdenUnknown),
             "edenfs-prefetch" => Ok(FetchCause::EdenPrefetch),
+            "edenfs-glob" => Ok(FetchCause::EdenGlob),
             "edenfs-thrift" => Ok(FetchCause::EdenThrift),
             "edenfs-fs" => Ok(FetchCause::EdenFs),
             "edenfs-mixed" => Ok(FetchCause::EdenMixed),
@@ -112,6 +117,7 @@ mod tests {
         let variants = [
             FetchCause::EdenUnknown,
             FetchCause::EdenPrefetch,
+            FetchCause::EdenGlob,
             FetchCause::EdenThrift,
             FetchCause::EdenFs,
             FetchCause::EdenMixed,

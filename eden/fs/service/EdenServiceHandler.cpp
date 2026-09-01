@@ -409,15 +409,16 @@ class ThriftFetchContext : public ObjectFetchContext {
  public:
   explicit ThriftFetchContext(
       OptionalProcessId pid,
-      folly::StringPiece endpoint)
-      : pid_(pid), endpoint_(endpoint) {}
+      folly::StringPiece endpoint,
+      Cause cause)
+      : pid_(pid), endpoint_(endpoint), cause_(cause) {}
 
   OptionalProcessId getClientPid() const override {
     return pid_;
   }
 
   Cause getCause() const override {
-    return ObjectFetchContext::Cause::Thrift;
+    return cause_;
   }
 
   std::optional<std::string_view> getCauseDetail() const override {
@@ -456,6 +457,7 @@ class ThriftFetchContext : public ObjectFetchContext {
  private:
   OptionalProcessId pid_;
   std::string_view endpoint_;
+  Cause cause_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 
@@ -513,7 +515,8 @@ class ThriftRequestScope {
       JoinFn&& join,
       std::shared_ptr<EdenServiceHandler> serviceHandler,
       bool enableCancellation = false,
-      bool enablePrefetchStats = false)
+      bool enablePrefetchStats = false,
+      ObjectFetchContext::Cause fetchCause = ObjectFetchContext::Cause::Thrift)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
         sourceLocation_{sourceLocation},
@@ -523,7 +526,8 @@ class ThriftRequestScope {
         itcLogger_(logger),
         thriftFetchContext_{makeRefPtr<ThriftFetchContext>(
             pid,
-            sourceLocation_.function_name())},
+            sourceLocation_.function_name(),
+            fetchCause)},
         prefetchFetchContext_{makeRefPtr<PrefetchFetchContext>(
             pid,
             sourceLocation_.function_name(),
@@ -865,6 +869,7 @@ bool checkAllowedQuery(
     requestContext,                                           \
     enableCancellation,                                       \
     enablePrefetchStats,                                      \
+    fetchCause,                                               \
     ...)                                                      \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
@@ -883,12 +888,20 @@ bool checkAllowedQuery(
         },                                                    \
         this->shared_from_this(),                             \
         enableCancellation,                                   \
-        enablePrefetchStats);                                 \
+        enablePrefetchStats,                                  \
+        fetchCause);                                          \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
 #define INSTRUMENT_THRIFT_CALL(level, ...) \
   INSTRUMENT_THRIFT_CALL_IMPL(             \
-      level, nullptr, nullptr, nullptr, false, false, __VA_ARGS__)
+      level,                               \
+      nullptr,                             \
+      nullptr,                             \
+      nullptr,                             \
+      false,                               \
+      false,                               \
+      ObjectFetchContext::Cause::Thrift,   \
+      __VA_ARGS__)
 
 #define INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(   \
     level, enableCancellation, requestContext, ...) \
@@ -899,6 +912,19 @@ bool checkAllowedQuery(
       requestContext,                               \
       enableCancellation,                           \
       false,                                        \
+      ObjectFetchContext::Cause::Thrift,            \
+      __VA_ARGS__)
+
+#define INSTRUMENT_THRIFT_GLOB_CALL_WITH_CANCELLATION( \
+    level, enableCancellation, requestContext, ...)    \
+  INSTRUMENT_THRIFT_CALL_IMPL(                         \
+      level,                                           \
+      nullptr,                                         \
+      nullptr,                                         \
+      requestContext,                                  \
+      enableCancellation,                              \
+      false,                                           \
+      ObjectFetchContext::Cause::Glob,                 \
       __VA_ARGS__)
 
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...) \
@@ -909,6 +935,7 @@ bool checkAllowedQuery(
       nullptr,                                             \
       false,                                               \
       false,                                               \
+      ObjectFetchContext::Cause::Thrift,                   \
       __VA_ARGS__)
 
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION( \
@@ -920,11 +947,19 @@ bool checkAllowedQuery(
       requestContext,                                      \
       enableCancellation,                                  \
       false,                                               \
+      ObjectFetchContext::Cause::Thrift,                   \
       __VA_ARGS__)
 
 #define INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS(level, enableStats, ...) \
   INSTRUMENT_THRIFT_CALL_IMPL(                                              \
-      level, nullptr, nullptr, nullptr, false, enableStats, __VA_ARGS__)
+      level,                                                                \
+      nullptr,                                                              \
+      nullptr,                                                              \
+      nullptr,                                                              \
+      false,                                                                \
+      enableStats,                                                          \
+      ObjectFetchContext::Cause::Thrift,                                    \
+      __VA_ARGS__)
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
@@ -2288,6 +2323,9 @@ void convertHgImportTraceEventToHgEvent(
       break;
     case ObjectFetchContext::Cause::Prefetch:
       te.importCause() = HgImportCause::PREFETCH;
+      break;
+    case ObjectFetchContext::Cause::Glob:
+      te.importCause() = HgImportCause::THRIFT;
       break;
   }
 
@@ -4970,7 +5008,7 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
   }
   ThriftGlobImpl globber{*params};
   auto requestContext = getRequestContext();
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+  auto helper = INSTRUMENT_THRIFT_GLOB_CALL_WITH_CANCELLATION(
       DBG3,
       false,
       requestContext,

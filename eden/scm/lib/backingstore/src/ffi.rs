@@ -41,13 +41,15 @@ pub(crate) mod ffi {
     #[repr(u8)]
     pub enum FetchCause {
         // Lowest Priority - Unknown orginination
-        Unknown,
+        Unknown = 0,
         // The request originated from a Thrift prefetch endpoint
-        Prefetch,
+        Prefetch = 1,
+        // The request originated from a Thrift glob endpoint
+        Glob = 2,
         // The request originated from a Thrift endpoint
-        Thrift,
+        Thrift = 3,
         // Highest Priority - The request originated from FUSE/NFS/PrjFS
-        Fs,
+        Fs = 4,
     }
 
     #[namespace = "facebook::eden"]
@@ -461,6 +463,7 @@ impl From<ffi::FetchCause> for FetchCause {
         match fetch_cause {
             ffi::FetchCause::Unknown => FetchCause::EdenUnknown,
             ffi::FetchCause::Prefetch => FetchCause::EdenPrefetch,
+            ffi::FetchCause::Glob => FetchCause::EdenGlob,
             ffi::FetchCause::Thrift => FetchCause::EdenThrift,
             ffi::FetchCause::Fs => FetchCause::EdenFs,
             _ => FetchCause::Unspecified, // should never happen
@@ -475,13 +478,14 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> (Fe
     let mut most_popular_cause = None;
     let mut len = 0;
     let mut max_count = 0;
-    let mut cause_counts = [0; 4]; // 4 is the number of variants in FetchCause enum
+    let mut cause_counts = [0; 5];
     for cause in fetch_causes_iter {
         let cause_index = match cause {
             ffi::FetchCause::Unknown => 0,
             ffi::FetchCause::Prefetch => 1,
-            ffi::FetchCause::Thrift => 2,
-            ffi::FetchCause::Fs => 3,
+            ffi::FetchCause::Glob => 2,
+            ffi::FetchCause::Thrift => 3,
+            ffi::FetchCause::Fs => 4,
             _ => 0, // should never happen
         };
         len += 1;
@@ -736,7 +740,7 @@ pub fn sapling_backingstore_get_tree_batch(
 
             let resolver = resolver.clone();
 
-            if req.cause != ffi::FetchCause::Prefetch && error.is_null() {
+            if should_trigger_walk_detection(req.cause) && error.is_null() {
                 let path = path_from_oid(req.oid);
                 if !path.is_empty() {
                     sapling_backingstore_witness_dir_read(
@@ -760,6 +764,10 @@ pub fn sapling_backingstore_get_tree_batch(
 fn path_from_oid(oid: &[u8]) -> &[u8] {
     // TODO: don't assume knowledge about the sl ObjectId format.
     if oid.len() <= 21 { &[] } else { &oid[21..] }
+}
+
+fn should_trigger_walk_detection(cause: ffi::FetchCause) -> bool {
+    !matches!(cause, ffi::FetchCause::Prefetch | ffi::FetchCause::Glob)
 }
 
 pub fn sapling_backingstore_get_tree_aux(
@@ -1269,6 +1277,7 @@ mod tests {
         let causes = [
             ffi::FetchCause::Unknown,
             ffi::FetchCause::Prefetch,
+            ffi::FetchCause::Glob,
             ffi::FetchCause::Thrift,
             ffi::FetchCause::Fs,
         ];
@@ -1300,5 +1309,14 @@ mod tests {
         // All the same cause - return `true`.
         let selected = select_cause(std::iter::repeat_n(ffi::FetchCause::Prefetch, 5));
         assert_eq!(selected, (FetchCause::EdenPrefetch, true));
+    }
+
+    #[test]
+    fn test_walk_detection_fetch_causes() {
+        assert!(!should_trigger_walk_detection(ffi::FetchCause::Prefetch));
+        assert!(!should_trigger_walk_detection(ffi::FetchCause::Glob));
+        assert!(should_trigger_walk_detection(ffi::FetchCause::Unknown));
+        assert!(should_trigger_walk_detection(ffi::FetchCause::Thrift));
+        assert!(should_trigger_walk_detection(ffi::FetchCause::Fs));
     }
 }
