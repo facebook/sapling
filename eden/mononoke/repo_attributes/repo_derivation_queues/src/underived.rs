@@ -144,43 +144,6 @@ async fn split_segment_into_batches(
     })
 }
 
-async fn collect_underived_segments(
-    ctx: &CoreContext,
-    ddm: &DerivedDataManager,
-    commit_graph: &CommitGraph,
-    derived_data_type: DerivableType,
-    head: ChangesetId,
-) -> Result<Vec<ChangesetSegment>> {
-    let mut heads = vec![head];
-    let mut segments = Vec::new();
-
-    while !heads.is_empty() {
-        let derived_frontier = commit_graph
-            .ancestors_frontier_with(ctx, heads.clone(), |cs_id| async move {
-                Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
-            })
-            .await?;
-        let current_segments = commit_graph
-            .ancestors_difference_segments(ctx, heads, derived_frontier)
-            .await?;
-        let external_parents = current_segments
-            .iter()
-            .flat_map(|segment| segment.parents.iter())
-            .filter(|parent| parent.location.is_none())
-            .map(|parent| parent.cs_id)
-            .unique()
-            .collect::<Vec<_>>();
-        heads = BulkDerivation::pending(ddm, ctx, &external_parents, None, derived_data_type)
-            .await?
-            .into_iter()
-            .unique()
-            .collect();
-        segments.extend(current_segments);
-    }
-
-    Ok(segments)
-}
-
 fn parent_batch_root(
     parent_segment: &UnderivedSegment,
     distance: u64,
@@ -519,8 +482,16 @@ async fn build_underived_batched_graph_v2<'a>(
         return Err(anyhow!("batch size must be greater than zero"));
     }
 
-    let segments =
-        collect_underived_segments(ctx, ddm, &commit_graph, derived_data_type, head).await?;
+    // Derived data is expected to be monotonic. Workers recover the rare case
+    // where an ancestor's derived-data mapping is missing.
+    let derived_frontier = commit_graph
+        .ancestors_frontier_with(ctx, vec![head], |cs_id| async move {
+            Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
+        })
+        .await?;
+    let segments = commit_graph
+        .ancestors_difference_segments(ctx, vec![head], derived_frontier)
+        .await?;
     if segments.is_empty() {
         return Ok(UnderivedGraphBuildResult {
             response: Some(EnqueueResponse::new(future::ok(true).boxed())),
@@ -547,29 +518,21 @@ async fn build_underived_batched_graph_v2<'a>(
             let parents = if batch_index > 0 {
                 vec![segment.batches[batch_index - 1].root]
             } else {
-                let mut parents = Vec::new();
-                for parent in &segment.segment.parents {
-                    let parent_root = match parent.location {
-                        Some(location) => {
-                            let parent_index = segments_by_head
-                                .get(&location.head)
-                                .ok_or_else(|| anyhow!("segment parent location is missing"))?;
-                            Some(parent_batch_root(
-                                &segments[*parent_index],
-                                location.distance,
-                                batch_size,
-                            )?)
-                        }
-                        None => segments_by_head
-                            .get(&parent.cs_id)
-                            .and_then(|index| segments[*index].batches.last())
-                            .map(|batch| batch.root),
-                    };
-                    if let Some(parent_root) = parent_root {
-                        parents.push(parent_root);
-                    }
-                }
-                parents.into_iter().unique().collect()
+                segment
+                    .segment
+                    .parents
+                    .iter()
+                    .filter_map(|parent| parent.location)
+                    .map(|location| {
+                        let parent_index = segments_by_head
+                            .get(&location.head)
+                            .ok_or_else(|| anyhow!("segment parent location is missing"))?;
+                        parent_batch_root(&segments[*parent_index], location.distance, batch_size)
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .unique()
+                    .collect()
             };
             let underived_batch = UnderivedBatch {
                 head: batch.head,
