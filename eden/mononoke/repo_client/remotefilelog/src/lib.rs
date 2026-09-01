@@ -99,10 +99,14 @@ fn rescue_redacted(res: Result<(Bytes, FileBytes)>) -> Result<(Bytes, FileBytes)
 /// this blob (this is NOT trying to be correct, it's just a rough estimate!), and the blob's
 /// bytes. This also returns Metadata,
 /// which is present in the v2 version of the protocol.
+///
+/// Takes the file's already-loaded envelope: every caller has one, and re-loading it here meant
+/// fetching the same blob twice to serve one file.
 pub async fn create_getpack_v2_blob<T: RepoLike>(
     ctx: &CoreContext,
     repo: &T,
     node: HgFileNodeId,
+    envelope: HgFileEnvelope,
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> Result<(
@@ -110,7 +114,7 @@ pub async fn create_getpack_v2_blob<T: RepoLike>(
     impl Future<Output = Result<(HgFileNodeId, Bytes, Metadata)>> + use<T>,
 )> {
     let RemotefilelogBlob { kind, data } =
-        prepare_blob(ctx, repo, node, lfs_params, validate_hash).await?;
+        prepare_blob(ctx, repo, node, envelope, lfs_params, validate_hash).await?;
     use RemotefilelogBlobKind::*;
 
     let (weight, metadata) = match kind {
@@ -158,10 +162,12 @@ pub async fn create_raw_filenode_blob(
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> Result<Bytes> {
+    let envelope = node.load(ctx, repo.repo_blobstore()).await?;
     let RemotefilelogBlob { kind, data } = prepare_blob(
         ctx,
         repo,
         node,
+        envelope,
         SessionLfsParams { threshold: None },
         validate_hash,
     )
@@ -183,11 +189,10 @@ async fn prepare_blob(
     ctx: &CoreContext,
     repo: &impl RepoLike,
     node: HgFileNodeId,
+    envelope: HgFileEnvelope,
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> Result<RemotefilelogBlob> {
-    let envelope = node.load(ctx, repo.repo_blobstore()).await?;
-
     let inline_file = match lfs_params.threshold {
         Some(lfs_threshold) => envelope.content_size() <= lfs_threshold,
         None => true,
@@ -346,7 +351,16 @@ mod test {
             }
         };
 
-        let blob = prepare_blob(ctx, repo, filenode, SessionLfsParams { threshold }, true).await?;
+        let envelope = filenode.load(ctx, repo.repo_blobstore()).await?;
+        let blob = prepare_blob(
+            ctx,
+            repo,
+            filenode,
+            envelope,
+            SessionLfsParams { threshold },
+            true,
+        )
+        .await?;
 
         let RemotefilelogBlob { kind, data } = blob;
         data.await?; // Await the blob data to make sure hash validation passes.

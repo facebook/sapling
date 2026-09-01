@@ -178,8 +178,17 @@ impl<R: MononokeRepo> HgDataContext<R> for HgFileContext<R> {
             threshold: self.repo_ctx.config().lfs.threshold,
         };
 
-        let (_size, content_fut) =
-            create_getpack_v2_blob(ctx, repo, filenode_id, lfs_params, false).await?;
+        // Hand over the envelope this context already loaded, rather than having
+        // create_getpack_v2_blob fetch the same blob a second time.
+        let (_size, content_fut) = create_getpack_v2_blob(
+            ctx,
+            repo,
+            filenode_id,
+            self.envelope.clone(),
+            lfs_params,
+            false,
+        )
+        .await?;
 
         // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
         // probably be better for this method to return a stream of the file content instead.
@@ -211,15 +220,20 @@ mod tests {
     use std::sync::Arc;
 
     use context::CoreContext;
+    use counting_blob::BlobstoreCounters;
+    use counting_blob::CountingBlobstore;
     use fbinit::FacebookInit;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
     use futures::TryStreamExt;
+    use memblob::Memblob;
     use mercurial_types::HgChangesetId;
     use mercurial_types::NULL_HASH;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
     use mononoke_macros::mononoke;
+    use mononoke_types::RepositoryId;
+    use test_repo_factory::TestRepoFactory;
 
     use super::*;
     use crate::RepoContextHgExt;
@@ -259,6 +273,51 @@ mod tests {
 
         let null_file = HgFileContext::new_check_exists(hg.clone(), null_id).await?;
         assert!(null_file.is_none());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn content_does_not_reload_the_envelope(fb: FacebookInit) -> Result<(), MononokeError> {
+        // HgFileContext already holds the file's HgFileEnvelope, loaded when the context was
+        // constructed. content() used to hand only the filenode id down to
+        // create_getpack_v2_blob, which loaded the very same envelope blob a second time -- so
+        // serving one file on /files2 cost two fetches of it instead of one.
+        let ctx = CoreContext::test_mock(fb);
+        let counters = Arc::new(BlobstoreCounters::new());
+        let repo: Repo = TestRepoFactory::new(fb)
+            .unwrap()
+            .with_blobstore(Arc::new(CountingBlobstore::new(
+                Memblob::default(),
+                counters.clone(),
+            )))
+            .with_id(RepositoryId::new(0))
+            .with_name(ManyFilesDirs::REPO_NAME.to_string())
+            .build()
+            .await
+            .unwrap();
+        ManyFilesDirs::init_repo(fb, &repo).await.unwrap();
+
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
+        let hg = repo_ctx.hg();
+
+        // File "1" from the ManyFilesDirs fixture, as used by the tests above.
+        let file_id = HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
+        let hg_file = HgFileContext::new(hg, file_id).await?;
+
+        // Count only what content() itself does, so repo construction and the context's own
+        // load of the envelope are excluded.
+        let before = counters.snapshot();
+        let content = hg_file.content().await?;
+        let gets = counters.snapshot().gets - before.gets;
+
+        assert_eq!(&content.0, &b"1\n"[..]);
+        // One get for the file content. The envelope is not fetched again: the context passes
+        // the copy it already has. Before this was two.
+        assert_eq!(
+            gets, 1,
+            "content() should fetch only the file content, not re-fetch the envelope"
+        );
 
         Ok(())
     }
