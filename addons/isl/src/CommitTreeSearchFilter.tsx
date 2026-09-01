@@ -14,6 +14,7 @@ import {KeyCode} from 'isl-components/KeyboardShortcuts';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import {useEffect, useRef} from 'react';
 import {debounce} from 'shared/debounce';
 import css from './CommitTreeSearchFilter.module.css';
 import {DropdownFields} from './DropdownFields';
@@ -93,12 +94,21 @@ export function CommitTreeSearchFilterButton() {
 
 function FilterDropdown({dismiss: _dismiss}: {dismiss: () => void}) {
   const [filter, setFilter] = useAtom(commitTreeSearchFilter);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  // On open, select the existing query (caret at the end) so typing replaces
+  // it and Delete clears it. Mount-only: refocusing within an open dropdown
+  // should not re-select.
+  useEffect(() => {
+    const input = inputRef.current;
+    input?.setSelectionRange(0, input.value.length, 'forward');
+  }, []);
 
   return (
     <DropdownFields title={<T>Filter Commits</T>} icon="filter">
       <div className={css.inputContainer}>
         <TextField
           autoFocus
+          ref={inputRef}
           className={css.input}
           placeholder={t('Filter by title, hash, or bookmark...')}
           value={filter}

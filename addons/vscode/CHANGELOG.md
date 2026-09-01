@@ -20,6 +20,7 @@
 - Add command palette entries for worktree operations
 - Show the Devmate "Fix signals" button for diffs with only warning-level signals, not just failures
 - Fix background polling accumulating after changing workspace folders
+- Select the existing query when the commit filter opens, so typing replaces it
 
 ## 0.1.69
 

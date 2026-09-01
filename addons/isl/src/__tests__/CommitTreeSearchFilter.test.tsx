@@ -6,6 +6,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {appliedCommitTreeSearchFilter, commitTreeSearchFilter} from '../CommitTreeSearchFilter';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -113,5 +114,85 @@ describe('filtering the commit tree', () => {
       expect(screen.queryByText('Commit B')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Commit A')).toBeInTheDocument();
+  });
+});
+
+describe('commit tree search filter', () => {
+  beforeEach(() => {
+    resetTestMessages();
+    render(<App />);
+
+    act(() => {
+      closeCommitInfoSidebar();
+      simulateCommits({
+        value: [
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('a', 'Apple Commit', '1'),
+          COMMIT('b', 'Banana Commit', 'a', {isDot: true}),
+        ],
+      });
+    });
+  });
+
+  const clickFilterButton = () => {
+    fireEvent.click(screen.getByTestId('filter-commits-button'));
+  };
+
+  const getFilterInput = () => screen.getByTestId('commit-tree-search-filter') as HTMLInputElement;
+
+  const setFilterText = (value: string) => {
+    fireEvent.input(getFilterInput(), {target: {value}});
+  };
+
+  it('does not auto-hide while typing in the filter input causes scroll events', () => {
+    clickFilterButton();
+    setFilterText('apple');
+    expect(document.activeElement).toBe(getFilterInput());
+
+    // Filtering shrinks the tree, which can clamp the scroll container's
+    // scrollTop and fire a scroll event outside the tooltip.
+    fireEvent.scroll(screen.getByTestId('commit-tree-root'));
+
+    expect(screen.getByTestId('commit-tree-search-filter')).toBeInTheDocument();
+  });
+
+  it('still dismisses on outside scroll when focus is not in the dropdown', () => {
+    clickFilterButton();
+    act(() => {
+      getFilterInput().blur();
+    });
+
+    fireEvent.scroll(screen.getByTestId('commit-tree-root'));
+
+    expect(screen.queryByTestId('commit-tree-search-filter')).not.toBeInTheDocument();
+  });
+
+  it('reopening the filter selects the existing query with the caret at the end', async () => {
+    clickFilterButton();
+    setFilterText('apple');
+    userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('commit-tree-search-filter')).not.toBeInTheDocument();
+    // the filter stays applied while the dropdown is closed
+    await waitFor(() => {
+      expect(screen.queryByText('Banana Commit')).not.toBeInTheDocument();
+    });
+
+    clickFilterButton();
+
+    const input = getFilterInput();
+    expect(input.value).toBe('apple');
+    // selection is applied a frame after focus
+    await waitFor(() => {
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe('apple'.length);
+      expect(input.selectionDirection).toBe('forward');
+    });
+
+    // Typing replaces the selected query wholesale.
+    userEvent.type(input, 'banana');
+    await waitFor(() => {
+      expect(screen.getByText('Banana Commit')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Apple Commit')).not.toBeInTheDocument();
   });
 });
