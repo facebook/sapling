@@ -63,7 +63,6 @@ use super::*;
 
 fn init_just_knobs_for_test() {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
@@ -500,7 +499,6 @@ async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
 
     // The override is process-global: carry the full standard map.
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
@@ -2817,7 +2815,6 @@ fn should_have_conflicts(res: Result<PushrebaseOutcome, PushrebaseError>) {
 
 fn init_just_knobs_for_merge_test() {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
@@ -3965,7 +3962,6 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
 
 fn init_just_knobs_for_noop_rejection_test(reject: bool) {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_reject_noop_merge_commits".to_string() => KnobVal::Bool(reject),
@@ -4386,7 +4382,6 @@ fn pessimistic_config() -> PushrebaseFlags {
 
 fn init_just_knobs_for_pessimistic_test() {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(true),
