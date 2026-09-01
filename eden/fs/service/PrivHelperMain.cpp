@@ -7,6 +7,14 @@
 
 #include <string>
 
+#ifdef __linux__
+#include <sys/prctl.h>
+
+#include <cerrno>
+
+#include <folly/String.h>
+#endif // __linux__
+
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -83,6 +91,17 @@ int main(int argc, char** argv) {
   auto loggingConfig = folly::parseLogConfig(
       "WARN:default, eden=DBG2; default:stream=stderr,async=false");
   folly::LoggerDB::get().updateConfig(loggingConfig);
+
+#ifdef __linux__
+  // The kernel clears the dumpable flag for setuid executions, so without
+  // this privhelper crashes produce no core and never reach coredumper.
+  if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) != 0) {
+    XLOGF(
+        WARNING,
+        "failed to mark privhelper dumpable: {}",
+        folly::errnoStr(errno));
+  }
+#endif // __linux__
 
   // Escape the process group of whatever launched EdenFS, so that
   // process-group-wide cleanup (e.g. by agent command runners that

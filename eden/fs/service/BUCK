@@ -133,6 +133,7 @@ cpp_binary(
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",
+        "//folly:string",
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",
