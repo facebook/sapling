@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -25,6 +26,7 @@ use history_manifest::HmRenameSource;
 use history_manifest::HmRenameSources;
 use history_manifest::RootHistoryManifestDirectoryId;
 use history_manifest::find_hm_rename_sources;
+use itertools::Itertools;
 use manifest::ManifestOps;
 use manifest::find_intersection_of_diffs;
 use mononoke_macros::mononoke;
@@ -39,6 +41,7 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::blame_v3::BlameV3Id;
 use mononoke_types::blame_v3::store_blame_v3;
 use mononoke_types::history_manifest::HistoryManifestEntry;
+use mononoke_types::history_manifest::HistoryManifestFile;
 use mononoke_types::typed_hash::HistoryManifestFileId;
 
 use crate::DEFAULT_BLAME_FILESIZE_LIMIT;
@@ -71,6 +74,15 @@ pub(crate) async fn derive_blame_v3(
         .blame_filesize_limit
         .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
     let renames = Arc::new(renames);
+    // Paths the changeset itself modifies. A path in the history manifest diff
+    // that is absent here is there purely because of merge resolution, which is
+    // the case `create_blame_v3` can satisfy by reusing a parent's blame.
+    let changed_paths: Arc<HashSet<NonRootMPath>> = Arc::new(
+        bonsai
+            .file_changes()
+            .map(|(path, _)| path.clone())
+            .collect(),
+    );
     find_intersection_of_diffs(
         ctx.clone(),
         blobstore.clone(),
@@ -80,7 +92,7 @@ pub(crate) async fn derive_blame_v3(
     .map_ok(|(path, entry)| Some((Option::<NonRootMPath>::from(path)?, entry.into_leaf()?)))
     .try_filter_map(future::ok)
     .map(move |path_and_hm_file| {
-        cloned!(ctx, derivation_ctx, blobstore, renames);
+        cloned!(ctx, derivation_ctx, blobstore, renames, changed_paths);
         async move {
             let (path, hm_file_id) = path_and_hm_file?;
             mononoke::spawn_task(async move {
@@ -89,6 +101,7 @@ pub(crate) async fn derive_blame_v3(
                     &derivation_ctx,
                     &blobstore,
                     renames,
+                    changed_paths,
                     csid,
                     path,
                     hm_file_id,
@@ -111,12 +124,27 @@ async fn create_blame_v3(
     derivation_ctx: &DerivationContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     renames: Arc<HmRenameSources>,
+    changed_paths: Arc<HashSet<NonRootMPath>>,
     csid: ChangesetId,
     path: NonRootMPath,
     hm_file_id: HistoryManifestFileId,
     filesize_limit: u64,
 ) -> Result<BlameV3Id, Error> {
     let hm_file = hm_file_id.load(ctx, blobstore).await?;
+
+    if let Some(blame_id) = reuse_parent_blame_v3(
+        ctx,
+        blobstore,
+        &changed_paths,
+        &renames,
+        &path,
+        hm_file_id,
+        &hm_file,
+    )
+    .await?
+    {
+        return Ok(blame_id);
+    }
 
     let mut blame_parents = Vec::new();
     for (parent_index, parent_entry) in hm_file.parents.iter().enumerate() {
@@ -194,6 +222,65 @@ async fn create_blame_v3(
     };
 
     store_blame_v3(ctx, blobstore, hm_file_id, blame).await
+}
+
+/// Reuse a parent's blame verbatim when this file node exists only because of
+/// merge resolution and its content is exactly one parent's.
+///
+/// A merge that re-emits a file only one parent still has (deleted on the
+/// other) makes the history manifest create a fresh file node even though the
+/// file version is unchanged. Recomputing blame there is not just wasted work,
+/// it degrades the result: the content matches the parent's, so no line is
+/// attributed to this changeset, but the changeset has already consumed a csid
+/// index. `compact` then strips the unreferenced entry while `max_csid_index`
+/// keeps counting it. Since a child takes `parent.max_csid_index + 1`, every
+/// later version of the file inherits that gap, and the index space drifts
+/// further from the number of changesets actually blamed with each such merge.
+///
+/// Deliberately narrow — each condition below marks a case where the blame
+/// genuinely differs from the parent's and must be computed:
+///   * the changeset modifies the path, so its content and linknode are new;
+///   * two live parents, so the merge resolves between differing versions;
+///   * a rename or subtree source, so the blame parent is not the manifest
+///     parent.
+async fn reuse_parent_blame_v3(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    changed_paths: &HashSet<NonRootMPath>,
+    renames: &HmRenameSources,
+    path: &NonRootMPath,
+    hm_file_id: HistoryManifestFileId,
+    hm_file: &HistoryManifestFile,
+) -> Result<Option<BlameV3Id>, Error> {
+    if changed_paths.contains(path) || renames.get(path).is_some() {
+        return Ok(None);
+    }
+
+    let Ok(parent_hm_file_id) = hm_file
+        .parents
+        .iter()
+        .filter_map(|parent| match parent {
+            HistoryManifestEntry::File(parent_hm_file_id) => Some(*parent_hm_file_id),
+            _ => None,
+        })
+        .exactly_one()
+    else {
+        return Ok(None);
+    };
+
+    let parent_hm_file = parent_hm_file_id.load(ctx, blobstore).await?;
+    if parent_hm_file.content_id != hm_file.content_id
+        || parent_hm_file.file_type != hm_file.file_type
+    {
+        return Ok(None);
+    }
+
+    let parent_blame = BlameV3Id::from(parent_hm_file_id)
+        .load(ctx, blobstore)
+        .await?;
+    Ok(Some(
+        store_blame_v3(ctx, blobstore, hm_file_id, parent_blame).await?,
+    ))
 }
 
 enum BlameV3ParentSource {
