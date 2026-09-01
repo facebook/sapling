@@ -422,16 +422,19 @@ pub struct RebasedStack {
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
     /// NOT yet saved; the caller must persist before referencing.
     pub rebased_bonsais: Vec<BonsaiChangeset>,
+    pub merge_summary: MergeResolutionSummary,
 }
 
 /// Rebases the linear stack `root..head` onto `onto` with pushrebase's
-/// conflict detection and commit rewrite, moving no bookmark and writing
-/// nothing. Runs no hooks; requires `ForceOff` merge resolution and
-/// `rewritedates == false` (both checked) — overlapping edits always
-/// surface as `Conflicts`, and the rewrite is deterministic, which is
-/// what makes callers' contention retries terminate. Rejects merge
-/// commits in the stack; uses content-manifest range diffs so repos
-/// without HG derived data work.
+/// conflict detection and commit rewrite, moving no bookmark and creating no
+/// changesets; merged file content is stored when merge resolution is on.
+/// Runs no hooks; honors the caller's merge resolution setting. With it on, a
+/// replay of an already-landed stack merges to a no-op rather than conflicting
+/// on paths, so callers relying on replay failing closed must keep it off or
+/// rely on the no-op merge commit rejection. Requires `rewritedates == false`
+/// (checked) — date stamping makes the rewrite non-deterministic, breaking
+/// callers' retry termination. Rejects merge commits in the stack; uses
+/// content-manifest range diffs so repos without HG derived data work.
 pub async fn rebase_stack_onto(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -440,15 +443,6 @@ pub async fn rebase_stack_onto(
     head: ChangesetId,
     onto: ChangesetId,
 ) -> Result<RebasedStack, PushrebaseError> {
-    if !matches!(
-        config.merge_resolution_override,
-        MergeResolutionOverride::ForceOff
-    ) {
-        return Err(PushrebaseError::Error(anyhow!(
-            "rebase_stack_onto requires MergeResolutionOverride::ForceOff: \
-             merge resolution results would be silently discarded"
-        )));
-    }
     if config.rewritedates {
         return Err(PushrebaseError::Error(anyhow!(
             "rebase_stack_onto requires rewritedates to be off: date stamping \
@@ -493,7 +487,7 @@ pub async fn rebase_stack_onto(
         .collect();
     client_cf.extend(find_subtree_changes(&client_bcs)?);
 
-    check_pushrebase_conflicts_with(
+    let conflict_result = check_pushrebase_conflicts_with(
         ctx,
         repo,
         config,
@@ -516,7 +510,7 @@ pub async fn rebase_stack_onto(
         head,
         onto,
         &mut no_hooks,
-        None,
+        conflict_result.merged_file_overrides,
     )
     .await?;
 
@@ -524,6 +518,7 @@ pub async fn rebase_stack_onto(
         new_head,
         rebased_changesets: rebased_changesets_into_pairs(rebased_changesets),
         rebased_bonsais,
+        merge_summary: conflict_result.merge_summary,
     })
 }
 

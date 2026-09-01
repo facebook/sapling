@@ -783,9 +783,80 @@ async fn rebase_stack_onto_server_merge_range_without_hg(fb: FacebookInit) -> Re
 }
 
 #[mononoke::fbinit_test]
-async fn rebase_stack_onto_requires_merge_resolution_force_off(
+async fn rebase_stack_onto_merge_resolution_governs_same_file_edits(
     fb: FacebookInit,
 ) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    const BASE: &str = "alpha\nbravo\ncharlie\ndelta\necho\nfoxtrot\n";
+    const SERVER: &str = "alpha SERVER\nbravo\ncharlie\ndelta\necho\nfoxtrot\n";
+    const CLIENT: &str = "alpha\nbravo\ncharlie\ndelta\necho\nfoxtrot CLIENT\n";
+
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("shared.txt", BASE)
+        .commit()
+        .await?;
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("shared.txt", SERVER)
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("shared.txt", CLIENT)
+        .commit()
+        .await?;
+
+    let merging_flags = PushrebaseFlags {
+        merge_resolution_override: MergeResolutionOverride::ForceOn,
+        ..stack_rebase_flags()
+    };
+    let rebased = rebase_stack_onto(&ctx, &repo, &merging_flags, root, head, onto).await?;
+
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let result_cs = repo
+        .derive_hg_changeset(&ctx, rebased.new_head)
+        .await?
+        .load(&ctx, repo.repo_blobstore())
+        .await?;
+    let file_entry = result_cs
+        .manifestid()
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            NonRootMPath::new("shared.txt")?.into(),
+        )
+        .await?
+        .expect("shared.txt should exist");
+    let shared = match file_entry {
+        Entry::Leaf((_, filenode_id)) => {
+            let content_id = filenode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await?
+                .content_id();
+            let bytes = filestore::fetch_concat(repo.repo_blobstore(), &ctx, content_id).await?;
+            String::from_utf8(bytes.to_vec())?
+        }
+        _ => panic!("shared.txt should be a file"),
+    };
+    assert!(
+        shared.contains("alpha SERVER") && shared.contains("foxtrot CLIENT"),
+        "both disjoint edits should survive the merge, got: {shared:?}"
+    );
+
+    let err = rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), root, head, onto)
+        .await
+        .expect_err("ForceOff keeps path-level rejection");
+    assert!(
+        matches!(err, PushrebaseError::Conflicts(_)),
+        "unexpected error: {err}"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_requires_rewritedates_off(fb: FacebookInit) -> Result<(), Error> {
     init_just_knobs_for_test();
     let ctx = CoreContext::test_mock(fb);
     let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
@@ -799,18 +870,6 @@ async fn rebase_stack_onto_requires_merge_resolution_force_off(
         .commit()
         .await?;
 
-    // Default flags leave merge resolution at UseJk, which this entry
-    // cannot honor (it would discard the merged content).
-    let err = rebase_stack_onto(&ctx, &repo, &PushrebaseFlags::default(), root, head, root)
-        .await
-        .expect_err("UseJk merge resolution should be rejected");
-    assert!(
-        err.to_string().contains("ForceOff"),
-        "unexpected error: {err}"
-    );
-
-    // Date rewriting breaks the determinism the callers' retry loops rely
-    // on, so it is rejected too.
     let date_rewriting_flags = PushrebaseFlags {
         rewritedates: true,
         merge_resolution_override: MergeResolutionOverride::ForceOff,
