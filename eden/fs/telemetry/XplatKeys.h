@@ -223,6 +223,9 @@ inline constexpr std::string_view kStaleRedirectionsFailed =
 inline constexpr std::string_view kStaleCheckoutMountUnmounted =
     "stale_checkout_mount_unmounted";
 
+// --- PrivhelperShutdown (also uses kExitSignal from SilentDaemonExit) ---
+inline constexpr std::string_view kExitCode = "exit_code";
+
 // --- CheckoutUpdateError (uses kPath and kReason from common fields) ---
 
 // --- edenfs_errors category

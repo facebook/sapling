@@ -273,6 +273,23 @@ struct DaemonStop : public EdenFSEvent {
   }
 };
 
+struct PrivhelperShutdown : public EdenFSEvent {
+  int64_t exit_code = 0;
+  int64_t exit_signal = 0;
+
+  PrivhelperShutdown(int64_t exit_code, int64_t exit_signal)
+      : exit_code(exit_code), exit_signal(exit_signal) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addInt("exit_code", exit_code);
+    event.addInt("exit_signal", exit_signal);
+  }
+
+  const char* getType() const override {
+    return "privhelper_shutdown";
+  }
+};
+
 struct FinishedCheckout : public EdenFSEvent {
   std::string mode;
   double duration = 0.0;

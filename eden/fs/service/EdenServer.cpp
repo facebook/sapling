@@ -2076,19 +2076,21 @@ folly::SemiFuture<Unit> EdenServer::performNormalShutdown() {
 void EdenServer::shutdownPrivhelper() {
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
+  // stop() returns the privhelper's wait() status: >0 = exit code,
+  // <0 = negated kill signal.
   const auto privhelperExitCode = serverState_->getPrivHelper()->stop();
   if (privhelperExitCode != 0) {
+    int64_t exitCode = 0;
+    int64_t exitSignal = 0;
     if (privhelperExitCode > 0) {
-      XLOG(
-          ERR,
-          "privhelper process exited with unexpected code {}",
-          privhelperExitCode);
+      exitCode = privhelperExitCode;
+      XLOGF(ERR, "privhelper process exited with unexpected code {}", exitCode);
     } else {
-      XLOGF(
-          ERR,
-          "privhelper process was killed by signal {}",
-          privhelperExitCode);
+      exitSignal = -privhelperExitCode;
+      XLOGF(ERR, "privhelper process was killed by signal {}", exitSignal);
     }
+    serverState_->getEdenFsEventsLogger()->logEvent(
+        PrivhelperShutdown{exitCode, exitSignal});
   }
 }
 
