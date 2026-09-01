@@ -6,12 +6,16 @@
 
 # Verify that the per-push merge-resolution summary lands on the
 # pushrebase Scuba sample as the `mr_outcome` /
-# `mr_conflict_files_count` / `mr_resolved_files_count` columns.
+# `mr_conflict_files_count` / `mr_resolved_files_count` columns, and
+# that the land-attribution pushvars (`LAND_INSTANCE_ID` /
+# `PHAB_DIFF_ID`) are stamped onto the sample.
 #
-# Two scenarios driven through the same Scuba sink:
+# Scenarios driven through the same Scuba sink:
 #   1. Clean pushes with no conflicts -> mr_outcome=not_needed
 #   2. A conflicting push that MR resolves -> mr_outcome=succeeded
 #      with mr_resolved_files_count == 1.
+#   3. A push carrying the attribution pushvars -> land_instance_id /
+#      phab_diff_id columns present; absent otherwise.
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
@@ -90,29 +94,18 @@
   $ jq -r 'select(.normal.log_tag == "pushrebase_complete" and .normal.mr_outcome == "not_needed") | .int.mr_resolved_files_count' "$TESTTMP/scuba.json" | sort -u
   0
 
--- The pushes above carried no MERGE_RESOLUTION_OVERRIDE pushvar, so they
--- defer to the JK and are labeled `bypass` (out-of-experiment / not an
--- assigned QE arm) on the `mr_qe_arm` column.
-  $ jq -r 'select(.normal.log_tag == "pushrebase_complete") | .normal.mr_qe_arm' "$TESTTMP/scuba.json" | sort -u
-  bypass
-
--- Exercise the QE arm labels end-to-end via the pushvar. A clean
--- (non-conflicting) push with MERGE_RESOLUTION_OVERRIDE=true is the
--- treatment arm -> mr_qe_arm=test; =false is the control arm ->
--- mr_qe_arm=control. Both land because there is no conflict.
+-- The permanent land-attribution pushvars are stamped onto the
+-- pushrebase Scuba sample so downstream samples can be joined back to
+-- the originating land job (`land_instance_id`) and diff
+-- (`phab_diff_id`).
   $ hg up -q master_bookmark
-  $ echo test_arm_line >> shared.txt
-  $ hg ci -m "client: append (test arm)"
-  $ hg push -r . --to master_bookmark -q --pushvar MERGE_RESOLUTION_OVERRIDE=true
+  $ echo attributed_line >> shared.txt
+  $ hg ci -m "client: append (attributed land)"
+  $ hg push -r . --to master_bookmark -q --pushvar LAND_INSTANCE_ID=land-instance-42 --pushvar PHAB_DIFF_ID=123456789
 
-  $ hg up -q master_bookmark
-  $ echo control_arm_line >> shared.txt
-  $ hg ci -m "client: append (control arm)"
-  $ hg push -r . --to master_bookmark -q --pushvar MERGE_RESOLUTION_OVERRIDE=false
+  $ jq -r 'select(.normal.log_tag == "pushrebase_complete" and .normal.land_instance_id != null) | .normal.land_instance_id + " " + .normal.phab_diff_id' "$TESTTMP/scuba.json"
+  land-instance-42 123456789
 
--- Cumulative arm distribution: the 3 override-free pushes are `bypass`,
--- plus one `test` and one `control` from the pushvar-driven pushes.
-  $ jq -r 'select(.normal.log_tag == "pushrebase_complete") | .normal.mr_qe_arm' "$TESTTMP/scuba.json" | sort | uniq -c | awk '{print $2": "$1}'
-  bypass: 3
-  control: 1
-  test: 1
+-- Pushes that carried no attribution pushvars have no such columns.
+  $ jq -r 'select(.normal.log_tag == "pushrebase_complete" and .normal.land_instance_id == null) | .normal.log_tag' "$TESTTMP/scuba.json" | uniq -c | awk '{print $2": "$1}'
+  pushrebase_complete: 3
