@@ -1051,7 +1051,7 @@ pub struct PushrebaseFlags {
     pub merge_resolution_override: MergeResolutionOverride,
     /// Per-request Sandcastle land instance id (`LAND_INSTANCE_ID` pushvar); stamped on Scuba to group a land's attempts. Observability only.
     pub land_instance_id: Option<String>,
-    /// Per-request Phabricator diff FBID (`PHAB_DIFF_ID` pushvar); the QE bucketing key, stamped on Scuba for per-diff dedup. Observability only.
+    /// Per-request Phabricator diff FBID (`PHAB_DIFF_ID` pushvar); stamped on Scuba for per-diff attribution (join key back to Landcastle/Phabricator datasets). Observability only.
     pub phab_diff_id: Option<String>,
 }
 
@@ -1064,8 +1064,16 @@ pub const PHAB_DIFF_ID_PUSHVAR_KEY: &str = "PHAB_DIFF_ID";
 /// Per-request override for the `pushrebase_enable_merge_resolution` JustKnob.
 ///
 /// `UseJk` (the default) consults the JK as before. `ForceOn`/`ForceOff`
-/// wins over the JK and is used by the QE rollout to assign requests to
-/// a treatment or control arm independent of the global flag.
+/// wins over the JK. This is the permanent per-land control surface for
+/// merge resolution:
+/// - `rebase_stack_onto` requires `ForceOff` (merge results would be
+///   silently discarded on that path), as does the multi-repo-land
+///   manifest-land path built on it;
+/// - the author-facing opt-out (`@no-merge-resolution` pragma ->
+///   Landcastle sends the pushvar as `"false"`) is tracked in T285699818,
+///   and exposure through checkout-less land APIs in T285699837.
+///
+/// Batched pushrebase does not honor the per-request override.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum MergeResolutionOverride {
     /// Defer to the `pushrebase_enable_merge_resolution` JustKnob (default).

@@ -5,9 +5,10 @@
 # directory of this source tree.
 
 # Verify that the `MERGE_RESOLUTION_OVERRIDE` pushvar can force merge
-# resolution ON even when the JustKnob is OFF. This is the QE rollout
-# treatment-arm path: Sandcastle sets the pushvar per-request to assign
-# the push to an arm independent of the global JK.
+# resolution ON even when the JustKnob is OFF. The pushvar is the
+# permanent per-land control surface for merge resolution: callers
+# (Landcastle, checkout-less land APIs) set it per-request independent
+# of the global JK.
 #
 # Setup: JK pushrebase_enable_merge_resolution=false (so MR is OFF by
 # default). Without the pushvar, a non-overlapping edit conflict would
