@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'return Err|bail!|anyhow!|reject|Reject|InvalidRequest|BadRequest'
+name: api-validation-tightening
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'return Err|bail!|anyhow!|reject|Reject|InvalidRequest|BadRequest'
 ---
 
 # API Validation Tightening
