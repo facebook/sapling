@@ -30,6 +30,9 @@ export type RenderDagProps = {
 
   /** Should "anonymous" parents (rendered as "~" in CLI) be ignored? */
   ignoreAnonymousParents?: boolean;
+
+  /** Disable row reorder animations, such as while pointer dragging. */
+  disableReorderAnimation?: boolean;
 } & React.HTMLAttributes<HTMLDivElement> &
   RenderFunctionProps;
 
@@ -123,6 +126,7 @@ export function RenderDag(props: RenderDagProps) {
     renderCommitExtras,
     renderGlyph = defaultRenderGlyph,
     useExtraCommitRowProps,
+    disableReorderAnimation,
     className,
     ...restProps
   } = props;
@@ -150,7 +154,9 @@ export function RenderDag(props: RenderDagProps) {
   return (
     <div className={fullClassName} {...restProps}>
       <SvgPatternList authors={authors} />
-      <AnimatedReorderGroup animationDuration={100}>{renderedRows}</AnimatedReorderGroup>
+      <AnimatedReorderGroup animationDuration={100} disableAnimation={disableReorderAnimation}>
+        {renderedRows}
+      </AnimatedReorderGroup>
     </div>
   );
 }

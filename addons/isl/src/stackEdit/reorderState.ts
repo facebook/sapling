@@ -8,6 +8,7 @@
 import type {CommitRev} from './commitStackState';
 
 import {List, Record} from 'immutable';
+import {nullthrows} from 'shared/utils';
 import {CommitStackState} from './commitStackState';
 
 type ReorderResult = {
@@ -91,6 +92,7 @@ export function reorderWithDeps(
 export class ReorderState extends Record({
   offset: 0,
   commitStack: new CommitStackState([]),
+  depMap: undefined as Readonly<Map<CommitRev, Set<CommitRev>>> | undefined,
   reorderRevs: List<CommitRev>(),
   draggingRevs: List<CommitRev>(),
   draggingRev: -1 as CommitRev,
@@ -99,6 +101,7 @@ export class ReorderState extends Record({
     return new ReorderState({
       offset: 0,
       commitStack,
+      depMap: commitStack.calculateDepMap(),
       draggingRev,
       reorderRevs: List(commitStack.revs()),
       draggingRevs: List([draggingRev]),
@@ -123,7 +126,7 @@ export class ReorderState extends Record({
       this.commitStack.stack.size,
       this.draggingRev,
       offset,
-      this.commitStack.calculateDepMap(),
+      nullthrows(this.depMap),
     );
 
     // Force match dependency requirements of `rev` by moving dependencies.

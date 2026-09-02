@@ -14,7 +14,7 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {useRef, useState} from 'react';
+import {useLayoutEffect, useRef, useState} from 'react';
 import {nullthrows} from 'shared/utils';
 import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
 import {CommitTitle as StandaloneCommitTitle} from '../../CommitTitle';
@@ -36,6 +36,77 @@ type ActivateSplitProps = {
   activateSplitTab?: () => void;
 };
 
+class StackReorderDragController {
+  private reorderState = new ReorderState();
+  private reorderTops: ReadonlyArray<number> = [];
+  private stackEdit: UseStackEditState | null = null;
+
+  constructor(private publishState: (state: ReorderState) => void) {}
+
+  setStackEdit(stackEdit: UseStackEditState) {
+    this.stackEdit = stackEdit;
+  }
+
+  setGeometry(tops: ReadonlyArray<number>) {
+    this.reorderTops = tops;
+  }
+
+  handleDrag(rev: CommitRev, y: number, isDragging: boolean, container: HTMLElement | null) {
+    const stackEdit = this.stackEdit;
+    if (stackEdit == null) {
+      return;
+    }
+    if (!isDragging) {
+      this.finish(stackEdit);
+      return;
+    }
+    if (!this.reorderState.isDragging()) {
+      this.setReorderState(ReorderState.init(stackEdit.commitStack, rev));
+      return;
+    }
+    if (container == null || this.reorderTops.length === 0) {
+      return;
+    }
+    const relativeY = y - container.getBoundingClientRect().top;
+    const offset = calculateReorderOffset(
+      this.reorderTops,
+      relativeY,
+      this.reorderState.draggingRev,
+    );
+    if (offset !== this.reorderState.offset) {
+      this.setReorderState(this.reorderState.withOffset(offset));
+    }
+  }
+
+  private finish(stackEdit: UseStackEditState) {
+    if (!this.reorderState.isDragging()) {
+      return;
+    }
+    const order = this.reorderState.reorderRevs.toArray();
+    const commitStack = stackEdit.commitStack;
+    if (commitStack.canReorder(order) && !this.reorderState.isNoop()) {
+      const newStackState = commitStack.reorder(order);
+      stackEdit.push(newStackState, {
+        name: 'move',
+        offset: this.reorderState.offset,
+        depCount: this.reorderState.draggingRevs.size - 1,
+        commit: nullthrows(commitStack.stack.get(this.reorderState.draggingRev)),
+      });
+      bumpStackEditMetric('moveDnD');
+    }
+    this.reorderTops = [];
+    this.setReorderState(new ReorderState());
+  }
+
+  private setReorderState(state: ReorderState) {
+    if (is(state, this.reorderState)) {
+      return;
+    }
+    this.reorderState = state;
+    this.publishState(state);
+  }
+}
+
 // <StackEditSubTree /> assumes stack is loaded.
 export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement {
   const stackEdit = useStackEditState();
@@ -43,9 +114,15 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
 
   const onDragRef = useRef<DragHandler | null>(null);
   const commitListDivRef = useRef<HTMLDivElement | null>(null);
+  const dragControllerRef = useRef<StackReorderDragController | null>(null);
+  if (dragControllerRef.current == null) {
+    dragControllerRef.current = new StackReorderDragController(setReorderState);
+  }
+  const dragController = dragControllerRef.current;
 
   const commitStack = stackEdit.commitStack;
-  const revs = reorderState.isDragging()
+  const isReordering = reorderState.isDragging();
+  const revs = isReordering
     ? reorderState.reorderRevs.slice(1).toArray().reverse()
     : commitStack.mutableRevs().reverse();
 
@@ -53,60 +130,32 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
   const draggingHintText: string | null =
     reorderState.draggingRevs.size > 1 ? t('Dependent commits are moved together') : null;
 
-  const getDragHandler = (rev: CommitRev): DragHandler => {
-    // Track `reorderState` updates in case the <DragHandle/>-captured `reorderState` gets outdated.
-    // Note: this would be unnecessary if React provides `getState()` instead of `state`.
-    let currentReorderState = reorderState;
-    const setCurrentReorderState = (state: ReorderState) => {
-      if (is(state, currentReorderState)) {
-        return;
-      }
-      currentReorderState = state;
-      setReorderState(state);
-    };
+  useLayoutEffect(() => {
+    dragController.setStackEdit(stackEdit);
+  });
 
+  useLayoutEffect(() => {
+    if (!isReordering) {
+      dragController.setGeometry([]);
+      return;
+    }
+    const container = commitListDivRef.current;
+    if (container != null) {
+      dragController.setGeometry(snapshotCommitTops(container));
+    }
+  }, [commitStack, dragController, isReordering, reorderState.offset]);
+
+  const getDragHandler = (rev: CommitRev): DragHandler => {
     return (x, y, isDragging) => {
-      // Visual update.
       onDragRef.current?.(x, y, isDragging);
-      // State update.
-      if (isDragging) {
-        if (currentReorderState.isDragging()) {
-          if (commitListDivRef.current) {
-            const offset = calculateReorderOffset(
-              commitListDivRef.current,
-              y,
-              currentReorderState.draggingRev,
-            );
-            const newReorderState = currentReorderState.withOffset(offset);
-            setCurrentReorderState(newReorderState);
-          }
-        } else {
-          setCurrentReorderState(ReorderState.init(commitStack, rev));
-        }
-      } else if (!isDragging && currentReorderState.isDragging()) {
-        // Apply reorder.
-        const order = currentReorderState.reorderRevs.toArray();
-        const commitStack = stackEdit.commitStack;
-        if (commitStack.canReorder(order) && !currentReorderState.isNoop()) {
-          const newStackState = commitStack.reorder(order);
-          stackEdit.push(newStackState, {
-            name: 'move',
-            offset: currentReorderState.offset,
-            depCount: currentReorderState.draggingRevs.size - 1,
-            commit: nullthrows(commitStack.stack.get(currentReorderState.draggingRev)),
-          });
-          bumpStackEditMetric('moveDnD');
-        }
-        // Reset reorder state.
-        setCurrentReorderState(new ReorderState());
-      }
+      dragController.handleDrag(rev, y, isDragging, commitListDivRef.current);
     };
   };
 
   return (
     <>
       <div className="stack-edit-subtree" ref={commitListDivRef}>
-        <AnimatedReorderGroup>
+        <AnimatedReorderGroup disableAnimation={isReordering}>
           {revs.map(rev => {
             return (
               <StackEditCommit
@@ -121,7 +170,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
           })}
         </AnimatedReorderGroup>
       </div>
-      {reorderState.isDragging() && (
+      {isReordering && (
         <DraggingOverlay onDragRef={onDragRef} hint={draggingHintText}>
           {reorderState.draggingRevs
             .toArray()
@@ -291,30 +340,35 @@ function StackEditDiffBadge({commit}: {commit: CommitState}): React.ReactElement
  * commit that is not rendered. If that's no longer the case, adjust the
  * `invisibleRevCount` accordingly.
  *
- * This is done by counting how many `.commit`s are below the y axis.
+ * This is done by counting how many cached `.commit` tops are below the y axis.
  * If nothing is reordered, there should be `rev - invisibleRevCount` commits below.
  * The existing `rev`s on the `.commit`s are not considered, as they can be before
  * or after the reorder preview, which are noisy to consider.
  */
+function snapshotCommitTops(container: HTMLDivElement): ReadonlyArray<number> {
+  const containerTop = container.getBoundingClientRect().top;
+  return [...container.querySelectorAll<HTMLElement>('.commit')]
+    .map(element => element.getBoundingClientRect().top - containerTop)
+    .sort((a, b) => a - b);
+}
+
 function calculateReorderOffset(
-  container: HTMLDivElement,
+  tops: ReadonlyArray<number>,
   y: number,
   draggingRev: CommitRev,
   invisibleRevCount = 1,
 ): number {
-  let belowCount = 0;
-  const parentY: number = nullthrows(container).getBoundingClientRect().y;
-  container.querySelectorAll('.commit').forEach(element => {
-    const commitDiv = element as HTMLDivElement;
-    // commitDiv.getBoundingClientRect() will consider the animation transform.
-    // We don't want to be affected by animation, so we use 'container' here,
-    // assuming 'container' is not animated. The 'container' can be in <ScrollY>,
-    // and should have a 'relative' position.
-    const commitY = parentY + commitDiv.offsetTop;
-    if (commitY > y) {
-      belowCount += 1;
+  let low = 0;
+  let high = tops.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (tops[middle] <= y) {
+      low = middle + 1;
+    } else {
+      high = middle;
     }
-  });
+  }
+  const belowCount = tops.length - low;
   const offset = invisibleRevCount + belowCount - draggingRev;
   return offset;
 }

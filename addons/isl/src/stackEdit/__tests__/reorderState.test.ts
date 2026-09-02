@@ -7,7 +7,8 @@
 
 import type {CommitRev} from '../commitStackState';
 
-import {reorderWithDeps} from '../reorderState';
+import {CommitStackState} from '../commitStackState';
+import {ReorderState, reorderWithDeps} from '../reorderState';
 
 describe('reorderWithDeps', () => {
   const depMap = new Map<CommitRev, Set<CommitRev>>([
@@ -92,5 +93,22 @@ describe('reorderWithDeps', () => {
       order: [0, 1, 2, 3, 4, 5],
       deps: [2, 3, 4, 5],
     });
+  });
+});
+
+describe('ReorderState', () => {
+  it('has no dependency map outside an active drag', () => {
+    expect(new ReorderState().depMap).toBeUndefined();
+  });
+
+  it('calculates dependencies once when a drag starts', () => {
+    const stack = new CommitStackState([]);
+    const calculateDepMap = jest.spyOn(stack, 'calculateDepMap');
+
+    const state = ReorderState.init(stack, 0 as CommitRev);
+    state.withOffset(0);
+    state.withOffset(1);
+
+    expect(calculateDepMap).toHaveBeenCalledTimes(1);
   });
 });

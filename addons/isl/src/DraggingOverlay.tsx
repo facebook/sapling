@@ -9,7 +9,7 @@ import type {DragHandler} from './DragHandle';
 
 import {ViewportOverlay} from 'isl-components/ViewportOverlay';
 import {getZoomLevel} from 'isl-components/zoom';
-import React, {useEffect, useRef} from 'react';
+import React, {useLayoutEffect, useRef} from 'react';
 import css from './DraggingOverlay.module.css';
 
 type DraggingOverlayProps = React.HTMLProps<HTMLDivElement> & {
@@ -44,12 +44,12 @@ export function DraggingOverlay(props: DraggingOverlayProps) {
   const draggingDivRef = useRef<HTMLDivElement | null>(null);
   const {key, children, onDragRef, dx = '- var(--pad)', dy = '- 50%', hint, ...rest} = props;
 
-  useEffect(() => {
-    const zoom = getZoomLevel();
-    onDragRef.current = (x, y, isDragging) => {
+  useLayoutEffect(() => {
+    const handleDrag: DragHandler = (x, y, isDragging) => {
       const draggingDiv = draggingDivRef.current;
       if (draggingDiv != null) {
         if (isDragging) {
+          const zoom = getZoomLevel();
           Object.assign(draggingDiv.style, {
             transform: `translate(calc(${Math.round(x / zoom)}px ${dx}), calc(${Math.round(
               y / zoom,
@@ -61,7 +61,13 @@ export function DraggingOverlay(props: DraggingOverlayProps) {
         }
       }
     };
-  });
+    onDragRef.current = handleDrag;
+    return () => {
+      if (onDragRef.current === handleDrag) {
+        onDragRef.current = null;
+      }
+    };
+  }, [dx, dy, onDragRef]);
 
   return (
     <ViewportOverlay key={key}>

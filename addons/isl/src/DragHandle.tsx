@@ -12,6 +12,94 @@ import {cn} from 'shared/cn';
 
 export type DragHandler = (x: number, y: number, isDragging: boolean) => void;
 
+type DragPosition = {x: number; y: number};
+
+class PointerDragSession {
+  private animationFrame: number | null = null;
+  private ended = false;
+  private pendingPosition: DragPosition | null = null;
+
+  constructor(
+    private body: HTMLElement,
+    private view: Window | null,
+    private pointerId: number,
+    private onDrag: DragHandler,
+    private onEnd: () => void,
+  ) {
+    body.setPointerCapture(pointerId);
+    body.addEventListener('pointermove', this.handlePointerMove);
+    body.addEventListener('pointerup', this.handlePointerUp);
+    body.addEventListener('pointercancel', this.handlePointerUp);
+    body.addEventListener('pointerleave', this.handlePointerUp);
+    body.style.cursor = 'grabbing';
+  }
+
+  start(x: number, y: number) {
+    this.onDrag(x, y, true);
+  }
+
+  private handlePointerMove = (event: PointerEvent) => {
+    if (event.pointerId !== this.pointerId) {
+      return;
+    }
+    this.pendingPosition = {x: event.clientX, y: event.clientY};
+    if (this.animationFrame != null) {
+      return;
+    }
+    if (this.view == null) {
+      this.flushPendingPosition();
+      return;
+    }
+    this.animationFrame = this.view.requestAnimationFrame(() => {
+      this.animationFrame = null;
+      this.flushPendingPosition();
+    });
+  };
+
+  private handlePointerUp = (event: PointerEvent) => {
+    if (event.pointerId !== this.pointerId) {
+      return;
+    }
+    // pointercancel coordinates are unreliable (some engines report 0,0);
+    // drop the pending move rather than applying a bogus position.
+    const hasPendingPosition = this.pendingPosition != null && event.type !== 'pointercancel';
+    this.dispose();
+    if (hasPendingPosition) {
+      this.onDrag(event.clientX, event.clientY, true);
+    }
+    this.onDrag(event.clientX, event.clientY, false);
+  };
+
+  private flushPendingPosition() {
+    const position = this.pendingPosition;
+    this.pendingPosition = null;
+    if (!this.ended && position != null) {
+      this.onDrag(position.x, position.y, true);
+    }
+  }
+
+  private dispose() {
+    if (this.ended) {
+      return;
+    }
+    this.ended = true;
+    if (this.animationFrame != null && this.view != null) {
+      this.view.cancelAnimationFrame(this.animationFrame);
+    }
+    this.animationFrame = null;
+    this.pendingPosition = null;
+    this.body.removeEventListener('pointermove', this.handlePointerMove);
+    this.body.removeEventListener('pointerup', this.handlePointerUp);
+    this.body.removeEventListener('pointercancel', this.handlePointerUp);
+    this.body.removeEventListener('pointerleave', this.handlePointerUp);
+    if (this.body.hasPointerCapture?.(this.pointerId) !== false) {
+      this.body.releasePointerCapture(this.pointerId);
+    }
+    this.body.style.removeProperty('cursor');
+    this.onEnd();
+  }
+}
+
 /**
  * A drag handle that fires events on drag-n-drop.
  *
@@ -50,34 +138,20 @@ export function dragHandleProps(onDrag?: DragHandler): {
   if (onDrag == null) {
     return {};
   }
-  let pointerDown = false;
+  let activeSession: PointerDragSession | null = null;
   const handlePointerDown: PointerEventHandler = e => {
-    if (e.isPrimary && !pointerDown) {
+    if (e.isPrimary && activeSession == null) {
       // e.target might be unmounted and lose events, listen on `document.body` instead.
       const body = (e.target as HTMLSpanElement).ownerDocument.body;
-
-      const handlePointerMove = (e: PointerEvent) => {
-        onDrag(e.clientX, e.clientY, true);
-      };
-      const handlePointerUp = (e: PointerEvent) => {
-        body.removeEventListener('pointermove', handlePointerMove as EventListener);
-        body.removeEventListener('pointerup', handlePointerUp as EventListener);
-        body.removeEventListener('pointerleave', handlePointerUp as EventListener);
-        body.releasePointerCapture(e.pointerId);
-        body.style.removeProperty('cursor');
-        pointerDown = false;
-        onDrag(e.clientX, e.clientY, false);
-      };
-
-      body.setPointerCapture(e.pointerId);
-      body.addEventListener('pointermove', handlePointerMove);
-      body.addEventListener('pointerup', handlePointerUp);
-      body.addEventListener('pointerleave', handlePointerUp);
-
-      body.style.cursor = 'grabbing';
-      pointerDown = true;
-
-      onDrag(e.clientX, e.clientY, true);
+      const view = body.ownerDocument.defaultView;
+      let session: PointerDragSession;
+      session = new PointerDragSession(body, view, e.pointerId, onDrag, () => {
+        if (activeSession === session) {
+          activeSession = null;
+        }
+      });
+      activeSession = session;
+      session.start(e.clientX, e.clientY);
     }
   };
 

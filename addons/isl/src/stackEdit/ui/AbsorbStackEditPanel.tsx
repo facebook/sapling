@@ -6,7 +6,7 @@
  */
 
 import type {Map as ImMap} from 'immutable';
-import type {ReactNode} from 'react';
+import type {MutableRefObject, ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {ParsedDiff} from 'shared/patch/types';
@@ -17,7 +17,14 @@ import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {HashSet} from '../../dag/set';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {CommitRev, CommitStackState, FileRev, FileStackIndex} from '../commitStackState';
+import type {
+  CommitRev,
+  CommitStackState,
+  CommitState,
+  FileRev,
+  FileStackIndex,
+} from '../commitStackState';
+import type {UseStackEditState} from './stackEditState';
 
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
@@ -25,7 +32,7 @@ import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
-import React, {useEffect, useMemo, useRef} from 'react';
+import React, {useContext, useEffect, useMemo, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {cn} from 'shared/cn';
@@ -43,41 +50,50 @@ import {themeState} from '../../theme';
 import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import css from './AbsorbStackEditPanel.module.css';
+import {type DragDestinationRow, findDragDestinationCommitRev} from './dragDestination';
 import {stackEditStack, useStackEditState} from './stackEditState';
+
+type DragDestinationSnapshot = {
+  container: HTMLElement;
+  rows: ReadonlyArray<DragDestinationRow>;
+};
 
 /** The `AbsorbEdit` that is currently being dragged. */
 const draggingAbsorbEdit = atom<AbsorbEdit | null>(null);
 const draggingHint = atom<string | null>(null);
-const onDragRef: {current: null | DragHandler} = {current: null};
+const AbsorbDragContext = React.createContext<MutableRefObject<DragHandler | null> | null>(null);
+
+function useAbsorbDragRef(): MutableRefObject<DragHandler | null> {
+  return nullthrows(useContext(AbsorbDragContext));
+}
 
 export function AbsorbStackEditPanel() {
   useResetCollapsedFilesOnMount();
+  const isDragging = useAtomValue(draggingAbsorbEdit) != null;
   const stackEdit = useStackEditState();
   const stack = stackEdit.commitStack;
   const dag = calculateDagFromStack(stack);
   const subset = relevantSubset(stack, dag);
+  const onDragRef = useRef<DragHandler | null>(null);
 
   return (
-    <>
+    <AbsorbDragContext.Provider value={onDragRef}>
       <Column className={css.container}>
         <AbsorbInstruction dag={dag} subset={subset} />
         <ScrollY maxSize="calc(100vh - 200px)" className={css.scrollYPadding}>
           <RenderDag
             className="absorb-dag"
+            disableReorderAnimation={isDragging}
             dag={dag}
             renderCommit={renderCommit}
             renderCommitExtras={renderCommitExtras}
             renderGlyph={RenderGlyph}
             subset={subset}
-            style={{
-              /* make it "containing block" so findDragDestinationCommitKey works */
-              position: 'relative',
-            }}
           />
         </ScrollY>
       </Column>
       <AbsorbDraggingOverlay />
-    </>
+    </AbsorbDragContext.Provider>
   );
 }
 
@@ -150,6 +166,7 @@ function RenderGlyph(info: DagCommitInfo): RenderGlyphResult {
 }
 
 function AbsorbDraggingOverlay() {
+  const onDragRef = useAbsorbDragRef();
   const absorbEdit = useAtomValue(draggingAbsorbEdit);
   const hint = useAtomValue(draggingHint);
   const stack = useAtomValue(stackEditStack);
@@ -209,43 +226,100 @@ function renderCommitExtras(info: DagCommitInfo) {
   return <AbsorbDagCommitExtras info={info} />;
 }
 
-/**
- * Scan the absorb dag DOM and extract [data-reorder-id], or the commit key,
- * from the dragging destination.
- */
-function findDragDestinationCommitKey(y: number): string | undefined {
-  const container = document.querySelector('.absorb-dag');
+function snapshotDragDestinationRows(stack: CommitStackState): DragDestinationSnapshot | undefined {
+  const container = document.querySelector<HTMLElement>('.absorb-dag');
   if (container == null) {
     return undefined;
   }
-  const containerY = container.getBoundingClientRect().y;
-  const relativeY = y - containerY;
-  let bestKey: string | undefined = undefined;
-  let bestDelta: number = Infinity;
-  for (const element of container.querySelectorAll('.render-dag-row-group')) {
-    const divElement = element as HTMLDivElement;
-    // use offSetTop instead of getBoundingClientRect() to avoid
-    // being affected by ongoing animation.
-    const y1 = divElement.offsetTop;
-    const y2 = y1 + divElement.offsetHeight;
-    const commitKey = divElement.getAttribute('data-reorder-id');
-    const delta = Math.abs(relativeY - (y1 + y2) / 2);
-    if (relativeY >= y1 && commitKey != null && delta < bestDelta) {
-      bestKey = commitKey;
-      bestDelta = delta;
+  // Reorder FLIP animations translate these rows; cancel them so measurements
+  // reflect settled positions rather than mid-animation offsets.
+  container.getAnimations?.({subtree: true})?.forEach(animation => animation.cancel());
+  const containerTop = container.getBoundingClientRect().top;
+  const keyToRev = new Map<string, CommitRev>();
+  for (const rev of stack.revs()) {
+    const commit = stack.get(rev);
+    if (commit != null) {
+      keyToRev.set(commit.key, rev);
     }
   }
-  return bestKey;
+  const rows: DragDestinationRow[] = [];
+  container.querySelectorAll<HTMLElement>('.render-dag-row-group').forEach(element => {
+    const key = element.getAttribute('data-reorder-id');
+    const rev = key == null ? undefined : keyToRev.get(key);
+    if (rev != null) {
+      const rect = element.getBoundingClientRect();
+      const top = rect.top - containerTop;
+      rows.push({midpoint: top + rect.height / 2, rev, top});
+    }
+  });
+  return {container, rows: rows.sort((a, b) => a.top - b.top)};
 }
 
-/** Similar to `findDragDestinationCommitKey` but reports the rev. */
-function findDragDestinationCommitRev(y: number, stack: CommitStackState): CommitRev | undefined {
-  const key = findDragDestinationCommitKey(y);
-  if (key == null) {
-    return undefined;
+class AbsorbDragController {
+  private geometryRefreshFrame: number | null = null;
+  private lastTargetRev: CommitRev | null | undefined;
+  private operationStackEdit: UseStackEditState | null = null;
+  private snapshot: DragDestinationSnapshot | undefined;
+  private started = false;
+
+  hint: string | null = null;
+
+  prepare(stack: CommitStackState, stackEdit: UseStackEditState) {
+    if (!this.started) {
+      this.started = true;
+      this.operationStackEdit = stackEdit;
+      this.snapshot = snapshotDragDestinationRows(stack);
+    } else if (this.geometryRefreshFrame != null) {
+      document.defaultView?.cancelAnimationFrame(this.geometryRefreshFrame);
+      this.geometryRefreshFrame = null;
+      this.snapshot = snapshotDragDestinationRows(stack);
+    }
+    return this.snapshot;
   }
-  // Convert key to rev.
-  return stack.findRev(commit => commit.key === key);
+
+  isNewTarget(rev: CommitRev | null) {
+    if (rev === this.lastTargetRev) {
+      return false;
+    }
+    this.lastTargetRev = rev;
+    return true;
+  }
+
+  applyDestination(stack: CommitStackState, commit: CommitState) {
+    nullthrows(this.operationStackEdit).push(stack, {name: 'absorbMove', commit});
+    this.scheduleGeometryRefresh();
+  }
+
+  finish() {
+    const view = document.defaultView;
+    if (view != null && this.geometryRefreshFrame != null) {
+      view.cancelAnimationFrame(this.geometryRefreshFrame);
+    }
+    this.geometryRefreshFrame = null;
+    this.hint = null;
+    this.lastTargetRev = undefined;
+    this.operationStackEdit = null;
+    this.snapshot = undefined;
+    this.started = false;
+  }
+
+  private scheduleGeometryRefresh() {
+    const view = document.defaultView;
+    if (view == null) {
+      this.geometryRefreshFrame = null;
+      const stack = readAtom(stackEditStack);
+      this.snapshot = stack == null ? undefined : snapshotDragDestinationRows(stack);
+      return;
+    }
+    if (this.geometryRefreshFrame != null) {
+      view.cancelAnimationFrame(this.geometryRefreshFrame);
+    }
+    this.geometryRefreshFrame = view.requestAnimationFrame(() => {
+      this.geometryRefreshFrame = null;
+      const stack = readAtom(stackEditStack);
+      this.snapshot = stack == null ? undefined : snapshotDragDestinationRows(stack);
+    });
+  }
 }
 
 /** Show file paths and diff chunks. */
@@ -389,45 +463,65 @@ function SingleAbsorbEdit(props: {
   const stackEdit = useStackEditState();
   const reorderId = `absorb-${edit.fileStackIndex}-${edit.absorbEditId}`;
   const ref = useRef<HTMLDivElement | null>(null);
+  const onDragRef = useAbsorbDragRef();
+  const dragControllerRef = useRef<AbsorbDragController | null>(null);
+  if (dragControllerRef.current == null) {
+    dragControllerRef.current = new AbsorbDragController();
+  }
+  const dragController = dragControllerRef.current;
 
   const handleDrag = (x: number, y: number, isDragging: boolean) => {
-    // Visual update.
     onDragRef.current?.(x, y, isDragging);
-    // State update.
-    let newDraggingHint: string | null = null;
+    let newDraggingHint = dragController.hint;
     if (isDragging) {
-      // The 'stack' in the closure might be outdated. Read the latest.
       const stack = readAtom(stackEditStack);
       if (stack == null) {
         return;
       }
-      const rev = findDragDestinationCommitRev(y, stack);
+      const snapshot = dragController.prepare(stack, stackEdit);
+      const rev =
+        snapshot == null
+          ? undefined
+          : findDragDestinationCommitRev(
+              y - snapshot.container.getBoundingClientRect().top,
+              snapshot.rows,
+            );
       const fileStackIndex = nullthrows(edit.fileStackIndex);
       const absorbEditId = edit.absorbEditId;
-      if (
-        rev != null &&
-        rev !== stack?.getAbsorbCommitRevs(fileStackIndex, absorbEditId).selectedRev
-      ) {
-        const commit = nullthrows(stack.get(rev));
-        let newStack = stack;
-        try {
-          newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
-          // `handleDrag` won't be updated with "refreshed" `stackEdit`.
-          // So `push` can work like `replaceTopOperation` while dragging.
-          stackEdit.push(newStack, {name: 'absorbMove', commit});
-        } catch {
-          // This should be unreachable.
-          newDraggingHint = t(
-            'Diff chunk can only be applied to a commit that modifies the file and has matching context lines.',
-          );
+      const targetRev = rev ?? null;
+      if (dragController.isNewTarget(targetRev)) {
+        newDraggingHint = null;
+        if (rev != null) {
+          const selectedRev = stack.getAbsorbCommitRevs(fileStackIndex, absorbEditId).selectedRev;
+          if (rev !== selectedRev) {
+            const commit = nullthrows(stack.get(rev));
+            try {
+              const newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
+              dragController.applyDestination(newStack, commit);
+            } catch {
+              // This should be unreachable.
+              newDraggingHint = t(
+                'Diff chunk can only be applied to a commit that modifies the file and has matching context lines.',
+              );
+            }
+          }
         }
       }
+    } else {
+      dragController.finish();
+      newDraggingHint = null;
     }
     // Ensure the hint is cleared when:
     // 1) not dragging. (important because the hint div interferes user interaction even if it's invisible)
     // 2) dragging back from an invalid rev to the current (valid) rev.
-    writeAtom(draggingHint, newDraggingHint);
-    writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
+    if (readAtom(draggingHint) !== newDraggingHint) {
+      writeAtom(draggingHint, newDraggingHint);
+    }
+    dragController.hint = newDraggingHint;
+    const newDraggingEdit = isDragging ? edit : null;
+    if (readAtom(draggingAbsorbEdit) !== newDraggingEdit) {
+      writeAtom(draggingAbsorbEdit, newDraggingEdit);
+    }
   };
 
   const useThemeHook = () => useAtomValue(themeState);

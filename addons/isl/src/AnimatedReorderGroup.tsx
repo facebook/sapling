@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import deepEqual from 'fast-deep-equal';
 import React, {useLayoutEffect, useRef} from 'react';
 import {prefersReducedMotion} from './mediaQuery';
 
@@ -13,21 +12,11 @@ type ReorderGroupProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactElement[];
   animationDuration?: number;
   animationMinPixel?: number;
+  disableAnimation?: boolean;
 };
 
-type PreviousState = {
-  // Ordered list of `data-reorder-id`s. Can ONLY be updated inside `useLayoutEffect`.
-  // Useful to test if `children` has changed or not.
-  idList: Array<string>;
-
-  // Locations of the old children, keyed by `data-reorder-id`.
-  rectMap: Map<string, DOMRect>;
-};
-
-const emptyPreviousState: Readonly<PreviousState> = {
-  idList: [],
-  rectMap: new Map(),
-};
+type ElementPosition = {left: number; top: number};
+type ElementMovement = [HTMLElement, number, number];
 
 /**
  * AnimatedReorderGroup tracks and animates elements with the `data-reorder-id` attribute.
@@ -43,33 +32,34 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
   children,
   animationDuration,
   animationMinPixel,
+  disableAnimation,
   ...props
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const previousStateRef = useRef<Readonly<PreviousState>>(emptyPreviousState);
+  const animationControllerRef = useRef<ReorderAnimationController | null>(null);
+  if (animationControllerRef.current == null) {
+    animationControllerRef.current = new ReorderAnimationController();
+  }
+  const animationController = animationControllerRef.current;
   const reducedMotion = prefersReducedMotion();
 
   useLayoutEffect(() => {
-    if (reducedMotion) {
+    const container = containerRef.current;
+    if (container == null || reducedMotion || disableAnimation) {
+      animationController.reset();
       return;
     }
-    const animate = true;
-    updatePreviousState(
-      containerRef,
-      previousStateRef,
-      animate,
-      animationDuration,
-      animationMinPixel,
-    );
-  }, [children, animationDuration, animationMinPixel, reducedMotion]);
+    animationController.update(container, animationMinPixel, animationDuration);
+  }, [
+    animationController,
+    children,
+    animationDuration,
+    animationMinPixel,
+    reducedMotion,
+    disableAnimation,
+  ]);
 
-  // Try to get the rects of old children right before rendering new children
-  // and calling the LayoutEffect callback. This captures position changes
-  // since the last useLayoutEffect. The position changes might be caused by
-  // scrolling or resizing the window.
-  if (!reducedMotion) {
-    updatePreviousState(containerRef, previousStateRef, false, animationDuration);
-  }
+  useLayoutEffect(() => () => animationController.dispose(), [animationController]);
 
   return (
     <div {...props} ref={containerRef}>
@@ -78,67 +68,80 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
   );
 };
 
-function scanElements(containerRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] {
-  const container = containerRef.current;
-  if (container == null) {
-    return [];
-  }
-  const elements = container.querySelectorAll<HTMLElement>('[data-reorder-id]');
-  return [...elements];
-}
+class ReorderAnimationController {
+  private animationFrame: {id: number; view: Window} | null = null;
+  private animations = new Set<Animation>();
+  private previousPositions = new Map<string, ElementPosition>();
 
-function updatePreviousState(
-  containerRef: React.RefObject<HTMLDivElement | null>,
-  previousStateRef: React.MutableRefObject<Readonly<PreviousState>>,
-  animate = false,
-  animationDuration = 200,
-  animationMinPixel = 5,
-) {
-  const elements = scanElements(containerRef);
-  const idList: Array<string> = [];
-  const rectMap = new Map<string, DOMRect>();
-  const toAnimate: Array<[HTMLElement, number, number]> = [];
-  elements.forEach(element => {
-    const reorderId = element.getAttribute('data-reorder-id');
-    if (reorderId == null || reorderId === '') {
+  update(container: HTMLElement, animationMinPixel = 5, animationDuration = 200) {
+    this.cancelAnimations();
+    const movements = this.measureMovements(container, animationMinPixel);
+    const view = container.ownerDocument.defaultView;
+    if (view == null || movements.length === 0) {
       return;
     }
-    idList.push(reorderId);
-    const newBox = element.getBoundingClientRect();
-    if (animate) {
-      const oldBox = previousStateRef.current.rectMap.get(reorderId);
-      if (oldBox && (oldBox.x !== newBox.x || oldBox.y !== newBox.y)) {
-        // Animate from old to the new (current) rect.
-        const dx = oldBox.left - newBox.left;
-        const dy = oldBox.top - newBox.top;
-        if (Math.abs(dx) + Math.abs(dy) > animationMinPixel) {
-          toAnimate.push([element, dx, dy]);
-        }
+    const frameId = view.requestAnimationFrame(() => {
+      if (this.animationFrame?.id !== frameId) {
+        return;
       }
-    }
-    rectMap.set(reorderId, newBox);
-  });
-
-  if (toAnimate.length > 0) {
-    requestAnimationFrame(() => {
-      toAnimate.forEach(([element, dx, dy]) => {
-        element.animate(
+      this.animationFrame = null;
+      for (const [element, dx, dy] of movements) {
+        const animation = element.animate(
           [{transform: `translate(${dx}px,${dy}px)`}, {transform: 'translate(0,0)'}],
           {duration: animationDuration, easing: 'ease-out'},
         );
-      });
+        this.animations.add(animation);
+        animation.onfinish = () => this.animations.delete(animation);
+      }
     });
+    this.animationFrame = {id: frameId, view};
   }
 
-  if (!animate && !deepEqual(idList, previousStateRef.current.idList)) {
-    // If animate is false, we want to get the rects of the old children.
-    // If the idList mismatches, it's not the "old" children so we discard
-    // the result.
-    return;
+  reset() {
+    this.cancelAnimations();
+    this.previousPositions = new Map();
   }
 
-  previousStateRef.current = {
-    idList,
-    rectMap,
-  };
+  dispose() {
+    this.reset();
+  }
+
+  private measureMovements(container: HTMLElement, animationMinPixel: number): ElementMovement[] {
+    const containerBox = container.getBoundingClientRect();
+    const nextPositions = new Map<string, ElementPosition>();
+    const movements: ElementMovement[] = [];
+    for (const element of container.querySelectorAll<HTMLElement>('[data-reorder-id]')) {
+      const reorderId = element.getAttribute('data-reorder-id');
+      if (reorderId == null || reorderId === '') {
+        continue;
+      }
+      const box = element.getBoundingClientRect();
+      const position = {
+        left: box.left - containerBox.left,
+        top: box.top - containerBox.top,
+      };
+      const previous = this.previousPositions.get(reorderId);
+      if (previous != null) {
+        const dx = previous.left - position.left;
+        const dy = previous.top - position.top;
+        if (Math.abs(dx) + Math.abs(dy) > animationMinPixel) {
+          movements.push([element, dx, dy]);
+        }
+      }
+      nextPositions.set(reorderId, position);
+    }
+    this.previousPositions = nextPositions;
+    return movements;
+  }
+
+  private cancelAnimations() {
+    if (this.animationFrame != null) {
+      this.animationFrame.view.cancelAnimationFrame(this.animationFrame.id);
+      this.animationFrame = null;
+    }
+    for (const animation of this.animations) {
+      animation.cancel();
+    }
+    this.animations.clear();
+  }
 }
