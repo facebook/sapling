@@ -394,6 +394,10 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsPrivilegedAccessUidRoot{"nfs.privileged_access.uid_root"};
   Counter nfsPrivilegedAccessGidWheel{"nfs.privileged_access.gid_wheel"};
 
+  // Requests rejected because nfs:root-access-mode / nfs:wheel-access-mode
+  // is set to "block" for an identity class the request claims.
+  Counter nfsBlockedAccess{"nfs.blocked_access"};
+
   // NFS GC invalidation counters
   Counter nfsInvalidationGcAttempt{"nfs.invalidation.gc.attempt"};
   Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"};

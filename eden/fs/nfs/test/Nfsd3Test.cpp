@@ -114,14 +114,15 @@ opaque_auth makeAuthSysCred(const authsys_parms& creds) {
 
 /**
  * Serialize an NFSv3 request for the given procedure with the given
- * credential, framed with a record-mark fragment header.
+ * credential, framed with a record-mark fragment header. serializeArgs is
+ * called with the QueueAppender to append the procedure arguments.
  */
-template <typename Args>
-std::unique_ptr<folly::IOBuf> buildNfsRequest(
+template <typename SerializeArgs>
+std::unique_ptr<folly::IOBuf> buildNfsRequestImpl(
     uint32_t xid,
     nfsv3Procs proc,
     opaque_auth cred,
-    const Args& args) {
+    SerializeArgs&& serializeArgs) {
   folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
   folly::io::QueueAppender ser(&queue, 1024);
 
@@ -139,13 +140,31 @@ std::unique_ptr<folly::IOBuf> buildNfsRequest(
       },
   };
   XdrTrait<rpc_msg_call>::serialize(ser, call);
-  XdrTrait<Args>::serialize(ser, args);
+  serializeArgs(ser);
 
   auto len = static_cast<uint32_t>(queue.chainLength() - sizeof(uint32_t));
   auto buf = queue.move();
   auto* header = reinterpret_cast<uint32_t*>(buf->writableData());
   *header = folly::Endian::big(len | 0x80000000);
   return buf;
+}
+
+template <typename Args>
+std::unique_ptr<folly::IOBuf> buildNfsRequest(
+    uint32_t xid,
+    nfsv3Procs proc,
+    opaque_auth cred,
+    const Args& args) {
+  return buildNfsRequestImpl(
+      xid, proc, std::move(cred), [&](folly::io::QueueAppender& ser) {
+        XdrTrait<Args>::serialize(ser, args);
+      });
+}
+
+std::unique_ptr<folly::IOBuf>
+buildNfsRequest(uint32_t xid, nfsv3Procs proc, opaque_auth cred) {
+  return buildNfsRequestImpl(
+      xid, proc, std::move(cred), [](folly::io::QueueAppender&) {});
 }
 
 /**
@@ -235,6 +254,22 @@ struct Nfsd3Test : ::testing::Test {
         nfsv3Procs::getattr,
         std::move(cred),
         GETATTR3args{nfs_fh3{InodeNumber{42}}}));
+  }
+
+  std::vector<uint8_t> sendAccess(uint32_t xid, opaque_auth cred) {
+    return sendAndReceive(buildNfsRequest(
+        xid,
+        nfsv3Procs::access,
+        std::move(cred),
+        ACCESS3args{nfs_fh3{InodeNumber{42}}, /*access=*/0x1}));
+  }
+
+  std::vector<uint8_t> sendRead(uint32_t xid, opaque_auth cred) {
+    return sendAndReceive(buildNfsRequest(
+        xid,
+        nfsv3Procs::read,
+        std::move(cred),
+        READ3args{nfs_fh3{InodeNumber{42}}, /*offset=*/0, /*count=*/16}));
   }
 
   int64_t getCounter(folly::StringPiece key) {
@@ -330,6 +365,132 @@ TEST_F(Nfsd3Test, both_modes_off_disable_the_counters) {
 
   EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
   EXPECT_EQ(getCounter("nfs.privileged_access.gid_wheel.sum.60"), wheelBefore);
+}
+
+struct Nfsd3BlockingTest : Nfsd3Test {
+  // uid 0, not wheel: exercises nfs:root-access-mode alone.
+  static opaque_auth rootOnlyCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/20, {20}});
+  }
+
+  // wheel (primary gid 0), not uid 0: exercises nfs:wheel-access-mode alone.
+  static opaque_auth wheelCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/0, {0}});
+  }
+
+  // wheel via the auxiliary gids list only.
+  static opaque_auth auxWheelCred() {
+    return makeAuthSysCred(
+        {/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20, 0}});
+  }
+
+  // claims both identity classes at once.
+  static opaque_auth rootAndWheelCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/0, {0}});
+  }
+
+  static opaque_auth userCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20}});
+  }
+
+  /**
+   * Assert the reply is MSG_DENIED with AUTH_ERROR / AUTH_TOOWEAK.
+   * Reply layout: fragment(0) xid(4) mtype(8) reply_stat(12) reject_stat(16)
+   * auth_stat(20).
+   */
+  static void expectAuthTooWeak(const std::vector<uint8_t>& reply) {
+    EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
+    EXPECT_EQ(readBigEndianU32(reply, 12), 1u); // reply_stat::MSG_DENIED
+    EXPECT_EQ(readBigEndianU32(reply, 16), 1u); // reject_stat::AUTH_ERROR
+    EXPECT_EQ(
+        readBigEndianU32(reply, 20),
+        static_cast<uint32_t>(auth_stat::AUTH_TOOWEAK));
+  }
+};
+
+TEST_F(Nfsd3BlockingTest, nothing_blocked_by_default) {
+  expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
+  expectAcceptedSuccess(sendGetattr(2, wheelCred()));
+}
+
+TEST_F(Nfsd3BlockingTest, block_root_rejects_uid0_across_procedures) {
+  setRootMode(NfsAccessMode::Block);
+
+  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
+  expectAuthTooWeak(sendAccess(2, rootOnlyCred()));
+  expectAuthTooWeak(sendRead(3, rootOnlyCred()));
+  // Wheel is not uid 0; blocking the root class alone leaves it alone.
+  expectAcceptedSuccess(sendGetattr(4, wheelCred()));
+  expectAcceptedSuccess(sendGetattr(5, userCred()));
+}
+
+TEST_F(Nfsd3BlockingTest, block_bumps_privileged_and_blocked_counters) {
+  setRootMode(NfsAccessMode::Block);
+  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+
+  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
+  expectAuthTooWeak(sendGetattr(2, rootOnlyCred()));
+
+  // "block" is a strict superset of "log": rejected requests still bump
+  // the class's privileged-access counter.
+  EXPECT_EQ(
+      getCounter("nfs.privileged_access.uid_root.sum.60") - rootBefore, 2);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 2);
+}
+
+TEST_F(Nfsd3BlockingTest, wheel_block_is_independent_of_root_mode) {
+  // Root class fully off, wheel class blocking: the independence case.
+  setRootMode(NfsAccessMode::Off);
+  setWheelMode(NfsAccessMode::Block);
+  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
+  auto wheelBefore = getCounter("nfs.privileged_access.gid_wheel.sum.60");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+
+  // Both wheel spellings (primary and auxiliary gid 0) are rejected, and a
+  // credential claiming root AND wheel is rejected by the wheel class alone.
+  expectAuthTooWeak(sendGetattr(1, wheelCred()));
+  expectAuthTooWeak(sendGetattr(2, auxWheelCred()));
+  expectAuthTooWeak(sendGetattr(3, rootAndWheelCred()));
+  // Plain root and plain user are untouched: the root class is off.
+  expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
+  expectAcceptedSuccess(sendGetattr(5, userCred()));
+
+  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
+  EXPECT_EQ(
+      getCounter("nfs.privileged_access.gid_wheel.sum.60") - wheelBefore, 3);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 3);
+}
+
+TEST_F(Nfsd3BlockingTest, missing_creds_are_never_blocked) {
+  setRootMode(NfsAccessMode::Block);
+  setWheelMode(NfsAccessMode::Block);
+
+  expectAcceptedSuccess(
+      sendGetattr(1, opaque_auth{auth_flavor::AUTH_NONE, {}}));
+}
+
+TEST_F(Nfsd3BlockingTest, null_proc_is_exempt) {
+  setRootMode(NfsAccessMode::Block);
+  setWheelMode(NfsAccessMode::Block);
+
+  auto reply =
+      sendAndReceive(buildNfsRequest(1, nfsv3Procs::null, rootOnlyCred()));
+  expectAcceptedSuccess(reply);
+}
+
+TEST_F(Nfsd3BlockingTest, config_changes_apply_without_restart) {
+  setRootMode(NfsAccessMode::Block);
+  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
+
+  // Dropping the mode back to "log" unblocks the same running server.
+  setRootMode(NfsAccessMode::Log);
+  expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
+
+  // The wheel mode is picked up independently.
+  setWheelMode(NfsAccessMode::Block);
+  expectAuthTooWeak(sendGetattr(3, wheelCred()));
+  expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
 }
 
 } // namespace

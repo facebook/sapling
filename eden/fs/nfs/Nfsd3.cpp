@@ -2387,25 +2387,43 @@ bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
 auth_stat Nfsd3ServerProcessor::checkAuthentication(
     const call_body& callBody,
     const std::optional<authsys_parms>& authSysCreds) {
-  // The NULL procedure is the liveness and mount handshake probe, and
-  // requests without a parsable AUTH_SYS credential carry no identity;
-  // neither is ever acted on.
+  // The NULL procedure is the liveness and mount handshake probe (blocking
+  // it would wedge mount and unmount), and requests without a parsable
+  // AUTH_SYS credential carry no identity; neither is ever acted on.
   if (!config_ || !authSysCreds ||
       callBody.proc == folly::to_underlying(nfsv3Procs::null)) {
     return auth_stat::AUTH_OK;
   }
-  // On macOS privileged access typically comes from security software
-  // crawling the mount; count it per identity class so we can see it.
+  // Per identity class: "log" and "block" both count the access ("block"
+  // is a strict superset of "log"), and "block" additionally rejects the
+  // request. Either class alone is enough to reject.
   auto config = config_->getEdenConfig();
-  if (credsClaimRoot(*authSysCreds) &&
-      config->nfsRootAccessMode.getValue() != NfsAccessMode::Off) {
-    dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
+  bool block = false;
+  if (credsClaimRoot(*authSysCreds)) {
+    const auto mode = config->nfsRootAccessMode.getValue();
+    if (mode != NfsAccessMode::Off) {
+      dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
+    }
+    block = block || mode == NfsAccessMode::Block;
   }
-  if (credsClaimWheel(*authSysCreds) &&
-      config->nfsWheelAccessMode.getValue() != NfsAccessMode::Off) {
-    dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessGidWheel);
+  if (credsClaimWheel(*authSysCreds)) {
+    const auto mode = config->nfsWheelAccessMode.getValue();
+    if (mode != NfsAccessMode::Off) {
+      dispatcher_->getStats()->increment(
+          &NfsStats::nfsPrivilegedAccessGidWheel);
+    }
+    block = block || mode == NfsAccessMode::Block;
   }
-  return auth_stat::AUTH_OK;
+  if (!block) {
+    return auth_stat::AUTH_OK;
+  }
+  dispatcher_->getStats()->increment(&NfsStats::nfsBlockedAccess);
+  // AUTH_TOOWEAK rather than AUTH_REJECTEDCRED: NFS clients treat TOOWEAK
+  // as terminal and surface a permission error to the caller (the macOS
+  // client maps it to a clean EACCES), while REJECTEDCRED asks the client
+  // to refresh its credential and retry, which would turn every blocked
+  // call into a retry loop.
+  return auth_stat::AUTH_TOOWEAK;
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(

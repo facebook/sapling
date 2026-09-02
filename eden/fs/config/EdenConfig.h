@@ -1178,13 +1178,17 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * How to respond to NFS requests whose AUTH_SYS credential claims root
    * (uid 0): "off" does nothing, "log" bumps the
-   * nfs.privileged_access.uid_root fb303 counter, "block" logs and rejects
-   * the request. (Blocking is wired up in a later change; until then
-   * "block" behaves like "log".) On macOS such access typically comes from
-   * security software crawling the mount. Read through ReloadableConfig on
-   * each request, so it can be changed without a daemon restart. NFS NULL
-   * probes and requests without a parsable AUTH_SYS credential are never
-   * affected.
+   * nfs.privileged_access.uid_root fb303 counter, "block" logs and
+   * additionally rejects the request (bumping nfs.blocked_access) with an
+   * auth error that clients surface as a permission error. On macOS such
+   * access typically comes from security software crawling the mount. Read
+   * through ReloadableConfig on each request, so it can be changed within
+   * config:reload-interval (or immediately via `eden debug thrift
+   * reloadConfig`) without a daemon restart. NFS NULL probes and requests
+   * without a parsable AUTH_SYS credential are never affected. AUTH_SYS
+   * identities are client-asserted, so "block" is a mitigation against
+   * well-behaved-but-noisy root processes (e.g. security scanners), not a
+   * security boundary.
    */
   ConfigSetting<NfsAccessMode> nfsRootAccessMode{
       "nfs:root-access-mode",
