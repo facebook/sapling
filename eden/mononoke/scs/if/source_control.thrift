@@ -1687,6 +1687,7 @@ struct RunAsIdentity {
 }
 
 /// The set of identities to run hooks as. See `CommitRunHooksParams.run_as`.
+@hack.MigrationBlockingLegacyJSONSerialization
 union RunAsIdentities {
   /// A list of plain type/data identities. Sufficient for hooks that match
   /// on identity type and data only.
@@ -3313,6 +3314,7 @@ stateful client exception HookRejectionsException {
 
 /// Identifies the restricted resource that an authorization check denied:
 /// either a path, or a manifest id (as a hex string).
+@hack.MigrationBlockingLegacyJSONSerialization
 union RestrictedPathAccess {
   1: string path;
   2: string manifest_id;
