@@ -770,6 +770,20 @@ struct SilentDaemonExit : public EdenFSEvent {
   }
 };
 
+struct PrivHelperExit : public EdenFSEvent {
+  std::string reason;
+
+  explicit PrivHelperExit(std::string reason) : reason(std::move(reason)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("reason", reason);
+  }
+
+  const char* getType() const override {
+    return "privhelper_exit";
+  }
+};
+
 struct AccidentalUnmountRecovery : public EdenFSEvent {
   std::string error;
   bool success = false;

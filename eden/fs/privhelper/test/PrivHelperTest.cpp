@@ -1423,3 +1423,57 @@ TEST(PrivHelperConnectionLossTest, sendFailureFailsRequestsWithoutDeadlock) {
   EXPECT_TRUE(alive.try_wait_for(5s));
 #endif // !__APPLE__
 }
+
+TEST(PrivHelperConnectionLossTest, unexpectedExitLogsOneEvent) {
+  EventBaseThread ioThread;
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+  auto client = createTestPrivHelper(std::move(clientConn));
+  auto recorder = std::make_shared<RecordingXplatLogger>();
+  client->setEdenFsEventsLogger(std::make_shared<EdenFsEventsLogger>(recorder));
+  ioThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client->attachEventBase(ioThread.getEventBase()); });
+
+  auto pending = client->fuseUnmount("/never/answered", {});
+  ioThread.getEventBase()->runInEventBaseThreadAndWait([] {});
+
+  // Drain the request from the server side before closing: closing a
+  // socket with unread data produces ECONNRESET on the client instead of
+  // a clean EOF.
+  char buf[4096];
+  while (recv(serverConn.fd(), buf, sizeof(buf), MSG_DONTWAIT) > 0) {
+  }
+
+  // The privhelper process dies.
+  serverConn.close();
+  EXPECT_THROW(std::move(pending).get(5s), std::runtime_error);
+
+  // Exactly one privhelper_exit event is logged, even though tearing down
+  // the connection triggers multiple socket callbacks (EOF, socket closed).
+  auto events = recorder->getEvents();
+  ASSERT_EQ(1ul, events.size());
+  const auto& strings = events[0].second.getStringMap();
+  EXPECT_EQ("privhelper_exit", strings.at("type"));
+  EXPECT_EQ("eof", strings.at("reason"));
+}
+
+TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
+  EventBaseThread ioThread;
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+  auto recorder = std::make_shared<RecordingXplatLogger>();
+  {
+    auto client = createTestPrivHelper(std::move(clientConn));
+    client->setEdenFsEventsLogger(
+        std::make_shared<EdenFsEventsLogger>(recorder));
+    ioThread.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client->attachEventBase(ioThread.getEventBase()); });
+    ioThread.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client->detachEventBase(); });
+  }
+
+  // Locally-initiated teardown is not an unexpected privhelper exit.
+  EXPECT_EQ(0ul, recorder->getEvents().size());
+}
