@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include "eden/common/utils/UnixSocket.h"
@@ -235,6 +236,16 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   // Virtual so that a test can observe whether a code path skipped it.
   virtual void cleanupMountPoints();
+
+#ifdef __APPLE__
+  // Restart configuration most recently supplied by the daemon, if any. Absent
+  // means the daemon never finished starting up, so there is nothing to
+  // restart and no boot-crash loop is possible.
+  std::optional<EdenFsRestartArgs> restartConfig_;
+
+  // Whether the daemon announced that its shutdown was deliberate.
+  bool cleanShutdownNotified_{false};
+#endif // __APPLE__
 
  private:
 #ifndef __APPLE__
