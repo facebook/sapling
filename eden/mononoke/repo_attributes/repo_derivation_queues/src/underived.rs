@@ -225,6 +225,7 @@ pub async fn build_underived_batched_graph<'a>(
     scuba.add("head_cs_id", head.to_string());
     scuba.add("commits_walked", build_result.commits_walked);
     scuba.add("items_enqueued", build_result.items_enqueued);
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
     scuba.log_with_msg("Underived graph built", None);
 
     Ok(build_result.response)
