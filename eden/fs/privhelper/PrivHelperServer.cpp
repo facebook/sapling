@@ -41,6 +41,7 @@
 #include <sys/syscall.h>
 #endif
 #include <sys/types.h>
+#include <algorithm>
 #include <chrono>
 #include <csignal>
 #include "eden/common/utils/PathFuncs.h"
@@ -335,7 +336,20 @@ folly::File PrivHelperServer::openBindMountTarget(
 #endif
 }
 
+#ifdef __APPLE__
+namespace {
+uint64_t currentEpochSeconds() {
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count());
+}
+} // namespace
+
+PrivHelperServer::PrivHelperServer() : now_{currentEpochSeconds} {}
+#else
 PrivHelperServer::PrivHelperServer() = default;
+#endif // __APPLE__
 
 PrivHelperServer::~PrivHelperServer() = default;
 
@@ -1607,6 +1621,13 @@ namespace {
 // A command line and an environment, generously. The sentinel is written by an
 // unprivileged process, so its size is bounded before anything is parsed.
 constexpr size_t kMaxSentinelSize = 1024 * 1024;
+
+// The restart policy arrives over IPC from the unprivileged daemon, so the
+// privhelper bounds what it will honour. The daemon's own defaults are 3
+// restarts per 10 minutes.
+constexpr uint32_t kRestartsCeiling = 10;
+constexpr uint32_t kMinRestartWindowSeconds = 60;
+constexpr uint32_t kMaxRestartWindowSeconds = 24 * 60 * 60;
 } // namespace
 
 std::optional<PrivHelperServer::RelaunchCommand>
@@ -1729,6 +1750,36 @@ PrivHelperServer::readRelaunchCommand() const {
   }
 
   return command;
+}
+
+bool PrivHelperServer::admitRestartAttempt() {
+  auto& config = restartConfig_.value();
+  const auto now = now_();
+  // Neither value is trusted: a window of zero would reset the count on every
+  // attempt, and maxRestarts could arrive as UINT32_MAX.
+  const uint64_t window = std::clamp(
+      config.windowSeconds, kMinRestartWindowSeconds, kMaxRestartWindowSeconds);
+  const uint32_t maxRestarts = std::min(config.maxRestarts, kRestartsCeiling);
+
+  // A clock that moved backwards is treated as a fresh window rather than
+  // wrapping the unsigned subtraction into a huge number.
+  if (config.firstRestartEpochSec == 0 || now < config.firstRestartEpochSec ||
+      now - config.firstRestartEpochSec > window) {
+    config.restartCount = 0;
+    config.firstRestartEpochSec = now;
+  }
+
+  if (config.restartCount >= maxRestarts) {
+    XLOGF(
+        WARN,
+        "not restarting edenfs: already restarted it {} times within {}s",
+        config.restartCount,
+        window);
+    return false;
+  }
+
+  ++config.restartCount;
+  return true;
 }
 #endif // __APPLE__
 

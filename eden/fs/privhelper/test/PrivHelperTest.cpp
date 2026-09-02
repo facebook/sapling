@@ -27,6 +27,7 @@
 #include <sys/wait.h>
 #include <atomic>
 #include <chrono>
+#include <limits>
 #include <optional>
 #include <thread>
 #include <unordered_map>
@@ -1654,6 +1655,85 @@ TEST_F(PrivHelperSentinelTest, rejectsAConfigurationWithNoNonce) {
   server_.restartConfig_->sentinelNonce = 0;
 
   EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+/** Exposes the circuit breaker and the clock seam, both protected. */
+class PrivHelperBreakerTestServer : public PrivHelperServer {
+ public:
+  PrivHelperBreakerTestServer() {
+    now_ = [this] { return now.load(); };
+  }
+
+  using PrivHelperServer::admitRestartAttempt;
+  using PrivHelperServer::restartConfig_;
+
+  std::atomic<uint64_t> now{kFakeNow};
+};
+
+class PrivHelperBreakerTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    server_.restartConfig_ = makeRestartArgs("/unused");
+  }
+
+  PrivHelperBreakerTestServer server_;
+};
+
+TEST_F(PrivHelperBreakerTest, admitsAndChargesAnAttemptWithinBudget) {
+  EXPECT_TRUE(server_.admitRestartAttempt());
+  EXPECT_EQ(2, server_.restartConfig_->restartCount);
+}
+
+TEST_F(PrivHelperBreakerTest, refusesAtTheLimit) {
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+
+  EXPECT_FALSE(server_.admitRestartAttempt());
+  EXPECT_EQ(
+      server_.restartConfig_->maxRestarts,
+      server_.restartConfig_->restartCount);
+}
+
+TEST_F(PrivHelperBreakerTest, holdsTheCountToTheWindowEdge) {
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  server_.now.store(kFakeNow + server_.restartConfig_->windowSeconds);
+
+  EXPECT_FALSE(server_.admitRestartAttempt());
+}
+
+TEST_F(PrivHelperBreakerTest, decaysTheCountAfterTheWindow) {
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  server_.now.store(kFakeNow + server_.restartConfig_->windowSeconds + 1);
+
+  EXPECT_TRUE(server_.admitRestartAttempt());
+  EXPECT_EQ(1, server_.restartConfig_->restartCount);
+}
+
+TEST_F(PrivHelperBreakerTest, aBackwardsClockStartsAFreshWindow) {
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  server_.now.store(kFakeNow - 60);
+
+  EXPECT_TRUE(server_.admitRestartAttempt());
+  EXPECT_EQ(1, server_.restartConfig_->restartCount);
+}
+
+TEST_F(PrivHelperBreakerTest, aZeroWindowStillBoundsTheCount) {
+  server_.restartConfig_->windowSeconds = 0;
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+
+  EXPECT_FALSE(server_.admitRestartAttempt());
+}
+
+TEST_F(PrivHelperBreakerTest, aLimitTheDaemonInflatedIsStillBounded) {
+  server_.restartConfig_->maxRestarts = std::numeric_limits<uint32_t>::max();
+  server_.restartConfig_->restartCount = 0;
+
+  constexpr uint32_t kGenerous = 1000;
+  uint32_t admitted = 0;
+  while (admitted < kGenerous && server_.admitRestartAttempt()) {
+    ++admitted;
+  }
+
+  EXPECT_LT(admitted, kGenerous);
 }
 
 #endif // __APPLE__

@@ -12,6 +12,7 @@
 #include <folly/File.h>
 #endif
 #include <sys/types.h>
+#include <functional>
 #include <limits>
 #include <map>
 #include <optional>
@@ -254,6 +255,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
     std::vector<std::pair<std::string, std::string>> env;
   };
 
+  // Seconds since the epoch. Overridable so that tests can age the restart
+  // window without sleeping.
+  std::function<uint64_t()> now_;
+
   // Restart configuration most recently supplied by the daemon, if any. Absent
   // means the daemon never finished starting up, so there is nothing to
   // restart and no boot-crash loop is possible.
@@ -267,6 +272,12 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * cannot be read or does not hold one. Only ever called with privileges.
    */
   std::optional<RelaunchCommand> readRelaunchCommand() const;
+
+  /**
+   * Applies the circuit breaker. Returns false when the limit is reached.
+   * Requires restartConfig_ to be set.
+   */
+  bool admitRestartAttempt();
 #endif // __APPLE__
 
  private:
