@@ -81,6 +81,17 @@ struct StopFileAccessMonitorResponse {
 };
 
 /*
+ * Environment variables that carry the restart budget across a relaunch.
+ *
+ * The privhelper sets them on the daemon it spawns, and that daemon reports
+ * them back to the next privhelper in EdenFsRestartArgs.
+ */
+inline constexpr folly::StringPiece kEdenFsRestartCountEnv{
+    "EDENFS_RESTART_COUNT"};
+inline constexpr folly::StringPiece kEdenFsFirstRestartAtEnv{
+    "EDENFS_FIRST_RESTART_AT"};
+
+/*
  * Everything the privhelper needs in order to relaunch edenfs after a crash.
  *
  * The privhelper reads no configuration of its own: edenfs delivers the backoff
