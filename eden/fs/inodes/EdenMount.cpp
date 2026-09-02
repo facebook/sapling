@@ -2813,7 +2813,8 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    mount->getCheckoutConfig()->getCaseSensitive(),
                    iosize,
                    edenConfig->nfsTraceBusCapacity.getValue(),
-                   edenConfig->nfsFastPathRPCs.getValue());
+                   edenConfig->nfsFastPathRPCs.getValue(),
+                   mount->getServerState()->getReloadableConfig());
              })
       .thenValue([mount,
                   nfsServer,

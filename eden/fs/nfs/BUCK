@@ -49,6 +49,7 @@ cpp_library(
         "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
+        "//eden/fs/config:config",
         "//eden/fs/privhelper:interface",
         "//eden/fs/store:context",
         "//eden/fs/telemetry:error_info",

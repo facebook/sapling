@@ -33,6 +33,7 @@ class PrivHelper;
 class ProcessInfoCache;
 class EdenFsEventsLogger;
 class FsEventLogger;
+class ReloadableConfig;
 
 namespace detail {
 /**
@@ -167,7 +168,8 @@ class Nfsd3 final : public FsChannel {
       std::chrono::nanoseconds highNfsRequestsLogInterval,
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       size_t traceBusCapacity,
-      bool fastPathRPCs);
+      bool fastPathRPCs,
+      std::shared_ptr<ReloadableConfig> config);
 
   void destroy() override;
 

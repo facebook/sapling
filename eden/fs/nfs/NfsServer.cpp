@@ -94,7 +94,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     CaseSensitivity caseSensitive,
     uint32_t iosize,
     size_t traceBusCapacity,
-    bool fastPathRPCs) {
+    bool fastPathRPCs,
+    std::shared_ptr<ReloadableConfig> config) {
   auto nfsd = std::unique_ptr<Nfsd3, FsChannelDeleter>{new Nfsd3{
       privHelper_,
       AbsolutePath{path},
@@ -114,7 +115,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       highNfsRequestsLogInterval_,
       longRunningFSRequestThreshold_,
       traceBusCapacity,
-      fastPathRPCs}};
+      fastPathRPCs,
+      std::move(config)}};
   mountd_.registerMount(path, rootIno);
 
   return {std::move(nfsd), mountd_.getAddr()};

@@ -7,6 +7,7 @@
 
 #include "eden/fs/nfs/Nfsd3.h"
 
+#include <algorithm>
 #include <memory>
 #include <type_traits>
 
@@ -20,6 +21,8 @@
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -69,6 +72,21 @@ void incrementNfsGcInvalidationCounter(
   stats->increment(counter);
 }
 
+/**
+ * Whether an AUTH_SYS credential claims root / the wheel group (primary or
+ * auxiliary gid 0, root-equivalent on macOS). These predicates define the
+ * identity classes that nfs:root-access-mode and nfs:wheel-access-mode act
+ * on; telemetry and enforcement must agree on them.
+ */
+bool credsClaimRoot(const authsys_parms& creds) {
+  return creds.uid == 0;
+}
+
+bool credsClaimWheel(const authsys_parms& creds) {
+  return creds.gid == 0 ||
+      std::find(creds.gids.begin(), creds.gids.end(), 0u) != creds.gids.end();
+}
+
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
   explicit Nfsd3ServerProcessor(
@@ -84,7 +102,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       std::atomic<size_t>& traceDetailedArguments,
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus,
       std::chrono::nanoseconds longRunningFSRequestThreshold,
-      bool fastPathRPCs)
+      bool fastPathRPCs,
+      std::shared_ptr<ReloadableConfig> config)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         edenFsEventsLogger_(edenFsEventsLogger),
@@ -98,7 +117,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         metadataSizeMismatchLogged_(false),
         traceBus_(traceBus),
         longRunningFSRequestThreshold_(longRunningFSRequestThreshold),
-        fastPathRPCs_(fastPathRPCs) {}
+        fastPathRPCs_(fastPathRPCs),
+        config_{std::move(config)} {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -112,6 +132,12 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber,
+      const std::optional<authsys_parms>& authSysCreds) override;
+
+  bool shouldParseAuthSysCreds() override;
+
+  auth_stat checkAuthentication(
+      const call_body& callBody,
       const std::optional<authsys_parms>& authSysCreds) override;
 
   void onShutdown(RpcStopData stopData) override;
@@ -254,6 +280,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
    */
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool fastPathRPCs_;
+  std::shared_ptr<ReloadableConfig> config_;
   std::atomic<size_t> inflightRequests_{0};
   // Used to check rate limiting. Set once in constructor via setFsChannel().
   // Nulled in onShutdown() before Nfsd3 destruction. The backpressure check
@@ -2345,6 +2372,42 @@ void Nfsd3ServerProcessor::serializeInlineReject(
   serializeJukeboxError(ser, xid, proc);
 }
 
+bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
+  if (!config_) {
+    return false;
+  }
+  // Single decision point for the credential fast path: when both access
+  // modes are off, requests need no identity and the per-request AUTH_SYS
+  // parse is skipped entirely. Both modes are read off one config snapshot.
+  auto config = config_->getEdenConfig();
+  return config->nfsRootAccessMode.getValue() != NfsAccessMode::Off ||
+      config->nfsWheelAccessMode.getValue() != NfsAccessMode::Off;
+}
+
+auth_stat Nfsd3ServerProcessor::checkAuthentication(
+    const call_body& callBody,
+    const std::optional<authsys_parms>& authSysCreds) {
+  // The NULL procedure is the liveness and mount handshake probe, and
+  // requests without a parsable AUTH_SYS credential carry no identity;
+  // neither is ever acted on.
+  if (!config_ || !authSysCreds ||
+      callBody.proc == folly::to_underlying(nfsv3Procs::null)) {
+    return auth_stat::AUTH_OK;
+  }
+  // On macOS privileged access typically comes from security software
+  // crawling the mount; count it per identity class so we can see it.
+  auto config = config_->getEdenConfig();
+  if (credsClaimRoot(*authSysCreds) &&
+      config->nfsRootAccessMode.getValue() != NfsAccessMode::Off) {
+    dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
+  }
+  if (credsClaimWheel(*authSysCreds) &&
+      config->nfsWheelAccessMode.getValue() != NfsAccessMode::Off) {
+    dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessGidWheel);
+  }
+  return auth_stat::AUTH_OK;
+}
+
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
@@ -2477,7 +2540,8 @@ Nfsd3::Nfsd3(
     std::chrono::nanoseconds highNfsRequestsLogInterval,
     std::chrono::nanoseconds longRunningFSRequestThreshold,
     size_t traceBusCapacity,
-    bool fastPathRPCs)
+    bool fastPathRPCs,
+    std::shared_ptr<ReloadableConfig> config)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
       stats_{dispatcher->getStats().copy()},
@@ -2495,7 +2559,8 @@ Nfsd3::Nfsd3(
             traceDetailedArguments_,
             traceBus_,
             longRunningFSRequestThreshold,
-            fastPathRPCs);
+            fastPathRPCs,
+            std::move(config));
         proc->setFsChannel(this);
         return RpcServer::create(
             std::move(proc),

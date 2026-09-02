@@ -444,3 +444,14 @@ TEST_F(ConfigSettingTest, setUnorderedSet) {
       std::unordered_set<std::string>{"1", "2", "3", "4"},
       "[\"1\", \"2\", \"3\", \"4\"]");
 }
+
+TEST_F(ConfigSettingTest, setNfsAccessMode) {
+  ConfigSetting<NfsAccessMode> setting{
+      "test:value", NfsAccessMode::Log, nullptr};
+  checkSet(setting, NfsAccessMode::Off, "off");
+  checkSet(setting, NfsAccessMode::Block, "block");
+  checkSet(setting, NfsAccessMode::Log, "log");
+  checkSet(setting, NfsAccessMode::Block, "BLOCK");
+  checkSetError(
+      setting, "Failed to convert value 'true' to an NfsAccessMode.", "true");
+}

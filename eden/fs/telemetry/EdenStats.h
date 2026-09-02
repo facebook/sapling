@@ -388,6 +388,12 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsBackpressureJukebox{"nfs.backpressure_jukebox"};
   Counter nfsInflightAtRequest{"nfs.inflight_at_request"};
 
+  // Requests whose AUTH_SYS credential claims root (uid 0) or wheel (gid 0,
+  // root-equivalent on macOS, checked against both the primary gid and the
+  // auxiliary gids).
+  Counter nfsPrivilegedAccessUidRoot{"nfs.privileged_access.uid_root"};
+  Counter nfsPrivilegedAccessGidWheel{"nfs.privileged_access.gid_wheel"};
+
   // NFS GC invalidation counters
   Counter nfsInvalidationGcAttempt{"nfs.invalidation.gc.attempt"};
   Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"};

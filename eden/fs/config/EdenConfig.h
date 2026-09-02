@@ -24,6 +24,7 @@
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/config/NfsAccessMode.h"
 #include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/eden-config.h"
 
@@ -1173,6 +1174,33 @@ class EdenConfig : private ConfigSettingManager {
    * from blocking behind slow operations.
    */
   ConfigSetting<bool> nfsFastPathRPCs{"nfs:fast-path-rpcs", true, this};
+
+  /**
+   * How to respond to NFS requests whose AUTH_SYS credential claims root
+   * (uid 0): "off" does nothing, "log" bumps the
+   * nfs.privileged_access.uid_root fb303 counter, "block" logs and rejects
+   * the request. (Blocking is wired up in a later change; until then
+   * "block" behaves like "log".) On macOS such access typically comes from
+   * security software crawling the mount. Read through ReloadableConfig on
+   * each request, so it can be changed without a daemon restart. NFS NULL
+   * probes and requests without a parsable AUTH_SYS credential are never
+   * affected.
+   */
+  ConfigSetting<NfsAccessMode> nfsRootAccessMode{
+      "nfs:root-access-mode",
+      NfsAccessMode::Log,
+      this};
+
+  /**
+   * Same as nfs:root-access-mode, but for requests whose AUTH_SYS
+   * credential claims the wheel group (primary gid 0 or 0 in the auxiliary
+   * gids, root-equivalent on macOS), tracked by the
+   * nfs.privileged_access.gid_wheel counter. The two modes are independent.
+   */
+  ConfigSetting<NfsAccessMode> nfsWheelAccessMode{
+      "nfs:wheel-access-mode",
+      NfsAccessMode::Log,
+      this};
 
   // [prjfs]
 
