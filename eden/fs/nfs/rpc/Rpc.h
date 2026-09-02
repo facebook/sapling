@@ -179,6 +179,20 @@ struct authsys_parms {
 EDEN_XDR_SERDE_DECL(authsys_parms, stamp, machinename, uid, gid, gids);
 
 /**
+ * Parse an AUTH_SYS (aka AUTH_UNIX) credential body into authsys_parms.
+ *
+ * Returns std::nullopt when the flavor is not AUTH_SYS or when the body is
+ * malformed (truncated, or violating the RFC 5531 bounds on machinename
+ * and gids sizes). Never throws.
+ *
+ * Note that AUTH_SYS credentials are entirely client-asserted: any local
+ * process that can speak to the NFS socket can claim any uid/gid. They are
+ * still useful for telemetry and coarse policy on a loopback mount where
+ * the kernel fills them in from the calling process.
+ */
+std::optional<authsys_parms> parseAuthSysCreds(const opaque_auth& auth);
+
+/**
  * Minimum bytes required to peek at an RPC call header:
  * 4 (fragment header) + 4 (xid) + 4 (msg_type) + 4 (rpcvers)
  * + 4 (prog) + 4 (vers) + 4 (proc) = 28.

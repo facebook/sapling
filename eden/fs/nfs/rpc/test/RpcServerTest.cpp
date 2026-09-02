@@ -40,7 +40,8 @@ class TestFastPathProcessor : public RpcServerProcessor {
   }
 };
 
-std::unique_ptr<folly::IOBuf> buildRpcRequest(uint32_t xid, uint32_t proc) {
+std::unique_ptr<folly::IOBuf>
+buildRpcRequestWithCred(uint32_t xid, uint32_t proc, opaque_auth cred) {
   folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
   folly::io::QueueAppender ser(&queue, 256);
 
@@ -53,7 +54,7 @@ std::unique_ptr<folly::IOBuf> buildRpcRequest(uint32_t xid, uint32_t proc) {
           kNfsdProgNumber,
           kNfsd3ProgVersion,
           proc,
-          opaque_auth{auth_flavor::AUTH_NONE, {}},
+          std::move(cred),
           opaque_auth{auth_flavor::AUTH_NONE, {}},
       },
   };
@@ -64,6 +65,21 @@ std::unique_ptr<folly::IOBuf> buildRpcRequest(uint32_t xid, uint32_t proc) {
   auto* header = reinterpret_cast<uint32_t*>(buf->writableData());
   *header = folly::Endian::big(len | 0x80000000);
   return buf;
+}
+
+std::unique_ptr<folly::IOBuf> buildRpcRequest(uint32_t xid, uint32_t proc) {
+  return buildRpcRequestWithCred(
+      xid, proc, opaque_auth{auth_flavor::AUTH_NONE, {}});
+}
+
+opaque_auth makeAuthSysCred(const authsys_parms& creds) {
+  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender ser(&queue, 256);
+  XdrTrait<authsys_parms>::serialize(ser, creds);
+  auto buf = queue.move();
+  auto bytes = buf->coalesce();
+  return opaque_auth{
+      auth_flavor::AUTH_SYS, OpaqueBytes{bytes.begin(), bytes.end()}};
 }
 
 std::unique_ptr<folly::IOBuf> buildNullRpcRequest(uint32_t xid) {
@@ -566,6 +582,136 @@ TEST_F(RpcServerTest, phase_timing_records_all_phases) {
   EXPECT_LE(*t.dispatched, *t.handlerStart);
   EXPECT_LE(*t.handlerStart, *t.handlerDone);
   EXPECT_LE(*t.handlerDone, *t.responseSent);
+
+  cleanup(clientFd, server);
+}
+
+/**
+ * Records the parsed AUTH_SYS credentials that the RpcServer hands to
+ * checkAuthentication and dispatchRpc.
+ */
+class CredsRecordingProcessor : public RpcServerProcessor {
+ public:
+  explicit CredsRecordingProcessor(bool parseCreds = true)
+      : parseCreds_{parseCreds} {}
+
+  bool shouldParseAuthSysCreds() override {
+    return parseCreds_;
+  }
+
+  auth_stat checkAuthentication(
+      const call_body& callBody,
+      const std::optional<authsys_parms>& authSysCreds) override {
+    checkAuthCreds_ = authSysCreds;
+    return RpcServerProcessor::checkAuthentication(callBody, authSysCreds);
+  }
+
+  ImmediateFuture<folly::Unit> dispatchRpc(
+      folly::io::Cursor /*deser*/,
+      folly::io::QueueAppender ser,
+      uint32_t xid,
+      uint32_t /*progNumber*/,
+      uint32_t /*progVersion*/,
+      uint32_t /*procNumber*/,
+      const std::optional<authsys_parms>& authSysCreds) override {
+    dispatchCreds_ = authSysCreds;
+    serializeReply(ser, accept_stat::SUCCESS, xid);
+    return folly::unit;
+  }
+
+  std::optional<authsys_parms> checkAuthCreds_;
+  std::optional<authsys_parms> dispatchCreds_;
+
+ private:
+  bool parseCreds_;
+};
+
+struct RpcServerCredsTest : RpcServerTest {
+  /**
+   * Send a request and crank the ManualExecutor and EventBase until the
+   * reply arrives. Everything runs on the test thread, so the processor's
+   * recorded credentials can be read without synchronization.
+   */
+  std::vector<uint8_t> sendAndCrank(
+      int clientFd,
+      std::unique_ptr<folly::IOBuf> request) {
+    sendRequest(clientFd, std::move(request));
+    for (int i = 0; i < 20; ++i) {
+      manualExecutor_->run();
+      evb.loopOnce(EVLOOP_NONBLOCK);
+    }
+    EXPECT_TRUE(pollForReply(clientFd, 1000)) << "Expected an RPC reply";
+    return readReply(clientFd);
+  }
+};
+
+TEST_F(RpcServerCredsTest, authsys_creds_passed_to_processor) {
+  auto proc = std::make_shared<CredsRecordingProcessor>();
+  auto server = createTestServerWithManualExecutor(proc);
+  auto clientFd = connectClient(*server);
+
+  authsys_parms creds{/*stamp=*/7, "testhost", /*uid=*/0, /*gid=*/0, {0, 20}};
+  auto reply = sendAndCrank(
+      clientFd, buildRpcRequestWithCred(1, 1, makeAuthSysCred(creds)));
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+
+  ASSERT_TRUE(proc->checkAuthCreds_.has_value());
+  EXPECT_EQ(proc->checkAuthCreds_->uid, 0u);
+  ASSERT_TRUE(proc->dispatchCreds_.has_value());
+  EXPECT_EQ(proc->dispatchCreds_->uid, 0u);
+  EXPECT_EQ(proc->dispatchCreds_->gid, 0u);
+  EXPECT_EQ(proc->dispatchCreds_->machinename, "testhost");
+  EXPECT_EQ(proc->dispatchCreds_->gids, (std::vector<uint32_t>{0, 20}));
+
+  cleanup(clientFd, server);
+}
+
+TEST_F(RpcServerCredsTest, auth_none_yields_nullopt_creds) {
+  auto proc = std::make_shared<CredsRecordingProcessor>();
+  auto server = createTestServerWithManualExecutor(proc);
+  auto clientFd = connectClient(*server);
+
+  auto reply = sendAndCrank(clientFd, buildRpcRequest(2, 1));
+  // Characterization: AUTH_NONE requests are still dispatched, the default
+  // checkAuthentication accepts everything.
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+  EXPECT_EQ(proc->checkAuthCreds_, std::nullopt);
+  EXPECT_EQ(proc->dispatchCreds_, std::nullopt);
+
+  cleanup(clientFd, server);
+}
+
+TEST_F(RpcServerCredsTest, parse_skipped_when_processor_declines_creds) {
+  auto proc = std::make_shared<CredsRecordingProcessor>(/*parseCreds=*/false);
+  auto server = createTestServerWithManualExecutor(proc);
+  auto clientFd = connectClient(*server);
+
+  // Even though the request carries a valid AUTH_SYS credential, the
+  // processor declined the parse, so both hooks must see nullopt.
+  authsys_parms creds{/*stamp=*/7, "testhost", /*uid=*/0, /*gid=*/0, {0}};
+  auto reply = sendAndCrank(
+      clientFd, buildRpcRequestWithCred(4, 1, makeAuthSysCred(creds)));
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+  EXPECT_EQ(proc->checkAuthCreds_, std::nullopt);
+  EXPECT_EQ(proc->dispatchCreds_, std::nullopt);
+
+  cleanup(clientFd, server);
+}
+
+TEST_F(RpcServerCredsTest, malformed_authsys_creds_still_dispatched) {
+  auto proc = std::make_shared<CredsRecordingProcessor>();
+  auto server = createTestServerWithManualExecutor(proc);
+  auto clientFd = connectClient(*server);
+
+  // A 3-byte AUTH_SYS body cannot even hold the stamp field.
+  opaque_auth truncated{auth_flavor::AUTH_SYS, {1, 2, 3}};
+  auto reply = sendAndCrank(
+      clientFd, buildRpcRequestWithCred(3, 1, std::move(truncated)));
+  // Characterization: malformed credentials parse to nullopt and the request
+  // is still dispatched rather than rejected with an auth error.
+  EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+  EXPECT_EQ(proc->dispatchCreds_, std::nullopt);
 
   cleanup(clientFd, server);
 }

@@ -552,7 +552,16 @@ void RpcConnectionHandler::dispatchAndReply(
               finalizeFragment(std::move(iobufQueue)), std::move(timeline)};
         }
 
-        if (auto auth = proc_->checkAuthentication(call.cbody);
+        // Parse the AUTH_SYS credential once, and share the result with
+        // checkAuthentication and dispatchRpc. Processors whose
+        // credential-consuming features are all off skip the parse
+        // entirely (see shouldParseAuthSysCreds).
+        std::optional<authsys_parms> authSysCreds;
+        if (proc_->shouldParseAuthSysCreds()) {
+          authSysCreds = parseAuthSysCreds(call.cbody.cred);
+        }
+
+        if (auto auth = proc_->checkAuthentication(call.cbody, authSysCreds);
             auth != auth_stat::AUTH_OK) {
           serializeAuthError(ser, auth, call.xid);
           timeline.handlerDone = std::chrono::steady_clock::now();
@@ -568,7 +577,8 @@ void RpcConnectionHandler::dispatchAndReply(
               call.xid,
               call.cbody.prog,
               call.cbody.vers,
-              call.cbody.proc);
+              call.cbody.proc,
+              authSysCreds);
         });
 
         return std::move(fut).thenTry(
@@ -692,8 +702,13 @@ void RpcServer::acceptStopped() noexcept {
   state_.get().acceptStopped = true;
 }
 
+bool RpcServerProcessor::shouldParseAuthSysCreds() {
+  return true;
+}
+
 auth_stat RpcServerProcessor::checkAuthentication(
-    const call_body& /*call_body*/) {
+    const call_body& /*call_body*/,
+    const std::optional<authsys_parms>& /*authSysCreds*/) {
   // Completely ignore authentication.
   // TODO: something reasonable here
   return auth_stat::AUTH_OK;
@@ -705,7 +720,8 @@ ImmediateFuture<folly::Unit> RpcServerProcessor::dispatchRpc(
     uint32_t /*xid*/,
     uint32_t /*progNumber*/,
     uint32_t /*progVersion*/,
-    uint32_t /*procNumber*/) {
+    uint32_t /*procNumber*/,
+    const std::optional<authsys_parms>& /*authSysCreds*/) {
   return folly::unit;
 }
 

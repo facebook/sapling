@@ -111,7 +111,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
-      uint32_t procNumber) override;
+      uint32_t procNumber,
+      const std::optional<authsys_parms>& authSysCreds) override;
 
   void onShutdown(RpcStopData stopData) override;
   void clientConnected() override;
@@ -2350,7 +2351,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     uint32_t xid,
     uint32_t progNumber,
     uint32_t progVersion,
-    uint32_t procNumber) {
+    uint32_t procNumber,
+    const std::optional<authsys_parms>& /*authSysCreds*/) {
   if (progNumber != kNfsdProgNumber) {
     serializeReply(ser, accept_stat::PROG_UNAVAIL, xid);
     return folly::unit;

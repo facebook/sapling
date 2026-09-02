@@ -7,9 +7,20 @@
 
 #include "eden/fs/nfs/rpc/Rpc.h"
 
+#include <folly/ExceptionString.h>
 #include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
 
 namespace facebook::eden {
+
+namespace {
+// RFC 5531 bounds for AUTH_SYS credentials. Enforcing these before
+// deserializing prevents a hostile length prefix from driving a huge
+// allocation.
+constexpr uint32_t kAuthSysMachinenameMax = 255;
+constexpr uint32_t kAuthSysGidsMax = 16;
+} // namespace
 
 EDEN_XDR_SERDE_IMPL(opaque_auth, flavor, body);
 EDEN_XDR_SERDE_IMPL(mismatch_info, low, high);
@@ -38,6 +49,58 @@ void serializeReply(
       }},
   };
   XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+}
+
+std::optional<authsys_parms> parseAuthSysCreds(const opaque_auth& auth) {
+  // We only parse AUTH_SYS: EdenFS serves loopback mounts that kernel clients
+  // mount with sec=sys, so AUTH_SYS (or AUTH_NONE on NULL calls) is all we
+  // expect. Other flavors are treated as "no credentials". See RFC 5531 §8.2
+  // for the other flavors.
+  if (auth.flavor != auth_flavor::AUTH_SYS) {
+    return std::nullopt;
+  }
+
+  auto buf =
+      folly::IOBuf::wrapBufferAsValue(auth.body.data(), auth.body.size());
+  folly::io::Cursor cursor{&buf};
+  try {
+    // Deserialized field by field instead of via
+    // XdrTrait<authsys_parms>::deserialize so the machinename and gids
+    // length prefixes can be validated first. Keep the field order in sync
+    // with the authsys_parms XDR declaration.
+    authsys_parms creds;
+    creds.stamp = XdrTrait<uint32_t>::deserialize(cursor);
+
+    auto nameLen = cursor.readBE<uint32_t>();
+    if (nameLen > kAuthSysMachinenameMax) {
+      XLOG_EVERY_MS(WARN, 60000)
+          << "Malformed AUTH_SYS credential: machinename length " << nameLen;
+      return std::nullopt;
+    }
+    creds.machinename = cursor.readFixedString(nameLen);
+    if (auto padding = nameLen % 4) {
+      cursor.skip(4 - padding);
+    }
+
+    creds.uid = XdrTrait<uint32_t>::deserialize(cursor);
+    creds.gid = XdrTrait<uint32_t>::deserialize(cursor);
+
+    auto gidsLen = cursor.readBE<uint32_t>();
+    if (gidsLen > kAuthSysGidsMax) {
+      XLOG_EVERY_MS(WARN, 60000)
+          << "Malformed AUTH_SYS credential: gids length " << gidsLen;
+      return std::nullopt;
+    }
+    creds.gids.reserve(gidsLen);
+    for (uint32_t i = 0; i < gidsLen; i++) {
+      creds.gids.push_back(XdrTrait<uint32_t>::deserialize(cursor));
+    }
+    return creds;
+  } catch (const std::exception& ex) {
+    XLOG_EVERY_MS(WARN, 60000)
+        << "Malformed AUTH_SYS credential: " << folly::exceptionStr(ex);
+    return std::nullopt;
+  }
 }
 
 std::optional<RpcCallPeek> peekRpcCallHeader(const folly::IOBuf& buf) {

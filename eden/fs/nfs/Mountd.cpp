@@ -35,7 +35,8 @@ class MountdServerProcessor final : public RpcServerProcessor {
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
-      uint32_t procNumber) override;
+      uint32_t procNumber,
+      const std::optional<authsys_parms>& authSysCreds) override;
 
   ImmediateFuture<folly::Unit>
   null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
@@ -182,7 +183,8 @@ ImmediateFuture<folly::Unit> MountdServerProcessor::dispatchRpc(
     uint32_t xid,
     uint32_t progNumber,
     uint32_t progVersion,
-    uint32_t procNumber) {
+    uint32_t procNumber,
+    const std::optional<authsys_parms>& /*authSysCreds*/) {
   if (progNumber != kMountdProgNumber) {
     serializeReply(ser, accept_stat::PROG_UNAVAIL, xid);
     return folly::unit;

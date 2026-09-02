@@ -85,14 +85,44 @@ struct RpcRequestTimeline {
 class RpcServerProcessor {
  public:
   virtual ~RpcServerProcessor() = default;
-  virtual auth_stat checkAuthentication(const call_body& call_body);
+
+  /**
+   * Whether the server should parse the AUTH_SYS credential of incoming
+   * calls at all. This is the single gate for the credential fast path:
+   * when it returns false the parse is skipped entirely and
+   * checkAuthentication/dispatchRpc see std::nullopt, which every
+   * credential consumer already treats as "do nothing". Processors whose
+   * credential-consuming features are all disabled should return false so
+   * credential handling costs nothing on the per-request hot path.
+   * Defaults to true.
+   */
+  virtual bool shouldParseAuthSysCreds();
+
+  /**
+   * Decide whether the call is allowed. authSysCreds carries the parsed
+   * AUTH_SYS credential when the call had one (see parseAuthSysCreds and
+   * shouldParseAuthSysCreds); it is std::nullopt for other flavors, for
+   * malformed credential bodies, and when the parse was skipped. The
+   * reference is only valid for the duration of the call.
+   */
+  virtual auth_stat checkAuthentication(
+      const call_body& call_body,
+      const std::optional<authsys_parms>& authSysCreds);
+
+  /**
+   * Handle one RPC call. authSysCreds is the parsed AUTH_SYS credential (see
+   * checkAuthentication above); the reference is only valid until this
+   * function returns, so implementations must copy what they need before
+   * deferring work to the returned future.
+   */
   virtual ImmediateFuture<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
-      uint32_t procNumber);
+      uint32_t procNumber,
+      const std::optional<authsys_parms>& authSysCreds);
   virtual void clientConnected();
   virtual void onShutdown(RpcStopData stopData);
 
