@@ -128,7 +128,7 @@ class PrivHelperClientSession
 
   int getRawClientFd() const {
     auto state = state_.rlock();
-    return state->conn_->getRawFd();
+    return state->conn_ ? state->conn_->getRawFd() : -1;
   }
 
   uint32_t getNextXid() {
@@ -171,7 +171,9 @@ class PrivHelperClientSession
     }
     // Make sure the socket is closed, and fail any outstanding requests.
     // Closing the socket will signal the privhelper process to exit.
-    closeSocket(std::runtime_error("privhelper client being destroyed"));
+    closeSocket(
+        folly::make_exception_wrapper<std::runtime_error>(
+            "privhelper client being destroyed"));
     return true;
   }
 
@@ -211,12 +213,26 @@ class PrivHelperClientSession
                                      msg = std::move(msg),
                                      promise = std::move(promise),
                                      eventBase]() mutable {
-      // Double check that the connection is still open and RUNNING. The
-      // status re-check matters: shutdown() may have flipped status and
-      // already run its one-and-only cancelStallWatchdogs() pass on this
-      // thread while this lambda was queued. conn_ can still be non-null at
-      // that point (detached but not yet closed), and arming a new watchdog
-      // here would let closeSocket() destroy it off the EventBase thread.
+      // Double check that the connection is still open, and only hold the
+      // lock to look up the connection: send() can fail synchronously and
+      // invoke the error callbacks, which re-enter handleSocketError() and
+      // acquire state_ again, deadlocking this EventBase thread if the
+      // lock were still held.
+      //
+      // The status re-check also prevents arming a watchdog after shutdown()
+      // has run its one-and-only cancelStallWatchdogs() pass on this thread.
+      // conn_ can still be non-null at that point (detached but not yet
+      // closed), and closeSocket() could otherwise destroy the watchdog off
+      // the EventBase thread.
+      //
+      // Using the raw pointer after releasing the lock is safe: conn_ is
+      // only mutated on this EventBase thread, except in cleanup(), which
+      // first moves the status off RUNNING and then drains this EventBase.
+      // Any lambda like this one that was enqueued before the status
+      // change is ordered before cleanup()'s drain on this thread, so it
+      // runs while the socket is still alive; lambdas enqueued afterwards
+      // never pass the status check above.
+      UnixSocket* conn = nullptr;
       {
         auto state = self->state_.rlock();
         if (state->status != Status::RUNNING || !state->conn_) {
@@ -225,6 +241,7 @@ class PrivHelperClientSession
                   "cannot send new requests on closed privhelper connection"));
           return;
         }
+        conn = state->conn_.get();
       }
       // The watchdog captures a raw session pointer rather than a shared_ptr:
       // it is owned by the session (via pendingRequests_) so it cannot outlive
@@ -242,10 +259,7 @@ class PrivHelperClientSession
               std::chrono::steady_clock::now(),
               std::move(stallWatchdog)});
       ++self->sendPending_;
-      {
-        auto state = self->state_.wlock();
-        state->conn_->send(std::move(msg), self.get());
-      }
+      conn->send(std::move(msg), self.get());
     });
     return future;
   }
@@ -360,21 +374,23 @@ class PrivHelperClientSession
   }
 
   void eofReceived() noexcept override {
-    handleSocketError(std::runtime_error("privhelper process exited"));
+    handleSocketError(
+        folly::make_exception_wrapper<std::runtime_error>(
+            "privhelper process exited"));
   }
 
   void socketClosed() noexcept override {
     handleSocketError(
-        std::runtime_error("privhelper client destroyed locally"));
+        folly::make_exception_wrapper<std::runtime_error>(
+            "privhelper client destroyed locally"));
   }
 
   void receiveError(const folly::exception_wrapper& ew) noexcept override {
     // Fail all pending requests
     handleSocketError(
-        std::runtime_error(
-            folly::to<string>(
-                "error reading from privhelper process: ",
-                folly::exceptionStr(ew))));
+        folly::make_exception_wrapper<std::runtime_error>(folly::to<string>(
+            "error reading from privhelper process: ",
+            folly::exceptionStr(ew))));
   }
 
   void sendSuccess() noexcept override {
@@ -385,10 +401,8 @@ class PrivHelperClientSession
     // Fail all pending requests
     --sendPending_;
     handleSocketError(
-        std::runtime_error(
-            folly::to<string>(
-                "error sending to privhelper process: ",
-                folly::exceptionStr(ew))));
+        folly::make_exception_wrapper<std::runtime_error>(folly::to<string>(
+            "error sending to privhelper process: ", folly::exceptionStr(ew))));
   }
 
   void onEventBaseDestruction() noexcept override {
@@ -398,7 +412,7 @@ class PrivHelperClientSession
     detachWithinEventBaseDestructor();
   }
 
-  void handleSocketError(const std::exception& ex) {
+  void handleSocketError(const folly::exception_wrapper& ew) {
     // If we are RUNNING, move to the CONNECTION_LOST state and then close the
     // socket and fail all pending requests.
     //
@@ -418,20 +432,38 @@ class PrivHelperClientSession
       state->status = Status::CONNECTION_LOST;
       state->eventBase = nullptr;
     }
-    closeSocket(ex);
+    closeSocket(ew);
+    // The EventBase is no longer in use; without this, destroying the
+    // client later fails OnDestructionCallback's must-be-canceled check.
+    cancel();
   }
 
-  void closeSocket(const std::exception& ex) {
+  /**
+   * Tear down the connection and fail all pending requests.
+   *
+   * Safe to call from inside the socket's own callbacks:
+   * UnixSocket::destroy() defers its teardown until the callback stack
+   * unwinds.
+   */
+  void closeSocket(const folly::exception_wrapper& ew) {
     PendingRequestMap pending;
     pending.swap(pendingRequests_);
+    // Move the socket out of state_ and destroy it only after releasing the
+    // lock: if a receive callback is still registered (the EOF and error
+    // paths), destroying the socket synchronously invokes socketClosed(),
+    // which re-enters handleSocketError() and acquires state_ again.
+    // folly::SharedMutex is not reentrant, so destroying the socket while
+    // holding the write lock deadlocks the EventBase thread, silently
+    // hanging every future privhelper request.
+    UnixSocket::UniquePtr conn;
     {
       auto state = state_.wlock();
-      state->conn_.reset();
+      conn = std::move(state->conn_);
     }
-    XDCHECK_EQ(sendPending_, 0ul);
+    conn.reset();
 
     for (auto& entry : pending) {
-      entry.second.promise.setException(ex);
+      entry.second.promise.setException(ew);
     }
   }
 

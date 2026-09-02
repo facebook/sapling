@@ -327,7 +327,8 @@ class PrivHelper {
   virtual int stop() = 0;
 
   /**
-   * Returns the underlying file descriptor value.
+   * Returns the underlying file descriptor value, or -1 if the connection
+   * has been closed.
    * This is intended to be used to pass the privhelper_fd option down
    * to a child process and it must not to used for general reading/writing.
    */

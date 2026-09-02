@@ -16,7 +16,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
-#include <folly/memory/SanitizeLeak.h>
 #include <folly/synchronization/Baton.h>
 #include <folly/synchronization/SaturatingSemaphore.h>
 #include <folly/test/TestUtils.h>
@@ -1352,49 +1351,75 @@ TEST(
   serverThread.join();
 }
 
-TEST(PrivHelperConnectionLossTest, serverDeathDeadlocksRequestHandling) {
+TEST(PrivHelperConnectionLossTest, serverDeathFailsRequestsWithoutDeadlock) {
   // This test models the privhelper process dying (e.g. killed under memory
   // pressure) while the daemon is running: the server end of the socket
   // closes and the client sees EOF.
-  //
-  // FIXME: processing the EOF self-deadlocks the EventBase thread.
-  // PrivHelperClientImpl::closeSocket() destroys the UnixSocket while
-  // holding the state_ write lock, and the destruction synchronously
-  // invokes the socketClosed() callback, which re-enters
-  // handleSocketError() and blocks acquiring the same non-reentrant lock.
-  // As a result the pending request below is never failed, new requests
-  // block inside sendAndRecv() instead of failing fast, and in a real
-  // daemon every subsequent mount and unmount hangs silently until
-  // restart.
-  //
-  // The EventBaseThread, client, and baton are intentionally leaked: the
-  // EventBase thread is deadlocked so it can never be joined, and
-  // destroying the client would block on it forever. The leaks are
-  // annotated so LeakSanitizer does not fail the run over them.
-  auto* ioThread = new EventBaseThread();
-  folly::lsan_ignore_object(ioThread);
+  EventBaseThread ioThread;
   File clientConn;
   File serverConn;
   PrivHelperConn::createConnPair(clientConn, serverConn);
-  auto& client = *new std::unique_ptr<PrivHelper>(
-      createTestPrivHelper(std::move(clientConn)));
-  folly::lsan_ignore_object(&client);
-  ioThread->getEventBase()->runInEventBaseThreadAndWait(
-      [&] { client->attachEventBase(ioThread->getEventBase()); });
+  auto client = createTestPrivHelper(std::move(clientConn));
+  ioThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client->attachEventBase(ioThread.getEventBase()); });
 
-  // Issue a request that the server never answers.
+  // Issue a request that the server never answers, and make sure it has
+  // been written before the connection drops, so this test pins the EOF
+  // path rather than the send-failure path covered below.
   auto pending = client->fuseUnmount("/never/answered", {});
+  ioThread.getEventBase()->runInEventBaseThreadAndWait([] {});
 
   // The privhelper process dies.
   serverConn.close();
 
-  // The pending request is never failed: it times out instead of receiving
-  // the connection error.
-  EXPECT_THROW(std::move(pending).get(2s), folly::FutureTimeout);
+  // The pending request fails with the connection error rather than
+  // hanging. (folly::FutureTimeout is a std::logic_error, so this assertion
+  // also proves the future was actually fulfilled.)
+  EXPECT_THROW(std::move(pending).get(5s), std::runtime_error);
 
-  // The EventBase thread is deadlocked: a callback posted to it never runs.
-  auto* alive = new folly::Baton<>();
-  folly::lsan_ignore_object(alive);
-  ioThread->getEventBase()->runInEventBaseThread([alive] { alive->post(); });
-  EXPECT_FALSE(alive->try_wait_for(2s));
+  // New requests fail fast instead of queueing against a dead connection.
+  EXPECT_THROW(
+      client->fuseUnmount("/other/mount", {}).get(5s), std::runtime_error);
+
+  // The closed connection no longer has a file descriptor to report.
+  EXPECT_EQ(-1, client->getRawClientFd());
+
+  // The EventBase thread survived processing the EOF.
+  folly::Baton<> alive;
+  ioThread.getEventBase()->runInEventBaseThread([&] { alive.post(); });
+  EXPECT_TRUE(alive.try_wait_for(5s));
+}
+
+TEST(PrivHelperConnectionLossTest, sendFailureFailsRequestsWithoutDeadlock) {
+  // Same failure family as above, but through the other entry point: the
+  // send itself fails synchronously while the connection still looks open,
+  // which invokes the error callbacks from inside send().
+#ifdef __APPLE__
+  // On macOS, shutting down the peer's receive side does not make sends
+  // fail with EPIPE (they are silently accepted until the socket is fully
+  // closed), so this test cannot trigger the send-failure path there.
+  GTEST_SKIP() << "shutdown(SHUT_RD) does not fail peer sends on macOS";
+#else
+  EventBaseThread ioThread;
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+  auto client = createTestPrivHelper(std::move(clientConn));
+  ioThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client->attachEventBase(ioThread.getEventBase()); });
+
+  // Shut down only the server's receiving side: the client never sees EOF,
+  // but its next send fails with EPIPE.
+  folly::checkUnixError(
+      ::shutdown(serverConn.fd(), SHUT_RD), "shutdown failed");
+
+  auto pending = client->fuseUnmount("/never/answered", {});
+  EXPECT_THROW(std::move(pending).get(5s), std::runtime_error);
+  EXPECT_THROW(
+      client->fuseUnmount("/other/mount", {}).get(5s), std::runtime_error);
+
+  folly::Baton<> alive;
+  ioThread.getEventBase()->runInEventBaseThread([&] { alive.post(); });
+  EXPECT_TRUE(alive.try_wait_for(5s));
+#endif // !__APPLE__
 }

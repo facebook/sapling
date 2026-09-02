@@ -275,10 +275,12 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   args.push_back(logPath.str());
 
 #ifndef _WIN32
-  // If we started a privhelper, pass its control descriptor to the child
-  if (privHelper && privHelper->getRawClientFd() != -1) {
-    auto fd = opts.inheritDescriptor(FileDescriptor(
-        ::dup(privHelper->getRawClientFd()), FileDescriptor::FDType::Socket));
+  // If we started a privhelper, pass its control descriptor to the child.
+  // Read the fd once: it can become -1 if the connection is lost.
+  const int privHelperFd = privHelper ? privHelper->getRawClientFd() : -1;
+  if (privHelperFd != -1) {
+    auto fd = opts.inheritDescriptor(
+        FileDescriptor(::dup(privHelperFd), FileDescriptor::FDType::Socket));
     // Note: we can't use `--privhelper_fd=123` here because
     // startOrConnectToPrivHelper has an intentionally anemic argv parser.
     // It requires that the flag and the value be in separate
