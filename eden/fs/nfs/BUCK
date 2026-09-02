@@ -40,6 +40,7 @@ cpp_library(
         "Nfsd3.cpp",
     ],
     headers = [
+        "NfsAccessRateLimiter.h",
         "NfsRequestContext.h",
         "Nfsd3.h",
     ],
@@ -76,6 +77,7 @@ cpp_library(
         "//eden/fs/utils:process_access_log",
         "//folly:exception_wrapper",
         "//folly:function",
+        "//folly:token_bucket",
     ],
 )
 

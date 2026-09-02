@@ -9,6 +9,8 @@
 
 #include "eden/fs/nfs/Nfsd3.h"
 
+#include "eden/fs/nfs/NfsAccessRateLimiter.h"
+
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -289,6 +291,20 @@ struct Nfsd3Test : ::testing::Test {
         mode, ConfigSourceType::UserConfig, true);
   }
 
+  void setRootRateLimit(uint32_t count, uint32_t windowSeconds) {
+    config_->nfsRootAccessRateLimitCount.setValue(
+        count, ConfigSourceType::UserConfig, true);
+    config_->nfsRootAccessRateLimitWindowSeconds.setValue(
+        windowSeconds, ConfigSourceType::UserConfig, true);
+  }
+
+  void setWheelRateLimit(uint32_t count, uint32_t windowSeconds) {
+    config_->nfsWheelAccessRateLimitCount.setValue(
+        count, ConfigSourceType::UserConfig, true);
+    config_->nfsWheelAccessRateLimitWindowSeconds.setValue(
+        windowSeconds, ConfigSourceType::UserConfig, true);
+  }
+
   static uint32_t readBigEndianU32(
       const std::vector<uint8_t>& data,
       size_t offset) {
@@ -508,6 +524,66 @@ TEST_F(Nfsd3BlockingTest, control_plane_procs_are_exempt) {
 
   // ...while file access is still rejected.
   expectAuthTooWeak(sendGetattr(4, rootAndWheelCred()));
+}
+
+TEST_F(Nfsd3BlockingTest, rate_limit_allows_baseline_and_rejects_bursts) {
+  setRootMode(NfsAccessMode::RateLimit);
+  // A generous window so the budget cannot refill mid-test.
+  setRootRateLimit(/*count=*/3, /*windowSeconds=*/3600);
+  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+
+  // The first `count` accesses in the window pass and nothing is blocked.
+  expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
+  expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
+  expectAcceptedSuccess(sendGetattr(3, rootOnlyCred()));
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60"), blockedBefore);
+
+  // The burst beyond the budget is rejected like "block".
+  expectAuthTooWeak(sendGetattr(4, rootOnlyCred()));
+  expectAuthTooWeak(sendGetattr(5, rootOnlyCred()));
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 2);
+
+  // Every privileged access is logged, allowed or not.
+  EXPECT_EQ(
+      getCounter("nfs.privileged_access.uid_root.sum.60") - rootBefore, 5);
+}
+
+TEST_F(Nfsd3BlockingTest, rate_limit_budgets_are_per_class) {
+  setRootMode(NfsAccessMode::RateLimit);
+  setWheelMode(NfsAccessMode::RateLimit);
+  setRootRateLimit(/*count=*/1, /*windowSeconds=*/3600);
+  setWheelRateLimit(/*count=*/1, /*windowSeconds=*/3600);
+
+  // Exhausting the root budget leaves the wheel budget untouched, and
+  // vice versa.
+  expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
+  expectAuthTooWeak(sendGetattr(2, rootOnlyCred()));
+  expectAcceptedSuccess(sendGetattr(3, wheelCred()));
+  expectAuthTooWeak(sendGetattr(4, wheelCred()));
+}
+
+TEST(NfsAccessRateLimiterTest, budget_refills_over_time) {
+  NfsAccessRateLimiter limiter;
+
+  // Burst capacity: `count` accesses pass at one instant, further ones are
+  // rejected. (The token bucket accrues from time zero, so start the
+  // synthetic clock late enough for a full initial budget.)
+  EXPECT_TRUE(
+      limiter.allow(/*count=*/2, /*windowSeconds=*/60, /*nowSeconds=*/1000.0));
+  EXPECT_TRUE(limiter.allow(2, 60, 1000.0));
+  EXPECT_FALSE(limiter.allow(2, 60, 1000.0));
+
+  // The budget refills continuously at count/window: one window later the
+  // full burst is available again.
+  EXPECT_TRUE(limiter.allow(2, 60, 1060.0));
+  EXPECT_TRUE(limiter.allow(2, 60, 1060.0));
+  EXPECT_FALSE(limiter.allow(2, 60, 1060.0));
+
+  // Degenerate configs: zero count admits nothing, zero window admits
+  // everything.
+  EXPECT_FALSE(limiter.allow(0, 60, 1120.0));
+  EXPECT_TRUE(limiter.allow(2, 0, 1120.0));
 }
 
 TEST_F(Nfsd3BlockingTest, config_changes_apply_without_restart) {

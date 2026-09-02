@@ -450,6 +450,7 @@ TEST_F(ConfigSettingTest, setNfsAccessMode) {
       "test:value", NfsAccessMode::Log, nullptr};
   checkSet(setting, NfsAccessMode::Off, "off");
   checkSet(setting, NfsAccessMode::Block, "block");
+  checkSet(setting, NfsAccessMode::RateLimit, "rate_limit");
   checkSet(setting, NfsAccessMode::Log, "log");
   checkSet(setting, NfsAccessMode::Block, "BLOCK");
   checkSetError(

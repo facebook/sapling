@@ -23,6 +23,7 @@
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/nfs/NfsAccessRateLimiter.h"
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -300,6 +301,10 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool fastPathRPCs_;
   std::shared_ptr<ReloadableConfig> config_;
+  // Per-identity-class budgets for NfsAccessMode::RateLimit, scoped to
+  // this mount's processor.
+  NfsAccessRateLimiter rootAccessRateLimiter_;
+  NfsAccessRateLimiter wheelAccessRateLimiter_;
   std::atomic<size_t> inflightRequests_{0};
   // Used to check rate limiting. Set once in constructor via setFsChannel().
   // Nulled in onShutdown() before Nfsd3 destruction. The backpressure check
@@ -2412,9 +2417,11 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   if (!config_ || !authSysCreds || isAccessModeExempt(callBody.proc)) {
     return auth_stat::AUTH_OK;
   }
-  // Per identity class: "log" and "block" both count the access ("block"
-  // is a strict superset of "log"), and "block" additionally rejects the
-  // request. Either class alone is enough to reject.
+  // Per identity class: every mode but "off" counts the access ("block"
+  // and "rate_limit" are strict supersets of "log"); "block" additionally
+  // rejects the request, and "rate_limit" rejects only the accesses that
+  // exceed the class's configured budget. Either class alone is enough to
+  // reject.
   auto config = config_->getEdenConfig();
   bool block = false;
   if (credsClaimRoot(*authSysCreds)) {
@@ -2422,7 +2429,13 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
     if (mode != NfsAccessMode::Off) {
       dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
     }
-    block = block || mode == NfsAccessMode::Block;
+    if (mode == NfsAccessMode::Block) {
+      block = true;
+    } else if (mode == NfsAccessMode::RateLimit) {
+      block = !rootAccessRateLimiter_.allow(
+          config->nfsRootAccessRateLimitCount.getValue(),
+          config->nfsRootAccessRateLimitWindowSeconds.getValue());
+    }
   }
   if (credsClaimWheel(*authSysCreds)) {
     const auto mode = config->nfsWheelAccessMode.getValue();
@@ -2430,7 +2443,14 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
       dispatcher_->getStats()->increment(
           &NfsStats::nfsPrivilegedAccessGidWheel);
     }
-    block = block || mode == NfsAccessMode::Block;
+    if (mode == NfsAccessMode::Block) {
+      block = true;
+    } else if (mode == NfsAccessMode::RateLimit) {
+      block = !wheelAccessRateLimiter_.allow(
+                  config->nfsWheelAccessRateLimitCount.getValue(),
+                  config->nfsWheelAccessRateLimitWindowSeconds.getValue()) ||
+          block;
+    }
   }
   if (!block) {
     return auth_stat::AUTH_OK;

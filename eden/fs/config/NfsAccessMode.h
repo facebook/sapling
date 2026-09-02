@@ -30,6 +30,13 @@ enum class NfsAccessMode {
    * request with an auth error.
    */
   Block,
+  /**
+   * Log as above, but only reject (as Block does) while the class's access
+   * count within the configured window exceeds the configured threshold —
+   * allow the low baseline, shed sustained bursts. See the
+   * nfs:*-access-rate-limit-* settings in EdenConfig.
+   */
+  RateLimit,
 };
 
 template <>

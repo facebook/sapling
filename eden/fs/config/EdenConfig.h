@@ -1207,6 +1207,43 @@ class EdenConfig : private ConfigSettingManager {
       NfsAccessMode::Log,
       this};
 
+  /**
+   * Only consulted when nfs:root-access-mode is "rate_limit": the number
+   * of root-claiming requests allowed per
+   * nfs:root-access-rate-limit-window-seconds window before further ones
+   * in that window are rejected the way "block" rejects them. The window
+   * is per mount and per identity class.
+   */
+  ConfigSetting<uint32_t> nfsRootAccessRateLimitCount{
+      "nfs:root-access-rate-limit-count",
+      1000,
+      this};
+
+  /**
+   * The window length, in seconds, for nfs:root-access-rate-limit-count.
+   */
+  ConfigSetting<uint32_t> nfsRootAccessRateLimitWindowSeconds{
+      "nfs:root-access-rate-limit-window-seconds",
+      60,
+      this};
+
+  /**
+   * Same as nfs:root-access-rate-limit-count, for the wheel class (only
+   * consulted when nfs:wheel-access-mode is "rate_limit").
+   */
+  ConfigSetting<uint32_t> nfsWheelAccessRateLimitCount{
+      "nfs:wheel-access-rate-limit-count",
+      1000,
+      this};
+
+  /**
+   * The window length, in seconds, for nfs:wheel-access-rate-limit-count.
+   */
+  ConfigSetting<uint32_t> nfsWheelAccessRateLimitWindowSeconds{
+      "nfs:wheel-access-rate-limit-window-seconds",
+      60,
+      this};
+
   // [prjfs]
 
   /**
