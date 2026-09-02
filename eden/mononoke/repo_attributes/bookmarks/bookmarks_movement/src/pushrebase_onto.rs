@@ -11,19 +11,22 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use context::CoreContext;
-use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use metaconfig_types::LAND_INSTANCE_ID_PUSHVAR_KEY;
 use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PHAB_DIFF_ID_PUSHVAR_KEY;
+use metaconfig_types::PushrebaseFlags;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 use repo_update_logger::CommitInfo;
@@ -39,183 +42,35 @@ use crate::repo_lock::check_repo_lock;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::restrictions::check_bookmark_sync_config;
 
-#[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
-pub struct PushrebaseOntoBookmarkOp<'op> {
-    bookmark: &'op BookmarkKey,
-    changesets: Vec<BonsaiChangeset>,
-    bookmark_restrictions: BookmarkKindRestrictions,
-    cross_repo_push_source: CrossRepoPushSource,
-    pushvars: Option<&'op HashMap<String, Bytes>>,
-    log_new_public_commits_to_scribe: bool,
+/// Returns the configured pushrebase flags with bookmark and request overrides.
+pub fn pushrebase_flags(
+    repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
+    bookmark: &BookmarkKey,
+    pushvars: Option<&HashMap<String, Bytes>>,
+) -> PushrebaseFlags {
+    let mut flags = repo.repo_config().pushrebase.flags.clone();
+    if let Some(rewritedates) = repo.repo_bookmark_attrs().should_rewrite_dates(bookmark) {
+        flags.rewritedates = rewritedates;
+    }
+
+    flags.merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
+        pushvars
+            .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
+            .map(|b| b.as_ref()),
+    );
+    flags.land_instance_id = pushvars
+        .and_then(|p| p.get(LAND_INSTANCE_ID_PUSHVAR_KEY))
+        .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
+        .map(str::to_owned);
+    flags.phab_diff_id = pushvars
+        .and_then(|p| p.get(PHAB_DIFF_ID_PUSHVAR_KEY))
+        .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
+        .map(str::to_owned);
+    flags
 }
 
-impl<'op> PushrebaseOntoBookmarkOp<'op> {
-    pub fn new(
-        bookmark: &'op BookmarkKey,
-        changesets: &[BonsaiChangeset],
-    ) -> PushrebaseOntoBookmarkOp<'op> {
-        PushrebaseOntoBookmarkOp {
-            bookmark,
-            changesets: changesets.to_vec(),
-            bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
-            cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
-            pushvars: None,
-            log_new_public_commits_to_scribe: false,
-        }
-    }
-
-    pub fn only_if_scratch(mut self) -> Self {
-        self.bookmark_restrictions = BookmarkKindRestrictions::OnlyScratch;
-        self
-    }
-
-    pub fn only_if_public(mut self) -> Self {
-        self.bookmark_restrictions = BookmarkKindRestrictions::OnlyPublishing;
-        self
-    }
-
-    pub fn with_bookmark_restrictions(
-        mut self,
-        bookmark_restrictions: BookmarkKindRestrictions,
-    ) -> Self {
-        self.bookmark_restrictions = bookmark_restrictions;
-        self
-    }
-
-    pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
-        self.pushvars = pushvars;
-        self
-    }
-
-    pub fn with_push_source(mut self, cross_repo_push_source: CrossRepoPushSource) -> Self {
-        self.cross_repo_push_source = cross_repo_push_source;
-        self
-    }
-
-    pub fn log_new_public_commits_to_scribe(mut self) -> Self {
-        self.log_new_public_commits_to_scribe = true;
-        self
-    }
-
-    pub async fn run(
-        self,
-        ctx: &'op CoreContext,
-        authz: &'op AuthorizationContext,
-        repo: &'op impl Repo,
-        hook_manager: &'op HookManager,
-    ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
-        let pushrebase_hooks = prepare_pushrebase_hooks(
-            ctx,
-            authz,
-            repo,
-            hook_manager,
-            self.bookmark,
-            &self.changesets,
-            self.pushvars,
-            self.cross_repo_push_source,
-            self.bookmark_restrictions,
-        )
-        .await?;
-
-        let source_changesets: HashSet<_> = self.changesets.into_iter().collect();
-
-        let mut flags = repo.repo_config().pushrebase.flags.clone();
-        if let Some(rewritedates) = repo
-            .repo_bookmark_attrs()
-            .should_rewrite_dates(self.bookmark)
-        {
-            // Bookmark config overrides repo flags.rewritedates config
-            flags.rewritedates = rewritedates;
-        }
-        flags.merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
-            self.pushvars
-                .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
-                .map(|b| b.as_ref()),
-        );
-        // Per-land key (same on every retry push) for the terminal-bounce readout.
-        flags.land_instance_id = self
-            .pushvars
-            .and_then(|p| p.get(LAND_INSTANCE_ID_PUSHVAR_KEY))
-            .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
-            .map(str::to_owned);
-        // QE bucketing key (Phabricator diff FBID) for per-diff dedup in the readout.
-        flags.phab_diff_id = self
-            .pushvars
-            .and_then(|p| p.get(PHAB_DIFF_ID_PUSHVAR_KEY))
-            .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
-            .map(str::to_owned);
-
-        ctx.scuba()
-            .clone()
-            .add("bookmark", self.bookmark.to_string())
-            .log_with_msg("Pushrebase started", None);
-        let (stats, result) = pushrebase::do_pushrebase_bonsai(
-            ctx,
-            repo,
-            &flags,
-            self.bookmark,
-            &source_changesets,
-            pushrebase_hooks.as_slice(),
-        )
-        .timed()
-        .await;
-
-        let mut scuba_logger = ctx.scuba().clone();
-        scuba_logger.add_future_stats(&stats);
-        match &result {
-            Ok(outcome) => {
-                scuba_logger
-                    .add("pushrebase_retry_num", outcome.retry_num.0)
-                    .add("pushrebase_distance", outcome.pushrebase_distance.0)
-                    .add("bookmark", self.bookmark.to_string())
-                    .add("changeset_id", format!("{}", outcome.head));
-                if let Some(ref paths) = outcome.merge_resolved_paths {
-                    scuba_logger.add("merge_resolved_count", paths.len()).add(
-                        "merge_resolved_paths",
-                        paths
-                            .iter()
-                            .take(10)
-                            .map(|p| p.to_string())
-                            .collect::<Vec<_>>()
-                            .join(","),
-                    );
-                }
-                scuba_logger.log_with_msg("Pushrebase finished", None);
-
-                postprocess_pushrebase_outcome(
-                    ctx,
-                    repo,
-                    self.bookmark,
-                    self.bookmark_restrictions,
-                    outcome,
-                    &source_changesets,
-                    self.log_new_public_commits_to_scribe,
-                )
-                .await?;
-            }
-            Err(err) => {
-                if let pushrebase::PushrebaseError::Conflicts(conflicts) = err {
-                    scuba_logger.add("conflict_count", conflicts.len()).add(
-                        "conflict_paths",
-                        conflicts
-                            .iter()
-                            .take(10)
-                            .map(|c| format!("{}={}", c.left, c.right))
-                            .collect::<Vec<_>>()
-                            .join(","),
-                    );
-                }
-                scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{err:#?}")));
-            }
-        }
-
-        result.map_err(BookmarkMovementError::PushrebaseError)
-    }
-}
-
-/// Performs all pre-pushrebase work (authorization, hooks, repo lock) and
-/// returns the pushrebase hooks to pass to the pushrebase operation.
-pub async fn prepare_pushrebase_hooks(
+/// Authorizes and validates the changesets supplied to pushrebase.
+pub async fn validate_pushrebase_request(
     ctx: &CoreContext,
     authz: &AuthorizationContext,
     repo: &impl Repo,
@@ -225,7 +80,7 @@ pub async fn prepare_pushrebase_hooks(
     pushvars: Option<&HashMap<String, Bytes>>,
     cross_repo_push_source: CrossRepoPushSource,
     bookmark_restrictions: BookmarkKindRestrictions,
-) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
+) -> Result<BookmarkKind, BookmarkMovementError> {
     let kind = bookmark_restrictions.check_kind(repo, bookmark)?;
 
     authz
@@ -265,6 +120,18 @@ pub async fn prepare_pushrebase_hooks(
         )
         .await?;
 
+    Ok(kind)
+}
+
+/// Builds the runtime hooks after checking the repository lock.
+pub async fn prepare_pushrebase_hooks(
+    ctx: &CoreContext,
+    authz: &AuthorizationContext,
+    repo: &impl Repo,
+    bookmark: &BookmarkKey,
+    pushvars: Option<&HashMap<String, Bytes>>,
+    kind: BookmarkKind,
+) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks =
         get_pushrebase_hooks(ctx, repo, bookmark, &repo.repo_config().pushrebase, None).await?;
 
@@ -304,12 +171,11 @@ pub async fn postprocess_pushrebase_outcome(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmark: &BookmarkKey,
-    bookmark_restrictions: BookmarkKindRestrictions,
+    kind: BookmarkKind,
     outcome: &pushrebase::PushrebaseOutcome,
     source_changesets: &HashSet<BonsaiChangeset>,
     log_new_public_commits_to_scribe: bool,
 ) -> Result<(), BookmarkMovementError> {
-    let kind = bookmark_restrictions.check_kind(repo, bookmark)?;
     if log_new_public_commits_to_scribe {
         let mut changesets_to_log: HashMap<_, _> = source_changesets
             .iter()

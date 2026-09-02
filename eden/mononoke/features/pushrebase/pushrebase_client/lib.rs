@@ -34,7 +34,7 @@ pub trait PushrebaseClient: Sync + Send {
     ///
     /// Per-request control over `pushrebase_enable_merge_resolution` is
     /// expressed via the `MERGE_RESOLUTION_OVERRIDE` pushvar; parsing
-    /// happens at the terminal `PushrebaseOntoBookmarkOp`.
+    /// happens at the terminal pushrebase implementation.
     async fn pushrebase(
         &self,
         bookmark: &BookmarkKey,
