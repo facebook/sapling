@@ -483,74 +483,126 @@ async fn build_underived_batched_graph_v2<'a>(
         return Err(anyhow!("batch size must be greater than zero"));
     }
 
-    // Derived data is expected to be monotonic. Workers recover the rare case
-    // where an ancestor's derived-data mapping is missing.
-    let derived_frontier = commit_graph
-        .ancestors_frontier_with(ctx, vec![head], |cs_id| async move {
-            Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
+    let parents_derived = stream::iter(commit_graph.changeset_parents(ctx, head).await?)
+        .map(|parent| async move {
+            anyhow::Ok((
+                parent,
+                ddm.is_derived(ctx, parent, None, derived_data_type).await?,
+            ))
         })
-        .await?;
-    let segments = commit_graph
-        .ancestors_difference_segments(ctx, vec![head], derived_frontier)
-        .await?;
-    if segments.is_empty() {
-        return Ok(UnderivedGraphBuildResult {
-            response: Some(EnqueueResponse::new(future::ok(true).boxed())),
-            commits_walked: 0,
-            items_enqueued: 0,
-        });
-    }
-
-    let commits_walked = segments.iter().map(|segment| segment.length).sum::<u64>();
-    let segments = stream::iter(segments)
-        .map(|segment| split_segment_into_batches(ctx, commit_graph.clone(), segment, batch_size))
         .buffer_unordered(100)
         .try_collect::<Vec<_>>()
         .await?;
-
-    let segments_by_head = segments
+    let underived_parents = parents_derived
         .iter()
-        .enumerate()
-        .map(|(index, segment)| (segment.segment.head, index))
-        .collect::<HashMap<_, _>>();
-    let mut batches = HashMap::new();
-    for segment in &segments {
-        for (batch_index, batch) in segment.batches.iter().enumerate() {
-            let parents = if batch_index > 0 {
-                vec![segment.batches[batch_index - 1].root]
-            } else {
-                segment
-                    .segment
-                    .parents
+        .filter(|(_, derived)| !derived)
+        .map(|(parent, _)| *parent)
+        .collect::<Vec<_>>();
+
+    // Derived data is expected to be monotonic. Workers recover the rare case
+    // where an ancestor's derived-data mapping is missing.
+    let (batches, root, commits_walked) = if underived_parents.is_empty() {
+        (
+            HashMap::from([(
+                head,
+                UnderivedBatch {
+                    head,
+                    parents: vec![],
+                },
+            )]),
+            head,
+            1,
+        )
+    } else {
+        let known_parents = parents_derived.iter().copied().collect::<HashMap<_, _>>();
+        let derived_frontier = commit_graph
+            .ancestors_frontier_with(ctx, underived_parents, |cs_id| {
+                let known_parents = &known_parents;
+                async move {
+                    match known_parents.get(&cs_id) {
+                        Some(derived) => Ok(*derived),
+                        None => Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?),
+                    }
+                }
+            })
+            .await?
+            .into_iter()
+            .chain(
+                parents_derived
                     .iter()
-                    .filter_map(|parent| parent.location)
-                    .map(|location| {
-                        let parent_index = segments_by_head
-                            .get(&location.head)
-                            .ok_or_else(|| anyhow!("segment parent location is missing"))?;
-                        parent_batch_root(&segments[*parent_index], location.distance, batch_size)
-                    })
-                    .collect::<Result<Vec<_>>>()?
-                    .into_iter()
-                    .unique()
-                    .collect()
-            };
-            let underived_batch = UnderivedBatch {
-                head: batch.head,
-                parents,
-            };
-            batches.insert(batch.root, underived_batch);
+                    .filter(|(_, derived)| *derived)
+                    .map(|(parent, _)| *parent),
+            )
+            .collect::<Vec<_>>();
+        let segments = commit_graph
+            .ancestors_difference_segments(ctx, vec![head], derived_frontier)
+            .await?;
+        if segments.is_empty() {
+            return Ok(UnderivedGraphBuildResult {
+                response: Some(EnqueueResponse::new(future::ok(true).boxed())),
+                commits_walked: 0,
+                items_enqueued: 0,
+            });
         }
-    }
-    let head_segment = segments_by_head
-        .get(&head)
-        .map(|index| &segments[*index])
-        .ok_or_else(|| anyhow!("underived graph does not contain requested head"))?;
-    let root = head_segment
-        .batches
-        .last()
-        .ok_or_else(|| anyhow!("underived head segment has no batches"))?
-        .root;
+
+        let commits_walked = segments.iter().map(|segment| segment.length).sum::<u64>();
+        let segments = stream::iter(segments)
+            .map(|segment| {
+                split_segment_into_batches(ctx, commit_graph.clone(), segment, batch_size)
+            })
+            .buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let segments_by_head = segments
+            .iter()
+            .enumerate()
+            .map(|(index, segment)| (segment.segment.head, index))
+            .collect::<HashMap<_, _>>();
+        let mut batches = HashMap::new();
+        for segment in &segments {
+            for (batch_index, batch) in segment.batches.iter().enumerate() {
+                let parents = if batch_index > 0 {
+                    vec![segment.batches[batch_index - 1].root]
+                } else {
+                    segment
+                        .segment
+                        .parents
+                        .iter()
+                        .filter_map(|parent| parent.location)
+                        .map(|location| {
+                            let parent_index = segments_by_head
+                                .get(&location.head)
+                                .ok_or_else(|| anyhow!("segment parent location is missing"))?;
+                            parent_batch_root(
+                                &segments[*parent_index],
+                                location.distance,
+                                batch_size,
+                            )
+                        })
+                        .collect::<Result<Vec<_>>>()?
+                        .into_iter()
+                        .unique()
+                        .collect()
+                };
+                let underived_batch = UnderivedBatch {
+                    head: batch.head,
+                    parents,
+                };
+                batches.insert(batch.root, underived_batch);
+            }
+        }
+        let head_segment = segments_by_head
+            .get(&head)
+            .map(|index| &segments[*index])
+            .ok_or_else(|| anyhow!("underived graph does not contain requested head"))?;
+        let root = head_segment
+            .batches
+            .last()
+            .ok_or_else(|| anyhow!("underived head segment has no batches"))?
+            .root;
+        (batches, root, commits_walked)
+    };
     let batches = Arc::new(batches);
     bounded_traversal::bounded_traversal_dag(
         100,
