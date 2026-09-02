@@ -76,7 +76,7 @@ class PrivHelperClientSession
  public:
   explicit PrivHelperClientSession(File conn)
       : state_{ThreadSafeData{
-            Status::NOT_STARTED,
+            Status::NOT_ATTACHED,
             nullptr,
             UnixSocket::makeUnique(nullptr, std::move(conn))}} {}
 
@@ -87,7 +87,7 @@ class PrivHelperClientSession
   void attachEventBase(EventBase* eventBase) {
     {
       auto state = state_.wlock();
-      if (state->status != Status::NOT_STARTED) {
+      if (state->status != Status::NOT_ATTACHED) {
         throwf<std::runtime_error>(
             "PrivHelper::start() called in unexpected state {}",
             static_cast<uint32_t>(state->status));
@@ -321,18 +321,19 @@ class PrivHelperClientSession
   using PendingRequestMap = std::unordered_map<uint32_t, PendingRequest>;
   enum class Status : uint32_t {
     /**
-     * Never attached, or detached again when the EventBase was destroyed.
-     * The only state attachEventBase() accepts.
+     * Socket open, not on an EventBase: either never attached, or detached
+     * again when one was destroyed. The only state attachEventBase() accepts.
      */
-    NOT_STARTED,
-    /** Attached and usable. The only state that accepts new requests. */
+    NOT_ATTACHED,
+    /** Socket open and attached. The only state that accepts new requests. */
     RUNNING,
     /**
-     * The connection ended without us asking: EOF, a send or receive error, or
-     * the socket being closed. Teardown still owes the process a reap.
+     * The socket went away and has been released: EOF, a send or receive
+     * error, or a local close. shutdown() has not run, so the process still
+     * needs reaping.
      */
-    CONNECTION_LOST,
-    /** Teardown has been entered, so a second attempt has nothing to do. */
+    DISCONNECTED,
+    /** shutdown() has run: nothing left to release, and no process to reap. */
     SHUT_DOWN,
   };
   struct ThreadSafeData {
@@ -457,7 +458,7 @@ class PrivHelperClientSession
   void handleSocketError(
       folly::StringPiece reason,
       const folly::exception_wrapper& ew) {
-    // If we are RUNNING, move to the CONNECTION_LOST state and then close the
+    // If we are RUNNING, move to the DISCONNECTED state and then close the
     // socket and fail all pending requests.
     //
     // If we are in any other state just return early.
@@ -473,7 +474,7 @@ class PrivHelperClientSession
       if (state->status != Status::RUNNING) {
         return;
       }
-      state->status = Status::CONNECTION_LOST;
+      state->status = Status::DISCONNECTED;
       state->eventBase = nullptr;
     }
     XLOG(ERR) << "lost connection to privhelper process (" << reason
@@ -524,7 +525,7 @@ class PrivHelperClientSession
       if (state->status != Status::RUNNING) {
         return;
       }
-      state->status = Status::NOT_STARTED;
+      state->status = Status::NOT_ATTACHED;
       state->eventBase = nullptr;
       state->conn_->clearReceiveCallback();
       state->conn_->detachEventBase();
