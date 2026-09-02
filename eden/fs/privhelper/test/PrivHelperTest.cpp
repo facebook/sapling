@@ -1736,4 +1736,113 @@ TEST_F(PrivHelperBreakerTest, aLimitTheDaemonInflatedIsStillBounded) {
   EXPECT_LT(admitted, kGenerous);
 }
 
+/** Exposes the binary resolution, which is protected. */
+class PrivHelperBinaryTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::findSiblingEdenFs;
+  using PrivHelperServer::RelaunchCommand;
+  using PrivHelperServer::resolveEdenFsBinary;
+};
+
+class PrivHelperBinaryTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    dir_ = std::make_unique<TemporaryDirectory>("edenfs_libexec");
+  }
+
+  AbsolutePath dirPath() const {
+    return canonicalPath(dir_->path().string());
+  }
+
+  void createFile(const std::string& path, mode_t mode = 0755) {
+    ASSERT_TRUE(folly::writeFile(std::string{"binary"}, path.c_str()));
+    checkUnixError(::chmod(path.c_str(), mode));
+  }
+
+  /**
+   * resolveEdenFsBinary probes the directory holding the test binary, which
+   * this fixture does not own and cannot override, so its fallback branches
+   * are only reachable while nothing named edenfs is installed there.
+   */
+  static testing::AssertionResult noEdenFsNextToTheTestBinary() {
+    const auto executable = executablePath();
+    const auto sibling =
+        PrivHelperBinaryTestServer::findSiblingEdenFs(executable.dirname());
+    if (sibling.has_value()) {
+      return testing::AssertionFailure()
+          << "the test binary is installed next to an edenfs at "
+          << sibling->view();
+    }
+    return testing::AssertionSuccess();
+  }
+
+  PrivHelperBinaryTestServer server_;
+  std::unique_ptr<TemporaryDirectory> dir_;
+};
+
+TEST_F(PrivHelperBinaryTest, findsTheSibling) {
+  createFile((dir_->path() / "edenfs").string());
+
+  EXPECT_EQ(dirPath() + "edenfs"_relpath, server_.findSiblingEdenFs(dirPath()));
+}
+
+TEST_F(PrivHelperBinaryTest, findsNothingWhenThereIsNoSibling) {
+  EXPECT_EQ(std::nullopt, server_.findSiblingEdenFs(dirPath()));
+}
+
+TEST_F(PrivHelperBinaryTest, rejectsASymlinkedSibling) {
+  // The leaf is the one path component an attacker who cannot write the
+  // install directory itself could still repoint.
+  const auto target = (dir_->path() / "elsewhere").string();
+  createFile(target);
+  checkUnixError(
+      ::symlink(target.c_str(), (dir_->path() / "edenfs").string().c_str()));
+
+  EXPECT_EQ(std::nullopt, server_.findSiblingEdenFs(dirPath()));
+}
+
+TEST_F(PrivHelperBinaryTest, rejectsADirectorySibling) {
+  // 0755 so that access(X_OK) alone would accept it: a searchable directory
+  // passes the executable check.
+  checkUnixError(::mkdir((dir_->path() / "edenfs").string().c_str(), 0755));
+
+  EXPECT_EQ(std::nullopt, server_.findSiblingEdenFs(dirPath()));
+}
+
+TEST_F(PrivHelperBinaryTest, rejectsANonExecutableSibling) {
+  createFile((dir_->path() / "edenfs").string(), 0644);
+
+  EXPECT_EQ(std::nullopt, server_.findSiblingEdenFs(dirPath()));
+}
+
+TEST_F(PrivHelperBinaryTest, acceptsASymlinkedAncestor) {
+  const auto real = (dir_->path() / "real").string();
+  checkUnixError(::mkdir(real.c_str(), 0700));
+  createFile(real + "/edenfs");
+  const auto link = (dir_->path() / "link").string();
+  checkUnixError(::symlink(real.c_str(), link.c_str()));
+
+  const auto linkDir = canonicalPath(link);
+  EXPECT_EQ(linkDir + "edenfs"_relpath, server_.findSiblingEdenFs(linkDir));
+}
+
+TEST_F(PrivHelperBinaryTest, fallsBackToTheRecordedCommand) {
+  ASSERT_TRUE(noEdenFsNextToTheTestBinary());
+
+  PrivHelperBinaryTestServer::RelaunchCommand command;
+  command.argv = kSentinelArgv;
+
+  EXPECT_EQ(
+      canonicalPath(kSentinelArgv[0]), server_.resolveEdenFsBinary(command));
+}
+
+TEST_F(PrivHelperBinaryTest, throwsWhenThereIsNothingToRelaunch) {
+  ASSERT_TRUE(noEdenFsNextToTheTestBinary());
+
+  EXPECT_THROW(
+      server_.resolveEdenFsBinary(
+          PrivHelperBinaryTestServer::RelaunchCommand{}),
+      std::runtime_error);
+}
+
 #endif // __APPLE__

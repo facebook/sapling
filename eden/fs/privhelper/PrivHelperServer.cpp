@@ -1630,6 +1630,46 @@ constexpr uint32_t kMinRestartWindowSeconds = 60;
 constexpr uint32_t kMaxRestartWindowSeconds = 24 * 60 * 60;
 } // namespace
 
+std::optional<AbsolutePath> PrivHelperServer::findSiblingEdenFs(
+    AbsolutePathPiece dir) {
+  const auto sibling = dir + "edenfs"_relpath;
+
+  struct stat st{};
+  if (lstat(sibling.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) {
+    return std::nullopt;
+  }
+  // A searchable directory passes X_OK, so the regular-file check above cannot
+  // be dropped in favour of this one.
+  if (::access(sibling.c_str(), X_OK) != 0) {
+    return std::nullopt;
+  }
+  return sibling;
+}
+
+AbsolutePath PrivHelperServer::resolveEdenFsBinary(
+    const RelaunchCommand& command) const {
+  const auto executable = executablePath();
+  const auto dir = executable.dirname();
+  if (const auto sibling = findSiblingEdenFs(dir)) {
+    return *sibling;
+  }
+
+  // Dev and test installs have no sibling to find, so fall back to the command
+  // edenfsctl recorded.
+  if (!command.argv.empty()) {
+    XLOGF(
+        WARN,
+        "no edenfs binary next to the privhelper in {}; falling back to {} from the recorded start command",
+        dir,
+        command.argv[0]);
+    return canonicalPath(command.argv[0]);
+  }
+
+  throwf<std::runtime_error>(
+      "no edenfs binary in {}, and no recorded start command to fall back to",
+      dir);
+}
+
 std::optional<PrivHelperServer::RelaunchCommand>
 PrivHelperServer::readRelaunchCommand() const {
   if (!restartConfig_.has_value()) {

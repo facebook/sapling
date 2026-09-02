@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/UnixSocket.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 
@@ -278,6 +279,22 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * Requires restartConfig_ to be set.
    */
   bool admitRestartAttempt();
+
+  /**
+   * The edenfs binary installed in `dir`, or nullopt when there is none: it
+   * must be a regular, executable file, so a symlinked leaf is rejected.
+   */
+  static std::optional<AbsolutePath> findSiblingEdenFs(AbsolutePathPiece dir);
+
+  /**
+   * Path to the edenfs binary to relaunch: the one installed next to this
+   * privhelper, which keeps both on the same version, falling back to argv[0]
+   * from the sentinel when there is no sibling. Throws when neither is usable.
+   *
+   * Virtual because a unit test has no sibling edenfs to point at.
+   */
+  virtual AbsolutePath resolveEdenFsBinary(
+      const RelaunchCommand& command) const;
 #endif // __APPLE__
 
  private:
