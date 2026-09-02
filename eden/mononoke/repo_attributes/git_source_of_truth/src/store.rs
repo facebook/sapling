@@ -81,6 +81,25 @@ mononoke_queries! {
          WHERE source_of_truth = {source_of_truth}"
     }
 
+    read GetByGitSourceOfTruthAndMutationId(
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) -> (
+        RowId,
+        RepositoryId,
+        RepositoryName,
+        GitSourceOfTruth,
+        Option<i64>,
+    ) {
+        "SELECT id,
+            repo_id,
+            repo_name,
+            source_of_truth,
+            mutation_id
+         FROM git_repositories_source_of_truth
+         WHERE source_of_truth = {source_of_truth} AND mutation_id = {mutation_id}"
+    }
+
     read GetAny() -> (
         RowId,
         RepositoryId,
@@ -401,6 +420,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             &self.connections.read_master_connection,
             ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Reserved,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
+    async fn get_reserved_by_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        mutation_id: i64,
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        let rows = GetByGitSourceOfTruthAndMutationId::query(
+            &self.connections.read_master_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Reserved,
+            &mutation_id,
         )
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
@@ -872,6 +906,86 @@ mod test {
         let entry = entry.unwrap();
         assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
         assert_eq!(entry.mutation_id.unwrap(), 123);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_reserved_by_mutation_id(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("reserved_wanted_a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("reserved_wanted_b".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(3),
+                    RepositoryName("reserved_other_mutation".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(4),
+                    RepositoryName("reserved_unstamped".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(5),
+                    RepositoryName("landed_same_mutation".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+            ],
+        )
+        .await?;
+        push.update_mutation_id_by_repo_names_for_reserved_repos(
+            &ctx,
+            &[
+                RepositoryName("reserved_wanted_a".to_string()),
+                RepositoryName("reserved_wanted_b".to_string()),
+                RepositoryName("landed_same_mutation".to_string()),
+            ],
+            42,
+        )
+        .await?;
+        push.update_mutation_id_by_repo_names_for_reserved_repos(
+            &ctx,
+            &[RepositoryName("reserved_other_mutation".to_string())],
+            43,
+        )
+        .await?;
+        push.update_source_of_truth_by_repo_names(
+            &ctx,
+            GitSourceOfTruth::Mononoke,
+            &[RepositoryName("landed_same_mutation".to_string())],
+        )
+        .await?;
+
+        let entries = push.get_reserved_by_mutation_id(&ctx, 42).await?;
+        let mut names = entries
+            .iter()
+            .map(|entry| entry.repo_name.0.as_str())
+            .collect::<Vec<_>>();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            vec!["reserved_wanted_a", "reserved_wanted_b"],
+            "only Reserved rows stamped with mutation_id 42 should be returned",
+        );
+        assert!(
+            entries.iter().all(|entry| {
+                entry.source_of_truth == GitSourceOfTruth::Reserved && entry.mutation_id == Some(42)
+            }),
+            "returned entries must all be Reserved and stamped with the requested mutation_id",
+        );
         Ok(())
     }
 

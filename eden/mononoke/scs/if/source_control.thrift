@@ -4090,6 +4090,10 @@ service SourceControlService extends fb303_core.BaseService {
   /// Repository management methods
   /// ==============================
 
+  /// Create the requested repos in Mononoke. For each request that sets
+  /// `default_branch`, the repo's HEAD symref is written to point at that
+  /// branch at creation time (and deleted again if the creation fails or is
+  /// aborted).
   CreateReposToken create_repos(1: CreateReposParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

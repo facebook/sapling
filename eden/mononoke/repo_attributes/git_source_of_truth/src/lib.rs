@@ -105,6 +105,13 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
 
     async fn get_reserved(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 
+    /// `Reserved` entries stamped with this mutation_id; rows in any other state are excluded.
+    async fn get_reserved_by_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        mutation_id: i64,
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
+
     /// Get all entries, regardless of source-of-truth state, in a single query.
     async fn get_any(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 }
@@ -207,6 +214,14 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
     }
 
     async fn get_reserved(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        Ok(vec![])
+    }
+
+    async fn get_reserved_by_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        _mutation_id: i64,
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(vec![])
     }
 
@@ -419,6 +434,24 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
             .expect("poisoned lock")
             .values()
             .filter(|entry| entry.source_of_truth == GitSourceOfTruth::Reserved)
+            .cloned()
+            .collect())
+    }
+
+    async fn get_reserved_by_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        mutation_id: i64,
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        Ok(self
+            .entries
+            .lock()
+            .expect("poisoned lock")
+            .values()
+            .filter(|entry| {
+                entry.source_of_truth == GitSourceOfTruth::Reserved
+                    && entry.mutation_id == Some(mutation_id)
+            })
             .cloned()
             .collect())
     }
