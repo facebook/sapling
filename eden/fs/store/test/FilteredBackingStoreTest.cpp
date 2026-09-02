@@ -161,7 +161,7 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   // DCHECK on InlineExecutor (Task.h:470). See D98178331.
   folly::CPUThreadPoolExecutor executor_{1};
 
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
 
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
       std::make_shared<SaplingBackingStore>(

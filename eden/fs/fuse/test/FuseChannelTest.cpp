@@ -24,7 +24,6 @@
 #include <system_error>
 #include <thread>
 
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -32,7 +31,7 @@
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
+#include "eden/fs/telemetry/test/CapturingXplatLogger.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
 
@@ -160,15 +159,14 @@ class FuseChannelTest : public ::testing::Test {
 
   FakeFuse fuse_;
   EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
-  ErrorLogger noopErrorLogger_{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger_{};
   // Error-logging tests inject capturingErrorLogger_ via errorLoggerOverride_
-  // so they can inspect what got logged to perfpipe_edenfs_errors.
-  std::shared_ptr<CapturingScribeLogger> scribe_ =
-      std::make_shared<CapturingScribeLogger>();
+  // so they can inspect what was sent to XplatLogger.
+  CapturingXplatLogger xplatLogger_;
   std::shared_ptr<EdenConfig> edenConfig_ = EdenConfig::createTestEdenConfig();
   std::shared_ptr<ReloadableConfig> reloadableConfig_ =
       std::make_shared<ReloadableConfig>(edenConfig_);
-  ErrorLogger capturingErrorLogger_{scribe_, SessionInfo{}, reloadableConfig_};
+  ErrorLogger capturingErrorLogger_{reloadableConfig_, &xplatLogger_};
   ErrorLogger* errorLoggerOverride_ = nullptr;
   TestDispatcher* dispatcher_;
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
@@ -615,8 +613,10 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
 }
 
 TEST_F(FuseChannelTest, unexpectedErrnoIsLogged) {
-  // EIO is a genuine failure, so it should be logged to perfpipe_edenfs_errors.
+  // EIO is a genuine failure, so it should be logged to edenfs_errors.
   edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  edenConfig_->enableXplatLoggerErrors.setValue(
+      true, ConfigSourceType::UserConfig);
   errorLoggerOverride_ = &capturingErrorLogger_;
   auto channel = createChannel();
   performInit(channel.get());
@@ -629,12 +629,14 @@ TEST_F(FuseChannelTest, unexpectedErrnoIsLogged) {
   EXPECT_EQ(id, received.header.unique);
   EXPECT_NE(0, received.header.error);
 
-  EXPECT_EQ(1, scribe_->messages().size());
+  EXPECT_EQ(1, xplatLogger_.events().size());
 }
 
 TEST_F(FuseChannelTest, expectedErrnoIsNotLogged) {
   // ENOENT is a normal, expected FUSE response, so it should NOT be logged.
   edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  edenConfig_->enableXplatLoggerErrors.setValue(
+      true, ConfigSourceType::UserConfig);
   errorLoggerOverride_ = &capturingErrorLogger_;
   auto channel = createChannel();
   performInit(channel.get());
@@ -647,7 +649,7 @@ TEST_F(FuseChannelTest, expectedErrnoIsNotLogged) {
   EXPECT_EQ(id, received.header.unique);
   EXPECT_NE(0, received.header.error);
 
-  EXPECT_TRUE(scribe_->messages().empty());
+  EXPECT_TRUE(xplatLogger_.events().empty());
 }
 
 TEST_F(FuseChannelTest, interruptLookups) {

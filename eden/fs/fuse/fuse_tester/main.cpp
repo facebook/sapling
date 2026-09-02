@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
   auto dispatcher =
       std::make_unique<TestDispatcher>(std::move(stats), identity);
 
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
 
   folly::Logger straceLogger{"eden.strace"};
 

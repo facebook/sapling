@@ -11,7 +11,6 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -21,7 +20,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
+#include "eden/fs/telemetry/test/CapturingXplatLogger.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -870,12 +869,13 @@ TEST(InodeMap, totalInodeCountFastMatchesInodeCounts) {
 }
 
 TEST(InodeMap, inodeLoadFailureLogsError) {
-  auto scribe = std::make_shared<CapturingScribeLogger>();
+  CapturingXplatLogger xplatLogger;
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   auto errorLogger =
-      std::make_shared<ErrorLogger>(scribe, SessionInfo{}, reloadableConfig);
+      std::make_shared<ErrorLogger>(reloadableConfig, &xplatLogger);
 
   auto builder = FakeTreeBuilder();
   builder.setFile("src/main.c", "int main() { return 0; }\n");
@@ -900,10 +900,8 @@ TEST(InodeMap, inodeLoadFailureLogsError) {
   ASSERT_TRUE(srcFuture.isReady());
   EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
 
-  ASSERT_EQ(scribe->messages().size(), 1);
-  const auto& msg = scribe->messages()[0];
-  EXPECT_NE(msg.find("object_store"), std::string::npos)
-      << "Should contain component, got: " << msg;
-  EXPECT_NE(msg.find("inode_loading_failed"), std::string::npos)
-      << "Should contain error_type, got: " << msg;
+  ASSERT_EQ(xplatLogger.events().size(), 1);
+  const auto& strings = xplatLogger.events()[0].event.getStringMap();
+  EXPECT_EQ(strings.at("component"), "object_store");
+  EXPECT_EQ(strings.at("error_type"), "inode_loading_failed");
 }

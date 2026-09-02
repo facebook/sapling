@@ -41,10 +41,10 @@ inline std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
 
 /**
  * Create a no-op ErrorLogger for use in unit tests.
- * Scribe is null so log() returns immediately.
+ * XplatLogger is null so log() returns immediately.
  */
 inline ErrorLogger makeTestErrorLogger() {
-  return ErrorLogger{nullptr, {}, nullptr};
+  return ErrorLogger{};
 }
 
 // Friend of Overlay so tests can drive the private WAL compaction path

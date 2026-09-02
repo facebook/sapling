@@ -45,7 +45,7 @@ std::shared_ptr<ServerState> createTestServerState() {
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<ErrorLogger>(nullptr, SessionInfo{}, nullptr),
+      std::make_shared<ErrorLogger>(),
       std::make_shared<NullScribeLogger>(),
       std::make_shared<ReloadableConfig>(edenConfig),
       *edenConfig,

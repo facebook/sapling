@@ -11,7 +11,6 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
@@ -22,7 +21,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
+#include "eden/fs/telemetry/test/CapturingXplatLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -282,12 +281,13 @@ TEST_P(CheckoutCancellationTest, CancellationAtInodeCheckoutStage) {
 }
 
 TEST_F(CheckoutCancellationTest, CancelledCheckoutLogsError) {
-  auto scribe = std::make_shared<CapturingScribeLogger>();
+  CapturingXplatLogger xplatLogger;
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   auto errorLogger =
-      std::make_shared<ErrorLogger>(scribe, SessionInfo{}, reloadableConfig);
+      std::make_shared<ErrorLogger>(reloadableConfig, &xplatLogger);
 
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("file1.txt", "content1\n");
@@ -334,12 +334,10 @@ TEST_F(CheckoutCancellationTest, CancelledCheckoutLogsError) {
   EXPECT_TRUE(checkoutFuture.isReady());
   EXPECT_ANY_THROW(std::move(checkoutFuture).get());
 
-  ASSERT_GE(scribe->messages().size(), 1);
-  const auto& msg = scribe->messages()[0];
-  EXPECT_NE(msg.find("object_store"), std::string::npos)
-      << "Should contain component, got: " << msg;
-  EXPECT_NE(msg.find("checkout_update_error"), std::string::npos)
-      << "Should contain error_type, got: " << msg;
+  ASSERT_GE(xplatLogger.events().size(), 1);
+  const auto& strings = xplatLogger.events()[0].event.getStringMap();
+  EXPECT_EQ(strings.at("component"), "object_store");
+  EXPECT_EQ(strings.at("error_type"), "checkout_update_error");
 
   testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
 }

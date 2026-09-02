@@ -24,6 +24,13 @@ using EdenStatsPtr = RefPtr<EdenStats>;
 
 class ErrorLogger {
  public:
+  ErrorLogger();
+
+  explicit ErrorLogger(
+      std::shared_ptr<ReloadableConfig> config,
+      IXplatLogger* xplatLogger = nullptr,
+      EdenStatsPtr edenStats = nullptr);
+
   ErrorLogger(
       std::shared_ptr<ScribeLogger> scribeLogger,
       SessionInfo sessionInfo,

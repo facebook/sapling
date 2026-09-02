@@ -20,6 +20,20 @@
 
 namespace facebook::eden {
 
+ErrorLogger::ErrorLogger()
+    : ErrorLogger(nullptr, SessionInfo{}, nullptr, nullptr, nullptr) {}
+
+ErrorLogger::ErrorLogger(
+    std::shared_ptr<ReloadableConfig> config,
+    IXplatLogger* xplatLogger,
+    EdenStatsPtr edenStats)
+    : ErrorLogger(
+          nullptr,
+          SessionInfo{},
+          std::move(config),
+          xplatLogger,
+          std::move(edenStats)) {}
+
 ErrorLogger::ErrorLogger(
     std::shared_ptr<ScribeLogger> scribeLogger,
     SessionInfo sessionInfo,

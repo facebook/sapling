@@ -20,7 +20,6 @@
 #include <memory>
 #include <optional>
 
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -33,7 +32,7 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
+#include "eden/fs/telemetry/test/CapturingXplatLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
@@ -110,7 +109,7 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
   // Use CPUThreadPoolExecutor — InlineExecutor is forbidden for coro::Task
   // (DCHECK on InlineExecutor at Task.h). getRootTree is now coroutine-backed.
   folly::CPUThreadPoolExecutor executor{1};
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
   auto backingStore = std::make_shared<SaplingBackingStore>(
       testRepo.repo.path(),
       testRepo.repo.path(),
@@ -163,7 +162,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   // Use a real executor so coroutine tests don't trip the coro::Task
   // DCHECK on InlineExecutor (Task.h:470). See D98178331.
   folly::CPUThreadPoolExecutor executor{1};
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -188,7 +187,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
   // Use a real executor so coroutine tests don't trip the coro::Task
   // DCHECK on InlineExecutor (Task.h:470).
   folly::CPUThreadPoolExecutor executor{1};
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -214,7 +213,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
   // Use CPUThreadPoolExecutor — InlineExecutor is forbidden for coro::Task
   // (DCHECK on InlineExecutor at Task.h:470). See D98178331.
   folly::CPUThreadPoolExecutor executor{1};
-  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  ErrorLogger noopErrorLogger{};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -898,14 +897,15 @@ TEST_F(
 struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/false};
   folly::InlineExecutor executor = folly::InlineExecutor::instance();
-  std::shared_ptr<CapturingScribeLogger> scribe =
-      std::make_shared<CapturingScribeLogger>();
+  CapturingXplatLogger xplatLogger;
   std::shared_ptr<ReloadableConfig> errorLoggerConfig{
       std::make_shared<ReloadableConfig>(testEdenConfig)};
-  ErrorLogger errorLogger{scribe, SessionInfo{}, errorLoggerConfig};
+  ErrorLogger errorLogger{errorLoggerConfig, &xplatLogger};
 
   SaplingBackingStoreErrorLoggingTest() {
     testEdenConfig->enableErrorLogging.setValue(
+        true, ConfigSourceType::UserConfig);
+    testEdenConfig->enableXplatLoggerErrors.setValue(
         true, ConfigSourceType::UserConfig);
   }
 
@@ -931,12 +931,10 @@ TEST_F(SaplingBackingStoreErrorLoggingTest, manifestResolutionFailureIsLogged) {
   auto result = queuedBackingStore->getManifestNode(bogusCommit);
   EXPECT_FALSE(result.has_value());
 
-  ASSERT_EQ(scribe->messages().size(), 1);
-  const auto& msg = scribe->messages()[0];
-  EXPECT_NE(msg.find("backing_store"), std::string::npos)
-      << "Should contain component, got: " << msg;
-  EXPECT_NE(msg.find("manifest_resolution_failure"), std::string::npos)
-      << "Should contain error_type, got: " << msg;
+  ASSERT_EQ(xplatLogger.events().size(), 1);
+  const auto& strings = xplatLogger.events()[0].event.getStringMap();
+  EXPECT_EQ(strings.at("component"), "backing_store");
+  EXPECT_EQ(strings.at("error_type"), "manifest_resolution_failure");
 }
 
 } // namespace facebook::eden

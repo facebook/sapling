@@ -129,8 +129,7 @@ TestMount::TestMount(
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullStructuredLogger>(),
-      errorLogger_ ? errorLogger_
-                   : make_shared<ErrorLogger>(nullptr, SessionInfo{}, nullptr),
+      errorLogger_ ? errorLogger_ : make_shared<ErrorLogger>(),
       make_shared<NullScribeLogger>(),
       reloadableConfig,
       *edenConfig_,
