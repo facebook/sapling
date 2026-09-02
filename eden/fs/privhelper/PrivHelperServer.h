@@ -17,6 +17,8 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 #include "eden/common/utils/UnixSocket.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 
@@ -234,10 +236,24 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::StringPiece mountRoot,
       folly::StringPiece mountPath);
 
+  // The daemon's credentials, as supplied to init().
+  uid_t uid_{std::numeric_limits<uid_t>::max()};
+  gid_t gid_{std::numeric_limits<gid_t>::max()};
+
   // Virtual so that a test can observe whether a code path skipped it.
   virtual void cleanupMountPoints();
 
 #ifdef __APPLE__
+  /**
+   * The command to relaunch edenfs with, as read out of the restart sentinel.
+   * argv is already stripped of sudo, `--takeover` and inherited file
+   * descriptor arguments by the daemon that wrote it.
+   */
+  struct RelaunchCommand {
+    std::vector<std::string> argv;
+    std::vector<std::pair<std::string, std::string>> env;
+  };
+
   // Restart configuration most recently supplied by the daemon, if any. Absent
   // means the daemon never finished starting up, so there is nothing to
   // restart and no boot-crash loop is possible.
@@ -245,6 +261,12 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   // Whether the daemon announced that its shutdown was deliberate.
   bool cleanShutdownNotified_{false};
+
+  /**
+   * Parse the relaunch command out of the restart sentinel, or nullopt if it
+   * cannot be read or does not hold one. Only ever called with privileges.
+   */
+  std::optional<RelaunchCommand> readRelaunchCommand() const;
 #endif // __APPLE__
 
  private:
@@ -267,8 +289,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;
-  uid_t uid_{std::numeric_limits<uid_t>::max()};
-  gid_t gid_{std::numeric_limits<gid_t>::max()};
   std::unique_ptr<FileAccessMonitorProcess> famProcess_;
 
   // The privhelper server only has a single thread,

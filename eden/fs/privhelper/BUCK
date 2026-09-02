@@ -96,6 +96,7 @@ cpp_library(
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/io/async:async_signal_handler",
+        "//folly/json:dynamic",
         "//folly/logging:init",
         "//folly/logging:logging",
         "//folly/portability:unistd",

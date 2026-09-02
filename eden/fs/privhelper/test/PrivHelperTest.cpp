@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
+#include <folly/FileUtil.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -16,6 +17,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
+#include <folly/json/json.h>
 #include <folly/synchronization/Baton.h>
 #include <folly/synchronization/SaturatingSemaphore.h>
 #include <folly/test/TestUtils.h>
@@ -332,6 +334,31 @@ EdenFsRestartArgs makeRestartArgs(std::string sentinelPath) {
   args.windowSeconds = 600;
   return args;
 }
+
+#ifdef __APPLE__
+const std::vector<std::string> kSentinelArgv{
+    "/usr/local/libexec/eden/edenfs",
+    "--edenfs"};
+
+/** The relaunch command as EdenServer::armPrivHelperRestart() writes it. */
+std::string makeSentinelContents(uint64_t nonce = kSentinelNonce) {
+  folly::dynamic argv = folly::dynamic::array;
+  for (const auto& arg : kSentinelArgv) {
+    argv.push_back(arg);
+  }
+  return folly::toJson(
+      folly::dynamic::object("argv", argv)(
+          "env",
+          folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/test"))(
+          "nonce", static_cast<int64_t>(nonce)));
+}
+
+/** As a daemon too old to stamp a generation writes it. */
+std::string makeSentinelContentsWithoutNonce() {
+  return folly::toJson(
+      folly::dynamic::object("argv", folly::dynamic::array("/bin/edenfs")));
+}
+#endif // __APPLE__
 
 EdenFsRestartArgs roundTrip(const EdenFsRestartArgs& args) {
   auto msg = PrivHelperConn::serializeSetRestartArgsRequest(/*xid=*/42, args);
@@ -1513,3 +1540,120 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
   // Locally-initiated teardown is not an unexpected privhelper exit.
   EXPECT_EQ(0ul, recorder->getEvents().size());
 }
+
+#ifdef __APPLE__
+
+/** Exposes the sentinel reader and the state it consults, all protected. */
+class PrivHelperSentinelTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::readRelaunchCommand;
+  using PrivHelperServer::restartConfig_;
+  using PrivHelperServer::uid_;
+};
+
+/**
+ * The sentinel is written by the daemon's unprivileged user and read by a root
+ * privhelper, so these cases are all about what a replaced file can do to the
+ * reader rather than about ordinary parse errors.
+ */
+class PrivHelperSentinelTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    dir_ = std::make_unique<TemporaryDirectory>("edenfs_sentinel");
+    server_.restartConfig_ = makeRestartArgs(sentinelPath());
+    server_.uid_ = getuid();
+  }
+
+  std::string sentinelPath() const {
+    return (dir_->path() / "sentinel").string();
+  }
+
+  /** Owned by us and only ours to write, as the daemon writes it. */
+  void writeSentinel(const std::string& contents) {
+    ASSERT_TRUE(folly::writeFile(contents, sentinelPath().c_str()));
+    checkUnixError(::chmod(sentinelPath().c_str(), 0600));
+  }
+
+  PrivHelperSentinelTestServer server_;
+  std::unique_ptr<TemporaryDirectory> dir_;
+};
+
+TEST_F(PrivHelperSentinelTest, readsTheCommandAndEnvironment) {
+  writeSentinel(makeSentinelContents());
+
+  const auto command = server_.readRelaunchCommand();
+  ASSERT_TRUE(command.has_value());
+  EXPECT_EQ(kSentinelArgv, command->argv);
+  EXPECT_THAT(
+      command->env,
+      UnorderedElementsAre(
+          std::pair<std::string, std::string>{"PATH", "/usr/bin"},
+          std::pair<std::string, std::string>{"HOME", "/home/test"}));
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsASymlink) {
+  const auto target = (dir_->path() / "target").string();
+  ASSERT_TRUE(folly::writeFile(makeSentinelContents(), target.c_str()));
+  checkUnixError(::symlink(target.c_str(), sentinelPath().c_str()));
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAFifo) {
+  // Without the regular-file check, opening this would block a root process
+  // that still owes the mounts a cleanup.
+  checkUnixError(::mkfifo(sentinelPath().c_str(), 0600));
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsASentinelOwnedByAnotherUser) {
+  writeSentinel(makeSentinelContents());
+  server_.uid_ = getuid() + 1;
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAGroupWritableSentinel) {
+  writeSentinel(makeSentinelContents());
+  checkUnixError(::chmod(sentinelPath().c_str(), 0660));
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAnOversizedFile) {
+  writeSentinel(std::string(2 * 1024 * 1024, 'x'));
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAnEmptyFile) {
+  writeSentinel("");
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAMissingFile) {
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsASentinelFromAnotherGeneration) {
+  writeSentinel(makeSentinelContents(kSentinelNonce + 1));
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsASentinelWithNoNonce) {
+  writeSentinel(makeSentinelContentsWithoutNonce());
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, rejectsAConfigurationWithNoNonce) {
+  writeSentinel(makeSentinelContentsWithoutNonce());
+  server_.restartConfig_->sentinelNonce = 0;
+
+  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+}
+
+#endif // __APPLE__

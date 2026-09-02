@@ -25,6 +25,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/json/json.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
@@ -1600,6 +1601,136 @@ void PrivHelperServer::bindUnmount(
 #endif
   insecureBindUnmount(mountPath);
 }
+
+#ifdef __APPLE__
+namespace {
+// A command line and an environment, generously. The sentinel is written by an
+// unprivileged process, so its size is bounded before anything is parsed.
+constexpr size_t kMaxSentinelSize = 1024 * 1024;
+} // namespace
+
+std::optional<PrivHelperServer::RelaunchCommand>
+PrivHelperServer::readRelaunchCommand() const {
+  if (!restartConfig_.has_value()) {
+    return std::nullopt;
+  }
+  // 0 is what an absent nonce parses to, so a configuration carrying it would
+  // accept a sentinel written by a daemon too old to have one.
+  if (restartConfig_->sentinelNonce == 0) {
+    XLOGF(ERR, "not restarting edenfs: the restart configuration has no nonce");
+    return std::nullopt;
+  }
+  const auto& path = restartConfig_->sentinelPath;
+
+  // A root process reading a file the daemon's user can replace: O_NOFOLLOW
+  // rejects a symlink swapped in for the sentinel, and O_NONBLOCK keeps a FIFO
+  // from blocking here so the regular-file check below can reject it.
+  const int fd = folly::openNoInt(
+      path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
+  if (fd == -1) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: cannot open the restart sentinel {}: {}",
+        path,
+        folly::errnoStr(errno));
+    return std::nullopt;
+  }
+  const folly::File sentinel{fd, /*ownsFd=*/true};
+
+  struct stat st{};
+  if (::fstat(sentinel.fd(), &st) != 0) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: cannot stat the restart sentinel {}: {}",
+        path,
+        folly::errnoStr(errno));
+    return std::nullopt;
+  }
+  if (!S_ISREG(st.st_mode)) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: the restart sentinel {} is not a regular file",
+        path);
+    return std::nullopt;
+  }
+  // Privileges are dropped to uid_ before the command runs, so whoever can
+  // write this file picks what runs as the daemon's user. The path is
+  // caller-supplied, so the rejection does not name the file's uid or mode.
+  if (st.st_uid != uid_ || (st.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: the restart sentinel {} has wrong ownership",
+        path);
+    return std::nullopt;
+  }
+  if (st.st_size <= 0 || static_cast<size_t>(st.st_size) > kMaxSentinelSize) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: the restart sentinel {} is {} bytes",
+        path,
+        st.st_size);
+    return std::nullopt;
+  }
+
+  std::string contents;
+  if (!folly::readFile(sentinel.fd(), contents, kMaxSentinelSize)) {
+    XLOGF(
+        ERR,
+        "not restarting edenfs: cannot read the restart sentinel {}: {}",
+        path,
+        folly::errnoStr(errno));
+    return std::nullopt;
+  }
+
+  // Written by EdenServer::armPrivHelperRestart(); the shape is fixed:
+  //
+  //   {"argv": ["...", ...], "env": {"KEY": "VALUE", ...}, "nonce": 123}
+  RelaunchCommand command;
+  try {
+    const auto parsed = folly::parseJson(contents);
+
+    // The sentinel path is fixed per state dir, so this privhelper may open a
+    // file a newer generation wrote. A sentinel with no nonce reads as 0,
+    // which no generation ever stamps.
+    const auto* nonce = parsed.get_ptr("nonce");
+    const uint64_t sentinelNonce =
+        nonce && nonce->isInt() ? static_cast<uint64_t>(nonce->asInt()) : 0;
+    if (sentinelNonce != restartConfig_->sentinelNonce) {
+      XLOGF(
+          ERR,
+          "not restarting edenfs: the restart sentinel {} belongs to another "
+          "daemon generation",
+          path);
+      return std::nullopt;
+    }
+
+    const auto* argv = parsed.get_ptr("argv");
+    if (!argv || !argv->isArray() || argv->empty()) {
+      XLOGF(
+          ERR,
+          "not restarting edenfs: the restart sentinel {} holds no command",
+          path);
+      return std::nullopt;
+    }
+    for (const auto& arg : *argv) {
+      command.argv.push_back(arg.asString());
+    }
+    if (const auto* env = parsed.get_ptr("env"); env && env->isObject()) {
+      for (const auto& [key, value] : env->items()) {
+        command.env.emplace_back(key.asString(), value.asString());
+      }
+    }
+  } catch (const std::exception&) {
+    // Without the exception's message: folly's JSON errors quote the offending
+    // input, and these are somebody else's file contents in a root process's
+    // log.
+    XLOGF(ERR, "not restarting edenfs: invalid restart sentinel {}", path);
+    return std::nullopt;
+  }
+
+  return command;
+}
+#endif // __APPLE__
 
 void PrivHelperServer::run() {
   // Log and ignore signals that would otherwise terminate the process.

@@ -42,6 +42,7 @@ cpp_unittest(
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/io/async:event_base_thread",
+        "//folly/json:dynamic",
         "//folly/synchronization:baton",
         "//folly/synchronization:saturating_semaphore",
         "//folly/test:test_utils",
