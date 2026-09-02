@@ -23,6 +23,10 @@ pub(super) struct CommandArgs {
     /// Expected size of the repos, used to provision resources for them
     #[clap(long, value_enum, default_value = "small")]
     size_bucket: SizeBucket,
+    /// Short branch name (e.g. "main", not "refs/heads/main") the new repos'
+    /// HEAD symref points at; unset means clones have no default branch
+    #[clap(long)]
+    default_branch: Option<String>,
     /// Names of the repos to create
     repo_names: Vec<String>,
 }
@@ -68,7 +72,7 @@ fn build_requests(args: &CommandArgs) -> Vec<thrift::RepoCreationRequest> {
                     ..Default::default()
                 }),
             size_bucket: args.size_bucket.into(),
-            default_branch: None,
+            default_branch: args.default_branch.clone(),
             ..Default::default()
         })
         .collect()
@@ -132,6 +136,7 @@ mod tests {
             hipster_group: hipster_group.map(String::from),
             oncall_name: "my_oncall".to_string(),
             size_bucket,
+            default_branch: None,
             repo_names: repo_names.iter().map(|name| name.to_string()).collect(),
         }
     }
@@ -147,7 +152,7 @@ mod tests {
         assert_eq!(custom_acl.hipster_group, "my_group");
         assert!(
             requests[0].default_branch.is_none(),
-            "default_branch has no CLI flag yet, so requests must leave it unset"
+            "default_branch must stay unset when --default-branch is not given"
         );
     }
 
@@ -198,5 +203,25 @@ mod tests {
         ] {
             assert_eq!(thrift::RepoSizeBucket::from(flag), expected);
         }
+    }
+
+    #[mononoke::test]
+    fn test_default_branch_flag_parses_and_reaches_request() {
+        use clap::Parser;
+        let args = CommandArgs::try_parse_from([
+            "create-repos",
+            "--oncall-name",
+            "oc",
+            "--default-branch",
+            "main",
+            "repo1",
+        ])
+        .expect("args with --default-branch should parse");
+        let requests = build_requests(&args);
+        assert_eq!(
+            requests[0].default_branch.as_deref(),
+            Some("main"),
+            "--default-branch should reach the request"
+        );
     }
 }
