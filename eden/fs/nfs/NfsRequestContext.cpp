@@ -13,15 +13,30 @@ namespace {
 
 class NfsObjectFetchContext : public FsObjectFetchContext {
  public:
-  explicit NfsObjectFetchContext(std::string_view causeDetail)
-      : causeDetail_{causeDetail} {}
+  NfsObjectFetchContext(
+      std::string_view causeDetail,
+      std::optional<uint32_t> clientUid,
+      std::optional<uint32_t> clientGid)
+      : causeDetail_{causeDetail},
+        clientUid_{clientUid},
+        clientGid_{clientGid} {}
 
   std::optional<std::string_view> getCauseDetail() const override {
     return causeDetail_;
   }
 
+  std::optional<uint32_t> getClientUid() const override {
+    return clientUid_;
+  }
+
+  std::optional<uint32_t> getClientGid() const override {
+    return clientGid_;
+  }
+
  private:
   std::string_view causeDetail_;
+  std::optional<uint32_t> clientUid_;
+  std::optional<uint32_t> clientGid_;
 };
 
 using NfsObjectFetchContextPtr = RefPtr<NfsObjectFetchContext>;
@@ -33,8 +48,9 @@ NfsRequestContext::NfsRequestContext(
     std::string_view causeDetail,
     ProcessAccessLog& processAccessLog,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
-    std::chrono::nanoseconds longRunningFsRequestThreshold)
-    : RequestContext{processAccessLog, std::move(edenFsEventsLogger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(causeDetail)},
+    std::chrono::nanoseconds longRunningFsRequestThreshold,
+    const std::optional<authsys_parms>& authSysCreds)
+    : RequestContext{processAccessLog, std::move(edenFsEventsLogger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(causeDetail, authSysCreds ? std::optional{authSysCreds->uid} : std::nullopt, authSysCreds ? std::optional{authSysCreds->gid} : std::nullopt)},
       xid_{xid} {}
 
 } // namespace facebook::eden

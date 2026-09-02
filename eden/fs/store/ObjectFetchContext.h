@@ -134,6 +134,20 @@ class ObjectFetchContext : public RefCounted {
   }
 
   /**
+   * The uid/gid claimed by the client that triggered this request, when
+   * known. Currently only populated for NFS requests, from the AUTH_SYS
+   * credential; note that AUTH_SYS credentials are client-asserted and
+   * spoofable, so these are suitable for telemetry and coarse policy only.
+   */
+  virtual std::optional<uint32_t> getClientUid() const {
+    return std::nullopt;
+  }
+
+  virtual std::optional<uint32_t> getClientGid() const {
+    return std::nullopt;
+  }
+
+  /**
    * If known, returns the reason these objects were fetched.
    */
   virtual Cause getCause() const = 0;

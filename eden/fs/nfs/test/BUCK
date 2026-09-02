@@ -11,13 +11,17 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
+        "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
         "//eden/fs/nfs:dirlist",
         "//eden/fs/nfs:nfs_utils",
         "//eden/fs/nfs:nfsd3",
         "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
         "//eden/fs/nfs/testharness:xdr_test_utils",
         "//eden/fs/telemetry:error_logger",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry/test:capturing_scribe_logger",
+        "//eden/fs/utils:process_access_log",
     ],
 )

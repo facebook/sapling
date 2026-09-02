@@ -69,6 +69,7 @@ cpp_library(
         "//eden/common/utils:case_sensitivity",
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/inodes:request_context",
+        "//eden/fs/nfs/rpc:rpc",
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:process_access_log",

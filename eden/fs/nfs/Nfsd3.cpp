@@ -2352,7 +2352,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     uint32_t progNumber,
     uint32_t progVersion,
     uint32_t procNumber,
-    const std::optional<authsys_parms>& /*authSysCreds*/) {
+    const std::optional<authsys_parms>& authSysCreds) {
   if (progNumber != kNfsdProgNumber) {
     serializeReply(ser, accept_stat::PROG_UNAVAIL, xid);
     return folly::unit;
@@ -2395,7 +2395,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       handlerEntry.name,
       processAccessLog_,
       edenFsEventsLogger_,
-      longRunningFSRequestThreshold_);
+      longRunningFSRequestThreshold_,
+      authSysCreds);
   context->startRequest(
       dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
   // The data that contextRef reference to is alive for the duration of the
