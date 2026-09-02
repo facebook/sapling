@@ -7,9 +7,11 @@ cpp_library(
     srcs = ["PrivHelper.cpp"],
     headers = ["PrivHelper.h"],
     deps = [
+        "//folly:conv",
         "//folly:file",
         "//folly/futures:core",
         "//folly/io/async:async_base",
+        "//folly/logging:logging",
     ],
     exported_deps = [
         "//folly:network_address",

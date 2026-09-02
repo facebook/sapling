@@ -32,6 +32,7 @@
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/UserInfo.h"
+#include "eden/common/utils/test/ScopedEnvVar.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
@@ -351,6 +352,32 @@ TEST(PrivHelperConnRestartArgs, roundTripPreservesAwkwardValues) {
   expected.firstRestartEpochSec = uint64_t{1} << 33;
 
   EXPECT_EQ(expected, roundTrip(expected));
+}
+
+TEST(PrivHelperRestartCounterEnv, absentIsZero) {
+  ScopedEnvVar var{kEdenFsRestartCountEnv};
+  var.unset();
+  EXPECT_EQ(0, readEdenFsRestartCounterEnv(kEdenFsRestartCountEnv));
+}
+
+TEST(PrivHelperRestartCounterEnv, emptyIsZero) {
+  ScopedEnvVar var{kEdenFsRestartCountEnv};
+  var.set("");
+  EXPECT_EQ(0, readEdenFsRestartCounterEnv(kEdenFsRestartCountEnv));
+}
+
+TEST(PrivHelperRestartCounterEnv, malformedIsZero) {
+  ScopedEnvVar var{kEdenFsRestartCountEnv};
+  var.set("three");
+  EXPECT_EQ(0, readEdenFsRestartCounterEnv(kEdenFsRestartCountEnv));
+}
+
+TEST(PrivHelperRestartCounterEnv, readsAValueAbove32Bits) {
+  // The epoch variable outgrows uint32 in 2106, so the reader is 64-bit.
+  ScopedEnvVar var{kEdenFsFirstRestartAtEnv};
+  var.set("4294967296");
+  EXPECT_EQ(
+      uint64_t{1} << 32, readEdenFsRestartCounterEnv(kEdenFsFirstRestartAtEnv));
 }
 
 TEST(PrivHelperConnRestartArgs, notifyCleanShutdownRoundTrip) {

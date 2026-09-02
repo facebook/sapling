@@ -23,6 +23,7 @@ cpp_unittest(
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:system_error",
         "//eden/common/utils:user_info",
+        "//eden/common/utils/test:scoped_env_var",
         "//eden/fs/privhelper:conn",
         "//eden/fs/privhelper:interface",
         "//eden/fs/privhelper:privhelper",

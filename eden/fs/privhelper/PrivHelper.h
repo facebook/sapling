@@ -91,6 +91,14 @@ inline constexpr folly::StringPiece kEdenFsRestartCountEnv{
 inline constexpr folly::StringPiece kEdenFsFirstRestartAtEnv{
     "EDENFS_FIRST_RESTART_AT"};
 
+/**
+ * Read one of the restart-budget environment variables above.
+ *
+ * Absent, empty or malformed all mean zero, which is the right answer for a
+ * daemon the user started.
+ */
+uint64_t readEdenFsRestartCounterEnv(folly::StringPiece name);
+
 /*
  * Everything the privhelper needs in order to relaunch edenfs after a crash.
  *
