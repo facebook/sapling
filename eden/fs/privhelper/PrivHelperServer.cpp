@@ -23,6 +23,7 @@
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/LoggerDB.h>
@@ -1601,23 +1602,28 @@ void PrivHelperServer::bindUnmount(
 }
 
 void PrivHelperServer::run() {
-  // Ignore SIGINT and SIGTERM.
+  // Log and ignore signals that would otherwise terminate the process.
   // We should only exit when the daemon's connection closes, so that we
   // can umount all outstanding mount points before we exit. The privhelper
   // binary detaches into its own session at startup, which keeps terminal
   // signals (e.g. Ctrl-C) and process-group-wide kills away from us, but
   // anything signaling this process directly must not terminate it either.
-  if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
-    XLOGF(
-        FATAL,
-        "error setting SIGINT handler in privhelper process: {}",
-        folly::errnoStr(errno));
-  }
-  if (signal(SIGTERM, SIG_IGN) == SIG_ERR) {
-    XLOGF(
-        FATAL,
-        "error setting SIGTERM handler in privhelper process: {}",
-        folly::errnoStr(errno));
+  class LogAndIgnoreSignalHandler : public folly::AsyncSignalHandler {
+   public:
+    using AsyncSignalHandler::AsyncSignalHandler;
+
+    void signalReceived(int sig) noexcept override {
+      XLOGF(
+          WARN,
+          "privhelper received signal {} ({}); ignoring; the privhelper "
+          "exits only when the EdenFS daemon connection closes",
+          sig,
+          strsignal(sig));
+    }
+  };
+  LogAndIgnoreSignalHandler signalHandler{eventBase_.get()};
+  for (int sig : {SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2}) {
+    signalHandler.registerSignalHandler(sig);
   }
 
   conn_->setReceiveCallback(this);
