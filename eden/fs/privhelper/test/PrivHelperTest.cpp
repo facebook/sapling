@@ -1549,6 +1549,7 @@ class PrivHelperSentinelTestServer : public PrivHelperServer {
  public:
   using PrivHelperServer::readRelaunchCommand;
   using PrivHelperServer::restartConfig_;
+  using PrivHelperServer::setRestartConfig;
   using PrivHelperServer::uid_;
 };
 
@@ -1561,7 +1562,7 @@ class PrivHelperSentinelTest : public ::testing::Test {
  protected:
   void SetUp() override {
     dir_ = std::make_unique<TemporaryDirectory>("edenfs_sentinel");
-    server_.restartConfig_ = makeRestartArgs(sentinelPath());
+    server_.setRestartConfig(makeRestartArgs(sentinelPath()));
     server_.uid_ = getuid();
   }
 
@@ -1666,6 +1667,7 @@ class PrivHelperBreakerTestServer : public PrivHelperServer {
 
   using PrivHelperServer::admitRestartAttempt;
   using PrivHelperServer::restartConfig_;
+  using PrivHelperServer::setRestartConfig;
 
   std::atomic<uint64_t> now{kFakeNow};
 };
@@ -1673,7 +1675,7 @@ class PrivHelperBreakerTestServer : public PrivHelperServer {
 class PrivHelperBreakerTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    server_.restartConfig_ = makeRestartArgs("/unused");
+    server_.setRestartConfig(makeRestartArgs("/unused"));
   }
 
   PrivHelperBreakerTestServer server_;
@@ -1875,6 +1877,126 @@ TEST_F(PrivHelperDropTest, refusesWhenTheResolvedIdentityIsNotTheOwner) {
   initWithOwner(getuid() + 1, getgid() + 1);
 
   EXPECT_THROW(server_.dropPrivilegesForRestart(), std::runtime_error);
+}
+
+/** Exposes the two disarm channels and the state they meet in. */
+class PrivHelperDisarmTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::cleanShutdownNotified_;
+  using PrivHelperServer::isDisarmed;
+  using PrivHelperServer::processNotifyCleanShutdownMsg;
+  using PrivHelperServer::processSetRestartArgsMsg;
+  using PrivHelperServer::restartConfig_;
+};
+
+/**
+ * The two disarm channels are deliberately redundant: the notification fails
+ * when the event loop is wedged, and the sentinel unlink fails essentially
+ * never. Each has to disarm on its own.
+ */
+class PrivHelperDisarmTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    deliverRestartArgs();
+  }
+
+  void deliverRestartArgs() {
+    deliverRestartArgs(sentinel_->path().string());
+  }
+
+  void deliverRestartArgs(std::string sentinelPath) {
+    auto msg = PrivHelperConn::serializeSetRestartArgsRequest(
+        /*xid=*/1, makeRestartArgs(std::move(sentinelPath)));
+    folly::io::Cursor cursor{&msg.data};
+    PrivHelperConn::parsePacket(cursor);
+    server_.processSetRestartArgsMsg(cursor);
+  }
+
+  void deliverCleanShutdown() {
+    auto msg = PrivHelperConn::serializeNotifyCleanShutdownRequest(
+        /*xid=*/2, "stop");
+    folly::io::Cursor cursor{&msg.data};
+    PrivHelperConn::parsePacket(cursor);
+    server_.processNotifyCleanShutdownMsg(cursor);
+  }
+
+  void expectSentinelPathRejected(const std::string& sentinelPath) {
+    SCOPED_TRACE(sentinelPath);
+    deliverRestartArgs(sentinelPath);
+    EXPECT_TRUE(server_.isDisarmed());
+  }
+
+  std::string sentinelDir() const {
+    return sentinel_->path().parent_path().string();
+  }
+
+  PrivHelperDisarmTestServer server_;
+  std::unique_ptr<TemporaryFile> sentinel_;
+};
+
+TEST_F(PrivHelperDisarmTest, restartArgsArm) {
+  ASSERT_TRUE(server_.restartConfig_.has_value());
+  EXPECT_EQ(sentinel_->path().string(), server_.restartConfig_->sentinelPath);
+  EXPECT_FALSE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, theNotificationAloneDisarms) {
+  deliverCleanShutdown();
+
+  EXPECT_TRUE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, removingTheSentinelAloneDisarms) {
+  sentinel_.reset();
+
+  EXPECT_TRUE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, freshRestartArgsReArm) {
+  // A daemon that resends its configuration has recovered from a failed
+  // takeover, and would otherwise stay permanently un-restartable behind the
+  // flag its aborted shutdown set.
+  deliverCleanShutdown();
+  ASSERT_TRUE(server_.isDisarmed());
+
+  deliverRestartArgs();
+
+  EXPECT_FALSE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, freshRestartArgsDropTheResolvedDirectory) {
+  ASSERT_FALSE(server_.isDisarmed());
+
+  const TemporaryDirectory elsewhere{"edenfs_restart_elsewhere"};
+  deliverRestartArgs((elsewhere.path() / "absent").string());
+
+  EXPECT_TRUE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, aSentinelPathRootCannotResolveDisarms) {
+  deliverRestartArgs("not/absolute");
+
+  EXPECT_TRUE(server_.isDisarmed());
+}
+
+TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesDisarms) {
+  // faccessat() resolves "." and ".." whatever the directory holds, so a
+  // sentinel named either could never be reported gone.
+  expectSentinelPathRejected(sentinelDir() + "/.");
+  expectSentinelPathRejected(sentinelDir() + "/..");
+}
+
+TEST_F(PrivHelperDisarmTest, aSentinelPathWithAnEmbeddedNulDisarms) {
+  // The syscalls stop at the NUL, so they would act on a prefix of the path
+  // that was validated.
+  expectSentinelPathRejected(sentinel_->path().string() + '\0');
+}
+
+TEST_F(PrivHelperDisarmTest, aServerThatNeverReceivedRestartArgsDisarms) {
+  PrivHelperDisarmTestServer unconfigured;
+
+  EXPECT_TRUE(unconfigured.isDisarmed());
 }
 
 #endif // __APPLE__

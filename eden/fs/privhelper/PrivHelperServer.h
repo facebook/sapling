@@ -8,9 +8,7 @@
 #pragma once
 
 #include <eden/common/utils/SpawnedProcess.h>
-#ifndef __APPLE__
 #include <folly/File.h>
-#endif
 #include <sys/types.h>
 #include <functional>
 #include <limits>
@@ -277,6 +275,42 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   // Whether the daemon announced that its shutdown was deliberate.
   bool cleanShutdownNotified_{false};
+
+  /** The directory holding the restart sentinel, and its name within it. */
+  struct SentinelLocation {
+    folly::File dir;
+    std::string name;
+  };
+
+  // Resolved on first use, and dropped whenever fresh restart args arrive.
+  mutable std::optional<SentinelLocation> sentinelLocation_;
+
+  // errno of the last resolution failure reported since the last re-arm, 0 for
+  // the malformed-path failure, which has none. A failure is retried rather
+  // than cached, so that a transient one cannot leave root permanently unable
+  // to restart edenfs; a retry that fails the same way again does not log.
+  mutable std::optional<int> lastSentinelResolutionError_;
+
+  /**
+   * Where the restart sentinel lives, or nullptr when no restart configuration
+   * has arrived or the configured path cannot be resolved. The path comes from
+   * the unprivileged daemon, so root walks it once and afterwards only looks
+   * the leaf up in the pinned directory, which no ancestor rename can redirect.
+   */
+  const SentinelLocation* sentinelLocation() const;
+
+  /**
+   * The only way to replace the restart configuration. Fresh arguments also
+   * re-arm: a resolution cached from the previous configuration would stay
+   * pinned to its directory, and a clean-shutdown flag would outlive it.
+   */
+  void setRestartConfig(EdenFsRestartArgs args);
+
+  UnixSocket::Message processSetRestartArgsMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processNotifyCleanShutdownMsg(folly::io::Cursor& cursor);
+
+  /** Whether edenfs signalled, either way, that it meant to shut down. */
+  bool isDisarmed() const;
 
   /**
    * Parse the relaunch command out of the restart sentinel, or nullopt if it

@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <chrono>
 #include <csignal>
+#include <string_view>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/common/utils/UserInfo.h"
@@ -1655,7 +1656,153 @@ constexpr size_t kMaxSentinelSize = 1024 * 1024;
 constexpr uint32_t kRestartsCeiling = 10;
 constexpr uint32_t kMinRestartWindowSeconds = 60;
 constexpr uint32_t kMaxRestartWindowSeconds = 24 * 60 * 60;
+
+// Stands in for the one sentinel resolution failure that has no errno.
+constexpr int kMalformedSentinelPath = 0;
+
+int openatNoInt(int dirFd, const char* name, int flags) {
+  int fd;
+  do {
+    fd = ::openat(dirFd, name, flags);
+  } while (fd == -1 && errno == EINTR);
+  return fd;
+}
+
+struct SentinelPathParts {
+  std::string_view dir;
+  std::string_view name;
+};
+
+/**
+ * An absolute sentinel path split into the directory to pin and the leaf to
+ * look up in it, or nullopt when the path cannot name a file: "." and ".."
+ * always resolve, so faccessat() could never report the sentinel gone, and a
+ * NUL ends the path the syscalls act on early.
+ */
+std::optional<SentinelPathParts> splitSentinelPath(const std::string& path) {
+  if (path.empty() || path.front() != '/' ||
+      path.find('\0') != std::string::npos) {
+    return std::nullopt;
+  }
+  const auto view = std::string_view{path};
+  const auto slash = view.rfind('/');
+  const auto name = view.substr(slash + 1);
+  if (name.empty() || name == "." || name == "..") {
+    return std::nullopt;
+  }
+  return SentinelPathParts{view.substr(0, slash == 0 ? 1 : slash), name};
+}
 } // namespace
+
+UnixSocket::Message PrivHelperServer::processSetRestartArgsMsg(Cursor& cursor) {
+  EdenFsRestartArgs args;
+  PrivHelperConn::parseSetRestartArgsRequest(cursor, args);
+  XLOGF(
+      INFO,
+      "received edenfs restart configuration: enabled={}, sentinel={}, restartCount={}, maxRestarts={}, windowSeconds={}",
+      args.enabled,
+      args.sentinelPath,
+      args.restartCount,
+      args.maxRestarts,
+      args.windowSeconds);
+  setRestartConfig(std::move(args));
+  return makeResponse();
+}
+
+void PrivHelperServer::setRestartConfig(EdenFsRestartArgs args) {
+  restartConfig_ = std::move(args);
+  sentinelLocation_.reset();
+  lastSentinelResolutionError_.reset();
+  // A daemon that resends its configuration has recovered from a failed
+  // takeover, and would otherwise stay permanently un-restartable behind the
+  // flag its aborted shutdown set.
+  cleanShutdownNotified_ = false;
+}
+
+UnixSocket::Message PrivHelperServer::processNotifyCleanShutdownMsg(
+    Cursor& cursor) {
+  std::string reason;
+  PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
+  XLOGF(INFO, "edenfs reported a deliberate shutdown: {}", reason);
+  cleanShutdownNotified_ = true;
+  // One-way request: processAndSendResponse() discards this.
+  return makeResponse();
+}
+
+const PrivHelperServer::SentinelLocation* PrivHelperServer::sentinelLocation()
+    const {
+  if (sentinelLocation_.has_value()) {
+    return &*sentinelLocation_;
+  }
+  if (!restartConfig_.has_value()) {
+    return nullptr;
+  }
+  // A retry can fail for a new reason, so only an exact repeat is dropped.
+  const auto isNewFailure = [this](int error) {
+    const bool changed = lastSentinelResolutionError_ != error;
+    lastSentinelResolutionError_ = error;
+    return changed;
+  };
+
+  const auto& path = restartConfig_->sentinelPath;
+  const auto parts = splitSentinelPath(path);
+  if (!parts.has_value()) {
+    if (isNewFailure(kMalformedSentinelPath)) {
+      XLOGF(ERR, "the restart sentinel path {} does not name a file", path);
+    }
+    return nullptr;
+  }
+
+  const auto dir = std::string{parts->dir};
+  // O_DIRECTORY rejects a FIFO or a device planted where the state directory
+  // should be; O_NOFOLLOW rejects a symlink as the final component, though the
+  // ancestors above it are still resolved as root.
+  const int fd = folly::openNoInt(
+      dir.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+  if (fd == -1) {
+    const int error = errno;
+    if (isNewFailure(error)) {
+      XLOGF(
+          ERR,
+          "cannot open the restart sentinel's directory {}: {}",
+          dir,
+          folly::errnoStr(error));
+    }
+    return nullptr;
+  }
+
+  sentinelLocation_ = SentinelLocation{
+      folly::File{fd, /*ownsFd=*/true}, std::string{parts->name}};
+  return &*sentinelLocation_;
+}
+
+bool PrivHelperServer::isDisarmed() const {
+  if (cleanShutdownNotified_) {
+    return true;
+  }
+  const auto* location = sentinelLocation();
+  if (location == nullptr) {
+    return true;
+  }
+  // The second, independent disarm signal. Only existence matters, so
+  // faccessat() rather than an open: a FIFO planted in the sentinel's place
+  // would block an open for ever. A spoofed "exists" only buys a restart a
+  // crash also buys.
+  if (::faccessat(location->dir.fd(), location->name.c_str(), F_OK, 0) == 0) {
+    return false;
+  }
+  const int error = errno;
+  // Only ENOENT means the daemon removed it. Anything else leaves the
+  // sentinel's state unknown, and root must not relaunch on a guess.
+  if (error != ENOENT) {
+    XLOGF(
+        ERR,
+        "treating the restart sentinel {} in the pinned directory as removed: {}",
+        location->name,
+        folly::errnoStr(error));
+  }
+  return true;
+}
 
 std::optional<AbsolutePath> PrivHelperServer::findSiblingEdenFs(
     AbsolutePathPiece dir) {
@@ -1708,18 +1855,23 @@ PrivHelperServer::readRelaunchCommand() const {
     XLOGF(ERR, "not restarting edenfs: the restart configuration has no nonce");
     return std::nullopt;
   }
-  const auto& path = restartConfig_->sentinelPath;
+  const auto* location = sentinelLocation();
+  if (location == nullptr) {
+    return std::nullopt;
+  }
 
   // A root process reading a file the daemon's user can replace: O_NOFOLLOW
   // rejects a symlink swapped in for the sentinel, and O_NONBLOCK keeps a FIFO
   // from blocking here so the regular-file check below can reject it.
-  const int fd = folly::openNoInt(
-      path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
+  const int fd = openatNoInt(
+      location->dir.fd(),
+      location->name.c_str(),
+      O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
   if (fd == -1) {
     XLOGF(
         ERR,
-        "not restarting edenfs: cannot open the restart sentinel {}: {}",
-        path,
+        "not restarting edenfs: cannot open the restart sentinel {} in the pinned directory: {}",
+        location->name,
         folly::errnoStr(errno));
     return std::nullopt;
   }
@@ -1730,7 +1882,7 @@ PrivHelperServer::readRelaunchCommand() const {
     XLOGF(
         ERR,
         "not restarting edenfs: cannot stat the restart sentinel {}: {}",
-        path,
+        location->name,
         folly::errnoStr(errno));
     return std::nullopt;
   }
@@ -1738,7 +1890,7 @@ PrivHelperServer::readRelaunchCommand() const {
     XLOGF(
         ERR,
         "not restarting edenfs: the restart sentinel {} is not a regular file",
-        path);
+        location->name);
     return std::nullopt;
   }
   // Privileges are dropped to uid_ before the command runs, so whoever can
@@ -1748,14 +1900,14 @@ PrivHelperServer::readRelaunchCommand() const {
     XLOGF(
         ERR,
         "not restarting edenfs: the restart sentinel {} has wrong ownership",
-        path);
+        location->name);
     return std::nullopt;
   }
   if (st.st_size <= 0 || static_cast<size_t>(st.st_size) > kMaxSentinelSize) {
     XLOGF(
         ERR,
         "not restarting edenfs: the restart sentinel {} is {} bytes",
-        path,
+        location->name,
         st.st_size);
     return std::nullopt;
   }
@@ -1765,7 +1917,7 @@ PrivHelperServer::readRelaunchCommand() const {
     XLOGF(
         ERR,
         "not restarting edenfs: cannot read the restart sentinel {}: {}",
-        path,
+        location->name,
         folly::errnoStr(errno));
     return std::nullopt;
   }
@@ -1788,7 +1940,7 @@ PrivHelperServer::readRelaunchCommand() const {
           ERR,
           "not restarting edenfs: the restart sentinel {} belongs to another "
           "daemon generation",
-          path);
+          location->name);
       return std::nullopt;
     }
 
@@ -1797,7 +1949,7 @@ PrivHelperServer::readRelaunchCommand() const {
       XLOGF(
           ERR,
           "not restarting edenfs: the restart sentinel {} holds no command",
-          path);
+          location->name);
       return std::nullopt;
     }
     for (const auto& arg : *argv) {
@@ -1812,7 +1964,10 @@ PrivHelperServer::readRelaunchCommand() const {
     // Without the exception's message: folly's JSON errors quote the offending
     // input, and these are somebody else's file contents in a root process's
     // log.
-    XLOGF(ERR, "not restarting edenfs: invalid restart sentinel {}", path);
+    XLOGF(
+        ERR,
+        "not restarting edenfs: invalid restart sentinel {}",
+        location->name);
     return std::nullopt;
   }
 
@@ -2039,7 +2194,19 @@ UnixSocket::Message PrivHelperServer::processMessage(
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
       return processSetFuseReadAhead(cursor);
     case PrivHelperConn::REQ_SET_RESTART_ARGS:
+#ifdef __APPLE__
+      return processSetRestartArgsMsg(cursor);
+#else
+      // Only macOS restarts edenfs; on Linux systemd owns the lifecycle, so
+      // accept and ignore.
+      return makeResponse();
+#endif
     case PrivHelperConn::REQ_NOTIFY_CLEAN_SHUTDOWN:
+#ifdef __APPLE__
+      return processNotifyCleanShutdownMsg(cursor);
+#else
+      return makeResponse();
+#endif
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;
