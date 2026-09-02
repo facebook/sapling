@@ -615,8 +615,6 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
 TEST_F(FuseChannelTest, unexpectedErrnoIsLogged) {
   // EIO is a genuine failure, so it should be logged to edenfs_errors.
   edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  edenConfig_->enableXplatLoggerErrors.setValue(
-      true, ConfigSourceType::UserConfig);
   errorLoggerOverride_ = &capturingErrorLogger_;
   auto channel = createChannel();
   performInit(channel.get());
@@ -635,8 +633,6 @@ TEST_F(FuseChannelTest, unexpectedErrnoIsLogged) {
 TEST_F(FuseChannelTest, expectedErrnoIsNotLogged) {
   // ENOENT is a normal, expected FUSE response, so it should NOT be logged.
   edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  edenConfig_->enableXplatLoggerErrors.setValue(
-      true, ConfigSourceType::UserConfig);
   errorLoggerOverride_ = &capturingErrorLogger_;
   auto channel = createChannel();
   performInit(channel.get());

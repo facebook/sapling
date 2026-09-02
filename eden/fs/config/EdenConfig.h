@@ -1534,8 +1534,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Scribe category is the first argument passed to the scribe_cat binary. This
-   * is used by the ErrorStructuredLogger
+   * Deprecated. Retained temporarily so older Configerator output remains
+   * accepted while the XplatLogger-only error path rolls out.
    */
   ConfigSetting<std::string> errorScribeCategory{
       "telemetry:error-scribe-category",
@@ -1731,10 +1731,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether to enable XplatLogger for edenfs_errors telemetry. When enabled,
-   * structured errors are routed through XplatLogger to the
-   * GeneratedEdenfsErrorsLoggerConfig (Hive + Scuba) instead of the legacy
-   * Scribe -> perfpipe_edenfs_errors path.
+   * Deprecated. ErrorLogger always uses XplatLogger. Retained temporarily so
+   * older Configerator output remains accepted during the rollout.
    */
   ConfigSetting<bool> enableXplatLoggerErrors{
       "telemetry:enable-xplatlogger-errors",

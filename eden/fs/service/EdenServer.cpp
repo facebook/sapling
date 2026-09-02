@@ -60,7 +60,6 @@
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"
-#include "eden/common/telemetry/SubprocessScribeLogger.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
@@ -486,35 +485,6 @@ std::shared_ptr<folly::Executor> makePrefetchFilesV2Threads(
   return nullptr;
 }
 
-std::shared_ptr<ErrorLogger> makeErrorLogger(
-    const EdenConfig& edenConfig,
-    SessionInfo sessionInfo,
-    std::shared_ptr<ReloadableConfig> config,
-    EdenStatsPtr edenStats,
-    IXplatLogger* xplatLogger) {
-  auto scribeBinary = edenConfig.scribeLogger.getValue();
-  auto errorCategory = edenConfig.errorScribeCategory.getValue();
-  std::shared_ptr<ScribeLogger> scribeLogger;
-  if (!scribeBinary.empty() && !errorCategory.empty()) {
-    try {
-      scribeLogger = std::make_shared<SubprocessScribeLogger>(
-          scribeBinary.c_str(), errorCategory);
-    } catch (const std::exception& ex) {
-      edenStats->increment(&TelemetryStats::subprocessLoggerFailure, 1);
-      XLOGF(
-          ERR,
-          "Failed to create scribe logger for ErrorLogger: {}. Error logging is disabled.",
-          folly::exceptionStr(ex));
-    }
-  }
-  return std::make_shared<ErrorLogger>(
-      std::move(scribeLogger),
-      std::move(sessionInfo),
-      std::move(config),
-      xplatLogger,
-      std::move(edenStats));
-}
-
 #ifndef _WIN32
 bool shouldRunPeriodicInodeUnload(const EdenConfig& config) {
   return !config.enablePressureBasedGc.getValue() &&
@@ -728,17 +698,14 @@ EdenServer::EdenServer(
           edenStats.copy(),
           config_)},
 #endif
-      errorLogger_{makeErrorLogger(
-          *edenConfig,
-          sessionInfo,
+      errorLogger_{std::make_shared<ErrorLogger>(
           config_,
-          edenStats.copy(),
 #ifdef EDEN_HAVE_LOGGER
-          xplatLogger_.get()
+          xplatLogger_.get(),
 #else
-          nullptr
+          nullptr,
 #endif
-              )},
+          edenStats.copy())},
       edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
 #ifdef EDEN_HAVE_LOGGER
           xplatLogger_

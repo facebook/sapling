@@ -24,7 +24,6 @@
 #include <folly/logging/Logger.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -34,7 +33,6 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
-#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/utils/Clock.h"
 
 namespace {
@@ -178,9 +176,7 @@ struct Nfsd3Test : ::testing::Test {
   void SetUp() override {
     config_ = EdenConfig::createTestEdenConfig();
     reloadableConfig_ = std::make_shared<ReloadableConfig>(config_);
-    scribeLogger_ = std::make_shared<CapturingScribeLogger>();
-    errorLogger_ = std::make_unique<ErrorLogger>(
-        scribeLogger_, SessionInfo{}, reloadableConfig_);
+    errorLogger_ = std::make_unique<ErrorLogger>();
 
     auto dispatcher =
         std::make_unique<FakeNfsDispatcher>(makeRefPtr<EdenStats>(), clock_);
@@ -329,7 +325,6 @@ struct Nfsd3Test : ::testing::Test {
   std::shared_ptr<folly::ManualExecutor> manualExecutor_;
   std::shared_ptr<EdenConfig> config_;
   std::shared_ptr<ReloadableConfig> reloadableConfig_;
-  std::shared_ptr<CapturingScribeLogger> scribeLogger_;
   std::unique_ptr<ErrorLogger> errorLogger_;
   folly::Logger straceLogger_{"eden.test.nfsd3"};
   UnixClock clock_;

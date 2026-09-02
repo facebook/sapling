@@ -146,10 +146,11 @@ Behavior is controlled by config flags (see `EdenConfig.h`); `log()` no-ops when
 disabled, so just call it from the catch:
 
 - `telemetry:enable-error-logging` — master on/off.
-- `telemetry:error-scribe-category` — Scribe category for the legacy path.
 - `telemetry:enable-stack-trace-upload` — upload captured stack traces to Manifold.
-- `telemetry:enable-xplatlogger-errors` — route errors via XplatLogger to the
-  Logger (Hive).
+
+Errors are always routed through XplatLogger to the Logger (Hive + Scuba). If
+XplatLogger is unavailable, `ErrorLogger` is disabled; there is no legacy
+Scribe fallback.
 
 ## Testing
 
@@ -157,7 +158,7 @@ Components that take an injectable `ErrorLogger&`/`ErrorLogger*` (e.g.
 `SaplingBackingStore`, `FuseChannel`, `TestMount`) are unit-testable directly:
 inject a capturing logger and assert on what was logged.
 
-- Use `eden/fs/telemetry/test/CapturingScribeLogger.h` to capture emitted events.
+- Use `eden/fs/telemetry/test/CapturingXplatLogger.h` to capture emitted events.
 - `TestMount` accepts an injectable `ErrorLogger`.
 - For an end-to-end smoke test, the `debugLogError` Thrift endpoint throws and
   logs a test error: `eden debug thrift debugLogError`.

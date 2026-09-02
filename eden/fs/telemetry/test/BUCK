@@ -6,14 +6,6 @@ load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_
 oncall("scm_client_infra")
 
 cpp_library(
-    name = "capturing_scribe_logger",
-    headers = ["CapturingScribeLogger.h"],
-    exported_deps = [
-        "//eden/common/telemetry:scribe_logger",
-    ],
-)
-
-cpp_library(
     name = "capturing_xplat_logger",
     headers = ["CapturingXplatLogger.h"],
     exported_deps = [

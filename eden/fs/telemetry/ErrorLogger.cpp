@@ -20,57 +20,25 @@
 
 namespace facebook::eden {
 
-ErrorLogger::ErrorLogger()
-    : ErrorLogger(nullptr, SessionInfo{}, nullptr, nullptr, nullptr) {}
-
 ErrorLogger::ErrorLogger(
     std::shared_ptr<ReloadableConfig> config,
     IXplatLogger* xplatLogger,
     EdenStatsPtr edenStats)
-    : ErrorLogger(
-          nullptr,
-          SessionInfo{},
-          std::move(config),
-          xplatLogger,
-          std::move(edenStats)) {}
-
-ErrorLogger::ErrorLogger(
-    std::shared_ptr<ScribeLogger> scribeLogger,
-    SessionInfo sessionInfo,
-    std::shared_ptr<ReloadableConfig> config,
-    IXplatLogger* xplatLogger,
-    EdenStatsPtr edenStats)
-    : hasScribe_(scribeLogger != nullptr),
-      structuredLogger_(std::move(scribeLogger), std::move(sessionInfo)),
-      config_(std::move(config)),
+    : config_(std::move(config)),
       xplatLogger_(xplatLogger),
       edenStats_(std::move(edenStats)) {}
 
 bool ErrorLogger::isEnabled() const {
-  if (!config_ || !config_->getEdenConfig()->enableErrorLogging.getValue()) {
-    return false;
-  }
-  const bool useXplat = xplatLogger_ &&
-      config_->getEdenConfig()->enableXplatLoggerErrors.getValue();
-  return hasScribe_ || useXplat;
+  return config_ && xplatLogger_ &&
+      config_->getEdenConfig()->enableErrorLogging.getValue();
 }
 
 void ErrorLogger::log(EdenErrorInfoBuilder builder) {
-  if (!config_) {
+  if (!config_ || !xplatLogger_) {
     return;
   }
   auto edenConfig = config_->getEdenConfig();
   if (!edenConfig->enableErrorLogging.getValue()) {
-    return;
-  }
-
-  // Either/or routing: when enabled and available, log to the XplatLogger
-  // (GeneratedEdenfsErrorsLoggerConfig -> Hive + Scuba). Otherwise fall back to
-  // the legacy Scribe -> perfpipe_edenfs_errors path, which needs a scribe
-  // binary configured.
-  const bool useXplat =
-      xplatLogger_ && edenConfig->enableXplatLoggerErrors.getValue();
-  if (!useXplat && !hasScribe_) {
     return;
   }
 
@@ -81,19 +49,12 @@ void ErrorLogger::log(EdenErrorInfoBuilder builder) {
         StackTraceUploader::uploadToManifold(std::move(*event.info.stackTrace));
   }
 
-  if (useXplat) {
-    if (edenStats_) {
-      edenStats_->increment(&TelemetryStats::errorsViaXplatLogger);
-    }
-    DynamicEvent de;
-    event.populate(de);
-    xplatLogger_->logEvent(xplat_keys::kErrorsCategory, de);
-  } else {
-    if (edenStats_) {
-      edenStats_->increment(&TelemetryStats::errorsViaStructuredLogger);
-    }
-    structuredLogger_.logEvent(std::move(event));
+  if (edenStats_) {
+    edenStats_->increment(&TelemetryStats::errorsViaXplatLogger);
   }
+  DynamicEvent de;
+  event.populate(de);
+  xplatLogger_->logEvent(xplat_keys::kErrorsCategory, de);
 }
 
 } // namespace facebook::eden

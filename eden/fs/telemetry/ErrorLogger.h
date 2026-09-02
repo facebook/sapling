@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "eden/common/utils/RefPtr.h"
-#include "eden/fs/telemetry/EdenStructuredLogger.h"
 
 namespace facebook::eden {
 
@@ -18,23 +17,13 @@ class EdenErrorInfoBuilder;
 class EdenStats;
 class IXplatLogger;
 class ReloadableConfig;
-class ScribeLogger;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
 class ErrorLogger {
  public:
-  ErrorLogger();
-
   explicit ErrorLogger(
-      std::shared_ptr<ReloadableConfig> config,
-      IXplatLogger* xplatLogger = nullptr,
-      EdenStatsPtr edenStats = nullptr);
-
-  ErrorLogger(
-      std::shared_ptr<ScribeLogger> scribeLogger,
-      SessionInfo sessionInfo,
-      std::shared_ptr<ReloadableConfig> config,
+      std::shared_ptr<ReloadableConfig> config = nullptr,
       IXplatLogger* xplatLogger = nullptr,
       EdenStatsPtr edenStats = nullptr);
 
@@ -45,18 +34,12 @@ class ErrorLogger {
    * is in thread-local storage and will be overwritten by the next
    * throw on this thread.
    *
-   * Requires enableErrorLogging to be true. The event is then routed one of
-   * two ways:
-   *   - XplatLogger path (when enableXplatLoggerErrors is true and an
-   *     XplatLogger is available): sent to GeneratedEdenfsErrorsLoggerConfig
-   *     (Hive + Scuba). Does not require a scribe binary.
-   *   - Legacy path (otherwise): sent via ScribeLogger to
-   *     perfpipe_edenfs_errors, which requires a scribe binary to be
-   *     configured.
+   * Requires enableErrorLogging to be true and an XplatLogger to be available.
+   * The event is sent to GeneratedEdenfsErrorsLoggerConfig (Hive + Scuba).
    *
-   * Stack trace symbolization and Manifold upload happen for whichever path
-   * is taken, and only when enableStackTraceUpload is true. If error logging
-   * is disabled or neither path is available, returns with zero cost.
+   * Stack trace symbolization and Manifold upload happen only when
+   * enableStackTraceUpload is true. If error logging is disabled or XplatLogger
+   * is unavailable, returns with zero cost.
    *
    * Example:
    *   logger->log(EdenErrorInfo::fuse(ex, ino, mountPath));
@@ -66,8 +49,6 @@ class ErrorLogger {
   bool isEnabled() const;
 
  private:
-  bool hasScribe_;
-  EdenStructuredLogger structuredLogger_;
   std::shared_ptr<ReloadableConfig> config_;
   // Not owned; outlives ErrorLogger (owned by EdenServer). May be null when
   // the XplatLogger is unavailable (e.g. EDEN_HAVE_LOGGER is off, or tests).

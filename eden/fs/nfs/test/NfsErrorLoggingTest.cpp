@@ -24,8 +24,6 @@ std::shared_ptr<ReloadableConfig> makeTestConfig() {
   auto edenConfig = EdenConfig::createTestEdenConfig();
   edenConfig->enableErrorLogging.setValue(
       true, ConfigSourceType::Default, true);
-  edenConfig->enableXplatLoggerErrors.setValue(
-      true, ConfigSourceType::Default, true);
   return std::make_shared<ReloadableConfig>(edenConfig);
 }
 

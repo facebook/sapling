@@ -10,7 +10,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
-        "//eden/common/telemetry:log_info",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
@@ -24,7 +23,6 @@ cpp_unittest(
         "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/telemetry/test:capturing_scribe_logger",
         "//eden/fs/telemetry/test:capturing_xplat_logger",
         "//eden/fs/utils:clock",
         "//eden/fs/utils:process_access_log",

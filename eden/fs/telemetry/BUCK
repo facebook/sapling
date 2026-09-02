@@ -133,7 +133,6 @@ cpp_library(
         "//eden/fs/config:config",
     ],
     exported_deps = [
-        ":structured_logger",
         "//eden/common/utils:ref_ptr",
     ],
 )

@@ -284,7 +284,6 @@ TEST_F(CheckoutCancellationTest, CancelledCheckoutLogsError) {
   CapturingXplatLogger xplatLogger;
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   auto errorLogger =
       std::make_shared<ErrorLogger>(reloadableConfig, &xplatLogger);

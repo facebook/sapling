@@ -177,7 +177,6 @@ TEST(EdenErrorInfoTest, ThriftErrorLoggedThroughErrorLogger) {
   CapturingXplatLogger xplatLogger;
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   ErrorLogger errorLogger{reloadableConfig, &xplatLogger};
 
@@ -209,10 +208,10 @@ TEST(EdenErrorInfoTest, SymbolizationIsDeferredUntilCreate) {
   }
 }
 
-TEST(EdenErrorInfoTest, RoutesToXplatLoggerWhenFlagEnabled) {
+TEST(EdenErrorInfoTest, RoutesToXplatLoggerWithoutLegacyGate) {
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
+  // enableXplatLoggerErrors remains at its deprecated default (false).
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   CapturingXplatLogger xplatLogger;
   auto stats = makeRefPtr<EdenStats>();

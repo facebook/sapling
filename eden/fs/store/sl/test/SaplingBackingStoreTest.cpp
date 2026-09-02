@@ -905,8 +905,6 @@ struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
   SaplingBackingStoreErrorLoggingTest() {
     testEdenConfig->enableErrorLogging.setValue(
         true, ConfigSourceType::UserConfig);
-    testEdenConfig->enableXplatLoggerErrors.setValue(
-        true, ConfigSourceType::UserConfig);
   }
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =

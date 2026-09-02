@@ -664,8 +664,6 @@ TEST(OverlayErrorLoggingTest, createOverlayFileLogsErrorOnFailure) {
   auto edenConfig = EdenConfig::createTestEdenConfig();
   edenConfig->enableErrorLogging.setValue(
       true, ConfigSourceType::Default, true);
-  edenConfig->enableXplatLoggerErrors.setValue(
-      true, ConfigSourceType::Default, true);
   auto config = std::make_shared<ReloadableConfig>(edenConfig);
   ErrorLogger errorLogger(config, &xplatLogger);
 
