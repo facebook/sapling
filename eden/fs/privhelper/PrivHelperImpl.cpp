@@ -268,6 +268,40 @@ class PrivHelperClientSession
     return future;
   }
 
+  /**
+   * Send a request without waiting for a response.
+   *
+   * The message is only enqueued: there is no way to force the write out
+   * without aborting or racing UnixSocket's own queued writes, so it races the
+   * socket closing and may never reach the server.
+   */
+  void sendOneWay(UnixSocket::Message&& msg) {
+    EventBase* eventBase;
+    {
+      auto state = state_.rlock();
+      if (state->status != Status::RUNNING) {
+        return;
+      }
+      eventBase = state->eventBase;
+    }
+    if (!eventBase) {
+      return;
+    }
+
+    eventBase->runInEventBaseThread(
+        [self = shared_from_this(), msg = std::move(msg)]() mutable {
+          auto state = self->state_.wlock();
+          if (!state->conn_) {
+            return;
+          }
+          // The null send callback is load-bearing: this send can still be
+          // queued while closeSocket() holds state_'s write lock, and a
+          // callback would reacquire it via sendError(); folly::Synchronized
+          // is not recursive.
+          state->conn_->send(std::move(msg));
+        });
+  }
+
  private:
   struct PendingRequest {
     folly::Promise<UnixSocket::Message> promise;
@@ -583,6 +617,8 @@ class PrivHelperClientImpl : public PrivHelper {
   Future<folly::Unit> setFuseReadAhead(
       StringPiece mountPath,
       uint32_t readAheadKb) override;
+  Future<Unit> setRestartArgs(const EdenFsRestartArgs& args) override;
+  void notifyCleanShutdown(StringPiece reason) noexcept override;
   void setEdenFsEventsLogger(
       std::shared_ptr<EdenFsEventsLogger> logger) override {
     session_->setEdenFsEventsLogger(std::move(logger));
@@ -900,6 +936,26 @@ Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_SET_FUSE_READ_AHEAD, response);
       });
+}
+
+Future<Unit> PrivHelperClientImpl::setRestartArgs(
+    const EdenFsRestartArgs& args) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeSetRestartArgsRequest(xid, args);
+
+  return sendAndRecv(xid, "set_restart_args", std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_SET_RESTART_ARGS, response);
+      });
+}
+
+void PrivHelperClientImpl::notifyCleanShutdown(StringPiece reason) noexcept {
+  // Best effort: this runs on the shutdown path, where the message races the
+  // EOF and the server may never see it.
+  session_->sendOneWay(
+      PrivHelperConn::serializeNotifyCleanShutdownRequest(
+          getNextXid(), reason));
 }
 
 int PrivHelperClientImpl::stop() {

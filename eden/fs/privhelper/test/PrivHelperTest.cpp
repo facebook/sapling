@@ -1313,6 +1313,15 @@ TEST(PrivHelperSessionTest, detachesFromParentProcessGroup) {
   EXPECT_EQ(0, WEXITSTATUS(status));
 }
 
+TEST_F(PrivHelperTest, cleanShutdownNotificationLeavesTheConnectionUsable) {
+  client_->notifyCleanShutdown("stop");
+
+  // A privhelper that does not act on this request -- every Linux one, and any
+  // build too old to know the type -- must still not reply to it. A later
+  // request completing proves nothing crashed and the stream is intact.
+  EXPECT_EQ(getpid(), std::move(client_->getServerPid()).get(1s));
+}
+
 TEST(
     PrivHelperClientLifetime,
     destroyingTheClientLeavesRequestsQueuedOnItsEventBaseSafeToRun) {
