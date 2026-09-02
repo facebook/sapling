@@ -2040,6 +2040,11 @@ struct RepoCreationRequest {
   4: optional CustomAclParams custom_acl;
   /// Size bucket (allows for provisioning the right amount of resources for the new repo)
   5: RepoSizeBucket size_bucket;
+  /// Short branch name (e.g. "main", not a full ref like "refs/heads/main")
+  /// that the repo's HEAD symref points at from creation. When unset, no HEAD
+  /// symref is written; clones of the repo will have no default branch until
+  /// one is created manually (mononoke_admin git-symref).
+  6: optional string default_branch;
 }
 
 struct CreateReposParams {
