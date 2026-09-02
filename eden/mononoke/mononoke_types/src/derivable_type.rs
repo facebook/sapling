@@ -73,6 +73,7 @@ pub enum DerivableType {
 #[derive(Clone, Copy, Debug, EnumIter, Eq, PartialEq)]
 pub enum DerivableUntopologicallyVariant {
     AclManifests,
+    BlameV3,
     BssmV3,
     Ccsm,
     ContentManifests,
@@ -239,6 +240,7 @@ impl DerivableType {
     pub fn into_derivable_untopologically_variant(self) -> Result<DerivableUntopologicallyVariant> {
         match self {
             DerivableType::AclManifests => Ok(DerivableUntopologicallyVariant::AclManifests),
+            DerivableType::BlameV3 => Ok(DerivableUntopologicallyVariant::BlameV3),
             DerivableType::BssmV3 => Ok(DerivableUntopologicallyVariant::BssmV3),
             DerivableType::Ccsm => Ok(DerivableUntopologicallyVariant::Ccsm),
             DerivableType::HgAugmentedManifests => {
@@ -313,6 +315,7 @@ impl DerivableUntopologicallyVariant {
     pub fn into_derivable_type(self) -> DerivableType {
         match self {
             DerivableUntopologicallyVariant::AclManifests => DerivableType::AclManifests,
+            DerivableUntopologicallyVariant::BlameV3 => DerivableType::BlameV3,
             DerivableUntopologicallyVariant::BssmV3 => DerivableType::BssmV3,
             DerivableUntopologicallyVariant::Ccsm => DerivableType::Ccsm,
             DerivableUntopologicallyVariant::ContentManifests => DerivableType::ContentManifests,

@@ -16,16 +16,21 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
+use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
+use futures::future;
 use history_manifest::RootHistoryManifestDirectoryId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::HistoryManifestDirectoryId;
 
 use crate::batch_v3::derive_blame_v3_in_batch;
+use crate::derive_from_predecessor_v3::derive_blame_v3_from_predecessor;
 use crate::derive_v3::derive_blame_v3;
+use crate::mapping_v2::RootBlameV2;
 
 const BLAME_V3_VERSION: i32 = 1;
 
@@ -169,5 +174,35 @@ impl BonsaiDerivable for RootBlameV3 {
                     ),
             }),
         ))
+    }
+}
+
+#[async_trait]
+impl DerivableUntopologically for RootBlameV3 {
+    const DERIVABLE_UNTOPOLOGICALLY_VARIANT: DerivableUntopologicallyVariant =
+        DerivableUntopologicallyVariant::BlameV3;
+
+    // Blame cannot be computed without ancestry, but blame v2 already holds
+    // the same payload under a different key, so v3 can be transcoded from it.
+    // This ties untopological v3 derivation to repos that have blame v2.
+    type PredecessorDependencies = dependencies![RootBlameV2, RootHistoryManifestDirectoryId];
+
+    async fn unsafe_derive_untopologically(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        let csid = bonsai.get_changeset_id();
+        let (blame_v2, root_manifest) = future::try_join(
+            derivation_ctx.fetch_dependency::<RootBlameV2>(ctx, csid),
+            derivation_ctx.fetch_dependency::<RootHistoryManifestDirectoryId>(ctx, csid),
+        )
+        .await?;
+        derive_blame_v3_from_predecessor(ctx, derivation_ctx.blobstore(), blame_v2, root_manifest)
+            .await?;
+        Ok(RootBlameV3 {
+            csid,
+            root_manifest,
+        })
     }
 }
