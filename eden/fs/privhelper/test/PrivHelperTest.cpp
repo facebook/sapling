@@ -1845,4 +1845,36 @@ TEST_F(PrivHelperBinaryTest, throwsWhenThereIsNothingToRelaunch) {
       std::runtime_error);
 }
 
+/**
+ * Exposes the privilege drop. initPartial() is what records the owner the drop
+ * has to match, so the fixture uses a real socket pair to set it.
+ */
+class PrivHelperDropTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::dropPrivilegesForRestart;
+};
+
+class PrivHelperDropTest : public ::testing::Test {
+ protected:
+  void initWithOwner(uid_t uid, gid_t gid) {
+    File clientConn;
+    File serverConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn);
+    clientConn_ = std::move(clientConn);
+    server_.initPartial(std::move(serverConn), uid, gid);
+  }
+
+  PrivHelperDropTestServer server_;
+  File clientConn_;
+};
+
+TEST_F(PrivHelperDropTest, refusesWhenTheResolvedIdentityIsNotTheOwner) {
+  // UserInfo::lookup() resolves the user running the test, so an owner that is
+  // deliberately not that user is the mismatch the check exists for. Without
+  // it, a lookup that silently resolved to root would relaunch edenfs as root.
+  initWithOwner(getuid() + 1, getgid() + 1);
+
+  EXPECT_THROW(server_.dropPrivilegesForRestart(), std::runtime_error);
+}
+
 #endif // __APPLE__

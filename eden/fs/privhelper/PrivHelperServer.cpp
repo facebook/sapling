@@ -46,6 +46,7 @@
 #include <csignal>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/privhelper/NfsMountRpc.h"
 #include "eden/fs/privhelper/priority/ProcessPriority.h"
 #include "eden/fs/utils/MountInfoTable.h"
@@ -344,9 +345,35 @@ uint64_t currentEpochSeconds() {
           std::chrono::system_clock::now().time_since_epoch())
           .count());
 }
+
+bool spawnEdenFs(
+    const AbsolutePath& binary,
+    const std::vector<std::string>& argv,
+    const std::vector<std::pair<std::string, std::string>>& env) {
+  SpawnedProcess::Options opts;
+  opts.executablePath(binary);
+  opts.nullStdin();
+
+  auto& environment = opts.environment();
+  environment.clear();
+  for (const auto& [key, value] : env) {
+    environment.set(key, value);
+  }
+
+  try {
+    SpawnedProcess proc(argv, std::move(opts));
+    XLOGF(INFO, "relaunched edenfs as pid {}", proc.pid());
+    std::move(proc).detach();
+    return true;
+  } catch (const std::exception& ex) {
+    XLOGF(ERR, "failed to relaunch edenfs: {}", folly::exceptionStr(ex));
+    return false;
+  }
+}
 } // namespace
 
-PrivHelperServer::PrivHelperServer() : now_{currentEpochSeconds} {}
+PrivHelperServer::PrivHelperServer()
+    : spawnEdenFs_{spawnEdenFs}, now_{currentEpochSeconds} {}
 #else
 PrivHelperServer::PrivHelperServer() = default;
 #endif // __APPLE__
@@ -1790,6 +1817,27 @@ PrivHelperServer::readRelaunchCommand() const {
   }
 
   return command;
+}
+
+void PrivHelperServer::dropPrivilegesForRestart() const {
+  auto info = UserInfo::lookup();
+
+  // UserInfo::lookup() falls back to uid 0 when the real uid is root and
+  // SUDO_UID is absent, and dropPrivileges() then silently does nothing. Check
+  // the resolved identity against the owner this privhelper was started for.
+  if (info.getUid() == 0) {
+    throw std::runtime_error("resolved uid is root");
+  }
+  if (info.getUid() != uid_ || info.getGid() != gid_) {
+    throwf<std::runtime_error>(
+        "resolved uid/gid {}/{} do not match the privhelper owner {}/{}",
+        info.getUid(),
+        info.getGid(),
+        uid_,
+        gid_);
+  }
+
+  info.dropPrivileges();
 }
 
 bool PrivHelperServer::admitRestartAttempt() {

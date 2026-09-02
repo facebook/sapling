@@ -256,6 +256,16 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
     std::vector<std::pair<std::string, std::string>> env;
   };
 
+  /**
+   * Spawns a new edenfs. Overridable so that tests can exercise the restart
+   * decision without launching anything. Returns false if the spawn failed.
+   */
+  using SpawnEdenFsFn = std::function<bool(
+      const AbsolutePath& binary,
+      const std::vector<std::string>& argv,
+      const std::vector<std::pair<std::string, std::string>>& env)>;
+  SpawnEdenFsFn spawnEdenFs_;
+
   // Seconds since the epoch. Overridable so that tests can age the restart
   // window without sleeping.
   std::function<uint64_t()> now_;
@@ -295,6 +305,18 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    */
   virtual AbsolutePath resolveEdenFsBinary(
       const RelaunchCommand& command) const;
+
+  /**
+   * Drop to the privhelper's owner, verifying that the drop really happened.
+   * Throws if it cannot be trusted.
+   *
+   * Changes process-wide credentials: real, effective and saved uid/gid, plus
+   * the supplementary groups. Root cannot be regained afterwards.
+   *
+   * Virtual because a unit test must neither drop privileges for real nor be
+   * able to.
+   */
+  virtual void dropPrivilegesForRestart() const;
 #endif // __APPLE__
 
  private:
