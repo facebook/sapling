@@ -560,6 +560,29 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
           daemonPid, daemonMemoryPriority.value());
     }
 
+    // Also protect the privhelper process when explicitly configured.
+    const auto privhelperMemoryPriority =
+        edenConfig->privHelperTargetMemoryPriority.getValue();
+    if (privhelperMemoryPriority.has_value()) {
+      auto privhelperPid = privHelper->getPid();
+      if (privhelperPid > 0) {
+        try {
+          privHelper->setMemoryPriorityForProcessBlocking(
+              privhelperPid, privhelperMemoryPriority.value());
+        } catch (const std::exception& ex) {
+          XLOGF(
+              WARN,
+              "Cannot set privhelper memory priority to {}: {}",
+              privhelperMemoryPriority.value(),
+              ex.what());
+        }
+      } else {
+        XLOG(
+            WARN,
+            "Cannot set privhelper memory priority: privhelper pid unknown");
+      }
+    }
+
 #ifdef __linux__
     XLOGF(
         DBG2,

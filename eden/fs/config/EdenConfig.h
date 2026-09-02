@@ -282,6 +282,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Similar to the above config, but sets the PrivHelper's priority instead.
+   * Leave unset to avoid changing the PrivHelper's priority.
    */
   ConfigSetting<std::optional<int32_t>> privHelperTargetMemoryPriority{
       "core:priv-helper-target-memory-priority",
