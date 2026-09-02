@@ -1066,9 +1066,9 @@ pub const PHAB_DIFF_ID_PUSHVAR_KEY: &str = "PHAB_DIFF_ID";
 /// `UseJk` (the default) consults the JK as before. `ForceOn`/`ForceOff`
 /// wins over the JK. This is the permanent per-land control surface for
 /// merge resolution:
-/// - `rebase_stack_onto` requires `ForceOff` (merge results would be
-///   silently discarded on that path), as does the multi-repo-land
-///   manifest-land path built on it;
+/// - `rebase_stack_onto` honors whatever the caller sets; the
+///   multi-repo-land manifest-land path built on it gates that on
+///   `scm/mononoke:sslv2_merge_resolution_enabled`;
 /// - the author-facing opt-out (`@no-merge-resolution` pragma ->
 ///   Landcastle sends the pushvar as `"false"`) is tracked in T285699818,
 ///   and exposure through checkout-less land APIs in T285699837.
