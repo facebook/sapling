@@ -39,6 +39,50 @@ Test -l (files with matches):
   apple
   fruits
 
+Test --max-count limits matching lines per file:
+  $ cat > repeated << 'EOF'
+  > match one
+  > no match
+  > match two
+  > EOF
+  $ sl commit -Aqm 'add repeated matches'
+  $ sl grep --max-count 1 match path:repeated
+  repeated:match one
+
+Test --replace expands capture groups:
+  $ sl grep --replace '$1' '^match (.*)$' path:repeated
+  repeated:one
+  repeated:two
+
+Test --replace preserves whole-input anchor semantics:
+  $ printf 'match one\nmatch one\nlast one\nlast one' > anchored
+  $ sl commit -Aqm 'add anchor replacement cases'
+  $ sl grep --replace X 'one|\Amatch one' path:anchored
+  anchored:X
+  anchored:match X
+  anchored:last X
+  anchored:last X
+  $ sl grep --replace X 'one|last one\z' path:anchored
+  anchored:match X
+  anchored:match X
+  anchored:last X
+  anchored:X
+  $ sl grep --replace X '\Amatch one' path:anchored
+  anchored:X
+  $ sl grep --replace X 'last one\z' path:anchored
+  anchored:X
+  $ sl grep -T json --replace X '\Amatch one' path:anchored
+  [
+    {"path":"anchored","text":"X"}
+  ]
+
+Test --null terminates file paths with NUL:
+  $ sl grep --null --max-count 1 match path:repeated > null-output
+  $ f --hexdump null-output
+  null-output:
+  0000: 72 65 70 65 61 74 65 64 00 6d 61 74 63 68 20 6f |repeated.match o|
+  0010: 6e 65 0a                                        |ne.|
+
 Test -w (word regexp):
   $ sl grep app | sort
   apple:apple
@@ -48,6 +92,9 @@ Test -w (word regexp):
 
 Test -V (invert match):
   $ sl grep -V apple path:fruits
+  fruits:banana
+  fruits:orange
+  $ sl grep -V --replace X '^apple' path:fruits
   fruits:banana
   fruits:orange
 
@@ -104,6 +151,10 @@ Test color output with line numbers:
   $ sl grep --color=always -n banana path:banana
   [35mbanana[39m:[32m1[39m:[0m[1m[31mbanana[0m
 
+Test color output with replacement:
+  $ sl grep --color=always --max-count 1 --replace hit match path:repeated
+  [35mrepeated[39m:[0m[1m[31mhit[0m one
+
 Test color disabled explicitly:
   $ sl grep --color=off apple path:apple
   apple:apple
@@ -120,6 +171,13 @@ Test JSON output with line numbers:
   $ sl grep -T json -n banana path:fruits
   [
     {"path":"fruits","line_number":2,"text":"banana"}
+  ]
+
+Test JSON output with replacement:
+  $ sl grep -T json --replace '$1' '^match (.*)$' path:repeated
+  [
+    {"path":"repeated","text":"one"},
+    {"path":"repeated","text":"two"}
   ]
 
 Test JSON output with multiple matches:
@@ -328,6 +386,8 @@ Test grep skips binary files:
   $ sl commit -Aqm 'add files'
   $ sl grep match
   text_file:text match
+  $ sl grep --replace found match
+  text_file:text found
 
 #if symlink
 Test grep skips symlink blobs:

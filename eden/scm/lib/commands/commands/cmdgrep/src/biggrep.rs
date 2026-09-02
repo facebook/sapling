@@ -41,6 +41,7 @@ use crate::GrepOpts;
 use crate::GrepTextStyles;
 use crate::JsonOutput;
 use crate::PlainTextWriter;
+use crate::PlainTextWriterOptions;
 use crate::run_standard_grep_with_writer;
 use crate::run_summary_grep_with_writer;
 
@@ -97,9 +98,19 @@ pub fn try_biggrep(
         return Ok(None);
     }
 
+    if ctx.opts.max_count.is_some() {
+        abort!("--max-count is incompatible with biggrep; use --no-external to disable biggrep");
+    }
+    if ctx.opts.replace.is_some() {
+        abort!("--replace is incompatible with biggrep; use --no-external to disable biggrep");
+    }
+    if ctx.opts.null {
+        abort!("--null is incompatible with biggrep; use --no-external to disable biggrep");
+    }
+
     // -V (invert match) is not supported with biggrep
     if ctx.opts.invert_match {
-        abort!("Cannot use invert_match option with biggrep");
+        abort!("--invert-match is incompatible with biggrep; use --no-external to disable biggrep");
     }
 
     // Build the biggrep pattern
@@ -305,7 +316,14 @@ pub fn try_biggrep(
         Ok(Some(0))
     } else {
         let styles = GrepTextStyles::from_config(config.as_ref());
-        let mut out = PlainTextWriter::new(ctx.io().output(), ctx.should_color(), &styles)?;
+        let mut out = PlainTextWriter::new(
+            ctx.io().output(),
+            PlainTextWriterOptions {
+                use_color: ctx.should_color(),
+                null: false,
+            },
+            &styles,
+        )?;
         let mut match_count: u64 = 0;
 
         for line_result in lines {

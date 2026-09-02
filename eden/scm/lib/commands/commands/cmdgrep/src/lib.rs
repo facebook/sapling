@@ -30,8 +30,10 @@ use configmodel::Text;
 use filewalk::WalkInput;
 use filewalk::WalkOptions;
 use filewalk::walk_and_fetch;
+use grep::matcher::Captures;
 use grep::matcher::Match;
 use grep::matcher::Matcher;
+use grep::regex::RegexCaptures;
 use grep::regex::RegexMatcher;
 use grep::regex::RegexMatcherBuilder;
 use grep::searcher::BinaryDetection;
@@ -52,6 +54,11 @@ use types::path::RelativizedRepoPath;
 use types::path::RepoPathRelativizer;
 
 const OUTPUT_BUFFER_CAPACITY: usize = 64 * 1024;
+
+fn trim_line_terminator(line: &[u8]) -> &[u8] {
+    let line = line.strip_suffix(b"\n").unwrap_or(line);
+    line.strip_suffix(b"\r").unwrap_or(line)
+}
 
 #[derive(Clone)]
 pub(crate) struct GrepTextStyles {
@@ -101,11 +108,18 @@ pub(crate) struct PlainTextWriter<W: Write> {
     path_style: RenderedStyle,
     line_number_style: RenderedStyle,
     match_style: RenderedStyle,
+    null: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct PlainTextWriterOptions {
+    use_color: bool,
+    null: bool,
 }
 
 impl<W: Write> PlainTextWriter<W> {
-    fn new(inner: W, use_color: bool, styles: &GrepTextStyles) -> io::Result<Self> {
-        let (path_style, line_number_style, match_style) = if use_color {
+    fn new(inner: W, options: PlainTextWriterOptions, styles: &GrepTextStyles) -> io::Result<Self> {
+        let (path_style, line_number_style, match_style) = if options.use_color {
             let mut styler = Styler::new().map_err(|e| io::Error::other(e.to_string()))?;
             (
                 RenderedStyle::render(&styles.path, &mut styler)?,
@@ -121,16 +135,12 @@ impl<W: Write> PlainTextWriter<W> {
             path_style,
             line_number_style,
             match_style,
+            null: options.null,
         })
     }
 
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
-    }
-
-    fn trim_line_terminator<'a>(&self, line: &'a [u8]) -> &'a [u8] {
-        let line = line.strip_suffix(b"\n").unwrap_or(line);
-        line.strip_suffix(b"\r").unwrap_or(line)
     }
 
     fn write_styled_bytes(
@@ -165,7 +175,7 @@ impl<W: Write> PlainTextWriter<W> {
         sep: u8,
     ) -> io::Result<()> {
         self.write_path(path)?;
-        self.inner.write_all(&[sep])?;
+        self.inner.write_all(&[if self.null { 0 } else { sep }])?;
         if let Some(line_number) = line_number {
             self.write_line_number(line_number)?;
             self.inner.write_all(&[sep])?;
@@ -199,7 +209,7 @@ impl<W: Write> PlainTextWriter<W> {
         line: &[u8],
         matches: &[Match],
     ) -> io::Result<()> {
-        let line = self.trim_line_terminator(line);
+        let line = trim_line_terminator(line);
         self.write_prefix(path, line_number, b':')?;
         if matches.is_empty() {
             self.inner.write_all(line)?;
@@ -215,7 +225,7 @@ impl<W: Write> PlainTextWriter<W> {
         line_number: Option<u64>,
         line: &[u8],
     ) -> io::Result<()> {
-        let line = self.trim_line_terminator(line);
+        let line = trim_line_terminator(line);
         self.write_prefix(path, line_number, b':')?;
         self.inner.write_all(line)?;
         self.inner.write_all(b"\n")
@@ -227,7 +237,7 @@ impl<W: Write> PlainTextWriter<W> {
         line_number: Option<u64>,
         line: &[u8],
     ) -> io::Result<()> {
-        let line = self.trim_line_terminator(line);
+        let line = trim_line_terminator(line);
         self.write_prefix(path, line_number, b'-')?;
         self.inner.write_all(line)?;
         self.inner.write_all(b"\n")
@@ -244,7 +254,7 @@ impl<W: Write> PlainTextWriter<W> {
 
     pub(crate) fn write_file_match(&mut self, path: impl std::fmt::Display) -> io::Result<()> {
         self.write_path(path)?;
-        self.inner.write_all(b"\n")
+        self.inner.write_all(if self.null { b"\0" } else { b"\n" })
     }
 
     pub(crate) fn write_binary_match(&mut self, path: impl std::fmt::Display) -> io::Result<()> {
@@ -268,6 +278,74 @@ impl<W: Write> PlainTextWriter<W> {
             "WARNING: stopped searching binary file after match (found \"{escaped}\" byte around offset {offset})\n"
         );
         self.inner.write_all(remainder.as_bytes())
+    }
+}
+
+struct ReplacementState {
+    replacement: Vec<u8>,
+    captures: RegexCaptures,
+    output: Vec<u8>,
+}
+
+impl ReplacementState {
+    fn new(matcher: &RegexMatcher, replacement: &str) -> io::Result<Self> {
+        Ok(Self {
+            replacement: replacement.as_bytes().to_vec(),
+            captures: matcher.new_captures().map_err(io::Error::other)?,
+            output: Vec::new(),
+        })
+    }
+
+    fn replace<'a>(
+        &'a mut self,
+        matcher: &RegexMatcher,
+        mat: &SinkMatch<'_>,
+        mut match_positions: Option<&mut Vec<Match>>,
+    ) -> io::Result<Option<&'a [u8]>> {
+        let Self {
+            replacement,
+            captures,
+            output,
+        } = self;
+        output.clear();
+        if let Some(match_positions) = match_positions.as_mut() {
+            match_positions.clear();
+        }
+
+        let haystack = mat.buffer();
+        let mut range = mat.bytes_range_in_buffer();
+        let line = trim_line_terminator(&haystack[range.clone()]);
+        range.end = range.start + line.len();
+
+        let mut last_match = range.start;
+        let mut replaced = false;
+        matcher
+            .captures_iter_at(haystack, range.start, captures, |captures| {
+                let matched = captures
+                    .get(0)
+                    .expect("capture group 0 is set for every regex match");
+                if matched.start() > range.end || matched.end() > range.end {
+                    return false;
+                }
+
+                output.extend_from_slice(&haystack[last_match..matched.start()]);
+                last_match = matched.end();
+                replaced = true;
+                let start = output.len();
+                captures.interpolate(
+                    |name| matcher.capture_index(name),
+                    haystack,
+                    replacement,
+                    output,
+                );
+                if let Some(match_positions) = match_positions.as_mut() {
+                    match_positions.push(Match::new(start, output.len()));
+                }
+                true
+            })
+            .map_err(io::Error::other)?;
+        output.extend_from_slice(&haystack[last_match..range.end]);
+        Ok(replaced.then_some(output))
     }
 }
 
@@ -312,12 +390,35 @@ fn should_grep_file(file_result: &filewalk::FileResult) -> bool {
     !file_result.is_symlink()
 }
 
+fn search_blob<S: Sink<Error = io::Error>>(
+    searcher: &mut Searcher,
+    matcher: &RegexMatcher,
+    data: Blob,
+    sink: &mut S,
+) -> io::Result<()> {
+    match data {
+        Blob::Bytes(bytes) => searcher.search_slice(matcher, &bytes, sink),
+        #[cfg(fbcode_build)]
+        data @ Blob::IOBuf(_) => searcher.search_reader(matcher, data.into_reader(), sink),
+    }
+}
+
+fn search_blob_with_full_context<S: Sink<Error = io::Error>>(
+    searcher: &mut Searcher,
+    matcher: &RegexMatcher,
+    data: Blob,
+    sink: &mut S,
+) -> io::Result<()> {
+    searcher.search_slice(matcher, &data.into_bytes(), sink)
+}
+
 /// A grepper that searches file contents for matches using the plain text printer.
 pub(crate) struct Grepper<'a, W: Write> {
     regex_matcher: RegexMatcher,
     searcher: Searcher,
     relativizer: &'a RepoPathRelativizer,
     writer: PlainTextWriter<W>,
+    replacement: Option<ReplacementState>,
     invert_match: bool,
     match_count: u64,
 }
@@ -343,34 +444,56 @@ impl<'a, W: Write> Grepper<'a, W> {
     ) -> Result<Self> {
         let regex_matcher = build_regex_matcher(opts, pattern)?;
         let searcher = build_searcher(opts)?;
+        let replacement = if opts.invert_match {
+            None
+        } else {
+            opts.replace
+                .as_deref()
+                .map(|replacement| ReplacementState::new(&regex_matcher, replacement))
+                .transpose()?
+        };
 
         Ok(Self {
             regex_matcher,
             searcher,
             relativizer,
-            writer: PlainTextWriter::new(out, use_color, styles)?,
+            writer: PlainTextWriter::new(
+                out,
+                PlainTextWriterOptions {
+                    use_color,
+                    null: opts.null,
+                },
+                styles,
+            )?,
+            replacement,
             invert_match: opts.invert_match,
             match_count: 0,
         })
     }
 
     /// Grep a file's contents for matches.
-    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> io::Result<()> {
+    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: Blob) -> io::Result<()> {
         let display_path = RelativizeOnce::new(self.relativizer, path);
-
-        data.each_chunk(|chunk| {
-            let mut sink = StandardLineSink::new(
+        let needs_full_context = self.replacement.is_some();
+        let mut sink = StandardLineSink::new(
+            &self.regex_matcher,
+            &mut self.writer,
+            &mut self.replacement,
+            &display_path,
+            self.invert_match,
+        );
+        if needs_full_context {
+            search_blob_with_full_context(
+                &mut self.searcher,
                 &self.regex_matcher,
-                &mut self.writer,
-                &display_path,
-                self.invert_match,
-            );
-            self.searcher
-                .search_slice(&self.regex_matcher, chunk, &mut sink)
-                .map_err(|e| io::Error::other(e.to_string()))?;
-            self.match_count += sink.match_count;
-            Ok(())
-        })
+                data,
+                &mut sink,
+            )?;
+        } else {
+            search_blob(&mut self.searcher, &self.regex_matcher, data, &mut sink)?;
+        }
+        self.match_count += sink.match_count;
+        Ok(())
     }
 
     /// Get the total number of matches found.
@@ -400,27 +523,24 @@ impl<'a, W: Write> SummaryGrepper<'a, W> {
             regex_matcher,
             searcher,
             relativizer,
-            writer: PlainTextWriter::new(out, use_color, styles)?,
+            writer: PlainTextWriter::new(
+                out,
+                PlainTextWriterOptions {
+                    use_color,
+                    null: opts.null,
+                },
+                styles,
+            )?,
             match_count: 0,
         })
     }
 
     /// Grep a file's contents for matches.
-    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> io::Result<()> {
+    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: Blob) -> io::Result<()> {
         let display_path = RelativizeOnce::new(self.relativizer, path);
-        let mut file_has_match = false;
-
-        data.each_chunk(|chunk| {
-            if file_has_match {
-                return Ok(());
-            }
-            let mut sink = FileMatchLineSink::new(&mut self.writer, &display_path);
-            self.searcher
-                .search_slice(&self.regex_matcher, chunk, &mut sink)
-                .map_err(|e| io::Error::other(e.to_string()))?;
-            file_has_match = sink.has_match;
-            Ok(())
-        })?;
+        let mut sink = FileMatchLineSink::new(&mut self.writer, &display_path);
+        search_blob(&mut self.searcher, &self.regex_matcher, data, &mut sink)?;
+        let file_has_match = sink.has_match;
         if file_has_match {
             self.match_count += 1;
         }
@@ -440,6 +560,7 @@ impl<'a, W: Write> SummaryGrepper<'a, W> {
 struct StandardLineSink<'a, 'w, W: Write> {
     regex_matcher: &'a RegexMatcher,
     writer: &'w mut PlainTextWriter<W>,
+    replacement: &'w mut Option<ReplacementState>,
     path: &'a RelativizeOnce<'a>,
     invert_match: bool,
     match_count: u64,
@@ -451,12 +572,14 @@ impl<'a, 'w, W: Write> StandardLineSink<'a, 'w, W> {
     fn new(
         regex_matcher: &'a RegexMatcher,
         writer: &'w mut PlainTextWriter<W>,
+        replacement: &'w mut Option<ReplacementState>,
         path: &'a RelativizeOnce<'a>,
         invert_match: bool,
     ) -> Self {
         Self {
             regex_matcher,
             writer,
+            replacement,
             path,
             invert_match,
             match_count: 0,
@@ -474,11 +597,30 @@ impl<W: Write> Sink for StandardLineSink<'_, '_, W> {
         let line = mat.bytes();
         let path = self.path.display();
 
-        if self.invert_match || self.writer.match_style.is_empty() {
+        if let Some(replacement) = self.replacement.as_mut() {
+            if self.writer.match_style.is_empty() {
+                let Some(line) = replacement.replace(self.regex_matcher, mat, None)? else {
+                    return Ok(true);
+                };
+                self.writer
+                    .write_plain_match_line(path, line_number, line)?;
+            } else {
+                let Some(line) = replacement.replace(
+                    self.regex_matcher,
+                    mat,
+                    Some(&mut self.match_positions),
+                )?
+                else {
+                    return Ok(true);
+                };
+                self.writer
+                    .write_match_line(path, line_number, line, &self.match_positions)?;
+            }
+        } else if self.invert_match || self.writer.match_style.is_empty() {
             self.writer
                 .write_plain_match_line(path, line_number, line)?;
         } else {
-            let line = self.writer.trim_line_terminator(line);
+            let line = trim_line_terminator(line);
             self.match_positions.clear();
             self.regex_matcher
                 .find_iter(line, |matched| {
@@ -576,6 +718,9 @@ impl<W: Write> Sink for FileMatchLineSink<'_, '_, W> {
 /// Build a regex matcher from grep options.
 fn build_regex_matcher(opts: &GrepOpts, pattern: &str) -> Result<RegexMatcher> {
     let mut matcher_builder = RegexMatcherBuilder::new();
+    matcher_builder
+        .multi_line(true)
+        .line_terminator(Some(b'\n'));
 
     // -i: ignore case when matching
     if opts.ignore_case {
@@ -671,6 +816,15 @@ fn build_searcher(opts: &GrepOpts) -> Result<Searcher> {
         searcher_builder.invert_match(true);
     }
 
+    let max_count = match opts.max_count {
+        Some(max_count) => match max_count.try_into() {
+            Ok(max_count) => Some(max_count),
+            Err(err) => abort!("invalid --max-count value '{}': {}", max_count, err),
+        },
+        None => None,
+    };
+    searcher_builder.max_matches(max_count);
+
     // -A: print NUM lines of trailing context
     if let Some(after_context) = opts.after_context {
         let after_context = match after_context.try_into() {
@@ -758,6 +912,17 @@ define_flags! {
         /// use Perl-compatible regexps
         #[short('P')]
         perl_regexp: bool,
+
+        /// stop after NUM matching lines per file
+        #[argtype("NUM")]
+        max_count: Option<i64>,
+
+        /// replace matches with TEXT
+        #[argtype("TEXT")]
+        replace: Option<String>,
+
+        /// print NUL after file names
+        null: bool,
 
         /// use external search indexes when available (ADVANCED)
         external: bool = true,
@@ -988,7 +1153,7 @@ pub(crate) fn run_standard_grep_with_writer<W: Write>(
                 continue;
             }
 
-            grepper.grep_file(&file_result.path, &file_result.data)?;
+            grepper.grep_file(&file_result.path, file_result.data)?;
         }
     }
 
@@ -1033,7 +1198,7 @@ pub(crate) fn run_summary_grep_with_writer<W: Write>(
                 continue;
             }
 
-            grepper.grep_file(&file_result.path, &file_result.data)?;
+            grepper.grep_file(&file_result.path, file_result.data)?;
         }
     }
 
@@ -1102,6 +1267,14 @@ pub(crate) fn grep_files_json(
     let mut searcher = build_searcher(opts)?;
     let include_line_number = opts.line_number;
     let files_only = opts.files_with_matches;
+    let mut replacement = if files_only || opts.invert_match {
+        None
+    } else {
+        opts.replace
+            .as_deref()
+            .map(|replacement| ReplacementState::new(&regex_matcher, replacement))
+            .transpose()?
+    };
     let mut match_count: u64 = 0;
 
     for file_batch in file_items.into_batches() {
@@ -1116,15 +1289,10 @@ pub(crate) fn grep_files_json(
             if files_only {
                 // In files_only mode, just check if file has any match
                 let mut file_has_match = false;
-                file_result.data.each_chunk(|chunk| {
-                    let mut sink = FileMatchSink {
-                        has_match: &mut file_has_match,
-                    };
-                    searcher
-                        .search_slice(&regex_matcher, chunk, &mut sink)
-                        .map_err(|e| io::Error::other(e.to_string()))?;
-                    Ok(())
-                })?;
+                let mut sink = FileMatchSink {
+                    has_match: &mut file_has_match,
+                };
+                search_blob(&mut searcher, &regex_matcher, file_result.data, &mut sink)?;
                 if file_has_match {
                     json_out.write(&GrepFileMatch {
                         path: display_path.display(),
@@ -1133,18 +1301,25 @@ pub(crate) fn grep_files_json(
                 }
             } else {
                 // Output matches directly as we find them
-                file_result.data.each_chunk(|chunk| {
-                    let mut sink = JsonWriteSink {
-                        path: &display_path,
-                        include_line_number,
-                        json_out,
-                        match_count: &mut match_count,
-                    };
-                    searcher
-                        .search_slice(&regex_matcher, chunk, &mut sink)
-                        .map_err(|e| io::Error::other(e.to_string()))?;
-                    Ok(())
-                })?;
+                let needs_full_context = replacement.is_some();
+                let mut sink = JsonWriteSink {
+                    matcher: &regex_matcher,
+                    replacement: &mut replacement,
+                    path: &display_path,
+                    include_line_number,
+                    json_out,
+                    match_count: &mut match_count,
+                };
+                if needs_full_context {
+                    search_blob_with_full_context(
+                        &mut searcher,
+                        &regex_matcher,
+                        file_result.data,
+                        &mut sink,
+                    )?;
+                } else {
+                    search_blob(&mut searcher, &regex_matcher, file_result.data, &mut sink)?;
+                }
             }
         }
     }
@@ -1154,6 +1329,8 @@ pub(crate) fn grep_files_json(
 
 /// A sink that writes grep matches directly to JSON output.
 pub(crate) struct JsonWriteSink<'a, 'p> {
+    pub matcher: &'a RegexMatcher,
+    pub replacement: &'a mut Option<ReplacementState>,
     pub path: &'a RelativizeOnce<'p>,
     pub include_line_number: bool,
     pub json_out: &'a mut JsonOutput,
@@ -1170,14 +1347,20 @@ impl Sink for JsonWriteSink<'_, '_> {
             None
         };
 
-        // Get the matched text, trimming the trailing newline
-        let text = String::from_utf8_lossy(mat.bytes());
-        let text = text.trim_end_matches('\n');
+        let text = if let Some(replacement) = self.replacement.as_mut() {
+            let Some(line) = replacement.replace(self.matcher, mat, None)? else {
+                return Ok(true);
+            };
+            String::from_utf8_lossy(line)
+        } else {
+            let line = trim_line_terminator(mat.bytes());
+            String::from_utf8_lossy(line)
+        };
 
         self.json_out.write(&GrepMatch {
             path: self.path.display(),
             line_number,
-            text,
+            text: &text,
         })?;
         *self.match_count += 1;
 
@@ -1273,6 +1456,7 @@ mod tests {
     use configmodel::Text;
 
     use super::PlainTextWriter;
+    use super::PlainTextWriterOptions;
     use crate::GrepTextStyles;
 
     #[derive(Clone, Debug, Default)]
@@ -1303,7 +1487,14 @@ mod tests {
             line_number: Text::from_static(""),
             matched: Text::from_static(""),
         };
-        let mut writer = PlainTextWriter::new(inner, false, &styles)?;
+        let mut writer = PlainTextWriter::new(
+            inner,
+            PlainTextWriterOptions {
+                use_color: false,
+                null: false,
+            },
+            &styles,
+        )?;
 
         writer.write_plain_match_line("path", None, b"hello")?;
         writer.write_plain_match_line("path", Some(2), b"world")?;

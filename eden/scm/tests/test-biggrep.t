@@ -34,6 +34,24 @@ Helper to capture biggrep args:
   >   cat "$TESTTMP/bg_args"
   > }
 
+Test options that biggrep cannot implement:
+  $ sl grep --max-count 1 foobar
+  abort: --max-count is incompatible with biggrep; use --no-external to disable biggrep
+  [255]
+  $ sl grep --replace replacement foobar
+  abort: --replace is incompatible with biggrep; use --no-external to disable biggrep
+  [255]
+  $ sl grep --null foobar
+  abort: --null is incompatible with biggrep; use --no-external to disable biggrep
+  [255]
+  $ sl grep --invert-match foobar
+  abort: --invert-match is incompatible with biggrep; use --no-external to disable biggrep
+  [255]
+
+The incompatible options remain available when external search is disabled:
+  $ sl grep --no-external --max-count 1 foobar grepdir/grepfile1
+  grepdir/grepfile1:foobarbaz
+
 Test basic argument passing:
   $ capture_args -n foobar
   test.tier fake re2 --stripdir -r --expression foobar
