@@ -485,9 +485,16 @@ async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
 
     // Knob off: the standard entry uses HG manifests.
     let hg = find_changed_files(&ctx, &repo, root, merge).await?;
-    let content =
-        find_changed_files_with(&ctx, &repo, root, merge, RangeDiffManifests::ContentCompat)
-            .await?;
+    let changesets = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, root, merge).await?;
+    let content = find_changed_files_with(
+        &ctx,
+        &repo,
+        root,
+        merge,
+        &changesets,
+        RangeDiffManifests::ContentCompat,
+    )
+    .await?;
     assert_eq!(
         hg, content,
         "HG and content manifests must report the same changed files"
@@ -990,7 +997,9 @@ async fn pushrebase_multi_root(fb: FacebookInit) -> Result<(), Error> {
     .await?;
 
     // should only rebase {bcs2, bcs3}
-    let rebased = find_rebased_set(&ctx, &repo, bcs_id_master, bcs_id_rebased.head).await?;
+    let rebased =
+        fetch_bonsai_range_ancestor_not_included(&ctx, &repo, bcs_id_master, bcs_id_rebased.head)
+            .await?;
     assert_eq!(rebased.len(), 2);
     let bcs2 = &rebased[0];
     let bcs3 = &rebased[1];
@@ -2519,18 +2528,10 @@ async fn batched_pushrebase_two_stacks(fb: FacebookInit) -> Result<(), Error> {
     // Index both stacks
     let bookmark = master_bookmark();
     let config = PushrebaseFlags::default();
-    let PushrebaseRequestIndex {
-        changed_files: cf_a,
-        changesets: changesets_a,
-        head: head_a,
-        root: root_a,
-    } = index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_a]).await?;
-    let PushrebaseRequestIndex {
-        changed_files: cf_b,
-        changesets: changesets_b,
-        head: head_b,
-        root: root_b,
-    } = index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_b]).await?;
+    let stack_a =
+        index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_a]).await?;
+    let stack_b =
+        index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_b]).await?;
 
     // Build PushrebaseRequests with oneshot channels
     let (tx_a, rx_a) = oneshot::channel();
@@ -2541,11 +2542,8 @@ async fn batched_pushrebase_two_stacks(fb: FacebookInit) -> Result<(), Error> {
     let hook_b: Box<dyn PushrebaseHook> = Box::new(Hook(repo.repo_identity().id()));
 
     let req_a = PushrebaseRequest {
-        changed_files: cf_a,
-        changesets: changesets_a,
-        head: head_a,
-        root: root_a,
-        conflict_check_base: root_a,
+        conflict_check_base: stack_a.root,
+        stack: stack_a,
         carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         hooks: vec![hook_a],
@@ -2553,11 +2551,8 @@ async fn batched_pushrebase_two_stacks(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let req_b = PushrebaseRequest {
-        changed_files: cf_b,
-        changesets: changesets_b,
-        head: head_b,
-        root: root_b,
-        conflict_check_base: root_b,
+        conflict_check_base: stack_b.root,
+        stack: stack_b,
         carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         hooks: vec![hook_b],
@@ -2628,28 +2623,17 @@ async fn batched_pushrebase_one_conflict(fb: FacebookInit) -> Result<(), Error> 
     // Index both stacks
     let bookmark = master_bookmark();
     let config = PushrebaseFlags::default();
-    let PushrebaseRequestIndex {
-        changed_files: cf_a,
-        changesets: changesets_a,
-        head: head_a,
-        root: root_a,
-    } = index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_a]).await?;
-    let PushrebaseRequestIndex {
-        changed_files: cf_b,
-        changesets: changesets_b,
-        head: head_b,
-        root: root_b,
-    } = index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_b]).await?;
+    let stack_a =
+        index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_a]).await?;
+    let stack_b =
+        index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs_b]).await?;
 
     let (tx_a, rx_a) = oneshot::channel();
     let (tx_b, rx_b) = oneshot::channel();
 
     let req_a = PushrebaseRequest {
-        changed_files: cf_a,
-        changesets: changesets_a,
-        head: head_a,
-        root: root_a,
-        conflict_check_base: root_a,
+        conflict_check_base: stack_a.root,
+        stack: stack_a,
         carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         hooks: vec![],
@@ -2657,11 +2641,8 @@ async fn batched_pushrebase_one_conflict(fb: FacebookInit) -> Result<(), Error> 
     };
 
     let req_b = PushrebaseRequest {
-        changed_files: cf_b,
-        changesets: changesets_b,
-        head: head_b,
-        root: root_b,
-        conflict_check_base: root_b,
+        conflict_check_base: stack_b.root,
+        stack: stack_b,
         carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         hooks: vec![],
@@ -2818,14 +2799,12 @@ async fn batched_pushrebase_rebase_failure_prevents_corrupt_hook_data(
             .commit()
             .await?;
         let bcs = bcs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let idx = index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs]).await?;
+        let stack =
+            index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs]).await?;
         let (tx, rx) = oneshot::channel();
         requests.push(PushrebaseRequest {
-            changed_files: idx.changed_files,
-            changesets: idx.changesets,
-            head: idx.head,
-            root: idx.root,
-            conflict_check_base: idx.root,
+            conflict_check_base: stack.root,
+            stack,
             carried_merge_file_info: vec![],
             retry_num: PushrebaseRetryNum(0),
             hooks: vec![Box::new(TrackingHook(repo.repo_identity().id()))],
@@ -3120,11 +3099,12 @@ line 8
     };
 
     // Rebase with the reconciled (carried) overrides
+    let rebased_set = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, base, client).await?;
     let (new_head, _, rebased_bonsais) = create_rebased_changesets(
         &ctx,
         &repo,
         &Default::default(),
-        find_rebased_set(&ctx, &repo, base, client).await?,
+        &rebased_set,
         base,
         client,
         s2,
@@ -3261,11 +3241,12 @@ async fn pushrebase_merge_resolution_carry_forward_with_new_server_changes(
     );
 
     // Rebase with reconciled overrides
+    let rebased_set = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, base, client).await?;
     let (new_head, _, rebased_bonsais) = create_rebased_changesets(
         &ctx,
         &repo,
         &Default::default(),
-        find_rebased_set(&ctx, &repo, base, client).await?,
+        &rebased_set,
         base,
         client,
         s2,
@@ -3754,11 +3735,12 @@ async fn pushrebase_merge_resolution_no_conflict_in_delta(fb: FacebookInit) -> R
     let reconciled = carried;
 
     // Rebase with carried overrides
+    let rebased_set = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, base, client).await?;
     let (new_head, _, rebased_bonsais) = create_rebased_changesets(
         &ctx,
         &repo,
         &Default::default(),
-        find_rebased_set(&ctx, &repo, base, client).await?,
+        &rebased_set,
         base,
         client,
         s2,
@@ -3838,16 +3820,13 @@ async fn batched_pushrebase_merge_resolution(fb: FacebookInit) -> Result<(), Err
 
     let client_bcs = client_cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let config = PushrebaseFlags::default();
-    let idx =
+    let stack =
         index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![client_bcs]).await?;
 
     let (tx, rx) = oneshot::channel();
     let request = PushrebaseRequest {
-        changed_files: idx.changed_files,
-        changesets: idx.changesets,
-        head: idx.head,
-        root: idx.root,
-        conflict_check_base: idx.root,
+        conflict_check_base: stack.root,
+        stack,
         carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         hooks: vec![],
@@ -3943,7 +3922,7 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
 
     let client_bcs = client_cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let config = PushrebaseFlags::default();
-    let idx =
+    let stack =
         index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![client_bcs]).await?;
 
     // First, get MergedFileInfo from a base→S1 check (simulating attempt 1)
@@ -3954,8 +3933,8 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
         base,
         base,
         s1,
-        std::slice::from_ref(idx.changesets.first().unwrap()),
-        &idx.changed_files,
+        std::slice::from_ref(stack.changesets.first().unwrap()),
+        &stack.changed_files,
     )
     .await?;
     let carried = result1
@@ -3965,10 +3944,7 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
     // Now simulate a retry: conflict_check_base = S1, carried info from attempt 1
     let (tx, rx) = oneshot::channel();
     let request = PushrebaseRequest {
-        changed_files: idx.changed_files,
-        changesets: idx.changesets,
-        head: idx.head,
-        root: idx.root,
+        stack,
         conflict_check_base: s1,
         carried_merge_file_info: carried,
         retry_num: PushrebaseRetryNum(1),

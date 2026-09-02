@@ -266,8 +266,8 @@ pub struct PushrebaseOutcome {
     pub merge_summary: Option<MergeResolutionSummary>,
 }
 
-/// Result of indexing a pushrebase request
-pub struct PushrebaseRequestIndex {
+/// A pushed stack prepared for conflict checking and rebasing.
+pub struct PushrebaseStack {
     /// Changed files in the pushed stack.
     pub changed_files: Vec<MPath>,
     /// Bonsai changesets to rebase, topological order (ancestor first).
@@ -279,14 +279,7 @@ pub struct PushrebaseRequestIndex {
 }
 
 pub struct PushrebaseRequest {
-    /// Changed files in the pushed stack.
-    pub changed_files: Vec<MPath>,
-    /// Bonsai changesets to rebase, topological order (ancestor first).
-    pub changesets: Vec<BonsaiChangeset>,
-    /// Head of the pushed stack.
-    pub head: ChangesetId,
-    /// Root of the pushed stack. Immutable; used for rebasing.
-    pub root: ChangesetId,
+    pub stack: PushrebaseStack,
     /// Last bookmark value checked for conflicts. Updated on CAS-failure re-queue.
     pub conflict_check_base: ChangesetId,
     /// Carried merge resolution info from previous CAS-failure attempts.
@@ -343,12 +336,7 @@ pub async fn do_pushrebase_bonsai(
     });
     let ctx = &ctx;
 
-    let PushrebaseRequestIndex {
-        changed_files: client_cf,
-        changesets: client_bcs,
-        head,
-        root,
-    } = index_pushrebase_request(ctx, repo, config, onto_bookmark, pushed).await?;
+    let stack = index_pushrebase_request(ctx, repo, config, onto_bookmark, pushed).await?;
 
     let use_pessimistic = justknobs::eval(
         "scm/mononoke:per_bookmark_locking",
@@ -362,10 +350,7 @@ pub async fn do_pushrebase_bonsai(
             repo,
             config,
             onto_bookmark,
-            head,
-            root,
-            client_cf,
-            &client_bcs,
+            &stack,
             prepushrebase_hooks,
         )
         .await;
@@ -376,10 +361,7 @@ pub async fn do_pushrebase_bonsai(
         repo,
         config,
         onto_bookmark,
-        head,
-        root,
-        client_cf,
-        &client_bcs,
+        &stack,
         prepushrebase_hooks,
     )
     .await
@@ -393,22 +375,25 @@ pub async fn index_pushrebase_request(
     config: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
     pushed: &HashSet<BonsaiChangeset>,
-) -> Result<PushrebaseRequestIndex, PushrebaseError> {
+) -> Result<PushrebaseStack, PushrebaseError> {
     let head = find_only_head_or_fail(pushed)?;
     let roots = find_roots(pushed);
     let root = find_closest_root(ctx, repo, config, onto_bookmark, &roots).await?;
 
-    let (mut client_cf, client_bcs) = try_join(
-        find_changed_files(ctx, repo, root, head),
-        fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head),
+    let client_bcs = fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head).await?;
+    let client_cf = find_changed_files_with(
+        ctx,
+        repo,
+        root,
+        head,
+        &client_bcs,
+        RangeDiffManifests::FromKnob,
     )
     .await?;
 
-    client_cf.extend(find_subtree_changes(&client_bcs)?);
-
     check_filenodes_backfilled(ctx, repo, &head, config.not_generated_filenodes_limit).await?;
 
-    Ok(PushrebaseRequestIndex {
+    Ok(PushrebaseStack {
         changed_files: client_cf,
         changesets: client_bcs,
         head,
@@ -481,11 +466,15 @@ pub async fn rebase_stack_onto(
         )));
     }
 
-    let mut client_cf: Vec<MPath> = client_bcs
-        .iter()
-        .flat_map(extract_conflict_files_from_bonsai_changeset)
-        .collect();
-    client_cf.extend(find_subtree_changes(&client_bcs)?);
+    let client_cf = find_changed_files_with(
+        ctx,
+        repo,
+        root,
+        head,
+        &client_bcs,
+        RangeDiffManifests::ContentCompat,
+    )
+    .await?;
 
     let conflict_result = check_pushrebase_conflicts_with(
         ctx,
@@ -505,7 +494,7 @@ pub async fn rebase_stack_onto(
         ctx,
         repo,
         config,
-        client_bcs,
+        &client_bcs,
         root,
         head,
         onto,
@@ -626,7 +615,7 @@ pub async fn do_batched_pushrebase(
 
     let mut requests_iter = requests.into_iter();
     while let Some(mut request) = requests_iter.next() {
-        let bookmark_val = old_bookmark_value.unwrap_or(request.root);
+        let bookmark_val = old_bookmark_value.unwrap_or(request.stack.root);
         // Narrow-range scan: use conflict_check_base as ancestor so retries
         // only scan the delta since the last attempt. On first attempt,
         // conflict_check_base == root, so the full range is scanned.
@@ -634,11 +623,11 @@ pub async fn do_batched_pushrebase(
             ctx,
             repo,
             config,
-            request.root,
+            request.stack.root,
             request.conflict_check_base,
             bookmark_val,
-            &request.changesets,
-            &request.changed_files,
+            &request.stack.changesets,
+            &request.stack.changed_files,
         )
         .await
         {
@@ -682,7 +671,7 @@ pub async fn do_batched_pushrebase(
             repo.commit_graph()
                 .changeset_linear_depth(ctx, bookmark_val),
             repo.commit_graph()
-                .changeset_linear_depth(ctx, request.root),
+                .changeset_linear_depth(ctx, request.stack.root),
         )
         .await
         {
@@ -701,22 +690,18 @@ pub async fn do_batched_pushrebase(
         let request_old_bookmark_value = running_head;
 
         // Rebase this stack onto the running head using the immutable root.
-        let onto = running_head.unwrap_or(request.root);
-        let rebase_result = async {
-            let rebased_set = find_rebased_set(ctx, repo, request.root, request.head).await?;
-            create_rebased_changesets(
-                ctx,
-                repo,
-                config,
-                rebased_set,
-                request.root,
-                request.head,
-                onto,
-                &mut commit_hooks,
-                reconciled_overrides,
-            )
-            .await
-        }
+        let onto = running_head.unwrap_or(request.stack.root);
+        let rebase_result = create_rebased_changesets(
+            ctx,
+            repo,
+            config,
+            &request.stack.changesets,
+            request.stack.root,
+            request.stack.head,
+            onto,
+            &mut commit_hooks,
+            reconciled_overrides,
+        )
         .await;
 
         match rebase_result {
@@ -838,6 +823,7 @@ pub async fn do_batched_pushrebase(
                     .iter()
                     .filter(|pair| {
                         p.request
+                            .stack
                             .changesets
                             .iter()
                             .any(|cs| cs.get_changeset_id() == pair.id_old)
@@ -856,7 +842,7 @@ pub async fn do_batched_pushrebase(
                 sample.log_with_msg("batched_pushrebase_request_complete", None);
 
                 let _ = p.request.response_tx.send(Ok(PushrebaseOutcome {
-                    old_bookmark_value: Some(p.old_bookmark_value.unwrap_or(p.request.root)),
+                    old_bookmark_value: Some(p.old_bookmark_value.unwrap_or(p.request.stack.root)),
                     head: p.new_head,
                     retry_num: p.request.retry_num,
                     rebased_changesets: stack_pairs,
@@ -1022,8 +1008,8 @@ async fn check_pushrebase_conflicts_with(
         }
     }
 
-    let mut server_cf = find_changed_files_with(ctx, repo, ancestor, descendant, manifests).await?;
-    server_cf.extend(find_subtree_changes(&server_bcs)?);
+    let server_cf =
+        find_changed_files_with(ctx, repo, ancestor, descendant, &server_bcs, manifests).await?;
 
     match intersect_changed_files(server_cf, client_cf.to_vec()) {
         Ok(()) => Ok(ConflictCheckResult {
@@ -1131,10 +1117,7 @@ async fn rebase_with_lock(
     repo: &impl PushrebaseRepo,
     config: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
-    head: ChangesetId,
-    root: ChangesetId,
-    client_cf: Vec<MPath>,
-    client_bcs: &[BonsaiChangeset],
+    stack: &PushrebaseStack,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
     let overall_start = Instant::now();
@@ -1148,11 +1131,11 @@ async fn rebase_with_lock(
         ctx,
         repo,
         config,
-        root,
-        root,
+        stack.root,
+        stack.root,
         speculative_bv_cs,
-        client_bcs,
-        &client_cf,
+        &stack.changesets,
+        &stack.changed_files,
     )
     .await?;
 
@@ -1184,10 +1167,7 @@ async fn rebase_with_lock(
         config,
         auth_value,
         speculative,
-        root,
-        head,
-        &client_cf,
-        client_bcs,
+        stack,
         prepushrebase_hooks,
     )
     .await;
@@ -1266,10 +1246,7 @@ async fn try_rebase_under_lock(
     config: &PushrebaseFlags,
     auth_value: Option<ChangesetId>,
     speculative: SpeculativeConflictResult,
-    root: ChangesetId,
-    head: ChangesetId,
-    client_cf: &[MPath],
-    client_bcs: &[BonsaiChangeset],
+    stack: &PushrebaseStack,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<RebaseUnderLockResult, PushrebaseError> {
     let auth_cs = auth_value.ok_or_else(|| {
@@ -1297,11 +1274,11 @@ async fn try_rebase_under_lock(
             ctx,
             repo,
             config,
-            root,
+            stack.root,
             speculative.bookmark_value,
             auth_cs,
-            client_bcs,
-            client_cf,
+            &stack.changesets,
+            &stack.changed_files,
         )
         .await?;
 
@@ -1332,14 +1309,13 @@ async fn try_rebase_under_lock(
         .as_ref()
         .map(|overrides| overrides.iter().map(|info| info.path.clone()).collect());
 
-    let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
     let (new_head, rebased_changesets, rebased_bonsais) = create_rebased_changesets(
         ctx,
         repo,
         config,
-        rebased_set,
-        root,
-        head,
+        &stack.changesets,
+        stack.root,
+        stack.head,
         auth_cs,
         &mut hooks,
         merged_overrides,
@@ -1579,18 +1555,18 @@ async fn speculative_batch_check(
     for request in requests {
         let bookmark_val = match speculative_bv {
             Some(v) => v,
-            None => request.root,
+            None => request.stack.root,
         };
 
         let conflict_result = match check_pushrebase_conflicts(
             ctx,
             repo,
             config,
-            request.root,
+            request.stack.root,
             request.conflict_check_base,
             bookmark_val,
-            &request.changesets,
-            &request.changed_files,
+            &request.stack.changesets,
+            &request.stack.changed_files,
         )
         .await
         {
@@ -1608,7 +1584,7 @@ async fn speculative_batch_check(
             repo.commit_graph()
                 .changeset_linear_depth(ctx, bookmark_val),
             repo.commit_graph()
-                .changeset_linear_depth(ctx, request.root),
+                .changeset_linear_depth(ctx, request.stack.root),
         )
         .await
         {
@@ -1683,11 +1659,11 @@ async fn rebase_batch_under_lock(
         if auth_value != speculative_bv {
             let auth_cs = match auth_value {
                 Some(v) => v,
-                None => request.root,
+                None => request.stack.root,
             };
             let spec_cs = match speculative_bv {
                 Some(v) => v,
-                None => request.root,
+                None => request.stack.root,
             };
 
             if auth_cs != spec_cs {
@@ -1695,11 +1671,11 @@ async fn rebase_batch_under_lock(
                     ctx,
                     repo,
                     config,
-                    request.root,
+                    request.stack.root,
                     spec_cs,
                     auth_cs,
-                    &request.changesets,
-                    &request.changed_files,
+                    &request.stack.changesets,
+                    &request.stack.changed_files,
                 )
                 .await
                 {
@@ -1744,22 +1720,18 @@ async fn rebase_batch_under_lock(
         request.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
 
         let request_old_bookmark_value = running_head;
-        let onto = running_head.unwrap_or(request.root);
-        let rebase_result = async {
-            let rebased_set = find_rebased_set(ctx, repo, request.root, request.head).await?;
-            create_rebased_changesets(
-                ctx,
-                repo,
-                config,
-                rebased_set,
-                request.root,
-                request.head,
-                onto,
-                commit_hooks,
-                reconciled_overrides,
-            )
-            .await
-        }
+        let onto = running_head.unwrap_or(request.stack.root);
+        let rebase_result = create_rebased_changesets(
+            ctx,
+            repo,
+            config,
+            &request.stack.changesets,
+            request.stack.root,
+            request.stack.head,
+            onto,
+            commit_hooks,
+            reconciled_overrides,
+        )
         .await;
 
         match rebase_result {
@@ -1890,6 +1862,7 @@ fn dispatch_batch_results(
             .iter()
             .filter(|pair| {
                 p.request
+                    .stack
                     .changesets
                     .iter()
                     .any(|cs| cs.get_changeset_id() == pair.id_old)
@@ -1905,7 +1878,7 @@ fn dispatch_batch_results(
         sample.log_with_msg("batched_pushrebase_request_complete", None);
 
         let _ = p.request.response_tx.send(Ok(PushrebaseOutcome {
-            old_bookmark_value: Some(p.old_bookmark_value.unwrap_or(p.request.root)),
+            old_bookmark_value: Some(p.old_bookmark_value.unwrap_or(p.request.stack.root)),
             head: p.new_head,
             retry_num: p.request.retry_num,
             rebased_changesets: stack_pairs,
@@ -1934,10 +1907,7 @@ async fn rebase_in_loop(
     repo: &impl Repo,
     config: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
-    head: ChangesetId,
-    root: ChangesetId,
-    client_cf: Vec<MPath>,
-    client_bcs: &[BonsaiChangeset],
+    stack: &PushrebaseStack,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
@@ -1945,7 +1915,7 @@ async fn rebase_in_loop(
     let emit_all_bookmarks = config.monitoring_bookmark.is_some();
     let mut any_attempt_resolved_conflicts = false;
     let repo_args = (repo.repo_identity().name().to_string(),);
-    let mut latest_rebase_attempt = root;
+    let mut latest_rebase_attempt = stack.root;
     let mut carried_merge_file_info: Vec<MergedFileInfo> = Vec::new();
     let mut total_pushrebase_distance: usize = 0;
     let mut accumulated_merge_summary = MergeResolutionSummary::NotNeeded;
@@ -1971,11 +1941,11 @@ async fn rebase_in_loop(
             ctx,
             repo,
             config,
-            root,
+            stack.root,
             latest_rebase_attempt,
-            old_bookmark_value.unwrap_or(root),
-            client_bcs,
-            &client_cf,
+            old_bookmark_value.unwrap_or(stack.root),
+            &stack.changesets,
+            &stack.changed_files,
         )
         .await?;
         // Accumulate total pushrebase distance across retries since each
@@ -2037,8 +2007,7 @@ async fn rebase_in_loop(
             ctx,
             repo,
             config,
-            root,
-            head,
+            stack,
             old_bookmark_value,
             onto_bookmark,
             hooks,
@@ -2082,7 +2051,7 @@ async fn rebase_in_loop(
             sample.log_with_msg("pushrebase_complete", None);
 
             let res = PushrebaseOutcome {
-                old_bookmark_value: Some(old_bookmark_value.unwrap_or(root)),
+                old_bookmark_value: Some(old_bookmark_value.unwrap_or(stack.root)),
                 head,
                 retry_num,
                 rebased_changesets,
@@ -2095,7 +2064,7 @@ async fn rebase_in_loop(
         } else {
             // CAS failed — carry forward merge info for next attempt
             carried_merge_file_info = reconciled_overrides.unwrap_or_default();
-            latest_rebase_attempt = old_bookmark_value.unwrap_or(root);
+            latest_rebase_attempt = old_bookmark_value.unwrap_or(stack.root);
             if emit_all_bookmarks {
                 bookmarks::saturation::record_pushrebase_failure(
                     repo.repo_identity().name(),
@@ -2129,8 +2098,7 @@ async fn do_rebase(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
-    root: ChangesetId,
-    head: ChangesetId,
+    stack: &PushrebaseStack,
     old_bookmark_value: Option<ChangesetId>,
     onto_bookmark: &BookmarkKey,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
@@ -2143,15 +2111,14 @@ async fn do_rebase(
     )>,
     PushrebaseError,
 > {
-    let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
     let (new_head, rebased_changesets, rebased_bonsais) = create_rebased_changesets(
         ctx,
         repo,
         config,
-        rebased_set,
-        root,
-        head,
-        old_bookmark_value.unwrap_or(root),
+        &stack.changesets,
+        stack.root,
+        stack.head,
+        old_bookmark_value.unwrap_or(stack.root),
         &mut hooks,
         merged_file_overrides,
     )
@@ -2445,17 +2412,21 @@ async fn fetch_bonsai_range_ancestor_not_included(
         .await?)
 }
 
+#[cfg(test)]
 async fn find_changed_files(
     ctx: &CoreContext,
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> Result<Vec<MPath>, PushrebaseError> {
+    let changesets =
+        fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
     find_changed_files_with(
         ctx,
         repo,
         ancestor,
         descendant,
+        &changesets,
         RangeDiffManifests::FromKnob,
     )
     .await
@@ -2466,79 +2437,55 @@ async fn find_changed_files_with(
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
+    changesets: &[BonsaiChangeset],
     manifests: RangeDiffManifests,
 ) -> Result<Vec<MPath>, PushrebaseError> {
-    let id_to_bcs = repo
-        .commit_graph()
-        .range_stream(ctx, ancestor, descendant)
-        .await?
-        .map(async |bcs_id| {
-            let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
-            anyhow::Ok((bcs_id, bcs))
-        })
-        .buffered(100)
-        .try_collect::<HashMap<_, _>>()
-        .await?;
+    let ids: HashSet<_> = std::iter::once(ancestor)
+        .chain(changesets.iter().map(BonsaiChangeset::get_changeset_id))
+        .collect();
+    let use_content_manifests = match manifests {
+        RangeDiffManifests::ContentCompat => true,
+        RangeDiffManifests::FromKnob => justknobs::eval(
+            "scm/mononoke:pushrebase_range_diff_use_content_manifests",
+            None,
+            Some(repo.repo_identity().name()),
+        ),
+    };
 
-    let ids: HashSet<_> = id_to_bcs.keys().copied().collect();
-
-    let file_changes_futs: Vec<_> = id_to_bcs
-        .into_iter()
-        .filter(|(id, _)| *id != ancestor)
-        .map(async |(id, bcs)| {
+    let file_changes =
+        try_join_all(changesets.iter().map(|bcs| async {
+            let id = bcs.get_changeset_id();
             let parents: Vec<_> = bcs.parents().collect();
             match *parents {
-                [] | [_] => Ok(extract_conflict_files_from_bonsai_changeset(&bcs)),
-                [p0_id, p1_id] => {
-                    match (ids.get(&p0_id), ids.get(&p1_id)) {
-                        (Some(_), Some(_)) => {
-                            // both parents are in the rebase set, so we can just take
-                            // filechanges from bonsai changeset
-                            Ok(extract_conflict_files_from_bonsai_changeset(&bcs))
+                [] | [_] => Ok(extract_conflict_files_from_bonsai_changeset(bcs)),
+                [p0, p1] => match (ids.get(&p0), ids.get(&p1)) {
+                    (Some(_), Some(_)) => Ok(extract_conflict_files_from_bonsai_changeset(bcs)),
+                    (Some(parent), None) | (None, Some(parent)) => {
+                        if use_content_manifests {
+                            find_changed_files_between_root_manifests(ctx, repo, id, *parent).await
+                        } else {
+                            find_changed_files_between_manifests(ctx, repo, id, *parent).await
                         }
-                        (Some(p_id), None) | (None, Some(p_id)) => {
-                            // TODO(stash, T40460159) - include copy sources in the list of
-                            // conflict files
-
-                            // one of the parents is not in the rebase set, to calculate
-                            // changed files in this case we will compute manifest diff
-                            // between elements that are in rebase set.
-                            let use_content_manifests = match manifests {
-                                RangeDiffManifests::ContentCompat => true,
-                                RangeDiffManifests::FromKnob => justknobs::eval(
-                                    "scm/mononoke:pushrebase_range_diff_use_content_manifests",
-                                    None,
-                                    Some(repo.repo_identity().name()),
-                                ),
-                            };
-                            if use_content_manifests {
-                                find_changed_files_between_root_manifests(ctx, repo, id, *p_id)
-                                    .await
-                            } else {
-                                find_changed_files_between_manifests(ctx, repo, id, *p_id).await
-                            }
-                        }
-                        (None, None) => panic!(
-                            "`range_stream` produced invalid result for: ({descendant}, {ancestor})",
-                        ),
                     }
-                }
+                    (None, None) => panic!(
+                        "`range_stream` produced invalid result for: ({descendant}, {ancestor})",
+                    ),
+                },
                 _ => panic!("pushrebase supports only two parents"),
             }
-        })
-        .collect();
+        }))
+        .await?;
 
-    let file_changes = try_join_all(file_changes_futs).await?;
-
-    let mut file_changes_union = file_changes
+    let mut changed_files = file_changes
         .into_iter()
         .flatten()
-        .collect::<HashSet<_>>() // compute union
+        .chain(find_subtree_changes(changesets)?)
+        .collect::<HashSet<_>>()
         .into_iter()
         .collect::<Vec<_>>();
-    file_changes_union.sort_unstable();
+    changed_files.sort_unstable();
 
-    Ok(file_changes_union)
+    Ok(changed_files)
 }
 
 fn extract_conflict_files_from_bonsai_changeset(bcs: &BonsaiChangeset) -> Vec<MPath> {
@@ -2960,7 +2907,7 @@ async fn create_rebased_changesets(
     config: &PushrebaseFlags,
     // `root..head` in topological order, so holders of the stack need not
     // fetch it twice.
-    rebased_set: Vec<BonsaiChangeset>,
+    rebased_set: &[BonsaiChangeset],
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
@@ -3014,7 +2961,7 @@ async fn create_rebased_changesets(
     // Tracks commits whose every file_change resolved to a duplicate of trunk
     // content via merge resolution — these would land as no-op commits.
     let mut noop_commits: Vec<(ChangesetId, Vec<NonRootMPath>)> = Vec::new();
-    for bcs_old in rebased_set {
+    for bcs_old in rebased_set.iter().cloned() {
         let id_old = bcs_old.get_changeset_id();
 
         // Compute per-commit merge overrides via cascading merge.
@@ -3459,16 +3406,6 @@ async fn generate_additional_bonsai_file_changes(
         .collect::<stream::FuturesUnordered<_>>()
         .try_collect()
         .await
-}
-
-// Order - from lowest generation number to highest
-async fn find_rebased_set(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    root: ChangesetId,
-    head: ChangesetId,
-) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head).await
 }
 
 /// Wrap a list of pushrebase transaction hooks into a single
