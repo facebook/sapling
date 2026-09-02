@@ -1184,9 +1184,10 @@ class EdenConfig : private ConfigSettingManager {
    * access typically comes from security software crawling the mount. Read
    * through ReloadableConfig on each request, so it can be changed within
    * config:reload-interval (or immediately via `eden debug thrift
-   * reloadConfig`) without a daemon restart. NFS NULL probes and requests
-   * without a parsable AUTH_SYS credential are never affected. AUTH_SYS
-   * identities are client-asserted, so "block" is a mitigation against
+   * reloadConfig`) without a daemon restart. Control-plane procedures (NFS
+   * NULL probes, FSSTAT, FSINFO, PATHCONF) and requests without a parsable
+   * AUTH_SYS credential are never affected. AUTH_SYS identities are
+   * client-asserted, so "block" is a mitigation against
    * well-behaved-but-noisy root processes (e.g. security scanners), not a
    * security boundary.
    */

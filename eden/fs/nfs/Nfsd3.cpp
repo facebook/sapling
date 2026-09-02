@@ -87,6 +87,25 @@ bool credsClaimWheel(const authsys_parms& creds) {
       std::find(creds.gids.begin(), creds.gids.end(), 0u) != creds.gids.end();
 }
 
+/**
+ * Procedures the root/wheel access modes never act on (never counted,
+ * never rejected): NULL is the liveness and mount handshake probe, and
+ * FSSTAT/FSINFO/PATHCONF are per-mount bookkeeping that NFS clients issue
+ * on their own behalf. Rejecting any of these could wedge the mount itself
+ * rather than shed the targeted file I/O.
+ */
+bool isAccessModeExempt(uint32_t proc) {
+  switch (static_cast<nfsv3Procs>(proc)) {
+    case nfsv3Procs::null:
+    case nfsv3Procs::fsstat:
+    case nfsv3Procs::fsinfo:
+    case nfsv3Procs::pathconf:
+      return true;
+    default:
+      return false;
+  }
+}
+
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
   explicit Nfsd3ServerProcessor(
@@ -2387,11 +2406,10 @@ bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
 auth_stat Nfsd3ServerProcessor::checkAuthentication(
     const call_body& callBody,
     const std::optional<authsys_parms>& authSysCreds) {
-  // The NULL procedure is the liveness and mount handshake probe (blocking
-  // it would wedge mount and unmount), and requests without a parsable
-  // AUTH_SYS credential carry no identity; neither is ever acted on.
-  if (!config_ || !authSysCreds ||
-      callBody.proc == folly::to_underlying(nfsv3Procs::null)) {
+  // Control-plane procedures are exempt (see isAccessModeExempt), and
+  // requests without a parsable AUTH_SYS credential carry no identity;
+  // neither is ever acted on.
+  if (!config_ || !authSysCreds || isAccessModeExempt(callBody.proc)) {
     return auth_stat::AUTH_OK;
   }
   // Per identity class: "log" and "block" both count the access ("block"

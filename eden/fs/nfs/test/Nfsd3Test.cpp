@@ -479,6 +479,37 @@ TEST_F(Nfsd3BlockingTest, null_proc_is_exempt) {
   expectAcceptedSuccess(reply);
 }
 
+TEST_F(Nfsd3BlockingTest, control_plane_procs_are_exempt) {
+  setRootMode(NfsAccessMode::Block);
+  setWheelMode(NfsAccessMode::Block);
+  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+
+  // Mount bookkeeping keeps working for a blocked identity...
+  expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
+      1,
+      nfsv3Procs::fsstat,
+      rootAndWheelCred(),
+      FSSTAT3args{nfs_fh3{InodeNumber{42}}})));
+  expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
+      2,
+      nfsv3Procs::fsinfo,
+      rootAndWheelCred(),
+      FSINFO3args{nfs_fh3{InodeNumber{42}}})));
+  expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
+      3,
+      nfsv3Procs::pathconf,
+      rootAndWheelCred(),
+      PATHCONF3args{nfs_fh3{InodeNumber{42}}})));
+
+  // ...and is neither counted nor blocked...
+  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60"), blockedBefore);
+
+  // ...while file access is still rejected.
+  expectAuthTooWeak(sendGetattr(4, rootAndWheelCred()));
+}
+
 TEST_F(Nfsd3BlockingTest, config_changes_apply_without_restart) {
   setRootMode(NfsAccessMode::Block);
   expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
