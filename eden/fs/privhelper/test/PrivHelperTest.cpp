@@ -16,6 +16,8 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
+#include <folly/memory/SanitizeLeak.h>
+#include <folly/synchronization/Baton.h>
 #include <folly/synchronization/SaturatingSemaphore.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
@@ -1348,4 +1350,51 @@ TEST(
       "cannot send new requests on closed privhelper connection");
 
   serverThread.join();
+}
+
+TEST(PrivHelperConnectionLossTest, serverDeathDeadlocksRequestHandling) {
+  // This test models the privhelper process dying (e.g. killed under memory
+  // pressure) while the daemon is running: the server end of the socket
+  // closes and the client sees EOF.
+  //
+  // FIXME: processing the EOF self-deadlocks the EventBase thread.
+  // PrivHelperClientImpl::closeSocket() destroys the UnixSocket while
+  // holding the state_ write lock, and the destruction synchronously
+  // invokes the socketClosed() callback, which re-enters
+  // handleSocketError() and blocks acquiring the same non-reentrant lock.
+  // As a result the pending request below is never failed, new requests
+  // block inside sendAndRecv() instead of failing fast, and in a real
+  // daemon every subsequent mount and unmount hangs silently until
+  // restart.
+  //
+  // The EventBaseThread, client, and baton are intentionally leaked: the
+  // EventBase thread is deadlocked so it can never be joined, and
+  // destroying the client would block on it forever. The leaks are
+  // annotated so LeakSanitizer does not fail the run over them.
+  auto* ioThread = new EventBaseThread();
+  folly::lsan_ignore_object(ioThread);
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+  auto& client = *new std::unique_ptr<PrivHelper>(
+      createTestPrivHelper(std::move(clientConn)));
+  folly::lsan_ignore_object(&client);
+  ioThread->getEventBase()->runInEventBaseThreadAndWait(
+      [&] { client->attachEventBase(ioThread->getEventBase()); });
+
+  // Issue a request that the server never answers.
+  auto pending = client->fuseUnmount("/never/answered", {});
+
+  // The privhelper process dies.
+  serverConn.close();
+
+  // The pending request is never failed: it times out instead of receiving
+  // the connection error.
+  EXPECT_THROW(std::move(pending).get(2s), folly::FutureTimeout);
+
+  // The EventBase thread is deadlocked: a callback posted to it never runs.
+  auto* alive = new folly::Baton<>();
+  folly::lsan_ignore_object(alive);
+  ioThread->getEventBase()->runInEventBaseThread([alive] { alive->post(); });
+  EXPECT_FALSE(alive->try_wait_for(2s));
 }
