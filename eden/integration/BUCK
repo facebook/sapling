@@ -231,6 +231,7 @@ python_integration_test(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
+        "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
     ],
 )

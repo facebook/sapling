@@ -59,6 +59,8 @@ if sys.platform == "win32":
         "persistence_test.PersistenceTestHg": [
             "test_does_not_reuse_inode_numbers_after_cold_restart"
         ],
+        # Windows has no privhelper process to kill.
+        "privhelper_test.PrivHelperDeathTest": True,
         "rage_test.RageTestDefault": True,
         "rc_test.RCTestHg": True,
         "readdir_test.ReaddirTestHg": [
