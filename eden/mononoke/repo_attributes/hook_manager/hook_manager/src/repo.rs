@@ -121,12 +121,26 @@ impl HookRepo {
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>> {
-        let file_bytes = self.get_file_bytes(ctx, id).await?;
+        if !justknobs::eval(
+            "scm/mononoke:enable_hook_skip_binary_blob_fetch",
+            None,
+            None,
+        ) {
+            let file_bytes = self.get_file_bytes(ctx, id).await?;
+            let file_bytes = file_bytes.filter(|b| !b.contains(&0));
+            return Ok(file_bytes);
+        }
 
-        // Filter out files with null bytes
-        let file_bytes = file_bytes.filter(|b| !b.contains(&0));
+        let metadata = self.get_file_metadata(ctx, id).await?;
 
-        Ok(file_bytes)
+        // Don't fetch content if we know the object is too large, or if it's
+        // binary. `is_binary` in the metadata means "contains a null byte",
+        // which is exactly the filter text hooks want.
+        if metadata.total_size > self.repo_config.hook_max_file_size || metadata.is_binary {
+            return Ok(None);
+        }
+
+        Ok(Some(self.fetch_file_bytes(ctx, id).await?))
     }
 
     pub async fn get_file_bytes<'a>(
@@ -140,11 +154,13 @@ impl HookRepo {
             return Ok(None);
         }
 
-        let file_bytes = filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
-            .await?
-            .ok_or_else(|| anyhow!("Content with id '{id}' not found"))?;
+        Ok(Some(self.fetch_file_bytes(ctx, id).await?))
+    }
 
-        Ok(Some(file_bytes))
+    async fn fetch_file_bytes<'a>(&'a self, ctx: &'a CoreContext, id: ContentId) -> Result<Bytes> {
+        filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
+            .await?
+            .ok_or_else(|| anyhow!("Content with id '{id}' not found"))
     }
 
     pub async fn find_content<'a>(
