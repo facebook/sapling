@@ -24,6 +24,7 @@
 #include <folly/io/async/AsyncTimeout.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Fcntl.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
 
@@ -1014,6 +1015,12 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
         throw std::runtime_error("Too few arguments");
       }
       auto fdNum = folly::to<int>(argv[i + 1]);
+      // This descriptor crossed an exec, so it cannot have arrived
+      // close-on-exec. Without FD_CLOEXEC it leaks into every process EdenFS
+      // spawns, and the privhelper then sees no EOF when EdenFS dies.
+      folly::checkUnixError(
+          fcntl(fdNum, F_SETFD, FD_CLOEXEC),
+          "failed to set FD_CLOEXEC on the privhelper client descriptor");
       return make_unique<PrivHelperClientImpl>(
           folly::File(fdNum, true), std::nullopt);
     }

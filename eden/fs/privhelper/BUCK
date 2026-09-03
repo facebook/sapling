@@ -148,6 +148,7 @@ cpp_library(
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/logging:logging",
+        "//folly/portability:fcntl",
         "//folly/portability:sys_types",
         "//folly/portability:unistd",
     ],

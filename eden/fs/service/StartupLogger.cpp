@@ -11,6 +11,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Fcntl.h>
 #include <folly/portability/Unistd.h>
 #include <gflags/gflags.h>
 #include <sys/types.h>
@@ -279,8 +280,14 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   // Read the fd once: it can become -1 if the connection is lost.
   const int privHelperFd = privHelper ? privHelper->getRawClientFd() : -1;
   if (privHelperFd != -1) {
+    // The copy must be close-on-exec, or it survives the exec below at its own
+    // number and leaks the privhelper socket. inheritDescriptor()'s dup2()
+    // clears the flag on the target the child is meant to use.
+    const int duped = fcntl(privHelperFd, F_DUPFD_CLOEXEC, 0);
+    folly::checkUnixError(
+        duped, "failed to duplicate the privhelper client descriptor");
     auto fd = opts.inheritDescriptor(
-        FileDescriptor(::dup(privHelperFd), FileDescriptor::FDType::Socket));
+        FileDescriptor(duped, FileDescriptor::FDType::Socket));
     // Note: we can't use `--privhelper_fd=123` here because
     // startOrConnectToPrivHelper has an intentionally anemic argv parser.
     // It requires that the flag and the value be in separate

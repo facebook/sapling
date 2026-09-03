@@ -18,6 +18,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/json/json.h>
+#include <folly/portability/Fcntl.h>
 #include <folly/synchronization/Baton.h>
 #include <folly/synchronization/SaturatingSemaphore.h>
 #include <folly/test/TestUtils.h>
@@ -964,6 +965,37 @@ TEST_F(PrivHelperTest, bindMountRejectsEscapedMountPath) {
       "Invalid cross-device link");
 
 #endif
+}
+
+/*
+ * The privhelper control descriptor arrives across an exec without
+ * FD_CLOEXEC; startOrConnectToPrivHelper has to restore it.
+ */
+TEST(PrivHelperCloExec, adoptedClientDescriptorIsCloseOnExec) {
+  folly::File clientConn;
+  folly::File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+
+  // Reproduce what an exec leaves behind: the flag cleared.
+  const int fd = clientConn.fd();
+  folly::checkUnixError(fcntl(fd, F_SETFD, 0), "clearing FD_CLOEXEC");
+  ASSERT_EQ(0, fcntl(fd, F_GETFD) & FD_CLOEXEC)
+      << "test setup failed to clear FD_CLOEXEC";
+
+  const auto fdArg = folly::to<std::string>(fd);
+  std::vector<const char*> argv{"edenfs", "--privhelper_fd", fdArg.c_str()};
+  auto helper = startOrConnectToPrivHelper(
+      UserInfo::lookup(),
+      static_cast<int>(argv.size()),
+      const_cast<char**>(argv.data()));
+  ASSERT_NE(nullptr, helper);
+
+  EXPECT_NE(0, fcntl(fd, F_GETFD) & FD_CLOEXEC)
+      << "the adopted privhelper descriptor is inheritable; it will leak into "
+         "every child EdenFS spawns and delay the privhelper's EOF";
+
+  // startOrConnectToPrivHelper took ownership of the descriptor.
+  clientConn.release();
 }
 
 TEST_F(PrivHelperTest, bindMountRejectsSymlinkComponent) {
