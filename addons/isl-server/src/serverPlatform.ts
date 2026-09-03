@@ -12,6 +12,7 @@ import type {
   RepoRelativePath,
   ServerToClientMessage,
 } from 'isl/src/types';
+import {Internal} from './Internal';
 import {Repository} from './Repository';
 import type {RepositoryContext} from './serverTypes';
 
@@ -97,6 +98,29 @@ export function makeBrowserServerPlatform(extraCwds?: string[]): ServerPlatform 
           for (const path of message.paths) {
             openFile(repo, ctx, path);
           }
+          break;
+        }
+        case 'platform/fillCommitMessageWithAI': {
+          // Generate a commit message on the server (where `sl web` runs -- a devserver/OnDemand with
+          // the `dm` CLI), so this works in standalone ISL, not only inside the VS Code Devmate host.
+          const cwd = repo?.info.repoRoot;
+          if (cwd == null || Internal.fillCommitMessageWithAI == null) {
+            break;
+          }
+          Internal.fillCommitMessageWithAI(cwd)
+            .then((generated: {title: string; description: string} | undefined) => {
+              if (generated != null) {
+                postMessage({
+                  type: 'updateDraftCommitMessage',
+                  title: generated.title,
+                  description: generated.description,
+                  mode: 'commit',
+                });
+              }
+            })
+            .catch((err: Error) => {
+              ctx.logger.error('failed to generate commit message with AI:', err);
+            });
           break;
         }
       }

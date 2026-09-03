@@ -178,7 +178,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
 
   const showDevmate =
     useFeatureFlagSync(Internal.featureFlags?.AIGenerateCommitMessage) &&
-    platform.platformName === 'vscode';
+    (platform.platformName === 'vscode' || platform.platformName === 'browser');
 
   const methods = (
     <>
