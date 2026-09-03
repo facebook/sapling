@@ -215,12 +215,8 @@ class FsFileContentStore : public FileContentStore {
    * permanently invisible to future loads. Removing the WAL after read
    * lets the next append start from a clean file.
    *
-   * The result.delta is a sorted std::map. Sorted iteration order matters
-   * for the direct-serialization load path in Overlay.cpp (introduced in a
-   * later commit): it feeds entries into a PathMapMutator whose
-   * insert_or_assign path falls into an O(N) compact() step on every
-   * out-of-order key. Returning sorted keys keeps that merge
-   * O(N + K log K) instead of O(K · N) for K WAL keys against N base entries.
+   * The result.delta is a sorted std::map, giving the WAL replay in
+   * Overlay.cpp a deterministic merge order.
    *
    * result.rawEntriesParsed counts well-formed WAL entries that were
    * successfully decoded, regardless of whether they collapse against an

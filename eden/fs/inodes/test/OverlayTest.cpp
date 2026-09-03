@@ -28,7 +28,6 @@
 #include <thread>
 
 #include "eden/common/testharness/TempFile.h"
-#include "eden/common/utils/PathMapMutator.h"
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -1741,8 +1740,8 @@ TEST(OverlayLoadWalTest, collapsedAddRemoveIsApplied) {
   bundle.overlay->saveOverlayDir(parent, base);
 
   // ADD then REMOVE for a fresh name → loadWalDelta collapses to REMOVE,
-  // which the mutator then erases. The base "a" is unaffected since the
-  // collapsed delta only touches "b".
+  // which the WAL replay then erases. The base "a" is unaffected since
+  // the collapsed delta only touches "b".
   overlay::OverlayEntry entryB;
   entryB.mode() = S_IFREG | 0644;
   entryB.inodeNumber() = bundle.overlay->allocateInodeNumber().get();
@@ -1809,7 +1808,7 @@ TEST(OverlayLoadWalTest, collapsedAddOverwritesBaseEntry) {
   auto it = loaded.find("foo"_pc);
   ASSERT_NE(loaded.end(), it);
   // Without insert_or_assign, this would still report baseChild because
-  // PathMapMutator::emplace silently drops collisions.
+  // PathMap::emplace leaves existing entries alone.
   EXPECT_EQ(walChild, it->second.getInodeNumber());
 
   bundle.overlay->close();

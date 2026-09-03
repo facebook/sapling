@@ -334,9 +334,6 @@ struct DirContents : PathMap<DirEntry> {
       folly::fbvector<std::pair<PathComponent, DirEntry>>&& entries,
       CaseSensitivity caseSensitive)
       : PathMap(std::move(entries), caseSensitive) {}
-
-  // Allow construction from a PathMap (e.g., from PathMapMutator::finalize).
-  explicit DirContents(PathMap<DirEntry>&& map) : PathMap(std::move(map)) {}
 };
 
 } // namespace facebook::eden

@@ -32,7 +32,6 @@
 #include "eden/common/telemetry/DurationScope.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/common/utils/PathMapMutator.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileContentStore.h"
@@ -803,9 +802,8 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 
   if (hasWal) {
     // Pre-process WAL into a collapsed net delta and merge it into the
-    // streamed-load PathMap via PathMapMutator. saveOverlayDir below
-    // flushes the merged base file and clearWalAfterFullWrite removes
-    // the WAL.
+    // streamed-load PathMap. saveOverlayDir below flushes the merged
+    // base file and clearWalAfterFullWrite removes the WAL.
     auto walResult = inodeCatalog_->loadWalDelta(inodeNumber, caseSensitive_);
     auto& delta = walResult.delta;
     stats_->increment(&OverlayStats::walReplay);
@@ -818,8 +816,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
           static_cast<double>(walResult.parseErrors));
     }
 
-    DirContents base{std::move(entries), caseSensitive_};
-    PathMapMutator<DirEntry> mutator{std::move(base)};
+    DirContents merged{std::move(entries), caseSensitive_};
 
     for (auto& [name, walDelta] : delta) {
       switch (walDelta.type) {
@@ -838,32 +835,34 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
             // WAL key matches the stored key exactly — no rekey needed, so
             // insert_or_assign is sufficient (vs. the erase+emplace in the
             // case-insensitive branch).
-            mutator.insert_or_assign(
-                PathComponentPiece{name}, std::move(entry));
+            merged.insert_or_assign(PathComponentPiece{name}, std::move(entry));
           } else {
             // On case-insensitive mounts the stored key spelling may differ
             // from the WAL ADD's spelling (e.g., base "foo" with WAL ADD
             // "FOO"). Erase any case-equivalent entry first so the inserted
             // key uses the WAL casing.
-            mutator.erase(PathComponentPiece{name});
-            mutator.emplace(PathComponentPiece{name}, std::move(entry));
+            merged.erase(PathComponentPiece{name});
+            merged.emplace(PathComponentPiece{name}, std::move(entry));
           }
           break;
         }
         case WalOpType::REMOVE:
-          mutator.erase(PathComponentPiece{name});
+          merged.erase(PathComponentPiece{name});
           break;
         case WalOpType::MATERIALIZE: {
-          auto it = mutator.find(PathComponentPiece{name});
-          if (it != mutator.end()) {
+          auto it = merged.find(PathComponentPiece{name});
+          if (it != merged.end()) {
             it->second.setMaterialized();
           }
           break;
         }
       }
     }
+    // The replayed map becomes the directory's live contents; fold the
+    // pending inserts and tombstones now instead of leaving lookups and
+    // iteration on the two-region path until the next mutation.
+    merged.compact();
 
-    DirContents merged{mutator.finalize()};
     if (!shouldDeferWalFlush() || walResult.parseErrors > 0 ||
         shouldRewriteOverlay) {
       // The clean-WAL rewrite is opportunistic compaction, redundant with what

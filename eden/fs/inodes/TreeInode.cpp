@@ -30,7 +30,6 @@
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/common/utils/PathMapMutator.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/TimeUtil.h"
@@ -4557,19 +4556,8 @@ void TreeInode::computeCheckoutActions(
     }
   };
 
-  if (!reportLocalOnlyAsConflicts) {
-    PathMapMutator<DirEntry> mutator(std::move(contents->entries));
-    try {
-      diffLoop(mutator);
-    } catch (...) {
-      // Restore entries from mutator so we don't leave the directory empty.
-      contents->entries = DirContents(mutator.finalize());
-      throw;
-    }
-    contents->entries = DirContents(mutator.finalize());
-  } else {
-    diffLoop(contents->entries);
-
+  diffLoop(contents->entries);
+  if (reportLocalOnlyAsConflicts) {
     auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
       return tree && tree->find(name) != tree->cend();
     };
@@ -4587,6 +4575,10 @@ void TreeInode::computeCheckoutActions(
       }
     }
   }
+  // A checkout may insert and erase many entries; fold them now instead of
+  // leaving lookups and iteration on the two-region path until the next
+  // mutation.
+  contents->entries.compact();
 }
 
 template <typename Contents>
@@ -5119,7 +5111,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
   return nullptr;
 }
 
-// Explicit template instantiations for DirContents and PathMapMutator.
+// Explicit template instantiations for DirContents.
 template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext*,
     TreeInodeState&,
@@ -5142,33 +5134,6 @@ template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     CheckoutContext*,
     TreeInodeState&,
     DirContents&,
-    const Tree::value_type*,
-    const Tree::value_type*,
-    bool&,
-    bool&);
-
-template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
-    CheckoutContext*,
-    TreeInodeState&,
-    PathMapMutator<DirEntry>&,
-    const Tree::value_type*,
-    const Tree::value_type*,
-    std::vector<IncompleteInodeLoad>&,
-    bool&,
-    bool&);
-template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
-    CheckoutContext*,
-    TreeInodeState&,
-    PathMapMutator<DirEntry>&,
-    const Tree::value_type*,
-    const Tree::value_type*,
-    std::vector<IncompleteInodeLoad>&,
-    bool&,
-    bool&);
-template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
-    CheckoutContext*,
-    TreeInodeState&,
-    PathMapMutator<DirEntry>&,
     const Tree::value_type*,
     const Tree::value_type*,
     bool&,
