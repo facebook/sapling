@@ -21,6 +21,7 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/UnixSocket.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/RestartSentinel.h"
 
 namespace folly {
 class EventBase;
@@ -244,20 +245,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void cleanupMountPoints();
 
 #ifdef __APPLE__
-  /**
-   * The command to relaunch edenfs with, as read out of the restart sentinel.
-   * argv is already stripped of sudo, `--takeover` and inherited file
-   * descriptor arguments by the daemon that wrote it.
-   */
-  struct RelaunchCommand {
-    std::vector<std::string> argv;
-    std::vector<std::pair<std::string, std::string>> env;
-  };
-
   /** Everything prepareRestart() resolved while it still had privileges. */
   struct RestartPlan {
     AbsolutePath binary;
-    RelaunchCommand command;
+    RestartSentinel::RelaunchCommand command;
     // The restart budget already charged for this attempt.
     uint32_t restartCount{0};
     uint64_t firstRestartEpochSec{0};
@@ -277,59 +268,12 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // window without sleeping.
   std::function<uint64_t()> now_;
 
-  // Restart configuration most recently supplied by the daemon, if any. Absent
-  // means the daemon never finished starting up, so there is nothing to
-  // restart and no boot-crash loop is possible.
-  std::optional<EdenFsRestartArgs> restartConfig_;
-
-  // Whether the daemon announced that its shutdown was deliberate.
-  bool cleanShutdownNotified_{false};
-
-  /** The directory holding the restart sentinel, and its name within it. */
-  struct SentinelLocation {
-    folly::File dir;
-    std::string name;
-  };
-
-  // Resolved on first use, and dropped whenever fresh restart args arrive.
-  mutable std::optional<SentinelLocation> sentinelLocation_;
-
-  // errno of the last resolution failure reported since the last re-arm, 0 for
-  // the malformed-path failure, which has none. A failure is retried rather
-  // than cached, so that a transient one cannot leave root permanently unable
-  // to restart edenfs; a retry that fails the same way again does not log.
-  mutable std::optional<int> lastSentinelResolutionError_;
-
-  /**
-   * Where the restart sentinel lives, or nullptr when no restart configuration
-   * has arrived or the configured path cannot be resolved. The path comes from
-   * the unprivileged daemon, so root walks it once and afterwards only looks
-   * the leaf up in the pinned directory, which no ancestor rename can redirect.
-   */
-  const SentinelLocation* sentinelLocation() const;
-
-  /**
-   * The only way to replace the restart configuration. Fresh arguments also
-   * re-arm: a resolution cached from the previous configuration would stay
-   * pinned to its directory, and a clean-shutdown flag would outlive it.
-   */
-  void setRestartConfig(EdenFsRestartArgs args);
+  // Whether edenfs should be relaunched, and what to relaunch. Constructed by
+  // initPartial(), which is where the daemon's uid becomes known.
+  std::optional<RestartSentinel> sentinel_;
 
   UnixSocket::Message processSetRestartArgsMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processNotifyCleanShutdownMsg(folly::io::Cursor& cursor);
-
-  /** How the two disarm signals read, or that neither could be read. */
-  enum class DisarmState {
-    /** edenfs neither announced a shutdown nor removed its sentinel. */
-    Armed,
-    /** edenfs signalled, either way, that it meant to shut down. */
-    ShutdownAnnounced,
-    /** The sentinel's state could not be determined; root must not guess. */
-    Unknown,
-  };
-
-  /** The disarm signals, or nullopt when no restart args ever armed them. */
-  std::optional<DisarmState> disarmState() const;
 
   /**
    * Decide whether this exit looks like a crash worth answering with a
@@ -347,18 +291,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   bool launchRestart(const RestartPlan& plan) const;
 
   /**
-   * Parse the relaunch command out of the restart sentinel, or nullopt if it
-   * cannot be read or does not hold one. Only ever called with privileges.
-   */
-  std::optional<RelaunchCommand> readRelaunchCommand() const;
-
-  /**
-   * Applies the circuit breaker. Returns false when the limit is reached.
-   * Requires restartConfig_ to be set.
-   */
-  bool admitRestartAttempt();
-
-  /**
    * The edenfs binary installed in `dir`, or nullopt when there is none: it
    * must be a regular, executable file, so a symlinked leaf is rejected.
    */
@@ -372,7 +304,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * Virtual because a unit test has no sibling edenfs to point at.
    */
   virtual AbsolutePath resolveEdenFsBinary(
-      const RelaunchCommand& command) const;
+      const RestartSentinel::RelaunchCommand& command) const;
 
   /**
    * Verify that resetting the child IDs will select the privhelper's owner.

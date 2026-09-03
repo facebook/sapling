@@ -72,9 +72,11 @@ cpp_library(
     srcs = [
         "PrivHelperServer.cpp",
         "PrivHelperServerSanityCheck.cpp",
+        "RestartSentinel.cpp",
     ],
     headers = [
         "PrivHelperServer.h",
+        "RestartSentinel.h",
     ],
     deps = [
         ":nfs_rpc",
@@ -111,6 +113,7 @@ cpp_library(
     }),
     exported_deps = [
         ":conn",
+        ":interface",
         "//eden/common/utils:io",
         "//eden/common/utils:process",
         "//folly:file",

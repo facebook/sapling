@@ -40,6 +40,7 @@
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
+#include "eden/fs/privhelper/RestartSentinel.h"
 #include "eden/fs/privhelper/test/PrivHelperTestServer.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/IXplatLogger.h"
@@ -1580,15 +1581,6 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
 
 #ifdef __APPLE__
 
-/** Exposes the sentinel reader and the state it consults, all protected. */
-class PrivHelperSentinelTestServer : public PrivHelperServer {
- public:
-  using PrivHelperServer::readRelaunchCommand;
-  using PrivHelperServer::restartConfig_;
-  using PrivHelperServer::setRestartConfig;
-  using PrivHelperServer::uid_;
-};
-
 /**
  * The sentinel is written by the daemon's unprivileged user and read by a root
  * privhelper, so these cases are all about what a replaced file can do to the
@@ -1598,8 +1590,7 @@ class PrivHelperSentinelTest : public ::testing::Test {
  protected:
   void SetUp() override {
     dir_ = std::make_unique<TemporaryDirectory>("edenfs_sentinel");
-    server_.setRestartConfig(makeRestartArgs(sentinelPath()));
-    server_.uid_ = getuid();
+    sentinel_.setConfig(makeRestartArgs(sentinelPath()));
   }
 
   std::string sentinelPath() const {
@@ -1612,14 +1603,14 @@ class PrivHelperSentinelTest : public ::testing::Test {
     checkUnixError(::chmod(sentinelPath().c_str(), 0600));
   }
 
-  PrivHelperSentinelTestServer server_;
+  RestartSentinel sentinel_{getuid()};
   std::unique_ptr<TemporaryDirectory> dir_;
 };
 
 TEST_F(PrivHelperSentinelTest, readsTheCommandAndEnvironment) {
   writeSentinel(makeSentinelContents());
 
-  const auto command = server_.readRelaunchCommand();
+  const auto command = sentinel_.readRelaunchCommand();
   ASSERT_TRUE(command.has_value());
   EXPECT_EQ(kSentinelArgv, command->argv);
   EXPECT_THAT(
@@ -1634,7 +1625,7 @@ TEST_F(PrivHelperSentinelTest, rejectsASymlink) {
   ASSERT_TRUE(folly::writeFile(makeSentinelContents(), target.c_str()));
   checkUnixError(::symlink(target.c_str(), sentinelPath().c_str()));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAFifo) {
@@ -1642,132 +1633,134 @@ TEST_F(PrivHelperSentinelTest, rejectsAFifo) {
   // that still owes the mounts a cleanup.
   checkUnixError(::mkfifo(sentinelPath().c_str(), 0600));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsASentinelOwnedByAnotherUser) {
   writeSentinel(makeSentinelContents());
-  server_.uid_ = getuid() + 1;
+  RestartSentinel otherOwner{getuid() + 1};
+  otherOwner.setConfig(makeRestartArgs(sentinelPath()));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(otherOwner.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAGroupWritableSentinel) {
   writeSentinel(makeSentinelContents());
   checkUnixError(::chmod(sentinelPath().c_str(), 0660));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAnOversizedFile) {
   writeSentinel(std::string(2 * 1024 * 1024, 'x'));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAnEmptyFile) {
   writeSentinel("");
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAMissingFile) {
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsASentinelFromAnotherGeneration) {
   writeSentinel(makeSentinelContents(kSentinelNonce + 1));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsASentinelWithNoNonce) {
   writeSentinel(makeSentinelContentsWithoutNonce());
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAConfigurationWithNoNonce) {
   writeSentinel(makeSentinelContentsWithoutNonce());
-  server_.restartConfig_->sentinelNonce = 0;
+  auto args = makeRestartArgs(sentinelPath());
+  args.sentinelNonce = 0;
+  sentinel_.setConfig(std::move(args));
 
-  EXPECT_FALSE(server_.readRelaunchCommand().has_value());
+  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
-
-/** Exposes the circuit breaker and the clock seam, both protected. */
-class PrivHelperBreakerTestServer : public PrivHelperServer {
- public:
-  PrivHelperBreakerTestServer() {
-    now_ = [this] { return now.load(); };
-  }
-
-  using PrivHelperServer::admitRestartAttempt;
-  using PrivHelperServer::restartConfig_;
-  using PrivHelperServer::setRestartConfig;
-
-  std::atomic<uint64_t> now{kFakeNow};
-};
 
 class PrivHelperBreakerTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    server_.setRestartConfig(makeRestartArgs("/unused"));
+    configure(makeRestartArgs("/unused"));
   }
 
-  PrivHelperBreakerTestServer server_;
+  void configure(EdenFsRestartArgs args) {
+    config_ = args;
+    sentinel_.setConfig(std::move(args));
+  }
+
+  /** A budget already spent up to its limit. */
+  void configureAtTheLimit() {
+    auto args = makeRestartArgs("/unused");
+    args.restartCount = args.maxRestarts;
+    configure(std::move(args));
+  }
+
+  EdenFsRestartArgs config_;
+  RestartSentinel sentinel_{getuid()};
 };
 
 TEST_F(PrivHelperBreakerTest, admitsAndChargesAnAttemptWithinBudget) {
-  EXPECT_TRUE(server_.admitRestartAttempt());
-  EXPECT_EQ(2, server_.restartConfig_->restartCount);
+  EXPECT_TRUE(sentinel_.admitRestartAttempt(kFakeNow));
+  EXPECT_EQ(2, sentinel_.restartCount());
 }
 
 TEST_F(PrivHelperBreakerTest, refusesAtTheLimit) {
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  configureAtTheLimit();
 
-  EXPECT_FALSE(server_.admitRestartAttempt());
-  EXPECT_EQ(
-      server_.restartConfig_->maxRestarts,
-      server_.restartConfig_->restartCount);
+  EXPECT_FALSE(sentinel_.admitRestartAttempt(kFakeNow));
+  EXPECT_EQ(config_.maxRestarts, sentinel_.restartCount());
 }
 
 TEST_F(PrivHelperBreakerTest, holdsTheCountToTheWindowEdge) {
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
-  server_.now.store(kFakeNow + server_.restartConfig_->windowSeconds);
+  configureAtTheLimit();
 
-  EXPECT_FALSE(server_.admitRestartAttempt());
+  EXPECT_FALSE(sentinel_.admitRestartAttempt(kFakeNow + config_.windowSeconds));
 }
 
 TEST_F(PrivHelperBreakerTest, decaysTheCountAfterTheWindow) {
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
-  server_.now.store(kFakeNow + server_.restartConfig_->windowSeconds + 1);
+  configureAtTheLimit();
 
-  EXPECT_TRUE(server_.admitRestartAttempt());
-  EXPECT_EQ(1, server_.restartConfig_->restartCount);
+  EXPECT_TRUE(
+      sentinel_.admitRestartAttempt(kFakeNow + config_.windowSeconds + 1));
+  EXPECT_EQ(1, sentinel_.restartCount());
 }
 
 TEST_F(PrivHelperBreakerTest, aBackwardsClockStartsAFreshWindow) {
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
-  server_.now.store(kFakeNow - 60);
+  configureAtTheLimit();
 
-  EXPECT_TRUE(server_.admitRestartAttempt());
-  EXPECT_EQ(1, server_.restartConfig_->restartCount);
+  EXPECT_TRUE(sentinel_.admitRestartAttempt(kFakeNow - 60));
+  EXPECT_EQ(1, sentinel_.restartCount());
 }
 
 TEST_F(PrivHelperBreakerTest, aZeroWindowStillBoundsTheCount) {
-  server_.restartConfig_->windowSeconds = 0;
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  auto args = makeRestartArgs("/unused");
+  args.windowSeconds = 0;
+  args.restartCount = args.maxRestarts;
+  configure(std::move(args));
 
-  EXPECT_FALSE(server_.admitRestartAttempt());
+  EXPECT_FALSE(sentinel_.admitRestartAttempt(kFakeNow));
 }
 
 TEST_F(PrivHelperBreakerTest, aLimitTheDaemonInflatedIsStillBounded) {
-  server_.restartConfig_->maxRestarts = std::numeric_limits<uint32_t>::max();
-  server_.restartConfig_->restartCount = 0;
+  auto args = makeRestartArgs("/unused");
+  args.maxRestarts = std::numeric_limits<uint32_t>::max();
+  args.restartCount = 0;
+  configure(std::move(args));
 
   constexpr uint32_t kGenerous = 1000;
   uint32_t admitted = 0;
-  while (admitted < kGenerous && server_.admitRestartAttempt()) {
+  while (admitted < kGenerous && sentinel_.admitRestartAttempt(kFakeNow)) {
     ++admitted;
   }
 
@@ -1778,7 +1771,6 @@ TEST_F(PrivHelperBreakerTest, aLimitTheDaemonInflatedIsStillBounded) {
 class PrivHelperBinaryTestServer : public PrivHelperServer {
  public:
   using PrivHelperServer::findSiblingEdenFs;
-  using PrivHelperServer::RelaunchCommand;
   using PrivHelperServer::resolveEdenFsBinary;
 };
 
@@ -1867,7 +1859,7 @@ TEST_F(PrivHelperBinaryTest, acceptsASymlinkedAncestor) {
 TEST_F(PrivHelperBinaryTest, fallsBackToTheRecordedCommand) {
   ASSERT_TRUE(noEdenFsNextToTheTestBinary());
 
-  PrivHelperBinaryTestServer::RelaunchCommand command;
+  RestartSentinel::RelaunchCommand command;
   command.argv = kSentinelArgv;
 
   EXPECT_EQ(
@@ -1878,8 +1870,7 @@ TEST_F(PrivHelperBinaryTest, throwsWhenThereIsNothingToRelaunch) {
   ASSERT_TRUE(noEdenFsNextToTheTestBinary());
 
   EXPECT_THROW(
-      server_.resolveEdenFsBinary(
-          PrivHelperBinaryTestServer::RelaunchCommand{}),
+      server_.resolveEdenFsBinary(RestartSentinel::RelaunchCommand{}),
       std::runtime_error);
 }
 
@@ -1929,12 +1920,9 @@ TEST_F(PrivHelperRestartOwnerTest, refusesAnOwnerMismatch) {
 /** Exposes the two disarm channels and the state they meet in. */
 class PrivHelperDisarmTestServer : public PrivHelperServer {
  public:
-  using PrivHelperServer::cleanShutdownNotified_;
-  using PrivHelperServer::disarmState;
-  using PrivHelperServer::DisarmState;
   using PrivHelperServer::processNotifyCleanShutdownMsg;
   using PrivHelperServer::processSetRestartArgsMsg;
-  using PrivHelperServer::restartConfig_;
+  using PrivHelperServer::sentinel_;
 };
 
 /**
@@ -1944,15 +1932,18 @@ class PrivHelperDisarmTestServer : public PrivHelperServer {
  */
 class PrivHelperDisarmTest : public ::testing::Test {
  protected:
-  using DisarmState = PrivHelperDisarmTestServer::DisarmState;
+  using DisarmState = RestartSentinel::DisarmState;
 
   void SetUp() override {
-    sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    sentinelFile_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    // Nothing calls initPartial() here, which is what would otherwise
+    // construct the sentinel from the daemon's uid.
+    server_.sentinel_.emplace(getuid());
     deliverRestartArgs();
   }
 
   void deliverRestartArgs() {
-    deliverRestartArgs(sentinel_->path().string());
+    deliverRestartArgs(sentinelFile_->path().string());
   }
 
   void deliverRestartArgs(std::string sentinelPath) {
@@ -1974,33 +1965,32 @@ class PrivHelperDisarmTest : public ::testing::Test {
   void expectSentinelPathRejected(const std::string& sentinelPath) {
     SCOPED_TRACE(sentinelPath);
     deliverRestartArgs(sentinelPath);
-    EXPECT_EQ(DisarmState::Unknown, server_.disarmState());
+    EXPECT_EQ(DisarmState::Unknown, server_.sentinel_->disarmState());
   }
 
   std::string sentinelDir() const {
-    return sentinel_->path().parent_path().string();
+    return sentinelFile_->path().parent_path().string();
   }
 
   PrivHelperDisarmTestServer server_;
-  std::unique_ptr<TemporaryFile> sentinel_;
+  std::unique_ptr<TemporaryFile> sentinelFile_;
 };
 
 TEST_F(PrivHelperDisarmTest, restartArgsArm) {
-  ASSERT_TRUE(server_.restartConfig_.has_value());
-  EXPECT_EQ(sentinel_->path().string(), server_.restartConfig_->sentinelPath);
-  EXPECT_EQ(DisarmState::Armed, server_.disarmState());
+  ASSERT_TRUE(server_.sentinel_->enabled());
+  EXPECT_EQ(DisarmState::Armed, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, theNotificationAloneDisarms) {
   deliverCleanShutdown();
 
-  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, removingTheSentinelAloneDisarms) {
-  sentinel_.reset();
+  sentinelFile_.reset();
 
-  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, freshRestartArgsReArm) {
@@ -2008,26 +1998,26 @@ TEST_F(PrivHelperDisarmTest, freshRestartArgsReArm) {
   // takeover, and would otherwise stay permanently un-restartable behind the
   // flag its aborted shutdown set.
   deliverCleanShutdown();
-  ASSERT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
+  ASSERT_EQ(DisarmState::ShutdownAnnounced, server_.sentinel_->disarmState());
 
   deliverRestartArgs();
 
-  EXPECT_EQ(DisarmState::Armed, server_.disarmState());
+  EXPECT_EQ(DisarmState::Armed, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, freshRestartArgsDropTheResolvedDirectory) {
-  ASSERT_EQ(DisarmState::Armed, server_.disarmState());
+  ASSERT_EQ(DisarmState::Armed, server_.sentinel_->disarmState());
 
   const TemporaryDirectory elsewhere{"edenfs_restart_elsewhere"};
   deliverRestartArgs((elsewhere.path() / "absent").string());
 
-  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, aSentinelPathRootCannotResolveIsUnknown) {
   deliverRestartArgs("not/absolute");
 
-  EXPECT_EQ(DisarmState::Unknown, server_.disarmState());
+  EXPECT_EQ(DisarmState::Unknown, server_.sentinel_->disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesIsUnknown) {
@@ -2040,11 +2030,11 @@ TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesIsUnknown) {
 TEST_F(PrivHelperDisarmTest, aSentinelPathWithAnEmbeddedNulIsUnknown) {
   // The syscalls stop at the NUL, so they would act on a prefix of the path
   // that was validated.
-  expectSentinelPathRejected(sentinel_->path().string() + '\0');
+  expectSentinelPathRejected(sentinelFile_->path().string() + '\0');
 }
 
 TEST_F(PrivHelperDisarmTest, aServerThatNeverReceivedRestartArgsHasNoState) {
-  PrivHelperDisarmTestServer unconfigured;
+  const RestartSentinel unconfigured{getuid()};
 
   EXPECT_EQ(std::nullopt, unconfigured.disarmState());
 }
@@ -2073,11 +2063,9 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
     now_ = [this] { return now.load(); };
   }
 
-  using PrivHelperServer::cleanShutdownNotified_;
   using PrivHelperServer::launchRestart;
   using PrivHelperServer::prepareRestart;
-  using PrivHelperServer::restartConfig_;
-  using PrivHelperServer::uid_;
+  using PrivHelperServer::sentinel_;
 
   size_t spawnCount() {
     return spawns.rlock()->size();
@@ -2091,7 +2079,7 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
 
  private:
   AbsolutePath resolveEdenFsBinary(
-      const RelaunchCommand& /* command */) const override {
+      const RestartSentinel::RelaunchCommand& /* command */) const override {
     return canonicalPath("/fake/libexec/eden/edenfs");
   }
 
@@ -2112,21 +2100,30 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
 class PrivHelperRestartDecisionTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    sentinelFile_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
     writeSentinel(makeSentinelContents());
     server_.now.store(kFakeNow);
-    server_.restartConfig_ = makeRestartArgs(sentinel_->path().string());
     // Nothing calls initPartial() here, so the sentinel's owner has to be
     // declared by hand for the reader's ownership check to pass.
-    server_.uid_ = getuid();
+    server_.sentinel_.emplace(getuid());
+    configure(restartArgs());
+  }
+
+  EdenFsRestartArgs restartArgs() const {
+    return makeRestartArgs(sentinelFile_->path().string());
+  }
+
+  void configure(EdenFsRestartArgs args) {
+    server_.sentinel_->setConfig(std::move(args));
   }
 
   void writeSentinel(const std::string& contents) {
-    ASSERT_TRUE(folly::writeFile(contents, sentinel_->path().string().c_str()));
+    ASSERT_TRUE(
+        folly::writeFile(contents, sentinelFile_->path().string().c_str()));
   }
 
   void removeSentinel() {
-    sentinel_.reset();
+    sentinelFile_.reset();
   }
 
   /**
@@ -2147,7 +2144,7 @@ class PrivHelperRestartDecisionTest : public ::testing::Test {
   }
 
   PrivHelperRestartTestServer server_;
-  std::unique_ptr<TemporaryFile> sentinel_;
+  std::unique_ptr<TemporaryFile> sentinelFile_;
 };
 
 TEST_F(PrivHelperRestartDecisionTest, restartsAfterACrash) {
@@ -2156,17 +2153,20 @@ TEST_F(PrivHelperRestartDecisionTest, restartsAfterACrash) {
 }
 
 TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWithoutRestartArgs) {
-  server_.restartConfig_.reset();
+  server_.sentinel_.emplace(getuid());
   expectNoRestart();
 }
 
 TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWhenDisabled) {
-  server_.restartConfig_->enabled = false;
+  auto args = restartArgs();
+  args.enabled = false;
+  configure(std::move(args));
+
   expectNoRestart();
 }
 
 TEST_F(PrivHelperRestartDecisionTest, cleanShutdownNotificationDisarms) {
-  server_.cleanShutdownNotified_ = true;
+  server_.sentinel_->noteCleanShutdown();
   expectNoRestart();
 }
 
@@ -2181,7 +2181,10 @@ TEST_F(PrivHelperRestartDecisionTest, anUnparseableSentinelStopsTheRestart) {
 }
 
 TEST_F(PrivHelperRestartDecisionTest, doesNotRestartOnceTheBreakerIsTripped) {
-  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  auto args = restartArgs();
+  args.restartCount = args.maxRestarts;
+  configure(std::move(args));
+
   expectNoRestart();
 }
 
