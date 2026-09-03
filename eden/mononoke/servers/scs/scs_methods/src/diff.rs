@@ -32,77 +32,66 @@ use mononoke_types::NonRootMPath;
 use scs_errors::ServiceError;
 use source_control as thrift;
 
-/// Trait for extracting RequestError from diff service error types.
-/// All diff service operations throw the same error types (RequestError and InternalError),
-/// so this trait allows us to uniformly check for transient errors across all operations.
+/// Trait for extracting declared errors from diff-service RPC failures.
 trait DiffServiceError {
     fn request_error(&self) -> Option<&diff_service_if::RequestError>;
+    fn overloaded_error(&self) -> Option<&diff_service_if::OverloadedError>;
+    fn repo_not_loaded_error(&self) -> Option<&diff_service_if::RepoNotLoadedError>;
 }
 
-impl DiffServiceError for DiffUnifiedHeaderlessError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
+macro_rules! impl_diff_service_error {
+    ($($error:ty),+ $(,)?) => {
+        $(
+            impl DiffServiceError for $error {
+                fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+                    match self {
+                        Self::ex(error) => Some(error),
+                        _ => None,
+                    }
+                }
+
+                fn overloaded_error(&self) -> Option<&diff_service_if::OverloadedError> {
+                    match self {
+                        Self::overloaded(error) => Some(error),
+                        _ => None,
+                    }
+                }
+
+                fn repo_not_loaded_error(&self) -> Option<&diff_service_if::RepoNotLoadedError> {
+                    match self {
+                        Self::repo_not_loaded(error) => Some(error),
+                        _ => None,
+                    }
+                }
+            }
+        )+
+    };
 }
 
-impl DiffServiceError for DiffUnifiedError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
-impl DiffServiceError for DiffHunksError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
-impl DiffServiceError for MetadataDiffError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
-impl DiffServiceError for CommitCompareError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
-impl DiffServiceError for DiffUnifiedUnaryError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
-impl DiffServiceError for DiffUnifiedHeaderlessUnaryError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
+impl_diff_service_error!(
+    DiffUnifiedHeaderlessError,
+    DiffUnifiedError,
+    DiffHunksError,
+    MetadataDiffError,
+    CommitCompareError,
+    DiffUnifiedUnaryError,
+    DiffUnifiedHeaderlessUnaryError,
+);
 
 fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> ServiceError {
+    if let Some(overloaded) = e.overloaded_error() {
+        return scs_errors::overloaded(format!("diff service overloaded: {}", overloaded.message))
+            .into();
+    }
+
+    if let Some(repo_not_loaded) = e.repo_not_loaded_error() {
+        return scs_errors::internal_error(format!(
+            "diff service repo not loaded: {}",
+            repo_not_loaded.message
+        ))
+        .into();
+    }
+
     match e.request_error() {
         Some(req_err) => match &req_err.reason {
             diff_service_if::RequestErrorReason::diff_error(diff_err) => {
@@ -965,8 +954,28 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_overloaded_diff_service_error_maps_to_scs_overload() {
-        // Given: diff_service rejects the request due to overload.
+    fn test_dedicated_overload_maps_to_scs_overload() {
+        let err = DiffUnifiedHeaderlessError::overloaded(diff_service_if::OverloadedError {
+            message: "diff service is overloaded".into(),
+            ..Default::default()
+        });
+
+        let service_error = convert_diff_service_error(err);
+
+        match service_error {
+            scs_errors::ServiceError::Overload(overload) => {
+                assert_eq!(
+                    overload.reason,
+                    "diff service overloaded: diff service is overloaded"
+                );
+            }
+            other => panic!("expected SCS OverloadError, got {other:?}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_legacy_overloaded_diff_service_error_maps_to_scs_overload() {
+        // Given: an older diff_service rejects the request due to overload.
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::transient_error(
                 diff_service_if::TransientError {
@@ -995,8 +1004,32 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_repo_not_found_diff_service_error_maps_to_scs_internal_error() {
-        // Given: diff_service reports a shard-routing miss for a repo in the tier.
+    fn test_repo_not_loaded_diff_service_error_maps_to_scs_internal_error() {
+        // Given: diff_service reports a shard-routing miss with its dedicated error.
+        let err =
+            DiffUnifiedHeaderlessError::repo_not_loaded(diff_service_if::RepoNotLoadedError {
+                message: "repo not loaded on this server: test_repo".into(),
+                ..Default::default()
+            });
+
+        // When: SCS converts the diff_service error for its clients.
+        let service_error = convert_diff_service_error(err);
+
+        // Then: clients observe the final failure as an internal error.
+        match service_error {
+            scs_errors::ServiceError::Internal(internal) => {
+                assert_eq!(
+                    internal.reason,
+                    "diff service repo not loaded: repo not loaded on this server: test_repo"
+                );
+            }
+            other => panic!("expected SCS InternalError, got {other:?}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_legacy_repo_not_found_diff_service_error_maps_to_scs_internal_error() {
+        // Given: an older diff_service reports a shard-routing miss as a nested error.
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::transient_error(
                 diff_service_if::TransientError {
@@ -1011,7 +1044,7 @@ mod tests {
         // When: SCS converts the diff_service error for its clients.
         let service_error = convert_diff_service_error(err);
 
-        // Then: clients observe an internal error with the diff_service context.
+        // Then: clients observe the final failure as an internal error.
         match service_error {
             scs_errors::ServiceError::Internal(internal) => {
                 assert!(
