@@ -8,9 +8,40 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from unittest.mock import patch
 
-from eden.fs.cli.daemon_util import start_daemon_from_args_file, SystemdStartDaemonError
+from eden.fs.cli.daemon_util import (
+    DAEMON_ARGS_FILENAME,
+    start_daemon_from_args_file,
+    SystemdStartDaemonError,
+    write_daemon_args_file,
+)
+
+
+class WriteDaemonArgsFileTest(unittest.TestCase):
+    def _write(self, restart_cmd: Optional[List[str]] = None) -> Dict[str, Any]:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            write_daemon_args_file(
+                Path(temp_dir),
+                ["/usr/bin/sudo", "/usr/local/bin/edenfs", "--takeover"],
+                {"PATH": "/usr/bin"},
+                restart_cmd,
+            )
+            return json.loads((Path(temp_dir) / DAEMON_ARGS_FILENAME).read_text())
+
+    def test_records_the_restart_command_alongside_the_launch_command(self) -> None:
+        data = self._write(["/usr/local/bin/edenfs"])
+
+        # The launch command is stored verbatim: systemd replays it as-is.
+        self.assertEqual(
+            data["cmd"], ["/usr/bin/sudo", "/usr/local/bin/edenfs", "--takeover"]
+        )
+        self.assertEqual(data["restart_cmd"], ["/usr/local/bin/edenfs"])
+
+    def test_omits_the_restart_command_when_there_is_none(self) -> None:
+        self.assertNotIn("restart_cmd", self._write())
 
 
 class StartDaemonFromArgsFileTest(unittest.TestCase):

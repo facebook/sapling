@@ -91,15 +91,24 @@ def _find_default_daemon_binary() -> Optional[str]:
 
 
 def write_daemon_args_file(
-    state_dir: Path, cmd: List[str], eden_env: Dict[str, str]
+    state_dir: Path,
+    cmd: List[str],
+    eden_env: Dict[str, str],
+    restart_cmd: Optional[List[str]] = None,
 ) -> Path:
     """Write the daemon command and environment to a JSON file.
 
-    This file is read by the 'eden systemd-start' subcommand which is invoked
-    by systemd's ExecStart/ExecReload.
+    ``cmd`` is read back by the 'eden systemd-start' subcommand which is
+    invoked by systemd's ExecStart/ExecReload, so it is stored verbatim.
+
+    ``restart_cmd`` is read by the daemon itself and forwarded to the
+    privhelper, which uses it to relaunch edenfs after a crash. It omits the
+    sudo wrapper and ``--takeover``, neither of which can be replayed.
     """
     args_file = state_dir / DAEMON_ARGS_FILENAME
-    data = {"cmd": cmd, "env": eden_env}
+    data: Dict[str, object] = {"cmd": cmd, "env": eden_env}
+    if restart_cmd is not None:
+        data["restart_cmd"] = restart_cmd
     write_file_atomically(args_file, json.dumps(data).encode())
     return args_file
 
