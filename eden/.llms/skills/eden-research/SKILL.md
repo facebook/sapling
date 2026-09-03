@@ -1,5 +1,5 @@
 ---
-name: 'eden_research'
+name: 'eden-research'
 description: >
   Load FIRST before searching code in eden/. Contains component-to-file maps,
   key type names, and architecture diagrams for EdenFS, Sapling, and Mononoke.
@@ -126,7 +126,7 @@ Always include concrete code pointers. Never give a pure prose answer without re
 Follow these tiers in order. Stop at the first tier that answers the question.
 
 **Tier 1 — Answer from skill content (seconds):**
-Check this skill's Architecture, Cross-Cutting Data Flows, and Component Overview sections for high-level "What is X?", "Where is X?", and "How do X and Y connect?" questions. If the question is about a specific component, load the appropriate reference from `references/` (see Detailed References section below).
+Check this skill's Architecture, Cross-Cutting Data Flows, and Component Overview sections for high-level "What is X?", "Where is X?", and "How do X and Y connect?" questions. If the question is about a specific component, load the appropriate reference from `../references/` (see Detailed References section below).
 
 **Tier 2 — Read source files directly (under 1 min):**
 Use the Detailed References table below to load the appropriate reference, which contains Component Overview and Quick Reference tables for the relevant component. Then read source files directly. Also check the relevant CLAUDE.md (`eden/fs/.claude/CLAUDE.md`, `eden/scm/.claude/CLAUDE.md`, etc.) for additional architecture context. This handles most "How does X work?", "Trace X", and implementation questions.
@@ -140,8 +140,8 @@ For component-specific information (component overview, quick reference, key con
 
 | Component | Reference | When to Load |
 |-----------|-----------|--------------|
-| **EdenFS** | [`references/edenfs.md`](references/edenfs.md) | Inodes, ObjectStore, FUSE/NFS/PrjFS, Thrift service |
-| **Sapling** | [`references/sapling.md`](references/sapling.md) | CLI commands, Rust libraries, Python interop, .t tests |
-| **Mononoke** | [`references/mononoke.md`](references/mononoke.md) | SLAPI/SCS/Git servers, blobstore, derived data, facets |
+| **EdenFS** | [`../references/edenfs.md`](../references/edenfs.md) | Inodes, ObjectStore, FUSE/NFS/PrjFS, Thrift service |
+| **Sapling** | [`../references/sapling.md`](../references/sapling.md) | CLI commands, Rust libraries, Python interop, .t tests |
+| **Mononoke** | [`../references/mononoke.md`](../references/mononoke.md) | SLAPI/SCS/Git servers, blobstore, derived data, facets |
 | **Integration** | `eden/integration/.claude/CLAUDE.md` | End-to-end tests with real EdenFS daemon |
 | **Endpoints** | [`../CREATING_ENDPOINTS/SKILL.md`](../CREATING_ENDPOINTS/SKILL.md) | Adding new EdenAPI/SLAPI endpoints |
