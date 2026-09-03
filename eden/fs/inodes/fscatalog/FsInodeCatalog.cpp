@@ -221,6 +221,7 @@ struct statfs FsFileContentStore::statFs() const {
 }
 
 void FsFileContentStore::close() {
+  walFileCache_.wlock()->entries.clear();
   dirFile_.close();
   infoFile_.close();
 }
@@ -673,6 +674,51 @@ WalPath FsFileContentStore::getWalPath(InodeNumber inodeNumber) {
   return walPath;
 }
 
+FsFileContentStore::CachedWalFilePtr FsFileContentStore::getCachedWalFile(
+    InodeNumber parent) {
+  if (cacheWalFiles_) {
+    auto cache = walFileCache_.wlock();
+    auto iter = cache->entries.find(parent);
+    if (iter != cache->entries.end()) {
+      return iter->second;
+    }
+  }
+
+  auto walPath = getWalPath(parent);
+  int fd = openat(
+      dirFile_.fd(),
+      walPath.c_str(),
+      O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC | O_NOFOLLOW,
+      0600);
+  folly::checkUnixError(
+      fd, fmt::format("error opening WAL file for inode {}", parent));
+  folly::File file{fd, /* ownsFd */ true};
+
+  off_t size = ::lseek(fd, 0, SEEK_END);
+  folly::checkUnixError(
+      size, fmt::format("error stat'ing WAL file for inode {}", parent));
+  auto cached = std::make_shared<CachedWalFile>(
+      std::move(file), static_cast<uint64_t>(size));
+
+  if (!cacheWalFiles_) {
+    // The caller drops the last reference once the append completes, which
+    // closes the fd, matching the uncached behavior.
+    return cached;
+  }
+
+  auto cache = walFileCache_.wlock();
+  auto iter = cache->entries.find(parent);
+  if (iter != cache->entries.end()) {
+    return iter->second;
+  }
+  cache->entries.set(parent, cached);
+  return cached;
+}
+
+void FsFileContentStore::invalidateCachedWalFile(InodeNumber parent) {
+  walFileCache_.wlock()->entries.erase(parent);
+}
+
 uint64_t FsFileContentStore::appendWalEntry(
     InodeNumber parent,
     WalOpType op,
@@ -785,30 +831,17 @@ uint64_t FsFileContentStore::appendWalEntry(
 
   XCHECK_EQ(offset, totalSize);
 
-  auto walPath = getWalPath(parent);
-  int fd = openat(
-      dirFile_.fd(),
-      walPath.c_str(),
-      O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC | O_NOFOLLOW,
-      0600);
-  folly::checkUnixError(
-      fd, fmt::format("error opening WAL file for inode {}", parent));
-  SCOPE_EXIT {
-    ::close(fd);
+  auto walFile = getCachedWalFile(parent);
+  auto fd = walFile->file.fd();
+  auto sizeBefore = walFile->size;
+  // The tracked size must match the on-disk size exactly: the short-write
+  // recovery below truncates to sizeBefore, so a stale-low value would chop
+  // off valid entries. A mismatch means a writer bypassed appendWalEntry or
+  // the per-parent serialization contract broke.
+  XDCHECK_EQ(static_cast<off_t>(sizeBefore), ::lseek(fd, 0, SEEK_END));
+  SCOPE_FAIL {
+    invalidateCachedWalFile(parent);
   };
-
-  // Record the pre-write file size so we can truncate the torn tail if
-  // the kernel returns a short write below. lseek(SEEK_END) on an
-  // O_APPEND fd returns the current size without affecting where the
-  // next write lands (the kernel always positions O_APPEND writes at
-  // end-of-file atomically). Cheap: kernel-only, no disk I/O.
-  //
-  // The lseek + writeFull + ftruncate sequence is NOT atomic across
-  // syscalls; it relies on the per-parent serialization documented on
-  // appendWalEntry's declaration.
-  off_t sizeBefore = ::lseek(fd, 0, SEEK_END);
-  folly::checkUnixError(
-      sizeBefore, fmt::format("error stat'ing WAL file for inode {}", parent));
 
   // No fsync after the write. EdenFS does not promise power-loss
   // durability for overlay state — saveOverlayDir takes the same stance
@@ -824,7 +857,7 @@ uint64_t FsFileContentStore::appendWalEntry(
     // burying the tear mid-file. Capture errno before ftruncate clobbers it.
     int writeErrno = errno;
     int truncErrno = 0;
-    if (::ftruncate(fd, sizeBefore) != 0) {
+    if (::ftruncate(fd, static_cast<off_t>(sizeBefore)) != 0) {
       truncErrno = errno;
     }
     folly::throwSystemErrorExplicit(
@@ -838,7 +871,8 @@ uint64_t FsFileContentStore::appendWalEntry(
             truncErrno));
   }
 
-  return static_cast<uint64_t>(sizeBefore) + static_cast<uint64_t>(written);
+  walFile->size = sizeBefore + static_cast<uint64_t>(written);
+  return walFile->size;
 }
 
 bool FsFileContentStore::hasWal(InodeNumber parent) {
@@ -1098,6 +1132,7 @@ LoadWalResult FsFileContentStore::replayWal(
 }
 
 void FsFileContentStore::removeWal(InodeNumber parent) {
+  invalidateCachedWalFile(parent);
   auto walPath = getWalPath(parent);
   if (::unlinkat(dirFile_.fd(), walPath.c_str(), 0) != 0) {
     int err = errno;

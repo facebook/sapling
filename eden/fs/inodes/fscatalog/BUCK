@@ -39,6 +39,8 @@ cpp_library(
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//folly:file",
         "//folly:range",
+        "//folly:synchronized",
+        "//folly/container:evicting_cache_map",
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),

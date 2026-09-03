@@ -2316,6 +2316,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Keep overlay WAL files open in a small cache instead of opening and
+   * closing one per append, and track their size in memory rather than
+   * with an lseek per append.
+   */
+  ConfigSetting<bool> experimentalOverlayCacheWalFiles{
+      "experimental:overlay-cache-wal-files",
+      true,
+      this};
+
+  /**
    * When true, write non-materialized directories directly to their overlay
    * file instead of creating a temporary file and renaming. This avoids
    * filesystem metadata overhead (rename) at the cost of leaving a

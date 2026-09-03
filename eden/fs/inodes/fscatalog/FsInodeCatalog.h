@@ -9,9 +9,12 @@
 
 #include <folly/File.h>
 #include <folly/Range.h>
+#include <folly/Synchronized.h>
+#include <folly/container/EvictingCacheMap.h>
 #include <gtest/gtest_prod.h>
 #include <array>
 #include <map>
+#include <memory>
 #include <optional>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/FileContentStore.h"
@@ -40,8 +43,11 @@ class FsFileContentStore : public FileContentStore {
  public:
   explicit FsFileContentStore(
       AbsolutePathPiece localDir,
-      bool directFileCreate = false)
-      : localDir_{localDir}, directFileCreate_{directFileCreate} {}
+      bool directFileCreate = false,
+      bool cacheWalFiles = false)
+      : localDir_{localDir},
+        directFileCreate_{directFileCreate},
+        cacheWalFiles_{cacheWalFiles} {}
 
   /**
    * Initialize the FileContentStore, acquire the "info" file lock and load the
@@ -186,7 +192,7 @@ class FsFileContentStore : public FileContentStore {
    * concurrent calls for the same parent would interleave the
    * lseek + writeFull + ftruncate short-write recovery sequence and could
    * drop a successful neighbor's write. Calls for different parents are
-   * safe — each opens its own fd against a distinct WAL file.
+   * safe — each uses a distinct cached fd for its WAL file.
    */
   uint64_t appendWalEntry(
       InodeNumber parent,
@@ -369,6 +375,25 @@ class FsFileContentStore : public FileContentStore {
       bool crashSafe,
       bool removeOnFailure);
 
+  struct CachedWalFile {
+    CachedWalFile(folly::File file, uint64_t size)
+        : file{std::move(file)}, size{size} {}
+
+    folly::File file;
+    uint64_t size;
+  };
+
+  using CachedWalFilePtr = std::shared_ptr<CachedWalFile>;
+
+  struct WalFileCache {
+    WalFileCache() : entries{64} {}
+
+    folly::EvictingCacheMap<InodeNumber, CachedWalFilePtr> entries;
+  };
+
+  CachedWalFilePtr getCachedWalFile(InodeNumber parent);
+  void invalidateCachedWalFile(InodeNumber parent);
+
   /** Path to ".eden/CLIENT/local" */
   const AbsolutePath localDir_;
 
@@ -377,6 +402,12 @@ class FsFileContentStore : public FileContentStore {
    * Gated by experimental:overlay-direct-file-create.
    */
   const bool directFileCreate_{false};
+
+  /**
+   * Keep WAL files open across appends. Gated by
+   * experimental:overlay-cache-wal-files.
+   */
+  const bool cacheWalFiles_{false};
 
   /**
    * An open file descriptor to the overlay info file.
@@ -393,6 +424,8 @@ class FsFileContentStore : public FileContentStore {
    * We maintain this so we can use openat(), unlinkat(), etc.
    */
   folly::File dirFile_;
+
+  folly::Synchronized<WalFileCache> walFileCache_{std::in_place};
 };
 
 /**

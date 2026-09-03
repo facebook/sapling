@@ -40,11 +40,15 @@ TEST(FsInodeCatalogWalPathTest, getWalPath_handlesMaxUint64Inode) {
   EXPECT_STREQ("ff/18446744073709551615.wal", path.c_str());
 }
 
-class FsInodeCatalogWalTest : public ::testing::Test {
+/// Parameterized over experimental:overlay-cache-wal-files, so every WAL
+/// behavior is verified with both the cached and open-per-append paths.
+class FsInodeCatalogWalTest : public ::testing::TestWithParam<bool> {
  protected:
   void SetUp() override {
     store_ = std::make_unique<FsFileContentStore>(
-        canonicalPath(testDir_.path().string()));
+        canonicalPath(testDir_.path().string()),
+        /*directFileCreate=*/false,
+        /*cacheWalFiles=*/GetParam());
     store_->initialize(/*createIfNonExisting=*/true);
   }
 
@@ -70,6 +74,11 @@ class FsInodeCatalogWalTest : public ::testing::Test {
   folly::test::TemporaryDirectory testDir_;
   std::unique_ptr<FsFileContentStore> store_;
 };
+
+INSTANTIATE_TEST_SUITE_P(
+    WalFileCache,
+    FsInodeCatalogWalTest,
+    ::testing::Bool());
 
 namespace {
 
@@ -185,7 +194,7 @@ void writeRawWal(
 
 } // namespace
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
   const InodeNumber parent{1};
   auto entry = makeEntryWithHash(0100644, 42, std::string(20, '\xab'));
   store_->appendWalEntry(
@@ -217,7 +226,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
   EXPECT_EQ(off, bytes.size());
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
   const InodeNumber parent{2};
   auto entry = makeEntry(0100644, 7);
   store_->appendWalEntry(
@@ -237,7 +246,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
   EXPECT_EQ(off, bytes.size());
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAclRootState) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_writesAclRootState) {
   const InodeNumber parent{9};
   auto entry = makeEntryWithAclRootState(
       S_IFDIR | 0755, 8, AclRootState::RestrictedAclRoot);
@@ -255,7 +264,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAclRootState) {
   EXPECT_EQ(off, bytes.size());
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
   const InodeNumber parent{3};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"baz"}, nullptr);
@@ -275,7 +284,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
       bytes.substr(kEntryLenSize + kOpByteSize + kNameLenSize, kTestNameSize));
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesMaterializeEntry) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_writesMaterializeEntry) {
   const InodeNumber parent{4};
   store_->appendWalEntry(
       parent, WalOpType::MATERIALIZE, PathComponentPiece{"qux"}, nullptr);
@@ -290,7 +299,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesMaterializeEntry) {
       static_cast<uint8_t>(bytes[kEntryLenSize]));
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_appendsAcrossMultipleCalls) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_appendsAcrossMultipleCalls) {
   const InodeNumber parent{5};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"a"}, nullptr);
@@ -307,7 +316,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_appendsAcrossMultipleCalls) {
   EXPECT_EQ(kSingleCharRemovePayload, readU32(bytes, sizeAfterFirst));
 }
 
-TEST_F(FsInodeCatalogWalTest, appendWalEntry_createsWalFileWithMode0600) {
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_createsWalFileWithMode0600) {
   const InodeNumber parent{6};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
@@ -320,22 +329,22 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_createsWalFileWithMode0600) {
   EXPECT_EQ(0600, st.st_mode & 0777);
 }
 
-TEST_F(FsInodeCatalogWalTest, hasWal_falseWhenMissing) {
+TEST_P(FsInodeCatalogWalTest, hasWal_falseWhenMissing) {
   EXPECT_FALSE(store_->hasWal(InodeNumber{200}));
 }
 
-TEST_F(FsInodeCatalogWalTest, hasWal_trueAfterAppend) {
+TEST_P(FsInodeCatalogWalTest, hasWal_trueAfterAppend) {
   const InodeNumber parent{201};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   EXPECT_TRUE(store_->hasWal(parent));
 }
 
-TEST_F(FsInodeCatalogWalTest, removeWal_missingFileIsNotAnError) {
+TEST_P(FsInodeCatalogWalTest, removeWal_missingFileIsNotAnError) {
   EXPECT_NO_THROW(store_->removeWal(InodeNumber{202}));
 }
 
-TEST_F(FsInodeCatalogWalTest, removeWal_removesAfterAppend) {
+TEST_P(FsInodeCatalogWalTest, removeWal_removesAfterAppend) {
   const InodeNumber parent{203};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
@@ -344,7 +353,7 @@ TEST_F(FsInodeCatalogWalTest, removeWal_removesAfterAppend) {
   EXPECT_FALSE(store_->hasWal(parent));
 }
 
-TEST_F(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
+TEST_P(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
   const InodeNumber parent{204};
   EXPECT_FALSE(store_->hasWal(parent));
   store_->appendWalEntry(
@@ -353,10 +362,28 @@ TEST_F(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
   store_->removeWal(parent);
   EXPECT_FALSE(store_->hasWal(parent));
 }
-TEST_F(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
+
+TEST_P(FsInodeCatalogWalTest, appendWalEntry_reopensAfterRemove) {
+  const InodeNumber parent{205};
+  store_->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"old"}, nullptr);
+  store_->removeWal(parent);
+
+  store_->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"new"}, nullptr);
+  auto bytes = readWal(parent);
+  constexpr size_t kNewNameSize = 3;
+  constexpr size_t kPayloadSize = kOpByteSize + kNameLenSize + kNewNameSize;
+  EXPECT_EQ(kEntryLenSize + kPayloadSize, bytes.size());
+  EXPECT_EQ(
+      "new",
+      bytes.substr(kEntryLenSize + kOpByteSize + kNameLenSize, kNewNameSize));
+}
+
+TEST_P(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
   // hasWal uses fstatat + S_ISREG, so a stray symlink planted at the WAL
   // path must report false rather than be followed (or accepted as a WAL).
-  const InodeNumber parent{205};
+  const InodeNumber parent{206};
   ASSERT_FALSE(store_->hasWal(parent));
 
   // Plant a dangling symlink where the WAL would live. The shard
@@ -370,11 +397,11 @@ TEST_F(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
   EXPECT_FALSE(store_->hasWal(parent));
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_emptyStore) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_emptyStore) {
   EXPECT_TRUE(store_->scanForWalFiles().empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_returnsInodesAcrossShards) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_returnsInodesAcrossShards) {
   // Pick three inode numbers whose low byte differs so they land in
   // distinct shard directories.
   const InodeNumber a{0x101};
@@ -395,7 +422,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_returnsInodesAcrossShards) {
   EXPECT_EQ(c, found[2]);
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_ignoresUnparsableNames) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_ignoresUnparsableNames) {
   // Make sure at least one shard directory exists by writing a real WAL.
   const InodeNumber real{0xab};
   store_->appendWalEntry(
@@ -410,7 +437,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_ignoresUnparsableNames) {
   EXPECT_EQ(real, found[0]);
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_coexistsWithOverlayFiles) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_coexistsWithOverlayFiles) {
   // The shard dir holds the overlay file (no .wal suffix) at "<inode>" and
   // the WAL file at "<inode>.wal". scanForWalFiles must only enumerate the
   // latter.
@@ -427,7 +454,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_coexistsWithOverlayFiles) {
   EXPECT_EQ(ino, found[0]);
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsZeroInode) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_skipsZeroInode) {
   // A stray "00/0.wal" would crash startup if returned: InodeNumber{0}
   // trips an internal assert. The scanner must reject and warn-skip
   // instead.
@@ -439,7 +466,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsZeroInode) {
   EXPECT_TRUE(found.empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsLeadingZeroNames) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_skipsLeadingZeroNames) {
   // The catalog's writers always use minimal-width decimal, so "05.wal"
   // can only be junk. Returning it would also yield duplicate inode 5
   // alongside any real "5.wal".
@@ -451,7 +478,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsLeadingZeroNames) {
   EXPECT_TRUE(found.empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsWrongShardPlacement) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_skipsWrongShardPlacement) {
   // Inode 0x171 hashes to shard 0x71, not 0x00. A WAL file dropped in
   // the wrong shard would be invisible to subsequent replayWal /
   // removeWal calls (those use getWalPath which reconstructs the shard
@@ -464,7 +491,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsWrongShardPlacement) {
   EXPECT_TRUE(found.empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsNonRegularEntries) {
+TEST_P(FsInodeCatalogWalTest, scanForWalFiles_skipsNonRegularEntries) {
   // A directory or symlink named "<inode>.wal" is corruption. The
   // scanner must drop it so callers don't try to read it as a WAL.
   auto root = canonicalPath(testDir_.path().string());
@@ -479,11 +506,11 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsNonRegularEntries) {
   EXPECT_TRUE(found.empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_emptyForMissingFile) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_emptyForMissingFile) {
   EXPECT_TRUE(store_->loadWalDelta(InodeNumber{300}).delta.empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
   const InodeNumber parent{301};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
@@ -496,7 +523,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
   EXPECT_EQ(WalOpType::REMOVE, delta.at("x").type);
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
   const InodeNumber parent{302};
   auto entry = makeEntryWithHash(0100644, 1, std::string(20, '\xab'));
   store_->appendWalEntry(
@@ -513,7 +540,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
   EXPECT_EQ(1, *delta.at("x").entry.inodeNumber());
 }
 
-TEST_F(
+TEST_P(
     FsInodeCatalogWalTest,
     loadWalDelta_materializeAloneRecordedAsMaterialize) {
   const InodeNumber parent{303};
@@ -525,7 +552,7 @@ TEST_F(
   EXPECT_EQ(WalOpType::MATERIALIZE, delta.at("y").type);
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
   const InodeNumber parent{304};
   store_->appendWalEntry(
       parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
@@ -539,7 +566,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
   EXPECT_EQ(99, *delta.at("x").entry.inodeNumber());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_preservesAclRootState) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_preservesAclRootState) {
   const InodeNumber parent{309};
   auto entry =
       makeEntryWithAclRootState(S_IFDIR | 0755, 100, AclRootState::AclRoot);
@@ -554,7 +581,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_preservesAclRootState) {
       static_cast<int32_t>(AclRootState::AclRoot), *loaded.aclRootState());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_acceptsLegacyAddWithoutAclTail) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsLegacyAddWithoutAclTail) {
   const InodeNumber parent{310};
   ASSERT_NO_FATAL_FAILURE(writeRawWal(
       testDir_, parent, makeOldFormatAddWalFrame("x", S_IFDIR | 0755, 100)));
@@ -568,7 +595,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_acceptsLegacyAddWithoutAclTail) {
   EXPECT_FALSE(loaded.aclRootState().has_value());
 }
 
-TEST_F(
+TEST_P(
     FsInodeCatalogWalTest,
     loadWalDelta_caseInsensitiveRemoveThenAddPreservesAddCasing) {
   const InodeNumber parent{330};
@@ -586,7 +613,7 @@ TEST_F(
   EXPECT_EQ(99, *it->second.entry.inodeNumber());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_caseInsensitiveAddThenRemoveWins) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_caseInsensitiveAddThenRemoveWins) {
   const InodeNumber parent{331};
   auto entry = makeEntry(0100644, 99);
   store_->appendWalEntry(
@@ -601,7 +628,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_caseInsensitiveAddThenRemoveWins) {
   EXPECT_EQ(WalOpType::REMOVE, it->second.type);
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
   const InodeNumber parent{305};
   auto e1 = makeEntry(0100644, 1);
   auto e2 = makeEntry(0100644, 2);
@@ -615,7 +642,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
   EXPECT_EQ(3, *delta.at("x").entry.inodeNumber());
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
   const InodeNumber parent{306};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
@@ -636,7 +663,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
   EXPECT_FALSE(delta.count("drop"));
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   // Forward-compat: an unknown opcode WITH a valid entryLen frame is
   // skipped (advanced by entryLen), not fatal. A subsequent valid REMOVE
   // in the same WAL must still be applied.
@@ -666,7 +693,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
-TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
   // Regression for the divergence between replayWal and loadWalDelta on
   // the byte-stream [REMOVE x][MATERIALIZE x]. replayWal applies REMOVE
   // first (deleting "x"), then no-ops on MATERIALIZE because "x" is gone.
@@ -684,13 +711,13 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
   EXPECT_EQ(WalOpType::REMOVE, it->second.type);
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_missingFileReturnsZero) {
+TEST_P(FsInodeCatalogWalTest, replayWal_missingFileReturnsZero) {
   overlay::OverlayDir dir;
   EXPECT_EQ(0u, store_->replayWal(InodeNumber{100}, dir).rawEntriesParsed);
   EXPECT_TRUE(dir.entries_ref()->empty());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
+TEST_P(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
   const InodeNumber parent{101};
   auto add = makeEntry(0100644, 200);
   auto addWithHash = makeEntryWithHash(0100644, 201, std::string(20, '\xab'));
@@ -716,7 +743,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
   EXPECT_FALSE(b.hash().has_value());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_preservesAclRootState) {
+TEST_P(FsInodeCatalogWalTest, replayWal_preservesAclRootState) {
   const InodeNumber parent{109};
   auto entry = makeEntryWithAclRootState(
       S_IFDIR | 0755, 202, AclRootState::RestrictedAclRoot);
@@ -733,7 +760,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_preservesAclRootState) {
       *loaded.aclRootState());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_acceptsLegacyAddWithoutAclTail) {
+TEST_P(FsInodeCatalogWalTest, replayWal_acceptsLegacyAddWithoutAclTail) {
   const InodeNumber parent{110};
   ASSERT_NO_FATAL_FAILURE(writeRawWal(
       testDir_, parent, makeOldFormatAddWalFrame("x", S_IFDIR | 0755, 202)));
@@ -748,7 +775,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_acceptsLegacyAddWithoutAclTail) {
   EXPECT_FALSE(loaded.aclRootState().has_value());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
+TEST_P(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
   const InodeNumber parent{102};
   // Pre-populate the dir as if the base file already had this entry.
   overlay::OverlayDir dir;
@@ -766,7 +793,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
   EXPECT_EQ(999, *dir.entries_ref()->at("x").inodeNumber());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_caseInsensitiveAddRekeysEntry) {
+TEST_P(FsInodeCatalogWalTest, replayWal_caseInsensitiveAddRekeysEntry) {
   const InodeNumber parent{108};
   overlay::OverlayDir dir;
   (*dir.entries_ref())["foo"] = makeEntry(0100644, 1);
@@ -784,7 +811,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_caseInsensitiveAddRekeysEntry) {
   EXPECT_EQ(999, *dir.entries_ref()->at("FOO").inodeNumber());
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
+TEST_P(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
   const InodeNumber parent{103};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
@@ -810,7 +837,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
   EXPECT_EQ(0u, dir.entries_ref()->count("drop"));
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_zeroEntryLenStops) {
+TEST_P(FsInodeCatalogWalTest, replayWal_zeroEntryLenStops) {
   const InodeNumber parent{104};
   // Four zero bytes: a zero entryLen, indistinguishable from a sparse file
   // tail. Replay must stop without applying anything.
@@ -819,7 +846,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_zeroEntryLenStops) {
   EXPECT_EQ(0u, store_->replayWal(parent, dir).rawEntriesParsed);
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
+TEST_P(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
   // Forward-compat: an unknown opcode with a valid entryLen frame is
   // skipped via replayWal too (it inherits loadWalDelta's parser).
   const InodeNumber parent{105};
@@ -854,7 +881,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
   EXPECT_EQ(0u, dir.entries_ref()->count("good"));
 }
 
-TEST_F(FsInodeCatalogWalTest, replayWal_truncatedInsideFieldsStopsCleanly) {
+TEST_P(FsInodeCatalogWalTest, replayWal_truncatedInsideFieldsStopsCleanly) {
   // Construct an entry whose declared entryLen exceeds the bytes that
   // follow. Replay must not parse past the buffer and must apply zero
   // entries.
