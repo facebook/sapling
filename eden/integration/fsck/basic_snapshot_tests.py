@@ -479,10 +479,13 @@ class Basic20251104Test(SnapshotTestBase):
                 )
             )
         repaired_files = self.snapshot.get_expected_files()
+        # The sockets (inodes 59 and 60) are contentless, so fsck quietly
+        # reclaims them rather than reporting orphan errors or archiving
+        # anything to lost+found.
+        repaired_files.pop("untracked/everybody.sock")
+        repaired_files.pop("untracked/owner_only.sock")
         orphan_files = [
             OrphanFile(58, repaired_files.pop("untracked/executable.exe")),
-            OrphanFile(59, repaired_files.pop("untracked/everybody.sock")),
-            OrphanFile(60, repaired_files.pop("untracked/owner_only.sock")),
         ]
         orphan_dirs = [
             OrphanDir(

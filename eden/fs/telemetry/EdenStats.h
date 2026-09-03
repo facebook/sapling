@@ -731,6 +731,12 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   // because compaction runs on the FUSE/NFS dispatch thread under the
   // parent contents lock.
   Duration walCompactionInline{"overlay.wal_compaction_inline_us"};
+
+  // Preallocated overlay file pool (overlay:file-prealloc-pool-size gate).
+  Counter preallocFileClaimed{"overlay.prealloc_file_claimed"};
+  Counter preallocFileMissed{"overlay.prealloc_file_missed"};
+  // A pool entry was popped but writing the initial contents failed.
+  Counter preallocFileClaimFailed{"overlay.prealloc_file_claim_failed"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {

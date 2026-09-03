@@ -88,6 +88,10 @@ class FileContentStore {
 
   /**
    * Helper function that creates an overlay file for a new FileInode.
+   *
+   * When a folly::File is returned, its offset is at the end of the written
+   * data (the header plus `contents`), so the caller can append further
+   * contents without seeking.
    */
   virtual std::variant<folly::File, InodeNumber> createOverlayFile(
       InodeNumber inodeNumber,

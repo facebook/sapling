@@ -2065,8 +2065,17 @@ FileInodePtr TreeInode::createImpl(
     // after releasing the contents lock.
     targetName = myPath.value() + name;
 
+#ifndef _WIN32
+    // Claim a preallocated overlay file (and its reserved inode number) if
+    // the pool has one; otherwise allocate a number and create the overlay
+    // file here.
+    auto prepared = getOverlay()->tryClaimPreparedFile(fileContents);
+    auto childNumber =
+        prepared ? prepared->first : getOverlay()->allocateInodeNumber();
+#else
     // Generate an inode number for this new entry.
     auto childNumber = getOverlay()->allocateInodeNumber();
+#endif
     getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
         childNumber,
@@ -2077,7 +2086,9 @@ FileInodePtr TreeInode::createImpl(
 
 #ifndef _WIN32
     // Create the overlay file before we insert the file into our entries map.
-    auto file = getOverlay()->createOverlayFile(childNumber, fileContents);
+    auto file = prepared
+        ? std::move(prepared->second)
+        : getOverlay()->createOverlayFile(childNumber, fileContents);
 #endif
 
     auto now = getNow();

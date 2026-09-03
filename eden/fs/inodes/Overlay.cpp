@@ -26,6 +26,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
+#include <folly/system/ThreadName.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/common/telemetry/DurationScope.h"
@@ -326,7 +327,11 @@ Overlay::Overlay(
       walCompactionByteCap_{config.overlayWalCompactionByteCap.getValue()},
       walMinCompactionThreshold_{static_cast<size_t>(
           config.experimentalOverlayWalMinCompactionThreshold.getValue())},
-      walCompactionRng_{[] { return folly::Random::rand32(); }} {}
+      walCompactionRng_{[] { return folly::Random::rand32(); }} {
+#ifndef _WIN32
+  filePreallocPoolSize_ = config.overlayFilePreallocPoolSize.getValue();
+#endif
+}
 
 Overlay::~Overlay() {
   close();
@@ -340,6 +345,10 @@ void Overlay::close() {
   if (gcThread_.joinable()) {
     gcThread_.join();
   }
+
+#ifndef _WIN32
+  stopPreallocThread();
+#endif
 
   // Make sure everything is shut down in reverse of construction order.
   // Cleanup is not necessary if tree overlay was not initialized and either
@@ -423,6 +432,12 @@ folly::SemiFuture<Unit> Overlay::initialize(
       promise.setException(std::move(ew));
       return;
     }
+#ifndef _WIN32
+    if (filePreallocPoolSize_ > 0 && fileContentStore_) {
+      preallocThread_ = std::thread([this] { preallocThreadLoop(); });
+    }
+#endif
+
     promise.setValue();
 
     gcThread();
@@ -1272,6 +1287,172 @@ OverlayFile Overlay::createOverlayFile(
     errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::createOverlayFileFailure);
     throw;
+  }
+}
+
+std::optional<std::pair<InodeNumber, OverlayFile>>
+Overlay::tryClaimPreparedFile(folly::ByteRange contents) {
+  if (filePreallocPoolSize_ == 0) {
+    return std::nullopt;
+  }
+  IORequest req{this};
+  PreparedFile prepared;
+  bool needRefill;
+  {
+    std::lock_guard<std::mutex> guard{preallocMutex_};
+    if (preallocPool_.empty()) {
+      stats_->increment(&OverlayStats::preallocFileMissed);
+      if (!preallocBroken_) {
+        preallocCondVar_.notify_one();
+      }
+      return std::nullopt;
+    }
+    prepared = std::move(preallocPool_.back());
+    preallocPool_.pop_back();
+    // Only wake the refill thread once half the pool has drained, so a
+    // steady stream of creates costs one wakeup and one refill batch per
+    // half-pool of claims rather than a futex wake per claim.
+    needRefill = preallocPool_.size() <= filePreallocPoolSize_ / 2;
+  }
+  if (needRefill) {
+    preallocCondVar_.notify_one();
+  }
+  if (!contents.empty()) {
+    // The fd is positioned just past the header, so this appends the
+    // contents (e.g. a symlink target) in the right place.
+    auto written =
+        folly::writeFull(prepared.file.fd(), contents.data(), contents.size());
+    if (written < 0) {
+      // Remove the file so a failed claim doesn't leave a partial
+      // payload behind for fsck to report.
+      int writeErrno = errno;
+      stats_->increment(&OverlayStats::preallocFileClaimFailed);
+      try {
+        fileContentStore_->removeOverlayFile(prepared.number);
+      } catch (const std::exception& ex) {
+        XLOGF(
+            WARN,
+            "failed to remove overlay file {} after a failed claim write: {}",
+            prepared.number,
+            folly::exceptionStr(ex));
+      }
+      folly::throwSystemErrorExplicit(
+          writeErrno, "failed to write contents to preallocated overlay file");
+    }
+  }
+  stats_->increment(&OverlayStats::preallocFileClaimed);
+  return std::make_pair(
+      prepared.number, OverlayFile{std::move(prepared.file), weak_from_this()});
+}
+
+void Overlay::preallocThreadLoop() {
+  folly::setThreadName("OverlayPrealloc");
+  bool backoff = false;
+  while (true) {
+    size_t want;
+    {
+      std::unique_lock<std::mutex> lock{preallocMutex_};
+      if (backoff) {
+        preallocCondVar_.wait_for(
+            lock, std::chrono::seconds(1), [&] { return preallocStop_; });
+        backoff = false;
+      } else {
+        preallocCondVar_.wait(lock, [&] {
+          return preallocStop_ || preallocPool_.size() < filePreallocPoolSize_;
+        });
+      }
+      if (preallocStop_) {
+        return;
+      }
+      want = filePreallocPoolSize_ - preallocPool_.size();
+    }
+    std::vector<PreparedFile> batch;
+    batch.reserve(want);
+    for (size_t i = 0; i < want; ++i) {
+      // If creation fails below, this number stays consumed; the inode
+      // number space is 64 bits, so the gap is harmless.
+      auto number = allocateInodeNumber();
+      try {
+        auto created =
+            fileContentStore_->createOverlayFile(number, folly::ByteRange{});
+        auto* file = std::get_if<folly::File>(&created);
+        if (!file) {
+          XLOG(
+              WARN,
+              "overlay file preallocation is not supported by this "
+              "FileContentStore; disabling the pool");
+          // The store may have persisted the file even though it did not
+          // return an fd (the LMDB store does); remove it so the probe
+          // leaves no orphan behind.
+          try {
+            fileContentStore_->removeOverlayFile(number);
+          } catch (const std::exception& removeEx) {
+            XLOGF(
+                WARN,
+                "failed to remove prealloc probe file {}: {}",
+                number,
+                folly::exceptionStr(removeEx));
+          }
+          // Entries already prepared in this batch are real overlay
+          // files; make them claimable rather than leaking them.
+          std::lock_guard<std::mutex> guard{preallocMutex_};
+          preallocBroken_ = true;
+          for (auto& entry : batch) {
+            preallocPool_.push_back(std::move(entry));
+          }
+          // The thread self-terminates without preallocStop_ being set;
+          // stopPreallocThread() still joins the finished thread safely.
+          return;
+        }
+        batch.push_back(PreparedFile{number, std::move(*file)});
+      } catch (const std::exception& ex) {
+        // Likely ENOSPC or an unusable overlay directory. Keep what we
+        // have and retry after a delay instead of spinning.
+        XLOGF(
+            WARN,
+            "overlay file preallocation failed for {}: {}",
+            number,
+            folly::exceptionStr(ex));
+        backoff = true;
+        break;
+      }
+    }
+    {
+      std::lock_guard<std::mutex> guard{preallocMutex_};
+      for (auto& entry : batch) {
+        preallocPool_.push_back(std::move(entry));
+      }
+    }
+  }
+}
+
+void Overlay::stopPreallocThread() {
+  {
+    std::lock_guard<std::mutex> guard{preallocMutex_};
+    preallocStop_ = true;
+  }
+  preallocCondVar_.notify_all();
+  if (preallocThread_.joinable()) {
+    preallocThread_.join();
+  }
+  // Remove any unclaimed pre-created files so they don't linger as orphans
+  // in the overlay directory.
+  std::vector<PreparedFile> leftover;
+  {
+    std::lock_guard<std::mutex> guard{preallocMutex_};
+    leftover.swap(preallocPool_);
+  }
+  for (auto& entry : leftover) {
+    entry.file.closeNoThrow();
+    try {
+      fileContentStore_->removeOverlayFile(entry.number);
+    } catch (const std::exception& ex) {
+      XLOGF(
+          WARN,
+          "failed to remove unclaimed preallocated overlay file {}: {}",
+          entry.number,
+          folly::exceptionStr(ex));
+    }
   }
 }
 

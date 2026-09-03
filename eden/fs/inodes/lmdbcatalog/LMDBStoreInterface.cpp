@@ -179,7 +179,9 @@ void LMDBStoreInterface::saveBlob(
         MDB_RESERVE));
     char* value = (char*)mdb_value.mv_data;
     for (size_t i = 0; i < iovCount; i++) {
-      memcpy(value, iov[i].iov_base, iov[i].iov_len);
+      if (iov[i].iov_len != 0) {
+        memcpy(value, iov[i].iov_base, iov[i].iov_len);
+      }
       value += iov[i].iov_len;
     }
   });

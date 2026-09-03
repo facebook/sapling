@@ -324,6 +324,7 @@ class EdenTestCase(EdenTestCaseBase):
             "hg": ['num-retry-threads = "2"'],
             "overlay": [
                 "direct-file-writes = true",
+                'file-prealloc-pool-size = "64"',
             ],
         }
 

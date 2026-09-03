@@ -158,6 +158,15 @@ TEST_F(LMDBStoreInterfaceTest, testSavingEmptyBlob) {
   EXPECT_EQ(store_->loadBlob(inode), expectedData);
 }
 
+TEST_F(LMDBStoreInterfaceTest, testSavingZeroLengthBlob) {
+  auto inode = InodeNumber{store_->nextInodeNumber()};
+
+  struct iovec iov{};
+  store_->saveBlob(inode, &iov, 1);
+
+  EXPECT_EQ(store_->loadBlob(inode), "");
+}
+
 TEST_F(LMDBStoreInterfaceTest, testSavingTreeOverwrite) {
   auto inode = InodeNumber{store_->nextInodeNumber()};
   overlay::OverlayDir dir;

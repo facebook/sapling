@@ -666,6 +666,44 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * experimental:overlay-wal-min-compaction-threshold.
    */
   size_t walMinCompactionThreshold_{0};
+#ifndef _WIN32
+  // Deliberate platform-scoped visibility switch: the pool's public API
+  // and its private machinery both exist only on non-Windows builds.
+ public:
+  /**
+   * Claim a pre-created overlay file (with its already-reserved inode
+   * number) from the preallocation pool, writing `contents` into it if
+   * non-empty. Returns nullopt when the pool is disabled, empty, or not
+   * supported by the backing store; callers then fall back to
+   * allocateInodeNumber() + createOverlayFile().
+   */
+  std::optional<std::pair<InodeNumber, OverlayFile>> tryClaimPreparedFile(
+      folly::ByteRange contents);
+
+ private:
+  void preallocThreadLoop();
+  void stopPreallocThread();
+
+  struct PreparedFile {
+    InodeNumber number;
+    folly::File file;
+  };
+
+  /**
+   * Pre-created overlay files for future file inodes: each entry's inode
+   * number is already allocated (reserved exclusively for the pool) and its
+   * on-disk file exists containing the standard file header, with the fd
+   * positioned just past the header. Claiming one makes file creation free
+   * of filesystem syscalls on the request path.
+   */
+  size_t filePreallocPoolSize_{0};
+  std::mutex preallocMutex_;
+  std::condition_variable preallocCondVar_;
+  std::vector<PreparedFile> preallocPool_;
+  bool preallocStop_{false};
+  bool preallocBroken_{false};
+  std::thread preallocThread_;
+#endif // !_WIN32
 
   /**
    * RNG used by `maybeCompactWal` to roll for inline compaction.

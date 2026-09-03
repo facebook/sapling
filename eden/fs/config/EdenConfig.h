@@ -2412,6 +2412,18 @@ class EdenConfig : private ConfigSettingManager {
       5'000'000,
       this};
 
+  /**
+   * Number of overlay files to pre-create for future file inodes so that
+   * creating a new file requires no filesystem syscalls on the request
+   * path. 0 disables preallocation. Only supported by the legacy
+   * (file-based) overlay. Read when a checkout's overlay is opened, so a
+   * change applies to mounts started afterwards.
+   */
+  ConfigSetting<uint64_t> overlayFilePreallocPoolSize{
+      "overlay:file-prealloc-pool-size",
+      64,
+      this};
+
   // [clone]
 
   /**

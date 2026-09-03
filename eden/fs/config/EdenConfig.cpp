@@ -63,7 +63,7 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
   subst["USER"] = "testuser";
   subst["USER_ID"] = "0";
 
-  return std::make_unique<EdenConfig>(
+  auto config = std::make_unique<EdenConfig>(
       std::move(subst),
       /*userHomePath=*/canonicalPath("/tmp"),
       /*systemConfigDir=*/canonicalPath("/tmp"),
@@ -71,6 +71,13 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
           std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
           std::make_shared<NullConfigSource>(ConfigSourceType::Dynamic),
           std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
+  // Overlay preallocation reserves inode numbers ahead of time and
+  // pre-creates on-disk entries, which breaks tests that assert exact
+  // inode-number accounting or overlay directory contents. Tests that
+  // exercise the pools enable them explicitly.
+  config->overlayFilePreallocPoolSize.setValue(
+      0, ConfigSourceType::Default, true);
+  return config;
 }
 
 std::string EdenConfig::toString(ConfigSourceType cs) const {
