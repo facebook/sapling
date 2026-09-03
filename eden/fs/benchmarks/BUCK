@@ -70,6 +70,22 @@ cpp_binary(
 )
 
 cpp_binary(
+    name = "fuse_getattr",
+    srcs = ["fuse_getattr.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:exception",
+    ],
+    external_deps = [
+        "gflags",
+    ],
+)
+
+cpp_binary(
     name = "get_xattr",
     srcs = ["get_xattr.cpp"],
     compatible_with = [

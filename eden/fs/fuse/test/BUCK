@@ -1,7 +1,28 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
+
+cpp_benchmark(
+    name = "fuse_channel_benchmark",
+    srcs = ["FuseChannelBenchmark.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/telemetry:error_logger",
+        "//eden/fs/telemetry:stats",
+        "//eden/fs/testharness:fake_fuse",
+        "//folly:benchmark",
+        "//folly:range",
+        "//folly/executors:global_executor",
+        "//folly/init:init",
+        "//folly/logging:logging",
+    ],
+)
 
 cpp_unittest(
     name = "test",
