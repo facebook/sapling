@@ -889,6 +889,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint32_t> fuseMaxPages{"fuse:max-pages", 0, this};
 
   /**
+   * Pass FUSE write data straight through to FileInode::write when the
+   * inode is already loaded, instead of copying it into a std::string for
+   * an asynchronous continuation.
+   */
+  ConfigSetting<bool> experimentalFuseAvoidWriteCopy{
+      "experimental:fuse-avoid-write-copy",
+      true,
+      this};
+
+  /**
    * Whether to use io_uring for FUSE request/reply transport instead of
    * traditional /dev/fuse read/write. Requires Linux 6.11+ with
    * CONFIG_FUSE_IO_URING=y. Falls back to /dev/fuse automatically if

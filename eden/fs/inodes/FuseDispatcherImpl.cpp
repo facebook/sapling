@@ -341,8 +341,19 @@ ImmediateFuture<size_t> FuseDispatcherImpl::write(
     folly::StringPiece data,
     off_t off,
     const ObjectFetchContextPtr& context) {
-  return inodeMap_->lookupFileInode(ino).thenValue(
-      [copy = data.str(), off, context = context.copy()](FileInodePtr&& inode) {
+  auto inodeFuture = inodeMap_->lookupFileInode(ino);
+  if (inodeFuture.isReady() &&
+      mount_->getEdenConfig()->experimentalFuseAvoidWriteCopy.getValue()) {
+    return std::move(inodeFuture)
+        .thenValue([data, off, context = context.copy()](FileInodePtr&& inode) {
+          // FileInode copies data if it has to materialize asynchronously.
+          return inode->write(data, off, context);
+        });
+  }
+
+  return std::move(inodeFuture)
+      .thenValue([copy = data.str(), off, context = context.copy()](
+                     FileInodePtr&& inode) {
         return inode->write(copy, off, context);
       });
 }
