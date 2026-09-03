@@ -47,7 +47,6 @@
 #include <string_view>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/privhelper/NfsMountRpc.h"
 #include "eden/fs/privhelper/priority/ProcessPriority.h"
 #include "eden/fs/utils/MountInfoTable.h"
@@ -1975,25 +1974,20 @@ PrivHelperServer::readRelaunchCommand() const {
   return command;
 }
 
-void PrivHelperServer::dropPrivilegesForRestart() const {
-  auto info = UserInfo::lookup();
-
-  // UserInfo::lookup() falls back to uid 0 when the real uid is root and
-  // SUDO_UID is absent, and dropPrivileges() then silently does nothing. Check
-  // the resolved identity against the owner this privhelper was started for.
-  if (info.getUid() == 0) {
-    throw std::runtime_error("resolved uid is root");
+void PrivHelperServer::validateRestartOwner() const {
+  const auto realUid = getuid();
+  const auto realGid = getgid();
+  if (realUid == 0) {
+    throw std::runtime_error("real uid is root");
   }
-  if (info.getUid() != uid_ || info.getGid() != gid_) {
+  if (realUid != uid_ || realGid != gid_) {
     throwf<std::runtime_error>(
-        "resolved uid/gid {}/{} do not match the privhelper owner {}/{}",
-        info.getUid(),
-        info.getGid(),
+        "real uid/gid {}/{} do not match the privhelper owner {}/{}",
+        realUid,
+        realGid,
         uid_,
         gid_);
   }
-
-  info.dropPrivileges();
 }
 
 bool PrivHelperServer::admitRestartAttempt() {

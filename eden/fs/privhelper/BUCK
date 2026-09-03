@@ -83,7 +83,6 @@ cpp_library(
         "//eden/common/utils:fsdetect",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",
-        "//eden/common/utils:user_info",
         "//eden/fs/privhelper/priority:process_priority",
         "//eden/fs/utils:mount_info_table",
         "//folly:conv",

@@ -1879,16 +1879,12 @@ TEST_F(PrivHelperBinaryTest, throwsWhenThereIsNothingToRelaunch) {
       std::runtime_error);
 }
 
-/**
- * Exposes the privilege drop. initPartial() is what records the owner the drop
- * has to match, so the fixture uses a real socket pair to set it.
- */
-class PrivHelperDropTestServer : public PrivHelperServer {
+class PrivHelperRestartOwnerTestServer : public PrivHelperServer {
  public:
-  using PrivHelperServer::dropPrivilegesForRestart;
+  using PrivHelperServer::validateRestartOwner;
 };
 
-class PrivHelperDropTest : public ::testing::Test {
+class PrivHelperRestartOwnerTest : public ::testing::Test {
  protected:
   void initWithOwner(uid_t uid, gid_t gid) {
     File clientConn;
@@ -1898,17 +1894,32 @@ class PrivHelperDropTest : public ::testing::Test {
     server_.initPartial(std::move(serverConn), uid, gid);
   }
 
-  PrivHelperDropTestServer server_;
+  PrivHelperRestartOwnerTestServer server_;
   File clientConn_;
 };
 
-TEST_F(PrivHelperDropTest, refusesWhenTheResolvedIdentityIsNotTheOwner) {
-  // UserInfo::lookup() resolves the user running the test, so an owner that is
-  // deliberately not that user is the mismatch the check exists for. Without
-  // it, a lookup that silently resolved to root would relaunch edenfs as root.
+TEST_F(PrivHelperRestartOwnerTest, acceptsMatchingNonRootRealIds) {
+  if (getuid() == 0) {
+    GTEST_SKIP() << "requires a non-root real uid";
+  }
+  initWithOwner(getuid(), getgid());
+
+  EXPECT_NO_THROW(server_.validateRestartOwner());
+}
+
+TEST_F(PrivHelperRestartOwnerTest, refusesARootRealUid) {
+  if (getuid() != 0) {
+    GTEST_SKIP() << "requires a root real uid";
+  }
+  initWithOwner(getuid(), getgid());
+
+  EXPECT_THROW(server_.validateRestartOwner(), std::runtime_error);
+}
+
+TEST_F(PrivHelperRestartOwnerTest, refusesAnOwnerMismatch) {
   initWithOwner(getuid() + 1, getgid() + 1);
 
-  EXPECT_THROW(server_.dropPrivilegesForRestart(), std::runtime_error);
+  EXPECT_THROW(server_.validateRestartOwner(), std::runtime_error);
 }
 
 /** Exposes the two disarm channels and the state they meet in. */

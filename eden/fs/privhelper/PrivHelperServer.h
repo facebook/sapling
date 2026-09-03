@@ -341,16 +341,12 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       const RelaunchCommand& command) const;
 
   /**
-   * Drop to the privhelper's owner, verifying that the drop really happened.
-   * Throws if it cannot be trusted.
+   * Verify that resetting the child IDs will select the privhelper's owner.
+   * Throws when the real IDs are root or do not match that owner.
    *
-   * Changes process-wide credentials: real, effective and saved uid/gid, plus
-   * the supplementary groups. Root cannot be regained afterwards.
-   *
-   * Virtual because a unit test must neither drop privileges for real nor be
-   * able to.
+   * Virtual so tests can supply controlled credentials.
    */
-  virtual void dropPrivilegesForRestart() const;
+  virtual void validateRestartOwner() const;
 #endif // __APPLE__
 
  private:
