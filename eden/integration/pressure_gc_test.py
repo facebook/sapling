@@ -7,7 +7,9 @@
 # pyre-strict
 
 import asyncio
+import errno
 import os
+import subprocess
 import sys
 import time
 from typing import Dict, List, Optional
@@ -176,6 +178,56 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             self.assertLess(loaded_after_gc, loaded_after_read)
 
         self.assertEqual("0\n", self.read_file("deep/parent/child/0"))
+
+    async def test_active_invalidation_breaks_getcwd_of_running_process(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        for i in range(self.deep_file_count):
+            self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
+
+        # Run a process whose cwd is a directory inside the mount. It calls
+        # getcwd() each time it receives a line on stdin.
+        child_code = (
+            "import os, sys\n"
+            "print('ready', flush=True)\n"
+            "for _ in sys.stdin:\n"
+            "    try:\n"
+            "        print(f'cwd:{os.getcwd()}', flush=True)\n"
+            "    except OSError as e:\n"
+            "        print(f'errno:{e.errno}', flush=True)\n"
+        )
+        cwd_path = os.path.join(self.mount, "deep", "parent", "child")
+        with subprocess.Popen(
+            [sys.executable, "-c", child_code],
+            cwd=cwd_path,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as child:
+            stdin = child.stdin
+            stdout = child.stdout
+            assert stdin is not None and stdout is not None
+
+            def probe() -> str:
+                stdin.write("\n")
+                stdin.flush()
+                return stdout.readline().strip()
+
+            try:
+                self.assertEqual("ready", stdout.readline().strip())
+                self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
+
+                invalidated = await self.invalidate("")
+                self.assertGreater(invalidated, 0)
+
+                # FIXME: getcwd() should keep working for a process whose cwd
+                # is inside the mount, but GC invalidation unhashes the cwd
+                # dentry chain, so getcwd() currently fails with ENOENT.
+                self.assertEqual(f"errno:{errno.ENOENT}", probe())
+            finally:
+                stdin.close()
+                child.wait(timeout=10)
 
     async def test_active_invalidation_preserves_bind_redirection(self) -> None:
         if sys.platform != "linux":
