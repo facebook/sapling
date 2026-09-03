@@ -20,7 +20,6 @@ extern crate scmqueryclient_rust_test_support as scmqueryclient_rust;
 use std::env;
 use std::io::IsTerminal;
 use std::io::stderr;
-use std::process::ExitCode;
 use std::sync::LazyLock;
 
 use ansi_term::Colour;
@@ -29,6 +28,7 @@ use clap::ArgMatches;
 use clap::CommandFactory;
 use clap::FromArgMatches;
 use clap::Parser;
+use cli::ExitCode;
 use fbinit::FacebookInit;
 use scs_client_raw::ScsClient;
 
@@ -107,7 +107,6 @@ impl BaseApp for ScscApp {
 
 #[derive(Parser)]
 #[clap(
-    name = "Source Control Service client",
     version(&**SHORT_VERSION),
     long_version(&**LONG_VERSION),
     term_width(textwrap::termwidth()),
@@ -130,6 +129,44 @@ struct ScscArgs {
     connection_args: ConnectionArgs,
 }
 
+/// Wrapper that lets `cli::main` drive clap parsing while still injecting
+/// scsc's dynamically-built (`base_app::subcommands!`) subcommands, which are
+/// not part of the derived `ScscArgs::command()`.
+struct ScscCli {
+    args: ScscArgs,
+    matches: ArgMatches,
+}
+
+impl CommandFactory for ScscCli {
+    fn command() -> clap::Command {
+        let subcommands = commands::subcommands();
+        assert!(!subcommands.is_empty());
+        ScscArgs::command()
+            .subcommands(subcommands)
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+    }
+
+    fn command_for_update() -> clap::Command {
+        Self::command()
+    }
+}
+
+impl FromArgMatches for ScscCli {
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, clap::Error> {
+        Ok(ScscCli {
+            args: ScscArgs::from_arg_matches(matches)?,
+            matches: matches.clone(),
+        })
+    }
+
+    fn update_from_arg_matches(&mut self, m: &ArgMatches) -> Result<(), clap::Error> {
+        self.args.update_from_arg_matches(m)?;
+        self.matches = m.clone();
+        Ok(())
+    }
+}
+
 #[cfg(target_os = "linux")]
 async fn init_just_knobs_from_config_path(path: &str) -> anyhow::Result<()> {
     use anyhow::Context;
@@ -142,20 +179,19 @@ async fn init_just_knobs_from_config_path(path: &str) -> anyhow::Result<()> {
         .context("initializing cached_config JustKnobs")
 }
 
-async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
+async fn main_impl(fb: FacebookInit, cli: ScscCli) -> anyhow::Result<()> {
+    cpp_log_spew::disable(fb);
+
     if hostcaps::is_corp() {
         //In Corp we should not be using strict mode of fbwhoami, which throws an error if the file is not present.
-        gflags::set_gflag_value(fb, "fbwhoami_strict", gflags::GflagValue::Bool(false))?
+        gflags::set_gflag_value(fb, "fbwhoami_strict", gflags::GflagValue::Bool(false))?;
     }
-    let subcommands = commands::subcommands();
-    assert!(!subcommands.is_empty());
+
+    let ScscCli {
+        args: common_args,
+        matches,
+    } = cli;
     let scsc_admin_enabled = env::var_os(SCSC_ADMIN_ENABLED_ENV).is_some();
-    let app = ScscArgs::command()
-        .subcommands(subcommands)
-        .subcommand_required(true)
-        .arg_required_else_help(true);
-    let matches = app.get_matches();
-    let common_args = ScscArgs::from_arg_matches(&matches)?;
     #[cfg(target_os = "linux")]
     if let Some(just_knobs_config_path) = &common_args.just_knobs_config_path {
         init_just_knobs_from_config_path(just_knobs_config_path).await?;
@@ -177,11 +213,11 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     commands::dispatch(app).await
 }
 
-#[fbinit::main]
-async fn main(fb: FacebookInit) -> ExitCode {
-    cpp_log_spew::disable(fb);
-
-    if let Err(e) = main_impl(fb).await {
+// `cli::main` requires a `Result`; handled errors are encoded in the `ExitCode`
+// so usage telemetry records failures without changing scsc's error format.
+#[cli::main("scsc", version = false, author_help = false)]
+async fn main(fb: FacebookInit, cli: ScscCli) -> anyhow::Result<ExitCode> {
+    if let Err(e) = main_impl(fb, cli).await {
         let prog_name = env::args().next().unwrap_or_else(|| "scsc".to_string());
         if stderr().is_terminal() {
             eprintln!(
@@ -193,7 +229,7 @@ async fn main(fb: FacebookInit) -> ExitCode {
         } else {
             eprintln!("{prog_name}: error: {e:#}");
         }
-        return ExitCode::FAILURE;
+        return Ok(ExitCode::FAILURE);
     }
-    ExitCode::SUCCESS
+    Ok(ExitCode::SUCCESS)
 }
