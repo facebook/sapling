@@ -15,6 +15,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkTransactionError;
+use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use dbbookmarks::transaction::AcquireBookmarkLock;
@@ -374,6 +375,26 @@ impl MultiRepoBookmarksTransaction {
     /// Commit all ops atomically. Retries `RetryableError` up to
     /// `scm/mononoke:multi_repo_bookmark_max_retry_attempts`.
     pub async fn commit(self) -> Result<MultiRepoBookmarksTransactionResult> {
+        self.commit_with_hooks(Vec::new()).await
+    }
+
+    /// Commit all ops atomically, running `hooks` inside the same SQL
+    /// transaction so their rows land with the bookmark moves or not at all.
+    ///
+    /// This mirrors the single-repo `BookmarkTransaction::commit_with_hooks`,
+    /// including running the hooks before the bookmark writes so both paths
+    /// take row locks in the same order.
+    ///
+    /// Hooks are re-run on every retry attempt, so their writes must be safe
+    /// to replay. A `LogicError` from a hook is translated into `Other`, since
+    /// only a bookmark write can genuinely lose a CAS race and reporting one
+    /// as contention would retry against a fault that never clears.
+    pub async fn commit_with_hooks(
+        self,
+        hooks: Vec<BookmarkTransactionHook>,
+    ) -> Result<MultiRepoBookmarksTransactionResult> {
+        // No ops means no bookmark moved, so there is nothing for a hook to
+        // record either — returning before running them is deliberate.
         if self.ops.is_empty() {
             return Ok(MultiRepoBookmarksTransactionResult::Success);
         }
@@ -390,10 +411,32 @@ impl MultiRepoBookmarksTransaction {
         } = self;
 
         retry_commit_loop(&ctx, max_attempts, || {
-            attempt_commit(&ctx, &write_connection, &ops)
+            attempt_commit(&ctx, &write_connection, &ops, &hooks)
         })
         .await
     }
+}
+
+/// Run each hook in turn, threading the transaction through.
+async fn run_transaction_hooks(
+    ctx: &CoreContext,
+    mut txn: SqlTransaction,
+    hooks: &[BookmarkTransactionHook],
+) -> Result<SqlTransaction, BookmarkTransactionError> {
+    for hook in hooks {
+        txn = hook(ctx.clone(), txn).await.map_err(|err| match err {
+            // A hook has no bookmark to lose a CAS race on, so `LogicError`
+            // from one is a bug. Reporting it as-is would surface to the caller
+            // as a contended land and be retried forever against a fault that
+            // is not contention, so translate it into the honest answer.
+            BookmarkTransactionError::LogicError => BookmarkTransactionError::Other(anyhow!(
+                "bookmark transaction hook reported a CAS failure, which only \
+                 bookmark writes can do"
+            )),
+            other => other,
+        })?;
+    }
+    Ok(txn)
 }
 
 /// Run a single SQL transaction attempt for the multi-repo commit.
@@ -406,6 +449,7 @@ async fn attempt_commit(
     ctx: &CoreContext,
     write_connection: &Connection,
     ops: &[BookmarkOp],
+    hooks: &[BookmarkTransactionHook],
 ) -> Result<MultiRepoBookmarksTransactionResult, BookmarkTransactionError> {
     let use_new_path = justknobs::eval("scm/mononoke:per_bookmark_locking", None, None);
 
@@ -415,6 +459,10 @@ async fn attempt_commit(
         .start_transaction(ctx.sql_query_telemetry())
         .await
         .map_err(BookmarkTransactionError::Other)?;
+
+    // Hooks keep whatever error class they report, so a transient failure here
+    // is retried rather than being flattened into a fatal one.
+    let txn = run_transaction_hooks(ctx, txn, hooks).await?;
 
     // Acquire locks and allocate IDs. Helper failures here are classified as
     // Other (not RetryableError) to preserve the pre-retry behavior — these
@@ -642,6 +690,10 @@ async fn allocate_multi_log_ids(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateLog;
     use bookmarks::BookmarkUpdateLogId;
@@ -1241,6 +1293,177 @@ mod tests {
 
         assert!(!result.is_success(), "LogicError should map to CasFailure");
         assert_eq!(attempts.get(), 1, "LogicError must not retry");
+        Ok(())
+    }
+
+    /// A hook that counts its invocations and fails the first `fail_first`
+    /// attempts, so tests can observe both re-runs and failure handling.
+    fn counting_hook(fail_first: usize) -> (BookmarkTransactionHook, Arc<AtomicUsize>) {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let counter = calls.clone();
+        let hook: BookmarkTransactionHook = Arc::new(move |_ctx, txn| {
+            let seen = counter.fetch_add(1, Ordering::SeqCst);
+            async move {
+                if seen < fail_first {
+                    Err(BookmarkTransactionError::RetryableError(anyhow!(
+                        "simulated transient hook failure"
+                    )))
+                } else {
+                    Ok(txn)
+                }
+            }
+            .boxed()
+        });
+        (hook, calls)
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_commit_with_hooks_runs_hook_and_moves_bookmarks(fb: FacebookInit) -> Result<()> {
+        let f = TwoRepoFixture::new(fb)?;
+        let bookmark = BookmarkKey::new("master")?;
+        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
+
+        let mut txn = f.multi_txn();
+        txn.update(
+            f.repo_id_1,
+            &bookmark,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+        )?;
+
+        let (hook, calls) = counting_hook(0);
+        let result = txn.commit_with_hooks(vec![hook]).await?;
+
+        assert!(result.is_success());
+        assert_eq!(calls.load(Ordering::SeqCst), 1, "hook should run once");
+        assert_eq!(
+            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
+            Some(TWOS_CSID),
+            "bookmark should move when the hook succeeds",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hook_failure_aborts_the_bookmark_move(fb: FacebookInit) -> Result<()> {
+        let f = TwoRepoFixture::new(fb)?;
+        let bookmark = BookmarkKey::new("master")?;
+        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
+
+        let mut txn = f.multi_txn();
+        txn.update(
+            f.repo_id_1,
+            &bookmark,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+        )?;
+
+        // Fails on every attempt, so the retry budget is exhausted.
+        let (hook, calls) = counting_hook(usize::MAX);
+        let result = txn.commit_with_hooks(vec![hook]).await;
+
+        assert!(result.is_err(), "a failing hook must fail the commit");
+        assert!(
+            calls.load(Ordering::SeqCst) > 1,
+            "a retryable hook failure should be retried",
+        );
+        // The hook shares the bookmark move's transaction, so aborting it must
+        // leave the bookmark where it was.
+        assert_eq!(
+            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
+            Some(ONES_CSID),
+            "bookmark must not move when the hook fails",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hooks_rerun_on_each_attempt(fb: FacebookInit) -> Result<()> {
+        let f = TwoRepoFixture::new(fb)?;
+        let bookmark = BookmarkKey::new("master")?;
+        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
+
+        let mut txn = f.multi_txn();
+        txn.update(
+            f.repo_id_1,
+            &bookmark,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+        )?;
+
+        let (hook, calls) = counting_hook(1);
+        let result = txn.commit_with_hooks(vec![hook]).await?;
+
+        assert!(result.is_success());
+        // This is why hook writes must be idempotent.
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            2,
+            "hook should run again on the retried attempt",
+        );
+        assert_eq!(
+            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
+            Some(TWOS_CSID),
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hook_logic_error_is_not_reported_as_a_cas_failure(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let f = TwoRepoFixture::new(fb)?;
+        let bookmark = BookmarkKey::new("master")?;
+        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
+
+        let mut txn = f.multi_txn();
+        txn.update(
+            f.repo_id_1,
+            &bookmark,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+        )?;
+
+        // A buggy hook claiming a CAS failure must not be laundered into
+        // `CasFailure`, which the caller reads as "someone else won the race"
+        // and retries against a fault that never clears.
+        let hook: BookmarkTransactionHook =
+            Arc::new(|_ctx, _txn| async { Err(BookmarkTransactionError::LogicError) }.boxed());
+        let result = txn.commit_with_hooks(vec![hook]).await;
+
+        let err = match result {
+            Err(err) => err,
+            Ok(_) => panic!("a hook reporting LogicError must fail the commit"),
+        };
+        assert!(
+            format!("{err:#}").contains("only bookmark writes can do"),
+            "the error should name the real problem, got: {err:#}",
+        );
+        assert_eq!(
+            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
+            Some(ONES_CSID),
+            "bookmark must not move",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hooks_not_run_when_there_are_no_ops(fb: FacebookInit) -> Result<()> {
+        let f = TwoRepoFixture::new(fb)?;
+
+        let (hook, calls) = counting_hook(0);
+        let result = f.multi_txn().commit_with_hooks(vec![hook]).await?;
+
+        assert!(result.is_success());
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            0,
+            "no bookmark moved, so there is nothing for a hook to record",
+        );
         Ok(())
     }
 }
