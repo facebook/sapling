@@ -52,7 +52,6 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use std::time::Instant;
@@ -162,8 +161,6 @@ pub enum PushrebaseInternalError {
     PushrebaseTooManyHeads,
     #[error("No common pushrebase root for {0}, all possible roots: {1:?}")]
     PushrebaseNoCommonRoot(BookmarkKey, HashSet<ChangesetId>),
-    #[error("Internal error: root changeset {0} not found")]
-    RootNotFound(ChangesetId),
     #[error("No pushrebase roots found")]
     NoRoots,
     #[error("Pushrebase failed after too many unsuccessful rebases")]
@@ -2210,17 +2207,10 @@ async fn find_closest_root(
         return find_closest_ancestor_root(ctx, repo, config, bookmark, roots, id).await;
     }
 
-    let roots = roots.keys().map(async |root| {
-        let root_gen = repo
-            .commit_graph()
-            .changeset_generation(ctx, *root)
-            .await
-            .map_err(|_| PushrebaseError::from(PushrebaseInternalError::RootNotFound(*root)))?;
-
-        Result::<_, PushrebaseError>::Ok((*root, root_gen))
-    });
-
-    let roots = try_join_all(roots).await?;
+    let roots = repo
+        .commit_graph()
+        .many_changeset_generations(ctx, &roots.keys().copied().collect::<Vec<_>>())
+        .await?;
 
     let (cs_id, _) = roots
         .into_iter()
@@ -2238,61 +2228,55 @@ async fn find_closest_ancestor_root(
     roots: &HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
 ) -> Result<ChangesetId, PushrebaseError> {
-    let mut queue = VecDeque::new();
-    queue.push_back(onto_bookmark_cs_id);
-
-    let mut queued = HashSet::new();
-    let mut depth = 0;
-
-    loop {
-        if depth > 0 && depth % 1000 == 0 {
-            info!(
-                "pushrebase depth: {depth}, searching from bookmark {bookmark} at {onto_bookmark_cs_id} back to one of {} possible roots",
-                roots.len()
-            );
-        }
-
-        if let Some(recursion_limit) = config.recursion_limit {
-            if depth >= recursion_limit {
-                return Err(PushrebaseError::RootTooFarBehind);
-            }
-        }
-
-        depth += 1;
-
-        let id = queue.pop_front().ok_or_else(|| {
+    let id = repo
+        .commit_graph()
+        .filter_ancestors(ctx, onto_bookmark_cs_id, roots.keys().copied().collect())
+        .await?
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
             PushrebaseError::Error(
                 PushrebaseInternalError::PushrebaseNoCommonRoot(
                     bookmark.clone(),
-                    roots.keys().cloned().collect(),
+                    roots.keys().copied().collect(),
                 )
                 .into(),
             )
         })?;
-
-        if let Some(index) = roots.get(&id) {
-            if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
-                ctx.scuba().clone().log_with_msg(
-                    "pushrebase_p2_root_rejected",
-                    Some(format!(
-                        "root={}, bookmark={}, depth={}, child_index={}",
-                        id, bookmark, depth, index.0,
-                    )),
-                );
-
-                let hgcs = repo.derive_hg_changeset(ctx, id).await?;
-                return Err(PushrebaseError::Error(
-                    PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
-                ));
-            }
-
-            return Ok(id);
-        }
-
-        let parents = repo.commit_graph().changeset_parents(ctx, id).await?;
-
-        queue.extend(parents.into_iter().filter(|p| queued.insert(*p)));
+    let (bookmark_generation, root_generation) = futures::try_join!(
+        repo.commit_graph()
+            .changeset_generation(ctx, onto_bookmark_cs_id),
+        repo.commit_graph().changeset_generation(ctx, id),
+    )?;
+    let distance = bookmark_generation
+        .value()
+        .saturating_sub(root_generation.value());
+    if config
+        .recursion_limit
+        .is_some_and(|limit| distance >= u64::try_from(limit).unwrap_or(u64::MAX))
+    {
+        return Err(PushrebaseError::RootTooFarBehind);
     }
+
+    let index = roots
+        .get(&id)
+        .expect("closest root should be one of the candidate roots");
+    if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
+        ctx.scuba().clone().log_with_msg(
+            "pushrebase_p2_root_rejected",
+            Some(format!(
+                "root={}, bookmark={}, depth={}, child_index={}",
+                id, bookmark, distance, index.0,
+            )),
+        );
+
+        let hgcs = repo.derive_hg_changeset(ctx, id).await?;
+        return Err(PushrebaseError::Error(
+            PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
+        ));
+    }
+
+    Ok(id)
 }
 
 /// Backing manifests for the range diff of a merge commit whose other

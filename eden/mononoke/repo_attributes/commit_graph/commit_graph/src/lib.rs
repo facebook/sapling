@@ -544,9 +544,9 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
     /// Given a descendant commit and a list of candidate ancestor commits,
     /// returns only those candidates that are actual ancestors of the
-    /// descendant. Uses progressive frontier lowering to share traversal
-    /// work across all candidates — more efficient than N individual
-    /// `is_ancestor` calls.
+    /// descendant, ordered by generation from highest to lowest. Uses
+    /// progressive frontier lowering to share traversal work across all
+    /// candidates — more efficient than N individual `is_ancestor` calls.
     ///
     /// Ancestry is inclusive: a commit is its own ancestor.
     pub async fn filter_ancestors(

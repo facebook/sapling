@@ -443,11 +443,11 @@ pub async fn test_filter_ancestors(
         .into_iter()
         .map(name_cs_id)
         .collect();
-    let result: HashSet<_> = graph
+    let result = graph
         .filter_ancestors(&ctx, name_cs_id("I"), candidates.clone())
-        .await?
-        .into_iter()
-        .collect();
+        .await?;
+    assert_eq!(result.first(), Some(&name_cs_id("H")));
+    let result: HashSet<_> = result.into_iter().collect();
     let expected: HashSet<_> = candidates.into_iter().collect();
     assert_eq!(result, expected);
 
