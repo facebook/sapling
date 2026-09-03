@@ -1436,9 +1436,12 @@ struct WalLifecycleOverlay {
 
 WalLifecycleOverlay makeWalLifecycleOverlay(
     const AbsolutePath& dir,
-    CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
+    CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive,
+    uint64_t walMinCompactionThreshold = 0) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
+      walMinCompactionThreshold, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
   auto stats = makeRefPtr<EdenStats>();
   auto noopErrorLogger = makeTestErrorLogger();
@@ -1593,6 +1596,26 @@ TEST(WalCompactionTest, compactsWhenRngHits) {
       parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   OverlayTestHelper::maybeCompactWal(*bundle.overlay, parent, content);
   EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalCompactionTest, smallDirectoryUsesMinimumThreshold) {
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(
+      dir, kPathMapDefaultCaseSensitive, /*walMinCompactionThreshold=*/300);
+  ASSERT_NE(nullptr, bundle.store);
+  // Without the floor, 3 * max(size, 10) = 30 would compact an empty
+  // directory. The floor keeps this WAL append deferred.
+  OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 30u; });
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.store->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
+  OverlayTestHelper::maybeCompactWal(*bundle.overlay, parent, content);
+  EXPECT_TRUE(bundle.store->hasWal(parent));
 
   bundle.overlay->close();
 }

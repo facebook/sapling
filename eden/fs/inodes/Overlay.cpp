@@ -324,6 +324,8 @@ Overlay::Overlay(
       walCompactionMultiplier_{
           config.overlayWalCompactionMultiplier.getValue()},
       walCompactionByteCap_{config.overlayWalCompactionByteCap.getValue()},
+      walMinCompactionThreshold_{static_cast<size_t>(
+          config.experimentalOverlayWalMinCompactionThreshold.getValue())},
       walCompactionRng_{[] { return folly::Random::rand32(); }} {}
 
 Overlay::~Overlay() {
@@ -1014,8 +1016,12 @@ void Overlay::maybeCompactWal(
     // Below the cap: probabilistic roll. Expected appends between
     // compactions = `threshold`, so amortized rewrite cost is O(1) per
     // append.
-    size_t threshold = walCompactionMultiplier_ *
-        std::max(content.size(), static_cast<size_t>(10));
+    size_t threshold = walMinCompactionThreshold_
+        ? std::max(
+              walMinCompactionThreshold_,
+              walCompactionMultiplier_ * content.size())
+        : walCompactionMultiplier_ *
+            std::max(content.size(), static_cast<size_t>(10));
     if (walCompactionRng_() % threshold != 0) {
       return;
     }

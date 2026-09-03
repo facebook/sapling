@@ -2326,6 +2326,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Floor on the WAL compaction probability denominator: a directory's WAL
+   * is compacted with probability 1/max(this, multiplier * entries), so
+   * small directories are compacted far less often. 0 restores the
+   * previous 1/(multiplier * max(entries, 10)) behavior.
+   */
+  ConfigSetting<uint64_t> experimentalOverlayWalMinCompactionThreshold{
+      "experimental:overlay-wal-min-compaction-threshold",
+      50,
+      this};
+
+  /**
    * When true, write non-materialized directories directly to their overlay
    * file instead of creating a temporary file and renaming. This avoids
    * filesystem metadata overhead (rename) at the cost of leaving a

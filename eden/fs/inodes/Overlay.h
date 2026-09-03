@@ -438,8 +438,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * Inline compaction with a hard byte cap. On each call:
    *   - If `walFileSizeBytes >= walCompactionByteCap_`, compact
    *     unconditionally.
-   *   - Else roll 1-in-`walCompactionMultiplier_ * max(content.size(), 10)`
-   *     and compact on a hit.
+   *   - Else roll 1-in-max(`walMinCompactionThreshold_`,
+   *     `walCompactionMultiplier_ * content.size()`) and compact on a hit.
+   *     With no floor configured, roll
+   *     1-in-`walCompactionMultiplier_ * max(content.size(), 10)`.
    *
    * The hard byte cap is a real upper bound on the on-disk WAL size; the
    * probabilistic roll keeps the typical-case compaction rate
@@ -657,6 +659,13 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool useWal_{false};
   size_t walCompactionMultiplier_{3};
   uint64_t walCompactionByteCap_{5'000'000};
+
+  /**
+   * Floor on the WAL compaction probability denominator; 0 uses the
+   * previous formula. Gated by
+   * experimental:overlay-wal-min-compaction-threshold.
+   */
+  size_t walMinCompactionThreshold_{0};
 
   /**
    * RNG used by `maybeCompactWal` to roll for inline compaction.
