@@ -7302,27 +7302,48 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                          // so we settle for invalidating the children
                          // themselves.
                          if (treePtr != nullptr) {
+                           // Collect the child names and release the contents
+                           // lock before loading any children: loading an
+                           // unloaded child acquires the write lock on the
+                           // same contents_ lock, so holding the read lock
+                           // across the loads self-deadlocks and permanently
+                           // wedges the directory.
+                           std::vector<PathComponent> childNames;
+                           {
+                             auto contents = treePtr->lockContentsRead();
+                             childNames.reserve(contents->entries.size());
+                             for (const auto& entry : contents->entries) {
+                               childNames.push_back(entry.first);
+                             }
+                           }
                            std::vector<ImmediateFuture<folly::Unit>>
                                childInvalidations{};
-                           auto contents = treePtr->lockContentsRead();
-                           for (const auto& entry : contents->entries) {
-                             auto childPath = RelativePath{*path} + entry.first;
-                             auto childInode = inodeFromUserPath(
-                                 mountHandle.getEdenMount(),
-                                 childPath.asString(),
-                                 fetchContext);
-                             childInode->forceMetadataUpdate();
+                           for (const auto& name : childNames) {
+                             auto childPath = RelativePath{*path} + name;
+                             // The entries may change once the lock is
+                             // released; a child that fails to load is simply
+                             // not invalidated, matching how per-child stat
+                             // errors are already discarded below.
                              childInvalidations.push_back(
-                                 childInode->stat(fetchContext)
-                                     .thenValue(
-                                         [nfsChannel,
-                                          canonicalMountPoint,
-                                          childPath](struct stat&& stat) {
-                                           nfsChannel->invalidate(
-                                               canonicalMountPoint + childPath,
-                                               stat.st_mode);
-                                           return folly::Unit();
-                                         }));
+                                 makeImmediateFutureWith(
+                                     [&]() -> ImmediateFuture<folly::Unit> {
+                                       auto childInode = inodeFromUserPath(
+                                           mountHandle.getEdenMount(),
+                                           childPath.asString(),
+                                           fetchContext);
+                                       childInode->forceMetadataUpdate();
+                                       return childInode->stat(fetchContext)
+                                           .thenValue(
+                                               [nfsChannel,
+                                                canonicalMountPoint,
+                                                childPath](struct stat&& stat) {
+                                                 nfsChannel->invalidate(
+                                                     canonicalMountPoint +
+                                                         childPath,
+                                                     stat.st_mode);
+                                                 return folly::Unit();
+                                               });
+                                     }));
                            }
                            return collectAll(std::move(childInvalidations))
                                .unit();
