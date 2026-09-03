@@ -254,6 +254,15 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
     std::vector<std::pair<std::string, std::string>> env;
   };
 
+  /** Everything prepareRestart() resolved while it still had privileges. */
+  struct RestartPlan {
+    AbsolutePath binary;
+    RelaunchCommand command;
+    // The restart budget already charged for this attempt.
+    uint32_t restartCount{0};
+    uint64_t firstRestartEpochSec{0};
+  };
+
   /**
    * Spawns a new edenfs. Overridable so that tests can exercise the restart
    * decision without launching anything. Returns false if the spawn failed.
@@ -309,8 +318,33 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processSetRestartArgsMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processNotifyCleanShutdownMsg(folly::io::Cursor& cursor);
 
-  /** Whether edenfs signalled, either way, that it meant to shut down. */
-  bool isDisarmed() const;
+  /** How the two disarm signals read, or that neither could be read. */
+  enum class DisarmState {
+    /** edenfs neither announced a shutdown nor removed its sentinel. */
+    Armed,
+    /** edenfs signalled, either way, that it meant to shut down. */
+    ShutdownAnnounced,
+    /** The sentinel's state could not be determined; root must not guess. */
+    Unknown,
+  };
+
+  /** The disarm signals, or nullopt when no restart args ever armed them. */
+  std::optional<DisarmState> disarmState() const;
+
+  /**
+   * Decide whether this exit looks like a crash worth answering with a
+   * relaunch, and do everything about it that needs root: reading the relaunch
+   * command, resolving the binary and charging the circuit breaker.
+   *
+   * Returns the plan to launch, or nullopt to leave edenfs down.
+   */
+  std::optional<RestartPlan> prepareRestart();
+
+  /**
+   * Validate the child credentials and relaunch edenfs from a plan. Returns
+   * whether the replacement process was spawned.
+   */
+  bool launchRestart(const RestartPlan& plan) const;
 
   /**
    * Parse the relaunch command out of the restart sentinel, or nullopt if it

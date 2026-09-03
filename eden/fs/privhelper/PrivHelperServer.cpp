@@ -346,6 +346,21 @@ uint64_t currentEpochSeconds() {
           .count());
 }
 
+/** Set key in env, replacing every entry already there for it. */
+void setEnv(
+    std::vector<std::pair<std::string, std::string>>& env,
+    folly::StringPiece key,
+    std::string value) {
+  // Every match goes, not just the first: spawnEdenFs() applies the pairs in
+  // order, so a duplicate left behind would overwrite what this sets.
+  const auto removed =
+      std::remove_if(env.begin(), env.end(), [key](const auto& entry) {
+        return entry.first == key;
+      });
+  env.erase(removed, env.end());
+  env.emplace_back(key.str(), std::move(value));
+}
+
 bool spawnEdenFs(
     const AbsolutePath& binary,
     const std::vector<std::string>& argv,
@@ -1776,20 +1791,24 @@ const PrivHelperServer::SentinelLocation* PrivHelperServer::sentinelLocation()
   return &*sentinelLocation_;
 }
 
-bool PrivHelperServer::isDisarmed() const {
+std::optional<PrivHelperServer::DisarmState> PrivHelperServer::disarmState()
+    const {
+  if (!restartConfig_.has_value()) {
+    return std::nullopt;
+  }
   if (cleanShutdownNotified_) {
-    return true;
+    return DisarmState::ShutdownAnnounced;
   }
   const auto* location = sentinelLocation();
   if (location == nullptr) {
-    return true;
+    return DisarmState::Unknown;
   }
   // The second, independent disarm signal. Only existence matters, so
   // faccessat() rather than an open: a FIFO planted in the sentinel's place
   // would block an open for ever. A spoofed "exists" only buys a restart a
   // crash also buys.
   if (::faccessat(location->dir.fd(), location->name.c_str(), F_OK, 0) == 0) {
-    return false;
+    return DisarmState::Armed;
   }
   const int error = errno;
   // Only ENOENT means the daemon removed it. Anything else leaves the
@@ -1797,11 +1816,12 @@ bool PrivHelperServer::isDisarmed() const {
   if (error != ENOENT) {
     XLOGF(
         ERR,
-        "treating the restart sentinel {} in the pinned directory as removed: {}",
+        "cannot read the restart sentinel {} in the pinned directory: {}",
         location->name,
         folly::errnoStr(error));
+    return DisarmState::Unknown;
   }
-  return true;
+  return DisarmState::ShutdownAnnounced;
 }
 
 std::optional<AbsolutePath> PrivHelperServer::findSiblingEdenFs(
@@ -2017,6 +2037,81 @@ bool PrivHelperServer::admitRestartAttempt() {
   }
 
   ++config.restartCount;
+  return true;
+}
+
+std::optional<PrivHelperServer::RestartPlan>
+PrivHelperServer::prepareRestart() {
+  if (!restartConfig_.has_value() || !restartConfig_->enabled) {
+    return std::nullopt;
+  }
+  const auto state = disarmState();
+  // Defensive: the guard above already rules out the one case that is nullopt.
+  if (!state.has_value()) {
+    return std::nullopt;
+  }
+  switch (*state) {
+    case DisarmState::Armed:
+      break;
+    case DisarmState::ShutdownAnnounced:
+      XLOG(INFO, "edenfs shut down on purpose; not restarting");
+      return std::nullopt;
+    case DisarmState::Unknown:
+      XLOG(
+          WARN,
+          "cannot tell whether edenfs meant to shut down; not restarting");
+      return std::nullopt;
+  }
+
+  // Read before producing a plan so launchRestart() is unreachable without a
+  // command that the privileged parent parsed and validated.
+  auto command = readRelaunchCommand();
+  if (!command.has_value()) {
+    return std::nullopt;
+  }
+
+  AbsolutePath binary;
+  try {
+    binary = resolveEdenFsBinary(*command);
+  } catch (const std::exception& ex) {
+    XLOGF(ERR, "refusing to restart edenfs: {}", folly::exceptionStr(ex));
+    return std::nullopt;
+  }
+
+  if (!admitRestartAttempt()) {
+    return std::nullopt;
+  }
+  return RestartPlan{
+      std::move(binary),
+      std::move(*command),
+      restartConfig_->restartCount,
+      restartConfig_->firstRestartEpochSec};
+}
+
+bool PrivHelperServer::launchRestart(const RestartPlan& plan) const {
+  // The recorded environment can already carry these keys: edenfsctl preserves
+  // every EDEN-prefixed variable it was started with.
+  auto env = plan.command.env;
+  setEnv(
+      env, kEdenFsRestartCountEnv, folly::to<std::string>(plan.restartCount));
+  setEnv(
+      env,
+      kEdenFsFirstRestartAtEnv,
+      folly::to<std::string>(plan.firstRestartEpochSec));
+
+  try {
+    validateRestartOwner();
+  } catch (const std::exception& ex) {
+    XLOGF(
+        ERR,
+        "refusing to restart edenfs, resetting IDs would not select its owner: {}",
+        folly::exceptionStr(ex));
+    return false;
+  }
+
+  if (!spawnEdenFs_(plan.binary, plan.command.argv, env)) {
+    return false;
+  }
   return true;
 }
 #endif // __APPLE__

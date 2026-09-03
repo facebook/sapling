@@ -342,16 +342,20 @@ const std::vector<std::string> kSentinelArgv{
     "/usr/local/libexec/eden/edenfs",
     "--edenfs"};
 
+folly::dynamic makeSentinelEnv() {
+  return folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/test");
+}
+
 /** The relaunch command as EdenServer::armPrivHelperRestart() writes it. */
-std::string makeSentinelContents(uint64_t nonce = kSentinelNonce) {
+std::string makeSentinelContents(
+    uint64_t nonce = kSentinelNonce,
+    folly::dynamic env = makeSentinelEnv()) {
   folly::dynamic argv = folly::dynamic::array;
   for (const auto& arg : kSentinelArgv) {
     argv.push_back(arg);
   }
   return folly::toJson(
-      folly::dynamic::object("argv", argv)(
-          "env",
-          folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/test"))(
+      folly::dynamic::object("argv", argv)("env", std::move(env))(
           "nonce", static_cast<int64_t>(nonce)));
 }
 
@@ -1926,7 +1930,8 @@ TEST_F(PrivHelperRestartOwnerTest, refusesAnOwnerMismatch) {
 class PrivHelperDisarmTestServer : public PrivHelperServer {
  public:
   using PrivHelperServer::cleanShutdownNotified_;
-  using PrivHelperServer::isDisarmed;
+  using PrivHelperServer::disarmState;
+  using PrivHelperServer::DisarmState;
   using PrivHelperServer::processNotifyCleanShutdownMsg;
   using PrivHelperServer::processSetRestartArgsMsg;
   using PrivHelperServer::restartConfig_;
@@ -1939,6 +1944,8 @@ class PrivHelperDisarmTestServer : public PrivHelperServer {
  */
 class PrivHelperDisarmTest : public ::testing::Test {
  protected:
+  using DisarmState = PrivHelperDisarmTestServer::DisarmState;
+
   void SetUp() override {
     sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
     deliverRestartArgs();
@@ -1967,7 +1974,7 @@ class PrivHelperDisarmTest : public ::testing::Test {
   void expectSentinelPathRejected(const std::string& sentinelPath) {
     SCOPED_TRACE(sentinelPath);
     deliverRestartArgs(sentinelPath);
-    EXPECT_TRUE(server_.isDisarmed());
+    EXPECT_EQ(DisarmState::Unknown, server_.disarmState());
   }
 
   std::string sentinelDir() const {
@@ -1981,19 +1988,19 @@ class PrivHelperDisarmTest : public ::testing::Test {
 TEST_F(PrivHelperDisarmTest, restartArgsArm) {
   ASSERT_TRUE(server_.restartConfig_.has_value());
   EXPECT_EQ(sentinel_->path().string(), server_.restartConfig_->sentinelPath);
-  EXPECT_FALSE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::Armed, server_.disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, theNotificationAloneDisarms) {
   deliverCleanShutdown();
 
-  EXPECT_TRUE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, removingTheSentinelAloneDisarms) {
   sentinel_.reset();
 
-  EXPECT_TRUE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, freshRestartArgsReArm) {
@@ -2001,45 +2008,229 @@ TEST_F(PrivHelperDisarmTest, freshRestartArgsReArm) {
   // takeover, and would otherwise stay permanently un-restartable behind the
   // flag its aborted shutdown set.
   deliverCleanShutdown();
-  ASSERT_TRUE(server_.isDisarmed());
+  ASSERT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
 
   deliverRestartArgs();
 
-  EXPECT_FALSE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::Armed, server_.disarmState());
 }
 
 TEST_F(PrivHelperDisarmTest, freshRestartArgsDropTheResolvedDirectory) {
-  ASSERT_FALSE(server_.isDisarmed());
+  ASSERT_EQ(DisarmState::Armed, server_.disarmState());
 
   const TemporaryDirectory elsewhere{"edenfs_restart_elsewhere"};
   deliverRestartArgs((elsewhere.path() / "absent").string());
 
-  EXPECT_TRUE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, server_.disarmState());
 }
 
-TEST_F(PrivHelperDisarmTest, aSentinelPathRootCannotResolveDisarms) {
+TEST_F(PrivHelperDisarmTest, aSentinelPathRootCannotResolveIsUnknown) {
   deliverRestartArgs("not/absolute");
 
-  EXPECT_TRUE(server_.isDisarmed());
+  EXPECT_EQ(DisarmState::Unknown, server_.disarmState());
 }
 
-TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesDisarms) {
+TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesIsUnknown) {
   // faccessat() resolves "." and ".." whatever the directory holds, so a
   // sentinel named either could never be reported gone.
   expectSentinelPathRejected(sentinelDir() + "/.");
   expectSentinelPathRejected(sentinelDir() + "/..");
 }
 
-TEST_F(PrivHelperDisarmTest, aSentinelPathWithAnEmbeddedNulDisarms) {
+TEST_F(PrivHelperDisarmTest, aSentinelPathWithAnEmbeddedNulIsUnknown) {
   // The syscalls stop at the NUL, so they would act on a prefix of the path
   // that was validated.
   expectSentinelPathRejected(sentinel_->path().string() + '\0');
 }
 
-TEST_F(PrivHelperDisarmTest, aServerThatNeverReceivedRestartArgsDisarms) {
+TEST_F(PrivHelperDisarmTest, aServerThatNeverReceivedRestartArgsHasNoState) {
   PrivHelperDisarmTestServer unconfigured;
 
-  EXPECT_TRUE(unconfigured.isDisarmed());
+  EXPECT_EQ(std::nullopt, unconfigured.disarmState());
+}
+
+/**
+ * A PrivHelperServer that records what the restart path would have done rather
+ * than resolving a real binary or launching anything.
+ */
+class PrivHelperRestartTestServer : public PrivHelperServer {
+ public:
+  struct Spawn {
+    AbsolutePath binary;
+    std::vector<std::string> argv;
+    std::vector<std::pair<std::string, std::string>> env;
+  };
+
+  PrivHelperRestartTestServer() {
+    spawnEdenFs_ =
+        [this](
+            const AbsolutePath& binary,
+            const std::vector<std::string>& argv,
+            const std::vector<std::pair<std::string, std::string>>& env) {
+          spawns.wlock()->push_back(Spawn{binary, argv, env});
+          return spawnSucceeds.load();
+        };
+    now_ = [this] { return now.load(); };
+  }
+
+  using PrivHelperServer::cleanShutdownNotified_;
+  using PrivHelperServer::launchRestart;
+  using PrivHelperServer::prepareRestart;
+  using PrivHelperServer::restartConfig_;
+  using PrivHelperServer::uid_;
+
+  size_t spawnCount() {
+    return spawns.rlock()->size();
+  }
+
+  std::atomic<uint64_t> now{0};
+  std::atomic<bool> spawnSucceeds{true};
+  std::atomic<bool> restartOwnerValid{true};
+  // Every attempt, including the ones spawnSucceeds turned into a failure.
+  folly::Synchronized<std::vector<Spawn>> spawns;
+
+ private:
+  AbsolutePath resolveEdenFsBinary(
+      const RelaunchCommand& /* command */) const override {
+    return canonicalPath("/fake/libexec/eden/edenfs");
+  }
+
+  void validateRestartOwner() const override {
+    if (!restartOwnerValid.load()) {
+      throw std::runtime_error("real uid is root");
+    }
+  }
+};
+
+/**
+ * Exercises the restart decision directly, without a socket or an event loop.
+ *
+ * The privhelper is armed by default once it has restart args; each test here
+ * removes exactly one of the reasons to restart and checks that nothing is
+ * launched.
+ */
+class PrivHelperRestartDecisionTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    writeSentinel(makeSentinelContents());
+    server_.now.store(kFakeNow);
+    server_.restartConfig_ = makeRestartArgs(sentinel_->path().string());
+    // Nothing calls initPartial() here, so the sentinel's owner has to be
+    // declared by hand for the reader's ownership check to pass.
+    server_.uid_ = getuid();
+  }
+
+  void writeSentinel(const std::string& contents) {
+    ASSERT_TRUE(folly::writeFile(contents, sentinel_->path().string().c_str()));
+  }
+
+  void removeSentinel() {
+    sentinel_.reset();
+  }
+
+  /**
+   * Runs the same two-step sequence run() does, or nullopt when the plan step
+   * already decided to leave edenfs down.
+   */
+  std::optional<bool> restart() {
+    const auto plan = server_.prepareRestart();
+    if (!plan) {
+      return std::nullopt;
+    }
+    return server_.launchRestart(*plan);
+  }
+
+  void expectNoRestart() {
+    EXPECT_EQ(std::nullopt, restart());
+    EXPECT_EQ(0, server_.spawnCount());
+  }
+
+  PrivHelperRestartTestServer server_;
+  std::unique_ptr<TemporaryFile> sentinel_;
+};
+
+TEST_F(PrivHelperRestartDecisionTest, restartsAfterACrash) {
+  EXPECT_EQ(true, restart());
+  EXPECT_EQ(1, server_.spawnCount());
+}
+
+TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWithoutRestartArgs) {
+  server_.restartConfig_.reset();
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWhenDisabled) {
+  server_.restartConfig_->enabled = false;
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, cleanShutdownNotificationDisarms) {
+  server_.cleanShutdownNotified_ = true;
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, removingTheSentinelDisarms) {
+  removeSentinel();
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, anUnparseableSentinelStopsTheRestart) {
+  writeSentinel("} not json {");
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, doesNotRestartOnceTheBreakerIsTripped) {
+  server_.restartConfig_->restartCount = server_.restartConfig_->maxRestarts;
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, refusesToRestartWhenOwnerIsInvalid) {
+  server_.restartOwnerValid.store(false);
+
+  EXPECT_EQ(false, restart());
+  EXPECT_EQ(0, server_.spawnCount());
+}
+
+TEST_F(PrivHelperRestartDecisionTest, reportsAFailedSpawn) {
+  server_.spawnSucceeds.store(false);
+
+  EXPECT_EQ(false, restart());
+  EXPECT_EQ(1, server_.spawnCount());
+}
+
+TEST_F(PrivHelperRestartDecisionTest, relaysTheRestartBudgetToTheNewDaemon) {
+  ASSERT_EQ(true, restart());
+
+  const auto spawns = *server_.spawns.rlock();
+  ASSERT_EQ(1, spawns.size());
+  EXPECT_EQ(kSentinelArgv, spawns[0].argv);
+  EXPECT_THAT(
+      spawns[0].env,
+      UnorderedElementsAre(
+          std::pair<std::string, std::string>{"PATH", "/usr/bin"},
+          std::pair<std::string, std::string>{"HOME", "/home/test"},
+          std::pair<std::string, std::string>{"EDENFS_RESTART_COUNT", "2"},
+          std::pair<std::string, std::string>{
+              "EDENFS_FIRST_RESTART_AT", folly::to<std::string>(kFakeNow)}));
+}
+
+TEST_F(PrivHelperRestartDecisionTest, replacesARecordedRestartBudget) {
+  writeSentinel(makeSentinelContents(
+      kSentinelNonce,
+      folly::dynamic::object("EDENFS_RESTART_COUNT", "99")(
+          "EDENFS_FIRST_RESTART_AT", "1")));
+
+  ASSERT_EQ(true, restart());
+
+  const auto spawns = *server_.spawns.rlock();
+  ASSERT_EQ(1, spawns.size());
+  EXPECT_THAT(
+      spawns[0].env,
+      UnorderedElementsAre(
+          std::pair<std::string, std::string>{"EDENFS_RESTART_COUNT", "2"},
+          std::pair<std::string, std::string>{
+              "EDENFS_FIRST_RESTART_AT", folly::to<std::string>(kFakeNow)}));
 }
 
 #endif // __APPLE__
