@@ -134,6 +134,10 @@ pub(crate) struct FsIoResult {
     write: PhaseResult,
     cache_preparation: CachePreparationResult,
     read: PhaseResult,
+    // Optional so baselines recorded before the remove phase existed can
+    // still be loaded for --diff.
+    #[serde(default)]
+    remove: Option<RemoveResult>,
     #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
     diff: Option<comparison::FsIoDiff>,
 }
@@ -195,6 +199,16 @@ struct FileSizeResult {
     file_open: OperationResult,
     file_io: OperationResult,
     file_close: OperationResult,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct RemoveResult {
+    wall_seconds: f64,
+    files_per_second: f64,
+    files: u64,
+    directories: u64,
+    file_unlink: OperationResult,
+    directory_remove: OperationResult,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -424,11 +438,16 @@ pub(crate) fn bench_fs_io(
     read_progress.finish_and_clear();
     let read = read?;
 
+    let remove_progress = file_progress_bar("Remove", workload.files.len(), options.show_progress);
+    let remove = bench_remove(&workload, options, &remove_progress);
+    remove_progress.finish_and_clear();
+    let remove = remove?;
     Ok(FsIoResult {
         config,
         write,
         cache_preparation,
         read,
+        remove: Some(remove),
         diff: None,
     })
 }
@@ -456,6 +475,72 @@ fn fs_io_config(options: FsIoOptions, workload: &Workload) -> FsIoConfig {
             .map(|(&size_bytes, files)| FileSizeConfig { size_bytes, files })
             .collect(),
     }
+}
+
+fn bench_remove(
+    workload: &Workload,
+    options: FsIoOptions,
+    progress: &ProgressBar,
+) -> Result<RemoveResult> {
+    let wall_start = Instant::now();
+    let file_unlink = run_unlink_workers(&workload.files, options.jobs, progress)?;
+
+    // Directories were recorded parents-before-children while generating the
+    // workload, so removing in reverse order empties children first. Removal
+    // stays sequential, unlike file unlinks: parallel workers would need
+    // cross-worker ordering to keep every child ahead of its parent, and
+    // directories are few relative to files.
+    let mut directory_remove = OperationAccumulator::default();
+    for path in workload.directories.iter().rev() {
+        let start = Instant::now();
+        fs::remove_dir(path).with_context(|| format!("failed to remove {}", path.display()))?;
+        directory_remove.record(start.elapsed());
+    }
+
+    let wall_seconds = wall_start.elapsed().as_secs_f64();
+    Ok(RemoveResult {
+        wall_seconds,
+        files_per_second: if wall_seconds > 0.0 {
+            workload.files.len() as f64 / wall_seconds
+        } else {
+            0.0
+        },
+        files: workload.files.len() as u64,
+        directories: workload.directories.len() as u64,
+        file_unlink: file_unlink.result(),
+        directory_remove: directory_remove.result(),
+    })
+}
+
+fn run_unlink_workers(
+    files: &[FileSpec],
+    jobs: NonZeroUsize,
+    progress: &ProgressBar,
+) -> Result<OperationAccumulator> {
+    run_chunked_workers(
+        files,
+        jobs,
+        |chunk| {
+            let mut accumulator = OperationAccumulator::default();
+            let mut pending_progress = 0;
+            for file in chunk {
+                let start = Instant::now();
+                fs::remove_file(&file.path)
+                    .with_context(|| format!("failed to unlink {}", file.path.display()))?;
+                accumulator.record(start.elapsed());
+                advance_progress(progress, &mut pending_progress);
+            }
+            progress.inc(pending_progress);
+            Ok(accumulator)
+        },
+        |workers| {
+            let mut result = OperationAccumulator::default();
+            for worker in &workers {
+                result.merge(worker);
+            }
+            Ok(result)
+        },
+    )
 }
 
 fn file_progress_bar(name: &str, files: usize, show_progress: bool) -> ProgressBar {
@@ -1162,11 +1247,32 @@ impl fmt::Display for FsIoResult {
         )?;
         write_operation(formatter, "file sync", &self.cache_preparation.file_sync)?;
         write_phase(formatter, "Read", "file open", &self.read)?;
+        if let Some(remove) = &self.remove {
+            write_remove_phase(formatter, remove)?;
+        }
         if let Some(diff) = &self.diff {
             comparison::write_diff(formatter, diff)?;
         }
         Ok(())
     }
+}
+
+fn write_remove_phase(formatter: &mut fmt::Formatter<'_>, result: &RemoveResult) -> fmt::Result {
+    writeln!(
+        formatter,
+        "\nRemove: {} wall, {:.0} files/s, {} files, {} directories",
+        format_duration_seconds(result.wall_seconds),
+        result.files_per_second,
+        result.files,
+        result.directories
+    )?;
+    writeln!(
+        formatter,
+        "{:<20} {:>10} {:>12} {:>12} {:>12} {:>12} {:>12}",
+        "operation", "calls", "sum", "avg", "p50", "p90", "p99"
+    )?;
+    write_operation(formatter, "file unlink", &result.file_unlink)?;
+    write_operation(formatter, "directory remove", &result.directory_remove)
 }
 
 fn write_phase(

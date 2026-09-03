@@ -22,6 +22,7 @@ use super::FileSizeResult;
 use super::FsIoResult;
 use super::OperationResult;
 use super::PhaseResult;
+use super::RemoveResult;
 use super::format_byte_size;
 
 #[derive(Debug, Serialize)]
@@ -32,6 +33,17 @@ pub(super) struct FsIoDiff {
     #[serde(skip_serializing_if = "Option::is_none")]
     cache_preparation: Option<CachePreparationDiff>,
     read: PhaseDiff,
+    // Absent when the baseline predates the remove phase.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remove: Option<RemoveDiff>,
+}
+
+#[derive(Debug, Serialize)]
+struct RemoveDiff {
+    wall_time_percent: Option<f64>,
+    files_per_second_percent: Option<f64>,
+    file_unlink: OperationDiff,
+    directory_remove: OperationDiff,
 }
 
 #[derive(Debug, Serialize)]
@@ -111,13 +123,47 @@ impl FsIoDiff {
         validate_phase("write", &current.write, &baseline.write)?;
         validate_phase("read", &current.read, &baseline.read)?;
 
+        let remove = match (&current.remove, &baseline.remove) {
+            (Some(current_remove), Some(baseline_remove)) => {
+                ensure!(
+                    current_remove.files == baseline_remove.files
+                        && current_remove.directories == baseline_remove.directories,
+                    "remove phase counts do not match baseline: baseline {}/{}, current {}/{}",
+                    baseline_remove.files,
+                    baseline_remove.directories,
+                    current_remove.files,
+                    current_remove.directories
+                );
+                Some(RemoveDiff::new(current_remove, baseline_remove))
+            }
+            _ => None,
+        };
+
         Ok(Self {
             write: PhaseDiff::new(&current.write, &baseline.write),
             cache_preparation: (current.cache_preparation.drop_kernel_caches != 0).then(|| {
                 CachePreparationDiff::new(&current.cache_preparation, &baseline.cache_preparation)
             }),
             read: PhaseDiff::new(&current.read, &baseline.read),
+            remove,
         })
+    }
+}
+
+impl RemoveDiff {
+    fn new(current: &RemoveResult, baseline: &RemoveResult) -> Self {
+        Self {
+            wall_time_percent: percent_change(current.wall_seconds, baseline.wall_seconds),
+            files_per_second_percent: percent_change(
+                current.files_per_second,
+                baseline.files_per_second,
+            ),
+            file_unlink: OperationDiff::new(&current.file_unlink, &baseline.file_unlink),
+            directory_remove: OperationDiff::new(
+                &current.directory_remove,
+                &baseline.directory_remove,
+            ),
+        }
     }
 }
 
@@ -366,7 +412,23 @@ pub(super) fn write_diff(formatter: &mut fmt::Formatter<'_>, diff: &FsIoDiff) ->
     if let Some(cache_preparation) = &diff.cache_preparation {
         write_cache_preparation_diff(formatter, cache_preparation)?;
     }
-    write_phase_diff(formatter, "Read", "file open", &diff.read)
+    write_phase_diff(formatter, "Read", "file open", &diff.read)?;
+    if let Some(remove) = &diff.remove {
+        write_remove_diff(formatter, remove)?;
+    }
+    Ok(())
+}
+
+fn write_remove_diff(formatter: &mut fmt::Formatter<'_>, diff: &RemoveDiff) -> fmt::Result {
+    writeln!(
+        formatter,
+        "\nRemove: wall {}, files/s {}",
+        format_change(diff.wall_time_percent, false),
+        format_change(diff.files_per_second_percent, true)
+    )?;
+    write_operation_diff_header(formatter)?;
+    write_operation_diff(formatter, "file unlink", &diff.file_unlink)?;
+    write_operation_diff(formatter, "directory remove", &diff.directory_remove)
 }
 
 fn write_cache_preparation_diff(
@@ -544,6 +606,14 @@ mod tests {
                 cache_drop_method: "disabled".to_owned(),
             },
             read: phase(scale),
+            remove: Some(RemoveResult {
+                wall_seconds: scale,
+                files_per_second: 10.0 / scale,
+                files: 10,
+                directories: 2,
+                file_unlink: operation(scale),
+                directory_remove: operation(scale),
+            }),
             diff: None,
         }
     }
