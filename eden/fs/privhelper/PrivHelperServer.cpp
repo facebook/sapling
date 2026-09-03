@@ -354,6 +354,7 @@ bool spawnEdenFs(
   SpawnedProcess::Options opts;
   opts.executablePath(binary);
   opts.nullStdin();
+  opts.resetIds();
 
   auto& environment = opts.environment();
   environment.clear();
