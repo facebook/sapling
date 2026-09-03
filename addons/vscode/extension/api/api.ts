@@ -31,6 +31,11 @@ export function makeExtensionApi(
       return reposList.repoForPath(path);
     },
     setActiveRepoForCwd(path: string): void {
+      if (reposList.repoForPath(path) == null) {
+        throw new Error(
+          `No Sapling repository available in the VS Code workspace for path: ${path}`,
+        );
+      }
       postMessageToISLWebview({type: 'changeActiveRepo', cwd: path, focusDotCommit: true});
     },
   };

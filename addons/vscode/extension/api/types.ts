@@ -41,7 +41,8 @@ export interface SaplingExtensionApi {
   /**
    * Change the active repository displayed in the ISL webview.
    * The `path` should be a directory path within a Sapling repository
-   * (e.g. a workspace folder path). If ISL is not currently open, this has no effect.
+   * available in the VS Code workspace (e.g. a workspace folder path). Throws if the repository
+   * is not available in the workspace. If ISL is not currently open, this has no effect.
    */
   setActiveRepoForCwd(path: string): void;
 }
