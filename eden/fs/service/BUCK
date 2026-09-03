@@ -428,6 +428,7 @@ cpp_library(
         "//folly/json:dynamic",
         "//folly/logging:logging",
         "//folly/portability:sys_types",
+        "//folly/portability:unistd",
         "//thrift/lib/cpp/concurrency:thread_manager",
         "//thrift/lib/cpp/util:enum_utils",
         "//thrift/lib/cpp2:server",

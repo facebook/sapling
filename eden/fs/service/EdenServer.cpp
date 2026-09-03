@@ -31,6 +31,8 @@
 #include <folly/Indestructible.h>
 #include <folly/ScopeGuard.h>
 #include <folly/SocketAddress.h>
+#include <folly/String.h>
+#include <folly/portability/Unistd.h>
 
 #include <folly/json/json.h>
 #ifdef __APPLE__
@@ -2993,6 +2995,21 @@ void EdenServer::prepareThriftAddress() const {
 
 void EdenServer::markShuttingDownLocked(RunStateData& state) {
   state.state = RunState::SHUTTING_DOWN;
+}
+
+void EdenServer::removeRestartSentinel() {
+  const auto sentinel = edenDir_.getRestartSentinelPath();
+  // A bare unlink() on purpose: one synchronous syscall that touches no event
+  // loop, so it still disarms when the loop is too wedged to deliver the
+  // clean-shutdown notification.
+  if (::unlink(sentinel.c_str()) != 0) {
+    // Captured before anything else can run: formatting the path below is not
+    // guaranteed to leave errno alone.
+    const int err = errno;
+    if (err != ENOENT) {
+      XLOGF(WARN, "failed to unlink {}: {}", sentinel, folly::errnoStr(err));
+    }
+  }
 }
 
 void EdenServer::stop() {

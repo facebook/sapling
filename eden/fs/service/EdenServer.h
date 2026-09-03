@@ -811,6 +811,9 @@ class EdenServer : private TakeoverHandler {
    */
   void markShuttingDownLocked(RunStateData& state);
 
+  /** Remove this daemon's restart sentinel. Idempotent. */
+  void removeRestartSentinel();
+
 #ifdef __APPLE__
   folly::dynamic nfsStatOutput_;
   std::optional<std::string> mapCounterNameForNFSStat(
