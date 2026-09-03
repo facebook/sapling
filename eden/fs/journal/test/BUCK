@@ -1,7 +1,18 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
+
+cpp_benchmark(
+    name = "journal_benchmark",
+    srcs = ["JournalBenchmark.cpp"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/journal:journal",
+    ],
+)
 
 cpp_unittest(
     name = "test",
