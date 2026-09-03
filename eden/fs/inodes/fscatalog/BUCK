@@ -24,6 +24,7 @@ cpp_library(
         "//folly:conv",
         "//folly:exception",
         "//folly:file_util",
+        "//folly:string",
         "//folly/io:iobuf",
         "//folly/lang:to_ascii",
         "//folly/logging:logging",

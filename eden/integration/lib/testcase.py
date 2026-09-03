@@ -313,6 +313,7 @@ class EdenTestCase(EdenTestCaseBase):
             "experimental": [
                 "enable-nfs-server = true",
                 "propagate-checkout-errors = true",
+                "overlay-direct-file-create = true",
             ],
             # Defaulting to 8 retry threads is excessive when the test
             # framework runs tests on each CPU core.

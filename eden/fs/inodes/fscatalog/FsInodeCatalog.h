@@ -38,8 +38,10 @@ class WalPath;
  */
 class FsFileContentStore : public FileContentStore {
  public:
-  explicit FsFileContentStore(AbsolutePathPiece localDir)
-      : localDir_{localDir} {}
+  explicit FsFileContentStore(
+      AbsolutePathPiece localDir,
+      bool directFileCreate = false)
+      : localDir_{localDir}, directFileCreate_{directFileCreate} {}
 
   /**
    * Initialize the FileContentStore, acquire the "info" file lock and load the
@@ -353,15 +355,28 @@ class FsFileContentStore : public FileContentStore {
    * When crashSafe is true, uses temp-file + rename to protect against
    * partial writes on process crash. When false, writes directly to the
    * final path for better performance.
+   *
+   * On a write failure the temporary file is always removed. In direct
+   * mode the final path is removed only when removeOnFailure is set: a
+   * new inode's file should not linger as an orphan, but a rewrite of an
+   * existing directory record is left truncated so that loading it fails
+   * instead of reading back as an empty directory.
    */
   folly::File createOverlayFileImpl(
       InodeNumber inodeNumber,
       iovec* iov,
       size_t iovCount,
-      bool crashSafe = true);
+      bool crashSafe,
+      bool removeOnFailure);
 
   /** Path to ".eden/CLIENT/local" */
   const AbsolutePath localDir_;
+
+  /**
+   * Skip the temp-file + rename dance when creating a new overlay file.
+   * Gated by experimental:overlay-direct-file-create.
+   */
+  const bool directFileCreate_{false};
 
   /**
    * An open file descriptor to the overlay info file.

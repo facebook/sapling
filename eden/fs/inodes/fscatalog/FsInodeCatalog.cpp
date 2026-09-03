@@ -21,6 +21,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/ToAscii.h>
@@ -416,7 +417,11 @@ void FsInodeCatalog::saveOverlayDir(
   iov[1].iov_base = const_cast<char*>(serializedData.data());
   iov[1].iov_len = serializedData.size();
   (void)core_->createOverlayFileImpl(
-      inodeNumber, iov.data(), iov.size(), crashSafe);
+      inodeNumber,
+      iov.data(),
+      iov.size(),
+      crashSafe,
+      /*removeOnFailure=*/false);
 }
 
 void FsInodeCatalog::saveOverlayEntries(
@@ -457,7 +462,11 @@ void FsInodeCatalog::saveOverlayEntries(
   iov[0].iov_len = header.size();
   serializedBuf->appendToIov(&iov);
   (void)core_->createOverlayFileImpl(
-      inodeNumber, iov.data(), iov.size(), crashSafe);
+      inodeNumber,
+      iov.data(),
+      iov.size(),
+      crashSafe,
+      /*removeOnFailure=*/false);
 }
 
 namespace {
@@ -1360,7 +1369,8 @@ folly::File FsFileContentStore::createOverlayFileImpl(
     InodeNumber inodeNumber,
     iovec* iov,
     size_t iovCount,
-    bool crashSafe) {
+    bool crashSafe,
+    bool removeOnFailure) {
   auto path = getFilePath(inodeNumber);
 
   // For the root inode, always use the crash-safe path regardless of the
@@ -1388,10 +1398,16 @@ folly::File FsFileContentStore::createOverlayFileImpl(
           inodeNumber,
           localDir_.view()));
   folly::File file{fd, /* ownsFd */ true};
-  bool success = !useTmpFile;
+  bool success = false;
   SCOPE_EXIT {
-    if (!success) {
-      unlinkat(dirFile_.fd(), tmpPath.data(), 0);
+    if (!success && (useTmpFile || removeOnFailure) &&
+        unlinkat(dirFile_.fd(), openPath, 0) != 0 && errno != ENOENT) {
+      XLOGF(
+          WARN,
+          "failed to remove overlay file {} for inode {} after its creation failed: {}",
+          openPath,
+          inodeNumber,
+          folly::errnoStr(errno));
     }
   };
 
@@ -1449,9 +1465,9 @@ folly::File FsFileContentStore::createOverlayFileImpl(
             "error committing overlay file for inode {} in {}",
             inodeNumber,
             localDir_.view()));
-    success = true;
   }
 
+  success = true;
   return file;
 }
 
@@ -1465,7 +1481,12 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
   iov[0].iov_len = header.size();
   iov[1].iov_base = const_cast<uint8_t*>(contents.data());
   iov[1].iov_len = contents.size();
-  return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+  return createOverlayFileImpl(
+      inodeNumber,
+      iov.data(),
+      iov.size(),
+      /*crashSafe=*/!directFileCreate_,
+      /*removeOnFailure=*/true);
 }
 
 std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
@@ -1487,7 +1508,12 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
   iov[0].iov_len = header.size();
   contents.appendToIov(&iov);
 
-  return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+  return createOverlayFileImpl(
+      inodeNumber,
+      iov.data(),
+      iov.size(),
+      /*crashSafe=*/!directFileCreate_,
+      /*removeOnFailure=*/true);
 }
 
 void FsFileContentStore::validateHeader(

@@ -2302,6 +2302,20 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * When true, write a newly created overlay file directly instead of
+   * creating a temporary file and renaming it into place. A torn write
+   * leaves a partial file, which is safe here because an inode is only
+   * recorded as materialized after its contents are written: on crash the
+   * partial file is an fsck orphan and the contents still come from source
+   * control. Covers file inodes only; `overlay:direct-file-writes` is the
+   * equivalent for directory records.
+   */
+  ConfigSetting<bool> experimentalOverlayDirectFileCreate{
+      "experimental:overlay-direct-file-create",
+      true,
+      this};
+
+  /**
    * When true, write non-materialized directories directly to their overlay
    * file instead of creating a temporary file and renaming. This avoids
    * filesystem metadata overhead (rename) at the cost of leaving a
