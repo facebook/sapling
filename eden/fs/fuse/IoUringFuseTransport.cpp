@@ -214,12 +214,15 @@ std::optional<QueueSetupError> setupQueue(
 
 IoUringFuseTransport::IoUringFuseTransport(
     uint32_t queueDepth,
-    bool disableIoWait)
+    bool disableIoWait,
+    bool skipSelfWakeup)
     : queueDepth_{queueDepth} {
 #if EDEN_HAVE_FUSE_IO_URING
   disableIoWait_ = disableIoWait;
+  skipSelfWakeup_ = skipSelfWakeup;
 #else
   (void)disableIoWait;
+  (void)skipSelfWakeup;
 #endif
 }
 
@@ -685,7 +688,8 @@ void IoUringFuseTransport::queueCommitAndFetch(
     RingEntry& entry,
     const EdenStatsPtr& stats) const {
   auto& queue = entry.pool->queues.at(entry.queueId);
-  if (std::this_thread::get_id() == queue.ownerThreadId) {
+  const bool sameThread = std::this_thread::get_id() == queue.ownerThreadId;
+  if (sameThread) {
     stats->increment(&FuseStats::ioUringReplySameThread);
   } else {
     stats->increment(&FuseStats::ioUringReplyCrossThread);
@@ -694,7 +698,13 @@ void IoUringFuseTransport::queueCommitAndFetch(
     auto pendingCommits = queue.pendingCommits->wlock();
     pendingCommits->push_back(&entry);
   }
-  notifyWorker(queue);
+  // The owner thread drains pendingCommits after its CQE loop and before
+  // the next io_uring_submit_and_wait, so a reply queued from the owner
+  // thread itself needs no eventfd nudge. Only cross-thread replies must
+  // wake the worker.
+  if (!sameThread || !skipSelfWakeup_) {
+    notifyWorker(queue);
+  }
 }
 
 void IoUringFuseTransport::processPendingCommits(RingQueue& queue) const {

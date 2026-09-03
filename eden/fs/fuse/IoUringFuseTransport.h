@@ -44,7 +44,8 @@ class IoUringFuseTransport final : public FuseTransport {
  public:
   explicit IoUringFuseTransport(
       uint32_t queueDepth,
-      bool disableIoWait = false);
+      bool disableIoWait = false,
+      bool skipSelfWakeup = true);
   ~IoUringFuseTransport() override;
   IoUringFuseTransport(const IoUringFuseTransport&) = delete;
   IoUringFuseTransport& operator=(const IoUringFuseTransport&) = delete;
@@ -250,6 +251,9 @@ class IoUringFuseTransport final : public FuseTransport {
   // FUSE I/O is outstanding. Only honored on kernels with
   // IORING_FEAT_NO_IOWAIT.
   bool disableIoWait_{false};
+  // Skip notifyWorker() for replies queued by the queue's own worker.
+  // Gated by experimental:fuse-io-uring-skip-self-wakeup.
+  bool skipSelfWakeup_{false};
 #endif
   uint32_t queueDepth_;
 };

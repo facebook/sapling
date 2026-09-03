@@ -1014,6 +1014,7 @@ FuseChannel::FuseChannel(
     std::string ioUringKernelReleaseRegex,
     uint32_t ioUringQueueDepth,
     bool ioUringDisableIoWait,
+    bool ioUringSkipSelfWakeup,
     size_t numInvalidationThreads)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
@@ -1051,6 +1052,7 @@ FuseChannel::FuseChannel(
       ioUringKernelReleaseRegex_{std::move(ioUringKernelReleaseRegex)},
       ioUringQueueDepth_{ioUringQueueDepth},
       ioUringDisableIoWait_{ioUringDisableIoWait},
+      ioUringSkipSelfWakeup_{ioUringSkipSelfWakeup},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
@@ -1248,7 +1250,7 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   connInfo_ = connInfo;
   if (negotiatedIoUringTransport(connInfo)) {
     transport_ = std::make_unique<IoUringFuseTransport>(
-        ioUringQueueDepth_, ioUringDisableIoWait_);
+        ioUringQueueDepth_, ioUringDisableIoWait_, ioUringSkipSelfWakeup_);
   }
   updateEffectiveWorkerThreadCount();
   dispatcher_->initConnection(connInfo);
@@ -2265,7 +2267,7 @@ void FuseChannel::readInitPacket() {
         transport_->getName(),
         ioUringQueueDepth_);
     transport_ = std::make_unique<IoUringFuseTransport>(
-        ioUringQueueDepth_, ioUringDisableIoWait_);
+        ioUringQueueDepth_, ioUringDisableIoWait_, ioUringSkipSelfWakeup_);
   }
   updateEffectiveWorkerThreadCount();
 

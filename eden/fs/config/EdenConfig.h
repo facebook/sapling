@@ -907,6 +907,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> fuseUseIoUring{"fuse:use-io-uring", false, this};
 
   /**
+   * Skip the eventfd wakeup when a FUSE io_uring reply is queued from the
+   * ring worker that owns the queue: the worker drains pending commits
+   * before its next submit_and_wait, so it does not need to be woken.
+   */
+  ConfigSetting<bool> experimentalFuseIoUringSkipSelfWakeup{
+      "experimental:fuse-io-uring-skip-self-wakeup",
+      true,
+      this};
+
+  /**
    * RE2 regex pattern matched against the Linux kernel release string
    * (`uname -r`) where Eden may negotiate FUSE io_uring when
    * fuse:use-io-uring is enabled. Defaults to fbk 6.13 kernels, where Eden's

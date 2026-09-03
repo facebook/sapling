@@ -117,6 +117,7 @@ class FuseChannelTest : public ::testing::Test {
         std::move(ioUringKernelReleaseRegex),
         /*ioUringQueueDepth=*/8,
         /*ioUringDisableIoWait=*/true,
+        /*ioUringSkipSelfWakeup=*/false,
         numInvalidationThreads);
   }
 
