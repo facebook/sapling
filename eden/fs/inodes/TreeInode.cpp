@@ -2928,7 +2928,8 @@ ImmediateFuture<Unit> TreeInode::rename(
     TreeInodePtr destParent,
     PathComponentPiece destName,
     InvalidationRequired invalidate,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    bool noReplace) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return ImmediateFuture<Unit>{
@@ -2968,6 +2969,11 @@ ImmediateFuture<Unit> TreeInode::rename(
           folly::Try<Unit>{InodeError{ENOENT, inodePtrFromThis(), name}}};
     }
     DirEntry& srcEntry = srcIter->second;
+
+    if (noReplace && locks.destChildExists()) {
+      return ImmediateFuture<Unit>{
+          folly::Try<Unit>{InodeError{EEXIST, destParent, destName}}};
+    }
 
     // Perform as much input validation as possible now, before starting inode
     // loads that might be necessary.
@@ -3059,9 +3065,10 @@ ImmediateFuture<Unit> TreeInode::rename(
                          destParent,
                          destNameCopy = destName.copy(),
                          invalidate,
+                         noReplace,
                          context = context.copy()](auto&&) mutable {
     return self->rename(
-        nameCopy, destParent, destNameCopy, invalidate, context);
+        nameCopy, destParent, destNameCopy, invalidate, context, noReplace);
   };
 
   if (needSrc && needDest) {

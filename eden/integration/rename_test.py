@@ -4,17 +4,53 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from __future__ import annotations
+
 # pyre-strict
 
+import ctypes
 import errno
 import os
+import sys
 import time
 
 from .lib import testcase
 
 
+RENAME_NOREPLACE = 1
+AT_FDCWD = -100
+
+
+def rename_noreplace(source: str, destination: str) -> None:
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = libc.renameat2
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    result = renameat2(
+        AT_FDCWD,
+        os.fsencode(source),
+        AT_FDCWD,
+        os.fsencode(destination),
+        RENAME_NOREPLACE,
+    )
+    if result != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error), destination)
+
+
 @testcase.eden_repo_test
 class RenameTest(testcase.EdenRepoTest):
+    def edenfs_extra_config(self) -> dict[str, list[str]] | None:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("experimental", []).append("fuse-rename-noreplace = true")
+        return result
+
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
@@ -120,6 +156,41 @@ class RenameTest(testcase.EdenRepoTest):
 
             f.seek(0)
             self.assertEqual("overlay-a\nwoot", f.read())
+
+    def test_rename_noreplace_overlay_only(self) -> None:
+        if sys.platform != "linux" or self.use_nfs():
+            self.skipTest("renameat2 is specific to Linux FUSE mounts")
+
+        source = os.path.join(self.mount, "noreplace-source")
+        destination = os.path.join(self.mount, "noreplace-destination")
+        with open(source, "w") as source_file:
+            source_file.write("source\n")
+
+        rename_noreplace(source, destination)
+
+        self.assertFalse(os.path.exists(source))
+        with open(destination) as destination_file:
+            self.assertEqual("source\n", destination_file.read())
+
+    def test_rename_noreplace_does_not_overwrite(self) -> None:
+        if sys.platform != "linux" or self.use_nfs():
+            self.skipTest("renameat2 is specific to Linux FUSE mounts")
+
+        source = os.path.join(self.mount, "noreplace-source")
+        destination = os.path.join(self.mount, "noreplace-destination")
+        with open(source, "w") as source_file:
+            source_file.write("source\n")
+        with open(destination, "w") as destination_file:
+            destination_file.write("destination\n")
+
+        with self.assertRaises(OSError) as context:
+            rename_noreplace(source, destination)
+
+        self.assertEqual(errno.EEXIST, context.exception.errno)
+        with open(source) as source_file:
+            self.assertEqual("source\n", source_file.read())
+        with open(destination) as destination_file:
+            self.assertEqual("destination\n", destination_file.read())
 
     def test_rename_overlay_over_tree(self) -> None:
         """Make an overlay file and overwrite a tree entry with it"""

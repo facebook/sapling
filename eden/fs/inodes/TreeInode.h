@@ -265,7 +265,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr newParent,
       PathComponentPiece newName,
       InvalidationRequired invalidate,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      bool noReplace = false);
 
 #ifndef _WIN32
   FuseDirList fuseReaddir(

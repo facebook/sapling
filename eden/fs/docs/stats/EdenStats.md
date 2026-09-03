@@ -160,6 +160,7 @@ The list of all the EdenStats Counter/Duration are as follows:
   Duration rmdir{"fuse.rmdir_us"}
   Duration symlink{"fuse.symlink_us"}
   Duration rename{"fuse.rename_us"}
+  Duration rename2{"fuse.rename2_us"}
   Duration link{"fuse.link_us"}
   Duration open{"fuse.open_us"}
   Duration read{"fuse.read_us"}

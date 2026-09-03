@@ -200,6 +200,31 @@ TEST_F(RenameTest, renameFileToSamePath) {
   EXPECT_EQ(path, origFile->getPath().value());
 }
 
+TEST_F(RenameTest, renameNoReplacePreservesExistingDestination) {
+  RelativePath srcPath{"a/b/c/doc.txt"};
+  RelativePath destPath{"a/b/c/readme.txt"};
+  auto srcInode = mount_->getFileInode(srcPath);
+  auto destInode = mount_->getFileInode(destPath);
+  auto parentDir = mount_->getTreeInode(srcPath.dirname());
+
+  auto renameFuture = parentDir
+                          ->rename(
+                              srcPath.basename(),
+                              parentDir,
+                              destPath.basename(),
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext(),
+                              /*noReplace=*/true)
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
+
+  ASSERT_TRUE(renameFuture.isReady());
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(0ms), EEXIST);
+  EXPECT_EQ(srcInode.get(), mount_->getFileInode(srcPath).get());
+  EXPECT_EQ(destInode.get(), mount_->getFileInode(destPath).get());
+}
+
 /*
  * Basic tests for renaming directories
  */

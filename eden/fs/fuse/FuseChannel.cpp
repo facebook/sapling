@@ -154,6 +154,20 @@ std::string rename(FuseArg arg) {
   return fmt::format("old={}, newdir={}, new={}", oldName, in.newdir, newName);
 }
 
+#ifdef __linux__
+std::string rename2(FuseArg arg) {
+  auto& in = arg.read<fuse_rename2_in>();
+  auto oldName = arg.readz();
+  auto newName = arg.readz();
+  return fmt::format(
+      "old={}, newdir={}, new={}, flags={:#x}",
+      oldName,
+      in.newdir,
+      newName,
+      in.flags);
+}
+#endif
+
 std::string link(FuseArg arg) {
   auto& in = arg.read<fuse_link_in>();
   auto newName = arg.readz();
@@ -606,7 +620,15 @@ constexpr auto kFuseHandlers = [] {
       Write};
 #ifdef __linux__
   handlers[FUSE_READDIRPLUS] = {"FUSE_READDIRPLUS", Read};
-  handlers[FUSE_RENAME2] = {"FUSE_RENAME2", Write};
+  handlers[FUSE_RENAME2] = {
+      "FUSE_RENAME2",
+      &FuseChannel::fuseRename2,
+      &argrender::rename2,
+      &FuseStats::rename2,
+      &FuseStats::rename2Successful,
+      &FuseStats::rename2Failure,
+      Write,
+      SamplingGroup::One};
   handlers[FUSE_LSEEK] = {"FUSE_LSEEK"};
   handlers[FUSE_COPY_FILE_RANGE] = {"FUSE_COPY_FILE_RANGE", Write};
   handlers[FUSE_SETUPMAPPING] = {"FUSE_SETUPMAPPING", Read};
@@ -2941,6 +2963,36 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
           request.getObjectFetchContext())
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
+
+#ifdef __linux__
+ImmediateFuture<folly::Unit> FuseChannel::fuseRename2(
+    FuseRequestContext& request,
+    const fuse_in_header& header,
+    ByteRange arg) {
+  const auto rename = reinterpret_cast<const fuse_rename2_in*>(arg.data());
+  auto oldNameStr = reinterpret_cast<const char*>(rename + 1);
+  StringPiece oldName{oldNameStr};
+  StringPiece newName{oldNameStr + oldName.size() + 1};
+
+  InodeNumber parent{header.nodeid};
+  InodeNumber newParent{rename->newdir};
+  XLOGF(
+      DBG7,
+      "FUSE_RENAME2 {} -> {}, flags={:#x}",
+      oldName,
+      newName,
+      rename->flags);
+  return dispatcher_
+      ->rename2(
+          parent,
+          extractPathComponent(oldName, requireUtf8Path_),
+          newParent,
+          extractPathComponent(newName, requireUtf8Path_),
+          rename->flags,
+          request.getObjectFetchContext())
+      .thenValue([&request](auto&&) { request.replyError(0); });
+}
+#endif
 
 ImmediateFuture<folly::Unit> FuseChannel::fuseLink(
     FuseRequestContext& request,

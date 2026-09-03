@@ -77,6 +77,13 @@ class FuseDispatcherImpl : public FuseDispatcher {
       InodeNumber newparent,
       PathComponentPiece newname,
       const ObjectFetchContextPtr& context) override;
+  ImmediateFuture<folly::Unit> rename2(
+      InodeNumber parent,
+      PathComponentPiece name,
+      InodeNumber newparent,
+      PathComponentPiece newname,
+      uint32_t flags,
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<fuse_entry_out> link(
       InodeNumber ino,
@@ -126,6 +133,14 @@ class FuseDispatcherImpl : public FuseDispatcher {
   ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:
+  ImmediateFuture<folly::Unit> renameImpl(
+      InodeNumber parent,
+      PathComponentPiece name,
+      InodeNumber newparent,
+      PathComponentPiece newname,
+      bool noReplace,
+      const ObjectFetchContextPtr& context);
+
   /**
    * Compute the FUSE cache TTL based on current inode pressure.
    * Returns dynamic TTL when pressure-based GC is enabled, or the

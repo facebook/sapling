@@ -242,6 +242,14 @@ class FuseDispatcher {
       PathComponentPiece newname,
       const ObjectFetchContextPtr& context);
 
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> rename2(
+      InodeNumber parent,
+      PathComponentPiece name,
+      InodeNumber newparent,
+      PathComponentPiece newname,
+      uint32_t flags,
+      const ObjectFetchContextPtr& context);
+
   /**
    * Create a hard link
    *

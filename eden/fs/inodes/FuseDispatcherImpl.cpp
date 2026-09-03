@@ -517,23 +517,68 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
     InodeNumber newParent,
     PathComponentPiece newNamePiece,
     const ObjectFetchContextPtr& context) {
+  return renameImpl(parent, namePiece, newParent, newNamePiece, false, context);
+}
+
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename2(
+    InodeNumber parent,
+    PathComponentPiece namePiece,
+    InodeNumber newParent,
+    PathComponentPiece newNamePiece,
+    uint32_t flags,
+    const ObjectFetchContextPtr& context) {
+  if (!mount_->getEdenConfig()->experimentalFuseRenameNoReplace.getValue()) {
+    // ENOSYS is deliberate: the kernel then stops sending FUSE_RENAME2 for
+    // the life of the mount and fails flagged renames with EINVAL itself,
+    // which is what callers expect from a filesystem without flag support.
+    // Enabling the setting takes effect on the next mount.
+    FUSELL_NOT_IMPL();
+  }
+
+  constexpr uint32_t kRenameNoReplace = 1;
+  if ((flags & ~kRenameNoReplace) != 0) {
+    folly::throwSystemErrorExplicit(EINVAL, "unsupported FUSE_RENAME2 flags");
+  }
+
+  return renameImpl(
+      parent,
+      namePiece,
+      newParent,
+      newNamePiece,
+      (flags & kRenameNoReplace) != 0,
+      context);
+}
+
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::renameImpl(
+    InodeNumber parent,
+    PathComponentPiece namePiece,
+    InodeNumber newParent,
+    PathComponentPiece newNamePiece,
+    bool noReplace,
+    const ObjectFetchContextPtr& context) {
   // Start looking up both parents
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
   // Do the rename once we have looked up both parents.
   return std::move(parentFuture)
-      .thenValue([npFuture = std::move(newParentFuture),
-                  name = PathComponent{namePiece},
-                  newName = PathComponent{newNamePiece},
-                  context =
-                      context.copy()](const TreeInodePtr& parent) mutable {
-        return std::move(npFuture).thenValue(
-            [parent, name, newName, context = context.copy()](
-                const TreeInodePtr& newParent) {
-              return parent->rename(
-                  name, newParent, newName, InvalidationRequired::No, context);
-            });
-      });
+      .thenValue(
+          [npFuture = std::move(newParentFuture),
+           name = PathComponent{namePiece},
+           newName = PathComponent{newNamePiece},
+           noReplace,
+           context = context.copy()](const TreeInodePtr& parent) mutable {
+            return std::move(npFuture).thenValue(
+                [parent, name, newName, noReplace, context = context.copy()](
+                    const TreeInodePtr& newParent) {
+                  return parent->rename(
+                      name,
+                      newParent,
+                      newName,
+                      InvalidationRequired::No,
+                      context,
+                      noReplace);
+                });
+          });
 }
 
 ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::link(

@@ -143,6 +143,16 @@ ImmediateFuture<folly::Unit> FuseDispatcher::rename(
   FUSELL_NOT_IMPL();
 }
 
+ImmediateFuture<folly::Unit> FuseDispatcher::rename2(
+    InodeNumber,
+    PathComponentPiece,
+    InodeNumber,
+    PathComponentPiece,
+    uint32_t,
+    const ObjectFetchContextPtr&) {
+  FUSELL_NOT_IMPL();
+}
+
 ImmediateFuture<fuse_entry_out>
 FuseDispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();

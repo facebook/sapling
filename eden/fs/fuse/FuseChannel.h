@@ -845,6 +845,12 @@ class FuseChannel final : public FsChannel {
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
+#ifdef __linux__
+  ImmediateFuture<folly::Unit> fuseRename2(
+      FuseRequestContext& request,
+      const fuse_in_header& header,
+      folly::ByteRange arg);
+#endif
   ImmediateFuture<folly::Unit> fuseLink(
       FuseRequestContext& request,
       const fuse_in_header& header,

@@ -899,6 +899,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Handle FUSE_RENAME2 requests using RENAME_NOREPLACE semantics.
+   */
+  ConfigSetting<bool> experimentalFuseRenameNoReplace{
+      "experimental:fuse-rename-noreplace",
+      false,
+      this};
+
+  /**
    * Whether to use io_uring for FUSE request/reply transport instead of
    * traditional /dev/fuse read/write. Requires Linux 6.11+ with
    * CONFIG_FUSE_IO_URING=y. Falls back to /dev/fuse automatically if

@@ -227,6 +227,9 @@ struct FuseStats : StatsGroup<FuseStats> {
   Duration rename{"fuse.rename_us"};
   Counter renameSuccessful{"fuse.rename_successful"};
   Counter renameFailure{"fuse.rename_failure"};
+  Duration rename2{"fuse.rename2_us"};
+  Counter rename2Successful{"fuse.rename2_successful"};
+  Counter rename2Failure{"fuse.rename2_failure"};
   Duration link{"fuse.link_us"};
   Counter linkSuccessful{"fuse.link_successful"};
   Counter linkFailure{"fuse.link_failure"};
