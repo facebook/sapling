@@ -243,6 +243,7 @@ class OverlayChecker {
   void linkInodeChildrenMemoryEfficient();
   void scanForParentErrors();
   bool isContentlessOrphanFile(const fsck::InodeInfo& info);
+  bool isContentlessOrphanDir(const fsck::InodeInfo& info);
   void reclaimContentlessOrphans();
   void checkNextInodeNumber();
 
@@ -267,6 +268,7 @@ class OverlayChecker {
   // as errors, and deleted only by reclaimContentlessOrphans(), which
   // runs from repairErrors(). A scan-only fsck leaves them on disk.
   std::vector<InodeNumber> contentlessOrphanFiles_;
+  std::vector<InodeNumber> contentlessOrphanDirs_;
   uint64_t maxInodeNumber_{kRootNodeId.get()};
 
   // Number of workers used per parallel fsck stage.

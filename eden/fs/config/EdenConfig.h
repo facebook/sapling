@@ -2424,6 +2424,18 @@ class EdenConfig : private ConfigSettingManager {
       64,
       this};
 
+  /**
+   * Number of empty overlay directory records to pre-create for future
+   * directory inodes so that mkdir does not write the new child's overlay
+   * record on the request path. 0 disables preallocation. Only supported by
+   * the legacy (file-based) overlay. Read when a checkout's overlay is
+   * opened, so a change applies to mounts started afterwards.
+   */
+  ConfigSetting<uint64_t> overlayDirPreallocPoolSize{
+      "overlay:dir-prealloc-pool-size",
+      64,
+      this};
+
   // [clone]
 
   /**

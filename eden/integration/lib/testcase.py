@@ -325,6 +325,7 @@ class EdenTestCase(EdenTestCaseBase):
             "overlay": [
                 "direct-file-writes = true",
                 'file-prealloc-pool-size = "64"',
+                'dir-prealloc-pool-size = "64"',
             ],
         }
 

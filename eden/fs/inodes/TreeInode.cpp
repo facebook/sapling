@@ -2346,8 +2346,17 @@ TreeInodePtr TreeInode::mkdir(
       invalidateChannelDirCache(*contents).get();
     }
 
+#ifndef _WIN32
+    // Claim an inode number whose empty overlay record is already on disk
+    // if the pool has one; otherwise allocate a number and save the record
+    // here.
+    auto preparedDir = getOverlay()->tryClaimPreparedDir();
+    auto childNumber =
+        preparedDir ? *preparedDir : getOverlay()->allocateInodeNumber();
+#else
     // Allocate an inode number
     auto childNumber = getOverlay()->allocateInodeNumber();
+#endif
     getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
         childNumber,
@@ -2362,7 +2371,13 @@ TreeInodePtr TreeInode::mkdir(
 
     // Store the overlay entry for this dir
     DirContents emptyDir(getMount()->getCheckoutConfig()->getCaseSensitive());
+#ifndef _WIN32
+    if (!preparedDir) {
+      saveOverlayDir(childNumber, emptyDir);
+    }
+#else
     saveOverlayDir(childNumber, emptyDir);
+#endif
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);

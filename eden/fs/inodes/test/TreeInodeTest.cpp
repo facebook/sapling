@@ -265,8 +265,11 @@ TEST_P(TreeInodeTestBase, fuseReaddirReturnsSelfAndParentBeforeEntries) {
   ASSERT_EQ(4, result.size());
   EXPECT_EQ(".", result[0].name);
   EXPECT_EQ("..", result[1].name);
-  EXPECT_EQ("file", result[2].name);
-  EXPECT_EQ(".eden", result[3].name);
+  // The remaining entries are listed in inode-number order, which depends
+  // on allocation order during mount setup and is not guaranteed.
+  std::vector<std::string> names{result[2].name, result[3].name};
+  std::sort(names.begin(), names.end());
+  EXPECT_EQ((std::vector<std::string>{".eden", "file"}), names);
 }
 
 TEST_P(TreeInodeTestBase, fuseReaddirOffsetsAreNonzero) {
@@ -296,50 +299,27 @@ TEST_P(TreeInodeTestBase, fuseReaddirRespectsOffset) {
   maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
+  auto listFrom = [&](uint64_t offset) {
+    return root
+        ->fuseReaddir(
+            FuseDirList{4096}, offset, ObjectFetchContext::getNullContext())
+        .extract();
+  };
 
-  const auto resultA =
-      root->fuseReaddir(
-              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
-          .extract();
-  ASSERT_EQ(4, resultA.size());
-  EXPECT_EQ(".", resultA[0].name);
-  EXPECT_EQ("..", resultA[1].name);
-  EXPECT_EQ("file", resultA[2].name);
-  EXPECT_EQ(".eden", resultA[3].name);
+  const auto all = listFrom(0);
+  ASSERT_EQ(4, all.size());
+  EXPECT_EQ(".", all[0].name);
+  EXPECT_EQ("..", all[1].name);
 
-  const auto resultB = root->fuseReaddir(
-                               FuseDirList{4096},
-                               resultA[0].offset,
-                               ObjectFetchContext::getNullContext())
-                           .extract();
-  ASSERT_EQ(3, resultB.size());
-  EXPECT_EQ("..", resultB[0].name);
-  EXPECT_EQ("file", resultB[1].name);
-  EXPECT_EQ(".eden", resultB[2].name);
-
-  const auto resultC = root->fuseReaddir(
-                               FuseDirList{4096},
-                               resultB[0].offset,
-                               ObjectFetchContext::getNullContext())
-                           .extract();
-  ASSERT_EQ(2, resultC.size());
-  EXPECT_EQ("file", resultC[0].name);
-  EXPECT_EQ(".eden", resultC[1].name);
-
-  const auto resultD = root->fuseReaddir(
-                               FuseDirList{4096},
-                               resultC[0].offset,
-                               ObjectFetchContext::getNullContext())
-                           .extract();
-  ASSERT_EQ(1, resultD.size());
-  EXPECT_EQ(".eden", resultD[0].name);
-
-  const auto resultE = root->fuseReaddir(
-                               FuseDirList{4096},
-                               resultD[0].offset,
-                               ObjectFetchContext::getNullContext())
-                           .extract();
-  EXPECT_EQ(0, resultE.size());
+  // Every entry's offset resumes the listing immediately after that entry,
+  // regardless of the order the entries were assigned inode numbers in.
+  for (size_t i = 0; i < all.size(); ++i) {
+    const auto rest = listFrom(all[i].offset);
+    ASSERT_EQ(all.size() - i - 1, rest.size());
+    for (size_t j = 0; j < rest.size(); ++j) {
+      EXPECT_EQ(all[i + 1 + j].name, rest[j].name);
+    }
+  }
 }
 
 TEST_P(TreeInodeTestBase, fuseReaddirIgnoresWildOffsets) {

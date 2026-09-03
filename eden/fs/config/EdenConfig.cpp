@@ -77,6 +77,8 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
   // exercise the pools enable them explicitly.
   config->overlayFilePreallocPoolSize.setValue(
       0, ConfigSourceType::Default, true);
+  config->overlayDirPreallocPoolSize.setValue(
+      0, ConfigSourceType::Default, true);
   return config;
 }
 

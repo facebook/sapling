@@ -680,6 +680,15 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::optional<std::pair<InodeNumber, OverlayFile>> tryClaimPreparedFile(
       folly::ByteRange contents);
 
+  /**
+   * Claim an inode number whose empty overlay directory record was already
+   * written by the preallocation thread, so mkdir needs no overlay write
+   * for the new child on the request path. Returns nullopt when the pool
+   * is disabled or empty; callers then fall back to allocateInodeNumber()
+   * + saveOverlayDir().
+   */
+  std::optional<InodeNumber> tryClaimPreparedDir();
+
  private:
   void preallocThreadLoop();
   void stopPreallocThread();
@@ -697,9 +706,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * of filesystem syscalls on the request path.
    */
   size_t filePreallocPoolSize_{0};
+  size_t dirPreallocPoolSize_{0};
   std::mutex preallocMutex_;
   std::condition_variable preallocCondVar_;
   std::vector<PreparedFile> preallocPool_;
+  std::vector<InodeNumber> preallocDirPool_;
   bool preallocStop_{false};
   bool preallocBroken_{false};
   std::thread preallocThread_;

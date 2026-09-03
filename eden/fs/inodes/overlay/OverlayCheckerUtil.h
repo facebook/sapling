@@ -58,6 +58,11 @@ struct InodeInfo {
   std::unique_ptr<std::string> errorMsg;
   mode_t modeFromParent{0};
   std::unique_ptr<overlay::OverlayDir> children;
+  // Entry count for a directory whose record parsed fully; used by the
+  // memory-efficient scan, which does not retain `children`. Only
+  // meaningful when dirEntryCountKnown is true.
+  uint64_t dirEntryCount{0};
+  bool dirEntryCountKnown{false};
   folly::small_vector<InodeNumber, 1> parents;
 };
 

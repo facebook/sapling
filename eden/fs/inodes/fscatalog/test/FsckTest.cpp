@@ -1128,12 +1128,18 @@ TEST(FsckWalTest, scanForErrorsLeavesWalUntouched) {
   ASSERT_TRUE(baseBefore.has_value());
   EXPECT_EQ(0u, baseBefore->entries()->count("walAdded"));
 
-  // Materialize the child file on disk so that scanForErrors sees an
+  // Materialize the child dir on disk so that scanForErrors sees an
   // inode with no parent (the WAL ADD that would link it to root is
-  // intentionally NOT merged by a read-only scan).
-  overlay::OverlayDir emptyChild;
+  // intentionally NOT merged by a read-only scan). Give it an entry:
+  // a contentless orphan dir would be quietly reclaimed, not reported.
+  overlay::OverlayDir childDir;
+  overlay::OverlayEntry grandChild;
+  grandChild.mode() = S_IFREG | 0644;
+  grandChild.inodeNumber() = testOverlay->allocateInodeNumber().get();
+  grandChild.hash() = "0123456789012345678901234567890123456789";
+  childDir.entries()->emplace("grandchild", std::move(grandChild));
   testOverlay->inodeCatalog()->saveOverlayDir(
-      childIno, std::move(emptyChild), /*crashSafe=*/true);
+      childIno, std::move(childDir), /*crashSafe=*/true);
 
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
@@ -1170,6 +1176,56 @@ TEST(FsckWalTest, scanForErrorsLeavesWalUntouched) {
   auto baseAfter = testOverlay->inodeCatalog()->loadOverlayDir(kRootNodeId);
   ASSERT_TRUE(baseAfter.has_value());
   EXPECT_EQ(0u, baseAfter->entries()->count("walAdded"));
+
+  testOverlay->inodeCatalog()->close(std::nullopt);
+}
+
+TEST(FsckWalTest, emptyOrphanDirWithWalIsReportedNotReclaimed) {
+  // An empty, parentless dir record whose WAL has not been merged may
+  // still gain children when the WAL replays; it must be reported as an
+  // orphan rather than classified as a reclaimable contentless record.
+  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  root.save();
+  testOverlay->closeCleanly();
+
+  auto nextInode =
+      testOverlay->inodeCatalog()->initOverlay(/*createIfNonExisting=*/false);
+  ASSERT_TRUE(nextInode.has_value());
+
+  auto orphanIno = testOverlay->allocateInodeNumber();
+  testOverlay->inodeCatalog()->saveOverlayDir(
+      orphanIno, overlay::OverlayDir{}, /*crashSafe=*/true);
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = testOverlay->allocateInodeNumber().get();
+  entry.hash() = "0123456789012345678901234567890123456789";
+  testOverlay->fcs().appendWalEntry(
+      orphanIno, WalOpType::ADD, PathComponentPiece{"pending"}, &entry);
+  ASSERT_TRUE(testOverlay->fcs().hasWal(orphanIno));
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+  checker.scanForErrors();
+
+  auto orphanInoStr = std::to_string(orphanIno.get());
+  bool reported = false;
+  for (const auto& err : checker.getErrors()) {
+    auto msg = err->getMessage(&checker);
+    if (msg.find("orphan") != std::string::npos &&
+        msg.find(orphanInoStr) != std::string::npos) {
+      reported = true;
+    }
+  }
+  EXPECT_TRUE(reported) << "expected orphan report for inode " << orphanInoStr;
 
   testOverlay->inodeCatalog()->close(std::nullopt);
 }

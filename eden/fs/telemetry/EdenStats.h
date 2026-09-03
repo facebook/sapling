@@ -737,6 +737,11 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter preallocFileMissed{"overlay.prealloc_file_missed"};
   // A pool entry was popped but writing the initial contents failed.
   Counter preallocFileClaimFailed{"overlay.prealloc_file_claim_failed"};
+
+  // Preallocated empty overlay dir records
+  // (overlay:dir-prealloc-pool-size gate).
+  Counter preallocDirClaimed{"overlay.prealloc_dir_claimed"};
+  Counter preallocDirMissed{"overlay.prealloc_dir_missed"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {
