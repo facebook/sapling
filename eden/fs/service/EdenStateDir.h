@@ -106,6 +106,23 @@ class EdenStateDir {
   AbsolutePath getMountdSocketPath() const;
 
   /**
+   * Get the path to the file in which edenfsctl records the command and
+   * environment it started this daemon with.
+   *
+   * The file may not exist: a daemon started directly, rather than through
+   * edenfsctl, has none.
+   */
+  AbsolutePath getDaemonArgsPath() const;
+
+  /**
+   * Get the path to the restart sentinel, whose existence tells a surviving
+   * privhelper that the daemon died rather than stopped.
+   *
+   * Shared by every daemon generation in this state dir, not per-process.
+   */
+  AbsolutePath getRestartSentinelPath() const;
+
+  /**
    * Get the path to the directory where state for a specific checkout is
    * stored.
    *

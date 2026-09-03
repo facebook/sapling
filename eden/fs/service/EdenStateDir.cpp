@@ -21,6 +21,13 @@ constexpr StringPiece kPidFileName{"pid"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kThriftSocketName{"socket"};
 constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
+// Written by edenfsctl; see eden/fs/cli/daemon_util.py. The name is also
+// hardcoded in eden/fs/facebook/packaging/systemd/edenfs@.service.
+constexpr PathComponentPiece kDaemonArgsName{".edenfs_start_args"_pc};
+// Created by the daemon once it arms the privhelper, removed when it shuts
+// down on purpose. One fixed name per state dir, so a daemon that starts while
+// a previous generation's privhelper is still alive overwrites its sentinel.
+constexpr PathComponentPiece kRestartSentinelName{".edenfs_restart_armed"_pc};
 constexpr StringPiece kHeartbeatFileNamePrefix{"heartbeat_"};
 } // namespace
 
@@ -145,6 +152,14 @@ AbsolutePath EdenStateDir::getTakeoverSocketPath() const {
 
 AbsolutePath EdenStateDir::getMountdSocketPath() const {
   return path_ + kMountdSocketName;
+}
+
+AbsolutePath EdenStateDir::getDaemonArgsPath() const {
+  return path_ + kDaemonArgsName;
+}
+
+AbsolutePath EdenStateDir::getRestartSentinelPath() const {
+  return path_ + kRestartSentinelName;
 }
 
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {
