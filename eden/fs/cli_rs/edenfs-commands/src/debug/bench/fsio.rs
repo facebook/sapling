@@ -7,6 +7,8 @@
 
 //! Filesystem I/O benchmarking
 
+mod comparison;
+
 use std::collections::HashSet;
 use std::fmt;
 use std::fs;
@@ -26,9 +28,11 @@ use std::time::Instant;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+pub(crate) use comparison::load_result;
 use hdrhistogram::Histogram;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use serde::Deserialize;
 use serde::Serialize;
 use virtual_repo::GeneratedFile;
 use virtual_repo::generate_workload;
@@ -124,15 +128,17 @@ pub(crate) struct FsIoOptions {
     pub(crate) show_progress: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct FsIoResult {
     config: FsIoConfig,
     write: PhaseResult,
     cache_preparation: CachePreparationResult,
     read: PhaseResult,
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    diff: Option<comparison::FsIoDiff>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct FsIoConfig {
     number_of_files: usize,
     files_per_dir: Option<usize>,
@@ -145,21 +151,21 @@ struct FsIoConfig {
     file_sizes: Vec<FileSizeConfig>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct FileSizeConfig {
     size_bytes: usize,
     files: u64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct CachePreparationResult {
     drop_kernel_caches: u8,
     wall_seconds: f64,
     file_sync: OperationResult,
-    cache_drop_method: &'static str,
+    cache_drop_method: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct PhaseResult {
     wall_seconds: f64,
     throughput_mib_per_second: f64,
@@ -176,7 +182,7 @@ struct PhaseResult {
     per_file_size: Vec<FileSizeResult>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct FileSizeResult {
     size_bytes: usize,
     files: u64,
@@ -191,7 +197,7 @@ struct FileSizeResult {
     file_close: OperationResult,
 }
 
-#[derive(Clone, Copy, Debug, Default, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 struct OperationResult {
     calls: u64,
     sum_seconds: f64,
@@ -381,8 +387,18 @@ impl FileAccumulator {
     }
 }
 
-pub(crate) fn bench_fs_io(test_dir: &TestDir, options: FsIoOptions) -> Result<FsIoResult> {
+pub(crate) fn bench_fs_io(
+    test_dir: &TestDir,
+    options: FsIoOptions,
+    baseline: Option<&FsIoResult>,
+) -> Result<FsIoResult> {
     let workload = Workload::new(test_dir, options)?;
+    let config = fs_io_config(options, &workload);
+    if let Some(baseline) = baseline {
+        // Fail before the benchmark runs rather than after, so a baseline
+        // recorded with a different workload doesn't waste a full run.
+        comparison::ensure_config_matches(&config, &baseline.config)?;
+    }
     // Extend the buffer by one write so every chunk is a contiguous slice
     // even when the cyclic offset is near the end of the buffer.
     let content =
@@ -408,30 +424,38 @@ pub(crate) fn bench_fs_io(test_dir: &TestDir, options: FsIoOptions) -> Result<Fs
     read_progress.finish_and_clear();
     let read = read?;
 
-    let file_sizes = write
-        .per_file_size
-        .iter()
-        .map(|result| FileSizeConfig {
-            size_bytes: result.size_bytes,
-            files: result.files,
-        })
-        .collect();
     Ok(FsIoResult {
-        config: FsIoConfig {
-            number_of_files: options.number_of_files.get(),
-            files_per_dir: options.files_per_dir.map(NonZeroUsize::get),
-            virtual_repo_factor: workload.virtual_repo_factor,
-            read_size_bytes: options.read_size.get(),
-            write_size_bytes: options.write_size.get(),
-            jobs: options.jobs.get(),
-            drop_kernel_caches: options.drop_kernel_caches.value(),
-            total_bytes: workload.total_bytes,
-            file_sizes,
-        },
+        config,
         write,
         cache_preparation,
         read,
+        diff: None,
     })
+}
+
+/// The run's configuration, derived from the planned workload before any
+/// I/O happens so a `--diff` baseline mismatch can be rejected up front.
+fn fs_io_config(options: FsIoOptions, workload: &Workload) -> FsIoConfig {
+    let mut files_per_band = vec![0u64; workload.file_sizes.len()];
+    for file in &workload.files {
+        files_per_band[file.size_index] += 1;
+    }
+    FsIoConfig {
+        number_of_files: options.number_of_files.get(),
+        files_per_dir: options.files_per_dir.map(NonZeroUsize::get),
+        virtual_repo_factor: workload.virtual_repo_factor,
+        read_size_bytes: options.read_size.get(),
+        write_size_bytes: options.write_size.get(),
+        jobs: options.jobs.get(),
+        drop_kernel_caches: options.drop_kernel_caches.value(),
+        total_bytes: workload.total_bytes,
+        file_sizes: workload
+            .file_sizes
+            .iter()
+            .zip(files_per_band)
+            .map(|(&size_bytes, files)| FileSizeConfig { size_bytes, files })
+            .collect(),
+    }
 }
 
 fn file_progress_bar(name: &str, files: usize, show_progress: bool) -> ProgressBar {
@@ -700,7 +724,7 @@ fn prepare_read_cache(
         drop_kernel_caches: drop_kernel_caches.value(),
         wall_seconds: wall_start.elapsed().as_secs_f64(),
         file_sync: file_sync.result(),
-        cache_drop_method: drop_kernel_caches.description(),
+        cache_drop_method: drop_kernel_caches.description().to_owned(),
     })
 }
 
@@ -1137,7 +1161,11 @@ impl fmt::Display for FsIoResult {
             self.cache_preparation.cache_drop_method
         )?;
         write_operation(formatter, "file sync", &self.cache_preparation.file_sync)?;
-        write_phase(formatter, "Read", "file open", &self.read)
+        write_phase(formatter, "Read", "file open", &self.read)?;
+        if let Some(diff) = &self.diff {
+            comparison::write_diff(formatter, diff)?;
+        }
+        Ok(())
     }
 }
 

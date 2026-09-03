@@ -8,8 +8,10 @@
 //! Command-line interface for benchmarking
 
 use std::num::NonZeroUsize;
+use std::path::PathBuf;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use serde_json;
@@ -70,6 +72,10 @@ pub enum BenchCmd {
         /// Output results as JSON
         #[clap(long)]
         json: bool,
+
+        /// Compare against JSON output from a previous fs-io run
+        #[clap(long)]
+        diff: Option<PathBuf>,
 
         /// Disable progress bars
         #[clap(long)]
@@ -189,9 +195,11 @@ impl crate::Subcommand for BenchCmd {
                 jobs,
                 drop_kernel_caches,
                 json,
+                diff,
                 no_progress,
             } => {
                 let drop_kernel_caches = fsio::resolve_kernel_cache_drop_mode(*drop_kernel_caches)?;
+                let baseline = diff.as_deref().map(fsio::load_result).transpose()?;
                 match r#gen::TestDir::validate(test_dir) {
                     Ok(test_dir) => {
                         let result = fsio::bench_fs_io(
@@ -206,9 +214,10 @@ impl crate::Subcommand for BenchCmd {
                                 drop_kernel_caches,
                                 show_progress: !*json && !*no_progress,
                             },
+                            baseline.as_ref(),
                         );
                         let cleanup_result = test_dir.remove();
-                        let result = match result {
+                        let mut result = match result {
                             Ok(result) => result,
                             Err(error) => {
                                 if let Err(cleanup_error) = cleanup_result {
@@ -219,14 +228,34 @@ impl crate::Subcommand for BenchCmd {
                                 return Err(error);
                             }
                         };
+                        // Print the measurements even when the baseline turns out
+                        // not to be comparable, so a long run is not thrown away.
+                        let diff_error = baseline
+                            .as_ref()
+                            .and_then(|baseline| result.add_diff(baseline).err());
                         if *json {
                             println!("{}", serde_json::to_string_pretty(&result)?);
                         } else {
                             println!("{result}");
                         }
-                        if let Err(cleanup_error) = cleanup_result {
-                            return Err(cleanup_error
-                                .context("benchmark completed but benchmark data cleanup failed"));
+                        let diff_error = diff_error.map(|error| {
+                            error.context(
+                                "benchmark completed but could not be compared with the baseline",
+                            )
+                        });
+                        match (diff_error, cleanup_result) {
+                            (None, Ok(())) => {}
+                            (Some(diff_error), Ok(())) => return Err(diff_error),
+                            (None, Err(cleanup_error)) => {
+                                return Err(cleanup_error.context(
+                                    "benchmark completed but benchmark data cleanup failed",
+                                ));
+                            }
+                            (Some(diff_error), Err(cleanup_error)) => {
+                                return Err(anyhow!(
+                                    "{diff_error:#}; benchmark data cleanup also failed: {cleanup_error:#}"
+                                ));
+                            }
                         }
                     }
                     Err(e) => return Err(e),
