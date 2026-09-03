@@ -3389,24 +3389,22 @@ bool TreeInode::readdirImpl(
   auto dir = lockContentsRead();
   auto& entries = dir->entries;
 
-  // Compute an index into the PathMap by InodeNumber, only including the
+  // Index the PathMap entries by InodeNumber, only including the
   // entries that are greater than the given offset.
-  std::vector<std::pair<InodeNumber, size_t>> indices;
+  std::vector<std::pair<InodeNumber, const DirContents::value_type*>> indices;
   indices.reserve(entries.size());
-  size_t index = 0;
-  for (auto& entry : entries) {
-    auto inodeNumber = entry.second.getInodeNumber();
+  for (const auto& mapEntry : entries) {
+    auto inodeNumber = mapEntry.second.getInodeNumber();
     if (static_cast<off_t>(inodeNumber.get() + 2) > off) {
-      indices.emplace_back(entry.second.getInodeNumber(), index);
+      indices.emplace_back(inodeNumber, &mapEntry);
     }
-    ++index;
   }
   std::make_heap(indices.begin(), indices.end(), std::greater<>{});
 
   // The provided FuseDirList has limited space. Add entries until no more fit.
   while (!indices.empty()) {
     std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
-    auto& [name, entry] = entries.begin()[indices.back().second];
+    auto& [name, entry] = *indices.back().second;
     indices.pop_back();
 
     if (!add(name.view(), entry, entry.getInodeNumber().get() + 2)) {
