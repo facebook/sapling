@@ -7,6 +7,8 @@
 
 //! Command-line interface for benchmarking
 
+use std::num::NonZeroUsize;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
@@ -25,24 +27,53 @@ use crate::ExitCode;
     long_about = "Benchmark filesystem operations including traversal, I/O, and database performance"
 )]
 pub enum BenchCmd {
-    #[clap(about = "Run filesystem/thrift I/O benchmarks")]
+    #[clap(about = "Run a realistic filesystem I/O benchmark")]
     FsIo {
         /// Directory to use for testing
         #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
         test_dir: String,
 
-        /// Number of randomly generated files to use for benchmarking
-        #[clap(long, default_value_t = types::DEFAULT_NUMBER_OF_FILES)]
-        number_of_files: usize,
+        /// Number of files to use for benchmarking
+        #[clap(long, default_value_t = NonZeroUsize::new(types::DEFAULT_NUMBER_OF_FILES).expect("default file count is nonzero"))]
+        number_of_files: NonZeroUsize,
 
-        /// Size of each chunk in bytes
-        #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
-        chunk_size: usize,
-
-        /// Whether to drop memory caches after writes.
-        /// Only supported on linux and needs root privilege to run.
+        /// Override the Virtual Repo directory layout with fixed-size leaf directories
         #[clap(long)]
-        drop_kernel_caches: bool,
+        files_per_dir: Option<NonZeroUsize>,
+
+        /// Override the Virtual Repo file-size distribution with one size
+        #[clap(long, value_parser = types::parse_byte_size)]
+        file_size: Option<usize>,
+
+        /// Maximum size of each read call
+        #[clap(long, value_parser = types::parse_nonzero_byte_size, default_value_t = NonZeroUsize::new(types::DEFAULT_IO_SIZE).expect("default read size is nonzero"))]
+        read_size: NonZeroUsize,
+
+        /// Maximum size of each write call
+        #[clap(long, value_parser = types::parse_nonzero_byte_size, default_value_t = NonZeroUsize::new(types::DEFAULT_IO_SIZE).expect("default write size is nonzero"))]
+        write_size: NonZeroUsize,
+
+        /// Number of worker threads for file reads and writes
+        #[clap(long, default_value_t = NonZeroUsize::new(1).expect("default job count is nonzero"))]
+        jobs: NonZeroUsize,
+
+        /// Kernel caches to drop before reading: 0=none, 1=pages, 2=dentries/inodes, 3=both.
+        /// Defaults to 1 on Linux; unsupported on other platforms.
+        #[clap(
+            long,
+            value_parser = fsio::parse_kernel_cache_drop_mode,
+            num_args = 0..=1,
+            default_missing_value = "1"
+        )]
+        drop_kernel_caches: Option<fsio::KernelCacheDropMode>,
+
+        /// Output results as JSON
+        #[clap(long)]
+        json: bool,
+
+        /// Disable progress bars
+        #[clap(long)]
+        no_progress: bool,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -151,40 +182,63 @@ impl crate::Subcommand for BenchCmd {
             Self::FsIo {
                 test_dir,
                 number_of_files,
-                chunk_size,
+                files_per_dir,
+                file_size,
+                read_size,
+                write_size,
+                jobs,
                 drop_kernel_caches,
-            } => match r#gen::TestDir::validate(test_dir) {
-                Ok(test_dir) => {
-                    let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
-                    println!(
-                        "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
-                        random_data.number_of_files,
-                        random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
-                        random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
-                    );
-                    println!(
-                        "{}",
-                        fsio::bench_write_mfmd(&test_dir, &random_data, *drop_kernel_caches)?
-                    );
-                    println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
-
-                    println!(
-                        "{}",
-                        fsio::bench_write_sfmd(&test_dir, &random_data, *drop_kernel_caches)?
-                    );
-
-                    println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
-
-                    test_dir.remove()?;
+                json,
+                no_progress,
+            } => {
+                let drop_kernel_caches = fsio::resolve_kernel_cache_drop_mode(*drop_kernel_caches)?;
+                match r#gen::TestDir::validate(test_dir) {
+                    Ok(test_dir) => {
+                        let result = fsio::bench_fs_io(
+                            &test_dir,
+                            fsio::FsIoOptions {
+                                number_of_files: *number_of_files,
+                                files_per_dir: *files_per_dir,
+                                file_size: *file_size,
+                                read_size: *read_size,
+                                write_size: *write_size,
+                                jobs: *jobs,
+                                drop_kernel_caches,
+                                show_progress: !*json && !*no_progress,
+                            },
+                        );
+                        let cleanup_result = test_dir.remove();
+                        let result = match result {
+                            Ok(result) => result,
+                            Err(error) => {
+                                if let Err(cleanup_error) = cleanup_result {
+                                    return Err(error.context(format!(
+                                        "benchmark data cleanup also failed: {cleanup_error:#}"
+                                    )));
+                                }
+                                return Err(error);
+                            }
+                        };
+                        if *json {
+                            println!("{}", serde_json::to_string_pretty(&result)?);
+                        } else {
+                            println!("{result}");
+                        }
+                        if let Err(cleanup_error) = cleanup_result {
+                            return Err(cleanup_error
+                                .context("benchmark completed but benchmark data cleanup failed"));
+                        }
+                    }
+                    Err(e) => return Err(e),
                 }
-                Err(e) => return Err(e),
-            },
+            }
             Self::DbIo {
                 test_dir,
                 number_of_files,
                 chunk_size,
             } => match r#gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
+                    test_dir.prepare_hash_directories()?;
                     let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
@@ -267,5 +321,24 @@ impl crate::Subcommand for BenchCmd {
         }
 
         Ok(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fs_io_drop_kernel_caches_accepts_bare_flag() {
+        let command = BenchCmd::try_parse_from(["bench", "fs-io", "--drop-kernel-caches"])
+            .expect("bare cache-drop flag should use its default mode");
+
+        let BenchCmd::FsIo {
+            drop_kernel_caches, ..
+        } = command
+        else {
+            panic!("expected fs-io command");
+        };
+        assert!(drop_kernel_caches.is_some());
     }
 }

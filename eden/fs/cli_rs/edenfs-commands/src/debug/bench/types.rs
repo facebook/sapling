@@ -7,6 +7,10 @@
 
 //! Types for benchmarking
 
+use std::num::NonZeroUsize;
+
+use anyhow::Result;
+use anyhow::anyhow;
 use num_format::Locale;
 use num_format::ToFormattedString;
 use serde::Serialize;
@@ -15,22 +19,47 @@ use serde::Serialize;
 pub const BENCH_DIR_NAME: &str = "__fsiomicrobench__";
 pub const LMDB_FILE_NAME: &str = "__lmdb__";
 pub const SQLITE_FILE_NAME: &str = "__sqlite__";
-pub const COMBINED_DATA_FILE_NAME: &str = "__combined_data__";
 pub const DEFAULT_NUMBER_OF_FILES: usize = 64 * 1024;
 pub const DEFAULT_CHUNK_SIZE: usize = 4 * 1024;
+pub const DEFAULT_IO_SIZE: usize = 128 * 1024;
 pub const NUMBER_OF_SUB_DIRS: usize = 256;
 pub const BYTES_IN_KILOBYTE: usize = 1024;
 pub const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 pub const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
 pub const PROGRESS_BAR_UPDATE_INTERVAL_SECS: u64 = 1;
 
+pub(crate) fn parse_byte_size(value: &str) -> Result<usize> {
+    let value = value.trim();
+    let suffix_offset = value
+        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .unwrap_or(value.len());
+    let (number, suffix) = value.split_at(suffix_offset);
+    let number = number
+        .parse::<f64>()
+        .map_err(|error| anyhow!("invalid byte size {value:?}: {error}"))?;
+    let multiplier = match suffix.trim().to_ascii_lowercase().as_str() {
+        "" | "b" => 1,
+        "k" | "kb" | "kib" => BYTES_IN_KILOBYTE,
+        "m" | "mb" | "mib" => BYTES_IN_MEGABYTE,
+        "g" | "gb" | "gib" => BYTES_IN_GIGABYTE,
+        _ => return Err(anyhow!("invalid byte-size suffix in {value:?}")),
+    };
+    let bytes = number * multiplier as f64;
+    if !bytes.is_finite() || bytes < 0.0 || bytes >= usize::MAX as f64 {
+        return Err(anyhow!("byte size {value:?} is out of range"));
+    }
+
+    Ok(bytes.round() as usize)
+}
+
+pub(crate) fn parse_nonzero_byte_size(value: &str) -> Result<NonZeroUsize> {
+    NonZeroUsize::new(parse_byte_size(value)?)
+        .ok_or_else(|| anyhow!("byte size must be greater than zero"))
+}
+
 /// Represents the type of benchmark being performed
 #[derive(Debug, Clone, Serialize)]
 pub enum BenchmarkType {
-    FsWriteMultipleFiles,
-    FsReadMultipleFiles,
-    FsWriteSingleFile,
-    FsReadSingleFile,
     FsTraversal,
     LmdbWriteMultipleFiles,
     LmdbReadMultipleFiles,
@@ -41,10 +70,6 @@ pub enum BenchmarkType {
 impl std::fmt::Display for BenchmarkType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BenchmarkType::FsWriteMultipleFiles => write!(f, "Filesystem Write Multiple Files"),
-            BenchmarkType::FsReadMultipleFiles => write!(f, "Filesystem Read Multiple Files"),
-            BenchmarkType::FsWriteSingleFile => write!(f, "Filesystem Write Single File"),
-            BenchmarkType::FsReadSingleFile => write!(f, "Filesystem Read Single File"),
             BenchmarkType::FsTraversal => write!(f, "Filesystem Traversal"),
             BenchmarkType::LmdbWriteMultipleFiles => write!(f, "LMDB Write Multiple Files"),
             BenchmarkType::LmdbReadMultipleFiles => write!(f, "LMDB Read Multiple Files"),
@@ -196,5 +221,39 @@ impl std::fmt::Display for Benchmark {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_byte_sizes() {
+        assert_eq!(parse_byte_size("64").expect("bytes should parse"), 64);
+        assert_eq!(
+            parse_byte_size("1.37KiB").expect("fractional KiB should parse"),
+            1_403
+        );
+        assert_eq!(
+            parse_byte_size("2M").expect("MiB shorthand should parse"),
+            2 * BYTES_IN_MEGABYTE
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_byte_sizes() {
+        assert!(
+            parse_byte_size("12 potatoes").is_err(),
+            "unknown suffixes should fail"
+        );
+        assert!(
+            parse_nonzero_byte_size("0").is_err(),
+            "I/O call sizes must be nonzero"
+        );
+        assert!(
+            parse_byte_size(&(usize::MAX as u128 + 1).to_string()).is_err(),
+            "byte sizes larger than usize must fail"
+        );
     }
 }

@@ -7,259 +7,1521 @@
 
 //! Filesystem I/O benchmarking
 
+use std::collections::HashSet;
+use std::fmt;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-#[cfg(target_os = "linux")]
-use std::os::unix::process::CommandExt;
+use std::num::NonZeroUsize;
+use std::path::Path;
+use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::Command;
+#[cfg(target_os = "linux")]
+use std::process::Stdio;
+use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::Context;
 use anyhow::Result;
-#[cfg(target_os = "linux")]
 use anyhow::anyhow;
+use hdrhistogram::Histogram;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
+use serde::Serialize;
+use virtual_repo::GeneratedFile;
+use virtual_repo::generate_workload;
+use virtual_repo::text_gen::generate_paragraphs;
 
-use super::r#gen::RandomData;
 use super::r#gen::TestDir;
 use super::types;
-use super::types::Benchmark;
-use super::types::BenchmarkType;
 
-/// Runs the MFMD write benchmark and returns the benchmark results
-pub fn bench_write_mfmd(
-    test_dir: &TestDir,
-    random_data: &RandomData,
-    no_caches: bool,
-) -> Result<Benchmark> {
-    let mut agg_create_dur = std::time::Duration::new(0, 0);
-    let mut agg_write_dur = std::time::Duration::new(0, 0);
-    for (chunk, path) in random_data
-        .chunks
+const CONTENT_BUFFER_SIZE: usize = 4 * types::BYTES_IN_MEGABYTE;
+const FILE_SIZE_STEP_UPPER_BOUNDS: &[u64] = &[
+    511, 4_095, 16_383, 65_535, 262_143, 524_287, 1_048_575, 5_242_879, 20_971_520,
+];
+const MAX_TRACKED_LATENCY_NANOSECONDS: u64 = 60 * 60 * 1_000_000_000;
+const PROGRESS_UPDATE_FILES: u64 = 256;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum KernelCacheDropMode {
+    Disabled,
+    PageCache,
+    DentriesInodes,
+    PageCacheDentriesInodes,
+}
+
+impl KernelCacheDropMode {
+    /// The numeric mode written to /proc/sys/vm/drop_caches and recorded in
+    /// benchmark results.
+    fn value(self) -> u8 {
+        match self {
+            Self::Disabled => 0,
+            Self::PageCache => 1,
+            Self::DentriesInodes => 2,
+            Self::PageCacheDentriesInodes => 3,
+        }
+    }
+
+    fn drops_page_cache(self) -> bool {
+        matches!(self, Self::PageCache | Self::PageCacheDentriesInodes)
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::Disabled => "disabled",
+            Self::PageCache => "Linux drop_caches mode 1: page cache",
+            Self::DentriesInodes => "Linux drop_caches mode 2: dentries and inodes",
+            Self::PageCacheDentriesInodes => {
+                "Linux drop_caches mode 3: page cache, dentries, and inodes"
+            }
+        }
+    }
+}
+
+pub(crate) fn parse_kernel_cache_drop_mode(value: &str) -> Result<KernelCacheDropMode> {
+    let mode = value
+        .parse::<u8>()
+        .map_err(|error| anyhow!("invalid kernel-cache mode {value:?}: {error}"))?;
+    match mode {
+        0 => Ok(KernelCacheDropMode::Disabled),
+        1 => Ok(KernelCacheDropMode::PageCache),
+        2 => Ok(KernelCacheDropMode::DentriesInodes),
+        3 => Ok(KernelCacheDropMode::PageCacheDentriesInodes),
+        _ => Err(anyhow!("kernel-cache mode must be between 0 and 3")),
+    }
+}
+
+pub(crate) fn resolve_kernel_cache_drop_mode(
+    requested: Option<KernelCacheDropMode>,
+) -> Result<KernelCacheDropMode> {
+    resolve_kernel_cache_drop_mode_for_platform(requested, cfg!(target_os = "linux"))
+}
+
+fn resolve_kernel_cache_drop_mode_for_platform(
+    requested: Option<KernelCacheDropMode>,
+    supported: bool,
+) -> Result<KernelCacheDropMode> {
+    if supported {
+        return Ok(requested.unwrap_or(KernelCacheDropMode::PageCache));
+    }
+    match requested {
+        None | Some(KernelCacheDropMode::Disabled) => Ok(KernelCacheDropMode::Disabled),
+        Some(_) => Err(anyhow!("--drop-kernel-caches is supported only on Linux")),
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FsIoOptions {
+    pub(crate) number_of_files: NonZeroUsize,
+    pub(crate) files_per_dir: Option<NonZeroUsize>,
+    pub(crate) file_size: Option<usize>,
+    pub(crate) read_size: NonZeroUsize,
+    pub(crate) write_size: NonZeroUsize,
+    pub(crate) jobs: NonZeroUsize,
+    pub(crate) drop_kernel_caches: KernelCacheDropMode,
+    pub(crate) show_progress: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct FsIoResult {
+    config: FsIoConfig,
+    write: PhaseResult,
+    cache_preparation: CachePreparationResult,
+    read: PhaseResult,
+}
+
+#[derive(Debug, Serialize)]
+struct FsIoConfig {
+    number_of_files: usize,
+    files_per_dir: Option<usize>,
+    virtual_repo_factor: u8,
+    read_size_bytes: usize,
+    write_size_bytes: usize,
+    jobs: usize,
+    drop_kernel_caches: u8,
+    total_bytes: u64,
+    file_sizes: Vec<FileSizeConfig>,
+}
+
+#[derive(Debug, Serialize)]
+struct FileSizeConfig {
+    size_bytes: usize,
+    files: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct CachePreparationResult {
+    drop_kernel_caches: u8,
+    wall_seconds: f64,
+    file_sync: OperationResult,
+    cache_drop_method: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+struct PhaseResult {
+    wall_seconds: f64,
+    throughput_mib_per_second: f64,
+    files: u64,
+    directories: u64,
+    bytes: u64,
+    directory_create: OperationResult,
+    directory_open: OperationResult,
+    directory_read: OperationResult,
+    directory_close: OperationResult,
+    file_open: OperationResult,
+    file_io: OperationResult,
+    file_close: OperationResult,
+    per_file_size: Vec<FileSizeResult>,
+}
+
+#[derive(Debug, Serialize)]
+struct FileSizeResult {
+    size_bytes: usize,
+    files: u64,
+    bytes: u64,
+    sum_seconds: f64,
+    average_nanoseconds_per_file: f64,
+    p50_nanoseconds_per_file: u64,
+    p90_nanoseconds_per_file: u64,
+    p99_nanoseconds_per_file: u64,
+    file_open: OperationResult,
+    file_io: OperationResult,
+    file_close: OperationResult,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize)]
+struct OperationResult {
+    calls: u64,
+    sum_seconds: f64,
+    average_nanoseconds: f64,
+    p50_nanoseconds: u64,
+    p90_nanoseconds: u64,
+    p99_nanoseconds: u64,
+}
+
+struct Workload {
+    files: Vec<FileSpec>,
+    directories: Vec<PathBuf>,
+    file_sizes: Vec<usize>,
+    total_bytes: u64,
+    virtual_repo_factor: u8,
+}
+
+struct FileSpec {
+    path: PathBuf,
+    size: usize,
+    size_index: usize,
+}
+
+struct OperationAccumulator {
+    calls: u64,
+    elapsed: Duration,
+    latencies_nanoseconds: Histogram<u64>,
+}
+
+/// The directory-level operations of one benchmark phase. Grouped so phase
+/// construction can't silently swap two accumulators of the same type.
+#[derive(Default)]
+struct DirectoryOperations {
+    create: OperationAccumulator,
+    open: OperationAccumulator,
+    read: OperationAccumulator,
+    close: OperationAccumulator,
+}
+
+/// Timings of one file's open/IO/close sequence, recorded into the phase
+/// accumulators by `record_file`.
+struct FileTiming {
+    open: Duration,
+    io: OperationAccumulator,
+    close: Duration,
+}
+
+struct FileSizeAccumulator {
+    size: usize,
+    files: u64,
+    bytes: u64,
+    file_total: OperationAccumulator,
+    file_open: OperationAccumulator,
+    file_io: OperationAccumulator,
+    file_close: OperationAccumulator,
+}
+
+struct FileAccumulator {
+    files: u64,
+    bytes: u64,
+    file_open: OperationAccumulator,
+    file_io: OperationAccumulator,
+    file_close: OperationAccumulator,
+    per_file_size: Vec<FileSizeAccumulator>,
+}
+
+impl OperationAccumulator {
+    fn new() -> Self {
+        Self {
+            calls: 0,
+            elapsed: Duration::default(),
+            latencies_nanoseconds: Histogram::new_with_bounds(
+                1,
+                MAX_TRACKED_LATENCY_NANOSECONDS,
+                3,
+            )
+            .expect("latency histogram bounds are valid"),
+        }
+    }
+
+    fn record(&mut self, elapsed: Duration) {
+        self.calls += 1;
+        self.elapsed += elapsed;
+        let latency = u64::try_from(elapsed.as_nanos())
+            .unwrap_or(MAX_TRACKED_LATENCY_NANOSECONDS)
+            .clamp(1, MAX_TRACKED_LATENCY_NANOSECONDS);
+        self.latencies_nanoseconds
+            .record(latency)
+            .expect("clamped latency fits the histogram");
+    }
+
+    fn merge(&mut self, other: &Self) {
+        self.calls += other.calls;
+        self.elapsed += other.elapsed;
+        self.latencies_nanoseconds
+            .add(&other.latencies_nanoseconds)
+            .expect("latency histograms use identical bounds");
+    }
+
+    fn result(self) -> OperationResult {
+        OperationResult {
+            calls: self.calls,
+            sum_seconds: self.elapsed.as_secs_f64(),
+            average_nanoseconds: if self.calls == 0 {
+                0.0
+            } else {
+                self.elapsed.as_secs_f64() * 1_000_000_000.0 / self.calls as f64
+            },
+            p50_nanoseconds: self.latencies_nanoseconds.value_at_quantile(0.50),
+            p90_nanoseconds: self.latencies_nanoseconds.value_at_quantile(0.90),
+            p99_nanoseconds: self.latencies_nanoseconds.value_at_quantile(0.99),
+        }
+    }
+}
+
+impl Default for OperationAccumulator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FileSizeAccumulator {
+    fn new(size: usize) -> Self {
+        Self {
+            size,
+            files: 0,
+            bytes: 0,
+            file_total: OperationAccumulator::default(),
+            file_open: OperationAccumulator::default(),
+            file_io: OperationAccumulator::default(),
+            file_close: OperationAccumulator::default(),
+        }
+    }
+
+    fn merge(&mut self, other: &Self) {
+        self.files += other.files;
+        self.bytes += other.bytes;
+        self.file_total.merge(&other.file_total);
+        self.file_open.merge(&other.file_open);
+        self.file_io.merge(&other.file_io);
+        self.file_close.merge(&other.file_close);
+    }
+
+    fn result(self) -> FileSizeResult {
+        let file_total = self.file_total.result();
+        FileSizeResult {
+            size_bytes: self.size,
+            files: self.files,
+            bytes: self.bytes,
+            sum_seconds: file_total.sum_seconds,
+            average_nanoseconds_per_file: file_total.average_nanoseconds,
+            p50_nanoseconds_per_file: file_total.p50_nanoseconds,
+            p90_nanoseconds_per_file: file_total.p90_nanoseconds,
+            p99_nanoseconds_per_file: file_total.p99_nanoseconds,
+            file_open: self.file_open.result(),
+            file_io: self.file_io.result(),
+            file_close: self.file_close.result(),
+        }
+    }
+}
+
+impl FileAccumulator {
+    fn new(file_sizes: &[usize]) -> Self {
+        Self {
+            files: 0,
+            bytes: 0,
+            file_open: OperationAccumulator::default(),
+            file_io: OperationAccumulator::default(),
+            file_close: OperationAccumulator::default(),
+            per_file_size: file_sizes
+                .iter()
+                .copied()
+                .map(FileSizeAccumulator::new)
+                .collect(),
+        }
+    }
+
+    fn merge(&mut self, other: Self) {
+        self.files += other.files;
+        self.bytes += other.bytes;
+        self.file_open.merge(&other.file_open);
+        self.file_io.merge(&other.file_io);
+        self.file_close.merge(&other.file_close);
+        for (size, other_size) in self.per_file_size.iter_mut().zip(&other.per_file_size) {
+            size.merge(other_size);
+        }
+    }
+}
+
+pub(crate) fn bench_fs_io(test_dir: &TestDir, options: FsIoOptions) -> Result<FsIoResult> {
+    let workload = Workload::new(test_dir, options)?;
+    // Extend the buffer by one write so every chunk is a contiguous slice
+    // even when the cyclic offset is near the end of the buffer.
+    let content =
+        generate_paragraphs(CONTENT_BUFFER_SIZE + options.write_size.get(), 0).into_bytes();
+
+    let write_progress = file_progress_bar("Write", workload.files.len(), options.show_progress);
+    let write = bench_write(&workload, &content, options, &write_progress);
+    write_progress.finish_and_clear();
+    let write = write?;
+
+    let cache_progress = cache_drop_spinner(
+        options.drop_kernel_caches,
+        options.show_progress,
+        workload.files.len(),
+    );
+    let cache_preparation =
+        prepare_read_cache(&workload, options.drop_kernel_caches, &cache_progress);
+    cache_progress.finish_and_clear();
+    let cache_preparation = cache_preparation?;
+
+    let read_progress = file_progress_bar("Read", workload.files.len(), options.show_progress);
+    let read = bench_read(test_dir, &workload, options, &read_progress);
+    read_progress.finish_and_clear();
+    let read = read?;
+
+    let file_sizes = write
+        .per_file_size
         .iter()
-        .zip(random_data.paths(test_dir).iter())
-    {
-        let start = Instant::now();
-        let mut file = File::create(path)?;
-        agg_create_dur += start.elapsed();
+        .map(|result| FileSizeConfig {
+            size_bytes: result.size_bytes,
+            files: result.files,
+        })
+        .collect();
+    Ok(FsIoResult {
+        config: FsIoConfig {
+            number_of_files: options.number_of_files.get(),
+            files_per_dir: options.files_per_dir.map(NonZeroUsize::get),
+            virtual_repo_factor: workload.virtual_repo_factor,
+            read_size_bytes: options.read_size.get(),
+            write_size_bytes: options.write_size.get(),
+            jobs: options.jobs.get(),
+            drop_kernel_caches: options.drop_kernel_caches.value(),
+            total_bytes: workload.total_bytes,
+            file_sizes,
+        },
+        write,
+        cache_preparation,
+        read,
+    })
+}
 
-        let start = Instant::now();
-        file.write_all(chunk)?;
-        agg_write_dur += start.elapsed();
+fn file_progress_bar(name: &str, files: usize, show_progress: bool) -> ProgressBar {
+    if !show_progress {
+        return ProgressBar::hidden();
     }
 
-    let mut agg_sync_dur = std::time::Duration::new(0, 0);
-    for path in random_data.paths(test_dir) {
-        let start = Instant::now();
-        let file = File::options().write(true).open(path)?;
-        file.sync_all()?;
-        agg_sync_dur += start.elapsed();
+    let progress = ProgressBar::new(files as u64);
+    progress.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "[{elapsed_precise}] {msg:<5} [{bar:40.cyan/blue}] {pos:>8}/{len:8} files {per_sec:>12} ETA {eta_precise}",
+            )
+            .expect("progress bar template is valid")
+            .progress_chars("=>-"),
+    );
+    progress.set_message(name.to_owned());
+    progress
+}
+
+fn cache_drop_spinner(mode: KernelCacheDropMode, show_progress: bool, files: usize) -> ProgressBar {
+    if !show_progress || mode == KernelCacheDropMode::Disabled {
+        return ProgressBar::hidden();
     }
 
-    let avg_create_dur = agg_create_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_write_dur = agg_write_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_sync_dur = agg_sync_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_e2e_dur = avg_create_dur + avg_write_dur + avg_sync_dur;
-    let avg_create_write_dur = avg_create_dur + avg_write_dur;
-    let mb_per_second_e2e =
-        random_data.chunk_size as f64 / avg_e2e_dur / types::BYTES_IN_MEGABYTE as f64;
-    let mb_per_second_create_write =
-        random_data.chunk_size as f64 / avg_create_write_dur / types::BYTES_IN_MEGABYTE as f64;
-
-    let mut result = Benchmark::new(BenchmarkType::FsWriteMultipleFiles);
-
-    // Add throughput metrics
-    result.add_metric(
-        "create() + write() + sync() throughput",
-        mb_per_second_e2e,
-        types::Unit::MiBps,
-        None,
+    let progress = ProgressBar::new_spinner();
+    progress.set_style(
+        ProgressStyle::default_spinner()
+            .template("[{elapsed_precise}] {spinner} {msg}")
+            .expect("cache-drop spinner template is valid"),
     );
-    result.add_metric(
-        "create() + write() throughput",
-        mb_per_second_create_write,
-        types::Unit::MiBps,
-        None,
-    );
+    progress.set_message(if mode.drops_page_cache() {
+        format!("Syncing {files} files before dropping kernel caches")
+    } else {
+        format!("Dropping kernel caches (mode {})", mode.value())
+    });
+    progress.enable_steady_tick(Duration::from_millis(100));
+    progress
+}
 
-    // Add latency metrics
-    result.add_metric(
-        "create() latency",
-        avg_create_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
+impl Workload {
+    fn new(test_dir: &TestDir, options: FsIoOptions) -> Result<Self> {
+        let generated = generate_workload(options.number_of_files.get())?;
+        let (file_sizes, size_indexes) = file_size_steps(&generated.files, options.file_size)?;
+        let mut files = Vec::with_capacity(generated.files.len());
+        let data_root = test_dir.path.join("data");
+        let mut directories = vec![data_root.clone()];
+        let mut seen_directories = HashSet::from([data_root.clone()]);
 
-    let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_metric(
-        &format!("write() {chunk_size_kb:.0} KiB latency"),
-        avg_write_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-    result.add_metric(
-        &format!("sync() {chunk_size_kb:.0} KiB latency"),
-        avg_sync_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
+        for (ordinal, (generated_file, size_index)) in
+            generated.files.iter().zip(size_indexes).enumerate()
+        {
+            let relative_path = options.files_per_dir.map_or_else(
+                || PathBuf::from(&generated_file.path).with_file_name(benchmark_file_name(ordinal)),
+                |files_per_dir| manual_relative_path(ordinal, files_per_dir.get()),
+            );
+            add_parent_directories(
+                &data_root,
+                &relative_path,
+                &mut seen_directories,
+                &mut directories,
+            );
+            files.push(FileSpec {
+                path: data_root.join(relative_path),
+                size: file_sizes[size_index],
+                size_index,
+            });
+        }
+        let total_bytes = files.iter().map(|file| file.size as u64).sum();
 
-    #[cfg(target_os = "linux")]
-    {
-        if no_caches {
-            if let Err(e) = drop_kernel_caches() {
-                eprintln!("\nFailed to drop caches: {e}\n");
-            } else {
-                println!("\nCaches dropped successfully after writes\n");
-            }
+        Ok(Self {
+            files,
+            directories,
+            file_sizes,
+            total_bytes,
+            virtual_repo_factor: generated.factor_bits,
+        })
+    }
+}
+
+fn file_size_steps(
+    generated_files: &[GeneratedFile],
+    override_size: Option<usize>,
+) -> Result<(Vec<usize>, Vec<usize>)> {
+    if let Some(size) = override_size {
+        return Ok((vec![size], vec![0; generated_files.len()]));
+    }
+
+    let bucket_count = FILE_SIZE_STEP_UPPER_BOUNDS.len() + 1;
+    let mut counts = vec![0_u64; bucket_count];
+    let mut sums = vec![0_u128; bucket_count];
+    let buckets = generated_files
+        .iter()
+        .map(|file| {
+            let bucket = FILE_SIZE_STEP_UPPER_BOUNDS.partition_point(|upper| *upper < file.size);
+            counts[bucket] += 1;
+            sums[bucket] += file.size as u128;
+            bucket
+        })
+        .collect::<Vec<_>>();
+
+    let mut bucket_to_size_index = vec![None; bucket_count];
+    let mut file_sizes = Vec::new();
+    for bucket in 0..bucket_count {
+        if counts[bucket] == 0 {
+            continue;
+        }
+        let average = (sums[bucket] + (counts[bucket] / 2) as u128) / counts[bucket] as u128;
+        let size = usize::try_from(average).context("generated file size does not fit usize")?;
+        bucket_to_size_index[bucket] = Some(file_sizes.len());
+        file_sizes.push(size);
+    }
+
+    let size_indexes = buckets
+        .into_iter()
+        .map(|bucket| bucket_to_size_index[bucket].expect("occupied bucket has a size step"))
+        .collect();
+    Ok((file_sizes, size_indexes))
+}
+
+fn manual_relative_path(ordinal: usize, files_per_dir: usize) -> PathBuf {
+    let leaf = ordinal / files_per_dir;
+    PathBuf::from(format!("{:02x}", leaf >> 16))
+        .join(format!("{:02x}", (leaf >> 8) & 0xff))
+        .join(format!("{:02x}", leaf & 0xff))
+        .join(benchmark_file_name(ordinal))
+}
+
+fn benchmark_file_name(ordinal: usize) -> String {
+    format!("file-{ordinal:08}.txt")
+}
+
+fn add_parent_directories(
+    data_root: &Path,
+    relative_file: &Path,
+    seen: &mut HashSet<PathBuf>,
+    directories: &mut Vec<PathBuf>,
+) {
+    let Some(parent) = relative_file.parent() else {
+        return;
+    };
+    let mut directory = data_root.to_path_buf();
+    for component in parent.components() {
+        directory.push(component);
+        if seen.insert(directory.clone()) {
+            directories.push(directory.clone());
         }
     }
-
-    Ok(result)
 }
 
-/// Runs the MFMD read benchmark and returns the benchmark results
-pub fn bench_fs_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
-    let mut agg_open_dur = std::time::Duration::new(0, 0);
-    let mut agg_read_dur = std::time::Duration::new(0, 0);
-    let mut read_data = vec![0u8; random_data.chunk_size];
-    for path in random_data.paths(test_dir) {
+fn bench_write(
+    workload: &Workload,
+    content: &[u8],
+    options: FsIoOptions,
+    progress: &ProgressBar,
+) -> Result<PhaseResult> {
+    let wall_start = Instant::now();
+    let mut directory_create = OperationAccumulator::default();
+    for path in &workload.directories {
         let start = Instant::now();
-        let mut file = File::open(path)?;
-        agg_open_dur += start.elapsed();
-
-        let start = Instant::now();
-        file.read_exact(&mut read_data)?;
-        agg_read_dur += start.elapsed();
+        fs::create_dir(path).with_context(|| format!("failed to create {}", path.display()))?;
+        directory_create.record(start.elapsed());
     }
-    let avg_open_dur = agg_open_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
-    let avg_dur = avg_open_dur + avg_read_dur;
-    let mb_per_second = random_data.chunk_size as f64 / avg_dur / types::BYTES_IN_MEGABYTE as f64;
+    let files = run_file_workers(
+        workload,
+        options.jobs,
+        |file, accumulator| write_file(file, content, options.write_size.get(), accumulator),
+        progress,
+    )?;
+    let wall_seconds = wall_start.elapsed().as_secs_f64();
 
-    let mut result = Benchmark::new(BenchmarkType::FsReadMultipleFiles);
-
-    // Add throughput metrics
-    result.add_metric(
-        "open() + read() throughput",
-        mb_per_second,
-        types::Unit::MiBps,
-        None,
-    );
-
-    // Add latency metrics
-    result.add_metric(
-        "open() latency",
-        avg_open_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_metric(
-        &format!("read() {chunk_size_kb:.0} KiB latency"),
-        avg_read_dur * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    result.add_metric(
-        &format!("total {chunk_size_kb:.0} KiB latency"),
-        (avg_read_dur + avg_open_dur) * 1000.0,
-        types::Unit::Ms,
-        Some(4),
-    );
-
-    Ok(result)
+    Ok(phase_result(
+        wall_seconds,
+        workload.directories.len() as u64,
+        DirectoryOperations {
+            create: directory_create,
+            ..Default::default()
+        },
+        files,
+    ))
 }
 
-/// Runs the SFMD write benchmark and returns the benchmark results
-pub fn bench_write_sfmd(
+fn write_file(
+    file: &FileSpec,
+    content: &[u8],
+    write_size: usize,
+    accumulator: &mut FileAccumulator,
+) -> Result<()> {
+    let cycle = content.len() - write_size;
+    debug_assert!(
+        cycle > 0,
+        "content must extend at least one write past the cycle"
+    );
+    let start = Instant::now();
+    let mut output = File::create(&file.path)
+        .with_context(|| format!("failed to create {}", file.path.display()))?;
+    let open_elapsed = start.elapsed();
+
+    let mut remaining = file.size;
+    let mut file_offset = 0;
+    let mut file_io = OperationAccumulator::default();
+    while remaining > 0 {
+        let content_offset = file_offset % cycle;
+        let bytes = remaining.min(write_size);
+        let mut written = 0;
+        while written < bytes {
+            let start = Instant::now();
+            let result = output.write(&content[content_offset + written..content_offset + bytes]);
+            file_io.record(start.elapsed());
+            match result {
+                Ok(0) => {
+                    return Err(anyhow!("write returned zero for {}", file.path.display()));
+                }
+                Ok(result) => written += result,
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(error) => return Err(error.into()),
+            }
+        }
+        file_offset += written;
+        remaining -= written;
+    }
+
+    let start = Instant::now();
+    drop(output);
+    let close_elapsed = start.elapsed();
+    record_file(
+        accumulator,
+        file,
+        file.size as u64,
+        FileTiming {
+            open: open_elapsed,
+            io: file_io,
+            close: close_elapsed,
+        },
+    );
+    Ok(())
+}
+
+fn prepare_read_cache(
+    workload: &Workload,
+    drop_kernel_caches: KernelCacheDropMode,
+    progress: &ProgressBar,
+) -> Result<CachePreparationResult> {
+    let wall_start = Instant::now();
+    let mut file_sync = OperationAccumulator::default();
+    if drop_kernel_caches.drops_page_cache() {
+        for file in &workload.files {
+            let input = File::open(&file.path)
+                .with_context(|| format!("failed to open {} for syncing", file.path.display()))?;
+            let start = Instant::now();
+            input
+                .sync_data()
+                .with_context(|| format!("failed to sync {}", file.path.display()))?;
+            file_sync.record(start.elapsed());
+        }
+    }
+    if drop_kernel_caches != KernelCacheDropMode::Disabled {
+        progress.set_message(format!(
+            "Dropping kernel caches (mode {})",
+            drop_kernel_caches.value()
+        ));
+        drop_kernel_caches_on_linux(drop_kernel_caches)?;
+    }
+
+    Ok(CachePreparationResult {
+        drop_kernel_caches: drop_kernel_caches.value(),
+        wall_seconds: wall_start.elapsed().as_secs_f64(),
+        file_sync: file_sync.result(),
+        cache_drop_method: drop_kernel_caches.description(),
+    })
+}
+
+fn bench_read(
     test_dir: &TestDir,
-    random_data: &RandomData,
-    no_caches: bool,
-) -> Result<Benchmark> {
-    let start = Instant::now();
-    let mut file = File::create(test_dir.combined_data_path())?;
-    for chunk in &random_data.chunks {
-        file.write_all(chunk)?;
-    }
-    let write_dur = start.elapsed().as_secs_f64();
-    let start = Instant::now();
-    file.sync_all()?;
-    let sync_dur = start.elapsed().as_secs_f64();
-    let agg_dur = write_dur + sync_dur;
-    let mb_per_second_e2e =
-        random_data.total_size() as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_dur;
-    let mb_per_second_write =
-        random_data.total_size() as f64 / types::BYTES_IN_MEGABYTE as f64 / write_dur;
+    workload: &Workload,
+    options: FsIoOptions,
+    progress: &ProgressBar,
+) -> Result<PhaseResult> {
+    let wall_start = Instant::now();
+    let (file_indexes, directory_operations) = enumerate_files(&test_dir.path, workload)?;
+    let files = run_read_workers(&file_indexes, workload, options, progress)?;
+    let wall_seconds = wall_start.elapsed().as_secs_f64();
 
-    let mut result = Benchmark::new(BenchmarkType::FsWriteSingleFile);
+    Ok(phase_result(
+        wall_seconds,
+        // Report the workload's directory count, matching the write phase.
+        // The open accumulator additionally counts the pre-existing benchmark
+        // root opened by enumerate_files.
+        workload.directories.len() as u64,
+        directory_operations,
+        files,
+    ))
+}
 
-    // Add throughput metrics
-    result.add_metric(
-        "create() + write() + sync() throughput",
-        mb_per_second_e2e,
-        types::Unit::MiBps,
-        None,
-    );
-    result.add_metric(
-        "create() + write()",
-        mb_per_second_write,
-        types::Unit::MiBps,
-        None,
-    );
+fn enumerate_files(root: &Path, workload: &Workload) -> Result<(Vec<usize>, DirectoryOperations)> {
+    let mut directories = vec![root.to_path_buf()];
+    let mut file_indexes = Vec::with_capacity(workload.files.len());
+    let mut directory_open = OperationAccumulator::default();
+    let mut directory_read = OperationAccumulator::default();
+    let mut directory_close = OperationAccumulator::default();
 
-    #[cfg(target_os = "linux")]
-    {
-        if no_caches {
-            if let Err(e) = drop_kernel_caches() {
-                eprintln!("\nFailed to drop caches: {e}\n");
-            } else {
-                println!("\nCaches dropped successfully after writes\n");
+    while let Some(directory) = directories.pop() {
+        let start = Instant::now();
+        let mut entries = fs::read_dir(&directory)
+            .with_context(|| format!("failed to open directory {}", directory.display()))?;
+        directory_open.record(start.elapsed());
+
+        let mut read_elapsed = Duration::default();
+        loop {
+            let start = Instant::now();
+            let entry = entries.next();
+            read_elapsed += start.elapsed();
+            let Some(entry) = entry else {
+                break;
+            };
+            let entry = entry
+                .with_context(|| format!("failed to read directory {}", directory.display()))?;
+            let path = entry.path();
+            let file_type = entry
+                .file_type()
+                .with_context(|| format!("failed to read file type for {}", path.display()))?;
+            if file_type.is_dir() {
+                directories.push(path);
+            } else if file_type.is_file() {
+                let ordinal = parse_file_ordinal(&path)?;
+                let expected = workload
+                    .files
+                    .get(ordinal)
+                    .ok_or_else(|| anyhow!("unexpected benchmark file {}", path.display()))?;
+                if expected.path != path {
+                    return Err(anyhow!("unexpected benchmark file {}", path.display()));
+                }
+                file_indexes.push(ordinal);
             }
         }
+        directory_read.record(read_elapsed);
+
+        let start = Instant::now();
+        drop(entries);
+        directory_close.record(start.elapsed());
+    }
+    if file_indexes.len() != workload.files.len() {
+        return Err(anyhow!(
+            "enumerated {} files but expected {}",
+            file_indexes.len(),
+            workload.files.len()
+        ));
     }
 
+    Ok((
+        file_indexes,
+        DirectoryOperations {
+            create: OperationAccumulator::default(),
+            open: directory_open,
+            read: directory_read,
+            close: directory_close,
+        },
+    ))
+}
+
+fn parse_file_ordinal(path: &Path) -> Result<usize> {
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow!("benchmark path is not valid UTF-8: {}", path.display()))?;
+    let ordinal = name
+        .strip_prefix("file-")
+        .and_then(|name| name.strip_suffix(".txt"))
+        .ok_or_else(|| anyhow!("unexpected benchmark file name {name:?}"))?;
+    ordinal
+        .parse()
+        .with_context(|| format!("invalid benchmark file name {name:?}"))
+}
+
+fn read_file(file: &FileSpec, buffer: &mut [u8], accumulator: &mut FileAccumulator) -> Result<()> {
+    let start = Instant::now();
+    let mut input = File::open(&file.path)
+        .with_context(|| format!("failed to open {}", file.path.display()))?;
+    let open_elapsed = start.elapsed();
+
+    let mut bytes_read = 0;
+    let mut file_io = OperationAccumulator::default();
+    loop {
+        let start = Instant::now();
+        let bytes = input.read(buffer);
+        file_io.record(start.elapsed());
+        let bytes = bytes?;
+        if bytes == 0 {
+            break;
+        }
+        bytes_read += bytes;
+    }
+    if bytes_read != file.size {
+        return Err(anyhow!(
+            "read {} bytes from {}, expected {}",
+            bytes_read,
+            file.path.display(),
+            file.size
+        ));
+    }
+
+    let start = Instant::now();
+    drop(input);
+    let close_elapsed = start.elapsed();
+    record_file(
+        accumulator,
+        file,
+        bytes_read as u64,
+        FileTiming {
+            open: open_elapsed,
+            io: file_io,
+            close: close_elapsed,
+        },
+    );
+    Ok(())
+}
+
+fn record_file(accumulator: &mut FileAccumulator, file: &FileSpec, bytes: u64, timing: FileTiming) {
+    accumulator.files += 1;
+    accumulator.bytes += bytes;
+    accumulator.file_open.record(timing.open);
+    accumulator.file_io.merge(&timing.io);
+    accumulator.file_close.record(timing.close);
+
+    let size = &mut accumulator.per_file_size[file.size_index];
+    size.files += 1;
+    size.bytes += bytes;
+    size.file_total
+        .record(timing.open + timing.io.elapsed + timing.close);
+    size.file_open.record(timing.open);
+    size.file_io.merge(&timing.io);
+    size.file_close.record(timing.close);
+}
+
+fn run_file_workers<F>(
+    workload: &Workload,
+    jobs: NonZeroUsize,
+    operation: F,
+    progress: &ProgressBar,
+) -> Result<FileAccumulator>
+where
+    F: Fn(&FileSpec, &mut FileAccumulator) -> Result<()> + Sync,
+{
+    let file_sizes = &workload.file_sizes;
+    run_chunked_workers(
+        &workload.files,
+        jobs,
+        |chunk| {
+            let mut accumulator = FileAccumulator::new(file_sizes);
+            let mut pending_progress = 0;
+            for file in chunk {
+                operation(file, &mut accumulator)?;
+                advance_progress(progress, &mut pending_progress);
+            }
+            progress.inc(pending_progress);
+            Ok(accumulator)
+        },
+        |workers| merge_file_accumulators(workers, file_sizes),
+    )
+}
+
+fn run_read_workers(
+    file_indexes: &[usize],
+    workload: &Workload,
+    options: FsIoOptions,
+    progress: &ProgressBar,
+) -> Result<FileAccumulator> {
+    let files = &workload.files;
+    let file_sizes = &workload.file_sizes;
+    let read_size = options.read_size;
+    run_chunked_workers(
+        file_indexes,
+        options.jobs,
+        |chunk| {
+            let mut accumulator = FileAccumulator::new(file_sizes);
+            let mut buffer = vec![0; read_size.get()];
+            let mut pending_progress = 0;
+            for index in chunk {
+                read_file(&files[*index], &mut buffer, &mut accumulator)?;
+                advance_progress(progress, &mut pending_progress);
+            }
+            progress.inc(pending_progress);
+            Ok(accumulator)
+        },
+        |workers| merge_file_accumulators(workers, file_sizes),
+    )
+}
+
+fn merge_file_accumulators(
+    workers: Vec<FileAccumulator>,
+    file_sizes: &[usize],
+) -> Result<FileAccumulator> {
+    let mut result = FileAccumulator::new(file_sizes);
+    for worker in workers {
+        result.merge(worker);
+    }
     Ok(result)
 }
 
-/// Runs the SFMD read benchmark and returns the benchmark results
-pub fn bench_fs_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
-    let file_path = test_dir.combined_data_path();
-    let mut read_data = Vec::with_capacity(random_data.total_size());
-    let start = Instant::now();
-    let mut file = File::open(&file_path)?;
-    file.read_to_end(&mut read_data)?;
-    let agg_dur = start.elapsed().as_secs_f64();
-    let mb_per_second = read_data.len() as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_dur;
+fn advance_progress(progress: &ProgressBar, pending: &mut u64) {
+    *pending += 1;
+    if *pending == PROGRESS_UPDATE_FILES {
+        progress.inc(*pending);
+        *pending = 0;
+    }
+}
 
-    let mut result = Benchmark::new(BenchmarkType::FsReadSingleFile);
+/// Split `items` across up to `jobs` scoped threads, run `process_chunk` on
+/// each slice, and fold the per-thread results with `merge`.
+fn run_chunked_workers<T, A, P, M>(
+    items: &[T],
+    jobs: NonZeroUsize,
+    process_chunk: P,
+    merge: M,
+) -> Result<A>
+where
+    T: Sync,
+    A: Send,
+    P: Fn(&[T]) -> Result<A> + Sync,
+    M: FnOnce(Vec<A>) -> Result<A>,
+{
+    if jobs.get() == 1 || items.len() <= 1 {
+        return process_chunk(items);
+    }
 
-    // Add throughput metrics
-    result.add_metric(
-        "open() + read() throughput",
-        mb_per_second,
-        types::Unit::MiBps,
-        None,
-    );
+    let workers = jobs.get().min(items.len());
+    let items_per_worker = items.len().div_ceil(workers);
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        for chunk in items.chunks(items_per_worker) {
+            let process_chunk = &process_chunk;
+            handles.push(scope.spawn(move || process_chunk(chunk)));
+        }
+        let mut results = Vec::with_capacity(handles.len());
+        for handle in handles {
+            results.push(
+                handle
+                    .join()
+                    .map_err(|_| anyhow!("filesystem benchmark worker panicked"))??,
+            );
+        }
+        merge(results)
+    })
+}
 
-    Ok(result)
+fn phase_result(
+    wall_seconds: f64,
+    directories: u64,
+    directory_operations: DirectoryOperations,
+    files: FileAccumulator,
+) -> PhaseResult {
+    PhaseResult {
+        wall_seconds,
+        throughput_mib_per_second: files.bytes as f64
+            / types::BYTES_IN_MEGABYTE as f64
+            / wall_seconds,
+        files: files.files,
+        directories,
+        bytes: files.bytes,
+        directory_create: directory_operations.create.result(),
+        directory_open: directory_operations.open.result(),
+        directory_read: directory_operations.read.result(),
+        directory_close: directory_operations.close.result(),
+        file_open: files.file_open.result(),
+        file_io: files.file_io.result(),
+        file_close: files.file_close.result(),
+        per_file_size: files
+            .per_file_size
+            .into_iter()
+            .map(FileSizeAccumulator::result)
+            .collect(),
+    }
 }
 
 #[cfg(target_os = "linux")]
-fn drop_kernel_caches() -> Result<()> {
-    let status = Command::new("sh")
-        .arg("-c")
-        .arg("echo 3 > /proc/sys/vm/drop_caches")
-        .uid(0)
-        .gid(0)
-        .status()
-        .map_err(|e| anyhow!("Failed to execute shell: {e}"))?;
+fn drop_kernel_caches_on_linux(mode: KernelCacheDropMode) -> Result<()> {
+    const DROP_CACHES: &str = "/proc/sys/vm/drop_caches";
+    let value = format!("{}\n", mode.value());
+    match fs::write(DROP_CACHES, value.as_bytes()) {
+        Ok(()) => return Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {}
+        Err(error) => return Err(error).context("failed to drop Linux kernel caches"),
+    }
 
-    if status.success() {
-        Ok(())
-    } else {
-        Err(anyhow!("Failed to drop caches: {status}"))
+    let mut child = Command::new("sudo")
+        .args(["-n", "tee", DROP_CACHES])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .context("failed to run sudo to drop Linux kernel caches")?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| anyhow!("sudo did not provide a standard input pipe"))?
+        .write_all(value.as_bytes())?;
+    let status = child.wait()?;
+    if !status.success() {
+        return Err(anyhow!(
+            "sudo could not drop Linux kernel caches using mode {} (status {status})",
+            mode.value()
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn drop_kernel_caches_on_linux(_mode: KernelCacheDropMode) -> Result<()> {
+    Err(anyhow!(
+        "dropping kernel caches is currently supported only on Linux"
+    ))
+}
+
+fn format_byte_size(bytes: u64) -> String {
+    let units = [
+        (types::BYTES_IN_GIGABYTE as u64, "GiB"),
+        (types::BYTES_IN_MEGABYTE as u64, "MiB"),
+        (types::BYTES_IN_KILOBYTE as u64, "KiB"),
+    ];
+    for (unit_size, unit) in units {
+        let value = bytes as f64 / unit_size as f64;
+        // Anything that would print as 1023.5 or more in the unit below
+        // rounds to 1 here instead.
+        if value >= 0.9995 {
+            if (value - value.round()).abs() < 0.05 {
+                return format!("{value:.0} {unit}");
+            }
+            return format!("{value:.1} {unit}");
+        }
+    }
+    format!("{bytes} B")
+}
+
+fn format_decimal_with_unit(value: f64, decimal_places: usize, unit: &str) -> String {
+    let mut formatted = format!("{value:.decimal_places$}");
+    if formatted.contains('.') {
+        while formatted.ends_with('0') {
+            formatted.pop();
+        }
+        if formatted.ends_with('.') {
+            formatted.pop();
+        }
+    }
+    formatted.push_str(unit);
+    formatted
+}
+
+fn format_duration_seconds(seconds: f64) -> String {
+    if seconds == 0.0 {
+        return "0s".to_owned();
+    }
+    if seconds >= 1.0 {
+        return format_decimal_with_unit(seconds, 3, "s");
+    }
+    if seconds >= 0.001 {
+        return format_decimal_with_unit(seconds * 1_000.0, 2, "ms");
+    }
+    if seconds >= 0.000_001 {
+        return format_decimal_with_unit(seconds * 1_000_000.0, 1, "us");
+    }
+    format_decimal_with_unit(seconds * 1_000_000_000.0, 0, "ns")
+}
+
+fn format_duration_nanoseconds(nanoseconds: f64) -> String {
+    format_duration_seconds(nanoseconds / 1_000_000_000.0)
+}
+
+impl fmt::Display for FsIoResult {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(formatter, "Filesystem I/O benchmark")?;
+        let directory_layout = self.config.files_per_dir.map_or_else(
+            || {
+                format!(
+                    "Virtual Repo factor {} layout",
+                    self.config.virtual_repo_factor
+                )
+            },
+            |files_per_dir| format!("{files_per_dir} files/directory"),
+        );
+        writeln!(
+            formatter,
+            "{} files, {}, {}, {} job(s)",
+            self.config.number_of_files,
+            directory_layout,
+            format_byte_size(self.config.total_bytes),
+            self.config.jobs
+        )?;
+        writeln!(
+            formatter,
+            "I/O request caps: read {}, write {}; drop_kernel_caches={}",
+            format_byte_size(self.config.read_size_bytes as u64),
+            format_byte_size(self.config.write_size_bytes as u64),
+            self.config.drop_kernel_caches
+        )?;
+        writeln!(
+            formatter,
+            "Sums add measured durations; latency values are per call or file."
+        )?;
+        write_phase(formatter, "Write", "file create", &self.write)?;
+        writeln!(
+            formatter,
+            "\nRead-cache preparation: {} — {}",
+            format_duration_seconds(self.cache_preparation.wall_seconds),
+            self.cache_preparation.cache_drop_method
+        )?;
+        write_operation(formatter, "file sync", &self.cache_preparation.file_sync)?;
+        write_phase(formatter, "Read", "file open", &self.read)
+    }
+}
+
+fn write_phase(
+    formatter: &mut fmt::Formatter<'_>,
+    name: &str,
+    file_open_label: &str,
+    result: &PhaseResult,
+) -> fmt::Result {
+    writeln!(
+        formatter,
+        "\n{name}: {} wall, {:.2} MiB/s, {} files, {} directories",
+        format_duration_seconds(result.wall_seconds),
+        result.throughput_mib_per_second,
+        result.files,
+        result.directories
+    )?;
+    writeln!(
+        formatter,
+        "{:<20} {:>10} {:>12} {:>12} {:>12} {:>12} {:>12}",
+        "operation", "calls", "sum", "avg", "p50", "p90", "p99"
+    )?;
+    write_operation(formatter, "directory create", &result.directory_create)?;
+    write_operation(formatter, "directory open", &result.directory_open)?;
+    write_operation(formatter, "directory read", &result.directory_read)?;
+    write_operation(formatter, "directory close", &result.directory_close)?;
+    write_operation(formatter, file_open_label, &result.file_open)?;
+    write_operation(formatter, "file I/O", &result.file_io)?;
+    write_operation(formatter, "file close", &result.file_close)?;
+
+    writeln!(
+        formatter,
+        "\n{:>10} {:>10} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12}",
+        "size", "files", "sum", "avg", "p50", "p90", "p99", "open sum", "I/O sum", "close sum"
+    )?;
+    for size in &result.per_file_size {
+        writeln!(
+            formatter,
+            "{:>10} {:>10} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12} {:>12}",
+            format_byte_size(size.size_bytes as u64),
+            size.files,
+            format_duration_seconds(size.sum_seconds),
+            format_duration_nanoseconds(size.average_nanoseconds_per_file),
+            format_duration_nanoseconds(size.p50_nanoseconds_per_file as f64),
+            format_duration_nanoseconds(size.p90_nanoseconds_per_file as f64),
+            format_duration_nanoseconds(size.p99_nanoseconds_per_file as f64),
+            format_duration_seconds(size.file_open.sum_seconds),
+            format_duration_seconds(size.file_io.sum_seconds),
+            format_duration_seconds(size.file_close.sum_seconds),
+        )?;
+    }
+    Ok(())
+}
+
+fn write_operation(
+    formatter: &mut fmt::Formatter<'_>,
+    name: &str,
+    result: &OperationResult,
+) -> fmt::Result {
+    if result.calls > 0 {
+        writeln!(
+            formatter,
+            "{name:<20} {:>10} {:>12} {:>12} {:>12} {:>12} {:>12}",
+            result.calls,
+            format_duration_seconds(result.sum_seconds),
+            format_duration_nanoseconds(result.average_nanoseconds),
+            format_duration_nanoseconds(result.p50_nanoseconds as f64),
+            format_duration_nanoseconds(result.p90_nanoseconds as f64),
+            format_duration_nanoseconds(result.p99_nanoseconds as f64),
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroUsize;
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    #[test]
+    fn formats_byte_sizes_with_readable_units() {
+        assert_eq!(format_byte_size(256), "256 B");
+        assert_eq!(format_byte_size(1_536), "1.5 KiB");
+        assert_eq!(format_byte_size(56 * 1024), "56 KiB");
+        assert_eq!(format_byte_size(5 * 1024 * 1024), "5 MiB");
+    }
+
+    #[test]
+    fn formats_durations_with_adaptive_units() {
+        assert_eq!(format_duration_seconds(12.245), "12.245s");
+        assert_eq!(format_duration_seconds(0.003), "3ms");
+        assert_eq!(format_duration_seconds(0.000_250_4), "250.4us");
+        assert_eq!(format_duration_seconds(0.000_000_025), "25ns");
+    }
+
+    #[test]
+    fn operation_accumulator_reports_latency_percentiles() {
+        let mut accumulator = OperationAccumulator::default();
+        for latency in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] {
+            accumulator.record(Duration::from_nanos(latency));
+        }
+
+        let result = accumulator.result();
+        assert_eq!(result.calls, 10);
+        assert_eq!(result.average_nanoseconds, 55.0);
+        assert_eq!(result.p50_nanoseconds, 50);
+        assert_eq!(result.p90_nanoseconds, 90);
+        assert_eq!(result.p99_nanoseconds, 100);
+    }
+
+    #[test]
+    fn kernel_cache_drop_mode_accepts_zero_through_three() {
+        for mode in 0..=3 {
+            assert_eq!(
+                parse_kernel_cache_drop_mode(&mode.to_string())
+                    .expect("supported cache-drop mode should parse")
+                    .value(),
+                mode
+            );
+        }
+        assert!(
+            parse_kernel_cache_drop_mode("4").is_err(),
+            "cache-drop modes above three should fail"
+        );
+    }
+
+    #[test]
+    fn kernel_cache_drop_defaults_depend_on_platform_support() {
+        assert_eq!(
+            resolve_kernel_cache_drop_mode_for_platform(None, true)
+                .expect("Linux default should resolve"),
+            KernelCacheDropMode::PageCache
+        );
+        assert_eq!(
+            resolve_kernel_cache_drop_mode_for_platform(
+                Some(KernelCacheDropMode::PageCacheDentriesInodes),
+                true
+            )
+            .expect("explicit Linux mode should resolve"),
+            KernelCacheDropMode::PageCacheDentriesInodes
+        );
+        assert_eq!(
+            resolve_kernel_cache_drop_mode_for_platform(None, false)
+                .expect("unsupported platforms should disable cache dropping by default"),
+            KernelCacheDropMode::Disabled
+        );
+        assert_eq!(
+            resolve_kernel_cache_drop_mode_for_platform(Some(KernelCacheDropMode::Disabled), false)
+                .expect("explicitly disabled cache dropping should be portable"),
+            KernelCacheDropMode::Disabled
+        );
+        assert!(
+            resolve_kernel_cache_drop_mode_for_platform(
+                Some(KernelCacheDropMode::PageCache),
+                false
+            )
+            .is_err(),
+            "enabled cache dropping should fail on unsupported platforms"
+        );
+    }
+
+    #[test]
+    fn workload_uses_requested_leaf_directory_occupancy() {
+        let parent = TempDir::new().expect("temporary directory should be created");
+        let test_dir = TestDir::validate(
+            parent
+                .path()
+                .to_str()
+                .expect("temporary path should be UTF-8"),
+        )
+        .expect("benchmark directory should be created");
+        let options = FsIoOptions {
+            number_of_files: NonZeroUsize::new(5).expect("test count is nonzero"),
+            files_per_dir: Some(NonZeroUsize::new(2).expect("test occupancy is nonzero")),
+            file_size: Some(10),
+            read_size: NonZeroUsize::new(4).expect("test read size is nonzero"),
+            write_size: NonZeroUsize::new(4).expect("test write size is nonzero"),
+            jobs: NonZeroUsize::new(1).expect("test job count is nonzero"),
+            drop_kernel_caches: KernelCacheDropMode::Disabled,
+            show_progress: false,
+        };
+
+        let workload = Workload::new(&test_dir, options).expect("workload should be generated");
+
+        assert_eq!(workload.files.len(), 5, "all requested files should exist");
+        assert_eq!(
+            workload.directories.len(),
+            6,
+            "three leaf directories are needed"
+        );
+        assert_eq!(
+            workload.total_bytes, 50,
+            "uniform file sizes should be used"
+        );
+        assert_eq!(
+            workload.files[0].path.parent(),
+            workload.files[1].path.parent(),
+            "the first leaf should contain two files"
+        );
+        assert_ne!(
+            workload.files[1].path.parent(),
+            workload.files[2].path.parent(),
+            "the next file should start a new leaf"
+        );
+    }
+
+    #[test]
+    fn workload_uses_virtual_repo_layout_and_sizes_by_default() {
+        let parent = TempDir::new().expect("temporary directory should be created");
+        let test_dir = TestDir::validate(
+            parent
+                .path()
+                .to_str()
+                .expect("temporary path should be UTF-8"),
+        )
+        .expect("benchmark directory should be created");
+        let options = FsIoOptions {
+            number_of_files: NonZeroUsize::new(1_000).expect("test count is nonzero"),
+            files_per_dir: None,
+            file_size: None,
+            read_size: NonZeroUsize::new(4).expect("test read size is nonzero"),
+            write_size: NonZeroUsize::new(4).expect("test write size is nonzero"),
+            jobs: NonZeroUsize::new(1).expect("test job count is nonzero"),
+            drop_kernel_caches: KernelCacheDropMode::Disabled,
+            show_progress: false,
+        };
+
+        let workload = Workload::new(&test_dir, options).expect("workload should be generated");
+
+        assert_eq!(workload.files.len(), 1_000);
+        assert!(workload.directories.len() > 1);
+        assert!(workload.file_sizes.len() > 1);
+        assert!(workload.file_sizes.len() <= FILE_SIZE_STEP_UPPER_BOUNDS.len() + 1);
+        assert!(workload.virtual_repo_factor <= virtual_repo::MAX_FACTOR_BITS as u8);
+        for (ordinal, file) in workload.files.iter().enumerate() {
+            assert_eq!(
+                parse_file_ordinal(&file.path).expect("benchmark filename should contain ordinal"),
+                ordinal
+            );
+        }
+    }
+
+    #[test]
+    fn virtual_repo_layout_can_be_written_and_enumerated() {
+        let parent = TempDir::new().expect("temporary directory should be created");
+        let test_dir = TestDir::validate(
+            parent
+                .path()
+                .to_str()
+                .expect("temporary path should be UTF-8"),
+        )
+        .expect("benchmark directory should be created");
+        let options = FsIoOptions {
+            number_of_files: NonZeroUsize::new(20).expect("test count is nonzero"),
+            files_per_dir: None,
+            file_size: Some(10),
+            read_size: NonZeroUsize::new(4).expect("test read size is nonzero"),
+            write_size: NonZeroUsize::new(4).expect("test write size is nonzero"),
+            jobs: NonZeroUsize::new(1).expect("test job count is nonzero"),
+            drop_kernel_caches: KernelCacheDropMode::Disabled,
+            show_progress: false,
+        };
+        let workload = Workload::new(&test_dir, options).expect("workload should be generated");
+        let progress = ProgressBar::hidden();
+
+        let write = bench_write(&workload, b"natural text buffer", options, &progress)
+            .expect("write benchmark should succeed");
+        let read = bench_read(&test_dir, &workload, options, &progress)
+            .expect("read benchmark should succeed");
+
+        assert_eq!(write.files, 20);
+        assert_eq!(read.files, 20);
+    }
+
+    #[test]
+    fn file_size_steps_use_requested_boundaries_and_omit_empty_buckets() {
+        let generated_files = [
+            GeneratedFile {
+                path: "zero".to_owned(),
+                size: 0,
+            },
+            GeneratedFile {
+                path: "below-512".to_owned(),
+                size: 511,
+            },
+            GeneratedFile {
+                path: "512".to_owned(),
+                size: 512,
+            },
+            GeneratedFile {
+                path: "256-kib".to_owned(),
+                size: 256 * 1024,
+            },
+            GeneratedFile {
+                path: "512-kib".to_owned(),
+                size: 512 * 1024,
+            },
+            GeneratedFile {
+                path: "1-mib".to_owned(),
+                size: 1024 * 1024,
+            },
+            GeneratedFile {
+                path: "5-mib".to_owned(),
+                size: 5 * 1024 * 1024,
+            },
+            GeneratedFile {
+                path: "20-mib".to_owned(),
+                size: 20 * 1024 * 1024,
+            },
+            GeneratedFile {
+                path: "above-20-mib".to_owned(),
+                size: 20 * 1024 * 1024 + 1,
+            },
+        ];
+
+        let (file_sizes, size_indexes) =
+            file_size_steps(&generated_files, None).expect("size steps should be generated");
+
+        assert_eq!(
+            file_sizes,
+            vec![
+                256,
+                512,
+                256 * 1024,
+                512 * 1024,
+                1024 * 1024,
+                25 * 1024 * 1024 / 2,
+                20 * 1024 * 1024 + 1,
+            ],
+            "only occupied buckets should produce output sizes"
+        );
+        assert_eq!(size_indexes, vec![0, 0, 1, 2, 3, 4, 5, 5, 6]);
+    }
+
+    #[test]
+    fn workload_reports_file_and_directory_operations() {
+        let parent = TempDir::new().expect("temporary directory should be created");
+        let test_dir = TestDir::validate(
+            parent
+                .path()
+                .to_str()
+                .expect("temporary path should be UTF-8"),
+        )
+        .expect("benchmark directory should be created");
+        let options = FsIoOptions {
+            number_of_files: NonZeroUsize::new(5).expect("test count is nonzero"),
+            files_per_dir: Some(NonZeroUsize::new(2).expect("test occupancy is nonzero")),
+            file_size: Some(10),
+            read_size: NonZeroUsize::new(4).expect("test read size is nonzero"),
+            write_size: NonZeroUsize::new(4).expect("test write size is nonzero"),
+            jobs: NonZeroUsize::new(2).expect("test job count is nonzero"),
+            drop_kernel_caches: KernelCacheDropMode::Disabled,
+            show_progress: false,
+        };
+        let workload = Workload::new(&test_dir, options).expect("workload should be generated");
+
+        let progress = ProgressBar::hidden();
+        let write = bench_write(&workload, b"natural text buffer", options, &progress)
+            .expect("write benchmark should succeed");
+        let read = bench_read(&test_dir, &workload, options, &progress)
+            .expect("read benchmark should succeed");
+
+        assert_eq!(
+            write.directory_create.calls, 6,
+            "the data root, two intermediate directories, and three leaves are created"
+        );
+        assert_eq!(write.file_open.calls, 5, "each file is created once");
+        assert_eq!(
+            write.file_io.calls, 15,
+            "each 10-byte file requires three 4-byte writes"
+        );
+        assert_eq!(write.file_close.calls, 5, "each file is closed once");
+        assert_eq!(
+            read.directories, 6,
+            "the read phase reports the workload's directory count like the write phase"
+        );
+        assert_eq!(read.file_open.calls, 5, "each file is opened once");
+        assert_eq!(
+            read.file_io.calls, 20,
+            "each file requires three data reads and one EOF read"
+        );
+        assert_eq!(read.file_close.calls, 5, "each file is closed once");
     }
 }

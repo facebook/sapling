@@ -35,6 +35,7 @@ rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "colum
 sapling-io = { version = "0.1.0", path = "../../../scm/lib/io" }
 sapling-termlogger = { version = "0.1.0", path = "../../../scm/lib/io/term/logger" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
+sapling-virtual-repo = { version = "0.1.0", path = "../../../scm/lib/virtual-repo" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 strum = { version = "0.28.0", features = ["derive"] }
