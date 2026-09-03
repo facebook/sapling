@@ -1,5 +1,8 @@
 ---
-oncalls: ['nuclide']
+name: llms
+metadata:
+  oncalls: ['nuclide']
+  strict: true
 ---
 
 # Interactive Smartlog (ISL)
