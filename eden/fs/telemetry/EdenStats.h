@@ -683,6 +683,12 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Duration removeChildren{"overlay.remove_children_us"};
   Duration renameChild{"overlay.rename_child_us"};
   Duration materializeChild{"overlay.materialize_child_us"};
+  // Whether the fd from creating a new overlay file was handed to the
+  // open-file cache, or dropped because a concurrent by-number request
+  // already opened the file.
+  Counter createdFdCached{"overlay.created_fd_cached"};
+  Counter createdFdAlreadyOpen{"overlay.created_fd_already_open"};
+
   Counter loadOverlayDirSuccessful{"overlay.load_overlay_dir_successful"};
   Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};
   Counter saveOverlayDirSuccessful{"overlay.save_overlay_dir_successful"};

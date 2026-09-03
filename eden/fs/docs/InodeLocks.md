@@ -32,6 +32,14 @@ No other locks should be acquired while holding this lock.
 In general, it should only be held very briefly while doing lookups/inserts on
 InodeTable's index data structures.
 
+## OverlayFileAccess `state_` Lock:
+
+No other locks should be acquired while holding this lock. It is held only
+briefly to look up or insert entries in the open overlay file cache, and it may
+be acquired while holding a FileInode lock or a TreeInode `contents_` lock:
+`TreeInode::createImpl` caches a newly created file's descriptor while it still
+holds the parent's `contents_` lock.
+
 ## FileInode Lock:
 
 The InodeBase `location_` lock may be acquired while holding a FileInode's lock.

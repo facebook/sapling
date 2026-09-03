@@ -2337,6 +2337,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Keep the file descriptor from creating a new overlay file in the open
+   * file cache, instead of closing it and reopening the file on the first
+   * write.
+   */
+  ConfigSetting<bool> experimentalOverlayReuseCreatedFds{
+      "experimental:overlay-reuse-created-fds",
+      true,
+      this};
+
+  /**
    * When true, write non-materialized directories directly to their overlay
    * file instead of creating a temporary file and renaming. This avoids
    * filesystem metadata overhead (rename) at the cost of leaving a

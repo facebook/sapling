@@ -60,6 +60,12 @@ class OverlayFileAccess {
       const std::optional<Hash32>& blake3);
 
   /**
+   * Adds a newly created overlay file to the open-file cache. Returns
+   * false if an entry for the inode already existed (the file is dropped).
+   */
+  bool cacheCreatedFile(InodeNumber ino, OverlayFile file, size_t size);
+
+  /**
    * Return the size of the overlay file at the given inode number. The result
    * will never be negative.
    *

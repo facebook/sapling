@@ -51,6 +51,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/journal/Journal.h"
@@ -2101,6 +2102,18 @@ FileInodePtr TreeInode::createImpl(
 #endif
 
     getOverlay()->addChild(getNodeId(), *insertion.first, contents->entries);
+
+#ifndef _WIN32
+    if (getMount()
+            ->getEdenConfig()
+            ->experimentalOverlayReuseCreatedFds.getValue()) {
+      const bool cached = getMount()->getOverlayFileAccess()->cacheCreatedFile(
+          childNumber, std::move(file), fileContents.size());
+      getMount()->getStats()->increment(
+          cached ? &OverlayStats::createdFdCached
+                 : &OverlayStats::createdFdAlreadyOpen);
+    }
+#endif
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus

@@ -108,6 +108,24 @@ void OverlayFileAccess::createFile(
       std::make_shared<Entry>(std::move(file), blob.getSize(), sha1, blake3));
 }
 
+bool OverlayFileAccess::cacheCreatedFile(
+    InodeNumber ino,
+    OverlayFile file,
+    size_t size) {
+  auto state = state_.wlock();
+  if (state->entries.exists(ino)) {
+    // A request that resolved the new inode by number (e.g. an NFS
+    // filehandle probe) can beat us here and open the same overlay file
+    // via getEntryForInode. That entry is equally valid; keep it.
+    return false;
+  }
+  state->entries.set(
+      ino,
+      std::make_shared<Entry>(
+          std::move(file), size, std::nullopt, std::nullopt));
+  return true;
+}
+
 FileOffset OverlayFileAccess::getFileSize(FileInode& inode) {
   return getFileSize(inode.getNodeId(), &inode);
 }

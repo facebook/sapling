@@ -316,6 +316,7 @@ class EdenTestCase(EdenTestCaseBase):
                 "overlay-direct-file-create = true",
                 "overlay-cache-wal-files = true",
                 'overlay-wal-min-compaction-threshold = "50"',
+                "overlay-reuse-created-fds = true",
             ],
             # Defaulting to 8 retry threads is excessive when the test
             # framework runs tests on each CPU core.
