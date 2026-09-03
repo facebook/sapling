@@ -78,6 +78,7 @@ cpp_library(
     ],
     deps = [
         ":nfs_rpc",
+        ":pin_scan",
         ":rollback",
         "//eden/common/utils:errno_utils",
         "//eden/common/utils:fsdetect",
@@ -165,5 +166,19 @@ cpp_library(
     headers = ["NfsMountRpc.h"],
     exported_deps = [
         "//eden/fs/nfs/xdr:xdr",
+    ],
+)
+
+cpp_library(
+    name = "pin_scan",
+    srcs = ["PinScan.cpp"],
+    headers = ["PinScan.h"],
+    deps = [
+        "//eden/fs/utils:mount_info_table",
+        "//folly:conv",
+        "//folly:string",
+    ],
+    exported_deps = [
+        "//folly:expected",
     ],
 )

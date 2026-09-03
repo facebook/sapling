@@ -30,6 +30,9 @@ uint64_t getStatmountMask(MountInfoOptions options) {
   if (options.includeMountSource) {
     mask |= STATMOUNT_SB_SOURCE;
   }
+  if (options.includeMountOptions) {
+    mask |= STATMOUNT_MNT_OPTS;
+  }
   return mask;
 }
 
@@ -120,6 +123,9 @@ folly::Expected<MountTableEntry, int> statmountById(
   }
   if (sm->mask & STATMOUNT_SB_SOURCE) {
     info.mountSource = sm->str + sm->sb_source;
+  }
+  if (sm->mask & STATMOUNT_MNT_OPTS) {
+    info.mountOptions = sm->str + sm->mnt_opts;
   }
 
   return info;

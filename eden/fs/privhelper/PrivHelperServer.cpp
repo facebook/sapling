@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/privhelper/PrivHelperServer.h"
+#include "eden/fs/privhelper/PinScan.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperRollback.h"
 
@@ -605,9 +606,8 @@ folly::File PrivHelperServer::fuseMount(
   if (readOnly) {
     mountFlags |= MS_RDONLY;
   }
-  // The colon indicates to coreutils/gnulib that this is a remote
-  // mount so it will not be displayed by `df --local`.
-  int rc = mount("edenfs:", mountPath, vfsType, mountFlags, mountOpts.c_str());
+  int rc = mount(
+      kEdenFsMountSource, mountPath, vfsType, mountFlags, mountOpts.c_str());
   checkUnixError(rc, "failed to mount");
   return fuseDev;
 #endif
@@ -637,8 +637,7 @@ PrivHelperServer::FuseMountResult PrivHelperServer::fuseMountByFd(
       fuseDev.fd());
 
   auto fsFd = fsOpen(vfsType);
-  // The colon preserves the old "remote" source name used by mount(2).
-  fsConfigString(fsFd.fd(), "source", "edenfs:");
+  fsConfigString(fsFd.fd(), "source", kEdenFsMountSource);
   fsConfigCommaSeparatedOptions(fsFd.fd(), mountOpts);
   fsConfigSet(fsFd.fd(), FSCONFIG_CMD_CREATE, nullptr, nullptr);
 

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <cstring>
 #include <string>
 
 #ifdef __linux__
@@ -23,6 +24,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 #include "eden/common/utils/UserInfo.h"
+#include "eden/fs/privhelper/PinScan.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
 #include "eden/fs/privhelper/PrivHelperRollback.h"
 #include "eden/fs/privhelper/PrivHelperServer.h"
@@ -86,6 +88,22 @@ DEFINE_int32(
     "The gid of the owner of this eden instance");
 
 int main(int argc, char** argv) {
+#ifdef __linux__
+  // One-shot mode used by EdenFS pressure GC to discover pinned directories.
+  // Handled before folly::Init so no flag or environment parsing happens on
+  // this path: as a mode of a setuid binary it is invocable by any local
+  // user, so it takes no input and reports only pins on the caller's own
+  // mounts (see runScanPinsMode).
+  //
+  // The flag spelling matters: privhelper binaries that predate this mode
+  // reject an unknown --flag with a clean exit(1) from gflags, whereas a
+  // bare positional argument would fall through into server startup and
+  // abort on the missing --privhelper_fd.
+  if (argc == 2 && strcmp(argv[1], "--scan-pins") == 0) {
+    return facebook::eden::runScanPinsMode();
+  }
+#endif
+
   const folly::Init init(&argc, &argv);
 
   auto loggingConfig = folly::parseLogConfig(

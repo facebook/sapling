@@ -128,6 +128,7 @@ cpp_binary(
     deps = [
         "//eden/common/utils:user_info",
         "//eden/fs/privhelper:flags",
+        "//eden/fs/privhelper:pin_scan",
         "//eden/fs/privhelper:rollback",
         "//eden/fs/privhelper:server",
         "//folly:exception",

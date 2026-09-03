@@ -24,10 +24,12 @@ struct MountTableEntry {
   std::string mountPoint;
   std::string mountSource;
   std::string fsType;
+  std::string mountOptions;
 };
 
 struct MountInfoOptions {
   bool includeMountSource{false};
+  bool includeMountOptions{false};
 };
 
 /**

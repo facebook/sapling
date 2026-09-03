@@ -54,6 +54,20 @@ cpp_unittest(
     ],
 )
 
+cpp_unittest(
+    name = "pin_scan",
+    srcs = ["PinScanTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/privhelper:pin_scan",
+        "//folly/testing:test_util",
+    ],
+)
+
 cpp_binary(
     name = "drop_privs",
     srcs = ["DropPrivs.cpp"],
