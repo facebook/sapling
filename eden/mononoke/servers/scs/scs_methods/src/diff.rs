@@ -23,7 +23,6 @@ use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::FileContext;
 use mononoke_api::HeaderlessUnifiedDiff;
-use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::UnifiedDiff;
@@ -103,32 +102,6 @@ impl DiffServiceError for DiffUnifiedHeaderlessUnaryError {
     }
 }
 
-pub(crate) enum RemoteDiffError {
-    /// The request itself is invalid (DiffError). Propagate to client.
-    RequestError(ServiceError),
-    /// Infrastructure error. Fall back to local execution.
-    InfraError(String),
-}
-
-fn is_request_error<E: DiffServiceError>(e: &E) -> bool {
-    if let Some(request_error) = e.request_error() {
-        matches!(
-            &request_error.reason,
-            diff_service_if::RequestErrorReason::diff_error(_)
-        )
-    } else {
-        false
-    }
-}
-
-fn classify_diff_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> RemoteDiffError {
-    if is_request_error(&e) {
-        RemoteDiffError::RequestError(convert_diff_service_error(e))
-    } else {
-        RemoteDiffError::InfraError(format!("{e:?}"))
-    }
-}
-
 fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> ServiceError {
     match e.request_error() {
         Some(req_err) => match &req_err.reason {
@@ -136,11 +109,24 @@ fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> Se
                 scs_errors::invalid_request(format!("diff service: {}", diff_err.reason)).into()
             }
             diff_service_if::RequestErrorReason::transient_error(transient) => {
-                scs_errors::internal_error(format!(
-                    "diff service transient error: {}",
-                    transient.message
-                ))
-                .into()
+                match transient.error_type {
+                    diff_service_if::TransientErrorType::OVERLOADED => scs_errors::overloaded(
+                        format!("diff service overloaded: {}", transient.message),
+                    )
+                    .into(),
+                    diff_service_if::TransientErrorType::REPO_NOT_FOUND => {
+                        scs_errors::internal_error(format!(
+                            "diff service repo not found: {}",
+                            transient.message
+                        ))
+                        .into()
+                    }
+                    _ => scs_errors::internal_error(format!(
+                        "diff service transient error: {}",
+                        transient.message
+                    ))
+                    .into(),
+                }
             }
             diff_service_if::RequestErrorReason::UnknownField(_) => {
                 scs_errors::internal_error(format!("diff service error: {e:#?}")).into()
@@ -148,6 +134,10 @@ fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> Se
         },
         None => scs_errors::internal_error(format!("diff service error: {e:#?}")).into(),
     }
+}
+
+fn remote_infra_error(reason: impl ToString) -> ServiceError {
+    scs_errors::internal_error(reason).into()
 }
 
 /// Router for diff operations that can use either local mononoke_api
@@ -226,19 +216,9 @@ impl<'a> DiffRouter<'a> {
         context_lines: usize,
     ) -> Result<HeaderlessUnifiedDiff, ServiceError> {
         if self.should_use_remote_diff(repo_name) {
-            match self
+            return self
                 .remote_headerless_diff(ctx, repo_name, other_file, base_file, context_lines)
-                .await
-            {
-                Ok(result) => return Ok(result),
-                Err(RemoteDiffError::RequestError(e)) => return Err(e),
-                Err(RemoteDiffError::InfraError(reason)) => {
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("diff_fallback", reason);
-                    scuba.add("diff_fallback_method", "headerless_unified_diff");
-                    scuba.log_with_msg("Diff service fallback to local", None);
-                }
-            }
+                .await;
         }
         headerless_unified_diff(other_file, base_file, context_lines, false)
             .await
@@ -254,19 +234,9 @@ impl<'a> DiffRouter<'a> {
         context_lines: usize,
     ) -> Result<UnifiedDiff, ServiceError> {
         if self.should_use_remote_diff(repo_name) {
-            match self
+            return self
                 .remote_unified_diff(ctx, repo_name, path_context, mode, context_lines)
-                .await
-            {
-                Ok(result) => return Ok(result),
-                Err(RemoteDiffError::RequestError(e)) => return Err(e),
-                Err(RemoteDiffError::InfraError(reason)) => {
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("diff_fallback", reason);
-                    scuba.add("diff_fallback_method", "unified_diff");
-                    scuba.log_with_msg("Diff service fallback to local", None);
-                }
-            }
+                .await;
         }
         Ok(path_context
             .unified_diff(ctx, context_lines, mode, false)
@@ -280,19 +250,9 @@ impl<'a> DiffRouter<'a> {
         path_context: &ChangesetPathDiffContext<Repo>,
     ) -> Result<mononoke_api::MetadataDiff, ServiceError> {
         if self.should_use_remote_diff(repo_name) {
-            match self
+            return self
                 .remote_metadata_diff(ctx, repo_name, path_context)
-                .await
-            {
-                Ok(result) => return Ok(result),
-                Err(RemoteDiffError::RequestError(e)) => return Err(e),
-                Err(RemoteDiffError::InfraError(reason)) => {
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("diff_fallback", reason);
-                    scuba.add("diff_fallback_method", "metadata_diff");
-                    scuba.log_with_msg("Diff service fallback to local", None);
-                }
-            }
+                .await;
         }
         Ok(path_context.metadata_diff(ctx, false).await?)
     }
@@ -343,16 +303,16 @@ impl<'a> DiffRouter<'a> {
         repo_name: &str,
         commit_id: thrift::CommitId,
         params: thrift::CommitCompareParams,
-    ) -> Result<thrift::CommitCompareResponse, RemoteDiffError> {
+    ) -> Result<thrift::CommitCompareResponse, ServiceError> {
         let client = self
             .create_diff_service_client(repo_name)
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         let response = repo_client
             .commit_compare(ctx, commit_id, params)
             .await
-            .map_err(classify_diff_error)?;
+            .map_err(convert_diff_service_error)?;
 
         Ok(response)
     }
@@ -364,15 +324,15 @@ impl<'a> DiffRouter<'a> {
         other_file: &FileContext<Repo>,
         base_file: &FileContext<Repo>,
         context_lines: usize,
-    ) -> Result<HeaderlessUnifiedDiff, RemoteDiffError> {
+    ) -> Result<HeaderlessUnifiedDiff, ServiceError> {
         let other_content_id = other_file
             .id()
             .await
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
         let base_content_id = base_file
             .id()
             .await
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
 
         let base_input = Some(DiffInput::content(base_content_id));
         let other_input = Some(DiffInput::content(other_content_id));
@@ -385,14 +345,14 @@ impl<'a> DiffRouter<'a> {
 
         let client = self
             .create_diff_service_client(repo_name)
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         if self.should_use_remote_diff_unary(ctx, repo_name) {
             let response = repo_client
                 .diff_unified_headerless_unary(ctx, base_input, other_input, options)
                 .await
-                .map_err(classify_diff_error)?;
+                .map_err(convert_diff_service_error)?;
             return Ok(HeaderlessUnifiedDiff {
                 raw_diff: response.content,
                 is_binary: response.is_binary,
@@ -402,12 +362,11 @@ impl<'a> DiffRouter<'a> {
         let (response, mut stream) = repo_client
             .diff_unified_headerless(ctx, base_input, other_input, options)
             .await
-            .map_err(classify_diff_error)?;
+            .map_err(convert_diff_service_error)?;
 
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
-            let chunk =
-                chunk.map_err(|e| RemoteDiffError::InfraError(format!("stream error: {e:?}")))?;
+            let chunk = chunk.map_err(|e| remote_infra_error(format!("stream error: {e:?}")))?;
             raw_diff.extend_from_slice(&chunk.content);
         }
 
@@ -420,8 +379,10 @@ impl<'a> DiffRouter<'a> {
     fn input_from_changeset<R: MononokeRepo>(
         content: &ChangesetPathContentContext<R>,
         replacement_path: Option<String>,
-    ) -> Result<DiffInput, MononokeError> {
-        let path = NonRootMPath::try_from(content.path().clone())?.to_string();
+    ) -> Result<DiffInput, ServiceError> {
+        let path = NonRootMPath::try_from(content.path().clone())
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?
+            .to_string();
         let changeset_id = content.changeset().id();
         Ok(diff_service_client::DiffInput::CommitPath {
             commit_id: diff_service_if::CommitId::bonsai(changeset_id.as_ref().to_vec()),
@@ -437,7 +398,7 @@ impl<'a> DiffRouter<'a> {
         path_context: &ChangesetPathDiffContext<Repo>,
         mode: UnifiedDiffMode,
         context_lines: usize,
-    ) -> Result<UnifiedDiff, RemoteDiffError> {
+    ) -> Result<UnifiedDiff, ServiceError> {
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
         // The Base file is the "old" file, with Other is the "new" one
@@ -446,14 +407,12 @@ impl<'a> DiffRouter<'a> {
         let base_input = path_context
             .get_old_content()
             .map(|c| Self::input_from_changeset(c, replacement_path))
-            .transpose()
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .transpose()?;
 
         let other_input = path_context
             .get_new_content()
             .map(|c| Self::input_from_changeset(c, None))
-            .transpose()
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .transpose()?;
 
         let copy_info = path_context.copy_info();
 
@@ -464,7 +423,7 @@ impl<'a> DiffRouter<'a> {
             Some(content) => content
                 .file_type()
                 .await
-                .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?,
+                .map_err(|e| remote_infra_error(format!("{e:?}")))?,
             None => None,
         };
 
@@ -495,14 +454,14 @@ impl<'a> DiffRouter<'a> {
 
         let client = self
             .create_diff_service_client(repo_name)
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         if self.should_use_remote_diff_unary(ctx, repo_name) {
             let response = repo_client
                 .diff_unified_unary(ctx, base_input, other_input, options)
                 .await
-                .map_err(classify_diff_error)?;
+                .map_err(convert_diff_service_error)?;
             return Ok(UnifiedDiff {
                 raw_diff: response.content,
                 is_binary: response.is_binary,
@@ -512,11 +471,10 @@ impl<'a> DiffRouter<'a> {
         let (response, mut stream) = repo_client
             .diff_unified(ctx, base_input, other_input, options)
             .await
-            .map_err(classify_diff_error)?;
+            .map_err(convert_diff_service_error)?;
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
-            let chunk =
-                chunk.map_err(|e| RemoteDiffError::InfraError(format!("stream error: {e:?}")))?;
+            let chunk = chunk.map_err(|e| remote_infra_error(format!("stream error: {e:?}")))?;
             raw_diff.extend_from_slice(&chunk.content);
         }
 
@@ -531,7 +489,7 @@ impl<'a> DiffRouter<'a> {
         ctx: &CoreContext,
         repo_name: &str,
         path_context: &ChangesetPathDiffContext<Repo>,
-    ) -> Result<mononoke_api::MetadataDiff, RemoteDiffError> {
+    ) -> Result<mononoke_api::MetadataDiff, ServiceError> {
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
         // The Base file is the "old" file, with Other is the "new" one
@@ -540,24 +498,22 @@ impl<'a> DiffRouter<'a> {
         let base_input = path_context
             .get_old_content()
             .map(|c| Self::input_from_changeset(c, replacement_path))
-            .transpose()
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .transpose()?;
 
         let other_input = path_context
             .get_new_content()
             .map(|c| Self::input_from_changeset(c, None))
-            .transpose()
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .transpose()?;
 
         let client = self
             .create_diff_service_client(repo_name)
-            .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         let response = repo_client
             .metadata_diff(ctx, base_input, other_input, false)
             .await
-            .map_err(classify_diff_error)?;
+            .map_err(convert_diff_service_error)?;
 
         // Convert the diff_service_if enums to mononoke_api enums
         let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
@@ -647,24 +603,18 @@ impl<'a> DiffRouter<'a> {
         // Convert the response back to mononoke_api::MetadataDiff
         Ok(mononoke_api::MetadataDiff {
             old_file_info: mononoke_api::MetadataDiffFileInfo {
-                file_type: convert_file_type(response.base_file_info.file_type)
-                    .map_err(RemoteDiffError::RequestError)?,
-                file_content_type: convert_content_type(response.base_file_info.content_type)
-                    .map_err(RemoteDiffError::RequestError)?,
+                file_type: convert_file_type(response.base_file_info.file_type)?,
+                file_content_type: convert_content_type(response.base_file_info.content_type)?,
                 file_generated_status: convert_generated_status(
                     response.base_file_info.generated_status,
-                )
-                .map_err(RemoteDiffError::RequestError)?,
+                )?,
             },
             new_file_info: mononoke_api::MetadataDiffFileInfo {
-                file_type: convert_file_type(response.other_file_info.file_type)
-                    .map_err(RemoteDiffError::RequestError)?,
-                file_content_type: convert_content_type(response.other_file_info.content_type)
-                    .map_err(RemoteDiffError::RequestError)?,
+                file_type: convert_file_type(response.other_file_info.file_type)?,
+                file_content_type: convert_content_type(response.other_file_info.content_type)?,
                 file_generated_status: convert_generated_status(
                     response.other_file_info.generated_status,
-                )
-                .map_err(RemoteDiffError::RequestError)?,
+                )?,
             },
             lines_count: response
                 .lines_count
@@ -991,7 +941,8 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_is_request_error_diff_error() {
+    fn test_diff_error_maps_to_invalid_request() {
+        // Given: diff_service rejects the request as invalid input.
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
                 reason: "bad input".into(),
@@ -999,203 +950,53 @@ mod tests {
             }),
             ..Default::default()
         });
-        assert!(
-            is_request_error(&err),
-            "DiffError should be classified as a request error"
-        );
-    }
 
-    #[mononoke::test]
-    fn test_is_request_error_overloaded() {
-        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::transient_error(
-                diff_service_if::TransientError {
-                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
-                    message: "overloaded".into(),
-                    ..Default::default()
-                },
-            ),
-            ..Default::default()
-        });
-        assert!(
-            !is_request_error(&err),
-            "TransientError(OVERLOADED) should not be classified as a request error"
-        );
-    }
+        // When: SCS converts the diff_service error for its clients.
+        let service_error = convert_diff_service_error(err);
 
-    #[mononoke::test]
-    fn test_is_request_error_repo_not_found() {
-        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::transient_error(
-                diff_service_if::TransientError {
-                    error_type: diff_service_if::TransientErrorType::REPO_NOT_FOUND,
-                    message: "repo not found".into(),
-                    ..Default::default()
-                },
-            ),
-            ..Default::default()
-        });
-        assert!(
-            !is_request_error(&err),
-            "TransientError(REPO_NOT_FOUND) should not be classified as a request error"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_classify_diff_error_request() {
-        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
-                reason: "bad input".into(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
-            "DiffError should classify as RequestError"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_classify_diff_error_commit_compare_request() {
-        let err = CommitCompareError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
-                reason: "bad input".into(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
-            "CommitCompareError with DiffError should classify as RequestError"
-        );
-    }
-
-    #[test]
-    fn test_classify_diff_error_commit_compare_transient() {
-        let err = CommitCompareError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::transient_error(
-                diff_service_if::TransientError {
-                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
-                    message: "overloaded".into(),
-                    ..Default::default()
-                },
-            ),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::InfraError(_)),
-            "CommitCompareError with TransientError should classify as InfraError"
-        );
-    }
-
-    #[test]
-    fn test_classify_diff_error_transient() {
-        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::transient_error(
-                diff_service_if::TransientError {
-                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
-                    message: "overloaded".into(),
-                    ..Default::default()
-                },
-            ),
-            ..Default::default()
-        });
-        match classify_diff_error(err) {
-            RemoteDiffError::InfraError(msg) => {
-                assert!(
-                    msg.contains("OVERLOADED"),
-                    "InfraError message should contain error details, got: {msg}"
-                );
+        // Then: clients observe an invalid request with the diff_service context.
+        match service_error {
+            scs_errors::ServiceError::Request(request) => {
+                assert_eq!(request.kind, thrift::RequestErrorKind::INVALID_REQUEST);
+                assert_eq!(request.reason, "diff service: bad input");
             }
-            RemoteDiffError::RequestError(_) => {
-                panic!("TransientError(OVERLOADED) should classify as InfraError, not RequestError")
-            }
+            other => panic!("expected SCS RequestError, got {other:?}"),
         }
     }
 
     #[mononoke::test]
-    fn test_classify_diff_unified_unary_error_request() {
-        let err = DiffUnifiedUnaryError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
-                reason: "bad input".into(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
-            "DiffError should classify as RequestError"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_classify_diff_unified_unary_error_transient() {
-        let err = DiffUnifiedUnaryError::ex(diff_service_if::RequestError {
+    fn test_overloaded_diff_service_error_maps_to_scs_overload() {
+        // Given: diff_service rejects the request due to overload.
+        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::transient_error(
                 diff_service_if::TransientError {
                     error_type: diff_service_if::TransientErrorType::OVERLOADED,
-                    message: "overloaded".into(),
+                    message: "diff service is overloaded".into(),
                     ..Default::default()
                 },
             ),
             ..Default::default()
         });
-        match classify_diff_error(err) {
-            RemoteDiffError::InfraError(msg) => {
+
+        // When: SCS converts the diff_service error for its clients.
+        let service_error = convert_diff_service_error(err);
+
+        // Then: clients observe SCS overload rather than an internal error.
+        match service_error {
+            scs_errors::ServiceError::Overload(overload) => {
                 assert!(
-                    msg.contains("OVERLOADED"),
-                    "InfraError message should contain error details, got: {msg}"
+                    overload.reason.contains("diff service is overloaded"),
+                    "overload reason should preserve diff_service context, got: {}",
+                    overload.reason
                 );
             }
-            RemoteDiffError::RequestError(_) => {
-                panic!("TransientError(OVERLOADED) should classify as InfraError, not RequestError")
-            }
+            other => panic!("expected SCS OverloadError, got {other:?}"),
         }
     }
 
     #[mononoke::test]
-    fn test_classify_diff_unified_headerless_unary_error_request() {
-        let err = DiffUnifiedHeaderlessUnaryError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
-                reason: "bad input".into(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
-            "DiffError should classify as RequestError"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_classify_diff_unified_headerless_unary_error_transient() {
-        let err = DiffUnifiedHeaderlessUnaryError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::transient_error(
-                diff_service_if::TransientError {
-                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
-                    message: "overloaded".into(),
-                    ..Default::default()
-                },
-            ),
-            ..Default::default()
-        });
-        match classify_diff_error(err) {
-            RemoteDiffError::InfraError(msg) => {
-                assert!(
-                    msg.contains("OVERLOADED"),
-                    "InfraError message should contain error details, got: {msg}"
-                );
-            }
-            RemoteDiffError::RequestError(_) => {
-                panic!("TransientError(OVERLOADED) should classify as InfraError, not RequestError")
-            }
-        }
-    }
-
-    #[mononoke::test]
-    fn test_classify_diff_error_repo_not_found() {
+    fn test_repo_not_found_diff_service_error_maps_to_scs_internal_error() {
+        // Given: diff_service reports a shard-routing miss for a repo in the tier.
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::transient_error(
                 diff_service_if::TransientError {
@@ -1206,24 +1007,22 @@ mod tests {
             ),
             ..Default::default()
         });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::InfraError(_)),
-            "REPO_NOT_FOUND (in-tier-not-loaded shard-routing race) must classify as InfraError so the SCS-side DiffRouter retries locally"
-        );
-    }
 
-    #[mononoke::test]
-    fn test_classify_diff_error_repo_does_not_exist() {
-        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
-            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
-                reason: "repo does not exist: ghost_repo".into(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-        assert!(
-            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
-            "diff_error reasons (including the truly-missing case) must classify as RequestError so SCS does not waste a local fallback"
-        );
+        // When: SCS converts the diff_service error for its clients.
+        let service_error = convert_diff_service_error(err);
+
+        // Then: clients observe an internal error with the diff_service context.
+        match service_error {
+            scs_errors::ServiceError::Internal(internal) => {
+                assert!(
+                    internal
+                        .reason
+                        .contains("repo not loaded on this server: test_repo"),
+                    "internal error reason should preserve diff_service context, got: {}",
+                    internal.reason
+                );
+            }
+            other => panic!("expected SCS InternalError, got {other:?}"),
+        }
     }
 }

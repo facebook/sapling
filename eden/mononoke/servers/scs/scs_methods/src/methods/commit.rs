@@ -57,7 +57,6 @@ use source_control as thrift;
 use super::commit_restricted_paths;
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::diff::RemoteDiffError;
 use crate::from_request::FromRequest;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::validate_timestamp;
@@ -832,20 +831,9 @@ impl SourceControlServiceImpl {
             .and_then(|config| config.remote_diff_config.clone());
         let diff_router = self.diff_router(remote_diff_config.as_ref());
         if diff_router.should_use_remote_commit_compare(repo_name) {
-            let remote_params = params.clone();
-            match diff_router
-                .remote_commit_compare(&ctx, repo_name, commit.id.clone(), remote_params)
-                .await
-            {
-                Ok(response) => return Ok(response),
-                Err(RemoteDiffError::RequestError(e)) => return Err(e),
-                Err(RemoteDiffError::InfraError(reason)) => {
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("diff_fallback", reason);
-                    scuba.add("diff_fallback_method", "commit_compare");
-                    scuba.log_with_msg("Diff service fallback to local", None);
-                }
-            }
+            return diff_router
+                .remote_commit_compare(&ctx, repo_name, commit.id.clone(), params)
+                .await;
         }
 
         let (repo, base_changeset, other_changeset) = match &params.other_commit_id {
