@@ -14,6 +14,7 @@
 #include <folly/Function.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
+#include <folly/container/F14Set.h>
 #include <folly/coro/safe/NowTask.h>
 #include <chrono>
 #include <memory>
@@ -631,13 +632,25 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * This process is bottom-up recursive: if a child inode is retained,
    * all of its parent inodes are also retained, regardless of their access
    * time.
+   *
+   * pinnedInodes controls which entries pressure-based FUSE GC may
+   * invalidate. Invalidating (unhashing) the dentry of a directory that is
+   * pinned as some process's working directory or root — or of any of its
+   * ancestors — breaks getcwd() and path resolution for that process, while
+   * reclaiming nothing (the kernel cannot FORGET a pinned inode). When
+   * pinnedInodes is non-null it holds the pinned directories; their
+   * ancestors are protected by propagating a contains-pin flag up the
+   * bottom-up traversal. When it is null, pin information is unavailable
+   * and all directory entries are skipped.
    */
   ImmediateFuture<uint64_t /* numInvalidated */>
   handleChildrenNotAccessedRecently(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
       bool pressureBased,
-      folly::CancellationToken cancellationToken = {});
+      folly::CancellationToken cancellationToken = {},
+      std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes =
+          nullptr);
 
   /*
    * Update a tree entry as part of a checkout operation.
@@ -846,15 +859,29 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   invalidateChildrenNotAccessedRecentlyFuse(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
-      const folly::CancellationToken& cancellationToken = {});
+      const folly::CancellationToken& cancellationToken,
+      std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes);
 
-  ImmediateFuture<uint64_t /* numInvalidated */>
-  invalidateChildrenNotAccessedRecentlyFuseImpl(
+  struct FuseGcResult {
+    uint64_t numInvalidated{0};
+    /**
+     * Whether this tree or any directory beneath it is pinned. The caller
+     * (this tree's parent) must not invalidate this tree's entry: unhashing
+     * any ancestor of a pinned directory breaks path resolution for the
+     * pinning process. Since entries are invalidated by the parent after
+     * recursing into the child, propagating this flag up the traversal
+     * protects the whole ancestor chain of every pin.
+     */
+    bool containsPin{false};
+  };
+
+  ImmediateFuture<FuseGcResult> invalidateChildrenNotAccessedRecentlyFuseImpl(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken,
       const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
       const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
+      const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
       FuseChannel* fuseChannel,
       folly::Executor::KeepAlive<> invalidationExecutor);
 #endif

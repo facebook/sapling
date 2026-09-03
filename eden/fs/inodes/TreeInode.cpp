@@ -6495,7 +6495,9 @@ TreeInode::handleChildrenNotAccessedRecently(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     [[maybe_unused]] bool pressureBased,
-    folly::CancellationToken cancellationToken) {
+    folly::CancellationToken cancellationToken,
+    [[maybe_unused]] std::shared_ptr<const folly::F14FastSet<InodeNumber>>
+        pinnedInodes) {
   if (getMount()->getNfsdChannel()) {
     return invalidateChildrenNotMaterializedNFS(
                cutoff, context, cancellationToken)
@@ -6512,7 +6514,7 @@ TreeInode::handleChildrenNotAccessedRecently(
     // This triggers FORGET from the kernel, which decrements fsRefcount
     // and allows subsequent unloading.
     return invalidateChildrenNotAccessedRecentlyFuse(
-        cutoff, context, cancellationToken);
+        cutoff, context, cancellationToken, std::move(pinnedInodes));
   }
   // Legacy FUSE path: passively unload inodes that are no longer referenced.
   // FUSE decreases the FS ref count by itself. On FUSE, we don't invalidate
@@ -6572,7 +6574,8 @@ folly::Expected<std::shared_ptr<GcBarrierTrie>, int> getGcBarrierTrie(
 ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
-    const folly::CancellationToken& cancellationToken) {
+    const folly::CancellationToken& cancellationToken,
+    std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes) {
   auto gcBarrier = getGcBarrierTrie(getMount());
   if (gcBarrier.hasError()) {
     XLOGF(
@@ -6605,27 +6608,32 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
              cancellationToken,
              gcBarrier.value(),
              currentGcBarrier,
+             pinnedInodes,
              fuseChannel.get(),
              folly::getKeepAliveToken(invalidationExecutor.get()))
+      .thenValue([](FuseGcResult result) { return result.numInvalidated; })
       .ensure([fuseChannel = std::move(fuseChannel),
                invalidationExecutor = std::move(invalidationExecutor)] {});
 }
 
-ImmediateFuture<uint64_t>
+ImmediateFuture<TreeInode::FuseGcResult>
 TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken,
     const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
     const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
+    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
     FuseChannel* fuseChannel,
     folly::Executor::KeepAlive<> invalidationExecutor) {
   if (shouldCancelGC(cancellationToken, getMount())) {
-    return uint64_t{0};
+    // This subtree was not examined, so report it as possibly-pinned to keep
+    // ancestors from invalidating its entry.
+    return FuseGcResult{0, /*containsPin=*/true};
   }
   if (currentGcBarrier != nullptr) {
     if (currentGcBarrier->isMountRoot) {
-      return uint64_t{0};
+      return FuseGcResult{0, /*containsPin=*/false};
     }
   }
 
@@ -6638,6 +6646,7 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
              [cutoff,
               gcBarrier,
               currentGcBarrier,
+              pinnedInodes,
               context = context.copy(),
               cancellationToken,
               fuseChannel,
@@ -6654,11 +6663,11 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                        cancellationToken,
                        gcBarrier,
                        childGcBarrier,
+                       pinnedInodes,
                        fuseChannel,
                        invalidationExecutor)
-                   .thenValue([name = PathComponent{name}](
-                                  uint64_t numInvalidated) mutable {
-                     return std::make_pair(std::move(name), numInvalidated);
+                   .thenValue([ino = tree->getNodeId()](FuseGcResult result) {
+                     return std::make_pair(ino, result);
                    });
              })
       .semi()
@@ -6668,24 +6677,31 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                   cancellationToken,
                   gcBarrier,
                   currentGcBarrier,
+                  pinnedInodes,
                   fuseChannel](
-                     const std::vector<std::pair<PathComponent, uint64_t>>&
+                     const std::vector<std::pair<InodeNumber, FuseGcResult>>&
                          childResults) {
         // Keep the trie alive while this continuation uses raw pointers into
         // it.
         (void)gcBarrier;
-        if (shouldCancelGC(cancellationToken)) {
-          return uint64_t{0};
-        }
-
+        bool containsPin =
+            pinnedInodes && pinnedInodes->count(self->getNodeId());
         uint64_t numInvalidated = 0;
-        for (const auto& [name, childInvalidated] : childResults) {
-          (void)name;
-          numInvalidated += childInvalidated;
+        folly::F14FastSet<InodeNumber> pinnedChildren;
+        for (const auto& [childIno, childResult] : childResults) {
+          numInvalidated += childResult.numInvalidated;
+          if (childResult.containsPin) {
+            containsPin = true;
+            pinnedChildren.insert(childIno);
+          }
+        }
+        if (shouldCancelGC(cancellationToken)) {
+          return FuseGcResult{numInvalidated, containsPin};
         }
 
         uint64_t numSkippedParentNoFsRef = 0;
         uint64_t numSkippedChildNoFsRef = 0;
+        uint64_t numSkippedPinned = 0;
         std::optional<PathComponent> lastExamined;
         std::vector<PathComponent> staleEntriesToInvalidate;
         std::vector<InodeMap::UnloadedInodeGcCandidate> unloadedCandidates;
@@ -6729,6 +6745,20 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                 continue;
               }
 
+              // Never invalidate the entry of a directory that is pinned as
+              // some process's cwd/root or whose subtree contains such a pin
+              // (see FuseGcResult::containsPin), and without pin information
+              // leave all directory entries alone. Pins are always
+              // directories, so file entries need no checks.
+              if (entry->second.isDirectory()) {
+                const auto childIno = entry->second.getInodeNumber();
+                if (!pinnedInodes || pinnedChildren.count(childIno) ||
+                    pinnedInodes->count(childIno)) {
+                  numSkippedPinned++;
+                  continue;
+                }
+              }
+
               auto* entryInode = entry->second.getInode();
               if (!entryInode) {
                 if (!entry->second.isDirectory()) {
@@ -6765,7 +6795,7 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
               self->getNodeId(), unloadedCandidates);
           for (auto& child : unloadedChildren) {
             if (shouldCancelGC(cancellationToken)) {
-              return numInvalidated;
+              return FuseGcResult{numInvalidated, containsPin};
             }
             auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
                 child.lastFsRequestTime.toTimespec().tv_sec);
@@ -6792,7 +6822,7 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                     name.piece(),
                     kMaxQueuedFuseGcInvalidations,
                     cancellationToken)) {
-              return numInvalidated;
+              return FuseGcResult{numInvalidated, containsPin};
             }
             numInvalidated++;
           }
@@ -6805,16 +6835,18 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
               numInvalidated,
               self->getLogPath());
         }
-        if (numSkippedParentNoFsRef > 0 || numSkippedChildNoFsRef > 0) {
+        if (numSkippedParentNoFsRef > 0 || numSkippedChildNoFsRef > 0 ||
+            numSkippedPinned > 0) {
           XLOGF(
               DBG9,
-              "FUSE GC skipped invalidating entries under {}: parentNoFsRef={}, childNoFsRef={}",
+              "FUSE GC skipped invalidating entries under {}: parentNoFsRef={}, childNoFsRef={}, pinned={}",
               self->getLogPath(),
               numSkippedParentNoFsRef,
-              numSkippedChildNoFsRef);
+              numSkippedChildNoFsRef,
+              numSkippedPinned);
         }
 
-        return numInvalidated;
+        return FuseGcResult{numInvalidated, containsPin};
       });
 }
 #endif

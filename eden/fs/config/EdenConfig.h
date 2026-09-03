@@ -607,6 +607,23 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether pressure-based GC discovers directories pinned as process
+   * working directories or roots (via the privhelper `scan-pins` mode) so it
+   * can invalidate all other directories while skipping the pinned chains.
+   * Invalidating a pinned directory's entry breaks getcwd() and path
+   * resolution for the pinning process without reclaiming anything, since
+   * the kernel cannot FORGET a pinned inode.
+   *
+   * When disabled, or whenever the scan fails, pressure-based GC skips
+   * invalidating directory entries entirely (file reclamation is
+   * unaffected).
+   */
+  ConfigSetting<bool> pressureBasedGcScanPins{
+      "mount:pressure-gc-scan-pins",
+      true,
+      this};
+
+  /**
    * If the number of inodes is greater than this threshold, the garbage
    * collection cutoff will be more aggressive.
    *

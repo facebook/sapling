@@ -361,13 +361,17 @@ TEST(
   EXPECT_FALSE(
       mount.getEdenMount()->getInodeMap()->lookupLoadedInode(fileNumber));
 
-  auto numInvalidated = mount.getEdenMount()
-                            ->getRootInode()
-                            ->handleChildrenNotAccessedRecently(
-                                cutoff,
-                                ObjectFetchContext::getNullContext(),
-                                /*pressureBased=*/true)
-                            .get(10s);
+  auto numInvalidated =
+      mount.getEdenMount()
+          ->getRootInode()
+          ->handleChildrenNotAccessedRecently(
+              cutoff,
+              ObjectFetchContext::getNullContext(),
+              /*pressureBased=*/true,
+              folly::CancellationToken{},
+              /*pinnedInodes=*/
+              std::make_shared<folly::F14FastSet<InodeNumber>>())
+          .get(10s);
   EXPECT_EQ(2u, numInvalidated);
   EXPECT_TRUE(
       mount.getEdenMount()->getInodeMap()->lookupLoadedInode(dirNumber));
@@ -439,13 +443,17 @@ TEST(
     }
   });
 
-  auto numInvalidated = mount.getEdenMount()
-                            ->getRootInode()
-                            ->handleChildrenNotAccessedRecently(
-                                cutoff,
-                                ObjectFetchContext::getNullContext(),
-                                /*pressureBased=*/true)
-                            .get(30s);
+  auto numInvalidated =
+      mount.getEdenMount()
+          ->getRootInode()
+          ->handleChildrenNotAccessedRecently(
+              cutoff,
+              ObjectFetchContext::getNullContext(),
+              /*pressureBased=*/true,
+              folly::CancellationToken{},
+              /*pinnedInodes=*/
+              std::make_shared<folly::F14FastSet<InodeNumber>>())
+          .get(30s);
   mount.getEdenMount()->flushInvalidations().get(30s);
   doneInvalidating.store(true, std::memory_order_release);
   drainer.join();

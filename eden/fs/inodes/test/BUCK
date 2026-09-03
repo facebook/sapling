@@ -147,6 +147,25 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "fuse_gc",
+    srcs = ["FuseGcTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_fuse",
+        "//eden/fs/testharness:test_mount",
+        "//folly:cancellation_token",
+    ],
+)
+
+cpp_unittest(
     name = "eden_mount",
     srcs = ["EdenMountTest.cpp"],
     # TODO: This doesn't pass on macOS yet, remove once fixed.

@@ -7,12 +7,12 @@
 # pyre-strict
 
 import asyncio
-import errno
+import contextlib
 import os
 import subprocess
 import sys
 import time
-from typing import Dict, List, Optional
+from typing import Callable, Dict, Generator, List, Optional
 
 from eden.fs.service.eden.thrift_types import (
     DebugInvalidateRequest,
@@ -23,6 +23,68 @@ from eden.fs.service.eden.thrift_types import (
 )
 
 from .lib import testcase
+from .lib.find_executables import FindExe
+
+
+def privhelper_supports_scan_pins() -> bool:
+    """Check whether the privhelper binary used by the daemon under test
+    supports the --scan-pins mode. Older binaries reject the flag and exit
+    nonzero."""
+    privhelper = FindExe.EDEN_PRIVHELPER
+    if privhelper is None:
+        return False
+    try:
+        result = subprocess.run(
+            [privhelper, "--scan-pins"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            encoding="utf-8",
+            timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    lines = result.stdout.splitlines()
+    return result.returncode == 0 and bool(lines) and lines[-1] == "done"
+
+
+@contextlib.contextmanager
+def pinned_cwd_child(cwd_path: str) -> Generator[Callable[[], str], None, None]:
+    """Run a child process with its cwd pinned to a directory inside the
+    mount. The yielded probe function makes the child call getcwd() and
+    returns "cwd:<path>" on success or "errno:<errno>" on failure."""
+    child_code = (
+        "import os, sys\n"
+        "print('ready', flush=True)\n"
+        "for _ in sys.stdin:\n"
+        "    try:\n"
+        "        print(f'cwd:{os.getcwd()}', flush=True)\n"
+        "    except OSError as e:\n"
+        "        print(f'errno:{e.errno}', flush=True)\n"
+    )
+    with subprocess.Popen(
+        [sys.executable, "-c", child_code],
+        cwd=cwd_path,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ) as child:
+        stdin = child.stdin
+        stdout = child.stdout
+        assert stdin is not None and stdout is not None
+
+        def probe() -> str:
+            stdin.write("\n")
+            stdin.flush()
+            return stdout.readline().strip()
+
+        try:
+            ready = stdout.readline().strip()
+            if ready != "ready":
+                raise RuntimeError(f"unexpected child output: {ready!r}")
+            yield probe
+        finally:
+            stdin.close()
+            child.wait(timeout=10)
 
 
 @testcase.eden_repo_test(run_on_nfs=False)
@@ -71,6 +133,19 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         for mountPath in mountPointInfo:
             info = mountPointInfo[mountPath]
             return info.loadedFileCount + info.loadedTreeCount
+        return 0  # Appease pyre
+
+    async def get_loaded_tree_count(self) -> int:
+        async with self.get_async_thrift_client() as client:
+            stats = await client.getStatInfo(
+                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+            )
+        mountPointInfo = stats.mountPointInfo
+        if mountPointInfo is None:
+            raise Exception("stats.mountPointInfo is not set")
+        self.assertEqual(len(mountPointInfo), 1)
+        for mountPath in mountPointInfo:
+            return mountPointInfo[mountPath].loadedTreeCount
         return 0  # Appease pyre
 
     def read_all(self) -> None:
@@ -179,55 +254,67 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         self.assertEqual("0\n", self.read_file("deep/parent/child/0"))
 
-    async def test_active_invalidation_breaks_getcwd_of_running_process(self) -> None:
+    async def test_active_invalidation_preserves_getcwd_of_running_process(
+        self,
+    ) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")
 
         for i in range(self.deep_file_count):
             self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
 
-        # Run a process whose cwd is a directory inside the mount. It calls
-        # getcwd() each time it receives a line on stdin.
-        child_code = (
-            "import os, sys\n"
-            "print('ready', flush=True)\n"
-            "for _ in sys.stdin:\n"
-            "    try:\n"
-            "        print(f'cwd:{os.getcwd()}', flush=True)\n"
-            "    except OSError as e:\n"
-            "        print(f'errno:{e.errno}', flush=True)\n"
-        )
         cwd_path = os.path.join(self.mount, "deep", "parent", "child")
-        with subprocess.Popen(
-            [sys.executable, "-c", child_code],
-            cwd=cwd_path,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            encoding="utf-8",
-        ) as child:
-            stdin = child.stdin
-            stdout = child.stdout
-            assert stdin is not None and stdout is not None
+        with pinned_cwd_child(cwd_path) as probe:
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
-            def probe() -> str:
-                stdin.write("\n")
-                stdin.flush()
-                return stdout.readline().strip()
+            invalidated = await self.invalidate("")
+            self.assertGreater(invalidated, 0)
 
-            try:
-                self.assertEqual("ready", stdout.readline().strip())
-                self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
+            # GC discovers pinned working directories via the privhelper
+            # scan-pins mode and skips invalidating the pinned chain (or, if
+            # pin information is unavailable, skips all directories), so
+            # getcwd() keeps working.
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
-                invalidated = await self.invalidate("")
-                self.assertGreater(invalidated, 0)
+    async def test_active_invalidation_reclaims_unpinned_directories(self) -> None:
+        """With pin information available, GC invalidates directory entries
+        outside the pinned chain, so unpinned directories are forgotten by the
+        kernel and unloaded while the pinned cwd keeps working."""
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+        if not privhelper_supports_scan_pins():
+            self.skipTest("privhelper does not support --scan-pins")
 
-                # FIXME: getcwd() should keep working for a process whose cwd
-                # is inside the mount, but GC invalidation unhashes the cwd
-                # dentry chain, so getcwd() currently fails with ENOENT.
-                self.assertEqual(f"errno:{errno.ENOENT}", probe())
-            finally:
-                stdin.close()
-                child.wait(timeout=10)
+        self.read_all()
+        for i in range(self.deep_file_count):
+            self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
+
+        trees_before = await self.get_loaded_tree_count()
+        # At least root, a, b, c, deep, deep/parent, deep/parent/child.
+        self.assertGreaterEqual(trees_before, 7)
+
+        cwd_path = os.path.join(self.mount, "deep", "parent", "child")
+        with pinned_cwd_child(cwd_path) as probe:
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
+
+            # The kernel sends FORGET replies to entry invalidations
+            # asynchronously, so poll: each invalidate() also re-runs the
+            # unload sweep that reaps newly-forgotten inodes.
+            deadline = time.monotonic() + 10
+            while True:
+                await self.invalidate("")
+                trees_after = await self.get_loaded_tree_count()
+                if trees_after <= trees_before - len(self.directories):
+                    break
+                if time.monotonic() >= deadline:
+                    self.fail(
+                        "unpinned directories were not reclaimed: "
+                        f"{trees_before} trees loaded before GC, "
+                        f"{trees_after} after"
+                    )
+                await asyncio.sleep(0.1)
+
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
     async def test_active_invalidation_preserves_bind_redirection(self) -> None:
         if sys.platform != "linux":
@@ -270,3 +357,49 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         load_gc_candidate()
         await invalidate_until_gc_runs()
         assert_bind_mounted()
+
+
+@testcase.eden_repo_test(run_on_nfs=False)
+class PressureGcWithoutPinScanTest(testcase.EdenRepoTest):
+    """With mount:pressure-gc-scan-pins disabled, pressure GC has no pin
+    information and must skip invalidating directory entries entirely, so
+    pinned working directories keep functioning while file entries are still
+    invalidated and reclaimed."""
+
+    file_count: int = 20
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("experimental", []).append("enable-pressure-based-gc = true")
+        result.setdefault("mount", []).append("pressure-gc-scan-pins = false")
+        return result
+
+    def populate_repo(self) -> None:
+        for i in range(self.file_count):
+            self.repo.write_file(f"deep/parent/child/{i}", f"{i}\n")
+        self.repo.commit("Initial commit.")
+
+    async def test_skips_directory_invalidation_without_pin_info(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        for i in range(self.file_count):
+            self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
+
+        cwd_path = os.path.join(self.mount, "deep", "parent", "child")
+        with pinned_cwd_child(cwd_path) as probe:
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
+
+            async with self.get_async_thrift_client() as client:
+                result = await client.debugInvalidateNonMaterialized(
+                    DebugInvalidateRequest(
+                        mount=MountId(mountPoint=self.mount_path_bytes),
+                        path=b"",
+                        age=TimeSpec(seconds=0, nanoSeconds=0),
+                    )
+                )
+            # File entries are still invalidated even though directories are
+            # skipped.
+            self.assertGreaterEqual(result.numInvalidated, self.file_count)
+
+            self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())

@@ -11,6 +11,10 @@
 #include <memory>
 #include "eden/common/utils/PathFuncs.h"
 
+// Path of the privhelper binary EdenFS was launched with. Defined in
+// PrivHelperImpl.cpp on every platform.
+DECLARE_string(privhelper_path);
+
 namespace folly {
 class File;
 }
