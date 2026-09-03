@@ -211,6 +211,12 @@ Delete backup state file and try again
   8a2d4df2b27fd146766b821123b3dd48c71e7e64 backed up
   585f89184f72f72e80f17cd586fb5ff16df53f82 not backed up
 
+Corrupt a node in an otherwise valid backup state file
+  >>> _ = open(".sl/commitcloud/backedupheads.remote", "ab").write(b"f411443647" + bytes(2))
+  $ sl cloud check -r "draft()" 2>&1 | tail -n 1
+  TypeError: Non-hexadecimal digit found
+  $ rm .sl/commitcloud/backedupheads.*
+
 Hide a commit. Make sure isbackedup still works
   $ sl hide 3a30e220fe42e969e34bbe8001b951a20f31f2e8
   hiding commit 3a30e220fe42 "newhead"
