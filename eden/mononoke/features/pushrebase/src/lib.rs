@@ -554,6 +554,19 @@ pub async fn do_batched_pushrebase(
     onto_bookmark: &BookmarkKey,
     requests: Vec<PushrebaseRequest>,
 ) -> Vec<PushrebaseRequest> {
+    let ctx = ctx.with_mutated_scuba(|mut scuba| {
+        // Per-land key to roll a land's attempts up to a terminal outcome.
+        if let Some(land_instance_id) = config.land_instance_id.as_deref() {
+            scuba.add("land_instance_id", land_instance_id);
+        }
+        // Phabricator diff FBID for per-diff attribution.
+        if let Some(phab_diff_id) = config.phab_diff_id.as_deref() {
+            scuba.add("phab_diff_id", phab_diff_id);
+        }
+        scuba
+    });
+    let ctx = &ctx;
+
     let use_pessimistic = justknobs::eval(
         "scm/mononoke:per_bookmark_locking",
         None,
