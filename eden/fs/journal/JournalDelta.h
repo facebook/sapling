@@ -217,7 +217,7 @@ struct JournalDeltaRange {
   std::unordered_set<RelativePath> uncleanPaths;
 
   bool isTruncated = false;
-  bool containsHgOnlyChanges = true;
+  bool containsSaplingOnlyChanges = true;
   bool containsRootUpdate = false;
   JournalDeltaRange() {
     // 1 and 2 entries are the most common by far.

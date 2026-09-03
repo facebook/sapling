@@ -31,6 +31,87 @@ struct JournalTest : ::testing::Test {
   IdentityCodec codec;
 };
 
+TEST_F(JournalTest, containsOnlySaplingChanges) {
+  EXPECT_TRUE(journal.containsOnlySaplingChanges(1));
+
+  journal.recordChanged(".sl/wlock"_relpath, dtype_t::Regular);
+  journal.recordChanged(".sl/blackbox.log"_relpath, dtype_t::Regular);
+  EXPECT_TRUE(journal.containsOnlySaplingChanges(1));
+
+  journal.recordChanged("foo/bar.txt"_relpath, dtype_t::Regular);
+  auto afterNonSapling = journal.observeLatest()->sequenceID;
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(1));
+  journal.recordChanged(".sl/dirstate"_relpath, dtype_t::Regular);
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(afterNonSapling));
+  EXPECT_TRUE(journal.containsOnlySaplingChanges(afterNonSapling + 1));
+}
+
+TEST_F(JournalTest, containsOnlySaplingChanges_legacy_hg_directory) {
+  journal.recordChanged(".hg/dirstate"_relpath, dtype_t::Regular);
+  EXPECT_TRUE(journal.containsOnlySaplingChanges(1));
+}
+
+TEST_F(JournalTest, containsOnlySaplingChanges_rename_out_of_metadata) {
+  journal.recordRenamed(
+      ".sl/origbackups/a"_relpath, "restored/a"_relpath, dtype_t::Regular);
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(1));
+}
+
+TEST_F(JournalTest, containsOnlySaplingChanges_root_update) {
+  journal.recordChanged(".sl/wlock"_relpath, dtype_t::Regular);
+  journal.recordRootUpdate(RootId{"1111111111111111111111111111111111111111"});
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(1));
+}
+
+TEST_F(JournalTest, containsOnlySaplingChanges_truncation) {
+  journal.recordChanged(".sl/wlock"_relpath, dtype_t::Regular);
+  journal.flush();
+  // The range starting at the flushed-away sequence was truncated: nothing
+  // can be said about what it contained.
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(1));
+}
+
+TEST_F(
+    JournalTest,
+    containsOnlySaplingChanges_truncated_probe_arms_notification) {
+  // Subscriber notifications are edge-triggered: after a notification,
+  // further changes do not notify again until someone observes the
+  // journal. Like accumulateRange, a containsOnlySaplingChanges probe counts
+  // as an observation even when the range was truncated, so the change
+  // after the probe must notify.
+  unsigned calls = 0;
+  auto sub = journal.registerSubscriber([&] { ++calls; });
+  (void)sub;
+
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
+  journal.flush();
+  auto callsBeforeProbe = calls;
+  EXPECT_FALSE(journal.containsOnlySaplingChanges(1));
+  journal.recordChanged("bar"_relpath, dtype_t::Regular);
+  EXPECT_EQ(callsBeforeProbe + 1, calls);
+}
+
+TEST_F(JournalTest, containsOnlySaplingChanges_matches_accumulateRange) {
+  auto viaAccumulateRange = [&](JournalDelta::SequenceNumber from) {
+    auto range = journal.accumulateRange(from);
+    if (!range) {
+      return false;
+    }
+    return !range->isTruncated && range->containsSaplingOnlyChanges &&
+        !range->containsRootUpdate;
+  };
+
+  journal.recordChanged(".sl/wlock"_relpath, dtype_t::Regular);
+  journal.recordChanged(".hg/dirstate"_relpath, dtype_t::Regular);
+  EXPECT_EQ(viaAccumulateRange(1), journal.containsOnlySaplingChanges(1));
+
+  journal.recordChanged("outside.txt"_relpath, dtype_t::Regular);
+  EXPECT_EQ(viaAccumulateRange(1), journal.containsOnlySaplingChanges(1));
+
+  journal.recordRootUpdate(RootId{"1111111111111111111111111111111111111111"});
+  EXPECT_EQ(viaAccumulateRange(1), journal.containsOnlySaplingChanges(1));
+}
+
 struct JournalDeltaTest : ::testing::Test {
   EdenStatsPtr edenStats{makeRefPtr<EdenStats>()};
   Journal journal{edenStats.copy()};
@@ -186,7 +267,7 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
   EXPECT_EQ(2, summed->changedFilesInOverlay.size());
 }
 
-TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
+TEST_F(JournalTest, accumulateRangeSaplingMetadataChanges) {
   // Empty journals have no rang to accumulate over
   EXPECT_FALSE(journal.observeLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
@@ -199,21 +280,31 @@ TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
 
   // get accumulated data for the tip of journal
   auto summed = journal.accumulateRange(latest->sequenceID);
-  EXPECT_FALSE(summed->containsHgOnlyChanges);
+  if (!summed) {
+    ADD_FAILURE() << "journal range should contain the recorded change";
+    return;
+  }
+  EXPECT_FALSE(summed->containsSaplingOnlyChanges);
 
-  // Record changes under .hg folder
-  journal.recordChanged(".hg/foo/bar"_relpath, dtype_t::Dir);
+  journal.recordChanged(".sl/foo/bar"_relpath, dtype_t::Dir);
+  journal.recordChanged(".hg/foo/baz"_relpath, dtype_t::Dir);
 
   // get accumulated data for the tip of journal
   latest = journal.observeLatest();
   summed = journal.accumulateRange(latest->sequenceID);
-  // It only contains .hg change
-  EXPECT_TRUE(summed->containsHgOnlyChanges);
+  if (!summed) {
+    ADD_FAILURE() << "journal range should contain Sapling metadata changes";
+    return;
+  }
+  EXPECT_TRUE(summed->containsSaplingOnlyChanges);
 
   // get accumulated data from the beginning.
   summed = journal.accumulateRange();
-  // It contains non-hg-only change
-  EXPECT_FALSE(summed->containsHgOnlyChanges);
+  if (!summed) {
+    ADD_FAILURE() << "journal range should contain all recorded changes";
+    return;
+  }
+  EXPECT_FALSE(summed->containsSaplingOnlyChanges);
 }
 
 TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {

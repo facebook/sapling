@@ -116,20 +116,13 @@ bool ScmStatusCache::isSequenceValid(
   // There is a chance that the latest sequence of the journal is larger than
   // the current sequence.
   // This is OK because when calculating the range, the final range will
-  // include our desired range. So if the final range does not contain non-.hg
-  // changes, we are sure that the current sequence is valid.
-  auto range = journal_->accumulateRange(
+  // include our desired range. So if the final range contains only Sapling
+  // metadata changes, we are sure that the current sequence is valid.
+  bool valid = journal_->containsOnlySaplingChanges(
       cachedSeq + 1); // plus one because the range for calculation is inclusive
-  bool valid = !range->isTruncated && range->containsHgOnlyChanges &&
-      !range->containsRootUpdate;
 
   XLOGF(
-      DBG7,
-      "range: from={}, truncated={}, hgOnly={}, rootUpdate={}",
-      cachedSeq,
-      range->isTruncated,
-      range->containsHgOnlyChanges,
-      range->containsRootUpdate);
+      DBG7, "range: from={}, containsOnlySaplingChanges={}", cachedSeq, valid);
   return valid;
 }
 

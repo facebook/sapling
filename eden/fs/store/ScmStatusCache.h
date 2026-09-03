@@ -179,7 +179,7 @@ class ScmStatusCache : public ObjectCache<
 
   /**
    * Use journal to determine if the sequence range contains changes outside
-   * the ".hg" folder. If so, it means the cache is not safe to reuse.
+   * Sapling metadata directories. If so, the cache is not safe to reuse.
    */
   std::shared_ptr<Journal> journal_;
 };

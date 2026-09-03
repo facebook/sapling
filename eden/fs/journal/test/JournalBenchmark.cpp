@@ -19,8 +19,9 @@ constexpr size_t kJournalEntries = 100'000;
 void populateJournal(Journal& journal, bool metadataOnly) {
   for (size_t i = 0; i < kJournalEntries; ++i) {
     // Distinct paths so consecutive deltas are not merged.
-    auto path = metadataOnly ? fmt::format(".hg/blackbox.log.{}", i)
-                             : fmt::format("foo/bar/baz.{}", i);
+    const auto path = metadataOnly
+        ? fmt::format("{}/metadata.{}", i % 2 == 0 ? ".sl" : ".hg", i)
+        : fmt::format("foo/bar/baz.{}", i);
     journal.recordChanged(RelativePath{path}, dtype_t::Regular);
   }
 }
@@ -34,7 +35,7 @@ bool validityViaAccumulateRange(Journal& journal) {
   if (!range) {
     return false;
   }
-  return !range->isTruncated && range->containsHgOnlyChanges &&
+  return !range->isTruncated && range->containsSaplingOnlyChanges &&
       !range->containsRootUpdate;
 }
 
@@ -54,8 +55,26 @@ void accumulate_range_validity_working_copy_only(benchmark::State& state) {
   }
 }
 
+void contains_only_sapling_changes_repo_metadata_only(benchmark::State& state) {
+  Journal journal{makeRefPtr<EdenStats>()};
+  populateJournal(journal, /*metadataOnly=*/true);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(journal.containsOnlySaplingChanges(1));
+  }
+}
+
+void contains_only_sapling_changes_working_copy_only(benchmark::State& state) {
+  Journal journal{makeRefPtr<EdenStats>()};
+  populateJournal(journal, /*metadataOnly=*/false);
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(journal.containsOnlySaplingChanges(1));
+  }
+}
+
 BENCHMARK(accumulate_range_validity_repo_metadata_only);
 BENCHMARK(accumulate_range_validity_working_copy_only);
+BENCHMARK(contains_only_sapling_changes_repo_metadata_only);
+BENCHMARK(contains_only_sapling_changes_working_copy_only);
 
 } // namespace
 

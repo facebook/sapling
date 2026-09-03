@@ -143,6 +143,18 @@ class Journal {
       SequenceNumber limitSequence = 1);
 
   /**
+   * Returns true if every change with sequence number >= limitSequence
+   * touches only paths under .sl or legacy .hg, the range contains no root
+   * transitions, and the range has not been truncated from the journal.
+   *
+   * This answers the same question as reading isTruncated,
+   * containsSaplingOnlyChanges, and containsRootUpdate from
+   * accumulateRange(limitSequence), but does not materialize the set of
+   * changed files and returns as soon as a disqualifying delta is seen.
+   */
+  bool containsOnlySaplingChanges(SequenceNumber limitSequence);
+
+  /**
    * Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
    * appropriate callback on each entry encountered.

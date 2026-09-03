@@ -270,10 +270,10 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   // reset cached sequence id
   cachedSeq = currentSeq;
 
-  // .hg-only changes
-  journal->recordChanged(".hg/what"_relpath, dtype_t::Regular);
-  journal->recordChanged(".hg/is"_relpath, dtype_t::Regular);
-  journal->recordChanged(".hg/this"_relpath, dtype_t::Regular);
+  // Sapling metadata changes under both current and legacy directory names.
+  journal->recordChanged(".sl/config"_relpath, dtype_t::Regular);
+  journal->recordChanged(".sl/wlock"_relpath, dtype_t::Regular);
+  journal->recordChanged(".hg/dirstate"_relpath, dtype_t::Regular);
 
   currentSeq = journal->peekLatest()->sequenceID;
   EXPECT_TRUE(cache->isSequenceValid(currentSeq, cachedSeq));

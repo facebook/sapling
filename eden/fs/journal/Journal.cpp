@@ -11,6 +11,18 @@
 
 namespace facebook::eden {
 
+namespace {
+
+bool isSaplingMetadataPath(const RelativePath& path) {
+  if (path.empty()) {
+    return true;
+  }
+  const auto firstComponent = path.paths().begin().piece();
+  return firstComponent == ".sl"_relpath || firstComponent == ".hg"_relpath;
+}
+
+} // namespace
+
 JournalDeltaPtr Journal::DeltaState::frontPtr() noexcept {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
   bool isRootUpdateEmpty = rootUpdateDeltas.empty();
@@ -442,9 +454,9 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 
           for (auto& entry : current.getChangedFilesInOverlay()) {
             auto& name = entry.first;
-            if (result->containsHgOnlyChanges && !name.empty() &&
-                name.paths().begin().piece() != ".hg"_relpath) {
-              result->containsHgOnlyChanges = false;
+            if (result->containsSaplingOnlyChanges &&
+                !isSaplingMetadataPath(name)) {
+              result->containsSaplingOnlyChanges = false;
             }
             auto& currentInfo = entry.second;
             auto* resultInfo =
@@ -508,6 +520,43 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 
   deltaState->markObserved();
   return result;
+}
+
+bool Journal::containsOnlySaplingChanges(SequenceNumber limitSequence) {
+  XDCHECK(limitSequence > 0);
+
+  auto deltaState = deltaState_.rlock();
+  if (!deltaState->empty() &&
+      deltaState->getFrontSequenceID() > limitSequence) {
+    // The range was truncated: it may have contained anything.
+    // Mark the journal observed even on this early return, like
+    // accumulateRange does for its truncated result: this call counts as
+    // an observation, and skipping it would let the next addDelta swallow
+    // the subscriber notification.
+    deltaState->markObserved();
+    return false;
+  }
+
+  bool saplingOnly = true;
+  forEachDelta(
+      *deltaState,
+      limitSequence,
+      std::nullopt,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        if ((current.isPath1Valid && !isSaplingMetadataPath(current.path1)) ||
+            (current.isPath2Valid && !isSaplingMetadataPath(current.path2))) {
+          saplingOnly = false;
+          return false;
+        }
+        return true;
+      },
+      [&](const RootUpdateJournalDelta&) -> bool {
+        saplingOnly = false;
+        return false;
+      });
+
+  deltaState->markObserved();
+  return saplingOnly;
 }
 
 bool Journal::forEachDelta(
