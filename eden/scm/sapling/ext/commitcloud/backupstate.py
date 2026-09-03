@@ -15,6 +15,14 @@ from . import util as ccutil
 FORMAT_VERSION = "v2"
 
 
+def _parseheads(lines):
+    try:
+        heads = [nodemod.bin(head.strip()) for head in lines]
+    except TypeError:
+        return None
+    return heads
+
+
 class BackupState:
     """Stores what commits have been successfully backed up to the Commit Cloud.
 
@@ -49,7 +57,11 @@ class BackupState:
                     )
                     self.initfromserver()
                     return
-                heads = [nodemod.bin(head.strip()) for head in lines[1:]]
+                heads = _parseheads(lines[1:])
+                if heads is None:
+                    repo.ui.debug("invalid backedupheads data, ignoring\n")
+                    self.initfromserver()
+                    return
                 heads = repo.changelog.filternodes(heads, local=True)
                 self.heads = set(heads)
             else:
