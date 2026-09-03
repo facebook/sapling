@@ -207,6 +207,18 @@ struct RpcServerTest : ::testing::Test {
   }
 
   /**
+   * Returns true once the peer has closed the connection: the fd is
+   * readable and read() reports EOF.
+   */
+  bool sawEof(int fd) {
+    if (!pollForReply(fd, 0)) {
+      return false;
+    }
+    uint8_t byte;
+    return read(fd, &byte, 1) == 0;
+  }
+
+  /**
    * Read a reply from the client fd. Assumes a single read() returns
    * the complete reply — safe on Unix socketpairs with small messages
    * but would need a loop for TCP or replies larger than 256 bytes.
@@ -309,6 +321,14 @@ class ShutdownRecordingProcessor : public RpcServerProcessor {
     clientCount_.fetch_add(1, std::memory_order_release);
   }
 
+  void onExtraConnection() override {
+    extraConnectionCount_.fetch_add(1, std::memory_order_release);
+  }
+
+  void onExtraConnectionRefused() override {
+    extraConnectionRefusedCount_.fetch_add(1, std::memory_order_release);
+  }
+
   void onShutdown(RpcStopData data) override {
     lastReason_ = data.reason;
     shutdownCount_.fetch_add(1, std::memory_order_release);
@@ -318,17 +338,35 @@ class ShutdownRecordingProcessor : public RpcServerProcessor {
     return clientCount_.load(std::memory_order_acquire);
   }
 
+  int extraConnectionCount() const {
+    return extraConnectionCount_.load(std::memory_order_acquire);
+  }
+
+  int extraConnectionRefusedCount() const {
+    return extraConnectionRefusedCount_.load(std::memory_order_acquire);
+  }
+
   int shutdownCount() const {
     return shutdownCount_.load(std::memory_order_acquire);
   }
 
   std::atomic<int> clientCount_{0};
+  std::atomic<int> extraConnectionCount_{0};
+  std::atomic<int> extraConnectionRefusedCount_{0};
   std::atomic<int> shutdownCount_{0};
   std::optional<RpcStopReason> lastReason_;
 };
 
-TEST_F(RpcServerTest, close_of_extra_connection_shuts_down_the_server) {
-  auto proc = std::make_shared<ShutdownRecordingProcessor>();
+class SingleClientShutdownRecordingProcessor
+    : public ShutdownRecordingProcessor {
+ public:
+  bool acceptsMultipleConnections() const override {
+    return false;
+  }
+};
+
+TEST_F(RpcServerTest, extra_connection_is_refused_for_single_client_server) {
+  auto proc = std::make_shared<SingleClientShutdownRecordingProcessor>();
   auto server = createTestServer(proc);
 
   folly::test::TemporaryDirectory tmpDir;
@@ -339,22 +377,56 @@ TEST_F(RpcServerTest, close_of_extra_connection_shuts_down_the_server) {
   drive([&] { return proc->clientCount() == 1; });
   ASSERT_EQ(1, proc->clientCount());
 
-  // Some other local process — a port scanner, a health checker — connects
-  // and immediately disconnects.
+  // Some other local process — anything able to reach the socket — connects
+  // and immediately disconnects. The server refuses the connection (the
+  // client observes EOF), and the processor is not told to shut down: only
+  // the kernel's connection controls the server's lifetime.
   int scannerFd = connectToServer(addr);
-  drive([&] { return proc->clientCount() == 2; });
-  ASSERT_EQ(2, proc->clientCount());
+  drive([&] { return sawEof(scannerFd); });
+  EXPECT_TRUE(sawEof(scannerFd)) << "extra connection should be refused";
   close(scannerFd);
-  drive([&] { return proc->shutdownCount() > 0; });
+  EXPECT_EQ(1, proc->clientCount());
+  EXPECT_EQ(1, proc->extraConnectionCount());
+  EXPECT_EQ(1, proc->extraConnectionRefusedCount());
+  EXPECT_EQ(0, proc->shutdownCount());
 
-  // FIXME: EOF on any accepted connection is treated as the kernel
-  // unmounting: the processor is told to shut down even though the kernel's
-  // connection is still open, so any local process that connects to the
-  // port and disconnects tears the mount down.
+  // EOF on the kernel's connection still stops the server: that is how a
+  // real unmount is detected.
+  close(kernelFd);
+  drive([&] { return proc->shutdownCount() > 0; });
   EXPECT_EQ(1, proc->shutdownCount());
   EXPECT_EQ(RpcStopReason::UNMOUNT, proc->lastReason_);
 
-  cleanup(kernelFd, server);
+  server.reset();
+  evb.loopOnce();
+}
+
+TEST_F(RpcServerTest, extra_connection_is_accepted_for_multi_client_server) {
+  // Mountd-style servers carry each exchange on its own connection, so a
+  // second connection must still be accepted and stay open.
+  auto proc = std::make_shared<ShutdownRecordingProcessor>();
+  auto server = createTestServer(proc);
+
+  folly::test::TemporaryDirectory tmpDir;
+  auto addr = bindUnixSocket(*server, tmpDir);
+
+  int first = connectToServer(addr);
+  drive([&] { return proc->clientCount() == 1; });
+  ASSERT_EQ(1, proc->clientCount());
+  int second = connectToServer(addr);
+  drive([&] { return proc->clientCount() == 2; });
+  ASSERT_EQ(2, proc->clientCount());
+  EXPECT_EQ(1, proc->extraConnectionCount());
+  EXPECT_EQ(0, proc->extraConnectionRefusedCount());
+
+  // Neither connection was closed by the server.
+  EXPECT_FALSE(pollForReply(first, 0));
+  EXPECT_FALSE(pollForReply(second, 0));
+
+  close(second);
+  close(first);
+  server.reset();
+  evb.loopOnce();
 }
 
 TEST_F(RpcServerTest, null_rpc_bypasses_thread_pool) {

@@ -234,6 +234,9 @@ The list of all the EdenStats Counter/Duration are as follows:
   Duration nfsPathconf{"nfs.pathconf_us"}
   Duration nfsCommit{"nfs.commit_us"}
 
+  Counter nfsRpcExtraConnection{"nfs.rpc.extra_connection"}
+  Counter nfsRpcExtraConnectionRefused{"nfs.rpc.extra_connection_refused"}
+
   Counter nfsInvalidationGcAttempt{"nfs.invalidation.gc.attempt"}
   Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"}
   Counter nfsInvalidationGcFailure{"nfs.invalidation.gc.failure"}

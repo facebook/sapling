@@ -125,6 +125,21 @@ class RpcServerProcessor {
       const std::optional<authsys_parms>& authSysCreds);
   virtual void clientConnected();
   virtual void onShutdown(RpcStopData stopData);
+  virtual void onExtraConnection();
+  virtual void onExtraConnectionRefused();
+
+  /**
+   * Whether this server may serve more than one concurrently connected
+   * client. Mountd carries each mount protocol exchange on its own
+   * short-lived connection, so it must keep accepting new connections.
+   * Nfsd3 serves exactly one client — the kernel — and does not support
+   * reconnects; since EOF on an accepted connection is treated as an
+   * unmount, a single-client server must refuse extra connections rather
+   * than accept them.
+   */
+  virtual bool acceptsMultipleConnections() const {
+    return true;
+  }
 
   /**
    * Return true to enable fast-path handling of certain RPCs directly on

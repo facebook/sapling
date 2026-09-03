@@ -387,6 +387,9 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsCommitSuccessful{"nfs.commit_successful"};
   Counter nfsCommitFailure{"nfs.commit_failure"};
 
+  Counter nfsRpcExtraConnection{"nfs.rpc.extra_connection"};
+  Counter nfsRpcExtraConnectionRefused{"nfs.rpc.extra_connection_refused"};
+
   // Backpressure
   Counter nfsBackpressureJukebox{"nfs.backpressure_jukebox"};
   Counter nfsInflightAtRequest{"nfs.inflight_at_request"};

@@ -162,8 +162,18 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
 
   void onShutdown(RpcStopData stopData) override;
   void clientConnected() override;
+  void onExtraConnection() override {
+    dispatcher_->getStats()->increment(&NfsStats::nfsRpcExtraConnection);
+  }
+  void onExtraConnectionRefused() override {
+    dispatcher_->getStats()->increment(&NfsStats::nfsRpcExtraConnectionRefused);
+  }
   bool shouldFastPathRPCs() const override {
     return fastPathRPCs_;
+  }
+  bool acceptsMultipleConnections() const override {
+    return !config_ ||
+        !config_->getEdenConfig()->nfsRefuseExtraClientConnections.getValue();
   }
   bool isUnimplementedProc(uint32_t proc) const override;
 

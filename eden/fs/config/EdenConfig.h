@@ -1289,6 +1289,18 @@ class EdenConfig : private ConfigSettingManager {
       60,
       this};
 
+  /**
+   * When true, an nfsd3 server refuses client connections beyond the single
+   * kernel client it serves. EOF on any accepted connection is treated as
+   * the mount being unmounted, so accepting extra connections lets an
+   * unrelated local process tear the mount down by connecting to the
+   * mount's loopback port and disconnecting again.
+   */
+  ConfigSetting<bool> nfsRefuseExtraClientConnections{
+      "nfs:refuse-extra-client-connections",
+      false,
+      this};
+
   // [prjfs]
 
   /**
