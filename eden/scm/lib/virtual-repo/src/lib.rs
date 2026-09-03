@@ -29,10 +29,15 @@ mod file_size_gen;
 mod id_fields;
 mod provider;
 pub mod text_gen;
+mod workload;
 
 pub use dag_populate::populate_dag;
+pub use file_size_gen::generate_file_size;
 pub use provider::MAX_FACTOR_BITS;
 pub use provider::VirtualRepoProvider;
+pub use workload::GeneratedFile;
+pub use workload::GeneratedWorkload;
+pub use workload::generate_workload;
 
 pub fn init() {
     factory_impls::init();
