@@ -13,3 +13,7 @@ CREATE TABLE IF NOT EXISTS `pushrebase_mutation_mapping` (
 );
 
 CREATE INDEX IF NOT EXISTS `pushrebase_mutation_mapping_repo_successor_key` ON `pushrebase_mutation_mapping` (`repo_id`, `successor_bcs_id`);
+
+-- Production already carries this index as `repo_predecessor_key`; it is
+-- declared here so SQLite-backed tests plan the forward lookup the same way.
+CREATE INDEX IF NOT EXISTS `pushrebase_mutation_mapping_repo_predecessor_key` ON `pushrebase_mutation_mapping` (`repo_id`, `predecessor_bcs_id`);

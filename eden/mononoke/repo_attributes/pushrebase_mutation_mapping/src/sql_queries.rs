@@ -37,6 +37,15 @@ mononoke_queries! {
         WHERE repo_id = {repo_id} AND successor_bcs_id = {successor_bcs_id}"
     }
 
+    read SelectSuccessorIds(
+        repo_id: RepositoryId,
+        predecessor_bcs_id: ChangesetId,
+    ) -> (ChangesetId,) {
+        "SELECT successor_bcs_id
+        FROM pushrebase_mutation_mapping
+        WHERE repo_id = {repo_id} AND predecessor_bcs_id = {predecessor_bcs_id}"
+    }
+
     write InsertMappingEntries(values:(
         repo_id: RepositoryId,
         predecessor_bcs_id: ChangesetId,
@@ -82,6 +91,23 @@ pub async fn get_prepushrebase_ids(
         ctx.sql_query_telemetry(),
         &repo_id,
         &successor_bcs_id,
+    )
+    .await?;
+
+    Ok(rows.into_iter().map(|r| r.0).collect())
+}
+
+pub async fn get_successor_ids(
+    ctx: &CoreContext,
+    connection: &Connection,
+    repo_id: RepositoryId,
+    predecessor_bcs_id: ChangesetId,
+) -> Result<Vec<ChangesetId>> {
+    let rows = SelectSuccessorIds::query(
+        connection,
+        ctx.sql_query_telemetry(),
+        &repo_id,
+        &predecessor_bcs_id,
     )
     .await?;
 
@@ -137,6 +163,35 @@ impl SqlPushrebaseMutationMappingConnection {
         }
         Ok(ids)
     }
+
+    async fn get_successor_ids(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        predecessor_bcs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        let mut ids = get_successor_ids(
+            ctx,
+            &self.connections.read_connection,
+            repo_id,
+            predecessor_bcs_id,
+        )
+        .await?;
+        if ids.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            ids = get_successor_ids(
+                ctx,
+                &self.connections.read_master_connection,
+                repo_id,
+                predecessor_bcs_id,
+            )
+            .await?;
+        }
+        Ok(ids)
+    }
 }
 
 impl SqlConstruct for SqlPushrebaseMutationMappingConnection {
@@ -176,6 +231,16 @@ impl PushrebaseMutationMapping for SqlPushrebaseMutationMapping {
     ) -> Result<Vec<ChangesetId>> {
         self.sql_conn
             .get_prepushrebase_ids(ctx, self.repo_id, successor_bcs_id)
+            .await
+    }
+
+    async fn get_successor_ids(
+        &self,
+        ctx: &CoreContext,
+        predecessor_bcs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        self.sql_conn
+            .get_successor_ids(ctx, self.repo_id, predecessor_bcs_id)
             .await
     }
 }

@@ -20,6 +20,7 @@ pub use sql_queries::SqlPushrebaseMutationMapping;
 pub use sql_queries::SqlPushrebaseMutationMappingConnection;
 pub use sql_queries::add_pushrebase_mapping;
 pub use sql_queries::get_prepushrebase_ids;
+pub use sql_queries::get_successor_ids;
 
 pub struct PushrebaseMutationMappingEntry {
     repo_id: RepositoryId,
@@ -49,5 +50,16 @@ pub trait PushrebaseMutationMapping: Send + Sync {
         &self,
         ctx: &CoreContext,
         successor_bcs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>>;
+
+    /// The commits pushrebase rewrote `predecessor_bcs_id` into.
+    ///
+    /// Several are possible: the table has no unique constraint, and the same
+    /// commit can be landed more than once. Callers must handle an ambiguous
+    /// answer rather than assuming one successor.
+    async fn get_successor_ids(
+        &self,
+        ctx: &CoreContext,
+        predecessor_bcs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>>;
 }
