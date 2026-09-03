@@ -2,7 +2,6 @@ load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_xplat")
 load(
     "@fbsource//xplat/thrift:defs.bzl",
-    "thrift_ci_hint",
     "thrift_rust_unittest",
 )
 
@@ -31,10 +30,4 @@ thrift_rust_unittest(
         ":thrift_test-rust-clients",
         "//thrift/lib/rust:fbthrift",
     ],
-)
-
-thrift_ci_hint(
-    ci_srcs = ["fbcode/thrift/compiler/generate/templates/rust/**"],
-    reason = "Test thrift-generated Rust code edge cases",
-    target = "test",
 )
