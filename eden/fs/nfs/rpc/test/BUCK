@@ -17,5 +17,6 @@ cpp_unittest(
         "//eden/fs/utils:request_permit_vendor",
         "//folly/executors:manual_executor",
         "//folly/io:iobuf",
+        "//folly/testing:test_util",
     ],
 )

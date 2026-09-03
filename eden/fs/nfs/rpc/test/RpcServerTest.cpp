@@ -13,11 +13,14 @@
 #include <unistd.h>
 #endif
 
+#include <chrono>
 #include <cstring>
+#include <thread>
 
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -62,7 +65,15 @@ buildRpcRequestWithCred(uint32_t xid, uint32_t proc, opaque_auth cred) {
 
   auto len = static_cast<uint32_t>(queue.chainLength() - sizeof(uint32_t));
   auto buf = queue.move();
+  if (!buf) {
+    ADD_FAILURE() << "serialized RPC request is empty";
+    return nullptr;
+  }
   auto* header = reinterpret_cast<uint32_t*>(buf->writableData());
+  if (!header) {
+    ADD_FAILURE() << "serialized RPC request has no writable data";
+    return nullptr;
+  }
   *header = folly::Endian::big(len | 0x80000000);
   return buf;
 }
@@ -125,6 +136,10 @@ struct RpcServerTest : ::testing::Test {
    * thread pool.
    */
   void sendRequest(int clientFd, std::unique_ptr<folly::IOBuf> request) {
+    if (!request) {
+      ADD_FAILURE() << "RPC request must not be null";
+      return;
+    }
     auto bytes = request->coalesce();
     ASSERT_EQ(
         static_cast<ssize_t>(bytes.size()),
@@ -144,6 +159,51 @@ struct RpcServerTest : ::testing::Test {
     pfd.fd = clientFd;
     pfd.events = POLLIN;
     return poll(&pfd, 1, timeoutMs) > 0;
+  }
+
+  /**
+   * Bind the server to a unix socket under @p tmpDir and return the bound
+   * address. A unix socket exercises the same accept path as the TCP
+   * socket used in production, and unlike loopback TCP it works in
+   * sandboxed test environments.
+   */
+  folly::SocketAddress bindUnixSocket(
+      RpcServer& server,
+      const folly::test::TemporaryDirectory& tmpDir) {
+    folly::SocketAddress bindAddr;
+    bindAddr.setFromPath((tmpDir.path() / "rpc.sock").string());
+    server.initialize(bindAddr);
+    return server.getAddr();
+  }
+
+  /**
+   * Connect a new client socket to the server's listening address and
+   * return the fd. Caller must close the fd.
+   */
+  int connectToServer(const folly::SocketAddress& addr) {
+    int fd = ::socket(addr.getFamily(), SOCK_STREAM, 0);
+    EXPECT_GE(fd, 0) << folly::errnoStr(errno);
+    sockaddr_storage ss{};
+    auto len = addr.getAddress(&ss);
+    EXPECT_EQ(0, ::connect(fd, reinterpret_cast<sockaddr*>(&ss), len))
+        << "connect to " << addr.describe() << ": " << folly::errnoStr(errno);
+    return fd;
+  }
+
+  /**
+   * Pump the EventBase until done() holds or a bounded number of
+   * iterations elapse. The EventBase is driven manually by the test
+   * thread, so nothing else can make progress between pumps. The loop
+   * exits as soon as the predicate holds; the brief sleep only yields
+   * between non-blocking pumps, it does not gate correctness.
+   */
+  template <typename Done>
+  void drive(Done&& done) {
+    for (int i = 0; i < 1000 && !done(); ++i) {
+      evb.loopOnce(EVLOOP_NONBLOCK);
+      // @lint-ignore CLANGTIDY facebook-hte-BadCall-sleep_for
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
   }
 
   /**
@@ -242,6 +302,60 @@ TEST_F(RpcServerTest, takeover_from_takeover) {
 
 #ifndef _WIN32
 // Tests below use Unix socketpair/poll APIs not available on Windows.
+
+class ShutdownRecordingProcessor : public RpcServerProcessor {
+ public:
+  void clientConnected() override {
+    clientCount_.fetch_add(1, std::memory_order_release);
+  }
+
+  void onShutdown(RpcStopData data) override {
+    lastReason_ = data.reason;
+    shutdownCount_.fetch_add(1, std::memory_order_release);
+  }
+
+  int clientCount() const {
+    return clientCount_.load(std::memory_order_acquire);
+  }
+
+  int shutdownCount() const {
+    return shutdownCount_.load(std::memory_order_acquire);
+  }
+
+  std::atomic<int> clientCount_{0};
+  std::atomic<int> shutdownCount_{0};
+  std::optional<RpcStopReason> lastReason_;
+};
+
+TEST_F(RpcServerTest, close_of_extra_connection_shuts_down_the_server) {
+  auto proc = std::make_shared<ShutdownRecordingProcessor>();
+  auto server = createTestServer(proc);
+
+  folly::test::TemporaryDirectory tmpDir;
+  auto addr = bindUnixSocket(*server, tmpDir);
+
+  // The kernel's connection, established once at mount time.
+  int kernelFd = connectToServer(addr);
+  drive([&] { return proc->clientCount() == 1; });
+  ASSERT_EQ(1, proc->clientCount());
+
+  // Some other local process — a port scanner, a health checker — connects
+  // and immediately disconnects.
+  int scannerFd = connectToServer(addr);
+  drive([&] { return proc->clientCount() == 2; });
+  ASSERT_EQ(2, proc->clientCount());
+  close(scannerFd);
+  drive([&] { return proc->shutdownCount() > 0; });
+
+  // FIXME: EOF on any accepted connection is treated as the kernel
+  // unmounting: the processor is told to shut down even though the kernel's
+  // connection is still open, so any local process that connects to the
+  // port and disconnects tears the mount down.
+  EXPECT_EQ(1, proc->shutdownCount());
+  EXPECT_EQ(RpcStopReason::UNMOUNT, proc->lastReason_);
+
+  cleanup(kernelFd, server);
+}
 
 TEST_F(RpcServerTest, null_rpc_bypasses_thread_pool) {
   auto server = createTestServerWithManualExecutor(
