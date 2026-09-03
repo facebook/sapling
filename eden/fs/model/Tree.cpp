@@ -31,8 +31,7 @@ size_t Tree::getSizeBytes() const {
   // eden for this type of thing. D17174143 is one such idea.
   size_t internal_size = sizeof(*this);
 
-  size_t indirect_size =
-      folly::goodMallocSize(sizeof(TreeEntry) * entries_.capacity());
+  size_t indirect_size = entries_.estimateStorageBytes();
 
   for (auto& entry : entries_) {
     indirect_size += estimateIndirectMemoryUsage(entry.first.value());
