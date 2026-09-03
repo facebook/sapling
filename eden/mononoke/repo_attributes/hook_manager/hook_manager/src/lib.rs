@@ -42,6 +42,7 @@ use mononoke_types::hash::GitSha1;
 use permission_checker::MononokeIdentitySet;
 use scuba::ScubaValue;
 use scuba_ext::MononokeScubaSampleBuilder;
+use strum::IntoStaticStr;
 
 pub use crate::errors::HookManagerError;
 pub use crate::manager::HookManager;
@@ -197,10 +198,12 @@ impl CheckedBypassIdentities {
 /// The reason a bypass fired and the hook's permission-group name are bundled
 /// here because the trait side (`run_hook`) cannot see the `Hook` enum that
 /// holds the config.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
 pub enum BypassDecision {
     /// No bypass was attempted (or none applies) — the hook's own result stands.
     #[default]
+    #[strum(serialize = "none")]
     NoBypass,
     /// A bypass fired and the pusher is authorized — the rejection is folded
     /// into a single `accepted_via_bypass` row. Carries the bypass reason and
@@ -226,6 +229,14 @@ pub enum BypassDecision {
         group: String,
         check: Option<CheckedBypassIdentities>,
     },
+}
+
+impl BypassDecision {
+    /// The decision's name as logged in the `log_only_bypass_decision` column.
+    /// Backed by the `IntoStaticStr` derive.
+    pub fn as_str(&self) -> &'static str {
+        self.into()
+    }
 }
 
 /// Add the mechanical execution-stats columns to `scuba`: common server data,
@@ -254,11 +265,77 @@ fn log_execution_stats(
     scuba.add("elapsed", elapsed).add("total_time", elapsed);
 }
 
+/// Add the `bypass_*` columns describing `bypass` to `scuba`; `NoBypass` adds
+/// none. Shared by the enforcing and log-only paths of
+/// `record_outcome_and_apply_bypass` so the columns mean the same thing in both.
+///
+/// Denials record the columns too, so a denied bypass is distinguishable from a
+/// rejection where none was attempted: `bypass_reason IS NOT NULL` selects
+/// exactly the attempts. `bypass_blocked_for_agent` is what separates the agent
+/// case from a plain "not a member" denial.
+fn add_bypass_decision_columns(scuba: &mut MononokeScubaSampleBuilder, bypass: &BypassDecision) {
+    match bypass {
+        BypassDecision::NoBypass => {}
+        BypassDecision::Authorized {
+            reason,
+            permission_group,
+            check,
+        } => {
+            scuba.add("bypass_reason", reason.clone());
+            if let Some(group) = permission_group {
+                scuba.add("bypass_permission_group", group.clone());
+            }
+            if let Some(check) = check {
+                scuba
+                    .add("bypass_identity_source", check.source.as_str())
+                    .add("bypass_identities_checked", check.identities.clone());
+            }
+        }
+        BypassDecision::UnauthorizedUser {
+            reason,
+            group,
+            check,
+        } => {
+            scuba
+                .add("bypass_reason", reason.clone())
+                .add("bypass_permission_group", group.clone())
+                .add("bypass_identity_source", check.source.as_str())
+                .add("bypass_identities_checked", check.identities.clone());
+        }
+        BypassDecision::UnauthorizedAgent {
+            reason,
+            group,
+            check,
+        } => {
+            scuba
+                .add("bypass_reason", reason.clone())
+                .add("bypass_permission_group", group.clone())
+                .add("bypass_blocked_for_agent", true);
+            if let Some(check) = check {
+                scuba
+                    .add("bypass_identity_source", check.source.as_str())
+                    .add("bypass_identities_checked", check.identities.clone());
+            }
+        }
+    }
+}
+
+/// Record, without applying it, the bypass decision that would have applied to
+/// a log-only rejection: `log_only_bypass_decision` names the decision and the
+/// usual `bypass_*` columns carry its details, so a log-only rollout shows
+/// whether a pusher's bypass would be honored once the hook enforces.
+fn add_log_only_bypass_columns(scuba: &mut MononokeScubaSampleBuilder, bypass: &BypassDecision) {
+    scuba.add("log_only_bypass_decision", bypass.as_str());
+    add_bypass_decision_columns(scuba, bypass);
+}
+
 /// Set the outcome columns (`outcome`, `errorcode`, `failed_hooks`, `stderr`, and
 /// any `bypass_*`) on `scuba` and return the finalized `HookOutcome`; the caller
-/// logs afterwards. The bypass decision is consulted exactly once, here: an
-/// authorized bypass folds a rejection into an accepted `accepted_via_bypass` row,
-/// an unauthorized one keeps the rejection with a "not a member" note.
+/// logs afterwards. The bypass decision is consulted exactly once, here. When
+/// enforcing, an authorized bypass folds a rejection into an accepted
+/// `accepted_via_bypass` row and an unauthorized one keeps the rejection with a
+/// "not a member" note. When log-only, the rejection is accepted regardless and
+/// the decision is only recorded (`log_only_bypass_decision`), never applied.
 fn record_outcome_and_apply_bypass(
     scuba: &mut MononokeScubaSampleBuilder,
     result: Result<HookOutcome>,
@@ -294,35 +371,26 @@ fn record_outcome_and_apply_bypass(
 
     if log_only {
         // Only logging: preserve any `extra_logs` but turn the rejection into an
-        // accepted execution so the push is not blocked.
+        // accepted execution so the push is not blocked. The bypass decision is
+        // not applied (there is nothing to bypass), but it is recorded so the
+        // rollout shows who would and would not get through once enforcing.
         scuba
             .add("log_only_rejection", long_description)
             .add("errorcode", 0)
             .add("failed_hooks", 0)
             .add("outcome", "log_only_rejected");
+        add_log_only_bypass_columns(scuba, bypass);
         let extra_logs = outcome.get_execution().extra_logs.clone();
         outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
         return Ok(outcome);
     }
 
+    add_bypass_decision_columns(scuba, bypass);
     match bypass {
         // An authorized bypass folds the rejection into a single
         // `accepted_via_bypass` row: it did not block the push, so it is not
         // counted as a failure.
-        BypassDecision::Authorized {
-            reason,
-            permission_group,
-            check,
-        } => {
-            scuba.add("bypass_reason", reason.clone());
-            if let Some(group) = permission_group {
-                scuba.add("bypass_permission_group", group.clone());
-            }
-            if let Some(check) = check {
-                scuba
-                    .add("bypass_identity_source", check.source.as_str())
-                    .add("bypass_identities_checked", check.identities.clone());
-            }
+        BypassDecision::Authorized { .. } => {
             scuba
                 .add("errorcode", 0)
                 .add("failed_hooks", 0)
@@ -339,48 +407,20 @@ fn record_outcome_and_apply_bypass(
                 .add("outcome", "rejected");
             Ok(outcome)
         }
-        // Record the bypass columns here too, so a denied bypass is
-        // distinguishable from a rejection where none was attempted:
-        // `outcome='rejected' AND bypass_reason IS NOT NULL` selects exactly the
-        // denials. `bypass_blocked_for_agent` stays unset -- that flag is what
-        // separates these from the agent case below.
-        BypassDecision::UnauthorizedUser {
-            reason,
-            group,
-            check,
-        } => {
+        BypassDecision::UnauthorizedUser { group, .. } => {
             scuba
                 .add("stderr", long_description)
                 .add("errorcode", 1)
                 .add("failed_hooks", 1)
-                .add("bypass_reason", reason.clone())
-                .add("bypass_permission_group", group.clone())
-                .add("bypass_identity_source", check.source.as_str())
-                .add("bypass_identities_checked", check.identities.clone())
                 .add("outcome", "rejected");
             Ok(annotate_unauthorized_rejection(outcome, group))
         }
-        // The pusher was in the group, so the bypass is worth recording in full:
-        // `bypass_blocked_for_agent` is what makes agent bypass attempts
-        // countable, separately from ordinary rejections.
-        BypassDecision::UnauthorizedAgent {
-            reason,
-            group,
-            check,
-        } => {
+        BypassDecision::UnauthorizedAgent { group, .. } => {
             scuba
                 .add("stderr", long_description)
                 .add("errorcode", 1)
                 .add("failed_hooks", 1)
-                .add("bypass_reason", reason.clone())
-                .add("bypass_permission_group", group.clone())
-                .add("bypass_blocked_for_agent", true)
                 .add("outcome", "rejected");
-            if let Some(check) = check {
-                scuba
-                    .add("bypass_identity_source", check.source.as_str())
-                    .add("bypass_identities_checked", check.identities.clone());
-            }
             Ok(annotate_agent_bypass_rejection(outcome, group))
         }
     }
