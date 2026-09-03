@@ -22,6 +22,7 @@ pub use sql_queries::add_pushrebase_mapping;
 pub use sql_queries::get_prepushrebase_ids;
 pub use sql_queries::get_successor_ids;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PushrebaseMutationMappingEntry {
     repo_id: RepositoryId,
     predecessor_bcs_id: ChangesetId,
@@ -29,7 +30,7 @@ pub struct PushrebaseMutationMappingEntry {
 }
 
 impl PushrebaseMutationMappingEntry {
-    fn new(
+    pub fn new(
         repo_id: RepositoryId,
         predecessor_bcs_id: ChangesetId,
         successor_bcs_id: ChangesetId,
