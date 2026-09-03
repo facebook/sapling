@@ -311,6 +311,36 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Allow the privhelper to relaunch edenfs when this daemon dies without
+   * announcing a clean shutdown.
+   *
+   * macOS only. Linux gets the same behavior from systemd, and a second
+   * supervisor there would fight the first.
+   */
+  ConfigSetting<bool> restartEdenfsOnCrash{
+      "privhelper:restart-edenfs-on-crash",
+      false,
+      this};
+
+  /**
+   * Maximum number of privhelper-driven restarts allowed within
+   * restartEdenfsWindow. Beyond it edenfs is left down.
+   */
+  ConfigSetting<uint32_t> restartEdenfsMaxCount{
+      "privhelper:restart-edenfs-max-count",
+      3,
+      this};
+
+  /**
+   * Window over which restartEdenfsMaxCount is counted. A window that
+   * elapses without hitting the limit resets the count to zero.
+   */
+  ConfigSetting<std::chrono::nanoseconds> restartEdenfsWindow{
+      "privhelper:restart-edenfs-window",
+      std::chrono::minutes(10),
+      this};
+
+  /**
    * Time offset before shutdown to cancel active requests. This allows
    * requests to complete gracefully before the shutdown timeout is reached.
    * The cancellation happens at (shutdownTimeout -
