@@ -1039,19 +1039,33 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchFeatureFlag': {
-        Internal.fetchFeatureFlag?.(repo.initialConnectionContext, data.name).then(
-          (passes: boolean) => {
+        Promise.resolve(Internal.fetchFeatureFlag?.(repo.initialConnectionContext, data.name)).then(
+          passes => {
             this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
-            this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
+            this.postMessage({
+              type: 'fetchedFeatureFlag',
+              name: data.name,
+              passes: passes ?? false,
+            });
+          },
+          err => {
+            this.logger.error(`failed to fetch feature flag ${data.name}: `, err);
+            this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes: false});
           },
         );
         break;
       }
       case 'bulkFetchFeatureFlags': {
-        Internal.bulkFetchFeatureFlags?.(repo.initialConnectionContext, data.names).then(
-          (result: Record<string, boolean>) => {
+        Promise.resolve(
+          Internal.bulkFetchFeatureFlags?.(repo.initialConnectionContext, data.names),
+        ).then(
+          result => {
             this.logger.info(`feature flags ${JSON.stringify(result, null, 2)}`);
-            this.postMessage({type: 'bulkFetchedFeatureFlags', id: data.id, result});
+            this.postMessage({type: 'bulkFetchedFeatureFlags', id: data.id, result: result ?? {}});
+          },
+          err => {
+            this.logger.error('failed to bulk fetch feature flags: ', err);
+            this.postMessage({type: 'bulkFetchedFeatureFlags', id: data.id, result: {}});
           },
         );
         break;

@@ -56,6 +56,7 @@ export type TrackEventName =
   | 'DiscardOperation'
   | 'DiagnosticsConfirmationOpportunity'
   | 'DiagnosticsConfirmationAction'
+  | 'DiagnosticsCheckSkipped'
   | 'DiffFetchSource'
   | 'EnterMergeConflicts'
   | 'EdenWatcherEvent'

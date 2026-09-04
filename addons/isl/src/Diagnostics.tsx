@@ -15,7 +15,7 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
-import {basename} from 'shared/utils';
+import {basename, timeout} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
 import css from './Diagnostics.module.css';
@@ -32,6 +32,8 @@ export const shouldWarnAboutDiagnosticsAtom = localStorageBackedAtom<boolean>(
   'isl.warn-about-diagnostics',
   true,
 );
+
+const DIAGNOSTICS_TIMEOUT_MS = 10_000;
 
 const hideNonBlockingDiagnosticsAtom = localStorageBackedAtom<boolean>(
   'isl.hide-non-blocking-diagnostics',
@@ -106,13 +108,21 @@ export async function confirmNoBlockingDiagnostics(
       type: 'platform/checkForDiagnostics',
       paths: [...allFiles],
     });
-    const [result, enabled] = await Promise.all([
-      serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true),
-      getFeatureFlag(
-        Internal.featureFlags?.ShowPresubmitDiagnosticsWarning,
-        /* enable this feature in OSS */ true,
-      ),
+    const checked = await Promise.race([
+      Promise.all([
+        serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true),
+        getFeatureFlag(
+          Internal.featureFlags?.ShowPresubmitDiagnosticsWarning,
+          /* enable this feature in OSS */ true,
+        ),
+      ]).catch(() => null),
+      timeout(() => null, DIAGNOSTICS_TIMEOUT_MS),
     ]);
+    if (checked == null) {
+      tracker.track('DiagnosticsCheckSkipped');
+      return true;
+    }
+    const [result, enabled] = checked;
     if (result.diagnostics.size > 0) {
       const allDiagnostics = [...result.diagnostics.values()];
       const allBlockingErrors = allDiagnostics

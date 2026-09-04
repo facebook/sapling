@@ -5,9 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UseUncommittedSelection} from '../partialSelection';
 import type {DiagnosticAllowlist} from '../types';
 
-import {isBlockingDiagnostic} from '../Diagnostics';
+import {confirmNoBlockingDiagnostics, isBlockingDiagnostic} from '../Diagnostics';
+import platform from '../platform';
+import {expectMessageSentToServer, resetTestMessages} from '../testUtils';
 
 const range = {startLine: 1, startCol: 1, endLine: 1, endCol: 1};
 
@@ -173,6 +176,34 @@ describe('Diagnostics', () => {
           policy,
         ),
       ).toBe(false);
+    });
+  });
+
+  describe('confirmNoBlockingDiagnostics', () => {
+    const selection = {
+      isFullyOrPartiallySelected: () => true,
+    } as unknown as UseUncommittedSelection;
+    const originalPlatformName = platform.platformName;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      resetTestMessages();
+      (platform as {platformName: string}).platformName = 'vscode';
+    });
+
+    afterEach(() => {
+      (platform as {platformName: string}).platformName = originalPlatformName;
+      jest.useRealTimers();
+    });
+
+    it('does not block submitting when the diagnostics reply never arrives', async () => {
+      // Deliberately never simulate a 'platform/gotDiagnostics' reply.
+      const result = confirmNoBlockingDiagnostics(selection);
+      await jest.advanceTimersByTimeAsync(60_000);
+
+      // Guards against passing vacuously via an early return before the check.
+      expectMessageSentToServer({type: 'platform/checkForDiagnostics', paths: []});
+      await expect(result).resolves.toBe(true);
     });
   });
 });
