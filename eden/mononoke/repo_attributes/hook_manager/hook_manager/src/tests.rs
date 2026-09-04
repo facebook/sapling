@@ -105,6 +105,39 @@ fn always_rejecting_changeset_hook() -> Box<dyn ChangesetHook> {
     Box::new(FnChangesetHook::new(f))
 }
 
+struct DryRunAwareChangesetHook;
+
+#[async_trait]
+impl ChangesetHook for DryRunAwareChangesetHook {
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
+        &'this self,
+        _ctx: &'ctx CoreContext,
+        _repo: &'repo HookRepo,
+        _bookmark: &BookmarkKey,
+        _changeset: &'cs BonsaiChangeset,
+        _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
+        _maybe_pushvars: Option<&'cs Pushvars>,
+    ) -> Result<HookExecution, Error> {
+        Ok(default_rejection())
+    }
+
+    async fn run_with_purpose<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
+        &'this self,
+        _ctx: &'ctx CoreContext,
+        _repo: &'repo HookRepo,
+        _bookmark: &BookmarkKey,
+        _changeset: &'cs BonsaiChangeset,
+        _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
+        purpose: HookExecutionPurpose,
+        _maybe_pushvars: Option<&'cs Pushvars>,
+    ) -> Result<HookExecution, Error> {
+        assert_eq!(purpose, HookExecutionPurpose::DryRun);
+        Ok(HookExecution::accepted())
+    }
+}
+
 #[derive(Clone, Debug)]
 struct ContentIdMatchingChangesetHook {
     expected_content_ids: HashMap<NonRootMPath, Option<ContentId>>,
@@ -416,6 +449,37 @@ async fn test_changeset_hook_accepted(fb: FacebookInit) {
         "hook1".to_string() => HookExecution::accepted()
     };
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
+}
+
+#[mononoke::fbinit_test]
+async fn test_changeset_hook_receives_execution_purpose(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        Box::new(DryRunAwareChangesetHook),
+        Default::default(),
+        None,
+    );
+    let bookmark = BookmarkKey::new("bm1").unwrap();
+    hook_manager.set_hooks_for_bookmark(bookmark.clone().into(), vec!["hook1".to_string()]);
+
+    let outcomes = hook_manager
+        .run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[default_changeset()],
+            &bookmark,
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+            HookExecutionPurpose::DryRun,
+            None,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(outcomes.len(), 1);
+    assert_eq!(outcomes[0].get_execution(), &HookExecution::accepted());
 }
 
 #[mononoke::fbinit_test]

@@ -527,6 +527,30 @@ pub trait ChangesetHook: Send + Sync {
         maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error>;
 
+    async fn run_with_purpose<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
+        bookmark: &BookmarkKey,
+        changeset: &'cs BonsaiChangeset,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        purpose: HookExecutionPurpose,
+        maybe_pushvars: Option<&'cs Pushvars>,
+    ) -> Result<HookExecution, Error> {
+        let _ = purpose;
+        self.run(
+            ctx,
+            repo,
+            bookmark,
+            changeset,
+            cross_repo_push_source,
+            push_authored_by,
+            maybe_pushvars,
+        )
+        .await
+    }
+
     async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
@@ -535,6 +559,7 @@ pub trait ChangesetHook: Send + Sync {
         changeset: &'cs BonsaiChangeset,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        purpose: HookExecutionPurpose,
         maybe_pushvars: Option<&'cs Pushvars>,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
@@ -542,13 +567,14 @@ pub trait ChangesetHook: Send + Sync {
         bypass: BypassDecision,
     ) -> Result<HookOutcome, Error> {
         let (stats, result) = self
-            .run(
+            .run_with_purpose(
                 ctx,
                 repo,
                 bookmark,
                 changeset,
                 cross_repo_push_source,
                 push_authored_by,
+                purpose,
                 maybe_pushvars,
             )
             .map_ok(|exec| {
@@ -583,6 +609,7 @@ pub trait ChangesetHook: Send + Sync {
         changesets: Vec<&'cs BonsaiChangeset>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        purpose: HookExecutionPurpose,
         maybe_pushvars: Option<&'cs Pushvars>,
         hook_name: &'cs str,
         scuba: MononokeScubaSampleBuilder,
@@ -604,6 +631,7 @@ pub trait ChangesetHook: Send + Sync {
                         cs,
                         cross_repo_push_source,
                         push_authored_by,
+                        purpose,
                         maybe_pushvars,
                         hook_name,
                         scuba.clone(),
