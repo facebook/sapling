@@ -1744,6 +1744,64 @@ TEST(DiffTest, cancelledDiff) {
       UnorderedElementsAre(std::make_pair("a.txt", ScmFileStatus::MODIFIED)));
 }
 
+TEST(DiffTest, cancelledDiffPoisonsStatusCache) {
+  TestMount mount;
+  FakeTreeBuilder current;
+  current.setFile("src/file.txt", "old\n");
+  auto target = current.clone();
+  target.replaceFile("src/file.txt", "new\n");
+  mount.initialize(current);
+  mount.updateEdenConfig({
+      {"experimental:throw-on-cancel", "true"},
+      {"hg:enable-scm-status-cache", "true"},
+  });
+
+  auto* targetRoot = target.finalize(mount.getBackingStore(), false);
+  const auto commitId = mount.nextCommitId();
+  auto* commit = mount.getBackingStore()->putCommit(
+      commitId, targetRoot->get().getObjectId());
+  commit->setReady();
+  targetRoot->setReady();
+  auto* targetSrc = target.getStoredTree("src"_relpath);
+  const auto srcId = targetSrc->get().getObjectId();
+  const auto baseline = mount.getBackingStore()->getAccessCount(srcId);
+
+  folly::CancellationSource cancellation;
+  auto cancelled = diffTask(
+                       mount.getEdenMount(),
+                       mount.getRootInode(),
+                       commitId,
+                       cancellation.getToken(),
+                       false,
+                       false)
+                       .semi()
+                       .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  ASSERT_FALSE(cancelled.isReady());
+  ASSERT_EQ(baseline + 1, mount.getBackingStore()->getAccessCount(srcId));
+
+  cancellation.requestCancellation();
+  targetSrc->setReady();
+  target.setAllReady();
+  mount.drainServerExecutor();
+  ASSERT_TRUE(cancelled.isReady());
+  EXPECT_TRUE(std::move(cancelled).get()->entries()->empty());
+
+  auto retry = diffTask(
+                   mount.getEdenMount(),
+                   mount.getRootInode(),
+                   commitId,
+                   folly::CancellationToken{},
+                   false,
+                   false)
+                   .semi()
+                   .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  ASSERT_TRUE(retry.isReady());
+  // FIXME(T287330084): A cancelled status must not be cached as complete.
+  EXPECT_TRUE(std::move(retry).get()->entries()->empty());
+}
+
 class DiffTestNonMateralized : public ::testing::Test {
  protected:
   void SetUp() override {
