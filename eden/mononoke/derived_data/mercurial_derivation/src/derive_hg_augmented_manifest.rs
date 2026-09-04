@@ -645,7 +645,7 @@ where
             blobstore,
             paths
                 .iter()
-                .filter(|&(_, lookup_path)| (!lookup_path.is_root()))
+                .filter(|&(_, lookup_path)| !lookup_path.is_root())
                 .map(|(_, lookup_path)| manifest::PathOrPrefix::Path(lookup_path.clone())),
         )
         .try_filter_map(|(path, entry)| async move {
