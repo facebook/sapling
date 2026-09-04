@@ -1744,7 +1744,7 @@ TEST(DiffTest, cancelledDiff) {
       UnorderedElementsAre(std::make_pair("a.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST(DiffTest, cancelledDiffPoisonsStatusCache) {
+TEST(DiffTest, cancelledDiffDoesNotPoisonStatusCache) {
   TestMount mount;
   FakeTreeBuilder current;
   current.setFile("src/file.txt", "old\n");
@@ -1798,8 +1798,10 @@ TEST(DiffTest, cancelledDiffPoisonsStatusCache) {
                    .via(mount.getServerExecutor().get());
   mount.drainServerExecutor();
   ASSERT_TRUE(retry.isReady());
-  // FIXME(T287330084): A cancelled status must not be cached as complete.
-  EXPECT_TRUE(std::move(retry).get()->entries()->empty());
+  EXPECT_THAT(
+      *std::move(retry).get()->entries(),
+      UnorderedElementsAre(
+          std::make_pair("src/file.txt", ScmFileStatus::MODIFIED)));
 }
 
 class DiffTestNonMateralized : public ::testing::Test {

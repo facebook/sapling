@@ -2609,6 +2609,15 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
           throw;
         }
 
+        if (ctxPtr->isCancelled()) {
+          promise->setException(folly::OperationCancelled{});
+          {
+            auto lockedCachePtr = scmStatusCache_.wlock();
+            (*lockedCachePtr)->dropPromise(key, curSequenceID);
+          }
+          co_return std::make_unique<ScmStatus>(callback->extractStatus());
+        }
+
         bool shouldInsert = true;
 
         ScmStatus newStatus = callbackPtr->peekStatus();
