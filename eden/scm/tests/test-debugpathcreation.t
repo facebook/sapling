@@ -40,12 +40,63 @@ Follow chained directory renames:
   $ sl -q debugpathcreation foo3/subdir
   75ae72b66962696c45e82d2a43e69188d9930209
 
+  $ echo 1 > foo3/1.txt
+  $ echo 2 > foo3/2.txt
+  $ echo 3 > foo3/3.txt
+  $ echo 4 > foo3/4.txt
+  $ echo 5 > foo3/5.txt
+  $ echo 6 > foo3/6.txt
+  $ echo 7 > foo3/7.txt
+  $ echo 8 > foo3/8.txt
+  $ sl commit -Aqm 'add more files to foo3'
+
+Allow a few new files in a copied directory:
+
+  $ sl copy -q foo3 mixed
+  $ echo new > mixed/new.txt
+  $ sl add -q mixed/new.txt
+  $ sl commit -qm 'copy foo3 and add a file'
+  $ sl -q debugpathcreation mixed
+  75ae72b66962696c45e82d2a43e69188d9930209
+
+Allow copied files to be deleted before committing:
+
+  $ sl copy -q foo3 pruned
+  $ sl forget -q pruned/a.txt
+  $ rm pruned/a.txt
+  $ sl commit -qm 'copy foo3 without one file'
+  $ sl -q debugpathcreation pruned
+  75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation pruned/subdir
+  75ae72b66962696c45e82d2a43e69188d9930209
+
+Do not infer a directory copy when fewer than 90% of destination files map:
+
+  $ sl copy -q foo3 weak-mapping
+  $ sl forget -q weak-mapping/1.txt weak-mapping/2.txt
+  $ echo new1 > weak-mapping/1.txt
+  $ echo new2 > weak-mapping/2.txt
+  $ sl add -q weak-mapping/1.txt weak-mapping/2.txt
+  $ sl commit -qm 'copy foo3 with too many new files'
+  $ sl debugpathcreation weak-mapping
+  f03bffcc5680263863bbbeb1c026f3ebf99287ce
+
+Warn but continue when source and destination sizes differ by more than 10%:
+
+  $ sl copy -q foo3 weak-size
+  $ sl forget -q weak-size/1.txt weak-size/2.txt
+  $ rm weak-size/1.txt weak-size/2.txt
+  $ sl commit -qm 'copy too little of foo3'
+  $ sl -q debugpathcreation weak-size
+  warning: inferred directory copy from 'foo3' to 'weak-size' despite dissimilar file counts (10 source, 8 destination)
+  75ae72b66962696c45e82d2a43e69188d9930209
+
 Follow explicit subtree-copy metadata:
 
   $ sl subtree copy -r "$A" --from-path foo1 --to-path subtree -m 'subtree copy foo1'
   copying foo1 to subtree
   $ sl debugpathcreation subtree
-  tracing backward: 91fb55dfe016 subtree copied 'foo1' to 'subtree'
+  tracing backward: 5fa5d1947ca7 subtree copied 'foo1' to 'subtree'
   75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation subtree/subdir
   75ae72b66962696c45e82d2a43e69188d9930209

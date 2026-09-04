@@ -14,27 +14,37 @@ Enable this extension with::
 from sapling import copies, error, match as matchmod, registrar, scmutil
 from sapling.i18n import _
 from sapling.node import hex, short
-from sapling.utils import pathutil, subtreeutil
+from sapling.utils import subtreeutil
 
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+_MIN_DIRECTORY_SIMILARITY_PERCENT = 90
+
+
+def _counts_are_similar(left, right):
+    return (
+        max(left, right) > 0
+        and min(left, right) * 100
+        >= max(left, right) * _MIN_DIRECTORY_SIMILARITY_PERCENT
+    )
+
+
+def _count_files(ctx, matcher):
+    return ctx.manifest().countfiles(matcher)
+
 
 def _copied_directory(repo, ctx, path):
     ui = repo.ui
-    files = [
-        file
-        for file in ctx.files()
-        if file in ctx and pathutil.path_starts_with(file, path)
-    ]
-    if not files:
-        return None
-
     matcher = matchmod.match(repo.root, "", [f"path:{path}"])
+    destination_count = _count_files(ctx, matcher)
     ui.debug(
-        f"inspecting {path!r} at {short(ctx.node())} ({len(files)} destination files)\n"
+        f"inspecting {path!r} at {short(ctx.node())} "
+        f"({destination_count} destination files)\n"
     )
+    if not destination_count:
+        return None
 
     candidates = []
     for parent in ctx.parents():
@@ -43,30 +53,32 @@ def _copied_directory(repo, ctx, path):
             f"parent {short(parent.node())} provides "
             f"{len(file_copies)} copy mappings under {path!r}\n"
         )
-        source_dir = None
-        for destination in files:
-            source = file_copies.get(destination)
+        source_counts = {}
+        for destination, source in file_copies.items():
             suffix = destination[len(path) :]
-            if (
-                source is None
-                or not suffix.startswith("/")
-                or not source.endswith(suffix)
-            ):
-                source_dir = None
-                break
+            if not suffix.startswith("/") or not source.endswith(suffix):
+                continue
 
-            candidate = source[: -len(suffix)]
-            if not candidate or (source_dir is not None and candidate != source_dir):
-                source_dir = None
-                break
-            source_dir = candidate
+            source_dir = source[: -len(suffix)]
+            if source_dir:
+                source_counts[source_dir] = source_counts.get(source_dir, 0) + 1
 
-        if source_dir is not None:
+        if source_counts:
+            source_dir, copied_count = max(
+                source_counts.items(), key=lambda item: item[1]
+            )
             ui.debug(
                 f"candidate {source_dir!r} maps "
-                f"{len(files)}/{len(files)} destination files\n"
+                f"{copied_count}/{destination_count} destination files\n"
             )
-            candidates.append((parent.node(), source_dir))
+            if not _counts_are_similar(copied_count, destination_count):
+                ui.debug(
+                    f"rejecting {source_dir!r}; copy coverage is below "
+                    f"{_MIN_DIRECTORY_SIMILARITY_PERCENT}%\n"
+                )
+                continue
+
+            candidates.append((parent, source_dir))
 
     if len(candidates) != 1:
         ui.debug(
@@ -75,7 +87,19 @@ def _copied_directory(repo, ctx, path):
         )
         return None
 
-    return candidates[0]
+    source_ctx, source_dir = candidates[0]
+    source_matcher = matchmod.match(repo.root, "", [f"path:{source_dir}"])
+    source_count = _count_files(source_ctx, source_matcher)
+    ui.debug(f"candidate {source_dir!r} contains {source_count} source files\n")
+    if not _counts_are_similar(source_count, destination_count):
+        ui.warn(
+            _(
+                "warning: inferred directory copy from '%s' to '%s' despite "
+                "dissimilar file counts (%d source, %d destination)\n"
+            )
+            % (source_dir, path, source_count, destination_count)
+        )
+    return source_ctx.node(), source_dir
 
 
 def _find_path_creation(repo, head, path):
