@@ -29,6 +29,9 @@ pub enum Error {
     #[error("Expected {} bytes read, but only read {} bytes", .expected, .read)]
     DeEof { expected: usize, read: usize },
 
+    #[error("while deserializing BSER: negative length {}", .len)]
+    DeNegativeLength { len: i64 },
+
     #[error("Invalid magic header: {:?}", .magic)]
     DeInvalidMagic { magic: Vec<u8> },
 
