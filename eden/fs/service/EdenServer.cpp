@@ -90,6 +90,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/notifications/NullNotifier.h"
+#include "eden/fs/privhelper/PinScan.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
@@ -3405,18 +3406,13 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
 
 #ifdef __linux__
 struct PinScanData {
-  folly::F14FastMap<uint64_t, std::vector<uint64_t>> pinsByDev;
+  PinScanReport report;
   folly::F14FastMap<std::string, uint64_t> devByMountPoint;
 };
 
 constexpr auto kPinScanTimeout = std::chrono::seconds{10};
 constexpr auto kPinScanKillTimeout = std::chrono::milliseconds{250};
 constexpr size_t kPinScanMaxOutput = 1024 * 1024;
-// Final line of scan-pins output. Output without it (the binary predates
-// scan-pins, or the child died or was cut short) must not be trusted:
-// treating a truncated pin list as complete would invalidate pinned
-// directories.
-constexpr folly::StringPiece kPinScanTrailer = "done";
 
 /**
  * Run the privhelper's one-shot `scan-pins` mode to discover directories
@@ -3539,31 +3535,16 @@ std::optional<PinScanData> runPinnedInodeScan() {
     return std::nullopt;
   }
 
-  PinScanData data;
-  std::vector<folly::StringPiece> lines;
-  folly::split('\n', output, lines);
-  bool sawTrailer = false;
-  for (auto line : lines) {
-    if (line.empty()) {
-      continue;
-    }
-    if (line == kPinScanTrailer) {
-      sawTrailer = true;
-      break;
-    }
-    uint64_t dev = 0;
-    uint64_t ino = 0;
-    if (!folly::split(' ', line, dev, ino)) {
-      XLOGF(WARN, "malformed pin scan output line: {}", line);
-      return std::nullopt;
-    }
-    data.pinsByDev[dev].push_back(ino);
-  }
-  if (!sawTrailer) {
+  auto report = parsePinScanReport(output);
+  if (!report) {
     XLOG(
-        WARN, "pin scan output is incomplete; skipping directory invalidation");
+        WARN,
+        "pin scan output is malformed or incomplete; "
+        "skipping directory invalidation");
     return std::nullopt;
   }
+  PinScanData data;
+  data.report = std::move(*report);
 
   auto mounts = getAllMounts();
   if (mounts.hasError()) {
@@ -3590,12 +3571,21 @@ PinnedInodeSet buildPinnedInodeSet(EdenMount& mount, const PinScanData* scan) {
     return nullptr;
   }
   auto devIter = scan->devByMountPoint.find(mount.getPath().asString());
-  if (devIter == scan->devByMountPoint.end()) {
+  if (devIter == scan->devByMountPoint.end() ||
+      !scan->report.scannedDevices.count(devIter->second)) {
+    // The scanner applies its own mount table filter, so a mount it did not
+    // cover has unknown pins; a mismatch must fail safe, not read as "no
+    // pins".
+    XLOGF_EVERY_MS(
+        WARN,
+        60'000,
+        "pin scan did not cover mount {}; skipping directory invalidation",
+        mount.getPath());
     return nullptr;
   }
   auto pins = std::make_shared<folly::F14FastSet<InodeNumber>>();
-  auto pinsIter = scan->pinsByDev.find(devIter->second);
-  if (pinsIter != scan->pinsByDev.end()) {
+  auto pinsIter = scan->report.pinsByDevice.find(devIter->second);
+  if (pinsIter != scan->report.pinsByDevice.end()) {
     for (auto ino : pinsIter->second) {
       pins->insert(InodeNumber{ino});
     }

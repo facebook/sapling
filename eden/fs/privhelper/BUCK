@@ -177,11 +177,13 @@ cpp_library(
     srcs = ["PinScan.cpp"],
     headers = ["PinScan.h"],
     deps = [
+        "//eden/common/utils:fsdetect",
         "//eden/fs/utils:mount_info_table",
         "//folly:conv",
         "//folly:string",
     ],
     exported_deps = [
         "//folly:expected",
+        "//folly/container:f14_hash",
     ],
 )

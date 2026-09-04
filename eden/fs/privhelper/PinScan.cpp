@@ -15,6 +15,7 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -23,6 +24,7 @@
 #include <folly/Conv.h>
 #include <folly/String.h>
 
+#include "eden/common/utils/FSDetect.h"
 #include "eden/fs/utils/MountInfoTable.h"
 
 namespace facebook::eden {
@@ -84,7 +86,7 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
       continue;
     }
     for (const char* link : {"cwd", "root"}) {
-      auto path =
+      const auto path =
           folly::to<std::string>(procRoot, "/", entry->d_name, "/", link);
 
       // Following a /proc magic link resolves directly to the process's
@@ -106,7 +108,7 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
         continue;
       }
 
-      uint64_t dev = makedev(stx.stx_dev_major, stx.stx_dev_minor);
+      const uint64_t dev = makedev(stx.stx_dev_major, stx.stx_dev_minor);
       for (auto wanted : devices) {
         if (dev == wanted) {
           pins.insert(PinnedInode{dev, stx.stx_ino});
@@ -124,6 +126,68 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
   return std::vector<PinnedInode>{pins.begin(), pins.end()};
 }
 
+namespace {
+constexpr folly::StringPiece kDoneMarker{"done"};
+} // namespace
+
+std::string formatPinScanReport(const PinScanReport& report) {
+  std::vector<uint64_t> devices{
+      report.scannedDevices.begin(), report.scannedDevices.end()};
+  std::sort(devices.begin(), devices.end());
+  std::vector<uint64_t> pinDevices;
+  for (const auto& [dev, _] : report.pinsByDevice) {
+    pinDevices.push_back(dev);
+  }
+  std::sort(pinDevices.begin(), pinDevices.end());
+
+  std::string out;
+  for (auto dev : devices) {
+    out += folly::to<std::string>("dev ", dev, "\n");
+  }
+  for (auto dev : pinDevices) {
+    for (auto ino : report.pinsByDevice.at(dev)) {
+      out += folly::to<std::string>(dev, " ", ino, "\n");
+    }
+  }
+  out += kDoneMarker.str();
+  out += "\n";
+  return out;
+}
+
+std::optional<PinScanReport> parsePinScanReport(std::string_view output) {
+  PinScanReport report;
+  std::vector<folly::StringPiece> lines;
+  folly::split('\n', output, lines);
+  for (folly::StringPiece line : lines) {
+    if (line.empty()) {
+      continue;
+    }
+    if (line == kDoneMarker) {
+      return report;
+    }
+    folly::StringPiece first;
+    folly::StringPiece second;
+    if (!folly::split(' ', line, first, second)) {
+      return std::nullopt;
+    }
+    if (first == "dev") {
+      auto dev = folly::tryTo<uint64_t>(second);
+      if (!dev) {
+        return std::nullopt;
+      }
+      report.scannedDevices.insert(*dev);
+      continue;
+    }
+    auto dev = folly::tryTo<uint64_t>(first);
+    auto ino = folly::tryTo<uint64_t>(second);
+    if (!dev || !ino) {
+      return std::nullopt;
+    }
+    report.pinsByDevice[*dev].push_back(*ino);
+  }
+  return std::nullopt;
+}
+
 int runScanPinsMode() {
   auto mounts = getAllMounts(
       MountInfoOptions{
@@ -139,9 +203,10 @@ int runScanPinsMode() {
   const uid_t uid = getuid();
   std::vector<uint64_t> devices;
   for (const auto& mount : mounts.value()) {
-    if (mount.fsType != "fuse" || mount.mountSource != kEdenFsMountSource) {
+    if (!is_edenfs_mount(mount.mountSource, mount.fsType)) {
       continue;
     }
+    // Only the caller's own FUSE mounts: NFS mounts carry no user_id option.
     if (parseFuseUserId(mount.mountOptions) != uid) {
       continue;
     }
@@ -156,17 +221,14 @@ int runScanPinsMode() {
         folly::errnoStr(pins.error()).c_str());
     return 1;
   }
+  PinScanReport report;
+  report.scannedDevices.insert(devices.begin(), devices.end());
   for (const auto& pin : pins.value()) {
-    printf(
-        "%llu %llu\n",
-        static_cast<unsigned long long>(pin.dev),
-        static_cast<unsigned long long>(pin.ino));
+    report.pinsByDevice[pin.dev].push_back(pin.ino);
   }
-  // Completion marker: consumers must not trust output without it, since a
-  // killed or crashed scan would otherwise be indistinguishable from a scan
-  // that found few pins.
-  printf("done\n");
-  if (fflush(stdout) != 0) {
+  const auto output = formatPinScanReport(report);
+  if (fwrite(output.data(), 1, output.size(), stdout) != output.size() ||
+      fflush(stdout) != 0) {
     return 1;
   }
   return 0;

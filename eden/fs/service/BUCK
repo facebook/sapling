@@ -371,6 +371,7 @@ cpp_library(
         "//eden/fs/notifications:command_notifier",
         "//eden/fs/notifications:notifier",
         "//eden/fs/notifications:null_notifier",
+        "//eden/fs/privhelper:pin_scan",
         "//eden/fs/privhelper:privhelper",
         "//eden/fs/prjfs:prjfs",
         "//eden/fs/rust/redirect_ffi:redirect-ffi",  # @manual

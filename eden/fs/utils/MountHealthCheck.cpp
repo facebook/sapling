@@ -29,15 +29,6 @@ bool isNotConnectedErrno(int err) {
   return err == ENOTCONN || err == ENXIO;
 }
 
-#ifdef __linux__
-bool isEdenMountInfo(
-    const std::string& mountSource,
-    const std::string& fsType) {
-  return is_edenfs_fs_type(mountSource) || is_edenfs_fs_type(fsType) ||
-      fsType == "fuse.edenfs";
-}
-#endif
-
 std::optional<int> lstatError(const std::string& path) {
   struct stat st{};
   if (lstat(path.c_str(), &st) == 0) {
@@ -91,7 +82,7 @@ std::optional<bool> hasEdenMountInKernelMountTable(
   if (!mountInfo.has_value()) {
     return false;
   }
-  return isEdenMountInfo(mountInfo->mountSource, mountInfo->fsType);
+  return is_edenfs_mount(mountInfo->mountSource, mountInfo->fsType);
 #else
   (void)mountPath;
   return true;

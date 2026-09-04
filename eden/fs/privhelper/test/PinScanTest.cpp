@@ -85,4 +85,29 @@ TEST(PinScanTest, scanProcessPins) {
   EXPECT_EQ(ENOENT, missing.error());
 }
 
+TEST(PinScanTest, reportRoundTrip) {
+  PinScanReport report;
+  report.scannedDevices = {7, 42};
+  report.pinsByDevice[42] = {1, 6654235};
+
+  auto parsed = parsePinScanReport(formatPinScanReport(report));
+  ASSERT_TRUE(parsed.has_value());
+  EXPECT_EQ(report.scannedDevices, parsed->scannedDevices);
+  EXPECT_EQ(report.pinsByDevice, parsed->pinsByDevice);
+}
+
+TEST(PinScanTest, parseRejectsIncompleteOrMalformedReports) {
+  EXPECT_FALSE(parsePinScanReport(""));
+  EXPECT_FALSE(parsePinScanReport("dev 7\n42 1\n"));
+  EXPECT_FALSE(parsePinScanReport("dev 7\n42 one\ndone\n"));
+  EXPECT_FALSE(parsePinScanReport("dev\ndone\n"));
+
+  // A scanner that predates device lines reports pins only. Nothing counts
+  // as covered, so consumers treat every mount's pins as unknown.
+  auto legacy = parsePinScanReport("42 1\ndone\n");
+  ASSERT_TRUE(legacy.has_value());
+  EXPECT_TRUE(legacy->scannedDevices.empty());
+  EXPECT_EQ(1u, legacy->pinsByDevice.count(42));
+}
+
 #endif // __linux__
