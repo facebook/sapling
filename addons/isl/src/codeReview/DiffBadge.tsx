@@ -31,6 +31,7 @@ import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import './DiffBadge.css';
 import css from './DiffBadge.module.css';
+import {submitAsDraft} from './DraftCheckbox';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 
@@ -244,6 +245,7 @@ function ResubmitSyncButton({
 }) {
   const runOperation = useRunOperation();
   const confirmShouldSubmit = useShowConfirmSubmitStack();
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
 
   return (
     <Tooltip
@@ -265,7 +267,7 @@ function ResubmitSyncButton({
           );
         }}>
         <Icon icon="cloud-upload" slot="start" />
-        <T>Submit</T>
+        {shouldSubmitAsDraft ? <T>Submit Draft</T> : <T>Submit</T>}
       </Button>
     </Tooltip>
   );
