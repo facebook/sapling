@@ -503,6 +503,8 @@ impl SourceControlServiceImpl {
         F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
+        ensure_repo_requests_allowed(&repo.name)?;
+
         let repo = self
             .mononoke
             .repo(ctx.clone(), &repo.name)
@@ -721,6 +723,21 @@ impl SourceControlServiceImpl {
             remote_diff_config,
         }
     }
+}
+
+fn ensure_repo_requests_allowed(repo_name: &str) -> Result<(), scs_errors::ServiceError> {
+    if justknobs::eval(
+        "scm/mononoke:scs_reject_repo_requests",
+        None,
+        Some(repo_name),
+    ) {
+        return Err(scs_errors::not_available(format!(
+            "SCS requests to repository '{repo_name}' are disabled"
+        ))
+        .into());
+    }
+
+    Ok(())
 }
 
 /// Configerator path of the runtime-updatable `ClientIdentifierPolicy`, mirrored
@@ -2123,6 +2140,37 @@ mod tests {
                     &["SERVICE_IDENTITY".to_string()]
                 ));
                 assert!(!ctx.nocache_thriftcache());
+            },
+        );
+    }
+
+    #[mononoke::test]
+    fn test_repo_requests_allowed_when_jk_disabled() {
+        with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_reject_repo_requests".to_string() => KnobVal::Bool(false)
+            ]),
+            || {
+                assert!(ensure_repo_requests_allowed("test_repo").is_ok());
+            },
+        );
+    }
+
+    #[mononoke::test]
+    fn test_repo_requests_rejected_when_jk_enabled() {
+        with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_reject_repo_requests".to_string() => KnobVal::Bool(true)
+            ]),
+            || match ensure_repo_requests_allowed("test_repo") {
+                Err(scs_errors::ServiceError::Request(error)) => {
+                    assert_eq!(error.kind, thrift::RequestErrorKind::NOT_AVAILABLE);
+                    assert_eq!(
+                        error.reason,
+                        "SCS requests to repository 'test_repo' are disabled"
+                    );
+                }
+                result => panic!("expected NOT_AVAILABLE request error, got {result:?}"),
             },
         );
     }
