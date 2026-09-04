@@ -134,6 +134,21 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "pin_scan_runner_test",
+    srcs = ["PinScanRunnerTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/service:pin_scan_runner",
+        "//folly:cancellation_token",
+        "//folly:file_util",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_unittest(
     name = "eden_server_test",
     srcs = ["EdenServerTest.cpp"],
     labels = ["autodeps2_generated"],

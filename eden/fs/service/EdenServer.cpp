@@ -39,9 +39,7 @@
 #include <folly/Subprocess.h> // @manual
 #endif
 #ifdef __linux__
-#include <fcntl.h>
 #include <folly/container/F14Map.h>
-#include <poll.h>
 #include <sys/sysmacros.h>
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/utils/MountInfoTable.h"
@@ -95,6 +93,7 @@
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
+#include "eden/fs/service/PinScanRunner.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftStreamStartupStatusSubscriber.h"
@@ -3410,137 +3409,20 @@ struct PinScanData {
   folly::F14FastMap<std::string, uint64_t> devByMountPoint;
 };
 
-constexpr auto kPinScanTimeout = std::chrono::seconds{10};
-constexpr auto kPinScanKillTimeout = std::chrono::milliseconds{250};
-constexpr size_t kPinScanMaxOutput = 1024 * 1024;
-
 /**
- * Run the privhelper's one-shot `scan-pins` mode to discover directories
- * pinned as process cwds/roots on this user's EdenFS mounts. The scan runs
- * as a separate process with a hard deadline: it stats every process's
- * /proc magic links, which in pathological cases can touch unrelated
- * wedged filesystems, and killing an overrunning child must not affect the
- * daemon. Returns std::nullopt if the scan could not be completed, in which
- * case pressure GC must not invalidate any directory entries.
+ * Run the privhelper's pin scan and map this daemon's mounts to the devices
+ * it reports. Returns std::nullopt if the scan could not be completed, in
+ * which case pressure GC must not invalidate any directory entries.
  */
-std::optional<PinScanData> runPinnedInodeScan() {
+std::optional<PinScanData> runPinnedInodeScan(
+    const folly::CancellationToken& cancellationToken) {
   std::string helperPath = FLAGS_privhelper_path;
   if (helperPath.empty()) {
     helperPath =
         (executablePath().dirname() + "edenfs_privhelper"_relpath).asString();
   }
-
-  std::string output;
-  try {
-    SpawnedProcess::Options options;
-    options.pipeStdout();
-    options.nullStdin();
-    SpawnedProcess proc(
-        std::vector<std::string>{helperPath, "--scan-pins"},
-        std::move(options));
-    // SpawnedProcess aborts the daemon if destroyed before being waited on,
-    // which unwinding to the catch below would otherwise do.
-    SCOPE_FAIL {
-      proc.terminateOrKill(kPinScanKillTimeout);
-    };
-    auto out = proc.stdoutFd();
-    int flags = fcntl(out.fd(), F_GETFL);
-    folly::checkUnixError(
-        fcntl(out.fd(), F_SETFL, flags | O_NONBLOCK), "fcntl");
-
-    auto deadline = std::chrono::steady_clock::now() + kPinScanTimeout;
-    bool eof = false;
-    while (!eof) {
-      auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
-          deadline - std::chrono::steady_clock::now());
-      if (remaining.count() <= 0) {
-        proc.terminateOrKill(kPinScanKillTimeout);
-        XLOG(WARN, "pin scan timed out; skipping directory invalidation");
-        return std::nullopt;
-      }
-      struct pollfd pfd{out.fd(), POLLIN, 0};
-      int pollResult = ::poll(&pfd, 1, static_cast<int>(remaining.count()));
-      if (pollResult < 0 && errno != EINTR) {
-        auto err = errno;
-        proc.terminateOrKill(kPinScanKillTimeout);
-        XLOGF(
-            WARN,
-            "pin scan poll failed: {}; skipping directory invalidation",
-            folly::errnoStr(err));
-        return std::nullopt;
-      }
-      if (pollResult <= 0) {
-        continue;
-      }
-      while (true) {
-        char buf[4096];
-        auto n = ::read(out.fd(), buf, sizeof(buf));
-        if (n > 0) {
-          output.append(buf, n);
-          if (output.size() > kPinScanMaxOutput) {
-            proc.terminateOrKill(kPinScanKillTimeout);
-            XLOG(WARN, "pin scan produced unreasonably large output");
-            return std::nullopt;
-          }
-          continue;
-        }
-        if (n == 0) {
-          eof = true;
-          break;
-        }
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          break;
-        }
-        if (errno == EINTR) {
-          continue;
-        }
-        auto err = errno;
-        proc.terminateOrKill(kPinScanKillTimeout);
-        XLOGF(
-            WARN,
-            "pin scan read failed: {}; skipping directory invalidation",
-            folly::errnoStr(err));
-        return std::nullopt;
-      }
-    }
-
-    // The exit-status wait shares the read loop's deadline so the whole scan
-    // is bounded by kPinScanTimeout.
-    auto status = proc.waitOrTerminateOrKill(
-        std::max(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                deadline - std::chrono::steady_clock::now()),
-            std::chrono::milliseconds{0}),
-        kPinScanKillTimeout);
-    if (status.state() != ProcessStatus::Exited || status.exitStatus() != 0) {
-      // A persistent failure mode is a privhelper binary that predates
-      // --scan-pins, which rejects the flag and exits 1 every attempt, so
-      // rate-limit the warning.
-      XLOGF_EVERY_MS(
-          WARN,
-          60'000,
-          "pin scan ({} --scan-pins) failed: {}; "
-          "skipping directory invalidation",
-          helperPath,
-          status.str());
-      return std::nullopt;
-    }
-  } catch (const std::exception& ex) {
-    XLOGF(
-        WARN,
-        "unable to run pin scan ({} --scan-pins): {}; "
-        "skipping directory invalidation",
-        helperPath,
-        folly::exceptionStr(ex));
-    return std::nullopt;
-  }
-
-  auto report = parsePinScanReport(output);
+  auto report = runPinScan(helperPath, cancellationToken);
   if (!report) {
-    XLOG(
-        WARN,
-        "pin scan output is malformed or incomplete; "
-        "skipping directory invalidation");
     return std::nullopt;
   }
   PinScanData data;
@@ -3620,7 +3502,10 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
       serverState_->getReloadableConfig()
           ->getEdenConfig()
           ->pressureBasedGcScanPins.getValue()) {
-    auto scan = runPinnedInodeScan();
+    auto scan = runPinnedInodeScan(
+        folly::cancellation_token_merge(
+            gcCancelSource_.rlock()->getToken(),
+            lease->getCancellationToken()));
     pinnedInodes = buildPinnedInodeSet(mount, scan ? &scan.value() : nullptr);
   }
 #endif
@@ -3776,7 +3661,7 @@ void EdenServer::garbageCollectAllMounts() {
                 dueMount.mountHandle.getEdenMount().getFuseChannel() != nullptr;
           }
           if (anyFuseMount) {
-            scan = runPinnedInodeScan();
+            scan = runPinnedInodeScan(shutdownToken);
           }
         }
 #endif

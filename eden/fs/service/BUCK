@@ -236,6 +236,23 @@ cpp_library(
 )
 
 cpp_library(
+    name = "pin_scan_runner",
+    srcs = ["PinScanRunner.cpp"],
+    headers = ["PinScanRunner.h"],
+    deps = [
+        "//eden/common/utils:process",
+        "//folly:exception",
+        "//folly:scope_guard",
+        "//folly:string",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/privhelper:pin_scan",
+        "//folly:cancellation_token",
+    ],
+)
+
+cpp_library(
     name = "startup_logger",
     srcs = [
         "StartupLogger.cpp",
@@ -371,6 +388,7 @@ cpp_library(
         "//eden/fs/notifications:command_notifier",
         "//eden/fs/notifications:notifier",
         "//eden/fs/notifications:null_notifier",
+        ":pin_scan_runner",
         "//eden/fs/privhelper:pin_scan",
         "//eden/fs/privhelper:privhelper",
         "//eden/fs/prjfs:prjfs",
