@@ -76,6 +76,24 @@ impl PushAuthoredBy {
     }
 }
 
+/// Why hooks are being executed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HookExecutionPurpose {
+    /// Hook outcomes gate a bookmark movement.
+    LandAttempt,
+    /// Hook outcomes are returned for inspection without moving a bookmark.
+    DryRun,
+}
+
+impl HookExecutionPurpose {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::LandAttempt => "land_attempt",
+            Self::DryRun => "dry_run",
+        }
+    }
+}
+
 /// The origin of the changeset.
 ///
 /// In the push-redirection scenario the changeset is initially pushed to a

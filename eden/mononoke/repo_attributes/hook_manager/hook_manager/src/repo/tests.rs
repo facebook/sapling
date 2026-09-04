@@ -50,6 +50,7 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileChangeType;
 use crate::HookExecution;
+use crate::HookExecutionPurpose;
 use crate::HookManager;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
@@ -386,6 +387,7 @@ async fn run_changeset_hooks_with_mgr(
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
+            HookExecutionPurpose::LandAttempt,
             None,
         )
         .await

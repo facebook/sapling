@@ -15,6 +15,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
+use hooks::HookExecutionPurpose;
 use hooks::HookManager;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
@@ -231,6 +232,7 @@ pub async fn run_changeset_hooks(
             pushvars,
             cross_repo_push_source,
             push_authored_by,
+            HookExecutionPurpose::LandAttempt,
             None,
         )
         .timed()

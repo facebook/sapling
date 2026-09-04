@@ -57,6 +57,7 @@ use crate::CheckedBypassIdentities;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
+use crate::HookExecutionPurpose;
 use crate::HookOutcome;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
@@ -680,6 +681,10 @@ impl HookManager {
         if let Some(cri) = ctx.metadata().client_request_info() {
             scuba.add_client_request_info(cri);
         }
+        scuba.add(
+            "originating_purpose",
+            HookExecutionPurpose::LandAttempt.as_str(),
+        );
 
         for hook_name in hooks {
             let hook = self
@@ -735,6 +740,7 @@ impl HookManager {
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        purpose: HookExecutionPurpose,
         // When the hooks are being run as a different set of identities than the
         // caller's (e.g. `commit_run_hooks` with `run_as`), this holds the
         // caller's real identities for audit logging. `None` for real pushes.
@@ -754,6 +760,7 @@ impl HookManager {
         if let Some(cri) = ctx.metadata().client_request_info() {
             scuba.add_client_request_info(cri);
         }
+        scuba.add("originating_purpose", purpose.as_str());
 
         if let Some(user) = user_option {
             scuba.add("user", user);

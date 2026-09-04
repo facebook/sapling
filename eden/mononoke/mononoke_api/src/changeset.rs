@@ -56,6 +56,7 @@ use futures_lazy_shared::LazyShared;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
 use hooks::CrossRepoPushSource;
+use hooks::HookExecutionPurpose;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
 use itertools::Itertools;
@@ -2155,6 +2156,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
+                HookExecutionPurpose::DryRun,
                 run_as_original_identities.as_ref(),
             )
             .await?)

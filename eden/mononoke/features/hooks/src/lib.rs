@@ -21,6 +21,7 @@ pub use hook_manager::ChangesetHook;
 pub use hook_manager::CrossRepoPushSource;
 pub use hook_manager::FileHook;
 pub use hook_manager::HookExecution;
+pub use hook_manager::HookExecutionPurpose;
 pub use hook_manager::HookManager;
 pub use hook_manager::HookManagerError;
 pub use hook_manager::HookOutcome;
