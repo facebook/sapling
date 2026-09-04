@@ -10,9 +10,13 @@
 #include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <memory>
 #include <system_error>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/RestrictedContentMode.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -22,6 +26,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -75,6 +80,28 @@ TreeInodePtr makeTreeInodeChildWithoutParentEntry(
       std::nullopt);
   testMount.getEdenMount()->getInodeMap()->inodeCreated(inode);
   return inode;
+}
+
+// Shared setup for the omittedMode_* tests: a parent directory with one
+// normal child and one restricted child, mounted with
+// acl:restricted-content-mode = omitted. The mode is snapshotted by the
+// mount's ObjectStore at construction, so it must be set on the EdenConfig
+// before construction rather than via updateEdenConfig().
+std::unique_ptr<TestMount> makeOmittedModeTestMount() {
+  FakeTreeBuilder builder;
+  builder.setFile("parent/normal.txt", "normal content");
+  builder.setFile("parent/restricted_child/secret.txt", "secret content");
+  builder.setDirIsRestricted("parent/restricted_child");
+  return std::make_unique<TestMount>(
+      builder,
+      /*startReady=*/true,
+      /*enableActivityBuffer=*/true,
+      kPathMapDefaultCaseSensitive,
+      /*errorLogger=*/nullptr,
+      [](EdenConfig& config) {
+        config.restrictedContentMode.setValue(
+            RestrictedContentMode::Omitted, ConfigSourceType::CommandLine);
+      });
 }
 } // namespace
 
@@ -906,4 +933,135 @@ CO_TEST(RestrictedTreeInode, getChildren_restrictedThrowsEACCES) {
   auto* err = result.tryGetExceptionObject<std::system_error>();
   CO_ASSERT_NE(err, nullptr);
   EXPECT_EQ(err->code().value(), EACCES);
+}
+
+// ============================================================================
+// acl:restricted-content-mode = omitted
+//
+// These tests pin the CURRENT behavior under omitted mode: restricted ACL
+// roots still appear in enumeration. The FIXME assertions are flipped by the
+// diff that implements omission.
+// ============================================================================
+
+TEST(RestrictedTreeInode, omittedMode_objectStoreSnapshotsMode) {
+  auto testMount = makeOmittedModeTestMount();
+
+  EXPECT_EQ(
+      RestrictedContentMode::Omitted,
+      testMount->getEdenMount()->getObjectStore()->getRestrictedContentMode());
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    omittedMode_getChildrenStillIncludesRestrictedChild) {
+  auto testMount = makeOmittedModeTestMount();
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto children =
+      co_await parentInode->getChildren(context, /*loadInodes=*/false);
+
+  auto iter =
+      std::find_if(children.begin(), children.end(), [](const auto& entry) {
+        return entry.first == "restricted_child"_pc;
+      });
+  // FIXME: omitted mode should omit restricted roots from child enumeration;
+  // they are currently still returned. The next diff implements omission and
+  // flips this assertion.
+  EXPECT_NE(iter, children.end());
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    omittedMode_coGetChildrenStillIncludesRestrictedChild) {
+  auto testMount = makeOmittedModeTestMount();
+
+  auto edenMount = testMount->getEdenMount();
+  auto vi = testMount->getVirtualInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto results = co_await vi.getChildren(
+      "parent"_relpath, edenMount->getObjectStore(), context);
+  bool sawRestrictedChild = false;
+  for (auto& [name, tryVi] : results) {
+    if (name == "restricted_child"_pc) {
+      sawRestrictedChild = true;
+    }
+  }
+  // FIXME: omitted mode should hide restricted roots from
+  // VirtualInode::getChildren; they are currently still listed. The next
+  // diff implements omission and flips this assertion.
+  EXPECT_TRUE(sawRestrictedChild);
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    omittedMode_coGetChildrenAttributesStillIncludesRestrictedChild) {
+  auto testMount = makeOmittedModeTestMount();
+
+  auto edenMount = testMount->getEdenMount();
+  auto vi = testMount->getVirtualInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto attrs = ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE;
+
+  auto results = co_await vi.co_getChildrenAttributes(
+      attrs,
+      RelativePath{"parent"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      context);
+  bool sawRestrictedChild = false;
+  for (auto& [name, tryAttrs] : results) {
+    if (name == "restricted_child"_pc) {
+      sawRestrictedChild = true;
+    }
+  }
+  // FIXME: omitted mode should hide restricted roots from
+  // co_getChildrenAttributes; they are currently still listed. The next diff
+  // implements omission and flips this assertion.
+  EXPECT_TRUE(sawRestrictedChild);
+}
+
+#ifndef _WIN32
+TEST(RestrictedTreeInode, omittedMode_fuseReaddirStillListsRestrictedChild) {
+  auto testMount = makeOmittedModeTestMount();
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto result =
+      parentInode
+          ->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+
+  auto iter = std::find_if(result.begin(), result.end(), [](const auto& entry) {
+    return entry.name == "restricted_child";
+  });
+  // FIXME: omitted mode should hide restricted roots from readdir; they are
+  // currently still listed. The next diff implements omission and flips this
+  // assertion.
+  EXPECT_NE(iter, result.end());
+}
+#endif
+
+TEST(RestrictedTreeInode, omittedMode_explicitLookupStillReturnsEACCES) {
+  // Regression guard for the omission diff: omitted mode must only affect
+  // enumeration. Explicit lookup by name still resolves the restricted child,
+  // and reading its contents still fails with EACCES.
+  auto testMount = makeOmittedModeTestMount();
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto child =
+      parentInode
+          ->getOrFindChild("restricted_child"_pc, context, /*loadInodes=*/false)
+          .get();
+  EXPECT_TRUE(child.isRestricted());
+
+  auto restrictedInode =
+      testMount->getTreeInode("parent/restricted_child"_relpath);
+  testMount->getBackingStore()->setCheckPermissionResult(
+      restrictedInode->getObjectId().value(), false);
+  expectEacces([&] {
+    restrictedInode->getOrFindChild("secret.txt"_pc, context, false).get();
+  });
 }

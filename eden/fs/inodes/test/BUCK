@@ -771,10 +771,13 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:case_sensitivity",
+        "//eden/fs/config:config",
+        "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
+        "//eden/fs/store:store",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
         "//folly/coro:gtest_helpers",

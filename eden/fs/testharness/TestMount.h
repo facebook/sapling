@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/executors/ManualExecutor.h>
 #include <sys/stat.h>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -84,11 +85,16 @@ class TestMount {
    * might fail with the ActivityBuffer enabled (i.e. InodePtr because inode
    * reference counts might be inaccurate if paths to store in the
    * ActivityBuffer are calculated concurrently), so we must turn it off then.
+   *
+   * configureEdenConfig is applied to the EdenConfig before ServerState and
+   * the mount's ObjectStore are constructed (and to replacement test configs),
+   * so construction-time config snapshots see its values.
    */
   TestMount(
       bool enableActivityBuffer = true,
       CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive,
-      std::shared_ptr<ErrorLogger> errorLogger = nullptr);
+      std::shared_ptr<ErrorLogger> errorLogger = nullptr,
+      std::function<void(EdenConfig&)> configureEdenConfig = {});
 
   /**
    * Create a new TestMount
@@ -113,7 +119,8 @@ class TestMount {
       bool startReady = true,
       bool enableActivityBuffer = true,
       CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive,
-      std::shared_ptr<ErrorLogger> errorLogger = nullptr);
+      std::shared_ptr<ErrorLogger> errorLogger = nullptr,
+      std::function<void(EdenConfig&)> configureEdenConfig = {});
   explicit TestMount(
       FakeTreeBuilder&& rootBuilder,
       bool enableActivityBuffer = true,
@@ -425,6 +432,7 @@ class TestMount {
   std::shared_ptr<TreeCache> treeCache_;
   std::shared_ptr<TestConfigSource> testConfigSource_;
   std::shared_ptr<EdenConfig> edenConfig_;
+  std::function<void(EdenConfig&)> configureEdenConfig_;
 
   /*
    * config_ is only set before edenMount_ has been initialized.

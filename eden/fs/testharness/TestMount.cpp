@@ -83,8 +83,10 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 TestMount::TestMount(
     bool enableActivityBuffer,
     CaseSensitivity caseSensitivity,
-    std::shared_ptr<ErrorLogger> errorLogger)
-    : errorLogger_{std::move(errorLogger)},
+    std::shared_ptr<ErrorLogger> errorLogger,
+    std::function<void(EdenConfig&)> configureEdenConfig)
+    : configureEdenConfig_{std::move(configureEdenConfig)},
+      errorLogger_{std::move(errorLogger)},
       privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
@@ -105,6 +107,10 @@ TestMount::TestMount(
   // By default, we should not allocate an NFS server (including mountd and
   // rpcbindd) on an EventBase in unit tests.
   edenConfig_->enableNfsServer.setValue(false, ConfigSourceType::Default, true);
+
+  if (configureEdenConfig_) {
+    configureEdenConfig_(*edenConfig_);
+  }
 
   auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig_);
 
@@ -146,10 +152,20 @@ TestMount::TestMount(
     bool startReady,
     bool enableActivityBuffer,
     CaseSensitivity caseSensitivity,
-    std::shared_ptr<ErrorLogger> errorLogger)
-    : TestMount(enableActivityBuffer, caseSensitivity, std::move(errorLogger)) {
-  // Create treeCache
+    std::shared_ptr<ErrorLogger> errorLogger,
+    std::function<void(EdenConfig&)> configureEdenConfig)
+    : TestMount(
+          enableActivityBuffer,
+          caseSensitivity,
+          std::move(errorLogger),
+          std::move(configureEdenConfig)) {
+  // Create treeCache. Reapply the mutator so an ObjectStore built from this
+  // replacement config (remount) snapshots the same values as the initial one
+  // (other base-ctor tweaks, e.g. enableNfsServer, are not re-applied).
   edenConfig_ = EdenConfig::createTestEdenConfig();
+  if (configureEdenConfig_) {
+    configureEdenConfig_(*edenConfig_);
+  }
 
   auto edenConfig = std::make_shared<ReloadableConfig>(edenConfig_);
   treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
