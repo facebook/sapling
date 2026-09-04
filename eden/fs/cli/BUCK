@@ -2,6 +2,7 @@ load("@fbcode//eden:defs.bzl", "get_dev_edenfsctl_env", "get_oss_suffix")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode_mode_win")
 
 oncall("scm_client_infra")
 
@@ -58,6 +59,7 @@ python_binary(
     imports_monitor = "log_time:0.0005%",
     lazy_imports_strategy = "lifeguard",
     main_function = "eden.fs.cli.main.zipapp_main",
+    package_style = "outplace" if is_fbcode_mode_win() else None,
     deps = [
         ":main_lib",
     ],
