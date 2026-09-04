@@ -696,6 +696,92 @@ async fn rebase_stack_onto_rejects_non_ancestor_root(fb: FacebookInit) -> Result
 }
 
 #[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_lands_an_orphaned_root(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    // The shape MRL hits: the author's stack sits on `orphan`, which an earlier
+    // land rewrote into `landed`. `orphan` is a sibling of `landed`, not an
+    // ancestor, so it cannot bound the server range -- but it still bounds the
+    // client stack and is still what the stack must be re-parented off.
+    // `orphan` and `landed` carry the same change but hang off different
+    // parents, which is what makes them distinct bonsais -- the same shape seen
+    // in production, where the pre-rebase and landed forms of one commit
+    // differed only in parent.
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("base", "base")
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("server_early", "early")
+        .commit()
+        .await?;
+    let orphan = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("shared", "v1")
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(&ctx, &repo, vec![server])
+        .add_file("shared", "v1")
+        .commit()
+        .await?;
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .add_file("server_file", "server")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("author_file", "author")
+        .commit()
+        .await?;
+    assert_ne!(orphan, landed, "the two forms must be distinct changesets");
+
+    // Plain rebase_stack_onto cannot express this: orphan does not precede onto.
+    let err = rebase_stack_onto(&ctx, &repo, &stack_rebase_flags(), orphan, head, onto)
+        .await
+        .expect_err("an orphaned root should be rejected without a conflict base");
+    assert!(
+        err.to_string().contains("must be an ancestor"),
+        "unexpected error: {err}"
+    );
+
+    // With the rewritten form as the conflict base it lands.
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        landed,
+        head,
+        onto,
+    )
+    .await?;
+
+    // Only the author's own commit is replayed -- the orphan's content is
+    // already on the branch as `landed` and must not be applied twice.
+    assert_eq!(
+        rebased.rebased_changesets.len(),
+        1,
+        "only the commits between orphan and head should be rebased",
+    );
+    assert_eq!(rebased.rebased_changesets[0].id_old, head);
+
+    let new_head = rebased
+        .rebased_bonsais
+        .iter()
+        .find(|bcs| bcs.get_changeset_id() == rebased.new_head)
+        .expect("the new head must be among the rebased bonsais");
+    assert_eq!(
+        new_head.parents().collect::<Vec<_>>(),
+        vec![onto],
+        "the rebased stack must sit directly on onto",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 async fn rebase_stack_onto_remaps_copy_info(fb: FacebookInit) -> Result<(), Error> {
     init_just_knobs_for_test();
     let ctx = CoreContext::test_mock(fb);

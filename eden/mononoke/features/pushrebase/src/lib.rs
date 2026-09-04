@@ -425,6 +425,26 @@ pub async fn rebase_stack_onto(
     head: ChangesetId,
     onto: ChangesetId,
 ) -> Result<RebasedStack, PushrebaseError> {
+    rebase_stack_onto_with_conflict_base(ctx, repo, config, root, root, head, onto).await
+}
+
+/// `rebase_stack_onto` where the server-side range is measured from
+/// `conflict_base` instead of `root`.
+///
+/// They differ only when `root` was itself rewritten by an earlier land: the
+/// author's stack still descends from `root`, so it stays the range base and
+/// the re-parent source, but `root` is no longer on the branch and cannot
+/// bound the server range. `conflict_base` is its rewritten form, which is.
+/// Pass `root` for both to get the ordinary behaviour.
+pub async fn rebase_stack_onto_with_conflict_base(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    root: ChangesetId,
+    conflict_base: ChangesetId,
+    head: ChangesetId,
+    onto: ChangesetId,
+) -> Result<RebasedStack, PushrebaseError> {
     if config.rewritedates {
         return Err(PushrebaseError::Error(anyhow!(
             "rebase_stack_onto requires rewritedates to be off: date stamping \
@@ -432,9 +452,11 @@ pub async fn rebase_stack_onto(
         )));
     }
 
-    let (root_is_ancestor_of_head, root_is_ancestor_of_onto) = try_join(
+    // The server range is bounded by conflict_base, so that is what must
+    // precede onto; root only has to bound the client stack.
+    let (root_is_ancestor_of_head, base_is_ancestor_of_onto) = try_join(
         repo.commit_graph().is_ancestor(ctx, root, head),
-        repo.commit_graph().is_ancestor(ctx, root, onto),
+        repo.commit_graph().is_ancestor(ctx, conflict_base, onto),
     )
     .await
     .map_err(PushrebaseError::Error)?;
@@ -443,10 +465,11 @@ pub async fn rebase_stack_onto(
             "rebase_stack_onto: root {root} must be an ancestor of head {head}, but is not"
         )));
     }
-    if !root_is_ancestor_of_onto {
+    if !base_is_ancestor_of_onto {
         return Err(PushrebaseError::Error(anyhow!(
-            "rebase_stack_onto: root {root} must be an ancestor of onto {onto}, but is not \
-             (was the destination force-moved off the shared history?)"
+            "rebase_stack_onto: conflict base {conflict_base} must be an ancestor of \
+             onto {onto}, but is not (was the destination force-moved off the shared \
+             history?)"
         )));
     }
 
@@ -478,7 +501,7 @@ pub async fn rebase_stack_onto(
         repo,
         config,
         root,
-        root,
+        conflict_base,
         onto,
         &client_bcs,
         &client_cf,
