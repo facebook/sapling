@@ -1318,17 +1318,23 @@ def rebase(ui, repo, templ=None, **opts):
         or opts.get("quit")
     ):
         # 'hg rebase' w/o args should do nothing
-        if not opts.get("dest"):
+        dests = opts.get("dest")
+        if not dests:
             raise error.Abort("you must specify a destination (-d) for the rebase")
+
+        if not isinstance(dests, list):
+            dests = [dests]
+        for dest in dests:
+            bookmarks.checkagentpreferredtarget(repo, dest)
 
         # 'hg rebase' can fast-forward bookmark
         prev = repo["."]
+        dests = opts.get("dest")
 
         # Only fast-forward the bookmark if no source nodes were explicitly
         # specified.
         if not (opts.get("base") or opts.get("source") or opts.get("rev")):
-            dests = opts.get("dest")
-            if dests and len(dests) == 1 and dests[0] != prev:
+            if len(dests) == 1 and dests[0] != prev:
                 dest = scmutil.revsingle(repo, dests[0])
                 common = dest.ancestor(prev)
                 if prev == common and dest != prev:

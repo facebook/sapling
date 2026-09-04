@@ -1283,6 +1283,35 @@ def mainbookmark(repo):
         return names[0]
 
 
+def checkagentpreferredtarget(repo, target):
+    preferred = repo.ui.config("experimental", "preferred-target")
+    if not target or not preferred or not repo.ui.agent() or repo.ui.plain():
+        return
+
+    main = mainbookmark(repo)
+    hoist = repo.ui.config("remotenames", "hoist")
+    target_is_main = target == main or (bool(hoist) and target == f"{hoist}/{main}")
+    # Only reject the main bookmark name, not hashes or revsets that happen to
+    # resolve to the same commit as main.
+    if preferred == main or not target_is_main:
+        return
+
+    repo.ui.log(
+        "preferred_target",
+        preferred_target=preferred,
+        requested_bookmark=target,
+    )
+    raise error.Abort(
+        _(
+            "use '%s' for faster builds, or retry with "
+            "'--config experimental.preferred-target=' to allow '%s'"
+        )
+        % (preferred, target),
+        hint=_("'%s' follows '%s' closely, so is normally a safe substitute")
+        % (preferred, main),
+    )
+
+
 def selectivepullinitbookmarknames(repo):
     """Returns set of initial remote bookmarks names"""
     if "emergencychangelog" in repo.storerequirements:

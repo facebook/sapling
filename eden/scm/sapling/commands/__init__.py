@@ -6232,6 +6232,9 @@ def update(
             ),
         )
 
+    if not opts.get("continue"):
+        bookmarks.checkagentpreferredtarget(repo, rev)
+
     # Suggest `hg prev` as an alternative to 'hg update .^'.
     # internal config: ui.suggesthgprev
     if node == ".^" and ui.configbool("ui", "suggesthgprev", False):
@@ -6250,8 +6253,8 @@ def update(
         else:
             abort_or_reset_mergestate()
 
-        # Either we consumed this with "--continue" or we ignoring it with a
-        # different destination.
+        # Either we consumed this with "--continue" or are replacing it with
+        # a different destination.
         repo.localvfs.tryunlink("updatestate")
 
         cmdutil.checkunfinished(repo, op="goto_clean" if clean else None)

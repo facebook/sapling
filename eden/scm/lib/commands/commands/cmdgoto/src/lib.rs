@@ -75,6 +75,14 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
         fallback!("checkout.use-rust is False");
     }
 
+    if repo
+        .config()
+        .get_nonempty("experimental", "preferred-target")
+        .is_some()
+    {
+        fallback!("preferred-target enforcement uses Python checkout");
+    }
+
     if repo.config().get("commands", "update.check").as_deref() == Some("none") {
         // This is equivalent to --merge, which we don't support.
         tracing::debug!(target: "checkout_info", checkout_detail="update.check");
