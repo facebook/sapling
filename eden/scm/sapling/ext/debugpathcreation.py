@@ -14,7 +14,7 @@ Enable this extension with::
 from sapling import copies, error, match as matchmod, registrar, scmutil
 from sapling.i18n import _
 from sapling.node import hex, short
-from sapling.utils import pathutil
+from sapling.utils import pathutil, subtreeutil
 
 
 cmdtable = {}
@@ -82,7 +82,10 @@ def _find_path_creation(repo, head, path):
     dag = repo.changelog.dag
     while creation := repo.pathcreation(path, dag.ancestors([head])):
         creation_ctx = repo[creation]
-        source = _copied_directory(repo, creation_ctx, path)
+        source = subtreeutil.find_subtree_copy(repo, creation, path)
+        is_subtree_copy = source is not None
+        if source is None:
+            source = _copied_directory(repo, creation_ctx, path)
         if source is None:
             repo.ui.debug(
                 f"no copy source found; {short(creation_ctx.node())} is the origin\n"
@@ -91,10 +94,12 @@ def _find_path_creation(repo, head, path):
 
         source_commit, source_path = source
         source_ctx = repo[source_commit]
-        repo.ui.status_err(
-            _("tracing backward: %s copied '%s' to '%s'\n")
-            % (short(creation_ctx.node()), source_path, path)
+        message = (
+            _("tracing backward: %s subtree copied '%s' to '%s'\n")
+            if is_subtree_copy
+            else _("tracing backward: %s copied '%s' to '%s'\n")
         )
+        repo.ui.status_err(message % (short(creation_ctx.node()), source_path, path))
         head, path = source_ctx.node(), source_path
 
     raise error.Abort(

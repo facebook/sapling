@@ -4,12 +4,15 @@
 # GNU General Public License version 2 or any later version.
 
   $ enable debugpathcreation
+  $ setconfig subtree.allow-any-source-commit=true
+  $ setconfig subtree.min-path-depth=1
   $ newclientrepo
 
   $ mkdir -p foo1/subdir
   $ echo aaa > foo1/a.txt
   $ echo bbb > foo1/subdir/b.txt
   $ sl commit -Aqm 'add foo1'
+  $ A=$(sl log -r . -T '{node}')
 
 Later changes do not affect the directory's origin:
 
@@ -35,6 +38,16 @@ Follow chained directory renames:
   $ sl -q debugpathcreation foo3
   75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation foo3/subdir
+  75ae72b66962696c45e82d2a43e69188d9930209
+
+Follow explicit subtree-copy metadata:
+
+  $ sl subtree copy -r "$A" --from-path foo1 --to-path subtree -m 'subtree copy foo1'
+  copying foo1 to subtree
+  $ sl debugpathcreation subtree
+  tracing backward: 91fb55dfe016 subtree copied 'foo1' to 'subtree'
+  75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation subtree/subdir
   75ae72b66962696c45e82d2a43e69188d9930209
 
 Reject paths that are not tracked directories:
