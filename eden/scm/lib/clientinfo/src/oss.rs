@@ -52,6 +52,10 @@ impl FbClientInfo {
         None
     }
 
+    pub fn atlas_purpose(&self) -> Option<&str> {
+        None
+    }
+
     pub fn atlas_env_id(&self) -> Option<&str> {
         None
     }

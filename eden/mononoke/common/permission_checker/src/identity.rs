@@ -267,6 +267,7 @@ pub struct TenantInfo {
     pub ci_purpose: Option<String>,
     pub atlas_env_id: Option<String>,
     pub atlas_rl: Option<bool>,
+    pub atlas_purpose: Option<String>,
     pub faas_job_name: Option<String>,
 }
 
@@ -323,6 +324,7 @@ mod tests {
             ci_purpose: Some("continuous".to_string()),
             atlas_env_id: None,
             atlas_rl: None,
+            atlas_purpose: None,
             faas_job_name: None,
         };
         // Sandcastle's subcategory is its ci_purpose.

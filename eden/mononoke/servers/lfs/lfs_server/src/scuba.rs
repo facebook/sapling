@@ -68,6 +68,7 @@ pub enum LfsScubaKey {
     ClientAtlas,
     ClientAtlasEnvId,
     ClientAtlasRl,
+    ClientAtlasPurpose,
     ClientFaasJobName,
     /// Fetch cause
     FetchCause,
@@ -112,6 +113,7 @@ impl AsRef<str> for LfsScubaKey {
             ClientAtlas => "client_atlas",
             ClientAtlasEnvId => "client_atlas_env_id",
             ClientAtlasRl => "client_atlas_rl",
+            ClientAtlasPurpose => "client_atlas_purpose",
             ClientFaasJobName => "client_faas_job_name",
             FetchCause => "fetch_cause",
             FetchFromCASAttempted => "fetch_from_cas_attempted",
@@ -221,6 +223,11 @@ impl ScubaHandler for LfsScubaHandler {
             scuba.add_opt(LfsScubaKey::ClientAtlasEnvId, client_info.fb.atlas_env_id());
 
             scuba.add_opt(LfsScubaKey::ClientAtlasRl, client_info.fb.is_atlas_rl());
+
+            scuba.add_opt(
+                LfsScubaKey::ClientAtlasPurpose,
+                client_info.fb.atlas_purpose(),
+            );
 
             scuba.add_opt(
                 LfsScubaKey::ClientFaasJobName,

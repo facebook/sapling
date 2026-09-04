@@ -40,6 +40,8 @@ pub struct FbClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     atlas_rl: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    atlas_purpose: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     atlas_env_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     faas_job_name: Option<String>,
@@ -82,6 +84,10 @@ impl FbClientInfo {
         self.atlas_rl
     }
 
+    pub fn atlas_purpose(&self) -> Option<&str> {
+        self.atlas_purpose.as_deref()
+    }
+
     pub fn atlas_env_id(&self) -> Option<&str> {
         self.atlas_env_id.as_deref()
     }
@@ -100,13 +106,13 @@ fn atlas_env_flag(name: &str) -> Option<bool> {
     std::env::var_os(name).map(|v| v == "1")
 }
 
-/// Whether this is a reinforcement-learning Atlas container, read from the
-/// `/etc/atlaswhoami` identity file written by the Atlas preparer. `None` when
-/// there is no whoami file (non-Atlas client) or no purpose recorded, mirroring
-/// the absent-field behaviour of the other optional fields.
-fn atlas_rl_from_whoami() -> Option<bool> {
-    let purpose = AtlasWhoAmI::get().ok()?.purpose?;
-    Some(purpose == Purpose::ReinforcementLearning)
+fn atlas_purpose_fields(purpose: Option<Purpose>) -> Option<(bool, String)> {
+    purpose.map(|purpose| {
+        (
+            purpose == Purpose::ReinforcementLearning,
+            purpose.to_string(),
+        )
+    })
 }
 
 fn get_tw_job_handle() -> Option<String> {
@@ -119,6 +125,8 @@ fn get_tw_job_handle() -> Option<String> {
 
 pub fn get_fb_client_info() -> FbClientInfo {
     let tw_task = var("TW_TASK_ID").ok();
+    let atlas_purpose = AtlasWhoAmI::get().ok().and_then(|whoami| whoami.purpose);
+    let (atlas_rl, atlas_purpose) = atlas_purpose_fields(atlas_purpose).unzip();
 
     FbClientInfo {
         tw_task,
@@ -129,8 +137,31 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
         ci_purpose: var("CI_PURPOSE").ok(),
         atlas: atlas_env_flag("ATLAS"),
-        atlas_rl: atlas_rl_from_whoami(),
+        atlas_rl,
+        atlas_purpose,
         atlas_env_id: var("ATLAS_ENV_ID").ok(),
         faas_job_name: var("FAAS_JOB_NAME").ok(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atlas_purpose_populates_legacy_and_canonical_fields() {
+        for (purpose, expected_rl, expected_purpose) in [
+            (None, None, None),
+            (Some(Purpose::General), Some(false), Some("general")),
+            (
+                Some(Purpose::ReinforcementLearning),
+                Some(true),
+                Some("reinforcement_learning"),
+            ),
+        ] {
+            let (atlas_rl, atlas_purpose) = atlas_purpose_fields(purpose).unzip();
+            assert_eq!(atlas_rl, expected_rl);
+            assert_eq!(atlas_purpose.as_deref(), expected_purpose);
+        }
     }
 }

@@ -291,6 +291,7 @@ impl Metadata {
             ci_purpose: self.ci_purpose().map(str::to_owned),
             atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
             atlas_rl: self.clientinfo_atlas_rl(),
+            atlas_purpose: self.clientinfo_atlas_purpose().map(str::to_owned),
             faas_job_name: self.clientinfo_faas_job_name().map(str::to_owned),
         }
     }
@@ -309,6 +310,12 @@ impl Metadata {
 
     pub fn clientinfo_atlas_rl(&self) -> Option<bool> {
         self.client_info.as_ref().and_then(|ci| ci.fb.is_atlas_rl())
+    }
+
+    pub fn clientinfo_atlas_purpose(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.atlas_purpose())
     }
 
     pub fn clientinfo_atlas_env_id(&self) -> Option<&str> {

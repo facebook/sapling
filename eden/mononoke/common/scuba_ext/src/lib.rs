@@ -174,6 +174,8 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_atlas_env_id", tenant.atlas_env_id.as_deref());
         self.inner.add_opt("client_atlas_rl", tenant.atlas_rl);
         self.inner
+            .add_opt("client_atlas_purpose", tenant.atlas_purpose.as_deref());
+        self.inner
             .add_opt("client_faas_job_name", tenant.faas_job_name.as_deref());
         self
     }
