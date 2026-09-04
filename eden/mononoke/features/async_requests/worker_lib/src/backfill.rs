@@ -116,18 +116,43 @@ fn get_throttled_manager(manager: &DerivedDataManager) -> Result<DerivedDataMana
     Ok(manager.with_replaced_blobstore(throttled_blobstore))
 }
 
-/// Returns a manager with the given derived data type enabled in its config.
-/// If the type is already enabled, returns a clone of the existing manager.
-/// This is needed for backfill operations where the type may not yet be in the repo config.
+/// Returns a manager with the given derived data type enabled in its config, and
+/// optionally deriving under `mapping_key_prefix` instead of the config's own prefix.
+///
+/// Enabling the type in-memory is what lets a backfill run before the type is in the
+/// repo config. Overriding the prefix serves the other half of a version rollout: the
+/// new data lands in a fresh key namespace (`derived_root_<ty>.<prefix><csid>`) that
+/// production, still reading the config's prefix, cannot see. The prefix must be
+/// applied to *every* manager in the campaign — including the one used for slicing,
+/// which decides what counts as already-derived — or the run silently mixes namespaces.
+///
+/// Returns a clone of the existing manager when there is nothing to change.
 fn with_type_enabled(
     manager: &DerivedDataManager,
     derived_data_type: DerivableType,
+    mapping_key_prefix: Option<&str>,
 ) -> DerivedDataManager {
-    if manager.config().types.contains(&derived_data_type) {
+    let type_already_enabled = manager.config().types.contains(&derived_data_type);
+    // `mapping_key_prefix()` treats absent and empty as the same thing, so compare
+    // against the effective prefix rather than the map entry.
+    let prefix_already_set = mapping_key_prefix.is_none_or(|prefix| {
+        manager
+            .config()
+            .mapping_key_prefixes
+            .get(&derived_data_type)
+            .map_or("", String::as_str)
+            == prefix
+    });
+    if type_already_enabled && prefix_already_set {
         return manager.clone();
     }
     let mut config = manager.config().clone();
     config.types.insert(derived_data_type);
+    if let Some(prefix) = mapping_key_prefix {
+        config
+            .mapping_key_prefixes
+            .insert(derived_data_type, prefix.to_string());
+    }
     manager.with_replaced_config(manager.config_name(), config)
 }
 
@@ -213,11 +238,12 @@ pub(crate) async fn compute_derive_boundaries(
         .map_err(AsyncRequestsError::request)?;
 
     info!(
-        "Deriving {} boundary changesets for repo {} type {:?} config_name {:?}",
+        "Deriving {} boundary changesets for repo {} type {:?} config_name {:?} mapping_key_prefix {:?}",
         boundary_cs_ids.len(),
         params.repo_id,
         derived_data_type,
         params.config_name,
+        params.mapping_key_prefix,
     );
 
     let derived_count = Arc::new(AtomicUsize::new(0));
@@ -226,7 +252,11 @@ pub(crate) async fn compute_derive_boundaries(
         params.config_name.as_deref(),
     )?;
     let manager = get_throttled_manager(base_manager).map_err(AsyncRequestsError::internal)?;
-    let manager = with_type_enabled(&manager, derived_data_type);
+    let manager = with_type_enabled(
+        &manager,
+        derived_data_type,
+        params.mapping_key_prefix.as_deref(),
+    );
     let concurrency = params.concurrency.max(1) as usize;
     let use_predecessor = params.use_predecessor_derivation;
     let opportunistic = justknobs::eval(JK_BACKFILL_OPPORTUNISTIC_BOUNDARIES, None, None);
@@ -426,11 +456,12 @@ pub(crate) async fn compute_derive_slice(
         DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
 
     info!(
-        "Deriving slice with {} segments for repo {} type {:?} config_name {:?}",
+        "Deriving slice with {} segments for repo {} type {:?} config_name {:?} mapping_key_prefix {:?}",
         params.segments.len(),
         params.repo_id,
         derived_data_type,
         params.config_name,
+        params.mapping_key_prefix,
     );
 
     let base_manager = resolve_manager(
@@ -438,7 +469,11 @@ pub(crate) async fn compute_derive_slice(
         params.config_name.as_deref(),
     )?;
     let manager = get_throttled_manager(base_manager).map_err(AsyncRequestsError::internal)?;
-    let manager = with_type_enabled(&manager, derived_data_type);
+    let manager = with_type_enabled(
+        &manager,
+        derived_data_type,
+        params.mapping_key_prefix.as_deref(),
+    );
 
     let segment_chunk_size =
         justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CHUNK_SIZE, None) as usize;
@@ -566,6 +601,21 @@ pub(crate) async fn compute_derive_backfill_repo(
 
     let slice_size = params.slice_size.max(1) as u64;
 
+    // MarkTypeEnabled records enablement for the reconcile tool, which writes the type
+    // into config but has no way to write a mapping key prefix. Auto-enabling a
+    // prefixed backfill would therefore land a config that reads the *unprefixed*
+    // namespace, hiding everything just derived. Reject the combination rather than
+    // enable a repo into data it cannot see.
+    if params.auto_enable && params.mapping_key_prefix.is_some() {
+        return Err(AsyncRequestsError::request(anyhow::anyhow!(
+            "auto_enable cannot be combined with mapping_key_prefix ({:?}): the enablement \
+             path does not write mapping_key_prefixes, so the enabled config would point at \
+             a different key namespace than the backfill. Enable the type in config manually \
+             with the same prefix instead.",
+            params.mapping_key_prefix,
+        )));
+    }
+
     let enqueued_row_ids = process_repo_backfill(
         ctx,
         &repo,
@@ -577,6 +627,7 @@ pub(crate) async fn compute_derive_backfill_repo(
         params.boundaries_concurrency,
         params.num_boundary_requests,
         params.config_name.as_deref(),
+        params.mapping_key_prefix.as_deref(),
         &repo_id,
         &root_request_id,
         created_by.as_deref(),
@@ -660,6 +711,7 @@ pub(crate) async fn enqueue_repo_backfill(
         config_name: params.config_name.clone(),
         reslice: params.reslice,
         auto_enable: params.auto_enable.unwrap_or(false),
+        mapping_key_prefix: params.mapping_key_prefix.clone(),
         ..Default::default()
     };
 
@@ -916,6 +968,7 @@ async fn enqueue_boundary_and_slice_requests(
     num_boundary_requests: i32,
     boundaries_concurrency: i32,
     config_name: Option<&str>,
+    mapping_key_prefix: Option<&str>,
     repo_id: &RepositoryId,
     root_request_id: &RowId,
     created_by: Option<&str>,
@@ -953,6 +1006,7 @@ async fn enqueue_boundary_and_slice_requests(
                 concurrency: boundaries_concurrency,
                 use_predecessor_derivation: true,
                 config_name: config_name.map(|s| s.to_string()),
+                mapping_key_prefix: mapping_key_prefix.map(|s| s.to_string()),
                 ..Default::default()
             };
 
@@ -1016,6 +1070,7 @@ async fn enqueue_boundary_and_slice_requests(
             derived_data_type: derived_data_type.name().to_string(),
             segments,
             config_name: config_name.map(|s| s.to_string()),
+            mapping_key_prefix: mapping_key_prefix.map(|s| s.to_string()),
             ..Default::default()
         };
 
@@ -1091,20 +1146,24 @@ async fn process_repo_backfill(
     boundaries_concurrency: i32,
     num_boundary_requests: i32,
     config_name: Option<&str>,
+    mapping_key_prefix: Option<&str>,
     repo_id: &RepositoryId,
     root_request_id: &RowId,
     created_by: Option<&str>,
 ) -> Result<Vec<RowId>, AsyncRequestsError> {
     let inner_repo = repo.repo();
     let manager = resolve_manager(inner_repo.repo_derived_data(), config_name)?;
-    let manager = with_type_enabled(manager, derived_data_type);
+    // Slicing decides which changesets count as already-derived, so it has to look at
+    // the same namespace the sub-requests will write to.
+    let manager = with_type_enabled(manager, derived_data_type, mapping_key_prefix);
 
     info!(
-        "DeriveBackfill for repo {} type {:?}: {} changesets, slice_size {}",
+        "DeriveBackfill for repo {} type {:?}: {} changesets, slice_size {}, mapping_key_prefix {:?}",
         repo_id.id(),
         derived_data_type,
         cs_ids.len(),
         slice_size,
+        mapping_key_prefix,
     );
 
     // Phase 1: Compute slices and boundaries
@@ -1134,6 +1193,7 @@ async fn process_repo_backfill(
         num_boundary_requests,
         boundaries_concurrency,
         config_name,
+        mapping_key_prefix,
         repo_id,
         root_request_id,
         created_by,
@@ -1417,6 +1477,54 @@ mod tests {
         assert!(
             BulkDerivation::is_derived(manager, &ctx, cs_id, None, DerivableType::Fsnodes).await?,
             "changeset should be derived after the waiter resolved",
+        );
+        Ok(())
+    }
+
+    /// `with_type_enabled` is the only thing keeping a prefixed backfill out of
+    /// production's key namespace, and every manager in a campaign has to agree on
+    /// the prefix. Assert through `DerivationContext::mapping_key_prefix` — the
+    /// accessor `format_key` actually calls — rather than the config map, since an
+    /// absent entry and an empty one are indistinguishable to derivation.
+    #[mononoke::fbinit_test]
+    async fn with_type_enabled_applies_mapping_key_prefix(fb: FacebookInit) -> Result<()> {
+        let repo: TestRepo = test_repo_factory::build_empty(fb)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let base = repo.repo_derived_data().manager();
+
+        // No prefix requested: the type is enabled, the namespace is untouched.
+        let plain = with_type_enabled(base, DerivableType::Fsnodes, None);
+        assert!(plain.config().types.contains(&DerivableType::Fsnodes));
+        assert_eq!(
+            plain
+                .derivation_context(None)
+                .mapping_key_prefix::<RootFsnodeId>(),
+            "",
+        );
+
+        // Prefix requested: derivation writes into the fresh namespace.
+        let prefixed = with_type_enabled(base, DerivableType::Fsnodes, Some("r5."));
+        assert!(prefixed.config().types.contains(&DerivableType::Fsnodes));
+        assert_eq!(
+            prefixed
+                .derivation_context(None)
+                .mapping_key_prefix::<RootFsnodeId>(),
+            "r5.",
+        );
+
+        // Only the backfilled type is renamespaced; siblings keep their own keys.
+        assert_eq!(prefixed.config().mapping_key_prefixes.len(), 1);
+
+        // The type already being enabled must not short-circuit the prefix. Repos
+        // partway through a version rollout already carry the type, and returning
+        // early there would silently derive into the config's namespace instead.
+        let rederived = with_type_enabled(&prefixed, DerivableType::Fsnodes, Some("r6."));
+        assert_eq!(
+            rederived
+                .derivation_context(None)
+                .mapping_key_prefix::<RootFsnodeId>(),
+            "r6.",
         );
         Ok(())
     }
