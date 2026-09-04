@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {serializeAsyncCall, sleep} from '../utils';
+import {sleep} from 'shared/utils';
+import {serializeAsyncCall} from '../utils';
 
 function flushPromises() {
   return new Promise(res => jest.requireActual('timers').setTimeout(res, 0));

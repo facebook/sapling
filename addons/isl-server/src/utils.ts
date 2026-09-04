@@ -11,10 +11,6 @@ import type {EjecaChildProcess, EjecaError, EjecaReturn} from 'shared/ejeca';
 import os from 'node:os';
 import {truncate} from 'shared/utils';
 
-export function sleep(timeMs: number): Promise<void> {
-  return new Promise(res => setTimeout(res, timeMs));
-}
-
 export function firstOfIterable<T>(iterable: IterableIterator<T>): T | undefined {
   return iterable.next().value;
 }

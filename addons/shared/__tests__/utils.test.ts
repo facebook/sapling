@@ -7,11 +7,14 @@
 
 import {
   basename,
+  CancelledError,
   generatorContains,
   group,
   mapObject,
   partition,
+  sleep,
   splitCommitMessage,
+  timeout,
   truncate,
 } from '../utils';
 
@@ -126,5 +129,80 @@ describe('group', () => {
       2: ['ab', 'ef'],
       3: ['abc'],
     });
+  });
+});
+
+describe('delay', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('resolves after the delay', async () => {
+    const promise = sleep(1_000);
+    jest.advanceTimersByTime(1_000);
+    await expect(promise).resolves.toBeUndefined();
+  });
+
+  it('rejects with CancelledError when disposed', async () => {
+    const promise = sleep(1_000);
+    promise.dispose();
+    await expect(promise).rejects.toThrow(CancelledError);
+    jest.advanceTimersByTime(1_000);
+  });
+
+  it('is a no-op to dispose after it resolved', async () => {
+    const promise = sleep(1_000);
+    jest.advanceTimersByTime(1_000);
+    await promise;
+    promise.dispose();
+    await expect(promise).resolves.toBeUndefined();
+  });
+});
+
+describe('timeout', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('runs the callback after the delay and resolves with its result', async () => {
+    const callback = jest.fn().mockReturnValue('done');
+    const promise = timeout(callback, 1_000);
+    expect(callback).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1_000);
+    await expect(promise).resolves.toBe('done');
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not run the callback after being disposed', async () => {
+    const callback = jest.fn();
+    const promise = timeout(callback, 1_000);
+    promise.dispose();
+    await expect(promise).rejects.toThrow(CancelledError);
+    jest.advanceTimersByTime(1_000);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op to dispose after the callback ran', async () => {
+    const callback = jest.fn().mockReturnValue('done');
+    const promise = timeout(callback, 1_000);
+    jest.advanceTimersByTime(1_000);
+    await promise;
+    promise.dispose();
+    expect(callback).toHaveBeenCalledTimes(1);
+    await expect(promise).resolves.toBe('done');
+  });
+
+  it('propagates a rejection thrown by the callback', async () => {
+    const promise = timeout(() => {
+      throw new Error('boom');
+    }, 1_000);
+    jest.advanceTimersByTime(1_000);
+    await expect(promise).rejects.toThrow('boom');
   });
 });

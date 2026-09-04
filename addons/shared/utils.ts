@@ -51,6 +51,60 @@ export function defer<T>(): Deferred<T> {
   return deferred;
 }
 
+export class CancelledError extends Error {
+  constructor() {
+    super('cancelled');
+    this.name = 'CancelledError';
+  }
+}
+
+export type CancellablePromise<T> = Promise<T> & {dispose(): void};
+
+/**
+ * `setTimeout` as an awaitable promise, resolving once `timeMs` has elapsed.
+ * `dispose()` cancels the timer and rejects with `CancelledError`; it is a
+ * no-op once the timer has already fired.
+ */
+export function sleep(timeMs: number): CancellablePromise<void> {
+  let cancel!: () => void;
+  const promise = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(resolve, timeMs);
+    cancel = () => {
+      clearTimeout(timer);
+      reject(new CancelledError());
+    };
+  }) as CancellablePromise<void>;
+  promise.dispose = cancel;
+  // Fire-and-forget callers never await, so a dispose() would otherwise surface
+  // as an unhandled rejection. Awaiting callers still observe the rejection.
+  promise.catch(() => {});
+  return promise;
+}
+
+/**
+ * Run `callback` after `timeMs`, resolving with its result. `dispose()` cancels
+ * the timer so the callback never runs, and rejects with `CancelledError`.
+ */
+export function timeout<T>(
+  callback: () => T | PromiseLike<T>,
+  timeMs: number,
+): CancellablePromise<T> {
+  const timer = sleep(timeMs);
+  let isDisposed = false;
+  const promise = timer.then(() => {
+    if (isDisposed) {
+      throw new CancelledError();
+    }
+    return callback();
+  }) as CancellablePromise<T>;
+  promise.dispose = () => {
+    timer.dispose();
+    isDisposed = true;
+  };
+  promise.catch(() => {});
+  return promise;
+}
+
 /**
  * Returns the part of the string after the last occurrence of delimiter,
  * or the entire string if no matches are found.
