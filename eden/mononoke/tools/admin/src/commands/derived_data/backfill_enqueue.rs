@@ -23,6 +23,7 @@ use mononoke_app::args::RepoArgs;
 use repo_identity::RepoIdentityRef;
 use source_control as thrift;
 use tracing::info;
+use tracing::warn;
 
 use super::Repo;
 
@@ -67,6 +68,17 @@ pub(super) struct BackfillEnqueueArgs {
     /// in the enabled_derived_data_types table once the repo's backfill succeeds.
     #[clap(long)]
     auto_enable: bool,
+
+    /// Derive into this mapping key namespace instead of the config's own prefix
+    /// for this type (e.g. `r5.`). Use it to backfill a new version of a type while
+    /// production keeps serving the old one: keys become
+    /// `derived_root_<ty>.<prefix><changeset_id>`, which the running config cannot
+    /// see. You must afterwards land the *same* prefix in the repo's
+    /// `mapping_key_prefixes` when enabling the type -- if the two disagree the
+    /// backfilled data is unreachable and gets silently re-derived. Cannot be
+    /// combined with `--auto-enable`, which has no way to write the prefix.
+    #[clap(long)]
+    mapping_key_prefix: Option<String>,
 }
 
 pub(super) async fn backfill_enqueue(
@@ -86,6 +98,28 @@ pub(super) async fn backfill_enqueue(
         !args.all_git_repos || repo_args.is_empty(),
         "--all-git-repos cannot be combined with --repo-id / --repo-name"
     );
+    // The enablement path (MarkTypeEnabled -> backfill-reconcile-configs) writes the
+    // type into config but never a mapping key prefix, so it would enable repos onto
+    // the unprefixed namespace and orphan everything this run derives.
+    anyhow::ensure!(
+        !(args.auto_enable && args.mapping_key_prefix.is_some()),
+        "--auto-enable cannot be combined with --mapping-key-prefix: the enablement path \
+         does not write mapping_key_prefixes, so the enabled config would read a different \
+         key namespace than this backfill writes. Enable the type manually, setting the same \
+         prefix in the repo's config."
+    );
+    // Every prefix in production ends with a separator ("r4.", "r2."). Without one the
+    // prefix runs straight into the changeset id, which still works but reads as a typo.
+    if let Some(prefix) = args.mapping_key_prefix.as_deref() {
+        anyhow::ensure!(!prefix.is_empty(), "--mapping-key-prefix cannot be empty");
+        if !prefix.ends_with('.') {
+            warn!(
+                "--mapping-key-prefix {:?} does not end with '.': keys will be \
+                 `derived_root_<ty>.{}<changeset_id>` with no separator",
+                prefix, prefix,
+            );
+        }
+    }
 
     let derived_data_type = args.derived_data_args.resolve_type()?;
 
@@ -163,6 +197,7 @@ pub(super) async fn backfill_enqueue(
         auto_enable: Some(args.auto_enable),
         config_name: config_name.map(|s| s.to_string()),
         repo_concurrency: Some(args.repo_concurrency as i32),
+        mapping_key_prefix: args.mapping_key_prefix.clone(),
         ..Default::default()
     };
 
