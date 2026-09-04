@@ -358,7 +358,7 @@ Test extension help:
        crdump        (no help text available)
        debugnetwork  test network connections to the server
        debugpathcreation
-                     find the creation commit of a tracked directory
+                     find the creation commit of a tracked path
        dialect       replace terms with more widely used equivalents
        dirsync
        drop          drop specified changeset from the stack
@@ -1210,14 +1210,14 @@ Test -e / -c / -k combinations
   $ sl help -e|grep -E '^[A-Z].*:|^ debug'
   Extensions:
    debugnetwork      test network connections to the server
-   debugpathcreation find the creation commit of a tracked directory
+   debugpathcreation find the creation commit of a tracked path
    debugshell        a python shell with repo, changelog & manifest objects
   $ sl help -k|grep -E '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
    debugnetwork      test network connections to the server
-   debugpathcreation find the creation commit of a tracked directory
+   debugpathcreation find the creation commit of a tracked path
    debugshell        a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ sl help -c -k dates |grep -E '^(Topics|Extensions|Commands):'

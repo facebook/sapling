@@ -20,6 +20,8 @@ Later changes do not affect the directory's origin:
   $ sl commit -qm 'modify foo1'
   $ sl debugpathcreation foo1
   75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation foo1/a.txt
+  75ae72b66962696c45e82d2a43e69188d9930209
 
 Follow ordinary directory copies, including from a nested subdirectory:
 
@@ -40,7 +42,11 @@ Follow chained directory renames:
   75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation foo3/subdir
   75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation foo3/a.txt
+  75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation --rev "$B" foo2
+  75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation --rev "$B" foo2/a.txt
   75ae72b66962696c45e82d2a43e69188d9930209
 
   $ echo 1 > foo3/1.txt
@@ -114,14 +120,20 @@ Follow explicit subtree-copy metadata:
   75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation subtree/subdir
   75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation subtree/subdir/b.txt
+  75ae72b66962696c45e82d2a43e69188d9930209
 
-Reject paths that are not tracked directories:
+Follow an individual file copy:
 
-  $ sl debugpathcreation foo3/a.txt
-  abort: path 'foo3/a.txt' is not a directory in commit * (glob)
-  [255]
+  $ sl copy -q foo3/a.txt copied.txt
+  $ sl commit -qm 'copy a file'
+  $ sl -q debugpathcreation copied.txt
+  75ae72b66962696c45e82d2a43e69188d9930209
+
+Reject paths that do not exist:
+
   $ sl debugpathcreation missing
-  abort: path 'missing' is not a directory in commit * (glob)
+  abort: path 'missing' does not exist in commit * (glob)
   [255]
   $ sl debugpathcreation .
   abort: repository root is not supported

@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""find the creation commit of a tracked directory
+"""find the creation commit of a tracked path
 
 Enable this extension with::
 
@@ -103,14 +103,27 @@ def _copied_directory(repo, ctx, path, similarity_percent):
     return source_ctx.node(), source_dir
 
 
-def _find_path_creation(repo, head, path, similarity_percent):
+def _copied_file(ctx, path):
+    renamed = ctx[path].renamed()
+    parents = ctx.parents()
+    if renamed is None or len(parents) != 1:
+        return None
+
+    return parents[0].node(), renamed[0]
+
+
+def _find_path_creation(repo, head, path, is_directory, similarity_percent):
     dag = repo.changelog.dag
     while creation := repo.pathcreation(path, dag.ancestors([head])):
         creation_ctx = repo[creation]
         source = subtreeutil.find_subtree_copy(repo, creation, path)
         is_subtree_copy = source is not None
         if source is None:
-            source = _copied_directory(repo, creation_ctx, path, similarity_percent)
+            source = (
+                _copied_directory(repo, creation_ctx, path, similarity_percent)
+                if is_directory
+                else _copied_file(creation_ctx, path)
+            )
         if source is None:
             repo.ui.debug(
                 f"no copy source found; {short(creation_ctx.node())} is the origin\n"
@@ -128,7 +141,7 @@ def _find_path_creation(repo, head, path, similarity_percent):
         head, path = source_ctx.node(), source_path
 
     raise error.Abort(
-        _("cannot find the origin of directory '%s'") % path,
+        _("cannot find the origin of path '%s'") % path,
         hint=_("run '@prog@ log %s' to inspect its history") % path,
     )
 
@@ -136,10 +149,14 @@ def _find_path_creation(repo, head, path, similarity_percent):
 @command(
     "debugpathcreation",
     [("r", "rev", "", _("start tracing at revision (default: .)"), _("REV"))],
-    _("[-r REV] FOLDER"),
+    _("[-r REV] PATH"),
 )
-def debugpathcreation(ui, repo, folder, **opts) -> None:
-    """print the oldest commit in the history of a tracked directory"""
+def debugpathcreation(ui, repo, path, **opts) -> None:
+    """print the oldest commit in a path's copy and rename history
+
+    Directory copy/rename history based on ``sl copy``/``sl rename`` metadata
+    is inferred heuristically and may be inaccurate.
+    """
 
     similarity_percent = ui.configint(
         "debugpathcreation", "similarity-percent", _DEFAULT_SIMILARITY_PERCENT
@@ -154,12 +171,18 @@ def debugpathcreation(ui, repo, folder, **opts) -> None:
         )
 
     ctx = scmutil.revsingle(repo, opts.get("rev"))
-    path = scmutil.rootrelpath(ctx, folder)
+    path = scmutil.rootrelpath(ctx, path)
     if not path:
         raise error.Abort(_("repository root is not supported"))
-    if not ctx.hasdir(path):
-        raise error.Abort(_("path '%s' is not a directory in commit %s") % (path, ctx))
+    is_directory = ctx.hasdir(path)
+    if not is_directory and path not in ctx:
+        raise error.Abort(_("path '%s' does not exist in commit %s") % (path, ctx))
 
     ui.write(
-        "%s\n" % hex(_find_path_creation(repo, ctx.node(), path, similarity_percent))
+        "%s\n"
+        % hex(
+            _find_path_creation(
+                repo, ctx.node(), path, is_directory, similarity_percent
+            )
+        )
     )
