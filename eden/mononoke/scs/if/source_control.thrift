@@ -3052,6 +3052,9 @@ struct DeriveBoundariesParams {
   5: bool use_predecessor_derivation;
   /// Optional config name to select an alternative derived data configuration.
   6: optional string config_name;
+  /// Optional mapping key prefix to derive under (forwarded from
+  /// DeriveBackfillParams; see that struct for semantics).
+  7: optional string mapping_key_prefix;
 }
 
 /// Result for derive_boundaries request
@@ -3084,6 +3087,9 @@ struct DeriveSliceParams {
   3: list<DeriveSliceSegment> segments;
   /// Optional config name to select an alternative derived data configuration.
   4: optional string config_name;
+  /// Optional mapping key prefix to derive under (forwarded from
+  /// DeriveBackfillParams; see that struct for semantics).
+  5: optional string mapping_key_prefix;
 }
 
 /// Result for derive_slice request
@@ -3135,6 +3141,17 @@ struct DeriveBackfillParams {
   /// Whether to enqueue a MarkTypeEnabled node per repo (cascade-dependent on the
   /// repo's backfill leaves) that records the type as enabled once backfill succeeds.
   10: optional bool auto_enable;
+  /// Optional mapping key prefix to derive under, overriding whatever the selected
+  /// config holds in `mapping_key_prefixes` for this type. Set it to backfill into a
+  /// fresh key namespace (e.g. "r5.") while production keeps serving from the old
+  /// one, then land the same prefix in config to cut over. Unset (the default)
+  /// derives under the config's own prefix, preserving the previous behavior.
+  ///
+  /// The prefix must match the one later written to the repo's config, otherwise the
+  /// backfilled data is unreachable and will be silently re-derived. Because of that
+  /// this is rejected together with `auto_enable`, whose enablement path cannot write
+  /// a prefix.
+  11: optional string mapping_key_prefix;
 }
 
 /// Result for derive_backfill request
@@ -3176,6 +3193,9 @@ struct DeriveBackfillRepoParams {
   /// Whether to enqueue a MarkTypeEnabled node (cascade-dependent on this repo's
   /// backfill leaves) that records the type as enabled once backfill succeeds.
   10: bool auto_enable;
+  /// Optional mapping key prefix to derive under (forwarded from
+  /// DeriveBackfillParams; see that struct for semantics).
+  11: optional string mapping_key_prefix;
 }
 
 /// Result for derive_backfill_repo request
