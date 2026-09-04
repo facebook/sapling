@@ -270,6 +270,7 @@ function mononoke_admin {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
+    --log-level INFO \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     --tracing-test-format \
     "$@"

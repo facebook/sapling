@@ -84,6 +84,7 @@ rust_binary(
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/cmdlib:arg_extensions",
         "//eden/mononoke/cmdlib:cmdlib_cross_repo",
         "//eden/mononoke/cmdlib/commit_id:commit_id",
         "//eden/mononoke/cmdlib/displaying:cmdlib_displaying",

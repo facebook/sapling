@@ -8,6 +8,7 @@
 #![feature(trait_alias)]
 
 use anyhow::Result;
+use arg_extensions::ArgDefaults;
 use clap::Parser;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
@@ -29,6 +30,14 @@ struct AdminArgs {
     use_monitoring: bool,
 }
 
+struct AdminArgDefaults;
+
+impl ArgDefaults for AdminArgDefaults {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        vec![("log_level", "OFF".to_owned())]
+    }
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let mut subcommands = commands::subcommands();
@@ -41,6 +50,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     subcommands.sort_unstable_by(|a, b| a.get_name().cmp(b.get_name()));
 
     let app = MononokeAppBuilder::new(fb)
+        .with_arg_defaults(AdminArgDefaults)
         .with_app_extension(ScrubAppExtension::new())
         .with_app_extension(MonitoringAppExtension {})
         .build_with_subcommands::<AdminArgs>(subcommands)?;

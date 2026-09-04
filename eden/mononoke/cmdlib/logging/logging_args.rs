@@ -51,11 +51,11 @@ pub struct LoggingArgs {
     pub debug: bool,
 
     /// Log level to use
-    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true)]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true, overrides_with = "log_level")]
     pub log_level: Option<String>,
 
     /// Log level to use for C++ logging
-    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true)]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true, overrides_with = "cxx_log_level")]
     pub cxx_log_level: Option<String>,
 
     /// Deprecated: Logview category (no longer used, accepted for compatibility)
@@ -285,5 +285,34 @@ where
         ctx.field_format().format_fields(writer.by_ref(), event)?;
 
         writeln!(writer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[derive(Parser, Debug)]
+    struct TestCli {
+        #[clap(flatten)]
+        logging: LoggingArgs,
+    }
+
+    #[mononoke::test]
+    fn repeated_log_level_last_wins() {
+        let cli = TestCli::try_parse_from(["test", "--log-level", "INFO", "--log-level", "OFF"])
+            .expect("repeated --log-level should parse");
+        assert_eq!(cli.logging.log_level.as_deref(), Some("OFF"));
+    }
+
+    #[mononoke::test]
+    fn repeated_cxx_log_level_last_wins() {
+        let cli =
+            TestCli::try_parse_from(["test", "--cxx-log-level", "INFO", "--cxx-log-level", "OFF"])
+                .expect("repeated --cxx-log-level should parse");
+        assert_eq!(cli.logging.cxx_log_level.as_deref(), Some("OFF"));
     }
 }

@@ -37,6 +37,7 @@ rust_library(
     name = "cmdlib_logging",
     srcs = glob(["logging/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "log"},
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
