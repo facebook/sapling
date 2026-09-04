@@ -7,9 +7,11 @@
 
 #include "eden/fs/inodes/TreeInode.h"
 
+#include <folly/ScopeGuard.h>
 #include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <system_error>
 
@@ -29,12 +31,14 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
 
 namespace {
+
 template <typename Fn>
 void expectEacces(Fn&& fn) {
   try {
@@ -83,9 +87,15 @@ TreeInodePtr makeTreeInodeChildWithoutParentEntry(
   return inode;
 }
 
-// Mount the given tree with acl:restricted-content-mode = omitted. The mode
-// is snapshotted by the mount's ObjectStore at construction, so it must be set
-// on the EdenConfig before construction rather than via updateEdenConfig().
+// The mount's ObjectStore snapshots acl:restricted-content-mode at
+// construction, so it must be set on the EdenConfig before TestMount is built,
+// not via updateEdenConfig().
+void setOmittedMode(EdenConfig& config) {
+  config.restrictedContentMode.setValue(
+      RestrictedContentMode::Omitted, ConfigSourceType::CommandLine);
+}
+
+// Mount the given tree with acl:restricted-content-mode = omitted.
 std::unique_ptr<TestMount> makeOmittedModeTestMount(FakeTreeBuilder& builder) {
   return std::make_unique<TestMount>(
       builder,
@@ -93,10 +103,7 @@ std::unique_ptr<TestMount> makeOmittedModeTestMount(FakeTreeBuilder& builder) {
       /*enableActivityBuffer=*/true,
       kPathMapDefaultCaseSensitive,
       /*errorLogger=*/nullptr,
-      [](EdenConfig& config) {
-        config.restrictedContentMode.setValue(
-            RestrictedContentMode::Omitted, ConfigSourceType::CommandLine);
-      });
+      setOmittedMode);
 }
 
 // Shared setup for the omittedMode_* tests: a parent directory with one
@@ -1190,3 +1197,108 @@ CO_TEST(
   EXPECT_EQ(
       "now public", testMount->readFile("parent/restricted_child/public.txt"));
 }
+
+#ifdef __linux__
+constexpr auto kTimeout = std::chrono::seconds{10};
+
+namespace {
+void stopFakeFuse(TestMount& testMount, FakeFuse& fuse) {
+  fuse.close();
+  testMount.getEdenMount()
+      ->getFsChannelCompletionFuture()
+      .within(kTimeout)
+      .getVia(testMount.getServerExecutor().get());
+}
+
+bool sawInodeInvalidation(FakeFuse& fuse, InodeNumber ino) {
+  const auto responses = fuse.getAllResponses();
+  return std::any_of(
+      responses.begin(), responses.end(), [ino](const auto& response) {
+        return response.header.error == FUSE_NOTIFY_INVAL_INODE &&
+            reinterpret_cast<const fuse_notify_inval_inode_out*>(
+                response.body.data())
+                ->ino == ino.get();
+      });
+}
+} // namespace
+
+CO_TEST(
+    RestrictedTreeInode,
+    omittedMode_transitionToUnrestrictedInvalidatesParentDirCache) {
+  auto testMount = makeOmittedModeTestMount();
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount->startFuseAndWait(fuse);
+  SCOPE_EXIT {
+    stopFakeFuse(*testMount, *fuse);
+  };
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto restrictedInode =
+      testMount->getTreeInode("parent/restricted_child"_relpath);
+  CO_ASSERT_TRUE(restrictedInode->isRestricted());
+  testMount->getBackingStore()->setCheckPermissionResult(
+      restrictedInode->getObjectId().value(), true);
+
+  // The first stat rechecks permission and transitions to unrestricted.
+  co_await restrictedInode->co_stat(ObjectFetchContext::getNullContext());
+  EXPECT_FALSE(restrictedInode->isRestricted());
+
+  testMount->getEdenMount()->flushInvalidations().get(kTimeout);
+  // The parent's cached listing must be dropped too.
+  EXPECT_TRUE(sawInodeInvalidation(*fuse, parentInode->getNodeId()));
+}
+
+TEST(
+    RestrictedTreeInode,
+    omittedMode_loadTimeRestrictionInvalidatesParentDirCache) {
+  // The parent entry says unrestricted but the fetched child tree is
+  // restricted, so loading the child backfills the parent entry and, in
+  // omitted mode, hides it from the parent's listing.
+  TestMount testMount{/*enableActivityBuffer=*/true,
+                      kPathMapDefaultCaseSensitive,
+                      /*errorLogger=*/nullptr,
+                      setOmittedMode};
+  auto backingStore = testMount.getBackingStore();
+  auto [secretBlob, secretBlobId] = backingStore->putBlob("secret content");
+  secretBlob->setReady();
+  auto* restrictedTree =
+      backingStore->putRestrictedTree({{"secret.txt", secretBlobId}});
+  restrictedTree->setReady();
+
+  Tree::container parentEntries{kPathMapDefaultCaseSensitive};
+  parentEntries.emplace(
+      "restricted"_pc,
+      ObjectId{restrictedTree->get().getObjectId()},
+      TreeEntryType::TREE,
+      /* isRestricted */ false,
+      /* hasACL */ std::nullopt);
+  auto* parentTree = backingStore->putTree(std::move(parentEntries));
+  parentTree->setReady();
+  Tree::container rootEntries{kPathMapDefaultCaseSensitive};
+  rootEntries.emplace(
+      "parent"_pc,
+      ObjectId{parentTree->get().getObjectId()},
+      TreeEntryType::TREE);
+  auto* rootTree = backingStore->putTree(std::move(rootEntries));
+  rootTree->setReady();
+  backingStore->putCommit(RootId{"1"}, rootTree)->setReady();
+  testMount.initialize(RootId{"1"});
+  ASSERT_EQ(
+      RestrictedContentMode::Omitted,
+      testMount.getEdenMount()->getObjectStore()->getRestrictedContentMode());
+
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount.startFuseAndWait(fuse);
+  SCOPE_EXIT {
+    stopFakeFuse(testMount, *fuse);
+  };
+
+  auto parentInode = testMount.getTreeInode("parent"_relpath);
+  auto restrictedInode = testMount.getTreeInode("parent/restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+
+  testMount.getEdenMount()->flushInvalidations().get(kTimeout);
+  // The entry just vanished from the listing; the cache must be dropped.
+  EXPECT_TRUE(sawInodeInvalidation(*fuse, parentInode->getNodeId()));
+}
+#endif // __linux__

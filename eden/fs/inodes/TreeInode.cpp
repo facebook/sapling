@@ -287,14 +287,17 @@ class TreeInode::IncompleteInodeLoad {
   Future<unique_ptr<InodeBase>> future_;
 };
 
-void maybeBackfillAclDirEntry(DirEntry& entry, const InodeBase* childInode) {
+// Returns true when the entry was listed before and is restricted now, the
+// only visibility change this path can make.
+bool maybeBackfillAclDirEntry(DirEntry& entry, const InodeBase* childInode) {
   auto* childTree = dynamic_cast<const TreeInode*>(childInode);
   if (!childTree) {
-    return;
+    return false;
   }
 
   // Normal parent metadata propagation happens on the tree-load path. This
   // only backfills stale or missing parent metadata after a child load.
+  const bool wasRestricted = entry.isRestricted();
   entry.setAclRootState(makeAclRootState(
       childTree->isRestricted(),
       preferKnownAclState(childTree->hasACL(), entry.hasACL())));
@@ -307,6 +310,7 @@ void maybeBackfillAclDirEntry(DirEntry& entry, const InodeBase* childInode) {
         childTree->getObjectId() ? childTree->getObjectId()->toLogString()
                                  : "none");
   }
+  return !wasRestricted && entry.isRestricted();
 }
 
 std::chrono::steady_clock::time_point initialLastPermissionCheck(
@@ -440,6 +444,16 @@ void TreeInode::throwRestrictedAccess() const {
 
 RestrictedContentMode TreeInode::restrictedContentMode() const {
   return getObjectStore().getRestrictedContentMode();
+}
+
+// Parent listings need invalidating only where entries are hidden: FUSE and
+// NFS in omitted mode. PrjFS enumerates the raw Tree and never hides any.
+bool TreeInode::hidesRestrictedEntries() const {
+#ifdef _WIN32
+  return false;
+#else
+  return restrictedContentMode() == RestrictedContentMode::Omitted;
+#endif
 }
 
 void TreeInode::assertRestrictedPlaceholderInvariant() const {
@@ -586,6 +600,11 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
                   loc.name,
                   self->getNodeId(),
                   folly::exceptionStr(ex));
+            }
+            if (self->hidesRestrictedEntries()) {
+              // Omitted mode hid this directory from the parent's listing;
+              // drop the kernel's cached listing so it shows up now.
+              loc.parent->invalidateChannelDirCache(*parentContents).get();
             }
           }
         }
@@ -739,7 +758,11 @@ TreeInode::loadChild(
       // data_ lock.
       auto childInode = std::move(loadFuture).get();
       auto* childInodeRaw = CHECK_NOTNULL(childInode.get());
-      maybeBackfillAclDirEntry(entry, childInodeRaw);
+      if (maybeBackfillAclDirEntry(entry, childInodeRaw) &&
+          hidesRestrictedEntries()) {
+        // Omitted mode now hides this entry; drop our cached listing.
+        invalidateChannelDirCache(*contents).get();
+      }
       entry.setInode(childInodeRaw);
       promises = getInodeMap()->inodeLoadComplete(childInodeRaw);
       childInodePtr = InodePtr::takeOwnership(std::move(childInode));
@@ -1422,7 +1445,11 @@ void TreeInode::inodeLoadComplete(
         auto childTreeId = childTree->getObjectId();
         if (childTreeId &&
             iter->second.getObjectId().bytesEqual(*childTreeId)) {
-          maybeBackfillAclDirEntry(iter->second, childInode.get());
+          if (maybeBackfillAclDirEntry(iter->second, childInode.get()) &&
+              hidesRestrictedEntries()) {
+            // Omitted mode now hides this entry; drop our cached listing.
+            invalidateChannelDirCache(*contents).get();
+          }
         }
       }
     }

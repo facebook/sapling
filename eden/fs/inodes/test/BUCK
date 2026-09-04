@@ -780,7 +780,9 @@ cpp_unittest(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:test_mount",
+        "//folly:scope_guard",
         "//folly/coro:gtest_helpers",
     ],
 )

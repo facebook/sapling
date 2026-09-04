@@ -1006,6 +1006,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /** The daemon's acl:restricted-content-mode snapshot from ServerState. */
   RestrictedContentMode restrictedContentMode() const;
 
+  /** Whether this mount hides restricted roots from directory listings. */
+  bool hidesRestrictedEntries() const;
+
   void assertRestrictedPlaceholderInvariant() const;
 
   void setAclRootState(AclRootState state) {
