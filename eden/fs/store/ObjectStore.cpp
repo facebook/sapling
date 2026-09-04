@@ -84,7 +84,9 @@ ObjectStore::ObjectStore(
       processInfoCache_(processInfoCache),
       edenFsEventsLogger_(edenFsEventsLogger),
       edenConfig_(edenConfig),
-      caseSensitive_{caseSensitive} {
+      caseSensitive_{caseSensitive},
+      restrictedContentMode_{
+          edenConfig->getEdenConfig()->restrictedContentMode.getValue()} {
   XCHECK(backingStore_);
   XCHECK(stats_);
 }

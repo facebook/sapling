@@ -22,6 +22,7 @@
 #include <folly/Expected.h>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/utils/ChronoParse.h"
 
 namespace facebook::eden {
@@ -258,6 +259,16 @@ class FieldConverter<std::shared_ptr<re2::RE2>> {
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::shared_ptr<re2::RE2> value) const;
+};
+
+template <>
+class FieldConverter<RestrictedContentMode> {
+ public:
+  folly::Expected<RestrictedContentMode, std::string> fromString(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(RestrictedContentMode value) const;
 };
 
 /**

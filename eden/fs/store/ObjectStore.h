@@ -20,6 +20,7 @@
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
@@ -413,6 +414,10 @@ class ObjectStore : public IObjectStore,
     return edenConfig_->getEdenConfig();
   }
 
+  RestrictedContentMode getRestrictedContentMode() const {
+    return restrictedContentMode_;
+  }
+
   /**
    * Get the TreeCache used by this ObjectStore
    */
@@ -568,6 +573,10 @@ class ObjectStore : public IObjectStore,
   // Is this ObjectStore case sensitive? This only matters for methods returning
   // Tree.
   CaseSensitivity caseSensitive_;
+
+  // Read once at construction: a live mount's listing policy must not flip
+  // under the kernel's caches.
+  const RestrictedContentMode restrictedContentMode_;
 };
 
 } // namespace facebook::eden

@@ -26,6 +26,7 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/NfsAccessMode.h"
 #include "eden/fs/config/ReaddirPrefetch.h"
+#include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/eden-config.h"
 
 namespace re2 {
@@ -2829,6 +2830,17 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableLocalUnderAclComputation{
       "acl:enable-local-under-acl-computation",
       true,
+      this};
+
+  /**
+   * Controls how restricted ACL roots are presented. "restricted" (the
+   * default) shows them in directory listings with mode 000; "omitted" hides
+   * them from enumeration entirely. Read once at daemon startup; runtime
+   * config reloads do not change the running mode.
+   */
+  ConfigSetting<RestrictedContentMode> restrictedContentMode{
+      "acl:restricted-content-mode",
+      RestrictedContentMode::Restricted,
       this};
 
 // [facebook]
