@@ -22,14 +22,6 @@ export function clone<T extends Json>(o: T): T {
   return JSON.parse(JSON.stringify(o));
 }
 
-/**
- * Returns a Promise which resolves after the current async tick is finished.
- * Useful for testing code which `await`s.
- */
-export function nextTick(): Promise<void> {
-  return new Promise(res => setTimeout(res, 0));
-}
-
 export async function gc() {
   // 'node --expose-gc' defines 'global.gc'.
   // To run with yarn: yarn node --expose-gc ./node_modules/.bin/jest ...

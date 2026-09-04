@@ -6,8 +6,7 @@
  */
 
 import {RateLimiter} from '../RateLimiter';
-import {nextTick} from '../testUtils';
-import {defer} from '../utils';
+import {defer, nextTick} from '../utils';
 
 /**
  * Number of tasks parked in `RateLimiter`'s queue waiting for a turn. Each one owns a `Deferred`

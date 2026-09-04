@@ -15,7 +15,8 @@ import {List} from 'immutable';
 import {Provider, atom, createStore, useAtomValue} from 'jotai';
 import {StrictMode} from 'react';
 import {SelfUpdate} from 'shared/immutableExt';
-import {gc, nextTick} from 'shared/testUtils';
+import {gc} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import {
   atomFamilyWeak,
   atomResetOnDepChange,

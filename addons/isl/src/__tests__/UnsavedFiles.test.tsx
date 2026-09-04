@@ -6,7 +6,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import App from '../App';
 import {writeAtom} from '../jotaiUtils';
 import {

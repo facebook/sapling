@@ -9,7 +9,6 @@ import type {CodeReviewSystem} from '../types';
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {nextTick} from 'shared/testUtils';
 import * as utils from 'shared/utils';
 import App from '../App';
 import {CommitInfoTestUtils} from '../testQueries';
@@ -108,7 +107,7 @@ describe('Image upload inside TextArea ', () => {
     it('pastes without images are handled normally', async () => {
       const textarea = CommitInfoTestUtils.getDescriptionEditor();
       act(() => void fireEvent.paste(textarea));
-      await nextTick(); // allow file upload to await arrayBuffer()
+      await utils.nextTick(); // allow file upload to await arrayBuffer()
       expectMessageNOTSentToServer(expect.objectContaining({type: 'uploadFile'}));
     });
   });
@@ -158,7 +157,7 @@ describe('Image upload inside TextArea ', () => {
           id,
           result: {value: `https://image.example.com/${id}`},
         });
-        await nextTick();
+        await utils.nextTick();
       });
     }
 
@@ -169,7 +168,7 @@ describe('Image upload inside TextArea ', () => {
           id,
           result: {error: new Error('upload failed')},
         });
-        await nextTick();
+        await utils.nextTick();
       });
     }
 

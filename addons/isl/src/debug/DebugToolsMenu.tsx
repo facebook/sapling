@@ -19,6 +19,7 @@ import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useState} from 'react';
+import {nextTick} from 'shared/utils';
 import serverApi, {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
@@ -88,10 +89,6 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       </DropdownField>
     </DropdownFields>
   );
-}
-
-function nextTick(): Promise<void> {
-  return new Promise(res => setTimeout(res, 0));
 }
 
 const stressTestAtom = atom<{progressPct: number | null; mismatches: Array<number>}>({

@@ -8,7 +8,7 @@
 import type {Hash} from '../../types';
 
 import {act, fireEvent, render, screen} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import App from '../../App';
 import platform from '../../platform';
 import {

@@ -106,6 +106,13 @@ export function timeout<T>(
 }
 
 /**
+ * Returns a Promise which resolves after the current async tick is finished.
+ */
+export function nextTick(): Promise<void> {
+  return sleep(0);
+}
+
+/**
  * Returns the part of the string after the last occurrence of delimiter,
  * or the entire string if no matches are found.
  * (default delimiter is '/')

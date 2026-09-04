@@ -11,7 +11,8 @@ import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
 
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
-import {mockLogger, nextTick} from 'shared/testUtils';
+import {mockLogger} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import {Internal} from '../Internal';
 import {Repository} from '../Repository';
 import {repositoryCache} from '../RepositoryCache';

@@ -11,8 +11,7 @@ import {act, cleanup, fireEvent, render, screen, waitFor, within} from '@testing
 import fs from 'node:fs';
 import path from 'node:path';
 import {ComparisonType} from 'shared/Comparison';
-import {nextTick} from 'shared/testUtils';
-import {nullthrows} from 'shared/utils';
+import {nextTick, nullthrows} from 'shared/utils';
 import App from '../App';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';

@@ -6,7 +6,7 @@
  */
 
 import {act, fireEvent, render, screen, within} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import App from '../../App';
 import platform from '../../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';

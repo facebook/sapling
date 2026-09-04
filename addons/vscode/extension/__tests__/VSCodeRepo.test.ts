@@ -15,7 +15,7 @@ import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {Logger} from 'isl-server/src/logger';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {nextTick} from 'shared/testUtils';
+import {nextTick} from 'shared/utils';
 import * as vscode from 'vscode';
 import {VSCodeReposList} from '../VSCodeRepo';
 
