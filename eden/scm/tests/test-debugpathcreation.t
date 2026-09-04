@@ -25,6 +25,7 @@ Follow ordinary directory copies, including from a nested subdirectory:
 
   $ sl copy -q foo1 foo2
   $ sl commit -qm 'copy foo1 to foo2'
+  $ B=$(sl log -r . -T '{node}')
   $ sl debugpathcreation foo2
   tracing backward: f20c904112ff copied 'foo1' to 'foo2'
   75ae72b66962696c45e82d2a43e69188d9930209
@@ -38,6 +39,8 @@ Follow chained directory renames:
   $ sl -q debugpathcreation foo3
   75ae72b66962696c45e82d2a43e69188d9930209
   $ sl -q debugpathcreation foo3/subdir
+  75ae72b66962696c45e82d2a43e69188d9930209
+  $ sl -q debugpathcreation --rev "$B" foo2
   75ae72b66962696c45e82d2a43e69188d9930209
 
   $ echo 1 > foo3/1.txt
@@ -80,6 +83,17 @@ Do not infer a directory copy when fewer than 90% of destination files map:
   $ sl commit -qm 'copy foo3 with too many new files'
   $ sl debugpathcreation weak-mapping
   f03bffcc5680263863bbbeb1c026f3ebf99287ce
+  $ sl --config debugpathcreation.similarity-percent=80 -q debugpathcreation weak-mapping
+  75ae72b66962696c45e82d2a43e69188d9930209
+
+Reject invalid similarity percentages:
+
+  $ sl --config debugpathcreation.similarity-percent=50 debugpathcreation weak-mapping
+  abort: debugpathcreation.similarity-percent must be greater than 50 and at most 100
+  [255]
+  $ sl --config debugpathcreation.similarity-percent=101 debugpathcreation weak-mapping
+  abort: debugpathcreation.similarity-percent must be greater than 50 and at most 100
+  [255]
 
 Warn but continue when source and destination sizes differ by more than 10%:
 

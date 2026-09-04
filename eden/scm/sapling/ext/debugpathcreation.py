@@ -20,14 +20,13 @@ from sapling.utils import subtreeutil
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-_MIN_DIRECTORY_SIMILARITY_PERCENT = 90
+_DEFAULT_SIMILARITY_PERCENT = 90
 
 
-def _counts_are_similar(left, right):
+def _counts_are_similar(left, right, similarity_percent):
     return (
         max(left, right) > 0
-        and min(left, right) * 100
-        >= max(left, right) * _MIN_DIRECTORY_SIMILARITY_PERCENT
+        and min(left, right) * 100 >= max(left, right) * similarity_percent
     )
 
 
@@ -35,7 +34,7 @@ def _count_files(ctx, matcher):
     return ctx.manifest().countfiles(matcher)
 
 
-def _copied_directory(repo, ctx, path):
+def _copied_directory(repo, ctx, path, similarity_percent):
     ui = repo.ui
     matcher = matchmod.match(repo.root, "", [f"path:{path}"])
     destination_count = _count_files(ctx, matcher)
@@ -71,10 +70,12 @@ def _copied_directory(repo, ctx, path):
                 f"candidate {source_dir!r} maps "
                 f"{copied_count}/{destination_count} destination files\n"
             )
-            if not _counts_are_similar(copied_count, destination_count):
+            if not _counts_are_similar(
+                copied_count, destination_count, similarity_percent
+            ):
                 ui.debug(
                     f"rejecting {source_dir!r}; copy coverage is below "
-                    f"{_MIN_DIRECTORY_SIMILARITY_PERCENT}%\n"
+                    f"{similarity_percent}%\n"
                 )
                 continue
 
@@ -91,7 +92,7 @@ def _copied_directory(repo, ctx, path):
     source_matcher = matchmod.match(repo.root, "", [f"path:{source_dir}"])
     source_count = _count_files(source_ctx, source_matcher)
     ui.debug(f"candidate {source_dir!r} contains {source_count} source files\n")
-    if not _counts_are_similar(source_count, destination_count):
+    if not _counts_are_similar(source_count, destination_count, similarity_percent):
         ui.warn(
             _(
                 "warning: inferred directory copy from '%s' to '%s' despite "
@@ -102,14 +103,14 @@ def _copied_directory(repo, ctx, path):
     return source_ctx.node(), source_dir
 
 
-def _find_path_creation(repo, head, path):
+def _find_path_creation(repo, head, path, similarity_percent):
     dag = repo.changelog.dag
     while creation := repo.pathcreation(path, dag.ancestors([head])):
         creation_ctx = repo[creation]
         source = subtreeutil.find_subtree_copy(repo, creation, path)
         is_subtree_copy = source is not None
         if source is None:
-            source = _copied_directory(repo, creation_ctx, path)
+            source = _copied_directory(repo, creation_ctx, path, similarity_percent)
         if source is None:
             repo.ui.debug(
                 f"no copy source found; {short(creation_ctx.node())} is the origin\n"
@@ -132,15 +133,33 @@ def _find_path_creation(repo, head, path):
     )
 
 
-@command("debugpathcreation", [], _("FOLDER"))
+@command(
+    "debugpathcreation",
+    [("r", "rev", "", _("start tracing at revision (default: .)"), _("REV"))],
+    _("[-r REV] FOLDER"),
+)
 def debugpathcreation(ui, repo, folder, **opts) -> None:
     """print the oldest commit in the history of a tracked directory"""
 
-    ctx = repo["."]
+    similarity_percent = ui.configint(
+        "debugpathcreation", "similarity-percent", _DEFAULT_SIMILARITY_PERCENT
+    )
+    # More than half guarantees a unique source directory within each parent.
+    if not 50 < similarity_percent <= 100:
+        raise error.Abort(
+            _(
+                "debugpathcreation.similarity-percent must be greater than 50 "
+                "and at most 100"
+            )
+        )
+
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
     path = scmutil.rootrelpath(ctx, folder)
     if not path:
         raise error.Abort(_("repository root is not supported"))
     if not ctx.hasdir(path):
         raise error.Abort(_("path '%s' is not a directory in commit %s") % (path, ctx))
 
-    ui.write("%s\n" % hex(_find_path_creation(repo, ctx.node(), path)))
+    ui.write(
+        "%s\n" % hex(_find_path_creation(repo, ctx.node(), path, similarity_percent))
+    )
