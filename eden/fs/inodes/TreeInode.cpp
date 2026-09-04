@@ -438,6 +438,10 @@ void TreeInode::throwRestrictedAccess() const {
           getNodeId()));
 }
 
+RestrictedContentMode TreeInode::restrictedContentMode() const {
+  return getObjectStore().getRestrictedContentMode();
+}
+
 void TreeInode::assertRestrictedPlaceholderInvariant() const {
   if (!isRestricted()) {
     return;
@@ -626,7 +630,7 @@ std::vector<PathComponent> TreeInode::getChildNames() const {
   auto contents = lockContentsRead();
   std::vector<PathComponent> names;
   names.reserve(contents->entries.size());
-  for (const auto& entry : contents->entries) {
+  for (const auto& entry : contents->entries.all()) {
     names.emplace_back(entry.first);
   }
   return names;
@@ -970,7 +974,8 @@ TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
     taskIdx.reserve(contents->entries.size());
     inodeLoadCleanUps.reserve(contents->entries.size());
 
-    for (const auto& [name, _entry] : contents->entries) {
+    for (const auto& [name, _entry] :
+         contents->entries.visible(restrictedContentMode())) {
       std::optional<PendingDirFetch> dirFetch;
       auto sync =
           rlockCheckChild(*contents, name, context, loadInodes, dirFetch);
@@ -1074,7 +1079,8 @@ TreeInode::co_getChildrenAttributes(
     auto thisUnderAcl =
         mergeAncestorAclState(adjusted.ancestorUnderAcl, adjusted.hasACL);
 
-    for (const auto& [name, _entry] : contents->entries) {
+    for (const auto& [name, _entry] :
+         contents->entries.visible(restrictedContentMode())) {
       auto subPath = path + name;
       std::optional<PendingDirFetch> dirFetch;
       auto sync = rlockCheckChild(
@@ -2470,7 +2476,7 @@ void TreeInode::removeAllChildrenRecursively(
   // Step 1, collect children nodes who are tree and loaded
   {
     auto contents = lockContentsRead();
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       if (auto asTreePtr = entry.second.asTreePtrOrNull()) {
         loadedTreeNodes.push_back(std::move(asTreePtr));
       }
@@ -2487,7 +2493,7 @@ void TreeInode::removeAllChildrenRecursively(
   // Step 3, Now all child nodes are removable, unless one of the directories
   // had a new entry added while the contents lock was not held.
   auto contents = lockContentsWrite();
-  auto it = contents->entries.begin();
+  auto it = contents->entries.all().begin();
   while (it != contents->entries.end()) {
     auto inodeNum = it->second.getInodeNumber();
     bool isDir = it->second.isDirectory();
@@ -3393,13 +3399,13 @@ bool TreeInode::readdirImpl(
   }
 
   auto dir = lockContentsRead();
-  auto& entries = dir->entries;
 
-  // Index the PathMap entries by InodeNumber, only including the
-  // entries that are greater than the given offset.
+  // Index the visible entries by InodeNumber, only including those past the
+  // given offset. Offsets are ino + 2, not list positions, so omitting an
+  // entry never shifts the offsets of the rest across resumed readdir calls.
   std::vector<std::pair<InodeNumber, const DirContents::value_type*>> indices;
-  indices.reserve(entries.size());
-  for (const auto& mapEntry : entries) {
+  indices.reserve(dir->entries.size());
+  for (const auto& mapEntry : dir->entries.visible(restrictedContentMode())) {
     auto inodeNumber = mapEntry.second.getInodeNumber();
     if (static_cast<off_t>(inodeNumber.get() + 2) > off) {
       indices.emplace_back(inodeNumber, &mapEntry);
@@ -3960,7 +3966,7 @@ TreeInode::prepareDeferredDiffEntries(
       scEnds.push_back(tree->cend());
       scIters.push_back(tree->cbegin());
     }
-    auto& inodeEntries = contents->entries;
+    auto& inodeEntries = contents->entries.all();
     auto inodeIter = inodeEntries.begin();
     while (true) {
       context->throwIfCanceled();
@@ -4453,7 +4459,7 @@ void TreeInode::computeCheckoutActions(
     // Restricted placeholders are different because their children are hidden.
     bool hasStaleChildAclRootState = false;
     if (toTree) {
-      for (auto& [name, entry] : contents->entries) {
+      for (auto& [name, entry] : contents->entries.all()) {
         auto toEntry = toTree->find(name);
         if (toEntry != toTree->end() &&
             aclRootStateRequiresCheckoutWalk(
@@ -4569,7 +4575,8 @@ void TreeInode::computeCheckoutActions(
       return tree && tree->find(name) != tree->cend();
     };
 
-    for (auto it = contents->entries.begin(); it != contents->entries.end();
+    for (auto it = contents->entries.all().begin();
+         it != contents->entries.end();
          ++it) {
       if (existsInTree(fromTree, it->first) ||
           existsInTree(toTree, it->first)) {
@@ -5812,7 +5819,7 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
       auto mode = getMetadataLocked(state.entries).mode;
       std::vector<InodeNumber> childInodes;
       childInodes.reserve(state.entries.size());
-      for (const auto& entry : state.entries) {
+      for (const auto& entry : state.entries.all()) {
         childInodes.push_back(entry.second.getInodeNumber());
       }
       auto stats = getMount()->getStats().copy();
@@ -6024,7 +6031,7 @@ void TreeInode::saveOverlayPostCheckout(
 
       // This code relies on the fact that our contents->entries PathMap sorts
       // paths in the same order as Tree's entry list.
-      auto inodeIter = contents->entries.begin();
+      auto inodeIter = contents->entries.all().begin();
       auto scmIter = tree->begin();
       for (; scmIter != tree->end(); ++inodeIter, ++scmIter) {
         // If any of our children are materialized, we need to be materialized
@@ -6223,7 +6230,7 @@ size_t unloadChildrenIf(
     auto contents = self->getContentsUnchecked().wlock();
     auto inodeMapLock = inodeMap->lockForUnload();
 
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       if (shouldCancel()) {
         break;
       }
@@ -6273,7 +6280,7 @@ std::vector<TreeInodePtr> getTreeChildren(
   std::vector<TreeInodePtr> treeChildren;
   {
     auto contents = self->getContentsUnchecked().rlock();
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       if (shouldCancel()) {
         break;
       }
@@ -6369,7 +6376,7 @@ ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
   std::vector<InodeMap::UnloadedInodeGcCandidate> unloadedCandidates;
   {
     auto contents = self->getContentsUnchecked().rlock();
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       if (cancellationToken.isCancellationRequested()) {
         break;
       }
@@ -6717,7 +6724,7 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                   std::min(
                       contents->entries.size(), kFuseGcDirectoryScanBatchSize));
             }
-            auto entry = contents->entries.begin();
+            auto entry = contents->entries.all().begin();
             if (lastExamined) {
               entry = contents->entries.find(lastExamined->piece());
               if (entry != contents->entries.end()) {
@@ -6914,7 +6921,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
               // As we didn't update parent's last fs request time when children
               // are accessed via the fs channel dispatcher, we need to check
               // the children's last fs request time here.
-              for (auto& entry : contents->entries) {
+              for (auto& entry : contents->entries.all()) {
                 auto* entryInode = entry.second.getInode();
                 if (!entryInode) {
                   continue;
@@ -7028,7 +7035,7 @@ TreeInode::invalidateChildrenNotMaterializedPrjFS(
 
               auto contents = self->lockContentsWrite();
               auto* inodeMap = self->getInodeMap();
-              for (auto& entry : contents->entries) {
+              for (auto& entry : contents->entries.all()) {
                 if (entry.second.isMaterialized()) {
                   continue;
                 }
@@ -7135,7 +7142,7 @@ ImmediateFuture<folly::Unit> TreeInode::ensureMaterialized(
   {
     auto contents = lockContentsRead();
     names.reserve(contents->entries.size());
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       names.emplace_back(entry.first);
     }
   }
@@ -7183,7 +7190,7 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(
   std::vector<TreeInodePtr> treeChildren;
   {
     auto contents = lockContentsRead();
-    for (auto& entry : contents->entries) {
+    for (auto& entry : contents->entries.all()) {
       if (shouldCancel()) {
         break;
       }
@@ -7405,7 +7412,7 @@ void TreeInode::doPrefetch(
         {
           auto contents = lease.getTreeInode()->lockContentsWrite();
 
-          for (auto& [name, entry] : contents->entries) {
+          for (auto& [name, entry] : contents->entries.all()) {
             if (entry.getInode()) {
               // Already loaded
               continue;

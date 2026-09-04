@@ -25,6 +25,7 @@
 #include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
+#include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -82,16 +83,10 @@ TreeInodePtr makeTreeInodeChildWithoutParentEntry(
   return inode;
 }
 
-// Shared setup for the omittedMode_* tests: a parent directory with one
-// normal child and one restricted child, mounted with
-// acl:restricted-content-mode = omitted. The mode is snapshotted by the
-// mount's ObjectStore at construction, so it must be set on the EdenConfig
-// before construction rather than via updateEdenConfig().
-std::unique_ptr<TestMount> makeOmittedModeTestMount() {
-  FakeTreeBuilder builder;
-  builder.setFile("parent/normal.txt", "normal content");
-  builder.setFile("parent/restricted_child/secret.txt", "secret content");
-  builder.setDirIsRestricted("parent/restricted_child");
+// Mount the given tree with acl:restricted-content-mode = omitted. The mode
+// is snapshotted by the mount's ObjectStore at construction, so it must be set
+// on the EdenConfig before construction rather than via updateEdenConfig().
+std::unique_ptr<TestMount> makeOmittedModeTestMount(FakeTreeBuilder& builder) {
   return std::make_unique<TestMount>(
       builder,
       /*startReady=*/true,
@@ -102,6 +97,16 @@ std::unique_ptr<TestMount> makeOmittedModeTestMount() {
         config.restrictedContentMode.setValue(
             RestrictedContentMode::Omitted, ConfigSourceType::CommandLine);
       });
+}
+
+// Shared setup for the omittedMode_* tests: a parent directory with one
+// normal child and one restricted child.
+std::unique_ptr<TestMount> makeOmittedModeTestMount() {
+  FakeTreeBuilder builder;
+  builder.setFile("parent/normal.txt", "normal content");
+  builder.setFile("parent/restricted_child/secret.txt", "secret content");
+  builder.setDirIsRestricted("parent/restricted_child");
+  return makeOmittedModeTestMount(builder);
 }
 } // namespace
 
@@ -938,9 +943,9 @@ CO_TEST(RestrictedTreeInode, getChildren_restrictedThrowsEACCES) {
 // ============================================================================
 // acl:restricted-content-mode = omitted
 //
-// These tests pin the CURRENT behavior under omitted mode: restricted ACL
-// roots still appear in enumeration. The FIXME assertions are flipped by the
-// diff that implements omission.
+// Under omitted mode, restricted ACL roots are hidden from enumeration
+// (readdir, getChildren, co_getChildrenAttributes) while explicit lookup
+// by name keeps returning EACCES on access.
 // ============================================================================
 
 TEST(RestrictedTreeInode, omittedMode_objectStoreSnapshotsMode) {
@@ -951,9 +956,7 @@ TEST(RestrictedTreeInode, omittedMode_objectStoreSnapshotsMode) {
       testMount->getEdenMount()->getObjectStore()->getRestrictedContentMode());
 }
 
-CO_TEST(
-    RestrictedTreeInode,
-    omittedMode_getChildrenStillIncludesRestrictedChild) {
+CO_TEST(RestrictedTreeInode, omittedMode_getChildrenOmitsRestrictedChild) {
   auto testMount = makeOmittedModeTestMount();
 
   auto parentInode = testMount->getTreeInode("parent"_relpath);
@@ -961,19 +964,20 @@ CO_TEST(
   auto children =
       co_await parentInode->getChildren(context, /*loadInodes=*/false);
 
-  auto iter =
+  auto restrictedIter =
       std::find_if(children.begin(), children.end(), [](const auto& entry) {
         return entry.first == "restricted_child"_pc;
       });
-  // FIXME: omitted mode should omit restricted roots from child enumeration;
-  // they are currently still returned. The next diff implements omission and
-  // flips this assertion.
-  EXPECT_NE(iter, children.end());
+  EXPECT_EQ(restrictedIter, children.end());
+
+  auto normalIter =
+      std::find_if(children.begin(), children.end(), [](const auto& entry) {
+        return entry.first == "normal.txt"_pc;
+      });
+  EXPECT_NE(normalIter, children.end());
 }
 
-CO_TEST(
-    RestrictedTreeInode,
-    omittedMode_coGetChildrenStillIncludesRestrictedChild) {
+CO_TEST(RestrictedTreeInode, omittedMode_coGetChildrenOmitsRestrictedChild) {
   auto testMount = makeOmittedModeTestMount();
 
   auto edenMount = testMount->getEdenMount();
@@ -983,20 +987,21 @@ CO_TEST(
   auto results = co_await vi.getChildren(
       "parent"_relpath, edenMount->getObjectStore(), context);
   bool sawRestrictedChild = false;
+  bool sawNormalChild = false;
   for (auto& [name, tryVi] : results) {
     if (name == "restricted_child"_pc) {
       sawRestrictedChild = true;
+    } else if (name == "normal.txt"_pc) {
+      sawNormalChild = true;
     }
   }
-  // FIXME: omitted mode should hide restricted roots from
-  // VirtualInode::getChildren; they are currently still listed. The next
-  // diff implements omission and flips this assertion.
-  EXPECT_TRUE(sawRestrictedChild);
+  EXPECT_FALSE(sawRestrictedChild);
+  EXPECT_TRUE(sawNormalChild);
 }
 
 CO_TEST(
     RestrictedTreeInode,
-    omittedMode_coGetChildrenAttributesStillIncludesRestrictedChild) {
+    omittedMode_coGetChildrenAttributesOmitsRestrictedChild) {
   auto testMount = makeOmittedModeTestMount();
 
   auto edenMount = testMount->getEdenMount();
@@ -1011,19 +1016,20 @@ CO_TEST(
       edenMount->getLastCheckoutTime().toTimespec(),
       context);
   bool sawRestrictedChild = false;
+  bool sawNormalChild = false;
   for (auto& [name, tryAttrs] : results) {
     if (name == "restricted_child"_pc) {
       sawRestrictedChild = true;
+    } else if (name == "normal.txt"_pc) {
+      sawNormalChild = true;
     }
   }
-  // FIXME: omitted mode should hide restricted roots from
-  // co_getChildrenAttributes; they are currently still listed. The next diff
-  // implements omission and flips this assertion.
-  EXPECT_TRUE(sawRestrictedChild);
+  EXPECT_FALSE(sawRestrictedChild);
+  EXPECT_TRUE(sawNormalChild);
 }
 
 #ifndef _WIN32
-TEST(RestrictedTreeInode, omittedMode_fuseReaddirStillListsRestrictedChild) {
+TEST(RestrictedTreeInode, omittedMode_fuseReaddirOmitsRestrictedChild) {
   auto testMount = makeOmittedModeTestMount();
 
   auto parentInode = testMount->getTreeInode("parent"_relpath);
@@ -1033,13 +1039,91 @@ TEST(RestrictedTreeInode, omittedMode_fuseReaddirStillListsRestrictedChild) {
               FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
           .extract();
 
-  auto iter = std::find_if(result.begin(), result.end(), [](const auto& entry) {
-    return entry.name == "restricted_child";
-  });
-  // FIXME: omitted mode should hide restricted roots from readdir; they are
-  // currently still listed. The next diff implements omission and flips this
-  // assertion.
-  EXPECT_NE(iter, result.end());
+  auto restrictedIter =
+      std::find_if(result.begin(), result.end(), [](const auto& entry) {
+        return entry.name == "restricted_child";
+      });
+  EXPECT_EQ(restrictedIter, result.end());
+
+  auto normalIter =
+      std::find_if(result.begin(), result.end(), [](const auto& entry) {
+        return entry.name == "normal.txt";
+      });
+  EXPECT_NE(normalIter, result.end());
+}
+
+TEST(RestrictedTreeInode, omittedMode_fuseReaddirResumesAcrossOmittedEntry) {
+  // The restricted child's name sorts between two normal siblings, so its
+  // (omitted) inode number falls between theirs and resumed readdir calls
+  // cross the hole it leaves in the offset sequence.
+  FakeTreeBuilder builder;
+  builder.setFile("parent/a.txt", "a");
+  builder.setFile("parent/m_restricted/secret.txt", "secret");
+  builder.setFile("parent/z.txt", "z");
+  builder.setDirIsRestricted("parent/m_restricted");
+  auto testMount = makeOmittedModeTestMount(builder);
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto full = parentInode->fuseReaddir(FuseDirList{4096}, 0, context).extract();
+  std::vector<std::string> fullNames;
+  fullNames.reserve(full.size());
+  for (const auto& entry : full) {
+    fullNames.push_back(entry.name);
+  }
+  const std::vector<std::string> expectedFull{".", "..", "a.txt", "z.txt"};
+  EXPECT_EQ(expectedFull, fullNames);
+
+  // Resuming from each entry's offset must return exactly the remaining
+  // visible entries: omission may not shift offsets between calls, re-list
+  // earlier entries, skip later ones, or surface the omitted entry.
+  for (size_t i = 0; i < full.size(); ++i) {
+    auto rest =
+        parentInode->fuseReaddir(FuseDirList{4096}, full[i].offset, context)
+            .extract();
+    std::vector<std::string> restNames;
+    restNames.reserve(rest.size());
+    for (const auto& entry : rest) {
+      restNames.push_back(entry.name);
+    }
+    const std::vector<std::string> expectedRest(
+        fullNames.begin() + i + 1, fullNames.end());
+    EXPECT_EQ(expectedRest, restNames)
+        << "mismatch resuming from offset of " << fullNames[i];
+  }
+}
+
+TEST(
+    RestrictedTreeInode,
+    omittedMode_nfsReaddirReportsEofWithTrailingOmittedEntry) {
+  // NFS is the only consumer of readdirImpl's EOF bit, and the planned
+  // batched enumeration-time permission refresh will rework this loop.
+  // Restricted entries never enter the offset index, so pin now that a
+  // drain whose trailing entry is omitted still reports EOF.
+  //
+  // Inode numbers are allocated in name order, so z_restricted's inode
+  // number (and thus readdir offset) is the largest — the omitted entry
+  // is the trailing one in the index.
+  FakeTreeBuilder builder;
+  builder.setFile("parent/a.txt", "a");
+  builder.setFile("parent/z_restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("parent/z_restricted");
+  auto testMount = makeOmittedModeTestMount(builder);
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto [list, isEof] = parentInode->nfsReaddir(
+      NfsDirList{4096, nfsv3Procs::readdir},
+      0,
+      ObjectFetchContext::getNullContext());
+
+  EXPECT_TRUE(isEof);
+  std::vector<std::string> names;
+  for (const auto& entry : list.extractList<entry3>().list) {
+    names.push_back(entry.name);
+  }
+  const std::vector<std::string> expected{".", "..", "a.txt"};
+  EXPECT_EQ(expected, names);
 }
 #endif
 
@@ -1064,4 +1148,45 @@ TEST(RestrictedTreeInode, omittedMode_explicitLookupStillReturnsEACCES) {
   expectEacces([&] {
     restrictedInode->getOrFindChild("secret.txt"_pc, context, false).get();
   });
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    omittedMode_checkoutStillProcessesHiddenRestrictedRoot) {
+  // The all() side of DirEntries: an entry hidden from enumeration is still
+  // walked by checkout, so it picks up the new commit's unrestricted content.
+  auto testMount = makeOmittedModeTestMount();
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto findChild = [](const auto& children) {
+    return std::find_if(children.begin(), children.end(), [](const auto& e) {
+      return e.first == "restricted_child"_pc;
+    });
+  };
+
+  auto before = co_await parentInode->getChildren(context, false);
+  EXPECT_EQ(findChild(before), before.end());
+
+  FakeTreeBuilder builder2;
+  builder2.setFile("parent/normal.txt", "normal content");
+  builder2.setFile("parent/restricted_child/public.txt", "now public");
+  builder2.finalize(testMount->getBackingStore(), true);
+  testMount->getBackingStore()->putCommit(RootId{"2"}, builder2)->setReady();
+
+  testMount->drainServerExecutor();
+  auto checkoutFuture =
+      testMount->getEdenMount()
+          ->checkout(testMount->getRootInode(), RootId{"2"}, context, __func__)
+          .semi()
+          .via(testMount->getServerExecutor().get());
+  testMount->drainServerExecutor();
+  CO_ASSERT_TRUE(checkoutFuture.isReady());
+  EXPECT_EQ(0, std::move(checkoutFuture).get().conflicts.size());
+
+  auto after = co_await parentInode->getChildren(context, false);
+  auto iter = findChild(after);
+  CO_ASSERT_NE(iter, after.end());
+  EXPECT_FALSE(iter->second.value().isRestricted());
+  EXPECT_EQ(
+      "now public", testMount->readFile("parent/restricted_child/public.txt"));
 }

@@ -8,11 +8,13 @@
 #pragma once
 #include <cstdint>
 #include <optional>
+#include <ranges>
 #include <utility>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathMap.h"
+#include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/ObjectId.h"
@@ -334,6 +336,51 @@ struct DirContents : PathMap<DirEntry> {
       folly::fbvector<std::pair<PathComponent, DirEntry>>&& entries,
       CaseSensitivity caseSensitive)
       : PathMap(std::move(entries), caseSensitive) {}
+};
+
+/**
+ * Entries of `dir` (a DirContents or Tree) as users see them: restricted ACL
+ * roots drop out in omitted mode. Explicit lookup by name is unaffected.
+ */
+template <typename Dir>
+auto visibleEntries(Dir& dir, RestrictedContentMode mode) {
+  const bool omit = mode == RestrictedContentMode::Omitted;
+  return dir | std::views::filter([omit](const auto& entry) {
+           return !omit || !entry.second.isRestricted();
+         });
+}
+
+/**
+ * Entries of a loaded directory. Direct iteration does not compile: walk it
+ * through all() (checkout, diff, GC, prefetch, persistence) or visible(mode)
+ * (readdir, getChildren). Lookups and mutation stay unfiltered so explicit
+ * lookup of a hidden entry still resolves.
+ */
+class DirEntries : public DirContents {
+ public:
+  explicit DirEntries(DirContents&& map) : DirContents(std::move(map)) {}
+  DirEntries& operator=(DirContents&& map) {
+    DirContents::operator=(std::move(map));
+    return *this;
+  }
+
+  DirContents& all() {
+    return *this;
+  }
+  const DirContents& all() const {
+    return *this;
+  }
+  auto visible(RestrictedContentMode mode) {
+    return visibleEntries(all(), mode);
+  }
+  auto visible(RestrictedContentMode mode) const {
+    return visibleEntries(all(), mode);
+  }
+
+ private:
+  // Direct iteration is a compile error: pick all() or visible(mode).
+  using DirContents::begin;
+  using DirContents::cbegin;
 };
 
 } // namespace facebook::eden

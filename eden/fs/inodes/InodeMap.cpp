@@ -1213,7 +1213,7 @@ bool InodeMap::hasRememberedChildForUnload(
   // The caller has established that nobody can acquire this inode, matching
   // the exception to the lock hierarchy used by updateOverlayForUnload().
   const auto& contents = inode.getContentsUnchecked().unsafeGetUnlocked();
-  for (const auto& [_, entry] : contents.entries) {
+  for (const auto& [_, entry] : contents.entries.all()) {
     if (data->unloadedInodes_.contains(entry.getInodeNumber())) {
       return true;
     }

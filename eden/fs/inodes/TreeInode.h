@@ -77,7 +77,7 @@ struct TreeInodeState {
     treeId = std::nullopt;
   }
 
-  DirContents entries;
+  DirEntries entries;
 
   /**
    * If this TreeInode is unmaterialized (identical to an existing source
@@ -205,6 +205,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * the inode load is already-in-progress, this may NOT return the loading
    * inode. Otherwise, the returned VirtualInode may contain a ObjectStore
    * Tree or a DirEntry/TreeEntry representing the entry.
+   *
+   * Returns the user-visible view: restricted roots are omitted in omitted
+   * mode.
    */
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
@@ -220,6 +223,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * preserving the latency profile of the original futures-based
    * implementation while still avoiding the ImmediateFuture wrapper
    * overhead.
+   *
+   * Returns the user-visible view: restricted roots are omitted in omitted
+   * mode.
    */
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
@@ -997,6 +1003,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   }
 
  private:
+  /** The daemon's acl:restricted-content-mode snapshot from ServerState. */
+  RestrictedContentMode restrictedContentMode() const;
+
   void assertRestrictedPlaceholderInvariant() const;
 
   void setAclRootState(AclRootState state) {

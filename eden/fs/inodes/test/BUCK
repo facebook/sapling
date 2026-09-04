@@ -776,6 +776,7 @@ cpp_unittest(
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",
+        "//eden/fs/nfs:dirlist",
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",

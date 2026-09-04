@@ -63,7 +63,8 @@ struct TreeInodePtrRoot {
   const DirContents& iterate(
       const folly::Synchronized<TreeInodeState>::ConstLockedPtr& contents)
       const {
-    return contents->entries;
+    // Glob walks every entry; omitted-mode filtering is out of scope.
+    return contents->entries.all();
   }
 
   /** Arrange to load a child TreeInode */

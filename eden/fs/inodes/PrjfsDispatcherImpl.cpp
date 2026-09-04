@@ -951,7 +951,7 @@ ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
   {
     auto contents = tree->lockContentsRead();
     map.reserve(direntNames.size() + contents->entries.size());
-    for (const auto& entry : contents->entries) {
+    for (const auto& entry : contents->entries.all()) {
       map.emplace(entry.first, folly::unit);
     }
   }

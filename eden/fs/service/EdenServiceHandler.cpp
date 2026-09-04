@@ -7267,7 +7267,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     // Invalidate all parent/child relationships potentially cached.
     if (treePtr != nullptr) {
       auto contents = treePtr->lockContentsRead();
-      for (const auto& entry : contents->entries) {
+      for (const auto& entry : contents->entries.all()) {
         fuseChannel->invalidateEntry(inode->getNodeId(), entry.first);
       }
     }
@@ -7312,7 +7312,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                            {
                              auto contents = treePtr->lockContentsRead();
                              childNames.reserve(contents->entries.size());
-                             for (const auto& entry : contents->entries) {
+                             for (const auto& entry : contents->entries.all()) {
                                childNames.push_back(entry.first);
                              }
                            }

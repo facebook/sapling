@@ -12,6 +12,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/AclState.h"
 #include "eden/fs/inodes/ChildEntryAttributes.h"
+#include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -1365,7 +1366,8 @@ getChildrenHelper(
   std::vector<folly::coro::Task<VirtualInode>> tasks;
   std::vector<size_t> taskIdx;
 
-  for (auto& child : *tree) {
+  for (auto& child :
+       visibleEntries(*tree, objectStore->getRestrictedContentMode())) {
     const auto* treeEntry = &child.second;
     if (treeEntry->isTree()) {
       if (treeEntry->isRestricted()) {
@@ -1498,7 +1500,8 @@ VirtualInode::co_getChildrenAttributes(
   names.reserve((*tree)->size());
   tasks.reserve((*tree)->size());
 
-  for (auto& child : **tree) {
+  for (auto& child :
+       visibleEntries(**tree, objectStore->getRestrictedContentMode())) {
     auto subPath = path + child.first;
     names.push_back(child.first);
     const auto& treeEntry = child.second;
