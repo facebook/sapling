@@ -164,7 +164,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       ErrorLogger& errorLogger,
       AbsolutePath mountPath,
       CaseSensitivity caseSensitive,
-      uint32_t iosize,
+      uint32_t readIoSize,
+      uint32_t writeIoSize,
       folly::Promise<FsStopDataPtr>& stopPromise,
       ProcessAccessLog& processAccessLog,
       std::atomic<size_t>& traceDetailedArguments,
@@ -178,7 +179,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         errorLogger_(errorLogger),
         mountPath_(std::move(mountPath)),
         caseSensitive_(caseSensitive),
-        iosize_(iosize),
+        readIoSize_(readIoSize),
+        writeIoSize_(writeIoSize),
         stopPromise_{stopPromise},
         processAccessLog_{processAccessLog},
         traceDetailedArguments_(traceDetailedArguments),
@@ -338,7 +340,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   ErrorLogger& errorLogger_;
   AbsolutePath mountPath_;
   CaseSensitivity caseSensitive_;
-  uint32_t iosize_;
+  uint32_t readIoSize_;
+  uint32_t writeIoSize_;
   // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
   // this server processor. This promise should only be used during the
   // lifetime of  nfs3d. The way we currently enforce this is by waiting for
@@ -1683,13 +1686,15 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsinfo(
         FSINFO3resok{
             // TODO(xavierd): fill the post_op_attr.
             post_op_attr{},
-            /*rtmax=*/iosize_,
-            /*rtpref=*/iosize_,
+            /*rtmax=*/readIoSize_,
+            /*rtpref=*/readIoSize_,
             /*rtmult=*/1,
-            /*wtmax=*/iosize_,
-            /*wtpref=*/iosize_,
+            /*wtmax=*/writeIoSize_,
+            /*wtpref=*/writeIoSize_,
             /*wtmult=*/1,
-            /*dtpref=*/iosize_,
+            // READDIR replies are reads, so they share the read size. The
+            // client's dsize is configured separately via `nfs:dir-read-size`.
+            /*dtpref=*/readIoSize_,
             /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
             // TODO: support nanosecond granularity on Windows
             /*time_delta*/ folly::kIsWindows ? nfstime3{1, 0} : nfstime3{0, 1},
@@ -2645,7 +2650,8 @@ Nfsd3::Nfsd3(
     folly::Duration /*requestTimeout*/,
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
-    uint32_t iosize,
+    uint32_t readIoSize,
+    uint32_t writeIoSize,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval,
     std::chrono::nanoseconds longRunningFSRequestThreshold,
@@ -2663,7 +2669,8 @@ Nfsd3::Nfsd3(
             errorLogger,
             mountPath_,
             caseSensitive,
-            iosize,
+            readIoSize,
+            writeIoSize,
             stopPromise_,
             processAccessLog_,
             traceDetailedArguments_,

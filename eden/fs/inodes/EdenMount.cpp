@@ -2803,12 +2803,11 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
     std::optional<folly::File> connectedSocket = std::nullopt) {
   auto edenConfig = mount->getEdenConfig();
   auto nfsServer = mount->getServerState()->getNfsServer();
-  auto iosize = edenConfig->nfsIoSize.getValue();
   auto mountPath = mount->getPath();
   // Make sure that we are running on the EventBase while registering
   // the mount point.
   return via(nfsServer->getEventBase(),
-             [mount, mountPath, nfsServer, iosize, edenConfig]() {
+             [mount, mountPath, nfsServer, edenConfig]() {
                return nfsServer->registerMount(
                    mountPath,
                    mount->getRootInode()->getNodeId(),
@@ -2822,7 +2821,8 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                        edenConfig->nfsRequestTimeout.getValue()),
                    mount->getServerState()->getNotifier(),
                    mount->getCheckoutConfig()->getCaseSensitive(),
-                   iosize,
+                   edenConfig->nfsReadIoSize.getValue(),
+                   edenConfig->nfsWriteIoSize.getValue(),
                    edenConfig->nfsTraceBusCapacity.getValue(),
                    edenConfig->nfsFastPathRPCs.getValue(),
                    mount->getServerState()->getReloadableConfig());

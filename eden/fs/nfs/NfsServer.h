@@ -93,7 +93,8 @@ class NfsServer {
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
-      uint32_t iosize,
+      uint32_t readIoSize,
+      uint32_t writeIoSize,
       size_t traceBusCapacity,
       bool fastPathRPCs,
       std::shared_ptr<ReloadableConfig> config);

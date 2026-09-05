@@ -1111,16 +1111,22 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * ========= DEPRECATED: DO NOT USE =========
    *
-   * Buffer size for read and write requests. Default to 16 KiB.
+   * Use `nfs:read-iosize` and `nfs:write-iosize` instead.
    *
-   * 16KiB was determined to offer the best tradeoff of random write speed to
-   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
-   * changing this default value.
+   * This used to be the sole source of the read and write transfer sizes
+   * EdenFS advertises in its FSINFO reply. It no longer influences those, or
+   * anything else, at all: the only remaining use is the dead `iosize` field
+   * in the privhelper NFS mount message. It is removed in a following diff.
    */
   ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 16 * 1024, this};
 
   /**
    * Buffer size for read requests. Default to 16 KiB.
+   *
+   * This is both the client's rsize mount option and the read transfer size
+   * EdenFS advertises in its FSINFO reply (rtmax/rtpref), which the client
+   * clamps rsize to. It also drives the advertised dtpref, since READDIR
+   * replies are reads.
    *
    * 16KiB was determined to offer the best tradeoff of random write speed to
    * streaming writes on macOS, use the benchmarks/random_writes.cpp before
@@ -1130,6 +1136,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Buffer size for write requests. Default to 16 KiB.
+   *
+   * This is both the client's wsize mount option and the write transfer size
+   * EdenFS advertises in its FSINFO reply (wtmax/wtpref), which the client
+   * clamps wsize to.
    *
    * 16KiB was determined to offer the best tradeoff of random write speed to
    * streaming writes on macOS, use the benchmarks/random_writes.cpp before
