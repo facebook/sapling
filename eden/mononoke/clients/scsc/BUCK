@@ -1,4 +1,5 @@
 load("@fbcode//clifoundation/cli_target/buck_defs:cli.bzl", "cli")
+load("@fbcode//clifoundation/cli_target/buck_defs:dotslash.bzl", "dotslash")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("//registry:defs.bzl", "rpm")
 
@@ -89,30 +90,33 @@ rpm.builder(
     summary = "Source Control Service Client",
 )
 
-cli.deployer(
+dotslash.builder(
     name = "scsc.clideployer",
-    distribution = cli.distribution(
-        bump_diffs = cli.bump_diffs(
-            destinations = [
-                cli.destination(
-                    branch = "master",
-                    paths = [
-                        "fbcode/scm/service/client/scsc",
-                        "tools/scm/scsc",
-                    ],
-                    repository = cli.repository.FBSOURCE,
-                ),
-                cli.destination(
-                    branch = "master",
-                    paths = [
-                        "chef/cookbooks/secure/fb_mercurial_client/files/default/scsc",
-                        "chef/itchef/cookbooks/core/cpe_mercurial/files/default/scsc",
-                    ],
-                    repository = cli.repository.OPSFILES,
-                ),
-            ],
-        ),
+    conveyor = cli.conveyor(
+        frequency = cli.frequency.WEEKLY,
+        holiday_countries = [
+            cli.holiday_country.UNITED_STATES,
+        ],
+        timezone = "US/Pacific",
     ),
+    destinations = [
+        cli.destination(
+            branch = "master",
+            paths = [
+                "fbcode/scm/service/client/scsc",
+                "tools/scm/scsc",
+            ],
+            repository = cli.repository.FBSOURCE,
+        ),
+        cli.destination(
+            branch = "master",
+            paths = [
+                "chef/cookbooks/secure/fb_mercurial_client/files/default/scsc",
+                "chef/itchef/cookbooks/core/cpe_mercurial/files/default/scsc",
+            ],
+            repository = cli.repository.OPSFILES,
+        ),
+    ],
     metadata = cli.metadata(
         binary_name = "scsc",
         criticality = cli.criticality(
@@ -121,39 +125,19 @@ cli.deployer(
         description = "Mononoke Source Control Service Client",
         executable = ":scsc",
     ),
-    packaging = cli.packaging(
-        dotslash = cli.dotslash(
-            platforms = [
-                cli.platform.linux(
-                    architectures = [
-                        cli.architecture.AARCH64,
-                        cli.architecture.X86_64,
-                    ],
-                ),
-                cli.platform.macos(
-                    architectures = [
-                        cli.architecture.AARCH64,
-                    ],
-                ),
-                cli.platform.windows(),
+    platforms = [
+        cli.platform.linux(
+            architectures = [
+                cli.architecture.AARCH64,
+                cli.architecture.X86_64,
             ],
         ),
-    ),
-    release = cli.release(
-        artifact_ci_config = cli.artifact_ci_config(
-            relevant_target_directories = [
-                "//eden/mononoke/clients/scsc/...",
+        cli.platform.macos(
+            architectures = [
+                cli.architecture.AARCH64,
             ],
         ),
-        conveyor = cli.conveyor(
-            frequency = cli.frequency.WEEKLY,
-            holiday_countries = [
-                cli.holiday_country.UNITED_STATES,
-            ],
-            timezone = "US/Pacific",
-        ),
-        srconveyor = cli.srconveyor(
-            rollout = cli.rollout.AT_ONCE,
-        ),
-    ),
+        cli.platform.windows(),
+    ],
+    schedule_name = "scsc",
 )
