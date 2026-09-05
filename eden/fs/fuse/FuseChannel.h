@@ -311,6 +311,10 @@ class FuseChannel final : public FsChannel {
    * ioUringQueueDepth -
    *      The io_uring queue depth to use when the io_uring transport is
    *      enabled.
+   * ioUringPreCreateQueues -
+   *      Whether to create every io_uring queue before replying to FUSE_INIT,
+   *      so that a mount can still fall back to /dev/fuse when the queues do
+   *      not all fit under RLIMIT_MEMLOCK.
    */
   FuseChannel(
       PrivHelper* privHelper,
@@ -340,6 +344,7 @@ class FuseChannel final : public FsChannel {
       uint32_t ioUringQueueDepth = 8,
       bool ioUringDisableIoWait = true,
       bool ioUringSkipSelfWakeup = true,
+      bool ioUringPreCreateQueues = false,
       size_t numInvalidationThreads = 4);
 
   FuseChannel(const FuseChannel&) = delete;
@@ -1049,6 +1054,7 @@ class FuseChannel final : public FsChannel {
   uint32_t ioUringQueueDepth_{8};
   bool ioUringDisableIoWait_{true};
   bool ioUringSkipSelfWakeup_{true};
+  bool ioUringPreCreateQueues_{false};
 #if EDEN_HAVE_FUSE_IO_URING
   mutable folly::once_flag ioUringTransportAvailabilityInitFlag_;
   mutable bool ioUringTransportAvailable_{false};

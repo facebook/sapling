@@ -118,6 +118,7 @@ class FuseChannelTest : public ::testing::Test {
         /*ioUringQueueDepth=*/8,
         /*ioUringDisableIoWait=*/true,
         /*ioUringSkipSelfWakeup=*/false,
+        /*ioUringPreCreateQueues=*/false,
         numInvalidationThreads);
   }
 

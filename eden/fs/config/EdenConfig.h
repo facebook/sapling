@@ -1016,6 +1016,28 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * When the FUSE io_uring transport is enabled, create every io_uring queue
+   * and allocate its buffers before replying to FUSE_INIT, and mount over
+   * /dev/fuse instead if they do not all fit.
+   *
+   * Eden creates one queue per logical CPU, and each ring charges
+   * RLIMIT_MEMLOCK against a limit shared by every process running as this
+   * uid, so a co-tenant can leave room for the first queues but not the rest.
+   * Before the INIT reply is the only point where declining io_uring is still
+   * possible: once the reply advertises FUSE_OVER_IO_URING the kernel blocks
+   * request allocation until the ring is ready, so a later failure hangs the
+   * mount rather than falling back.
+   *
+   * When disabled, each worker thread creates its own queue as it starts,
+   * which keeps that queue's memory NUMA-local to the worker but leaves no way
+   * to recover from a shortfall.
+   */
+  ConfigSetting<bool> fuseIoUringPreCreateQueues{
+      "fuse:io-uring-pre-create-queues",
+      false,
+      this};
+
   // [nfs]
 
   /**

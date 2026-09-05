@@ -1037,6 +1037,7 @@ FuseChannel::FuseChannel(
     uint32_t ioUringQueueDepth,
     bool ioUringDisableIoWait,
     bool ioUringSkipSelfWakeup,
+    bool ioUringPreCreateQueues,
     size_t numInvalidationThreads)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
@@ -1075,6 +1076,7 @@ FuseChannel::FuseChannel(
       ioUringQueueDepth_{ioUringQueueDepth},
       ioUringDisableIoWait_{ioUringDisableIoWait},
       ioUringSkipSelfWakeup_{ioUringSkipSelfWakeup},
+      ioUringPreCreateQueues_{ioUringPreCreateQueues},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
@@ -1779,10 +1781,11 @@ void FuseChannel::initWorkerThread() noexcept {
     setThreadName(fmt::format("fuse{}", mountPath_.basename()));
     XLOGF(
         DBG6,
-        "Fuse init worker starting for mount={} transport={} useIoUringConfig={}",
+        "Fuse init worker starting for mount={} transport={} useIoUringConfig={} ioUringPreCreateQueuesConfig={}",
         mountPath_,
         transport_->getName(),
-        useIoUring_);
+        useIoUring_,
+        ioUringPreCreateQueues_);
 
     // Read the INIT packet
     readInitPacket();
