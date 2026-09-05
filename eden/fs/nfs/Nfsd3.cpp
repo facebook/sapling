@@ -74,6 +74,15 @@ void incrementNfsGcInvalidationCounter(
 }
 
 /**
+ * Whether an AUTH_SYS credential carries `gid` as its primary gid or as one
+ * of its auxiliary gids.
+ */
+bool credsHaveGid(const authsys_parms& creds, uint32_t gid) {
+  return creds.gid == gid ||
+      std::find(creds.gids.begin(), creds.gids.end(), gid) != creds.gids.end();
+}
+
+/**
  * Whether an AUTH_SYS credential claims root / the wheel group (primary or
  * auxiliary gid 0, root-equivalent on macOS). These predicates define the
  * identity classes that nfs:root-access-mode and nfs:wheel-access-mode act
@@ -84,8 +93,7 @@ bool credsClaimRoot(const authsys_parms& creds) {
 }
 
 bool credsClaimWheel(const authsys_parms& creds) {
-  return creds.gid == 0 ||
-      std::find(creds.gids.begin(), creds.gids.end(), 0u) != creds.gids.end();
+  return credsHaveGid(creds, 0);
 }
 
 /**
@@ -105,6 +113,28 @@ bool isAccessModeExempt(uint32_t proc) {
     default:
       return false;
   }
+}
+
+/**
+ * Whether one (mode, rate limiter) entry rejects a request: Block always
+ * does, RateLimit only once `limiter` is over its `count` per
+ * `windowSeconds` budget, and Off / Log never do.
+ */
+bool accessModeRejects(
+    NfsAccessMode mode,
+    NfsAccessRateLimiter& limiter,
+    uint32_t count,
+    uint32_t windowSeconds) {
+  switch (mode) {
+    case NfsAccessMode::Off:
+    case NfsAccessMode::Log:
+      return false;
+    case NfsAccessMode::Block:
+      return true;
+    case NfsAccessMode::RateLimit:
+      return !limiter.allow(count, windowSeconds);
+  }
+  return false;
 }
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
@@ -2439,12 +2469,12 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
     if (mode != NfsAccessMode::Off) {
       dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
     }
-    if (mode == NfsAccessMode::Block) {
+    if (accessModeRejects(
+            mode,
+            rootAccessRateLimiter_,
+            config->nfsRootAccessRateLimitCount.getValue(),
+            config->nfsRootAccessRateLimitWindowSeconds.getValue())) {
       block = true;
-    } else if (mode == NfsAccessMode::RateLimit) {
-      block = !rootAccessRateLimiter_.allow(
-          config->nfsRootAccessRateLimitCount.getValue(),
-          config->nfsRootAccessRateLimitWindowSeconds.getValue());
     }
   }
   if (credsClaimWheel(*authSysCreds)) {
@@ -2453,13 +2483,12 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
       dispatcher_->getStats()->increment(
           &NfsStats::nfsPrivilegedAccessGidWheel);
     }
-    if (mode == NfsAccessMode::Block) {
+    if (accessModeRejects(
+            mode,
+            wheelAccessRateLimiter_,
+            config->nfsWheelAccessRateLimitCount.getValue(),
+            config->nfsWheelAccessRateLimitWindowSeconds.getValue())) {
       block = true;
-    } else if (mode == NfsAccessMode::RateLimit) {
-      block = !wheelAccessRateLimiter_.allow(
-                  config->nfsWheelAccessRateLimitCount.getValue(),
-                  config->nfsWheelAccessRateLimitWindowSeconds.getValue()) ||
-          block;
     }
   }
   if (!block) {
