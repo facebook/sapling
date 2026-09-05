@@ -424,7 +424,7 @@ TEST_F(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait) {
 
   IoUringFuseTransport transport{kQueueDepth, /*disableIoWait=*/true};
   IoUringFuseTransport::RingQueue queue;
-  transport.initializeQueue(queue, devNull.fd());
+  transport.createQueueRing(queue, devNull.fd());
 
   if (!(queue.ring.features & IORING_FEAT_NO_IOWAIT)) {
     GTEST_SKIP() << "kernel lacks IORING_FEAT_NO_IOWAIT";
@@ -441,7 +441,7 @@ TEST_F(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait) {
 
   IoUringFuseTransport transport{kQueueDepth};
   IoUringFuseTransport::RingQueue queue;
-  transport.initializeQueue(queue, devNull.fd());
+  transport.createQueueRing(queue, devNull.fd());
 
   EXPECT_FALSE(queue.ring.int_flags & IORING_ENTER_NO_IOWAIT);
 }
@@ -466,14 +466,14 @@ TEST_F(FuseChannelTest, ioUringStopWakeupBeforeEventFdPublished) {
   IoUringFuseTransport transport{kQueueDepth};
   IoUringFuseTransport::RingQueue queue;
 
-  // Simulate requestStopWakeup() racing ahead of initializeQueue(): the
+  // Simulate requestStopWakeup() racing ahead of createQueueRing(): the
   // queue's eventfd hasn't been published yet, so this must record the
   // pending wakeup instead of silently dropping it.
   transport.requestQueueStopWakeup(queue);
 
-  transport.initializeQueue(queue, devNull.fd());
+  transport.createQueueRing(queue, devNull.fd());
 
-  // initializeQueue() must self-notify the freshly published eventfd,
+  // createQueueRing() must self-notify the freshly published eventfd,
   // otherwise the worker could block indefinitely in
   // io_uring_submit_and_wait() waiting for a wakeup that was already
   // requested.

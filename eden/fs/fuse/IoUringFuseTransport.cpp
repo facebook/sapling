@@ -252,6 +252,7 @@ IoUringFuseTransport::RingQueue::RingQueue(RingQueue&& other) noexcept
       ownerThreadId{other.ownerThreadId},
       ring{other.ring},
       ringInitialized{other.ringInitialized},
+      buffersAllocated{other.buffersAllocated},
       entries{std::move(other.entries)},
       pendingCommits{std::move(other.pendingCommits)} {
   other.resetMovedFrom();
@@ -274,6 +275,7 @@ IoUringFuseTransport::RingQueue& IoUringFuseTransport::RingQueue::operator=(
   ownerThreadId = other.ownerThreadId;
   ring = other.ring;
   ringInitialized = other.ringInitialized;
+  buffersAllocated = other.buffersAllocated;
   entries = std::move(other.entries);
   pendingCommits = std::move(other.pendingCommits);
 
@@ -291,6 +293,8 @@ void IoUringFuseTransport::RingQueue::resetMovedFrom() noexcept {
   ring = {};
   ring.ring_fd = -1;
   ringInitialized = false;
+  // entries (and the buffers they own) were moved out along with the vector.
+  buffersAllocated = false;
 }
 
 void IoUringFuseTransport::RingQueue::reset() noexcept {
@@ -368,7 +372,7 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
   });
 }
 
-void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
+void IoUringFuseTransport::createQueueRing(RingQueue& queue, int fuseFd) const {
   int eventFd = -1;
   auto maybeSetupError = setupQueue(
       queueDepth_, fuseFd, eventFd, queue.ring, queue.ringInitialized);
@@ -404,21 +408,14 @@ void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
   }
 }
 
-void IoUringFuseTransport::initializeQueueForWorker(
-    RingQueue& queue,
-    int fuseFd) const {
-  XLOGF(
-      DBG6,
-      "io_uring worker initializing queueId={} queueDepth={} payloadSize={}",
-      queue.queueId,
-      queue.entries.size(),
-      queue.pool->maxRequestPayloadSize);
-
-  initializeQueue(queue, fuseFd);
+void IoUringFuseTransport::allocateQueueBuffers(RingQueue& queue) const {
   for (auto& entry : queue.entries) {
     initializeEntryBuffers(queue, entry);
   }
+  queue.buffersAllocated = true;
+}
 
+void IoUringFuseTransport::registerQueueWithFuse(RingQueue& queue) const {
   prepareFetchRequests(queue);
   auto rc = io_uring_submit(&queue.ring);
   if (rc < 0) {
@@ -438,6 +435,27 @@ void IoUringFuseTransport::initializeQueueForWorker(
       rc,
       queue.eventFd.load(std::memory_order_acquire),
       queue.ring.ring_fd);
+}
+
+void IoUringFuseTransport::initializeQueueForWorker(
+    RingQueue& queue,
+    int fuseFd) const {
+  XLOGF(
+      DBG6,
+      "io_uring worker initializing queueId={} queueDepth={} payloadSize={}",
+      queue.queueId,
+      queue.entries.size(),
+      queue.pool->maxRequestPayloadSize);
+
+  // The ring and buffers may already exist if they were set up ahead of
+  // FUSE_INIT; only do the work here that the worker is first to reach.
+  if (!queue.ringInitialized) {
+    createQueueRing(queue, fuseFd);
+  }
+  if (!queue.buffersAllocated) {
+    allocateQueueBuffers(queue);
+  }
+  registerQueueWithFuse(queue);
 }
 
 void IoUringFuseTransport::initializeEntryBuffers(
@@ -753,7 +771,7 @@ bool IoUringFuseTransport::shouldExitWorkerLoop(
 
 void IoUringFuseTransport::notifyWorker(const RingQueue& queue) const {
   // Every caller (queueCommitAndFetch(), the self-notify in
-  // initializeQueue(), and requestQueueStopWakeup()'s fallback) already
+  // createQueueRing(), and requestQueueStopWakeup()'s fallback) already
   // guarantees the eventfd is published before calling this. Don't silently
   // ignore an unpublished/invalid fd here, since that would mask a genuine
   // caller bug instead of surfacing it.
@@ -771,7 +789,7 @@ void IoUringFuseTransport::requestQueueStopWakeup(RingQueue& queue) const {
   auto fd = queue.eventFd.load(std::memory_order_acquire);
   while (fd < 0 && fd != kStopRequestedBeforeReady) {
     // The owning worker hasn't published its eventfd yet. Record that a stop
-    // wakeup is owed so initializeQueue() can self-notify once it publishes
+    // wakeup is owed so createQueueRing() can self-notify once it publishes
     // the fd, instead of silently dropping this wakeup the way a plain
     // load-then-write would.
     if (queue.eventFd.compare_exchange_weak(

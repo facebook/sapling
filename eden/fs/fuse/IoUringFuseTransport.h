@@ -126,6 +126,9 @@ class IoUringFuseTransport final : public FuseTransport {
     std::thread::id ownerThreadId;
     io_uring ring{};
     bool ringInitialized{false};
+    // Tracks the entry buffers separately from the ring: the two halves of
+    // bring-up can run at different times, so each needs its own guard.
+    bool buffersAllocated{false};
     std::vector<RingEntry> entries;
     std::unique_ptr<folly::Synchronized<std::vector<RingEntry*>>>
         pendingCommits;
@@ -219,7 +222,15 @@ class IoUringFuseTransport final : public FuseTransport {
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
-  void initializeQueue(RingQueue& queue, int fuseFd) const;
+  // Bring-up is split into three phases so they can run at different times.
+  // Ring creation and buffer allocation are pure io_uring/userspace work and
+  // can run before FUSE_INIT is answered; only registration requires
+  // FUSE_OVER_IO_URING to have been negotiated. Keeping every allocation in
+  // the first two phases means a shortfall is detectable while declining
+  // io_uring is still possible.
+  void createQueueRing(RingQueue& queue, int fuseFd) const;
+  void allocateQueueBuffers(RingQueue& queue) const;
+  void registerQueueWithFuse(RingQueue& queue) const;
   void initializeQueueForWorker(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void prepareWakePollSqe(RingQueue& queue) const;
