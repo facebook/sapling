@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <map>
 #include <optional>
@@ -14,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 
 #include <cpptoml.h>
 #include <fmt/ranges.h>
@@ -180,6 +182,72 @@ class FieldConverter<std::unordered_set<T>> {
         [](auto& element) {
           return FieldConverter<T>{}.toDebugString(element);
         });
+    return fmt::to_string(fmt::join(serializedElements, ", "));
+  }
+};
+
+/**
+ * Parses a TOML array of "key:value" strings (split at the first colon) into
+ * a map. Keys and values go through their own converters; a missing colon,
+ * a key or value that fails to convert, and a duplicate key are all errors.
+ */
+template <typename K, typename V>
+class FieldConverter<std::unordered_map<K, V>> {
+ public:
+  folly::Expected<std::unordered_map<K, V>, std::string> fromString(
+      std::string_view value,
+      const std::map<std::string, std::string>& convData) const {
+    auto elements =
+        FieldConverter<std::vector<std::string>>{}.fromString(value, convData);
+    if (elements.hasError()) {
+      return folly::makeUnexpected(std::move(elements.error()));
+    }
+
+    std::unordered_map<K, V> result;
+    for (const std::string_view element : elements.value()) {
+      auto colon = element.find(':');
+      if (colon == std::string_view::npos) {
+        return folly::makeUnexpected(
+            fmt::format("expected 'key:value', got '{}'", element));
+      }
+      auto keyStr = element.substr(0, colon);
+      auto key = FieldConverter<K>{}.fromString(keyStr, convData);
+      if (key.hasError()) {
+        return folly::makeUnexpected(std::move(key.error()));
+      }
+      auto val =
+          FieldConverter<V>{}.fromString(element.substr(colon + 1), convData);
+      if (val.hasError()) {
+        return folly::makeUnexpected(std::move(val.error()));
+      }
+      if (!result.try_emplace(std::move(key.value()), std::move(val.value()))
+               .second) {
+        return folly::makeUnexpected(fmt::format("duplicate key '{}'", keyStr));
+      }
+    }
+    return result;
+  }
+
+  std::string toDebugString(const std::unordered_map<K, V>& value) const {
+    // Sorted by key, not its string form, so output is deterministic and
+    // numeric keys read in order.
+    std::vector<const typename std::unordered_map<K, V>::value_type*> entries;
+    entries.reserve(value.size());
+    for (const auto& entry : value) {
+      entries.push_back(&entry);
+    }
+    std::sort(entries.begin(), entries.end(), [](const auto* a, const auto* b) {
+      return a->first < b->first;
+    });
+    std::vector<std::string> serializedElements;
+    serializedElements.reserve(entries.size());
+    for (const auto* entry : entries) {
+      serializedElements.push_back(
+          fmt::format(
+              "{}:{}",
+              FieldConverter<K>{}.toDebugString(entry->first),
+              FieldConverter<V>{}.toDebugString(entry->second)));
+    }
     return fmt::to_string(fmt::join(serializedElements, ", "));
   }
 };
