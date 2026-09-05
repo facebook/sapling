@@ -232,9 +232,7 @@ impl HttpClientBuilder {
             headers.insert("X-Enforce-Path-Acls".to_string(), "true".to_string());
         }
 
-        // edenapi.maxrequests is old name supported for transition to new name - can delete in future
-        let max_requests = get_config(config, "edenapi", "max-concurrent-requests")?
-            .or(get_config(config, "edenapi", "maxrequests")?);
+        let max_requests = get_config(config, "edenapi", "max-concurrent-requests")?;
 
         let max_requests_per_batch =
             get_config(config, "edenapi", "max-concurrent-requests-per-batch")?;
