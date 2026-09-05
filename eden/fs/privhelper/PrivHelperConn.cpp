@@ -174,11 +174,15 @@ folly::SocketAddress deserializeSocketAddress(Cursor& cursor) {
   }
 }
 
+// Legacy iosize option. Serialized to its old value for compatibility with old
+// privhelpers.
+constexpr uint32_t kLegacyIoSizeWireSlot = 16 * 1024;
+
 void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeSocketAddress(a, options.mountdAddr);
   serializeSocketAddress(a, options.nfsdAddr);
   serializeBool(a, options.readOnly);
-  serializeUint32(a, options.iosize);
+  serializeUint32(a, kLegacyIoSizeWireSlot);
   serializeBool(a, options.useReaddirplus);
   serializeBool(a, options.useSoftMount);
   serializeUint32(a, options.readIOSize);
@@ -196,7 +200,8 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   options.mountdAddr = deserializeSocketAddress(cursor);
   options.nfsdAddr = deserializeSocketAddress(cursor);
   options.readOnly = deserializeBool(cursor);
-  options.iosize = deserializeUint32(cursor);
+  // Legacy iosize option, ignored.
+  deserializeUint32(cursor);
   options.useReaddirplus = deserializeBool(cursor);
   options.useSoftMount = deserializeBool(cursor);
   options.readIOSize = deserializeUint32(cursor);

@@ -1109,18 +1109,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * ========= DEPRECATED: DO NOT USE =========
-   *
-   * Use `nfs:read-iosize` and `nfs:write-iosize` instead.
-   *
-   * This used to be the sole source of the read and write transfer sizes
-   * EdenFS advertises in its FSINFO reply. It no longer influences those, or
-   * anything else, at all: the only remaining use is the dead `iosize` field
-   * in the privhelper NFS mount message. It is removed in a following diff.
-   */
-  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 16 * 1024, this};
-
-  /**
    * Buffer size for read requests. Default to 16 KiB.
    *
    * This is both the client's rsize mount option and the read transfer size

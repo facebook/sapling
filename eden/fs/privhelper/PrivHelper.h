@@ -35,8 +35,6 @@ struct NFSMountOptions {
   folly::SocketAddress mountdAddr;
   folly::SocketAddress nfsdAddr;
   bool readOnly = false;
-  // DEPRECATED: use readIOSize and writeIOSize instead
-  uint32_t iosize{};
   bool useReaddirplus = false;
   bool useSoftMount = false;
   uint32_t readIOSize{};

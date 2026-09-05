@@ -2880,7 +2880,6 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
 
         if (shouldBeOrIsNfsChannel()) {
           NFSMountOptions options;
-          options.iosize = edenConfig->nfsIoSize.getValue();
           options.useReaddirplus = edenConfig->useReaddirplus.getValue();
           options.useSoftMount = edenConfig->useSoftMounts.getValue();
           options.readOnly = readOnly;
