@@ -315,6 +315,10 @@ struct FuseStats : StatsGroup<FuseStats> {
 
   Counter ioUringReplySameThread{"fuse.io_uring_reply_same_thread"};
   Counter ioUringReplyCrossThread{"fuse.io_uring_reply_cross_thread"};
+  Counter ioUringPreCreateQueuesSuccess{
+      "fuse.io_uring_pre_create_queues_success"};
+  Counter ioUringPreCreateQueuesFailure{
+      "fuse.io_uring_pre_create_queues_failure"};
   Counter invalidationQueueThrottleWait{
       "fuse.invalidation.queue_throttle_wait"};
 };

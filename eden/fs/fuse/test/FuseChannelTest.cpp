@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <folly/File.h>
 #include <sys/eventfd.h>
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
 #include <sys/utsname.h>
 #endif
 #include <cerrno>
@@ -86,6 +88,7 @@ class FuseChannelTest : public ::testing::Test {
       uint32_t fuseMaxPages = 0,
       bool useIoUring = false,
       std::string ioUringKernelReleaseRegex = {},
+      bool ioUringPreCreateQueues = false,
       size_t numInvalidationThreads = 4) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
@@ -118,7 +121,7 @@ class FuseChannelTest : public ::testing::Test {
         /*ioUringQueueDepth=*/8,
         /*ioUringDisableIoWait=*/true,
         /*ioUringSkipSelfWakeup=*/false,
-        /*ioUringPreCreateQueues=*/false,
+        ioUringPreCreateQueues,
         numInvalidationThreads);
   }
 
@@ -307,6 +310,129 @@ TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
   auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
   ASSERT_NE(nullptr, fuseStopData);
   EXPECT_FALSE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+}
+
+// Lowers RLIMIT_MEMLOCK for the duration of a test and restores it after.
+// Only the soft limit is touched, so this never needs privileges to undo.
+class MemlockSoftLimitGuard {
+ public:
+  explicit MemlockSoftLimitGuard(rlim_t softLimit) {
+    if (getrlimit(RLIMIT_MEMLOCK, &original_) != 0) {
+      return;
+    }
+    rlimit lowered = original_;
+    lowered.rlim_cur = softLimit;
+    lowered_ = setrlimit(RLIMIT_MEMLOCK, &lowered) == 0;
+  }
+
+  ~MemlockSoftLimitGuard() {
+    if (lowered_) {
+      setrlimit(RLIMIT_MEMLOCK, &original_);
+    }
+  }
+
+  bool lowered() const {
+    return lowered_;
+  }
+
+ private:
+  rlimit original_ = {};
+  bool lowered_{false};
+};
+
+// The failure this whole path exists for: a single ring fits, so io_uring
+// looks available, but the full set of queues does not. Eden must notice
+// before it answers FUSE_INIT and mount over /dev/fuse instead -- once the
+// reply advertises io_uring there is no way back.
+TEST_F(FuseChannelTest, testInitFallsBackToDevFuseWhenQueuesDoNotFit) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/true,
+      /*ioUringKernelReleaseRegex=*/"^" + getRunningKernelReleaseForTest(),
+      /*ioUringPreCreateQueues=*/true);
+  // Runs the single-ring probe and memoizes it as available, exactly as it
+  // would be on a host with enough headroom for one ring at mount time.
+  if (folly::StringPiece{channel->getDesiredTransportName()} !=
+      kIoUringFuseTransportName) {
+    GTEST_SKIP()
+        << "FUSE io_uring transport is not available in this test environment";
+  }
+
+  MemlockSoftLimitGuard memlockGuard{0};
+  if (!memlockGuard.lowered()) {
+    GTEST_SKIP() << "could not lower RLIMIT_MEMLOCK";
+  }
+  // CAP_IPC_LOCK bypasses RLIMIT_MEMLOCK entirely, so confirm the limit
+  // actually bites here before relying on it to force the failure.
+  folly::File devNull{"/dev/null", O_RDWR};
+  if (!IoUringFuseTransport::getMaybeSetupError(8, devNull.fd())) {
+    GTEST_SKIP() << "RLIMIT_MEMLOCK is not enforced in this environment";
+  }
+
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      0,
+      FUSE_INIT_EXT,
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+
+  EXPECT_FALSE(channel->usesIoUringTransport());
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  // The kernel must not have been told io_uring was in play.
+  EXPECT_FALSE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+}
+
+// The other half: when the queues do fit, pre-creating them must not change
+// what gets negotiated.
+TEST_F(FuseChannelTest, testInitNegotiatesIoUringWhenQueuesArePreCreated) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/true,
+      /*ioUringKernelReleaseRegex=*/"^" + getRunningKernelReleaseForTest(),
+      /*ioUringPreCreateQueues=*/true);
+  if (folly::StringPiece{channel->getDesiredTransportName()} !=
+      kIoUringFuseTransportName) {
+    GTEST_SKIP()
+        << "FUSE io_uring transport is not available in this test environment";
+  }
+
+  // One queue per logical CPU is about to be created for real, so skip rather
+  // than fail where the environment cannot house them.
+  rlimit memlock = {};
+  const auto queueCount = static_cast<rlim_t>(std::max(get_nprocs_conf(), 1));
+  if (getrlimit(RLIMIT_MEMLOCK, &memlock) == 0 &&
+      memlock.rlim_cur != RLIM_INFINITY &&
+      memlock.rlim_cur < queueCount * 64 * 1024) {
+    GTEST_SKIP() << "RLIMIT_MEMLOCK is too low to pre-create " << queueCount
+                 << " io_uring queues";
+  }
+
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      0,
+      FUSE_INIT_EXT,
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+
+  EXPECT_TRUE(channel->usesIoUringTransport());
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_TRUE(
       fuseStopData->fuseSettings.flags2 &
       static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 }
@@ -1006,6 +1132,7 @@ TEST_F(FuseChannelTest, singleInvalidationThreadUsesSerialFlush) {
       /*fuseMaxPages=*/0,
       /*useIoUring=*/false,
       /*ioUringKernelReleaseRegex=*/{},
+      /*ioUringPreCreateQueues=*/false,
       /*numInvalidationThreads=*/1);
   if (!channelPtr) {
     FAIL() << "createChannel returned null";
@@ -1032,6 +1159,7 @@ TEST_F(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker) {
       /*fuseMaxPages=*/0,
       /*useIoUring=*/false,
       /*ioUringKernelReleaseRegex=*/{},
+      /*ioUringPreCreateQueues=*/false,
       /*numInvalidationThreads=*/0);
   if (!channelPtr) {
     FAIL() << "createChannel returned null";
@@ -1047,6 +1175,7 @@ TEST_F(FuseChannelTest, excessiveInvalidationThreadsAreCapped) {
       /*fuseMaxPages=*/0,
       /*useIoUring=*/false,
       /*ioUringKernelReleaseRegex=*/{},
+      /*ioUringPreCreateQueues=*/false,
       /*numInvalidationThreads=*/1'000);
 
   EXPECT_EQ(64, channel->numInvalidationThreads_);

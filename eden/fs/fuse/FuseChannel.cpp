@@ -1273,6 +1273,13 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   takeoverReadinessStarted_.store(true, std::memory_order_release);
   connInfo_ = connInfo;
   if (negotiatedIoUringTransport(connInfo)) {
+    // TODO: fuse:io-uring-pre-create-queues is deliberately not honored here.
+    // io_uring was already negotiated by the process we took over from, so
+    // there is no INIT reply left to withhold and nothing to fall back to: if
+    // the queues do not fit, this mount is stuck either way. Recovering that
+    // case needs its own mechanism (fail the takeover and let the old process
+    // keep the mount), which is worth building only once the pre-create path
+    // has proven itself on fresh mounts.
     transport_ = std::make_unique<IoUringFuseTransport>(
         ioUringQueueDepth_, ioUringDisableIoWait_, ioUringSkipSelfWakeup_);
   }
@@ -2211,10 +2218,43 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_ALLOW_IDMAP;
 #endif
 
+  // Carries a pre-created io_uring transport across the INIT reply. Assigned
+  // just below when the queues are created up front, and consumed at the
+  // transport switch further down (after sendReply()); stays null otherwise.
+  //
+  // The two halves cannot be merged. The queues have to exist *before* the
+  // reply, because that reply is the last point at which io_uring can be
+  // declined: once it advertises FUSE_OVER_IO_URING the kernel blocks request
+  // allocation until a ring is ready, so a failure afterwards hangs the mount
+  // instead of falling back. But transport_ can only be swapped *after* the
+  // reply, both because that is where the negotiated flags are known and
+  // because the reply itself is still sent over devfuse. Hence a local that
+  // spans the two.
+  std::unique_ptr<IoUringFuseTransport> preparedIoUringTransport;
+
   // Only return the capabilities the kernel supports.
 #if EDEN_HAVE_FUSE_IO_URING
-  if (isIoUringTransportAvailable()) {
-    want |= FUSE_OVER_IO_URING;
+  if (isIoUringTransportAvailable() && (capable & FUSE_OVER_IO_URING)) {
+    bool negotiateIoUring = true;
+    if (ioUringPreCreateQueues_) {
+      auto transport = std::make_unique<IoUringFuseTransport>(
+          ioUringQueueDepth_, ioUringDisableIoWait_);
+      if (auto error = transport->prepareAllQueues(*this)) {
+        XLOGF(
+            WARN,
+            "Not negotiating FUSE io_uring on mount \"{}\": {}",
+            mountPath_,
+            *error);
+        getStats()->increment(&FuseStats::ioUringPreCreateQueuesFailure);
+        negotiateIoUring = false;
+      } else {
+        getStats()->increment(&FuseStats::ioUringPreCreateQueuesSuccess);
+        preparedIoUringTransport = std::move(transport);
+      }
+    }
+    if (negotiateIoUring) {
+      want |= FUSE_OVER_IO_URING;
+    }
   }
 #else
   (void)useIoUring_;
@@ -2291,8 +2331,17 @@ void FuseChannel::readInitPacket() {
         mountPath_,
         transport_->getName(),
         ioUringQueueDepth_);
-    transport_ = std::make_unique<IoUringFuseTransport>(
-        ioUringQueueDepth_, ioUringDisableIoWait_, ioUringSkipSelfWakeup_);
+    // Adopt the transport prepared before the INIT reply, if there is one.
+    // Constructing a fresh one here instead would strand the queues it
+    // already created and silently rebuild them per worker, undoing the
+    // pre-creation. It is null whenever the queues were not pre-created, in
+    // which case each worker creates its own queue as it starts, as before.
+    transport_ = preparedIoUringTransport
+        ? std::move(preparedIoUringTransport)
+        : std::make_unique<IoUringFuseTransport>(
+              ioUringQueueDepth_,
+              ioUringDisableIoWait_,
+              ioUringSkipSelfWakeup_);
   }
   updateEffectiveWorkerThreadCount();
 

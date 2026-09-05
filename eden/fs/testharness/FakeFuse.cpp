@@ -81,6 +81,22 @@ uint32_t FakeFuse::sendRequest(uint32_t opcode, uint64_t inode, ByteRange arg) {
   return requestID;
 }
 
+namespace {
+// recvmsg() here only blocks when a reply is slow to arrive, and a blocked
+// call can be interrupted by any signal the process happens to use. Retry
+// rather than turning that into a test failure; SO_RCVTIMEO still bounds how
+// long this can spin.
+ssize_t recvmsgRetryOnEintr(int fd, msghdr* message, int flags) {
+  while (true) {
+    ssize_t bytesRead = recvmsg(fd, message, flags);
+    if (bytesRead >= 0 || errno != EINTR) {
+      return bytesRead;
+    }
+    XLOG(DBG5, "recvmsg on FUSE socket interrupted; retrying");
+  }
+}
+} // namespace
+
 FakeFuse::Response FakeFuse::recvResponse() {
   Response response;
 
@@ -92,7 +108,7 @@ FakeFuse::Response FakeFuse::recvResponse() {
   message.msg_iov = iov.data();
   message.msg_iovlen = 1;
 
-  ssize_t bytesRead = recvmsg(conn_.fd(), &message, MSG_PEEK);
+  ssize_t bytesRead = recvmsgRetryOnEintr(conn_.fd(), &message, MSG_PEEK);
   folly::checkUnixError(bytesRead, "recvmsg failed on FUSE socket");
 
   if (static_cast<size_t>(bytesRead) < sizeof(fuse_out_header)) {
@@ -117,7 +133,7 @@ FakeFuse::Response FakeFuse::recvResponse() {
   iov[1].iov_len = dataLength;
   message.msg_iovlen = 2;
 
-  bytesRead = recvmsg(conn_.fd(), &message, 0);
+  bytesRead = recvmsgRetryOnEintr(conn_.fd(), &message, 0);
   folly::checkUnixError(bytesRead, "recvmsg failed on FUSE socket");
 
   if (bytesRead != packetLength) {
