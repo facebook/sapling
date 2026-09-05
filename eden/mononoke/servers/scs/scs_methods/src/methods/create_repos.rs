@@ -1256,7 +1256,8 @@ async fn update_mutation_id_by_repo_names_for_reserved_repos(
     params: &thrift::CreateReposParams,
     mutation_id: i64,
 ) -> Result<(), scs_errors::ServiceError> {
-    git_source_of_truth_config
+    let expected = params.repos.len() as u64;
+    let stamped = git_source_of_truth_config
         .update_mutation_id_by_repo_names_for_reserved_repos(
             &ctx,
             &params
@@ -1268,7 +1269,52 @@ async fn update_mutation_id_by_repo_names_for_reserved_repos(
         )
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    // Every reserved row must still exist when it is stamped. A shortfall
+    // means rows were lost (e.g. deleted out-of-band) after reservation:
+    // fail the creation loudly before it proceeds toward landing, instead
+    // of landing repos with no source-of-truth row.
+    // MySQL affected_rows counts CHANGED rows; the confirm-read distinguishes a lost-ack re-stamp from genuine row loss.
+    if stamped != expected
+        && !all_requested_repos_stamped(&ctx, git_source_of_truth_config, params, mutation_id)
+            .await?
+    {
+        return Err(scs_errors::internal_error(format!(
+            "stamping mutation_id {mutation_id} updated {stamped} reserved row(s) but {expected} \
+             were reserved; refusing to proceed, reconcile the source-of-truth table"
+        ))
+        .into());
+    }
     Ok(())
+}
+
+async fn all_requested_repos_stamped(
+    ctx: &CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
+    mutation_id: i64,
+) -> Result<bool, scs_errors::ServiceError> {
+    // A row can flip Reserved -> Mononoke while the stamp is still retrying:
+    // once the stamp has committed (even with its ack lost), a concurrent
+    // duplicate request can attach to this mutation_id, and its client's poll
+    // can land the mutation and flip the rows before the retry loop is done.
+    // A flip proves the stamp committed, so rows in either state count.
+    let stamped_names: HashSet<String> = git_source_of_truth_config
+        .get_reserved_by_mutation_id(ctx, mutation_id)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        .into_iter()
+        .chain(
+            git_source_of_truth_config
+                .get_redirected_to_mononoke_by_mutation_id(ctx, mutation_id)
+                .await
+                .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?,
+        )
+        .map(|entry| entry.repo_name.0)
+        .collect();
+    Ok(params
+        .repos
+        .iter()
+        .all(|request| stamped_names.contains(&request.repo_name)))
 }
 
 async fn delete_source_of_truth_for_reserved_repos(
@@ -2290,6 +2336,136 @@ mod attach_tests {
                 .collect(),
             ..Default::default()
         }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn stamp_count_mismatch_fails_creation(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(1),
+                    RepositoryName("repo/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+
+        // Only one of the two expected reserved rows exists: the stamp must
+        // fail the creation rather than proceed with a lost row.
+        let params = params_for(&["repo/a", "repo/b"]);
+        let result = update_mutation_id_by_repo_names_for_reserved_repos(
+            ctx.clone(),
+            &config,
+            &params,
+            4242,
+        )
+        .await;
+        assert!(result.is_err(), "missing reserved row must fail the stamp");
+
+        // With every expected row reserved, the stamp succeeds.
+        config
+            .insert_repos(
+                &ctx,
+                &[(
+                    RepositoryId::new(2),
+                    RepositoryName("repo/b".to_string()),
+                    GitSourceOfTruth::Reserved,
+                )],
+            )
+            .await?;
+        update_mutation_id_by_repo_names_for_reserved_repos(ctx.clone(), &config, &params, 4243)
+            .await
+            .map_err(|e| anyhow::anyhow!("stamp should succeed: {e:?}"))?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn lost_ack_restamp_confirm_read(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        config
+            .insert_repos(
+                &ctx,
+                &[
+                    (
+                        RepositoryId::new(1),
+                        RepositoryName("repo/a".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                    (
+                        RepositoryId::new(2),
+                        RepositoryName("repo/b".to_string()),
+                        GitSourceOfTruth::Reserved,
+                    ),
+                ],
+            )
+            .await?;
+        // Attempt 1 committed the stamp but its ack was lost; the retry's
+        // UPDATE reports 0 changed rows on MySQL. Sqlite counts matched rows,
+        // so exercise the confirm-read directly against the stamped state.
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[
+                    RepositoryName("repo/a".to_string()),
+                    RepositoryName("repo/b".to_string()),
+                ],
+                4242,
+            )
+            .await?;
+
+        let params = params_for(&["repo/a", "repo/b"]);
+        assert!(
+            all_requested_repos_stamped(&ctx, &config, &params, 4242)
+                .await
+                .map_err(|e| anyhow::anyhow!("confirm-read should succeed: {e:?}"))?,
+            "every requested repo carries the stamp: the re-stamp must be accepted",
+        );
+
+        // Genuine loss: a requested repo with no stamped row must still fail.
+        let params_missing = params_for(&["repo/a", "repo/b", "repo/c"]);
+        assert!(
+            !all_requested_repos_stamped(&ctx, &config, &params_missing, 4242)
+                .await
+                .map_err(|e| anyhow::anyhow!("confirm-read should succeed: {e:?}"))?,
+            "a repo missing from the stamped set must not be accepted",
+        );
+
+        // Rows stamped under a different mutation are not ours.
+        assert!(
+            !all_requested_repos_stamped(&ctx, &config, &params, 9999)
+                .await
+                .map_err(|e| anyhow::anyhow!("confirm-read should succeed: {e:?}"))?,
+            "rows stamped with another mutation_id must not be accepted",
+        );
+
+        // A stamped row that a concurrent attacher's poll already flipped to
+        // Mononoke still proves the stamp committed: the re-stamp must be
+        // accepted, not reported as row loss.
+        config
+            .update_source_of_truth_by_repo_names(
+                &ctx,
+                GitSourceOfTruth::Mononoke,
+                &[RepositoryName("repo/b".to_string())],
+            )
+            .await?;
+        assert!(
+            all_requested_repos_stamped(&ctx, &config, &params, 4242)
+                .await
+                .map_err(|e| anyhow::anyhow!("confirm-read should succeed: {e:?}"))?,
+            "a row flipped to Mononoke under our mutation_id still counts as stamped",
+        );
+        assert!(
+            !all_requested_repos_stamped(&ctx, &config, &params, 9999)
+                .await
+                .map_err(|e| anyhow::anyhow!("confirm-read should succeed: {e:?}"))?,
+            "flipped rows under another mutation_id must not be accepted",
+        );
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

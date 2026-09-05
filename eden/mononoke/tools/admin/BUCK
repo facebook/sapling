@@ -193,11 +193,16 @@ rust_binary(
         []
         if rust_oss.is_oss_build()
         else [
+            # Only used by the fbcode-only src/facebook/ commands; keeping it
+            # out of the OSS deps avoids the unused-dependency check failure.
+            "fbsource//third-party/rust:derive_more",
             "//common/rust/configo:configo",
             "//configerator/structs/scm/mononoke/repos:repos-rust",
             "//eden/mononoke/blobstore:blobstore_factory",
             "//eden/mononoke/blobstore:fileblob",
             "//eden/mononoke/blobstore:redactedblobstore",
+            "//eden/mononoke/common/sql_construct:sql_construct",
+            "//eden/mononoke/metaconfig:metaconfig_parser",
             "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
             "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
             "//eden/mononoke/tools/repo_spec_writer:repo_spec_writer",

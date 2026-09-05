@@ -57,6 +57,7 @@ dbbookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks/dbboo
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
+derive_more = { version = "2.1.1", features = ["full"] }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 directory_branch_cluster_manifest = { version = "0.1.0", path = "../../derived_data/directory_branch_cluster_manifest" }
 either = "1.17.0"
@@ -94,6 +95,7 @@ megarepolib = { version = "0.1.0", path = "../../features/commit_rewriting/megar
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
@@ -150,6 +152,7 @@ smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "
 sorted_vector_map = { version = "0.2.1", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 strum = { version = "0.28.0", features = ["derive"] }

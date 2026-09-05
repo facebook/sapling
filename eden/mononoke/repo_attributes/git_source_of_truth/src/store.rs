@@ -179,6 +179,29 @@ mononoke_queries! {
          AND mutation_id = {mutation_id}"
     }
 
+    write DeleteReservedRowStamped(
+        id: RowId,
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) {
+        none,
+        "DELETE FROM git_repositories_source_of_truth
+         WHERE id = {id}
+         AND source_of_truth = {source_of_truth}
+         AND mutation_id = {mutation_id}"
+    }
+
+    write DeleteReservedRowUnstamped(
+        id: RowId,
+        source_of_truth: GitSourceOfTruth,
+    ) {
+        none,
+        "DELETE FROM git_repositories_source_of_truth
+         WHERE id = {id}
+         AND source_of_truth = {source_of_truth}
+         AND mutation_id IS NULL"
+    }
+
 }
 
 fn row_to_entry(
@@ -322,8 +345,8 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         ctx: &CoreContext,
         repo_names: &[RepositoryName],
         mutation_id: i64,
-    ) -> Result<()> {
-        UpdateMutationIdByRepoNames::query(
+    ) -> Result<u64> {
+        let result = UpdateMutationIdByRepoNames::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Reserved,
@@ -331,7 +354,7 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             repo_names,
         )
         .await?;
-        Ok(())
+        Ok(result.affected_rows())
     }
 
     async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
@@ -440,6 +463,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
 
+    async fn get_redirected_to_mononoke_by_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        mutation_id: i64,
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        let rows = GetByGitSourceOfTruthAndMutationId::query(
+            &self.connections.read_master_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Mononoke,
+            &mutation_id,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
     async fn get_any(&self, ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         let rows = GetAny::query(
             &self.connections.read_master_connection,
@@ -447,6 +485,36 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         )
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
+    async fn delete_reserved_row(
+        &self,
+        ctx: &CoreContext,
+        id: RowId,
+        mutation_id: Option<i64>,
+    ) -> Result<u64> {
+        let result = match mutation_id {
+            Some(mutation_id) => {
+                DeleteReservedRowStamped::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &id,
+                    &GitSourceOfTruth::Reserved,
+                    &mutation_id,
+                )
+                .await?
+            }
+            None => {
+                DeleteReservedRowUnstamped::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &id,
+                    &GitSourceOfTruth::Reserved,
+                )
+                .await?
+            }
+        };
+        Ok(result.affected_rows())
     }
 
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>> {
@@ -910,6 +978,65 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
+    async fn test_update_mutation_id_returns_affected_row_count(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("reserved_a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("reserved_b".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(3),
+                    RepositoryName("already_mononoke".to_string()),
+                    GitSourceOfTruth::Mononoke,
+                ),
+            ],
+        )
+        .await?;
+
+        assert_eq!(
+            push.update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[
+                    RepositoryName("reserved_a".to_string()),
+                    RepositoryName("reserved_b".to_string()),
+                ],
+                7,
+            )
+            .await?,
+            2,
+            "both reserved rows should be stamped and counted",
+        );
+        assert_eq!(
+            push.update_mutation_id_by_repo_names_for_reserved_repos(
+                &ctx,
+                &[
+                    RepositoryName("reserved_a".to_string()),
+                    RepositoryName("already_mononoke".to_string()),
+                    RepositoryName("missing".to_string()),
+                ],
+                8,
+            )
+            .await?,
+            1,
+            "non-reserved and missing rows must not be stamped or counted",
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
     async fn test_get_reserved_by_mutation_id(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
@@ -986,6 +1113,150 @@ mod test {
             }),
             "returned entries must all be Reserved and stamped with the requested mutation_id",
         );
+
+        let mononoke_entries = push
+            .get_redirected_to_mononoke_by_mutation_id(&ctx, 42)
+            .await?;
+        assert_eq!(
+            mononoke_entries
+                .iter()
+                .map(|entry| entry.repo_name.0.as_str())
+                .collect::<Vec<_>>(),
+            vec!["landed_same_mutation"],
+            "only Mononoke rows stamped with mutation_id 42 should be returned",
+        );
+        assert!(
+            push.get_redirected_to_mononoke_by_mutation_id(&ctx, 43)
+                .await?
+                .is_empty(),
+            "no Mononoke row is stamped with mutation_id 43",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_delete_reserved_row(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("unstamped".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("stamped".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+                (
+                    RepositoryId::new(3),
+                    RepositoryName("landed".to_string()),
+                    GitSourceOfTruth::Reserved,
+                ),
+            ],
+        )
+        .await?;
+        push.update_mutation_id_by_repo_names_for_reserved_repos(
+            &ctx,
+            &[
+                RepositoryName("stamped".to_string()),
+                RepositoryName("landed".to_string()),
+            ],
+            7,
+        )
+        .await?;
+        push.update_source_of_truth_by_repo_names(
+            &ctx,
+            GitSourceOfTruth::Mononoke,
+            &[RepositoryName("landed".to_string())],
+        )
+        .await?;
+
+        let row_id_of = |name: &str| {
+            let name = RepositoryName(name.to_string());
+            let push = &push;
+            let ctx = &ctx;
+            async move {
+                anyhow::Ok(
+                    push.get_by_repo_name(ctx, &name, Staleness::MostRecent)
+                        .await?
+                        .expect("row should exist")
+                        .id,
+                )
+            }
+        };
+
+        // Wrong stamp never deletes.
+        let unstamped_id = row_id_of("unstamped").await?;
+        assert_eq!(
+            push.delete_reserved_row(&ctx, unstamped_id, Some(7))
+                .await?,
+            0,
+            "unstamped row must not match a stamped delete",
+        );
+        let stamped_id = row_id_of("stamped").await?;
+        assert_eq!(
+            push.delete_reserved_row(&ctx, stamped_id, None).await?,
+            0,
+            "stamped row must not match an unstamped delete",
+        );
+        assert_eq!(
+            push.delete_reserved_row(&ctx, stamped_id, Some(8)).await?,
+            0,
+            "stamped row must not match a different mutation_id",
+        );
+
+        // Non-reserved rows are never touched, even with a matching stamp.
+        let landed_id = row_id_of("landed").await?;
+        assert_eq!(
+            push.delete_reserved_row(&ctx, landed_id, Some(7)).await?,
+            0,
+            "non-reserved row must never be deleted",
+        );
+        assert!(
+            push.get_by_repo_name(
+                &ctx,
+                &RepositoryName("landed".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?
+            .is_some(),
+            "non-reserved row should still exist",
+        );
+
+        // Exact matches delete exactly one row.
+        assert_eq!(
+            push.delete_reserved_row(&ctx, unstamped_id, None).await?,
+            1,
+            "exact unstamped match should delete",
+        );
+        assert_eq!(
+            push.delete_reserved_row(&ctx, stamped_id, Some(7)).await?,
+            1,
+            "exact stamped match should delete",
+        );
+        assert!(
+            push.get_by_repo_name(
+                &ctx,
+                &RepositoryName("unstamped".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?
+            .is_none(),
+            "deleted row should be gone",
+        );
+
+        // Idempotent: a second delete is a no-op.
+        assert_eq!(
+            push.delete_reserved_row(&ctx, stamped_id, Some(7)).await?,
+            0
+        );
+
         Ok(())
     }
 
