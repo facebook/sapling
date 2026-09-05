@@ -11,7 +11,7 @@ from sapling import error
 from sapling.ext.github.consts import query
 from sapling.ext.github.gh_submit import PullRequestState
 from sapling.ext.github.pull_request_body import title_and_body
-from sapling.result import Ok, Result
+from sapling.result import Err, Ok, Result
 
 from .consts import GITHUB_HOSTNAME
 from .github_gh_cli import JsonDict
@@ -28,8 +28,11 @@ REPO_NAME = "test_github_repo"
 REPO_ID = "R_test_github_repo"
 USER_NAME = "facebook_username"
 
-ParamsType = Dict[str, Union[bool, int, str]]
-MakeRequestType = Callable[[ParamsType, str, str, Optional[str]], Result[JsonDict, str]]
+ParamsType = Dict[str, Union[bool, int, str, List[bool], List[int], List[str]]]
+MakeRequestType = Callable[
+    [ParamsType, str, str, Optional[str], Optional[Dict[str, str]]],
+    Result[JsonDict, str],
+]
 RunGitCommandType = Callable[[List[str], str], bytes]
 
 
@@ -75,6 +78,7 @@ class MockGitHubServer:
     def __init__(self, hostname: str = GITHUB_HOSTNAME):
         self.hostname: str = hostname
         self.requests: Dict[str, MockRequest] = {}
+        self._consumed_keys: set = set()
 
     async def make_request(
         self,
@@ -83,10 +87,15 @@ class MockGitHubServer:
         hostname: str,
         endpoint: str = "graphql",
         method: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
     ) -> Result[JsonDict, str]:
         """Wrapper function for `github_gh_cli.make_request`.
 
         It reads mock data from `self.requests` instead of sending network requests.
+
+        Note that `headers` is intentionally not part of the request key: the
+        headers we send (e.g., X-GitHub-Api-Version) do not affect which mock
+        response should be returned.
         """
         assert real_make_request.__name__ == "_make_request", (
             f"expected '_make_request', but got '{real_make_request.__name__}'"
@@ -96,10 +105,44 @@ class MockGitHubServer:
 
         if key not in self.requests:
             raise MockRequestNotFound(key, self.requests)
+        self._consumed_keys.add(key)
         return self.requests[key].get_response()
 
     def _add_request(self, request_key: str, request: "MockRequest") -> None:
         self.requests[request_key] = request
+
+    def unconsumed_requests(self) -> List[str]:
+        """Keys of expectations that were never requested."""
+        return sorted(k for k in self.requests if k not in self._consumed_keys)
+
+    def report_unconsumed(self, ui) -> None:
+        """Prints a warning for every expectation that was never requested.
+
+        Intended to be called after the command under test has finished (see
+        wrap_with_consumption_check). Tests that use this produce no extra
+        output when all expectations were consumed, so any warning makes the
+        test fail: this catches code paths that silently stopped making a
+        request the test author expected.
+        """
+        for key in self.unconsumed_requests():
+            first_line = key.splitlines()[0]
+            ui.status_err(f"warning, unconsumed mock request: {first_line}\n")
+
+
+def wrap_with_consumption_check(server: "MockGitHubServer", module, funcname) -> None:
+    """Wraps `module.funcname` (a command function taking `ui` as its first
+    argument) so that unconsumed mock expectations are reported after the
+    command finishes, even if it aborts.
+    """
+    from sapling import extensions
+
+    def wrapped(orig, ui, *args, **kwargs):
+        try:
+            return orig(ui, *args, **kwargs)
+        finally:
+            server.report_unconsumed(ui)
+
+    extensions.wrapfunction(module, funcname, wrapped)
 
     def expect_get_repository_request(
         self, owner: str = OWNER, name: str = REPO_NAME
@@ -279,7 +322,9 @@ class MockGitHubServer:
         pr_id: str,
         pr_number: int,
         commit_msg: str,
-        base: str = "main",
+        # None means the update does not touch the base branch (used for the
+        # "stacked" workflow, where the native GitHub stack manages bases).
+        base: Optional[str] = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
         stack_pr_ids: Optional[List[int]] = None,
@@ -302,12 +347,17 @@ class MockGitHubServer:
 
         title, body = title_and_body(commit_msg)
         params: ParamsType = {
-            "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
+            "query": (
+                query.GRAPHQL_UPDATE_PULL_REQUEST
+                if base is not None
+                else query.GRAPHQL_UPDATE_PULL_REQUEST_NO_BASE
+            ),
             "pullRequestId": pr_id,
             "title": title,
             "body": body,
-            "base": base,
         }
+        if base is not None:
+            params["base"] = base
         key = create_request_key(params, self.hostname)
         request = UpdatePrRequest(key, pr_id)
         self._add_request(key, request)
@@ -338,6 +388,61 @@ class MockGitHubServer:
         }
         key = create_request_key(params, self.hostname)
         request = MergeIntoBranchRequest(key, head)
+        self._add_request(key, request)
+        return request
+
+    def expect_get_stack_request(
+        self,
+        pr_number: int,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "GetStackRequest":
+        endpoint = f"repos/{owner}/{name}/stacks?pull_request={pr_number}"
+        key = create_request_key({}, self.hostname, endpoint=endpoint)
+        request = GetStackRequest(key, owner, name)
+        self._add_request(key, request)
+        return request
+
+    def expect_create_stack_request(
+        self,
+        pr_numbers: List[int],
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "CreateStackRequest":
+        endpoint = f"repos/{owner}/{name}/stacks"
+        params: ParamsType = {"pull_requests": pr_numbers}
+        key = create_request_key(
+            params, self.hostname, endpoint=endpoint, method="POST"
+        )
+        request = CreateStackRequest(key, owner, name, pr_numbers)
+        self._add_request(key, request)
+        return request
+
+    def expect_add_to_stack_request(
+        self,
+        stack_number: int,
+        pr_numbers: List[int],
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "AddToStackRequest":
+        endpoint = f"repos/{owner}/{name}/stacks/{stack_number}/add"
+        params: ParamsType = {"pull_requests": pr_numbers}
+        key = create_request_key(
+            params, self.hostname, endpoint=endpoint, method="POST"
+        )
+        request = AddToStackRequest(key, owner, name, stack_number)
+        self._add_request(key, request)
+        return request
+
+    def expect_unstack_request(
+        self,
+        stack_number: int,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "UnstackRequest":
+        endpoint = f"repos/{owner}/{name}/stacks/{stack_number}/unstack"
+        key = create_request_key({}, self.hostname, endpoint=endpoint, method="POST")
+        request = UnstackRequest(key, owner, name, stack_number)
         self._add_request(key, request)
         return request
 
@@ -571,6 +676,151 @@ class MergeIntoBranchRequest(MockRequest):
         merge_commit_oid = merge_commit_oid or gen_hash_hexdigest(self._head)
         data = {"data": {"mergeBranch": {"mergeCommit": {"oid": merge_commit_oid}}}}
         self._response = Ok(data)
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+def create_stack_response(
+    owner: str, name: str, stack_number: int, pr_numbers: List[int], is_open: bool = True
+) -> JsonDict:
+    """Builds a "Pull Request Stack" REST API response object.
+
+    `pr_numbers` is ordered from the bottom of the stack to the top.
+    """
+    return {
+        "id": stack_number,
+        "number": stack_number,
+        "node_id": f"PRS_id_{stack_number}",
+        "url": f"https://github.com/{owner}/{name}/stacks/{stack_number}",
+        "open": is_open,
+        "base": {"ref": "main"},
+        "created_at": "2026-07-30T00:00:00Z",
+        "pull_requests": [
+            {
+                "number": n,
+                "state": "open",
+                "draft": False,
+                "merged_at": None,
+                "head": {"ref": f"pr{n}", "sha": gen_hash_hexdigest(f"pr{n}")},
+            }
+            for n in pr_numbers
+        ],
+    }
+
+
+class GetStackRequest(MockRequest):
+    def __init__(self, key: str, owner: str, name: str) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._owner = owner
+        self._name = name
+
+    def and_respond(
+        self,
+        stack_number: Optional[int] = None,
+        pr_numbers: Optional[List[int]] = None,
+        is_open: bool = True,
+    ):
+        """Responds with the stack containing the pull request, or an empty
+        list (meaning "not part of any stack") if stack_number is None.
+        """
+        if stack_number is None:
+            self._response = Ok([])
+        else:
+            self._response = Ok(
+                [
+                    create_stack_response(
+                        self._owner,
+                        self._name,
+                        stack_number,
+                        pr_numbers or [],
+                        is_open=is_open,
+                    )
+                ]
+            )
+
+    def and_respond_error(self, message: str):
+        """Responds with an error, as if the stacks API request failed."""
+        self._response = Err(message)
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class CreateStackRequest(MockRequest):
+    def __init__(self, key: str, owner: str, name: str, pr_numbers: List[int]) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._owner = owner
+        self._name = name
+        self._pr_numbers = pr_numbers
+
+    def and_respond(self, stack_number: int):
+        self._response = Ok(
+            create_stack_response(
+                self._owner, self._name, stack_number, self._pr_numbers
+            )
+        )
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class AddToStackRequest(MockRequest):
+    def __init__(self, key: str, owner: str, name: str, stack_number: int) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._owner = owner
+        self._name = name
+        self._stack_number = stack_number
+
+    def and_respond(self, pr_numbers: List[int]):
+        """`pr_numbers` is the full list of pull requests in the stack after
+        the addition, ordered from the bottom to the top.
+        """
+        self._response = Ok(
+            create_stack_response(
+                self._owner, self._name, self._stack_number, pr_numbers
+            )
+        )
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class UnstackRequest(MockRequest):
+    def __init__(self, key: str, owner: str, name: str, stack_number: int) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._owner = owner
+        self._name = name
+        self._stack_number = stack_number
+
+    def and_respond(self, remaining_pr_numbers: Optional[List[int]] = None):
+        """Responds with the updated stack if pull requests remain in it, or
+        with an empty response (HTTP 204: stack dissolved) by default.
+        """
+        if remaining_pr_numbers is None:
+            self._response = Ok({})
+        else:
+            self._response = Ok(
+                create_stack_response(
+                    self._owner, self._name, self._stack_number, remaining_pr_numbers
+                )
+            )
 
     def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
