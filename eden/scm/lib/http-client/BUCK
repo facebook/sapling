@@ -60,6 +60,7 @@ sl_rust_library(
         "fbsource//third-party/rust:url",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/minibytes:minibytes",
     ],
 )

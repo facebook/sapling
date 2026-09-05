@@ -13,6 +13,7 @@ use anyhow::Context;
 use curl::multi::Easy2Handle;
 use curl::multi::Message;
 use curl::multi::Multi;
+use metrics::Counter;
 
 use crate::Easy2H;
 use crate::errors::Abort;
@@ -44,6 +45,53 @@ impl Complete {
         match result {
             Ok(()) => Ok(handle),
             Err(e) => Err((handle, e)),
+        }
+    }
+}
+
+/// Counters for connection setup. Only transfers that opened a new connection
+/// are counted (curl reports a zero connect time when it reused a cached
+/// connection), so these track connection setups rather than requests.
+static CONNECTIONS: Counter = Counter::new_counter("http_client.connections");
+static CONNECTIONS_UNIX_SOCKET: Counter =
+    Counter::new_counter("http_client.connections_unix_socket");
+static CONNECT_FAILURES: Counter = Counter::new_counter("http_client.connect_failures");
+static CONNECT_US: Counter = Counter::new_counter("http_client.connect_us");
+static TLS_US: Counter = Counter::new_counter("http_client.tls_us");
+static SETUP_OVER_1S: Counter = Counter::new_counter("http_client.connection_setup_over_1s");
+static SETUP_OVER_3S: Counter = Counter::new_counter("http_client.connection_setup_over_3s");
+static SETUP_OVER_5S: Counter = Counter::new_counter("http_client.connection_setup_over_5s");
+
+fn record_connect_metrics(complete: &Complete) {
+    let easy = &complete.handle;
+    let connect = easy.connect_time().unwrap_or_default();
+    if connect.is_zero() {
+        // Either a reused connection, or a transfer that failed before the
+        // connection was usable (DNS, connect or TLS failure, connect
+        // timeout). pretransfer_time stays zero in the latter case, which
+        // separates it from a failure on a reused connection.
+        if complete.result.is_err() && easy.pretransfer_time().unwrap_or_default().is_zero() {
+            CONNECT_FAILURES.increment();
+        }
+        return;
+    }
+    if easy.get_ref().request_context().unix_socket_path.is_some() {
+        CONNECTIONS_UNIX_SOCKET.increment();
+        return;
+    }
+    CONNECTIONS.increment();
+    // appconnect_time is zero for plain HTTP, in which case setup is just the
+    // TCP connect.
+    let setup = easy.appconnect_time().unwrap_or_default().max(connect);
+    CONNECT_US.add(connect.as_micros() as usize);
+    TLS_US.add(setup.saturating_sub(connect).as_micros() as usize);
+    for (secs, counter) in [
+        (1, &SETUP_OVER_1S),
+        (3, &SETUP_OVER_3S),
+        (5, &SETUP_OVER_5S),
+    ] {
+        if setup > Duration::from_secs(secs) {
+            counter.increment();
         }
     }
 }
@@ -160,6 +208,7 @@ impl<'a> MultiDriver<'a> {
             // error (signalling that we should return early) abort all remaining transfers.
             for c in completed {
                 let token = c.token;
+                record_connect_metrics(&c);
                 callback(c.into_result())?;
                 tracing::trace!("Successfully handled transfer: {}", token);
                 self.account_for_added_transfers("Perform callback", &mut total, &mut in_progress);

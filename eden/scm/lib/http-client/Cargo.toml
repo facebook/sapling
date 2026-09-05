@@ -31,6 +31,7 @@ pin-project = "1.1.13"
 regex = "1.13.1"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
+sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_cbor = "0.11.2"
