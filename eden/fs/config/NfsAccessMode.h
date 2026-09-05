@@ -12,29 +12,23 @@
 namespace facebook::eden {
 
 /**
- * How EdenFS responds to NFS requests claiming a privileged identity class
- * (root or the wheel group). See nfs:root-access-mode and
- * nfs:wheel-access-mode in EdenConfig.
+ * What EdenFS does with an NFS request whose AUTH_SYS credential matches an
+ * entry in nfs:uid-access-modes or nfs:gid-access-modes (see EdenConfig).
  */
 enum class NfsAccessMode {
   /**
-   * Do nothing for this identity class.
-   */
-  Off,
-  /**
-   * Bump the class's nfs.privileged_access.* counter.
+   * Bump the id's nfs.access.{uid,gid}.<id> stat.
    */
   Log,
   /**
-   * Log as above, and additionally bump nfs.blocked_access and reject the
-   * request with an auth error.
+   * Log as above, and additionally bump nfs.blocked.{uid,gid}.<id> and
+   * nfs.blocked_access and reject the request with an auth error.
    */
   Block,
   /**
-   * Log as above, but only reject (as Block does) while the class's access
-   * count within the configured window exceeds the configured threshold —
-   * allow the low baseline, shed sustained bursts. See the
-   * nfs:*-access-rate-limit-* settings in EdenConfig.
+   * Log as above, but only reject (as Block does) while the id's access
+   * count within nfs:access-rate-limit-window-seconds exceeds
+   * nfs:access-rate-limit-count — allow the low baseline, shed bursts.
    */
   RateLimit,
 };

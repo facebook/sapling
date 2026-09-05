@@ -16,8 +16,10 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <unordered_map>
 
 #include <fb303/ServiceData.h>
+#include <fb303/ThreadCachedServiceData.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
@@ -272,33 +274,53 @@ struct Nfsd3Test : ::testing::Test {
 
   int64_t getCounter(folly::StringPiece key) {
     dispatcher_->getStats()->flush();
+    facebook::fb303::ThreadCachedServiceData::get()->publishStats();
     return facebook::fb303::ServiceData::get()
         ->getCounterIfExists(key)
         .value_or(0);
   }
 
-  void setRootMode(NfsAccessMode mode) {
-    config_->nfsRootAccessMode.setValue(
-        mode, ConfigSourceType::UserConfig, true);
+  void setUidModes(std::unordered_map<uint32_t, NfsAccessMode> modes) {
+    config_->nfsUidAccessModes.setValue(
+        std::move(modes), ConfigSourceType::UserConfig, true);
   }
 
-  void setWheelMode(NfsAccessMode mode) {
-    config_->nfsWheelAccessMode.setValue(
-        mode, ConfigSourceType::UserConfig, true);
+  void setGidModes(std::unordered_map<uint32_t, NfsAccessMode> modes) {
+    config_->nfsGidAccessModes.setValue(
+        std::move(modes), ConfigSourceType::UserConfig, true);
   }
 
-  void setRootRateLimit(uint32_t count, uint32_t windowSeconds) {
-    config_->nfsRootAccessRateLimitCount.setValue(
+  void setRateLimit(uint32_t count, uint32_t windowSeconds) {
+    config_->nfsAccessRateLimitCount.setValue(
         count, ConfigSourceType::UserConfig, true);
-    config_->nfsRootAccessRateLimitWindowSeconds.setValue(
+    config_->nfsAccessRateLimitWindowSeconds.setValue(
         windowSeconds, ConfigSourceType::UserConfig, true);
   }
 
-  void setWheelRateLimit(uint32_t count, uint32_t windowSeconds) {
-    config_->nfsWheelAccessRateLimitCount.setValue(
-        count, ConfigSourceType::UserConfig, true);
-    config_->nfsWheelAccessRateLimitWindowSeconds.setValue(
-        windowSeconds, ConfigSourceType::UserConfig, true);
+  // uid 0 with gid 20 / aux {20}: matches a uid 0 entry only.
+  static opaque_auth rootOnlyCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/20, {20}});
+  }
+
+  // uid 501 with primary gid 0: matches a gid 0 entry only.
+  static opaque_auth wheelCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/0, {0}});
+  }
+
+  // uid 501 with gid 0 only in the auxiliary list.
+  static opaque_auth auxWheelCred() {
+    return makeAuthSysCred(
+        {/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20, 0}});
+  }
+
+  // uid 0 and gid 0: matches both default entries.
+  static opaque_auth rootAndWheelCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/0, {0}});
+  }
+
+  // uid 501, gid 20: matches nothing in the default config.
+  static opaque_auth userCred() {
+    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20}});
   }
 
   static uint32_t readBigEndianU32(
@@ -321,89 +343,6 @@ struct Nfsd3Test : ::testing::Test {
     EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
   }
 
-  folly::EventBase evb_;
-  std::shared_ptr<folly::ManualExecutor> manualExecutor_;
-  std::shared_ptr<EdenConfig> config_;
-  std::shared_ptr<ReloadableConfig> reloadableConfig_;
-  std::unique_ptr<ErrorLogger> errorLogger_;
-  folly::Logger straceLogger_{"eden.test.nfsd3"};
-  UnixClock clock_;
-  FakeNfsDispatcher* dispatcher_ = nullptr;
-  std::unique_ptr<Nfsd3, FsChannelDeleter> nfsd3_;
-  int clientFd_ = -1;
-};
-
-TEST_F(Nfsd3Test, root_cred_bumps_both_privileged_counters) {
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto wheelBefore = getCounter("nfs.privileged_access.gid_wheel.sum.60");
-
-  auto reply = sendGetattr(
-      4, makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/0, {0}}));
-  expectAcceptedSuccess(reply);
-
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.uid_root.sum.60") - rootBefore, 1);
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.gid_wheel.sum.60") - wheelBefore, 1);
-}
-
-TEST_F(Nfsd3Test, only_wheel_claims_bump_the_wheel_counter) {
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto wheelBefore = getCounter("nfs.privileged_access.gid_wheel.sum.60");
-
-  // A plain user counts toward neither class; a credential whose only
-  // privileged claim is an auxiliary gid 0 counts toward wheel alone.
-  expectAcceptedSuccess(sendGetattr(
-      5, makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20}})));
-  expectAcceptedSuccess(sendGetattr(
-      6,
-      makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20, 0}})));
-
-  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.gid_wheel.sum.60") - wheelBefore, 1);
-}
-
-TEST_F(Nfsd3Test, both_modes_off_disable_the_counters) {
-  setRootMode(NfsAccessMode::Off);
-  setWheelMode(NfsAccessMode::Off);
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto wheelBefore = getCounter("nfs.privileged_access.gid_wheel.sum.60");
-
-  auto reply = sendGetattr(
-      7, makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/0, {0}}));
-  expectAcceptedSuccess(reply);
-
-  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
-  EXPECT_EQ(getCounter("nfs.privileged_access.gid_wheel.sum.60"), wheelBefore);
-}
-
-struct Nfsd3BlockingTest : Nfsd3Test {
-  // uid 0, not wheel: exercises nfs:root-access-mode alone.
-  static opaque_auth rootOnlyCred() {
-    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/20, {20}});
-  }
-
-  // wheel (primary gid 0), not uid 0: exercises nfs:wheel-access-mode alone.
-  static opaque_auth wheelCred() {
-    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/0, {0}});
-  }
-
-  // wheel via the auxiliary gids list only.
-  static opaque_auth auxWheelCred() {
-    return makeAuthSysCred(
-        {/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20, 0}});
-  }
-
-  // claims both identity classes at once.
-  static opaque_auth rootAndWheelCred() {
-    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/0, /*gid=*/0, {0}});
-  }
-
-  static opaque_auth userCred() {
-    return makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {20}});
-  }
-
   /**
    * Assert the reply is MSG_DENIED with AUTH_ERROR / AUTH_TOOWEAK.
    * Reply layout: fragment(0) xid(4) mtype(8) reply_stat(12) reject_stat(16)
@@ -417,145 +356,218 @@ struct Nfsd3BlockingTest : Nfsd3Test {
         readBigEndianU32(reply, 20),
         static_cast<uint32_t>(auth_stat::AUTH_TOOWEAK));
   }
+
+  folly::EventBase evb_;
+  std::shared_ptr<folly::ManualExecutor> manualExecutor_;
+  std::shared_ptr<EdenConfig> config_;
+  std::shared_ptr<ReloadableConfig> reloadableConfig_;
+  std::unique_ptr<ErrorLogger> errorLogger_;
+  folly::Logger straceLogger_{"eden.test.nfsd3"};
+  UnixClock clock_;
+  FakeNfsDispatcher* dispatcher_ = nullptr;
+  std::unique_ptr<Nfsd3, FsChannelDeleter> nfsd3_;
+  int clientFd_ = -1;
 };
 
-TEST_F(Nfsd3BlockingTest, nothing_blocked_by_default) {
-  expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
-  expectAcceptedSuccess(sendGetattr(2, wheelCred()));
+TEST_F(Nfsd3Test, default_config_counts_uid0_and_gid0) {
+  auto uidBefore = getCounter("nfs.access.uid.0.sum");
+  auto gidBefore = getCounter("nfs.access.gid.0.sum");
+
+  expectAcceptedSuccess(sendGetattr(1, rootAndWheelCred()));
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum") - uidBefore, 1);
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - gidBefore, 1);
+
+  // A plain user matches neither default entry.
+  expectAcceptedSuccess(sendGetattr(2, userCred()));
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum") - uidBefore, 1);
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - gidBefore, 1);
 }
 
-TEST_F(Nfsd3BlockingTest, block_root_rejects_uid0_across_procedures) {
-  setRootMode(NfsAccessMode::Block);
+TEST_F(Nfsd3Test, gid_entry_matches_auxiliary_gid) {
+  auto gidBefore = getCounter("nfs.access.gid.0.sum");
+
+  expectAcceptedSuccess(sendGetattr(1, auxWheelCred()));
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - gidBefore, 1);
+
+  // gid 20 / aux {20} carries no gid 0 anywhere.
+  expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - gidBefore, 1);
+}
+
+TEST_F(Nfsd3Test, empty_maps_skip_everything) {
+  setUidModes({});
+  setGidModes({});
+  auto uidBefore = getCounter("nfs.access.uid.0.sum");
+  auto gidBefore = getCounter("nfs.access.gid.0.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
+
+  expectAcceptedSuccess(sendGetattr(1, rootAndWheelCred()));
+
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum"), uidBefore);
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum"), gidBefore);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum"), blockedBefore);
+}
+
+TEST_F(Nfsd3Test, block_entry_rejects_across_procedures) {
+  setUidModes({{0, NfsAccessMode::Block}});
+  auto accessBefore = getCounter("nfs.access.uid.0.sum");
+  auto blockedUidBefore = getCounter("nfs.blocked.uid.0.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
 
   expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
   expectAuthTooWeak(sendAccess(2, rootOnlyCred()));
   expectAuthTooWeak(sendRead(3, rootOnlyCred()));
-  // Wheel is not uid 0; blocking the root class alone leaves it alone.
+  // The gid map still holds the default "0:log", so wheel is untouched.
   expectAcceptedSuccess(sendGetattr(4, wheelCred()));
   expectAcceptedSuccess(sendGetattr(5, userCred()));
+
+  // "block" is a strict superset of "log": rejected requests are counted.
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum") - accessBefore, 3);
+  EXPECT_EQ(getCounter("nfs.blocked.uid.0.sum") - blockedUidBefore, 3);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum") - blockedBefore, 3);
 }
 
-TEST_F(Nfsd3BlockingTest, block_bumps_privileged_and_blocked_counters) {
-  setRootMode(NfsAccessMode::Block);
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+TEST_F(Nfsd3Test, uid_and_gid_entries_are_independent) {
+  setUidModes({});
+  setGidModes({{0, NfsAccessMode::Block}});
+  auto uidBefore = getCounter("nfs.access.uid.0.sum");
 
-  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
-  expectAuthTooWeak(sendGetattr(2, rootOnlyCred()));
-
-  // "block" is a strict superset of "log": rejected requests still bump
-  // the class's privileged-access counter.
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.uid_root.sum.60") - rootBefore, 2);
-  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 2);
-}
-
-TEST_F(Nfsd3BlockingTest, wheel_block_is_independent_of_root_mode) {
-  // Root class fully off, wheel class blocking: the independence case.
-  setRootMode(NfsAccessMode::Off);
-  setWheelMode(NfsAccessMode::Block);
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto wheelBefore = getCounter("nfs.privileged_access.gid_wheel.sum.60");
-  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
-
-  // Both wheel spellings (primary and auxiliary gid 0) are rejected, and a
-  // credential claiming root AND wheel is rejected by the wheel class alone.
+  // Both gid 0 spellings are rejected by the gid entry alone.
   expectAuthTooWeak(sendGetattr(1, wheelCred()));
   expectAuthTooWeak(sendGetattr(2, auxWheelCred()));
-  expectAuthTooWeak(sendGetattr(3, rootAndWheelCred()));
-  // Plain root and plain user are untouched: the root class is off.
-  expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
-  expectAcceptedSuccess(sendGetattr(5, userCred()));
+  // uid 0 has no entry: neither rejected nor counted.
+  expectAcceptedSuccess(sendGetattr(3, rootOnlyCred()));
 
-  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.gid_wheel.sum.60") - wheelBefore, 3);
-  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 3);
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum"), uidBefore);
 }
 
-TEST_F(Nfsd3BlockingTest, missing_creds_are_never_blocked) {
-  setRootMode(NfsAccessMode::Block);
-  setWheelMode(NfsAccessMode::Block);
+TEST_F(Nfsd3Test, arbitrary_ids_get_their_own_entries) {
+  setUidModes({{501, NfsAccessMode::Block}});
+  setGidModes({{20, NfsAccessMode::Log}});
+  auto uidAccessBefore = getCounter("nfs.access.uid.501.sum");
+  auto uidBlockedBefore = getCounter("nfs.blocked.uid.501.sum");
+  auto gidAccessBefore = getCounter("nfs.access.gid.20.sum");
+  auto gidBlockedBefore = getCounter("nfs.blocked.gid.20.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
+
+  expectAuthTooWeak(sendGetattr(1, userCred()));
+
+  // Both entries are evaluated and counted; only the uid one rejects, and
+  // the aggregate counter moves once per request, not once per entry.
+  EXPECT_EQ(getCounter("nfs.access.uid.501.sum") - uidAccessBefore, 1);
+  EXPECT_EQ(getCounter("nfs.blocked.uid.501.sum") - uidBlockedBefore, 1);
+  EXPECT_EQ(getCounter("nfs.access.gid.20.sum") - gidAccessBefore, 1);
+  EXPECT_EQ(getCounter("nfs.blocked.gid.20.sum"), gidBlockedBefore);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum") - blockedBefore, 1);
+}
+
+TEST_F(Nfsd3Test, every_matching_gid_entry_is_evaluated) {
+  setUidModes({});
+  setGidModes({{0, NfsAccessMode::Log}, {20, NfsAccessMode::Block}});
+  auto gid0AccessBefore = getCounter("nfs.access.gid.0.sum");
+  auto gid0BlockedBefore = getCounter("nfs.blocked.gid.0.sum");
+  auto gid20AccessBefore = getCounter("nfs.access.gid.20.sum");
+  auto gid20BlockedBefore = getCounter("nfs.blocked.gid.20.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
+
+  // Primary gid 20 and auxiliary gid 0 both match; the gid loop keeps going
+  // past the first hit, so both entries are counted and the block one rejects.
+  expectAuthTooWeak(sendGetattr(
+      1, makeAuthSysCred({/*stamp=*/1, "mac", /*uid=*/501, /*gid=*/20, {0}})));
+
+  EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - gid0AccessBefore, 1);
+  EXPECT_EQ(getCounter("nfs.access.gid.20.sum") - gid20AccessBefore, 1);
+  EXPECT_EQ(getCounter("nfs.blocked.gid.20.sum") - gid20BlockedBefore, 1);
+  EXPECT_EQ(getCounter("nfs.blocked.gid.0.sum"), gid0BlockedBefore);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum") - blockedBefore, 1);
+}
+
+TEST_F(Nfsd3Test, missing_creds_are_never_blocked) {
+  setUidModes({{0, NfsAccessMode::Block}});
+  setGidModes({{0, NfsAccessMode::Block}});
 
   expectAcceptedSuccess(
       sendGetattr(1, opaque_auth{auth_flavor::AUTH_NONE, {}}));
 }
 
-TEST_F(Nfsd3BlockingTest, null_proc_is_exempt) {
-  setRootMode(NfsAccessMode::Block);
-  setWheelMode(NfsAccessMode::Block);
-
-  auto reply =
-      sendAndReceive(buildNfsRequest(1, nfsv3Procs::null, rootOnlyCred()));
-  expectAcceptedSuccess(reply);
-}
-
-TEST_F(Nfsd3BlockingTest, control_plane_procs_are_exempt) {
-  setRootMode(NfsAccessMode::Block);
-  setWheelMode(NfsAccessMode::Block);
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+TEST_F(Nfsd3Test, control_plane_procs_are_exempt) {
+  setUidModes({{0, NfsAccessMode::Block}});
+  setGidModes({{0, NfsAccessMode::Block}});
+  auto uidBefore = getCounter("nfs.access.uid.0.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
 
   // Mount bookkeeping keeps working for a blocked identity...
+  expectAcceptedSuccess(
+      sendAndReceive(buildNfsRequest(1, nfsv3Procs::null, rootAndWheelCred())));
   expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
-      1,
+      2,
       nfsv3Procs::fsstat,
       rootAndWheelCred(),
       FSSTAT3args{nfs_fh3{InodeNumber{42}}})));
   expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
-      2,
+      3,
       nfsv3Procs::fsinfo,
       rootAndWheelCred(),
       FSINFO3args{nfs_fh3{InodeNumber{42}}})));
   expectAcceptedSuccess(sendAndReceive(buildNfsRequest(
-      3,
+      4,
       nfsv3Procs::pathconf,
       rootAndWheelCred(),
       PATHCONF3args{nfs_fh3{InodeNumber{42}}})));
 
   // ...and is neither counted nor blocked...
-  EXPECT_EQ(getCounter("nfs.privileged_access.uid_root.sum.60"), rootBefore);
-  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60"), blockedBefore);
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum"), uidBefore);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum"), blockedBefore);
 
   // ...while file access is still rejected.
-  expectAuthTooWeak(sendGetattr(4, rootAndWheelCred()));
+  expectAuthTooWeak(sendGetattr(5, rootAndWheelCred()));
 }
 
-TEST_F(Nfsd3BlockingTest, rate_limit_allows_baseline_and_rejects_bursts) {
-  setRootMode(NfsAccessMode::RateLimit);
+TEST_F(Nfsd3Test, rate_limit_allows_baseline_and_rejects_bursts) {
+  setUidModes({{0, NfsAccessMode::RateLimit}});
   // A generous window so the budget cannot refill mid-test.
-  setRootRateLimit(/*count=*/3, /*windowSeconds=*/3600);
-  auto rootBefore = getCounter("nfs.privileged_access.uid_root.sum.60");
-  auto blockedBefore = getCounter("nfs.blocked_access.sum.60");
+  setRateLimit(/*count=*/3, /*windowSeconds=*/3600);
+  auto accessBefore = getCounter("nfs.access.uid.0.sum");
+  auto blockedUidBefore = getCounter("nfs.blocked.uid.0.sum");
+  auto blockedBefore = getCounter("nfs.blocked_access.sum");
 
-  // The first `count` accesses in the window pass and nothing is blocked.
+  // The first `count` accesses in the window pass...
   expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
   expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
   expectAcceptedSuccess(sendGetattr(3, rootOnlyCred()));
-  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60"), blockedBefore);
-
-  // The burst beyond the budget is rejected like "block".
+  // ...and the burst beyond the budget is rejected like "block".
   expectAuthTooWeak(sendGetattr(4, rootOnlyCred()));
   expectAuthTooWeak(sendGetattr(5, rootOnlyCred()));
-  EXPECT_EQ(getCounter("nfs.blocked_access.sum.60") - blockedBefore, 2);
 
-  // Every privileged access is logged, allowed or not.
-  EXPECT_EQ(
-      getCounter("nfs.privileged_access.uid_root.sum.60") - rootBefore, 5);
+  // Every access is counted, allowed or not.
+  EXPECT_EQ(getCounter("nfs.access.uid.0.sum") - accessBefore, 5);
+  EXPECT_EQ(getCounter("nfs.blocked.uid.0.sum") - blockedUidBefore, 2);
+  EXPECT_EQ(getCounter("nfs.blocked_access.sum") - blockedBefore, 2);
 }
 
-TEST_F(Nfsd3BlockingTest, rate_limit_budgets_are_per_class) {
-  setRootMode(NfsAccessMode::RateLimit);
-  setWheelMode(NfsAccessMode::RateLimit);
-  setRootRateLimit(/*count=*/1, /*windowSeconds=*/3600);
-  setWheelRateLimit(/*count=*/1, /*windowSeconds=*/3600);
+TEST_F(Nfsd3Test, rate_limit_budgets_are_per_id) {
+  setUidModes({{0, NfsAccessMode::RateLimit}, {501, NfsAccessMode::RateLimit}});
+  setRateLimit(/*count=*/1, /*windowSeconds=*/3600);
 
-  // Exhausting the root budget leaves the wheel budget untouched, and
-  // vice versa.
+  // Exhausting uid 0's budget leaves uid 501's untouched.
   expectAcceptedSuccess(sendGetattr(1, rootOnlyCred()));
   expectAuthTooWeak(sendGetattr(2, rootOnlyCred()));
-  expectAcceptedSuccess(sendGetattr(3, wheelCred()));
-  expectAuthTooWeak(sendGetattr(4, wheelCred()));
+  expectAcceptedSuccess(sendGetattr(3, userCred()));
+  expectAuthTooWeak(sendGetattr(4, userCred()));
+}
+
+TEST_F(Nfsd3Test, config_changes_apply_without_restart) {
+  setUidModes({{0, NfsAccessMode::Block}});
+  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
+
+  // Dropping the entry back to "log" unblocks the same running server.
+  setUidModes({{0, NfsAccessMode::Log}});
+  expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
+
+  // The gid map is picked up independently.
+  setGidModes({{0, NfsAccessMode::Block}});
+  expectAuthTooWeak(sendGetattr(3, rootAndWheelCred()));
+  expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
 }
 
 TEST(NfsAccessRateLimiterTest, budget_refills_over_time) {
@@ -579,20 +591,6 @@ TEST(NfsAccessRateLimiterTest, budget_refills_over_time) {
   // everything.
   EXPECT_FALSE(limiter.allow(0, 60, 1120.0));
   EXPECT_TRUE(limiter.allow(2, 0, 1120.0));
-}
-
-TEST_F(Nfsd3BlockingTest, config_changes_apply_without_restart) {
-  setRootMode(NfsAccessMode::Block);
-  expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
-
-  // Dropping the mode back to "log" unblocks the same running server.
-  setRootMode(NfsAccessMode::Log);
-  expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
-
-  // The wheel mode is picked up independently.
-  setWheelMode(NfsAccessMode::Block);
-  expectAuthTooWeak(sendGetattr(3, wheelCred()));
-  expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
 }
 
 } // namespace

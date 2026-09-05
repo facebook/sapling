@@ -11,6 +11,7 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
@@ -1274,71 +1275,44 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> nfsFastPathRPCs{"nfs:fast-path-rpcs", true, this};
 
   /**
-   * How to respond to NFS requests whose AUTH_SYS credential claims root
-   * (uid 0): "off" does nothing, "log" bumps the
-   * nfs.privileged_access.uid_root fb303 counter, "block" logs and
-   * additionally rejects the request (bumping nfs.blocked_access) with an
-   * auth error that clients surface as a permission error. On macOS such
-   * access typically comes from security software crawling the mount. Read
-   * through ReloadableConfig on each request, so it can be changed within
-   * config:reload-interval (or immediately via `eden debug thrift
-   * reloadConfig`) without a daemon restart. Control-plane procedures (NFS
-   * NULL probes, FSSTAT, FSINFO, PATHCONF) and requests without a parsable
-   * AUTH_SYS credential are never affected. AUTH_SYS identities are
-   * client-asserted, so "block" is a mitigation against
-   * well-behaved-but-noisy root processes (e.g. security scanners), not a
-   * security boundary.
+   * Per-uid access modes, "uid:mode", e.g. ["0:log", "89:block"]. A match bumps
+   * nfs.access.uid.<uid>; "block" also rejects, bumping nfs.blocked.uid.<uid>
+   * and nfs.blocked_access; "rate_limit" does so past nfs:access-rate-limit-*.
+   * Re-read on every request; AUTH_SYS ids are client-asserted, so this sheds
+   * noisy processes rather than enforcing a security boundary.
    */
-  ConfigSetting<NfsAccessMode> nfsRootAccessMode{
-      "nfs:root-access-mode",
-      NfsAccessMode::Log,
+  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsUidAccessModes{
+      "nfs:uid-access-modes",
+      {{0, NfsAccessMode::Log}},
       this};
 
   /**
-   * Same as nfs:root-access-mode, but for requests whose AUTH_SYS
-   * credential claims the wheel group (primary gid 0 or 0 in the auxiliary
-   * gids, root-equivalent on macOS), tracked by the
-   * nfs.privileged_access.gid_wheel counter. The two modes are independent.
+   * Same as nfs:uid-access-modes, keyed by gid: an entry matches a request
+   * whose AUTH_SYS credential has that gid as its primary gid or among its
+   * auxiliary gids. Evaluated independently of the uid entries, and every
+   * matching entry of either map is counted.
    */
-  ConfigSetting<NfsAccessMode> nfsWheelAccessMode{
-      "nfs:wheel-access-mode",
-      NfsAccessMode::Log,
+  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsGidAccessModes{
+      "nfs:gid-access-modes",
+      {{0, NfsAccessMode::Log}},
       this};
 
   /**
-   * Only consulted when nfs:root-access-mode is "rate_limit": the number
-   * of root-claiming requests allowed per
-   * nfs:root-access-rate-limit-window-seconds window before further ones
-   * in that window are rejected the way "block" rejects them. The window
-   * is per mount and per identity class.
+   * For "rate_limit" entries in nfs:uid-access-modes / nfs:gid-access-modes:
+   * the requests an id may make per nfs:access-rate-limit-window-seconds
+   * before further ones in that window are rejected the way "block" rejects
+   * them. Budgets are per id and per mount.
    */
-  ConfigSetting<uint32_t> nfsRootAccessRateLimitCount{
-      "nfs:root-access-rate-limit-count",
+  ConfigSetting<uint32_t> nfsAccessRateLimitCount{
+      "nfs:access-rate-limit-count",
       1000,
       this};
 
   /**
-   * The window length, in seconds, for nfs:root-access-rate-limit-count.
+   * The window length, in seconds, for nfs:access-rate-limit-count.
    */
-  ConfigSetting<uint32_t> nfsRootAccessRateLimitWindowSeconds{
-      "nfs:root-access-rate-limit-window-seconds",
-      60,
-      this};
-
-  /**
-   * Same as nfs:root-access-rate-limit-count, for the wheel class (only
-   * consulted when nfs:wheel-access-mode is "rate_limit").
-   */
-  ConfigSetting<uint32_t> nfsWheelAccessRateLimitCount{
-      "nfs:wheel-access-rate-limit-count",
-      1000,
-      this};
-
-  /**
-   * The window length, in seconds, for nfs:wheel-access-rate-limit-count.
-   */
-  ConfigSetting<uint32_t> nfsWheelAccessRateLimitWindowSeconds{
-      "nfs:wheel-access-rate-limit-window-seconds",
+  ConfigSetting<uint32_t> nfsAccessRateLimitWindowSeconds{
+      "nfs:access-rate-limit-window-seconds",
       60,
       this};
 

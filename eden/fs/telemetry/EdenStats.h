@@ -398,14 +398,8 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsBackpressureJukebox{"nfs.backpressure_jukebox"};
   Counter nfsInflightAtRequest{"nfs.inflight_at_request"};
 
-  // Requests whose AUTH_SYS credential claims root (uid 0) or wheel (gid 0,
-  // root-equivalent on macOS, checked against both the primary gid and the
-  // auxiliary gids).
-  Counter nfsPrivilegedAccessUidRoot{"nfs.privileged_access.uid_root"};
-  Counter nfsPrivilegedAccessGidWheel{"nfs.privileged_access.gid_wheel"};
-
-  // Requests rejected because nfs:root-access-mode / nfs:wheel-access-mode
-  // is set to "block" for an identity class the request claims.
+  // Requests rejected by a "block" or over-budget "rate_limit" entry in
+  // nfs:uid-access-modes / nfs:gid-access-modes.
   Counter nfsBlockedAccess{"nfs.blocked_access"};
 
   // NFS GC invalidation counters

@@ -32,7 +32,7 @@ class NfsAccessRateLimiter {
   bool allow(
       uint64_t count,
       uint64_t windowSeconds,
-      double nowSeconds = folly::DynamicTokenBucket::defaultClockNow()) {
+      double nowSeconds = folly::DynamicTokenBucket::defaultClockNow()) const {
     if (count == 0) {
       return false;
     }
@@ -47,7 +47,8 @@ class NfsAccessRateLimiter {
   }
 
  private:
-  folly::DynamicTokenBucket bucket_;
+  // The bucket is internally atomic, so sharing it under a read lock is safe.
+  mutable folly::DynamicTokenBucket bucket_;
 };
 
 } // namespace facebook::eden

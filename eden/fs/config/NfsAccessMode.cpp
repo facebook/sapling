@@ -12,8 +12,7 @@ namespace facebook::eden {
 namespace {
 
 constexpr auto nfsAccessModeStr = [] {
-  std::array<folly::StringPiece, 4> mapping{};
-  mapping[folly::to_underlying(NfsAccessMode::Off)] = "off";
+  std::array<folly::StringPiece, 3> mapping{};
   mapping[folly::to_underlying(NfsAccessMode::Log)] = "log";
   mapping[folly::to_underlying(NfsAccessMode::Block)] = "block";
   mapping[folly::to_underlying(NfsAccessMode::RateLimit)] = "rate_limit";

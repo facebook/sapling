@@ -27,6 +27,7 @@ cpp_unittest(
         "//eden/fs/utils:clock",
         "//eden/fs/utils:process_access_log",
         "//fb303:service_data",
+        "//fb303:thread_cached_service_data",
         "//folly/executors:manual_executor",
         "//folly/io:iobuf",
         "//folly/logging:logging",

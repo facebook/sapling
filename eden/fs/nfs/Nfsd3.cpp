@@ -8,11 +8,17 @@
 #include "eden/fs/nfs/Nfsd3.h"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 
+#include <fb303/ThreadCachedServiceData.h>
+#include <fmt/format.h>
 #include <folly/String.h>
+#include <folly/Synchronized.h>
 #include <folly/Utility.h>
+#include <folly/container/F14Map.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/portability/Stdlib.h>
@@ -75,7 +81,7 @@ void incrementNfsGcInvalidationCounter(
 
 /**
  * Whether an AUTH_SYS credential carries `gid` as its primary gid or as one
- * of its auxiliary gids.
+ * of its auxiliary gids; this is what an nfs:gid-access-modes entry matches.
  */
 bool credsHaveGid(const authsys_parms& creds, uint32_t gid) {
   return creds.gid == gid ||
@@ -83,21 +89,7 @@ bool credsHaveGid(const authsys_parms& creds, uint32_t gid) {
 }
 
 /**
- * Whether an AUTH_SYS credential claims root / the wheel group (primary or
- * auxiliary gid 0, root-equivalent on macOS). These predicates define the
- * identity classes that nfs:root-access-mode and nfs:wheel-access-mode act
- * on; telemetry and enforcement must agree on them.
- */
-bool credsClaimRoot(const authsys_parms& creds) {
-  return creds.uid == 0;
-}
-
-bool credsClaimWheel(const authsys_parms& creds) {
-  return credsHaveGid(creds, 0);
-}
-
-/**
- * Procedures the root/wheel access modes never act on (never counted,
+ * Procedures the uid/gid access modes never act on (never counted,
  * never rejected): NULL is the liveness and mount handshake probe, and
  * FSSTAT/FSINFO/PATHCONF are per-mount bookkeeping that NFS clients issue
  * on their own behalf. Rejecting any of these could wedge the mount itself
@@ -115,26 +107,52 @@ bool isAccessModeExempt(uint32_t proc) {
   }
 }
 
+using AccessRateLimiters =
+    folly::Synchronized<folly::F14FastMap<uint32_t, NfsAccessRateLimiter>>;
+
 /**
- * Whether one (mode, rate limiter) entry rejects a request: Block always
- * does, RateLimit only once `limiter` is over its `count` per
- * `windowSeconds` budget, and Off / Log never do.
+ * Whether one access mode entry rejects a request: Block always does,
+ * RateLimit only once `id`'s budget of `count` per `windowSeconds` is
+ * exhausted, and Log never does.
  */
 bool accessModeRejects(
     NfsAccessMode mode,
-    NfsAccessRateLimiter& limiter,
+    AccessRateLimiters& limiters,
+    uint32_t id,
     uint32_t count,
     uint32_t windowSeconds) {
   switch (mode) {
-    case NfsAccessMode::Off:
     case NfsAccessMode::Log:
       return false;
     case NfsAccessMode::Block:
       return true;
-    case NfsAccessMode::RateLimit:
-      return !limiter.allow(count, windowSeconds);
+    case NfsAccessMode::RateLimit: {
+      // Shared lock on the common path; the bucket itself is atomic. Only
+      // the first request for an id takes the exclusive lock to create it.
+      // Bucket references never outlive the lock, so the map is free to
+      // rehash.
+      {
+        auto locked = limiters.rlock();
+        if (auto it = locked->find(id); it != locked->end()) {
+          return !it->second.allow(count, windowSeconds);
+        }
+      }
+      return !limiters.wlock()->try_emplace(id).first->second.allow(
+          count, windowSeconds);
+    }
   }
   return false;
+}
+
+/**
+ * Bumps the per-id fb303 stat nfs.<name>.<id> (e.g. nfs.access.uid.0),
+ * exported as .sum, .sum.60, etc.
+ */
+void bumpAccessStat(std::string_view name, uint32_t id) {
+  fmt::memory_buffer buf;
+  fmt::format_to(std::back_inserter(buf), "nfs.{}.{}", name, id);
+  fb303::ThreadCachedServiceData::get()->addStatValue(
+      folly::StringPiece(buf.data(), buf.size()), 1, fb303::SUM);
 }
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
@@ -341,10 +359,11 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool fastPathRPCs_;
   std::shared_ptr<ReloadableConfig> config_;
-  // Per-identity-class budgets for NfsAccessMode::RateLimit, scoped to
-  // this mount's processor.
-  NfsAccessRateLimiter rootAccessRateLimiter_;
-  NfsAccessRateLimiter wheelAccessRateLimiter_;
+  // Per-id budgets for NfsAccessMode::RateLimit entries, scoped to this
+  // mount's processor. Created on first use and kept for the processor's
+  // lifetime: the id set is small and bounded by config.
+  AccessRateLimiters uidRateLimiters_;
+  AccessRateLimiters gidRateLimiters_;
   std::atomic<size_t> inflightRequests_{0};
   // Used to check rate limiting. Set once in constructor via setFsChannel().
   // Nulled in onShutdown() before Nfsd3 destruction. The backpressure check
@@ -2440,12 +2459,12 @@ bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
   if (!config_) {
     return false;
   }
-  // Single decision point for the credential fast path: when both access
-  // modes are off, requests need no identity and the per-request AUTH_SYS
-  // parse is skipped entirely. Both modes are read off one config snapshot.
+  // Single decision point for the credential fast path: with no uid or gid
+  // entries configured, requests need no identity and the per-request
+  // AUTH_SYS parse is skipped entirely. Both maps are read off one snapshot.
   auto config = config_->getEdenConfig();
-  return config->nfsRootAccessMode.getValue() != NfsAccessMode::Off ||
-      config->nfsWheelAccessMode.getValue() != NfsAccessMode::Off;
+  return !config->nfsUidAccessModes.getValue().empty() ||
+      !config->nfsGidAccessModes.getValue().empty();
 }
 
 auth_stat Nfsd3ServerProcessor::checkAuthentication(
@@ -2457,37 +2476,33 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   if (!config_ || !authSysCreds || isAccessModeExempt(callBody.proc)) {
     return auth_stat::AUTH_OK;
   }
-  // Per identity class: every mode but "off" counts the access ("block"
-  // and "rate_limit" are strict supersets of "log"); "block" additionally
-  // rejects the request, and "rate_limit" rejects only the accesses that
-  // exceed the class's configured budget. Either class alone is enough to
-  // reject.
+  // Every uid/gid entry the credential matches is evaluated, not just the
+  // first: each one is counted, and any rejecting one rejects the request.
   auto config = config_->getEdenConfig();
+  const auto count = config->nfsAccessRateLimitCount.getValue();
+  const auto windowSeconds = config->nfsAccessRateLimitWindowSeconds.getValue();
   bool block = false;
-  if (credsClaimRoot(*authSysCreds)) {
-    const auto mode = config->nfsRootAccessMode.getValue();
-    if (mode != NfsAccessMode::Off) {
-      dispatcher_->getStats()->increment(&NfsStats::nfsPrivilegedAccessUidRoot);
-    }
+
+  const auto& uidModes = config->nfsUidAccessModes.getValue();
+  if (auto entry = uidModes.find(authSysCreds->uid); entry != uidModes.end()) {
+    bumpAccessStat("access.uid", authSysCreds->uid);
     if (accessModeRejects(
-            mode,
-            rootAccessRateLimiter_,
-            config->nfsRootAccessRateLimitCount.getValue(),
-            config->nfsRootAccessRateLimitWindowSeconds.getValue())) {
+            entry->second,
+            uidRateLimiters_,
+            authSysCreds->uid,
+            count,
+            windowSeconds)) {
+      bumpAccessStat("blocked.uid", authSysCreds->uid);
       block = true;
     }
   }
-  if (credsClaimWheel(*authSysCreds)) {
-    const auto mode = config->nfsWheelAccessMode.getValue();
-    if (mode != NfsAccessMode::Off) {
-      dispatcher_->getStats()->increment(
-          &NfsStats::nfsPrivilegedAccessGidWheel);
+  for (const auto& [gid, mode] : config->nfsGidAccessModes.getValue()) {
+    if (!credsHaveGid(*authSysCreds, gid)) {
+      continue;
     }
-    if (accessModeRejects(
-            mode,
-            wheelAccessRateLimiter_,
-            config->nfsWheelAccessRateLimitCount.getValue(),
-            config->nfsWheelAccessRateLimitWindowSeconds.getValue())) {
+    bumpAccessStat("access.gid", gid);
+    if (accessModeRejects(mode, gidRateLimiters_, gid, count, windowSeconds)) {
+      bumpAccessStat("blocked.gid", gid);
       block = true;
     }
   }

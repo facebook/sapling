@@ -469,7 +469,6 @@ TEST_F(ConfigSettingTest, setUnorderedMap) {
 TEST_F(ConfigSettingTest, setNfsAccessMode) {
   ConfigSetting<NfsAccessMode> setting{
       "test:value", NfsAccessMode::Log, nullptr};
-  checkSet(setting, NfsAccessMode::Off, "off");
   checkSet(setting, NfsAccessMode::Block, "block");
   checkSet(setting, NfsAccessMode::RateLimit, "rate_limit");
   checkSet(setting, NfsAccessMode::Log, "log");
