@@ -372,6 +372,46 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
   });
 }
 
+std::optional<std::string> IoUringFuseTransport::prepareAllQueues(
+    FuseChannel& channel) {
+  initializeSession(channel);
+  if (!ringPool_) {
+    return "io_uring ring pool was not created";
+  }
+
+  // Runs on a single thread, so unlike processSession() there is no
+  // pinThreadToCpu() to make each ring's memory local to the worker that will
+  // use it. That NUMA locality is traded for being able to detect a shortfall
+  // while declining io_uring is still possible.
+  const auto queueCount = ringPool_->queues.size();
+  const auto fuseFd = channel.getFuseDeviceFd();
+  for (auto& queue : ringPool_->queues) {
+    try {
+      if (!queue.ringInitialized) {
+        createQueueRing(queue, fuseFd);
+      }
+      if (!queue.buffersAllocated) {
+        allocateQueueBuffers(queue);
+      }
+    } catch (const std::exception& ex) {
+      auto error = fmt::format(
+          "failed to prepare io_uring queue {} of {}: {}",
+          queue.queueId,
+          queueCount,
+          ex.what());
+      // Release the queues prepared so far rather than holding a partial pool
+      // for the lifetime of the transport. sessionInitFlag_ stays set, so the
+      // pool is not rebuilt later: this transport is spent and the caller is
+      // expected to drop it.
+      destroyRingPool();
+      return error;
+    }
+  }
+
+  XLOGF(DBG3, "prepared {} io_uring queues before FUSE_INIT", queueCount);
+  return std::nullopt;
+}
+
 void IoUringFuseTransport::createQueueRing(RingQueue& queue, int fuseFd) const {
   int eventFd = -1;
   auto maybeSetupError = setupQueue(

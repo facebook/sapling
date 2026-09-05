@@ -71,6 +71,25 @@ class IoUringFuseTransport final : public FuseTransport {
   static std::optional<std::string> getMaybeSetupError(
       uint32_t queueDepth,
       int fuseFd);
+
+  // Creates every queue's ring and allocates its buffers up front, keeping
+  // them, and returns an error description if any queue could not be prepared.
+  //
+  // getMaybeSetupError() only proves that a *single* ring fits. This proves the
+  // whole set fits, which is what actually gets created: one queue per logical
+  // CPU, each charging RLIMIT_MEMLOCK against a counter shared by every process
+  // running as this uid. A co-tenant can leave room for one ring but not for
+  // all of them.
+  //
+  // The queues are kept rather than probed-and-released so nothing can consume
+  // the headroom between the check and the real bring-up. The caller must run
+  // this before answering FUSE_INIT: once the reply advertises
+  // FUSE_OVER_IO_URING the kernel blocks request allocation until the ring is
+  // ready, so declining io_uring is no longer possible.
+  //
+  // On failure the ring pool is torn down, so the caller can simply discard
+  // this transport and continue with devfuse.
+  std::optional<std::string> prepareAllQueues(FuseChannel& channel);
 #endif
 
  private:
@@ -172,11 +191,14 @@ class IoUringFuseTransport final : public FuseTransport {
   // initializeRingPool() for the calling thread, which already establishes
   // the necessary happens-before edge.
   //
-  // Those unlocked reads also depend on ringPool_ outliving every worker:
-  // destroyRingPool() is only reachable from ~IoUringFuseTransport(), which
-  // runs after the worker threads have been joined. If teardown ever moves
-  // to a point where workers can still be running, processSession() and its
-  // helpers must take the shared lock too.
+  // Those unlocked reads also depend on ringPool_ outliving every worker, so
+  // destroyRingPool() must never run while a worker could still be using the
+  // pool. Both of its callers satisfy that: ~IoUringFuseTransport() runs
+  // after the worker threads have been joined, and prepareAllQueues() runs
+  // before FUSE_INIT is answered, which is before any worker has started. A
+  // third caller, or either of these moving to a point where workers can
+  // still be running, means processSession() and its helpers must take the
+  // shared lock too.
   mutable folly::SharedMutex ringPoolMutex_;
   std::unique_ptr<RingPool> ringPool_;
 
