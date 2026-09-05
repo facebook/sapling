@@ -333,7 +333,9 @@ pub(crate) fn log_source_results_to_scuba_with_enforcement<T: SourceRestrictionC
         None => Vec::new(),
     };
 
-    log_access_to_scuba(
+    // Shared entry point with the legacy path: applies SCSC override sampling
+    // and feeds the schematized logger, not just the legacy Scuba table.
+    log_checked_access_to_restricted_path(
         ctx,
         RestrictedPathLogData {
             repo_id,
