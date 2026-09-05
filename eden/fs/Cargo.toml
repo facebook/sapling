@@ -49,6 +49,7 @@ c2pa = { git = "https://github.com/peekmoar/c2pa-rs", rev = "bc2e763f3333eb7aaa1
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
 cxx-build = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
 darwin-libproc = { git = "https://github.com/fbsource/darwin-libproc", rev = "f73ddb1002d51ae74c1b41670fae56bd5896b7a3" }
+egui-phosphor = { git = "https://github.com/amPerl/egui-phosphor", rev = "d392183fe3766d49a78e4fce249e73777985119a" }
 gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "ebad63b48e960270b8d8d0dec74f5b2e54cad13f" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
