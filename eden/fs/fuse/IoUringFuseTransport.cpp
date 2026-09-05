@@ -125,9 +125,12 @@ size_t roundUpToPageSize(size_t size) {
   return ((size + pageSize - 1) / pageSize) * pageSize;
 }
 
-void pinThreadToCpu(size_t cpu, size_t cpuCount) {
+// Returns false if the thread was not pinned, in which case its affinity is
+// whatever it was before the call -- callers that pin repeatedly need to know,
+// since a stale mask is worse than none.
+bool pinThreadToCpu(size_t cpu, size_t cpuCount) {
   if (cpuCount == 0) {
-    return;
+    return false;
   }
 
   // cpu_set_t has a fixed capacity, so clamp the affinity domain to the CPUs
@@ -142,11 +145,69 @@ void pinThreadToCpu(size_t cpu, size_t cpuCount) {
     const auto savedErrno = errno;
     XLOGF(
         WARN,
-        "failed to pin io_uring worker to cpu {}: {}",
+        "failed to pin io_uring thread to cpu {}: {}",
         cpu,
         std::generic_category().message(savedErrno));
+    return false;
   }
+  return true;
 }
+
+// Restores the calling thread's CPU affinity on scope exit, so a function that
+// pins itself temporarily does not leave the thread bound to whatever CPU it
+// touched last.
+class ScopedThreadAffinity {
+ public:
+  ScopedThreadAffinity() {
+    saved_ = sched_getaffinity(0, sizeof(original_), &original_) == 0;
+    if (!saved_) {
+      const auto savedErrno = errno;
+      XLOGF(
+          WARN,
+          "failed to read thread CPU affinity: {}",
+          std::generic_category().message(savedErrno));
+    }
+  }
+
+  ~ScopedThreadAffinity() {
+    restore();
+  }
+
+  // Puts the captured mask back. Idempotent, and a no-op when the original
+  // mask was never captured, so a caller can also use it to undo a partial pin
+  // mid-scope.
+  void restore() {
+    if (!saved_) {
+      return;
+    }
+    if (sched_setaffinity(0, sizeof(original_), &original_) != 0) {
+      const auto savedErrno = errno;
+      // Worth a warning rather than a silent return: threads spawned after
+      // this point inherit whatever mask is left behind, and not all of them
+      // pin themselves afterwards.
+      XLOGF(
+          WARN,
+          "failed to restore thread CPU affinity: {}",
+          std::generic_category().message(savedErrno));
+    }
+  }
+
+  // Strictly scope-bound: a movable guard could restore twice, or not at all.
+  ScopedThreadAffinity(const ScopedThreadAffinity&) = delete;
+  ScopedThreadAffinity& operator=(const ScopedThreadAffinity&) = delete;
+  ScopedThreadAffinity(ScopedThreadAffinity&&) = delete;
+  ScopedThreadAffinity& operator=(ScopedThreadAffinity&&) = delete;
+
+  // False when the original mask could not be captured, in which case the
+  // caller must not pin: there would be no way to undo it.
+  bool canRestore() const {
+    return saved_;
+  }
+
+ private:
+  cpu_set_t original_{};
+  bool saved_{false};
+};
 
 std::optional<QueueSetupError> setupQueue(
     uint32_t queueDepth,
@@ -379,13 +440,44 @@ std::optional<std::string> IoUringFuseTransport::prepareAllQueues(
     return "io_uring ring pool was not created";
   }
 
-  // Runs on a single thread, so unlike processSession() there is no
-  // pinThreadToCpu() to make each ring's memory local to the worker that will
-  // use it. That NUMA locality is traded for being able to detect a shortfall
-  // while declining io_uring is still possible.
+  // This all runs on one thread, so each queue is pinned to the CPU whose
+  // worker will later claim it before its ring is created. io_uring_setup()
+  // allocates the ring on the calling thread's NUMA node -- it passes
+  // numa_node_id() as the preferred node, with no __GFP_THISNODE, so it is a
+  // preference rather than a hard bind -- and without this the entire pool
+  // would land on whichever node happens to run FUSE_INIT.
+  //
+  // The mapping must stay identical to the one processSession() uses, clamp
+  // included, or queues end up deliberately placed on the wrong node instead
+  // of merely unpinned. Reusing pinThreadToCpu() is what keeps them in sync.
+  //
+  // Only the ring is affected. The per-entry buffers dominate the footprint
+  // (~1 MiB per queue against ~8 KiB for the ring) but are never written here,
+  // so first-touch still places them on the worker that eventually uses them.
+  //
+  // Unpins on the way out. This thread goes on to call startWorkerThreads(),
+  // and spawned threads inherit the creator's affinity mask -- the io_uring
+  // workers re-pin themselves, but the invalidation threads never do and would
+  // stay stuck on one CPU for the life of the mount.
+  ScopedThreadAffinity restoreAffinity;
+  const auto configuredCpuCount = get_nprocs_conf();
+  // Skip pinning outright if the mask could not be captured. Losing NUMA
+  // locality is a far better outcome than pinning with no way back.
+  const bool pinToQueueCpu =
+      restoreAffinity.canRestore() && configuredCpuCount > 0;
+
   const auto queueCount = ringPool_->queues.size();
   const auto fuseFd = channel.getFuseDeviceFd();
   for (auto& queue : ringPool_->queues) {
+    if (pinToQueueCpu &&
+        !pinThreadToCpu(
+            queue.queueId, static_cast<size_t>(configuredCpuCount))) {
+      // A failed pin leaves the *previous* queue's mask in place, which would
+      // put this ring on a deliberately wrong node rather than an arbitrary
+      // one. Fall back to the original mask so the placement degrades to
+      // unpinned.
+      restoreAffinity.restore();
+    }
     try {
       if (!queue.ringInitialized) {
         createQueueRing(queue, fuseFd);
