@@ -1126,7 +1126,13 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
       auto result = handleCqe(queue, *cqe, channel.isStopRequested());
       switch (result.action) {
         case CqeResult::Action::DispatchRequest: {
-          XCHECK(result.request.has_value());
+          // A DispatchRequest action always carries a decoded request.
+          if (!result.request.has_value()) {
+            throw std::runtime_error(
+                fmt::format(
+                    "io_uring dispatch on queue {} produced no request",
+                    queue.queueId));
+          }
           auto& request = *result.request;
           if (channel.isStopRequested()) {
             // COMMIT_AND_FETCH can return another request while shutdown is
