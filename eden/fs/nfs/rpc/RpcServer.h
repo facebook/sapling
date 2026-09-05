@@ -201,6 +201,17 @@ class RpcServerProcessor {
 class RpcServer;
 
 /**
+ * Size of each freshly allocated recv(2) buffer.
+ *
+ * This is folly::IOBufQueue::preallocate's `newAllocationSize` argument, whose
+ * signature is preallocate(min, newAllocationSize, max = SIZE_MAX). It sizes a
+ * newly allocated buffer; it is not a cap on how much a single recv(2) may
+ * return. We leave `max` at its default, and preallocate's fast path returns
+ * the whole available tailroom, which can exceed this value.
+ */
+inline constexpr size_t kDefaultReadBufferAllocationSize = 64 * 1024;
+
+/**
  * RpcConnectionHandler manages connected RPC sockets, whether for NFS or Mountd
  * or Rpcbind.
  *

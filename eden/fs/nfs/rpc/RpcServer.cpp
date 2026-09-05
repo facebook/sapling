@@ -37,18 +37,18 @@ FsChannelInfo RpcStopData::extractTakeoverInfo() {
 }
 
 void RpcConnectionHandler::getReadBuffer(void** bufP, size_t* lenP) {
-  // TODO(xavierd): Should maxSize be configured to be at least the
-  // configured NFS iosize?
-  constexpr size_t maxSize = 64 * 1024;
+  // TODO(xavierd): Should kDefaultReadBufferAllocationSize be configured to be
+  // at least the configured NFS iosize?
   constexpr size_t minReadSize = 4 * 1024;
 
-  // We want to issue a recv(2) of at least minReadSize, and bound it to
-  // the available writable size of the readBuf_ to minimize allocation
-  // cost. This guarantees reading large buffers, and minimize the number
-  // of calls to tryConsumeReadBuffer.
+  // We want to issue a recv(2) of at least minReadSize, and to reuse whatever
+  // the readBuf_ already has room for before allocating again, to minimize
+  // allocation cost. This guarantees reading large buffers, and minimize the
+  // number of calls to tryConsumeReadBuffer.
   auto minSize = std::max(readBuf_.tailroom(), minReadSize);
 
-  auto [buf, len] = readBuf_.preallocate(minSize, maxSize);
+  auto [buf, len] =
+      readBuf_.preallocate(minSize, kDefaultReadBufferAllocationSize);
   *lenP = len;
   *bufP = buf;
 }
