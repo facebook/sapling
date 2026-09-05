@@ -1707,6 +1707,18 @@ struct CommitRunHooksParams {
   /// (instead of the calling client's identities). Does not affect
   /// repository access control, which still uses the caller's identity.
   3: optional RunAsIdentities run_as;
+  /// If set, hooks evaluate the commit as if it carried this message instead
+  /// of the stored one. Lets callers preview the outcome for a commit whose
+  /// message will be regenerated before landing (e.g. from live review
+  /// state). Only affects this dry run's reported verdicts; a real push
+  /// always evaluates the pushed commit.
+  4: optional string override_commit_message;
+  /// If set, the response includes rejections from hooks configured as
+  /// log-only instead of showing them as accepted. Lets callers preview what
+  /// a hook would do once enforcing while it is still being rolled out.
+  /// Does not make anything enforce: it only changes what this dry run
+  /// reports.
+  5: optional bool include_log_only_rejections;
 }
 
 /// Parameters for checking commit rate limits.

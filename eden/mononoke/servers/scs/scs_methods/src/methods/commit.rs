@@ -24,6 +24,7 @@ use futures::try_join;
 use futures_watchdog::WatchdogExt;
 use hooks::HookOutcome;
 use hooks::HookResult;
+use hooks::LogOnlyRejections;
 use itertools::Either;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
@@ -1268,13 +1269,40 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitRunHooksParams,
     ) -> Result<thrift::CommitRunHooksResponse, scs_errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let pushvars: Option<HashMap<String, Bytes>> = params
             .pushvars
             .map(|p| p.into_iter().map(|(k, v)| (k, Bytes::from(v))).collect());
         let run_as = params.run_as.map(run_as_identities).transpose()?;
+        // Both fields only shape this dry run's reported verdicts; a real
+        // push never reads them. Log their use for rollout analysis.
+        let log_only_rejections = if params.include_log_only_rejections.unwrap_or(false) {
+            LogOnlyRejections::Report
+        } else {
+            LogOnlyRejections::Suppress
+        };
+        if params.override_commit_message.is_some()
+            || log_only_rejections == LogOnlyRejections::Report
+        {
+            let mut scuba = ctx.scuba().clone();
+            scuba.add(
+                "override_commit_message_set",
+                params.override_commit_message.is_some(),
+            );
+            scuba.add(
+                "include_log_only_rejections",
+                log_only_rejections == LogOnlyRejections::Report,
+            );
+            scuba.log_with_msg("commit_run_hooks dry-run overrides", None);
+        }
         let outcomes = changeset
-            .run_hooks(params.bookmark, pushvars.as_ref(), run_as)
+            .run_hooks(
+                params.bookmark,
+                pushvars.as_ref(),
+                run_as,
+                params.override_commit_message,
+                log_only_rejections,
+            )
             .await?;
 
         let mut outcomes_map = BTreeMap::new();

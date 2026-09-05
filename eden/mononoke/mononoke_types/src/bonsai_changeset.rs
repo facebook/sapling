@@ -474,6 +474,19 @@ impl BonsaiChangeset {
     pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner
     }
+
+    /// For hook dry runs only. Returns a changeset whose `get_changeset_id()`
+    /// is unchanged but whose message is replaced, so that hooks evaluate the
+    /// substitute message while id-based lookups still resolve the stored
+    /// commit. The result violates the `id == hash(content)` invariant and
+    /// must never be persisted.
+    pub fn replace_message_keeping_id(self, message: String) -> Result<Self> {
+        let id = self.id;
+        let mut inner = self.inner;
+        inner.message = message;
+        inner.verify()?;
+        Ok(BonsaiChangeset { inner, id })
+    }
 }
 
 impl BlobstoreValue for BonsaiChangeset {
@@ -741,6 +754,43 @@ mod test {
                 )
                 .unwrap()
             )
+        );
+    }
+
+    #[mononoke::test]
+    fn replace_message_keeps_id_and_changes_message() {
+        let tc = BonsaiChangesetMut {
+            parents: vec![ChangesetId::from_byte_array([3; 32])],
+            author: "foo".into(),
+            author_date: DateTime::from_timestamp(1234567890, 36800).unwrap(),
+            message: "Original message".into(),
+            file_changes: sorted_vector_map![
+                NonRootMPath::new("a/b").unwrap() => FileChange::Deletion,
+            ],
+            ..Default::default()
+        };
+        let original = tc.freeze().expect("fixed bonsai changeset must be valid");
+        let original_id = original.get_changeset_id();
+
+        let replaced = original
+            .replace_message_keeping_id("Replaced message".to_string())
+            .expect("message replacement of a valid changeset must succeed");
+
+        assert_eq!(replaced.message(), "Replaced message");
+        assert_eq!(
+            replaced.get_changeset_id(),
+            original_id,
+            "id must be preserved so id-based lookups resolve the stored commit"
+        );
+        // The preserved id intentionally no longer matches the content hash.
+        let refrozen_id = replaced
+            .into_mut()
+            .freeze()
+            .expect("refreeze must be valid")
+            .get_changeset_id();
+        assert_ne!(
+            refrozen_id, original_id,
+            "content hash must differ once the message changed"
         );
     }
 

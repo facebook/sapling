@@ -94,6 +94,25 @@ impl HookExecutionPurpose {
     }
 }
 
+/// What to do with rejections from hooks configured as log-only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LogOnlyRejections {
+    /// Suppress: convert the rejection to an accepted outcome, as on a real
+    /// push (the rejection is recorded to scuba only).
+    Suppress,
+    /// Report the rejection to the caller. For dry runs that preview what a
+    /// hook would do once enforcing; never used on a real push path.
+    Report,
+}
+
+impl LogOnlyRejections {
+    /// Whether a hook configured as log-only should have its rejection
+    /// suppressed under this mode.
+    pub fn suppresses(&self, hook_is_log_only: bool) -> bool {
+        hook_is_log_only && *self == LogOnlyRejections::Suppress
+    }
+}
+
 /// The origin of the changeset.
 ///
 /// In the push-redirection scenario the changeset is initially pushed to a

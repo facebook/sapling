@@ -54,6 +54,7 @@ use crate::HookExecutionPurpose;
 use crate::HookManager;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
+use crate::LogOnlyRejections;
 use crate::PathContent;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
@@ -389,6 +390,7 @@ async fn run_changeset_hooks_with_mgr(
             PushAuthoredBy::User,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )
         .await
         .unwrap();

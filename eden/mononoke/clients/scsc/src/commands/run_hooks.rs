@@ -64,6 +64,16 @@ pub(super) struct CommandArgs {
     /// Unlike --run-as this preserves identity attributes, so hooks that
     /// inspect them (e.g. agent taints) see the real thing.
     run_as_encoded: Option<String>,
+    #[clap(long, value_name = "MESSAGE")]
+    /// Run the hooks as if the commit carried this message instead of its
+    /// stored one (e.g. the message it will carry once regenerated at land
+    /// time). Only affects this dry run's reported verdicts.
+    override_commit_message: Option<String>,
+    #[clap(long)]
+    /// Include rejections from hooks configured as log-only instead of
+    /// showing them as accepted (previews what they would do once
+    /// enforcing).
+    include_log_only_rejections: bool,
 }
 
 /// Build the `run_as` payload from the `--run-as` / `--run-as-encoded` flags,
@@ -166,6 +176,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bookmark: bookmark.clone(),
         pushvars,
         run_as,
+        override_commit_message: args.override_commit_message.clone(),
+        include_log_only_rejections: args.include_log_only_rejections.then_some(true),
         ..Default::default()
     };
     let response = conn

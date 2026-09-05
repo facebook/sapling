@@ -60,6 +60,7 @@ use crate::HookExecution;
 use crate::HookExecutionPurpose;
 use crate::HookOutcome;
 use crate::HookRepo;
+use crate::LogOnlyRejections;
 use crate::PushAuthoredBy;
 use crate::errors::HookManagerError;
 
@@ -745,6 +746,7 @@ impl HookManager {
         // caller's (e.g. `commit_run_hooks` with `run_as`), this holds the
         // caller's real identities for audit logging. `None` for real pushes.
         run_as_original_identities: Option<&MononokeIdentitySet>,
+        log_only_rejections: LogOnlyRejections,
     ) -> Result<Vec<HookOutcome>, Error> {
         debug!("Running hooks for bookmark {:?}", bookmark);
 
@@ -875,7 +877,7 @@ impl HookManager {
                     push_authored_by,
                     purpose,
                     maybe_pushvars,
-                    hook.get_config().log_only,
+                    log_only_rejections.suppresses(hook.get_config().log_only),
                     bypass_by_cs,
                 )
             })

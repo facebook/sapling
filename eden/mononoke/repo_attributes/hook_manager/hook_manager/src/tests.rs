@@ -64,6 +64,7 @@ use crate::HookManager;
 use crate::HookOutcome;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
+use crate::LogOnlyRejections;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
 use crate::add_log_only_bypass_columns;
@@ -387,6 +388,7 @@ async fn run_changeset_hooks(
             PushAuthoredBy::User,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )
         .await
         .unwrap();
@@ -420,6 +422,7 @@ async fn run_file_hooks(
             PushAuthoredBy::User,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )
         .await
         .unwrap();
@@ -474,6 +477,7 @@ async fn test_changeset_hook_receives_execution_purpose(fb: FacebookInit) {
             PushAuthoredBy::User,
             HookExecutionPurpose::DryRun,
             None,
+            LogOnlyRejections::Suppress,
         )
         .await
         .unwrap();
@@ -496,6 +500,66 @@ async fn test_changeset_hook_rejected(fb: FacebookInit) {
         "hook1".to_string() => default_rejection()
     };
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
+}
+
+#[mononoke::fbinit_test]
+async fn test_log_only_rejection_reported_per_mode(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(
+        ctx.fb,
+        hashmap! {"bm1".to_string() => vec!["hook1".to_string()]},
+        hashmap! {},
+    )
+    .await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        HookConfig {
+            log_only: true,
+            ..Default::default()
+        },
+        None,
+    );
+    let changeset = default_changeset();
+    let bookmark = BookmarkKey::new("bm1").unwrap();
+
+    let outcomes = hook_manager
+        .run_changesets_hooks_for_bookmark(
+            &ctx,
+            std::slice::from_ref(&changeset),
+            &bookmark,
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+            HookExecutionPurpose::LandAttempt,
+            None,
+            LogOnlyRejections::Suppress,
+        )
+        .await
+        .unwrap();
+    assert!(
+        !outcomes[0].get_execution().is_rejected(),
+        "a log-only rejection must be reported as accepted on a real push"
+    );
+
+    let outcomes = hook_manager
+        .run_changesets_hooks_for_bookmark(
+            &ctx,
+            std::slice::from_ref(&changeset),
+            &bookmark,
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+            HookExecutionPurpose::LandAttempt,
+            None,
+            LogOnlyRejections::Report,
+        )
+        .await
+        .unwrap();
+    assert!(
+        outcomes[0].get_execution().is_rejected(),
+        "LogOnlyRejections::Report must surface the underlying log-only rejection"
+    );
 }
 
 #[mononoke::fbinit_test]
@@ -1001,6 +1065,7 @@ async fn test_unauthorized_bypass_file_hook_annotates_each_path(fb: FacebookInit
             PushAuthoredBy::User,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )),
     )
     .await
@@ -1456,6 +1521,7 @@ impl BypassScenario {
                 PushAuthoredBy::User,
                 HookExecutionPurpose::LandAttempt,
                 None,
+                LogOnlyRejections::Suppress,
             )),
         )
         .await
@@ -1709,6 +1775,7 @@ async fn test_bypass_resolves_author_email_to_group_unixname(fb: FacebookInit) {
             PushAuthoredBy::User,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )),
     )
     .await

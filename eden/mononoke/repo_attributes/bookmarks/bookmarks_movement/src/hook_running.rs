@@ -18,6 +18,7 @@ use hooks::CrossRepoPushSource;
 use hooks::HookExecutionPurpose;
 use hooks::HookManager;
 use hooks::HookOutcome;
+use hooks::LogOnlyRejections;
 use hooks::PushAuthoredBy;
 use mononoke_types::BonsaiChangeset;
 use thiserror::Error;
@@ -234,6 +235,7 @@ pub async fn run_changeset_hooks(
             push_authored_by,
             HookExecutionPurpose::LandAttempt,
             None,
+            LogOnlyRejections::Suppress,
         )
         .timed()
         .await;

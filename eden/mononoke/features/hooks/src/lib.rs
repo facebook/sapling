@@ -29,6 +29,7 @@ pub use hook_manager::HookRejection;
 pub use hook_manager::HookRejectionInfo;
 pub use hook_manager::HookRepo;
 pub use hook_manager::HookResult;
+pub use hook_manager::LogOnlyRejections;
 pub use hook_manager::PathContent;
 pub use hook_manager::PushAuthoredBy;
 pub use hook_manager::Pushvars;
