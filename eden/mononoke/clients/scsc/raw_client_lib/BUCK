@@ -20,7 +20,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:maplit",
+        "//artillery/artillery2/api/cpp/cli_lite/rust:art_cli_lite_rs",
         "//c2p/secure_thrift/rust/client:x2pclient",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
@@ -32,12 +32,14 @@ rust_library(
         "DEFAULT": [],
         "ovr_config//os:linux": [
             "//common/rust/identity:identity",
+            "//common/rust/thrift/bareclient:thriftclient",
             "//common/rust/thrift/srclient:srclient",
             "//eden/mononoke/scs/if:source_control-rust-srclients",
             "//eden/mononoke/scs/if:source_control-rust-thriftclients",
         ],
         "ovr_config//os:macos": [
             "//common/rust/identity:identity",
+            "//common/rust/thrift/bareclient:thriftclient",
             "//eden/mononoke/scs/if:source_control-rust-thriftclients",
         ],
     }),

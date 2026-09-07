@@ -7,6 +7,8 @@
 
 //! Raw SCS Client.
 
+use std::collections::HashMap;
+use std::iter::once;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
@@ -22,7 +24,6 @@ use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 #[cfg(not(target_os = "windows"))]
 use identity::IdentitySet;
-use maplit::hashmap;
 use sharding_ext::encode_repo_name;
 pub use source_control as thrift;
 use source_control_clients::SourceControlService;
@@ -108,6 +109,11 @@ impl ScsClientBuilder {
     }
 }
 
+/// The active Artillery trace context (if any) as outgoing header key/value pairs
+fn artillery_trace_headers() -> Vec<(String, String)> {
+    art_cli_lite_rs::outgoing("thrift", "SourceControlService")
+}
+
 /// Build a scsclient from a tier name via servicerouter.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn build_from_tier_name_via_sr(
@@ -124,9 +130,10 @@ fn build_from_tier_name_via_sr(
     use srclient::ClientParams;
 
     let (client_info, correlator) = new_scs_client_info(client_correlator);
-    let headers = hashmap! {
-        String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
-    };
+    let headers: HashMap<String, String> =
+        once((String::from(CLIENT_INFO_HEADER), client_info.to_json()?))
+            .chain(artillery_trace_headers())
+            .collect();
 
     let client_params = ClientParams::new()
         .with_client_id(client_id)
@@ -189,9 +196,10 @@ fn build_from_tier_name_via_x2p(
     client_correlator: Option<String>,
 ) -> Result<ScsClient, Error> {
     let (client_info, correlator) = new_scs_client_info(client_correlator);
-    let headers = hashmap! {
-        String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
-    };
+    let headers: HashMap<String, String> =
+        once((String::from(CLIENT_INFO_HEADER), client_info.to_json()?))
+            .chain(artillery_trace_headers())
+            .collect();
 
     let channel = x2pclient::X2pClientBuilder::from_service_name(fb, tier.as_ref())
         .with_client_id(client_id)
@@ -284,12 +292,13 @@ impl ScsClientHostBuilder {
         fb: FacebookInit,
         host_port: impl AsRef<str>,
     ) -> Result<ScsClient, Error> {
-        use source_control_thriftclients::make_SourceControlService_thriftclient;
+        use source_control_thriftclients::build_SourceControlService_client;
+        use thriftclient::ThriftChannelBuilder;
 
         let expected_identities = if let Ok(identity) =
             std::env::var("MONONOKE_INTEGRATION_TEST_EXPECTED_THRIFT_SERVER_IDENTITY")
         {
-            IdentitySet::from_iter(std::iter::once(identity.parse()?))
+            IdentitySet::from_iter(once(identity.parse()?))
         } else {
             IdentitySet::new()
         };
@@ -297,14 +306,17 @@ impl ScsClientHostBuilder {
         let mut addrs = host_port.as_ref().to_socket_addrs()?;
         let addr = addrs.next().expect("no address found");
         let (_client_info, correlator) = new_scs_client_info(self.client_correlator);
-        let client = make_SourceControlService_thriftclient!(
-            fb,
-            from_sock_addr = addr,
-            with_conn_timeout = CONN_TIMEOUT_MS,
-            with_recv_timeout = RECV_TIMEOUT_MS,
-            with_secure = true,
-            with_expected_identities = expected_identities,
-        )?;
+
+        let builder = artillery_trace_headers().into_iter().fold(
+            ThriftChannelBuilder::from_sock_addr(fb, addr)?
+                .with_conn_timeout(CONN_TIMEOUT_MS)
+                .with_recv_timeout(RECV_TIMEOUT_MS)
+                .with_secure(true)
+                .with_expected_identities(expected_identities),
+            |b, header| b.with_persistent_header(header),
+        );
+
+        let client = build_SourceControlService_client(builder)?;
         Ok(ScsClient {
             client,
             correlator: Some(correlator),

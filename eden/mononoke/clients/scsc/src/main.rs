@@ -181,6 +181,9 @@ async fn init_just_knobs_from_config_path(path: &str) -> anyhow::Result<()> {
 
 async fn main_impl(fb: FacebookInit, cli: ScscCli) -> anyhow::Result<()> {
     cpp_log_spew::disable(fb);
+    // Continue an inbound Artillery trace (if any) for this whole invocation so the
+    // SCS calls below join the caller's trace.
+    let _artillery_trace_block = art_cli_lite_rs::trace_cli("scsc");
 
     if hostcaps::is_corp() {
         //In Corp we should not be using strict mode of fbwhoami, which throws an error if the file is not present.
