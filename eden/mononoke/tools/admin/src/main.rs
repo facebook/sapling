@@ -40,6 +40,16 @@ impl ArgDefaults for AdminArgDefaults {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
+    // Continue an inbound Artillery trace (if any) for this whole invocation so
+    // the work below joins the caller's trace (e.g. an agent that shelled out to
+    // `mononoke_admin`). Inert no-op when not traced; art_cli_lite hydrates from
+    // the env waterfall and stamps the attested agent id from our TLS cert SAN.
+    // Held on the main thread for the run; the process-wide context it publishes
+    // is what the tokio-runtime thrift calls pick up. fbcode-only: art_cli_lite
+    // is not part of the OSS build.
+    #[cfg(fbcode_build)]
+    let _artillery_trace_block = art_cli_lite_rs::trace_cli("mononoke_admin");
+
     let mut subcommands = commands::subcommands();
 
     #[cfg(fbcode_build)]
