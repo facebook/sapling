@@ -33,7 +33,6 @@ mod test;
 
 #[derive(Clone)]
 pub struct GlobalrevPushrebaseHook {
-    ctx: CoreContext,
     mapping: Arc<dyn BonsaiGlobalrevMapping>,
     repository_id: RepositoryId,
     /// If this is a megarepo large repo, then this is the repo id of the
@@ -45,13 +44,11 @@ pub struct GlobalrevPushrebaseHook {
 
 impl GlobalrevPushrebaseHook {
     pub fn new(
-        ctx: CoreContext,
         mapping: Arc<dyn BonsaiGlobalrevMapping>,
         repository_id: RepositoryId,
         globalrevs_small_repo_id: Option<RepositoryId>,
     ) -> Box<dyn PushrebaseHook> {
         Box::new(Self {
-            ctx,
             mapping,
             repository_id,
             globalrevs_small_repo_id,
@@ -63,10 +60,10 @@ impl GlobalrevPushrebaseHook {
 impl PushrebaseHook for GlobalrevPushrebaseHook {
     async fn in_critical_section(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         _old_bookmark_value: Option<ChangesetId>,
     ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-        let max = self.mapping.get_max(&self.ctx).await?;
+        let max = self.mapping.get_max(ctx).await?;
         let increment = 1;
 
         let next_rev = match (max, self.globalrevs_small_repo_id) {
@@ -75,7 +72,7 @@ impl PushrebaseHook for GlobalrevPushrebaseHook {
             // the small repo.
             (None, Some(globalrevs_small_repo_id)) => self
                 .mapping
-                .get_max_custom_repo(&self.ctx, &globalrevs_small_repo_id)
+                .get_max_custom_repo(ctx, &globalrevs_small_repo_id)
                 .await?
                 .context("Small repo didn't have globalrevs")?,
             (None, None) => Globalrev::start_commit(),

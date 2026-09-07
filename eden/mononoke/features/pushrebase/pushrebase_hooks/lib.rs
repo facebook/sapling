@@ -86,7 +86,6 @@ pub async fn get_pushrebase_hooks(
             };
             if add_hook {
                 let hook = GlobalrevPushrebaseHook::new(
-                    ctx.clone(),
                     repo.bonsai_globalrev_mapping_arc().clone(),
                     repo_id,
                     config.globalrevs_small_repo_id,
