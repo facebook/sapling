@@ -418,6 +418,123 @@ mod fb {
         }
     }
 
+    /// How many individual repos the review diff's summary names. A batch carries up
+    /// to `--batch-size` repos (1000 by default) and the diff's own changed files
+    /// already enumerate every one of them, so repeating the full list in the message
+    /// only buries the per-type breakdown a reviewer actually reads.
+    const MAX_LISTED_REPOS: usize = 20;
+
+    /// Above this many distinct types the prose names a count instead of listing
+    /// them, so the title stays a readable single line.
+    const MAX_NAMED_TYPES: usize = 3;
+
+    /// How many repos each derived data type is being enabled for, type-ordered.
+    fn counts_by_type(edits: &[&PendingReconcile]) -> BTreeMap<&'static str, usize> {
+        edits.iter().fold(BTreeMap::new(), |mut counts, p| {
+            *counts.entry(p.derived_data_type.name()).or_default() += 1;
+            counts
+        })
+    }
+
+    /// The types being enabled, named when there are few enough to fit on one line.
+    fn types_phrase(counts: &BTreeMap<&'static str, usize>) -> String {
+        if counts.len() <= MAX_NAMED_TYPES {
+            counts
+                .keys()
+                .map(|name| format!("`{name}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        } else {
+            format!("{} derived data types", counts.len())
+        }
+    }
+
+    /// Title of the review diff. `@bypass_size_limit` is required because a batch
+    /// edits up to `--batch-size` `.cconf` files at once.
+    fn review_diff_title(edits: &[&PendingReconcile]) -> String {
+        format!(
+            "[mononoke]: Enable {} for {} repo(s) (automated backfill reconcile)\n@bypass_size_limit",
+            types_phrase(&counts_by_type(edits)),
+            edits.len(),
+        )
+    }
+
+    /// Summary of the review diff: what the change does, a per-type breakdown, and a
+    /// sample of the affected repos capped at `MAX_LISTED_REPOS`.
+    fn review_diff_summary(edits: &[&PendingReconcile]) -> String {
+        let counts = counts_by_type(edits);
+        let types = types_phrase(&counts);
+        let type_rows: String = counts
+            .iter()
+            .map(|(name, count)| format!("| `{name}` | {count} |\n"))
+            .collect();
+
+        let repo_rows: String = edits
+            .iter()
+            .take(MAX_LISTED_REPOS)
+            .map(|p| {
+                format!(
+                    "| {} | `{}` | `{}` | `{}` |\n",
+                    p.repo_id.id(),
+                    p.repo_name,
+                    p.derived_data_type.name(),
+                    p.enabled_config_name,
+                )
+            })
+            .collect();
+
+        let repos_heading = if edits.len() > MAX_LISTED_REPOS {
+            format!(
+                "Affected repos (first {} of {}; this diff's changed files cover all of them):",
+                MAX_LISTED_REPOS,
+                edits.len(),
+            )
+        } else {
+            "Affected repos:".to_string()
+        };
+
+        format!(
+            "Enables {types} for {} repo(s).\n\
+             \n\
+             Automated reconcile of the `enabled_derived_data_types` table into \
+             configerator: each repo below has already been backfilled for the type, \
+             so this adds the type to that repo's active derived-data config — one \
+             `.cconf` edit per repo.\n\
+             \n\
+             | Derived data type | Repos |\n\
+             | --- | --- |\n\
+             {type_rows}\
+             \n\
+             {repos_heading}\n\
+             \n\
+             | Repo ID | Repo | Type | Active config |\n\
+             | --- | --- | --- | --- |\n\
+             {repo_rows}",
+            edits.len(),
+        )
+    }
+
+    /// Test plan of the review diff. Deliberately does not repeat the repo list: it
+    /// is the diff's changed files.
+    fn review_diff_test_plan(edits: &[&PendingReconcile]) -> String {
+        format!(
+            "Created by `mononoke_admin derived-data backfill-reconcile-configs --apply`.\n\
+             \n\
+             - Configerator's `prepare` compiled all {} edited `RepoSpec` config(s) \
+             server-side before this diff was published, so every `.cconf` edit parses \
+             and type-checks.\n\
+             - Each edit adds the type to the active config's `types` and ensures the \
+             tuning that type requires (its `derivation_batch_sizes` entry, and for \
+             GDMV3 the version selector). Nothing else in the config is touched.\n\
+             - The tool is idempotent: a repo whose active config already lists the type \
+             is skipped, so re-running it produces no further edits.\n\
+             \n\
+             Per-type breakdown is in the summary; the affected repos are this diff's \
+             changed files.",
+            edits.len(),
+        )
+    }
+
     /// Create one peer-review configerator diff covering every repo in `batch`.
     ///
     /// One `managed_transaction`: for each repo read its `RepoSpec` `.cconf`, add
@@ -436,7 +553,10 @@ mod fb {
             ConfigoClient::with_client(ctx.fb, make_ConfigoService_srclient!(ctx.fb)?);
         let mut txn = configo_client.managed_transaction();
 
-        let mut edited = 0usize;
+        // The repos this transaction actually changed. Not the same as `batch`:
+        // a repo whose config already lists the type is skipped, and the diff
+        // message must describe what was edited, not what was attempted.
+        let mut edited: Vec<&PendingReconcile> = Vec::new();
         for p in batch {
             let cconf_path = make_repo_spec_file_path(&p.repo_name, repo_spec_dir_for(p)?);
 
@@ -459,7 +579,7 @@ mod fb {
                         REPO_SPEC_THRIFT_PATH.to_string(),
                         None,
                     );
-                    edited += 1;
+                    edited.push(p);
                 }
                 None => {
                     // Type already present in config (raced with a prior land or
@@ -474,22 +594,11 @@ mod fb {
             }
         }
 
-        if edited == 0 {
+        if edited.is_empty() {
             tracing::debug!("batch had no effective edits; not creating an empty review diff");
             return Ok(None);
         }
 
-        let summary = batch
-            .iter()
-            .map(|p| {
-                format!(
-                    "|{}|{}|{}|",
-                    p.repo_id.id(),
-                    p.repo_name,
-                    p.derived_data_type.name()
-                )
-            })
-            .collect::<String>();
         // The review path publishes a Phabricator diff, whose author must resolve
         // to an employee FBID. The `scm_server_infra` service identity does not, so
         // stamp the diff with the unixname of the human running this CLI instead.
@@ -502,20 +611,13 @@ mod fb {
         let mutation = txn
             .prepare_mutation_request()?
             .add_author(author)
-            .add_commit_message(
-                format!(
-                    "[mononoke]: Enable derived data type(s) for {edited} repo(s) (automated backfill reconcile)\n@bypass_size_limit",
-                ),
-                summary.clone(),
-            )
+            .add_commit_message(review_diff_title(&edited), review_diff_summary(&edited))
             .prepare(PREPARE_TIMEOUT)
             .await?;
 
-        let test_plan = format!(
-            "Automated backfill reconcile. Adds derived data type(s) to the active \
-             derived-data config for {edited} repo(s):\n{summary}",
-        );
-        let diff = mutation.review(reviewers.clone(), test_plan).await?;
+        let diff = mutation
+            .review(reviewers.clone(), review_diff_test_plan(&edited))
+            .await?;
         tracing::debug!("created review diff {} for reconcile batch", diff);
         Ok(Some(diff))
     }
