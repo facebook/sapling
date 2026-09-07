@@ -5,5 +5,6 @@
  * GNU General Public License version 2.
  */
 
+mod authenticated_usernames;
 pub mod implementations;
 mod phabricator_message_parser;
