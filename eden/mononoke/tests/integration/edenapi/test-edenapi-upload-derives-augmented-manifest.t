@@ -124,10 +124,19 @@ upload stores the client-supplied changeset, nothing derives it.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS1"
   Derived: * (glob)
 
-Scenario 2 -- knob OFF, everything else identical. The running server picks up
-the new value without a restart.
+Scenario 2 -- changeset-upload derivation OFF, everything else identical, and the
+two tree-upload knobs this stack adds pinned ON so that later diffs change what
+this one upload produces rather than adding uploads of their own. Nothing reads
+those two yet.
+
+They are declared here rather than in the header on purpose. Scenario 1 has to
+upload with them off: with them on, its tree upload would write envelopes before
+the changeset derivation ran, and puts are if-absent, so the derivation's own put
+would silently become a no-op.
+
+The running server picks up the new values without a restart.
   $ merge_just_knobs <<EOF
-  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false}}
+  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false, "scm/mononoke:build_augmented_manifests_at_tree_upload": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
   > EOF
   $ force_update_configerator
 
@@ -149,8 +158,69 @@ Same upload, same endpoints, nothing derived. The knob is what removed the work.
   $ derivations_since "$BEFORE"
 
   $ CS2=$(sl log -r . -T '{node}')
+  $ ROOT_MFID_2=$(sl log -r . -T '{manifest}')
   $ cd $TESTTMP
   $ mononoke_admin derived-data -R repo exists -T hgchangesets -i "$CS2"
   Derived: * (glob)
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS2"
   Not Derived: * (glob)
+
+Everything below probes that one upload, and the later diffs in this stack change
+what it records instead of adding scenarios of their own. The two lines above are
+the control and never change: no augmented manifest is ever derived for this
+commit, so anything that does appear is attributable to the tree-upload path
+rather than to anything else in the upload.
+
+First, whether an envelope exists at the root tree's key. Deriving is not the only
+way one could appear, since the tree upload stores blobs of its own. The key is
+the hg manifest id alone -- no changeset, no mapping row -- which is the same
+lookup the serve path does, and the reason an envelope built outside per-changeset
+derivation is servable at all. `fetch-many` rather than `fetch` because it always
+prints its three counts, so a hit changes a recorded number rather than deleting a
+line.
+  $ echo "hgaugmentedmanifest.sha1.$ROOT_MFID_2" > envelope_keys
+  $ mononoke_admin blobstore -R repo fetch-many --keys-file envelope_keys
+  present: 0
+  missing: 1
+  failed: 0
+
+Second, what the trees endpoint serves for that same tree. All four attributes are
+spelled out because `TreeAttributes` derives `#[serde(default)]` and `parents` and
+`child_metadata` default to true, so omitting them would ask for metadata here and
+make the recorded values move for a reason unrelated to the route.
+  $ cat > tree_attrs << EOF
+  > {
+  >     "manifest_blob": True,
+  >     "parents": False,
+  >     "child_metadata": False,
+  >     "augmented_trees": False
+  > }
+  > EOF
+  $ cat > tree_keys << EOF
+  > [
+  >     ("", "$ROOT_MFID_2")
+  > ]
+  > EOF
+
+Routing is off, so this is the original manifest served the way it is served
+today. `manifest_blob_sha1` is the one value that must survive routing being
+turned on: the augmented path stores no copy of these bytes, it rebuilds them by
+re-serialising the augmented subentries back into legacy manifest lines, so that
+hash holding still while the rest of the block moves is what shows the round trip
+is faithful.
+  $ hg debugapi mono:repo -e trees -f tree_keys -f tree_attrs --sort > "$TESTTMP/served.out" 2>&1
+  $ python3 -c "
+  > import hashlib
+  > bin = lambda x: x
+  > e = eval(open('$TESTTMP/served.out').read())[0]
+  > print('manifest_blob_sha1=%s' % hashlib.sha1(e['data']).hexdigest())
+  > print('tree_aux_data=%s' % (e.get('tree_aux_data') is not None))
+  > print('has_acl=%s' % e.get('has_acl'))
+  > print('parents_present=%s' % (e.get('parents') is not None))
+  > print('children=%s' % len(e.get('children') or []))
+  > "
+  manifest_blob_sha1=a06e8b2b61feaa5b804299db3dd2f707ff6bd8ae
+  tree_aux_data=False
+  has_acl=None
+  parents_present=False
+  children=0
