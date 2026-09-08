@@ -229,7 +229,16 @@ class shelvedstate:
             if d.get("activebook", "") != cls._noactivebook:
                 obj.activebookmark = d.get("activebook", "")
             obj.obsshelve = d["obsshelve"] == cls._obsbased
-        except (error.RepoLookupError, KeyError) as err:
+            # optional keys, may be missing in state files written by older
+            # versions
+            obj.shelveunknown = util.unescapestr(
+                d.get("shelveunknown", "").encode("utf-8")
+            )
+            addedbefore = util.unescapestr(d.get("addedbefore", "").encode("utf-8"))
+            obj.addedbefore = (
+                frozenset(addedbefore.split("\0")) if addedbefore else frozenset()
+            )
+        except (error.RepoLookupError, KeyError, ValueError) as err:
             raise error.CorruptedState(str(err))
 
         return obj
@@ -246,6 +255,8 @@ class shelvedstate:
         keep=False,
         activebook="",
         obsshelve=False,
+        shelveunknown="",
+        addedbefore=(),
     ):
         info = {
             "name": name,
@@ -257,6 +268,8 @@ class shelvedstate:
             "keep": cls._keep if keep else cls._nokeep,
             "activebook": activebook or cls._noactivebook,
             "obsshelve": cls._obsbased if obsshelve else cls._traditional,
+            "shelveunknown": util.escapestr(shelveunknown or ""),
+            "addedbefore": util.escapestr("\0".join(sorted(addedbefore))),
         }
         scmutil.simplekeyvaluefile(repo.localvfs, cls._filename).write(
             info, firstline=str(cls._version)
@@ -740,6 +753,7 @@ def unshelvecontinue(ui, repo, state, opts) -> None:
             state.nodestoremove.append(shelvectx.node())
 
         mergefiles(ui, repo, state.wctx, shelvectx)
+        _forgetunknownfiles(repo, state.shelveunknown, state.addedbefore)
 
         state.removenodes(ui, repo)
         _restoreactivebookmark(repo, state.activebookmark)
@@ -810,6 +824,8 @@ def _rebaserestoredcommit(
     shelvectx,
     branchtorestore,
     activebookmark,
+    shelveunknown,
+    addedbefore,
 ):
     """Rebase restored commit from its original location to a destination"""
     # If the shelve is not immediately on top of the commit
@@ -860,6 +876,8 @@ def _rebaserestoredcommit(
             branchtorestore,
             opts.get("keep"),
             activebookmark,
+            shelveunknown=shelveunknown,
+            addedbefore=addedbefore,
         )
 
         repo.localvfs.rename("rebasestate", "unshelverebasestate")
@@ -1078,6 +1096,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 shelvectx,
                 branchtorestore,
                 activebookmark,
+                shelveunknown,
+                addedbefore,
             )
             mergefiles(ui, repo, pctx, shelvectx)
             _forgetunknownfiles(repo, shelveunknown, addedbefore)

@@ -1167,16 +1167,45 @@ Moving to another commit sends unshelve down its rebase path:
   $ sl unshelve --continue
   rebasing 830882e51dc7 "shelve changes to: base"
   unshelve of 'default' complete
-
-# FIXME: 'unknown' should be '? unknown'. unshelvecontinue never calls
-# _forgetunknownfiles, and shelvedstate persists neither the shelve_unknown
-# list nor the pre-unshelve added set that it needs. The next commit fixes
-# this and flips this assertion.
-
   $ sl status
   M f
-  A unknown
   ? f.orig
+  ? unknown
+  $ cd ..
+
+# The persisted state must escape valid path characters that Python's
+# splitlines() treats as line boundaries.
+
+  $ newclientrepo unknowncontinue-line-separator
+  $ printf '1\n' > f
+  $ sl commit -Aqm base
+  $ printf '2\n' > f
+  $ $PYTHON -c 'open("unknown\u0085file", "w").write("unknown\n")'
+  $ sl shelve --unknown
+  shelved as default
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ printf '3\n' > f
+  $ sl commit -qm conflicting
+  $ $PYTHON -c 'open("added\u0085before", "w").write("added\n")'
+  $ sl add -q
+
+  $ sl unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'sl unshelve --abort')
+  rebasing shelved changes
+  rebasing * "shelve changes to: base" (glob)
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see 'sl resolve', then 'sl unshelve --continue')
+  [1]
+  $ printf '2\n' > f
+  $ sl resolve --mark f
+  (no more unresolved files)
+  continue: sl unshelve --continue
+  $ sl unshelve --continue
+  rebasing * "shelve changes to: base" (glob)
+  unshelve of 'default' complete
+  $ sl status -0 | $PYTHON -c 'import sys; assert set(sys.stdin.buffer.read().split(b"\0")[:-1]) == {b"M f", b"A added\xc2\x85before", b"? f.orig", b"? unknown\xc2\x85file"}'
   $ cd ..
 
 # Prepare unshelve with a corrupted shelvedstate
@@ -1198,10 +1227,20 @@ Moving to another commit sends unshelve down its rebase path:
   warning: 1 conflicts while merging file! (edit, then use 'sl resolve --mark')
   unresolved conflicts (see 'sl resolve', then 'sl unshelve --continue')
   [1]
+  $ cp .sl/shelvedstate ../valid-shelvedstate
   $ echo somethingsomething > .sl/shelvedstate
 
 # Unshelve --continue fails with appropriate message if shelvedstate is corrupted
 
+  $ sl continue
+  abort: corrupted shelved state file
+  (please run sl unshelve --abort to abort unshelve operation)
+  [255]
+
+# Invalid escapes in the optional fields are also treated as corruption
+
+  $ mv ../valid-shelvedstate .sl/shelvedstate
+  $ $PYTHON -c 'p = ".sl/shelvedstate"; data = open(p).read(); assert "shelveunknown=\n" in data; open(p, "w").write(data.replace("shelveunknown=\n", r"shelveunknown=\x" + "\n"))'
   $ sl continue
   abort: corrupted shelved state file
   (please run sl unshelve --abort to abort unshelve operation)
