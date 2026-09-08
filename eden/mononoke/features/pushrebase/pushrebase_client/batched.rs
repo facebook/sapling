@@ -108,7 +108,6 @@ impl<R: Repo + HookManagerRef + 'static> PushrebaseClient for BatchedPushrebaseC
                 ctx: ctx.clone(),
                 stack,
                 flags: prepared.flags,
-                pushvars: pushvars.cloned().unwrap_or_default(),
                 repo_lock: prepared.repo_lock,
                 response_tx,
                 enqueued_at: tokio::time::Instant::now(),

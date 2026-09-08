@@ -5,14 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
 use bookmarks::BookmarkKey;
-use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
@@ -36,13 +34,13 @@ use crate::PushrebaseRetryNum;
 use crate::PushrebaseStack;
 use crate::RepoLockPolicy;
 use crate::do_batched_pushrebase;
+use crate::pushrebase_context;
 
 /// A pushrebase request ready to be queued.
 pub struct PushrebaseRequest {
     pub ctx: CoreContext,
     pub stack: PushrebaseStack,
     pub flags: PushrebaseFlags,
-    pub pushvars: HashMap<String, Bytes>,
     pub repo_lock: RepoLockPolicy,
     pub response_tx: oneshot::Sender<Result<PushrebaseOutcome, SharedError<PushrebaseError>>>,
     pub enqueued_at: tokio::time::Instant,
@@ -87,7 +85,6 @@ pub(super) struct QueuedPushrebaseRequest {
 
 pub(super) struct PushrebaseRequestBatch {
     pub(super) flags: PushrebaseFlags,
-    pub(super) pushvars: HashMap<String, Bytes>,
     pub(super) repo_lock: RepoLockPolicy,
     pub(super) requests: Vec<QueuedPushrebaseRequest>,
 }
@@ -130,12 +127,16 @@ fn partition_requests(
     let mut conflicts = 0;
     let request_batches = requests.into_iter().map(|request| {
         let conflict_check_base = request.stack.root;
+        let ctx = pushrebase_context(&request.ctx, &request.flags);
+        let mut flags = request.flags;
+        // Attribution belongs to each request, not to the shared execution.
+        flags.land_instance_id = None;
+        flags.phab_diff_id = None;
         PushrebaseRequestBatch {
-            flags: request.flags,
-            pushvars: request.pushvars,
+            flags,
             repo_lock: request.repo_lock,
             requests: vec![QueuedPushrebaseRequest {
-                ctx: request.ctx,
+                ctx,
                 stack: request.stack,
                 conflict_check_base,
                 carried_merge_file_info: vec![],
@@ -154,7 +155,6 @@ fn partition_requests(
             .collect::<Vec<_>>();
         if let Some((batch_changed_files, batch)) = batches.last_mut()
             && batch.flags == request_batch.flags
-            && batch.pushvars == request_batch.pushvars
             && batch.repo_lock == request_batch.repo_lock
         {
             if find_path_conflicts(batch_changed_files.clone(), changed_files.clone()).is_empty()
@@ -410,7 +410,6 @@ mod tests {
                 root: id,
             },
             flags: PushrebaseFlags::default(),
-            pushvars: HashMap::new(),
             repo_lock: RepoLockPolicy::Bypass,
             response_tx,
             enqueued_at: tokio::time::Instant::now(),
@@ -435,26 +434,22 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn partitions_incompatible_execution_inputs(fb: FacebookInit) {
-        let mut different_flags = request(fb, "b");
+    async fn partitions_by_execution_inputs(fb: FacebookInit) {
+        let mut first = request(fb, "a");
+        first.flags.land_instance_id = Some("first land".to_owned());
+        first.flags.phab_diff_id = Some("first diff".to_owned());
+        let mut second = request(fb, "b");
+        second.flags.land_instance_id = Some("second land".to_owned());
+        second.flags.phab_diff_id = Some("second diff".to_owned());
+        let mut different_flags = request(fb, "c");
         different_flags.flags.rewritedates = false;
-        let mut different_pushvars = request(fb, "c");
-        different_pushvars
-            .pushvars
-            .insert("PUSHVAR".to_owned(), Bytes::from_static(b"different"));
         let mut enforcing = request(fb, "d");
         enforcing.repo_lock = RepoLockPolicy::Enforce;
         let mut same_enforcement = request(fb, "e");
         same_enforcement.repo_lock = RepoLockPolicy::Enforce;
         let (batches, conflicts) = partition_requests(
             vec![],
-            vec![
-                request(fb, "a"),
-                different_flags,
-                different_pushvars,
-                enforcing,
-                same_enforcement,
-            ],
+            vec![first, second, different_flags, enforcing, same_enforcement],
         );
 
         assert_eq!(
@@ -462,10 +457,10 @@ mod tests {
                 .iter()
                 .map(|batch| batch.requests.len())
                 .collect::<Vec<_>>(),
-            [1, 1, 1, 2]
+            [2, 1, 2]
         );
         assert_eq!(batches[0].repo_lock, RepoLockPolicy::Bypass);
-        assert_eq!(batches[3].repo_lock, RepoLockPolicy::Enforce);
+        assert_eq!(batches[2].repo_lock, RepoLockPolicy::Enforce);
         assert_eq!(conflicts, 0);
     }
 
