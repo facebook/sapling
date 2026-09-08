@@ -1133,13 +1133,8 @@ Moving to another commit sends unshelve down its rebase path:
   unshelving change 'default'
   rebasing shelved changes
   rebasing 50d1e3771ebc "shelve changes to: B"
-
-# FIXME: this should be '? unknown'. The rebase in _rebaserestoredcommit drops
-# the shelve_unknown extra, so _forgetunknownfiles finds nothing to forget and
-# the file stays added. The next commit fixes this and flips this assertion.
-
   $ sl status
-  A unknown
+  ? unknown
   $ cd ..
 
 # Prepare unshelve with a corrupted shelvedstate

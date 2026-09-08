@@ -880,10 +880,9 @@ def _rebaserestoredcommit(
     return shelvectx
 
 
-def _forgetunknownfiles(repo, shelvectx, addedbefore) -> None:
+def _forgetunknownfiles(repo, shelveunknown, addedbefore) -> None:
     # Forget any files that were unknown before the shelve, unknown before
     # unshelve started, but are now added.
-    shelveunknown = shelvectx.extra().get("shelve_unknown")
     if not shelveunknown:
         return
     shelveunknown = frozenset(shelveunknown.split("\0"))
@@ -1057,6 +1056,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
         tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts, tmpwctx)
         repo, shelvectx = _unshelverestorecommit(ui, repo, basename)
         _checkunshelveuntrackedproblems(ui, repo, shelvectx)
+        # Read this before rebasing because rebase drops the shelve_unknown extra.
+        shelveunknown = shelvectx.extra().get("shelve_unknown")
         branchtorestore = ""
 
         rebaseconfigoverrides = {
@@ -1079,7 +1080,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 activebookmark,
             )
             mergefiles(ui, repo, pctx, shelvectx)
-            _forgetunknownfiles(repo, shelvectx, addedbefore)
+            _forgetunknownfiles(repo, shelveunknown, addedbefore)
 
         _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
 
