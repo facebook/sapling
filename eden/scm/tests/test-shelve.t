@@ -1107,6 +1107,41 @@
   $ sl commit -qm 'Remove unknown'
   $ cd ..
 
+# And if I shelve an unknown file and unshelve on a different commit, it should
+# stay unknown. The file is absent before the unshelve, so by the rule above it
+# must come back in unknown state even though unshelve has to rebase.
+
+  $ newclientrepo unknownrebase
+  $ drawdag <<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ sl goto -q $B
+  $ echo unknown > unknown
+  $ sl status
+  ? unknown
+  $ sl shelve --unknown
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ sl status
+
+Moving to another commit sends unshelve down its rebase path:
+
+  $ sl goto -q $A
+  $ sl unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 50d1e3771ebc "shelve changes to: B"
+
+# FIXME: this should be '? unknown'. The rebase in _rebaserestoredcommit drops
+# the shelve_unknown extra, so _forgetunknownfiles finds nothing to forget and
+# the file stays added. The next commit fixes this and flips this assertion.
+
+  $ sl status
+  A unknown
+  $ cd ..
+
 # Prepare unshelve with a corrupted shelvedstate
 
   $ newclientrepo
