@@ -470,6 +470,16 @@ impl TenantInfo {
                 offline_job_root_run_id.as_deref()?,
                 offline_job_leaf_run_id.as_deref()?,
             ),
+            Self::FaaS {
+                client_id,
+                atlas_purpose,
+                atlas_env_id,
+                ..
+            } => (
+                atlas_purpose.as_deref()?,
+                client_id.as_deref()?,
+                atlas_env_id.as_deref()?,
+            ),
             _ => {
                 let client_id = self.client_id()?;
                 (client_id, client_id, client_id)
@@ -642,12 +652,38 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn test_faas_tenancy_path_v2() {
+        for workload in ["ASYNC_JOB_ID:1234", "CREWMATE:5678"] {
+            let faas = TenantInfo::FaaS {
+                client_id: Some(workload.to_string()),
+                atlas_purpose: Some("general".to_string()),
+                atlas_env_id: Some("atlas-1234".to_string()),
+                atlas_rl: None,
+                faas_job_name: None,
+            };
+            assert_eq!(
+                faas.tenancy_path_v2(),
+                Some(vec![
+                    "root".to_string(),
+                    "faas".to_string(),
+                    "general".to_string(),
+                    workload.to_string(),
+                    "atlas-1234".to_string(),
+                ])
+            );
+        }
+        assert_eq!(
+            tenant_info(ClientCategory::FaaS, "ASYNC_JOB_ID:1234").tenancy_path_v2(),
+            None
+        );
+    }
+
+    #[mononoke::test]
     fn test_tenancy_path_v2_repeats_client_id_for_all_categories() {
         for category in [
             ClientCategory::HealthCheck,
             ClientCategory::InteractiveDev,
             ClientCategory::SandcastleAutomation,
-            ClientCategory::FaaS,
             ClientCategory::Automation,
             ClientCategory::Unknown,
         ] {
