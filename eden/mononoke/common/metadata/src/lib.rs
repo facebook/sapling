@@ -295,6 +295,7 @@ impl Metadata {
             ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
                 client_id,
                 ci_purpose: self.ci_purpose().map(str::to_owned),
+                sandcastle_job_id: self.identities.sandcastle_job_id().map(str::to_owned),
             },
             ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
             ClientCategory::Mast => TenantInfo::Mast { client_id },

@@ -212,6 +212,7 @@ pub trait MononokeIdentitySetExt {
 
     fn username(&self) -> Option<&str>;
     fn crewmate(&self) -> Option<&str>;
+    fn sandcastle_job_id(&self) -> Option<&str>;
 
     fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String>;
     fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String;
@@ -274,6 +275,7 @@ pub enum TenantInfo {
     CiSandcastle {
         client_id: Option<String>,
         ci_purpose: Option<String>,
+        sandcastle_job_id: Option<String>,
     },
     SandcastleAutomation {
         client_id: Option<String>,
@@ -332,6 +334,15 @@ impl TenantInfo {
         }
     }
 
+    pub fn sandcastle_job_id(&self) -> Option<&str> {
+        match self {
+            Self::CiSandcastle {
+                sandcastle_job_id, ..
+            } => sandcastle_job_id.as_deref(),
+            _ => None,
+        }
+    }
+
     pub fn atlas_env_id(&self) -> Option<&str> {
         match self {
             Self::FaaS { atlas_env_id, .. } => atlas_env_id.as_deref(),
@@ -372,13 +383,28 @@ impl TenantInfo {
     }
 
     pub fn tenancy_path_v2(&self) -> Option<Vec<String>> {
-        let client_id = self.client_id()?;
+        let (level_3, level_4, level_5) = match self {
+            Self::CiSandcastle {
+                client_id,
+                ci_purpose,
+                sandcastle_job_id,
+            } => (
+                ci_purpose.as_deref()?,
+                client_id.as_deref()?,
+                sandcastle_job_id.as_deref()?,
+            ),
+            _ => {
+                let client_id = self.client_id()?;
+                (client_id, client_id, client_id)
+            }
+        };
+
         Some(vec![
             "root".to_string(),
             self.category().as_str().to_string(),
-            client_id.to_string(),
-            client_id.to_string(),
-            client_id.to_string(),
+            level_3.to_string(),
+            level_4.to_string(),
+            level_5.to_string(),
         ])
     }
 }
@@ -410,6 +436,7 @@ mod tests {
             ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
                 client_id,
                 ci_purpose: None,
+                sandcastle_job_id: None,
             },
             ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
             ClientCategory::Mast => TenantInfo::Mast { client_id },
@@ -449,12 +476,35 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn test_ci_sandcastle_tenancy_path_v2() {
+        let ci = TenantInfo::CiSandcastle {
+            client_id: Some("ALIAS:continuous".to_string()),
+            ci_purpose: Some("ci_fbsource".to_string()),
+            sandcastle_job_id: Some("1234".to_string()),
+        };
+        assert_eq!(
+            ci.tenancy_path_v2(),
+            Some(vec![
+                "root".to_string(),
+                "ci_sandcastle".to_string(),
+                "ci_fbsource".to_string(),
+                "ALIAS:continuous".to_string(),
+                "1234".to_string(),
+            ])
+        );
+
+        assert_eq!(
+            tenant_info(ClientCategory::CiSandcastle, "ALIAS:continuous").tenancy_path_v2(),
+            None
+        );
+    }
+
+    #[mononoke::test]
     fn test_tenancy_path_v2_repeats_client_id_for_all_categories() {
         for category in [
             ClientCategory::HealthCheck,
             ClientCategory::InteractiveDev,
             ClientCategory::DevEnv,
-            ClientCategory::CiSandcastle,
             ClientCategory::SandcastleAutomation,
             ClientCategory::Mast,
             ClientCategory::FaaS,
