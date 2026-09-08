@@ -24,9 +24,9 @@
 //! address used for every later `poll` and for the eventual drop.
 //!
 //! [`TaskCell`] is that address. The future is moved into the cell before it is
-//! polled at all, so the first poll — which still runs inline in the pipeline
-//! callback — already observes the future's final location, and the future is
-//! never relocated afterwards whether it completes inline or suspends.
+//! polled at all, so its first poll already observes the future's final
+//! location, and the future is never relocated afterwards whether it completes
+//! immediately or suspends.
 //!
 //! Honoring that contract costs one allocation per spawn: readiness is only
 //! known after a poll, and the poll may not happen anywhere but the future's
@@ -37,9 +37,11 @@
 
 use std::cell::UnsafeCell;
 use std::future::Future;
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
@@ -48,12 +50,16 @@ use std::task::Poll;
 use std::task::RawWaker;
 use std::task::RawWakerVTable;
 use std::task::Waker;
+use std::thread;
 use std::thread::Result as UnwindResult;
+use std::thread::ThreadId;
 
 use crate::ffi::ffi;
 
 /// A non-`Send` future confined to its originating EventBase.
 struct EventBaseLocalFuture<F>(F);
+
+struct EventBaseLocalOutput<T>(T);
 
 // SAFETY: this wrapper is constructed only by `EventBaseTask::start_local`.
 // The task's first poll runs on the originating EventBase, and every later
@@ -61,14 +67,19 @@ struct EventBaseLocalFuture<F>(F);
 // EventBase. Cross-thread wakers touch only the task cell's atomic state and
 // scheduler; they never access or destroy the wrapped future.
 unsafe impl<F> Send for EventBaseLocalFuture<F> {}
+// SAFETY: EventBaseLocalOutput is created, consumed, and dropped only while
+// polling its EventBaseLocalFuture on the originating EventBase thread.
+unsafe impl<T> Send for EventBaseLocalOutput<T> {}
 
 impl<F: Future> Future for EventBaseLocalFuture<F> {
-    type Output = F::Output;
+    type Output = EventBaseLocalOutput<F::Output>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         // SAFETY: pinning the wrapper also pins its `future` field, which is
         // never moved before its destructor runs.
-        unsafe { self.map_unchecked_mut(|this| &mut this.0) }.poll(context)
+        unsafe { self.map_unchecked_mut(|this| &mut this.0) }
+            .poll(context)
+            .map(EventBaseLocalOutput)
     }
 }
 
@@ -82,11 +93,78 @@ const SCHEDULED: u8 = 1 << 2;
 const RUNNING: u8 = 1 << 3;
 /// Terminal: the future, completion, and payload slots have been consumed.
 const CLOSED: u8 = 1 << 4;
+/// Cancellation was requested reentrantly during a poll.
+const CANCEL_REQUESTED: u8 = 1 << 5;
 
 pub(crate) struct TaskToken {
     task: Option<usize>,
     run: fn(usize),
     cancel: fn(usize),
+}
+
+/// Owning cancellation handle for an EventBase-local task.
+///
+/// Dropping this handle on its owning EventBase synchronously drops a suspended
+/// future. Reentrant cancellation during `poll` is recorded synchronously and
+/// drops the future immediately after that poll returns. The handle is
+/// intentionally neither `Send` nor `Sync`; an opaque C++ owner is checked
+/// against the creating thread before it can consume the handle.
+pub struct LocalTaskHandle {
+    task: Option<usize>,
+    cancel: fn(usize),
+    owner_thread: ThreadId,
+    _local: PhantomData<Rc<()>>,
+}
+
+// SAFETY: C++ owns this type only behind `rust::Box` and never observes its
+// layout. The handle remains confined to the EventBase thread where Rust
+// created it.
+unsafe impl cxx::ExternType for LocalTaskHandle {
+    type Id = cxx::type_id!("channel_pipeline_rust::LocalTaskHandle");
+    type Kind = cxx::kind::Opaque;
+}
+
+impl LocalTaskHandle {
+    fn new<F, C, P, S>(task: &Arc<TaskCell<F, C, P, S>>) -> Self
+    where
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
+        C: FnOnce(P, F::Output) + Send + 'static,
+        P: Send + 'static,
+        S: Scheduler,
+    {
+        let task = Arc::into_raw(Arc::clone(task)) as usize;
+        Self {
+            task: Some(task),
+            cancel: cancel_local_task::<F, C, P, S>,
+            owner_thread: thread::current().id(),
+            _local: PhantomData,
+        }
+    }
+
+    pub fn cancel(mut self) {
+        if let Some(task) = self.take_task() {
+            (self.cancel)(task);
+        }
+    }
+
+    fn take_task(&mut self) -> Option<usize> {
+        let task = self.task.take()?;
+        assert_eq!(
+            thread::current().id(),
+            self.owner_thread,
+            "an EventBase-local task handle must be consumed on its owning thread",
+        );
+        Some(task)
+    }
+}
+
+impl Drop for LocalTaskHandle {
+    fn drop(&mut self) {
+        if let Some(task) = self.take_task() {
+            (self.cancel)(task);
+        }
+    }
 }
 
 impl TaskToken {
@@ -310,10 +388,34 @@ where
         }
     }
 
+    /// Poll an armed task inline after its cancellation handle is registered.
+    fn poll_armed_inline(task: &Arc<Self>) {
+        match task.state.compare_exchange(
+            ARMED,
+            ARMED | RUNNING,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        ) {
+            Ok(_) => {}
+            Err(state) if state & CLOSED != 0 => return,
+            Err(state) => panic!("invalid task state before inline poll: {state}"),
+        }
+
+        match Self::poll_future(task) {
+            Ok(Poll::Ready(output)) => task.finish_ready(output),
+            Ok(Poll::Pending) => task.finish_pending(),
+            Err(_) => task.close(),
+        }
+    }
+
     fn finish_pending(&self) {
         let mut state = self.state.load(Ordering::Acquire);
         loop {
             debug_assert_ne!(state & RUNNING, 0);
+            if state & CANCEL_REQUESTED != 0 {
+                self.close();
+                return;
+            }
             let reschedule = state & NOTIFIED != 0;
             let mut next = state & !(RUNNING | NOTIFIED);
             if reschedule {
@@ -353,6 +455,10 @@ where
     }
 
     fn finish_ready(&self, output: F::Output) {
+        if self.state.load(Ordering::Acquire) & CANCEL_REQUESTED != 0 {
+            self.close();
+            return;
+        }
         let Some(previous) = self.claim_closed() else {
             return;
         };
@@ -391,6 +497,28 @@ where
             if previous & ARMED != 0 {
                 (*self.payload.get()).assume_init_drop();
                 Arc::decrement_strong_count(self as *const Self);
+            }
+        }
+    }
+
+    fn cancel_local(&self) {
+        let mut state = self.state.load(Ordering::Acquire);
+        loop {
+            if state & CLOSED != 0 {
+                return;
+            }
+            if state & RUNNING == 0 {
+                self.close();
+                return;
+            }
+            match self.state.compare_exchange_weak(
+                state,
+                state | CANCEL_REQUESTED,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return,
+                Err(current) => state = current,
             }
         }
     }
@@ -504,6 +632,20 @@ where
         let task = unsafe { Arc::from_raw(task as *const TaskCell<F, C, P, S>) };
         task.close();
     }));
+}
+
+fn cancel_local_task<F, C, P, S>(task: usize)
+where
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+    C: FnOnce(P, F::Output) + Send + 'static,
+    P: Send + 'static,
+    S: Scheduler,
+{
+    // SAFETY: LocalTaskHandle owns the Arc reference created by
+    // LocalTaskHandle::new and consumes it exactly once here.
+    let task = unsafe { Arc::from_raw(task as *const TaskCell<F, C, P, S>) };
+    task.cancel_local();
 }
 
 pub(crate) enum FirstPoll<T, F, C, P, S>
@@ -639,7 +781,63 @@ impl EventBaseTask {
         event_base: *mut ffi::EventBase,
         future: impl Future<Output = ()> + 'static,
     ) {
-        Self::start(event_base, EventBaseLocalFuture(future));
+        match Self::poll(
+            event_base,
+            EventBaseLocalFuture(future),
+            |(), EventBaseLocalOutput(())| {},
+        ) {
+            FirstPoll::Ready(EventBaseLocalOutput(())) | FirstPoll::Panicked => {}
+            FirstPoll::Pending(task) => task.install(()),
+        }
+    }
+
+    pub(crate) fn enqueue_local<T, Fut, Complete>(
+        event_base: *mut ffi::EventBase,
+        future: Fut,
+        complete: Complete,
+    ) -> LocalTaskHandle
+    where
+        T: 'static,
+        Fut: Future<Output = T> + 'static,
+        Complete: FnOnce(T) + 'static,
+    {
+        Self::check_event_base(event_base);
+        let task = TaskCell::create(
+            EventBaseScheduler {
+                event_base: event_base as usize,
+            },
+            EventBaseLocalFuture(async move { (complete, future.await) }),
+            |(), EventBaseLocalOutput((complete, output))| complete(output),
+        );
+        let handle = LocalTaskHandle::new(&task);
+        task.notify();
+        TaskCell::arm(task, ());
+        handle
+    }
+
+    pub(crate) fn start_local_registered<T, Fut, Register, Complete>(
+        event_base: *mut ffi::EventBase,
+        future: Fut,
+        register: Register,
+        complete: Complete,
+    ) where
+        T: 'static,
+        Fut: Future<Output = T> + 'static,
+        Register: FnOnce(LocalTaskHandle),
+        Complete: FnOnce(T) + 'static,
+    {
+        Self::check_event_base(event_base);
+        let task = TaskCell::create(
+            EventBaseScheduler {
+                event_base: event_base as usize,
+            },
+            EventBaseLocalFuture(async move { (complete, future.await) }),
+            |(), EventBaseLocalOutput((complete, output))| complete(output),
+        );
+        let handle = LocalTaskHandle::new(&task);
+        TaskCell::arm(Arc::clone(&task), ());
+        register(handle);
+        TaskCell::poll_armed_inline(&task);
     }
 
     #[cfg(test)]
@@ -1049,6 +1247,46 @@ mod tests {
         }
 
         assert_eq!(drops.load(Ordering::Relaxed), 1);
+    }
+
+    struct NeverReadyFuture {
+        drops: Arc<AtomicUsize>,
+    }
+
+    impl Future for NeverReadyFuture {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
+            Poll::Pending
+        }
+    }
+
+    impl Drop for NeverReadyFuture {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn reentrant_cancellation_closes_immediately_after_poll() {
+        let drops = Arc::new(AtomicUsize::new(0));
+        let task = TaskCell::create(
+            |_task: TaskToken| unreachable!("cancelled task must not schedule"),
+            NeverReadyFuture {
+                drops: Arc::clone(&drops),
+            },
+            |(), ()| {},
+        );
+        TaskCell::arm(Arc::clone(&task), ());
+        task.state.fetch_or(RUNNING, Ordering::Release);
+
+        task.cancel_local();
+        assert_eq!(drops.load(Ordering::Relaxed), 0);
+        assert_ne!(task.state.load(Ordering::Acquire) & CANCEL_REQUESTED, 0,);
+
+        task.finish_pending();
+        assert_eq!(drops.load(Ordering::Relaxed), 1);
+        assert_ne!(task.state.load(Ordering::Acquire) & CLOSED, 0);
     }
 
     struct WakeDuringLaterPoll {

@@ -27,7 +27,11 @@
 #[cxx::bridge(namespace = "channel_pipeline_rust")]
 pub(crate) mod ffi {
     extern "Rust" {
+        type LocalTaskHandle;
         type RustHandlerOpaque;
+        type RustTailEndpointOpaque;
+
+        fn local_task_handle_cancel(task: Box<LocalTaskHandle>);
 
         fn rust_handler_new_noop() -> Box<RustHandlerOpaque>;
         fn rust_handler_new_counting_test() -> Box<RustHandlerOpaque>;
@@ -85,6 +89,23 @@ pub(crate) mod ffi {
         fn rust_handler_phase5_p5_counts() -> Vec<u32>;
         fn rust_handler_state_machine_stage_count() -> u32;
 
+        fn rust_tail_endpoint_new_echo_test() -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_queued_test() -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_reset_test_counts();
+        fn rust_tail_endpoint_test_counts() -> Vec<u32>;
+        fn rust_tail_endpoint_queued_test_completions() -> u32;
+        fn rust_tail_endpoint_on_read(
+            endpoint: &mut RustTailEndpointOpaque,
+            context: Pin<&mut FfiCallbackContext>,
+            msg: Pin<&mut TypeErasedBox>,
+        ) -> i32;
+        fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_on_write_ready(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_on_pipeline_active(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_on_pipeline_inactive(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_handler_added(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_handler_removed(endpoint: &mut RustTailEndpointOpaque);
+
         fn rust_handler_on_read(
             handler: &mut RustHandlerOpaque,
             context: Pin<&mut FfiCallbackContext>,
@@ -130,6 +151,20 @@ pub(crate) mod ffi {
 
         #[cxx_name = "CallbackContext"]
         type FfiCallbackContext;
+        #[cxx_name = "LocalPipelineContext"]
+        type FfiLocalPipelineContext;
+
+        #[cxx_name = "makeLocalPipelineContext"]
+        fn make_local_pipeline_context(
+            self: Pin<&mut FfiCallbackContext>,
+        ) -> UniquePtr<FfiLocalPipelineContext>;
+
+        #[cxx_name = "awaitWriteReady"]
+        fn local_await_write_ready(self: Pin<&mut FfiLocalPipelineContext>);
+        #[cxx_name = "cancelWriteReady"]
+        fn local_cancel_write_ready(self: Pin<&mut FfiLocalPipelineContext>);
+        #[cxx_name = "isClosed"]
+        fn local_is_closed(self: &FfiLocalPipelineContext) -> bool;
 
         /// SAFETY: `storage` must point to two pointer-sized, pointer-aligned,
         /// uninitialized words that remain valid until `destroy_context_handle`.
@@ -166,6 +201,12 @@ pub(crate) mod ffi {
         fn forward_read(self: Pin<&mut FfiCallbackContext>) -> i32;
         #[cxx_name = "forwardWrite"]
         fn forward_write(self: Pin<&mut FfiCallbackContext>) -> i32;
+        #[cxx_name = "fireException"]
+        unsafe fn fire_exception(
+            self: Pin<&mut FfiCallbackContext>,
+            message_data: *const u8,
+            message_size: usize,
+        );
 
         #[cxx_name = "awaitReadReady"]
         fn await_read_ready(self: Pin<&mut FfiCallbackContext>);
@@ -266,8 +307,10 @@ pub(crate) mod ffi {
 }
 
 pub use ffi::FfiCallbackContext;
+pub use ffi::FfiLocalPipelineContext;
 pub use ffi::TypeErasedBox as FfiTypeErasedBox;
 
+use crate::LocalTaskHandle;
 use crate::context::CallbackContext;
 use crate::erased::RustTypeErasedBox;
 use crate::ffi::ffi::TypeErasedBox;
@@ -282,6 +325,14 @@ use crate::handler::PanickingLifecycleHandler;
 use crate::handler::PanickingTestHandler;
 use crate::handler::ReadinessProbeHandler;
 use crate::handler::RustHandler;
+use crate::tail::EchoTestTail;
+use crate::tail::QueuedTestTail;
+use crate::tail::RustTailEndpoint;
+use crate::tail::RustTailEndpointOpaque;
+
+pub fn local_task_handle_cancel(task: Box<LocalTaskHandle>) {
+    drop(task);
+}
 
 fn boxed(handler: impl RustHandler) -> Box<RustHandlerOpaque> {
     box_handler(handler)
@@ -482,6 +533,76 @@ pub fn rust_handler_phase5_p5_counts() -> Vec<u32> {
 }
 pub fn rust_handler_state_machine_stage_count() -> u32 {
     crate::handler::STATE_MACHINE_STAGE_COUNT
+}
+
+pub fn rust_tail_endpoint_new_echo_test() -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(EchoTestTail)
+}
+
+pub fn rust_tail_endpoint_new_queued_test() -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(QueuedTestTail::default())
+}
+
+pub fn rust_tail_endpoint_reset_test_counts() {
+    crate::tail::reset_test_counts();
+}
+
+pub fn rust_tail_endpoint_test_counts() -> Vec<u32> {
+    crate::tail::test_counts().to_vec()
+}
+
+pub fn rust_tail_endpoint_queued_test_completions() -> u32 {
+    crate::tail::queued_test_completions()
+}
+
+pub fn rust_tail_endpoint_on_read(
+    endpoint: &mut RustTailEndpointOpaque,
+    context: std::pin::Pin<&mut ffi::FfiCallbackContext>,
+    msg: std::pin::Pin<&mut TypeErasedBox>,
+) -> i32 {
+    if ffi::rust_teb_is_empty(msg.as_ref().get_ref()) {
+        return HandlerResult::Error as i32;
+    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        endpoint.inner.on_read(
+            &mut CallbackContext::new(context),
+            RustTypeErasedBox::new(msg),
+        ) as i32
+    }))
+    .unwrap_or(HandlerResult::Error as i32)
+}
+
+fn contain_tail(
+    endpoint: &mut RustTailEndpointOpaque,
+    callback: impl FnOnce(&mut dyn RustTailEndpoint),
+) {
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        callback(endpoint.inner.as_mut());
+    }));
+}
+
+pub fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::on_exception);
+}
+
+pub fn rust_tail_endpoint_on_write_ready(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::on_write_ready);
+}
+
+pub fn rust_tail_endpoint_on_pipeline_active(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::on_pipeline_active);
+}
+
+pub fn rust_tail_endpoint_on_pipeline_inactive(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::on_pipeline_inactive);
+}
+
+pub fn rust_tail_endpoint_handler_added(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::handler_added);
+}
+
+pub fn rust_tail_endpoint_handler_removed(endpoint: &mut RustTailEndpointOpaque) {
+    contain_tail(endpoint, RustTailEndpoint::handler_removed);
 }
 
 fn dispatch_erased(

@@ -23,12 +23,15 @@ use std::mem::MaybeUninit;
 use std::pin::Pin;
 use std::rc::Rc;
 
+use cxx::UniquePtr;
+
 use crate::adapter::BytesPtr;
 use crate::adapter::RustMessageAdapter;
 use crate::erased::BorrowedMessageAdapter;
 use crate::erased::OwnedMessageAdapter;
 use crate::event_base::EventBaseTask;
 use crate::event_base::FirstPoll;
+use crate::event_base::LocalTaskHandle;
 use crate::ffi::ffi::FfiCallbackContext;
 use crate::handler::HandlerResult;
 
@@ -73,6 +76,41 @@ pub struct ContextHandle {
 // native destruction runs inline on the EventBase or schedules the live token
 // back there before Rust's inline storage expires.
 unsafe impl Send for ContextHandle {}
+
+/// A pipeline continuation confined to its originating EventBase.
+pub struct LocalContextHandle {
+    inner: ContextHandle,
+    _local: PhantomData<Rc<()>>,
+}
+
+/// Reusable pipeline access confined to one handler's EventBase and lifetime.
+///
+/// Unlike [`LocalContextHandle`], this handle is connection-scoped rather than
+/// one-shot. It is intended for local stream state that may emit several
+/// outbound messages and resume after write backpressure.
+pub struct LocalPipelineContext {
+    inner: UniquePtr<crate::ffi::FfiLocalPipelineContext>,
+    _local: PhantomData<Rc<()>>,
+}
+
+impl LocalPipelineContext {
+    #[doc(hidden)]
+    pub fn native_mut(&mut self) -> Pin<&mut crate::ffi::FfiLocalPipelineContext> {
+        self.inner.pin_mut()
+    }
+
+    pub fn await_write_ready(&mut self) {
+        self.inner.pin_mut().local_await_write_ready();
+    }
+
+    pub fn cancel_write_ready(&mut self) {
+        self.inner.pin_mut().local_cancel_write_ready();
+    }
+
+    pub fn is_closed(&self) -> bool {
+        self.inner.local_is_closed()
+    }
+}
 
 impl ContextHandle {
     /// Continue an inbound message from this captured pipeline position.
@@ -124,6 +162,25 @@ impl ContextHandle {
             );
         }
     }
+
+    /// Continue an outbound adapter-defined message from this captured
+    /// pipeline position.
+    fn fire_write_local<A: LocalContextOutboundMessageAdapter>(self, message: A::Message) {
+        let mut handle = std::mem::ManuallyDrop::new(self);
+        // SAFETY: `handle` owns one live token and ManuallyDrop prevents Rust
+        // Drop from consuming it after the adapter transfers it to native code.
+        unsafe {
+            A::fire_context_write(handle.storage.as_mut_ptr().cast(), message);
+        }
+    }
+}
+
+impl LocalContextHandle {
+    /// Schedule an adapter-defined outbound message later in the current
+    /// EventBase loop iteration.
+    pub fn fire_write_owned<A: LocalContextOutboundMessageAdapter>(self, message: A::Message) {
+        self.inner.fire_write_local::<A>(message);
+    }
 }
 
 impl Drop for ContextHandle {
@@ -168,6 +225,22 @@ pub unsafe trait OutboundMessageAdapter {
     /// `storage` must contain one live token owned by a [`DeferredRead`]. The
     /// implementation must consume that token exactly once.
     unsafe fn fire_deferred_write(storage: *mut u8, message: Self::Message);
+}
+
+/// Adapter for sending an owned message through a captured pipeline context.
+///
+/// # Safety
+///
+/// `fire_context_write` must consume the live [`ContextHandle`] token at
+/// `storage` exactly once and transfer `Message` into the exact native pipeline
+/// message type it represents.
+pub unsafe trait LocalContextOutboundMessageAdapter {
+    type Message;
+
+    /// # Safety
+    ///
+    /// `storage` must contain one live token owned by a [`ContextHandle`].
+    unsafe fn fire_context_write(storage: *mut u8, message: Self::Message);
 }
 
 // SAFETY: the native token has unique ownership of both the message and its
@@ -320,6 +393,17 @@ impl<'callback> CallbackContext<'callback> {
         }
     }
 
+    /// Propagate an exception synchronously through the current pipeline.
+    pub fn fire_exception(&mut self, error: &PipelineError) {
+        // SAFETY: native code copies the message before returning, and this
+        // callback-scoped context is live on its owning EventBase thread.
+        unsafe {
+            self.inner
+                .as_mut()
+                .fire_exception(error.message().as_ptr(), error.message().len());
+        }
+    }
+
     /// Start a Rust future on this pipeline's EventBase.
     ///
     /// The task owns the existing move-only continuation handle, which retains
@@ -393,6 +477,17 @@ impl<'callback> CallbackContext<'callback> {
         handle
     }
 
+    /// Capture reusable access to this pipeline position for an EventBase-local
+    /// endpoint. The returned handle must be dropped by `handler_removed`.
+    pub fn local_pipeline_context(&mut self) -> LocalPipelineContext {
+        let inner = self.inner.as_mut().make_local_pipeline_context();
+        assert!(!inner.is_null(), "local pipeline context must not be null");
+        LocalPipelineContext {
+            inner,
+            _local: PhantomData,
+        }
+    }
+
     /// Suspend the current inbound message without unpacking or copying it.
     ///
     /// Returns `None` if this callback has no message, the message is empty, or
@@ -453,6 +548,63 @@ impl<'callback> CallbackContext<'callback> {
             complete(deferred, future.await);
         });
         HandlerResult::Success
+    }
+
+    /// Defer the current read and queue the future's initial poll.
+    ///
+    /// Unlike [`CallbackContext::spawn_deferred_read`], this always returns to
+    /// the pipeline before polling the future. Ready and suspended futures
+    /// therefore use the same completion path later in the current EventBase
+    /// loop iteration.
+    pub fn spawn_deferred_read_queued<T, Fut, Complete>(
+        &mut self,
+        message: crate::erased::RustTypeErasedBox<'_>,
+        future: Fut,
+        complete: Complete,
+    ) -> Result<LocalTaskHandle, HandlerResult>
+    where
+        T: 'static,
+        Fut: Future<Output = T> + 'static,
+        Complete: FnOnce(DeferredRead, T) + 'static,
+    {
+        let Some(deferred) = self.defer_read(message) else {
+            return Err(HandlerResult::Error);
+        };
+        let event_base = self.inner.as_ref().get_ref().event_base();
+        Ok(EventBaseTask::enqueue_local(
+            event_base,
+            future,
+            move |output| {
+                complete(deferred, output);
+            },
+        ))
+    }
+
+    /// Register and immediately poll an EventBase-local future without
+    /// retaining the inbound message.
+    ///
+    /// `register` receives the cancellation handle before the first poll. This
+    /// makes synchronous completion and reentrant cancellation safe without an
+    /// EventBase scheduling hop.
+    pub fn spawn_local_registered<T, Fut, Register, Complete>(
+        &mut self,
+        future: Fut,
+        register: Register,
+        complete: Complete,
+    ) where
+        T: 'static,
+        Fut: Future<Output = T> + 'static,
+        Register: FnOnce(LocalTaskHandle),
+        Complete: FnOnce(LocalContextHandle, T) + 'static,
+    {
+        let event_base = self.inner.as_ref().get_ref().event_base();
+        let continuation = LocalContextHandle {
+            inner: self.context_handle(),
+            _local: PhantomData,
+        };
+        EventBaseTask::start_local_registered(event_base, future, register, move |output| {
+            complete(continuation, output)
+        });
     }
 
     /// Forward the inbound buffer downstream and return the result.
