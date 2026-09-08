@@ -421,8 +421,7 @@ pub async fn commit_throughput(
         #[cfg(fbcode_build)]
         LandBackend::LandService => match &args.land_service_host_port {
             Some(host_port) => Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), &authz, repo)
-                    .await?,
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
             ),
             None => {
                 let (PushrebaseRemoteMode::RemoteLandService(address)
@@ -433,17 +432,11 @@ pub async fn commit_throughput(
                 };
                 match address {
                     Address::Tier(tier) => Box::new(
-                        LandServicePushrebaseClient::from_tier(ctx, tier.clone(), &authz, repo)
-                            .await?,
+                        LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
                     ),
                     Address::HostPort(host_port) => Box::new(
-                        LandServicePushrebaseClient::from_host_port(
-                            ctx,
-                            host_port.clone(),
-                            &authz,
-                            repo,
-                        )
-                        .await?,
+                        LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo)
+                            .await?,
                     ),
                 }
             }
@@ -453,8 +446,6 @@ pub async fn commit_throughput(
             bail!("the land_service backend is only available in fbcode builds")
         }
         LandBackend::Local => Box::new(LocalPushrebaseClient {
-            ctx,
-            authz: &authz,
             repo,
             hook_manager: repo.hook_manager(),
         }),
@@ -462,6 +453,7 @@ pub async fn commit_throughput(
 
     println!("Landing {} stacks in parallel...", built.len());
     let wall = Instant::now();
+    let authz = &authz;
     let in_flight = match args.concurrency {
         0 => built.len(),
         limit => limit,
@@ -473,6 +465,8 @@ pub async fn commit_throughput(
             let submitted_at_secs = wall.elapsed().as_secs_f64();
             let outcome = client
                 .pushrebase(
+                    ctx,
+                    authz,
                     bookmark,
                     changesets,
                     None,

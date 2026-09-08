@@ -26,8 +26,6 @@ use repo_authorization::AuthorizationContext;
 use crate::PushrebaseClient;
 
 pub struct LocalPushrebaseClient<'a, R: Repo> {
-    pub ctx: &'a CoreContext,
-    pub authz: &'a AuthorizationContext,
     pub repo: &'a R,
     pub hook_manager: &'a HookManager,
 }
@@ -36,6 +34,8 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
 impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
     async fn pushrebase(
         &self,
+        ctx: &CoreContext,
+        authz: &AuthorizationContext,
         bookmark: &BookmarkKey,
         changesets: &[BonsaiChangeset],
         pushvars: Option<&HashMap<String, Bytes>>,
@@ -44,8 +44,8 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         log_new_public_commits_to_scribe: bool,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
         let prepared = prepare_pushrebase(
-            self.ctx,
-            self.authz,
+            ctx,
+            authz,
             self.repo,
             self.hook_manager,
             bookmark,
@@ -57,13 +57,12 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         .await?;
         let source_changesets: HashSet<_> = changesets.iter().cloned().collect();
 
-        self.ctx
-            .scuba()
+        ctx.scuba()
             .clone()
             .add("bookmark", bookmark.to_string())
             .log_with_msg("Pushrebase started", None);
         let (stats, result) = pushrebase::do_pushrebase_bonsai(
-            self.ctx,
+            ctx,
             self.repo,
             &prepared.flags,
             bookmark,
@@ -73,7 +72,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         .timed()
         .await;
 
-        let mut scuba = self.ctx.scuba().clone();
+        let mut scuba = ctx.scuba().clone();
         scuba.add_future_stats(&stats);
         match &result {
             Ok(outcome) => {
@@ -96,7 +95,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
                 scuba.log_with_msg("Pushrebase finished", None);
 
                 postprocess_pushrebase_outcome(
-                    self.ctx,
+                    ctx,
                     self.repo,
                     bookmark,
                     prepared.kind,

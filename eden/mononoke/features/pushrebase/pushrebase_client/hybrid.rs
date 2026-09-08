@@ -47,11 +47,13 @@ pub async fn normal_pushrebase<'a>(
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, authz, repo).await?;
+            maybe_client_from_address(&remote_mode, ctx, repo).await?;
 
         if let Some(client) = maybe_client {
             let result = client
                 .pushrebase(
+                    ctx,
+                    authz,
                     bookmark,
                     changesets,
                     maybe_pushvars,
@@ -87,21 +89,18 @@ pub async fn normal_pushrebase<'a>(
             None
         }
     };
-    let result = LocalPushrebaseClient {
-        ctx,
-        authz,
-        repo,
-        hook_manager,
-    }
-    .pushrebase(
-        bookmark,
-        changesets,
-        maybe_pushvars,
-        cross_repo_push_source,
-        bookmark_restrictions,
-        log_new_public_commits_to_scribe,
-    )
-    .await;
+    let result = LocalPushrebaseClient { repo, hook_manager }
+        .pushrebase(
+            ctx,
+            authz,
+            bookmark,
+            changesets,
+            maybe_pushvars,
+            cross_repo_push_source,
+            bookmark_restrictions,
+            log_new_public_commits_to_scribe,
+        )
+        .await;
     if let Some((mut scuba, err)) = maybe_fallback_scuba {
         if result.is_ok() {
             scuba.log_with_msg("failed_remote_pushrebase", err.to_string());
@@ -114,13 +113,12 @@ pub async fn normal_pushrebase<'a>(
 async fn maybe_client_from_address<'a>(
     remote_mode: &'a PushrebaseRemoteMode,
     ctx: &'a CoreContext,
-    authz: &'a AuthorizationContext,
     repo: &'a impl Repo,
 ) -> anyhow::Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     match remote_mode {
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            Ok(address_from_land_service(address, ctx, authz, repo).await?)
+            Ok(address_from_land_service(address, ctx, repo).await?)
         }
         PushrebaseRemoteMode::Local => Ok(None),
     }
@@ -129,24 +127,22 @@ async fn maybe_client_from_address<'a>(
 async fn address_from_land_service<'a>(
     address: &'a Address,
     ctx: &'a CoreContext,
-    authz: &'a AuthorizationContext,
     repo: &'a impl Repo,
 ) -> anyhow::Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     #[cfg(fbcode_build)]
     {
         match address {
             metaconfig_types::Address::Tier(tier) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), authz, repo).await?,
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
             ))),
             metaconfig_types::Address::HostPort(host_port) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), authz, repo)
-                    .await?,
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
             ))),
         }
     }
     #[cfg(not(fbcode_build))]
     {
-        let _ = (address, ctx, repo, authz);
+        let _ = (address, ctx, repo);
         unreachable!()
     }
 }
