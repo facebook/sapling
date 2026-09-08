@@ -45,6 +45,7 @@ import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
 import {Repository, absolutePathForFileInRepo} from './Repository';
 import {repositoryCache} from './RepositoryCache';
+import {localImageRoots, readLocalImage} from './localImage';
 import {firstOfIterable, parseExecJson} from './utils';
 
 export type IncomingMessage = ClientToServerMessage;
@@ -966,6 +967,25 @@ export default class ServerToClientAPI {
           ?.catch(err => {
             this.logger.error('Error rendering markup:', err);
           });
+        break;
+      }
+      case 'fetchLocalImage': {
+        repo
+          .forceGetConfig(ctx, 'isl.image-roots')
+          .catch(() => undefined)
+          .then(configuredRoots =>
+            readLocalImage(localImageRoots(repo.info.repoRoot, configuredRoots), data.src),
+          )
+          .then(
+            dataUrl =>
+              this.postMessage({type: 'fetchedLocalImage', id: data.id, result: {value: dataUrl}}),
+            err =>
+              this.postMessage({
+                type: 'fetchedLocalImage',
+                id: data.id,
+                result: {error: err as Error},
+              }),
+          );
         break;
       }
       case 'getSuggestedReviewers': {
