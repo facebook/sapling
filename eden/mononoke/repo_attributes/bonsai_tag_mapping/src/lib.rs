@@ -100,6 +100,14 @@ pub trait BonsaiTagMapping: Send + Sync {
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>>;
 
+    /// Fetch the tag mapping entries corresponding to the input tag names
+    /// for the given repo in a single call, instead of one lookup per name
+    async fn get_entries_by_tag_names(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>>;
+
     /// Add new tag name to bonsai changeset mappings
     async fn add_or_update_mappings(
         &self,

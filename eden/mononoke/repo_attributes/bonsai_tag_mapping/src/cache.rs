@@ -216,6 +216,27 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
         }
     }
 
+    /// Fetch the tag mapping entries corresponding to the input tag names
+    /// for the given repo in a single call, instead of one lookup per name
+    async fn get_entries_by_tag_names(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>> {
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None) {
+            let tag_names = tag_names.into_iter().collect::<HashSet<_>>();
+            Ok(self
+                .entries
+                .load()
+                .iter()
+                .filter(|&entry| tag_names.contains(&entry.tag_name))
+                .cloned()
+                .collect())
+        } else {
+            self.inner.get_entries_by_tag_names(ctx, tag_names).await
+        }
+    }
+
     /// Add new tag name to bonsai changeset mappings
     async fn add_or_update_mappings(
         &self,

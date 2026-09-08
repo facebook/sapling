@@ -113,6 +113,15 @@ mononoke_queries! {
          FROM bonsai_tag_mapping
          WHERE repo_id = {repo_id} AND tag_hash IN {tag_hash}"
     }
+
+    read SelectMappingByTagNames(
+        repo_id: RepositoryId,
+        >list tag_name: String
+    ) -> (String, ChangesetId, GitSha1, bool) {
+        "SELECT tag_name, changeset_id, tag_hash, target_is_tag
+         FROM bonsai_tag_mapping
+         WHERE repo_id = {repo_id} AND tag_name IN {tag_name}"
+    }
 }
 
 pub struct SqlBonsaiTagMapping {
@@ -244,6 +253,36 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
         select_mapping_by_tag_hash(ctx, &self.read_connection, &self.repo_id, tag_hashes).await
+    }
+
+    async fn get_entries_by_tag_names(
+        &self,
+        ctx: &CoreContext,
+        tag_names: Vec<String>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>> {
+        if tag_names.is_empty() {
+            return Ok(vec![]);
+        }
+        let results = SelectMappingByTagNames::query(
+            &self.read_connection.conn,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            tag_names.as_slice(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching entries for tags {tag_names:?} in repo {}",
+                self.repo_id
+            )
+        })?;
+
+        Ok(results
+            .into_iter()
+            .map(|(tag_name, changeset_id, tag_hash, target_is_tag)| {
+                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
+            })
+            .collect())
     }
 
     async fn add_or_update_mappings(

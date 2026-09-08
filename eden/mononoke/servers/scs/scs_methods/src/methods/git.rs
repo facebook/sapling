@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use bonsai_tag_mapping::BonsaiTagMappingRef;
-use bonsai_tag_mapping::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
 use everstore_client::EverstoreClient;
@@ -289,21 +289,30 @@ impl SourceControlServiceImpl {
 
         let blobstore = repo_ctx.repo().repo_blobstore_arc();
 
+        // Fetch all the requested tag mappings in one call instead of doing a
+        // separate lookup per tag below: repos can have hundreds to thousands
+        // of git tags, and per-tag lookups either hit the DB once each or
+        // linear-scan the in-memory tag cache once each.
+        let tag_names: Vec<String> = params.tag_to_hash_map.keys().cloned().collect();
+        let tag_entries_by_name: HashMap<String, bonsai_tag_mapping::BonsaiTagMappingEntry> =
+            repo_ctx
+                .repo()
+                .bonsai_tag_mapping()
+                .get_entries_by_tag_names(repo_ctx.ctx(), tag_names)
+                .await
+                .map_err(|err| {
+                    internal_error(format!("Error fetching tag mappings. Cause: {err:#}"))
+                })?
+                .into_iter()
+                .map(|entry| (entry.tag_name.clone(), entry))
+                .collect();
+
         let tag_infos = stream::iter(params.tag_to_hash_map)
             .map(|(tag_name, commit_hash)| {
-                let repo = repo_ctx.repo().clone();
                 let ctx = repo_ctx.ctx().clone();
                 let blobstore = blobstore.clone();
+                let entry = tag_entries_by_name.get(&tag_name).cloned();
                 async move {
-                    let entry = repo.bonsai_tag_mapping()
-                        .get_entry_by_tag_name(&ctx, tag_name.clone(), Freshness::MaybeStale)
-                        .await
-                        .map_err(|err| {
-                            internal_error(format!(
-                                "Error fetching tag mapping for tag '{tag_name}'. Cause: {err:#}"
-                            ))
-                        })?;
-
                     if let Some(entry) = entry {
                         let tag_hash_oid = entry.tag_hash.to_object_id().map_err(|err| {
                             internal_error(format!(
