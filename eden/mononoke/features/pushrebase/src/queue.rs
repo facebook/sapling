@@ -19,6 +19,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use mononoke_types::check_case_conflicts;
 use mononoke_types::find_path_conflicts;
 use pushrebase_hooks::RepoLockPushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
@@ -156,7 +157,18 @@ fn partition_requests(
             && batch.pushvars == request_batch.pushvars
             && batch.repo_lock == request_batch.repo_lock
         {
-            if find_path_conflicts(batch_changed_files.clone(), changed_files.clone()).is_empty() {
+            if find_path_conflicts(batch_changed_files.clone(), changed_files.clone()).is_empty()
+                && (!batch.flags.casefolding_check
+                    || check_case_conflicts(
+                        batch
+                            .requests
+                            .iter()
+                            .chain(&request_batch.requests)
+                            .flat_map(|request| request.stack.changesets.iter()),
+                        &batch.flags.casefolding_check_excluded_paths,
+                    )
+                    .is_none())
+            {
                 batch_changed_files.extend(changed_files);
                 batch.requests.append(&mut request_batch.requests);
                 continue;
@@ -358,18 +370,42 @@ async fn run_queue<R, F>(
 mod tests {
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
+    use mononoke_types::BonsaiChangesetMut;
+    use mononoke_types::ContentId;
+    use mononoke_types::FileChange;
+    use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
+    use mononoke_types::NonRootMPath;
     use mononoke_types::hash::Blake2;
 
     use super::*;
 
     fn request(fb: FacebookInit, path: &str) -> PushrebaseRequest {
         let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
+        let path = NonRootMPath::new(path).expect("test path should be valid");
+        let changeset = BonsaiChangesetMut {
+            file_changes: [(
+                path.clone(),
+                FileChange::tracked(
+                    ContentId::new(Blake2::from_byte_array([2; 32])),
+                    FileType::Regular,
+                    1,
+                    None,
+                    GitLfs::FullContent,
+                ),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        }
+        .freeze()
+        .expect("test changeset should be valid");
         let (response_tx, _) = oneshot::channel();
         PushrebaseRequest {
             ctx: CoreContext::test_mock(fb),
             stack: PushrebaseStack {
-                changed_files: vec![MPath::new(path).expect("test path should be valid")],
-                changesets: vec![],
+                changed_files: vec![path.into()],
+                changesets: vec![changeset],
                 head: id,
                 root: id,
             },
@@ -431,5 +467,24 @@ mod tests {
         assert_eq!(batches[0].repo_lock, RepoLockPolicy::Bypass);
         assert_eq!(batches[3].repo_lock, RepoLockPolicy::Enforce);
         assert_eq!(conflicts, 0);
+    }
+
+    #[mononoke::fbinit_test]
+    async fn partitions_case_conflicts_when_enabled(fb: FacebookInit) {
+        let mut upper = request(fb, "dir/File");
+        upper.flags.casefolding_check = true;
+        let mut lower = request(fb, "dir/file");
+        lower.flags.casefolding_check = true;
+
+        let (batches, conflicts) = partition_requests(vec![], vec![upper, lower]);
+
+        assert_eq!(
+            batches
+                .iter()
+                .map(|batch| batch.requests.len())
+                .collect::<Vec<_>>(),
+            [1, 1]
+        );
+        assert_eq!(conflicts, 1);
     }
 }
