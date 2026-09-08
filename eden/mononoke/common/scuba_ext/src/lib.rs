@@ -167,16 +167,20 @@ impl MononokeScubaSampleBuilder {
 
     /// Log the tenancy-relevant client fields to Scuba
     pub fn add_tenant_info(&mut self, tenant: &TenantInfo) -> &mut Self {
-        self.inner.add("client_category", tenant.category.as_str());
+        let tenancy_path_v2 = tenant.tenancy_path_v2().map(|path| path.join("/"));
+
         self.inner
-            .add_opt("ci_purpose", tenant.ci_purpose.as_deref());
+            .add("client_category", tenant.category().as_str());
+        self.inner.add_opt("ci_purpose", tenant.ci_purpose());
         self.inner
-            .add_opt("client_atlas_env_id", tenant.atlas_env_id.as_deref());
-        self.inner.add_opt("client_atlas_rl", tenant.atlas_rl);
+            .add_opt("client_atlas_env_id", tenant.atlas_env_id());
+        self.inner.add_opt("client_atlas_rl", tenant.atlas_rl());
         self.inner
-            .add_opt("client_atlas_purpose", tenant.atlas_purpose.as_deref());
+            .add_opt("client_atlas_purpose", tenant.atlas_purpose());
         self.inner
-            .add_opt("client_faas_job_name", tenant.faas_job_name.as_deref());
+            .add_opt("client_faas_job_name", tenant.faas_job_name());
+        self.inner
+            .add_opt("rim_tenancy_path_v2", tenancy_path_v2.as_deref());
         self
     }
 

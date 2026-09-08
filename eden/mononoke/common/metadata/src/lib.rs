@@ -17,6 +17,7 @@ use clientinfo::ClientInfo;
 use clientinfo::ClientRequestInfo;
 use hickory_resolver::TokioResolver;
 use hickory_resolver::proto::rr::RData;
+use permission_checker::ClientCategory;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use permission_checker::TenantInfo;
@@ -283,16 +284,29 @@ impl Metadata {
     }
 
     pub fn tenant_info(&self) -> TenantInfo {
-        TenantInfo {
-            client_id: self
-                .client_request_info()
-                .and_then(|cri| cri.main_id.clone()),
-            category: self.identities.client_category(self.sandcastle_alias()),
-            ci_purpose: self.ci_purpose().map(str::to_owned),
-            atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
-            atlas_rl: self.clientinfo_atlas_rl(),
-            atlas_purpose: self.clientinfo_atlas_purpose().map(str::to_owned),
-            faas_job_name: self.clientinfo_faas_job_name().map(str::to_owned),
+        let client_id = self
+            .client_request_info()
+            .and_then(|cri| cri.main_id.clone());
+
+        match self.identities.client_category(self.sandcastle_alias()) {
+            ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
+            ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
+            ClientCategory::DevEnv => TenantInfo::DevEnv { client_id },
+            ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
+                client_id,
+                ci_purpose: self.ci_purpose().map(str::to_owned),
+            },
+            ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
+            ClientCategory::Mast => TenantInfo::Mast { client_id },
+            ClientCategory::FaaS => TenantInfo::FaaS {
+                client_id,
+                atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
+                atlas_rl: self.clientinfo_atlas_rl(),
+                atlas_purpose: self.clientinfo_atlas_purpose().map(str::to_owned),
+                faas_job_name: self.clientinfo_faas_job_name().map(str::to_owned),
+            },
+            ClientCategory::Automation => TenantInfo::Automation { client_id },
+            ClientCategory::Unknown => TenantInfo::Unknown { client_id },
         }
     }
 

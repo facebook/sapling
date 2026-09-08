@@ -261,25 +261,124 @@ impl ClientCategory {
 /// A request's tenancy dimensions, used for RIM attribution and rate-limit
 /// policy.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TenantInfo {
-    pub client_id: Option<String>,
-    pub category: ClientCategory,
-    pub ci_purpose: Option<String>,
-    pub atlas_env_id: Option<String>,
-    pub atlas_rl: Option<bool>,
-    pub atlas_purpose: Option<String>,
-    pub faas_job_name: Option<String>,
+pub enum TenantInfo {
+    HealthCheck {
+        client_id: Option<String>,
+    },
+    InteractiveDev {
+        client_id: Option<String>,
+    },
+    DevEnv {
+        client_id: Option<String>,
+    },
+    CiSandcastle {
+        client_id: Option<String>,
+        ci_purpose: Option<String>,
+    },
+    SandcastleAutomation {
+        client_id: Option<String>,
+    },
+    Mast {
+        client_id: Option<String>,
+    },
+    FaaS {
+        client_id: Option<String>,
+        atlas_env_id: Option<String>,
+        atlas_rl: Option<bool>,
+        atlas_purpose: Option<String>,
+        faas_job_name: Option<String>,
+    },
+    Automation {
+        client_id: Option<String>,
+    },
+    Unknown {
+        client_id: Option<String>,
+    },
 }
 
 impl TenantInfo {
+    pub fn category(&self) -> ClientCategory {
+        match self {
+            Self::HealthCheck { .. } => ClientCategory::HealthCheck,
+            Self::InteractiveDev { .. } => ClientCategory::InteractiveDev,
+            Self::DevEnv { .. } => ClientCategory::DevEnv,
+            Self::CiSandcastle { .. } => ClientCategory::CiSandcastle,
+            Self::SandcastleAutomation { .. } => ClientCategory::SandcastleAutomation,
+            Self::Mast { .. } => ClientCategory::Mast,
+            Self::FaaS { .. } => ClientCategory::FaaS,
+            Self::Automation { .. } => ClientCategory::Automation,
+            Self::Unknown { .. } => ClientCategory::Unknown,
+        }
+    }
+
+    pub fn client_id(&self) -> Option<&str> {
+        match self {
+            Self::HealthCheck { client_id }
+            | Self::InteractiveDev { client_id }
+            | Self::DevEnv { client_id }
+            | Self::CiSandcastle { client_id, .. }
+            | Self::SandcastleAutomation { client_id }
+            | Self::Mast { client_id }
+            | Self::FaaS { client_id, .. }
+            | Self::Automation { client_id }
+            | Self::Unknown { client_id } => client_id.as_deref(),
+        }
+    }
+
+    pub fn ci_purpose(&self) -> Option<&str> {
+        match self {
+            Self::CiSandcastle { ci_purpose, .. } => ci_purpose.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn atlas_env_id(&self) -> Option<&str> {
+        match self {
+            Self::FaaS { atlas_env_id, .. } => atlas_env_id.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn atlas_rl(&self) -> Option<bool> {
+        match self {
+            Self::FaaS { atlas_rl, .. } => *atlas_rl,
+            _ => None,
+        }
+    }
+
+    pub fn atlas_purpose(&self) -> Option<&str> {
+        match self {
+            Self::FaaS { atlas_purpose, .. } => atlas_purpose.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn faas_job_name(&self) -> Option<&str> {
+        match self {
+            Self::FaaS { faas_job_name, .. } => faas_job_name.as_deref(),
+            _ => None,
+        }
+    }
+
     /// RIM tenancy hierarchy path: root -> category -> client id. `None` when
     /// there is no `client_id` to attribute to (no meaningful RIM path).
     pub fn tenancy_path(&self) -> Option<Vec<String>> {
-        let client_id = self.client_id.clone()?;
+        let client_id = self.client_id()?;
         Some(vec![
             "root".to_string(),
-            self.category.as_str().to_string(),
-            client_id,
+            self.category().as_str().to_string(),
+            client_id.to_string(),
+        ])
+    }
+
+    pub fn tenancy_path_v2(&self) -> Option<Vec<String>> {
+        let client_id = self.client_id()?;
+        Some(vec![
+            "root".to_string(),
+            self.category().as_str().to_string(),
+            client_id.to_string(),
+            client_id.to_string(),
+            client_id.to_string(),
         ])
     }
 }
@@ -300,6 +399,80 @@ mod tests {
     fn test_ipv6_identity() {
         let id = MononokeIdentity::from_str("MACHINE:2621:10d:c1a8:12c9::1162").unwrap();
         assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
+    }
+
+    fn tenant_info(category: ClientCategory, client_id: &str) -> TenantInfo {
+        let client_id = Some(client_id.to_string());
+        match category {
+            ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
+            ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
+            ClientCategory::DevEnv => TenantInfo::DevEnv { client_id },
+            ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
+                client_id,
+                ci_purpose: None,
+            },
+            ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
+            ClientCategory::Mast => TenantInfo::Mast { client_id },
+            ClientCategory::FaaS => TenantInfo::FaaS {
+                client_id,
+                atlas_env_id: None,
+                atlas_rl: None,
+                atlas_purpose: None,
+                faas_job_name: None,
+            },
+            ClientCategory::Automation => TenantInfo::Automation { client_id },
+            ClientCategory::Unknown => TenantInfo::Unknown { client_id },
+        }
+    }
+
+    #[mononoke::test]
+    fn test_tenancy_path_v2() {
+        let interactive = tenant_info(ClientCategory::InteractiveDev, "USER:alice");
+        assert_eq!(
+            interactive.tenancy_path(),
+            Some(vec![
+                "root".to_string(),
+                "interactive_dev".to_string(),
+                "USER:alice".to_string(),
+            ])
+        );
+        assert_eq!(
+            interactive.tenancy_path_v2(),
+            Some(vec![
+                "root".to_string(),
+                "interactive_dev".to_string(),
+                "USER:alice".to_string(),
+                "USER:alice".to_string(),
+                "USER:alice".to_string(),
+            ])
+        );
+    }
+
+    #[mononoke::test]
+    fn test_tenancy_path_v2_repeats_client_id_for_all_categories() {
+        for category in [
+            ClientCategory::HealthCheck,
+            ClientCategory::InteractiveDev,
+            ClientCategory::DevEnv,
+            ClientCategory::CiSandcastle,
+            ClientCategory::SandcastleAutomation,
+            ClientCategory::Mast,
+            ClientCategory::FaaS,
+            ClientCategory::Automation,
+            ClientCategory::Unknown,
+        ] {
+            let tenant = tenant_info(category, "CLIENT:id");
+            assert_eq!(
+                tenant.tenancy_path_v2(),
+                Some(vec![
+                    "root".to_string(),
+                    category.as_str().to_string(),
+                    "CLIENT:id".to_string(),
+                    "CLIENT:id".to_string(),
+                    "CLIENT:id".to_string(),
+                ])
+            );
+        }
     }
 
     #[mononoke::test]
