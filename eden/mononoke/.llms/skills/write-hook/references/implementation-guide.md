@@ -15,7 +15,8 @@
 
 ## Hook Types
 
-- **ChangesetHook** -- validates the entire commit (directory sizes, commit message, merge policy). Registered in `make_changeset_hook`. Most common.
+- **ChangesetHook** -- validates the entire commit (directory sizes, commit message, merge policy).
+  Registered in `make_changeset_hook`. Most common.
 - **FileHook** -- validates individual files (content patterns, filenames, size). Registered in `make_file_hook`.
 - **BookmarkHook** -- validates bookmark operations (tag limits, branch creation). Registered in `make_bookmark_hook`.
 
@@ -24,7 +25,8 @@
 Read the user's request and decide:
 1. Which hook type (ChangesetHook, FileHook, BookmarkHook)
 2. What config fields the hook needs (deserialized from JSON via serde)
-3. What derived data it needs (ContentManifest for recursive sizes, SkeletonManifest for entry counts, fsnodes for file info)
+3. What derived data it needs (ContentManifest for recursive sizes, SkeletonManifest for entry counts,
+   fsnodes for file info)
 
 Read `implementations.rs` and an existing similar hook (e.g. `limit_directory_size.rs`, `block_files.rs`) for patterns.
 
@@ -36,12 +38,17 @@ Split the work into 3 commits on a stack:
 - New file `implementations/<hook_name>.rs` with:
   - Config struct with `#[derive(Deserialize, Clone, Debug)]`
   - Hook struct with `new(config: &HookConfig)` and `with_config(config: Config)`
-  - No-op `run()` returning `Ok(HookExecution::accepted())`. `HookExecution` wraps a `HookResult` plus `extra_logs`; build with `accepted()` / `rejected(info)`, or `*_with_logs` variants to attach Scuba diagnostic lines.
+  - No-op `run()` returning `Ok(HookExecution::accepted())`.
+  - For hooks whose behavior differs by execution context, implement `run_with_purpose` and inspect
+    `HookExecutionPurpose`.
+  - `HookExecution` wraps a `HookResult` plus `extra_logs`; build with `accepted()` / `rejected(info)`, or
+    `*_with_logs` variants to attach Scuba diagnostic lines.
 - `implementations.rs`: add `mod <hook_name>;` line only (NOT the match arm)
 - No tests, no BUCK/Cargo changes (skeleton has minimal imports)
 
 **Commit 2 -- Tests:**
-- `implementations/<hook_name>.rs`: add `#[cfg(test)] mod test` with ALL test cases, but rejection tests assert `Accepted` with `// TODO` comments (showing wrong/no-op behavior)
+- `implementations/<hook_name>.rs`: add `#[cfg(test)] mod test` with ALL test cases, but rejection tests
+  assert `Accepted` with `// TODO` comments (showing wrong/no-op behavior)
 - Integration test `.t` file with all pushes succeeding (wrong behavior)
 
 **Commit 3 -- Wiring + Implementation:**
