@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use anyhow::anyhow;
 use bookmarks::BookmarkUpdateReason;
@@ -154,7 +153,7 @@ pub async fn postprocess_pushrebase_outcome(
     bookmark: &BookmarkKey,
     kind: BookmarkKind,
     outcome: &pushrebase::PushrebaseOutcome,
-    source_changesets: &HashSet<BonsaiChangeset>,
+    source_changesets: &[BonsaiChangeset],
     log_new_public_commits_to_scribe: bool,
 ) -> Result<(), BookmarkMovementError> {
     if log_new_public_commits_to_scribe {

@@ -121,6 +121,7 @@ rust_library(
             "fbsource//third-party/rust:anyhow",
             "fbsource//third-party/rust:async-trait",
             "fbsource//third-party/rust:bytes",
+            "fbsource//third-party/rust:tokio",
             ":pushrebase",
             ":pushrebase_hooks",
             "//common/rust/shed/futures_stats:futures_stats",
@@ -132,6 +133,7 @@ rust_library(
             "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
             "//eden/mononoke/repo_attributes/bookmarks/bookmarks_movement:bookmarks_movement",
             "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
+            "//eden/mononoke/repo_attributes/hook_manager/hook_manager:hook_manager",
             "//eden/mononoke/repo_authorization:repo_authorization",
             "//eden/mononoke/servers/slapi/slapi_server/context:context",
         ]

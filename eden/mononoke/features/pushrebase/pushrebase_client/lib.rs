@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod batched;
 #[cfg(fbcode_build)]
 mod facebook;
 mod hybrid;
@@ -12,6 +13,7 @@ mod local;
 
 use std::collections::HashMap;
 
+pub use batched::BatchedPushrebaseClient;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_types::BookmarkKey;

@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -69,7 +68,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         if prepared.repo_lock == RepoLockPolicy::Enforce {
             hooks.push(RepoLockPushrebaseHook::new(self.repo.repo_identity().id()));
         }
-        let source_changesets: HashSet<_> = changesets.iter().cloned().collect();
+        let source_changesets = changesets.iter().cloned().collect();
 
         ctx.scuba()
             .clone()
@@ -114,7 +113,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
                     bookmark,
                     prepared.kind,
                     outcome,
-                    &source_changesets,
+                    changesets,
                     log_new_public_commits_to_scribe,
                 )
                 .await?;
