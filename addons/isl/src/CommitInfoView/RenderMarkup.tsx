@@ -6,21 +6,28 @@
  */
 
 import {useAtomValue} from 'jotai';
+import MarkdownIt from 'markdown-it';
+import type {MouseEvent} from 'react';
 import {cached} from 'shared/LRU';
 import clientToServerAPI from '../ClientToServerAPI';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
+import platform from '../platform';
 
 import './RenderedMarkup.css';
+
+// Raw HTML stays off so a `<Component>` name in a description shows as text rather than being
+// dropped as an unknown tag.
+const markdown = new MarkdownIt({html: false, linkify: true});
 
 const renderedMarkup = atomFamilyWeak((markup: string) => {
   // This is an atom to trigger re-render when the server returns.
   return lazyAtom(get => {
     const provider = get(codeReviewProvider);
-    if (provider?.enableMessageSyncing !== true) {
-      return null;
+    if (provider?.enableMessageSyncing === true) {
+      return renderMarkupToHTML(markup);
     }
-    return renderMarkupToHTML(markup);
+    return markdown.render(markup);
   }, null);
 });
 
@@ -37,12 +44,26 @@ const renderMarkupToHTML = cached((markup: string): Promise<string> | string => 
   });
 });
 
+function openLinksExternally(event: MouseEvent<HTMLDivElement>) {
+  const anchor = (event.target as Element).closest('a[href]');
+  if (anchor instanceof HTMLAnchorElement) {
+    // Keep the click from reaching the field's click-to-edit handler.
+    event.preventDefault();
+    event.stopPropagation();
+    platform.openExternalLink(anchor.href);
+  }
+}
+
 export function RenderMarkup({children}: {children: string}) {
   const renderedHtml = useAtomValue(renderedMarkup(children));
-  // TODO: We could consider using DOM purify to sanitize this HTML,
-  // though this html is coming directly from a trusted server.
-  return renderedHtml != null ? (
-    <div className="rendered-markup" dangerouslySetInnerHTML={{__html: renderedHtml}} />
+  // The HTML comes either from the trusted server or from markdown-it with raw HTML disabled,
+  // so it is injected without further sanitizing.
+  return renderedHtml != null && renderedHtml !== '' ? (
+    <div
+      className="rendered-markup"
+      onClick={openLinksExternally}
+      dangerouslySetInnerHTML={{__html: renderedHtml}}
+    />
   ) : (
     <div>{children}</div>
   );
