@@ -175,6 +175,75 @@ describe('Repository', () => {
       });
     });
 
+    it('prefers the upstream repo over the fork it was cloned from', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://github.com/myUsername/myRepo.git'],
+          ['paths.upstream', 'https://github.com/upstreamOrg/myRepo.git'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'upstreamOrg',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+
+    it('falls back to the default path when upstream is not a github repo', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://github.com/myUsername/myRepo.git'],
+          ['paths.upstream', 'https://gitlab.myCompany.com/myUsername/myRepo.git'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+
+    it('lets github.pull_request_repo override both paths', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://github.com/myUsername/myRepo.git'],
+          ['paths.upstream', 'https://github.com/upstreamOrg/myRepo.git'],
+          ['github.pull_request_repo', 'chosenOrg/chosenRepo'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'chosenOrg',
+        repo: 'chosenRepo',
+        hostname: 'github.com',
+      });
+    });
+
+    it('resolves a bare github.pull_request_repo against the enterprise host in use', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://ghe.myCompany.com/myUsername/myRepo.git'],
+          ['github.pull_request_repo', 'chosenOrg/chosenRepo'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'chosenOrg',
+        repo: 'chosenRepo',
+        hostname: 'ghe.myCompany.com',
+      });
+    });
+
     it('handles non-github-enterprise unknown code review providers', async () => {
       setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
