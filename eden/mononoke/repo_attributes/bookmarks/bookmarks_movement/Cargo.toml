@@ -9,7 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
-async-trait = "0.1.92"
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
@@ -37,7 +36,6 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../../features/pushrebase" }
-pushrebase_hook = { version = "0.1.0", path = "../../../features/pushrebase/pushrebase_hook" }
 pushrebase_hooks = { version = "0.1.0", path = "../../../features/pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }
@@ -50,7 +48,6 @@ repo_lock = { version = "0.1.0", path = "../../repo_lock/repo_lock" }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_permission_checker" }
 repo_update_logger = { version = "0.1.0", path = "../../../features/repo_update_logger" }
 skeleton_manifest = { version = "0.1.0", path = "../../../derived_data/skeleton_manifest" }
-sql_ext = { version = "0.1.0", path = "../../../common/rust/sql_ext" }
 thiserror = "2.0.20"
 
 [dev-dependencies]

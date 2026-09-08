@@ -62,6 +62,8 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLogId;
@@ -97,6 +99,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
 use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PushrebaseFlags;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -115,7 +118,10 @@ use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use shared_error::std::SharedError;
@@ -123,11 +129,14 @@ use stats::prelude::*;
 use thiserror::Error;
 
 mod merge_resolution_summary;
+mod queue;
 pub use merge_resolution_summary::MR_PATH_SAMPLE_CAP;
 pub use merge_resolution_summary::MergeResolutionSummary;
+pub use queue::PushrebaseQueue;
+pub use queue::PushrebaseRequest;
+use queue::QueuedPushrebaseRequest;
 use three_way_merge::MergeResult;
 use three_way_merge::merge_text;
-use tokio::sync::oneshot;
 use tracing::info;
 use tracing::warn;
 
@@ -244,6 +253,13 @@ pub struct PushrebaseRetryNum(pub usize);
 #[derive(Debug, Clone, Copy)]
 pub struct PushrebaseDistance(pub usize);
 
+/// Whether a pushrebase transaction must verify that the repository is writable.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RepoLockPolicy {
+    Enforce,
+    Bypass,
+}
+
 #[derive(Debug, Clone)]
 pub struct PushrebaseOutcome {
     pub old_bookmark_value: Option<ChangesetId>,
@@ -275,21 +291,6 @@ pub struct PushrebaseStack {
     pub root: ChangesetId,
 }
 
-pub struct PushrebaseRequest {
-    pub stack: PushrebaseStack,
-    /// Last bookmark value checked for conflicts. Updated on CAS-failure re-queue.
-    pub conflict_check_base: ChangesetId,
-    /// Carried merge resolution info from previous CAS-failure attempts.
-    /// On retry, reconciled with new delta info to preserve O(delta) scans.
-    pub carried_merge_file_info: Vec<MergedFileInfo>,
-    /// Number of times this request has been retried due to CAS failures.
-    pub retry_num: PushrebaseRetryNum,
-    /// Pre-computed pushrebase hooks.
-    pub hooks: Vec<Box<dyn PushrebaseHook>>,
-    /// Channel for returning the result to the caller. Uses SharedError for cloneable error broadcasting.
-    pub response_tx: oneshot::Sender<Result<PushrebaseOutcome, SharedError<PushrebaseError>>>,
-}
-
 pub trait Repo = BookmarksRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
@@ -303,6 +304,27 @@ pub trait Repo = BookmarksRef
 /// Extended repo trait for pessimistic pushrebase, which needs direct
 /// access to `SqlBookmarks` for `LockedBookmarkTransaction`.
 pub trait PushrebaseRepo = Repo + SqlBookmarksRef;
+
+/// Repository capabilities needed to construct hooks for queued pushrebases.
+pub trait PushrebaseQueueRepo = PushrebaseRepo
+    + BonsaiGitMappingArc
+    + BonsaiGlobalrevMappingArc
+    + PushrebaseMutationMappingRef
+    + RepoBookmarkAttrsRef
+    + RepoConfigRef
+    + RepoCrossRepoRef;
+
+fn pushrebase_context(ctx: &CoreContext, config: &PushrebaseFlags) -> CoreContext {
+    ctx.with_mutated_scuba(|mut scuba| {
+        if let Some(land_instance_id) = config.land_instance_id.as_deref() {
+            scuba.add("land_instance_id", land_instance_id);
+        }
+        if let Some(phab_diff_id) = config.phab_diff_id.as_deref() {
+            scuba.add("phab_diff_id", phab_diff_id);
+        }
+        scuba
+    })
+}
 
 /// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
 /// The commits from the pushed set should already be committed to the blobrepo
@@ -320,21 +342,10 @@ pub async fn do_pushrebase_bonsai(
     // samples can be joined back to the originating land job and diff.
     // Rebinding `ctx` here means every downstream `ctx.scuba()` clone
     // inherits the fields.
-    let ctx = ctx.with_mutated_scuba(|mut scuba| {
-        // Per-land key to roll a land's attempts up to a terminal outcome.
-        if let Some(land_instance_id) = config.land_instance_id.as_deref() {
-            scuba.add("land_instance_id", land_instance_id);
-        }
-        // Phabricator diff FBID for per-diff attribution.
-        if let Some(phab_diff_id) = config.phab_diff_id.as_deref() {
-            scuba.add("phab_diff_id", phab_diff_id);
-        }
-        scuba
-    });
+    let ctx = pushrebase_context(ctx, config);
     let ctx = &ctx;
 
     let stack = index_pushrebase_request(ctx, repo, config, onto_bookmark, pushed).await?;
-
     let use_pessimistic = justknobs::eval(
         "scm/mononoke:per_bookmark_locking",
         None,
@@ -533,7 +544,7 @@ pub async fn rebase_stack_onto_with_conflict_base(
 
 /// A successfully rebased request pending the CAS bookmark update.
 struct PendingRebase {
-    request: PushrebaseRequest,
+    request: QueuedPushrebaseRequest,
     new_head: ChangesetId,
     pushrebase_distance: usize,
     old_bookmark_value: Option<ChangesetId>,
@@ -561,46 +572,31 @@ struct RebaseUnderLockResult {
 
 /// Lands multiple indexed stacks in a single critical section pass.
 ///
-/// All requests must have equivalent hooks (only the first request's hooks
-/// are used) and must not have file conflicts with each other.
-///
 /// Takes ownership of requests. Sends results via each request's oneshot
 /// for resolved requests. Returns only CAS-failure requests for re-queuing
 /// with updated `conflict_check_base`.
-pub async fn do_batched_pushrebase(
+async fn do_batched_pushrebase(
     ctx: &CoreContext,
     repo: &impl PushrebaseRepo,
-    config: &PushrebaseFlags,
+    flags: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
-    requests: Vec<PushrebaseRequest>,
-) -> Vec<PushrebaseRequest> {
-    let ctx = ctx.with_mutated_scuba(|mut scuba| {
-        // Per-land key to roll a land's attempts up to a terminal outcome.
-        if let Some(land_instance_id) = config.land_instance_id.as_deref() {
-            scuba.add("land_instance_id", land_instance_id);
-        }
-        // Phabricator diff FBID for per-diff attribution.
-        if let Some(phab_diff_id) = config.phab_diff_id.as_deref() {
-            scuba.add("phab_diff_id", phab_diff_id);
-        }
-        scuba
-    });
-    let ctx = &ctx;
-
+    requests: Vec<QueuedPushrebaseRequest>,
+    hooks: &[Box<dyn PushrebaseHook>],
+) -> Vec<QueuedPushrebaseRequest> {
     let use_pessimistic = justknobs::eval(
         "scm/mononoke:per_bookmark_locking",
         None,
         Some(&repo.repo_identity().id().to_string()),
-    ) && config.pessimistic_locking_bookmarks.contains(onto_bookmark);
+    ) && flags.pessimistic_locking_bookmarks.contains(onto_bookmark);
 
     if use_pessimistic {
-        return batched_rebase_with_lock(ctx, repo, config, onto_bookmark, requests).await;
+        return batched_rebase_with_lock(ctx, repo, onto_bookmark, flags, hooks, requests).await;
     }
 
-    let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
+    let should_log = flags.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
     // Parallel all-bookmarks saturation counters: fire for EVERY bookmark's
     // land, but only in repos already tracked in ODS (monitoring_bookmark set).
-    let emit_all_bookmarks = config.monitoring_bookmark.is_some();
+    let emit_all_bookmarks = flags.monitoring_bookmark.is_some();
     let reponame = repo.repo_identity().name();
     let repo_args = (reponame.to_string(),);
     let start_critical_section = Instant::now();
@@ -617,19 +613,7 @@ pub async fn do_batched_pushrebase(
         }
     };
 
-    if requests.is_empty() {
-        return vec![];
-    }
-
-    // Run hooks' in_critical_section using the first request's hooks
-    // (all requests in the batch share equivalent hooks).
-    let hooks_result = try_join_all(requests[0].hooks.iter().map(|h| {
-        h.in_critical_section(ctx, old_bookmark_value)
-            .map_err(PushrebaseError::from)
-    }))
-    .await;
-
-    let mut commit_hooks = match hooks_result {
+    let mut commit_hooks = match run_batch_hooks(ctx, hooks, old_bookmark_value).await {
         Ok(h) => h,
         Err(e) => {
             let shared = SharedError::from(e);
@@ -648,14 +632,15 @@ pub async fn do_batched_pushrebase(
 
     let mut requests_iter = requests.into_iter();
     while let Some(mut request) = requests_iter.next() {
+        let request_ctx = pushrebase_context(&request.ctx, flags);
         let bookmark_val = old_bookmark_value.unwrap_or(request.stack.root);
         // Narrow-range scan: use conflict_check_base as ancestor so retries
         // only scan the delta since the last attempt. On first attempt,
         // conflict_check_base == root, so the full range is scanned.
         let conflict_result = match check_pushrebase_conflicts(
-            ctx,
+            &request_ctx,
             repo,
-            config,
+            flags,
             request.stack.root,
             request.conflict_check_base,
             bookmark_val,
@@ -702,9 +687,9 @@ pub async fn do_batched_pushrebase(
 
         let pushrebase_distance = match try_join(
             repo.commit_graph()
-                .changeset_linear_depth(ctx, bookmark_val),
+                .changeset_linear_depth(&request_ctx, bookmark_val),
             repo.commit_graph()
-                .changeset_linear_depth(ctx, request.stack.root),
+                .changeset_linear_depth(&request_ctx, request.stack.root),
         )
         .await
         {
@@ -725,9 +710,9 @@ pub async fn do_batched_pushrebase(
         // Rebase this stack onto the running head using the immutable root.
         let onto = running_head.unwrap_or(request.stack.root);
         let rebase_result = create_rebased_changesets(
-            ctx,
+            &request_ctx,
             repo,
-            config,
+            flags,
             &request.stack.changesets,
             request.stack.root,
             request.stack.head,
@@ -864,7 +849,8 @@ pub async fn do_batched_pushrebase(
                     .cloned()
                     .collect();
 
-                let mut sample = ctx.scuba().clone();
+                let request_ctx = pushrebase_context(&p.request.ctx, flags);
+                let mut sample = request_ctx.scuba().clone();
                 sample
                     .add("repo_name", repo.repo_identity().name())
                     .add("retry_num", p.request.retry_num.0 as i64);
@@ -957,11 +943,10 @@ async fn check_filenodes_backfilled(
 /// resolution. Carries the base/server content IDs so the cascading merge
 /// in `create_rebased_changesets` can reuse them without re-fetching fsnodes.
 ///
-/// Public for use in `PushrebaseRequest::carried_merge_file_info`.
-/// Fields are private — external callers should only initialize with
-/// `vec![]`; the pushrebase internals populate this on carry-forward.
+/// Stored across optimistic-lock retries so the next attempt can reuse
+/// resolved file contents without fetching them again.
 #[derive(Clone, Debug, PartialEq)]
-pub struct MergedFileInfo {
+struct MergedFileInfo {
     path: NonRootMPath,
     base_content_id: ContentId,
     server_content_id: ContentId,
@@ -1382,7 +1367,7 @@ fn fail_pending(pending: Vec<PendingRebase>, error: SharedError<PushrebaseError>
 
 /// Per-request result from speculative (pre-lock) conflict checking.
 struct SpeculativeRequestCheck {
-    request: PushrebaseRequest,
+    request: QueuedPushrebaseRequest,
     merge_info: Vec<MergedFileInfo>,
     pushrebase_distance: usize,
     merge_summary: MergeResolutionSummary,
@@ -1393,17 +1378,14 @@ struct SpeculativeRequestCheck {
 async fn batched_rebase_with_lock(
     ctx: &CoreContext,
     repo: &impl PushrebaseRepo,
-    config: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
-    requests: Vec<PushrebaseRequest>,
-) -> Vec<PushrebaseRequest> {
-    if requests.is_empty() {
-        return vec![];
-    }
-
-    let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
+    flags: &PushrebaseFlags,
+    hooks: &[Box<dyn PushrebaseHook>],
+    requests: Vec<QueuedPushrebaseRequest>,
+) -> Vec<QueuedPushrebaseRequest> {
+    let should_log = flags.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
     // Parallel all-bookmarks saturation counters (see do_batched_pushrebase).
-    let emit_all_bookmarks = config.monitoring_bookmark.is_some();
+    let emit_all_bookmarks = flags.monitoring_bookmark.is_some();
     let repo_args = (repo.repo_identity().name().to_string(),);
     let overall_start = Instant::now();
     let batch_size = requests.len();
@@ -1420,8 +1402,7 @@ async fn batched_rebase_with_lock(
         }
     };
 
-    let checked_requests =
-        speculative_batch_check(ctx, repo, config, speculative_bv, requests).await;
+    let checked_requests = speculative_batch_check(repo, flags, speculative_bv, requests).await;
 
     if checked_requests.is_empty() {
         return vec![];
@@ -1451,9 +1432,7 @@ async fn batched_rebase_with_lock(
     let auth_value = locked_txn.current_value();
 
     // Phase 3: Run hooks under lock.
-    let requests_slice: Vec<&PushrebaseRequest> =
-        checked_requests.iter().map(|c| &c.request).collect();
-    let mut commit_hooks = match run_batch_hooks(ctx, &requests_slice, auth_value).await {
+    let mut commit_hooks = match run_batch_hooks(ctx, hooks, auth_value).await {
         Ok(h) => h,
         Err(e) => {
             if emit_all_bookmarks {
@@ -1474,9 +1453,8 @@ async fn batched_rebase_with_lock(
 
     // Phase 4: Delta conflict checks + rebase under lock.
     let rebase_result = rebase_batch_under_lock(
-        ctx,
         repo,
-        config,
+        flags,
         speculative_bv,
         auth_value,
         checked_requests,
@@ -1553,7 +1531,7 @@ async fn batched_rebase_with_lock(
                 )
                 .log_with_msg("pessimistic_batched_pushrebase_complete", None);
 
-            dispatch_batch_results(ctx, repo, pending, log_id, &all_rebased_pairs);
+            dispatch_batch_results(repo, flags, pending, log_id, &all_rebased_pairs);
             vec![]
         }
         Err((pending, e)) => {
@@ -1577,24 +1555,24 @@ async fn batched_rebase_with_lock(
 /// Runs speculative conflict checks for each request BEFORE the lock is
 /// acquired. Requests that hit unresolvable conflicts are failed immediately.
 async fn speculative_batch_check(
-    ctx: &CoreContext,
     repo: &impl PushrebaseRepo,
-    config: &PushrebaseFlags,
+    flags: &PushrebaseFlags,
     speculative_bv: Option<ChangesetId>,
-    requests: Vec<PushrebaseRequest>,
+    requests: Vec<QueuedPushrebaseRequest>,
 ) -> Vec<SpeculativeRequestCheck> {
     let mut checked = Vec::with_capacity(requests.len());
 
     for request in requests {
+        let ctx = pushrebase_context(&request.ctx, flags);
         let bookmark_val = match speculative_bv {
             Some(v) => v,
             None => request.stack.root,
         };
 
         let conflict_result = match check_pushrebase_conflicts(
-            ctx,
+            &ctx,
             repo,
-            config,
+            flags,
             request.stack.root,
             request.conflict_check_base,
             bookmark_val,
@@ -1615,9 +1593,9 @@ async fn speculative_batch_check(
 
         let pushrebase_distance = match try_join(
             repo.commit_graph()
-                .changeset_linear_depth(ctx, bookmark_val),
+                .changeset_linear_depth(&ctx, bookmark_val),
             repo.commit_graph()
-                .changeset_linear_depth(ctx, request.stack.root),
+                .changeset_linear_depth(&ctx, request.stack.root),
         )
         .await
         {
@@ -1643,18 +1621,14 @@ async fn speculative_batch_check(
 
 async fn run_batch_hooks(
     ctx: &CoreContext,
-    requests: &[&PushrebaseRequest],
+    hooks: &[Box<dyn PushrebaseHook>],
     old_bookmark_value: Option<ChangesetId>,
 ) -> Result<Vec<Box<dyn PushrebaseCommitHook>>, PushrebaseError> {
-    let first = requests.first().ok_or_else(|| {
-        PushrebaseError::Error(anyhow!("run_batch_hooks called with no requests"))
-    })?;
-    let hooks = try_join_all(first.hooks.iter().map(|h| {
+    try_join_all(hooks.iter().map(|h| {
         h.in_critical_section(ctx, old_bookmark_value)
             .map_err(PushrebaseError::from)
     }))
-    .await?;
-    Ok(hooks)
+    .await
 }
 
 struct BatchRebaseState {
@@ -1667,14 +1641,13 @@ struct BatchRebaseState {
 /// results from outside the lock; only runs a delta check if the bookmark
 /// moved between the speculative read and lock acquisition.
 async fn rebase_batch_under_lock(
-    ctx: &CoreContext,
     repo: &impl PushrebaseRepo,
-    config: &PushrebaseFlags,
+    flags: &PushrebaseFlags,
     speculative_bv: Option<ChangesetId>,
     auth_value: Option<ChangesetId>,
     checked_requests: Vec<SpeculativeRequestCheck>,
     commit_hooks: &mut [Box<dyn PushrebaseCommitHook>],
-) -> Result<BatchRebaseState, (Vec<PushrebaseRequest>, PushrebaseError)> {
+) -> Result<BatchRebaseState, (Vec<QueuedPushrebaseRequest>, PushrebaseError)> {
     let mut pending: Vec<PendingRebase> = Vec::new();
     let mut running_head = auth_value;
     let mut all_rebased_changesets: RebasedChangesets = Default::default();
@@ -1683,6 +1656,7 @@ async fn rebase_batch_under_lock(
     let mut checked_iter = checked_requests.into_iter();
     while let Some(checked) = checked_iter.next() {
         let mut request = checked.request;
+        let ctx = pushrebase_context(&request.ctx, flags);
         let mut merge_info = checked.merge_info;
         let mut pushrebase_distance = checked.pushrebase_distance;
         let mut merge_summary = checked.merge_summary;
@@ -1701,9 +1675,9 @@ async fn rebase_batch_under_lock(
 
             if auth_cs != spec_cs {
                 let delta_result = match check_pushrebase_conflicts(
-                    ctx,
+                    &ctx,
                     repo,
-                    config,
+                    flags,
                     request.stack.root,
                     spec_cs,
                     auth_cs,
@@ -1755,9 +1729,9 @@ async fn rebase_batch_under_lock(
         let request_old_bookmark_value = running_head;
         let onto = running_head.unwrap_or(request.stack.root);
         let rebase_result = create_rebased_changesets(
-            ctx,
+            &ctx,
             repo,
-            config,
+            flags,
             &request.stack.changesets,
             request.stack.root,
             request.stack.head,
@@ -1884,8 +1858,8 @@ async fn save_and_commit_batch(
 }
 
 fn dispatch_batch_results(
-    ctx: &CoreContext,
     repo: &impl PushrebaseRepo,
+    flags: &PushrebaseFlags,
     pending: Vec<PendingRebase>,
     log_id: u64,
     all_rebased_pairs: &[PushrebaseChangesetPair],
@@ -1903,7 +1877,8 @@ fn dispatch_batch_results(
             .cloned()
             .collect();
 
-        let mut sample = ctx.scuba().clone();
+        let request_ctx = pushrebase_context(&p.request.ctx, flags);
+        let mut sample = request_ctx.scuba().clone();
         sample
             .add("repo_name", repo.repo_identity().name())
             .add("retry_num", p.request.retry_num.0 as i64);

@@ -58,6 +58,7 @@ use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::resolve_cs_id;
+use tokio::sync::oneshot;
 
 use super::*;
 
@@ -103,6 +104,23 @@ struct PushrebaseTestRepo {
 
     #[facet]
     commit_graph_writer: dyn CommitGraphWriter,
+}
+
+fn queued_pushrebase_request(
+    ctx: &CoreContext,
+    stack: PushrebaseStack,
+    response_tx: oneshot::Sender<Result<PushrebaseOutcome, SharedError<PushrebaseError>>>,
+) -> QueuedPushrebaseRequest {
+    let conflict_check_base = stack.root;
+    QueuedPushrebaseRequest {
+        ctx: ctx.clone(),
+        stack,
+        conflict_check_base,
+        carried_merge_file_info: vec![],
+        retry_num: PushrebaseRetryNum(0),
+        response_tx,
+        enqueued_at: tokio::time::Instant::now(),
+    }
 }
 
 async fn fetch_bonsai_changesets(
@@ -2623,30 +2641,13 @@ async fn batched_pushrebase_two_stacks(fb: FacebookInit) -> Result<(), Error> {
     let (tx_a, rx_a) = oneshot::channel();
     let (tx_b, rx_b) = oneshot::channel();
 
-    // Only the first request needs hooks (batched pushrebase uses hooks from requests[0])
-    let hook_a: Box<dyn PushrebaseHook> = Box::new(Hook(repo.repo_identity().id()));
-    let hook_b: Box<dyn PushrebaseHook> = Box::new(Hook(repo.repo_identity().id()));
-
-    let req_a = PushrebaseRequest {
-        conflict_check_base: stack_a.root,
-        stack: stack_a,
-        carried_merge_file_info: vec![],
-        retry_num: PushrebaseRetryNum(0),
-        hooks: vec![hook_a],
-        response_tx: tx_a,
-    };
-
-    let req_b = PushrebaseRequest {
-        conflict_check_base: stack_b.root,
-        stack: stack_b,
-        carried_merge_file_info: vec![],
-        retry_num: PushrebaseRetryNum(0),
-        hooks: vec![hook_b],
-        response_tx: tx_b,
-    };
+    let hooks = vec![Box::new(Hook(repo.repo_identity().id())) as Box<dyn PushrebaseHook>];
+    let req_a = queued_pushrebase_request(&ctx, stack_a, tx_a);
+    let req_b = queued_pushrebase_request(&ctx, stack_b, tx_b);
 
     // Call do_batched_pushrebase
-    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![req_a, req_b]).await;
+    let requeued =
+        do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![req_a, req_b], &hooks).await;
 
     // No CAS failures expected
     assert!(requeued.is_empty(), "Expected no re-queued requests");
@@ -2717,25 +2718,11 @@ async fn batched_pushrebase_one_conflict(fb: FacebookInit) -> Result<(), Error> 
     let (tx_a, rx_a) = oneshot::channel();
     let (tx_b, rx_b) = oneshot::channel();
 
-    let req_a = PushrebaseRequest {
-        conflict_check_base: stack_a.root,
-        stack: stack_a,
-        carried_merge_file_info: vec![],
-        retry_num: PushrebaseRetryNum(0),
-        hooks: vec![],
-        response_tx: tx_a,
-    };
+    let req_a = queued_pushrebase_request(&ctx, stack_a, tx_a);
+    let req_b = queued_pushrebase_request(&ctx, stack_b, tx_b);
 
-    let req_b = PushrebaseRequest {
-        conflict_check_base: stack_b.root,
-        stack: stack_b,
-        carried_merge_file_info: vec![],
-        retry_num: PushrebaseRetryNum(0),
-        hooks: vec![],
-        response_tx: tx_b,
-    };
-
-    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![req_a, req_b]).await;
+    let requeued =
+        do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![req_a, req_b], &[]).await;
     assert!(requeued.is_empty(), "Expected no re-queued requests");
 
     // Stack A should succeed
@@ -2875,6 +2862,7 @@ async fn batched_pushrebase_rebase_failure_prevents_corrupt_hook_data(
     let root = commits["A"];
     let bookmark = master_bookmark();
     let config = PushrebaseFlags::default();
+    let hooks = vec![Box::new(TrackingHook(repo.repo_identity().id())) as Box<dyn PushrebaseHook>];
 
     // Three non-conflicting stacks, each with one changeset.
     let mut requests = Vec::new();
@@ -2888,18 +2876,11 @@ async fn batched_pushrebase_rebase_failure_prevents_corrupt_hook_data(
         let stack =
             index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs]).await?;
         let (tx, rx) = oneshot::channel();
-        requests.push(PushrebaseRequest {
-            conflict_check_base: stack.root,
-            stack,
-            carried_merge_file_info: vec![],
-            retry_num: PushrebaseRetryNum(0),
-            hooks: vec![Box::new(TrackingHook(repo.repo_identity().id()))],
-            response_tx: tx,
-        });
+        requests.push(queued_pushrebase_request(&ctx, stack, tx));
         receivers.push(rx);
     }
 
-    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, requests).await;
+    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, requests, &hooks).await;
 
     // Request B (index 1) should have received the hook error.
     let result_b = receivers.remove(1).await.unwrap();
@@ -3910,16 +3891,9 @@ async fn batched_pushrebase_merge_resolution(fb: FacebookInit) -> Result<(), Err
         index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![client_bcs]).await?;
 
     let (tx, rx) = oneshot::channel();
-    let request = PushrebaseRequest {
-        conflict_check_base: stack.root,
-        stack,
-        carried_merge_file_info: vec![],
-        retry_num: PushrebaseRetryNum(0),
-        hooks: vec![],
-        response_tx: tx,
-    };
+    let request = queued_pushrebase_request(&ctx, stack, tx);
 
-    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![request]).await;
+    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![request], &[]).await;
     assert!(requeued.is_empty(), "Should not be requeued");
 
     let outcome = rx.await.unwrap().unwrap();
@@ -4029,16 +4003,12 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
 
     // Now simulate a retry: conflict_check_base = S1, carried info from attempt 1
     let (tx, rx) = oneshot::channel();
-    let request = PushrebaseRequest {
-        stack,
-        conflict_check_base: s1,
-        carried_merge_file_info: carried,
-        retry_num: PushrebaseRetryNum(1),
-        hooks: vec![],
-        response_tx: tx,
-    };
+    let mut request = queued_pushrebase_request(&ctx, stack, tx);
+    request.conflict_check_base = s1;
+    request.carried_merge_file_info = carried;
+    request.retry_num = PushrebaseRetryNum(1);
 
-    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![request]).await;
+    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![request], &[]).await;
     assert!(requeued.is_empty(), "Should not be requeued");
 
     let outcome = rx.await.unwrap().unwrap();

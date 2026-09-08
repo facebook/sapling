@@ -5,18 +5,29 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
+use bookmarks::BookmarkTransactionError;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::PushrebaseParams;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
+use pushrebase_hook::PushrebaseTransactionHook;
+use pushrebase_hook::RebasedChangesets;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
+use repo_lock::RepoLockState;
+use repo_lock::TransactionRepoLock;
+use sql_ext::Transaction;
 use synced_commit_mapping_pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 use thiserror::Error;
@@ -46,6 +57,75 @@ pub enum PushrebaseHooksError {
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),
+}
+
+pub struct RepoLockPushrebaseHook {
+    transaction_repo_lock: TransactionRepoLock,
+}
+
+impl RepoLockPushrebaseHook {
+    pub fn new(repo_id: RepositoryId) -> Box<dyn PushrebaseHook> {
+        Box::new(Self {
+            transaction_repo_lock: TransactionRepoLock::new(repo_id),
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl PushrebaseHook for RepoLockPushrebaseHook {
+    async fn in_critical_section(
+        &self,
+        _ctx: &CoreContext,
+        _old_bookmark_value: Option<ChangesetId>,
+    ) -> anyhow::Result<Box<dyn PushrebaseCommitHook>> {
+        Ok(Box::new(RepoLockCommitTransactionHook {
+            transaction_repo_lock: self.transaction_repo_lock,
+        }))
+    }
+}
+
+struct RepoLockCommitTransactionHook {
+    transaction_repo_lock: TransactionRepoLock,
+}
+
+#[async_trait::async_trait]
+impl PushrebaseCommitHook for RepoLockCommitTransactionHook {
+    fn post_rebase_changeset(
+        &mut self,
+        _bcs_old: ChangesetId,
+        _bcs_new: &mut BonsaiChangesetMut,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    async fn into_transaction_hook(
+        self: Box<Self>,
+        _ctx: &CoreContext,
+        _rebased: &RebasedChangesets,
+    ) -> anyhow::Result<Box<dyn PushrebaseTransactionHook>> {
+        Ok(self)
+    }
+}
+
+#[async_trait::async_trait]
+impl PushrebaseTransactionHook for RepoLockCommitTransactionHook {
+    async fn populate_transaction(
+        &self,
+        _ctx: &CoreContext,
+        txn: Transaction,
+    ) -> Result<Transaction, BookmarkTransactionError> {
+        let (txn, state) = self
+            .transaction_repo_lock
+            .check_repo_lock_with_transaction(txn)
+            .await
+            .context("Failed to fetch repo lock state")?;
+        if let RepoLockState::Locked(reason) = state {
+            return Err(BookmarkTransactionError::Other(anyhow::anyhow!(
+                "Repo is locked: {reason}"
+            )));
+        }
+        Ok(txn)
+    }
 }
 
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this repo when

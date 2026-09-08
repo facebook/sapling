@@ -22,8 +22,7 @@ use metaconfig_types::PHAB_DIFF_ID_PUSHVAR_KEY;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
-use pushrebase_hook::PushrebaseHook;
-use pushrebase_hooks::get_pushrebase_hooks;
+use pushrebase::RepoLockPolicy;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
@@ -37,16 +36,15 @@ use crate::BookmarkMovementError;
 use crate::Repo;
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
-use crate::repo_lock::RepoLockPushrebaseHook;
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::restrictions::check_bookmark_sync_config;
 
-/// Inputs needed to execute a pushrebase request.
+/// Authorization and request policy needed to execute a pushrebase.
 pub struct PushrebasePreparation {
     pub flags: PushrebaseFlags,
     pub kind: BookmarkKind,
-    pub hooks: Vec<Box<dyn PushrebaseHook>>,
+    pub repo_lock: RepoLockPolicy,
 }
 
 /// Returns the configured pushrebase flags with bookmark and request overrides.
@@ -127,14 +125,11 @@ pub async fn prepare_pushrebase(
         )
         .await?;
 
-    let mut hooks =
-        get_pushrebase_hooks(ctx, repo, bookmark, &repo.repo_config().pushrebase, None).await?;
-
     // For pushrebase, we check the repo lock once at the beginning of the
     // pushrebase operation, and then once more as part of the pushrebase
     // bookmark update transaction, to check if the repo got locked while
     // we were performing the pushrebase.
-    check_repo_lock(
+    let repo_lock = check_repo_lock(
         ctx,
         repo,
         kind,
@@ -144,23 +139,10 @@ pub async fn prepare_pushrebase(
     )
     .await?;
 
-    if let Some(hook) = RepoLockPushrebaseHook::new(
-        repo.repo_identity().id(),
-        kind,
-        pushvars,
-        repo.repo_permission_checker(),
-        ctx.metadata().identities(),
-        authz,
-    )
-    .await
-    {
-        hooks.push(hook);
-    }
-
     Ok(PushrebasePreparation {
         flags: pushrebase_flags(repo, bookmark, pushvars),
         kind,
-        hooks,
+        repo_lock,
     })
 }
 
