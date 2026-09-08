@@ -13,9 +13,11 @@ import {
   type AbsolutePath,
   type Hash,
   type MergeConflicts,
+  type Submodule,
   type WorktreeEntry,
 } from 'isl/src/types';
 import os from 'node:os';
+import path from 'node:path';
 import {ejeca} from 'shared/ejeca';
 import {isEjecaError} from './utils';
 
@@ -130,6 +132,62 @@ export async function findRoots(ctx: RepositoryContext): Promise<AbsolutePath[] 
     ctx.logger.error(`Failed to find repository roots starting from ${ctx.cwd}`, error);
     return undefined;
   }
+}
+
+/**
+ * The submodules `root` declares, or undefined if they could not be read.
+ */
+export async function findSubmodules(
+  ctx: RepositoryContext,
+  root: AbsolutePath,
+): Promise<Array<Submodule> | undefined> {
+  try {
+    const proc = await runCommand(ctx, ['debuggitmodules', '--json', '--repo', root]);
+    return JSON.parse(proc.stdout) as Array<Submodule>;
+  } catch (error) {
+    ctx.logger.error(`Failed to list submodules of ${root}`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Narrow the roots reported by `debugroots` to the submodule chain that contains the cwd.
+ *
+ * `debugroots` walks all the way to the system root, so it also reports repos that merely contain
+ * this checkout somewhere in their directory tree. Cloning a project inside another project's
+ * working copy does not make it a submodule of that project, and treating it as one mislabels the
+ * repo and hides the superproject's real submodules. Keep only the innermost run of roots where
+ * each root is a submodule of the one above it, leaving the most local repo first in line.
+ *
+ * `roots` is ordered furthest-to-closest, so the chain is always a suffix of it.
+ */
+export async function narrowToSubmoduleChain(
+  ctx: RepositoryContext,
+  roots: ReadonlyArray<AbsolutePath>,
+): Promise<Array<AbsolutePath>> {
+  // Every root but the innermost is a candidate parent; chains are short, so ask them all at once.
+  const submodulesByParent = await Promise.all(
+    roots.slice(0, -1).map(parent => findSubmodules(ctx, parent)),
+  );
+  let outermost = roots.length - 1;
+  while (outermost > 0) {
+    const parent = roots[outermost - 1];
+    const child = roots[outermost];
+    const submodules = submodulesByParent[outermost - 1];
+    if (
+      submodules == null ||
+      !submodules.some(m => m.path === relativeSubmodulePath(parent, child))
+    ) {
+      break;
+    }
+    outermost--;
+  }
+  return roots.slice(outermost);
+}
+
+/** Submodule paths are always posix-style, even on Windows. */
+function relativeSubmodulePath(parent: AbsolutePath, child: AbsolutePath): string {
+  return path.relative(parent, child).split(path.sep).join('/');
 }
 
 export async function findDotDir(ctx: RepositoryContext): Promise<AbsolutePath | undefined> {
