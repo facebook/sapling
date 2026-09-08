@@ -67,20 +67,24 @@ export function TopBar() {
       <span className="button-group">
         {canPush && <PullButton />}
         <CwdSelector />
-        <DownloadCommitsTooltipButton />
-        <ShelvedChangesMenu />
-        <BulkActionsMenu />
-        <BookmarksManagerMenu />
-        {Internal.FullRepoBranchButton && <Internal.FullRepoBranchButton />}
-        <WorktreeButton />
+        <span className="button-cluster">
+          <DownloadCommitsTooltipButton />
+          <ShelvedChangesMenu />
+          <BulkActionsMenu />
+          <BookmarksManagerMenu />
+          {Internal.FullRepoBranchButton && <Internal.FullRepoBranchButton />}
+          <WorktreeButton />
+        </span>
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
-        <DebugToolsButton />
-        <CommitTreeSearchFilterButton />
-        <FocusModeToggle />
-        <BugButton />
-        <SettingsGearButton />
+        <span className="button-cluster">
+          <DebugToolsButton />
+          <CommitTreeSearchFilterButton />
+          <FocusModeToggle />
+          <BugButton />
+          <SettingsGearButton />
+        </span>
         <RefreshButton />
       </span>
     </div>

@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   padding: var(--pad);
   background-color: var(--background);
   margin-left: var(--halfpad);
@@ -20,15 +20,14 @@
   z-index: 11;
 }
 
-/* The two button groups sit side by side and each wraps WITHIN its own half so
-   the bar never scrolls horizontally: the left group stays left-aligned and the
-   right group stays right-aligned, each wrapping to a new line as needed. */
+/* The two button groups wrap within their own halves until their largest button
+   cluster no longer fits, then the whole group wraps so the halves cannot overlap. */
 .top-bar .button-group {
   display: flex;
   gap: var(--pad);
   align-items: center;
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: min-content;
   flex-wrap: wrap;
 }
 
@@ -37,11 +36,18 @@
 }
 
 /* Right group: anchored to the right with flex-end, kept in natural DOM order so
-   keyboard tab order matches the visual order (row-reverse would reverse the tab
-   order — an accessibility pitfall). When it runs out of room the trailing icons
-   wrap to the next line, still flush right. */
+   keyboard tab order matches the visual order (row-reverse would reverse it). */
 .top-bar .button-group:last-child {
   justify-content: flex-end;
+}
+
+/* Keep related utility buttons together while CWD and Refresh remain independent
+   wrap points. */
+.top-bar .button-cluster {
+  display: inline-flex;
+  gap: var(--pad);
+  align-items: center;
+  flex: none;
 }
 
 .fetching-data-indicator {
