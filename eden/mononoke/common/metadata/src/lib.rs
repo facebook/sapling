@@ -298,7 +298,18 @@ impl Metadata {
                 sandcastle_job_id: self.identities.sandcastle_job_id().map(str::to_owned),
             },
             ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
-            ClientCategory::Mast => TenantInfo::Mast { client_id },
+            ClientCategory::Mast => TenantInfo::Mast {
+                client_id,
+                data_project: self
+                    .identities
+                    .identity_type_filtered_concat("DATA_PROJECT"),
+                offline_job_root_run_id: self
+                    .identities
+                    .identity_type_filtered_concat("OFFLINE_JOB_ROOT_RUN_ID"),
+                offline_job_leaf_run_id: self
+                    .identities
+                    .identity_type_filtered_concat("OFFLINE_JOB_LEAF_RUN_ID"),
+            },
             ClientCategory::FaaS => TenantInfo::FaaS {
                 client_id,
                 atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),

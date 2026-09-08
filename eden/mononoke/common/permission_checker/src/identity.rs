@@ -282,6 +282,9 @@ pub enum TenantInfo {
     },
     Mast {
         client_id: Option<String>,
+        data_project: Option<String>,
+        offline_job_root_run_id: Option<String>,
+        offline_job_leaf_run_id: Option<String>,
     },
     FaaS {
         client_id: Option<String>,
@@ -320,7 +323,7 @@ impl TenantInfo {
             | Self::DevEnv { client_id }
             | Self::CiSandcastle { client_id, .. }
             | Self::SandcastleAutomation { client_id }
-            | Self::Mast { client_id }
+            | Self::Mast { client_id, .. }
             | Self::FaaS { client_id, .. }
             | Self::Automation { client_id }
             | Self::Unknown { client_id } => client_id.as_deref(),
@@ -339,6 +342,33 @@ impl TenantInfo {
             Self::CiSandcastle {
                 sandcastle_job_id, ..
             } => sandcastle_job_id.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn data_project(&self) -> Option<&str> {
+        match self {
+            Self::Mast { data_project, .. } => data_project.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn offline_job_root_run_id(&self) -> Option<&str> {
+        match self {
+            Self::Mast {
+                offline_job_root_run_id,
+                ..
+            } => offline_job_root_run_id.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn offline_job_leaf_run_id(&self) -> Option<&str> {
+        match self {
+            Self::Mast {
+                offline_job_leaf_run_id,
+                ..
+            } => offline_job_leaf_run_id.as_deref(),
             _ => None,
         }
     }
@@ -393,6 +423,16 @@ impl TenantInfo {
                 client_id.as_deref()?,
                 sandcastle_job_id.as_deref()?,
             ),
+            Self::Mast {
+                data_project,
+                offline_job_root_run_id,
+                offline_job_leaf_run_id,
+                ..
+            } => (
+                data_project.as_deref()?,
+                offline_job_root_run_id.as_deref()?,
+                offline_job_leaf_run_id.as_deref()?,
+            ),
             _ => {
                 let client_id = self.client_id()?;
                 (client_id, client_id, client_id)
@@ -439,7 +479,12 @@ mod tests {
                 sandcastle_job_id: None,
             },
             ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
-            ClientCategory::Mast => TenantInfo::Mast { client_id },
+            ClientCategory::Mast => TenantInfo::Mast {
+                client_id,
+                data_project: None,
+                offline_job_root_run_id: None,
+                offline_job_leaf_run_id: None,
+            },
             ClientCategory::FaaS => TenantInfo::FaaS {
                 client_id,
                 atlas_env_id: None,
@@ -500,13 +545,42 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn test_mast_tenancy_path_v2() {
+        let mast = TenantInfo::Mast {
+            client_id: Some("DATA_PROJECT:genai_llm_research-agents".to_string()),
+            data_project: Some("DATA_PROJECT:genai_llm_research-agents".to_string()),
+            offline_job_root_run_id: Some("OFFLINE_JOB_ROOT_RUN_ID:mast-job-run/root".to_string()),
+            offline_job_leaf_run_id: Some(
+                "OFFLINE_JOB_LEAF_RUN_ID:mast-job-run/root.0".to_string(),
+            ),
+        };
+        assert_eq!(
+            mast.tenancy_path_v2(),
+            Some(vec![
+                "root".to_string(),
+                "mast".to_string(),
+                "DATA_PROJECT:genai_llm_research-agents".to_string(),
+                "OFFLINE_JOB_ROOT_RUN_ID:mast-job-run/root".to_string(),
+                "OFFLINE_JOB_LEAF_RUN_ID:mast-job-run/root.0".to_string(),
+            ])
+        );
+        assert_eq!(
+            tenant_info(
+                ClientCategory::Mast,
+                "DATA_PROJECT:genai_llm_research-agents"
+            )
+            .tenancy_path_v2(),
+            None
+        );
+    }
+
+    #[mononoke::test]
     fn test_tenancy_path_v2_repeats_client_id_for_all_categories() {
         for category in [
             ClientCategory::HealthCheck,
             ClientCategory::InteractiveDev,
             ClientCategory::DevEnv,
             ClientCategory::SandcastleAutomation,
-            ClientCategory::Mast,
             ClientCategory::FaaS,
             ClientCategory::Automation,
             ClientCategory::Unknown,
