@@ -140,4 +140,22 @@ pub trait ThriftEnum: Sized {
 
     /// Convert the numerical representation of a variant to the enum variant.
     fn from_inner_value(value: i32) -> Result<Self>;
+
+    /// The variant name of this enum value, if it is a known variant.
+    ///
+    /// This is a naive linear scan over `enumerate()`; enums are expected to
+    /// be small in variant count so this is cheap enough. Returns `None` for
+    /// unknown (open-enum) values, which have no static name.
+    fn variant_name(&self) -> Option<&'static str>
+    where
+        Self: 'static,
+    {
+        let inner = self.inner_value();
+        // Compare via inner values rather than `==` so this stays available
+        // to implementors without `PartialEq`.
+        Self::enumerate()
+            .iter()
+            .find(|(variant, _)| variant.inner_value() == inner)
+            .map(|(_, name)| *name)
+    }
 }
