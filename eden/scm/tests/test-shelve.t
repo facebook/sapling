@@ -1137,6 +1137,48 @@ Moving to another commit sends unshelve down its rebase path:
   ? unknown
   $ cd ..
 
+# Unknown files must also stay unknown when the unshelve conflicts and is
+# finished with 'unshelve --continue'. Same rule as above: the file is absent
+# before the unshelve, so it must come back in unknown state.
+
+  $ newclientrepo unknowncontinue
+  $ printf '1\n' > f
+  $ sl commit -Aqm base
+  $ printf '2\n' > f
+  $ echo unknown > unknown
+  $ sl shelve --unknown
+  shelved as default
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ printf '3\n' > f
+  $ sl commit -qm conflicting
+
+  $ sl unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 830882e51dc7 "shelve changes to: base"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see 'sl resolve', then 'sl unshelve --continue')
+  [1]
+  $ printf '2\n' > f
+  $ sl resolve --mark f
+  (no more unresolved files)
+  continue: sl unshelve --continue
+  $ sl unshelve --continue
+  rebasing 830882e51dc7 "shelve changes to: base"
+  unshelve of 'default' complete
+
+# FIXME: 'unknown' should be '? unknown'. unshelvecontinue never calls
+# _forgetunknownfiles, and shelvedstate persists neither the shelve_unknown
+# list nor the pre-unshelve added set that it needs. The next commit fixes
+# this and flips this assertion.
+
+  $ sl status
+  M f
+  A unknown
+  ? f.orig
+  $ cd ..
+
 # Prepare unshelve with a corrupted shelvedstate
 
   $ newclientrepo
