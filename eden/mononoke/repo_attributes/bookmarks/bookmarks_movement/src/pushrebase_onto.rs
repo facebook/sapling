@@ -42,6 +42,13 @@ use crate::repo_lock::check_repo_lock;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::restrictions::check_bookmark_sync_config;
 
+/// Inputs needed to execute a pushrebase request.
+pub struct PushrebasePreparation {
+    pub flags: PushrebaseFlags,
+    pub kind: BookmarkKind,
+    pub hooks: Vec<Box<dyn PushrebaseHook>>,
+}
+
 /// Returns the configured pushrebase flags with bookmark and request overrides.
 pub fn pushrebase_flags(
     repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
@@ -69,8 +76,8 @@ pub fn pushrebase_flags(
     flags
 }
 
-/// Authorizes and validates the changesets supplied to pushrebase.
-pub async fn validate_pushrebase_request(
+/// Authorizes and prepares a pushrebase request for direct or batched execution.
+pub async fn prepare_pushrebase(
     ctx: &CoreContext,
     authz: &AuthorizationContext,
     repo: &impl Repo,
@@ -80,7 +87,7 @@ pub async fn validate_pushrebase_request(
     pushvars: Option<&HashMap<String, Bytes>>,
     cross_repo_push_source: CrossRepoPushSource,
     bookmark_restrictions: BookmarkKindRestrictions,
-) -> Result<BookmarkKind, BookmarkMovementError> {
+) -> Result<PushrebasePreparation, BookmarkMovementError> {
     let kind = bookmark_restrictions.check_kind(repo, bookmark)?;
 
     authz
@@ -120,19 +127,7 @@ pub async fn validate_pushrebase_request(
         )
         .await?;
 
-    Ok(kind)
-}
-
-/// Builds the runtime hooks after checking the repository lock.
-pub async fn prepare_pushrebase_hooks(
-    ctx: &CoreContext,
-    authz: &AuthorizationContext,
-    repo: &impl Repo,
-    bookmark: &BookmarkKey,
-    pushvars: Option<&HashMap<String, Bytes>>,
-    kind: BookmarkKind,
-) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
-    let mut pushrebase_hooks =
+    let mut hooks =
         get_pushrebase_hooks(ctx, repo, bookmark, &repo.repo_config().pushrebase, None).await?;
 
     // For pushrebase, we check the repo lock once at the beginning of the
@@ -159,10 +154,14 @@ pub async fn prepare_pushrebase_hooks(
     )
     .await
     {
-        pushrebase_hooks.push(hook);
+        hooks.push(hook);
     }
 
-    Ok(pushrebase_hooks)
+    Ok(PushrebasePreparation {
+        flags: pushrebase_flags(repo, bookmark, pushvars),
+        kind,
+        hooks,
+    })
 }
 
 /// Performs all post-pushrebase work: scribe logging, bookmark operation

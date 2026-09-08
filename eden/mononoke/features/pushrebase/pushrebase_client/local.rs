@@ -13,9 +13,7 @@ use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::Repo;
 use bookmarks_movement::postprocess_pushrebase_outcome;
-use bookmarks_movement::prepare_pushrebase_hooks;
-use bookmarks_movement::pushrebase_flags;
-use bookmarks_movement::validate_pushrebase_request;
+use bookmarks_movement::prepare_pushrebase;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
@@ -45,7 +43,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         bookmark_restrictions: BookmarkKindRestrictions,
         log_new_public_commits_to_scribe: bool,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
-        let kind = validate_pushrebase_request(
+        let prepared = prepare_pushrebase(
             self.ctx,
             self.authz,
             self.repo,
@@ -57,9 +55,6 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
             bookmark_restrictions,
         )
         .await?;
-        let hooks =
-            prepare_pushrebase_hooks(self.ctx, self.authz, self.repo, bookmark, pushvars, kind)
-                .await?;
         let source_changesets: HashSet<_> = changesets.iter().cloned().collect();
 
         self.ctx
@@ -70,10 +65,10 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         let (stats, result) = pushrebase::do_pushrebase_bonsai(
             self.ctx,
             self.repo,
-            &pushrebase_flags(self.repo, bookmark, pushvars),
+            &prepared.flags,
             bookmark,
             &source_changesets,
-            &hooks,
+            &prepared.hooks,
         )
         .timed()
         .await;
@@ -104,7 +99,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
                     self.ctx,
                     self.repo,
                     bookmark,
-                    kind,
+                    prepared.kind,
                     outcome,
                     &source_changesets,
                     log_new_public_commits_to_scribe,
