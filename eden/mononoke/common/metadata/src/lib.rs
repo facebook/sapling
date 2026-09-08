@@ -226,6 +226,13 @@ impl Metadata {
         self.client_hostname.as_deref()
     }
 
+    pub fn client_region(&self) -> Option<&str> {
+        self.client_hostname()?
+            .split('.')
+            .nth(1)
+            .filter(|region| !region.is_empty())
+    }
+
     pub fn set_client_hostname(mut self, client_hostname: Option<String>) -> Self {
         self.client_hostname = client_hostname;
         self
@@ -291,7 +298,12 @@ impl Metadata {
         match self.identities.client_category(self.sandcastle_alias()) {
             ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
             ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
-            ClientCategory::DevEnv => TenantInfo::DevEnv { client_id },
+            ClientCategory::DevEnv => TenantInfo::DevEnv {
+                client_id,
+                on_demand_type: self.identities.on_demand_type().map(str::to_owned),
+                client_region: self.client_region().map(str::to_owned),
+                client_hostname: self.client_hostname().map(str::to_owned),
+            },
             ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
                 client_id,
                 ci_purpose: self.ci_purpose().map(str::to_owned),

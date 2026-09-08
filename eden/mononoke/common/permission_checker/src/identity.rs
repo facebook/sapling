@@ -213,6 +213,7 @@ pub trait MononokeIdentitySetExt {
     fn username(&self) -> Option<&str>;
     fn crewmate(&self) -> Option<&str>;
     fn sandcastle_job_id(&self) -> Option<&str>;
+    fn on_demand_type(&self) -> Option<&str>;
 
     fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String>;
     fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String;
@@ -271,6 +272,9 @@ pub enum TenantInfo {
     },
     DevEnv {
         client_id: Option<String>,
+        on_demand_type: Option<String>,
+        client_region: Option<String>,
+        client_hostname: Option<String>,
     },
     CiSandcastle {
         client_id: Option<String>,
@@ -320,7 +324,7 @@ impl TenantInfo {
         match self {
             Self::HealthCheck { client_id }
             | Self::InteractiveDev { client_id }
-            | Self::DevEnv { client_id }
+            | Self::DevEnv { client_id, .. }
             | Self::CiSandcastle { client_id, .. }
             | Self::SandcastleAutomation { client_id }
             | Self::Mast { client_id, .. }
@@ -342,6 +346,29 @@ impl TenantInfo {
             Self::CiSandcastle {
                 sandcastle_job_id, ..
             } => sandcastle_job_id.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn on_demand_type(&self) -> Option<&str> {
+        match self {
+            Self::DevEnv { on_demand_type, .. } => on_demand_type.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn client_region(&self) -> Option<&str> {
+        match self {
+            Self::DevEnv { client_region, .. } => client_region.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn client_hostname(&self) -> Option<&str> {
+        match self {
+            Self::DevEnv {
+                client_hostname, ..
+            } => client_hostname.as_deref(),
             _ => None,
         }
     }
@@ -423,6 +450,16 @@ impl TenantInfo {
                 client_id.as_deref()?,
                 sandcastle_job_id.as_deref()?,
             ),
+            Self::DevEnv {
+                on_demand_type,
+                client_region,
+                client_hostname,
+                ..
+            } => (
+                on_demand_type.as_deref()?,
+                client_region.as_deref()?,
+                client_hostname.as_deref()?,
+            ),
             Self::Mast {
                 data_project,
                 offline_job_root_run_id,
@@ -472,7 +509,12 @@ mod tests {
         match category {
             ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
             ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
-            ClientCategory::DevEnv => TenantInfo::DevEnv { client_id },
+            ClientCategory::DevEnv => TenantInfo::DevEnv {
+                client_id,
+                on_demand_type: None,
+                client_region: None,
+                client_hostname: None,
+            },
             ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
                 client_id,
                 ci_purpose: None,
@@ -545,6 +587,31 @@ mod tests {
     }
 
     #[mononoke::test]
+    fn test_dev_env_tenancy_path_v2() {
+        let dev_env = TenantInfo::DevEnv {
+            client_id: Some("SERVICE_IDENTITY:ondemand_worker".to_string()),
+            on_demand_type: Some("www_fbsource_configerator".to_string()),
+            client_region: Some("lla3".to_string()),
+            client_hostname: Some("od1689.lla3.facebook.com".to_string()),
+        };
+        assert_eq!(
+            dev_env.tenancy_path_v2(),
+            Some(vec![
+                "root".to_string(),
+                "dev_env".to_string(),
+                "www_fbsource_configerator".to_string(),
+                "lla3".to_string(),
+                "od1689.lla3.facebook.com".to_string(),
+            ])
+        );
+        assert_eq!(
+            tenant_info(ClientCategory::DevEnv, "SERVICE_IDENTITY:ondemand_worker")
+                .tenancy_path_v2(),
+            None
+        );
+    }
+
+    #[mononoke::test]
     fn test_mast_tenancy_path_v2() {
         let mast = TenantInfo::Mast {
             client_id: Some("DATA_PROJECT:genai_llm_research-agents".to_string()),
@@ -579,7 +646,6 @@ mod tests {
         for category in [
             ClientCategory::HealthCheck,
             ClientCategory::InteractiveDev,
-            ClientCategory::DevEnv,
             ClientCategory::SandcastleAutomation,
             ClientCategory::FaaS,
             ClientCategory::Automation,
