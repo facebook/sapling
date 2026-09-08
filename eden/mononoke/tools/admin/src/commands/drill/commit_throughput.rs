@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Context;
@@ -48,6 +49,7 @@ use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use pushrebase_client::BatchedPushrebaseClient;
 // land_service is FB-internal only; keep it out of OSS builds.
 #[cfg(fbcode_build)]
 use pushrebase_client::LandServicePushrebaseClient;
@@ -67,6 +69,7 @@ use super::Repo;
 enum LandBackend {
     LandService,
     Local,
+    LocalBatched,
 }
 
 /// Land many file-disjoint stacks in parallel onto a single test bookmark and measure commit throughput
@@ -103,7 +106,7 @@ pub struct CommitThroughputArgs {
     #[clap(long, default_value_t = 0)]
     concurrency: usize,
 
-    /// Where the land happens: the prod land_service, or in-process pushrebase.
+    /// Where the land happens: land_service, local pushrebase, or local batching.
     #[clap(long, value_enum, default_value_t = LandBackend::LandService)]
     land_backend: LandBackend,
 
@@ -449,6 +452,13 @@ pub async fn commit_throughput(
             repo,
             hook_manager: repo.hook_manager(),
         }),
+        LandBackend::LocalBatched => {
+            let repo = Arc::new(repo.clone());
+            Box::new(BatchedPushrebaseClient::new(
+                ctx.clone_and_reset(),
+                move || Some(repo.clone()),
+            ))
+        }
     };
 
     println!("Landing {} stacks in parallel...", built.len());
