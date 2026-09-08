@@ -93,6 +93,7 @@ pub use generation::FIRST_GENERATION;
 pub use generation::Generation;
 pub use globalrev::Globalrev;
 pub use hash::MononokeDigest;
+pub use path::CaseConflictTrie;
 pub use path::MPath;
 pub use path::MPathHash;
 pub use path::NonRootMPath;

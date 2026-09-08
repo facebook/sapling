@@ -15,10 +15,9 @@ use context::CoreContext;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
 use mononoke_macros::mononoke;
+use mononoke_types::CaseConflictTrie;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
-use mononoke_types::check_case_conflicts;
-use mononoke_types::find_path_conflicts;
+use mononoke_types::PrefixTrie;
 use pushrebase_hooks::RepoLockPushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
 use shared_error::std::SharedError;
@@ -123,7 +122,7 @@ fn partition_requests(
     retry_batches: Vec<PushrebaseRequestBatch>,
     requests: Vec<PushrebaseRequest>,
 ) -> (Vec<PushrebaseRequestBatch>, usize) {
-    let mut batches: Vec<(Vec<MPath>, PushrebaseRequestBatch)> = vec![];
+    let mut batches = vec![];
     let mut conflicts = 0;
     let request_batches = requests.into_iter().map(|request| {
         let conflict_check_base = request.stack.root;
@@ -146,43 +145,63 @@ fn partition_requests(
             }],
         }
     });
+    let mut request_batches = retry_batches.into_iter().chain(request_batches).peekable();
 
-    for mut request_batch in retry_batches.into_iter().chain(request_batches) {
-        let changed_files = request_batch
+    while let Some(mut batch) = request_batches.next() {
+        let mut changed_files = batch
             .requests
             .iter()
             .flat_map(|request| request.stack.changed_files.iter().cloned())
-            .collect::<Vec<_>>();
-        if let Some((batch_changed_files, batch)) = batches.last_mut()
-            && batch.flags == request_batch.flags
-            && batch.repo_lock == request_batch.repo_lock
+            .collect::<PrefixTrie>();
         {
-            if find_path_conflicts(batch_changed_files.clone(), changed_files.clone()).is_empty()
-                && (!batch.flags.casefolding_check
-                    || check_case_conflicts(
+            let mut case_conflicts =
+                CaseConflictTrie::new(&batch.flags.casefolding_check_excluded_paths);
+            let has_case_conflict = batch.flags.casefolding_check
+                && case_conflicts
+                    .check_conflicts(
                         batch
                             .requests
                             .iter()
-                            .chain(&request_batch.requests)
                             .flat_map(|request| request.stack.changesets.iter()),
-                        &batch.flags.casefolding_check_excluded_paths,
                     )
-                    .is_none())
-            {
-                batch_changed_files.extend(changed_files);
-                batch.requests.append(&mut request_batch.requests);
-                continue;
-            }
-            conflicts += 1;
-        }
+                    .is_some();
 
-        batches.push((changed_files, request_batch));
+            while let Some(request_batch) = request_batches.peek_mut()
+                && batch.flags == request_batch.flags
+                && batch.repo_lock == request_batch.repo_lock
+            {
+                let request_changed_files = request_batch
+                    .requests
+                    .iter()
+                    .flat_map(|request| request.stack.changed_files.iter().cloned())
+                    .collect::<Vec<_>>();
+                if request_changed_files
+                    .iter()
+                    .any(|path| changed_files.has_path_conflict(path))
+                    || (batch.flags.casefolding_check
+                        && (has_case_conflict
+                            || case_conflicts
+                                .check_conflicts(
+                                    request_batch
+                                        .requests
+                                        .iter()
+                                        .flat_map(|request| request.stack.changesets.iter()),
+                                )
+                                .is_some()))
+                {
+                    conflicts += 1;
+                    break;
+                }
+
+                changed_files.extend(request_changed_files);
+                batch.requests.append(&mut request_batch.requests);
+                let _ = request_batches.next();
+            }
+        }
+        batches.push(batch);
     }
 
-    (
-        batches.into_iter().map(|(_, batch)| batch).collect(),
-        conflicts,
-    )
+    (batches, conflicts)
 }
 
 async fn run_queue<R, F>(

@@ -1297,6 +1297,23 @@ impl PrefixTrie {
         }
     }
 
+    /// Returns true if the given path is equal to, an ancestor of, or a
+    /// descendant of a path in the trie.
+    pub fn has_path_conflict<'p, P: IntoIterator<Item = &'p MPathElement>>(&self, path: P) -> bool {
+        match self {
+            PrefixTrie::Included => true,
+            PrefixTrie::Children(children) => {
+                let mut iter = path.into_iter();
+                match iter.next() {
+                    None => !children.is_empty(),
+                    Some(element) => children
+                        .get(element)
+                        .is_some_and(|child| child.has_path_conflict(iter)),
+                }
+            }
+        }
+    }
+
     /// Returns true if this trie contains all paths.
     pub fn contains_everything(&self) -> bool {
         self == &PrefixTrie::Included
@@ -1358,12 +1375,26 @@ pub struct CaseConflictTrie<'a> {
 }
 
 impl<'a> CaseConflictTrie<'a> {
-    fn new(exclusions: &'a PrefixTrie) -> CaseConflictTrie<'a> {
-        CaseConflictTrie {
+    pub fn new(exclusions: &'a PrefixTrie) -> Self {
+        Self {
             children: Default::default(),
             lowercase_to_original: Default::default(),
             exclusions,
         }
+    }
+
+    pub fn check_conflicts<P, I>(&mut self, iter: I) -> Option<(NonRootMPath, NonRootMPath)>
+    where
+        P: CaseConflictTrieUpdate,
+        I: IntoIterator<Item = P>,
+    {
+        for update in iter {
+            let conflict = update.apply(self);
+            if conflict.is_some() {
+                return conflict;
+            }
+        }
+        None
     }
 
     fn is_empty(&self) -> bool {
@@ -1521,14 +1552,7 @@ where
     P: CaseConflictTrieUpdate,
     I: IntoIterator<Item = P>,
 {
-    let mut trie = CaseConflictTrie::new(exclusions);
-    for update in iter {
-        let conflict = update.apply(&mut trie);
-        if conflict.is_some() {
-            return conflict;
-        }
-    }
-    None
+    CaseConflictTrie::new(exclusions).check_conflicts(iter)
 }
 
 #[cfg(test)]
@@ -1920,6 +1944,11 @@ mod test {
         assert!(!prefixes.contains_prefix(&path("g/i")));
         assert!(!prefixes.contains_prefix(&path("g/i/h")));
         assert!(!prefixes.contains_everything());
+
+        assert!(prefixes.has_path_conflict(&path("a/b/c")));
+        assert!(prefixes.has_path_conflict(&path("a/b/c/d")));
+        assert!(prefixes.has_path_conflict(&path("a/b")));
+        assert!(!prefixes.has_path_conflict(&path("a/c")));
 
         // Adding the empty path makes the trie contain everything
         assert!(prefixes.add(&None));
