@@ -34,6 +34,29 @@ Follow ordinary directory copies, including from a nested subdirectory:
   $ sl -q debugpathcreation foo2/subdir
   75ae72b66962696c45e82d2a43e69188d9930209
 
+JSON output captures the origin and the trace normally printed to stderr:
+
+  $ sl debugpathcreation -Tjson foo2
+  [tracing backward: f20c904112ff copied 'foo1' to 'foo2'
+  
+   {
+    "origin": "75ae72b66962696c45e82d2a43e69188d9930209",
+    "path": "foo2",
+    "trace": [{"commit": "*", "destination": "foo2", "source": "foo1", "subtree": false}] (glob)
+   }
+  ]
+
+A path that is its own origin has an empty trace:
+
+  $ sl debugpathcreation -Tjson foo1
+  [
+   {
+    "origin": "75ae72b66962696c45e82d2a43e69188d9930209",
+    "path": "foo1",
+    "trace": []
+   }
+  ]
+
 Follow chained directory renames:
 
   $ sl rename -q foo2 foo3
@@ -110,6 +133,21 @@ Warn but continue when source and destination sizes differ by more than 10%:
   $ sl -q debugpathcreation weak-size
   warning: inferred directory copy from 'foo3' to 'weak-size' despite dissimilar file counts (10 source, 8 destination)
   75ae72b66962696c45e82d2a43e69188d9930209
+
+JSON output captures the warning in the trace entry instead of writing to stderr:
+
+  $ sl debugpathcreation -Tjson weak-size
+  [warning: inferred directory copy from 'foo3' to 'weak-size' despite dissimilar file counts (10 source, 8 destination)
+  tracing backward: 396a951855ff copied 'foo3' to 'weak-size'
+  tracing backward: c964940e9a7a copied 'foo2' to 'foo3'
+  tracing backward: f20c904112ff copied 'foo1' to 'foo2'
+  
+   {
+    "origin": "75ae72b66962696c45e82d2a43e69188d9930209",
+    "path": "weak-size",
+    "trace": [{"commit": "*", "destination": "weak-size", "source": "foo3", "subtree": false, "warning": "warning: inferred directory copy from 'foo3' to 'weak-size' despite dissimilar file counts (10 source, 8 destination)"}, * (glob)
+   }
+  ]
 
 Follow explicit subtree-copy metadata:
 
