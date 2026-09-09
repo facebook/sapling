@@ -39,7 +39,7 @@ gotham = "0.8.1"
 gotham_derive = "0.8.1"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 http = "1.5.0"
-http-body-util = "0.1.4"
+http-body-util = "0.1.5"
 import_direct = { version = "0.1.0", path = "../../../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../../../git/import_tools" }
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
