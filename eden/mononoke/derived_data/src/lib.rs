@@ -68,6 +68,9 @@ use repo_identity::RepoIdentityRef;
 
 pub mod batch;
 
+#[cfg(test)]
+mod tests;
+
 pub use derived_data_manager::DerivationError;
 pub use derived_data_manager::SharedDerivationError;
 pub use metaconfig_types::DerivedDataTypesConfig;

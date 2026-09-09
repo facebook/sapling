@@ -113,6 +113,39 @@ impl BonsaiDerivable for RootHistoryManifestDirectoryId {
             .await
     }
 
+    async fn store_mapping_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        derived: Vec<(ChangesetId, Self)>,
+    ) -> Result<()> {
+        if derived.is_empty() {
+            return Ok(());
+        }
+
+        let entries = derived
+            .into_iter()
+            .map(|(csid, derived)| {
+                (
+                    csid,
+                    HISTORY_MANIFEST_VERSION,
+                    derived.0.blake2().as_ref().to_vec(),
+                )
+            })
+            .collect();
+        derivation_ctx
+            .commit_derived_data_mapping()?
+            .store_mapping_batch(
+                ctx,
+                derivation_ctx.repo_id(),
+                entries,
+                Self::VARIANT,
+                HISTORY_MANIFEST_VERSION,
+                derivation_ctx.xdb_shard_id(Self::VARIANT)?,
+            )
+            .await?;
+        Ok(())
+    }
+
     async fn fetch(
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
