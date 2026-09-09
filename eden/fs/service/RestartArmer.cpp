@@ -295,10 +295,6 @@ void RestartArmer::arm() {
   const auto sentinel =
       stateDir_.getRestartSentinelPath(::getpid(), folly::Random::rand64());
   args.sentinelPath = sentinel.asString();
-  // Never 0: that value is reserved for the absent nonce a sentinel from an
-  // older daemon reads as. Bounded to 63 bits so it survives folly::dynamic's
-  // signed integer as a positive number.
-  args.sentinelNonce = folly::Random::rand64(1, uint64_t{1} << 63);
   {
     auto sentinelPath = sentinelPath_.wlock();
     // Created before the request, so the privhelper never sees a missing path

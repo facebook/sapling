@@ -326,14 +326,10 @@ static_assert(PrivHelperConn::REQ_SET_USE_EDENFS == 10);
 // without sleeping.
 constexpr uint64_t kFakeNow = 1'700'000'000ull;
 
-// Distinct bytes above 2^32, so a truncated width or a swapped field fails.
-constexpr uint64_t kSentinelNonce = 0x0123456789abcdefull;
-
 EdenFsRestartArgs makeRestartArgs(std::string sentinelPath) {
   EdenFsRestartArgs args;
   args.enabled = true;
   args.sentinelPath = std::move(sentinelPath);
-  args.sentinelNonce = kSentinelNonce;
   args.restartCount = 1;
   args.firstRestartEpochSec = kFakeNow;
   args.maxRestarts = 3;
@@ -390,9 +386,9 @@ void appendLengthPrefixedString(
 // trailing counters.
 constexpr size_t kBytesAfterRelaunchCommand =
     3 * sizeof(uint32_t) + sizeof(uint64_t);
-// Rejecting the sentinel path leaves the nonce and the two counts as well.
+// Rejecting the sentinel path leaves the argv and env counts as well.
 constexpr size_t kBytesAfterSentinelPath =
-    sizeof(uint64_t) + 2 * sizeof(uint32_t) + kBytesAfterRelaunchCommand;
+    2 * sizeof(uint32_t) + kBytesAfterRelaunchCommand;
 
 /**
  * An enabled restart-args body whose sentinel path declares
@@ -409,7 +405,6 @@ folly::IOBuf makeRestartArgsBody(
   folly::io::Appender appender{&body, kBodySize};
   appender.write<uint8_t>(1);
   appender.write<uint32_t>(sentinelPathLength);
-  appender.write<uint64_t>(kSentinelNonce);
   writeRelaunchCommand(appender);
   appender.write<uint32_t>(0);
   appender.write<uint64_t>(0);

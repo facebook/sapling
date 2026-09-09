@@ -764,7 +764,6 @@ UnixSocket::Message PrivHelperConn::serializeSetRestartArgsRequest(
 
   serializeBool(appender, args.enabled);
   serializeString(appender, args.sentinelPath);
-  serializeUint64(appender, args.sentinelNonce);
   serializeUint32(appender, args.relaunchArgv.size());
   for (const auto& arg : args.relaunchArgv) {
     serializeString(appender, arg);
@@ -788,7 +787,6 @@ void PrivHelperConn::parseSetRestartArgsRequest(
   size_t pathBudget = kMaxSentinelPathBytes;
   args.sentinelPath =
       deserializeBoundedString(cursor, "sentinel path", pathBudget);
-  args.sentinelNonce = deserializeUint64(cursor);
   size_t relaunchBudget = kMaxRelaunchBytes;
   args.relaunchArgv = deserializeRelaunchArgv(cursor, relaunchBudget);
   args.relaunchEnv = deserializeRelaunchEnv(cursor, relaunchBudget);

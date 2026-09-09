@@ -103,18 +103,14 @@ uint64_t readEdenFsRestartCounterEnv(folly::StringPiece name);
  * Everything the privhelper needs in order to relaunch edenfs after a crash.
  *
  * The privhelper reads no configuration of its own: edenfs delivers the backoff
- * policy here and the command to relaunch with in the sentinel below.
+ * policy and the command to relaunch with here.
  */
 struct EdenFsRestartArgs {
   bool enabled = false;
-  // The daemon's restart sentinel. Its existence is the "still armed" flag:
-  // edenfs removes it when it shuts down on purpose. Its contents are the
-  // relaunch command, as {"argv": [...], "env": {...}, "nonce": N} JSON.
+  // The daemon's restart sentinel: an empty file whose existence is the "still
+  // armed" flag, and whose name carries the pid and a per-arm token that
+  // identify the generation that created it. A clean shutdown removes it.
   std::string sentinelPath;
-  // Identifies the generation that wrote the sentinel. The path is fixed per
-  // state dir, so without this a privhelper that outlives its daemon can read a
-  // sentinel a newer generation has since overwritten.
-  uint64_t sentinelNonce = 0;
   // The command line to relaunch edenfs with, already stripped of sudo,
   // `--takeover` and inherited file descriptor arguments.
   std::vector<std::string> relaunchArgv;

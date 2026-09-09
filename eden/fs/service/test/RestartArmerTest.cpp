@@ -433,7 +433,6 @@ TEST_F(RestartArmerTest, armingSendsTheRequestAndMarksItselfArmed) {
   const auto& args = privHelper_.restartArgs.front();
   EXPECT_TRUE(args.enabled);
   EXPECT_TRUE(exists(armedSentinelPath()));
-  EXPECT_NE(0, args.sentinelNonce);
   EXPECT_TRUE(armer.armed());
 }
 
