@@ -7,6 +7,7 @@
 
 #include "eden/fs/service/EdenStateDir.h"
 
+#include <fmt/core.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
@@ -28,6 +29,10 @@ constexpr PathComponentPiece kDaemonArgsName{".edenfs_start_args"_pc};
 // down on purpose. One fixed name per state dir, so a daemon that starts while
 // a previous generation's privhelper is still alive overwrites its sentinel.
 constexpr PathComponentPiece kRestartSentinelName{".edenfs_restart_armed"_pc};
+// One restart sentinel per daemon generation: <prefix><pid>.<token>. The
+// trailing separator keeps a prefix scan from also matching
+// kRestartSentinelName, of which these names are extensions.
+constexpr std::string_view kRestartSentinelNamePrefix{".edenfs_restart_armed."};
 constexpr StringPiece kHeartbeatFileNamePrefix{"heartbeat_"};
 } // namespace
 
@@ -160,6 +165,19 @@ AbsolutePath EdenStateDir::getDaemonArgsPath() const {
 
 AbsolutePath EdenStateDir::getRestartSentinelPath() const {
   return path_ + kRestartSentinelName;
+}
+
+AbsolutePath EdenStateDir::getRestartSentinelPath(pid_t pid, uint64_t token)
+    const {
+  // PathComponent validates its input; the literal prefix, a decimal pid and
+  // hex digits can yield no directory separator, and never "", "." or "..".
+  const auto name =
+      fmt::format("{}{}.{:016x}", kRestartSentinelNamePrefix, pid, token);
+  return path_ + PathComponent(name);
+}
+
+std::string_view EdenStateDir::getRestartSentinelNamePrefix() const {
+  return kRestartSentinelNamePrefix;
 }
 
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {

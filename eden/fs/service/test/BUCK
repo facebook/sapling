@@ -149,6 +149,19 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "eden_state_dir_test",
+    srcs = ["EdenStateDirTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/service:server",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_unittest(
     name = "restart_armer_test",
     srcs = ["RestartArmerTest.cpp"],
     network_access = network_access_utils.none(),
