@@ -16,6 +16,8 @@ use edenfs_commands::is_command_enabled_in_rust;
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send_edenfs_cli_usage;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::telemetry_disabled;
 #[cfg(windows)]
 use edenfs_utils::execute_par;
 #[cfg(windows)]
@@ -104,6 +106,13 @@ fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
     // import modules. So, let's strip the PYTHONHOME and PYTHONPATH variables.
     cmd.env_remove("PYTHONHOME");
     cmd.env_remove("PYTHONPATH");
+
+    // Python cannot tell a dev build from a release one, so hand it our
+    // decision instead of letting it log where we would not.
+    #[cfg(fbcode_build)]
+    if telemetry_disabled() {
+        cmd.env("EDENFS_NO_TELEMETRY", "1");
+    }
 
     tracing::debug!("Falling back to {:?}", cmd);
 

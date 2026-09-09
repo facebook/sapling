@@ -357,6 +357,23 @@ class NullTelemetryLogger(TelemetryLogger):
         return NullTelemetrySample()
 
 
+def telemetry_disabled_by_env() -> bool:
+    """Return whether environment variables disable Scuba telemetry."""
+    # Test harnesses must not be able to opt in to production telemetry.
+    if "EDENFS_UNITTEST" in os.environ or "EDENFS_INTEGRATION_TEST" in os.environ:
+        return True
+
+    # edenfsctl sets this after applying the Rust build-mode policy.
+    if "EDENFS_NO_TELEMETRY" in os.environ:
+        return True
+
+    # Developers set this when testing Scuba logging from a dev build.
+    if "EDENFS_SCUBA_LOG_FROM_DEV" in os.environ:
+        return False
+
+    return False
+
+
 def get_session_id() -> int:
     global _session_id
     sid = _session_id

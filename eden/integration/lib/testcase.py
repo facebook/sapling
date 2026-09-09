@@ -109,7 +109,7 @@ class EdenTestCase(EdenTestCaseBase):
 
         # Set an environment variable to prevent telemetry logging
         # during integration tests
-        self.setenv("INTEGRATION_TEST", "1")
+        self.setenv("EDENFS_INTEGRATION_TEST", "1")
 
         # Set this environment variable to enable Sl tracing during the test
         # self.setenv("SL_LOG", "trace")
@@ -329,7 +329,7 @@ class EdenTestCase(EdenTestCaseBase):
                 'dir-prealloc-pool-size = "64"',
             ],
             # Keep test daemons out of the production Scuba tables regardless
-            # of build mode. INTEGRATION_TEST only reaches the CLIs.
+            # of build mode. EDENFS_INTEGRATION_TEST only reaches the CLIs.
             "telemetry": ['enable-scribe-logging = "false"'],
         }
 

@@ -8,10 +8,44 @@
 
 import json
 import math
+import os
 import typing
 import unittest
+from unittest.mock import patch
 
-from ..telemetry import ExternalTelemetryLogger, JsonTelemetrySample
+from ..telemetry import (
+    ExternalTelemetryLogger,
+    JsonTelemetrySample,
+    telemetry_disabled_by_env,
+)
+
+
+class TelemetryDisabledByEnvTest(unittest.TestCase):
+    def test_clean_environment_logs(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(telemetry_disabled_by_env())
+
+    def test_kill_switch_overrides_dev_opt_in(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"EDENFS_NO_TELEMETRY": "1", "EDENFS_SCUBA_LOG_FROM_DEV": "1"},
+            clear=True,
+        ):
+            self.assertTrue(telemetry_disabled_by_env())
+
+    def test_dev_opt_in_logs(self) -> None:
+        with patch.dict(os.environ, {"EDENFS_SCUBA_LOG_FROM_DEV": "1"}, clear=True):
+            self.assertFalse(telemetry_disabled_by_env())
+
+    def test_test_markers_override_dev_opt_in(self) -> None:
+        for marker in ("EDENFS_UNITTEST", "EDENFS_INTEGRATION_TEST"):
+            with self.subTest(marker=marker):
+                with patch.dict(
+                    os.environ,
+                    {marker: "1", "EDENFS_SCUBA_LOG_FROM_DEV": "1"},
+                    clear=True,
+                ):
+                    self.assertTrue(telemetry_disabled_by_env())
 
 
 class TelemetryTest(unittest.TestCase):

@@ -742,7 +742,9 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 off_mount_repo_dir=instance.get_config_bool(
                     "clone.off-mount-repo-dir",
                     # Enable by default in tests.
-                    any(v in os.environ for v in ("INTEGRATION_TEST", "TESTTMP")),
+                    any(
+                        v in os.environ for v in ("EDENFS_INTEGRATION_TEST", "TESTTMP")
+                    ),
                 ),
             )
         except util.RepoError as ex:

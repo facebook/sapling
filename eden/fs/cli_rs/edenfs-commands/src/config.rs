@@ -8,6 +8,7 @@
 //! edenfsctl config
 
 use std::path::PathBuf;
+use std::process::Command;
 
 use anyhow::Result;
 #[cfg(windows)]
@@ -124,25 +125,39 @@ pub struct ReloadConfigCmd {
     verbose: bool,
 }
 
+fn edenfs_config_manager_command(telemetry_disabled: bool) -> Command {
+    #[cfg(not(target_os = "windows"))]
+    let cmd = {
+        let mut cmd = Command::new("sudo");
+        if telemetry_disabled {
+            // A command-line assignment survives sudo's environment filtering.
+            cmd.arg("EDENFS_NO_TELEMETRY=1");
+        }
+        cmd.arg("/usr/local/libexec/eden/edenfs_config_manager");
+        cmd
+    };
+
+    #[cfg(target_os = "windows")]
+    let cmd = {
+        let mut cmd = Command::new(r"C:\Windows\py.exe");
+        cmd.arg(r"c:\tools\eden\libexec\edenfs_config_manager.par");
+        if telemetry_disabled {
+            cmd.env("EDENFS_NO_TELEMETRY", "1");
+        }
+        cmd
+    };
+
+    cmd
+}
+
 #[async_trait]
 impl crate::Subcommand for ReloadConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
-        #[cfg(not(target_os = "windows"))]
-        let mut cmd = {
-            let mut cmd_builder = std::process::Command::new("sudo");
-            let edenfs_config_manager_cmd = "/usr/local/libexec/eden/edenfs_config_manager";
-            cmd_builder.arg(edenfs_config_manager_cmd);
-            cmd_builder
-        };
-
-        #[cfg(target_os = "windows")]
-        let mut cmd = {
-            let py_exe = r"C:\Windows\py.exe";
-            let mut cmd_builder = std::process::Command::new(py_exe);
-            let edenfs_config_manager_cmd = r"c:\tools\eden\libexec\edenfs_config_manager.par";
-            cmd_builder.arg(edenfs_config_manager_cmd);
-            cmd_builder
-        };
+        #[cfg(fbcode_build)]
+        let telemetry_disabled = edenfs_telemetry::telemetry_disabled();
+        #[cfg(not(fbcode_build))]
+        let telemetry_disabled = false;
+        let mut cmd = edenfs_config_manager_command(telemetry_disabled);
 
         if self.dry_run {
             cmd.arg("--dry-run");
@@ -261,5 +276,53 @@ impl crate::Subcommand for FsConfigCmd {
         }
 
         Ok(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+
+    use super::*;
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn config_manager_command_propagates_telemetry_kill_switch_through_sudo() {
+        let disabled = edenfs_config_manager_command(true);
+        assert_eq!(disabled.get_program(), OsStr::new("sudo"));
+        assert_eq!(
+            disabled.get_args().collect::<Vec<_>>(),
+            [
+                OsStr::new("EDENFS_NO_TELEMETRY=1"),
+                OsStr::new("/usr/local/libexec/eden/edenfs_config_manager"),
+            ]
+        );
+
+        let enabled = edenfs_config_manager_command(false);
+        assert_eq!(
+            enabled.get_args().collect::<Vec<_>>(),
+            [OsStr::new("/usr/local/libexec/eden/edenfs_config_manager")]
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn config_manager_command_propagates_telemetry_kill_switch() {
+        let disabled = edenfs_config_manager_command(true);
+        assert_eq!(disabled.get_program(), OsStr::new(r"C:\Windows\py.exe"));
+        assert_eq!(
+            disabled
+                .get_envs()
+                .find(|(name, _)| *name == OsStr::new("EDENFS_NO_TELEMETRY")),
+            Some((OsStr::new("EDENFS_NO_TELEMETRY"), Some(OsStr::new("1"))))
+        );
+
+        let enabled = edenfs_config_manager_command(false);
+        assert_eq!(
+            enabled
+                .get_envs()
+                .find(|(name, _)| *name == OsStr::new("EDENFS_NO_TELEMETRY")),
+            None
+        );
     }
 }
