@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 
 #include <fb303/ThreadCachedServiceData.h>
@@ -153,6 +154,14 @@ DEFINE_dynamic_timeseries(nfs_blocked_uid, "nfs.blocked.uid.{}", fb303::SUM);
 DEFINE_dynamic_timeseries(nfs_access_gid, "nfs.access.gid.{}", fb303::SUM);
 DEFINE_dynamic_timeseries(nfs_policed_gid, "nfs.policed.gid.{}", fb303::SUM);
 DEFINE_dynamic_timeseries(nfs_blocked_gid, "nfs.blocked.gid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(
+    nfs_access_uid_proc,
+    "nfs.access.uid.{}.{}",
+    fb303::SUM);
+DEFINE_dynamic_timeseries(
+    nfs_access_gid_proc,
+    "nfs.access.gid.{}.{}",
+    fb303::SUM);
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
@@ -2527,12 +2536,21 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   const auto count = config->nfsAccessPolicyRateLimitCount.getValue();
   const auto windowSeconds =
       config->nfsAccessPolicyRateLimitWindowSeconds.getValue();
+  // Per-procedure keys use the lowercase handler name; a procedure number
+  // outside the table has none and is counted per id only.
+  const std::string* procName = callBody.proc < kNfs3dHandlers.size()
+      ? &lowerProcNames()[callBody.proc]
+      : nullptr;
   bool block = false;
 
   const auto& uidPolicy = config->nfsUidAccessPolicy.getValue();
   if (auto entry = uidPolicy.find(authSysCreds->uid);
       entry != uidPolicy.end()) {
     STATS_nfs_access_uid.add(1, authSysCreds->uid);
+    if (procName) {
+      STATS_nfs_access_uid_proc.add(
+          1, authSysCreds->uid, std::string_view{*procName});
+    }
     if (isPoliced()) {
       STATS_nfs_policed_uid.add(1, authSysCreds->uid);
       if (accessModeRejects(
@@ -2551,6 +2569,9 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
       continue;
     }
     STATS_nfs_access_gid.add(1, gid);
+    if (procName) {
+      STATS_nfs_access_gid_proc.add(1, gid, std::string_view{*procName});
+    }
     if (!isPoliced()) {
       continue;
     }

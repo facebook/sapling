@@ -1275,12 +1275,13 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Per-uid access policy, "uid:mode", e.g. ["0:log", "89:block"]. A match
-   * bumps nfs.access.uid.<uid>; "block" also rejects requests for procedures
-   * in nfs:access-policy-procedures, bumping nfs.blocked.uid.<uid> and
-   * nfs.blocked_access; "rate_limit" does so for those procedures only past
-   * nfs:access-policy-rate-limit-*. Re-read on every request; AUTH_SYS ids
-   * are client-asserted, so this sheds noisy processes rather than enforcing
-   * a security boundary.
+   * bumps nfs.access.uid.<uid> and, per procedure,
+   * nfs.access.uid.<uid>.<procedure>; "block" also rejects requests for
+   * procedures in nfs:access-policy-procedures, bumping nfs.blocked.uid.<uid>
+   * and nfs.blocked_access; "rate_limit" does so for those procedures only
+   * past nfs:access-policy-rate-limit-*. Re-read on every request; AUTH_SYS
+   * ids are client-asserted, so this sheds noisy processes rather than
+   * enforcing a security boundary.
    */
   ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsUidAccessPolicy{
       "nfs:uid-access-policy",

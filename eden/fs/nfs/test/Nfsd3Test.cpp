@@ -639,6 +639,12 @@ TEST_F(Nfsd3Test, default_set_polices_readdir_only) {
   auto policedBefore = getCounter("nfs.policed.uid.0.sum");
   auto blockedUidBefore = getCounter("nfs.blocked.uid.0.sum");
   auto blockedBefore = getCounter("nfs.blocked_access.sum");
+  const std::vector<std::string> procs{
+      "readdir", "readdirplus", "getattr", "read", "lookup"};
+  std::vector<int64_t> perProcBefore;
+  for (const auto& proc : procs) {
+    perProcBefore.push_back(getCounter("nfs.access.uid.0." + proc + ".sum"));
+  }
 
   // Directory traversal by the blocked uid is rejected...
   expectAuthTooWeak(sendReaddir(1, rootOnlyCred()));
@@ -653,6 +659,13 @@ TEST_F(Nfsd3Test, default_set_polices_readdir_only) {
   EXPECT_EQ(getCounter("nfs.policed.uid.0.sum") - policedBefore, 2);
   EXPECT_EQ(getCounter("nfs.blocked.uid.0.sum") - blockedUidBefore, 2);
   EXPECT_EQ(getCounter("nfs.blocked_access.sum") - blockedBefore, 2);
+  // ...and each one is also counted under its procedure name.
+  for (size_t i = 0; i < procs.size(); ++i) {
+    EXPECT_EQ(
+        getCounter("nfs.access.uid.0." + procs[i] + ".sum") - perProcBefore[i],
+        1)
+        << procs[i];
+  }
 }
 
 TEST_F(Nfsd3Test, gid_entries_use_the_same_procedure_set) {
@@ -662,6 +675,7 @@ TEST_F(Nfsd3Test, gid_entries_use_the_same_procedure_set) {
   auto accessBefore = getCounter("nfs.access.gid.0.sum");
   auto policedBefore = getCounter("nfs.policed.gid.0.sum");
   auto blockedBefore = getCounter("nfs.blocked.gid.0.sum");
+  auto readdirBefore = getCounter("nfs.access.gid.0.readdir.sum");
 
   expectAuthTooWeak(sendReaddir(1, wheelCred()));
   expectAcceptedSuccess(sendGetattr(2, wheelCred()));
@@ -669,6 +683,7 @@ TEST_F(Nfsd3Test, gid_entries_use_the_same_procedure_set) {
   EXPECT_EQ(getCounter("nfs.access.gid.0.sum") - accessBefore, 2);
   EXPECT_EQ(getCounter("nfs.policed.gid.0.sum") - policedBefore, 1);
   EXPECT_EQ(getCounter("nfs.blocked.gid.0.sum") - blockedBefore, 1);
+  EXPECT_EQ(getCounter("nfs.access.gid.0.readdir.sum") - readdirBefore, 1);
 }
 
 TEST_F(Nfsd3Test, unpoliced_procedures_do_not_consume_budget) {
