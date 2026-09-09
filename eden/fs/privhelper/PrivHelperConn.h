@@ -232,12 +232,31 @@ class PrivHelperConn {
       std::string& mountPath,
       uint32_t& readAheadKb);
 
+  /**
+   * Framing bounds for a REQ_SET_RESTART_ARGS message, so that nothing in it
+   * can size an allocation in the root privhelper. They say nothing about
+   * whether the command can be spawned.
+   *
+   * kMaxRelaunchBytes spans the argv entries and the environment names and
+   * values together. Its magnitude comes from macOS kern.argmax, typically
+   * 1 MiB.
+   */
+  static constexpr uint32_t kMaxRelaunchArgvEntries = 4096;
+  static constexpr uint32_t kMaxRelaunchEnvEntries = 4096;
+  static constexpr size_t kMaxRelaunchBytes = 1024 * 1024;
+  // Budgeted apart from the relaunch command: the sentinel path is opened, not
+  // spawned, so it is no part of the exec footprint. 4096 is PATH_MAX on Linux
+  // and four times the macOS value.
+  static constexpr size_t kMaxSentinelPathBytes = 4096;
+
   static UnixSocket::Message serializeSetRestartArgsRequest(
       uint32_t xid,
       const EdenFsRestartArgs& args);
   static void parseSetRestartArgsRequest(
       folly::io::Cursor& cursor,
       EdenFsRestartArgs& args);
+
+  static constexpr size_t kMaxCleanShutdownReasonBytes = 4096;
 
   static UnixSocket::Message serializeNotifyCleanShutdownRequest(
       uint32_t xid,

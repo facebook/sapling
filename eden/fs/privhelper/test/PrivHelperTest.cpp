@@ -27,9 +27,11 @@
 #include <gtest/gtest.h>
 #include <sys/wait.h>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <limits>
 #include <optional>
+#include <system_error>
 #include <thread>
 #include <unordered_map>
 
@@ -377,6 +379,90 @@ EdenFsRestartArgs roundTrip(const EdenFsRestartArgs& args) {
   return parsed;
 }
 
+std::string serializeRestartArgsRejection(const EdenFsRestartArgs& args) {
+  try {
+    PrivHelperConn::serializeSetRestartArgsRequest(/*xid=*/42, args);
+  } catch (const std::invalid_argument& ex) {
+    return ex.what();
+  } catch (const std::exception& ex) {
+    ADD_FAILURE() << "expected std::invalid_argument, got: " << ex.what();
+    return {};
+  }
+  ADD_FAILURE() << "the serializer accepted oversized restart args";
+  return {};
+}
+
+void appendLengthPrefixedString(
+    folly::io::Appender& appender,
+    folly::StringPiece value) {
+  appender.write<uint32_t>(static_cast<uint32_t>(value.size()));
+  appender.push(folly::ByteRange(value));
+}
+
+// What is left unread when the parser rejects the relaunch command: the four
+// trailing counters.
+constexpr size_t kBytesAfterRelaunchCommand =
+    3 * sizeof(uint32_t) + sizeof(uint64_t);
+// Rejecting the sentinel path leaves the nonce and the two counts as well.
+constexpr size_t kBytesAfterSentinelPath =
+    sizeof(uint64_t) + 2 * sizeof(uint32_t) + kBytesAfterRelaunchCommand;
+
+/**
+ * An enabled restart-args body whose sentinel path declares
+ * `sentinelPathLength` bytes without supplying any, whose relaunch command is
+ * whatever `writeRelaunchCommand` appends, and whose four trailing counters
+ * are zero. Encoded independently of the serializer under test.
+ */
+template <typename Fn>
+folly::IOBuf makeRestartArgsBody(
+    uint32_t sentinelPathLength,
+    Fn writeRelaunchCommand) {
+  constexpr size_t kBodySize = 256;
+  folly::IOBuf body{folly::IOBuf::CREATE, kBodySize};
+  folly::io::Appender appender{&body, kBodySize};
+  appender.write<uint8_t>(1);
+  appender.write<uint32_t>(sentinelPathLength);
+  appender.write<uint64_t>(kSentinelNonce);
+  writeRelaunchCommand(appender);
+  appender.write<uint32_t>(0);
+  appender.write<uint64_t>(0);
+  appender.write<uint32_t>(0);
+  appender.write<uint32_t>(0);
+  return body;
+}
+
+/** The errno the parser rejected `cursor` with, or 0 if it accepted it. */
+int parseRestartArgsRejection(folly::io::Cursor& cursor) {
+  EdenFsRestartArgs args;
+  try {
+    PrivHelperConn::parseSetRestartArgsRequest(cursor, args);
+  } catch (const std::system_error& ex) {
+    return ex.code().value();
+  } catch (const std::exception& ex) {
+    ADD_FAILURE() << "expected a std::system_error, got: " << ex.what();
+    return 0;
+  }
+  ADD_FAILURE() << "the parser accepted a malformed message";
+  return 0;
+}
+
+/**
+ * Assert `body` is rejected without the parser ever sizing an allocation from
+ * the length or count it declares.
+ *
+ * Only Cursor::readFixedString() sizes anything from the wire here, and it
+ * reserves the declared length before draining the message looking for those
+ * bytes. Finding `bytesLeftUnread` still there is what shows it was never
+ * reached.
+ */
+void expectRejectedBeforeSizingAnything(
+    const folly::IOBuf& body,
+    size_t bytesLeftUnread) {
+  folly::io::Cursor cursor{&body};
+  EXPECT_EQ(EINVAL, parseRestartArgsRejection(cursor));
+  EXPECT_EQ(bytesLeftUnread, cursor.totalLength());
+}
+
 } // namespace
 
 TEST(PrivHelperConnRestartArgs, roundTripPreservesAwkwardValues) {
@@ -384,8 +470,139 @@ TEST(PrivHelperConnRestartArgs, roundTripPreservesAwkwardValues) {
       makeRestartArgs("/var/eden dir/.edenfs_restart_armed \xc3\xa9");
   // Above 2^32, to catch a truncated width on the wire.
   expected.firstRestartEpochSec = uint64_t{1} << 33;
+  expected.relaunchArgv = {
+      "/usr/local/libexec/eden/edenfs",
+      "--edenfsctlPath=/opt/eden dir/edenfsctl",
+      "--configPath=/home/us\xc3\xa9r/.edenrc",
+      ""};
+  // Duplicate keys are deliberate: the codec must not reorder or coalesce them.
+  expected.relaunchEnv = {
+      {"PATH", "/usr/bin:/bin"},
+      {"EDENFS_EXTRA_ARGS", "--logging=eden=DBG2,eden.fs=DBG7"},
+      {"EMPTY", ""},
+      {"HOME", "/home/first"},
+      {"HOME", "/home/last"}};
 
   EXPECT_EQ(expected, roundTrip(expected));
+}
+
+TEST(PrivHelperConnRestartArgs, roundTripPreservesAnEmptyRelaunchCommand) {
+  auto expected = makeRestartArgs("/var/eden/.edenfs_restart_armed");
+  ASSERT_TRUE(expected.relaunchArgv.empty());
+  ASSERT_TRUE(expected.relaunchEnv.empty());
+
+  EXPECT_EQ(expected, roundTrip(expected));
+}
+
+TEST(PrivHelperConnRestartArgs, serializerRejectsAnOversizedSentinelPath) {
+  auto args = makeRestartArgs(
+      std::string(PrivHelperConn::kMaxSentinelPathBytes + 1, 'a'));
+
+  EXPECT_THAT(
+      serializeRestartArgsRejection(args),
+      ::testing::HasSubstr("sentinel path"));
+}
+
+TEST(PrivHelperConnRestartArgs, serializerRejectsTooManyArgvEntries) {
+  auto args = makeRestartArgs("/var/eden/.edenfs_restart_armed");
+  args.relaunchArgv.resize(PrivHelperConn::kMaxRelaunchArgvEntries + 1);
+
+  EXPECT_THAT(
+      serializeRestartArgsRejection(args),
+      ::testing::HasSubstr("relaunch argv"));
+}
+
+TEST(PrivHelperConnRestartArgs, serializerRejectsTooManyEnvEntries) {
+  auto args = makeRestartArgs("/var/eden/.edenfs_restart_armed");
+  args.relaunchEnv.resize(PrivHelperConn::kMaxRelaunchEnvEntries + 1);
+
+  EXPECT_THAT(
+      serializeRestartArgsRejection(args),
+      ::testing::HasSubstr("relaunch env"));
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsASentinelPathBeyondItsByteLimit) {
+  expectRejectedBeforeSizingAnything(
+      makeRestartArgsBody(
+          std::numeric_limits<uint32_t>::max(),
+          [](folly::io::Appender& appender) {
+            appender.write<uint32_t>(0); // argv count
+            appender.write<uint32_t>(0); // env count
+          }),
+      kBytesAfterSentinelPath);
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsAnArgvCountBeyondTheLimit) {
+  expectRejectedBeforeSizingAnything(
+      makeRestartArgsBody(
+          0,
+          [](folly::io::Appender& appender) {
+            appender.write<uint32_t>(
+                PrivHelperConn::kMaxRelaunchArgvEntries + 1);
+          }),
+      kBytesAfterRelaunchCommand);
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsAnEnvCountBeyondTheLimit) {
+  expectRejectedBeforeSizingAnything(
+      makeRestartArgsBody(
+          0,
+          [](folly::io::Appender& appender) {
+            appender.write<uint32_t>(0); // argv count
+            appender.write<uint32_t>(
+                PrivHelperConn::kMaxRelaunchEnvEntries + 1);
+          }),
+      kBytesAfterRelaunchCommand);
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsAStringBeyondTheByteLimit) {
+  expectRejectedBeforeSizingAnything(
+      makeRestartArgsBody(
+          0,
+          [](folly::io::Appender& appender) {
+            appender.write<uint32_t>(1); // argv count
+            appender.write<uint32_t>(std::numeric_limits<uint32_t>::max());
+          }),
+      kBytesAfterRelaunchCommand);
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsAStringLongerThanTheMessage) {
+  expectRejectedBeforeSizingAnything(
+      makeRestartArgsBody(
+          0,
+          [](folly::io::Appender& appender) {
+            appender.write<uint32_t>(1); // argv count
+            appender.write<uint32_t>(PrivHelperConn::kMaxRelaunchBytes / 2);
+          }),
+      kBytesAfterRelaunchCommand);
+}
+
+TEST(PrivHelperConnRestartArgs, rejectsARelaunchCommandOverTheByteLimit) {
+  const std::string halfLimit(PrivHelperConn::kMaxRelaunchBytes / 2, 'a');
+  auto body =
+      makeRestartArgsBody(0, [&halfLimit](folly::io::Appender& appender) {
+        appender.write<uint32_t>(2); // argv count
+        appendLengthPrefixedString(appender, halfLimit);
+        appendLengthPrefixedString(appender, halfLimit);
+        appender.write<uint32_t>(1); // env count
+        appender.write<uint32_t>(1); // env name length
+      });
+  folly::io::Cursor cursor{&body};
+
+  EXPECT_EQ(EINVAL, parseRestartArgsRejection(cursor));
+}
+
+TEST(PrivHelperConnRestartArgs, serializerRejectsARelaunchCommandOverTheLimit) {
+  // The budget spans argv and env together, so the environment is what tips
+  // this one over.
+  auto args = makeRestartArgs("/var/eden/.edenfs_restart_armed");
+  const size_t half = PrivHelperConn::kMaxRelaunchBytes / 2;
+  args.relaunchArgv = {std::string(half, 'a'), std::string(half, 'b')};
+  args.relaunchEnv = {{"PATH", "/usr/bin"}};
+
+  const auto error = serializeRestartArgsRejection(args);
+  EXPECT_THAT(error, ::testing::HasSubstr("relaunch env name"));
+  EXPECT_THAT(error, ::testing::HasSubstr("budget"));
 }
 
 TEST(PrivHelperRestartCounterEnv, absentIsZero) {
@@ -414,7 +631,7 @@ TEST(PrivHelperRestartCounterEnv, readsAValueAbove32Bits) {
       uint64_t{1} << 32, readEdenFsRestartCounterEnv(kEdenFsFirstRestartAtEnv));
 }
 
-TEST(PrivHelperConnRestartArgs, notifyCleanShutdownRoundTrip) {
+TEST(PrivHelperConnCleanShutdown, roundTrip) {
   constexpr folly::StringPiece kReason{"graceful restart"};
   auto msg = PrivHelperConn::serializeNotifyCleanShutdownRequest(
       /*xid=*/7, kReason);
@@ -424,6 +641,53 @@ TEST(PrivHelperConnRestartArgs, notifyCleanShutdownRoundTrip) {
   std::string reason;
   PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
   EXPECT_EQ(kReason, reason);
+}
+
+TEST(PrivHelperConnCleanShutdown, acceptsAReasonAtTheByteLimit) {
+  constexpr size_t kReasonByteLimit = 4096;
+  static_assert(
+      PrivHelperConn::kMaxCleanShutdownReasonBytes == kReasonByteLimit);
+  const std::string expected(kReasonByteLimit, 'a');
+  auto msg = PrivHelperConn::serializeNotifyCleanShutdownRequest(
+      /*xid=*/7, expected);
+  folly::io::Cursor cursor{&msg.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  std::string reason;
+  PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
+  EXPECT_EQ(expected, reason);
+}
+
+TEST(PrivHelperConnCleanShutdown, truncatesAReasonBeyondTheByteLimit) {
+  const std::string expected(PrivHelperConn::kMaxCleanShutdownReasonBytes, 'a');
+  auto msg = PrivHelperConn::serializeNotifyCleanShutdownRequest(
+      /*xid=*/7, expected + "b");
+  folly::io::Cursor cursor{&msg.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  std::string reason;
+  PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
+  EXPECT_EQ(expected, reason);
+}
+
+TEST(
+    PrivHelperConnCleanShutdown,
+    rejectsAReasonBeyondTheByteLimitBeforeAllocation) {
+  constexpr uint32_t kTrailingMarker = 0x12345678;
+  folly::IOBuf body{folly::IOBuf::CREATE, 2 * sizeof(uint32_t)};
+  folly::io::Appender appender{&body, 2 * sizeof(uint32_t)};
+  appender.write<uint32_t>(PrivHelperConn::kMaxCleanShutdownReasonBytes + 1);
+  appender.write<uint32_t>(kTrailingMarker);
+  folly::io::Cursor cursor{&body};
+
+  std::string reason;
+  try {
+    PrivHelperConn::parseNotifyCleanShutdownRequest(cursor, reason);
+    ADD_FAILURE() << "the parser accepted an oversized shutdown reason";
+  } catch (const std::system_error& ex) {
+    EXPECT_EQ(EINVAL, ex.code().value());
+  }
+  EXPECT_EQ(sizeof(kTrailingMarker), cursor.totalLength());
 }
 
 class RawPrivHelperClient : private UnixSocket::ReceiveCallback {
@@ -628,6 +892,15 @@ class PrivHelperRawProtocolTest : public ::testing::Test {
   std::thread serverThread_;
   std::optional<RawPrivHelperClient> client_;
 };
+
+TEST_F(PrivHelperTest, restartArgsValidationFailureCompletesTheFuture) {
+  auto args = makeRestartArgs(
+      std::string(PrivHelperConn::kMaxSentinelPathBytes + 1, 'a'));
+
+  auto result = client_->setRestartArgs(args);
+
+  EXPECT_THROW(std::move(result).get(), std::invalid_argument);
+}
 
 TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
   auto timeoutResponse = client_->sendAndRecv(makeLegacyMacFuseConfigRequest(

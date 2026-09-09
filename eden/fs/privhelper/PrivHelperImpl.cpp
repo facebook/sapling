@@ -942,14 +942,16 @@ Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
 
 Future<Unit> PrivHelperClientImpl::setRestartArgs(
     const EdenFsRestartArgs& args) {
-  auto xid = getNextXid();
-  auto request = PrivHelperConn::serializeSetRestartArgsRequest(xid, args);
+  return folly::makeFutureWith([&]() -> Future<Unit> {
+    auto xid = getNextXid();
+    auto request = PrivHelperConn::serializeSetRestartArgsRequest(xid, args);
 
-  return sendAndRecv(xid, "set_restart_args", std::move(request))
-      .thenValue([](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_SET_RESTART_ARGS, response);
-      });
+    return sendAndRecv(xid, "set_restart_args", std::move(request))
+        .thenValue([](UnixSocket::Message&& response) {
+          PrivHelperConn::parseEmptyResponse(
+              PrivHelperConn::REQ_SET_RESTART_ARGS, response);
+        });
+  });
 }
 
 void PrivHelperClientImpl::notifyCleanShutdown(StringPiece reason) noexcept {
