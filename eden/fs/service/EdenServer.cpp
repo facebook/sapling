@@ -1640,7 +1640,17 @@ Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
           // mount points. Even if an error occurs we still transition to the
           // running state. The prepare() code will log an error with more
           // details if we do fail to set up some of the mount points.
-          [this] { runningState_.wlock()->state = RunState::RUNNING; });
+          //
+          // SHUTTING_DOWN is terminal: a stop that arrived mid-startup has
+          // already disarmed the privhelper, and returning to RUNNING would let
+          // the arm that follows relaunch a daemon the user stopped. Takeover
+          // recovery, the one way back out, does not come through here.
+          [this] {
+            auto state = runningState_.wlock();
+            if (state->state != RunState::SHUTTING_DOWN) {
+              state->state = RunState::RUNNING;
+            }
+          });
 }
 
 namespace {
@@ -1998,7 +2008,7 @@ bool EdenServer::performCleanup() {
     // A no-op today: every path that reaches performCleanup has already
     // transitioned. Routed through the helper so that a future path which has
     // not still picks up whatever the helper does.
-    markShuttingDownLocked(*state);
+    markShuttingDownLocked(*state, "cleanup");
   }
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
@@ -3000,11 +3010,55 @@ void EdenServer::prepareThriftAddress() const {
 }
 
 void EdenServer::armPrivHelperRestart() {
+  uint64_t generation;
+  {
+    const auto state = runningState_.rlock();
+    if (state->state == RunState::SHUTTING_DOWN) {
+      XLOG(INFO, "not arming the privhelper: edenfs is already shutting down");
+      return;
+    }
+    generation = state->restartArmGeneration;
+  }
+
   restartArmer_.arm();
+
+  auto state = runningState_.wlock();
+  if (state->state == RunState::SHUTTING_DOWN ||
+      state->restartArmGeneration != generation) {
+    XLOGF(
+        WARN,
+        "removing the privhelper restart sentinel: {}",
+        state->state == RunState::SHUTTING_DOWN
+            ? "EdenFS is shutting down"
+            : "the restart-arm generation changed");
+
+    restartArmer_.removeSentinel();
+  }
 }
 
-void EdenServer::markShuttingDownLocked(RunStateData& state) {
+void EdenServer::markShuttingDownLocked(
+    RunStateData& state,
+    folly::StringPiece reason) {
+  if (state.state == RunState::SHUTTING_DOWN) {
+    return;
+  }
   state.state = RunState::SHUTTING_DOWN;
+  ++state.restartArmGeneration;
+
+  // Deliberately not behind armed(): an in-flight arm can have created its
+  // sentinel before the setRestartArgs response sets that flag.
+  restartArmer_.removeSentinel();
+
+  // The notification does wait for the flag. It is one-way, so a privhelper
+  // too old to know the request would answer it, and the unmatched transaction
+  // ID raises EDEN_BUG on the client.
+  if (!restartArmer_.armed()) {
+    return;
+  }
+
+  // Safe to send while holding the lock: the client only enqueues the message
+  // onto its EventBase and returns.
+  serverState_->getPrivHelper()->notifyCleanShutdown(reason);
 }
 
 void EdenServer::stop() {
@@ -3017,7 +3071,7 @@ void EdenServer::stop() {
       XLOG(INFO, "stop was called while server was already shutting down");
       return;
     }
-    markShuttingDownLocked(*state);
+    markShuttingDownLocked(*state, "stop");
   }
 
   handler_->cancelAllActiveRequests("EdenServer::stop() called");
@@ -3099,7 +3153,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // if the takeover was unsuccessful.
     XCHECK(!state->shutdownFuture.valid());
     state->shutdownFuture = takeoverPromise.getFuture();
-    markShuttingDownLocked(*state);
+    markShuttingDownLocked(*state, "graceful restart");
   }
 
   return serverState_->getFaultInjector()

@@ -408,7 +408,12 @@ class EdenServer : private TakeoverHandler {
     return edenDir_.getPath();
   }
 
-  /** Arm the privhelper to relaunch this daemon after a crash. */
+  /**
+   * Arm the privhelper to relaunch this daemon after a crash. A no-op once a
+   * shutdown is intended.
+   *
+   * Acquires runningState_; the caller must not hold it.
+   */
   void armPrivHelperRestart();
 
   std::string getEdenHeartbeatFileNameStr() const;
@@ -790,6 +795,8 @@ class EdenServer : private TakeoverHandler {
    */
   struct RunStateData {
     RunState state{RunState::STARTING};
+    // Advances when shutdown starts, even if takeover recovery resumes us.
+    uint64_t restartArmGeneration{0};
     folly::File takeoverThriftSocket;
     /**
      * In the case of a takeover shutdown, this will be fulfilled after the
@@ -805,15 +812,14 @@ class EdenServer : private TakeoverHandler {
   folly::Synchronized<RunStateData> runningState_;
 
   /**
-   * Move the server into RunState::SHUTTING_DOWN.
-   *
-   * The single entry point for that transition, so that everything which has
-   * to happen once a shutdown is intended happens on every path that intends
-   * one.
+   * Move the server into RunState::SHUTTING_DOWN and disarm the privhelper's
+   * crash detection. The two belong together: any path that reaches
+   * SHUTTING_DOWN without disarming gets edenfs relaunched behind the user's
+   * back.
    *
    * Caller must hold runningState_ write-locked.
    */
-  void markShuttingDownLocked(RunStateData& state);
+  void markShuttingDownLocked(RunStateData& state, folly::StringPiece reason);
 
 #ifdef __APPLE__
   folly::dynamic nfsStatOutput_;
