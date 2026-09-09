@@ -8,9 +8,7 @@
 #include "eden/fs/nfs/Nfsd3.h"
 
 #include <algorithm>
-#include <iterator>
 #include <memory>
-#include <string_view>
 #include <type_traits>
 
 #include <fb303/ThreadCachedServiceData.h>
@@ -145,15 +143,16 @@ bool accessModeRejects(
 }
 
 /**
- * Bumps the per-id fb303 stat nfs.<name>.<id> (e.g. nfs.access.uid.0),
- * exported as .sum, .sum.60, etc.
+ * Per-id access stats, exported as nfs.<name>.<id>.sum, .sum.60, etc. The
+ * wrapper formats the key only the first time it sees an id and caches the
+ * handle per thread.
  */
-void bumpAccessStat(std::string_view name, uint32_t id) {
-  fmt::memory_buffer buf;
-  fmt::format_to(std::back_inserter(buf), "nfs.{}.{}", name, id);
-  fb303::ThreadCachedServiceData::get()->addStatValue(
-      folly::StringPiece(buf.data(), buf.size()), 1, fb303::SUM);
-}
+DEFINE_dynamic_timeseries(nfs_access_uid, "nfs.access.uid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(nfs_policed_uid, "nfs.policed.uid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(nfs_blocked_uid, "nfs.blocked.uid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(nfs_access_gid, "nfs.access.gid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(nfs_policed_gid, "nfs.policed.gid.{}", fb303::SUM);
+DEFINE_dynamic_timeseries(nfs_blocked_gid, "nfs.blocked.gid.{}", fb303::SUM);
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
@@ -2533,16 +2532,16 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   const auto& uidPolicy = config->nfsUidAccessPolicy.getValue();
   if (auto entry = uidPolicy.find(authSysCreds->uid);
       entry != uidPolicy.end()) {
-    bumpAccessStat("access.uid", authSysCreds->uid);
+    STATS_nfs_access_uid.add(1, authSysCreds->uid);
     if (isPoliced()) {
-      bumpAccessStat("policed.uid", authSysCreds->uid);
+      STATS_nfs_policed_uid.add(1, authSysCreds->uid);
       if (accessModeRejects(
               entry->second,
               uidRateLimiters_,
               authSysCreds->uid,
               count,
               windowSeconds)) {
-        bumpAccessStat("blocked.uid", authSysCreds->uid);
+        STATS_nfs_blocked_uid.add(1, authSysCreds->uid);
         block = true;
       }
     }
@@ -2551,13 +2550,13 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
     if (!credsHaveGid(*authSysCreds, gid)) {
       continue;
     }
-    bumpAccessStat("access.gid", gid);
+    STATS_nfs_access_gid.add(1, gid);
     if (!isPoliced()) {
       continue;
     }
-    bumpAccessStat("policed.gid", gid);
+    STATS_nfs_policed_gid.add(1, gid);
     if (accessModeRejects(mode, gidRateLimiters_, gid, count, windowSeconds)) {
-      bumpAccessStat("blocked.gid", gid);
+      STATS_nfs_blocked_gid.add(1, gid);
       block = true;
     }
   }

@@ -400,6 +400,8 @@ struct NfsStats : StatsGroup<NfsStats> {
 
   // Requests rejected by a "block" or over-budget "rate_limit" entry in
   // nfs:uid-access-policy / nfs:gid-access-policy.
+  // nfs.{access,policed,blocked}.{uid,gid}.<id> take their id from config, so
+  // they are fb303 dynamic timeseries declared in Nfsd3.cpp, not members here.
   Counter nfsBlockedAccess{"nfs.blocked_access"};
 
   // NFS GC invalidation counters
