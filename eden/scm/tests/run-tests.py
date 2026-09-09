@@ -73,7 +73,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 try:
     # pyre-fixme[21]: Could not find module `features`.
     import features
-except:
+except Exception:
     features = None
 
 import queue
