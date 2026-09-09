@@ -2483,7 +2483,8 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
 /**
  * Exercises the restart decision directly, without a socket or an event loop.
  *
- * The privhelper is armed by default once it has restart args; each test here
+ * The privhelper is armed by default once it has restart args: an empty
+ * sentinel on disk, and the command to relaunch inside the args. Each test here
  * removes exactly one of the reasons to restart and checks that nothing is
  * launched.
  */
@@ -2491,26 +2492,27 @@ class PrivHelperRestartDecisionTest : public ::testing::Test {
  protected:
   void SetUp() override {
     sentinelFile_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
-    writeSentinel(makeSentinelContents());
+    restrictSentinelToOwner(sentinelPath());
     server_.now.store(kFakeNow);
     // Nothing calls initPartial() here, so the sentinel's owner has to be
-    // declared by hand for the reader's ownership check to pass.
+    // declared by hand for the ownership check to pass.
     server_.sentinel_.emplace(getuid());
     configure(restartArgs());
   }
 
+  std::string sentinelPath() const {
+    return sentinelFile_->path().string();
+  }
+
   EdenFsRestartArgs restartArgs() const {
-    return makeRestartArgs(sentinelFile_->path().string());
+    auto args = makeRestartArgs(sentinelPath());
+    args.relaunchArgv = kSentinelArgv;
+    args.relaunchEnv = {{"PATH", "/usr/bin"}, {"HOME", "/home/test"}};
+    return args;
   }
 
   void configure(EdenFsRestartArgs args) {
     server_.sentinel_->setConfig(std::move(args));
-  }
-
-  void writeSentinel(const std::string& contents) {
-    ASSERT_TRUE(
-        folly::writeFile(contents, sentinelFile_->path().string().c_str()));
-    restrictSentinelToOwner(sentinelFile_->path().string());
   }
 
   void removeSentinel() {
@@ -2538,9 +2540,15 @@ class PrivHelperRestartDecisionTest : public ::testing::Test {
   std::unique_ptr<TemporaryFile> sentinelFile_;
 };
 
-TEST_F(PrivHelperRestartDecisionTest, restartsAfterACrash) {
+TEST_F(PrivHelperRestartDecisionTest, restartsAfterACrashWithAnEmptySentinel) {
+  std::string contents;
+  ASSERT_TRUE(folly::readFile(sentinelPath().c_str(), contents));
+  ASSERT_TRUE(contents.empty());
+
   EXPECT_EQ(true, restart());
-  EXPECT_EQ(1, server_.spawnCount());
+
+  ASSERT_EQ(1, server_.spawnCount());
+  EXPECT_EQ(kSentinelArgv, server_.spawns.rlock()->at(0).argv);
 }
 
 TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWithoutRestartArgs) {
@@ -2566,8 +2574,16 @@ TEST_F(PrivHelperRestartDecisionTest, removingTheSentinelDisarms) {
   expectNoRestart();
 }
 
-TEST_F(PrivHelperRestartDecisionTest, anUnparseableSentinelStopsTheRestart) {
-  writeSentinel("} not json {");
+TEST_F(PrivHelperRestartDecisionTest, aSentinelAnyoneCouldHaveWrittenDisarms) {
+  checkUnixError(::chmod(sentinelPath().c_str(), 0660));
+  expectNoRestart();
+}
+
+TEST_F(PrivHelperRestartDecisionTest, doesNotRestartWithoutARelaunchCommand) {
+  auto args = restartArgs();
+  args.relaunchArgv.clear();
+  configure(std::move(args));
+
   expectNoRestart();
 }
 
@@ -2598,7 +2614,6 @@ TEST_F(PrivHelperRestartDecisionTest, relaysTheRestartBudgetToTheNewDaemon) {
 
   const auto spawns = *server_.spawns.rlock();
   ASSERT_EQ(1, spawns.size());
-  EXPECT_EQ(kSentinelArgv, spawns[0].argv);
   EXPECT_THAT(
       spawns[0].env,
       UnorderedElementsAre(
@@ -2610,10 +2625,10 @@ TEST_F(PrivHelperRestartDecisionTest, relaysTheRestartBudgetToTheNewDaemon) {
 }
 
 TEST_F(PrivHelperRestartDecisionTest, replacesARecordedRestartBudget) {
-  writeSentinel(makeSentinelContents(
-      kSentinelNonce,
-      folly::dynamic::object("EDENFS_RESTART_COUNT", "99")(
-          "EDENFS_FIRST_RESTART_AT", "1")));
+  auto args = restartArgs();
+  args.relaunchEnv = {
+      {"EDENFS_RESTART_COUNT", "99"}, {"EDENFS_FIRST_RESTART_AT", "1"}};
+  configure(std::move(args));
 
   ASSERT_EQ(true, restart());
 

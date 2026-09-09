@@ -1766,9 +1766,9 @@ PrivHelperServer::prepareRestart() {
       return std::nullopt;
   }
 
-  // Read before producing a plan so launchRestart() is unreachable without a
-  // command that the privileged parent parsed and validated.
-  auto command = sentinel_->readRelaunchCommand();
+  // Obtained before producing a plan so launchRestart() is unreachable without
+  // a command.
+  auto command = sentinel_->relaunchCommand();
   if (!command.has_value()) {
     return std::nullopt;
   }

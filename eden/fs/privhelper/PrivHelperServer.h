@@ -277,7 +277,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   /**
    * Decide whether this exit looks like a crash worth answering with a
-   * relaunch, and do everything about it that needs root: reading the relaunch
+   * relaunch, and do everything about it that needs root: taking the relaunch
    * command, resolving the binary and charging the circuit breaker.
    *
    * Returns the plan to launch, or nullopt to leave edenfs down.
@@ -299,7 +299,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   /**
    * Path to the edenfs binary to relaunch: the one installed next to this
    * privhelper, which keeps both on the same version, falling back to argv[0]
-   * from the sentinel when there is no sibling. Throws when neither is usable.
+   * of `command` when there is no sibling. Throws when neither is usable.
    *
    * Virtual because a unit test has no sibling edenfs to point at.
    */
