@@ -2058,6 +2058,10 @@ struct RepoCreationRequest {
   /// symref is written; clones of the repo will have no default branch until
   /// one is created manually (mononoke_admin git-symref).
   6: optional string default_branch;
+  /// Create the repo read-only. Writers must hold `bypass_readonly` on the
+  /// repo's ACL; the GitHub mirror sync does, and passes gitimport
+  /// --bypass-readonly. Defaults to false (writable).
+  7: optional bool readonly;
 }
 
 struct CreateReposParams {

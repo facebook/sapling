@@ -1123,7 +1123,7 @@ fn make_repo_spec(
             make_top_level_acl_name_from_repo_name(&request.repo_name)
         },
         enabled: true,
-        readonly: false,
+        readonly: request.readonly.unwrap_or(false),
         default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
         enable_git_bundle_uri: None,
         tiers: tier_list_for_repo(&request.repo_name),
@@ -2077,6 +2077,25 @@ mod tests {
         assert_eq!(
             spec.hipster_acl, "repos/git/org",
             "hipster_acl should be the top-level namespace ACL, not the full repo name"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_honours_readonly_request() {
+        let repo_id = RepositoryId::new(12346);
+        let request = thrift::RepoCreationRequest {
+            repo_name: "org/mirror-repo".to_string(),
+            size_bucket: RepoSizeBucket::SMALL,
+            readonly: Some(true),
+            ..Default::default()
+        };
+
+        let spec =
+            make_repo_spec(&(repo_id, request), None).expect("make_repo_spec should succeed");
+
+        assert!(
+            spec.readonly,
+            "a request with readonly=true must produce a read-only RepoSpec"
         );
     }
 
