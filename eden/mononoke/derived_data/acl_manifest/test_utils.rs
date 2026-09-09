@@ -335,6 +335,53 @@ pub(crate) async fn load_entries(
         .await
 }
 
+/// Load the directory entry for `path`, relative to the root manifest.
+#[expect(
+    dead_code,
+    reason = "test helper landed ahead of the acl_node_for_directory tests that call it"
+)]
+pub(crate) async fn directory_entry_at_path(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    root_id: &AclManifestId,
+    path: &[&str],
+) -> Result<Option<AclManifestDirectoryEntry>> {
+    if path.is_empty() {
+        anyhow::bail!("directory_entry_at_path requires a non-empty path");
+    }
+    let mut current_id = *root_id;
+    let mut current_entry = None;
+
+    for component in path {
+        let Some((_, entry)) = load_entries(ctx, repo, &current_id)
+            .await?
+            .into_iter()
+            .find(|(name, _)| name.as_ref() == component.as_bytes())
+        else {
+            return Ok(None);
+        };
+        current_id = entry.id;
+        current_entry = Some(entry);
+    }
+
+    Ok(current_entry)
+}
+
+#[expect(
+    dead_code,
+    reason = "test helper landed ahead of the acl_node_for_directory tests that call it"
+)]
+pub(crate) async fn directory_id_at_path(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    root_id: &AclManifestId,
+    path: &[&str],
+) -> Result<Option<AclManifestId>> {
+    Ok(directory_entry_at_path(ctx, repo, root_id, path)
+        .await?
+        .map(|entry| entry.id))
+}
+
 // ---------------------------------------------------------------------------
 // Counting blobstore — tracks gets/puts independently of CoreContext
 // ---------------------------------------------------------------------------
