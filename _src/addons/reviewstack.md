@@ -34,3 +34,22 @@ ReviewStack supports the following keyboard shortcuts:
 | `alt+A`                     | select Approve Changes action |
 | `alt+R`                     | select Request Changes action |
 | `alt+C`                     | select Comment action         |
+
+## Linking to a different review tool
+
+When <Command name="pr" linkText="sl pr submit" /> creates a stack, it appends a footer to each pull request body with a link to the stack on **reviewstack.dev**. If you run your own instance of ReviewStack (or another review tool that understands stacks), you can point that link elsewhere:
+
+```ini
+[github]
+pull-request-review-url-template=https://review.example.com/{owner}/{repo}/pull/{number}
+pull-request-review-tool-name=MyReview
+```
+
+The URL template supports the `{owner}`, `{repo}`, `{number}`, and `{hostname}` placeholders. `{hostname}` expands to the GitHub host the repository lives on — `github.com` for repositories on github.com, or your GitHub Enterprise hostname; when submitting from a fork it is the upstream's host. Note that the host in the template itself is your review tool, not GitHub: `{hostname}` is handy when a single review-tool instance serves repositories on more than one GitHub host and needs the GitHub host in the URL to tell them apart:
+
+```ini
+[github]
+pull-request-review-url-template=https://reviewstack.example.com/{hostname}/{owner}/{repo}/pull/{number}
+```
+
+When these configs are unset, the footer links to reviewstack.dev as before. Setting `github.pull-request-include-reviewstack=false` removes the review link line entirely.
