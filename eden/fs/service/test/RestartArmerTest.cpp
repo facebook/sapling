@@ -18,7 +18,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -237,6 +236,24 @@ constexpr folly::StringPiece kDaemonArgs{
     R"({"restart_cmd": ["/usr/local/bin/edenfs", "--edenDir", "/tmp/eden"],
         "env": {"PATH": "/usr/bin", "HOME": "/home/eden"}})"};
 
+using EnvPairs = std::vector<std::pair<std::string, std::string>>;
+
+/**
+ * The relaunch environment sorted for comparison as an unordered set.
+ */
+EnvPairs sortedEntries(EnvPairs env) {
+  std::sort(env.begin(), env.end());
+  return env;
+}
+
+void expectRecordedCommand(const EdenFsRestartArgs& args) {
+  const std::vector<std::string> expectedArgv{
+      "/usr/local/bin/edenfs", "--edenDir", "/tmp/eden"};
+  const EnvPairs expectedEnv{{"HOME", "/home/eden"}, {"PATH", "/usr/bin"}};
+  EXPECT_EQ(expectedArgv, args.relaunchArgv);
+  EXPECT_EQ(expectedEnv, sortedEntries(args.relaunchEnv));
+}
+
 /** Sets an environment variable for the duration of one test. */
 class ScopedEnvVar {
  public:
@@ -420,6 +437,28 @@ TEST_F(RestartArmerTest, armingSendsTheRequestAndMarksItselfArmed) {
   EXPECT_TRUE(armer.armed());
 }
 
+TEST_F(RestartArmerTest, theRequestCarriesTheRecordedCommand) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+
+  makeArmer().arm();
+
+  ASSERT_EQ(1, privHelper_.restartArgs.size());
+  expectRecordedCommand(privHelper_.restartArgs.front());
+}
+
+// The re-arm a failed takeover performs reads the command back out of the
+// memo, which the first arm must therefore leave intact.
+TEST_F(RestartArmerTest, aSecondArmCarriesTheCommandAgain) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+
+  auto armer = makeArmer();
+  armer.arm();
+  armer.arm();
+
+  ASSERT_EQ(2, privHelper_.restartArgs.size());
+  expectRecordedCommand(privHelper_.restartArgs.back());
+}
+
 TEST_F(RestartArmerTest, aRejectedRequestRemovesTheSentinelAgain) {
   ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
   privHelper_.setRestartArgsError =
@@ -434,6 +473,21 @@ TEST_F(RestartArmerTest, aRejectedRequestRemovesTheSentinelAgain) {
 }
 
 TEST_F(RestartArmerTest, aMissingDaemonArgsFileDoesNotArm) {
+  auto armer = makeArmer();
+  armer.arm();
+
+  EXPECT_FALSE(armer.armed());
+  EXPECT_TRUE(sentinelNames().empty());
+  EXPECT_TRUE(privHelper_.restartArgs.empty());
+}
+
+TEST_F(RestartArmerTest, aDaemonArgsFileWithoutARestartCommandDoesNotArm) {
+  ASSERT_TRUE(
+      folly::writeFile(
+          std::string{R"({"cmd": ["/usr/bin/sudo", "/usr/local/bin/edenfs"],
+                          "env": {"PATH": "/usr/bin"}})"},
+          daemonArgsPath_.c_str()));
+
   auto armer = makeArmer();
   armer.arm();
 

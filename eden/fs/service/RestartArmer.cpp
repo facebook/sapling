@@ -199,15 +199,15 @@ RestartArmer::RestartArmer(
       daemonArgsPath_{stateDir.getDaemonArgsPath()} {}
 
 #ifdef __APPLE__
-std::optional<folly::dynamic> RestartArmer::getRelaunchCommand() {
+std::optional<RestartArmer::RelaunchCommand>
+RestartArmer::getRelaunchCommand() {
   auto cached = relaunchCommand_.wlock();
   if (cached->has_value()) {
     return *cached;
   }
 
   const auto& argsPath = daemonArgsPath_;
-  folly::dynamic relaunchArgv = folly::dynamic::array;
-  folly::dynamic relaunchEnv = folly::dynamic::object;
+  RelaunchCommand command;
   try {
     std::string contents;
     if (!folly::readFile(argsPath.c_str(), contents)) {
@@ -228,11 +228,11 @@ std::optional<folly::dynamic> RestartArmer::getRelaunchCommand() {
       return std::nullopt;
     }
     for (const auto& arg : *restartCmd) {
-      relaunchArgv.push_back(arg.asString());
+      command.argv.push_back(arg.asString());
     }
     if (const auto* env = parsed.get_ptr("env"); env && env->isObject()) {
       for (const auto& [key, value] : env->items()) {
-        relaunchEnv[key.asString()] = value.asString();
+        command.env.emplace_back(key.asString(), value.asString());
       }
     }
   } catch (const std::exception& ex) {
@@ -244,7 +244,7 @@ std::optional<folly::dynamic> RestartArmer::getRelaunchCommand() {
     return std::nullopt;
   }
 
-  if (relaunchEnv.empty()) {
+  if (command.env.empty()) {
     // The privhelper replaces the child's environment wholesale, so relaunching
     // with nothing would give the new daemon no PATH, HOME or USER.
     XLOGF(
@@ -254,8 +254,7 @@ std::optional<folly::dynamic> RestartArmer::getRelaunchCommand() {
     return std::nullopt;
   }
 
-  *cached = folly::dynamic::object("argv", std::move(relaunchArgv))(
-      "env", std::move(relaunchEnv));
+  *cached = std::move(command);
   return *cached;
 }
 #endif // __APPLE__
@@ -267,12 +266,15 @@ void RestartArmer::arm() {
     return;
   }
 
-  if (!getRelaunchCommand().has_value()) {
+  auto command = getRelaunchCommand();
+  if (!command.has_value()) {
     return;
   }
 
   EdenFsRestartArgs args;
   args.enabled = true;
+  args.relaunchArgv = std::move(command->argv);
+  args.relaunchEnv = std::move(command->env);
   // Carry forward the budget spent by the privhelper that spawned us, so that
   // a daemon crashing in a loop is stopped rather than restarted for ever.
   args.restartCount = static_cast<uint32_t>(std::min<uint64_t>(

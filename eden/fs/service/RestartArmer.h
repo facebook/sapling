@@ -10,9 +10,11 @@
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <folly/Synchronized.h>
-#include <folly/json/dynamic.h>
 
 #include "eden/common/utils/PathFuncs.h"
 
@@ -66,13 +68,19 @@ class RestartArmer {
 
  private:
 #ifdef __APPLE__
+  /** What to relaunch this daemon with, in the shape the restart args carry. */
+  struct RelaunchCommand {
+    std::vector<std::string> argv;
+    std::vector<std::pair<std::string, std::string>> env;
+  };
+
   /**
    * The `argv` and `env` edenfsctl recorded for this daemon, read on the first
    * arm and kept.
    *
    * Returns nullopt, having logged why, if there is nothing to relaunch with.
    */
-  std::optional<folly::dynamic> getRelaunchCommand();
+  std::optional<RelaunchCommand> getRelaunchCommand();
 #endif // __APPLE__
 
   // Only arm() ever talks to the privhelper, so off macOS nothing reads this.
@@ -99,7 +107,7 @@ class RestartArmer {
    * directory, so a daemon that failed to take over from us has already
    * replaced its contents with its own command by the time we re-arm.
    */
-  folly::Synchronized<std::optional<folly::dynamic>> relaunchCommand_;
+  folly::Synchronized<std::optional<RelaunchCommand>> relaunchCommand_;
 #endif // __APPLE__
 };
 
