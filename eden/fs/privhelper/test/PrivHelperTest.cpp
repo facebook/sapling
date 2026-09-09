@@ -25,10 +25,12 @@
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <cstring>
 #include <limits>
 #include <optional>
 #include <system_error>
@@ -360,6 +362,15 @@ std::string makeSentinelContents(
   return folly::toJson(
       folly::dynamic::object("argv", argv)("env", std::move(env))(
           "nonce", static_cast<int64_t>(nonce)));
+}
+
+/**
+ * Restrict the sentinel to its owner, as the daemon writes it. Both
+ * folly::writeFile and TemporaryFile create a file 0666 & ~umask, so under a
+ * group-writable umask the privhelper would refuse a sentinel it should accept.
+ */
+void restrictSentinelToOwner(const std::string& path) {
+  checkUnixError(::chmod(path.c_str(), 0600));
 }
 
 /** As a daemon too old to stamp a generation writes it. */
@@ -1861,6 +1872,8 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
  */
 class PrivHelperSentinelTest : public ::testing::Test {
  protected:
+  using DisarmState = RestartSentinel::DisarmState;
+
   void SetUp() override {
     dir_ = std::make_unique<TemporaryDirectory>("edenfs_sentinel");
     sentinel_.setConfig(makeRestartArgs(sentinelPath()));
@@ -1873,7 +1886,11 @@ class PrivHelperSentinelTest : public ::testing::Test {
   /** Owned by us and only ours to write, as the daemon writes it. */
   void writeSentinel(const std::string& contents) {
     ASSERT_TRUE(folly::writeFile(contents, sentinelPath().c_str()));
-    checkUnixError(::chmod(sentinelPath().c_str(), 0600));
+    restrictSentinelToOwner(sentinelPath());
+  }
+
+  void expectDisarmed() {
+    EXPECT_EQ(DisarmState::ShutdownAnnounced, sentinel_.disarmState());
   }
 
   RestartSentinel sentinel_{getuid()};
@@ -1893,35 +1910,70 @@ TEST_F(PrivHelperSentinelTest, readsTheCommandAndEnvironment) {
           std::pair<std::string, std::string>{"HOME", "/home/test"}));
 }
 
-TEST_F(PrivHelperSentinelTest, rejectsASymlink) {
+TEST_F(PrivHelperSentinelTest, anEmptyFileTheDaemonOwnsIsArmed) {
+  writeSentinel("");
+
+  EXPECT_EQ(DisarmState::Armed, sentinel_.disarmState());
+}
+
+TEST_F(PrivHelperSentinelTest, aSymlinkIsNotArmed) {
   const auto target = (dir_->path() / "target").string();
   ASSERT_TRUE(folly::writeFile(makeSentinelContents(), target.c_str()));
   checkUnixError(::symlink(target.c_str(), sentinelPath().c_str()));
 
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
+  expectDisarmed();
 }
 
-TEST_F(PrivHelperSentinelTest, rejectsAFifo) {
-  // Without the regular-file check, opening this would block a root process
-  // that still owes the mounts a cleanup.
+TEST_F(PrivHelperSentinelTest, aFifoIsNotArmed) {
+  // Without O_NONBLOCK and the regular-file check, opening this would block a
+  // root process that still owes the mounts a cleanup.
   checkUnixError(::mkfifo(sentinelPath().c_str(), 0600));
 
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
+  expectDisarmed();
 }
 
-TEST_F(PrivHelperSentinelTest, rejectsASentinelOwnedByAnotherUser) {
+TEST_F(PrivHelperSentinelTest, aDirectoryIsNotArmed) {
+  checkUnixError(::mkdir(sentinelPath().c_str(), 0700));
+
+  expectDisarmed();
+}
+
+TEST_F(PrivHelperSentinelTest, aSentinelOwnedByAnotherUserIsNotArmed) {
   writeSentinel(makeSentinelContents());
   RestartSentinel otherOwner{getuid() + 1};
   otherOwner.setConfig(makeRestartArgs(sentinelPath()));
 
-  EXPECT_FALSE(otherOwner.readRelaunchCommand().has_value());
+  EXPECT_EQ(DisarmState::ShutdownAnnounced, otherOwner.disarmState());
 }
 
-TEST_F(PrivHelperSentinelTest, rejectsAGroupWritableSentinel) {
+TEST_F(PrivHelperSentinelTest, aGroupWritableSentinelIsNotArmed) {
   writeSentinel(makeSentinelContents());
   checkUnixError(::chmod(sentinelPath().c_str(), 0660));
 
+  expectDisarmed();
+}
+
+TEST_F(PrivHelperSentinelTest, aMissingSentinelIsNotArmed) {
+  expectDisarmed();
   EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
+}
+
+TEST_F(PrivHelperSentinelTest, aNameThatCannotBeExaminedIsUnknown) {
+  // A unix socket is the one thing that fails the open without settling what
+  // is at the name, so it is the only route to Unknown from a resolvable path.
+  const auto path = sentinelPath();
+  ASSERT_LT(path.size(), sizeof(sockaddr_un::sun_path));
+  sockaddr_un addr{};
+  addr.sun_family = AF_UNIX;
+  std::memcpy(addr.sun_path, path.c_str(), path.size() + 1);
+  const int socketFd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+  checkUnixError(socketFd);
+  const folly::File socket{socketFd, /*ownsFd=*/true};
+  checkUnixError(
+      ::bind(
+          socket.fd(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)));
+
+  EXPECT_EQ(DisarmState::Unknown, sentinel_.disarmState());
 }
 
 TEST_F(PrivHelperSentinelTest, rejectsAnOversizedFile) {
@@ -1933,10 +1985,6 @@ TEST_F(PrivHelperSentinelTest, rejectsAnOversizedFile) {
 TEST_F(PrivHelperSentinelTest, rejectsAnEmptyFile) {
   writeSentinel("");
 
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
-}
-
-TEST_F(PrivHelperSentinelTest, rejectsAMissingFile) {
   EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
@@ -2277,6 +2325,7 @@ class PrivHelperDisarmTest : public ::testing::Test {
 
   void SetUp() override {
     sentinelFile_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    restrictSentinelToOwner(sentinelFile_->path().string());
     // Nothing calls initPartial() here, which is what would otherwise
     // construct the sentinel from the daemon's uid.
     server_.sentinel_.emplace(getuid());
@@ -2362,8 +2411,8 @@ TEST_F(PrivHelperDisarmTest, aSentinelPathRootCannotResolveIsUnknown) {
 }
 
 TEST_F(PrivHelperDisarmTest, aLeafThatAlwaysResolvesIsUnknown) {
-  // faccessat() resolves "." and ".." whatever the directory holds, so a
-  // sentinel named either could never be reported gone.
+  // "." and ".." resolve whatever the directory holds, so a sentinel named
+  // either could never be reported gone.
   expectSentinelPathRejected(sentinelDir() + "/.");
   expectSentinelPathRejected(sentinelDir() + "/..");
 }
@@ -2461,6 +2510,7 @@ class PrivHelperRestartDecisionTest : public ::testing::Test {
   void writeSentinel(const std::string& contents) {
     ASSERT_TRUE(
         folly::writeFile(contents, sentinelFile_->path().string().c_str()));
+    restrictSentinelToOwner(sentinelFile_->path().string());
   }
 
   void removeSentinel() {

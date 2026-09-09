@@ -45,7 +45,11 @@ class RestartSentinel {
   enum class DisarmState {
     /** edenfs neither announced a shutdown nor removed its sentinel. */
     Armed,
-    /** edenfs signalled, either way, that it meant to shut down. */
+    /**
+     * edenfs signalled, either way, that it meant to shut down. A name root
+     * could examine and found to hold something other than this daemon's own
+     * sentinel reads the same way.
+     */
     ShutdownAnnounced,
     /** The sentinel's state could not be determined; root must not guess. */
     Unknown,
