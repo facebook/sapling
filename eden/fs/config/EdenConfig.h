@@ -1273,44 +1273,46 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> nfsFastPathRPCs{"nfs:fast-path-rpcs", true, this};
 
   /**
-   * Per-uid access modes, "uid:mode", e.g. ["0:log", "89:block"]. A match bumps
-   * nfs.access.uid.<uid>; "block" also rejects, bumping nfs.blocked.uid.<uid>
-   * and nfs.blocked_access; "rate_limit" does so past nfs:access-rate-limit-*.
-   * Re-read on every request; AUTH_SYS ids are client-asserted, so this sheds
-   * noisy processes rather than enforcing a security boundary.
+   * Per-uid access policy, "uid:mode", e.g. ["0:log", "89:block"]. A match
+   * bumps nfs.access.uid.<uid>; "block" also rejects, bumping
+   * nfs.blocked.uid.<uid> and nfs.blocked_access; "rate_limit" does so past
+   * nfs:access-policy-rate-limit-*. Re-read on every request; AUTH_SYS ids
+   * are client-asserted, so this sheds noisy processes rather than enforcing
+   * a security boundary.
    */
-  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsUidAccessModes{
-      "nfs:uid-access-modes",
+  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsUidAccessPolicy{
+      "nfs:uid-access-policy",
       {{0, NfsAccessMode::Log}},
       this};
 
   /**
-   * Same as nfs:uid-access-modes, keyed by gid: an entry matches a request
+   * Same as nfs:uid-access-policy, keyed by gid: an entry matches a request
    * whose AUTH_SYS credential has that gid as its primary gid or among its
    * auxiliary gids. Evaluated independently of the uid entries, and every
    * matching entry of either map is counted.
    */
-  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsGidAccessModes{
-      "nfs:gid-access-modes",
+  ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsGidAccessPolicy{
+      "nfs:gid-access-policy",
       {{0, NfsAccessMode::Log}},
       this};
 
   /**
-   * For "rate_limit" entries in nfs:uid-access-modes / nfs:gid-access-modes:
-   * the requests an id may make per nfs:access-rate-limit-window-seconds
-   * before further ones in that window are rejected the way "block" rejects
-   * them. Budgets are per id and per mount.
+   * For "rate_limit" entries in nfs:uid-access-policy / nfs:gid-access-policy:
+   * the requests an id may make per
+   * nfs:access-policy-rate-limit-window-seconds before further ones in that
+   * window are rejected the way "block" rejects them. Budgets are per id and
+   * per mount.
    */
-  ConfigSetting<uint32_t> nfsAccessRateLimitCount{
-      "nfs:access-rate-limit-count",
+  ConfigSetting<uint32_t> nfsAccessPolicyRateLimitCount{
+      "nfs:access-policy-rate-limit-count",
       1000,
       this};
 
   /**
-   * The window length, in seconds, for nfs:access-rate-limit-count.
+   * The window length, in seconds, for nfs:access-policy-rate-limit-count.
    */
-  ConfigSetting<uint32_t> nfsAccessRateLimitWindowSeconds{
-      "nfs:access-rate-limit-window-seconds",
+  ConfigSetting<uint32_t> nfsAccessPolicyRateLimitWindowSeconds{
+      "nfs:access-policy-rate-limit-window-seconds",
       60,
       this};
 

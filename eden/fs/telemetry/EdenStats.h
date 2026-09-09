@@ -399,7 +399,7 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsInflightAtRequest{"nfs.inflight_at_request"};
 
   // Requests rejected by a "block" or over-budget "rate_limit" entry in
-  // nfs:uid-access-modes / nfs:gid-access-modes.
+  // nfs:uid-access-policy / nfs:gid-access-policy.
   Counter nfsBlockedAccess{"nfs.blocked_access"};
 
   // NFS GC invalidation counters

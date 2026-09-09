@@ -281,20 +281,20 @@ struct Nfsd3Test : ::testing::Test {
         .value_or(0);
   }
 
-  void setUidModes(std::unordered_map<uint32_t, NfsAccessMode> modes) {
-    config_->nfsUidAccessModes.setValue(
+  void setUidPolicy(std::unordered_map<uint32_t, NfsAccessMode> modes) {
+    config_->nfsUidAccessPolicy.setValue(
         std::move(modes), ConfigSourceType::UserConfig, true);
   }
 
-  void setGidModes(std::unordered_map<uint32_t, NfsAccessMode> modes) {
-    config_->nfsGidAccessModes.setValue(
+  void setGidPolicy(std::unordered_map<uint32_t, NfsAccessMode> modes) {
+    config_->nfsGidAccessPolicy.setValue(
         std::move(modes), ConfigSourceType::UserConfig, true);
   }
 
   void setRateLimit(uint32_t count, uint32_t windowSeconds) {
-    config_->nfsAccessRateLimitCount.setValue(
+    config_->nfsAccessPolicyRateLimitCount.setValue(
         count, ConfigSourceType::UserConfig, true);
-    config_->nfsAccessRateLimitWindowSeconds.setValue(
+    config_->nfsAccessPolicyRateLimitWindowSeconds.setValue(
         windowSeconds, ConfigSourceType::UserConfig, true);
   }
 
@@ -396,8 +396,8 @@ TEST_F(Nfsd3Test, gid_entry_matches_auxiliary_gid) {
 }
 
 TEST_F(Nfsd3Test, empty_maps_skip_everything) {
-  setUidModes({});
-  setGidModes({});
+  setUidPolicy({});
+  setGidPolicy({});
   auto uidBefore = getCounter("nfs.access.uid.0.sum");
   auto gidBefore = getCounter("nfs.access.gid.0.sum");
   auto blockedBefore = getCounter("nfs.blocked_access.sum");
@@ -410,7 +410,7 @@ TEST_F(Nfsd3Test, empty_maps_skip_everything) {
 }
 
 TEST_F(Nfsd3Test, block_entry_rejects_across_procedures) {
-  setUidModes({{0, NfsAccessMode::Block}});
+  setUidPolicy({{0, NfsAccessMode::Block}});
   auto accessBefore = getCounter("nfs.access.uid.0.sum");
   auto blockedUidBefore = getCounter("nfs.blocked.uid.0.sum");
   auto blockedBefore = getCounter("nfs.blocked_access.sum");
@@ -429,8 +429,8 @@ TEST_F(Nfsd3Test, block_entry_rejects_across_procedures) {
 }
 
 TEST_F(Nfsd3Test, uid_and_gid_entries_are_independent) {
-  setUidModes({});
-  setGidModes({{0, NfsAccessMode::Block}});
+  setUidPolicy({});
+  setGidPolicy({{0, NfsAccessMode::Block}});
   auto uidBefore = getCounter("nfs.access.uid.0.sum");
 
   // Both gid 0 spellings are rejected by the gid entry alone.
@@ -443,8 +443,8 @@ TEST_F(Nfsd3Test, uid_and_gid_entries_are_independent) {
 }
 
 TEST_F(Nfsd3Test, arbitrary_ids_get_their_own_entries) {
-  setUidModes({{501, NfsAccessMode::Block}});
-  setGidModes({{20, NfsAccessMode::Log}});
+  setUidPolicy({{501, NfsAccessMode::Block}});
+  setGidPolicy({{20, NfsAccessMode::Log}});
   auto uidAccessBefore = getCounter("nfs.access.uid.501.sum");
   auto uidBlockedBefore = getCounter("nfs.blocked.uid.501.sum");
   auto gidAccessBefore = getCounter("nfs.access.gid.20.sum");
@@ -463,8 +463,8 @@ TEST_F(Nfsd3Test, arbitrary_ids_get_their_own_entries) {
 }
 
 TEST_F(Nfsd3Test, every_matching_gid_entry_is_evaluated) {
-  setUidModes({});
-  setGidModes({{0, NfsAccessMode::Log}, {20, NfsAccessMode::Block}});
+  setUidPolicy({});
+  setGidPolicy({{0, NfsAccessMode::Log}, {20, NfsAccessMode::Block}});
   auto gid0AccessBefore = getCounter("nfs.access.gid.0.sum");
   auto gid0BlockedBefore = getCounter("nfs.blocked.gid.0.sum");
   auto gid20AccessBefore = getCounter("nfs.access.gid.20.sum");
@@ -484,16 +484,16 @@ TEST_F(Nfsd3Test, every_matching_gid_entry_is_evaluated) {
 }
 
 TEST_F(Nfsd3Test, missing_creds_are_never_blocked) {
-  setUidModes({{0, NfsAccessMode::Block}});
-  setGidModes({{0, NfsAccessMode::Block}});
+  setUidPolicy({{0, NfsAccessMode::Block}});
+  setGidPolicy({{0, NfsAccessMode::Block}});
 
   expectAcceptedSuccess(
       sendGetattr(1, opaque_auth{auth_flavor::AUTH_NONE, {}}));
 }
 
 TEST_F(Nfsd3Test, control_plane_procs_are_exempt) {
-  setUidModes({{0, NfsAccessMode::Block}});
-  setGidModes({{0, NfsAccessMode::Block}});
+  setUidPolicy({{0, NfsAccessMode::Block}});
+  setGidPolicy({{0, NfsAccessMode::Block}});
   auto uidBefore = getCounter("nfs.access.uid.0.sum");
   auto blockedBefore = getCounter("nfs.blocked_access.sum");
 
@@ -525,7 +525,7 @@ TEST_F(Nfsd3Test, control_plane_procs_are_exempt) {
 }
 
 TEST_F(Nfsd3Test, rate_limit_allows_baseline_and_rejects_bursts) {
-  setUidModes({{0, NfsAccessMode::RateLimit}});
+  setUidPolicy({{0, NfsAccessMode::RateLimit}});
   // A generous window so the budget cannot refill mid-test.
   setRateLimit(/*count=*/3, /*windowSeconds=*/3600);
   auto accessBefore = getCounter("nfs.access.uid.0.sum");
@@ -547,7 +547,8 @@ TEST_F(Nfsd3Test, rate_limit_allows_baseline_and_rejects_bursts) {
 }
 
 TEST_F(Nfsd3Test, rate_limit_budgets_are_per_id) {
-  setUidModes({{0, NfsAccessMode::RateLimit}, {501, NfsAccessMode::RateLimit}});
+  setUidPolicy(
+      {{0, NfsAccessMode::RateLimit}, {501, NfsAccessMode::RateLimit}});
   setRateLimit(/*count=*/1, /*windowSeconds=*/3600);
 
   // Exhausting uid 0's budget leaves uid 501's untouched.
@@ -558,15 +559,15 @@ TEST_F(Nfsd3Test, rate_limit_budgets_are_per_id) {
 }
 
 TEST_F(Nfsd3Test, config_changes_apply_without_restart) {
-  setUidModes({{0, NfsAccessMode::Block}});
+  setUidPolicy({{0, NfsAccessMode::Block}});
   expectAuthTooWeak(sendGetattr(1, rootOnlyCred()));
 
   // Dropping the entry back to "log" unblocks the same running server.
-  setUidModes({{0, NfsAccessMode::Log}});
+  setUidPolicy({{0, NfsAccessMode::Log}});
   expectAcceptedSuccess(sendGetattr(2, rootOnlyCred()));
 
   // The gid map is picked up independently.
-  setGidModes({{0, NfsAccessMode::Block}});
+  setGidPolicy({{0, NfsAccessMode::Block}});
   expectAuthTooWeak(sendGetattr(3, rootAndWheelCred()));
   expectAcceptedSuccess(sendGetattr(4, rootOnlyCred()));
 }

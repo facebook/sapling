@@ -13,7 +13,7 @@ namespace facebook::eden {
 
 /**
  * What EdenFS does with an NFS request whose AUTH_SYS credential matches an
- * entry in nfs:uid-access-modes or nfs:gid-access-modes (see EdenConfig).
+ * entry in nfs:uid-access-policy or nfs:gid-access-policy (see EdenConfig).
  */
 enum class NfsAccessMode {
   /**
@@ -27,8 +27,8 @@ enum class NfsAccessMode {
   Block,
   /**
    * Log as above, but only reject (as Block does) while the id's access
-   * count within nfs:access-rate-limit-window-seconds exceeds
-   * nfs:access-rate-limit-count — allow the low baseline, shed bursts.
+   * count within nfs:access-policy-rate-limit-window-seconds exceeds
+   * nfs:access-policy-rate-limit-count — allow the low baseline, shed bursts.
    */
   RateLimit,
 };

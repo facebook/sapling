@@ -81,7 +81,7 @@ void incrementNfsGcInvalidationCounter(
 
 /**
  * Whether an AUTH_SYS credential carries `gid` as its primary gid or as one
- * of its auxiliary gids; this is what an nfs:gid-access-modes entry matches.
+ * of its auxiliary gids; this is what an nfs:gid-access-policy entry matches.
  */
 bool credsHaveGid(const authsys_parms& creds, uint32_t gid) {
   return creds.gid == gid ||
@@ -2468,8 +2468,8 @@ bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
   // entries configured, requests need no identity and the per-request
   // AUTH_SYS parse is skipped entirely. Both maps are read off one snapshot.
   auto config = config_->getEdenConfig();
-  return !config->nfsUidAccessModes.getValue().empty() ||
-      !config->nfsGidAccessModes.getValue().empty();
+  return !config->nfsUidAccessPolicy.getValue().empty() ||
+      !config->nfsGidAccessPolicy.getValue().empty();
 }
 
 auth_stat Nfsd3ServerProcessor::checkAuthentication(
@@ -2484,12 +2484,14 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   // Every uid/gid entry the credential matches is evaluated, not just the
   // first: each one is counted, and any rejecting one rejects the request.
   auto config = config_->getEdenConfig();
-  const auto count = config->nfsAccessRateLimitCount.getValue();
-  const auto windowSeconds = config->nfsAccessRateLimitWindowSeconds.getValue();
+  const auto count = config->nfsAccessPolicyRateLimitCount.getValue();
+  const auto windowSeconds =
+      config->nfsAccessPolicyRateLimitWindowSeconds.getValue();
   bool block = false;
 
-  const auto& uidModes = config->nfsUidAccessModes.getValue();
-  if (auto entry = uidModes.find(authSysCreds->uid); entry != uidModes.end()) {
+  const auto& uidPolicy = config->nfsUidAccessPolicy.getValue();
+  if (auto entry = uidPolicy.find(authSysCreds->uid);
+      entry != uidPolicy.end()) {
     bumpAccessStat("access.uid", authSysCreds->uid);
     if (accessModeRejects(
             entry->second,
@@ -2501,7 +2503,7 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
       block = true;
     }
   }
-  for (const auto& [gid, mode] : config->nfsGidAccessModes.getValue()) {
+  for (const auto& [gid, mode] : config->nfsGidAccessPolicy.getValue()) {
     if (!credsHaveGid(*authSysCreds, gid)) {
       continue;
     }
