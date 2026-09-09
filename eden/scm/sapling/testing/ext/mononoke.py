@@ -175,7 +175,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
                 stderr=outfile,
                 env=localenv,
             )
-        except:
+        except Exception:
             stderr.write(
                 f"Error when running mononoke with command {mononoke_command} and stdout file {test_tmp}/mononoke.out\n".encode()
             )
