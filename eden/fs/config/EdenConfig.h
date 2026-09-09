@@ -1173,16 +1173,18 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint8_t> nfsReadAhead{"nfs:read-ahead", 16, this};
 
   /**
-   * NOTE: This config currently is limited to multiples of 10 deciseconds due
-   * to a bug in the EdenFS mount implementation.
-   *
    * Set the initial retransmit timeout to the specified value. (Normally, the
    * dumbtimer option should be specified when using this option to manually
    * tune the timeout interval). The value is in tenths of a second.
+   *
+   * On macOS with dumbtimer enabled this is the fixed per-request timeout of
+   * the kernel NFS client. For soft mounts the kernel gives up on a request
+   * (ETIMEDOUT to the caller) after at most min(timeo, 30s) once EdenFS is
+   * slow to answer, so 30s is the largest useful value there.
    */
   ConfigSetting<int32_t> nfsRetransmitTimeoutTenthSeconds{
       "nfs:retransmit-timeout-tenths",
-      10,
+      folly::kIsApple ? 300 : 10,
       this};
 
   /**
@@ -1208,13 +1210,22 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Turn off the dynamic retransmit timeout estimator.  This may be useful for
-   * UDP mounts that exhibit high retry rates, since it is possible that the
-   * dynamically estimated timeout interval is too short.
+   * ========== MACOS ONLY ==========
+   *
+   * Turn off the dynamic retransmit timeout estimator and use
+   * nfs:retransmit-timeout-tenths as a fixed request timeout instead.
+   *
+   * The estimator tracks the smoothed RTT of EdenFS replies, which is
+   * sub-millisecond for a local server, so the estimated timeout sits at its
+   * ~80ms floor. Any request that EdenFS answers slowly then trips the timer
+   * repeatedly, and on soft mounts that shrinks the kernel's give-up budget to
+   * a few seconds (or ~1.4s on a busy mount, where 15 retries are burned in
+   * 80ms steps). Enabled by default on macOS for that reason; nullopt leaves
+   * the kernel default (estimator on).
    */
   ConfigSetting<std::optional<bool>> nfsDumbtimer{
       "nfs:dumbtimer",
-      std::nullopt,
+      folly::kIsApple ? std::optional<bool>{true} : std::optional<bool>{},
       this};
 
   /**

@@ -715,8 +715,9 @@ void PrivHelperServer::nfsMount(
    * Enables or disables rdirplus (readdirplus) based on EdenConfig value
    * Sets the mount type to soft/hard (but make it interruptible) based on an
    *   EdenConfig value. While in theory we would always want the mount to be
-   *   soft, macOS force a maximum timeout of 60s, which in some case is too
-   *   short for files to be fetched, thus make it configurable.
+   *   soft, the macOS kernel gives up on a soft-mount request at most 30s
+   *   (NFS_MAXTIMEO / 2) after EdenFS stops answering promptly, which in some
+   *   cases is too short for files to be fetched, thus make it configurable.
    * Possibly specifies dumbtimer behavior, iff an EdenConfig value is
    *   explicitly set.
    * Suppresses macOS kernel JUKEBOX retry logging (NFS_MFLAG_MUTEJUKEBOX),
