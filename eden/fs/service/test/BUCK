@@ -149,6 +149,25 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "restart_armer_test",
+    srcs = ["RestartArmerTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/service:server",
+        "//folly:file_util",
+        "//folly/futures:core",
+        "//folly/json:dynamic",
+        "//folly/portability:unistd",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_unittest(
     name = "eden_server_test",
     srcs = ["EdenServerTest.cpp"],
     labels = ["autodeps2_generated"],

@@ -253,7 +253,7 @@ RestartSentinel::readRelaunchCommand() const {
     return std::nullopt;
   }
 
-  // Written by EdenServer::armPrivHelperRestart(); the shape is fixed:
+  // Written by RestartArmer::arm(); the shape is fixed:
   //
   //   {"argv": ["...", ...], "env": {"KEY": "VALUE", ...}, "nonce": 123}
   RelaunchCommand command;

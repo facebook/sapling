@@ -40,6 +40,7 @@
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
+#include "eden/fs/service/RestartArmer.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -407,14 +408,7 @@ class EdenServer : private TakeoverHandler {
     return edenDir_.getPath();
   }
 
-  /**
-   * Give the privhelper what it needs to relaunch this daemon after a crash,
-   * and create the sentinel whose existence says "still armed".
-   *
-   * No-op unless this is macOS with privhelper:restart-edenfs-on-crash set.
-   * Best effort: a daemon started without edenfsctl has no recorded command,
-   * and the only consequence is that it will not be restarted.
-   */
+  /** Arm the privhelper to relaunch this daemon after a crash. */
   void armPrivHelperRestart();
 
   std::string getEdenHeartbeatFileNameStr() const;
@@ -821,31 +815,7 @@ class EdenServer : private TakeoverHandler {
    */
   void markShuttingDownLocked(RunStateData& state);
 
-  /** Remove this daemon's restart sentinel. Idempotent. */
-  void removeRestartSentinel();
-
-  /**
-   * Whether the privhelper accepted our restart configuration. Only ever true
-   * on macOS with the feature enabled; gates every disarm action.
-   */
-  std::atomic<bool> privHelperRestartArmed_{false};
-
 #ifdef __APPLE__
-  /**
-   * The `argv` and `env` edenfsctl recorded for this daemon, read on the first
-   * arm and kept.
-   *
-   * Returns nullopt, having logged why, if there is nothing to relaunch with.
-   */
-  std::optional<folly::dynamic> getRelaunchCommand();
-
-  /**
-   * Memoizes getRelaunchCommand(). The args file has one fixed path per state
-   * directory, so a daemon that failed to take over from us has already
-   * replaced its contents with its own command by the time we re-arm.
-   */
-  folly::Synchronized<std::optional<folly::dynamic>> relaunchCommand_;
-
   folly::dynamic nfsStatOutput_;
   std::optional<std::string> mapCounterNameForNFSStat(
       std::pair<std::string, std::string> nfsStatsCounter);
@@ -918,6 +888,12 @@ class EdenServer : private TakeoverHandler {
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;
+
+  /**
+   * The privhelper-driven restart state machine.
+   * Declared after serverState_ so it can receive the PrivHelper.
+   */
+  RestartArmer restartArmer_;
 
   /**
    * HeartbeatManager to handle all heartbeat-related operations.
