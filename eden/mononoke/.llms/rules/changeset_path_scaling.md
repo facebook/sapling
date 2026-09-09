@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'changed_files|file_changes|path|paths|manifest|diff|list_all'
+name: changeset-path-scaling
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'changed_files|file_changes|path|paths|manifest|diff|list_all'
 ---
 
 # Changeset Path Scaling
