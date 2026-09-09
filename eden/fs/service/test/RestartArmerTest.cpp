@@ -366,7 +366,7 @@ TEST_F(RestartArmerTest, aSentinelThatCannotBeUnlinkedDoesNotFailTheArm) {
 
 TEST_F(RestartArmerTest, aNameThatOnlySharesThePrefixIsNotReaped) {
   ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
-  const auto generationless = makeStateDirFile(".edenfs_restart_armed");
+  const auto withoutTheSeparator = makeStateDirFile(".edenfs_restart_armed");
   std::vector<std::string> kept{
       ".edenfs_restart_armed.Ab3XyZ",
       ".edenfs_restart_armed.7.000000000000000",
@@ -385,7 +385,7 @@ TEST_F(RestartArmerTest, aNameThatOnlySharesThePrefixIsNotReaped) {
   kept.push_back(std::string{armedSentinelPath().basename().view()});
   std::sort(kept.begin(), kept.end());
   EXPECT_EQ(kept, sentinelNames());
-  EXPECT_TRUE(exists(generationless));
+  EXPECT_TRUE(exists(withoutTheSeparator));
 }
 
 TEST_F(RestartArmerTest, unrelatedFilesInTheStateDirAreLeftAlone) {

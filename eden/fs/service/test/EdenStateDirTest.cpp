@@ -35,14 +35,14 @@ TEST_F(EdenStateDirTest, restartSentinelIsNamedForItsPidAndToken) {
   EXPECT_EQ(stateDirPath().asString(), path.dirname().asString());
 }
 
-TEST_F(EdenStateDirTest, restartSentinelPrefixMatchesOnlyPerGenerationNames) {
+TEST_F(EdenStateDirTest, restartSentinelNamesStartWithThePrefix) {
   const EdenStateDir stateDir{stateDirPath()};
   const auto prefix = stateDir.getRestartSentinelNamePrefix();
-  const auto perGeneration = stateDir.getRestartSentinelPath(1, 2);
-  const auto generationLess = stateDir.getRestartSentinelPath();
+  const auto path = stateDir.getRestartSentinelPath(1, 2);
+  const auto name = path.basename().view();
 
-  EXPECT_TRUE(perGeneration.basename().view().starts_with(prefix));
-  EXPECT_FALSE(generationLess.basename().view().starts_with(prefix));
+  EXPECT_EQ('.', prefix.back());
+  EXPECT_TRUE(name.starts_with(prefix)) << name;
 }
 
 } // namespace

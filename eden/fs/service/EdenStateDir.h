@@ -119,15 +119,8 @@ class EdenStateDir {
   AbsolutePath getDaemonArgsPath() const;
 
   /**
-   * Get the path to the restart sentinel, whose existence tells a surviving
-   * privhelper that the daemon died rather than stopped.
-   *
-   * Shared by every daemon generation in this state dir, not per-process.
-   */
-  AbsolutePath getRestartSentinelPath() const;
-
-  /**
-   * Get the path to one daemon generation's restart sentinel.
+   * Get the path to one daemon generation's restart sentinel, whose existence
+   * tells a surviving privhelper that the daemon died rather than stopped.
    *
    * @param pid the arming daemon's pid.
    * @param token regenerated on every arm, so that a re-arm by the same pid
@@ -138,8 +131,7 @@ class EdenStateDir {
   /**
    * Get the file name prefix every generation's restart sentinel shares.
    *
-   * Includes the separator that follows it, so it never matches the
-   * generation-less sentinel name.
+   * Includes the separator that precedes the pid.
    */
   std::string_view getRestartSentinelNamePrefix() const;
 
