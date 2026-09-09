@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Portability.h>
 #include <folly/system/HardwareConcurrency.h>
 #include <chrono>
 #include <memory>
@@ -1611,6 +1612,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   // [telemetry]
+
+  /**
+   * Whether the daemon sends samples to Scribe at all via the XplatLogger.
+   * Checked on every sample, so it can be flipped in emergency situations. Off
+   * by default in debug builds to avoid pollution but that means it needs to be
+   * enabled for testing telemetry related code changes.
+   */
+  ConfigSetting<bool> enableScribeLogging{
+      "telemetry:enable-scribe-logging",
+      !folly::kIsDebug,
+      this};
 
   /**
    * Location of scribe_cat binary on the system. If not specified, scribe
