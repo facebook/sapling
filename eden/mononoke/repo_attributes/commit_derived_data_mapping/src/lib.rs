@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -67,6 +68,8 @@ mononoke_queries! {
 
 /// Mapping of (repo_id, changeset_id, derived_data_type, version) -> derived_value
 /// stored in XDB, sharded by derived data type.
+///
+/// Reads check the primary for replica misses to preserve read-after-write consistency.
 ///
 /// The caller is responsible for providing the correct connection index
 /// (from `xdb_mapping_shard_ids` config) for each derived data type.
@@ -168,6 +171,7 @@ impl CommitDerivedDataMapping {
 pub struct SqlCommitDerivedDataMapping {
     write_connections: Arc<Vec1<Connection>>,
     read_connections: Arc<Vec1<Connection>>,
+    read_master_connections: Arc<Vec1<Connection>>,
 }
 
 impl SqlCommitDerivedDataMapping {
@@ -284,6 +288,19 @@ impl SqlCommitDerivedDataMapping {
             &derived_data_version,
         )
         .await?;
+        if let Some((value,)) = rows.into_iter().next() {
+            return Ok(Some(value));
+        }
+
+        let rows = SelectMapping::query(
+            &self.read_master_connections[idx],
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &cs_id,
+            &type_id,
+            &derived_data_version,
+        )
+        .await?;
         Ok(rows.into_iter().next().map(|(v,)| v))
     }
 
@@ -297,8 +314,12 @@ impl SqlCommitDerivedDataMapping {
         shard_id: usize,
     ) -> Result<Vec<(ChangesetId, Vec<u8>)>> {
         let idx = self.shard_id(shard_id)?;
+        if cs_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let type_id = Self::derived_data_type_id(derived_data_type);
-        SelectMappingBatch::query(
+        let mut rows = SelectMappingBatch::query(
             &self.read_connections[idx],
             ctx.sql_query_telemetry(),
             &repo_id,
@@ -306,7 +327,27 @@ impl SqlCommitDerivedDataMapping {
             &derived_data_version,
             &cs_ids[..],
         )
-        .await
+        .await?;
+        let fetched_cs_ids: HashSet<_> = rows.iter().map(|(cs_id, _)| *cs_id).collect();
+        let missing_cs_ids: Vec<_> = cs_ids
+            .into_iter()
+            .filter(|cs_id| !fetched_cs_ids.contains(cs_id))
+            .collect();
+        if missing_cs_ids.is_empty() {
+            return Ok(rows);
+        }
+
+        let primary_rows = SelectMappingBatch::query(
+            &self.read_master_connections[idx],
+            ctx.sql_query_telemetry(),
+            &repo_id,
+            &type_id,
+            &derived_data_version,
+            &missing_cs_ids[..],
+        )
+        .await?;
+        rows.extend(primary_rows);
+        Ok(rows)
     }
 }
 
@@ -318,13 +359,14 @@ impl SqlShardedConstruct for SqlCommitDerivedDataMapping {
     fn from_sql_shard_connections(connections: SqlShardedConnections) -> Self {
         let SqlShardedConnections {
             read_connections,
-            read_master_connections: _,
+            read_master_connections,
             write_connections,
         } = connections;
 
         Self {
             write_connections: Arc::new(write_connections),
             read_connections: Arc::new(read_connections),
+            read_master_connections: Arc::new(read_master_connections),
         }
     }
 }
@@ -353,11 +395,157 @@ mod test {
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use sql_construct::SqlConstruct;
+    use sql_ext::SqlConnections;
 
     use super::*;
 
     // In-memory SQLite has a single connection, so shard_id is always 0.
     const CONN: usize = 0;
+
+    mononoke_queries! {
+        write DropMappingsTable() {
+            none,
+            "DROP TABLE commit_derived_data"
+        }
+    }
+
+    fn with_lagging_replica() -> Result<(SqlCommitDerivedDataMapping, SqlCommitDerivedDataMapping)>
+    {
+        let primary = SqlCommitDerivedDataMapping::with_sqlite_in_memory()?;
+        let replica = SqlCommitDerivedDataMapping::with_sqlite_in_memory()?;
+        let sql = SqlCommitDerivedDataMapping::from_sql_connections(SqlConnections {
+            write_connection: primary.write_connections[CONN].clone(),
+            read_master_connection: primary.write_connections[CONN].clone(),
+            read_connection: replica.read_connections[CONN].clone(),
+        });
+        Ok((sql, replica))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_single_read_with_replica_lag(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (sql, replica) = with_lagging_replica()?;
+        let repo_id = RepositoryId::new(1);
+        let dt = DerivableType::HistoryManifests;
+        let version = 1;
+        let value = vec![1u8; 32];
+
+        sql.store_mapping(&ctx, repo_id, ONES_CSID, dt, version, &value, CONN)
+            .await?;
+        assert_eq!(
+            replica
+                .fetch_mapping(&ctx, repo_id, ONES_CSID, dt, version, CONN)
+                .await?,
+            None,
+        );
+        assert_eq!(
+            sql.fetch_mapping(&ctx, repo_id, ONES_CSID, dt, version, CONN)
+                .await?,
+            Some(value),
+        );
+        assert_eq!(
+            sql.fetch_mapping(&ctx, repo_id, TWOS_CSID, dt, version, CONN)
+                .await?,
+            None,
+        );
+
+        for (repo_id, dt, version) in [
+            (RepositoryId::new(2), dt, version),
+            (repo_id, DerivableType::Fsnodes, version),
+            (repo_id, dt, version + 1),
+        ] {
+            assert_eq!(
+                sql.fetch_mapping(&ctx, repo_id, ONES_CSID, dt, version, CONN)
+                    .await?,
+                None,
+            );
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_batch_read_with_replica_lag(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (sql, replica) = with_lagging_replica()?;
+        let repo_id = RepositoryId::new(1);
+        let dt = DerivableType::HistoryManifests;
+        let version = 1;
+        let value1 = vec![1u8; 32];
+        let value2 = vec![2u8; 32];
+
+        sql.store_mapping_batch(
+            &ctx,
+            repo_id,
+            vec![
+                (ONES_CSID, version, value1.clone()),
+                (TWOS_CSID, version, value2.clone()),
+            ],
+            dt,
+            version,
+            CONN,
+        )
+        .await?;
+        replica
+            .store_mapping(&ctx, repo_id, ONES_CSID, dt, version, &value1, CONN)
+            .await?;
+
+        let results = sql
+            .fetch_mapping_batch(
+                &ctx,
+                repo_id,
+                vec![ONES_CSID, ONES_CSID, TWOS_CSID, TWOS_CSID, THREES_CSID],
+                dt,
+                version,
+                CONN,
+            )
+            .await?;
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results.into_iter().collect::<HashMap<_, _>>(),
+            HashMap::from([(ONES_CSID, value1), (TWOS_CSID, value2)]),
+        );
+
+        for cs_ids in [vec![], vec![THREES_CSID]] {
+            assert!(
+                sql.fetch_mapping_batch(&ctx, repo_id, cs_ids, dt, version, CONN)
+                    .await?
+                    .is_empty(),
+            );
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_replica_hits_do_not_query_primary(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (sql, replica) = with_lagging_replica()?;
+        let repo_id = RepositoryId::new(1);
+        let dt = DerivableType::HistoryManifests;
+        let version = 1;
+        let value = vec![1u8; 32];
+
+        replica
+            .store_mapping(&ctx, repo_id, ONES_CSID, dt, version, &value, CONN)
+            .await?;
+        DropMappingsTable::query(&sql.write_connections[CONN], ctx.sql_query_telemetry()).await?;
+
+        assert_eq!(
+            sql.fetch_mapping(&ctx, repo_id, ONES_CSID, dt, version, CONN)
+                .await?,
+            Some(value.clone()),
+        );
+        assert_eq!(
+            sql.fetch_mapping_batch(&ctx, repo_id, vec![ONES_CSID, ONES_CSID], dt, version, CONN,)
+                .await?,
+            vec![(ONES_CSID, value)],
+        );
+        assert!(
+            sql.fetch_mapping_batch(&ctx, repo_id, vec![], dt, version, CONN)
+                .await?
+                .is_empty(),
+        );
+        Ok(())
+    }
 
     #[mononoke::fbinit_test]
     async fn test_single_write_and_read(fb: FacebookInit) -> Result<()> {
