@@ -174,7 +174,7 @@ def wrapmerge(
                 ),
                 to_repo.ui.configwith(str, "devel", "lock_backoff", default="0.1s"),
             )
-        except:
+        except Exception:
             # For now, log and ignore errors.
             to_repo.ui.warn("Failed to set edenfs notifications state 'hg.update'")
             cm = contextlib.nullcontext()
@@ -222,7 +222,7 @@ def wrapgoto(
                 repo.ui.configwith(str, "edenfs", "eden-state-timeout", default="1s"),
                 repo.ui.configwith(str, "devel", "lock_backoff", default="0.1s"),
             )
-        except:
+        except Exception:
             # For now, log and ignore errors.
             repo.ui.warn("Failed to set edenfs notifications state 'hg.update'")
             cm = contextlib.nullcontext()
