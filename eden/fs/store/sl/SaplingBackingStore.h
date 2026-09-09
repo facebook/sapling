@@ -265,6 +265,14 @@ class SaplingBackingStore final
     sapling::sapling_flush_counters();
   }
 
+  /**
+   * Mirrors telemetry:enable-scribe-logging into the Rust tracing-to-Scuba
+   * sink, which cannot read EdenConfig itself. Process wide.
+   */
+  static void setScribeLoggingEnabled(bool enabled) {
+    sapling::sapling_backingstore_set_scribe_logging_enabled(enabled);
+  }
+
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 

@@ -785,6 +785,11 @@ EdenServer::EdenServer(
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)},
       lastPressureBasedGcTimes_{kPathMapDefaultCaseSensitive} {
+  // The Rust tracing sink lives outside EdenConfig, so hand it the switch
+  // here and again on every reload.
+  SaplingBackingStore::setScribeLoggingEnabled(
+      edenConfig->enableScribeLogging.getValue());
+
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
 
   registerInodePopulationReportsCallback();
@@ -4200,6 +4205,9 @@ void EdenServer::reloadConfig() {
   // Reload the config, then get the new values.
   serverState_->getReloadableConfig()->maybeReload();
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
+
+  SaplingBackingStore::setScribeLoggingEnabled(
+      config->enableScribeLogging.getValue());
 
   // Update all periodic tasks that are controlled by config settings.
   // This should be cheap, so for now we just block on this to finish rather

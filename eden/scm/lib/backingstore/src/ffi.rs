@@ -403,6 +403,11 @@ pub(crate) mod ffi {
 
         pub fn sapling_backingstore_flush(store: &BackingStore);
 
+        /// Process-wide switch for the tracing-to-Scuba sink. Mirrors the
+        /// daemon's `telemetry:enable-scribe-logging`; call it at startup and
+        /// after every config reload.
+        pub fn sapling_backingstore_set_scribe_logging_enabled(enabled: bool);
+
         pub fn sapling_backingstore_get_glob_files(
             store: &BackingStore,
             commit_id: &[u8],
@@ -560,6 +565,13 @@ pub fn sapling_backingstore_new(
         &extra_sapling_configs,
     )?;
     Ok(Box::new(store))
+}
+
+pub fn sapling_backingstore_set_scribe_logging_enabled(enabled: bool) {
+    #[cfg(feature = "scuba")]
+    edenfs_telemetry::tracing_logger::set_scribe_logging_enabled(enabled);
+    #[cfg(not(feature = "scuba"))]
+    let _ = enabled;
 }
 
 pub fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
