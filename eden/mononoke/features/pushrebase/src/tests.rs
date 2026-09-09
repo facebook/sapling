@@ -764,13 +764,13 @@ async fn rebase_stack_onto_with_conflict_base_lands_an_orphaned_root(
         "unexpected error: {err}"
     );
 
-    // With the rewritten form as the conflict base it lands.
+    // With the fork point as the conflict base it lands.
     let rebased = rebase_stack_onto_with_conflict_base(
         &ctx,
         &repo,
         &stack_rebase_flags(),
         orphan,
-        landed,
+        base,
         head,
         onto,
     )
@@ -796,6 +796,558 @@ async fn rebase_stack_onto_with_conflict_base_lands_an_orphaned_root(
         "the rebased stack must sit directly on onto",
     );
 
+    Ok(())
+}
+
+/// The MRL shape: the stack sits on `orphan`, rewritten into `landed` by an
+/// earlier land; `server_early` landed in between and is what the stack never
+/// saw. Returns `(base, orphan, landed, onto)`; `base` is the fork point.
+async fn orphaned_root_fixture(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    gap_base: &str,
+    gap_server: &str,
+) -> Result<(ChangesetId, ChangesetId, ChangesetId, ChangesetId), Error> {
+    let base = CreateCommitContext::new_root(ctx, repo)
+        .add_file("base", "base")
+        .add_file("gap", gap_base)
+        .add_file("blob", vec![0u8, 1, 2, 3])
+        .add_file("gone", "g")
+        .commit()
+        .await?;
+    let server_early = CreateCommitContext::new(ctx, repo, vec![base])
+        .add_file("gap", gap_server)
+        .commit()
+        .await?;
+    let orphan = CreateCommitContext::new(ctx, repo, vec![base])
+        .add_file("shared", "v1")
+        .add_file("blob", vec![0u8, 4, 4])
+        .delete_file("gone")
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(ctx, repo, vec![server_early])
+        .add_file("shared", "v1")
+        .add_file("blob", vec![0u8, 4, 4])
+        .delete_file("gone")
+        .commit()
+        .await?;
+    let onto = CreateCommitContext::new(ctx, repo, vec![landed])
+        .add_file("server_file", "server")
+        .commit()
+        .await?;
+    assert_ne!(orphan, landed);
+    Ok((base, orphan, landed, onto))
+}
+
+async fn file_bytes(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    cs: ChangesetId,
+    path: &str,
+) -> Result<Vec<u8>, Error> {
+    let hg = repo
+        .derive_hg_changeset(ctx, cs)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?;
+    let entry = hg
+        .manifestid()
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            NonRootMPath::new(path)?.into(),
+        )
+        .await?
+        .ok_or_else(|| format_err!("{path} should exist"))?;
+    match entry {
+        Entry::Leaf((_, filenode_id)) => {
+            let content_id = filenode_id
+                .load(ctx, repo.repo_blobstore())
+                .await?
+                .content_id();
+            Ok(
+                filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id)
+                    .await?
+                    .to_vec(),
+            )
+        }
+        _ => Err(format_err!("{path} should be a file")),
+    }
+}
+
+async fn file_content(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    cs: ChangesetId,
+    path: &str,
+) -> Result<String, Error> {
+    Ok(String::from_utf8(file_bytes(ctx, repo, cs, path).await?)?)
+}
+
+fn conflict_paths(err: &PushrebaseError) -> Vec<String> {
+    match err {
+        PushrebaseError::Conflicts(conflicts) => {
+            let mut paths: Vec<_> = conflicts.iter().map(|c| c.left.to_string()).collect();
+            paths.sort();
+            paths
+        }
+        other => panic!("expected a conflict, got: {other}"),
+    }
+}
+
+fn merging_flags() -> PushrebaseFlags {
+    PushrebaseFlags {
+        merge_resolution_override: MergeResolutionOverride::ForceOn,
+        ..stack_rebase_flags()
+    }
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_checks_commits_landed_before_the_rewrite(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, _landed, onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // The stack edits `gap`, which `server_early` edited before the rewrite.
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("gap", "author")
+        .commit()
+        .await?;
+
+    let err = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        base,
+        head,
+        onto,
+    )
+    .await
+    .expect_err("a path changed before the rewrite must still conflict");
+    assert_eq!(conflict_paths(&err), vec!["gap".to_string()]);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_merges_across_the_rewrite(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, _landed, onto) = orphaned_root_fixture(
+        &ctx,
+        &repo,
+        "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n",
+        "SERVER\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n",
+    )
+    .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("gap", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nAUTHOR\n")
+        .commit()
+        .await?;
+
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &merging_flags(),
+        orphan,
+        base,
+        head,
+        onto,
+    )
+    .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "gap").await?,
+        "SERVER\nl2\nl3\nl4\nl5\nl6\nl7\nAUTHOR\n"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_takes_the_stack_over_its_own_landed_form(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, _landed, onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // `shared` and the binary `blob` were last touched by the stack's own
+    // landed form; with merge resolution off that must still not conflict.
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("shared", "v2")
+        .add_file("blob", vec![0u8, 9, 9, 9])
+        .commit()
+        .await?;
+
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        base,
+        head,
+        onto,
+    )
+    .await?;
+    assert_eq!(rebased.rebased_changesets.len(), 1);
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "shared").await?,
+        "v2"
+    );
+    assert_eq!(
+        file_bytes(&ctx, &repo, rebased.new_head, "blob").await?,
+        vec![0u8, 9, 9, 9]
+    );
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "server_file").await?,
+        "server"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_still_rejects_a_real_binary_overlap(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, landed, _onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // Someone else changed the binary after the stack's landed form did.
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .add_file("blob", vec![0u8, 7, 7])
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("blob", vec![0u8, 9, 9, 9])
+        .commit()
+        .await?;
+
+    // With merge resolution on this still conflicts because the three
+    // one-line blobs genuinely disagree, not through binary detection.
+    for flags in [stack_rebase_flags(), merging_flags()] {
+        let err =
+            rebase_stack_onto_with_conflict_base(&ctx, &repo, &flags, orphan, base, head, onto)
+                .await
+                .expect_err("a binary changed on both sides cannot land");
+        assert_eq!(conflict_paths(&err), vec!["blob".to_string()]);
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_merges_after_a_resolved_rewrite(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    // D1 (line 1) was merge-resolved against P (line 8) into B1', so B1'.x
+    // differs from D1.x. D2 edits line 4; all three edits must survive, with
+    // the merge based at D1, not at the fork point.
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+    let p = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nSERVER\n")
+        .commit()
+        .await?;
+    let d1 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("x", "AUTHOR1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+    let b1_prime = CreateCommitContext::new(&ctx, &repo, vec![p])
+        .add_file("x", "AUTHOR1\nl2\nl3\nl4\nl5\nl6\nl7\nSERVER\n")
+        .commit()
+        .await?;
+    let d2 = CreateCommitContext::new(&ctx, &repo, vec![d1])
+        .add_file("x", "AUTHOR1\nl2\nl3\nAUTHOR2\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+
+    let rebased =
+        rebase_stack_onto_with_conflict_base(&ctx, &repo, &merging_flags(), d1, fork, d2, b1_prime)
+            .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "x").await?,
+        "AUTHOR1\nl2\nl3\nAUTHOR2\nl5\nl6\nl7\nSERVER\n"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_merges_against_the_latest_server_edit(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+    let s1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nS1\n")
+        .commit()
+        .await?;
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![s1])
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nS2\n")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("x", "C\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+
+    // Two server edits to one file: the merge must see the later one.
+    let rebased = rebase_stack_onto(&ctx, &repo, &merging_flags(), root, head, onto).await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "x").await?,
+        "C\nl2\nl3\nl4\nl5\nl6\nl7\nS2\n"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_takes_a_multi_commit_stack_over_its_own_landed_form(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, _landed, onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // Two new commits both touch `shared`; the cascade must apply them in order.
+    let b = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("shared", "v2")
+        .commit()
+        .await?;
+    let c = CreateCommitContext::new(&ctx, &repo, vec![b])
+        .add_file("shared", "v3")
+        .delete_file("blob")
+        .commit()
+        .await?;
+
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        base,
+        c,
+        onto,
+    )
+    .await?;
+    assert_eq!(rebased.rebased_changesets.len(), 2);
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "shared").await?,
+        "v3"
+    );
+    assert!(
+        file_bytes(&ctx, &repo, rebased.new_head, "blob")
+            .await
+            .is_err(),
+        "the stack's own deletion of its landed file must apply"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_reads_the_base_from_a_deeper_landed_prefix(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    // A0 edits x line 1 and A1 does not touch x: the base is A1's view of x,
+    // read from a manifest nobody derived before this land.
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+    let p = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("x", "l1\nl2\nl3\nl4\nl5\nl6\nl7\nSERVER\n")
+        .commit()
+        .await?;
+    let a0 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("x", "A0\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n")
+        .add_file("y", "y0")
+        .commit()
+        .await?;
+    let a1 = CreateCommitContext::new(&ctx, &repo, vec![a0])
+        .add_file("other", "a1")
+        .commit()
+        .await?;
+    let a0_prime = CreateCommitContext::new(&ctx, &repo, vec![p])
+        .add_file("x", "A0\nl2\nl3\nl4\nl5\nl6\nl7\nSERVER\n")
+        .add_file("y", "y0")
+        .commit()
+        .await?;
+    let a1_prime = CreateCommitContext::new(&ctx, &repo, vec![a0_prime])
+        .add_file("other", "a1")
+        .commit()
+        .await?;
+    // `y` exists only from A0 on: a base read from the fork point instead of
+    // the root would find nothing and reject this with merge resolution off.
+    let head_y = CreateCommitContext::new(&ctx, &repo, vec![a1])
+        .add_file("y", "y1")
+        .commit()
+        .await?;
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        a1,
+        fork,
+        head_y,
+        a1_prime,
+    )
+    .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "y").await?,
+        "y1"
+    );
+
+    let head_x = CreateCommitContext::new(&ctx, &repo, vec![a1])
+        .add_file("x", "A0\nl2\nl3\nAUTHOR\nl5\nl6\nl7\nl8\n")
+        .commit()
+        .await?;
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &merging_flags(),
+        a1,
+        fork,
+        head_x,
+        a1_prime,
+    )
+    .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "x").await?,
+        "A0\nl2\nl3\nAUTHOR\nl5\nl6\nl7\nSERVER\n"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_rejects_an_edit_to_a_file_the_server_deleted(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, landed, _onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // The server deleted `shared` after the stack's landed form created it.
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .delete_file("shared")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("shared", "v2")
+        .commit()
+        .await?;
+
+    for flags in [stack_rebase_flags(), merging_flags()] {
+        let err =
+            rebase_stack_onto_with_conflict_base(&ctx, &repo, &flags, orphan, base, head, onto)
+                .await
+                .expect_err("editing a file the server deleted must not land silently");
+        assert_eq!(conflict_paths(&err), vec!["shared".to_string()]);
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_takes_a_recreated_file_its_landed_form_deleted(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, _landed, onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // `gone` is absent at the root and deleted on the server by the root's
+    // own landed form: re-creating it is a self-overlap, not a conflict.
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("gone", "g2")
+        .commit()
+        .await?;
+
+    let rebased = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        base,
+        head,
+        onto,
+    )
+    .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        file_content(&ctx, &repo, rebased.new_head, "gone").await?,
+        "g2"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rebase_stack_onto_with_conflict_base_reads_the_head_when_the_range_has_a_merge(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let (base, orphan, landed, _onto) =
+        orphaned_root_fixture(&ctx, &repo, "base", "server").await?;
+    // A side branch adds `only_side`; the merge keeps it without recording it,
+    // so server state must come from the head's manifest, not the bonsais.
+    let side = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("only_side", "side")
+        .commit()
+        .await?;
+    // The merge must record every path its parents disagree on.
+    let onto = CreateCommitContext::new(&ctx, &repo, vec![landed, side])
+        .add_file("gap", "server")
+        .add_file("blob", vec![0u8, 4, 4])
+        .delete_file("gone")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("shared", "v2")
+        .add_file("only_side", "author")
+        .commit()
+        .await?;
+
+    let err = rebase_stack_onto_with_conflict_base(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        base,
+        head,
+        onto,
+    )
+    .await
+    .expect_err("creating a file the merge brought in must conflict");
+    // `shared` is the stack's own landed content and is not reported.
+    assert_eq!(conflict_paths(&err), vec!["only_side".to_string()]);
     Ok(())
 }
 

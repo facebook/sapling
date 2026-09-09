@@ -424,7 +424,9 @@ pub struct RebasedStack {
 /// Runs no hooks; honors the caller's merge resolution setting. With it on, a
 /// replay of an already-landed stack merges to a no-op rather than conflicting
 /// on paths, so callers relying on replay failing closed must keep it off or
-/// rely on the no-op merge commit rejection. Requires `rewritedates == false`
+/// rely on the no-op merge commit rejection. Overlaps whose server content
+/// still equals the base are taken as-is; a replay differs from the base and
+/// is unaffected. Requires `rewritedates == false`
 /// (checked) — date stamping makes the rewrite non-deterministic, breaking
 /// callers' retry termination. Rejects merge commits in the stack; uses
 /// content-manifest range diffs so repos without HG derived data work.
@@ -445,8 +447,12 @@ pub async fn rebase_stack_onto(
 /// They differ only when `root` was itself rewritten by an earlier land: the
 /// author's stack still descends from `root`, so it stays the range base and
 /// the re-parent source, but `root` is no longer on the branch and cannot
-/// bound the server range. `conflict_base` is its rewritten form, which is.
-/// Pass `root` for both to get the ordinary behaviour.
+/// bound the server range. `conflict_base` is where the stack left the
+/// branch, so the range covers everything the stack has not seen, including
+/// the root's own landed form. Overlaps the server never changed relative to
+/// the root are the stack's own earlier commits and are taken as-is; the
+/// caller must have proven the root landed under another identity. Pass
+/// `root` for both to get the ordinary behaviour.
 pub async fn rebase_stack_onto_with_conflict_base(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -517,6 +523,7 @@ pub async fn rebase_stack_onto_with_conflict_base(
         &client_bcs,
         &client_cf,
         RangeDiffManifests::ContentCompat,
+        UnchangedOverlap::TakeClient,
     )
     .await?;
 
@@ -967,6 +974,17 @@ struct ConflictCheckResult {
     merge_summary: MergeResolutionSummary,
 }
 
+/// An overlapping path whose server content still equals the base: only the
+/// stack changed it, so there is nothing to merge.
+#[derive(Clone, Copy)]
+enum UnchangedOverlap {
+    /// Report it like any other overlap.
+    Conflict,
+    /// Take the stack's content; needed when the range holds the root's own
+    /// landed form.
+    TakeClient,
+}
+
 /// Checks for server-side conflicts against the client's pushed stack.
 /// Returns conflict check results including the number of server-side changesets
 /// and optionally merged file overrides if live merge resolution succeeds.
@@ -990,6 +1008,7 @@ async fn check_pushrebase_conflicts(
         client_bcs,
         client_cf,
         RangeDiffManifests::FromKnob,
+        UnchangedOverlap::Conflict,
     )
     .await
 }
@@ -1004,6 +1023,7 @@ async fn check_pushrebase_conflicts_with(
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
     manifests: RangeDiffManifests,
+    unchanged: UnchangedOverlap,
 ) -> Result<ConflictCheckResult, PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
@@ -1037,6 +1057,36 @@ async fn check_pushrebase_conflicts_with(
         }),
         Err(PushrebaseError::Conflicts(conflicts)) => {
             let reponame = repo.repo_identity().name();
+            let (conflicts, bases) = match unchanged {
+                UnchangedOverlap::Conflict => (conflicts, Bases::ProbeThenRead),
+                UnchangedOverlap::TakeClient => {
+                    let total = conflicts.len();
+                    let (remaining, bases) = without_unchanged_overlaps(
+                        ctx,
+                        repo,
+                        conflicts,
+                        root,
+                        descendant,
+                        &server_bcs,
+                    )
+                    .await?;
+                    if remaining.len() < total {
+                        ctx.scuba()
+                            .clone()
+                            .add("repo_name", reponame)
+                            .add("unchanged_overlaps_taken", (total - remaining.len()) as i64)
+                            .log_with_msg("Pushrebase unchanged overlaps taken", None);
+                    }
+                    if remaining.is_empty() {
+                        return Ok(ConflictCheckResult {
+                            server_changeset_count: server_bcs_len,
+                            merged_file_overrides: None,
+                            merge_summary: MergeResolutionSummary::NotNeeded,
+                        });
+                    }
+                    (remaining, Bases::Precomputed(bases))
+                }
+            };
             let conflict_files_count = conflicts.len() as u64;
             STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
             STATS::conflict_files_count.add_value(conflicts.len() as i64, (reponame.to_string(),));
@@ -1071,6 +1121,7 @@ async fn check_pushrebase_conflicts_with(
                         repo,
                         &conflicts,
                         root,
+                        bases,
                         &server_bcs,
                         client_bcs,
                         max_merge_conflicts,
@@ -2535,11 +2586,11 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
     }
 }
 
-/// Whether the root manifest [`fetch_manifest_file`] would read for `cs_id` is
-/// already derived, so merge resolution can run without paying for derivation
-/// inside the pushrebase critical section.
+/// Whether the root manifest `base_files` would read for `cs_id` is already
+/// derived, so merge resolution can run without paying for derivation inside
+/// the pushrebase critical section.
 ///
-/// This must probe the same manifest type `fetch_manifest_file` derives --
+/// This must probe the same manifest type `id_to_root_manifest_id` derives --
 /// probing fsnodes on a repo that has migrated to content manifests would
 /// report "not derived" forever and silently disable merge resolution.
 async fn root_manifest_is_derived(
@@ -2569,31 +2620,130 @@ async fn root_manifest_is_derived(
     }
 }
 
-/// Fetch manifest file entry for a given path from a changeset's manifest.
-/// Returns the ContentManifestFile which provides access to content_id and file_type.
-/// Uses content_manifest or fsnode depending on the JustKnobs gate.
-async fn fetch_manifest_file(
+/// What the stack saw at a path.
+#[derive(Clone, Copy)]
+struct BaseFile {
+    content_id: ContentId,
+    file_type: FileType,
+}
+
+/// Base content for `paths` from `root`'s manifest, `None` meaning absent,
+/// in one batched lookup. Derives the manifest if it is not there yet, so
+/// callers holding the bookmark lock must probe first.
+async fn base_files(
     ctx: &CoreContext,
     repo: &impl Repo,
-    cs_id: ChangesetId,
-    path: &NonRootMPath,
-) -> Result<Option<compat::ContentManifestFile>> {
+    root: ChangesetId,
+    paths: &[NonRootMPath],
+) -> Result<HashMap<NonRootMPath, Option<BaseFile>>> {
     use manifest::Entry;
 
-    let root_id = id_to_root_manifest_id(ctx, repo, cs_id).await?;
-
-    let entry = root_id
-        .find_entry(
+    let root_id = id_to_root_manifest_id(ctx, repo, root).await?;
+    let found: HashMap<MPath, _> = root_id
+        .find_entries(
             ctx.clone(),
             repo.repo_blobstore().clone(),
-            path.clone().into(),
+            paths.iter().cloned(),
         )
+        .try_collect()
         .await?;
+    Ok(paths
+        .iter()
+        .map(|path| {
+            let base = match found.get(&MPath::from(path.clone())) {
+                Some(Entry::Leaf(file)) => {
+                    let file: compat::ContentManifestFile = file.clone().into();
+                    Some(BaseFile {
+                        content_id: file.content_id(),
+                        file_type: file.file_type(),
+                    })
+                }
+                _ => None,
+            };
+            (path.clone(), base)
+        })
+        .collect())
+}
 
-    match entry {
-        Some(Entry::Leaf(file)) => Ok(Some(file.into())),
-        _ => Ok(None),
-    }
+/// Drops overlaps whose server state still equals the base: only the stack
+/// changed those, so taking its content is plain rebase, not a merge, and no
+/// merge guard applies. Also returns the bases so merge resolution can reuse
+/// them. Reads manifests on demand: this route holds no bookmark lock.
+async fn without_unchanged_overlaps(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    conflicts: Vec<PushrebaseConflict>,
+    root: ChangesetId,
+    onto: ChangesetId,
+    server_bcs: &[BonsaiChangeset],
+) -> Result<
+    (
+        Vec<PushrebaseConflict>,
+        HashMap<NonRootMPath, Option<BaseFile>>,
+    ),
+    PushrebaseError,
+> {
+    let paths: Vec<NonRootMPath> = conflicts
+        .iter()
+        .filter(|c| c.left == c.right)
+        .filter_map(|c| c.left.clone().into_optional_non_root_path())
+        .collect();
+    let bases = base_files(ctx, repo, root, &paths)
+        .await
+        .map_err(PushrebaseError::Error)?;
+    // A merge's bonsai omits paths it kept from a single parent, so only a
+    // linear range can be replayed from file changes; otherwise read `onto`.
+    let server_state: HashMap<NonRootMPath, Option<BaseFile>> =
+        if server_bcs.iter().any(BonsaiChangeset::is_merge) {
+            base_files(ctx, repo, onto, &paths)
+                .await
+                .map_err(PushrebaseError::Error)?
+        } else {
+            // Latest wins: server_bcs is oldest-to-newest.
+            server_bcs
+                .iter()
+                .flat_map(|bcs| bcs.file_changes_map().iter())
+                .map(|(path, fc)| {
+                    let state = match fc {
+                        FileChange::Change(tc) => Some(BaseFile {
+                            content_id: tc.content_id(),
+                            file_type: tc.file_type(),
+                        }),
+                        // Snapshot-only variants never reach a landed range.
+                        FileChange::Deletion
+                        | FileChange::UntrackedChange(_)
+                        | FileChange::UntrackedDeletion => None,
+                    };
+                    (path.clone(), state)
+                })
+                .collect()
+        };
+
+    let unchanged: HashSet<MPath> = paths
+        .into_iter()
+        .filter(|path| match (bases.get(path), server_state.get(path)) {
+            (Some(Some(base)), Some(Some(server))) => {
+                base.content_id == server.content_id && base.file_type == server.file_type
+            }
+            (Some(None), Some(None)) => true,
+            _ => false,
+        })
+        .map(MPath::from)
+        .collect();
+
+    let remaining = conflicts
+        .into_iter()
+        .filter(|c| !(c.left == c.right && unchanged.contains(&c.left)))
+        .collect();
+    Ok((remaining, bases))
+}
+
+/// Where merge resolution gets the base content it needs.
+enum Bases {
+    /// Read already, outside any bookmark lock; no derivation probe needed.
+    Precomputed(HashMap<NonRootMPath, Option<BaseFile>>),
+    /// Not read yet: probe for derived manifests first, then read.
+    ProbeThenRead,
 }
 
 /// Outcome of attempting a three-way merge on a single file.
@@ -2669,6 +2819,7 @@ async fn collect_merge_file_info(
     repo: &impl Repo,
     conflicts: &[PushrebaseConflict],
     root: ChangesetId,
+    bases: Bases,
     server_bcs: &[BonsaiChangeset],
     client_bcs: &[BonsaiChangeset],
     max_conflicts: usize,
@@ -2693,16 +2844,28 @@ async fn collect_merge_file_info(
     // If derive_fsnodes is false, check if the root manifest is already
     // derived. If not, skip merge resolution to avoid expensive derivation in
     // the pushrebase critical section.
-    if !derive_fsnodes {
-        let is_derived = root_manifest_is_derived(ctx, repo, root)
-            .await
-            .map_err(MergeResolutionError::InternalError)?;
-        if !is_derived {
-            return Err(MergeResolutionError::Skipped(
-                "root manifest not derived for base commit".to_string(),
-            ));
+    let bases = match bases {
+        Bases::Precomputed(bases) => bases,
+        Bases::ProbeThenRead => {
+            if !derive_fsnodes {
+                let is_derived = root_manifest_is_derived(ctx, repo, root)
+                    .await
+                    .map_err(MergeResolutionError::InternalError)?;
+                if !is_derived {
+                    return Err(MergeResolutionError::Skipped(
+                        "root manifest not derived for base commit".to_string(),
+                    ));
+                }
+            }
+            let base_paths: Vec<NonRootMPath> = exact_conflicts
+                .iter()
+                .filter_map(|c| c.left.clone().into_optional_non_root_path())
+                .collect();
+            base_files(ctx, repo, root, &base_paths)
+                .await
+                .map_err(MergeResolutionError::InternalError)?
         }
-    }
+    };
 
     // Build a map of path -> FileChange from the client changesets
     let client_changes: HashMap<&NonRootMPath, &FileChange> = client_bcs
@@ -2793,28 +2956,24 @@ async fn collect_merge_file_info(
             )));
         }
 
-        // Fetch base content from root manifest — capture the content ID
-        // so the cascading merge in create_rebased_changesets can reuse it.
-        let base_file = match fetch_manifest_file(ctx, repo, root, &non_root_path).await {
-            Ok(Some(f)) => f,
-            Ok(None) => {
+        // The cascading merge in create_rebased_changesets reuses this id.
+        let base_file = match bases.get(&non_root_path) {
+            Some(Some(f)) => f,
+            _ => {
                 return Err(MergeResolutionError::Skipped(format!(
                     "file {non_root_path} not found in base",
                 )));
             }
-            Err(e) => return Err(MergeResolutionError::InternalError(e)),
         };
 
-        if base_file.file_type() != local_file_type {
+        if base_file.file_type != local_file_type {
             return Err(MergeResolutionError::Skipped(format!(
                 "file {} has type mismatch: base={:?}, local={:?}",
-                non_root_path,
-                base_file.file_type(),
-                local_file_type,
+                non_root_path, base_file.file_type, local_file_type,
             )));
         }
 
-        let base_content_id = base_file.content_id();
+        let base_content_id = base_file.content_id;
         let server_content_id = server_fc.content_id().clone();
 
         // Record metadata for the cascading merge in
