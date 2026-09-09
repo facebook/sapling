@@ -328,6 +328,9 @@ class EdenTestCase(EdenTestCaseBase):
                 'file-prealloc-pool-size = "64"',
                 'dir-prealloc-pool-size = "64"',
             ],
+            # Keep test daemons out of the production Scuba tables regardless
+            # of build mode. INTEGRATION_TEST only reaches the CLIs.
+            "telemetry": ['enable-scribe-logging = "false"'],
         }
 
         # Collect experimental configs from mixins

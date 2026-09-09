@@ -119,6 +119,9 @@ overrides = {{}}
 [experimental]
 enable-nfs-server = "true"
 allow-remote-get-batch = "false"
+
+[telemetry]
+enable-scribe-logging = "false"
 """
                     )
 

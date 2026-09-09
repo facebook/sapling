@@ -566,6 +566,16 @@ python_integration_test(
 )
 
 python_integration_test(
+    name = "telemetry",
+    srcs = ["telemetry_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "stop",
     srcs = ["stop_test.py"],
     env = artifacts["env"],

@@ -92,6 +92,8 @@ unique_ptr<EdenServer> TestServer::createServer(
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
   config->enableNfsServer.setValue(
       options.enableNfsServer, ConfigSourceType::CommandLine);
+  // Unit tests must never reach production Scuba, whatever the build mode.
+  config->enableScribeLogging.setValue(false, ConfigSourceType::CommandLine);
 #ifdef _WIN32
   config->enableEdenMenu.setValue(false, ConfigSourceType::SystemConfig);
 #endif // _WIN32
