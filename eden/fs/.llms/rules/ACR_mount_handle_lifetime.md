@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/.*\.(cpp|h)$'
-apply_to_content: 'EdenMountHandle|mountHandle|lookupMount|\.ensure\(|wrapImmediateFuture'
+name: ACR-mount-handle-lifetime
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/.*\.(cpp|h)$'
+  apply_to_content: 'EdenMountHandle|mountHandle|lookupMount|\.ensure\(|wrapImmediateFuture'
 ---
 
 # EdenMountHandle Lifetime
