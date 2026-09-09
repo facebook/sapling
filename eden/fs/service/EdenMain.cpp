@@ -671,7 +671,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry([startupLogger, daemonStart](folly::Try<folly::Unit>&& result) {
+      .thenTry([startupLogger, daemonStart, &server](
+                   folly::Try<folly::Unit>&& result) {
         // If an error occurred this means that we failed to mount all of
         // the mount points.
         //
@@ -700,6 +701,11 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         }
 #endif
         startupLogger->success(startTimeInSeconds);
+
+        // Deliberately after startup has succeeded. A daemon that dies before
+        // this point leaves the privhelper with no restart information at all,
+        // which is what makes a boot-crash loop structurally impossible.
+        server->armPrivHelperRestart();
       })
       .ensure([daemonStart,
                edenFsEventsLogger =
