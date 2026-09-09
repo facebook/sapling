@@ -1961,6 +1961,74 @@ TEST_F(PrivHelperSentinelTest, rejectsAConfigurationWithNoNonce) {
   EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
+/**
+ * The relaunch command as the daemon hands it over in the restart arguments.
+ * No sentinel file is involved: these cases are about the configuration alone.
+ */
+class PrivHelperRelaunchCommandTest : public ::testing::Test {
+ protected:
+  /** The duplicated key is deliberate: order is part of the contract. */
+  static std::vector<std::pair<std::string, std::string>> relaunchEnv() {
+    return {
+        {"PATH", "/usr/bin"}, {"HOME", "/home/first"}, {"HOME", "/home/last"}};
+  }
+
+  void configure(
+      std::vector<std::string> argv,
+      std::vector<std::pair<std::string, std::string>> env) {
+    auto args = makeRestartArgs("/unused");
+    args.relaunchArgv = std::move(argv);
+    args.relaunchEnv = std::move(env);
+    sentinel_.setConfig(std::move(args));
+  }
+
+  RestartSentinel sentinel_{getuid()};
+};
+
+TEST_F(PrivHelperRelaunchCommandTest, servesTheConfiguredCommandInOrder) {
+  configure(kSentinelArgv, relaunchEnv());
+
+  const auto command = sentinel_.relaunchCommand();
+  ASSERT_TRUE(command.has_value());
+  EXPECT_EQ(kSentinelArgv, command->argv);
+  EXPECT_EQ(relaunchEnv(), command->env);
+}
+
+TEST_F(PrivHelperRelaunchCommandTest, hasNoCommandBeforeAnyConfiguration) {
+  const RestartSentinel unconfigured{getuid()};
+
+  EXPECT_EQ(std::nullopt, unconfigured.relaunchCommand());
+}
+
+TEST_F(PrivHelperRelaunchCommandTest, freshArgsReplaceTheCommand) {
+  configure(kSentinelArgv, relaunchEnv());
+  const std::vector<std::string> argv{"/opt/eden/edenfs", "--foreground"};
+  const std::vector<std::pair<std::string, std::string>> env{
+      {"HOME", "/home/second"}};
+
+  configure(argv, env);
+
+  const auto command = sentinel_.relaunchCommand();
+  ASSERT_TRUE(command.has_value());
+  EXPECT_EQ(argv, command->argv);
+  EXPECT_EQ(env, command->env);
+}
+
+TEST_F(PrivHelperRelaunchCommandTest, rejectsAConfigurationWithNoArgv) {
+  configure({}, relaunchEnv());
+
+  EXPECT_EQ(std::nullopt, sentinel_.relaunchCommand());
+}
+
+TEST_F(PrivHelperRelaunchCommandTest, servesACommandWithNoEnvironment) {
+  configure(kSentinelArgv, {});
+
+  const auto command = sentinel_.relaunchCommand();
+  ASSERT_TRUE(command.has_value());
+  EXPECT_EQ(kSentinelArgv, command->argv);
+  EXPECT_TRUE(command->env.empty());
+}
+
 class PrivHelperBreakerTest : public ::testing::Test {
  protected:
   void SetUp() override {

@@ -32,9 +32,9 @@ namespace facebook::eden {
 class RestartSentinel {
  public:
   /**
-   * The command to relaunch edenfs with, as read out of the restart sentinel.
-   * argv is already stripped of sudo, `--takeover` and inherited file
-   * descriptor arguments by the daemon that wrote it.
+   * The command to relaunch edenfs with. argv is already stripped of sudo,
+   * `--takeover` and inherited file descriptor arguments by the daemon that
+   * supplied it.
    */
   struct RelaunchCommand {
     std::vector<std::string> argv;
@@ -75,6 +75,13 @@ class RestartSentinel {
    * cannot be read or does not hold one. Only ever called with privileges.
    */
   std::optional<RelaunchCommand> readRelaunchCommand() const;
+
+  /**
+   * The relaunch command the daemon delivered with its restart arguments, or
+   * nullopt when no configuration has arrived or the one that did carries no
+   * argv. An empty environment is served as it stands.
+   */
+  std::optional<RelaunchCommand> relaunchCommand() const;
 
   /**
    * Applies the circuit breaker. Returns false when the limit is reached.

@@ -302,6 +302,21 @@ RestartSentinel::readRelaunchCommand() const {
   return command;
 }
 
+std::optional<RestartSentinel::RelaunchCommand>
+RestartSentinel::relaunchCommand() const {
+  if (!config_.has_value()) {
+    return std::nullopt;
+  }
+  // An argv the parser accepted as empty would reach execve() with no argv[0].
+  if (config_->relaunchArgv.empty()) {
+    XLOG(
+        ERR,
+        "not restarting edenfs: the restart arguments carry no relaunch command");
+    return std::nullopt;
+  }
+  return RelaunchCommand{config_->relaunchArgv, config_->relaunchEnv};
+}
+
 bool RestartSentinel::admitRestartAttempt(uint64_t now) {
   auto& config = config_.value();
   // Neither value is trusted: a window of zero would reset the count on every
