@@ -7,8 +7,15 @@
 
 #include "eden/fs/service/RestartArmer.h"
 
+#ifndef _WIN32
+#include <dirent.h>
+#endif
+
 #include <algorithm>
 #include <limits>
+#include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #ifdef __APPLE__
@@ -84,6 +91,100 @@ bool createSentinel(const AbsolutePath& sentinel) {
     return false;
   }
   return true;
+}
+
+bool isDecimalDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
+bool isLowerHexDigit(char c) {
+  return isDecimalDigit(c) || (c >= 'a' && c <= 'f');
+}
+
+/**
+ * Whether `name` is a per-generation sentinel: `namePrefix`, a decimal pid, a
+ * dot, and the sixteen lowercase hex digits of the token.
+ *
+ * Exact rather than a prefix test, because other names in the state directory
+ * share the prefix and are not ours to unlink.
+ */
+bool isSentinelName(std::string_view name, std::string_view namePrefix) {
+  if (!name.starts_with(namePrefix)) {
+    return false;
+  }
+  const auto rest = name.substr(namePrefix.size());
+  const auto dot = rest.find('.');
+  if (dot == std::string_view::npos || dot == 0) {
+    return false;
+  }
+  const auto pid = rest.substr(0, dot);
+  const auto token = rest.substr(dot + 1);
+  return token.size() == 16 &&
+      std::all_of(pid.begin(), pid.end(), isDecimalDigit) &&
+      std::all_of(token.begin(), token.end(), isLowerHexDigit);
+}
+
+/**
+ * Remove the sentinels earlier daemon generations left in `stateDirPath`,
+ * keeping the ones this pid armed under.
+ *
+ * A sentinel that cannot be removed is logged and skipped.
+ *
+ * A live pid is reaped like any other: whoever holds the state directory lock
+ * is the only daemon entitled to be armed against it.
+ */
+void reapOtherGenerationSentinels(
+    const std::string& stateDirPath,
+    std::string_view namePrefix) {
+  const std::unique_ptr<DIR, int (*)(DIR*)> dir{
+      ::opendir(stateDirPath.c_str()), &::closedir};
+  if (dir == nullptr) {
+    const int err = errno;
+    XLOGF(
+        WARN,
+        "failed to open {} to reap old restart sentinels: {}",
+        stateDirPath,
+        folly::errnoStr(err));
+    return;
+  }
+
+  // Unlinked relative to the handle we listed, rather than by path, so the
+  // name resolves in the directory we scanned and a sentinel that turns out to
+  // be a symlink is removed rather than followed.
+  const int dirFd = ::dirfd(dir.get());
+  const auto ownPrefix =
+      std::string{namePrefix} + std::to_string(::getpid()) + '.';
+
+  while (true) {
+    errno = 0;
+    const struct dirent* const entry = ::readdir(dir.get());
+    if (entry == nullptr) {
+      if (const int err = errno; err != 0) {
+        XLOGF(
+            WARN,
+            "failed to list {} while reaping old restart sentinels: {}",
+            stateDirPath,
+            folly::errnoStr(err));
+      }
+      break;
+    }
+
+    const std::string_view name{entry->d_name};
+    if (!isSentinelName(name, namePrefix) || name.starts_with(ownPrefix)) {
+      continue;
+    }
+    if (::unlinkat(dirFd, entry->d_name, 0) != 0) {
+      const int err = errno;
+      if (err != ENOENT) {
+        XLOGF(
+            WARN,
+            "failed to reap the restart sentinel {} in {}: {}",
+            name,
+            stateDirPath,
+            folly::errnoStr(err));
+      }
+    }
+  }
 }
 #endif // __APPLE__
 } // namespace
@@ -208,6 +309,12 @@ void RestartArmer::arm() {
       unlinkSentinel(*previous);
     }
   }
+
+  // Here, and not sooner or later: a daemon that fails before its own marker
+  // exists must leave earlier ones for their privhelpers to find, and a sweep
+  // deferred to the reply below could outrun a later generation's arm.
+  reapOtherGenerationSentinels(
+      stateDir_.getPath().asString(), stateDir_.getRestartSentinelNamePrefix());
 
   // Cannot be waited on: the reply is driven by the main EventBase, the thread
   // we are on. The continuation carries no executor, so it runs inline on

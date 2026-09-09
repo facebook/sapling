@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #endif
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -166,20 +167,46 @@ class RestartArmerTest : public ::testing::Test {
     return canonicalPath(privHelper_.restartArgs.back().sentinelPath);
   }
 
-  /** Every name in the state directory a sentinel prefix scan would match. */
-  std::vector<std::string> sentinelNames() const {
+  /** Every name in the state directory, sorted. */
+  std::vector<std::string> stateDirNames() const {
     std::vector<std::string> names;
     for (const auto& entry :
          std::filesystem::directory_iterator{stateDirPath_.asString()}) {
-      auto name = entry.path().filename().string();
-      if (std::string_view{name}.starts_with(
-              stateDir_.getRestartSentinelNamePrefix())) {
-        names.push_back(std::move(name));
-      }
+      names.push_back(entry.path().filename().string());
     }
+    std::sort(names.begin(), names.end());
+    return names;
+  }
+
+  /** Every name in the state directory a sentinel prefix scan would match. */
+  [[maybe_unused]]
+  std::vector<std::string> sentinelNames() const {
+    auto names = stateDirNames();
+    std::erase_if(names, [this](const std::string& name) {
+      return !std::string_view{name}.starts_with(
+          stateDir_.getRestartSentinelNamePrefix());
+    });
     return names;
   }
 #endif
+
+  /** Creates an empty file in the state directory and returns its path. */
+  [[maybe_unused]]
+  AbsolutePath makeStateDirFile(std::string_view name) const {
+    const auto path = stateDirPath_ + PathComponent{std::string{name}};
+    EXPECT_TRUE(folly::writeFile(std::string{}, path.c_str())) << name;
+    return path;
+  }
+
+  /** Creates a directory in the state directory and returns its path. */
+  [[maybe_unused]]
+  AbsolutePath makeStateDirSubdir(std::string_view name) const {
+    const auto path = stateDirPath_ + PathComponent{std::string{name}};
+    std::error_code ec;
+    std::filesystem::create_directory(path.c_str(), ec);
+    EXPECT_FALSE(ec) << name << ": " << ec.message();
+    return path;
+  }
 
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath stateDirPath_;
@@ -262,6 +289,106 @@ TEST_F(RestartArmerTest, rearmingReplacesThePreviousSentinel) {
   EXPECT_FALSE(exists(first));
   EXPECT_TRUE(exists(second));
   EXPECT_EQ(1, sentinelNames().size());
+}
+
+TEST_F(RestartArmerTest, armingReapsTheSentinelsOfOtherGenerations) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  makeStateDirFile(".edenfs_restart_armed.1.0000000000000001");
+  makeStateDirFile(".edenfs_restart_armed.999999.00000000000000ff");
+
+  makeArmer().arm();
+
+  const auto own = std::string{armedSentinelPath().basename().view()};
+  EXPECT_EQ(std::vector<std::string>{own}, sentinelNames());
+}
+
+TEST_F(RestartArmerTest, armingReapsBeforeTheRequestIsAnswered) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  const auto foreign =
+      makeStateDirFile(".edenfs_restart_armed.1.0000000000000001");
+  privHelper_.pendingRequest.emplace();
+
+  auto armer = makeArmer();
+  armer.arm();
+
+  ASSERT_EQ(1, privHelper_.restartArgs.size());
+  ASSERT_FALSE(armer.armed());
+  EXPECT_FALSE(exists(foreign));
+
+  privHelper_.pendingRequest->setValue();
+  EXPECT_TRUE(armer.armed());
+}
+
+TEST_F(RestartArmerTest, anArmThatNeverGetsASentinelReapsNothing) {
+  const auto foreign =
+      makeStateDirFile(".edenfs_restart_armed.1.0000000000000001");
+
+  makeArmer().arm();
+
+  ASSERT_TRUE(privHelper_.restartArgs.empty());
+  EXPECT_TRUE(exists(foreign));
+}
+
+TEST_F(RestartArmerTest, aSentinelThatCannotBeUnlinkedDoesNotFailTheArm) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  // Directories carry sentinel names no daemon would give them, but unlinkat
+  // refuses them, which is the per-entry failure under test.
+  const auto first =
+      makeStateDirSubdir(".edenfs_restart_armed.1.0000000000000001");
+  const auto second =
+      makeStateDirSubdir(".edenfs_restart_armed.2.0000000000000002");
+
+  auto armer = makeArmer();
+  armer.arm();
+
+  EXPECT_TRUE(armer.armed());
+  EXPECT_TRUE(exists(armedSentinelPath()));
+  EXPECT_TRUE(exists(first));
+  EXPECT_TRUE(exists(second));
+}
+
+TEST_F(RestartArmerTest, aNameThatOnlySharesThePrefixIsNotReaped) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  const auto generationless = makeStateDirFile(".edenfs_restart_armed");
+  std::vector<std::string> kept{
+      ".edenfs_restart_armed.Ab3XyZ",
+      ".edenfs_restart_armed.7.000000000000000",
+      ".edenfs_restart_armed.7.0000000000000001x",
+      ".edenfs_restart_armed.7.0123456789ABCDEF",
+      ".edenfs_restart_armed..0123456789abcdef",
+      ".edenfs_restart_armed.pid.0123456789abcdef",
+  };
+  for (const auto& name : kept) {
+    makeStateDirFile(name);
+  }
+  makeStateDirFile(".edenfs_restart_armed.7.0123456789abcdef");
+
+  makeArmer().arm();
+
+  kept.push_back(std::string{armedSentinelPath().basename().view()});
+  std::sort(kept.begin(), kept.end());
+  EXPECT_EQ(kept, sentinelNames());
+  EXPECT_TRUE(exists(generationless));
+}
+
+TEST_F(RestartArmerTest, unrelatedFilesInTheStateDirAreLeftAlone) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  for (const auto* name :
+       {"edenfs_restart_armed.1.0000000000000001", "heartbeat_1", "lock"}) {
+    makeStateDirFile(name);
+  }
+
+  makeArmer().arm();
+
+  std::vector<std::string> expected{
+      ".edenfs_start_args",
+      "edenfs_restart_armed.1.0000000000000001",
+      "heartbeat_1",
+      "lock",
+      std::string{armedSentinelPath().basename().view()},
+  };
+  std::sort(expected.begin(), expected.end());
+  EXPECT_EQ(expected, stateDirNames());
 }
 
 TEST_F(RestartArmerTest, disarmingRemovesTheSentinelThatWasCreated) {
