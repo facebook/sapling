@@ -204,7 +204,7 @@ class CodeSite:
     def __eq__(self, other):
         try:
             return self.lineno == other.lineno and self.path == other.path
-        except:
+        except Exception:
             return False
 
     def __hash__(self):
@@ -230,7 +230,7 @@ class CodeSite:
                     if i == lineno:
                         self.source = line.strip()
                         break
-            except:
+            except Exception:
                 pass
             finally:
                 if fp:
