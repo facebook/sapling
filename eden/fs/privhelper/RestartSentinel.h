@@ -75,12 +75,6 @@ class RestartSentinel {
   std::optional<DisarmState> disarmState() const;
 
   /**
-   * Parse the relaunch command out of the restart sentinel, or nullopt if it
-   * cannot be read or does not hold one. Only ever called with privileges.
-   */
-  std::optional<RelaunchCommand> readRelaunchCommand() const;
-
-  /**
    * The relaunch command the daemon delivered with its restart arguments, or
    * nullopt when no configuration has arrived or the one that did carries no
    * argv. An empty environment is served as it stands.

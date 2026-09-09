@@ -13,7 +13,7 @@
 #include <folly/Expected.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
-#include <folly/json/json.h>
+#include <folly/Unit.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 #include <sys/stat.h>
@@ -24,10 +24,6 @@
 namespace facebook::eden {
 
 namespace {
-// A command line and an environment, generously. The sentinel is written by an
-// unprivileged process, so its size is bounded before anything is parsed.
-constexpr size_t kMaxSentinelSize = 1024 * 1024;
-
 // The restart policy arrives over IPC from the unprivileged daemon, so the
 // privhelper bounds what it will honour. The daemon's own defaults are 3
 // restarts per 10 minutes.
@@ -81,12 +77,6 @@ enum class SentinelError {
   Indeterminate,
 };
 
-/** The sentinel, open and validated, sized as it was when validated. */
-struct ValidatedSentinel {
-  folly::File file;
-  off_t size;
-};
-
 /**
  * Open the sentinel and establish that it is plausibly a marker the daemon's
  * user created: a regular file owned by `uid` that only its owner can write.
@@ -98,7 +88,7 @@ struct ValidatedSentinel {
  * simply gone is the ordinary clean-shutdown signal, and every other reason
  * leaves edenfs down.
  */
-folly::Expected<ValidatedSentinel, SentinelError>
+folly::Expected<folly::Unit, SentinelError>
 openSentinel(int dirFd, const std::string& name, uid_t uid) {
   // O_NOFOLLOW rejects a symlink swapped in for the sentinel, and O_NONBLOCK
   // keeps a FIFO from blocking here so the regular-file check below can reject
@@ -139,9 +129,9 @@ openSentinel(int dirFd, const std::string& name, uid_t uid) {
         name);
     return folly::makeUnexpected(SentinelError::Rejected);
   }
-  // Privileges are dropped to uid before the command runs, so whoever can
-  // write this file picks what runs as the daemon's user. The path is
-  // caller-supplied, so the rejection does not name the file's uid or mode.
+  // Its existence is what keeps root armed, so whoever can create this file
+  // can force a relaunch. The path is caller-supplied, so the rejection does
+  // not name the file's uid or mode.
   if (st.st_uid != uid || (st.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
     XLOGF(
         ERR,
@@ -149,7 +139,7 @@ openSentinel(int dirFd, const std::string& name, uid_t uid) {
         name);
     return folly::makeUnexpected(SentinelError::Rejected);
   }
-  return ValidatedSentinel{std::move(file), st.st_size};
+  return folly::unit;
 }
 } // namespace
 
@@ -250,101 +240,6 @@ std::optional<RestartSentinel::DisarmState> RestartSentinel::disarmState()
   return sentinel.error() == SentinelError::Indeterminate
       ? DisarmState::Unknown
       : DisarmState::ShutdownAnnounced;
-}
-
-std::optional<RestartSentinel::RelaunchCommand>
-RestartSentinel::readRelaunchCommand() const {
-  if (!config_.has_value()) {
-    return std::nullopt;
-  }
-  // 0 is what an absent nonce parses to, so a configuration carrying it would
-  // accept a sentinel written by a daemon too old to have one.
-  if (config_->sentinelNonce == 0) {
-    XLOGF(ERR, "not restarting edenfs: the restart configuration has no nonce");
-    return std::nullopt;
-  }
-  const auto* loc = location();
-  if (loc == nullptr) {
-    return std::nullopt;
-  }
-
-  const auto sentinel = openSentinel(loc->dir.fd(), loc->name, uid_);
-  if (sentinel.hasError()) {
-    if (sentinel.error() == SentinelError::Absent) {
-      XLOGF(
-          ERR,
-          "not restarting edenfs: the restart sentinel {} is missing",
-          loc->name);
-    }
-    return std::nullopt;
-  }
-  if (sentinel->size <= 0 ||
-      static_cast<size_t>(sentinel->size) > kMaxSentinelSize) {
-    XLOGF(
-        ERR,
-        "not restarting edenfs: the restart sentinel {} is {} bytes",
-        loc->name,
-        sentinel->size);
-    return std::nullopt;
-  }
-
-  std::string contents;
-  if (!folly::readFile(sentinel->file.fd(), contents, kMaxSentinelSize)) {
-    XLOGF(
-        ERR,
-        "not restarting edenfs: cannot read the restart sentinel {}: {}",
-        loc->name,
-        folly::errnoStr(errno));
-    return std::nullopt;
-  }
-
-  // Written by RestartArmer::arm(); the shape is fixed:
-  //
-  //   {"argv": ["...", ...], "env": {"KEY": "VALUE", ...}, "nonce": 123}
-  RelaunchCommand command;
-  try {
-    const auto parsed = folly::parseJson(contents);
-
-    // The sentinel path is fixed per state dir, so this privhelper may open a
-    // file a newer generation wrote. A sentinel with no nonce reads as 0,
-    // which no generation ever stamps.
-    const auto* nonce = parsed.get_ptr("nonce");
-    const uint64_t sentinelNonce =
-        nonce && nonce->isInt() ? static_cast<uint64_t>(nonce->asInt()) : 0;
-    if (sentinelNonce != config_->sentinelNonce) {
-      XLOGF(
-          ERR,
-          "not restarting edenfs: the restart sentinel {} belongs to another "
-          "daemon generation",
-          loc->name);
-      return std::nullopt;
-    }
-
-    const auto* argv = parsed.get_ptr("argv");
-    if (!argv || !argv->isArray() || argv->empty()) {
-      XLOGF(
-          ERR,
-          "not restarting edenfs: the restart sentinel {} holds no command",
-          loc->name);
-      return std::nullopt;
-    }
-    for (const auto& arg : *argv) {
-      command.argv.push_back(arg.asString());
-    }
-    if (const auto* env = parsed.get_ptr("env"); env && env->isObject()) {
-      for (const auto& [key, value] : env->items()) {
-        command.env.emplace_back(key.asString(), value.asString());
-      }
-    }
-  } catch (const std::exception&) {
-    // Without the exception's message: folly's JSON errors quote the offending
-    // input, and these are somebody else's file contents in a root process's
-    // log.
-    XLOGF(ERR, "not restarting edenfs: invalid restart sentinel {}", loc->name);
-    return std::nullopt;
-  }
-
-  return command;
 }
 
 std::optional<RestartSentinel::RelaunchCommand>

@@ -17,7 +17,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
-#include <folly/json/json.h>
 #include <folly/portability/Fcntl.h>
 #include <folly/synchronization/Baton.h>
 #include <folly/synchronization/SaturatingSemaphore.h>
@@ -347,23 +346,6 @@ const std::vector<std::string> kSentinelArgv{
     "/usr/local/libexec/eden/edenfs",
     "--edenfs"};
 
-folly::dynamic makeSentinelEnv() {
-  return folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/test");
-}
-
-/** Sentinel contents readRelaunchCommand() accepts a command out of. */
-std::string makeSentinelContents(
-    uint64_t nonce = kSentinelNonce,
-    folly::dynamic env = makeSentinelEnv()) {
-  folly::dynamic argv = folly::dynamic::array;
-  for (const auto& arg : kSentinelArgv) {
-    argv.push_back(arg);
-  }
-  return folly::toJson(
-      folly::dynamic::object("argv", argv)("env", std::move(env))(
-          "nonce", static_cast<int64_t>(nonce)));
-}
-
 /**
  * Restrict the sentinel to its owner, as the daemon writes it. Both
  * folly::writeFile and TemporaryFile create a file 0666 & ~umask, so under a
@@ -371,12 +353,6 @@ std::string makeSentinelContents(
  */
 void restrictSentinelToOwner(const std::string& path) {
   checkUnixError(::chmod(path.c_str(), 0600));
-}
-
-/** As a daemon too old to stamp a generation writes it. */
-std::string makeSentinelContentsWithoutNonce() {
-  return folly::toJson(
-      folly::dynamic::object("argv", folly::dynamic::array("/bin/edenfs")));
 }
 #endif // __APPLE__
 
@@ -1866,9 +1842,9 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
 #ifdef __APPLE__
 
 /**
- * The sentinel is written by the daemon's unprivileged user and read by a root
- * privhelper, so these cases are all about what a replaced file can do to the
- * reader rather than about ordinary parse errors.
+ * The sentinel is created by the daemon's unprivileged user and examined by a
+ * root privhelper, so these cases are all about what a file planted at the name
+ * can make that examination conclude.
  */
 class PrivHelperSentinelTest : public ::testing::Test {
  protected:
@@ -1883,9 +1859,9 @@ class PrivHelperSentinelTest : public ::testing::Test {
     return (dir_->path() / "sentinel").string();
   }
 
-  /** Owned by us and only ours to write, as the daemon writes it. */
-  void writeSentinel(const std::string& contents) {
-    ASSERT_TRUE(folly::writeFile(contents, sentinelPath().c_str()));
+  /** Empty, owned by us and only ours to write, as the daemon writes it. */
+  void writeSentinel() {
+    ASSERT_TRUE(folly::writeFile(std::string{}, sentinelPath().c_str()));
     restrictSentinelToOwner(sentinelPath());
   }
 
@@ -1897,28 +1873,15 @@ class PrivHelperSentinelTest : public ::testing::Test {
   std::unique_ptr<TemporaryDirectory> dir_;
 };
 
-TEST_F(PrivHelperSentinelTest, readsTheCommandAndEnvironment) {
-  writeSentinel(makeSentinelContents());
-
-  const auto command = sentinel_.readRelaunchCommand();
-  ASSERT_TRUE(command.has_value());
-  EXPECT_EQ(kSentinelArgv, command->argv);
-  EXPECT_THAT(
-      command->env,
-      UnorderedElementsAre(
-          std::pair<std::string, std::string>{"PATH", "/usr/bin"},
-          std::pair<std::string, std::string>{"HOME", "/home/test"}));
-}
-
 TEST_F(PrivHelperSentinelTest, anEmptyFileTheDaemonOwnsIsArmed) {
-  writeSentinel("");
+  writeSentinel();
 
   EXPECT_EQ(DisarmState::Armed, sentinel_.disarmState());
 }
 
 TEST_F(PrivHelperSentinelTest, aSymlinkIsNotArmed) {
   const auto target = (dir_->path() / "target").string();
-  ASSERT_TRUE(folly::writeFile(makeSentinelContents(), target.c_str()));
+  ASSERT_TRUE(folly::writeFile(std::string{}, target.c_str()));
   checkUnixError(::symlink(target.c_str(), sentinelPath().c_str()));
 
   expectDisarmed();
@@ -1939,7 +1902,7 @@ TEST_F(PrivHelperSentinelTest, aDirectoryIsNotArmed) {
 }
 
 TEST_F(PrivHelperSentinelTest, aSentinelOwnedByAnotherUserIsNotArmed) {
-  writeSentinel(makeSentinelContents());
+  writeSentinel();
   RestartSentinel otherOwner{getuid() + 1};
   otherOwner.setConfig(makeRestartArgs(sentinelPath()));
 
@@ -1947,7 +1910,7 @@ TEST_F(PrivHelperSentinelTest, aSentinelOwnedByAnotherUserIsNotArmed) {
 }
 
 TEST_F(PrivHelperSentinelTest, aGroupWritableSentinelIsNotArmed) {
-  writeSentinel(makeSentinelContents());
+  writeSentinel();
   checkUnixError(::chmod(sentinelPath().c_str(), 0660));
 
   expectDisarmed();
@@ -1955,7 +1918,6 @@ TEST_F(PrivHelperSentinelTest, aGroupWritableSentinelIsNotArmed) {
 
 TEST_F(PrivHelperSentinelTest, aMissingSentinelIsNotArmed) {
   expectDisarmed();
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
 }
 
 TEST_F(PrivHelperSentinelTest, aNameThatCannotBeExaminedIsUnknown) {
@@ -1976,37 +1938,24 @@ TEST_F(PrivHelperSentinelTest, aNameThatCannotBeExaminedIsUnknown) {
   EXPECT_EQ(DisarmState::Unknown, sentinel_.disarmState());
 }
 
-TEST_F(PrivHelperSentinelTest, rejectsAnOversizedFile) {
-  writeSentinel(std::string(2 * 1024 * 1024, 'x'));
+TEST_F(PrivHelperSentinelTest, aMarkerFromAnotherGenerationIsNotArmed) {
+  // Generations share the state directory and the name prefix, differing only
+  // in pid and token, so only the exact configured leaf may arm.
+  const auto foreign =
+      (dir_->path() / ".edenfs_restart_armed.999.00000000deadbeef").string();
+  ASSERT_TRUE(folly::writeFile(std::string{}, foreign.c_str()));
+  restrictSentinelToOwner(foreign);
 
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
-}
+  // The neighbour is a marker root would arm on, so the leaf is the only thing
+  // separating the two verdicts below.
+  sentinel_.setConfig(makeRestartArgs(foreign));
+  ASSERT_EQ(DisarmState::Armed, sentinel_.disarmState());
 
-TEST_F(PrivHelperSentinelTest, rejectsAnEmptyFile) {
-  writeSentinel("");
+  // This generation's own marker was never created.
+  sentinel_.setConfig(makeRestartArgs(
+      (dir_->path() / ".edenfs_restart_armed.1234.000000000000000a").string()));
 
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
-}
-
-TEST_F(PrivHelperSentinelTest, rejectsASentinelFromAnotherGeneration) {
-  writeSentinel(makeSentinelContents(kSentinelNonce + 1));
-
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
-}
-
-TEST_F(PrivHelperSentinelTest, rejectsASentinelWithNoNonce) {
-  writeSentinel(makeSentinelContentsWithoutNonce());
-
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
-}
-
-TEST_F(PrivHelperSentinelTest, rejectsAConfigurationWithNoNonce) {
-  writeSentinel(makeSentinelContentsWithoutNonce());
-  auto args = makeRestartArgs(sentinelPath());
-  args.sentinelNonce = 0;
-  sentinel_.setConfig(std::move(args));
-
-  EXPECT_FALSE(sentinel_.readRelaunchCommand().has_value());
+  expectDisarmed();
 }
 
 /**

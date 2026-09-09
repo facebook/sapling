@@ -245,7 +245,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void cleanupMountPoints();
 
 #ifdef __APPLE__
-  /** Everything prepareRestart() resolved while it still had privileges. */
+  /** Everything prepareRestart() resolved as root. */
   struct RestartPlan {
     AbsolutePath binary;
     RestartSentinel::RelaunchCommand command;
