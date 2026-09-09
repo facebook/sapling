@@ -2244,6 +2244,35 @@ constexpr auto kNfs3dHandlers = [] {
   return handlers;
 }();
 
+/**
+ * The handler table's procedure names in lowercase, the spelling
+ * nfs:access-policy-procedures uses, built once on first use.
+ */
+const std::array<std::string, kNfs3dHandlers.size()>& lowerProcNames() {
+  static const auto names = [] {
+    std::array<std::string, kNfs3dHandlers.size()> lower;
+    for (size_t proc = 0; proc < kNfs3dHandlers.size(); ++proc) {
+      lower[proc] = kNfs3dHandlers[proc].name.str();
+      folly::toLowerAscii(lower[proc]);
+    }
+    return lower;
+  }();
+  return names;
+}
+
+/**
+ * Whether `proc` is in nfs:access-policy-procedures: one hash lookup of the
+ * procedure's lowercase name. Any other entry in the set, including a
+ * procedure name in different casing, matches nothing, and a procedure
+ * number outside the handler table is never policed.
+ */
+bool isPolicedProcedure(
+    uint32_t proc,
+    const std::unordered_set<std::string>& procedures) {
+  return proc < kNfs3dHandlers.size() &&
+      procedures.contains(lowerProcNames()[proc]);
+}
+
 bool Nfsd3ServerProcessor::isUnimplementedProc(uint32_t proc) const {
   return proc == folly::to_underlying(nfsv3Procs::commit) ||
       proc >= kNfs3dHandlers.size();
@@ -2481,9 +2510,21 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   if (!config_ || !authSysCreds || isAccessModeExempt(callBody.proc)) {
     return auth_stat::AUTH_OK;
   }
-  // Every uid/gid entry the credential matches is evaluated, not just the
-  // first: each one is counted, and any rejecting one rejects the request.
+  // Every uid/gid entry the credential matches is counted, not just the
+  // first, and any rejecting one rejects the request. Block/rate_limit and
+  // the rate-limit budget apply only to procedures in
+  // nfs:access-policy-procedures; other procedures never reach the limiter.
   auto config = config_->getEdenConfig();
+  // Resolved on the first matching entry, at most once per request: most
+  // requests match no entry at all.
+  std::optional<bool> policed;
+  auto isPoliced = [&] {
+    if (!policed) {
+      policed = isPolicedProcedure(
+          callBody.proc, config->nfsAccessPolicyProcedures.getValue());
+    }
+    return *policed;
+  };
   const auto count = config->nfsAccessPolicyRateLimitCount.getValue();
   const auto windowSeconds =
       config->nfsAccessPolicyRateLimitWindowSeconds.getValue();
@@ -2493,14 +2534,17 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
   if (auto entry = uidPolicy.find(authSysCreds->uid);
       entry != uidPolicy.end()) {
     bumpAccessStat("access.uid", authSysCreds->uid);
-    if (accessModeRejects(
-            entry->second,
-            uidRateLimiters_,
-            authSysCreds->uid,
-            count,
-            windowSeconds)) {
-      bumpAccessStat("blocked.uid", authSysCreds->uid);
-      block = true;
+    if (isPoliced()) {
+      bumpAccessStat("policed.uid", authSysCreds->uid);
+      if (accessModeRejects(
+              entry->second,
+              uidRateLimiters_,
+              authSysCreds->uid,
+              count,
+              windowSeconds)) {
+        bumpAccessStat("blocked.uid", authSysCreds->uid);
+        block = true;
+      }
     }
   }
   for (const auto& [gid, mode] : config->nfsGidAccessPolicy.getValue()) {
@@ -2508,6 +2552,10 @@ auth_stat Nfsd3ServerProcessor::checkAuthentication(
       continue;
     }
     bumpAccessStat("access.gid", gid);
+    if (!isPoliced()) {
+      continue;
+    }
+    bumpAccessStat("policed.gid", gid);
     if (accessModeRejects(mode, gidRateLimiters_, gid, count, windowSeconds)) {
       bumpAccessStat("blocked.gid", gid);
       block = true;

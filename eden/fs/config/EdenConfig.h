@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
@@ -1274,8 +1275,9 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Per-uid access policy, "uid:mode", e.g. ["0:log", "89:block"]. A match
-   * bumps nfs.access.uid.<uid>; "block" also rejects, bumping
-   * nfs.blocked.uid.<uid> and nfs.blocked_access; "rate_limit" does so past
+   * bumps nfs.access.uid.<uid>; "block" also rejects requests for procedures
+   * in nfs:access-policy-procedures, bumping nfs.blocked.uid.<uid> and
+   * nfs.blocked_access; "rate_limit" does so for those procedures only past
    * nfs:access-policy-rate-limit-*. Re-read on every request; AUTH_SYS ids
    * are client-asserted, so this sheds noisy processes rather than enforcing
    * a security boundary.
@@ -1294,6 +1296,21 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::unordered_map<uint32_t, NfsAccessMode>> nfsGidAccessPolicy{
       "nfs:gid-access-policy",
       {{0, NfsAccessMode::Log}},
+      this};
+
+  /**
+   * The procedures that nfs:uid-access-policy / nfs:gid-access-policy act on,
+   * as lowercase NFSv3 procedure names, e.g. ["readdir", "readdirplus"];
+   * anything else, including other casing, is ignored. Only procedures in
+   * this set are blocked, rate-limited, or consume rate-limit budget; every
+   * other non-exempt request that matches an entry is still counted in
+   * nfs.access.{uid,gid}.<id>, and the policed ones additionally in
+   * nfs.policed.{uid,gid}.<id>. The control-plane procedures (NULL, FSSTAT,
+   * FSINFO, PATHCONF) stay exempt whatever this set holds.
+   */
+  ConfigSetting<std::unordered_set<std::string>> nfsAccessPolicyProcedures{
+      "nfs:access-policy-procedures",
+      {"readdir", "readdirplus"},
       this};
 
   /**
