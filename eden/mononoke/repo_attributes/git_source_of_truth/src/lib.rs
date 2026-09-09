@@ -10,10 +10,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use futures_retry::retry;
 use mononoke_types::RepositoryId;
 
 mod store;
@@ -139,6 +141,31 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         id: RowId,
         mutation_id: Option<i64>,
     ) -> Result<u64>;
+}
+
+/// The source-of-truth flip `create_repos` performs once its Configo mutation
+/// reaches `LANDED`: every row stamped with `mutation_id` becomes `Mononoke`.
+/// Shared with out-of-band repair (`mononoke_admin git-source-of-truth
+/// sweep-landed-reserved`) so a repair takes exactly the path the poller takes.
+pub async fn flip_landed_mutation_to_mononoke(
+    ctx: &CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<()> {
+    retry(
+        |_| {
+            git_source_of_truth_config.update_source_of_truth_by_mutation_id(
+                ctx,
+                GitSourceOfTruth::Mononoke,
+                mutation_id,
+            )
+        },
+        Duration::from_millis(1_000),
+    )
+    .binary_exponential_backoff()
+    .max_attempts(5)
+    .await?;
+    Ok(())
 }
 
 #[derive(Clone)]
