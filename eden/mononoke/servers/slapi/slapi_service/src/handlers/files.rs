@@ -36,7 +36,6 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::wire::ToWire;
 use ephemeral_blobstore::BubbleId;
 use futures::FutureExt;
-use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -279,18 +278,6 @@ async fn generate_upload_token<R>(
     ))
 }
 
-/// Upload content of a file
-async fn store_file<R: MononokeRepo>(
-    repo: HgRepoContext<R>,
-    id: AnyFileContentId,
-    data: impl Stream<Item = Result<Bytes, Error>> + Send,
-    content_size: u64,
-    bubble_id: Option<BubbleId>,
-) -> Result<(), Error> {
-    repo.store_file(id, content_size, data, bubble_id).await?;
-    Ok(())
-}
-
 /// Upload content of a file requested by the client.
 pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let params = UploadFileParams::take_from(state);
@@ -308,7 +295,6 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
 
     let id = AnyFileContentId::from_str(&format!("{}/{}", params.idtype, params.id))
         .map_err(HttpError::e400)?;
-
     let body = Body::take_from(state)
         .into_data_stream()
         .map_err(Error::from);
@@ -328,12 +314,25 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
         ))),
     }?;
 
-    store_file(
-        repo.clone(),
-        id.clone(),
-        body,
+    let bypass_redaction = if repo
+        .repo_ctx()
+        .config()
+        .mirror_upload_redaction_bypass_enabled
+    {
+        repo.repo_ctx()
+            .authorization_context()
+            .check_mirror_upload_operations(repo.ctx(), repo.repo())
+            .await
+            .is_permitted()
+    } else {
+        false
+    };
+    repo.store_file(
+        id,
         content_size,
+        body,
         query_string.bubble_id.map(BubbleId::new),
+        bypass_redaction,
     )
     .await
     .map_err(HttpError::e500)?;

@@ -913,6 +913,9 @@ concurrency = 24
     if env.getenv("REDACTION_DISABLED"):
         append_config("redaction=false")
 
+    if env.getenv("MIRROR_UPLOAD_REDACTION_BYPASS_ENABLED"):
+        append_config("mirror_upload_redaction_bypass_enabled=true")
+
     if env.getenv("LIST_KEYS_PATTERNS_MAX"):
         list_keys_patterns_max = env.getenv("LIST_KEYS_PATTERNS_MAX")
         append_config(f"list_keys_patterns_max={list_keys_patterns_max}")

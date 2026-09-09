@@ -221,16 +221,24 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         }
     }
 
-    /// Store file into blobstore
+    /// Store file into blobstore. When `bypass_redaction` is true, redaction
+    /// remains logged but is not enforced for the filestore operation.
     pub async fn store_file(
         &self,
         key: impl Into<FetchKey>,
         size: u64,
         data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
+        bypass_redaction: bool,
     ) -> Result<ContentMetadataV2, MononokeError> {
+        let blobstore = self.bubble_blobstore(bubble_id).await?;
+        let blobstore = if bypass_redaction {
+            blobstore.with_log_only_redaction()
+        } else {
+            blobstore
+        };
         filestore::store(
-            &self.bubble_blobstore(bubble_id).await?,
+            &blobstore,
             *self.repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_fetch_key(size, key.into()),

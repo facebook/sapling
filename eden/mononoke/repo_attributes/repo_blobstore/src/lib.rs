@@ -90,6 +90,16 @@ impl RepoBlobstore {
         blobstore
     }
 
+    /// Return a view that logs redacted accesses without enforcing them.
+    pub fn with_log_only_redaction(&self) -> Self {
+        let (blobstore, redacted_blobstore_config) = self.0.0.as_parts();
+        let blobstore = RedactedBlobstore::new(
+            blobstore,
+            redacted_blobstore_config.with_log_only_redaction(),
+        );
+        Self(AbstractRepoBlobstore(blobstore))
+    }
+
     pub fn copier_to<'a>(&'a self, other: &'a RepoBlobstore) -> RepoBlobstoreCopier<'a> {
         RepoBlobstoreCopier::new(self, other)
     }

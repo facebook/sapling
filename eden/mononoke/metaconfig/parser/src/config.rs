@@ -426,6 +426,7 @@ fn build_repo_config(
         hook_manager_params,
         hooks,
         redaction,
+        mirror_upload_redaction_bypass_enabled,
         generation_cache_size,
         scuba_table_hooks,
         cache_warmup,
@@ -519,6 +520,9 @@ fn build_repo_config(
         Redaction::Disabled
     };
 
+    let mirror_upload_redaction_bypass_enabled =
+        mirror_upload_redaction_bypass_enabled.unwrap_or(false);
+
     let infinitepush = infinitepush.convert()?.unwrap_or_default();
 
     let generation_cache_size: usize = generation_cache_size
@@ -602,6 +606,7 @@ fn build_repo_config(
         hash_validation_percentage,
         readonly: metadata.readonly,
         redaction,
+        mirror_upload_redaction_bypass_enabled,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -1693,6 +1698,7 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
+                mirror_upload_redaction_bypass_enabled: false,
                 infinitepush: InfinitepushParams {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(
@@ -1897,6 +1903,7 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
+                mirror_upload_redaction_bypass_enabled: false,
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,

@@ -214,6 +214,11 @@ pub struct RepoConfig {
     pub readonly: RepoReadOnly,
     /// Should files be checked for redaction
     pub redaction: Redaction,
+    /// When true, an upload to this repo may bypass redaction (log-only, not
+    /// blocked) if the caller holds the mirror_upload permission. Set only on
+    /// AWS Operational Shadow replica repos, which modern_sync keeps identical
+    /// to a source repo. Defaults to false: redaction is enforced.
+    pub mirror_upload_redaction_bypass_enabled: bool,
     /// Params for the hook manager
     pub hook_manager_params: Option<HookManagerParams>,
     /// Max number of results in listkeyspatterns.

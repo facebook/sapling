@@ -41,6 +41,7 @@ pub mod config {
 pub struct RedactedBlobstoreConfigInner {
     redacted: Option<Arc<RedactedBlobs>>,
     scuba_builder: MononokeScubaSampleBuilder,
+    enforce: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +66,17 @@ impl RedactedBlobstoreConfig {
             inner: Arc::new(RedactedBlobstoreConfigInner {
                 redacted,
                 scuba_builder,
+                enforce: true,
+            }),
+        }
+    }
+
+    pub fn with_log_only_redaction(&self) -> Self {
+        Self {
+            inner: Arc::new(RedactedBlobstoreConfigInner {
+                redacted: self.redacted.clone(),
+                scuba_builder: self.scuba_builder.clone(),
+                enforce: false,
             }),
         }
     }
@@ -152,9 +164,12 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                             "{} operation with redacted blobstore with key {:?}",
                             operation, key
                         );
-                        self.log_redacted_blob_access_to_scuba(ctx, key, operation, metadata);
+                        let log_only = metadata.log_only || !self.config.enforce;
+                        self.log_redacted_blob_access_to_scuba(
+                            ctx, key, operation, metadata, log_only,
+                        );
 
-                        if metadata.log_only {
+                        if log_only {
                             Ok(&self.blobstore)
                         } else {
                             Err(
@@ -174,6 +189,7 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
         key: &str,
         operation: &str,
         metadata: &RedactedMetadata,
+        log_only: bool,
     ) {
         let mut scuba_builder = self.config.scuba_builder.clone();
         scuba_builder.unsampled();
@@ -182,7 +198,7 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
             .add("operation", operation)
             .add("key", key.to_string())
             .add("reason", metadata.task.to_string())
-            .add("enforced", (!metadata.log_only) as u32)
+            .add("enforced", (!log_only) as u32)
             .add("session_uuid", ctx.metadata().session_id().to_string());
 
         if let Some(unix_username) = ctx.metadata().unix_name() {
@@ -400,36 +416,42 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<()> {
+    async fn test_redaction_log_only_sources(fb: FacebookInit) -> Result<()> {
         let redacted_log_only_key = "bar";
         let redacted_task = "bar task";
-
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
 
-        let inner = Memblob::default();
-        let redacted_pairs = RedactedBlobs::FromHashMapForTests(Arc::new(hashmap! {
-            redacted_log_only_key.to_owned() => RedactedMetadata {
-                task: redacted_task.to_owned(),
-                log_only: true,
-            },
-        }));
-
-        let blob = RedactedBlobstore::new(
-            PrefixBlobstore::new(inner, "prefix"),
-            RedactedBlobstoreConfig::new(
+        for (metadata_log_only, config_log_only) in [(true, false), (false, true)] {
+            let inner = Memblob::default();
+            let redacted_pairs = RedactedBlobs::FromHashMapForTests(Arc::new(hashmap! {
+                redacted_log_only_key.to_owned() => RedactedMetadata {
+                    task: redacted_task.to_owned(),
+                    log_only: metadata_log_only,
+                },
+            }));
+            let config = RedactedBlobstoreConfig::new(
                 Some(Arc::new(redacted_pairs)),
                 MononokeScubaSampleBuilder::with_discard(),
-            ),
-        );
+            );
+            let config = if config_log_only {
+                config.with_log_only_redaction()
+            } else {
+                config
+            };
+            let blob = RedactedBlobstore::new(PrefixBlobstore::new(inner, "prefix"), config);
 
-        // Since this is a log-only mode it should succeed
-        let val = BlobstoreBytes::from_bytes("test bar");
-        blob.put(ctx, redacted_log_only_key.to_owned(), val.clone())
-            .await?;
+            let val = BlobstoreBytes::from_bytes("test bar");
+            blob.put(ctx, redacted_log_only_key.to_owned(), val.clone())
+                .await?;
 
-        let actual = blob.get(ctx, redacted_log_only_key).await?;
-        assert_eq!(Some(val), actual.map(|val| val.into_bytes()));
+            let actual = blob.get(ctx, redacted_log_only_key).await?;
+            assert_eq!(
+                Some(val),
+                actual.map(|val| val.into_bytes()),
+                "log-only via metadata={metadata_log_only}, config={config_log_only} should permit access"
+            );
+        }
 
         Ok(())
     }

@@ -27,7 +27,7 @@
   >   "tiers": {
   >     "mirror_commit_upload": {
   >       "actions": {
-  >         "mirror_upload": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
+  >         "mirror_upload": ["SERVICE_IDENTITY:not-modern-sync"]
   >       }
   >     }
   >   }
@@ -35,7 +35,8 @@
   > ACLS
 
   $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config
-  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest MIRROR_UPLOAD_REDACTION_BYPASS_ENABLED=1 setup_common_config
+  $ REPOID=2 REPONAME=dest_nobypass ACL_NAME=dest setup_common_config
 
   $ testtool_drawdag -R orig --derive-all --print-hg-hashes <<EOF
   > A-B-C
@@ -77,72 +78,83 @@ The files should now be marked as redacted
   Found 1 redacted paths
   T0                  : C
 
-Restart mononoke server to pick up the redaction config without relying on timing
+Restart mononoke server to pick up the redaction config without relying on timing.
+The dest repo has mirror_upload_redaction_bypass_enabled set; dest_nobypass does not.
   $ termandwait $MONONOKE_PID
   $ start_and_wait_for_mononoke_server
 
-Sync all bookmarks moves
+Without the mirror_upload permission, the enforced redaction still blocks Modern Sync
+even for the repo that enables the bypass.
+The initial ACL grants mirror_upload to an identity that does not match the client.
   $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
-  > mononoke_modern_sync "" sync-once orig dest --start-id 0
-  [INFO] Running sync-once loop
-  [INFO] [sync{repo=orig}] Opened SourceRepoArgs(Name("orig")) unredacted
-  [INFO] [sync{repo=orig}] Starting sync from 0
-  [INFO] [sync{repo=orig}] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
-  [INFO] [sync{repo=orig}] Established EdenAPI connection
-  [INFO] [sync{repo=orig}] Initialized channels
-  [INFO] [sync{repo=orig}] Read 1 entries
-  [INFO] [sync{repo=orig}] 1 entries left after filtering
-  [INFO] [sync{repo=orig}] mononoke_host="*" dogfooding=false (glob)
-  [INFO] [sync{repo=orig}] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
-  [INFO] [sync{repo=orig}] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
-  [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
-  [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
-  [INFO] [sync{repo=orig}] Starting sync of 3 missing commits, 0 were already synced
-  [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
-  
-  Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0","request_id":"*"}. Headers: { (glob)
-          "x-request-id": "*", (glob)
-          "content-type": "application/json",
-          "x-load": "*", (glob)
-          "server": "edenapi_server",
-          "x-mononoke-host": "*", (glob)
-          "content-length": "149",
-          "date": "*", (glob)
-      }
-  [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
-  
-  Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0","request_id":"*"}. Headers: { (glob)
-          "x-request-id": "*", (glob)
-          "content-type": "application/json",
-          "x-load": "*", (glob)
-          "server": "edenapi_server",
-          "x-mononoke-host": "*", (glob)
-          "content-length": "149",
-          "date": "*", (glob)
-      }
+  > mononoke_modern_sync "" sync-once orig dest --start-id 0 > "$TESTTMP/denied-sync.log" 2>&1
+  $ grep -o "The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0" "$TESTTMP/denied-sync.log" | head -1
+  The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0
 
+Redaction is the only error. The retry count does not matter, so list the
+distinct errors. A different or extra error adds a line here and fails the test.
+  $ grep "ERROR" "$TESTTMP/denied-sync.log" | sed 's/.*\] //' | sort -u
+  Error processing content: collecting contents entries
 
-Removing the redaction config should allow the sync to succeed. That is the scenario we use in the initial AWS sync
-  $ cat > "$REDACTION_CONF/redaction_sets" <<EOF
-  > {
-  >  "all_redactions": [
-  >  ]
-  > }
-  > EOF
+The denied sync writes nothing to the destination.
+  $ mononoke_admin bookmarks -R dest get master_bookmark
+  (not set)
 
-The files should not be marked as redacted
-  $ mononoke_admin redaction list -R orig -i $C
-  Searching for redacted paths in e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  Found 0 redacted paths
-
-Restart mononoke server to pick up the redaction config without relying on timing
+Grant the Modern Sync client's authenticated identity the mirror_upload permission.
+Facebook certificates carry a service identity, while the OSS fixture exposes its X509 subject.
   $ termandwait $MONONOKE_PID
+  $ if [ -n "${FB_TEST_FIXTURES:-}" ]; then
+  >   MIRROR_UPLOAD_IDENTITY="SERVICE_IDENTITY:server"
+  > else
+  >   MIRROR_UPLOAD_IDENTITY="X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA"
+  > fi
+  $ cat > "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "orig": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
+  >       }
+  >     },
+  >     "dest": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
+  >          "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
+  >       }
+  >     }
+  >   },
+  >   "tiers": {
+  >     "mirror_commit_upload": {
+  >       "actions": {
+  >         "mirror_upload": ["$MIRROR_UPLOAD_IDENTITY"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
   $ start_and_wait_for_mononoke_server
 
-Sync all bookmarks moves
-  $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
+Even an authorised identity cannot bypass redaction on a repo that does not enable it.
+  $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
+  > mononoke_modern_sync "" sync-once orig dest_nobypass --start-id 0 > "$TESTTMP/config-disabled-sync.log" 2>&1
+  $ grep -o "The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0" "$TESTTMP/config-disabled-sync.log" | head -1
+  The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0
+
+Redaction is the only error here as well.
+  $ grep "ERROR" "$TESTTMP/config-disabled-sync.log" | sed 's/.*\] //' | sort -u
+  Error processing content: collecting contents entries
+
+The denied sync writes nothing to the destination.
+  $ mononoke_admin bookmarks -R dest_nobypass get master_bookmark
+  (not set)
+
+The dest repo enables the bypass, so the authorised upload succeeds while destination
+redaction remains enforced.
+  $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
+  > mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
   [INFO] Running sync-once loop
   [INFO] [sync{repo=orig}] Opened SourceRepoArgs(Name("orig")) unredacted
   [INFO] [sync{repo=orig}] Starting sync from 0
@@ -157,7 +169,9 @@ Sync all bookmarks moves
   [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
   [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
   [INFO] [sync{repo=orig}] Starting sync of 3 missing commits, 0 were already synced
-  [INFO] [sync{repo=orig}] Setting checkpoint from entry 1 to 0
-  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
   [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  [INFO] [sync{repo=orig}] Marking entry 1 as done
+
+Destination reads remain redacted after the authorised upload.
+  $ hg clone -q mono:dest dest
+  $ hg --cwd dest cat -r $C C
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
