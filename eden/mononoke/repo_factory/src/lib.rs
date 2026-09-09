@@ -2146,7 +2146,12 @@ impl RepoFactory {
             .open_sql_shardable::<SqlCommitDerivedDataMapping>(repo_config)
             .await
             .context(RepoFactoryError::CommitDerivedDataMapping)?;
-        Ok(Arc::new(CommitDerivedDataMapping { sql }))
+        let mapping = CommitDerivedDataMapping::new(sql);
+        let mapping = match self.cache_handler_factory("commit_derived_data_mapping")? {
+            Some(factory) => mapping.with_caching(factory),
+            None => mapping,
+        };
+        Ok(Arc::new(mapping))
     }
 
     pub async fn repo_event_publisher(

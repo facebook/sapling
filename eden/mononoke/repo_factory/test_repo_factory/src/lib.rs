@@ -729,9 +729,9 @@ impl TestRepoFactory {
             repo_config.derived_data_config.clone(),
             None, // derivation_service_client = None
             restricted_paths_config_based.clone(),
-            Arc::new(CommitDerivedDataMapping {
-                sql: SqlCommitDerivedDataMapping::from_sql_connections(self.metadata_db.clone()),
-            }),
+            Arc::new(CommitDerivedDataMapping::new(
+                SqlCommitDerivedDataMapping::from_sql_connections(self.metadata_db.clone()),
+            )),
         )?))
     }
 

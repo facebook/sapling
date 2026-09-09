@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use caching_ext::CacheHandlerFactory;
 use context::CoreContext;
 use metaconfig_types::OssRemoteDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
@@ -24,6 +25,8 @@ use sql_ext::Connection;
 use sql_ext::SqlShardedConnections;
 use sql_ext::mononoke_queries;
 use vec1::Vec1;
+
+mod caching;
 
 pub const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
 
@@ -76,9 +79,23 @@ mononoke_queries! {
 #[facet::facet]
 pub struct CommitDerivedDataMapping {
     pub sql: SqlCommitDerivedDataMapping,
+    cache: Option<caching::MappingCache>,
 }
 
 impl CommitDerivedDataMapping {
+    /// Construct a mapping without caching.
+    pub fn new(sql: SqlCommitDerivedDataMapping) -> Self {
+        Self { sql, cache: None }
+    }
+
+    /// Cache successful mapping reads in the configured local and shared caches.
+    pub fn with_caching(self, factory: CacheHandlerFactory) -> Self {
+        Self {
+            cache: Some(caching::MappingCache::new(factory)),
+            ..self
+        }
+    }
+
     pub async fn store_mapping(
         &self,
         ctx: &CoreContext,
@@ -134,6 +151,20 @@ impl CommitDerivedDataMapping {
         derived_data_version: i32,
         shard_id: usize,
     ) -> Result<Option<Vec<u8>>> {
+        if self.cache.is_some() {
+            let rows = self
+                .fetch_mapping_batch(
+                    ctx,
+                    repo_id,
+                    vec![cs_id],
+                    derived_data_type,
+                    derived_data_version,
+                    shard_id,
+                )
+                .await?;
+            return Ok(rows.into_iter().next().map(|(_, value)| value));
+        }
+
         self.sql
             .fetch_mapping(
                 ctx,
@@ -155,6 +186,21 @@ impl CommitDerivedDataMapping {
         derived_data_version: i32,
         shard_id: usize,
     ) -> Result<Vec<(ChangesetId, Vec<u8>)>> {
+        if let Some(cache) = &self.cache {
+            self.sql.shard_id(shard_id)?;
+            return caching::CacheRequest {
+                ctx,
+                sql: &self.sql,
+                cache,
+                repo_id,
+                derived_data_type,
+                derived_data_version,
+                shard_id,
+            }
+            .fetch(cs_ids)
+            .await;
+        }
+
         self.sql
             .fetch_mapping_batch(
                 ctx,

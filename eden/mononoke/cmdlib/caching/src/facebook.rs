@@ -141,6 +141,12 @@ pub fn init_cachelib_from_settings(
             .unwrap_or(available_space / 20),
     )?;
     cachelib::get_or_create_volatile_pool(
+        "commit_derived_data_mapping",
+        settings
+            .commit_derived_data_mapping_cache_size
+            .unwrap_or(32 * 1024 * 1024),
+    )?;
+    cachelib::get_or_create_volatile_pool(
         "filenodes",
         settings
             .filenodes_cache_size

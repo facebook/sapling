@@ -166,6 +166,7 @@
     "scm/mononoke_memcache_sitevers:bonsai_git_mapping": 0,
     "scm/mononoke_memcache_sitevers:blobstore": 0,
     "scm/mononoke_memcache_sitevers:bonsai_hg_mapping": 0,
+    "scm/mononoke_memcache_sitevers:commit_derived_data_mapping": 0,
     "scm/mononoke_memcache_sitevers:filenodes": 0,
     "scm/mononoke_memcache_sitevers:hg_mutation_store": 0,
     "scm/mononoke_memcache_sitevers:mutable_renames": 0,

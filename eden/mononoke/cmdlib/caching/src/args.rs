@@ -108,6 +108,10 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub commit_graph_cache_size: Option<usize>,
 
+    /// Override size of the commit derived data mapping cache, in bytes
+    #[clap(long, value_name = "SIZE", hide = true)]
+    pub commit_derived_data_mapping_cache_size: Option<usize>,
+
     /// Override size of the filenodes cache (individual filenodes)
     #[clap(long, value_name = "SIZE", hide = true)]
     pub filenodes_cache_size: Option<usize>,
