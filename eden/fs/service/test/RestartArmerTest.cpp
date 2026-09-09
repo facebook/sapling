@@ -12,15 +12,17 @@
 #endif
 
 #include <chrono>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include <folly/FileUtil.h>
 #include <folly/futures/Future.h>
-#include <folly/json/json.h>
 #include <folly/portability/Unistd.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
@@ -29,6 +31,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/service/EdenStateDir.h"
 
 using namespace facebook::eden;
 
@@ -137,11 +140,11 @@ class RecordingPrivHelper final : public PrivHelper {
 
 class RestartArmerTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    const auto stateDir = canonicalPath(tmpDir_.path().string());
-    daemonArgsPath_ = stateDir + ".edenfs_start_args"_pc;
-    sentinelPath_ = stateDir + ".edenfs_restart_armed"_pc;
-    edenConfig_ = EdenConfig::createTestEdenConfig();
+  RestartArmerTest()
+      : stateDirPath_{canonicalPath(tmpDir_.path().string())},
+        stateDir_{stateDirPath_},
+        daemonArgsPath_{stateDir_.getDaemonArgsPath()},
+        edenConfig_{EdenConfig::createTestEdenConfig()} {
     edenConfig_->restartEdenfsOnCrash.setValue(
         true, ConfigSourceType::CommandLine);
   }
@@ -150,17 +153,38 @@ class RestartArmerTest : public ::testing::Test {
     return RestartArmer{
         &privHelper_,
         std::make_shared<ReloadableConfig>(edenConfig_),
-        daemonArgsPath_,
-        sentinelPath_};
+        stateDir_};
   }
 
   static bool exists(const AbsolutePath& path) {
     return ::access(path.c_str(), F_OK) == 0;
   }
 
+#ifdef __APPLE__
+  /** Where the most recent arm told the privhelper it had put the sentinel. */
+  AbsolutePath armedSentinelPath() const {
+    return canonicalPath(privHelper_.restartArgs.back().sentinelPath);
+  }
+
+  /** Every name in the state directory a sentinel prefix scan would match. */
+  std::vector<std::string> sentinelNames() const {
+    std::vector<std::string> names;
+    for (const auto& entry :
+         std::filesystem::directory_iterator{stateDirPath_.asString()}) {
+      auto name = entry.path().filename().string();
+      if (std::string_view{name}.starts_with(
+              stateDir_.getRestartSentinelNamePrefix())) {
+        names.push_back(std::move(name));
+      }
+    }
+    return names;
+  }
+#endif
+
   folly::test::TemporaryDirectory tmpDir_;
+  AbsolutePath stateDirPath_;
+  EdenStateDir stateDir_;
   AbsolutePath daemonArgsPath_;
-  AbsolutePath sentinelPath_;
   std::shared_ptr<EdenConfig> edenConfig_;
   RecordingPrivHelper privHelper_;
 };
@@ -169,15 +193,15 @@ TEST_F(RestartArmerTest, aFreshArmerIsDisarmed) {
   EXPECT_FALSE(makeArmer().armed());
 }
 
-TEST_F(RestartArmerTest, removingTheSentinelIsIdempotent) {
-  ASSERT_TRUE(folly::writeFile(std::string{"{}"}, sentinelPath_.c_str()));
+TEST_F(RestartArmerTest, disarmingWithoutArmingLeavesOtherGenerationsAlone) {
+  const auto foreign =
+      stateDirPath_ + ".edenfs_restart_armed.1.0000000000000002"_pc;
+  ASSERT_TRUE(folly::writeFile(std::string{"stale"}, foreign.c_str()));
+
   auto armer = makeArmer();
-
   armer.removeSentinel();
-  ASSERT_FALSE(exists(sentinelPath_));
 
-  armer.removeSentinel();
-  EXPECT_FALSE(exists(sentinelPath_));
+  EXPECT_TRUE(exists(foreign));
 }
 
 #ifdef __APPLE__
@@ -202,32 +226,57 @@ class ScopedEnvVar {
   std::string name_;
 };
 
-folly::dynamic readJson(const AbsolutePath& path) {
-  std::string contents;
-  if (!folly::readFile(path.c_str(), contents)) {
-    throw std::runtime_error("cannot read " + path.asString());
-  }
-  return folly::parseJson(contents);
-}
-
-TEST_F(RestartArmerTest, armingWritesTheSentinel) {
+TEST_F(RestartArmerTest, armingCreatesAnEmptySentinelForThisGeneration) {
   ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
 
   makeArmer().arm();
 
-  struct stat st{};
-  ASSERT_EQ(0, ::stat(sentinelPath_.c_str(), &st));
-  EXPECT_EQ(0600, st.st_mode & 07777);
+  ASSERT_EQ(1, privHelper_.restartArgs.size());
+  const auto sentinel = armedSentinelPath();
+  EXPECT_EQ(stateDirPath_.asString(), sentinel.dirname().asString());
 
-  const auto sentinel = readJson(sentinelPath_);
-  EXPECT_EQ(
-      folly::dynamic::array("/usr/local/bin/edenfs", "--edenDir", "/tmp/eden"),
-      sentinel["argv"]);
-  EXPECT_EQ(
-      folly::dynamic{
-          folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/eden")},
-      sentinel["env"]);
-  EXPECT_NE(0, sentinel["nonce"].asInt());
+  const auto leaf = std::string{sentinel.basename().view()};
+  const auto expectedPrefix =
+      ".edenfs_restart_armed." + std::to_string(::getpid()) + ".";
+  EXPECT_TRUE(leaf.starts_with(expectedPrefix)) << leaf;
+  EXPECT_EQ(expectedPrefix.size() + 16, leaf.size());
+
+  struct stat st{};
+  ASSERT_EQ(0, ::stat(sentinel.c_str(), &st));
+  EXPECT_EQ(0600, st.st_mode & 07777);
+  EXPECT_EQ(0, st.st_size);
+
+  EXPECT_EQ(std::vector<std::string>{leaf}, sentinelNames());
+}
+
+TEST_F(RestartArmerTest, rearmingReplacesThePreviousSentinel) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+
+  auto armer = makeArmer();
+  armer.arm();
+  const auto first = armedSentinelPath();
+  armer.arm();
+  const auto second = armedSentinelPath();
+
+  EXPECT_NE(first.asString(), second.asString());
+  EXPECT_FALSE(exists(first));
+  EXPECT_TRUE(exists(second));
+  EXPECT_EQ(1, sentinelNames().size());
+}
+
+TEST_F(RestartArmerTest, disarmingRemovesTheSentinelThatWasCreated) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+
+  auto armer = makeArmer();
+  armer.arm();
+  const auto sentinel = armedSentinelPath();
+  ASSERT_TRUE(exists(sentinel));
+
+  armer.removeSentinel();
+  ASSERT_FALSE(exists(sentinel));
+
+  armer.removeSentinel();
+  EXPECT_FALSE(exists(sentinel));
 }
 
 TEST_F(RestartArmerTest, armingSendsTheRequestAndMarksItselfArmed) {
@@ -239,10 +288,8 @@ TEST_F(RestartArmerTest, armingSendsTheRequestAndMarksItselfArmed) {
   ASSERT_EQ(1, privHelper_.restartArgs.size());
   const auto& args = privHelper_.restartArgs.front();
   EXPECT_TRUE(args.enabled);
-  EXPECT_EQ(sentinelPath_.asString(), args.sentinelPath);
-  EXPECT_EQ(
-      readJson(sentinelPath_)["nonce"].asInt(),
-      static_cast<int64_t>(args.sentinelNonce));
+  EXPECT_TRUE(exists(armedSentinelPath()));
+  EXPECT_NE(0, args.sentinelNonce);
   EXPECT_TRUE(armer.armed());
 }
 
@@ -254,8 +301,9 @@ TEST_F(RestartArmerTest, aRejectedRequestRemovesTheSentinelAgain) {
   auto armer = makeArmer();
   armer.arm();
 
+  ASSERT_EQ(1, privHelper_.restartArgs.size());
   EXPECT_FALSE(armer.armed());
-  EXPECT_FALSE(exists(sentinelPath_));
+  EXPECT_FALSE(exists(armedSentinelPath()));
 }
 
 TEST_F(RestartArmerTest, aMissingDaemonArgsFileDoesNotArm) {
@@ -263,7 +311,7 @@ TEST_F(RestartArmerTest, aMissingDaemonArgsFileDoesNotArm) {
   armer.arm();
 
   EXPECT_FALSE(armer.armed());
-  EXPECT_FALSE(exists(sentinelPath_));
+  EXPECT_TRUE(sentinelNames().empty());
   EXPECT_TRUE(privHelper_.restartArgs.empty());
 }
 
@@ -278,7 +326,7 @@ TEST_F(RestartArmerTest, anEmptyEnvironmentDoesNotArm) {
   armer.arm();
 
   EXPECT_FALSE(armer.armed());
-  EXPECT_FALSE(exists(sentinelPath_));
+  EXPECT_TRUE(sentinelNames().empty());
   EXPECT_TRUE(privHelper_.restartArgs.empty());
 }
 
@@ -293,13 +341,34 @@ TEST_F(RestartArmerTest, destroyingTheArmerWithARequestInFlight) {
     auto armer = makeArmer();
     armer.arm();
     ASSERT_EQ(1, privHelper_.restartArgs.size());
-    ASSERT_TRUE(exists(sentinelPath_));
+    ASSERT_TRUE(exists(armedSentinelPath()));
   }
 
   privHelper_.pendingRequest->setException(
       std::runtime_error("privhelper went away"));
 
-  EXPECT_FALSE(exists(sentinelPath_));
+  EXPECT_FALSE(exists(armedSentinelPath()));
+}
+
+TEST_F(RestartArmerTest, aLateRejectionRemovesOnlyTheSentinelOfItsOwnArm) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  privHelper_.pendingRequest.emplace();
+
+  auto armer = makeArmer();
+  armer.arm();
+  const auto first = armedSentinelPath();
+
+  // The re-arm a failed takeover would do: same pid, and answered at once.
+  auto firstRequest = std::move(*privHelper_.pendingRequest);
+  privHelper_.pendingRequest.reset();
+  armer.arm();
+  const auto second = armedSentinelPath();
+  ASSERT_NE(first.asString(), second.asString());
+
+  firstRequest.setException(std::runtime_error("privhelper went away"));
+
+  EXPECT_FALSE(exists(first));
+  EXPECT_TRUE(exists(second));
 }
 
 TEST_F(RestartArmerTest, theRestartBudgetIsCarriedOverFromTheEnvironment) {

@@ -447,6 +447,7 @@ cpp_library(
         "//folly/io/async:async_signal_handler",
         "//folly/json:dynamic",
         "//folly/logging:logging",
+        "//folly/portability:fcntl",
         "//folly/portability:unistd",
         "//thrift/lib/cpp/concurrency:thread_manager",
         "//thrift/lib/cpp/util:enum_utils",

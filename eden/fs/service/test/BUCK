@@ -174,7 +174,6 @@ cpp_unittest(
         "//eden/fs/service:server",
         "//folly:file_util",
         "//folly/futures:core",
-        "//folly/json:dynamic",
         "//folly/portability:unistd",
         "//folly/testing:test_util",
     ],

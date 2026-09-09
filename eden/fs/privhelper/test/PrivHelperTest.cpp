@@ -349,7 +349,7 @@ folly::dynamic makeSentinelEnv() {
   return folly::dynamic::object("PATH", "/usr/bin")("HOME", "/home/test");
 }
 
-/** The relaunch command as EdenServer::armPrivHelperRestart() writes it. */
+/** Sentinel contents readRelaunchCommand() accepts a command out of. */
 std::string makeSentinelContents(
     uint64_t nonce = kSentinelNonce,
     folly::dynamic env = makeSentinelEnv()) {

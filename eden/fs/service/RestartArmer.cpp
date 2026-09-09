@@ -15,16 +15,20 @@
 #include <chrono>
 #endif
 
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Random.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/json/json.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Fcntl.h>
+#include <folly/portability/SysStat.h>
 #include <folly/portability/Unistd.h>
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/service/EdenStateDir.h"
 
 #ifdef __APPLE__
 #include "eden/fs/config/EdenConfig.h"
@@ -46,17 +50,52 @@ void unlinkSentinel(const AbsolutePath& sentinel) {
     }
   }
 }
+
+#ifdef __APPLE__
+/**
+ * Create the empty sentinel, and report whether it is now there.
+ *
+ * O_EXCL: the sentinel has to be a file this call made, so that neither its
+ * mode nor its emptiness can belong to something already at that name.
+ */
+bool createSentinel(const AbsolutePath& sentinel) {
+  const int fd = folly::openNoInt(
+      sentinel.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+  if (fd < 0) {
+    const int err = errno;
+    XLOGF(
+        WARN,
+        "failed to create {}: {}; edenfs will not be auto-restarted",
+        sentinel,
+        folly::errnoStr(err));
+    return false;
+  }
+  const folly::File file{fd, /*ownsFd=*/true};
+
+  // open()'s mode is only whatever the umask leaves of it, so pin 0600 here.
+  if (::fchmod(fd, 0600) != 0) {
+    const int err = errno;
+    XLOGF(
+        WARN,
+        "failed to set the mode of {}: {}; edenfs will not be auto-restarted",
+        sentinel,
+        folly::errnoStr(err));
+    unlinkSentinel(sentinel);
+    return false;
+  }
+  return true;
+}
+#endif // __APPLE__
 } // namespace
 
 RestartArmer::RestartArmer(
     PrivHelper* privHelper,
     std::shared_ptr<ReloadableConfig> config,
-    AbsolutePath daemonArgsPath,
-    AbsolutePath sentinelPath)
+    const EdenStateDir& stateDir)
     : privHelper_{privHelper},
       config_{std::move(config)},
-      daemonArgsPath_{std::move(daemonArgsPath)},
-      sentinelPath_{std::move(sentinelPath)} {}
+      stateDir_{stateDir},
+      daemonArgsPath_{stateDir.getDaemonArgsPath()} {}
 
 #ifdef __APPLE__
 std::optional<folly::dynamic> RestartArmer::getRelaunchCommand() {
@@ -127,8 +166,7 @@ void RestartArmer::arm() {
     return;
   }
 
-  const auto relaunch = getRelaunchCommand();
-  if (!relaunch.has_value()) {
+  if (!getRelaunchCommand().has_value()) {
     return;
   }
 
@@ -148,32 +186,27 @@ void RestartArmer::arm() {
                                 config->restartEdenfsWindow.getValue())
                                 .count()));
 
-  const auto& sentinel = sentinelPath_;
+  // A token drawn afresh on every arm: a daemon re-arming after a failed
+  // takeover keeps its pid, and under a name the earlier arm could reproduce,
+  // that arm's late failure continuation would delete this one's marker.
+  const auto sentinel =
+      stateDir_.getRestartSentinelPath(::getpid(), folly::Random::rand64());
   args.sentinelPath = sentinel.asString();
   // Never 0: that value is reserved for the absent nonce a sentinel from an
   // older daemon reads as. Bounded to 63 bits so it survives folly::dynamic's
   // signed integer as a positive number.
   args.sentinelNonce = folly::Random::rand64(1, uint64_t{1} << 63);
-  // The sentinel carries the relaunch command as well as arming the privhelper,
-  // so the RPC never has to. Written before the request, so the privhelper
-  // never sees a missing path and concludes that we already disarmed.
-  const folly::dynamic command = folly::dynamic::object(
-      "argv", relaunch->at("argv"))("env", relaunch->at("env"))(
-      "nonce", static_cast<int64_t>(args.sentinelNonce));
-  // Atomically, onto a file created for this write: the root privhelper refuses
-  // a sentinel that anyone but us can write, and a mode passed to open() would
-  // leave whatever an earlier generation left behind in place.
-  if (const int rc = folly::writeFileAtomicNoThrow(
-          sentinel.asString(),
-          folly::toJson(command),
-          folly::WriteFileAtomicOptions().setPermissions(0600));
-      rc != 0) {
-    XLOGF(
-        WARN,
-        "failed to create {}: {}; edenfs will not be auto-restarted",
-        sentinel,
-        folly::errnoStr(rc));
-    return;
+  {
+    auto sentinelPath = sentinelPath_.wlock();
+    // Created before the request, so the privhelper never sees a missing path
+    // and concludes that we already disarmed.
+    if (!createSentinel(sentinel)) {
+      return;
+    }
+    const auto previous = std::exchange(*sentinelPath, sentinel);
+    if (previous.has_value()) {
+      unlinkSentinel(*previous);
+    }
   }
 
   // Cannot be waited on: the reply is driven by the main EventBase, the thread
@@ -200,7 +233,11 @@ void RestartArmer::arm() {
 }
 
 void RestartArmer::removeSentinel() {
-  unlinkSentinel(sentinelPath_);
+  auto sentinelPath = sentinelPath_.wlock();
+  const auto sentinel = std::exchange(*sentinelPath, std::nullopt);
+  if (sentinel.has_value()) {
+    unlinkSentinel(*sentinel);
+  }
 }
 
 bool RestartArmer::armed() const {

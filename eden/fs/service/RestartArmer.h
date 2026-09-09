@@ -18,11 +18,12 @@
 
 namespace facebook::eden {
 
+class EdenStateDir;
 class PrivHelper;
 class ReloadableConfig;
 
 /**
- * The daemon half of privhelper-driven restarts: writes the restart sentinel
+ * The daemon half of privhelper-driven restarts: creates the restart sentinel
  * and gives the privhelper the policy to relaunch this daemon under.
  *
  * Only macOS arms; arm() is a no-op elsewhere. Removing the sentinel is
@@ -33,26 +34,28 @@ class RestartArmer {
   /**
    * @param privHelper the privhelper to arm; must outlive this object.
    * @param config read afresh on every arm, so a reload is picked up.
-   * @param daemonArgsPath where edenfsctl recorded this daemon's command.
-   * @param sentinelPath the restart sentinel to write and remove.
+   * @param stateDir holds the daemon args file and names the sentinels; must
+   *    outlive this object.
    */
   RestartArmer(
       PrivHelper* privHelper,
       std::shared_ptr<ReloadableConfig> config,
-      AbsolutePath daemonArgsPath,
-      AbsolutePath sentinelPath);
+      const EdenStateDir& stateDir);
 
   /**
-   * Give the privhelper what it needs to relaunch this daemon after a crash,
-   * and create the sentinel whose existence says "still armed".
+   * Send the privhelper the policy to restart this daemon under, and create
+   * the sentinel whose existence says "still armed".
    *
    * No-op unless this is macOS with privhelper:restart-edenfs-on-crash set.
-   * Best effort: a daemon started without edenfsctl has no recorded command,
-   * and the only consequence is that it will not be restarted.
+   * Best effort: a daemon started without edenfsctl has no recorded command to
+   * arm on, and the only consequence is that it will not be restarted.
    */
   void arm();
 
-  /** Remove this daemon's restart sentinel. Idempotent. */
+  /**
+   * Remove the sentinel the most recent arm created. Idempotent, and a no-op
+   * when nothing has been armed.
+   */
   void removeSentinel();
 
   /**
@@ -75,8 +78,15 @@ class RestartArmer {
   // Only arm() ever talks to the privhelper, so off macOS nothing reads this.
   [[maybe_unused]] PrivHelper* const privHelper_;
   const std::shared_ptr<ReloadableConfig> config_;
+  // Likewise, only arm() names a sentinel.
+  [[maybe_unused]] const EdenStateDir& stateDir_;
   const AbsolutePath daemonArgsPath_;
-  const AbsolutePath sentinelPath_;
+
+  /**
+   * The sentinel the most recent arm created, so that a disarm removes the
+   * file that arm made rather than a name rebuilt from a fresh token.
+   */
+  folly::Synchronized<std::optional<AbsolutePath>> sentinelPath_;
 
   // Shared with the in-flight setRestartArgs continuation, which can outlive
   // this object; that continuation must therefore never capture `this`.

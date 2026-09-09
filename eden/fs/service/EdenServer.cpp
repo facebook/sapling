@@ -756,11 +756,7 @@ EdenServer::EdenServer(
           nullptr
 #endif
               )},
-      restartArmer_{
-          serverState_->getPrivHelper(),
-          config_,
-          edenDir_.getDaemonArgsPath(),
-          edenDir_.getRestartSentinelPath()},
+      restartArmer_{serverState_->getPrivHelper(), config_, edenDir_},
       heartbeatManager_{std::make_shared<HeartbeatManager>(
           edenDir_,
           serverState_->getEdenFsEventsLogger())},
