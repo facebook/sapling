@@ -14,6 +14,8 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace folly {
 class EventBase;
@@ -113,6 +115,13 @@ struct EdenFsRestartArgs {
   // state dir, so without this a privhelper that outlives its daemon can read a
   // sentinel a newer generation has since overwritten.
   uint64_t sentinelNonce = 0;
+  // The command line to relaunch edenfs with, already stripped of sudo,
+  // `--takeover` and inherited file descriptor arguments.
+  std::vector<std::string> relaunchArgv;
+  // The environment to relaunch with. The privhelper replaces the child's
+  // environment wholesale, so an incomplete one leaves the new daemon without
+  // a PATH, HOME or USER. Applied in order, so a later entry for a key wins.
+  std::vector<std::pair<std::string, std::string>> relaunchEnv;
   // Restarts already performed within the current window. The privhelper exits
   // after restarting, so the count travels to the new daemon through the
   // environment and comes back here from the new daemon.
