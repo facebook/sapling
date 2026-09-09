@@ -106,7 +106,7 @@ def reap_children():
                 pid, status = os.waitpid(any_process, os.WNOHANG)
                 if pid == 0:
                     break
-            except:
+            except Exception:
                 break
 
 
@@ -148,7 +148,7 @@ class Bunch:
         try:
             for i in range(n):
                 start_new_thread(task, ())
-        except:
+        except Exception:
             self._can_exit = True
             raise
 
