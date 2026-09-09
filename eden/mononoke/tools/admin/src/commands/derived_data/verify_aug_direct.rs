@@ -27,7 +27,6 @@ use clap::Args;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivedDataManager;
 use futures::StreamExt;
@@ -142,7 +141,7 @@ impl<'a> Verifier<'a> {
         }
 
         let source_roots = derivation_ctx
-            .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(self.ctx, source_csids.clone())
+            .fetch_derived_batch::<RootHgAugmentedManifestId>(self.ctx, source_csids.clone())
             .await
             .with_context(|| {
                 format!(
@@ -263,7 +262,7 @@ impl<'a> Verifier<'a> {
     ) -> Result<HgAugmentedManifestId> {
         let cs_id = bonsai.get_changeset_id();
         let aug_parents = derivation_ctx
-            .fetch_parents::<RootHgAugmentedManifestV2Id>(self.ctx, bonsai)
+            .fetch_parents::<RootHgAugmentedManifestId>(self.ctx, bonsai)
             .await
             .with_context(|| format!("fetching augmented parent roots for {cs_id}"))?
             .into_iter()
@@ -296,18 +295,22 @@ impl<'a> Verifier<'a> {
         bonsai: &BonsaiChangeset,
     ) -> Result<HgAugmentedManifestId> {
         let cs_id = bonsai.get_changeset_id();
-        let mut source_choice = RootHgAugmentedManifestV2Id::derive_batch(
+        let aug_parents = derivation_ctx
+            .fetch_parents::<RootHgAugmentedManifestId>(self.ctx, bonsai)
+            .await
+            .with_context(|| format!("fetching augmented parent roots for {cs_id}"))?
+            .into_iter()
+            .map(|p| p.hg_augmented_manifest_id())
+            .collect();
+        RootHgAugmentedManifestV2Id::derive_from_mapped_hg_with_parents(
             self.ctx,
             derivation_ctx,
-            vec![bonsai.clone()],
+            bonsai,
+            aug_parents,
         )
-        .await?;
-        source_choice
-            .remove(&cs_id)
-            .map(|root| root.hg_augmented_manifest_id())
-            .ok_or_else(|| {
-                anyhow!("v2 source-choice did not derive augmented manifest for {cs_id}")
-            })
+        .await?
+        .map(|root| root.hg_augmented_manifest_id())
+        .ok_or_else(|| anyhow!("mapped Hg manifest not found for {cs_id}"))
     }
 
     async fn compare_computed_root_to_stored(
@@ -926,7 +929,6 @@ mod tests {
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::override_just_knobs;
     use mercurial_derivation::MappedHgChangesetId;
-    use mercurial_derivation::RootHgAugmentedManifestV2Id;
     use mercurial_types::HgNodeHash;
     use mercurial_types::HgParents;
     use mercurial_types::blobs::ChangesetMetadata;
@@ -1687,7 +1689,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn direct_v2_no_store_computation_ignores_current_root_mapping(
+    async fn verifier_v2_source_choice_ignores_current_root_mapping(
         fb: FacebookInit,
     ) -> Result<()> {
         // Given a linear repository with stored old-path augmented data, but
@@ -1706,18 +1708,11 @@ mod tests {
             .await
             .with_context(|| format!("loading second bonsai changeset {second}"))?;
 
-        // When computing the second commit's v2 augmented root directly with
-        // the no-store derivation context.
-        let computed = RootHgAugmentedManifestV2Id::derive_batch(
-            &ctx,
-            &no_store_derivation_ctx,
-            vec![second_bonsai],
-        )
-        .await?;
-        let computed_second = computed
-            .get(&second)
-            .ok_or_else(|| anyhow!("missing computed v2 augmented root for {second}"))?
-            .hg_augmented_manifest_id();
+        // When computing the second commit's v2 source-choice root with
+        // shared parent roots in the no-store derivation context.
+        let computed_second = verifier
+            .derive_v2_source_choice_root(&no_store_derivation_ctx, &second_bonsai)
+            .await?;
 
         // Then the computation is independent of the current stored root
         // mapping and does not repair that mapping in persistent storage.

@@ -925,46 +925,318 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_augmented_manifest_v2_fetch_uses_configured_v1_root_mapping_namespace(
+    async fn test_augmented_manifest_v2_fetch_falls_back_to_v1_root_mapping(
         fb: FacebookInit,
     ) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
 
-        // Given: a config with a non-default v1 augmented-manifest root
-        // mapping prefix, and a root stored through that v1 namespace.
+        // Given: a changeset with only the shared v1 augmented-manifest root stored.
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("a.txt", "initial")
             .commit()
             .await?;
-        let mut config = test_repo_factory::default_test_repo_derived_data_types_config();
-        config.mapping_key_prefixes.insert(
-            DerivableType::HgAugmentedManifests,
-            "v1-prefix.".to_string(),
-        );
-        let manager = repo
-            .repo_derived_data()
-            .manager()
-            .with_replaced_config("v1-prefixed-augmented-manifests".to_string(), config);
-        let derivation_ctx = manager.derivation_context(None);
-        let stored_aug =
-            RootHgAugmentedManifestId::new(HgAugmentedManifestId::from_bytes(&[0x24; 20])?);
-        stored_aug
-            .clone()
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+        let shared_root = HgAugmentedManifestId::from_bytes(&[0x24; 20])?;
+        RootHgAugmentedManifestId::new(shared_root)
             .store_mapping(&ctx, &derivation_ctx, root)
             .await?;
 
         // When: fetching the same changeset through the v2 derived-data type.
         let fetched = RootHgAugmentedManifestV2Id::fetch(&ctx, &derivation_ctx, root).await?;
 
-        // Then: v2 observes the configured v1 root mapping namespace instead
-        // of using a separate v2/default namespace.
+        // Then: the shared root is available as compatible v2 input without
+        // creating private evidence that v2 ran for the changeset.
         assert_eq!(
             fetched.map(|root| root.hg_augmented_manifest_id()),
-            Some(stored_aug.hg_augmented_manifest_id()),
+            Some(shared_root),
+        );
+        assert_eq!(
+            RootHgAugmentedManifestV2Id::fetch_private_mapping(&ctx, &derivation_ctx, root).await?,
+            None,
         );
 
         Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_fetch_ignores_private_mapping_when_publishing(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a changeset with private V2 completion but no shared root mapping.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+        let stored_aug: RootHgAugmentedManifestV2Id =
+            BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&[0x31; 20])).try_into()?;
+        stored_aug
+            .store_mapping_with_publication(&ctx, &derivation_ctx, root, false)
+            .await?;
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async move {
+                // When: V2 is fetched after publication is enabled.
+                let fetched =
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &derivation_ctx, root).await?;
+
+                // Then: private shadow state is not publication completion and reads do not publish.
+                assert_eq!(fetched, None);
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation_ctx, root).await?,
+                    None,
+                );
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_private_mapping_uses_v1_configured_namespace(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+
+        // Given: two supported derived-data configurations with distinct V1
+        // mapping prefixes and one V2 result stored through the first.
+        let mut first_config = test_repo_factory::default_test_repo_derived_data_types_config();
+        first_config.mapping_key_prefixes.insert(
+            DerivableType::HgAugmentedManifests,
+            "first-prefix.".to_string(),
+        );
+        let first_manager = repo
+            .repo_derived_data()
+            .manager()
+            .with_replaced_config("first-v1-prefix".to_string(), first_config);
+        let mut second_config = test_repo_factory::default_test_repo_derived_data_types_config();
+        second_config.mapping_key_prefixes.insert(
+            DerivableType::HgAugmentedManifests,
+            "second-prefix.".to_string(),
+        );
+        let second_manager = repo
+            .repo_derived_data()
+            .manager()
+            .with_replaced_config("second-v1-prefix".to_string(), second_config);
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(false),
+            )])),
+            async move {
+                let first_ctx = first_manager.derivation_context(None);
+                let second_ctx = second_manager.derivation_context(None);
+                let stored_aug: RootHgAugmentedManifestV2Id =
+                    BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&[0x57; 20])).try_into()?;
+                stored_aug
+                    .clone()
+                    .store_mapping(&ctx, &first_ctx, root)
+                    .await?;
+
+                // When: both configured namespaces fetch V2 completion.
+                let first_fetched =
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &first_ctx, root).await?;
+                let second_fetched =
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &second_ctx, root).await?;
+
+                // Then: only the namespace that stored the result observes it.
+                assert_eq!(first_fetched, Some(stored_aug));
+                assert_eq!(second_fetched, None);
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_store_mapping_without_publication_is_private(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a v2 result and publication disabled.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(false),
+            )])),
+            async move {
+                let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+                let stored_aug: RootHgAugmentedManifestV2Id =
+                    BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&[0x35; 20])).try_into()?;
+
+                // When: storing a canonical v2 result while publication is disabled.
+                stored_aug
+                    .clone()
+                    .store_mapping(&ctx, &derivation_ctx, root)
+                    .await?;
+
+                // Then: v2 completion is recorded without publishing the shared root.
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &derivation_ctx, root).await?,
+                    Some(stored_aug),
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation_ctx, root).await?,
+                    None,
+                );
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_publication_uses_only_shared_mapping(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a v2 result and publication enabled.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async move {
+                let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+                let stored_aug: RootHgAugmentedManifestV2Id =
+                    BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&[0x46; 20])).try_into()?;
+
+                // When: storing a canonical v2 result while publication is enabled.
+                stored_aug
+                    .clone()
+                    .store_mapping(&ctx, &derivation_ctx, root)
+                    .await?;
+
+                // Then: only the shared production root is recorded and used for V2 reads.
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(
+                        &ctx,
+                        &derivation_ctx,
+                        root,
+                    )
+                    .await?,
+                    None,
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation_ctx, root)
+                        .await?
+                        .map(|root| root.hg_augmented_manifest_id()),
+                    Some(stored_aug.hg_augmented_manifest_id()),
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &derivation_ctx, root).await?,
+                    Some(stored_aug),
+                );
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_shared_parent_bounds_canonical_derivation(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a child with its ACL dependency and a parent that has only the
+        // shared augmented-manifest root from V1.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file("a.txt", "modified")
+            .commit()
+            .await?;
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive::<RootHgAugmentedManifestId>(
+                &ctx,
+                root,
+                None,
+                derivation_queue_thrift::DerivationPriority::LOW,
+            )
+            .await?;
+        let derivation_ctx = manager.derivation_context(None);
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(false),
+            )])),
+            async move {
+                // When: canonical V2 derives the child through the manager.
+                manager
+                    .derive::<RootHgAugmentedManifestV2Id>(
+                        &ctx,
+                        child,
+                        None,
+                        derivation_queue_thrift::DerivationPriority::LOW,
+                    )
+                    .await?;
+
+                // Then: the shared parent bounds traversal, while only the child
+                // gets private V2 completion.
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(
+                        &ctx,
+                        &derivation_ctx,
+                        root,
+                    )
+                    .await?,
+                    None,
+                );
+                assert!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(
+                        &ctx,
+                        &derivation_ctx,
+                        child,
+                    )
+                    .await?
+                    .is_some(),
+                );
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
     }
 
     #[mononoke::fbinit_test]

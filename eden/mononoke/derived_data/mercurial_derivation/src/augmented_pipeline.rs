@@ -44,6 +44,7 @@ use mononoke_types::typed_hash::AclManifestId;
 
 use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 use crate::augmented_manifest_v2::fetch_augmented_roots_with_fallback;
+use crate::augmented_manifest_v2::should_publish_shared_mapping;
 use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
 use crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged;
@@ -66,13 +67,6 @@ impl AugmentedManifestPipelineKind {
             Self::V2 => "derived_hgaugmentedmanifest_v2_stage",
         }
     }
-
-    fn derivation_name(self) -> &'static str {
-        match self {
-            Self::V1 => "hg_augmented_manifests",
-            Self::V2 => "hg_augmented_manifests_v2",
-        }
-    }
 }
 
 fn stage_blobstore_key(
@@ -92,11 +86,14 @@ fn stage_blobstore_key(
 
 fn use_normal_mapping(pipeline_kind: AugmentedManifestPipelineKind, stage_path: &MPath) -> bool {
     stage_path.is_root()
-        && justknobs::eval(
-            "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
-            None,
-            Some(pipeline_kind.derivation_name()),
-        )
+        && match pipeline_kind {
+            AugmentedManifestPipelineKind::V1 => justknobs::eval(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
+                None,
+                Some(RootHgAugmentedManifestId::NAME),
+            ),
+            AugmentedManifestPipelineKind::V2 => should_publish_shared_mapping(),
+        }
 }
 
 async fn fetch_v2_source_augmented_roots(
@@ -687,14 +684,8 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
                         "terminal stage output for {cs_id} should be a directory, got {output:?}",
                     ));
                 };
-                derivation
-                    .blobstore()
-                    .put(
-                        ctx,
-                        format_key(derivation, cs_id),
-                        RootHgAugmentedManifestId::new(HgAugmentedManifestId::new(dir.treenode))
-                            .into(),
-                    )
+                RootHgAugmentedManifestV2Id::new(HgAugmentedManifestId::new(dir.treenode))
+                    .store_mapping_with_publication(ctx, derivation, cs_id, true)
                     .await
             } else {
                 store_intermediate_stage_output(
@@ -730,14 +721,10 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
 
         stream::iter(cs_ids.into_iter().map(|cs_id| async move {
             if use_normal_mapping {
-                let Some(blob_data) = derivation
-                    .blobstore()
-                    .get(ctx, &format_key(derivation, cs_id))
-                    .await?
+                let Some(root) = RootHgAugmentedManifestId::fetch(ctx, derivation, cs_id).await?
                 else {
                     return Ok::<_, Error>(None);
                 };
-                let root: RootHgAugmentedManifestId = blob_data.try_into()?;
                 let entry = extract_stage_entry(
                     ctx,
                     derivation,
@@ -772,22 +759,33 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
+    use blobstore::Storable;
     use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use mercurial_types::HgNodeHash;
+    use mercurial_types::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
+    use mercurial_types::sharded_augmented_manifest::ShardedHgAugmentedManifest;
     use mononoke_macros::mononoke;
     use mononoke_types::FileType;
+    use mononoke_types::MPathElement;
     use mononoke_types::hash::Blake2;
     use mononoke_types::hash::Blake3;
     use mononoke_types::hash::Sha1 as ContentSha1;
     use mononoke_types::sha1_hash::Sha1 as NodeSha1;
+    use mononoke_types::sharded_map_v2::ShardedMapV2Node;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataRef;
 
     use super::*;
 
     #[facet::container]
     #[derive(Clone)]
-    struct TestRepo(RepoBlobstore);
+    struct TestRepo(RepoBlobstore, RepoDerivedData);
 
     fn directory_output(byte: u8) -> Option<HgAugmentedManifestEntry> {
         Some(HgAugmentedManifestEntry::DirectoryNode(
@@ -908,6 +906,190 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_v2_terminal_publication_uses_only_shared_mapping(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a V2 terminal output and publication enabled.
+        let cs_id = ChangesetId::new(Blake2::from_byte_array([5; 32]));
+        let expected =
+            HgAugmentedManifestId::new(HgNodeHash::new(NodeSha1::from_byte_array([5; 20])));
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async move {
+                let derivation = repo.repo_derived_data().manager().derivation_context(None);
+
+                // When: V2 publishes a terminal root through the pipeline.
+                RootHgAugmentedManifestV2Id::store_stage_outputs(
+                    &ctx,
+                    &derivation,
+                    &StageId::Manifest(MPath::ROOT),
+                    HashMap::from([(cs_id, directory_output(5))]),
+                )
+                .await?;
+
+                // Then: only the shared production root is recorded.
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(&ctx, &derivation, cs_id)
+                        .await?,
+                    None,
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation, cs_id)
+                        .await?
+                        .map(|root| root.hg_augmented_manifest_id()),
+                    Some(expected),
+                );
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_v2_terminal_shadow_uses_only_checkpoint(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+        let checkpoint_cs_id = ChangesetId::new(Blake2::from_byte_array([6; 32]));
+        let shared_cs_id = ChangesetId::new(Blake2::from_byte_array([7; 32]));
+        let expected = directory_output(6);
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(false),
+            )])),
+            async move {
+                let derivation = repo.repo_derived_data().manager().derivation_context(None);
+
+                // Given: one V2 root checkpoint and one changeset with only a shared root.
+                RootHgAugmentedManifestV2Id::store_stage_outputs(
+                    &ctx,
+                    &derivation,
+                    &StageId::Manifest(MPath::ROOT),
+                    HashMap::from([(checkpoint_cs_id, expected.clone())]),
+                )
+                .await?;
+                RootHgAugmentedManifestId::new(HgAugmentedManifestId::new(HgNodeHash::new(
+                    NodeSha1::from_byte_array([7; 20]),
+                )))
+                .store_mapping(&ctx, &derivation, shared_cs_id)
+                .await?;
+
+                // When: V2 checks terminal completion while publication remains disabled.
+                let outputs = RootHgAugmentedManifestV2Id::fetch_stage_outputs(
+                    &ctx,
+                    &derivation,
+                    &StageId::Manifest(MPath::ROOT),
+                    vec![checkpoint_cs_id, shared_cs_id],
+                )
+                .await?;
+
+                // Then: only the V2 checkpoint is completion and no root mapping was written.
+                assert_eq!(outputs, HashMap::from([(checkpoint_cs_id, expected)]));
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(
+                        &ctx,
+                        &derivation,
+                        checkpoint_cs_id,
+                    )
+                    .await?,
+                    None,
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation, checkpoint_cs_id).await?,
+                    None,
+                );
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_v2_terminal_publication_reads_only_shared_mapping(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+        let private_cs_id = ChangesetId::new(Blake2::from_byte_array([8; 32]));
+        let shared_cs_id = ChangesetId::new(Blake2::from_byte_array([9; 32]));
+        let treenode = HgNodeHash::new(NodeSha1::from_byte_array([8; 20]));
+        let subentries = ShardedMapV2Node::from_entries(
+            &ctx,
+            repo.repo_blobstore(),
+            Vec::<(MPathElement, HgAugmentedManifestEntry)>::new(),
+        )
+        .await?;
+        let augmented_manifest = ShardedHgAugmentedManifest {
+            hg_node_id: treenode,
+            p1: None,
+            p2: None,
+            computed_node_id: treenode,
+            subentries,
+            acl_manifest_directory_id: None,
+        };
+        let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
+            .clone()
+            .compute_content_addressed_digest(&ctx, repo.repo_blobstore())
+            .await?;
+        let root_id = HgAugmentedManifestEnvelope {
+            augmented_manifest_id,
+            augmented_manifest_size,
+            augmented_manifest,
+        }
+        .store(&ctx, repo.repo_blobstore())
+        .await?;
+        let expected = Some(HgAugmentedManifestEntry::DirectoryNode(
+            HgAugmentedDirectoryNode {
+                treenode,
+                augmented_manifest_id,
+                augmented_manifest_size,
+                acl_manifest_directory_id: None,
+            },
+        ));
+        let derivation = repo.repo_derived_data().manager().derivation_context(None);
+        RootHgAugmentedManifestV2Id::new(root_id)
+            .store_mapping_with_publication(&ctx, &derivation, private_cs_id, false)
+            .await?;
+        RootHgAugmentedManifestId::new(root_id)
+            .store_mapping(&ctx, &derivation, shared_cs_id)
+            .await?;
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                KnobVal::Bool(true),
+            )])),
+            async move {
+                // When: V2 checks publication-on completion for private-only and shared roots.
+                let outputs = RootHgAugmentedManifestV2Id::fetch_stage_outputs(
+                    &ctx,
+                    &derivation,
+                    &StageId::Manifest(MPath::ROOT),
+                    vec![private_cs_id, shared_cs_id],
+                )
+                .await?;
+
+                // Then: only the shared mapping satisfies terminal completion.
+                assert_eq!(outputs, HashMap::from([(shared_cs_id, expected)]));
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
     }
 
     #[mononoke::fbinit_test]

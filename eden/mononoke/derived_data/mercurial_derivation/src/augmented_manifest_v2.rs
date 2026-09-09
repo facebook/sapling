@@ -16,6 +16,7 @@ use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::KeyedBlobstore;
 use blobstore::StoreLoadable;
 use context::CoreContext;
 use derived_data::prefetch_content_metadata;
@@ -41,8 +42,38 @@ use crate::mapping::RootHgAugmentedManifestId;
 pub struct RootHgAugmentedManifestV2Id(HgAugmentedManifestId);
 
 impl RootHgAugmentedManifestV2Id {
+    pub(crate) fn new(hg_augmented_manifest_id: HgAugmentedManifestId) -> Self {
+        Self(hg_augmented_manifest_id)
+    }
+
     pub fn hg_augmented_manifest_id(&self) -> HgAugmentedManifestId {
         self.0
+    }
+
+    /// Derives the mapped-Hg source choice from caller-provided parent content.
+    /// This does not fetch or store V2 completion for those parents.
+    pub async fn derive_from_mapped_hg_with_parents(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: &BonsaiChangeset,
+        aug_parents: Vec<HgAugmentedManifestId>,
+    ) -> Result<Option<Self>> {
+        let Some(hg_manifest_id) =
+            lookup_mapped_root_hg_manifest_id(ctx, derivation_ctx, bonsai.get_changeset_id())
+                .await?
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Self(
+            derive_from_mapped_hg_manifest(
+                ctx,
+                derivation_ctx,
+                bonsai,
+                hg_manifest_id,
+                aug_parents,
+            )
+            .await?,
+        )))
     }
 
     fn from_v1(root: RootHgAugmentedManifestId) -> Self {
@@ -51,6 +82,41 @@ impl RootHgAugmentedManifestV2Id {
 
     fn into_v1(self) -> RootHgAugmentedManifestId {
         RootHgAugmentedManifestId::new(self.0)
+    }
+
+    pub(crate) async fn fetch_private_mapping(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(derivation_ctx, changeset_id);
+        derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()
+    }
+
+    pub(crate) async fn store_mapping_with_publication(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+        publish_shared: bool,
+    ) -> Result<()> {
+        if publish_shared {
+            self.into_v1()
+                .store_mapping(ctx, derivation_ctx, changeset_id)
+                .await
+        } else {
+            let key = format_key(derivation_ctx, changeset_id);
+            derivation_ctx
+                .blobstore()
+                .put(ctx, key, self.into())
+                .await?;
+            Ok(())
+        }
     }
 }
 
@@ -74,6 +140,20 @@ impl From<RootHgAugmentedManifestV2Id> for BlobstoreBytes {
     fn from(root_hg_augmented_manifest_id: RootHgAugmentedManifestV2Id) -> Self {
         BlobstoreBytes::from(root_hg_augmented_manifest_id.into_v1())
     }
+}
+
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "derived_root_hgaugmentedmanifest_v2.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<RootHgAugmentedManifestId>();
+    format!("{root_prefix}{key_prefix}{changeset_id}")
+}
+
+pub(crate) fn should_publish_shared_mapping() -> bool {
+    justknobs::eval(
+        "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
+        None,
+        Some(RootHgAugmentedManifestV2Id::NAME),
+    )
 }
 
 pub(crate) async fn fetch_augmented_roots_with_fallback(
@@ -322,8 +402,8 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        self.into_v1()
-            .store_mapping(ctx, derivation_ctx, changeset_id)
+        let publish_shared = should_publish_shared_mapping();
+        self.store_mapping_with_publication(ctx, derivation_ctx, changeset_id, publish_shared)
             .await
     }
 
@@ -332,11 +412,24 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        Ok(
-            RootHgAugmentedManifestId::fetch(ctx, derivation_ctx, changeset_id)
-                .await?
-                .map(Self::from_v1),
-        )
+        if should_publish_shared_mapping() {
+            Ok(
+                RootHgAugmentedManifestId::fetch(ctx, derivation_ctx, changeset_id)
+                    .await?
+                    .map(Self::from_v1),
+            )
+        } else {
+            // Shared roots are compatible migration boundaries, but only the
+            // private mapping proves that V2 produced a root while shadowing.
+            match Self::fetch_private_mapping(ctx, derivation_ctx, changeset_id).await? {
+                Some(root) => Ok(Some(root)),
+                None => Ok(
+                    RootHgAugmentedManifestId::fetch(ctx, derivation_ctx, changeset_id)
+                        .await?
+                        .map(Self::from_v1),
+                ),
+            }
+        }
     }
 
     fn from_thrift(data: thrift::DerivedData) -> Result<Self> {

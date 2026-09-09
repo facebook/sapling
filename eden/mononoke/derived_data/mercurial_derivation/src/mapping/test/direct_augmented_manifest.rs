@@ -451,14 +451,13 @@ async fn test_augmented_manifest_v2_derive_single_no_hg_missing_subtree_source_r
 }
 
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_v2_derive_single_no_hg_uses_persisted_subtree_source_root(
+async fn test_augmented_manifest_v2_derive_single_uses_shared_subtree_source_root(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
-    // Given: a no-Hg subtree-copy child whose non-parent source augmented root
-    // is available only through the shared persisted v2 root mapping (not the
-    // `known` cache), with ACL prederived for every changeset.
+    // Given: a no-Hg subtree-copy child whose non-parent source has only the
+    // shared augmented-manifest root produced by V1.
     let NoHgSubtreeCopyFixture {
         repo,
         source,
@@ -470,11 +469,15 @@ async fn test_augmented_manifest_v2_derive_single_no_hg_uses_persisted_subtree_s
     } = create_no_hg_subtree_copy_fixture(&ctx, fb).await?;
     let manager = repo.repo_derived_data().manager();
     manager
-        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, vec![source], None)
+        .derive::<RootHgAugmentedManifestId>(
+            &ctx,
+            source,
+            None,
+            derivation_queue_thrift::DerivationPriority::LOW,
+        )
         .await?;
 
-    // When: deriving the subtree-copy child with the source root available only
-    // via the persisted mapping (the `known` cache is empty).
+    // When: deriving the subtree-copy child with no source in the known cache.
     let child_aug = RootHgAugmentedManifestV2Id::derive_single(
         &ctx,
         &derivation_ctx,
@@ -484,22 +487,18 @@ async fn test_augmented_manifest_v2_derive_single_no_hg_uses_persisted_subtree_s
     )
     .await?;
 
-    // Then: the persisted source root satisfies the subtree copy, the child is
-    // content-derived (no canonical Hg mapping), the persisted source mapping is
-    // left intact, and no HgChangeset mappings are created.
+    // Then: V2 accepts the shared source as compatible input without creating
+    // private completion for it or deriving unrelated child history through Hg.
     let env = load_v2_aug_envelope(&ctx, &repo, &child_aug).await?;
     assert_eq!(
         env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
         "v2 should use a content-derived root when no canonical Hg mapping exists for {child}",
     );
-    assert!(
-        manager
-            .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, source, None)
-            .await?
-            .is_some(),
-        "the persisted source augmented root mapping should remain available",
+    assert_eq!(
+        RootHgAugmentedManifestV2Id::fetch_private_mapping(&ctx, &derivation_ctx, source).await?,
+        None,
     );
-    for cs_id in csids {
+    for cs_id in csids.into_iter().filter(|cs_id| *cs_id != source) {
         assert!(
             manager
                 .fetch_derived::<MappedHgChangesetId>(&ctx, cs_id, None)
