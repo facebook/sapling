@@ -106,7 +106,7 @@ class client:
         if "eden" not in repo.requirements:
             try:
                 self._approx_total_file_count = len(repo.dirstate._map)
-            except:
+            except Exception:
                 # Can error in cases such as dotgit mode - ignore.
                 pass
 
