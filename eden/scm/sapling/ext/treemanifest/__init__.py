@@ -44,6 +44,16 @@ server, rather than relying on the server to perform this computation.
     [treemanifest]
     bfsprefetch = True
 
+`experimental.verify-manifest-root` looks up a manifest's root tree in the store
+as soon as the manifest is requested, so a missing root fails fast instead of
+when the tree is first read. Each lookup is a separate store request, so this is
+off by default and manifests are resolved lazily.
+
+::
+
+    [experimental]
+    verify-manifest-root = True
+
 `treemanifest.http` causes treemanifest to fetch tress over HTTP using EdenAPI.
 
 ::
@@ -398,6 +408,7 @@ class treemanifestlog:
         self._repo = repo
         self._opener = opener
         self.ui = repo.ui
+        self._verifyroot = repo.ui.configbool("experimental", "verify-manifest-root")
 
         setuptreestores(repo, self)
 
@@ -517,19 +528,18 @@ class treemanifestlog:
                     m._tree = m._tree.copy()
                 return m
 
-        store = self.datastore
-
-        try:
-            store.get(dir, node)
-        except KeyError:
-            raise shallowutil.MissingNodesError([(dir, node)])
-        except error.HttpError as ex:
-            # Hack to handle eagerstore errors. This should be converted to a KeyError
-            # somewhere in Rust.
-            if "404" in str(ex):
+        if self._verifyroot:
+            try:
+                self.datastore.get(dir, node)
+            except KeyError:
                 raise shallowutil.MissingNodesError([(dir, node)])
-            else:
-                raise ex
+            except error.HttpError as ex:
+                # Hack to handle eagerstore errors. This should be converted to a KeyError
+                # somewhere in Rust.
+                if "404" in str(ex):
+                    raise shallowutil.MissingNodesError([(dir, node)])
+                else:
+                    raise ex
 
         m = treemanifestctx(self, dir, node)
         self._treemanifestcache[node] = m

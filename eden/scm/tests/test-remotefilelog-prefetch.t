@@ -41,11 +41,10 @@ Prefetch (and also check we get counters):
   scmstore.tree.fetch.edenapi.singles: 1
   scmstore.tree.fetch.edenapi.time: * (glob) (?)
   scmstore.tree.prefetch.edenapi.time: * (glob) (?)
-  scmstore.tree.fetch.indexedlog.cache.hits: 1
-  scmstore.tree.fetch.indexedlog.cache.keys: 2
+  scmstore.tree.fetch.indexedlog.cache.keys: 1
   scmstore.tree.fetch.indexedlog.cache.misses: 1
-  scmstore.tree.fetch.indexedlog.cache.requests: 2
-  scmstore.tree.fetch.indexedlog.cache.singles: 2
+  scmstore.tree.fetch.indexedlog.cache.requests: 1
+  scmstore.tree.fetch.indexedlog.cache.singles: 1
   scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.local.keys: 1
   scmstore.tree.fetch.indexedlog.local.misses: 1

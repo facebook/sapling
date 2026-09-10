@@ -118,7 +118,7 @@ commit changed, is not prefetched:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 1, 1, 1 keys
+  remote tree fetch before rebase: 3 keys
   content fetch before rebase: shared (3 requests, 3 remote)
   rebasing S
   merging shared
@@ -132,6 +132,17 @@ commit changed, is not prefetched:
   source 1
   alone 2
   alone 3
+
+`experimental.verify-manifest-root` restores a store lookup for each requested
+manifest's root tree ahead of the batched walk:
+
+  $ clearcache
+  $ summarize_fetches sl rebase --keep -r source -d destination --config experimental.verify-manifest-root=true
+  remote tree fetch before rebase: 1, 1, 1 keys
+  content fetch before rebase: shared (3 requests, 3 remote)
+  rebasing S
+  merging shared
+  content fetch S: shared (5 requests, 0 remote)
 
 Replaying an added file does not fetch its content:
 
@@ -152,7 +163,7 @@ Replaying an added file does not fetch its content:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 1, 1, 1 keys
+  remote tree fetch before rebase: 3 keys
   rebasing S
 
   $ sl cat -r 'desc(S)' added
@@ -178,7 +189,7 @@ Deleting a file does not fetch its old content while replaying:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 1, 1, 1 keys
+  remote tree fetch before rebase: 3 keys
   rebasing S
 
 Source commits with different parents each merge against their own parent, so
@@ -210,7 +221,7 @@ input is prefetched before rebasing starts:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -r other-source -d destination
-  remote tree fetch before rebase: 1, 1, 1, 1, 1 keys
+  remote tree fetch before rebase: 5 keys
   content fetch before rebase: first, second (6 requests, 6 remote)
   rebasing S
   merging first
