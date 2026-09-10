@@ -151,14 +151,14 @@ fn random_4k_reads_direct(b: &mut Bencher) {
     options.custom_flags(winapi::um::winbase::FILE_FLAG_NO_BUFFERING);
     let file = options
         .open(&path)
-        .expect(&format!("failed to open {}", path.display()));
+        .unwrap_or_else(|_| panic!("failed to open {}", path.display()));
 
     #[cfg(target_vendor = "apple")]
     unsafe {
         libc::fcntl(file.as_raw_fd(), libc::F_NOCACHE, 1);
     }
 
-    std::fs::remove_file(&path).expect(&format!("failed to remove {}", path.display()));
+    std::fs::remove_file(&path).unwrap_or_else(|_| panic!("failed to remove {}", path.display()));
 
     const FILE_SIZE: u64 = 20 * (1 << 30); // 20 GiB
 
@@ -191,8 +191,8 @@ fn random_4k_writes(b: &mut Bencher) {
 
     let path = get_tempfile_path("random_writes.tmp");
 
-    let file = File::create(&path).expect(&format!("failed to open {}", path.display()));
-    std::fs::remove_file(&path).expect(&format!("failed to remove {}", path.display()));
+    let file = File::create(&path).unwrap_or_else(|_| panic!("failed to open {}", path.display()));
+    std::fs::remove_file(&path).unwrap_or_else(|_| panic!("failed to remove {}", path.display()));
 
     file.set_len(DEFAULT_FILE_SIZE)
         .expect("failed to set file size");
@@ -253,3 +253,47 @@ fn print_current_exe_path() {
 
 criterion_group!(main_group, random_4k);
 criterion_main!(main_group);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Exercises the positional I/O paths (`PosIO::write_full_at` /
+    // `read_full_at`) used by the benchmarks: data written at a nonzero
+    // offset must read back byte-for-byte, and bytes ahead of the offset
+    // must stay untouched.
+    #[test]
+    fn positional_write_read_round_trip() {
+        let path = std::env::temp_dir().join(format!(
+            "eden_benchmarks_positional_round_trip_{}.tmp",
+            std::process::id()
+        ));
+
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&path)
+            .expect("failed to open temp file");
+
+        let offset: u64 = 3 * PAGE_SIZE as u64 + 17;
+        let payload = b"positional-io-round-trip";
+
+        file.write_full_at(payload, offset)
+            .expect("write_full_at failed");
+
+        let mut read_back = vec![0u8; payload.len()];
+        file.read_full_at(&mut read_back, offset)
+            .expect("read_full_at failed");
+        assert_eq!(payload, read_back.as_slice());
+
+        let mut prefix = vec![0xffu8; offset as usize];
+        file.read_full_at(&mut prefix, 0)
+            .expect("read_full_at prefix failed");
+        assert!(prefix.iter().all(|&b| b == 0));
+
+        drop(file);
+        let _ = std::fs::remove_file(&path);
+    }
+}

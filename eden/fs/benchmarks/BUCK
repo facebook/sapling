@@ -282,6 +282,7 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//third-party/boost:boost_uuid",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
@@ -289,7 +290,6 @@ cpp_binary(
         "//thrift/lib/cpp2/async:header_client_channel",
     ],
     external_deps = [
-        ("boost", None, "boost_uuid"),
         "gflags",
     ],
 )
