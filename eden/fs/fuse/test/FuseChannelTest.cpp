@@ -223,9 +223,9 @@ TEST_F(FuseChannelTest, requestMetricsDuringWorkerInitialization) {
   };
   ASSERT_TRUE(waitForPollAfter(0));
 
-  // TSan detects unsafe concurrent publication while metric reads overlap
-  // worker initialization. The assertion below also requires the polling
-  // thread to observe an active request in non-sanitized builds.
+  // Exercise metric reads while workers publish their per-thread watch lists.
+  // TSan verifies publication is race-free, while the assertion below requires
+  // the polling thread to observe an active request in non-sanitized builds.
   performInit(channel.get());
 
   auto requestId = fuse_.sendLookup(FUSE_ROOT_ID, "worker-ready");

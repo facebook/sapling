@@ -1833,8 +1833,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
   disablePthreadCancellation();
   setThreadName(fmt::format("fuse{}", mountPath_.basename()));
   setThreadSigmask();
-  *(liveRequestWatches_.get()) =
-      std::make_shared<RequestMetricsScope::LockedRequestWatchList>();
+  (void)liveRequestWatches_.get();
 
   try {
     processSession();

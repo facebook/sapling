@@ -1133,7 +1133,9 @@ class FuseChannel final : public FsChannel {
   folly::ThreadLocal<
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>,
       ThreadLocalTag>
-      liveRequestWatches_;
+      liveRequestWatches_{[] {
+        return std::make_shared<RequestMetricsScope::LockedRequestWatchList>();
+      }};
 
   std::vector<TraceSubscriptionHandle<FuseTraceEvent>>
       traceSubscriptionHandles_;
