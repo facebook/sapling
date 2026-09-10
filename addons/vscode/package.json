@@ -6,7 +6,7 @@
   "publisher": "meta",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.63.0"
+    "vscode": "^1.86.0"
   },
   "categories": [
     "SCM Providers"
@@ -19,6 +19,9 @@
   ],
   "extensionKind": [
     "workspace"
+  ],
+  "enabledApiProposals": [
+    "contribMultiDiffEditorMenus"
   ],
   "galleryBanner": {
     "color": "#2e8555",
