@@ -112,6 +112,14 @@ Do not infer a directory copy when fewer than 90% of destination files map:
   $ sl commit -qm 'copy foo3 with too many new files'
   $ sl debugpathcreation weak-mapping
   f03bffcc5680263863bbbeb1c026f3ebf99287ce
+  $ sl debugpathcreation weak-mapping --debug
+  inspecting 'weak-mapping' at f03bffcc5680 (10 destination files)
+  parent * provides 8 copy mappings under 'weak-mapping' (glob)
+  candidate 'foo3' maps 8/10 destination files
+  rejecting 'foo3'; copy coverage is 80.0%, below configured 90%; use '--config debugpathcreation.similarity-percent=N' to adjust the threshold, where 50 < N <= 100
+  found 0 viable copy sources for 'weak-mapping' at f03bffcc5680
+  no copy source found; f03bffcc5680 is the origin
+  f03bffcc5680263863bbbeb1c026f3ebf99287ce
   $ sl --config debugpathcreation.similarity-percent=80 -q debugpathcreation weak-mapping
   75ae72b66962696c45e82d2a43e69188d9930209
 

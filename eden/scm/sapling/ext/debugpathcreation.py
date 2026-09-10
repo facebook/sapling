@@ -74,8 +74,11 @@ def _copied_directory(repo, ctx, path, similarity_percent):
                 copied_count, destination_count, similarity_percent
             ):
                 ui.debug(
-                    f"rejecting {source_dir!r}; copy coverage is below "
-                    f"{similarity_percent}%\n"
+                    f"rejecting {source_dir!r}; copy coverage is "
+                    f"{copied_count * 100 / destination_count:.1f}%, below "
+                    f"configured {similarity_percent}%; use '--config "
+                    "debugpathcreation.similarity-percent=N' to adjust "
+                    "the threshold, where 50 < N <= 100\n"
                 )
                 continue
 
