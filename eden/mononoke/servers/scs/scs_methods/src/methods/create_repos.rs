@@ -1207,6 +1207,7 @@ async fn prepare_repo_configs_mutation_nowait(
                     } else {
                         make_top_level_acl_name_from_repo_name(&request.repo_name)
                     },
+                    readonly: request.readonly.unwrap_or(false),
                     enable_git_bundle_uri: None,
                 },
             ))

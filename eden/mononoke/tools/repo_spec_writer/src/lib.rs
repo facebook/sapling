@@ -99,6 +99,9 @@ pub struct RepoIndexEntry {
     pub is_deep_sharded: bool,
     pub t_shirt_size: TShirtSize,
     pub hipster_acl: String,
+    /// Must match the `RepoSpec` written in the same transaction; nothing
+    /// else keeps the two in step.
+    pub readonly: bool,
     pub enable_git_bundle_uri: Option<bool>,
 }
 
@@ -158,7 +161,7 @@ pub fn append_to_repo_index(
         "default_commit_identity_scheme": RawCommitIdentityScheme.GIT,
         "hipster_acl": "{}",
         "enabled": True,
-        "readonly": False,"#,
+        "readonly": {},"#,
             escape_python_string(repo_name),
             escape_python_string(&entry.config_path),
             entry.repo_id,
@@ -166,6 +169,7 @@ pub fn append_to_repo_index(
             format_python_bool(entry.is_deep_sharded),
             t_shirt_size_str,
             escape_python_string(&entry.hipster_acl),
+            format_python_bool(entry.readonly),
         );
         if let Some(bundle_uri) = entry.enable_git_bundle_uri {
             entry_str.push_str(&format!(
@@ -328,6 +332,7 @@ mod tests {
             is_deep_sharded: true,
             t_shirt_size: TShirtSize::SMALL,
             hipster_acl: "repos/git/new/repo".to_string(),
+            readonly: false,
             enable_git_bundle_uri: None,
         };
         let updated = append_to_repo_index(current, &[("new/repo".to_string(), entry)]).unwrap();
@@ -353,6 +358,7 @@ mod tests {
             is_deep_sharded: true,
             t_shirt_size: TShirtSize::SMALL,
             hipster_acl: "a".to_string(),
+            readonly: false,
             enable_git_bundle_uri: Some(false),
         };
         let updated = append_to_repo_index(current, &[("r".to_string(), entry)]).unwrap();
@@ -369,10 +375,40 @@ mod tests {
             is_deep_sharded: true,
             t_shirt_size: TShirtSize::SMALL,
             hipster_acl: "a".to_string(),
+            readonly: false,
             enable_git_bundle_uri: None,
         };
         let updated = append_to_repo_index(current, &[("r".to_string(), entry)]).unwrap();
         assert!(!updated.contains("enable_git_bundle_uri"));
+    }
+
+    #[mononoke::test]
+    fn append_to_repo_index_emits_the_requested_readonly() {
+        let entry_with = |readonly| RepoIndexEntry {
+            config_path: "scm/mononoke/repos/git/aa/r".to_string(),
+            repo_id: 1,
+            tiers: vec!["scs"],
+            is_deep_sharded: true,
+            t_shirt_size: TShirtSize::SMALL,
+            hipster_acl: "a".to_string(),
+            readonly,
+            enable_git_bundle_uri: None,
+        };
+
+        let readonly =
+            append_to_repo_index("REPOS = {\n}\n", &[("r".to_string(), entry_with(true))]).unwrap();
+        assert!(
+            readonly.contains("\"readonly\": True"),
+            "read-only repo must be read-only in the index: {readonly}"
+        );
+
+        let writable =
+            append_to_repo_index("REPOS = {\n}\n", &[("r".to_string(), entry_with(false))])
+                .unwrap();
+        assert!(
+            writable.contains("\"readonly\": False"),
+            "the default stays writable: {writable}"
+        );
     }
 
     #[mononoke::test]
