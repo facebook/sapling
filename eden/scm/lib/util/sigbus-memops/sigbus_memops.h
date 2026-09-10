@@ -21,6 +21,15 @@ extern "C" {
 /* Return whether SIGBUS or equivalent exception protection is available. */
 bool sigbus_is_protected(void);
 
+/*
+ * Install a process-wide SIGBUS handler for the protected operations.
+ *
+ * The handler is installed at most once and delegates unrecognized signals to
+ * the handler that was installed previously. Returns 0 on success, otherwise
+ * an errno value.
+ */
+int sigbus_install_handler(void);
+
 #ifndef _WIN32
 /*
  * Try to redirect a synchronous SIGBUS raised by `sigbus_try_memcpy` or

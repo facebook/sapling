@@ -12,6 +12,7 @@
 #include "sigbus_memops.h"
 #include "sigbus_memops_config.h"
 
+#include <errno.h>
 #include <string.h>
 
 bool sigbus_is_protected(void) {
@@ -23,6 +24,10 @@ bool sigbus_is_protected(void) {
 // @lint-ignore SPELL
 #include <excpt.h>
 #include <windows.h>
+
+int sigbus_install_handler(void) {
+  return 0;
+}
 
 static int sigbus_memops_filter(unsigned long code) {
   return code == EXCEPTION_IN_PAGE_ERROR ? EXCEPTION_EXECUTE_HANDLER
@@ -63,8 +68,10 @@ bool sigbus_try_read(const void* src, size_t len) {
 
 #elif SIGBUS_MEMOPS_HAS_PROTECTION
 
+#include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #if SIGBUS_MEMOPS_DARWIN_AARCH64
 #include <mach/arm/thread_status.h>
@@ -83,6 +90,50 @@ extern void sigbus_try_read_recover_pc(void);
 // instruction; x86-64 faults on the same `rep movsb` for both accesses.
 extern void sigbus_try_memcpy_store_fault_pc(void);
 #endif
+
+static struct sigaction sigbus_memops_previous_action;
+static pthread_once_t sigbus_memops_install_once = PTHREAD_ONCE_INIT;
+static int sigbus_memops_install_error;
+
+static void
+sigbus_memops_signal_handler(int signo, siginfo_t* info, void* ucontext) {
+  if (sigbus_try_handle(signo, info, ucontext)) {
+    return;
+  }
+
+  if (sigbus_memops_previous_action.sa_handler == SIG_IGN ||
+      sigbus_memops_previous_action.sa_handler == SIG_DFL) {
+    // A synchronous fault re-runs the faulting instruction after this handler
+    // returns. Restore the original disposition first so it does not loop back
+    // into this handler.
+    if (sigaction(signo, &sigbus_memops_previous_action, NULL) != 0) {
+      _exit(128 + signo);
+    }
+    return;
+  }
+
+  if (sigbus_memops_previous_action.sa_flags & SA_SIGINFO) {
+    sigbus_memops_previous_action.sa_sigaction(signo, info, ucontext);
+  } else {
+    sigbus_memops_previous_action.sa_handler(signo);
+  }
+}
+
+static void sigbus_memops_install_handler_once(void) {
+  struct sigaction action = {0};
+  action.sa_sigaction = sigbus_memops_signal_handler;
+  action.sa_flags = SA_SIGINFO | SA_ONSTACK;
+  sigemptyset(&action.sa_mask);
+  if (sigaction(SIGBUS, &action, &sigbus_memops_previous_action) != 0) {
+    sigbus_memops_install_error = errno;
+  }
+}
+
+int sigbus_install_handler(void) {
+  int error = pthread_once(
+      &sigbus_memops_install_once, sigbus_memops_install_handler_once);
+  return error != 0 ? error : sigbus_memops_install_error;
+}
 
 bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
   if (signo != SIGBUS || info == NULL || opaque == NULL) {
@@ -144,6 +195,10 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
 }
 
 #else
+
+int sigbus_install_handler(void) {
+  return 0;
+}
 
 #ifndef _WIN32
 bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {

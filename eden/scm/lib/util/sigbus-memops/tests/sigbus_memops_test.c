@@ -41,19 +41,15 @@ bool sigbus_test_raise_in_page_error(void);
 struct signal_state {
   volatile sig_atomic_t expect_unhandled;
   volatile sig_atomic_t saw_unhandled;
-  volatile sig_atomic_t last_handled_code;
 };
 
 // The signal handler and test body can only communicate through global state.
 static struct signal_state
     signal_state; // NOLINT(facebook-avoid-non-const-global-variables)
 
-static void on_sigbus(int signo, siginfo_t* info, void* context) {
-  if (info != NULL && sigbus_try_handle(signo, info, context)) {
-    signal_state.last_handled_code = info->si_code;
-    return;
-  }
-
+static void on_unhandled_sigbus(int signo, siginfo_t* info, void* context) {
+  (void)info;
+  (void)context;
   if (signal_state.expect_unhandled) {
     signal_state.saw_unhandled = 1;
     return;
@@ -61,9 +57,35 @@ static void on_sigbus(int signo, siginfo_t* info, void* context) {
 
   _exit(128 + signo);
 }
+
+static int test_sig_ign(void) {
+  struct sigaction ignored_action = {0};
+  struct sigaction original_action;
+  ignored_action.sa_handler = SIG_IGN;
+  CHECK(sigemptyset(&ignored_action.sa_mask) == 0);
+  CHECK(sigaction(SIGBUS, &ignored_action, &original_action) == 0);
+  CHECK(sigbus_install_handler() == 0);
+
+  CHECK(raise(SIGBUS) == 0);
+
+  struct sigaction installed_action;
+  CHECK(sigaction(SIGBUS, NULL, &installed_action) == 0);
+  CHECK(installed_action.sa_handler == SIG_IGN);
+  CHECK(sigaction(SIGBUS, &original_action, NULL) == 0);
+  return 0;
+}
 #endif
 
-int main(void) {
+int main(int argc, char** argv) {
+#ifndef _WIN32
+  if (argc == 2 && strcmp(argv[1], "--sig-ign") == 0) {
+    return test_sig_ign();
+  }
+#else
+  (void)argc;
+  (void)argv;
+#endif
+
   if (!sigbus_is_protected()) {
     return 0;
   }
@@ -101,10 +123,11 @@ int main(void) {
 
   struct sigaction action = {0};
   struct sigaction old_action;
-  action.sa_sigaction = on_sigbus;
+  action.sa_sigaction = on_unhandled_sigbus;
   action.sa_flags = SA_SIGINFO;
   CHECK(sigemptyset(&action.sa_mask) == 0);
   CHECK(sigaction(SIGBUS, &action, &old_action) == 0);
+  CHECK(sigbus_install_handler() == 0);
 
 #ifdef BUS_MCEERR_AO
   siginfo_t asynchronous_mce = {.si_code = BUS_MCEERR_AO};
@@ -113,6 +136,9 @@ int main(void) {
 #endif
 
   signal_state.expect_unhandled = 1;
+  CHECK(raise(SIGBUS) == 0);
+  CHECK(signal_state.saw_unhandled == 1);
+  signal_state.saw_unhandled = 0;
   CHECK(raise(SIGBUS) == 0);
   CHECK(signal_state.saw_unhandled == 1);
   signal_state.expect_unhandled = 0;
@@ -129,11 +155,6 @@ int main(void) {
 
   uint8_t* crossing = mapping + page_size - 8;
   CHECK(!sigbus_try_memcpy(crossing, source, 16));
-#if defined(__APPLE__) && defined(__MACH__)
-  CHECK(signal_state.last_handled_code == BUS_ADRALN);
-#else
-  CHECK(signal_state.last_handled_code == BUS_ADRERR);
-#endif
   CHECK(memcmp(crossing, source, 8) == 0);
 
   uint8_t source_fault_destination = 0;

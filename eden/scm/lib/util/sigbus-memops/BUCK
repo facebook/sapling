@@ -64,6 +64,14 @@ custom_unittest(
     command = ["$(exe :sigbus_memops_test_bin)"],
 )
 
+custom_unittest(
+    name = "sigbus_memops_sig_ign_test",
+    command = [
+        "$(exe :sigbus_memops_test_bin)",
+        "--sig-ign",
+    ],
+)
+
 cpp_binary(
     # @autodeps-skip
     name = "sigbus_memops_fallback_test_bin",

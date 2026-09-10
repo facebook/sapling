@@ -25,6 +25,7 @@ int main(void) {
   uint8_t destination[sizeof(source)] = {0};
 
   CHECK(!sigbus_is_protected());
+  CHECK(sigbus_install_handler() == 0);
 #ifndef _WIN32
   CHECK(!sigbus_try_handle(SIGBUS, NULL, NULL));
 #endif

@@ -13,6 +13,9 @@ unsafe extern "C" {
     #[link_name = "sigbus_is_protected"]
     fn ffi_is_protected() -> bool;
 
+    #[link_name = "sigbus_install_handler"]
+    fn ffi_install_handler() -> c_int;
+
     #[link_name = "sigbus_try_memcpy"]
     fn ffi_try_memcpy(dst: *mut c_void, src: *const c_void, len: usize) -> bool;
 
@@ -30,6 +33,20 @@ pub fn is_protected() -> bool {
     unsafe { ffi_is_protected() }
 }
 
+/// Installs the process-wide handler needed by the protected operations.
+///
+/// Unrecognized signals are delegated to the handler that was installed
+/// previously. Calling this function more than once has no effect.
+pub fn install_handler() -> std::io::Result<()> {
+    // SAFETY: This FFI function has no arguments or safety preconditions.
+    let error = unsafe { ffi_install_handler() };
+    if error == 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::from_raw_os_error(error))
+    }
+}
+
 /// Tries to copy `len` bytes from `src` to `dst`.
 ///
 /// Returns `false` if a recognized synchronous SIGBUS interrupts the copy.
@@ -38,8 +55,9 @@ pub fn is_protected() -> bool {
 /// # Safety
 ///
 /// `src` and `dst` must each identify a mapped range of at least `len` bytes
-/// and must not overlap. On protected platforms, the process SIGBUS handler
-/// must call `try_handle` before delegating to its fallback handler.
+/// and must not overlap. On protected platforms, [`install_handler`] must have
+/// been called or the process SIGBUS handler must call [`try_handle`] before
+/// delegating to its fallback handler.
 pub unsafe fn try_memcpy(dst: *mut u8, src: *const u8, len: usize) -> bool {
     // SAFETY: By this function's contract, `dst` and `src` identify valid,
     // non-overlapping ranges of `len` bytes. Casting to `c_void` preserves
@@ -54,8 +72,8 @@ pub unsafe fn try_memcpy(dst: *mut u8, src: *const u8, len: usize) -> bool {
 /// # Safety
 ///
 /// `src` must identify a mapped range of at least `len` bytes. On protected
-/// platforms, the process SIGBUS handler must call `try_handle` before
-/// delegating to its fallback handler.
+/// platforms, [`install_handler`] must have been called or the process SIGBUS
+/// handler must call [`try_handle`] before delegating to its fallback handler.
 pub unsafe fn try_read(src: *const u8, len: usize) -> bool {
     // SAFETY: By this function's contract, `src` identifies a mapped range of
     // `len` bytes. Casting to `c_void` preserves its address and provenance.
@@ -102,39 +120,10 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn catches_faults_past_end_of_file() {
-        use std::mem::MaybeUninit;
-
         use memmap2::MmapOptions;
 
         if !is_protected() {
             return;
-        }
-
-        unsafe extern "C" fn on_sigbus(
-            signo: c_int,
-            info: *mut libc::siginfo_t,
-            ucontext: *mut c_void,
-        ) {
-            // SAFETY: These pointers are supplied by the kernel to this
-            // SA_SIGINFO signal handler.
-            if unsafe { try_handle(signo, info.cast(), ucontext) } {
-                return;
-            }
-
-            // SAFETY: `_exit` is async-signal-safe and does not return.
-            unsafe { libc::_exit(128 + signo) }
-        }
-
-        struct RestoreSigbusHandler(libc::sigaction);
-
-        impl Drop for RestoreSigbusHandler {
-            fn drop(&mut self) {
-                // SAFETY: `self.0` was initialized by `sigaction`, and a null
-                // third argument is permitted when restoring an action.
-                unsafe {
-                    libc::sigaction(libc::SIGBUS, &self.0, std::ptr::null_mut());
-                }
-            }
         }
 
         // SAFETY: `_SC_PAGESIZE` is a valid `sysconf` selector.
@@ -149,22 +138,7 @@ mod tests {
         // EOF is intentional so accesses to the second page raise SIGBUS.
         let mut mapping = unsafe { MmapOptions::new().len(2 * page_size).map_mut(&file) }.unwrap();
 
-        let mut action = MaybeUninit::<libc::sigaction>::zeroed();
-        let mut old_action = MaybeUninit::<libc::sigaction>::uninit();
-        // SAFETY: Both sigaction values point to valid writable storage, and
-        // the handler has the SA_SIGINFO function signature.
-        unsafe {
-            let action = action.assume_init_mut();
-            action.sa_sigaction = on_sigbus as *const () as usize;
-            action.sa_flags = libc::SA_SIGINFO;
-            assert_eq!(libc::sigemptyset(&mut action.sa_mask), 0);
-            assert_eq!(
-                libc::sigaction(libc::SIGBUS, action, old_action.as_mut_ptr()),
-                0
-            );
-        }
-        // SAFETY: The successful `sigaction` call initialized `old_action`.
-        let _restore_handler = RestoreSigbusHandler(unsafe { old_action.assume_init() });
+        install_handler().unwrap();
 
         let source = [0x80; 16];
         // SAFETY: Both pointer ranges are mapped for 16 bytes and do not
