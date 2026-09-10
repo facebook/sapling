@@ -57,6 +57,7 @@ use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
+use tests_utils::list_working_copy;
 use tests_utils::resolve_cs_id;
 use tokio::sync::oneshot;
 
@@ -4488,6 +4489,104 @@ async fn batched_pushrebase_merge_resolution(fb: FacebookInit) -> Result<(), Err
         "should have client's change"
     );
 
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn batched_pushrebase_rebase_failure_loses_server_edit(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_merge_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let config = PushrebaseFlags::default();
+    let book = master_bookmark();
+    let base_content = "one\ntwo\nthree\nfour\nfive\n";
+    let server_content = "server\ntwo\nthree\nfour\nfive\n";
+    let client_content = "one\ntwo\nthree\nfour\nclient\n";
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("before", base_content)
+        .add_file("broken", base_content)
+        .add_file("after", base_content)
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("before", server_content)
+        .add_file("broken", server_content)
+        .add_file("after", server_content)
+        .commit()
+        .await?;
+
+    // Exercise optimistic batching and pessimistic checks both with and without
+    // a bookmark move between the speculative check and lock acquisition.
+    for speculative_head in [None, Some(base), Some(server)] {
+        bookmark(&ctx, &repo, book.clone()).set_to(server).await?;
+        let mut requests = Vec::new();
+        let mut receivers = Vec::new();
+        for (path, content) in [
+            ("before", client_content),
+            ("broken", "client\ntwo\nthree\nfour\nfive\n"),
+            ("after", client_content),
+        ] {
+            let cs_id = CreateCommitContext::new(&ctx, &repo, vec![base])
+                .add_file(path, content)
+                .commit()
+                .await?;
+            let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
+            let stack =
+                index_pushrebase_request(&ctx, &repo, &config, &book, &hashset![bcs]).await?;
+            let (tx, rx) = oneshot::channel();
+            requests.push(queued_pushrebase_request(&ctx, stack, tx));
+            receivers.push(rx);
+        }
+
+        let requeued = if let Some(speculative_head) = speculative_head {
+            let checked =
+                speculative_batch_check(&repo, &config, Some(speculative_head), requests).await;
+            assert_eq!(checked.len(), 3);
+            match rebase_batch_under_lock(
+                &repo,
+                &config,
+                Some(speculative_head),
+                Some(server),
+                checked,
+                &mut [],
+            )
+            .await
+            {
+                Err((requests, _)) => requests,
+                Ok(_) => panic!("the conflicting merge should abort the batch"),
+            }
+        } else {
+            do_batched_pushrebase(&ctx, &repo, &config, &book, requests, &[]).await
+        };
+        let error = receivers.remove(1).await?.expect_err("merge should fail");
+        assert!(matches!(error.inner(), PushrebaseError::Conflicts(_)));
+        assert_eq!(requeued.len(), 2);
+        assert_eq!(requeued[0].conflict_check_base, server);
+        assert_eq!(requeued[0].carried_merge_file_info.len(), 1);
+        // FIXME: An unprocessed request must retain its original conflict-check base.
+        assert_eq!(requeued[1].conflict_check_base, server);
+        assert!(requeued[1].carried_merge_file_info.is_empty());
+
+        let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requeued, &[]).await;
+        assert!(requeued.is_empty());
+        for receiver in receivers {
+            receiver.await?.map_err(|error| anyhow!(error))?;
+        }
+        let head = get_bookmark_value(&ctx, &repo, &book)
+            .await?
+            .expect("bookmark should be set after pushrebase");
+        let files = list_working_copy(&ctx, &repo, head).await?;
+        for (path, expected) in [
+            ("before", "server\ntwo\nthree\nfour\nclient\n"),
+            // FIXME: The unprocessed request loses the server edit on retry.
+            ("after", client_content),
+        ] {
+            let content = &files[&NonRootMPath::new(path)?];
+            assert_eq!(&content[..], expected.as_bytes());
+        }
+    }
     Ok(())
 }
 
