@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
@@ -148,6 +149,13 @@ fn partition_requests(
     let mut request_batches = retry_batches.into_iter().chain(request_batches).peekable();
 
     while let Some(mut batch) = request_batches.next() {
+        // Rebase mappings and hooks are keyed by the original changeset ID.
+        let mut changeset_ids = batch
+            .requests
+            .iter()
+            .flat_map(|request| request.stack.changesets.iter())
+            .map(|changeset| changeset.get_changeset_id())
+            .collect::<HashSet<_>>();
         let mut changed_files = batch
             .requests
             .iter()
@@ -178,6 +186,11 @@ fn partition_requests(
                 if request_changed_files
                     .iter()
                     .any(|path| changed_files.has_path_conflict(path))
+                    || request_batch
+                        .requests
+                        .iter()
+                        .flat_map(|request| request.stack.changesets.iter())
+                        .any(|changeset| !changeset_ids.insert(changeset.get_changeset_id()))
                     || (batch.flags.casefolding_check
                         && (has_case_conflict
                             || case_conflicts
@@ -387,6 +400,7 @@ async fn run_queue<R, F>(
 
 #[cfg(test)]
 mod tests {
+    use blobstore::Loadable;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangesetMut;
@@ -396,8 +410,12 @@ mod tests {
     use mononoke_types::GitLfs;
     use mononoke_types::NonRootMPath;
     use mononoke_types::hash::Blake2;
+    use repo_blobstore::RepoBlobstoreRef;
+    use tests_utils::CreateCommitContext;
+    use tests_utils::bookmark;
 
     use super::*;
+    use crate::tests::PushrebaseTestRepo;
 
     fn request(fb: FacebookInit, path: &str) -> PushrebaseRequest {
         let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
@@ -450,6 +468,84 @@ mod tests {
             [1, 2]
         );
         assert_eq!(conflicts, 1);
+    }
+
+    #[mononoke::fbinit_test]
+    async fn shared_empty_commits_land_in_separate_batches(fb: FacebookInit) -> anyhow::Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+        let bookmark_name = BookmarkKey::new("master")?;
+        let root = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+        bookmark(&ctx, &repo, bookmark_name.clone())
+            .set_to(root)
+            .await?;
+        let mut empty_commits = vec![];
+        for message in ["first", "second"] {
+            let id = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .set_message(message)
+                .commit()
+                .await?;
+            empty_commits.push(id.load(&ctx, repo.repo_blobstore()).await?);
+        }
+        let (requests, receivers): (Vec<_>, Vec<_>) = [0, 1, 1, 0]
+            .into_iter()
+            .map(|index| {
+                let (response_tx, response_rx) = oneshot::channel();
+                let changeset = &empty_commits[index];
+                (
+                    PushrebaseRequest {
+                        ctx: ctx.clone(),
+                        stack: PushrebaseStack {
+                            root,
+                            head: changeset.get_changeset_id(),
+                            changesets: vec![changeset.clone()],
+                            changed_files: vec![],
+                        },
+                        flags: PushrebaseFlags::default(),
+                        repo_lock: RepoLockPolicy::Bypass,
+                        response_tx,
+                        enqueued_at: tokio::time::Instant::now(),
+                    },
+                    response_rx,
+                )
+            })
+            .unzip();
+        let (batches, conflicts) = partition_requests(vec![], requests);
+        assert_eq!(
+            batches
+                .iter()
+                .map(|batch| batch.requests.len())
+                .collect::<Vec<_>>(),
+            [2, 2]
+        );
+        assert_eq!(conflicts, 1);
+        let (batches, conflicts) = partition_requests(batches, vec![]);
+        assert_eq!(batches.len(), 2, "retry batches must remain separate");
+        assert_eq!(conflicts, 1);
+        for batch in batches {
+            assert!(
+                do_batched_pushrebase(
+                    &ctx,
+                    &repo,
+                    &batch.flags,
+                    &bookmark_name,
+                    batch.requests,
+                    &[]
+                )
+                .await
+                .is_empty()
+            );
+        }
+        for (receiver, index) in receivers.into_iter().zip([0, 1, 1, 0]) {
+            let outcome = receiver.await??;
+            assert_eq!(outcome.rebased_changesets.len(), 1);
+            assert_eq!(
+                outcome.rebased_changesets[0].id_old,
+                empty_commits[index].get_changeset_id()
+            );
+            assert_eq!(outcome.rebased_changesets[0].id_new, outcome.head);
+        }
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

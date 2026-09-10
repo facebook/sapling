@@ -75,7 +75,7 @@ fn init_just_knobs_for_test() {
 
 #[facet::container]
 #[derive(Clone)]
-struct PushrebaseTestRepo {
+pub(super) struct PushrebaseTestRepo {
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
 
