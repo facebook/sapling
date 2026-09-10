@@ -16,6 +16,7 @@
 #include <system_error>
 #include <typeinfo>
 #include <unordered_set>
+#include <utility>
 
 #include <fb303/ServiceData.h>
 #include <fmt/format.h>
@@ -48,6 +49,7 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/StatTimes.h"
 #include "eden/common/utils/String.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -73,13 +75,12 @@
 #include "eden/fs/nfs/Nfsd3.h"
 #ifdef _WIN32
 #include "eden/fs/notifications/Notifier.h"
+#include "eden/fs/prjfs/PrjfsChannel.h" // @manual
 #endif
 #include "eden/fs/privhelper/PrivHelper.h"
-#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/rust/redirect_ffi/include/ffi.h"
 #include "eden/fs/rust/redirect_ffi/src/lib.rs.h"
 #include "eden/fs/service/EdenServer.h"
-#include "eden/fs/service/ThriftGetObjectImpl.h"
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -93,7 +94,6 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
@@ -409,9 +409,9 @@ class ThriftFetchContext : public ObjectFetchContext {
  public:
   explicit ThriftFetchContext(
       OptionalProcessId pid,
-      folly::StringPiece endpoint,
+      CauseDetail endpoint,
       Cause cause)
-      : pid_(pid), endpoint_(endpoint), cause_(cause) {}
+      : pid_(pid), endpoint_(std::move(endpoint)), cause_(cause) {}
 
   OptionalProcessId getClientPid() const override {
     return pid_;
@@ -422,7 +422,7 @@ class ThriftFetchContext : public ObjectFetchContext {
   }
 
   std::optional<std::string_view> getCauseDetail() const override {
-    return endpoint_;
+    return endpoint_.asStringView();
   }
 
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
@@ -456,7 +456,7 @@ class ThriftFetchContext : public ObjectFetchContext {
 
  private:
   OptionalProcessId pid_;
-  std::string_view endpoint_;
+  CauseDetail endpoint_;
   Cause cause_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
@@ -465,14 +465,13 @@ class PrefetchFetchContext : public StatsFetchContext {
  public:
   explicit PrefetchFetchContext(
       OptionalProcessId pid,
-      std::string_view endpoint,
+      CauseDetail endpoint,
       bool enablePrefetchStats)
       : StatsFetchContext(
             pid,
             ObjectFetchContext::Cause::Prefetch,
-            endpoint,
+            std::move(endpoint),
             nullptr),
-        endpoint_(endpoint),
         enablePrefetchStats_(enablePrefetchStats) {}
 
   ImportPriority getPriority() const override {
@@ -490,7 +489,6 @@ class PrefetchFetchContext : public StatsFetchContext {
   }
 
  private:
-  std::string_view endpoint_;
   bool enablePrefetchStats_;
 };
 
@@ -526,11 +524,13 @@ class ThriftRequestScope {
         itcLogger_(logger),
         thriftFetchContext_{makeRefPtr<ThriftFetchContext>(
             pid,
-            sourceLocation_.function_name(),
+            ObjectFetchContext::StaticCauseDetail::fromSourceLocation(
+                sourceLocation_),
             fetchCause)},
         prefetchFetchContext_{makeRefPtr<PrefetchFetchContext>(
             pid,
-            sourceLocation_.function_name(),
+            ObjectFetchContext::StaticCauseDetail::fromSourceLocation(
+                sourceLocation_),
             enablePrefetchStats)},
         handler_(serviceHandler) {
     if (auto handler = handler_.lock()) {
@@ -704,7 +704,7 @@ class GlobFilesRequestScope {
       const ObjectFetchContextPtr& context)
       : serverState_{std::move(serverState)},
         isOffloadable_{isOffloadable},
-        logString_{logString},
+        logString_{std::move(logString)},
         context_{context.copy()} {}
 
   ~GlobFilesRequestScope() {
@@ -2580,7 +2580,7 @@ ImmediateFuture<folly::Unit> diffBetweenRoots(
     const RootId& toRoot,
     const CheckoutConfig& checkoutConfig,
     const std::shared_ptr<ObjectStore>& objectStore,
-    folly::CancellationToken cancellation,
+    const folly::CancellationToken& cancellation,
     const ObjectFetchContextPtr& fetchContext,
     DiffCallback* callback) {
   auto diffContext = std::make_unique<DiffContext>(
@@ -2790,7 +2790,7 @@ bool isPathIncluded(
     const std::vector<RelativePath>& excludedRoots,
     const std::vector<std::string>& includedSuffixes,
     const std::vector<std::string>& excludedSuffixes,
-    RelativePath path,
+    const RelativePath& path,
     dtype_t type) {
   if (!includedRoots.empty()) {
     bool included = false;
@@ -3659,7 +3659,7 @@ EdenServiceHandler::semifuture_getEntryInformationImpl(
                    return applyToVirtualInode(
                        mountHandle.getRootInode(),
                        *paths,
-                       [](const VirtualInode& inode, RelativePath) {
+                       [](const VirtualInode& inode, const RelativePath&) {
                          return inode.getDtype();
                        },
                        mountHandle.getObjectStorePtr(),
@@ -3860,7 +3860,7 @@ EdenServiceHandler::semifuture_getFileInformationImpl(
                        [mountHandle,
                         lastCheckoutTime,
                         fetchContext = fetchContext.copy()](
-                           const VirtualInode& inode, RelativePath) {
+                           const VirtualInode& inode, const RelativePath&) {
                          return inode
                              .stat(
                                  lastCheckoutTime,
@@ -4359,7 +4359,7 @@ EdenServiceHandler::getEntryAttributesImpl(
 
 namespace {
 bool dtypeMatchesRequestScope(
-    VirtualInode inode,
+    const VirtualInode& inode,
     AttributesRequestScope reqScope) {
   if (reqScope == AttributesRequestScope::TREES_AND_FILES) {
     return true;
@@ -4642,7 +4642,7 @@ EdenServiceHandler::semifuture_setPathObjectId(
       DBG1, *params->mountPoint(), toLogArg(object_strings));
 
   if (auto requestInfo = params->requestInfo()) {
-    helper->getThriftFetchContext().updateRequestInfo(std::move(*requestInfo));
+    helper->getThriftFetchContext().updateRequestInfo(*requestInfo);
   }
   ObjectFetchContextPtr context = helper->getFetchContext().copy();
   return wrapImmediateFuture(

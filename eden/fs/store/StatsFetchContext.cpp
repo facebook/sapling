@@ -13,7 +13,7 @@ namespace facebook::eden {
 StatsFetchContext::StatsFetchContext(
     OptionalProcessId pid,
     Cause cause,
-    std::optional<std::string_view> causeDetail,
+    CauseDetail causeDetail,
     const std::unordered_map<std::string, std::string>* requestInfo)
     : clientPid_{pid}, cause_{cause}, causeDetail_{std::move(causeDetail)} {
   if (requestInfo) {
@@ -40,7 +40,7 @@ StatsFetchContext::StatsFetchContext(const StatsFetchContext& other)
 StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
     : clientPid_{other.clientPid_},
       cause_{other.cause_},
-      causeDetail_{other.causeDetail_},
+      causeDetail_{std::move(other.causeDetail_)},
       requestInfo_{std::move(other.requestInfo_)} {
   for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
@@ -209,7 +209,7 @@ ObjectFetchContext::Cause StatsFetchContext::getCause() const {
 }
 
 std::optional<std::string_view> StatsFetchContext::getCauseDetail() const {
-  return causeDetail_;
+  return causeDetail_.asStringView();
 }
 
 } // namespace facebook::eden

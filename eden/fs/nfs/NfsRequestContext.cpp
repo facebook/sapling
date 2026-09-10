@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/nfs/NfsRequestContext.h"
+#include "eden/fs/nfs/Nfsd3.h"
 
 namespace facebook::eden {
 
@@ -14,15 +15,13 @@ namespace {
 class NfsObjectFetchContext : public FsObjectFetchContext {
  public:
   NfsObjectFetchContext(
-      std::string_view causeDetail,
+      nfsv3Procs proc,
       std::optional<uint32_t> clientUid,
       std::optional<uint32_t> clientGid)
-      : causeDetail_{causeDetail},
-        clientUid_{clientUid},
-        clientGid_{clientGid} {}
+      : proc_{proc}, clientUid_{clientUid}, clientGid_{clientGid} {}
 
   std::optional<std::string_view> getCauseDetail() const override {
-    return causeDetail_;
+    return nfsProcName(static_cast<uint32_t>(proc_));
   }
 
   std::optional<uint32_t> getClientUid() const override {
@@ -34,7 +33,7 @@ class NfsObjectFetchContext : public FsObjectFetchContext {
   }
 
  private:
-  std::string_view causeDetail_;
+  nfsv3Procs proc_;
   std::optional<uint32_t> clientUid_;
   std::optional<uint32_t> clientGid_;
 };
@@ -45,12 +44,12 @@ using NfsObjectFetchContextPtr = RefPtr<NfsObjectFetchContext>;
 
 NfsRequestContext::NfsRequestContext(
     uint32_t xid,
-    std::string_view causeDetail,
+    nfsv3Procs proc,
     ProcessAccessLog& processAccessLog,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::chrono::nanoseconds longRunningFsRequestThreshold,
     const std::optional<authsys_parms>& authSysCreds)
-    : RequestContext{processAccessLog, std::move(edenFsEventsLogger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(causeDetail, authSysCreds ? std::optional{authSysCreds->uid} : std::nullopt, authSysCreds ? std::optional{authSysCreds->gid} : std::nullopt)},
+    : RequestContext{processAccessLog, std::move(edenFsEventsLogger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(proc, authSysCreds ? std::optional{authSysCreds->uid} : std::nullopt, authSysCreds ? std::optional{authSysCreds->gid} : std::nullopt)},
       xid_{xid} {}
 
 } // namespace facebook::eden

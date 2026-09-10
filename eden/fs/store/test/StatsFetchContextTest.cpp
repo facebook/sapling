@@ -7,7 +7,10 @@
 
 #include "eden/fs/store/StatsFetchContext.h"
 #include <gtest/gtest.h>
+#include <string>
+#include <type_traits>
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/utils/SourceLocation.h"
 
 namespace facebook::eden {
 
@@ -150,6 +153,76 @@ TEST(StatsFetchContextTest, CopyConstructorPreservesFailures) {
   EXPECT_EQ(10, ctx2.getFailureCount(ObjectFetchContext::Blob));
 }
 
+TEST(StatsFetchContextTest, CauseDetailRequiresExplicitLifetime) {
+  using StackArray = char[sizeof("stack memory")];
+  using ConstStackArray = const char[sizeof("stack memory")];
+  static_assert(!std::is_constructible_v<
+                ObjectFetchContext::StaticCauseDetail,
+                StackArray&>);
+  static_assert(!std::is_constructible_v<
+                ObjectFetchContext::StaticCauseDetail,
+                ConstStackArray&>);
+  static_assert(
+      !std::is_constructible_v<ObjectFetchContext::CauseDetail, StackArray&>);
+  static_assert(!std::is_constructible_v<
+                ObjectFetchContext::CauseDetail,
+                ConstStackArray&>);
+  static_assert(!std::is_constructible_v<
+                ObjectFetchContext::CauseDetail,
+                std::string_view>);
+  StatsFetchContext ctx{
+      std::nullopt,
+      ObjectFetchContext::Cause::Thrift,
+      ObjectFetchContext::StaticCauseDetail::fromLiteral("checkout caller"),
+      nullptr};
+
+  auto detail = ctx.getCauseDetail();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("checkout caller", detail.value());
+}
+
+TEST(StatsFetchContextTest, CauseDetailCanOwnDynamicString) {
+  std::string dynamicDetail = "checkout caller";
+  StatsFetchContext ctx{
+      std::nullopt,
+      ObjectFetchContext::Cause::Thrift,
+      ObjectFetchContext::CauseDetail::fromOwnedString(dynamicDetail),
+      nullptr};
+
+  dynamicDetail = "mutated caller";
+
+  auto detail = ctx.getCauseDetail();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("checkout caller", detail.value());
+}
+
+TEST(StatsFetchContextTest, StaticCauseDetailAcceptsSourceLocation) {
+  const auto sourceLocation = EDEN_CURRENT_SOURCE_LOCATION;
+  StatsFetchContext ctx{
+      std::nullopt,
+      ObjectFetchContext::Cause::Thrift,
+      ObjectFetchContext::StaticCauseDetail::fromSourceLocation(sourceLocation),
+      nullptr};
+
+  EXPECT_EQ(ctx.getCauseDetail(), sourceLocation.function_name());
+}
+
+TEST(StatsFetchContextTest, CopiedCauseDetailOutlivesSourceContext) {
+  ObjectFetchContext::CauseDetail copiedDetail;
+  {
+    StatsFetchContext ctx{
+        std::nullopt,
+        ObjectFetchContext::Cause::Thrift,
+        ObjectFetchContext::CauseDetail::fromOwnedString("copied detail"),
+        nullptr};
+    copiedDetail = ctx.copyCauseDetail();
+  }
+
+  const auto detail = copiedDetail.asStringView();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("copied detail", *detail);
+}
+
 TEST(StatsFetchContextTest, MergeAddsFailures) {
   StatsFetchContext ctx1, ctx2;
 
@@ -162,7 +235,11 @@ TEST(StatsFetchContextTest, MergeAddsFailures) {
 }
 
 TEST(StatsFetchContextTest, MoveConstructorPreservesBytes) {
-  StatsFetchContext ctx1;
+  StatsFetchContext ctx1{
+      std::nullopt,
+      ObjectFetchContext::Cause::Thrift,
+      ObjectFetchContext::StaticCauseDetail::fromLiteral("move constructor"),
+      nullptr};
   ObjectId id = makeTestId("1234567890123456789012345678901234567890");
   ctx1.didFetch(
       ObjectFetchContext::Blob, id, ObjectFetchContext::FromNetworkFetch, 1000);
@@ -179,6 +256,39 @@ TEST(StatsFetchContextTest, MoveConstructorPreservesBytes) {
       ctx2.countBytesFetchedOfTypeAndOrigin(
           ObjectFetchContext::Blob, ObjectFetchContext::FromNetworkFetch));
   EXPECT_EQ(3, ctx2.getFailureCount(ObjectFetchContext::Blob));
+
+  auto detail = ctx2.getCauseDetail();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("move constructor", detail.value());
+}
+
+TEST(StatsFetchContextTest, CopyConstructorPreservesOwnedCauseDetail) {
+  auto ctx2 = [] {
+    StatsFetchContext ctx1{
+        std::nullopt,
+        ObjectFetchContext::Cause::Thrift,
+        ObjectFetchContext::CauseDetail::fromOwnedString("copy constructor"),
+        nullptr};
+    return StatsFetchContext{ctx1};
+  }();
+
+  auto detail = ctx2.getCauseDetail();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("copy constructor", detail.value());
+}
+
+TEST(StatsFetchContextTest, MoveConstructorPreservesOwnedCauseDetail) {
+  StatsFetchContext ctx1{
+      std::nullopt,
+      ObjectFetchContext::Cause::Thrift,
+      ObjectFetchContext::CauseDetail::fromOwnedString("move constructor"),
+      nullptr};
+
+  StatsFetchContext ctx2(std::move(ctx1));
+
+  auto detail = ctx2.getCauseDetail();
+  ASSERT_TRUE(detail.has_value());
+  EXPECT_EQ("move constructor", detail.value());
 }
 
 TEST(StatsFetchContextTest, MoveAssignmentPreservesBytes) {

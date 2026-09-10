@@ -30,7 +30,7 @@ DiffContext::DiffContext(
       statsContext_{makeRefPtr<StatsFetchContext>(
           fetchContext->getClientPid(),
           fetchContext->getCause(),
-          fetchContext->getCauseDetail(),
+          fetchContext->copyCauseDetail(),
           fetchContext->getRequestInfo())},
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},

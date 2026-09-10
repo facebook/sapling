@@ -8,6 +8,7 @@
 #pragma once
 
 #include "eden/fs/inodes/RequestContext.h"
+#include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
@@ -19,9 +20,8 @@ class NfsRequestContext : public RequestContext {
    * Constructs a new NfsRequestContext. The context should live for the
    * duration of the NFS request.
    * `startRequest` should be called at the beginning and `finishRequest` at the
-   * end of the request. The `causeDetail` is copied as is and thus the lifetime
-   * of the underlying string must exceed the lifetime of the NfsRequestContext.
-   * The caller is responsible for ensuring this.
+   * end of the request. `proc` identifies the NFS procedure used as the
+   * fetch cause detail.
    *
    * When the request carried a parsable AUTH_SYS credential, `authSysCreds`
    * holds it and the client uid/gid are exposed through the fetch context's
@@ -31,7 +31,7 @@ class NfsRequestContext : public RequestContext {
    */
   explicit NfsRequestContext(
       uint32_t xid,
-      std::string_view causeDetail,
+      nfsv3Procs proc,
       ProcessAccessLog& processAccessLog,
       std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::chrono::nanoseconds longRunningFsRequestThreshold,

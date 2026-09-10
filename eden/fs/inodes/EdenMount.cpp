@@ -394,7 +394,8 @@ InodeCatalogOptions EdenMount::getInodeCatalogOptions(
           .value();
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenMount::initialize");
+      ObjectFetchContext::StaticCauseDetail::fromLiteral(
+          "EdenMount::initialize"));
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().view())
       .thenValue([this, parent](auto&&) {
@@ -495,8 +496,9 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
     UnlinkThenSymlink,
   };
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("ensureDotEdenSymlink");
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      ObjectFetchContext::StaticCauseDetail::fromLiteral(
+          "ensureDotEdenSymlink"));
   return directory->getOrLoadChild(symlinkName, context)
       .thenTry([=](Try<InodePtr>&& result) -> ImmediateFuture<Action> {
         if (!result.hasValue()) {
@@ -577,8 +579,8 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
 
 ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      ObjectFetchContext::StaticCauseDetail::fromLiteral("setupDotEden"));
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, context)
       .thenTry([=, this](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;

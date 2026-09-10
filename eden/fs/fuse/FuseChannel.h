@@ -1155,6 +1155,7 @@ class FuseChannel final : public FsChannel {
   std::shared_ptr<TraceBus<FuseTraceEvent>> traceBus_;
 };
 
+// Returns a view backed by the static FUSE handler table.
 folly::StringPiece fuseOpcodeName(uint32_t opcode);
 ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode);
 

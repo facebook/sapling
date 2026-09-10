@@ -48,7 +48,7 @@ class StatsFetchContext : public ObjectFetchContext {
   StatsFetchContext(
       OptionalProcessId pid,
       Cause cause,
-      std::optional<std::string_view> causeDetail,
+      CauseDetail causeDetail,
       const std::unordered_map<std::string, std::string>* requestInfo);
   StatsFetchContext(const StatsFetchContext& other);
 
@@ -113,7 +113,7 @@ class StatsFetchContext : public ObjectFetchContext {
   std::atomic<uint64_t> prefetchedBlobBytes_{0};
   OptionalProcessId clientPid_;
   Cause cause_ = Cause::Unknown;
-  std::optional<std::string_view> causeDetail_;
+  CauseDetail causeDetail_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 

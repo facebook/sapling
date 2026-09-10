@@ -3742,7 +3742,8 @@ void EdenServer::garbageCollectAllMounts() {
                pinnedInodes = std::move(pinnedInodes)]() mutable {
                 static auto context =
                     ObjectFetchContext::getNullContextWithCauseDetail(
-                        "EdenServer::garbageCollectAllMounts");
+                        ObjectFetchContext::StaticCauseDetail::fromLiteral(
+                            "EdenServer::garbageCollectAllMounts"));
                 return garbageCollectInodesWithLease(
                            mountHandle.getEdenMount(),
                            mountHandle.getRootInode(),

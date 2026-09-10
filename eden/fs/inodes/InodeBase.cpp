@@ -484,7 +484,7 @@ void InodeBase::logAccess(const ObjectFetchContext& fetchContext) {
 
   std::optional<std::string> fetchDetail;
 
-  const auto& detail = fetchContext.getCauseDetail();
+  const auto detail = fetchContext.getCauseDetail();
   if (detail.has_value()) {
     fetchDetail.emplace(std::string{detail.value()});
   }

@@ -32,7 +32,7 @@ struct NfsRequestContextTest : ::testing::Test {
       const std::optional<authsys_parms>& authSysCreds) {
     return std::make_unique<NfsRequestContext>(
         /*xid=*/1,
-        "GETATTR",
+        nfsv3Procs::getattr,
         processAccessLog,
         std::make_shared<EdenFsEventsLogger>(nullptr),
         /*longRunningFsRequestThreshold=*/std::chrono::nanoseconds{0},
@@ -58,6 +58,11 @@ TEST_F(NfsRequestContextTest, missing_creds_yield_no_client_identity) {
   auto context = makeContext(std::nullopt);
   EXPECT_EQ(context->getObjectFetchContext()->getClientUid(), std::nullopt);
   EXPECT_EQ(context->getObjectFetchContext()->getClientGid(), std::nullopt);
+}
+
+TEST_F(NfsRequestContextTest, procedure_name_is_the_fetch_cause_detail) {
+  auto context = makeContext(std::nullopt);
+  EXPECT_EQ(context->getObjectFetchContext()->getCauseDetail(), "GETATTR");
 }
 
 } // namespace

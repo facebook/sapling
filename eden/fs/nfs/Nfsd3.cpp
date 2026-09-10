@@ -2640,7 +2640,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
   auto context = std::make_unique<NfsRequestContext>(
       xid,
-      handlerEntry.name,
+      static_cast<nfsv3Procs>(procNumber),
       processAccessLog_,
       edenFsEventsLogger_,
       longRunningFSRequestThreshold_,

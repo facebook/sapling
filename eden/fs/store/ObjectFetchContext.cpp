@@ -8,6 +8,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include <folly/CppAttributes.h>
 #include "eden/fs/utils/MiniTracer.h"
+#include "eden/fs/utils/SourceLocation.h"
 
 namespace {
 
@@ -17,15 +18,15 @@ class NullObjectFetchContext : public ObjectFetchContext {
  public:
   NullObjectFetchContext() = default;
 
-  explicit NullObjectFetchContext(std::optional<std::string_view> causeDetail)
-      : causeDetail_(causeDetail) {}
+  explicit NullObjectFetchContext(CauseDetail causeDetail)
+      : causeDetail_(std::move(causeDetail)) {}
 
   Cause getCause() const override {
     return Cause::Unknown;
   }
 
   std::optional<std::string_view> getCauseDetail() const override {
-    return causeDetail_;
+    return causeDetail_.asStringView();
   }
 
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
@@ -34,7 +35,7 @@ class NullObjectFetchContext : public ObjectFetchContext {
   }
 
  private:
-  std::optional<std::string_view> causeDetail_;
+  CauseDetail causeDetail_;
 };
 
 class NullFSObjectFetchContext : public ObjectFetchContext {
@@ -69,15 +70,21 @@ class NullPrefetchObjectFetchContext : public ObjectFetchContext {
 
 namespace facebook::eden {
 
+ObjectFetchContext::StaticCauseDetail
+ObjectFetchContext::StaticCauseDetail::fromSourceLocation(
+    SourceLocation sourceLocation) noexcept {
+  return StaticCauseDetail{sourceLocation.function_name()};
+}
+
 ObjectFetchContextPtr ObjectFetchContext::getNullContext() {
   static auto* p = new NullObjectFetchContext;
   return ObjectFetchContextPtr::singleton(*p);
 }
 
 ObjectFetchContextPtr ObjectFetchContext::getNullContextWithCauseDetail(
-    std::string_view causeDetail) {
+    CauseDetail causeDetail) {
   return ObjectFetchContextPtr::singleton(
-      *new NullObjectFetchContext{causeDetail});
+      *new NullObjectFetchContext{std::move(causeDetail)});
 }
 
 ObjectFetchContextPtr ObjectFetchContext::getNullFsContext() {

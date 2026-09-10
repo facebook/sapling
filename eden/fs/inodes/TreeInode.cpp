@@ -1383,7 +1383,8 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     // loadChildInode is called by InodeMap during FUSE_LOOKUP processing. Pass
     // a null fetch context because we don't need to record statistics.
     static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-        "TreeInode::loadChildInode");
+        ObjectFetchContext::StaticCauseDetail::fromLiteral(
+            "TreeInode::loadChildInode"));
     future = startLoadingInodeNoThrow(entry, name, context, false);
   }
   registerInodeLoadComplete(future, name, number);

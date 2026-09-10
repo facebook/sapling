@@ -57,9 +57,8 @@ void BackingStoreLogger::logImport(
     case ObjectFetchContext::Unknown:
       cause_string = "Unknown";
   }
-  if (auto causeDetail = context.getCauseDetail()) {
-    cause_string =
-        folly::to<std::string>(cause_string, " - ", causeDetail.value());
+  if (auto detail = context.getCauseDetail()) {
+    cause_string = folly::to<std::string>(cause_string, " - ", detail.value());
   }
 
   std::string typeString = "<invalid>";

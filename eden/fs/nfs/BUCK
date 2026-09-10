@@ -47,7 +47,6 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":nfs_utils",
-        ":nfsd_rpc",
         "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
@@ -71,6 +70,7 @@ cpp_library(
     ],
     exported_deps = [
         ":dispatcher",
+        ":nfsd_rpc",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:case_sensitivity",
         "//eden/fs/inodes:fs_channel",

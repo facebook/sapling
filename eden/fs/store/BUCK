@@ -19,6 +19,7 @@ cpp_library(
     srcs = CONTEXT_SRCS,
     headers = CONTEXT_HEADERS,
     deps = [
+        "//eden/fs/utils:source_location",
         "//folly:cpp_attributes",
         "//folly/logging:logging",
     ],

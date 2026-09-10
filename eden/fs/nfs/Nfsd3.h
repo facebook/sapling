@@ -352,6 +352,7 @@ class Nfsd3 final : public FsChannel {
   std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
 };
 
+// Returns a view backed by the static NFS handler table.
 folly::StringPiece nfsProcName(uint32_t procNumber);
 ProcessAccessLog::AccessType nfsProcAccessType(uint32_t procNumber);
 } // namespace facebook::eden
