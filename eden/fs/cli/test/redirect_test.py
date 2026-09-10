@@ -16,6 +16,7 @@ from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.redirect import (
     check_redirection,
     FixupCmd,
+    get_effective_redirections,
     RedirectionState,
     RedirectionType,
 )
@@ -25,6 +26,43 @@ from ..redirect import Redirection, RepoPathDisposition
 
 
 class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
+    def test_darwin_symlink_bind_redirection_matches_configuration(self) -> None:
+        temp_dir = self.make_temporary_directory()
+        checkout_path = Path(temp_dir) / "checkout"
+        checkout_path.mkdir()
+        target = Path(temp_dir) / "target"
+        target.mkdir()
+        (checkout_path / "foo").symlink_to(target)
+
+        instance = MagicMock()
+        instance.get_mount_paths.return_value = []
+        instance.get_config_value.return_value = "symlink"
+        checkout = MagicMock()
+        checkout.path = checkout_path
+        checkout.instance = instance
+        redir = Redirection(
+            repo_path=Path("foo"),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+        )
+        mount_table = MagicMock()
+        mount_table.read.return_value = []
+
+        with (
+            patch("eden.fs.cli.redirect.sys.platform", "darwin"),
+            patch(
+                "eden.fs.cli.redirect.get_configured_redirections",
+                return_value={"foo": redir},
+            ),
+            patch("eden.fs.cli.redirect.make_scratch_dir", return_value=target),
+        ):
+            redirs = get_effective_redirections(checkout, mount_table, instance)
+
+        # FIXME: This should be MATCHES_CONFIGURATION once macOS bind
+        # redirections backed by symlinks use symlink state detection.
+        self.assertEqual(redirs["foo"].state, RedirectionState.NOT_MOUNTED)
+
     @patch("eden.fs.cli.redirect.Redirection._bind_unmount")
     @patch("eden.fs.cli.redirect.RepoPathDisposition.analyze")
     @patch("eden.fs.cli.redirect.Redirection.expand_repo_path")
