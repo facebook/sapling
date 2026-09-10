@@ -97,10 +97,11 @@ class InodeTable {
   template <typename... OldRecords>
   static std::unique_ptr<InodeTable> open(
       folly::StringPiece path,
-      EdenStatsPtr stats) {
+      EdenStatsPtr stats,
+      MappedDiskVectorOptions options = {}) {
     return std::unique_ptr<InodeTable>{new InodeTable{
         MappedDiskVector<Entry>::template open<
-            detail::InodeTableEntry<OldRecords>...>(path),
+            detail::InodeTableEntry<OldRecords>...>(path, options),
         std::move(stats)}};
   }
 
@@ -191,7 +192,6 @@ class InodeTable {
     }
     auto index = iter->second;
     XCHECK_LT(index, state->storage.size());
-    state->storage.populateEntryForWrite(index);
     auto entry = state->storage.get(index);
     fn(entry.record);
     state->storage.set(index, entry);
@@ -221,12 +221,9 @@ class InodeTable {
     size_t lastIndex = storage.size() - 1;
 
     if (lastIndex != indexToDelete) {
-      storage.populateEntryForWrite(indexToDelete);
-      // The source entry must be faulted before reading it during compaction.
-      storage.populateEntryForWrite(lastIndex);
       auto lastEntry = storage.get(lastIndex);
-      indices.erase(iter);
       storage.set(indexToDelete, lastEntry);
+      indices.erase(iter);
       indices[lastEntry.inode] = indexToDelete;
     } else {
       indices.erase(iter);
@@ -247,7 +244,6 @@ class InodeTable {
     for (auto& entry : state->indices) {
       const auto& inode = entry.first;
       auto index = entry.second;
-      state->storage.populateEntryForWrite(index);
       auto value = state->storage.get(index);
       fn(inode, value.record);
       state->storage.set(index, value);
@@ -317,7 +313,6 @@ class InodeTable {
       MappedDiskVector<Entry>& storage,
       size_t index,
       ModifyFn&& modify) {
-    storage.populateEntryForWrite(index);
     auto entry = storage.get(index);
     if constexpr (std::is_void_v<T>) {
       modify(entry.record);
