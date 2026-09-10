@@ -18,14 +18,12 @@ cpp_library(
 cpp_binary(
     name = "sigbus_memops_test_bin",
     srcs = ["tests/sigbus_memops_test.c"],
-    compatible_with = ["ovr_config//os:linux-x86_64"],
     deps = [":sigbus_memops"],
 )
 
 custom_unittest(
     name = "sigbus_memops_test",
     command = ["$(exe :sigbus_memops_test_bin)"],
-    compatible_with = ["ovr_config//os:linux-x86_64"],
 )
 
 cpp_binary(

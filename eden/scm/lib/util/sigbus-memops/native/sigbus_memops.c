@@ -68,6 +68,33 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
     registers[REG_RIP] = (greg_t)(uintptr_t)&sigbus_try_read_recover_pc;
     return true;
   }
+#elif SIGBUS_MEMOPS_ARCH_AARCH64
+#if SIGBUS_MEMOPS_DARWIN_AARCH64
+  arm_thread_state64_t* registers = &context->uc_mcontext->__ss;
+  void (*pc)(void) = arm_thread_state64_get_pc_fptr(*registers);
+  if (pc == &sigbus_try_memcpy_fault_pc ||
+      pc == &sigbus_try_memcpy_store_fault_pc) {
+    arm_thread_state64_set_pc_fptr(*registers, &sigbus_try_memcpy_recover_pc);
+    return true;
+  }
+
+  if (pc == &sigbus_try_read_fault_pc) {
+    arm_thread_state64_set_pc_fptr(*registers, &sigbus_try_read_recover_pc);
+    return true;
+  }
+#else
+  uintptr_t pc = (uintptr_t)context->uc_mcontext.pc;
+  if (pc == (uintptr_t)&sigbus_try_memcpy_fault_pc ||
+      pc == (uintptr_t)&sigbus_try_memcpy_store_fault_pc) {
+    context->uc_mcontext.pc = (uintptr_t)&sigbus_try_memcpy_recover_pc;
+    return true;
+  }
+
+  if (pc == (uintptr_t)&sigbus_try_read_fault_pc) {
+    context->uc_mcontext.pc = (uintptr_t)&sigbus_try_read_recover_pc;
+    return true;
+  }
+#endif
 #endif
 
   return false;

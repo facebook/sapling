@@ -14,6 +14,10 @@
 #if defined(__linux__)
 #define SIGBUS_MEMOPS_ARCH_X86_64 1
 #endif
+#elif defined(__aarch64__)
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define SIGBUS_MEMOPS_ARCH_AARCH64 1
+#endif
 #endif
 #endif
 

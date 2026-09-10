@@ -16,9 +16,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <sys/mman.h>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <sys/ucontext.h>
+#else
 #include <ucontext.h>
+#endif
 #include <unistd.h>
+#endif
 
 #define CHECK(expression)                                 \
   do {                                                    \
@@ -28,6 +34,7 @@
     }                                                     \
   } while (0)
 
+#ifndef _WIN32
 struct signal_state {
   volatile sig_atomic_t expect_unhandled;
   volatile sig_atomic_t saw_unhandled;
@@ -51,11 +58,14 @@ static void on_sigbus(int signo, siginfo_t* info, void* context) {
 
   _exit(128 + signo);
 }
+#endif
 
 int main(void) {
   if (!sigbus_is_protected()) {
     return 0;
   }
+
+#ifndef _WIN32
 
   long page_size_long = sysconf(_SC_PAGESIZE);
   CHECK(page_size_long > 0);
@@ -80,9 +90,11 @@ int main(void) {
   CHECK(sigemptyset(&action.sa_mask) == 0);
   CHECK(sigaction(SIGBUS, &action, &old_action) == 0);
 
+#ifdef BUS_MCEERR_AO
   siginfo_t asynchronous_mce = {.si_code = BUS_MCEERR_AO};
   ucontext_t synthetic_context = {0};
   CHECK(!sigbus_try_handle(SIGBUS, &asynchronous_mce, &synthetic_context));
+#endif
 
   signal_state.expect_unhandled = 1;
   CHECK(raise(SIGBUS) == 0);
@@ -101,7 +113,11 @@ int main(void) {
 
   uint8_t* crossing = mapping + page_size - 8;
   CHECK(!sigbus_try_memcpy(crossing, source, 16));
+#if defined(__APPLE__) && defined(__MACH__)
+  CHECK(signal_state.last_handled_code == BUS_ADRALN);
+#else
   CHECK(signal_state.last_handled_code == BUS_ADRERR);
+#endif
   CHECK(memcmp(crossing, source, 8) == 0);
 
   uint8_t source_fault_destination = 0;
@@ -113,4 +129,7 @@ int main(void) {
   CHECK(munmap(mapping, 2 * page_size) == 0);
   CHECK(close(fd) == 0);
   return 0;
+#else
+  return 1;
+#endif
 }
