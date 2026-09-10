@@ -13,6 +13,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -44,6 +45,7 @@ use metaconfig_types::PushrebaseRemoteMode;
 #[cfg(fbcode_build)]
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
@@ -59,9 +61,8 @@ use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::RestrictedPathsRef;
-use sha2::Digest;
-use sha2::Sha256;
 use skeleton_manifest::RootSkeletonManifestId;
+use uuid::Uuid;
 
 use super::Repo;
 
@@ -201,43 +202,20 @@ pub async fn commit_throughput(
         .try_collect()
         .await?;
 
-    let mut owner: HashMap<NonRootMPath, usize> = HashMap::new();
-    let mut stacks: Vec<Vec<_>> = Vec::new();
-    for cs_id in &nodes {
-        let Some((files, deletions, _)) = changes.get(cs_id) else {
-            continue;
-        };
+    let stacks = group_disjoint_stacks(nodes.iter().filter_map(|cs_id| {
+        let (files, deletions, _) = changes.get(cs_id)?;
         if files.is_empty() {
-            continue;
+            return None;
         }
-        let paths: Vec<NonRootMPath> = files
-            .iter()
-            .map(|(path, ..)| path.clone())
-            .chain(deletions.iter().cloned())
-            .collect();
-
-        let overlapping: HashSet<usize> = paths
-            .iter()
-            .filter_map(|path| owner.get(path).copied())
-            .collect();
-        let mut overlapping = overlapping.into_iter();
-        let target = match (overlapping.next(), overlapping.next()) {
-            (None, _) => {
-                stacks.push(Vec::new());
-                Some(stacks.len() - 1)
-            }
-            (Some(stack), None) => Some(stack),
-            _ => None,
-        };
-        let Some(target) = target else {
-            continue;
-        };
-
-        stacks[target].push(*cs_id);
-        for path in paths {
-            owner.insert(path, target);
-        }
-    }
+        Some((
+            *cs_id,
+            files
+                .iter()
+                .map(|(path, ..)| path.clone())
+                .chain(deletions.iter().cloned())
+                .collect(),
+        ))
+    }));
 
     let mut shaped: Vec<Vec<_>> = Vec::new();
     let mut current: Vec<_> = Vec::new();
@@ -321,6 +299,8 @@ pub async fn commit_throughput(
         .try_collect()
         .await?;
 
+    let run_id = Uuid::new_v4();
+    println!("Run ID: {run_id}");
     let mut built: Vec<Vec<_>> = Vec::new();
     let mut all = Vec::new();
     for stack in &shaped {
@@ -343,9 +323,8 @@ pub async fn commit_throughput(
                         *size,
                     )
                     .await?;
-                    let digest = hex::encode(Sha256::digest(&data));
                     let nonced = Bytes::from(
-                        [&data[..], format!("\n# drill-nonce {digest}\n").as_bytes()].concat(),
+                        [&data[..], format!("\n# drill-nonce {run_id}\n").as_bytes()].concat(),
                     );
                     let len = nonced.len() as u64;
                     let stored = filestore::store(
@@ -521,10 +500,19 @@ pub async fn commit_throughput(
         commits as f64 / wall,
     );
     for error in results.iter().filter_map(|result| result.as_ref().err()) {
-        println!("  stack land failed: {error:?}");
+        eprintln!("  stack land failed: {error:?}");
     }
+    let result = if landed.len() == built.len() {
+        Ok(())
+    } else {
+        Err(anyhow!(
+            "{}/{} stacks failed to land",
+            built.len() - landed.len(),
+            built.len()
+        ))
+    };
     if landed.is_empty() {
-        return Ok(());
+        return result;
     }
 
     let mut submits: Vec<f64> = landed.iter().map(|land| land.submitted_at_secs).collect();
@@ -572,5 +560,91 @@ pub async fn commit_throughput(
         retries[retries.len() / 2],
         retries[retries.len() - 1],
     );
-    Ok(())
+    result
+}
+
+fn group_disjoint_stacks(
+    changesets: impl IntoIterator<Item = (ChangesetId, Vec<NonRootMPath>)>,
+) -> Vec<Vec<ChangesetId>> {
+    let mut owner: BTreeMap<NonRootMPath, usize> = BTreeMap::new();
+    let mut stacks: Vec<Vec<ChangesetId>> = Vec::new();
+    for (cs_id, paths) in changesets {
+        let overlapping: HashSet<usize> = paths
+            .iter()
+            .flat_map(|path| {
+                path.clone()
+                    .into_non_root_ancestors()
+                    .filter_map(|ancestor| owner.get(&ancestor))
+                    .chain(
+                        owner
+                            .range(path.clone()..)
+                            .take_while(move |(other, _)| path.is_prefix_of(*other))
+                            .map(|(_, stack)| stack),
+                    )
+                    .copied()
+            })
+            .collect();
+        let mut overlapping = overlapping.into_iter();
+        let target = match (overlapping.next(), overlapping.next()) {
+            (None, _) => {
+                stacks.push(Vec::new());
+                stacks.len() - 1
+            }
+            (Some(stack), None) => stack,
+            _ => continue,
+        };
+        stacks[target].push(cs_id);
+        for path in paths {
+            owner.insert(path, target);
+        }
+    }
+    stacks
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn group_stacks_by_path_prefix() -> Result<()> {
+        let paths = [
+            vec!["a/b"],
+            vec!["a/b/c"],
+            vec!["a"],
+            vec!["ab"],
+            vec!["other/x"],
+            vec!["other/y"],
+            vec!["other"],
+            vec!["a/b", "ab"],
+        ];
+        let commits: Vec<_> = (0..paths.len())
+            .map(|i| ChangesetId::from_bytes([i as u8; 32]))
+            .collect::<Result<_, _>>()?;
+        let changesets = commits
+            .iter()
+            .copied()
+            .zip(paths)
+            .map(|(id, paths)| {
+                Ok((
+                    id,
+                    paths
+                        .into_iter()
+                        .map(NonRootMPath::new)
+                        .collect::<Result<_, _>>()?,
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(
+            group_disjoint_stacks(changesets),
+            vec![
+                vec![commits[0], commits[1], commits[2]],
+                vec![commits[3]],
+                vec![commits[4]],
+                vec![commits[5]],
+            ],
+        );
+        Ok(())
+    }
 }

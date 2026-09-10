@@ -145,7 +145,6 @@ sapling-renderdag = { version = "0.1.0", path = "../../../scm/lib/renderdag" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
-sha2 = "0.10.6"
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 skeleton_manifest_v2 = { version = "0.1.0", path = "../../derived_data/skeleton_manifest_v2" }
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
@@ -165,6 +164,7 @@ tokio-util = { version = "0.7.19", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+uuid = { version = "1.24.1", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
 walkdir = "2.3"
 
 [dev-dependencies]
