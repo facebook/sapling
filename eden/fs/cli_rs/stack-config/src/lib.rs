@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+// The derive macro emits absolute `::stack_config` paths.
+#[cfg(test)]
+extern crate self as stack_config;
+
 pub use stack_config_derive::*;
 
 pub mod __private {
@@ -49,3 +53,6 @@ pub mod __private {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

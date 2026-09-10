@@ -6,7 +6,8 @@
  */
 
 use serde::Deserialize;
-use stack_config::StackConfig;
+
+use crate::StackConfig;
 
 #[derive(Deserialize, StackConfig, Debug, PartialEq)]
 struct ConfigNested {
