@@ -70,9 +70,9 @@ pub(crate) enum AclFileChange {
 /// to the parent's `create_tree`, providing pre-computed flags for
 /// `AclManifestDirectoryEntry` without requiring a blobstore load.
 #[derive(Clone, Copy, Debug, Default)]
-struct AclManifestNodeInfo {
-    is_restricted: bool,
-    has_restricted_descendants: bool,
+pub(crate) struct AclManifestNodeInfo {
+    pub(crate) is_restricted: bool,
+    pub(crate) has_restricted_descendants: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +338,7 @@ pub(crate) async fn derive_acl_manifest_entry(
 /// 3. Look up the ACL file in the built map to determine the restriction.
 /// 4. Compute `has_restricted_descendants` by checking for Directory entries.
 /// 5. Store the manifest blob and return the ID with node info.
-async fn create_acl_manifest(
+pub(crate) async fn create_acl_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
     acl_file_name: &[u8],
@@ -622,7 +622,9 @@ pub(crate) async fn prepare_acl_file_changes(
         .await
 }
 
-async fn fetch_and_parse_acl_file(
+/// Fetch and parse an ACL file. `Ok(None)` means it did not parse: logged and
+/// treated as absent, leaving the directory unrestricted.
+pub(crate) async fn fetch_and_parse_acl_file(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     content_id: ContentId,
@@ -665,7 +667,7 @@ fn log_invalid_acl_file(
 }
 
 /// Store a parsed ACL file as an AclManifestEntryBlob and return the blob ID.
-async fn store_acl_entry_from_acl_file(
+pub(crate) async fn store_acl_entry_from_acl_file(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     acl_file: &RestrictedPathsAclFile,

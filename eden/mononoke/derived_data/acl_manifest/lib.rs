@@ -8,8 +8,12 @@
 mod derive;
 mod mapping;
 mod pipeline;
+mod upload;
 
 pub use mapping::RootAclManifestId;
+pub use upload::AclChildNode;
+pub use upload::DirectoryAclInputs;
+pub use upload::acl_node_for_directory;
 
 #[cfg(test)]
 mod test_utils;
