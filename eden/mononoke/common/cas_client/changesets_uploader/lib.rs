@@ -252,6 +252,8 @@ where
     /// The current implementation is based on the diffing of the hg manifests, rather than hg augmented manifests,
     /// but it is a good starting point, and the result of the diff will be identical.
     /// We will switch over to diff the augmented manifests once we have them, since we can have the digests strait away to pass to the uploads.
+    ///
+    /// Trees under restricted paths are never uploaded; files under them are.
     pub async fn upload_single_changeset<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -329,17 +331,18 @@ where
         } else {
             diff_stream
                 .into_iter()
-                .filter(|(path, _)| {
-                    !restricted_path_roots
-                        .iter()
-                        .any(|root| root.is_prefix_of(path))
+                .filter(|(path, entry)| {
+                    !matches!(entry, Entry::Tree(_))
+                        || !restricted_path_roots
+                            .iter()
+                            .any(|root| root.is_prefix_of(path))
                 })
                 .collect()
         };
 
         if diff_stream.len() < total_before_filter {
             info!(
-                "Filtered out {} of {} entries under restricted paths for changeset {}",
+                "Filtered out {} of {} entries (trees under restricted paths) for changeset {}",
                 total_before_filter - diff_stream.len(),
                 total_before_filter,
                 changeset_id,
