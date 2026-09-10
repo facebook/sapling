@@ -27,6 +27,8 @@ type Props = {
   allowEmptyMessage?: boolean;
   label?: string;
   actionSelector?: React.ReactNode;
+  enableSuggestedChange?: boolean;
+  suggestedChangeText?: string;
 };
 
 /**
@@ -59,6 +61,8 @@ export default function PullRequestCommentInput({
   allowEmptyMessage = false,
   label = 'Add Comment',
   actionSelector,
+  enableSuggestedChange = false,
+  suggestedChangeText,
 }: Props): React.ReactElement {
   const [comment, setComment] = useState<string>('');
   const [disabled, setDisabled] = useState(false);
@@ -115,6 +119,17 @@ export default function PullRequestCommentInput({
     [onAddComment],
   );
 
+  const onInsertSuggestedChange = useCallback(() => {
+    setComment(current => {
+      if (current.includes('```suggestion')) {
+        return current;
+      }
+      const replacement = current.trimEnd() || suggestedChangeText || '';
+      return `\`\`\`suggestion\n${replacement}\n\`\`\``;
+    });
+    setError(null);
+  }, [suggestedChangeText]);
+
   const cancelButton =
     onCancel != null ? (
       <Button variant="danger" onClick={onCancel} disabled={disabled}>
@@ -146,6 +161,13 @@ export default function PullRequestCommentInput({
       />
       <Box display="flex" justifyContent="flex-end" gridGap={1}>
         {actionSelector}
+        {enableSuggestedChange && (
+          <Button
+            onClick={onInsertSuggestedChange}
+            disabled={disabled || comment.includes('```suggestion')}>
+            Suggest change
+          </Button>
+        )}
         {cancelButton}
         <Button disabled={isAddCommentDisabled} onClick={onAddComment} variant="primary">
           {label}

@@ -62,6 +62,15 @@ export default React.memo(function PrimerStyles(): React.ReactElement {
   color: ${theme?.colors.fg.subtle};
 }
 
+.review-comment-selected {
+  background-color: ${theme?.colors.accent.subtle};
+}
+
+.lineNumber.review-comment-selected {
+  color: ${theme?.colors.accent.fg};
+  font-weight: 600;
+}
+
 .SplitDiffView-hunk-table td {
   font-family: ${theme?.fonts.mono}
 }

@@ -19,6 +19,7 @@ import type {GitHubPullRequestReviewThread} from '../../github/pullRequestTimeli
 
 import {diffAndTokenizeAtom} from '../../diffServiceClient';
 import {DiffSide} from '../../generated/graphql';
+import {reviewCommentRangeAtom} from '../../reviewCommentRange';
 import {
   gitHubDiffCommitIDsAtom,
   gitHubPullRequestAtom,
@@ -34,13 +35,15 @@ import {
 } from '../atoms';
 import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useCallback, useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo, useRef} from 'react';
 
 /**
  * Type for the new comment input callbacks.
  */
 export type NewCommentInputCallbacks = {
   onShowNewCommentInput: (event: React.MouseEvent<HTMLTableElement>) => void;
+  onStartNewCommentRange: (event: React.PointerEvent<HTMLTableElement>) => void;
+  onExtendNewCommentRange: (event: React.PointerEvent<HTMLTableElement>) => void;
   onResetNewCommentInput: () => void;
 };
 
@@ -104,17 +107,24 @@ export function useSplitDiffViewData(
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const setCellAtom = useSetAtom(gitHubPullRequestNewCommentInputCellAtom);
   const setNotification = useSetAtom(notificationMessageAtom);
+  const setCommentRange = useSetAtom(reviewCommentRangeAtom);
+  const dragSelectionActive = useRef(false);
+  const suppressNextClick = useRef(false);
 
-  const onShowNewCommentInput = useCallback(
-    (event: React.MouseEvent<HTMLTableElement>) => {
-      const {target} = event;
+  const selectCommentLine = useCallback(
+    (
+      table: HTMLTableElement,
+      target: EventTarget | null,
+      extendFromAnchor: boolean,
+      showCommentInput: boolean,
+    ): boolean => {
       if (!(target instanceof HTMLTableCellElement)) {
-        return;
+        return false;
       }
 
       const {lineNumber: lineNumberStr, path, side: sideStr} = target.dataset;
       if (lineNumberStr == null || path == null || sideStr == null) {
-        return;
+        return false;
       }
 
       const lineNumber = parseInt(lineNumberStr, 10);
@@ -122,16 +132,14 @@ export function useSplitDiffViewData(
         sideStr === DiffSide.Left
           ? DiffSide.Left
           : sideStr === DiffSide.Right
-            ? DiffSide.Right
-            : null;
+          ? DiffSide.Right
+          : null;
       if (isNaN(lineNumber) || side == null) {
-        return;
+        return false;
       }
 
       // Check if we can add a comment using the Jotai atom
-      const canAddComment = store.get(
-        gitHubPullRequestCanAddCommentAtom({lineNumber, path, side}),
-      );
+      const canAddComment = store.get(gitHubPullRequestCanAddCommentAtom({lineNumber, path, side}));
       if (!canAddComment) {
         // Check why we can't add a comment and show appropriate message
         // Only check if versions are loaded
@@ -154,24 +162,133 @@ export function useSplitDiffViewData(
             });
           }
         }
-        return;
+        return false;
       }
 
-      setCellAtom({path, lineNumber, side});
+      const currentRange = store.get(reviewCommentRangeAtom);
+      if (
+        extendFromAnchor &&
+        currentRange != null &&
+        currentRange.path === path &&
+        currentRange.side === side
+      ) {
+        const startLine = Math.min(currentRange.anchorLine, lineNumber);
+        const endLine = Math.max(currentRange.anchorLine, lineNumber);
+        const availableLines = new Set(
+          Array.from(table.querySelectorAll<HTMLTableCellElement>('td.lineNumber'))
+            .filter(cell => cell.dataset.path === path && cell.dataset.side === side)
+            .map(cell => Number(cell.dataset.lineNumber)),
+        );
+        const rangeIsVisible = Array.from(
+          {length: endLine - startLine + 1},
+          (_, index) => startLine + index,
+        ).every(selectedLine => availableLines.has(selectedLine));
+        if (!rangeIsVisible) {
+          setNotification({
+            type: 'info',
+            message:
+              'A multi-line comment must cover contiguous visible lines on the same side of the diff.',
+          });
+          return false;
+        }
+        setCommentRange({...currentRange, startLine, endLine});
+        setCellAtom(showCommentInput ? {path, lineNumber: endLine, side} : null);
+        return true;
+      }
+
+      setCommentRange({
+        anchorLine: lineNumber,
+        startLine: lineNumber,
+        endLine: lineNumber,
+        path,
+        side,
+      });
+      setCellAtom(showCommentInput ? {path, lineNumber, side} : null);
+      return true;
     },
-    [store, setCellAtom, setNotification, versionsLoadable],
+    [store, setCellAtom, setCommentRange, setNotification, versionsLoadable],
+  );
+
+  const finishDragSelection = useCallback(() => {
+    if (!dragSelectionActive.current) {
+      return;
+    }
+    dragSelectionActive.current = false;
+    const range = store.get(reviewCommentRangeAtom);
+    if (range != null) {
+      setCellAtom({path: range.path, lineNumber: range.endLine, side: range.side});
+    }
+  }, [setCellAtom, store]);
+
+  useEffect(() => {
+    window.addEventListener('pointerup', finishDragSelection);
+    window.addEventListener('pointercancel', finishDragSelection);
+    return () => {
+      window.removeEventListener('pointerup', finishDragSelection);
+      window.removeEventListener('pointercancel', finishDragSelection);
+    };
+  }, [finishDragSelection]);
+
+  const onStartNewCommentRange = useCallback(
+    (event: React.PointerEvent<HTMLTableElement>) => {
+      if (event.button !== 0) {
+        return;
+      }
+      if (selectCommentLine(event.currentTarget, event.target, event.shiftKey, false)) {
+        event.preventDefault();
+        dragSelectionActive.current = true;
+        suppressNextClick.current = true;
+      }
+    },
+    [selectCommentLine],
+  );
+
+  const onExtendNewCommentRange = useCallback(
+    (event: React.PointerEvent<HTMLTableElement>) => {
+      if (!dragSelectionActive.current || event.buttons === 0) {
+        return;
+      }
+      if (selectCommentLine(event.currentTarget, event.target, true, false)) {
+        event.preventDefault();
+      }
+    },
+    [selectCommentLine],
+  );
+
+  const onShowNewCommentInput = useCallback(
+    (event: React.MouseEvent<HTMLTableElement>) => {
+      if (suppressNextClick.current) {
+        suppressNextClick.current = false;
+        return;
+      }
+      selectCommentLine(event.currentTarget, event.target, event.shiftKey, true);
+    },
+    [selectCommentLine],
   );
 
   const onResetNewCommentInput = useCallback(() => {
     setCellAtom(null);
-  }, [setCellAtom]);
+    setCommentRange(null);
+    dragSelectionActive.current = false;
+  }, [setCellAtom, setCommentRange]);
 
   const newCommentInputCallbacks: NewCommentInputCallbacks | null = useMemo(() => {
     if (pullRequest != null) {
-      return {onShowNewCommentInput, onResetNewCommentInput};
+      return {
+        onExtendNewCommentRange,
+        onResetNewCommentInput,
+        onShowNewCommentInput,
+        onStartNewCommentRange,
+      };
     }
     return null;
-  }, [pullRequest, onShowNewCommentInput, onResetNewCommentInput]);
+  }, [
+    pullRequest,
+    onExtendNewCommentRange,
+    onResetNewCommentInput,
+    onShowNewCommentInput,
+    onStartNewCommentRange,
+  ]);
 
   // Diff and tokenize atom
   const diffAndTokenizeParams = useMemo(

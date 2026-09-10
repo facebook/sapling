@@ -14,6 +14,7 @@ import {
   gitHubPullRequestCanAddCommentAtom,
   gitHubPullRequestNewCommentInputShownAtom,
 } from './jotai';
+import {reviewCommentRangeAtom} from './reviewCommentRange';
 import {Box} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import {useMemo} from 'react';
@@ -132,10 +133,7 @@ function SplitDiffRowSide({
 
   // These atoms are synchronous derived atoms that read from data preloaded
   // by useSplitDiffViewData in <SplitDiffView>.
-  const canAddCommentAtom = useMemo(
-    () => gitHubPullRequestCanAddCommentAtom(param),
-    [param],
-  );
+  const canAddCommentAtom = useMemo(() => gitHubPullRequestCanAddCommentAtom(param), [param]);
   const newCommentInputShownAtom = useMemo(
     () => gitHubPullRequestNewCommentInputShownAtom(param),
     [param],
@@ -143,10 +141,18 @@ function SplitDiffRowSide({
 
   const canAddCommentValue = useAtomValue(canAddCommentAtom);
   const isNewCommentInputShownValue = useAtomValue(newCommentInputShownAtom);
+  const selectedRange = useAtomValue(reviewCommentRangeAtom);
 
   // Only use the values if commenting is allowed for this row
   const canAddComment = canComment && canAddCommentValue;
   const isNewCommentInputShown = canComment && isNewCommentInputShownValue;
+  const isSelectedForComment =
+    lineNumber != null &&
+    selectedRange != null &&
+    selectedRange.path === path &&
+    selectedRange.side === side &&
+    lineNumber >= selectedRange.startLine &&
+    lineNumber <= selectedRange.endLine;
 
   let style;
   let commentThreads = null;
@@ -165,20 +171,28 @@ function SplitDiffRowSide({
 
   const lineNumberBorderStyle = side === 'RIGHT' ? extraRightLineNumberCellProps : {};
   const extraClassName = className != null ? ` ${className}-number` : '';
+  const selectedClassName = isSelectedForComment ? ' review-comment-selected' : '';
   return (
     <>
       <Box
         as="td"
-        className={`lineNumber${extraClassName}`}
+        className={`lineNumber${extraClassName}${selectedClassName}`}
         data-line-number={lineNumber}
         data-path={path}
+        data-review-comment-selected={isSelectedForComment ? 'true' : undefined}
         data-side={side}
         sx={style}
         {...lineNumberBorderStyle}>
         {lineNumber}
       </Box>
-      <td className={className}>
-        {content}
+      <td className={`${className ?? ''}${selectedClassName}`.trim() || undefined}>
+        <span
+          data-line-number={lineNumber}
+          data-path={path}
+          data-review-comment-line-content="true"
+          data-side={side}>
+          {content}
+        </span>
         {commentThreads}
         {input}
       </td>
