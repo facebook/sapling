@@ -691,6 +691,7 @@ async fn do_batched_pushrebase(
 
         // Store reconciled overrides on the request for carry-forward on re-queue
         request.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
+        request.conflict_check_base = bookmark_val;
 
         let pushrebase_distance = match try_join(
             repo.commit_graph()
@@ -757,8 +758,6 @@ async fn do_batched_pushrebase(
                     .map(|p| p.request)
                     .chain(requests_iter)
                     .map(|mut req| {
-                        req.conflict_check_base =
-                            old_bookmark_value.unwrap_or(req.conflict_check_base);
                         req.retry_num = PushrebaseRetryNum(req.retry_num.0 + 1);
                         req
                     })
@@ -881,7 +880,7 @@ async fn do_batched_pushrebase(
             vec![]
         }
         Ok(None) => {
-            // CAS failed — update conflict_check_base and return for re-queue.
+            // CAS failed — return for re-queue with the saved conflict checks.
             if emit_all_bookmarks {
                 bookmarks::saturation::record_pushrebase_failure(
                     repo.repo_identity().name(),
@@ -895,8 +894,6 @@ async fn do_batched_pushrebase(
             pending
                 .into_iter()
                 .map(|mut p| {
-                    p.request.conflict_check_base =
-                        old_bookmark_value.unwrap_or(p.request.conflict_check_base);
                     p.request.retry_num = PushrebaseRetryNum(p.request.retry_num.0 + 1);
                     // carried_merge_file_info is already updated on the request
                     p.request
@@ -1776,6 +1773,7 @@ async fn rebase_batch_under_lock(
         }
 
         request.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
+        request.conflict_check_base = auth_value.unwrap_or(request.stack.root);
 
         let request_old_bookmark_value = running_head;
         let onto = running_head.unwrap_or(request.stack.root);
@@ -1814,7 +1812,6 @@ async fn rebase_batch_under_lock(
                     .map(|p| p.request)
                     .chain(checked_iter.map(|c| c.request))
                     .map(|mut req| {
-                        req.conflict_check_base = auth_value.unwrap_or(req.conflict_check_base);
                         req.retry_num = PushrebaseRetryNum(req.retry_num.0 + 1);
                         req
                     })

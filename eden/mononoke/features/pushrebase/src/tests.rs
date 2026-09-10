@@ -4493,7 +4493,7 @@ async fn batched_pushrebase_merge_resolution(fb: FacebookInit) -> Result<(), Err
 }
 
 #[mononoke::fbinit_test]
-async fn batched_pushrebase_rebase_failure_loses_server_edit(
+async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
     fb: FacebookInit,
 ) -> Result<(), Error> {
     init_just_knobs_for_merge_test();
@@ -4565,8 +4565,7 @@ async fn batched_pushrebase_rebase_failure_loses_server_edit(
         assert_eq!(requeued.len(), 2);
         assert_eq!(requeued[0].conflict_check_base, server);
         assert_eq!(requeued[0].carried_merge_file_info.len(), 1);
-        // FIXME: An unprocessed request must retain its original conflict-check base.
-        assert_eq!(requeued[1].conflict_check_base, server);
+        assert_eq!(requeued[1].conflict_check_base, base);
         assert!(requeued[1].carried_merge_file_info.is_empty());
 
         let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requeued, &[]).await;
@@ -4578,13 +4577,9 @@ async fn batched_pushrebase_rebase_failure_loses_server_edit(
             .await?
             .expect("bookmark should be set after pushrebase");
         let files = list_working_copy(&ctx, &repo, head).await?;
-        for (path, expected) in [
-            ("before", "server\ntwo\nthree\nfour\nclient\n"),
-            // FIXME: The unprocessed request loses the server edit on retry.
-            ("after", client_content),
-        ] {
+        for path in ["before", "after"] {
             let content = &files[&NonRootMPath::new(path)?];
-            assert_eq!(&content[..], expected.as_bytes());
+            assert_eq!(&content[..], b"server\ntwo\nthree\nfour\nclient\n");
         }
     }
     Ok(())
