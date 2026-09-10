@@ -895,8 +895,6 @@ def get_edenfs_environment(
         # when starting edenfs with cgroup isolation.
         "XDG_RUNTIME_DIR",
         "DBUS_SESSION_BUS_ADDRESS",
-        # Used to identify if edenfs was started by a coding agent
-        "CODING_AGENT_METADATA",
     ]
 
     if sys.platform == "win32":
