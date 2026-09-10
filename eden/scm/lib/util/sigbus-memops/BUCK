@@ -1,0 +1,50 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
+
+oncall("sapling")
+
+cpp_library(
+    name = "sigbus_memops",
+    srcs = [
+        "native/sigbus_memops.c",
+        "native/sigbus_memops_inline.c",
+    ],
+    headers = ["sigbus_memops.h"],
+    header_namespace = "",
+    private_headers = ["native/sigbus_memops_config.h"],
+)
+
+cpp_binary(
+    name = "sigbus_memops_test_bin",
+    srcs = ["tests/sigbus_memops_test.c"],
+    compatible_with = ["ovr_config//os:linux-x86_64"],
+    deps = [":sigbus_memops"],
+)
+
+custom_unittest(
+    name = "sigbus_memops_test",
+    command = ["$(exe :sigbus_memops_test_bin)"],
+    compatible_with = ["ovr_config//os:linux-x86_64"],
+)
+
+cpp_binary(
+    # @autodeps-skip
+    name = "sigbus_memops_fallback_test_bin",
+    srcs = [
+        "native/sigbus_memops.c",
+        "native/sigbus_memops_inline.c",
+        "tests/sigbus_memops_fallback_test.c",
+    ],
+    headers = [
+        "native/sigbus_memops_config.h",
+        "sigbus_memops.h",
+    ],
+    header_namespace = "",
+    preprocessor_flags = ["-DSIGBUS_MEMOPS_FORCE_FALLBACK"],
+)
+
+custom_unittest(
+    name = "sigbus_memops_fallback_test",
+    command = ["$(exe :sigbus_memops_fallback_test_bin)"],
+)
