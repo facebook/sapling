@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode_mode_win")
@@ -7,6 +8,7 @@ load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 load(
     "//eden/scm/tests:targets.bzl",
     "generate_trinity_smoketests",
+    "get_hg_test_sanitizer_env",
     "get_sl_edenfs_watchman_run_tests_included",
     "get_sl_watchman_run_tests_excluded",
     "run_tests_target",
@@ -48,6 +50,17 @@ python_binary(
     name = "unittestify",
     labels = ["noautodeps"],
     main_src = "unittestify.py",
+)
+
+export_file(
+    name = "tsan_suppressions",
+    src = "tsan_suppressions.txt",
+)
+
+buck_command_alias(
+    name = "hg_test_with_sanitizer_env",
+    env = get_hg_test_sanitizer_env(),
+    exe = "//eden/scm:hg_test",
 )
 
 python_binary(

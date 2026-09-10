@@ -1,0 +1,6 @@
+# ThreadSanitizer suppressions for Sapling .t tests.
+#
+# Tokio blocking-pool workers intentionally live for the lifetime of the
+# Sapling process. TSan reports those workers as leaked when the process exits.
+
+thread:tokio::runtime::blocking::pool
