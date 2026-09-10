@@ -11,6 +11,7 @@
 #ifndef _WIN32
 
 #include <optional>
+#include <type_traits>
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/MappedDiskVector.h"
 #include "eden/fs/inodes/InodeMetadata.h"
@@ -169,7 +170,7 @@ class InodeTable {
       auto index = iter->second;
       XCHECK_LT(index, state->storage.size());
       stats_->increment(&InodeMetadataTableStats::getHit);
-      return state->storage[index].record;
+      return state->storage.get(index).record;
     }
   }
 
@@ -191,9 +192,11 @@ class InodeTable {
     auto index = iter->second;
     XCHECK_LT(index, state->storage.size());
     state->storage.populateEntryForWrite(index);
-    fn(state->storage[index].record);
+    auto entry = state->storage.get(index);
+    fn(entry.record);
+    state->storage.set(index, entry);
     // TODO: maybe trigger a background msync
-    return state->storage[index].record;
+    return entry.record;
   }
 
   // TODO: replace with freeInodes - it's much more efficient to free a bunch
@@ -221,10 +224,10 @@ class InodeTable {
       storage.populateEntryForWrite(indexToDelete);
       // The source entry must be faulted before reading it during compaction.
       storage.populateEntryForWrite(lastIndex);
-      auto lastInode = storage[lastIndex].inode;
+      auto lastEntry = storage.get(lastIndex);
       indices.erase(iter);
-      storage[indexToDelete] = storage[lastIndex];
-      indices[lastInode] = indexToDelete;
+      storage.set(indexToDelete, lastEntry);
+      indices[lastEntry.inode] = indexToDelete;
     } else {
       indices.erase(iter);
     }
@@ -245,8 +248,9 @@ class InodeTable {
       const auto& inode = entry.first;
       auto index = entry.second;
       state->storage.populateEntryForWrite(index);
-      auto& record = state->storage[index].record;
-      fn(inode, record);
+      auto value = state->storage.get(index);
+      fn(inode, value.record);
+      state->storage.set(index, value);
     }
   }
 
@@ -286,8 +290,7 @@ class InodeTable {
       auto iter = state->indices.find(ino);
       if (LIKELY(iter != state->indices.end())) {
         auto index = iter->second;
-        state->storage.populateEntryForWrite(index);
-        return modify(state->storage[index].record);
+        return modifyExistingEntry<T>(state->storage, index, modify);
       }
     }
 
@@ -300,20 +303,36 @@ class InodeTable {
     auto iter = state->indices.find(ino);
     if (UNLIKELY(iter != state->indices.end())) {
       auto index = iter->second;
-      state->storage.populateEntryForWrite(index);
-      return modify(state->storage[index].record);
+      return modifyExistingEntry<T>(state->storage, index, modify);
     }
 
     size_t index = state->storage.size();
     state->storage.emplace_back(ino, record);
     state->indices.emplace(ino, index);
-    return result(state->storage[index].record);
+    return modifyExistingEntry<T>(state->storage, index, result);
+  }
+
+  template <typename T, typename ModifyFn>
+  static T modifyExistingEntry(
+      MappedDiskVector<Entry>& storage,
+      size_t index,
+      ModifyFn&& modify) {
+    storage.populateEntryForWrite(index);
+    auto entry = storage.get(index);
+    if constexpr (std::is_void_v<T>) {
+      modify(entry.record);
+      storage.set(index, entry);
+    } else {
+      auto result = modify(entry.record);
+      storage.set(index, entry);
+      return result;
+    }
   }
 
   struct State {
     State(MappedDiskVector<Entry>&& mdv) : storage{std::move(mdv)} {
       for (size_t i = 0; i < storage.size(); ++i) {
-        const Entry& entry = storage[i];
+        auto entry = storage.get(i);
         if (entry.inode.empty()) {
           // Buffers probably weren't flushed to disk, leaving
           // zeroes. Don't pretend this entry is valid.

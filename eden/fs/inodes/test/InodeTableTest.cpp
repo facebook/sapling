@@ -176,6 +176,21 @@ TEST_F(InodeTableTest, setDefault) {
   EXPECT_EQ(14, inodeTable->setDefault(1_ino, 16));
 }
 
+TEST_F(InodeTableTest, modifyOrThrowDoesNotWriteWhenCallbackThrows) {
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  inodeTable->set(1_ino, 14);
+
+  EXPECT_THROW(
+      inodeTable->modifyOrThrow(
+          1_ino,
+          [](auto& value) {
+            value = 16;
+            throw std::runtime_error{"test error"};
+          }),
+      std::runtime_error);
+  EXPECT_EQ(14, inodeTable->getOrThrow(1_ino));
+}
+
 #if defined(__linux__) && defined(MADV_POPULATE_WRITE)
 TEST_F(InodeTableTest, modifyOrThrowHandlesUnavailableBackingPage) {
   auto pageSize = sysconf(_SC_PAGESIZE);
