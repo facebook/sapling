@@ -17,6 +17,19 @@ class PhabricatorClientError(Exception):
         Exception.__init__(self, reason, error)
 
 
+class InvalidJSONResponse(Exception):
+    def __init__(self, status, reason, raw_data):
+        self.status = status
+        self.reason = reason
+        self.raw_data = raw_data
+        message = "Invalid JSON response from Phabricator (HTTP %s %s): %r" % (
+            status,
+            reason,
+            raw_data[:1000],
+        )
+        Exception.__init__(self, message)
+
+
 class PhabricatorGraphQLClientRequests:
     def __init__(self, unix_socket_proxy=None, ui=None):
         self._connection = None
@@ -63,6 +76,12 @@ class PhabricatorGraphQLClientRequests:
             raw_data = res.read()
             ret = json.loads(raw_data)
         except json.JSONDecodeError as e:
-            ui.debug("Raw response: %s\n" % raw_data)
-            raise e
+            if ui is not None:
+                ui.debug("Response headers: %r\n" % res.getheaders())
+                ui.debug("Raw response: %s\n" % raw_data)
+            raise InvalidJSONResponse(
+                getattr(res, "status", "unknown"),
+                getattr(res, "reason", "unknown"),
+                raw_data,
+            ) from e
         return ret
