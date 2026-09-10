@@ -2526,6 +2526,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether mmap accesses to the inode metadata table should recover from
+   * synchronous SIGBUS faults. Snapshot at Overlay initialization.
+   */
+  ConfigSetting<bool> overlayUseSigbusProtection{
+      "overlay:use-sigbus-protection",
+      false,
+      this};
+
+  /**
    * Multiplier applied to a directory's base size when computing the
    * inline-compaction threshold. A compaction is triggered when the WAL
    * entry count for a parent exceeds `multiplier * max(baseSize, 10)`,

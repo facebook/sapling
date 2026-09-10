@@ -27,6 +27,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <folly/system/ThreadName.h>
+#include <sigbus_memops.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/common/telemetry/DurationScope.h"
@@ -586,6 +587,12 @@ void Overlay::initOverlay(
     hadCleanStartup_ = true;
   }
 
+#ifndef _WIN32
+  const bool useSigbusProtection =
+      config->getEdenConfig()->overlayUseSigbusProtection.getValue() &&
+      sigbus_is_protected();
+#endif
+
   // On Windows, we need to scan the state of the repository every time at
   // start up to find any potential changes happened when EdenFS is not
   // running.
@@ -614,12 +621,23 @@ void Overlay::initOverlay(
   nextInodeNumber_.store(nextInodeNumber, std::memory_order_relaxed);
 
 #ifndef _WIN32
+  if (useSigbusProtection) {
+    if (auto error = sigbus_install_handler()) {
+      folly::throwSystemErrorExplicit(
+          error, "failed to install sigbus-memops SIGBUS handler");
+    }
+    XLOG(DBG2, "Enabled SIGBUS protection for the inode metadata table");
+  }
+
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
       (localDir_ + PathComponentPiece{FsFileContentStore::kMetadataFile})
           .c_str(),
-      stats_.copy());
+      stats_.copy(),
+      MappedDiskVectorOptions{
+          .useSigbusProtection = useSigbusProtection,
+      });
 #endif // !_WIN32
 }
 
