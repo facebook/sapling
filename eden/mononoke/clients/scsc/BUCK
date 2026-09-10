@@ -96,9 +96,9 @@ dotslash.builder(
     conveyor = cli.conveyor(
         frequency = cli.frequency.WEEKLY,
         holiday_countries = [
-            cli.holiday_country.UNITED_STATES,
+            cli.holiday_country.UNITED_KINGDOM,
         ],
-        timezone = "US/Pacific",
+        timezone = "Europe/London",
     ),
     destinations = [
         cli.destination(
