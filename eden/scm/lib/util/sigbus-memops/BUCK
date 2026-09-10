@@ -1,6 +1,7 @@
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
+load("//eden/scm:targets.bzl", "sl_rust_library")
 
 oncall("sapling")
 
@@ -17,6 +18,39 @@ cpp_library(
         "DEFAULT": [],
         "ovr_config//os:windows": ["-fasync-exceptions"],
     }),
+)
+
+sl_rust_library(
+    name = "sigbus-memops",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {"build-dependencies": ["fbsource//third-party/rust:cc"]},
+            "lib": {"name": "sigbus_memops"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-sigbus-memops",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:memmap2",
+            "fbsource//third-party/rust:tempfile",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:memmap2",
+            "fbsource//third-party/rust:tempfile",
+        ],
+    }),
+    deps = [":sigbus_memops"],
 )
 
 cpp_binary(
