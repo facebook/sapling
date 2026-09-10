@@ -336,10 +336,6 @@ pub(crate) async fn load_entries(
 }
 
 /// Load the directory entry for `path`, relative to the root manifest.
-#[expect(
-    dead_code,
-    reason = "test helper landed ahead of the acl_node_for_directory tests that call it"
-)]
 pub(crate) async fn directory_entry_at_path(
     ctx: &CoreContext,
     repo: &TestRepo,
@@ -365,21 +361,6 @@ pub(crate) async fn directory_entry_at_path(
     }
 
     Ok(current_entry)
-}
-
-#[expect(
-    dead_code,
-    reason = "test helper landed ahead of the acl_node_for_directory tests that call it"
-)]
-pub(crate) async fn directory_id_at_path(
-    ctx: &CoreContext,
-    repo: &TestRepo,
-    root_id: &AclManifestId,
-    path: &[&str],
-) -> Result<Option<AclManifestId>> {
-    Ok(directory_entry_at_path(ctx, repo, root_id, path)
-        .await?
-        .map(|entry| entry.id))
 }
 
 // ---------------------------------------------------------------------------

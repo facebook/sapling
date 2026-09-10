@@ -5,17 +5,31 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeId;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mononoke_macros::mononoke;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::acl_manifest::AclManifest;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
+use crate::AclChildNode;
+use crate::DirectoryAclInputs;
 use crate::RootAclManifestId;
+use crate::acl_node_for_directory;
 use crate::test_utils::*;
 
 // ---------------------------------------------------------------------------
@@ -446,6 +460,333 @@ async fn test_identical_subtree_has_same_directory_id_at_different_paths(
     assert_eq!(
         entries[0].1.id, entries[1].1.id,
         "identical subtree content should produce the same directory-node AclManifestId regardless of path"
+    );
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Upload-time single-directory construction
+//
+// The oracle is canonical derivation of the same commit: build one directory's
+// node from that directory's own contents and assert it is the node the
+// changeset-driven traversal produced for the same directory. `AclManifestId`
+// is a content hash, so agreeing on the entry is agreeing on the bytes.
+// ---------------------------------------------------------------------------
+
+/// Resolve the `ContentId` of a file in `cs_id`'s tree, the way a caller with a
+/// manifest in hand would already know it.
+async fn content_id_at_path(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+    path: &str,
+) -> Result<ContentId> {
+    let root_fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
+    let entry = root_fsnode_id
+        .fsnode_id()
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            MPath::new(path)?,
+        )
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("{path} not found in fsnodes"))?;
+    match entry {
+        Entry::Leaf(file) => Ok(*file.content_id()),
+        Entry::Tree(_) => anyhow::bail!("{path} is a directory"),
+    }
+}
+
+/// A directory that is only a waypoint: no ACL file of its own, one restricted
+/// child. Passing that child is enough to reproduce the derived node.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_matches_derivation_for_a_restricted_child(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/child/.slacl", SLACL_PROJECT1)
+        .add_file("dir/child/file.txt", "content")
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let child = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir", "child"])
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("dir/child missing from the derived manifest"))?;
+    let expected = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir"]).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: None,
+            children: BTreeMap::from([(
+                MPathElement::new(b"child".to_vec())?,
+                AclChildNode::Known(child),
+            )]),
+        },
+    )
+    .await?;
+
+    assert!(
+        expected.is_some(),
+        "dir should be a waypoint above the restricted child"
+    );
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+/// The same fixture with only the child's id supplied: the builder must recover
+/// the child's flags by loading it, and land on the same node.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_recovers_child_flags_from_the_id_alone(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/child/.slacl", SLACL_PROJECT1)
+        .add_file("dir/child/file.txt", "content")
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let child = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir", "child"])
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("dir/child missing from the derived manifest"))?;
+    let expected = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir"]).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: None,
+            children: BTreeMap::from([(
+                MPathElement::new(b"child".to_vec())?,
+                AclChildNode::IdOnly(child.id),
+            )]),
+        },
+    )
+    .await?;
+
+    assert!(expected.is_some(), "dir should be a waypoint");
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+/// A restriction root with no ACL-bearing children: the directory's own ACL
+/// file is the whole input.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_matches_derivation_for_its_own_acl_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/.slacl", SLACL_PROJECT1)
+        .add_file("dir/file.txt", "content")
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let own_acl_file = content_id_at_path(&ctx, &repo, cs_id, "dir/.slacl").await?;
+    let expected = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir"]).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: Some(own_acl_file),
+            children: BTreeMap::new(),
+        },
+    )
+    .await?;
+
+    assert!(
+        expected.is_some(),
+        "a directory with its own .slacl should be a restriction root"
+    );
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+/// A restriction root with a restricted child: the helper must agree with
+/// canonical derivation when both `is_restricted` and
+/// `has_restricted_descendants` are true.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_matches_derivation_for_a_restriction_root_with_a_restricted_child(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/.slacl", SLACL_PROJECT1)
+        .add_file("dir/child/.slacl", SLACL_PROJECT2)
+        .add_file("dir/child/file.txt", "content")
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let own_acl_file = content_id_at_path(&ctx, &repo, cs_id, "dir/.slacl").await?;
+    let child = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir", "child"])
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("dir/child missing from the derived manifest"))?;
+    let expected = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir"]).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: Some(own_acl_file),
+            children: BTreeMap::from([(
+                MPathElement::new(b"child".to_vec())?,
+                AclChildNode::Known(child),
+            )]),
+        },
+    )
+    .await?;
+
+    assert!(
+        expected.is_some(),
+        "a directory with its own .slacl and a restricted child should produce a node"
+    );
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+/// Nothing restricted here or below: derivation records no node, and the
+/// builder must agree rather than storing an empty one.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_is_absent_for_an_unrestricted_directory(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file.txt", "content")
+        .add_file("restricted/.slacl", SLACL_PROJECT1)
+        .add_file("restricted/file.txt", "content")
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let restricted_sibling =
+        directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["restricted"]).await?;
+    let expected = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir"]).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: None,
+            children: BTreeMap::new(),
+        },
+    )
+    .await?;
+
+    assert!(
+        restricted_sibling.is_some(),
+        "the fixture's restricted sibling should be present in the derived manifest"
+    );
+    assert_eq!(None, expected);
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+/// The canonical empty ACL id spells absence everywhere else, so a child
+/// carrying it must not become a phantom restricted entry.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_treats_an_empty_child_id_as_absent(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let actual = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: None,
+            children: BTreeMap::from([(
+                MPathElement::new(b"child".to_vec())?,
+                AclChildNode::IdOnly(AclManifest::empty_id()),
+            )]),
+        },
+    )
+    .await?;
+
+    assert_eq!(
+        None, actual,
+        "canonical empty ACL ids should be treated as absent inputs"
+    );
+
+    Ok(())
+}
+
+/// The ACL file and the children share one key space, so a child named like the
+/// ACL file would replace the restriction leaf and the node would come back
+/// unrestricted. A manifest name is either a file or a directory, so this can
+/// only be a caller error -- and a wrong pointer here is permanent.
+#[mononoke::fbinit_test]
+async fn test_acl_node_for_directory_rejects_a_child_named_like_the_acl_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/.slacl", SLACL_PROJECT1)
+        .add_file("dir/child/.slacl", SLACL_PROJECT1)
+        .commit()
+        .await?;
+    let root_id = derive(&ctx, &repo, cs_id).await?;
+
+    let own_acl_file = content_id_at_path(&ctx, &repo, cs_id, "dir/.slacl").await?;
+    let child = directory_entry_at_path(&ctx, &repo, root_id.inner_id(), &["dir", "child"])
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("dir/child missing from the derived manifest"))?;
+    let blobstore = repo.repo_blobstore().boxed();
+
+    let err = acl_node_for_directory(
+        &ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: ".slacl",
+            own_acl_file: Some(own_acl_file),
+            children: BTreeMap::from([(
+                MPathElement::new(b".slacl".to_vec())?,
+                AclChildNode::Known(child),
+            )]),
+        },
+    )
+    .await
+    .expect_err("a child colliding with the acl file name should be rejected");
+
+    assert!(
+        err.to_string().contains("collides with acl file name"),
+        "expected a collision error, got: {err}"
     );
 
     Ok(())
