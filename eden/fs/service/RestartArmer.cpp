@@ -349,4 +349,8 @@ bool RestartArmer::armed() const {
   return armed_->load(std::memory_order_acquire);
 }
 
+void RestartArmer::clearArmed() {
+  armed_->store(false, std::memory_order_release);
+}
+
 } // namespace facebook::eden

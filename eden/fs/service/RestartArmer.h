@@ -66,6 +66,13 @@ class RestartArmer {
    */
   bool armed() const;
 
+  /**
+   * Forget that the privhelper accepted a configuration, so that the next arm
+   * answers for itself rather than for the one before it. Leaves the sentinel
+   * alone; removeSentinel() is the other half.
+   */
+  void clearArmed();
+
  private:
 #ifdef __APPLE__
   /** What to relaunch this daemon with, in the shape the restart args carry. */

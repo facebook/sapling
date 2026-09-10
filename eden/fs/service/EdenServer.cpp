@@ -1556,10 +1556,17 @@ ImmediateFuture<Unit> EdenServer::recover(TakeoverData&& data) {
           // mount points. Even if an error occurs we still transition to the
           // running state.
           [this] {
-            auto state = runningState_.wlock();
-            state->shutdownFuture =
-                folly::Future<std::optional<TakeoverData>>::makeEmpty();
-            state->state = RunState::RUNNING;
+            {
+              auto state = runningState_.wlock();
+              state->shutdownFuture =
+                  folly::Future<std::optional<TakeoverData>>::makeEmpty();
+              state->state = RunState::RUNNING;
+            }
+            // The failed takeover already disarmed us, and the privhelper is
+            // still holding cleanShutdownNotified_. Without re-arming, this
+            // recovered daemon would never be restarted again.
+            restartArmer_.clearArmed();
+            armPrivHelperRestart();
           });
 }
 
