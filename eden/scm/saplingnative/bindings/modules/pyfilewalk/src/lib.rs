@@ -10,6 +10,7 @@
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use filewalk::FileStats;
+use filewalk::ModifiedDiffPair;
 use filewalk::WalkInput;
 use filewalk::WalkOptions;
 use filewalk::prefetch;
@@ -33,6 +34,19 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
                 matcher: PyObject,
                 config: PyConfig,
                 base_manifest: Option<PyTreeManifest> = None,
+            )
+        ),
+    )?;
+    m.add(
+        py,
+        "prefetchdiffs",
+        py_fn!(
+            py,
+            prefetch_diffs_py(
+                repo: PyRepo,
+                manifest_pairs: &PyList,
+                matcher: PyObject,
+                config: PyConfig,
             )
         ),
     )?;
@@ -73,10 +87,31 @@ fn walk_and_cache_py(
         })
         .map_pyerr(py)?;
 
-    let py_stats = PyDict::new(py);
-    py_stats.set_item(py, "local", stats.local_files)?;
-    py_stats.set_item(py, "remote", stats.remote_files)?;
-    Ok(py_stats)
+    file_stats_to_py(py, stats)
+}
+
+fn prefetch_diffs_py(
+    py: Python,
+    repo: PyRepo,
+    manifest_pairs: &PyList,
+    matcher: PyObject,
+    config: PyConfig,
+) -> PyResult<PyDict> {
+    let input = extract_modified_diff_pairs(py, manifest_pairs)?;
+    let matcher = extract_matcher(py, matcher)?.0;
+    let options = WalkOptions::from_config(&config.get_cfg(py)).map_pyerr(py)?;
+    let file_store = repo.read_repo(py).file_store().map_pyerr(py)?;
+    let stats = py
+        .allow_threads(move || prefetch(input, matcher, &file_store, options))
+        .map_pyerr(py)?;
+    file_stats_to_py(py, stats)
+}
+
+fn file_stats_to_py(py: Python, stats: FileStats) -> PyResult<PyDict> {
+    let result = PyDict::new(py);
+    result.set_item(py, "local", stats.local_files)?;
+    result.set_item(py, "remote", stats.remote_files)?;
+    Ok(result)
 }
 
 fn extract_manifests(py: Python, manifests: &PyList) -> PyResult<Vec<TreeManifest>> {
@@ -87,4 +122,29 @@ fn extract_manifests(py: Python, manifests: &PyList) -> PyResult<Vec<TreeManifes
             Ok(manifest.get_underlying(py).read().clone())
         })
         .collect()
+}
+
+fn extract_modified_diff_pairs(py: Python, manifest_pairs: &PyList) -> PyResult<WalkInput> {
+    let pairs = manifest_pairs
+        .iter(py)
+        .map(|pair| {
+            let pair: PyTuple = pair.extract(py)?;
+            if pair.len(py) != 3 {
+                return Err(PyErr::new::<exc::ValueError, _>(
+                    py,
+                    "prefetchdiffs expects (manifest, base manifest, matcher) tuples",
+                ));
+            }
+
+            let manifest = PyTreeManifest::downcast_from(py, pair.get_item(py, 0))?;
+            let base_manifest = PyTreeManifest::downcast_from(py, pair.get_item(py, 1))?;
+            let matcher = extract_matcher(py, pair.get_item(py, 2))?.0;
+            Ok(ModifiedDiffPair {
+                manifest: manifest.get_underlying(py).read().clone(),
+                base_manifest: base_manifest.get_underlying(py).read().clone(),
+                matcher,
+            })
+        })
+        .collect::<PyResult<Vec<_>>>()?;
+    Ok(WalkInput::ModifiedDiffPairs(pairs))
 }
