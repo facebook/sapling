@@ -1,10 +1,11 @@
 #inprocess-hg-incompatible
-#require lldb
+#require lldb no-asan
 
 This test requires:
 - real processes (therefore inprocess-hg-incompatible)
 - python 3.10 or 3.12+ (sapling_cext_evalframe_resolve_frame in cext/evalframe.c is currently only implemented for these versions)
 - lldb (used by the debugbacktrace command)
+- a non-ASan Sapling binary (lldb does not produce a Python backtrace for the ASan-built test binary)
 
 Check python version:
 

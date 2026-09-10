@@ -549,6 +549,11 @@ def has_bucktest():
     return "HGTEST_HG" in os.environ
 
 
+@check("asan", "AddressSanitizer-instrumented Sapling binary")
+def has_asan():
+    return os.environ.get("SL_TEST_ASAN") == "1"
+
+
 @check("bash", "running via real bash")
 def has_bash():
     return False

@@ -141,6 +141,17 @@ def get_hg_test_sanitizer_env():
         ),
     )
 
+def _get_test_sanitizer_env(sanitizer):
+    env = {}
+    if sanitizer and "address" in sanitizer:
+        env["SL_TEST_ASAN"] = "1"
+    return env
+
+_TEST_SANITIZER_ENV = selects.apply(
+    sanitizers.get_sanitizer_v2(),
+    _get_test_sanitizer_env,
+)
+
 SRCS = dict(
     [("unittestify.py", "unittestify.py")],
 )
@@ -189,6 +200,11 @@ def run_tests_target(name = None, watchman = False, eden = False, mononoke = Fal
             ENV[k] = v
         else:
             ENV.pop(k)
+    base_env = ENV
+    ENV = selects.apply(
+        _TEST_SANITIZER_ENV,
+        lambda sanitizer_env: dict(sanitizer_env, **base_env),
+    )
     python_unittest(
         name = name,
         srcs = SRCS,
