@@ -8,6 +8,7 @@
 
 import binascii
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -23,6 +24,8 @@ from eden.fs.cli.util import (
 )
 
 from .config import EdenCheckout
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 _DEFAULT_EXTRA_HGRC_CONTENTS: str = """\
 [extensions]
@@ -127,6 +130,34 @@ def get_filter_id(
         raise Exception(f"Filter generation failed: {e.stderr}")
 
 
+def _setup_off_mount_hg_dir(checkout_hg_dir: Path, real_hg_dir: Path) -> None:
+    try:
+        real_hg_dir.mkdir()
+    except FileExistsError:
+        if not real_hg_dir.is_dir() or real_hg_dir.is_symlink():
+            raise Exception(f"{real_hg_dir} exists but is not a directory")
+        logger.info("Reusing existing Mercurial state directory %s", real_hg_dir)
+
+    try:
+        os.symlink(real_hg_dir, checkout_hg_dir, target_is_directory=True)
+    except FileExistsError:
+        if not checkout_hg_dir.is_symlink():
+            raise Exception(f"{checkout_hg_dir} exists but is not a symlink")
+
+        existing_target = Path(os.readlink(checkout_hg_dir))
+        if not existing_target.is_absolute():
+            existing_target = checkout_hg_dir.parent / existing_target
+        if os.path.abspath(existing_target) != os.path.abspath(real_hg_dir):
+            raise Exception(
+                f"{checkout_hg_dir} points to {existing_target}, expected {real_hg_dir}"
+            )
+        logger.info(
+            "Reusing existing Mercurial state symlink %s -> %s",
+            checkout_hg_dir,
+            real_hg_dir,
+        )
+
+
 def setup_hg_dir(
     checkout: EdenCheckout, commit_id: str, filter_paths: Optional[List[str]] = None
 ) -> None:
@@ -137,22 +168,13 @@ def setup_hg_dir(
     if config.off_mount_repo_dir:
         real_hg_dir = checkout.state_dir / _OFF_MOUNT_REPO_DIR_NAME
 
-    try:
-        real_hg_dir.mkdir()
-    except FileExistsError:
-        raise Exception(f"{real_hg_dir} directory already exists")
-
     if config.off_mount_repo_dir:
+        _setup_off_mount_hg_dir(checkout_hg_dir, real_hg_dir)
+    else:
         try:
-            os.symlink(
-                real_hg_dir,
-                checkout_hg_dir,
-                # Not strictly necessary since real_hg_dir should exist and be a directory,
-                # but just-in-case.
-                target_is_directory=True,
-            )
+            real_hg_dir.mkdir()
         except FileExistsError:
-            raise Exception(f"{checkout_hg_dir} symlink already exists")
+            raise Exception(f"{real_hg_dir} directory already exists")
 
     # repo config file (hgrc for .hg, config for .sl)
     hgrc_data = get_hgrc_data(checkout)

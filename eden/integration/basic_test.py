@@ -215,6 +215,7 @@ class BasicTest(BasicTestBase):
             self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
         self.eden.remove(self.mount)
+        self.eden.wait_for_checkout_removed(self.mount)
 
         if sys.platform != "win32":
             self.assertFalse(self.eden.in_proc_mounts(self.mount))

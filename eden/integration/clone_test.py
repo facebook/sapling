@@ -152,6 +152,11 @@ class CloneTest(testcase.EdenRepoTest):
         eden_clone2 = self.make_temporary_directory()
         self.clone_rev(self.repo.get_head_hash(), eden_clone1, eden_clone2)
 
+        self.eden.remove(eden_clone2)
+        self.eden.wait_for_checkout_removed(eden_clone2)
+        self.eden.remove(eden_clone1)
+        self.eden.wait_for_checkout_removed(eden_clone1)
+
     async def test_clone_with_symlink_exception_fails(self) -> None:
         def strip_ansi_codes(s):
             ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
@@ -174,10 +179,11 @@ class CloneTest(testcase.EdenRepoTest):
                 )
             except edenclient.EdenCommandError as e:
                 clean_error_msg = strip_ansi_codes(e.stderr.strip())
-                self.assertEqual(
+                self.assertIn(
                     "Failed to clone. Error from EdenFS: std::runtime_error: intentional exception",
                     clean_error_msg,
                 )
+                self.assertNotIn("ERROR: AddressSanitizer", clean_error_msg)
 
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
         tmp = self.make_temporary_directory()
@@ -349,6 +355,8 @@ class CloneTest(testcase.EdenRepoTest):
         self.eden.clone(self.repo.path, empty_dir, case_sensitive=False)
 
         self.assertFalse(self.eden.is_case_sensitive(empty_dir))
+        self.eden.remove(empty_dir)
+        self.eden.wait_for_checkout_removed(empty_dir)
 
 
 @testcase.eden_repo_test

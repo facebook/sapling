@@ -23,7 +23,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, cast, Dict, Generator, List, Optional, TextIO, Tuple, Union
 
-from eden.fs.cli import util
+from eden.fs.cli import proc_utils as proc_utils_mod, util
 from eden.fs.service.eden.thrift_clients import EdenService
 from eden.fs.service.eden.thrift_types import MountState
 from eden.thrift import client
@@ -35,6 +35,24 @@ from .find_executables import FindExe
 # and many-core machines under load.
 EDENFS_START_TIMEOUT = 120
 EDENFS_STOP_TIMEOUT = 240
+
+
+def is_process_running(pid: Optional[int]) -> bool:
+    if pid is None:
+        return False
+
+    if sys.platform.startswith("linux"):
+        try:
+            stat = pathlib.Path(f"/proc/{pid}/stat").read_text()
+            state = stat.rsplit(")", 1)[1].strip().split()[0]
+            if state == "Z":
+                return False
+        except FileNotFoundError:
+            return False
+        except (IndexError, OSError):
+            pass
+
+    return proc_utils_mod.new().is_process_alive(pid)
 
 
 class EdenFS:
@@ -160,6 +178,15 @@ class EdenFS:
         if process is None or process.returncode is not None:
             return
         self.shutdown(retry=retry)
+
+    def wait_for_exit(self, timeout: float = EDENFS_STOP_TIMEOUT) -> int:
+        process = self._process
+        assert process is not None
+
+        return_code = process.wait(timeout=timeout)
+        self.report_time(f"Eden process exited with return code {return_code}")
+        self._process = None
+        return return_code
 
     def kill_dirty(self) -> None:
         """Kills privhelper and this instance directly, without waiting for cleanup.
@@ -492,6 +519,26 @@ class EdenFS:
 
         self._process = process
 
+    def _kill_after_shutdown_timeout(
+        self, process: subprocess.Popen, daemon_pid: Optional[int]
+    ) -> Tuple[int, bool]:
+        if daemon_pid is not None and not is_process_running(daemon_pid):
+            self.report_time(
+                "Eden daemon exited; killing stale edenfsctl daemon wrapper"
+            )
+            process.kill()
+            return_code = process.wait(timeout=10)
+            self.report_time(
+                f"Stale edenfsctl daemon wrapper exited with return code {return_code}"
+            )
+            return return_code, True
+
+        if can_run_sudo() and daemon_pid is not None:
+            os.kill(daemon_pid, signal.SIGKILL)
+        else:
+            process.kill()
+        return process.wait(timeout=10), False
+
     def shutdown(self, retry=False) -> None:
         """
         Run "eden shutdown" to stop the eden daemon.
@@ -515,6 +562,8 @@ class EdenFS:
             # to prevent overall test timeouts.
             timeout = 10
 
+        stale_wrapper = False
+
         # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
         # process to exit.  Since we are running it directly (self._process) we will
         # need to wait on it.  Depending on exactly how it is being run the process may
@@ -533,12 +582,10 @@ class EdenFS:
         except subprocess.TimeoutExpired:
             # EdenFS did not exit normally on its own.
             self.report_time("Eden stop timed out, killing process")
-            if can_run_sudo() and daemon_pid is not None:
-                os.kill(daemon_pid, signal.SIGKILL)
-            else:
-                process.kill()
-            return_code = process.wait(timeout=10)
-            if not retry:
+            return_code, stale_wrapper = self._kill_after_shutdown_timeout(
+                process, daemon_pid
+            )
+            if not retry and not stale_wrapper:
                 raise Exception(
                     f"edenfs did not shutdown within {timeout} seconds; "
                     "had to send SIGKILL"
@@ -567,7 +614,9 @@ class EdenFS:
         finally:
             self._process = None
 
-        if return_code != 0 and not retry:
+        # A stale wrapper is intentionally killed after the daemon has exited,
+        # so its signal exit status does not indicate a daemon shutdown failure.
+        if return_code != 0 and not retry and not stale_wrapper:
             raise Exception(
                 "eden exited unsuccessfully with status {}".format(return_code)
             )
@@ -741,6 +790,16 @@ class EdenFS:
                 if entry_path == mount:
                     return MountState(entry.state)
             return None
+
+    def wait_for_checkout_removed(
+        self, mount: Union[str, os.PathLike], timeout: float = 60
+    ) -> None:
+        mount_path = pathlib.Path(mount)
+
+        def checkout_removed() -> Optional[bool]:
+            return True if self.get_mount_state(mount_path) is None else None
+
+        util.poll_until(checkout_removed, timeout=timeout)
 
     async def get_mount_state_async(
         self, mount: pathlib.Path, client: Optional[EdenService.Async] = None

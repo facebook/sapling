@@ -50,9 +50,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         """
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.run_cmd("debug", "getpath", "1234", cwd=self.mount)
-            self.assertIn(
-                "unknown inode number 1234", context.exception.stderr.decode()
-            )
+        self.assertIn("unknown inode number 1234", context.exception.stderr)
 
     async def test_getpath_unloaded_inode(self) -> None:
         """
@@ -64,12 +62,15 @@ class DebugGetPathTest(testcase.EdenRepoTest):
 
         # Create the file
         self.write_file(os.path.join("dir", "file"), "blah")
-        # Get the inodeNumber
-        stat = os.stat(filepath)
-        await self.unload_one_inode_under("dir")
+        with open(filepath, "rb") as f:
+            # Get the inodeNumber
+            stat_result = os.fstat(f.fileno())
+            await self.unload_one_inode_under("dir")
 
-        # Get the path for dir/file from its inodeNumber
-        output = self.eden.run_cmd("debug", "getpath", str(stat.st_ino), cwd=self.mount)
+            # Get the path for dir/file from its inodeNumber
+            output = self.eden.run_cmd(
+                "debug", "getpath", str(stat_result.st_ino), cwd=self.mount
+            )
 
         self.assertEqual(f"unloaded {filepath}\n", output)
 
@@ -81,15 +82,21 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         # Create the file
         self.write_file(os.path.join("foo", "bar", "test.txt"), "blah")
         dirpath = os.path.join(self.mount, "foo", "bar")
-        # Get the inodeNumber
-        stat = os.stat(os.path.join(dirpath, "test.txt"))
+        filepath = os.path.join(dirpath, "test.txt")
+        with open(filepath, "rb") as f:
+            # Get the inodeNumber
+            stat_result = os.fstat(f.fileno())
 
-        await self.unload_one_inode_under(os.path.join("foo", "bar"))
+            await self.unload_one_inode_under(os.path.join("foo", "bar"))
 
-        # Rename the foo directory
-        os.rename(os.path.join(self.mount, "foo"), os.path.join(self.mount, "newname"))
-        # Get the new path for the file from its inodeNumber
-        output = self.eden.run_cmd("debug", "getpath", str(stat.st_ino), cwd=self.mount)
+            # Rename the foo directory
+            os.rename(
+                os.path.join(self.mount, "foo"), os.path.join(self.mount, "newname")
+            )
+            # Get the new path for the file from its inodeNumber
+            output = self.eden.run_cmd(
+                "debug", "getpath", str(stat_result.st_ino), cwd=self.mount
+            )
 
         self.assertEqual(
             "unloaded " + os.path.join(self.mount, "newname", "bar", "test.txt") + "\n",

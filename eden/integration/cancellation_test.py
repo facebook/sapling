@@ -192,8 +192,10 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 "debugGetBlob request should be cancelable",
             )
 
-            # Stop the Eden server - this should trigger cancellation
-            self.eden.shutdown()
+            # Stop the Eden server. Use thrift directly here so the request is
+            # cancelled by shutdown before the test fault's internal timeout.
+            async with self.eden.get_async_thrift_client() as shutdown_client:
+                await shutdown_client.initiateShutdown("test shutdown")
 
             with self.assertRaises(EdenError) as cm:
                 await asyncio.wait_for(blob_task, timeout=5.0)
@@ -204,6 +206,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 error.message,
                 "Expected folly::OperationCancelled in error message",
             )
+            self.assertEqual(0, self.eden.wait_for_exit(timeout=10))
 
     async def test_bulk_cancel_nonexistent_requests(self) -> None:
         """Test cancelling multiple non-existent requests in a single bulk operation."""

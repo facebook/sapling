@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 
+from eden.fs.cli import util
 from eden.fs.service.eden.thrift_types import (
     Added,
     CommitTransition,
@@ -26,6 +27,7 @@ from eden.fs.service.eden.thrift_types import (
     LostChangesReason,
     Modified,
     Removed,
+    RemoveFaultArg,
     Renamed,
     Replaced,
     StateEntered,
@@ -49,6 +51,45 @@ else:
 
 @testcase.eden_repo_test
 class ChangesTestCommon(testBase):
+    async def unblock_changes_since_sequence_fault(self, client) -> None:
+        async def unblock_when_blocked():
+            unblocked = await client.unblockFault(
+                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
+            )
+            if unblocked > 0:
+                return True
+            return None
+
+        await util.poll_until_async(unblock_when_blocked, timeout=30)
+        await client.removeFault(
+            RemoveFaultArg(keyClass="changesSince", keyValueRegex="sequence")
+        )
+
+    def communicate_changes_since(self, proc: subprocess.Popen) -> bytes:
+        try:
+            raw_changes, stderr = proc.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            try:
+                raw_changes, stderr = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.fail(
+                    "eden notify changes-since did not exit within 10 seconds "
+                    "after SIGKILL"
+                )
+            self.fail(
+                "eden notify changes-since did not exit after unblocking "
+                f"fault. stdout: {raw_changes.decode(errors='replace')} "
+                f"stderr: {stderr.decode(errors='replace')}"
+            )
+
+        self.assertEqual(
+            0,
+            proc.returncode,
+            msg=stderr.decode(errors="replace"),
+        )
+        return raw_changes
+
     async def test_wrong_mount_generation(self):
         # The input mount generation should equal the current mount generation
         async with self.get_async_thrift_client() as client:
@@ -604,8 +645,7 @@ class ChangesTestCommon(testBase):
             proc = subprocess.Popen(
                 cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-
-            time.sleep(1)
+            self.wait_on_fault_hit(key_class="changesSince")
 
             for _ in range(10):
                 await self.repo_write_file(
@@ -613,10 +653,8 @@ class ChangesTestCommon(testBase):
                 )
                 self.rm("test_folder/test_file")
 
-            await client.unblockFault(
-                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
-            )
-            raw_changes, _ = proc.communicate()
+            await self.unblock_changes_since_sequence_fault(client)
+            raw_changes = self.communicate_changes_since(proc)
 
             sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
             # Expect that the sequence number is at least 20 higher than the original position
@@ -650,8 +688,7 @@ class ChangesTestCommon(testBase):
             proc = subprocess.Popen(
                 cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-
-            time.sleep(2)
+            self.wait_on_fault_hit(key_class="changesSince")
 
             for _ in range(10):
                 self.rename("test_folder", "test_folder2")
@@ -661,11 +698,8 @@ class ChangesTestCommon(testBase):
                 if sys.platform == "win32":
                     time.sleep(1)
 
-            time.sleep(2)
-            await client.unblockFault(
-                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
-            )
-            raw_changes, _ = proc.communicate()
+            await self.unblock_changes_since_sequence_fault(client)
+            raw_changes = self.communicate_changes_since(proc)
 
             sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
             # Expect that the sequence number is at least 20 higher than the original position
@@ -702,18 +736,14 @@ class ChangesTestCommon(testBase):
             proc = subprocess.Popen(
                 cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-
-            time.sleep(2)
+            self.wait_on_fault_hit(key_class="changesSince")
 
             for _ in range(10):
                 self.eden_repo.update(commit1)
                 self.eden_repo.update(commit2)
 
-            time.sleep(2)
-            await client.unblockFault(
-                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
-            )
-            raw_changes, _ = proc.communicate()
+            await self.unblock_changes_since_sequence_fault(client)
+            raw_changes = self.communicate_changes_since(proc)
 
             sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
             # Expect that the sequence number is at least 20 higher than the original position
