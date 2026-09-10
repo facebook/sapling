@@ -51,6 +51,7 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/AsyncSignalHandler.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/SysTypes.h>
@@ -3766,8 +3767,16 @@ bool EdenServer::stopAllGarbageCollections(
     std::chrono::seconds retryInterval) {
   // First stop the periodic GC - must run on EventBase thread
   // This should be cheap, so we just block on this to finish.
-  mainEventBase_->runImmediatelyOrRunInEventBaseThreadAndWait(
-      [this]() { gcTask_.updateInterval(std::chrono::seconds(0)); });
+  auto stopPeriodicGC = [this]() {
+    gcTask_.updateInterval(std::chrono::seconds(0));
+  };
+  if (mainEventBase_->inRunningEventBaseThread() ||
+      mainEventBase_ ==
+          folly::EventBaseManager::get()->getExistingEventBase()) {
+    stopPeriodicGC();
+  } else {
+    mainEventBase_->runInEventBaseThreadAndWait(std::move(stopPeriodicGC));
+  }
 
   // By default, folly futures and thread pools do not provide a built-in way
   // to forcibly stop a running task. We can cancel any running GC and wait

@@ -445,6 +445,7 @@ cpp_library(
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/executors/thread_factory:named_thread_factory",
         "//folly/io/async:async_signal_handler",
+        "//folly/io/async:event_base_manager",
         "//folly/json:dynamic",
         "//folly/logging:logging",
         "//folly/portability:fcntl",

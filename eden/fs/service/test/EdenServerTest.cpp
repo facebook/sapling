@@ -527,4 +527,32 @@ TEST_F(EdenServerTest, StopAllGarbageCollectionsDoesNotPoisonFutureGC) {
 #endif
 }
 
+TEST_F(EdenServerTest, StopAllGarbageCollectionsWithStoppedEventBase) {
+  auto& server = testServer().getServer();
+  server.stop();
+
+  ASSERT_EQ(EdenServer::RunState::SHUTTING_DOWN, server.getStatus());
+  ASSERT_FALSE(server.getMainEventBase()->isRunning());
+  EXPECT_TRUE(server.stopAllGarbageCollections(
+      /*maxRetries=*/0, /*retryInterval=*/std::chrono::seconds{0}));
+}
+
+TEST_F(
+    EdenServerTest,
+    StopAllGarbageCollectionsFromWorkerWaitsForStoppedEventBase) {
+  auto& server = testServer().getServer();
+  server.stop();
+
+  ASSERT_FALSE(server.getMainEventBase()->isRunning());
+  auto stopResult = std::async(std::launch::async, [&server] {
+    return server.stopAllGarbageCollections(
+        /*maxRetries=*/0, /*retryInterval=*/std::chrono::seconds{0});
+  });
+
+  ASSERT_EQ(std::future_status::timeout, stopResult.wait_for(1s));
+  server.getMainEventBase()->loopOnce();
+  ASSERT_EQ(std::future_status::ready, stopResult.wait_for(5s));
+  EXPECT_TRUE(stopResult.get());
+}
+
 } // namespace facebook::eden
