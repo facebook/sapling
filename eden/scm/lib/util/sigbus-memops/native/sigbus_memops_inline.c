@@ -10,7 +10,7 @@
 
 #include <stdint.h> // @manual
 
-#if SIGBUS_MEMOPS_HAS_PROTECTION
+#if SIGBUS_MEMOPS_HAS_PROTECTION && !SIGBUS_MEMOPS_WINDOWS_SEH
 
 // The inline assembly defines process-wide fault and recovery symbols, so the
 // compiler must not make additional copies of these functions. Clang's

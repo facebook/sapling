@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+bool sigbus_test_raise_in_page_error(void);
+#endif
 #ifndef _WIN32
 #include <sys/mman.h>
 #if defined(__APPLE__) && defined(__MACH__)
@@ -65,7 +68,20 @@ int main(void) {
     return 0;
   }
 
-#ifndef _WIN32
+#ifdef _WIN32
+  uint8_t source[32];
+  uint8_t destination[sizeof(source)] = {0};
+  for (size_t i = 0; i < sizeof(source); ++i) {
+    source[i] = (uint8_t)(0x80 + i);
+  }
+
+  CHECK(sigbus_try_memcpy(destination, source, sizeof(source)));
+  CHECK(memcmp(destination, source, sizeof(source)) == 0);
+  CHECK(sigbus_try_read(destination, sizeof(destination)));
+  CHECK(sigbus_try_read(NULL, 0));
+  CHECK(sigbus_test_raise_in_page_error());
+  return 0;
+#else
 
   long page_size_long = sysconf(_SC_PAGESIZE);
   CHECK(page_size_long > 0);
@@ -129,7 +145,5 @@ int main(void) {
   CHECK(munmap(mapping, 2 * page_size) == 0);
   CHECK(close(fd) == 0);
   return 0;
-#else
-  return 1;
 #endif
 }

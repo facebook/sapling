@@ -13,6 +13,10 @@ cpp_library(
     headers = ["sigbus_memops.h"],
     header_namespace = "",
     private_headers = ["native/sigbus_memops_config.h"],
+    compiler_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["-fasync-exceptions"],
+    }),
 )
 
 cpp_binary(

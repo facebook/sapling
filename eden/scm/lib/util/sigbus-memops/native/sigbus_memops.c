@@ -18,7 +18,50 @@ bool sigbus_is_protected(void) {
   return SIGBUS_MEMOPS_HAS_PROTECTION;
 }
 
-#if SIGBUS_MEMOPS_HAS_PROTECTION
+#if SIGBUS_MEMOPS_WINDOWS_SEH
+
+// @lint-ignore SPELL
+#include <excpt.h>
+#include <windows.h>
+
+static int sigbus_memops_filter(unsigned long code) {
+  return code == EXCEPTION_IN_PAGE_ERROR ? EXCEPTION_EXECUTE_HANDLER
+                                         : EXCEPTION_CONTINUE_SEARCH;
+}
+
+bool sigbus_test_raise_in_page_error(void) {
+  __try {
+    RaiseException(EXCEPTION_IN_PAGE_ERROR, 0, 0, NULL);
+  } __except (sigbus_memops_filter(GetExceptionCode())) {
+    return true;
+  }
+  return false;
+}
+
+bool sigbus_try_memcpy(void* dst, const void* src, size_t len) {
+  __try {
+    if (len != 0) {
+      memcpy(dst, src, len);
+    }
+    return true;
+  } __except (sigbus_memops_filter(GetExceptionCode())) {
+    return false;
+  }
+}
+
+bool sigbus_try_read(const void* src, size_t len) {
+  __try {
+    const volatile unsigned char* bytes = src;
+    for (size_t i = 0; i < len; ++i) {
+      (void)bytes[i];
+    }
+    return true;
+  } __except (sigbus_memops_filter(GetExceptionCode())) {
+    return false;
+  }
+}
+
+#elif SIGBUS_MEMOPS_HAS_PROTECTION
 
 #include <signal.h>
 #include <stdint.h>

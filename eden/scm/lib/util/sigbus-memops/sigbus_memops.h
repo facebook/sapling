@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/* Return whether SIGBUS protection is available on this target. */
+/* Return whether SIGBUS or equivalent exception protection is available. */
 bool sigbus_is_protected(void);
 
 #ifndef _WIN32
@@ -48,6 +48,9 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* ucontext);
  * write raises a recognized synchronous SIGBUS. In that case, `src` might be
  * partially copied to `dst`.
  *
+ * On Windows, the equivalent exception is `EXCEPTION_IN_PAGE_ERROR`.
+ * `EXCEPTION_ACCESS_VIOLATION` is not handled.
+ *
  * On unsupported targets, calls libc memcpy and returns true if memcpy returns
  * normally.
  *
@@ -60,6 +63,9 @@ bool sigbus_try_memcpy(void* dst, const void* src, size_t len);
  *
  * On supported targets, returns false if a read raises a recognized synchronous
  * SIGBUS.
+ *
+ * On Windows, the equivalent exception is `EXCEPTION_IN_PAGE_ERROR`.
+ * `EXCEPTION_ACCESS_VIOLATION` is not handled.
  *
  * On unsupported targets, the reads are unprotected.
  *

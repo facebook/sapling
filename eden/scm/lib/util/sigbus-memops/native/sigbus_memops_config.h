@@ -8,7 +8,12 @@
 #ifndef SIGBUS_MEMOPS_CONFIG_H
 #define SIGBUS_MEMOPS_CONFIG_H
 
-#if !defined(SIGBUS_MEMOPS_FORCE_FALLBACK) && \
+#if !defined(SIGBUS_MEMOPS_FORCE_FALLBACK) && defined(_WIN32) && \
+    defined(_MSC_VER)
+#define SIGBUS_MEMOPS_WINDOWS_SEH 1
+#endif
+
+#if !defined(SIGBUS_MEMOPS_FORCE_FALLBACK) && !defined(_WIN32) && \
     (defined(__GNUC__) || defined(__clang__))
 #if defined(__x86_64__)
 #if defined(__linux__)
@@ -35,7 +40,12 @@
 #define SIGBUS_MEMOPS_DARWIN_AARCH64 0
 #endif
 
-#if SIGBUS_MEMOPS_ARCH_X86_64 || SIGBUS_MEMOPS_ARCH_AARCH64
+#ifndef SIGBUS_MEMOPS_WINDOWS_SEH
+#define SIGBUS_MEMOPS_WINDOWS_SEH 0
+#endif
+
+#if SIGBUS_MEMOPS_ARCH_X86_64 || SIGBUS_MEMOPS_ARCH_AARCH64 || \
+    SIGBUS_MEMOPS_WINDOWS_SEH
 #define SIGBUS_MEMOPS_HAS_PROTECTION 1
 #else
 #define SIGBUS_MEMOPS_HAS_PROTECTION 0
