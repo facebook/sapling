@@ -29,6 +29,50 @@ class HgError(CommandError):
     pass
 
 
+def _append_tsan_suppressions(env: Dict[str, str]) -> Dict[str, str]:
+    tsan_options = env.get("TSAN_OPTIONS")
+    suppressions = env.get("EDEN_TSAN_SUPPRESSIONS")
+    if not tsan_options or not suppressions:
+        return env
+
+    if any(option.startswith("suppressions=") for option in tsan_options.split(":")):
+        return env
+
+    env = dict(env)
+    env["TSAN_OPTIONS"] = f"{tsan_options}:suppressions={os.path.abspath(suppressions)}"
+    return env
+
+
+def _finish_hg_result(
+    cmd: List[str],
+    result: Optional[subprocess.CompletedProcess],
+    error: Optional[subprocess.CalledProcessError],
+    stdout_content: Optional[bytes],
+    stderr_content: Optional[bytes],
+) -> subprocess.CompletedProcess:
+    if error is not None:
+        print("----------- Mercurial Crash Report")
+        print("cmd: ", " ".join(cmd))
+        if stdout_content is not None:
+            error.stdout = stdout_content
+            print("stdout: ", stdout_content.decode())
+        if stderr_content is not None:
+            error.stderr = stderr_content
+            print("stderr: ", stderr_content.decode())
+        print("----------- Mercurial Crash Report End")
+        raise HgError(error) from error
+
+    if result is not None:
+        if stdout_content is not None:
+            result.stdout = stdout_content
+        if stderr_content is not None:
+            result.stderr = stderr_content
+        return result
+
+    # practically unreachable, just to make pyre happy.
+    raise RuntimeError("either result or error should be set")
+
+
 class HgRepository(repobase.Repository):
     hg_bin: str
     hg_environment: Dict[str, str]
@@ -153,7 +197,7 @@ class HgRepository(repobase.Repository):
         traceback: bool = True,
         env: Optional[Dict[str, str]] = None,
     ) -> subprocess.CompletedProcess:
-        env = self.hg_environment | (env or {})
+        env = _append_tsan_suppressions(self.hg_environment | (env or {}))
         argslist = list(args)
         cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + argslist
         print(f"Trying to run {cmd}")
@@ -210,26 +254,7 @@ class HgRepository(repobase.Repository):
                 stderr_content = stderr_file.read()
                 stderr_file.close()
 
-        if error is not None:
-            print("----------- Mercurial Crash Report")
-            print("cmd: ", " ".join(cmd))
-            if stdout_content is not None:
-                error.stdout = stdout_content
-                print("stdout: ", stdout_content.decode())
-            if stderr_content is not None:
-                error.stderr = stderr_content
-                print("stderr: ", stderr_content.decode())
-            print("----------- Mercurial Crash Report End")
-            raise HgError(error) from error
-        elif result is not None:
-            if stdout_content is not None:
-                result.stdout = stdout_content
-            if stderr_content is not None:
-                result.stderr = stderr_content
-            return result
-        else:
-            # practically unreachable, just to make pyre happy.
-            raise RuntimeError("either result or error should be set")
+        return _finish_hg_result(cmd, result, error, stdout_content, stderr_content)
 
     def run(
         self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
