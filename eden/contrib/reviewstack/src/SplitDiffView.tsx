@@ -115,7 +115,7 @@ export default function SplitDiffView({
     const errorMessage =
       typeof loadable.error === 'string'
         ? loadable.error
-        : (loadable.error?.message ?? 'Unknown error');
+        : loadable.error?.message ?? 'Unknown error';
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
@@ -178,7 +178,12 @@ const SplitDiffViewTable = React.memo(
     newCommentInputCallbacks: NewCommentInputCallbacks | null;
     commitIDs: DiffCommitIDs | null;
   }): React.ReactElement => {
-    const {onShowNewCommentInput, onResetNewCommentInput} = newCommentInputCallbacks ?? {};
+    const {
+      onExtendNewCommentRange,
+      onResetNewCommentInput,
+      onShowNewCommentInput,
+      onStartNewCommentRange,
+    } = newCommentInputCallbacks ?? {};
 
     useEffect(() => onResetNewCommentInput?.(), [commitIDs, onResetNewCommentInput]);
     const [expandedSeparators, setExpandedSeparators] = useState<Readonly<Set<string>>>(
@@ -300,7 +305,11 @@ const SplitDiffViewTable = React.memo(
     }
 
     return (
-      <table className="SplitDiffView-hunk-table" onClick={onShowNewCommentInput}>
+      <table
+        className="SplitDiffView-hunk-table"
+        onClick={onShowNewCommentInput}
+        onPointerDown={onStartNewCommentRange}
+        onPointerOver={onExtendNewCommentRange}>
         <colgroup>
           <col width={50} />
           <col width={'50%'} />

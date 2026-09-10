@@ -5,19 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DiffSide} from './generated/graphql';
+
 import PullRequestCommentInput from './PullRequestCommentInput';
-import {DiffSide} from './generated/graphql';
 import {
   gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestNewCommentInputCellAtom,
-  gitHubPullRequestPositionForLineAtom,
 } from './jotai';
+import {reviewCommentRangeAtom} from './reviewCommentRange';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
-import {useMemo, useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 
 type Props = {
   line: number;
@@ -25,9 +26,39 @@ type Props = {
   side: DiffSide;
 };
 
+function getSelectedLineText(range: {
+  startLine: number;
+  endLine: number;
+  path: string;
+  side: DiffSide;
+}): string {
+  const contentByLine = new Map<number, string>();
+  document.querySelectorAll<HTMLElement>('[data-review-comment-line-content]').forEach(element => {
+    if (element.dataset.path !== range.path || element.dataset.side !== range.side) {
+      return;
+    }
+    const lineNumber = Number(element.dataset.lineNumber);
+    if (lineNumber >= range.startLine && lineNumber <= range.endLine) {
+      contentByLine.set(lineNumber, element.textContent ?? '');
+    }
+  });
+  return Array.from({length: range.endLine - range.startLine + 1}, (_, index) => {
+    const lineNumber = range.startLine + index;
+    const content = contentByLine.get(lineNumber);
+    if (content == null) {
+      throw new Error(`Could not read selected diff line ${lineNumber}.`);
+    }
+    return content;
+  }).join('\n');
+}
+
 export default function PullRequestNewCommentInput({line, path, side}: Props): React.ReactElement {
   const setCellAtom = useSetAtom(gitHubPullRequestNewCommentInputCellAtom);
-  const onCancel = useCallback(() => setCellAtom(null), [setCellAtom]);
+  const setRange = useSetAtom(reviewCommentRangeAtom);
+  const onCancel = useCallback(() => {
+    setCellAtom(null);
+    setRange(null);
+  }, [setCellAtom, setRange]);
   const refreshPullRequest = useRefreshPullRequest();
 
   // Client is already loaded by the time we're adding a comment
@@ -37,12 +68,17 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const comparableVersions = useAtomValue(gitHubPullRequestComparableVersionsAtom);
 
-  // Get position for this line using the Jotai atom
-  const positionAtom = useMemo(
-    () => gitHubPullRequestPositionForLineAtom({line, path, side}),
-    [line, path, side],
+  const selectedRange = useAtomValue(reviewCommentRangeAtom);
+  const range = useMemo(
+    () =>
+      selectedRange != null &&
+      selectedRange.path === path &&
+      selectedRange.side === side &&
+      selectedRange.endLine === line
+        ? selectedRange
+        : {anchorLine: line, startLine: line, endLine: line, path, side},
+    [line, path, selectedRange, side],
   );
-  const position = useAtomValue(positionAtom);
 
   const addComment = useCallback(
     async (comment: string): Promise<void> => {
@@ -59,20 +95,20 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
         return Promise.reject('comparableVersions not found');
       }
 
-      const {beforeCommitID, afterCommitID} = comparableVersions;
-      const commitID =
-        beforeCommitID != null && side === DiffSide.Left ? beforeCommitID : afterCommitID;
-
-      if (position == null) {
-        return Promise.reject('positionForLine not found');
-      }
-
-      await client.addPullRequestReviewComment({
-        body: comment,
-        commitOID: commitID,
-        path,
-        position,
+      await client.addPullRequestReview({
+        commitOID: comparableVersions.afterCommitID,
         pullRequestId,
+        threads: [
+          {
+            body: comment,
+            line: range.endLine,
+            path,
+            side,
+            ...(range.startLine === range.endLine
+              ? {}
+              : {startLine: range.startLine, startSide: side}),
+          },
+        ],
       });
 
       // Note that onCancel() will reset gitHubPullRequestNewCommentInputCellAtom
@@ -81,15 +117,24 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
       onCancel();
       refreshPullRequest();
     },
-    [client, comparableVersions, onCancel, path, position, pullRequest, refreshPullRequest, side],
+    [client, comparableVersions, onCancel, path, pullRequest, range, refreshPullRequest, side],
   );
+
+  const lineLabel =
+    range.startLine === range.endLine
+      ? `line ${range.endLine}`
+      : `lines ${range.startLine}–${range.endLine}`;
+  const suggestedChangeText = getSelectedLineText(range);
 
   return (
     <Box backgroundColor="canvas.subtle" fontFamily="normal" padding={2}>
       <Box borderColor="border.default" borderWidth={1} borderStyle="solid">
         <Box padding={2}>
           <Text>
-            Commenting on <Text fontWeight="bold">line {line}</Text>
+            Commenting on <Text fontWeight="bold">{lineLabel}</Text>
+          </Text>
+          <Text as="p" color="fg.muted" fontSize={0} marginBottom={0}>
+            Shift-click or drag across line numbers to select a contiguous range.
           </Text>
         </Box>
         {/* Do not reset input after adding a comment because addComment unmounts it. */}
@@ -98,6 +143,8 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
           onCancel={onCancel}
           autoFocus={true}
           resetInputAfterAddingComment={false}
+          enableSuggestedChange={true}
+          suggestedChangeText={suggestedChangeText}
         />
       </Box>
     </Box>

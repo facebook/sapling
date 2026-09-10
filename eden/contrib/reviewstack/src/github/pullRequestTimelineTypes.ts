@@ -39,7 +39,9 @@ export type CommitData = CommitFragment;
 
 type Repository = NonNullable<PullRequestQueryData['repository']>;
 
-export type PullRequest = NonNullable<Repository['pullRequest']>;
+export type PullRequest = NonNullable<Repository['pullRequest']> & {
+  checksError?: string;
+};
 
 export type PullRequestReviewThread = PullRequestReviewThreadFragment;
 

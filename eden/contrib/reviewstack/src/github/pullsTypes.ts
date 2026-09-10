@@ -9,6 +9,7 @@ import type {PaginationParams} from './types';
 import type {PageInfo, PullRequestState, PullsPullRequestFragment} from '../generated/graphql';
 
 export type PullsQueryInput = PaginationParams & {
+  includeBody?: boolean;
   labels: string[];
   states: PullRequestState[];
 };

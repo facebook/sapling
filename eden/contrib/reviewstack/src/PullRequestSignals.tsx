@@ -8,7 +8,7 @@
 import type {CheckStatusState} from './generated/graphql';
 
 import {CheckConclusionState} from './generated/graphql';
-import {gitHubPullRequestCheckRunsAtom} from './jotai';
+import {gitHubPullRequestAtom, gitHubPullRequestCheckRunsAtom} from './jotai';
 import {
   AlertIcon,
   BlockedIcon,
@@ -20,11 +20,35 @@ import {
   StopIcon,
   XCircleIcon,
 } from '@primer/octicons-react';
-import {Box, Details, Link, StyledOcticon, Text, useDetails} from '@primer/react';
+import {Box, Details, Flash, Link, StyledOcticon, Text, useDetails} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import {useMemo} from 'react';
 
 export default function PullRequestSignals(): React.ReactElement {
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
+  if (pullRequest?.checksError != null) {
+    return (
+      <Flash variant="warning" role="alert">
+        <Text as="p" fontWeight="bold">
+          CI checks unavailable with this token.
+        </Text>
+        <Text as="p">GitHub denied access to CI checks. You can still review the code.</Text>
+        <Link href={`${pullRequest.url}/checks`} target="_blank" rel="noreferrer">
+          View checks on GitHub
+        </Link>
+        <details>
+          <summary>GitHub error details</summary>
+          <Box as="pre" sx={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>
+            {pullRequest.checksError}
+          </Box>
+        </details>
+      </Flash>
+    );
+  }
+  return <AvailablePullRequestSignals />;
+}
+
+function AvailablePullRequestSignals(): React.ReactElement {
   const checkRuns = useAtomValue(gitHubPullRequestCheckRunsAtom);
   const successful = useMemo(
     () => checkRuns.filter(({conclusion}) => conclusion === CheckConclusionState.Success).length,

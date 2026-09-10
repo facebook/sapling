@@ -52,7 +52,7 @@ import type {
 
 import {globalCacheStats} from './GitHubClientStats';
 import {createGraphQLEndpointForHostname} from './gitHubCredentials';
-import queryGraphQL from './queryGraphQL';
+import queryGraphQL, {GitHubGraphQLError} from './queryGraphQL';
 import {
   AddCommentMutation,
   AddLabelsToLabelableMutation,
@@ -267,12 +267,39 @@ export default class GraphQLGitHubClient implements GitHubClient {
       numComments: NUM_COMMENTS_TO_FETCH,
       numTimelineItems: NUM_TIMELINE_ITEMS_TO_FETCH,
     };
-    const data = await this.query<PullRequestQueryData, PullRequestQueryVariables>(
-      PullRequestQuery,
-      variables,
-    );
-    ++globalCacheStats.gitHubGetPullRequest;
-    return data?.repository?.pullRequest ?? null;
+    try {
+      const data = await this.query<PullRequestQueryData, PullRequestQueryVariables>(
+        PullRequestQuery,
+        variables,
+      );
+      ++globalCacheStats.gitHubGetPullRequest;
+      return data?.repository?.pullRequest ?? null;
+    } catch (error) {
+      // GraphQL can return the PR and its diff inputs while denying CI metadata.
+      // Keep that data only when every error belongs to the optional Checks panel.
+      if (
+        error instanceof GitHubGraphQLError &&
+        error.errors.every(
+          ({type, path}) =>
+            type === 'FORBIDDEN' &&
+            path?.[0] === 'repository' &&
+            path[1] === 'pullRequest' &&
+            path[2] === 'commits' &&
+            path[3] === 'nodes' &&
+            typeof path[4] === 'number' &&
+            path[5] === 'commit' &&
+            path[6] === 'checkSuites',
+        )
+      ) {
+        const data = error.data as PullRequestQueryData | null;
+        const pullRequest = data?.repository?.pullRequest;
+        if (pullRequest != null) {
+          ++globalCacheStats.gitHubGetPullRequest;
+          return {...pullRequest, checksError: error.message};
+        }
+      }
+      throw error;
+    }
   }
 
   async getPullRequests(input: PullsQueryInput): Promise<PullsWithPageInfo | null> {
