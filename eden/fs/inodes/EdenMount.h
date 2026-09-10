@@ -107,6 +107,11 @@ class SharedRenameLock;
 
 constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
+// Checkout carries RenameLock across async continuations, so release may run
+// on a different worker thread from acquire. Use the same SharedMutex
+// implementation without TSan's thread-affine rwlock annotations.
+using RenameMutex = folly::SharedMutexSuppressTSAN;
+
 /**
  * Represents an inode state transition and the duration it took for the event
  * to occur. Currently this tracks inode loads and inode materializations. This
@@ -1416,7 +1421,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Any operation that modifies an existing InodeBase's location_ data must
    * hold the rename lock.
    */
-  mutable folly::SharedMutex renameMutex_;
+  mutable RenameMutex renameMutex_;
 
   /**
    * The IDs of the parent commit of the working directory.
@@ -1574,11 +1579,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
  * but it also provides a helper method to ensure that it is currently holding
  * a lock on the desired mount.
  */
-class RenameLock : public std::unique_lock<folly::SharedMutex> {
+class RenameLock : public std::unique_lock<RenameMutex> {
  public:
   RenameLock() {}
   explicit RenameLock(EdenMount* mount)
-      : std::unique_lock<folly::SharedMutex>{mount->renameMutex_} {}
+      : std::unique_lock<RenameMutex>{mount->renameMutex_} {}
 
   bool isHeld(EdenMount* mount) const {
     return owns_lock() && (mutex() == &mount->renameMutex_);
@@ -1588,10 +1593,10 @@ class RenameLock : public std::unique_lock<folly::SharedMutex> {
 /**
  * SharedRenameLock is a holder for an EdenMount's rename mutex in shared mode.
  */
-class SharedRenameLock : public std::shared_lock<folly::SharedMutex> {
+class SharedRenameLock : public std::shared_lock<RenameMutex> {
  public:
   explicit SharedRenameLock(EdenMount* mount)
-      : std::shared_lock<folly::SharedMutex>{mount->renameMutex_} {}
+      : std::shared_lock<RenameMutex>{mount->renameMutex_} {}
 
   bool isHeld(EdenMount* mount) const {
     return owns_lock() && (mutex() == &mount->renameMutex_);

@@ -12,6 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <thread>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -40,6 +41,18 @@ TEST(CheckoutContextTest, errorsAreReturnedAsConflicts) {
   EXPECT_EQ(ConflictType::ERROR, conflicts[0].type().value());
   EXPECT_THAT(
       conflicts[0].message().value(), testing::EndsWith(": checkout error"));
+}
+
+TEST(CheckoutContextTest, RenameLockAllowsCrossThreadRelease) {
+  TestMount testMount{FakeTreeBuilder{}};
+
+  auto renameLock = testMount.getEdenMount()->acquireRenameLock();
+  std::thread releaser{
+      [renameLock = std::move(renameLock)]() mutable { renameLock.unlock(); }};
+  releaser.join();
+
+  auto sharedLock = testMount.getEdenMount()->acquireSharedRenameLock();
+  EXPECT_TRUE(sharedLock.owns_lock());
 }
 
 TEST(CheckoutContextTest, logsCheckoutErrorOnceAtBoundary) {
