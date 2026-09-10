@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import asyncio
 import configparser
 import datetime
 import json
@@ -490,6 +491,39 @@ class HgRepository(repobase.Repository):
             args.append("--merge")
         args.append(rev)
         return self.hg(*args, **opts)
+
+    async def update_async(
+        self, rev: str, clean: bool = False, merge: bool = False
+    ) -> str:
+        args = ["update"]
+        if clean:
+            args.append("--clean")
+        if merge:
+            args.append("--merge")
+        args.append(rev)
+
+        command = [self.hg_bin, "--traceback", *args]
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            cwd=self.path,
+            env=self.hg_environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        returncode = process.returncode
+        if returncode is None:
+            raise RuntimeError("async hg process did not report an exit status")
+        if returncode != 0:
+            error = subprocess.CalledProcessError(
+                returncode,
+                command,
+                output=stdout,
+                stderr=stderr,
+            )
+            raise HgError(error) from error
+        return stdout.decode("utf-8", errors="replace")
 
     def reset(self, rev: str, keep: bool = True) -> None:
         if keep:

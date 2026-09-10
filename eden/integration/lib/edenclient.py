@@ -854,6 +854,10 @@ class EdenFS:
     def unmount(self, mount_path: pathlib.Path) -> None:
         self.run_cmd("unmount", "--", str(mount_path))
 
+    async def unmount_async(self, mount_path: pathlib.Path) -> None:
+        async with self.get_async_thrift_client() as client:
+            await client.unmount(os.fsencode(mount_path))
+
 
 class EdenCommandError(subprocess.CalledProcessError):
     def __init__(self, ex: subprocess.CalledProcessError) -> None:

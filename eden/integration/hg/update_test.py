@@ -6,8 +6,10 @@
 
 # pyre-unsafe
 
+import asyncio
 import logging
 import os
+import pathlib
 import re
 import signal
 import sys
@@ -16,10 +18,9 @@ from contextlib import asynccontextmanager
 from enum import Enum
 from textwrap import dedent
 from threading import Thread
-from typing import AsyncGenerator, Dict, List, Optional, Set
+from typing import AsyncGenerator, Awaitable, Dict, List, Optional, Set
 
 from eden.fs.cli import util
-from eden.fs.cli.mp import get_context
 from eden.fs.service.eden.thrift_types import (
     CheckoutMode,
     CheckOutRevisionParams,
@@ -28,6 +29,7 @@ from eden.fs.service.eden.thrift_types import (
     EdenErrorType,
     FaultDefinition,
     GetScmStatusParams,
+    MountState,
     SyncBehavior,
     UnblockFaultArg,
 )
@@ -244,6 +246,7 @@ class UpdateTest(EdenHgTestCase):
 
         self.repo.update(base_commit)
         self.assert_status_empty()
+        self.wait_for_path_absent("bar")
         self.write_file("bar/some_new_file.txt", file_contents)
         self.hg("add", "bar/some_new_file.txt")
         self.assert_status({"bar/some_new_file.txt": "A"})
@@ -287,6 +290,7 @@ class UpdateTest(EdenHgTestCase):
 
         self.repo.update(base_commit)
         self.assert_status_empty()
+        self.wait_for_path_absent("bar")
         self.write_file("bar/some_new_file.txt", file_contents)
 
         # the update succeeds because some_new_file has the same contents
@@ -299,6 +303,7 @@ class UpdateTest(EdenHgTestCase):
         )
 
         self.repo.update(base_commit)
+        self.wait_for_path_absent("bar")
         new_file_contents = "some OTHER contents\n"
         self.write_file("bar/some_new_file.txt", new_file_contents)
         self.assert_status({"bar/some_new_file.txt": "?"})
@@ -538,6 +543,59 @@ class UpdateTest(EdenHgTestCase):
                     UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
                 )
 
+    async def get_async_error(
+        self, awaitable: Optional[Awaitable[object]]
+    ) -> Optional[Exception]:
+        if awaitable is None:
+            return None
+        try:
+            await awaitable
+        except Exception as ex:
+            return ex
+        return None
+
+    async def wait_for_mount_shutting_down(self) -> None:
+        async def state_shutting_down() -> Optional[bool]:
+            state = await self.eden.get_mount_state_async(pathlib.Path(self.mount))
+            if state == MountState.SHUTTING_DOWN:
+                return True
+            if state in (None, MountState.SHUT_DOWN, MountState.DESTROYING):
+                self.fail(
+                    "mount should not list status as not mounted while "
+                    "checkout is in progress"
+                )
+            return None
+
+        await util.poll_until_async(state_shutting_down, timeout=30)
+
+    def wait_for_path_absent(self, path: str) -> None:
+        def path_absent() -> Optional[bool]:
+            if not os.path.exists(self.get_path(path)):
+                return True
+            return None
+
+        util.poll_until(path_absent, timeout=30)
+
+    def check_unmount_checkout_errors(
+        self,
+        update_error: Optional[Exception],
+        unmount_error: Optional[Exception],
+    ) -> None:
+        if unmount_error is not None:
+            raise unmount_error
+
+        if update_error is None:
+            return
+
+        if not isinstance(update_error, hgrepo.HgError):
+            raise update_error
+
+        stderr = update_error.stderr or b""
+        if isinstance(stderr, str):
+            stderr = stderr.encode()
+        if b"No such file or directory" not in stderr or b"/.hg/" not in stderr:
+            raise update_error
+
     async def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
         mounts = self.eden.run_cmd("list")
         self.assertEqual(f"{self.mount}\n", mounts)
@@ -545,37 +603,29 @@ class UpdateTest(EdenHgTestCase):
         self.backing_repo.write_file("foo/bar.txt", "new contents")
         new_commit = self.backing_repo.commit("Update foo/bar.txt")
 
-        async with self.block_checkout():
-            # Run a checkout
-            p1 = get_context().Process(target=self.repo.update, args=(new_commit,))
-            p1.start()
+        update_task: Optional[asyncio.Task[str]] = None
+        unmount_task: Optional[asyncio.Task[None]] = None
+        update_error: Optional[Exception] = None
+        unmount_error: Optional[Exception] = None
+        try:
+            async with self.block_checkout():
+                update_task = asyncio.create_task(
+                    self.repo.update_async(new_commit), name="hg-update"
+                )
 
-            # Ensure the checkout has started
-            await self.wait_for_checkout_in_progress()
+                await self.wait_for_checkout_in_progress()
 
-            p2 = get_context().Process(target=self.eden.unmount, args=(self.mount,))
-            p2.start()
+                unmount_task = asyncio.create_task(
+                    self.eden.unmount_async(pathlib.Path(self.mount)),
+                    name="eden-unmount",
+                )
 
-            # Wait for the state to be shutting down
-            def state_shutting_down() -> Optional[bool]:
-                mounts = self.eden.run_cmd("list")
-                print(mounts)
-                if mounts.find("SHUTTING_DOWN") != -1:
-                    return True
-                if mounts.find("(not mounted)") != -1:
-                    self.fail(
-                        "mount should not list status as not mounted while "
-                        "checkout is in progress"
-                    )
-                return None
+                await self.wait_for_mount_shutting_down()
+        finally:
+            update_error = await self.get_async_error(update_task)
+            unmount_error = await self.get_async_error(unmount_task)
 
-            util.poll_until(state_shutting_down, timeout=30)
-            # Unblock the server shutdown and wait for the checkout to complete.
-
-        # join the checkout before the unmount because the unmount call
-        # won't finish until the checkout has finished
-        p1.join()
-        p2.join()
+        self.check_unmount_checkout_errors(update_error, unmount_error)
 
     def test_dir_locking(self) -> None:
         """
