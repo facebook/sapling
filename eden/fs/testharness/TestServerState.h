@@ -12,7 +12,9 @@
 namespace facebook::eden {
 
 class ServerState;
+class UnboundedQueueExecutor;
 
-std::shared_ptr<ServerState> createTestServerState();
+std::shared_ptr<ServerState> createTestServerState(
+    std::shared_ptr<UnboundedQueueExecutor> fsChannelThreadPool = nullptr);
 
 } // namespace facebook::eden

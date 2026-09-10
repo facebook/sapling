@@ -71,7 +71,7 @@ ServerState::ServerState(
         sessionInfo, // NOLINT(performance-unnecessary-value-param)
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
-    std::shared_ptr<folly::Executor> fsChannelThreadPool,
+    std::shared_ptr<UnboundedQueueExecutor> fsChannelThreadPool,
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
@@ -151,8 +151,34 @@ ServerState::ServerState(
 
 ServerState::~ServerState() {
   // Stop the cleanup scheduler before any of the members it touches are
-  // destroyed (notably preloadProgressMap_).
-  preloadCleanupScheduler_.shutdown();
+  // destroyed (notably preloadProgressMap_). Executor shutdown is explicit via
+  // shutdown(), since the final ServerState reference may be released on an
+  // executor thread.
+  shutdownPreloadCleanup();
+}
+
+void ServerState::shutdownPreloadCleanup() {
+  folly::call_once(preloadCleanupShutdownOnceFlag_, [this] {
+    preloadCleanupScheduler_.shutdown();
+  });
+}
+
+void ServerState::shutdown() {
+  shutdownPreloadCleanup();
+
+  folly::call_once(executorShutdownOnceFlag_, [this] {
+    // Synchronize with lazy initialization without creating the preload pool
+    // solely to shut it down.
+    folly::call_once(preloadThreadPoolOnceFlag_, [] {});
+    if (preloadThreadPool_) {
+      preloadThreadPool_->join();
+    }
+
+    if (fsChannelThreadPool_.get() != threadPool_.get()) {
+      fsChannelThreadPool_->join();
+    }
+    threadPool_->join();
+  });
 }
 
 const std::shared_ptr<folly::IOThreadPoolExecutor>&

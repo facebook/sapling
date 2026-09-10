@@ -124,13 +124,15 @@ TestMount::TestMount(
   // Create treeCache
   treeCache_ = TreeCache::create(reloadableConfig, makeRefPtr<EdenStats>());
 
+  const auto serverThreadPool =
+      make_shared<UnboundedQueueExecutor>(serverExecutor_);
   serverState_ = make_shared<ServerState>(
       UserInfo::lookup(),
       makeRefPtr<EdenStats>(),
       SessionInfo{},
       privHelper_,
-      make_shared<UnboundedQueueExecutor>(serverExecutor_),
-      serverExecutor_,
+      serverThreadPool,
+      serverThreadPool,
       clock_,
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),

@@ -31,6 +31,7 @@
 #include <gtest/gtest.h>
 
 #include "eden/common/utils/FaultInjector.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/nfs/MountdRpc.h"
 #include "eden/fs/nfs/NfsServer.h"
@@ -336,9 +337,11 @@ TEST_F(EdenServerTest, StopIsIdempotent) {
   EXPECT_TRUE(true);
 }
 
-TEST(EdenServer, serverStateDestroyDoesNotWaitForFsChannelExecutor) {
-  auto serverState = createTestServerState();
-  auto fsChannelExecutor = serverState->getFsChannelThreadPool();
+TEST(EdenServer, serverStateShutdownWaitsForFsChannelExecutor) {
+  const auto fsChannelExecutor =
+      std::make_shared<UnboundedQueueExecutor>(1, "TestFsChannel");
+  auto serverState = createTestServerState(fsChannelExecutor);
+  ASSERT_NE(serverState->getThreadPool().get(), fsChannelExecutor.get());
 
   std::promise<void> taskStartedPromise;
   auto taskStarted = taskStartedPromise.get_future();
@@ -353,23 +356,29 @@ TEST(EdenServer, serverStateDestroyDoesNotWaitForFsChannelExecutor) {
   });
   ASSERT_EQ(taskStarted.wait_for(5s), std::future_status::ready);
 
-  std::promise<void> destructionFinishedPromise;
-  auto destructionFinished = destructionFinishedPromise.get_future();
-  std::thread destroyThread([&] {
-    serverState.reset();
-    destructionFinishedPromise.set_value();
+  std::promise<void> shutdownFinishedPromise;
+  auto shutdownFinished = shutdownFinishedPromise.get_future();
+  std::thread shutdownThread([&] {
+    serverState->shutdown();
+    shutdownFinishedPromise.set_value();
   });
+  bool taskReleased = false;
   auto cleanup = folly::makeGuard([&] {
-    releaseTaskPromise.set_value();
-    if (destroyThread.joinable()) {
-      destroyThread.join();
+    if (!taskReleased) {
+      releaseTaskPromise.set_value();
+      taskReleased = true;
+    }
+    if (shutdownThread.joinable()) {
+      shutdownThread.join();
     }
   });
 
-  // FIXME: ServerState destruction should wait for FS-channel executor work to
-  // finish so shutdown does not leave finished FsChannelThread workers
-  // unjoined.
-  EXPECT_EQ(destructionFinished.wait_for(5s), std::future_status::ready);
+  EXPECT_EQ(shutdownFinished.wait_for(250ms), std::future_status::timeout);
+
+  releaseTaskPromise.set_value();
+  taskReleased = true;
+
+  EXPECT_EQ(shutdownFinished.wait_for(5s), std::future_status::ready);
 }
 
 #ifndef _WIN32

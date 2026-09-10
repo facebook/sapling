@@ -827,16 +827,7 @@ EdenServer::EdenServer(
   }
 
   counters->registerCallback(kFsChannelTaskCount, [this] {
-    auto fsChannelExecutor = this->getServerState()->getFsChannelThreadPool();
-    if (auto ex = std::dynamic_pointer_cast<folly::CPUThreadPoolExecutor>(
-            fsChannelExecutor)) {
-      return ex->getTaskQueueSize();
-    }
-    if (auto ex = std::dynamic_pointer_cast<UnboundedQueueExecutor>(
-            fsChannelExecutor)) {
-      return ex->getTaskQueueSize();
-    }
-    return (size_t)0;
+    return this->getServerState()->getFsChannelThreadPool()->getTaskQueueSize();
   });
 
   counters->registerCallback(kMemoryVmRssBytes, [] {
@@ -2054,11 +2045,14 @@ bool EdenServer::performCleanup() {
       folly::futures::detachOn(
           getServerState()->getThreadPool().get(),
           recover(std::move(shutdownValue).value()).semi());
+      // Recovery resumes this EdenServer, so its executors must remain usable.
       return false;
     }
   }
 #endif
 
+  auto shutdownServerState =
+      folly::makeGuard([this] { serverState_->shutdown(); });
   closeStorage();
   // Stop the privhelper process.
   shutdownPrivhelper();

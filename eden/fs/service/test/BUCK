@@ -187,6 +187,7 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:fault_injector",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:inodes",
         "//eden/fs/nfs:mountd_rpc",
         "//eden/fs/nfs:nfs_server",
