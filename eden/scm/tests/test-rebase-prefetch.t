@@ -5,11 +5,11 @@
   $ enable rebase
   $ setconfig rebase.experimental.inmemory=True
 
-The existing prefetch batches manifest trees, but fetches the destination file
-content incrementally while rebasing each commit. The summarizer below reports
-the size of every remote tree fetch request and the file content requests, grouped
-by rebase phase along with how many of the requested files had to be fetched
-remotely, and passes other output through:
+Before rebasing starts, prefetch the manifest trees and the source, ancestor, and
+destination content of every file that needs a three-way merge. The summarizer
+below reports the size of every remote tree fetch request and the file content
+requests, grouped by rebase phase along with how many of the requested files had
+to be fetched remotely, and passes other output through:
 
   $ cat > $TESTTMP/summarize-fetches.py <<'PY'
   > import ast
@@ -76,12 +76,13 @@ remotely, and passes other output through:
   $ clearcache
   $ summarize_fetches sl rebase -s 'desc(S1)' -d destination
   remote tree fetch before rebase: 1, 1 keys
+  content fetch before rebase: first, second (6 requests, 4 remote)
   rebasing S1
   merging first
-  content fetch S1: first (5 requests, 2 remote)
+  content fetch S1: first (5 requests, 0 remote)
   rebasing S2
   merging second
-  content fetch S2: second (5 requests, 2 remote)
+  content fetch S2: second (5 requests, 0 remote)
 
   $ sl cat -r 'desc(S2)' first
   source 1
@@ -94,10 +95,9 @@ remotely, and passes other output through:
   $ sl cat -r 'desc(S2)' unrelated
   destination
 
-Source commits are not assumed to have local file content. Without a content
-prefetch, all three merge inputs are fetched while rebasing. Only files the
-destination also changed need merge content; `alone` is only changed by the
-source commit:
+Source commits are not assumed to have local file content. Only files the
+destination also changed need merge content, so `alone`, which only the source
+commit changed, is not prefetched:
 
   $ newserver remote-source-server
   $ printf 'base 1\nbase 2\nbase 3\n' > shared
@@ -118,10 +118,11 @@ source commit:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 3 keys
+  remote tree fetch before rebase: 1, 1, 1 keys
+  content fetch before rebase: shared (3 requests, 3 remote)
   rebasing S
   merging shared
-  content fetch S: shared (5 requests, 3 remote)
+  content fetch S: shared (5 requests, 0 remote)
 
   $ sl cat -r 'desc(S)' shared
   source 1
@@ -151,7 +152,7 @@ Replaying an added file does not fetch its content:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 3 keys
+  remote tree fetch before rebase: 1, 1, 1 keys
   rebasing S
 
   $ sl cat -r 'desc(S)' added
@@ -177,11 +178,12 @@ Deleting a file does not fetch its old content while replaying:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -d destination
-  remote tree fetch before rebase: 3 keys
+  remote tree fetch before rebase: 1, 1, 1 keys
   rebasing S
 
-Source commits with different parents each merge against their own parent. Their
-merge inputs are still fetched lazily while each commit is rebased:
+Source commits with different parents each merge against their own parent, so
+each root's destination is compared with that root's parent and every merge
+input is prefetched before rebasing starts:
 
   $ newserver multi-root-server
   $ printf 'base 1\nbase 2\nbase 3\n' > first
@@ -208,13 +210,14 @@ merge inputs are still fetched lazily while each commit is rebased:
   $ sl go -q null
   $ clearcache
   $ summarize_fetches sl rebase --keep -r source -r other-source -d destination
-  remote tree fetch before rebase: 5 keys
+  remote tree fetch before rebase: 1, 1, 1, 1, 1 keys
+  content fetch before rebase: first, second (6 requests, 6 remote)
   rebasing S
   merging first
-  content fetch S: first (5 requests, 3 remote)
+  content fetch S: first (5 requests, 0 remote)
   rebasing T
   merging second
-  content fetch T: second (5 requests, 3 remote)
+  content fetch T: second (5 requests, 0 remote)
 
   $ sl cat -r 'desc(S)' first
   source 1
@@ -227,7 +230,7 @@ merge inputs are still fetched lazily while each commit is rebased:
   second base 4
   second destination 5
 
-Restack uses the same rebase prefetch path. Every manifest involved was created
+Restack uses the same stack-wide prefetch. Every manifest involved was created
 locally, so clearing the cache only evicts the base content of `shared` that came
 from the server:
 
@@ -252,9 +255,10 @@ from the server:
   hint[hint-ack]: use 'sl hint --ack amend-restack' to silence these hints
   $ clearcache
   $ summarize_fetches sl rebase --restack
+  content fetch before rebase: shared (3 requests, 1 remote)
   rebasing C
   merging shared
-  content fetch C: shared (5 requests, 1 remote)
+  content fetch C: shared (5 requests, 0 remote)
   rebasing D
 
   $ sl cat -r 'desc(D)' shared
