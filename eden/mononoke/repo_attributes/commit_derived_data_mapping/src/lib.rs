@@ -12,6 +12,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use caching_ext::CacheHandlerFactory;
 use context::CoreContext;
+use context::PerfCounterType;
 use metaconfig_types::OssRemoteDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
@@ -255,6 +256,8 @@ impl SqlCommitDerivedDataMapping {
             &derived_data_version,
             &value_vec,
         )];
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         InsertMappings::query(
             &self.write_connections[idx],
             ctx.sql_query_telemetry(),
@@ -303,6 +306,8 @@ impl SqlCommitDerivedDataMapping {
                 .iter()
                 .map(|(a, b, c, d, e)| (a, b, c, d, e))
                 .collect();
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlWrites);
             let result = InsertMappings::query(
                 &self.write_connections[idx],
                 ctx.sql_query_telemetry(),
@@ -325,6 +330,8 @@ impl SqlCommitDerivedDataMapping {
     ) -> Result<Option<Vec<u8>>> {
         let idx = self.shard_id(shard_id)?;
         let type_id = Self::derived_data_type_id(derived_data_type);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectMapping::query(
             &self.read_connections[idx],
             ctx.sql_query_telemetry(),
@@ -338,6 +345,8 @@ impl SqlCommitDerivedDataMapping {
             return Ok(Some(value));
         }
 
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         let rows = SelectMapping::query(
             &self.read_master_connections[idx],
             ctx.sql_query_telemetry(),
@@ -365,6 +374,8 @@ impl SqlCommitDerivedDataMapping {
         }
 
         let type_id = Self::derived_data_type_id(derived_data_type);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut rows = SelectMappingBatch::query(
             &self.read_connections[idx],
             ctx.sql_query_telemetry(),
@@ -383,6 +394,8 @@ impl SqlCommitDerivedDataMapping {
             return Ok(rows);
         }
 
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         let primary_rows = SelectMappingBatch::query(
             &self.read_master_connections[idx],
             ctx.sql_query_telemetry(),
@@ -550,6 +563,18 @@ mod test {
             results.into_iter().collect::<HashMap<_, _>>(),
             HashMap::from([(ONES_CSID, value1), (TWOS_CSID, value2)]),
         );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsReplica),
+            1,
+            "A partial replica miss uses one replica query",
+        );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsMaster),
+            1,
+            "Missing mappings are queried together on the primary",
+        );
 
         for cs_ids in [vec![], vec![THREES_CSID]] {
             assert!(
@@ -558,6 +583,18 @@ mod test {
                     .is_empty(),
             );
         }
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsReplica),
+            2,
+            "The empty batch adds no query; the missing batch adds one",
+        );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsMaster),
+            2,
+            "Only the two nonempty batches require primary fallbacks",
+        );
         Ok(())
     }
 
@@ -590,6 +627,18 @@ mod test {
                 .await?
                 .is_empty(),
         );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsReplica),
+            2,
+            "Each nonempty replica hit issues one query",
+        );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsMaster),
+            0,
+            "Replica hits and empty requests do not query the primary",
+        );
         Ok(())
     }
 
@@ -615,6 +664,23 @@ mod test {
             .fetch_mapping(&ctx, repo_id, TWOS_CSID, dt, version, CONN)
             .await?;
         assert_eq!(result, None);
+        assert_eq!(
+            ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+            1,
+            "A single mapping insert issues one write",
+        );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsReplica),
+            2,
+            "Each fetch issues one replica query",
+        );
+        assert_eq!(
+            ctx.perf_counters()
+                .get_counter(PerfCounterType::SqlReadsMaster),
+            1,
+            "Only the missing mapping requires a primary query",
+        );
 
         Ok(())
     }
@@ -658,6 +724,51 @@ mod test {
         assert_eq!(result_map.get(&TWOS_CSID), Some(&value2));
         assert_eq!(result_map.get(&THREES_CSID), Some(&value3));
 
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_batch_write_perf_counters(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let sql = SqlCommitDerivedDataMapping::with_sqlite_in_memory()?;
+        let repo_id = RepositoryId::new(1);
+        let dt = DerivableType::HistoryManifests;
+        let version = 1;
+
+        assert_eq!(
+            sql.store_mapping_batch(&ctx, repo_id, vec![], dt, version, CONN)
+                .await?,
+            0,
+        );
+        assert_eq!(
+            ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+            0,
+            "An empty batch issues no INSERTs",
+        );
+
+        let entries = vec![(ONES_CSID, version, vec![1; 32]); MYSQL_INSERT_CHUNK_SIZE + 1];
+        assert_eq!(
+            sql.store_mapping_batch(&ctx, repo_id, entries.clone(), dt, version, CONN)
+                .await?,
+            1,
+        );
+        assert_eq!(
+            ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+            2,
+            "One full chunk plus one entry requires two INSERTs despite ignored rows",
+        );
+
+        DropMappingsTable::query(&sql.write_connections[CONN], ctx.sql_query_telemetry()).await?;
+        assert!(
+            sql.store_mapping_batch(&ctx, repo_id, entries, dt, version, CONN)
+                .await
+                .is_err(),
+        );
+        assert_eq!(
+            ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+            3,
+            "The failed first chunk counts once; the second chunk is never attempted",
+        );
         Ok(())
     }
 

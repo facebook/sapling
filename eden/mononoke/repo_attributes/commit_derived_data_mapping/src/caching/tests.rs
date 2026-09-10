@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::FOURS_CSID;
@@ -102,6 +103,23 @@ async fn test_sql_cachelib_and_memcache_reads(fb: FacebookInit) -> Result<()> {
     );
     assert_eq!(cachelib.stats().hits, 2);
     assert_eq!(memcache.stats().gets, 2);
+    assert_eq!(
+        ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+        1,
+        "The cache wrapper does not double-count the INSERT",
+    );
+    assert_eq!(
+        ctx.perf_counters()
+            .get_counter(PerfCounterType::SqlReadsReplica),
+        1,
+        "Only the initial cache miss reads the replica",
+    );
+    assert_eq!(
+        ctx.perf_counters()
+            .get_counter(PerfCounterType::SqlReadsMaster),
+        1,
+        "Only the initial cache miss falls back to the primary",
+    );
     Ok(())
 }
 
