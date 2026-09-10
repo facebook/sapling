@@ -1,148 +1,151 @@
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Licensed under the MIT license in the upstream LICENSE file.
  */
-
-import type {ChangeEvent, FormEvent} from 'react';
+import type {FormEvent} from 'react';
 import type {CustomLoginDialogProps} from 'reviewstack/src/LoginDialog';
 
 import './DefaultLoginDialog.css';
-
 import {Box, Flash, Link, Text} from '@primer/react';
-import {useCallback, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 
-export default function LoginDialog({
+const GITHUB_AUTH_ENDPOINT = '/github/oauth2/auth';
+const GITHUB_START_ENDPOINT = '/github/oauth2/start';
+const GITHUB_RETURN_PARAMETER = 'reviewstack_github_oauth';
+
+export default function DefaultLoginDialog({
   setTokenAndHostname,
   authError,
-}: CustomLoginDialogProps): React.ReactElement | null {
+}: CustomLoginDialogProps) {
   const [token, setToken] = useState('');
-  const [hostname, setHostname] = useState('github.com');
+  const [oauthError, setOAuthError] = useState<string | null>(null);
+  const restoreOAuth = useRef(
+    new URLSearchParams(window.location.search).get(GITHUB_RETURN_PARAMETER) === '1',
+  ).current;
+  const [checkingOAuth, setCheckingOAuth] = useState(restoreOAuth);
+  const connectGitHub = useRef(setTokenAndHostname);
+  connectGitHub.current = setTokenAndHostname;
 
-  const onChangeToken = useCallback(
-    (e: ChangeEvent) => setToken((e.target as HTMLInputElement).value),
-    [],
-  );
-  const onChangeHostname = useCallback(
-    (e: ChangeEvent) => setHostname((e.target as HTMLInputElement).value),
-    [],
-  );
+  useEffect(() => {
+    if (!restoreOAuth) {
+      return;
+    }
+    let active = true;
+    const returnURL = new URL(window.location.href);
+    returnURL.searchParams.delete(GITHUB_RETURN_PARAMETER);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${returnURL.pathname}${returnURL.search}${returnURL.hash}`,
+    );
+    async function restoreGitHubSession() {
+      try {
+        const response = await fetch(GITHUB_AUTH_ENDPOINT, {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        });
+        if (!active) {
+          return;
+        }
+        if (response.status === 401) {
+          setCheckingOAuth(false);
+          return;
+        }
+        if (response.status !== 202) {
+          throw new Error(`GitHub sign-in returned HTTP ${response.status}`);
+        }
+        const oauthToken = response.headers.get('X-Auth-Request-Access-Token');
+        if (oauthToken == null || oauthToken === '') {
+          throw new Error('GitHub sign-in did not return an access token');
+        }
+        connectGitHub.current(oauthToken, 'github.com');
+      } catch (error) {
+        if (active) {
+          setOAuthError(error instanceof Error ? error.message : 'GitHub sign-in failed');
+          setCheckingOAuth(false);
+        }
+      }
+    }
+    restoreGitHubSession();
+    return () => {
+      active = false;
+    };
+  }, [restoreOAuth]);
 
-  const onSubmit = useCallback(
-    (e: FormEvent) => {
-      e.preventDefault();
-      setTokenAndHostname(token.trim(), hostname.trim());
-      return false;
-    },
-    [token, hostname, setTokenAndHostname],
-  );
-
-  const isInputValid = isValid(token, hostname);
-
-  return (
-    <>
-      <div className="LoginDialog-container">
-        <Box
-          bg="canvas.default"
-          className="LoginDialog"
-          borderWidth={1}
-          borderColor="border.default">
-          <form onSubmit={onSubmit}>
-            {authError != null ? (
-              <Box pb={2}>
-                <Flash variant="warning">
-                  <Text>{authError}</Text>
-                </Flash>
-              </Box>
-            ) : null}
-            <Box pb={2}>
-              <Text>
-                This tool requires an authentication token so it can read and write data from
-                GitHub. Follow GitHub's{' '}
-                <Link
-                  href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token"
-                  target="_blank">
-                  instructions to create a personal access token (PAT)
-                </Link>{' '}
-                and <Text fontWeight="bold">be sure to store it in a safe place</Text>. After
-                initially viewing your PAT, GitHub will never show it to you again.
-              </Text>
-              {/* We may add a checkbox to aide in persisting these values. */}
-            </Box>
-            <Box pb={2}>
-              <Text>
-                Alternatively, if you have authenticated with the{' '}
-                <Link href="https://cli.github.com/">GitHub CLI</Link>, you can use{' '}
-                <Text as="code" bg="canvas.subtle">
-                  gh auth status -t
-                </Text>{' '}
-                to dump the PAT you are using for{' '}
-                <Text as="code" bg="canvas.subtle">
-                  gh
-                </Text>
-                , which can also be used with ReviewStack if you are comfortable using the same PAT
-                for both tools:
-                <Box as="pre" bg="canvas.subtle" padding={2}>
-                  {`$ gh auth status -t
-github.com
-  \u2713 Logged in to github.com as username (oauth_token)
-  \u2713 Git operations for github.com configured to use https protocol.
-  \u2713 Token: gho_this_is_your_real_PAT_xxxxxxxxxxxxxx
-`}
-                </Box>
-              </Text>
-            </Box>
-            <Box pb={2}>
-              <Text fontStyle="italic">
-                Note your PAT will be stored in <code>localStorage</code> so you will not have to
-                enter it again when you return to this page. Click{' '}
-                <Text fontStyle="normal" fontWeight="bold">
-                  Logout
-                </Text>{' '}
-                to delete your PAT and any data that was fetched from GitHub using your PAT from the
-                browser.
-              </Text>
-            </Box>
-            <Box pb={2}>
-              Personal Access Token: <br />
-              <input
-                value={token}
-                size={60}
-                required={true}
-                onChange={onChangeToken}
-                placeholder="paste your token here"
-              />
-            </Box>
-            <Box pb={2}>
-              Hostname: <br />
-              <input
-                value={hostname}
-                size={60}
-                required={true}
-                onChange={onChangeHostname}
-                placeholder="github.com or GitHub Enterprise hostname"
-              />
-            </Box>
-            <Box>
-              <input
-                type="submit"
-                value="Grant access to your GitHub data"
-                disabled={!isInputValid}
-              />
-            </Box>
-          </form>
-        </Box>
-      </div>
-    </>
-  );
-}
-
-function isValid(token: string, hostname: string): boolean {
-  if (token.trim() === '') {
-    return false;
+  function startOAuth() {
+    const returnURL = new URL(window.location.href);
+    returnURL.searchParams.set(GITHUB_RETURN_PARAMETER, '1');
+    const returnTo = `${returnURL.pathname}${returnURL.search}${returnURL.hash}`;
+    window.location.assign(`${GITHUB_START_ENDPOINT}?rd=${encodeURIComponent(returnTo)}`);
   }
 
-  const normalizedHostname = hostname.trim();
-  return normalizedHostname !== '' && normalizedHostname.indexOf('.') !== -1;
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (token.trim()) {
+      setTokenAndHostname(token.trim(), 'github.com');
+      setToken('');
+    }
+  }
+  return (
+    <div className="LoginDialog-container">
+      <Box className="LoginDialog" bg="canvas.default" borderWidth={1} borderColor="border.default">
+        <Text as="h1" fontSize={3}>
+          Aionic ReviewStack
+        </Text>
+        {authError && <Flash variant="warning">{authError}</Flash>}
+        {oauthError && <Flash variant="warning">{oauthError}</Flash>}
+        <Box as="p">Connect your GitHub account to read pull requests and submit reviews.</Box>
+        <button type="button" onClick={startOAuth} disabled={checkingOAuth}>
+          {checkingOAuth ? 'Checking GitHub sign-in…' : 'Authorize with GitHub'}
+        </button>
+        <Box as="p">
+          GitHub shows the permissions before you approve them. Aionic controls the app and limits
+          it to repositories where the app is installed.
+        </Box>
+        <details>
+          <summary>Use a personal access token instead</summary>
+          <form onSubmit={submit}>
+            <Box as="p">
+              Create a{' '}
+              <Link
+                href="https://github.com/settings/personal-access-tokens/new?target_name=aionic-labs&name=Aionic%20ReviewStack&contents=read&pull_requests=write"
+                target="_blank"
+                rel="noreferrer">
+                fine-grained token
+              </Link>{' '}
+              for the repositories you review. Select the organization as the resource owner to
+              access its private repositories.
+            </Box>
+            <Box as="p">
+              Allow read access to Contents and read and write access to Pull requests.
+            </Box>
+            <Box as="p">
+              Fine-grained tokens can limit CI check access. When checks are unavailable here, use
+              the link to view them on GitHub.
+            </Box>
+            <Box as="p">
+              <label htmlFor="github-token">GitHub token</label>
+              <br />
+              <input
+                id="github-token"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={token}
+                required
+                size={45}
+                onChange={event => setToken(event.target.value)}
+              />
+            </Box>
+            <button type="submit" disabled={!token.trim()}>
+              Connect with token
+            </button>
+          </form>
+        </details>
+        <Box as="p">
+          This browser stores your GitHub token and cached GitHub data. Use Logout to clear them.
+        </Box>
+      </Box>
+    </div>
+  );
 }
