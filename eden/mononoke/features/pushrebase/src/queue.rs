@@ -146,9 +146,21 @@ fn partition_requests(
             }],
         }
     });
-    let mut request_batches = retry_batches.into_iter().chain(request_batches).peekable();
+    let mut request_batches = retry_batches
+        .into_iter()
+        .chain(request_batches)
+        .map(|batch| {
+            // Merges may derive the onto manifest, so they need a persisted base.
+            let has_merge = batch
+                .requests
+                .iter()
+                .flat_map(|request| request.stack.changesets.iter())
+                .any(|changeset| changeset.is_merge());
+            (batch, has_merge)
+        })
+        .peekable();
 
-    while let Some(mut batch) = request_batches.next() {
+    while let Some((mut batch, has_merge)) = request_batches.next() {
         // Rebase mappings and hooks are keyed by the original changeset ID.
         let mut changeset_ids = batch
             .requests
@@ -174,7 +186,8 @@ fn partition_requests(
                     )
                     .is_some();
 
-            while let Some(request_batch) = request_batches.peek_mut()
+            while !has_merge
+                && let Some((request_batch, false)) = request_batches.peek_mut()
                 && batch.flags == request_batch.flags
                 && batch.repo_lock == request_batch.repo_lock
             {
@@ -468,6 +481,55 @@ mod tests {
             [1, 2]
         );
         assert_eq!(conflicts, 1);
+    }
+
+    #[mononoke::fbinit_test]
+    async fn isolates_requests_with_merges(fb: FacebookInit) -> anyhow::Result<()> {
+        for boundary in [true, false] {
+            let mut merge = request(fb, "merge");
+            let mut parent = merge.stack.changesets[0].clone().into_mut();
+            parent.parents = vec![merge.stack.root];
+            let parent = parent.freeze()?;
+            let other_parent = if boundary {
+                ChangesetId::new(Blake2::from_byte_array([3; 32]))
+            } else {
+                merge.stack.root
+            };
+            let head = BonsaiChangesetMut {
+                parents: vec![parent.get_changeset_id(), other_parent],
+                ..Default::default()
+            }
+            .freeze()?;
+            merge.stack.head = head.get_changeset_id();
+            merge.stack.changesets = vec![parent, head];
+            let (batches, _) = partition_requests(
+                vec![],
+                vec![
+                    request(fb, "a"),
+                    request(fb, "b"),
+                    merge,
+                    request(fb, "c"),
+                    request(fb, "d"),
+                ],
+            );
+            assert_eq!(
+                batches
+                    .iter()
+                    .map(|batch| batch.requests.len())
+                    .collect::<Vec<_>>(),
+                [2, 1, 2]
+            );
+            let (batches, _) = partition_requests(batches, vec![]);
+            assert_eq!(
+                batches
+                    .iter()
+                    .map(|batch| batch.requests.len())
+                    .collect::<Vec<_>>(),
+                [2, 1, 2],
+                "retry batches must keep merge requests isolated"
+            );
+        }
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
