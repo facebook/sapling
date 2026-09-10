@@ -2,6 +2,7 @@ load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbcode_macros//build_defs:sanitizers.bzl", "sanitizers")
 load("@fbsource//tools/build_defs:selects.bzl", "selects")
+load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
 load("@prelude//utils:buckconfig.bzl", "read_bool")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
@@ -145,11 +146,23 @@ def _get_test_sanitizer_env(sanitizer):
     env = {}
     if sanitizer and "address" in sanitizer:
         env["SL_TEST_ASAN"] = "1"
+    if sanitizer and "thread" in sanitizer:
+        env["SL_TEST_TSAN"] = "1"
     return env
 
 _TEST_SANITIZER_ENV = selects.apply(
     sanitizers.get_sanitizer_v2(),
     _get_test_sanitizer_env,
+)
+
+def _get_sanitizer_labels(sanitizer):
+    if sanitizer and "thread" in sanitizer:
+        return [tpx_labels.serialize_test_cases]
+    return []
+
+_SANITIZER_LABELS = selects.apply(
+    sanitizers.get_sanitizer_v2(),
+    _get_sanitizer_labels,
 )
 
 SRCS = dict(
@@ -205,6 +218,12 @@ def run_tests_target(name = None, watchman = False, eden = False, mononoke = Fal
         _TEST_SANITIZER_ENV,
         lambda sanitizer_env: dict(sanitizer_env, **base_env),
     )
+    labels = kwargs.pop("labels", [])
+    if eden:
+        labels = selects.apply_n(
+            [labels, _SANITIZER_LABELS],
+            lambda labels, sanitizer_labels: labels + sanitizer_labels,
+        )
     python_unittest(
         name = name,
         srcs = SRCS,
@@ -213,6 +232,7 @@ def run_tests_target(name = None, watchman = False, eden = False, mononoke = Fal
             "//eden/scm:scm_prompt",
         ],
         env = ENV,
+        labels = labels,
         resources = resources,
         supports_static_listing = False,
         **kwargs,

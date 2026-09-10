@@ -4,3 +4,18 @@
 # Sapling process. TSan reports those workers as leaked when the process exits.
 
 thread:tokio::runtime::blocking::pool
+
+# Keep this file narrow. These entries suppress a known Tokio ScheduledIo false
+# positive where TSAN cannot model the kernel epoll ordering between descriptor
+# registration and the runtime I/O driver wakeup path.
+#
+# Same class of false positive is already suppressed in other Rust TSan suites:
+# fbcode/cathode/tools/cli/tsan_suppressions.txt
+# fbcode/polyglot_toolkit/glue/test/tsan_suppressions.txt
+# fbcode/thatch/data_plane/e2e/tsan_suppressions.txt
+
+race:scheduled_io
+race:drain_filter
+race:linked_list
+race:tokio::runtime::io::driver
+race:registration_set
