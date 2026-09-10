@@ -10,7 +10,8 @@
 Multiprocessing helpers for EdenFS CLI.
 
 Fixes two problems that prevent multiprocessing 'spawn' children from
-working correctly in standalone PAR builds on macOS/Windows:
+working correctly across supported platforms, especially in standalone PAR
+builds:
 
 1. __main__ re-import: multiprocessing.spawn re-imports the __main__
    module in the child process. In a PAR, this triggers the full import
@@ -35,6 +36,7 @@ import multiprocessing
 import multiprocessing.context
 import os
 import sys
+from typing import cast
 
 
 def _native_lib_dirs() -> list[str]:
@@ -124,9 +126,9 @@ def _prevent_main_reimport() -> None:
 _setup_library_paths()
 
 
-def get_context() -> multiprocessing.context.DefaultContext:
+def get_context() -> multiprocessing.context.SpawnContext:
     """
-    Return the platform-default multiprocessing context.
+    Return a multiprocessing context for EdenFS CLI helper subprocesses.
 
     Clears __main__.__spec__ on each call to prevent multiprocessing.spawn
     from re-importing __main__ in the child process. This must be done here
@@ -135,9 +137,10 @@ def get_context() -> multiprocessing.context.DefaultContext:
     captures __main__.__spec__ for the child.
 
     Returns:
-        The default multiprocessing context for the current platform.
+        A spawn multiprocessing context.
     """
     _prevent_main_reimport()
-    # pyre-ignore[7]: multiprocessing.get_context() is typed as BaseContext
-    # but actually returns DefaultContext at runtime.
-    return multiprocessing.get_context()
+    return cast(
+        multiprocessing.context.SpawnContext,
+        multiprocessing.get_context("spawn"),
+    )

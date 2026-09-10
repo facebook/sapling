@@ -15,6 +15,7 @@ import random
 import re
 import subprocess
 import sys
+from multiprocessing.connection import Connection
 from typing import List, NamedTuple, Union
 
 from .mp import get_context
@@ -30,22 +31,36 @@ MountInfo = NamedTuple(
 
 MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int), ("st_mode", int)])
 
+
+class LstatProcess(NamedTuple):
+    process: multiprocessing.context.SpawnProcess
+    result_reader: Connection
+    result_writer: Connection
+
+
 kMountStaleSecondsTimeout = 5
+# Preserve the full stale-mount probe budget after the spawn child has paid
+# interpreter startup and module import costs.
+kMountProcessStartupGraceSeconds = 5
+kMountStaleProcessTimeout = kMountStaleSecondsTimeout + kMountProcessStartupGraceSeconds
 
 
 # Note this function needs to be a global function, otherwise it will cause
 # errors to spawn a process with this function as the entry point.
-def lstat_process(path: Union[bytes, str]) -> None:
+def lstat_process(path: Union[bytes, str], result_writer: Connection) -> None:
     """
     Function to be the entry point of the multiproccessing process
     to stat path. stat might hang so we might kill this process.
-    The return code of this process is the exit code of lstat.
     """
     try:
-        os.lstat(path)
-    except OSError as e:
-        exit(e.errno)
-    exit(0)
+        try:
+            os.lstat(path)
+        except OSError as error:
+            result_writer.send(error.errno if error.errno is not None else errno.EIO)
+        else:
+            result_writer.send(0)
+    finally:
+        result_writer.close()
 
 
 class MountTable(abc.ABC):
@@ -69,14 +84,49 @@ class MountTable(abc.ABC):
     def create_lstat_process(
         self,
         path: bytes,
-    ) -> multiprocessing.context.Process:
-        return get_context().Process(
-            target=lstat_process,
-            args=(os.path.join(path, hex(random.getrandbits(32))[2:].encode()),),
+    ) -> LstatProcess:
+        context = get_context()
+        result_reader, result_writer = context.Pipe(duplex=False)
+        return LstatProcess(
+            process=context.Process(
+                target=lstat_process,
+                args=(
+                    os.path.join(path, hex(random.getrandbits(32))[2:].encode()),
+                    result_writer,
+                ),
+            ),
+            result_reader=result_reader,
+            result_writer=result_writer,
         )
 
+    def _run_lstat_process(self, path: bytes, timeout_error: OSError) -> int:
+        lstat = self.create_lstat_process(path)
+        try:
+            lstat.process.start()
+            lstat.result_writer.close()
+            lstat.process.join(timeout=kMountStaleProcessTimeout)
+            if lstat.process.is_alive():
+                self.close_hanging_process(lstat.process, timeout_error)
+
+            if lstat.process.exitcode != 0:
+                raise OSError(
+                    errno.EIO,
+                    f"lstat helper exited with code {lstat.process.exitcode}",
+                )
+
+            try:
+                return lstat.result_reader.recv()
+            except EOFError:
+                raise OSError(
+                    errno.EIO,
+                    "lstat helper exited without reporting a result",
+                ) from None
+        finally:
+            lstat.result_reader.close()
+            lstat.result_writer.close()
+
     def close_hanging_process(
-        self, proc: multiprocessing.context.Process, error: OSError
+        self, proc: multiprocessing.context.SpawnProcess, error: OSError
     ) -> None:
         """
         This method closes hanging process if the process hang
@@ -111,60 +161,38 @@ class MountTable(abc.ABC):
         # For FUSE it's pretty easy, we can lstat the mount. ENOENT means the
         # mount seems to be working fine and ENOTCONN means the mount is stale.
         if mount_type == b"fuse":
-            try:
-                # Even if the FUSE process is shut down, the lstat call will succeed if
-                # the stat result is cached. Append a random string to avoid that. In a
-                # better world, this code would bypass the cache by opening a handle
-                # with O_DIRECT, but EdenFS does not support O_DIRECT.
-                proc = self.create_lstat_process(path)
-                proc.start()
-                proc.join(timeout=kMountStaleSecondsTimeout)
-                if proc.is_alive():
-                    self.close_hanging_process(
-                        proc,
-                        OSError(
-                            errno.ETIMEDOUT,
-                            "Stating the mount timed out, mount point hangs",
-                        ),
-                    )
-                else:
-                    raise OSError(
-                        proc.exitcode,
-                        "Mount point is no longer connected to a running EdenFS -- stale mount",
-                    )
-            except OSError as e:
-                if e.errno == errno.ENOENT:
-                    return
-                raise
+            # Even if the FUSE process is shut down, the lstat call will succeed if
+            # the stat result is cached. Append a random string to avoid that. In a
+            # better world, this code would bypass the cache by opening a handle
+            # with O_DIRECT, but EdenFS does not support O_DIRECT.
+            result_errno = self._run_lstat_process(
+                path,
+                OSError(
+                    errno.ETIMEDOUT,
+                    "Stating the mount timed out, mount point hangs",
+                ),
+            )
+            if result_errno == errno.ENOENT:
+                return
+            raise OSError(
+                result_errno,
+                "Mount point is no longer connected to a running EdenFS -- stale mount",
+            )
         # For NFS it's less easy. Stating the mount point will hang if the mount
         # is stale. So we need to add a timeout on our stat call. A timeout
         # means the mount is stale and ENOENT still means the mount seems to be
         # working properly.
         elif mount_type == b"nfs":
-            proc = self.create_lstat_process(path)
-            proc.start()
-            proc.join(timeout=kMountStaleSecondsTimeout)
-            if proc.is_alive():
-                self.close_hanging_process(
-                    proc,
-                    OSError(
-                        errno.ENOTCONN,
-                        "Stating the mount timed out, mount point is not connected",
-                    ),
-                )
-            else:
-                if proc.exitcode == errno.ENOENT:
-                    return
-                # The return code is technically an optional, but it should
-                # only be none if the process has not yet terminated.
-                if proc.exitcode is None:
-                    raise Exception(
-                        """
-Reaching here should be impossible, checking process was terminated, but does
-not seem to have finished.
-"""
-                    )
-                raise OSError(proc.exitcode, "stating the mountpoint failed")
+            result_errno = self._run_lstat_process(
+                path,
+                OSError(
+                    errno.ENOTCONN,
+                    "Stating the mount timed out, mount point is not connected",
+                ),
+            )
+            if result_errno == errno.ENOENT:
+                return
+            raise OSError(result_errno, "stating the mountpoint failed")
         raise Exception(f"Unknown mount type {mount_type}")
 
     @abc.abstractmethod
