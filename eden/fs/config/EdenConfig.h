@@ -1255,33 +1255,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether we should validate that files on disk match their inode state after
-   * checkout. We won't validate all of the loaded files or even the ones
-   * changed by checkout, but just a handful of the files that were loaded and
-   * changed by checkout. The next few configs control how many files and how
-   * we select them.
-   TODO: This is to collect data for S439820. We can remove this once SEV
-   closed.
-   */
-  ConfigSetting<bool> verifyFilesAfterCheckout{
-      "nfs:verify-files-after-checkout",
-      false,
-      this};
-
-  /**
-   * We aim to invalidate maxNumberOfInvlidationsToVerify on every checkout
-   * operation. If there are less than maxNumberOfInvlidationsToVerify files
-   * invalidated by a checkout operation then we might verify less. But most
-   * operations should verify this many files.
-   TODO: This is to collect data for S439820. We can remove this once SEV
-   closed.
-   */
-  ConfigSetting<size_t> maxNumberOfInvlidationsToVerify{
-      "nfs:max-number-invalidations-to-verify",
-      10,
-      this};
-
-  /**
    * When set to true, we will use readdirplus instead of readdir. Readdirplus
    * will be enabled for all nfs mounts. If set to false, regular readdir is
    * used instead.
