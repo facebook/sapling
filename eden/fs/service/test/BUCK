@@ -197,6 +197,7 @@ cpp_unittest(
         "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_server",
+        "//eden/fs/testharness:test_server_state",
         "//folly:cancellation_token",
         "//folly:exception_wrapper",
         "//folly:scope_guard",

@@ -32,6 +32,8 @@ std::shared_ptr<ServerState> createTestServerState() {
   auto executor =
       std::make_shared<UnboundedQueueExecutor>(1, "TestServerState");
   auto edenConfig = EdenConfig::createTestEdenConfig();
+  // This test helper does not provide the EventBase required by NFS servers.
+  edenConfig->enableNfsServer.setValue(false, ConfigSourceType::Default, true);
   auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig);
 
   return std::make_shared<ServerState>(

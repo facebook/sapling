@@ -44,6 +44,7 @@
 #include "eden/fs/testharness/TestMount.h"
 #endif
 #include "eden/fs/testharness/TestServer.h"
+#include "eden/fs/testharness/TestServerState.h"
 
 using namespace std::chrono_literals;
 #ifdef __linux__
@@ -333,6 +334,42 @@ TEST_F(EdenServerTest, StopIsIdempotent) {
 
   // Test passes if no crash occurs
   EXPECT_TRUE(true);
+}
+
+TEST(EdenServer, serverStateDestroyDoesNotWaitForFsChannelExecutor) {
+  auto serverState = createTestServerState();
+  auto fsChannelExecutor = serverState->getFsChannelThreadPool();
+
+  std::promise<void> taskStartedPromise;
+  auto taskStarted = taskStartedPromise.get_future();
+
+  std::promise<void> releaseTaskPromise;
+  auto releaseTask = releaseTaskPromise.get_future().share();
+
+  fsChannelExecutor->add([taskStartedPromise = std::move(taskStartedPromise),
+                          releaseTask]() mutable {
+    taskStartedPromise.set_value();
+    releaseTask.wait();
+  });
+  ASSERT_EQ(taskStarted.wait_for(5s), std::future_status::ready);
+
+  std::promise<void> destructionFinishedPromise;
+  auto destructionFinished = destructionFinishedPromise.get_future();
+  std::thread destroyThread([&] {
+    serverState.reset();
+    destructionFinishedPromise.set_value();
+  });
+  auto cleanup = folly::makeGuard([&] {
+    releaseTaskPromise.set_value();
+    if (destroyThread.joinable()) {
+      destroyThread.join();
+    }
+  });
+
+  // FIXME: ServerState destruction should wait for FS-channel executor work to
+  // finish so shutdown does not leave finished FsChannelThread workers
+  // unjoined.
+  EXPECT_EQ(destructionFinished.wait_for(5s), std::future_status::ready);
 }
 
 #ifndef _WIN32
