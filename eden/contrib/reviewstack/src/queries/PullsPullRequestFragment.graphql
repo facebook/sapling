@@ -1,6 +1,7 @@
 fragment PullsPullRequestFragment on PullRequest {
   number
   title
+  body @include(if: $includeBody)
   updatedAt
   author {
     ...ActorFragment
