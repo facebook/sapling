@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::ffi::c_void;
 use std::mem;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
@@ -30,7 +31,7 @@ pub fn register_sigbus_handler() {
     crate::page_out::NEED_FIND_REGION.store(true, Ordering::Release);
     let mut new_action: libc::sigaction = unsafe { mem::zeroed() };
     new_action.sa_sigaction = signal_handler as *const () as usize;
-    new_action.sa_flags = libc::SA_SIGINFO;
+    new_action.sa_flags = libc::SA_SIGINFO | libc::SA_ONSTACK;
     tracing::debug!("registering SIGBUS handler");
     unsafe {
         ORIG_HANDLER = Some(mem::zeroed());
@@ -44,7 +45,7 @@ pub fn register_sigbus_handler() {
 unsafe extern "C" fn signal_handler(
     sig: libc::c_int,
     info: *mut libc::siginfo_t,
-    _ucontext: usize,
+    ucontext: *mut c_void,
 ) {
     unsafe {
         if let Some(info) = info.as_ref() {
@@ -61,15 +62,40 @@ unsafe extern "C" fn signal_handler(
             }
         }
 
-        // Fallback to the original handler. Restore the old handler and re-raise the signal.
+        // Call a previous handler directly so multiple recoverable SIGBUS
+        // handlers can coexist. An ignored or default disposition still has to
+        // be restored so the fault can be raised again by the kernel.
         // This can happen when (but not limited to):
         // - The address in question is not tracked by indexedlog's (file-backed) mmap buffers.
         // - Already tried fixing the same page before, to prevent infinite loop.
         #[expect(static_mut_refs)]
-        if let Some(old_handler_mut) = ORIG_HANDLER.as_mut() {
-            libc::sigaction(sig, old_handler_mut, std::ptr::null_mut());
-            // Retry as a way to re-raise.
+        if let Some(old_handler) = ORIG_HANDLER.as_ref() {
+            call_original_handler(old_handler, sig, info, ucontext);
         }
+    }
+}
+
+unsafe fn call_original_handler(
+    action: &libc::sigaction,
+    sig: libc::c_int,
+    info: *mut libc::siginfo_t,
+    ucontext: *mut c_void,
+) {
+    let handler = action.sa_sigaction;
+    if handler == libc::SIG_IGN || handler == libc::SIG_DFL {
+        unsafe {
+            libc::sigaction(sig, action, std::ptr::null_mut());
+        }
+        return;
+    }
+
+    if action.sa_flags & libc::SA_SIGINFO != 0 {
+        let handler: unsafe extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut c_void) =
+            unsafe { mem::transmute(handler) };
+        unsafe { handler(sig, info, ucontext) };
+    } else {
+        let handler: unsafe extern "C" fn(libc::c_int) = unsafe { mem::transmute(handler) };
+        unsafe { handler(sig) };
     }
 }
 
@@ -103,12 +129,83 @@ fn zero_fill_page(addr: usize, writable: bool) -> Result<(), ()> {
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::c_void;
     use std::fs::OpenOptions;
+    use std::mem;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
 
     use tempfile::tempdir;
 
     use crate::log::Log;
     use crate::log::PRIMARY_FILE;
+
+    #[test]
+    fn test_call_original_siginfo_handler() {
+        static CALLS: AtomicUsize = AtomicUsize::new(0);
+
+        unsafe extern "C" fn handler(
+            sig: libc::c_int,
+            _info: *mut libc::siginfo_t,
+            _ucontext: *mut c_void,
+        ) {
+            assert_eq!(sig, libc::SIGBUS);
+            CALLS.fetch_add(1, Ordering::Relaxed);
+        }
+
+        let mut action: libc::sigaction = unsafe { mem::zeroed() };
+        action.sa_sigaction = handler as *const () as usize;
+        action.sa_flags = libc::SA_SIGINFO;
+        unsafe {
+            super::call_original_handler(
+                &action,
+                libc::SIGBUS,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+            super::call_original_handler(
+                &action,
+                libc::SIGBUS,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+        }
+        assert_eq!(CALLS.load(Ordering::Relaxed), 2);
+    }
+
+    #[test]
+    fn test_call_original_ignored_handler_restores_disposition() {
+        unsafe extern "C" fn handler(_sig: libc::c_int) {}
+
+        let mut current_action: libc::sigaction = unsafe { mem::zeroed() };
+        current_action.sa_sigaction = handler as *const () as usize;
+        let mut ignored_action: libc::sigaction = unsafe { mem::zeroed() };
+        ignored_action.sa_sigaction = libc::SIG_IGN;
+        let mut original_action: libc::sigaction = unsafe { mem::zeroed() };
+
+        let signal = libc::SIGUSR2;
+        unsafe {
+            assert_eq!(
+                libc::sigaction(signal, &current_action, &mut original_action),
+                0
+            );
+            super::call_original_handler(
+                &ignored_action,
+                signal,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+        }
+
+        let mut installed_action: libc::sigaction = unsafe { mem::zeroed() };
+        let query_result =
+            unsafe { libc::sigaction(signal, std::ptr::null(), &mut installed_action) };
+        unsafe {
+            libc::sigaction(signal, &original_action, std::ptr::null_mut());
+        }
+        assert_eq!(query_result, 0);
+        assert_eq!(installed_action.sa_sigaction, libc::SIG_IGN);
+    }
 
     #[test]
     fn test_sigbus_truncate_log() {
