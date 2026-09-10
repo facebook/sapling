@@ -22,6 +22,7 @@
 #include <sys/sysinfo.h>
 #include <sys/utsname.h>
 #endif
+#include <atomic>
 #include <cerrno>
 #include <system_error>
 #include <thread>
@@ -190,6 +191,55 @@ TEST_F(FuseChannelTest, testInitDestroy) {
   // device.
   auto channel = createChannel();
   performInit(channel.get());
+}
+
+TEST_F(FuseChannelTest, requestMetricsDuringWorkerInitialization) {
+  constexpr size_t kWorkerCount = 32;
+  auto channel = createChannel(kWorkerCount);
+
+  std::atomic<bool> keepPolling{true};
+  std::atomic<bool> observedActiveRequest{false};
+  std::atomic<size_t> pollCount{0};
+  std::thread statsThread{[&] {
+    while (keepPolling.load(std::memory_order_acquire)) {
+      if (channel->getRequestMetric(RequestMetricsScope::COUNT) > 0) {
+        observedActiveRequest.store(true, std::memory_order_release);
+      }
+      pollCount.fetch_add(1, std::memory_order_release);
+    }
+  }};
+  SCOPE_EXIT {
+    keepPolling.store(false, std::memory_order_release);
+    statsThread.join();
+  };
+
+  const auto waitForPollAfter = [&](size_t previousCount) {
+    const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (pollCount.load(std::memory_order_acquire) <= previousCount &&
+           std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::yield();
+    }
+    return pollCount.load(std::memory_order_acquire) > previousCount;
+  };
+  ASSERT_TRUE(waitForPollAfter(0));
+
+  // TSan detects unsafe concurrent publication while metric reads overlap
+  // worker initialization. The assertion below also requires the polling
+  // thread to observe an active request in non-sanitized builds.
+  performInit(channel.get());
+
+  auto requestId = fuse_.sendLookup(FUSE_ROOT_ID, "worker-ready");
+  auto request = dispatcher_->waitForLookup(requestId);
+
+  const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+  while (!observedActiveRequest.load(std::memory_order_acquire) &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  ASSERT_TRUE(observedActiveRequest.load(std::memory_order_acquire));
+
+  request.promise.setValue(genRandomLookupResponse(2));
+  EXPECT_EQ(requestId, fuse_.recvResponse().header.unique);
 }
 
 TEST_F(FuseChannelTest, testDestroyWithPendingInit) {
