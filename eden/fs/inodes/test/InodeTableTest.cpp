@@ -10,7 +10,6 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
-#include <signal.h>
 #include <unistd.h>
 #include <system_error>
 
@@ -41,14 +40,6 @@ struct Int {
   int value;
 };
 
-#if defined(__linux__) && defined(MADV_POPULATE_WRITE)
-void handleSigbus(int signo, siginfo_t* info, void* ucontext) {
-  if (sigbus_try_handle(signo, info, ucontext)) {
-    return;
-  }
-  _exit(128 + signo);
-}
-#endif
 } // namespace
 
 TEST_F(InodeTableTest, persists_record) {
@@ -228,11 +219,7 @@ TEST_F(InodeTableTest, modifyOrThrowHandlesUnavailableBackingPage) {
 
   EXPECT_EXIT(
       {
-        struct sigaction action = {};
-        action.sa_sigaction = handleSigbus;
-        action.sa_flags = SA_SIGINFO;
-        sigemptyset(&action.sa_mask);
-        if (sigaction(SIGBUS, &action, nullptr) != 0) {
+        if (sigbus_install_handler() != 0) {
           _exit(1);
         }
         try {
@@ -275,11 +262,7 @@ TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
 
   EXPECT_EXIT(
       {
-        struct sigaction action = {};
-        action.sa_sigaction = handleSigbus;
-        action.sa_flags = SA_SIGINFO;
-        sigemptyset(&action.sa_mask);
-        if (sigaction(SIGBUS, &action, nullptr) != 0) {
+        if (sigbus_install_handler() != 0) {
           _exit(1);
         }
         try {
