@@ -7,6 +7,26 @@
 
 import UnauthorizedError from './UnauthorizedError';
 
+type GraphQLResponseError = {
+  message: string;
+  type?: string;
+  path?: Array<string | number>;
+};
+
+export class GitHubGraphQLError extends Error {
+  constructor(readonly errors: GraphQLResponseError[], readonly data: unknown) {
+    super(
+      errors
+        .map(error => {
+          const path = Array.isArray(error.path) ? ` (${error.path.join('.')})` : '';
+          return `${error.message}${path}`;
+        })
+        .join('\n'),
+    );
+    this.name = 'GitHubGraphQLError';
+  }
+}
+
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
@@ -30,8 +50,8 @@ export default async function queryGraphQL<TData, TVariables>(
 
   const json = await response.json();
 
-  if (Array.isArray(json.errors)) {
-    return Promise.reject(`Error: ${json.errors[0].message}`);
+  if (Array.isArray(json.errors) && json.errors.length > 0) {
+    throw new GitHubGraphQLError(json.errors, json.data);
   }
 
   return json.data;

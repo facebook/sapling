@@ -27,7 +27,7 @@ import {
   stackedPullRequestAtom,
 } from './jotai';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
-import {Box, Text} from '@primer/react';
+import {Box, Flash, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {Suspense, useEffect, useMemo} from 'react';
@@ -58,17 +58,12 @@ function PullRequestBootstrap() {
 function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   // Use loadable to avoid suspending - we want to show the current PR while
   // refreshing in the background
-  const loadablePRAtom = useMemo(
-    () => loadable(gitHubPullRequestForParamsAtom(params)),
-    [params],
-  );
+  const loadablePRAtom = useMemo(() => loadable(gitHubPullRequestForParamsAtom(params)), [params]);
   const pullRequestLoadable = useAtomValue(loadablePRAtom);
   const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
-  const pullRequest =
-    pullRequestLoadable.state === 'hasData' ? pullRequestLoadable.data : null;
-  const isPullRequestNotFound =
-    pullRequestLoadable.state === 'hasData' && pullRequest == null;
+  const pullRequest = pullRequestLoadable.state === 'hasData' ? pullRequestLoadable.data : null;
+  const isPullRequestNotFound = pullRequestLoadable.state === 'hasData' && pullRequest == null;
 
   useEffect(() => {
     if (pullRequest != null) {
@@ -102,7 +97,25 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
     }
   }, [pullRequest, setPendingScrollRestore]);
 
-  if (isPullRequestNotFound) {
+  if (pullRequestLoadable.state === 'hasError') {
+    const error = pullRequestLoadable.error;
+    return (
+      <Flash variant="danger" role="alert">
+        <Text as="p" fontWeight="bold">
+          Could not load this pull request.
+        </Text>
+        <Box as="pre" sx={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>
+          {error instanceof Error ? error.message : String(error)}
+        </Box>
+        <Text as="p">
+          Check that your GitHub token covers this repository and can read its contents and pull
+          requests. After changing permissions, reload this page.
+        </Text>
+      </Flash>
+    );
+  } else if (pullRequestLoadable.state === 'loading') {
+    return <CenteredSpinner />;
+  } else if (isPullRequestNotFound) {
     return <PullRequestNotFound />;
   } else {
     return <PullRequestDetails />;
