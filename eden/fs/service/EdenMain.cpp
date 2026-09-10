@@ -506,12 +506,36 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
   auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
+  bool disclaimTcc = edenConfig->disclaimTccResponsibility.getValue();
+#ifdef __APPLE__
+  std::string signingTeam;
+  if (disclaimTcc) {
+    signingTeam = selfCodeSigningTeamId();
+    disclaimTcc = signingTeam == edenConfig->disclaimTccTeamId.getValue();
+  }
+#endif
   auto startupLogger = daemonizeIfRequested(
       logPath,
       privHelper.get(),
       originalCommandLine,
       startupStatusChannel,
-      edenConfig->disclaimTccResponsibility.getValue());
+      disclaimTcc);
+#ifdef __APPLE__
+  // Logged after daemonizing rather than before: the daemonizing parent never
+  // returns from daemonizeIfRequested(), and the daemon's stderr is redirected
+  // into edenfs.log inside it, which is where this needs to be visible. A
+  // user-run --foreground daemon has an empty logPath and spawned nothing, so
+  // there is no skipped disclaim to report.
+  if (!disclaimTcc && edenConfig->disclaimTccResponsibility.getValue() &&
+      !logPath.empty()) {
+    XLOGF(
+        INFO,
+        "not disclaiming TCC responsibility for the daemon: code signature "
+        "team {}, not the fleet team {}",
+        signingTeam,
+        edenConfig->disclaimTccTeamId.getValue());
+  }
+#endif
   std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {

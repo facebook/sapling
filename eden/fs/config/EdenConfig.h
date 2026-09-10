@@ -12,6 +12,8 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -31,6 +33,15 @@
 #include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/eden-config.h"
+
+#ifdef EDEN_HAVE_TCC_DISCLAIM_TEAM_ID
+#include "eden/fs/config/facebook/TccDisclaimTeamId.h" // @manual
+#else
+namespace facebook::eden {
+// No fleet signing team in open-source builds; set core:disclaim-tcc-team-id.
+constexpr std::string_view kTccDisclaimTeamId = "";
+} // namespace facebook::eden
+#endif
 
 namespace re2 {
 class RE2;
@@ -362,11 +373,26 @@ class EdenConfig : private ConfigSettingManager {
    * so filesystem access can fail depending on launch context. If true, the
    * daemonizing parent spawns the long-lived daemon with TCC responsibility
    * disclaimed, making the daemon its own responsible process so grants keyed
-   * to its code signature apply deterministically. Only used on macOS.
+   * to its code signature apply deterministically. The daemon additionally
+   * has to be signed by the team that grant is keyed to (see
+   * disclaimTccTeamId); other builds never disclaim regardless of this
+   * setting. Only used on macOS.
    */
   ConfigSetting<bool> disclaimTccResponsibility{
       "core:disclaim-tcc-responsibility",
       true,
+      this};
+
+  /**
+   * Team identifier a macOS code signature must carry for the daemon to
+   * disclaim TCC responsibility (see disclaimTccResponsibility). Defaults to
+   * the fleet release team the MDM PPPC grant is keyed to in Meta builds,
+   * empty otherwise. The privhelper spawn uses the compiled default, see the
+   * TODO in PrivHelperImpl.cpp.
+   */
+  ConfigSetting<std::string> disclaimTccTeamId{
+      "core:disclaim-tcc-team-id",
+      std::string{kTccDisclaimTeamId},
       this};
 
   // [daemon]

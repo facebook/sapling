@@ -16,6 +16,7 @@ target_link_libraries(
     eden_utils
     Folly::folly
   PRIVATE
+    eden_config
     eden_nfs_xdr
 )
 

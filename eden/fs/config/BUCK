@@ -50,6 +50,7 @@ cpp_library(
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
         "//eden/fs:config",
+        "//eden/fs/config/facebook:tcc_disclaim_team_id",  # @manual
         "//eden/fs/model:model",
         "//eden/fs/store:store_type",
         "//eden/fs/utils:chrono",

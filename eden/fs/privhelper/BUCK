@@ -139,6 +139,7 @@ cpp_library(
         "//eden/common/utils:io",
         "//eden/common/utils:process",
         "//eden/common/utils:user_info",
+        "//eden/fs/config:config",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:eden_error",

@@ -9,6 +9,7 @@
 
 #include <gflags/gflags.h>
 #include <memory>
+#include <string>
 #include "eden/common/utils/PathFuncs.h"
 
 // Path of the privhelper binary EdenFS was launched with. Defined in
@@ -59,6 +60,14 @@ constexpr const char* kTccDisclaimKillswitchPath =
  */
 bool tccDisclaimKillswitchPresent(
     const char* path = kTccDisclaimKillswitchPath);
+
+#ifdef __APPLE__
+/**
+ * Team identifier of this process's code signature via csops(2), or "none"
+ * if unsigned, ad-hoc, or unavailable.
+ */
+std::string selfCodeSigningTeamId();
+#endif // __APPLE__
 
 /**
  * Create a PrivHelper client object using the specified connection rather than
