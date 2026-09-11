@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! # Parsing hgrc content using pest.
+//! # Parsing and formatting hgrc content.
 //!
 //! Parse hgrc content (`str`) into a list of instructions:
 //! - SetConfig(section, name, value)
@@ -15,6 +15,7 @@
 //! Pure. Do not depend on a filesystem.
 
 pub(crate) mod config;
+pub mod format;
 #[cfg(test)]
 mod tests;
 

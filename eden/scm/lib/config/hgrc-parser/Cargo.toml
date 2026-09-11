@@ -11,3 +11,6 @@ license = "MIT"
 
 [lib]
 name = "hgrc_parser"
+
+[dependencies]
+thiserror = "2.0.20"
