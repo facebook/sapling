@@ -32,6 +32,8 @@ pub struct DenyFilesBuilder {
     /// are also rejected. Defaults to false (matches the historical behavior
     /// where deletions were always permitted by `all_push_sources_deny_patterns`).
     block_deletions: bool,
+    /// Extra guidance appended to the default rejection text.
+    additional_message: Option<String>,
 }
 
 impl DenyFilesBuilder {
@@ -44,6 +46,9 @@ impl DenyFilesBuilder {
         }
         if let Some(v) = config.ints_64.get("block_deletions") {
             self = self.block_deletions(*v != 0)
+        }
+        if let Some(v) = config.strings.get("additional_message") {
+            self = self.additional_message(v)
         }
         self
     }
@@ -71,6 +76,11 @@ impl DenyFilesBuilder {
         self
     }
 
+    pub fn additional_message(mut self, additional_message: &str) -> Self {
+        self.additional_message = Some(additional_message.to_owned());
+        self
+    }
+
     pub fn build(self) -> Result<DenyFiles> {
         Ok(DenyFiles {
             all_push_sources_deny_patterns: self
@@ -88,6 +98,7 @@ impl DenyFilesBuilder {
                 .collect::<Result<Vec<_>, _>>()
                 .context("Failed to create LuaPattern for native_push_only_deny_patterns")?,
             block_deletions: self.block_deletions,
+            additional_message: self.additional_message,
         })
     }
 }
@@ -101,6 +112,7 @@ pub struct DenyFiles {
     /// When true, deletions matching `all_push_sources_deny_patterns` are
     /// rejected. Native-only patterns already block deletions unconditionally.
     pub block_deletions: bool,
+    additional_message: Option<String>,
 }
 
 impl DenyFiles {
@@ -128,6 +140,7 @@ impl FileHook for DenyFiles {
             &self.all_push_sources_deny_patterns,
             &self.native_push_only_deny_patterns,
             self.block_deletions,
+            self.additional_message.as_deref(),
             path,
             cross_repo_push_source,
             change,
@@ -135,12 +148,17 @@ impl FileHook for DenyFiles {
     }
 }
 
-fn rejection<'a, 'b>(path: &'a String, pattern: &'b LuaPattern) -> HookExecution {
+fn rejection(path: &str, pattern: &LuaPattern, additional_message: Option<&str>) -> HookExecution {
+    let default_message = format!(
+        "Denied filename '{path}' matched deny pattern '{pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '{path}' so that it no longer appears in your diff, then re-submit."
+    );
+    let long_description = match additional_message {
+        Some(additional) => format!("{default_message}\n\n{additional}"),
+        None => default_message,
+    };
     HookExecution::rejected(HookRejectionInfo::new_long(
         "Denied filename matched name pattern",
-        format!(
-            "Denied filename '{path}' matched deny pattern '{pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '{path}' so that it no longer appears in your diff, then re-submit."
-        ),
+        long_description,
     ))
 }
 
@@ -149,6 +167,7 @@ fn deny_unacceptable_patterns<'a, 'b, 'c>(
     all_patterns: &'a [LuaPattern],
     native_patterns: &'a [LuaPattern],
     block_deletions: bool,
+    additional_message: Option<&str>,
     path: &'b NonRootMPath,
     cross_repo_push_source: CrossRepoPushSource,
     change: Option<&'c BasicFileChange>,
@@ -157,7 +176,7 @@ fn deny_unacceptable_patterns<'a, 'b, 'c>(
     if CrossRepoPushSource::NativeToThisRepo == cross_repo_push_source {
         for pattern in native_patterns {
             if pattern.is_match(&path) {
-                return Ok(rejection(&path, pattern));
+                return Ok(rejection(&path, pattern, additional_message));
             }
         }
     }
@@ -168,7 +187,7 @@ fn deny_unacceptable_patterns<'a, 'b, 'c>(
 
     for pattern in all_patterns {
         if pattern.is_match(&path) {
-            return Ok(rejection(&path, pattern));
+            return Ok(rejection(&path, pattern, additional_message));
         }
     }
 
@@ -206,6 +225,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -217,6 +237,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -233,6 +254,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -244,6 +266,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -260,6 +283,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             None,
@@ -271,6 +295,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -287,6 +312,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -298,6 +324,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -314,6 +341,7 @@ mod test {
             &all,
             &native,
             false,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             None,
@@ -331,6 +359,7 @@ mod test {
             &all,
             &native,
             true,
+            None,
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             None,
@@ -343,6 +372,7 @@ mod test {
             &all,
             &native,
             true,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             None,
@@ -359,11 +389,52 @@ mod test {
             &all,
             &native,
             true,
+            None,
             &mp,
             CrossRepoPushSource::PushRedirected,
             None,
         )
         .unwrap();
         assert!(r.is_accepted());
+    }
+
+    #[mononoke::test]
+    fn test_additional_rejection_message() {
+        let additional_message = "Contact the owners of this directory before changing it.";
+        let config = HookConfig {
+            strings: [(
+                "additional_message".to_owned(),
+                additional_message.to_owned(),
+            )]
+            .into_iter()
+            .collect(),
+            string_lists: [("deny_patterns".to_owned(), vec!["all".to_owned()])]
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        };
+        let hook = DenyFiles::builder()
+            .set_from_config(&config)
+            .build()
+            .expect("test patterns should be valid");
+
+        let result = deny_unacceptable_patterns(
+            &hook.all_push_sources_deny_patterns,
+            &hook.native_push_only_deny_patterns,
+            hook.block_deletions,
+            hook.additional_message.as_deref(),
+            &mpath("all/1"),
+            CrossRepoPushSource::NativeToThisRepo,
+            Some(&basic_change()),
+        )
+        .expect("hook execution should succeed");
+
+        assert!(result.is_rejected_with_reason(|info| {
+            info.long_description
+                .starts_with("Denied filename 'all/1' matched deny pattern 'all'. ")
+                && info
+                    .long_description
+                    .ends_with(&format!("then re-submit.\n\n{additional_message}"))
+        }));
     }
 }
