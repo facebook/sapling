@@ -227,7 +227,7 @@ export function startServer({
           platformImpl = (await import('../platform/obsidianServerPlatform')).platform;
           break;
         case 'agentHome':
-          platformImpl = (await import('../platform/agentHomeServerPlatform')).platform;
+          // @fb-only: platformImpl = (await import('../src/facebook/agentHomeServerPlatform')).platform;
           break;
         default:
         case undefined:
