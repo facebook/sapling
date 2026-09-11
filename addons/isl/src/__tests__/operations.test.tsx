@@ -34,17 +34,18 @@ const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');
 
-function mockPlatform(values: Partial<typeof platform>): () => void {
-  // Only Doctor eligibility tests need rollout enabled; keep other operation tests unchanged.
+function mockDoctorRollout(): void {
   const useFeatureFlagSync = featureFlags.useFeatureFlagSync;
-  const flagSpy = jest.spyOn(featureFlags, 'useFeatureFlagSync').mockImplementation(name => {
+  jest.spyOn(featureFlags, 'useFeatureFlagSync').mockImplementation(name => {
     const value = useFeatureFlagSync(name);
     return name === Internal.featureFlags?.VSCodeSelfHealEnabled ? true : value;
   });
+}
+
+function mockPlatform(values: Partial<typeof platform>): () => void {
   const original = {...platform};
   Object.assign(platform, values);
   return () => {
-    flagSpy.mockRestore();
     for (const key of Object.keys(values)) {
       if (!Object.hasOwn(original, key)) {
         Reflect.deleteProperty(platform, key);
@@ -228,6 +229,7 @@ describe('operations', () => {
   it.each([undefined, 'Structured progress'])(
     'offers Doctor with failure evidence (tooltip: %s)',
     async tooltip => {
+      mockDoctorRollout();
       const restorePlatform = mockPlatform({
         platformName: 'vscode',
         supportsFailureInvestigation: true,
@@ -267,11 +269,11 @@ describe('operations', () => {
         fireEvent.click(screen.getByTestId('progress-header-row'));
 
         const healthButton = screen.getByRole('button', {
-          name: 'Investigate with Doctor',
+          name: 'Investigate with Agent',
         });
         fireEvent.mouseEnter(healthButton.parentElement as HTMLElement);
         expect(screen.getByRole('tooltip')).toHaveTextContent(
-          'Investigate this ISL failure with Doctor. You can review and confirm before sharing the workspace and error output.',
+          "Ask Doctor's agent to investigate this ISL failure. You can review and confirm before sharing the workspace and error output.",
         );
         fireEvent.click(healthButton);
         const healthMessage = getLastMessageOfTypeSentToServer('platform/investigateFailure');
@@ -298,6 +300,7 @@ describe('operations', () => {
     ['interrupted externally', 130],
     ['lost during disconnection', EXIT_CODE_FORGET],
   ])('does not offer VS Code Doctor for a %s Sapling operation', async (_name, exitCode) => {
+    mockDoctorRollout();
     const restorePlatform = mockPlatform({
       platformName: 'vscode',
       supportsFailureInvestigation: true,
@@ -326,7 +329,8 @@ describe('operations', () => {
     }
   });
 
-  it('does not offer a health check when the platform does not support one', async () => {
+  it('does not offer an investigation when the platform does not support one', async () => {
+    mockDoctorRollout();
     const restorePlatform = mockPlatform({
       platformName: 'vscode',
       supportsFailureInvestigation: false,
@@ -354,6 +358,7 @@ describe('operations', () => {
   });
 
   it('does not offer VS Code Doctor for an aborted operation', async () => {
+    mockDoctorRollout();
     const restorePlatform = mockPlatform({
       platformName: 'vscode',
       supportsFailureInvestigation: true,

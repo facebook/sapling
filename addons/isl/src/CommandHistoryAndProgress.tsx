@@ -321,7 +321,7 @@ export function CommandHistoryAndProgress() {
               <Row style={{justifyContent: 'flex-end', marginTop: 'var(--pad)'}}>
                 <Tooltip
                   title={t(
-                    'Investigate this ISL failure with Doctor. You can review and confirm before sharing the workspace and error output.',
+                    "Ask Doctor's agent to investigate this ISL failure. You can review and confirm before sharing the workspace and error output.",
                   )}>
                   <Button
                     data-testid="investigate-with-doctor-button"
@@ -339,7 +339,7 @@ export function CommandHistoryAndProgress() {
                         ),
                       });
                     }}>
-                    <T>Investigate with Doctor</T>
+                    <T>Investigate with Agent</T>
                   </Button>
                 </Tooltip>
               </Row>
