@@ -12,6 +12,7 @@
 #include <folly/futures/Future.h>
 #include <rust/cxx.h>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -29,6 +30,10 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
+
+namespace facebook::eden {
+class EdenFsEventsLogger;
+}
 
 namespace sapling {
 
@@ -111,6 +116,11 @@ void sapling_backingstore_get_file_aux_batch_handler(
     size_t index,
     std::unique_ptr<SaplingBackingStoreError> error,
     std::shared_ptr<FileAuxData> aux);
+
+/** Forward a serialized EdenSample to EdenFS's process-wide XplatLogger. */
+void sapling_backingstore_log_edenfs_event(
+    const facebook::eden::EdenFsEventsLogger& logger,
+    rust::Str sampleJson);
 
 // Helper so that Rust can construct an eden Tree "natively" with no
 // intermediate objects.

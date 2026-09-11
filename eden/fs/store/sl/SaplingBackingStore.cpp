@@ -200,7 +200,8 @@ SaplingBackingStore::SaplingBackingStore(
               rust::Str{
                   clientDirectory.view().data(),
                   clientDirectory.view().size()},
-              config_->getEdenConfig()->backingstoreWalkMode.getValue())
+              config_->getEdenConfig()->backingstoreWalkMode.getValue(),
+              edenFsEventsLogger_)
               .into_raw(),
           [](sapling::BackingStore* backingStore) {
             auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);
@@ -277,7 +278,8 @@ SaplingBackingStore::SaplingBackingStore(
               rust::Str{
                   clientDirectory.view().data(),
                   clientDirectory.view().size()},
-              config_->getEdenConfig()->backingstoreWalkMode.getValue())
+              config_->getEdenConfig()->backingstoreWalkMode.getValue(),
+              edenFsEventsLogger_)
               .into_raw(),
           [](sapling::BackingStore* backingStore) {
             auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);

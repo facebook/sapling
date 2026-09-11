@@ -13,6 +13,7 @@
 
 namespace facebook::eden {
 
+class DynamicEvent;
 class IXplatLogger;
 
 /**
@@ -28,6 +29,7 @@ class EdenFsEventsLogger {
 
   void logEvent(const TypedEvent& event) const;
   void logEvent(const TypelessEvent& event) const;
+  void logEvent(const DynamicEvent& event) const;
 
  private:
   std::shared_ptr<IXplatLogger> xplatLogger_;

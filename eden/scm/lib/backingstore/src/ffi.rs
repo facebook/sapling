@@ -11,11 +11,13 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Error;
 use anyhow::anyhow;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+use cxx::WeakPtr;
 use cxxerror::Result;
 use edenapi::types::DirectoryMetadata;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
@@ -164,6 +166,9 @@ pub(crate) mod ffi {
     unsafe extern "C++" {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 
+        #[namespace = "facebook::eden"]
+        type EdenFsEventsLogger;
+
         #[namespace = "folly"]
         type IOBuf = iobuf::IOBuf;
 
@@ -171,6 +176,11 @@ pub(crate) mod ffi {
         type GetTreeAuxBatchResolver;
         type GetBlobBatchResolver;
         type GetFileAuxBatchResolver;
+
+        fn sapling_backingstore_log_edenfs_event(
+            logger: &EdenFsEventsLogger,
+            sample_json: &str,
+        ) -> Result<()>;
 
         unsafe fn sapling_backingstore_get_tree_batch_handler(
             resolve_state: SharedPtr<GetTreeBatchResolver>,
@@ -200,6 +210,8 @@ pub(crate) mod ffi {
             blob: SharedPtr<FileAuxData>,
         );
     }
+
+    impl WeakPtr<EdenFsEventsLogger> {}
 
     unsafe extern "C++" {
         type TreeBuilder;
@@ -336,6 +348,7 @@ pub(crate) mod ffi {
             mount: &str,
             eden_client_dir: &str,
             walk_mode: &str,
+            eden_fs_events_logger: SharedPtr<EdenFsEventsLogger>,
         ) -> Result<Box<BackingStore>>;
 
         pub fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
@@ -452,6 +465,40 @@ pub(crate) mod ffi {
     }
 }
 
+/// Borrows EdenServer's logger without delaying its shutdown and queue drain.
+struct EdenFsEventsLoggerAdapter {
+    logger: Mutex<WeakPtr<ffi::EdenFsEventsLogger>>,
+}
+
+// SAFETY: The adapter never exposes its cxx pointers. The mutex serializes weak
+// pointer upgrades, C++ calls, and destruction of each temporary SharedPtr. A
+// successful upgrade keeps EdenFsEventsLogger alive throughout the call; an
+// expired pointer is never dereferenced. EdenFsEventsLogger only forwards const
+// logging calls to XplatLoggerCore, whose transform registry and message queue
+// are protected by folly::Synchronized, including calls from other C++ owners.
+// The pointers have no thread-affine destruction requirements. Dropping this
+// adapter requires exclusive ownership and releases only a weak reference.
+unsafe impl Send for EdenFsEventsLoggerAdapter {}
+unsafe impl Sync for EdenFsEventsLoggerAdapter {}
+
+impl edenfs_telemetry::SampleLogger for EdenFsEventsLoggerAdapter {
+    fn log(&self, sample: edenfs_telemetry::EdenSample) -> anyhow::Result<()> {
+        let weak_logger = self
+            .logger
+            .lock()
+            .map_err(|_| anyhow!("EdenFsEventsLogger mutex is poisoned"))?;
+        let logger = weak_logger.upgrade();
+        let Some(logger) = logger.as_ref() else {
+            // EdenServer has released its logger during shutdown. Do not keep
+            // it alive or route late events back to the legacy logger.
+            return Ok(());
+        };
+        let sample_json = serde_json::to_string(&sample)?;
+        ffi::sapling_backingstore_log_edenfs_event(logger, &sample_json)?;
+        Ok(())
+    }
+}
+
 impl From<ffi::FetchMode> for FetchMode {
     fn from(fetch_mode: ffi::FetchMode) -> Self {
         match fetch_mode {
@@ -547,8 +594,15 @@ pub fn sapling_backingstore_new(
     mount: &str,
     eden_client_dir: &str,
     walk_mode: &str,
+    eden_fs_events_logger: SharedPtr<ffi::EdenFsEventsLogger>,
 ) -> Result<Box<BackingStore>> {
-    super::init::backingstore_global_init();
+    if eden_fs_events_logger.is_null() {
+        super::init::backingstore_global_init();
+    } else {
+        super::init::backingstore_global_init_with_logger(Arc::new(EdenFsEventsLoggerAdapter {
+            logger: Mutex::new(eden_fs_events_logger.downgrade()),
+        }));
+    }
 
     let mut extra_sapling_configs = Vec::new();
 
@@ -1157,7 +1211,33 @@ pub fn sapling_flush_counters() {
 mod tests {
     use std::path::PathBuf;
 
+    use edenfs_telemetry::EdenSample;
+    use edenfs_telemetry::SampleLogger;
+
     use super::*;
+
+    #[test]
+    fn test_events_logger_adapter_without_live_logger() {
+        let logger = Arc::new(EdenFsEventsLoggerAdapter {
+            logger: Mutex::new(WeakPtr::null()),
+        });
+
+        // An expired weak pointer also upgrades to null. Exercise that path
+        // concurrently through the Rust adapter, not just the C++ log helper.
+        let threads: Vec<_> = (0..8)
+            .map(|_| {
+                let logger = Arc::clone(&logger);
+                std::thread::spawn(move || {
+                    for _ in 0..25 {
+                        logger.log(EdenSample::new()).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+    }
 
     #[test]
     fn test_batch_fetch_stats_maps_fetch_context_counts() {

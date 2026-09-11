@@ -5,15 +5,137 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <folly/CppAttributes.h>
 #include <folly/Try.h>
 #include <folly/io/IOBuf.h>
+#include <folly/json/json.h>
+#include <folly/logging/xlog.h>
+#include <algorithm>
 #include <memory>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
+#include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/scm/lib/backingstore/include/ffi.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 namespace sapling {
+
+namespace {
+
+std::string toStdString(const folly::dynamic& value) {
+  const auto& string = value.asString();
+  return std::string{string.data(), string.size()};
+}
+
+void logMalformedSampleField(
+    const char* section,
+    const folly::dynamic& key,
+    const char* expectedType,
+    const folly::dynamic& value) {
+  XLOGF(
+      WARN,
+      "Skipping malformed EdenSample field '{}.{}': expected {}, got {}",
+      section,
+      key.asString(),
+      expectedType,
+      value.typeName());
+}
+
+bool isStringArray(const folly::dynamic& value) {
+  return value.isArray() &&
+      std::all_of(value.begin(), value.end(), [](const auto& item) {
+           return item.isString();
+         });
+}
+
+const folly::dynamic* FOLLY_NULLABLE
+getObjectField(const folly::dynamic& sample, const char* name) {
+  const auto* field = sample.get_ptr(name);
+  if (!field) {
+    return nullptr;
+  }
+  if (!field->isObject()) {
+    XLOGF(
+        WARN,
+        "Skipping malformed EdenSample section '{}': expected object, got {}",
+        name,
+        field->typeName());
+    return nullptr;
+  }
+  return field;
+}
+
+} // namespace
+
+void sapling_backingstore_log_edenfs_event(
+    const facebook::eden::EdenFsEventsLogger& logger,
+    rust::Str sampleJson) {
+  const auto sample =
+      folly::parseJson(std::string_view{sampleJson.data(), sampleJson.size()});
+  if (!sample.isObject()) {
+    throw std::invalid_argument{"EdenSample JSON is not an object"};
+  }
+
+  facebook::eden::DynamicEvent event;
+
+  if (const auto* ints = getObjectField(sample, "int")) {
+    // EdenSample serializes this section from a BTreeMap<String, i64>. Other
+    // numeric representations cannot be converted to int64_t without losing
+    // precision, so treat them as malformed input.
+    for (const auto& [key, value] : ints->items()) {
+      if (!value.isInt()) {
+        logMalformedSampleField("int", key, "integer", value);
+        continue;
+      }
+      event.addInt(toStdString(key), value.asInt());
+    }
+  }
+  if (const auto* strings = getObjectField(sample, "normal")) {
+    for (const auto& [key, value] : strings->items()) {
+      if (!value.isString()) {
+        logMalformedSampleField("normal", key, "string", value);
+        continue;
+      }
+      event.addString(toStdString(key), toStdString(value));
+    }
+  }
+  if (const auto* vectors = getObjectField(sample, "normvector")) {
+    for (const auto& [key, value] : vectors->items()) {
+      if (!isStringArray(value)) {
+        logMalformedSampleField(
+            "normvector", key, "array containing only strings", value);
+        continue;
+      }
+      std::vector<std::string> values;
+      values.reserve(value.size());
+      for (const auto& item : value) {
+        values.emplace_back(toStdString(item));
+      }
+      event.addStringVec(toStdString(key), std::move(values));
+    }
+  }
+  if (const auto* sets = getObjectField(sample, "tags")) {
+    for (const auto& [key, value] : sets->items()) {
+      if (!isStringArray(value)) {
+        logMalformedSampleField(
+            "tags", key, "array containing only strings", value);
+        continue;
+      }
+      std::unordered_set<std::string> values;
+      values.reserve(value.size());
+      for (const auto& item : value) {
+        values.emplace(toStdString(item));
+      }
+      event.addStringSet(toStdString(key), std::move(values));
+    }
+  }
+
+  logger.logEvent(event);
+}
 
 void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,

@@ -5,19 +5,49 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <mutex>
+#include <thread>
 
+#include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
+#include "eden/fs/telemetry/XplatKeys.h"
 #include "eden/scm/lib/backingstore/include/ffi.h"
+#include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
 using namespace sapling;
 using namespace facebook::eden;
 using rust::Str;
+
+namespace {
+
+class CapturingXplatLogger final : public IXplatLogger {
+ public:
+  void logEvent(std::string_view category, const DynamicEvent& event) override {
+    std::lock_guard lock{mutex_};
+    category_ = category;
+    event_ = event;
+    eventCount_.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  std::string category_;
+  DynamicEvent event_;
+  std::atomic<size_t> eventCount_{0};
+
+ private:
+  std::mutex mutex_;
+};
+
+} // namespace
 
 class TreeBuilderTest : public ::testing::Test {
  protected:
@@ -240,4 +270,111 @@ TEST_F(TreeBuilderTest, MarkMissing) {
   // Build should return nullptr when marked as missing
   auto tree = builder.build();
   EXPECT_EQ(tree, nullptr);
+}
+
+TEST(SaplingBackingStoreTelemetryTest, ForwardsSerializedSample) {
+  auto xplatLogger = std::make_shared<CapturingXplatLogger>();
+  EdenFsEventsLogger eventsLogger{xplatLogger};
+  const std::string sampleJson = R"json({
+    "int":{"file_loads":101,"walk_duration":7},
+    "normal":{"type":"big_walk","walk_root":"src"},
+    "normvector":{"patterns":["*.cpp","*.h"]},
+    "tags":{"labels":["a","b"]}
+  })json";
+
+  sapling_backingstore_log_edenfs_event(eventsLogger, Str{sampleJson});
+
+  EXPECT_EQ(xplatLogger->category_, xplat_keys::kEventsCategory);
+  EXPECT_EQ(xplatLogger->event_.getIntMap().at("file_loads"), 101);
+  EXPECT_EQ(xplatLogger->event_.getIntMap().at("walk_duration"), 7);
+  EXPECT_EQ(xplatLogger->event_.getStringMap().at("type"), "big_walk");
+  EXPECT_EQ(xplatLogger->event_.getStringMap().at("walk_root"), "src");
+  EXPECT_EQ(
+      xplatLogger->event_.getStringVecMap().at("patterns"),
+      (std::vector<std::string>{"*.cpp", "*.h"}));
+  EXPECT_EQ(
+      xplatLogger->event_.getStringSetMap().at("labels"),
+      (std::unordered_set<std::string>{"a", "b"}));
+}
+
+TEST(SaplingBackingStoreTelemetryTest, SkipsMalformedSerializedSampleFields) {
+  auto xplatLogger = std::make_shared<CapturingXplatLogger>();
+  EdenFsEventsLogger eventsLogger{xplatLogger};
+  const std::string sampleJson = R"json({
+    "int":{"valid_int":101,"invalid_int":"101","invalid_float":101.5},
+    "normal":{"valid_string":"big_walk","invalid_string":7},
+    "normvector":{"valid_vector":["a","b"],"invalid_vector":["a",7]},
+    "tags":{"valid_set":["x","y"],"invalid_set":"x"}
+  })json";
+
+  EXPECT_NO_THROW(
+      sapling_backingstore_log_edenfs_event(eventsLogger, Str{sampleJson}));
+
+  EXPECT_EQ(xplatLogger->event_.getIntMap().at("valid_int"), 101);
+  EXPECT_EQ(xplatLogger->event_.getIntMap().count("invalid_int"), 0);
+  EXPECT_EQ(xplatLogger->event_.getIntMap().count("invalid_float"), 0);
+  EXPECT_EQ(xplatLogger->event_.getStringMap().at("valid_string"), "big_walk");
+  EXPECT_EQ(xplatLogger->event_.getStringMap().count("invalid_string"), 0);
+  EXPECT_EQ(
+      xplatLogger->event_.getStringVecMap().at("valid_vector"),
+      (std::vector<std::string>{"a", "b"}));
+  EXPECT_EQ(xplatLogger->event_.getStringVecMap().count("invalid_vector"), 0);
+  EXPECT_EQ(
+      xplatLogger->event_.getStringSetMap().at("valid_set"),
+      (std::unordered_set<std::string>{"x", "y"}));
+  EXPECT_EQ(xplatLogger->event_.getStringSetMap().count("invalid_set"), 0);
+}
+
+TEST(SaplingBackingStoreTelemetryTest, LogsSerializedSamplesConcurrently) {
+  constexpr size_t kThreadCount = 8;
+  constexpr size_t kEventsPerThread = 25;
+
+  auto xplatLogger = std::make_shared<CapturingXplatLogger>();
+  EdenFsEventsLogger eventsLogger{xplatLogger};
+  const std::string sampleJson = R"json({
+    "int":{"file_loads":101},
+    "normal":{"type":"big_walk"}
+  })json";
+
+  std::vector<std::thread> threads;
+  threads.reserve(kThreadCount);
+  for (size_t i = 0; i < kThreadCount; ++i) {
+    threads.emplace_back([&] {
+      for (size_t event = 0; event < kEventsPerThread; ++event) {
+        sapling_backingstore_log_edenfs_event(eventsLogger, Str{sampleJson});
+      }
+    });
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_EQ(
+      xplatLogger->eventCount_.load(std::memory_order_relaxed),
+      kThreadCount * kEventsPerThread);
+}
+
+TEST(SaplingBackingStoreTelemetryTest, GlobalBindingDoesNotRetainLogger) {
+  folly::test::TemporaryDirectory testDir;
+  const auto repository = testDir.path().string();
+  auto xplatLogger = std::make_shared<CapturingXplatLogger>();
+  auto eventsLogger = std::make_shared<EdenFsEventsLogger>(xplatLogger);
+  std::weak_ptr<EdenFsEventsLogger> weakEventsLogger{eventsLogger};
+  std::weak_ptr<IXplatLogger> weakXplatLogger{xplatLogger};
+
+  // Logger binding happens before loading the repository. An empty directory
+  // lets us exercise the production static binding without a Sapling repo.
+  EXPECT_THROW(
+      sapling_backingstore_new(
+          Str{repository}, Str{}, Str{}, Str{}, eventsLogger),
+      rust::Error);
+
+  EXPECT_EQ(eventsLogger.use_count(), 1);
+  eventsLogger.reset();
+  xplatLogger.reset();
+
+  // The static Rust binding remains installed, but must not prevent either
+  // destructor from running when EdenServer releases its ownership.
+  EXPECT_TRUE(weakEventsLogger.expired());
+  EXPECT_TRUE(weakXplatLogger.expired());
 }

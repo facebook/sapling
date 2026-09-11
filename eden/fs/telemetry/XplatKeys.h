@@ -64,6 +64,7 @@ inline constexpr std::string_view kRepoSource = "repo_source";
 inline constexpr std::string_view kError = "error";
 inline constexpr std::string_view kInterface = "interface";
 inline constexpr std::string_view kActionType = "action_type";
+inline constexpr std::string_view kLoggedBy = "logged_by";
 
 // --- Fsck ---
 inline constexpr std::string_view kAttemptedRepair = "attempted_repair";
@@ -181,6 +182,17 @@ inline constexpr std::string_view kReadThreshold = "read_threshold";
 inline constexpr std::string_view kReaddirCount = "readdir_count";
 inline constexpr std::string_view kReaddirThreshold = "readdir_threshold";
 inline constexpr std::string_view kProcessHierarchy = "process_hierarchy";
+
+// --- BigWalk ---
+inline constexpr std::string_view kWalkRoot = "walk_root";
+inline constexpr std::string_view kWalkerDetail = "walker_detail";
+inline constexpr std::string_view kFileLoads = "file_loads";
+inline constexpr std::string_view kFilePreloads = "file_preloads";
+inline constexpr std::string_view kFileReads = "file_reads";
+inline constexpr std::string_view kDirLoads = "dir_loads";
+inline constexpr std::string_view kDirReads = "dir_reads";
+inline constexpr std::string_view kWalkDepth = "walk_depth";
+inline constexpr std::string_view kWalkDuration = "walk_duration";
 
 // --- FetchMiss ---
 inline constexpr std::string_view kMissType = "miss_type";

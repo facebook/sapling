@@ -1504,7 +1504,7 @@ impl Walk {
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 walk_depth = self.depth,
-                walker_detail = self.pid_detail.get(),
+                walker_detail = self.pid_detail.get().map(String::as_str).unwrap_or_default(),
                 walk_duration = duration,
             );
         }

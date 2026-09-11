@@ -18,22 +18,22 @@ EdenFsEventsLogger::EdenFsEventsLogger(
     : xplatLogger_{std::move(xplatLogger)} {}
 
 void EdenFsEventsLogger::logEvent(const TypedEvent& event) const {
-  if (!xplatLogger_) {
-    return;
-  }
   DynamicEvent de;
   event.populate(de);
   de.addString(std::string(xplat_keys::kType), std::string(event.getType()));
-  xplatLogger_->logEvent(xplat_keys::kEventsCategory, de);
+  logEvent(de);
 }
 
 void EdenFsEventsLogger::logEvent(const TypelessEvent& event) const {
-  if (!xplatLogger_) {
-    return;
-  }
   DynamicEvent de;
   event.populate(de);
-  xplatLogger_->logEvent(xplat_keys::kEventsCategory, de);
+  logEvent(de);
+}
+
+void EdenFsEventsLogger::logEvent(const DynamicEvent& event) const {
+  if (xplatLogger_) {
+    xplatLogger_->logEvent(xplat_keys::kEventsCategory, event);
+  }
 }
 
 } // namespace facebook::eden
