@@ -20,7 +20,10 @@ sl_rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/blob:blob",
+        "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/types:types",
     ],
 )

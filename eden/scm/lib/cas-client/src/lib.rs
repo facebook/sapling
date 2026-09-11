@@ -11,6 +11,13 @@ use futures::stream::BoxStream;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 
+mod manager;
+
+pub use manager::CasFetchGuard;
+pub use manager::CasFetchManager;
+pub use manager::CasFetchManagerBuilder;
+pub use manager::CasFetchOutcome;
+
 /// Per-digest results from one batch returned by [`CasClient::fetch`].
 ///
 /// Each entry associates a digest with its blob, a CAS not-found result
