@@ -175,6 +175,48 @@ describe('platform/subscribeToVSCodeConfig', () => {
   });
 });
 
+describe('platform/investigateFailure', () => {
+  async function checkHealth() {
+    const platform = getVSCodePlatform({} as vscode.ExtensionContext);
+    await platform.handleMessageFromClient(
+      undefined,
+      mockCtx,
+      {
+        type: 'platform/investigateFailure',
+        failure: {
+          operationId: 'id',
+          operationName: 'GotoOperation',
+          exitCode: 1,
+          output: '',
+          outputTruncated: false,
+        },
+      },
+      jest.fn(),
+      jest.fn(),
+    );
+  }
+
+  beforeEach(() => jest.clearAllMocks());
+
+  afterEach(() => {
+    delete Internal.investigateFailure;
+  });
+
+  it('passes the server context and failure to the internal investigation', async () => {
+    const check = jest.fn().mockResolvedValue(undefined);
+    Internal.investigateFailure = check;
+    await checkHealth();
+    expect(check.mock.calls).toEqual([[mockCtx, expect.objectContaining({operationId: 'id'})]]);
+  });
+
+  it('ignores health requests in OSS without commands, telemetry, or installation prompts', async () => {
+    await checkHealth();
+    expect(vscode.commands.getCommands).not.toHaveBeenCalled();
+    expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+  });
+});
+
 describe('platform/openFileAtRevset', () => {
   const mockExtensionContext = {
     globalState: {update: jest.fn()},

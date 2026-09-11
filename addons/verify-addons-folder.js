@@ -207,7 +207,9 @@ async function lintAndTest(cwd) {
   await Promise.all([
     runTask(['yarn', 'run', 'lint'], cwd),
     runTask(['yarn', 'run', 'tsc', '--noEmit'], cwd),
-    runTask(['yarn', 'test', '--watchAll=false'], cwd),
+    // Packages run concurrently. Bound each Jest pool so they do not each consume
+    // the host's CPU count in workers and exhaust the CI container's memory.
+    runTask(['yarn', 'test', '--watchAll=false', '--maxWorkers=2'], cwd),
   ]);
 }
 

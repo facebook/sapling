@@ -35,6 +35,8 @@ export interface PlatformVisibility {
  */
 export interface Platform {
   platformName: PlatformName;
+  /** Whether the embedding host supports investigating a failed operation. */
+  supportsFailureInvestigation?: boolean;
   confirm(message: string, details?: string): Promise<boolean>;
   openFile(path: RepoRelativePath, options?: {line?: OneIndexedLineNumber}): void;
   openFiles(paths: ReadonlyArray<RepoRelativePath>, options?: {line?: OneIndexedLineNumber}): void;

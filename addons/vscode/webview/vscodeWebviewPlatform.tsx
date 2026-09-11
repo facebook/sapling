@@ -15,6 +15,7 @@ import type {VSCodeAPI} from './vscodeApi';
 import {browserClipboardCopy} from 'isl/src/platform/browserPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
+import {Internal} from './Internal';
 import {vscodeApi} from './vscodeApi';
 
 import './uncaughtExceptions';
@@ -52,6 +53,7 @@ const persistedState: Record<string, Json> = window.islInitialPersistedState ?? 
 
 const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
+  supportsFailureInvestigation: Internal.supportsFailureInvestigation === true,
   confirm: (message: string, details?: string | undefined) => {
     window.clientToServerAPI?.postMessage({type: 'platform/confirm', message, details});
 

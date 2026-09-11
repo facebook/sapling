@@ -19,8 +19,12 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {notEmpty, truncate} from 'shared/utils';
 import {LogRenderExposures} from './analytics/LogRenderExposures';
+import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {createFailedOperationContext} from './failureInvestigation';
+import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
+import {Internal} from './Internal';
 import {
   EXIT_CODE_FORGET,
   operationList,
@@ -28,12 +32,15 @@ import {
   queuedOperationsErrorAtom,
   useAbortRunningOperation,
 } from './operationsState';
+import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
 import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
 
 import './CommandHistoryAndProgress.css';
+
+const EXIT_CODE_SIGINT = 130;
 
 function OperationDescription(props: {
   info: ValidatedRepoInfo;
@@ -101,6 +108,7 @@ const nextToRunCollapsedAtom = atom(false);
 const queueErrorCollapsedAtom = atom(true);
 
 export function CommandHistoryAndProgress() {
+  const investigationEnabled = useFeatureFlagSync(Internal.featureFlags?.VSCodeSelfHealEnabled);
   const list = useAtomValue(operationList);
   const queued = useAtomValue(queuedOperations);
   const [queuedError, setQueuedError] = useAtom(queuedOperationsErrorAtom);
@@ -161,12 +169,22 @@ export function CommandHistoryAndProgress() {
     showLastLineOfOutput = true;
   }
 
-  let processedLines = processTerminalLines(progress.commandOutput ?? []);
+  const evidenceLines = processTerminalLines(progress.commandOutput ?? []);
+  let processedLines = evidenceLines;
   if (desc?.tooltip != null) {
     processedLines = processedLines.filter(line => !line.startsWith('{'));
   }
 
   const showAbort = isRunning;
+  const showInvestigationAction =
+    investigationEnabled === true &&
+    platform.supportsFailureInvestigation === true &&
+    progress.operation.runner === CommandRunner.Sapling &&
+    progress.exitCode != null &&
+    progress.exitCode !== 0 &&
+    progress.exitCode !== EXIT_CODE_SIGINT &&
+    progress.exitCode !== EXIT_CODE_FORGET &&
+    !progress.aborting;
 
   const lastLine =
     showLastLineOfOutput && processedLines.length > 0 ? processedLines.at(-1) : undefined;
@@ -292,12 +310,41 @@ export function CommandHistoryAndProgress() {
         </div>
 
         {outputExpanded && (
-          <CommandOutputArea
-            processedLines={processedLines}
-            isRunning={isRunning}
-            outputRef={outputRef}
-            userScrolledUpRef={userScrolledUpRef}
-          />
+          <>
+            <CommandOutputArea
+              processedLines={processedLines}
+              isRunning={isRunning}
+              outputRef={outputRef}
+              userScrolledUpRef={userScrolledUpRef}
+            />
+            {showInvestigationAction && (
+              <Row style={{justifyContent: 'flex-end', marginTop: 'var(--pad)'}}>
+                <Tooltip
+                  title={t(
+                    'Investigate this ISL failure with Doctor. You can review and confirm before sharing the workspace and error output.',
+                  )}>
+                  <Button
+                    data-testid="investigate-with-doctor-button"
+                    onClick={() => {
+                      if (progress.exitCode == null) {
+                        return;
+                      }
+                      serverAPI.postMessage({
+                        type: 'platform/investigateFailure',
+                        failure: createFailedOperationContext(
+                          progress.operation.id,
+                          progress.operation.trackEventName,
+                          progress.exitCode,
+                          evidenceLines,
+                        ),
+                      });
+                    }}>
+                    <T>Investigate with Doctor</T>
+                  </Button>
+                </Tooltip>
+              </Row>
+            )}
+          </>
         )}
       </div>
     </div>

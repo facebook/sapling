@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {FailedOperationContext} from './failureInvestigation';
+
 import type {TypeaheadResult} from 'isl-components/Types';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
@@ -797,6 +799,10 @@ export type PlatformSpecificClientToServerMessages =
       scope: 'workspace' | 'global';
     }
   | {type: 'platform/checkForDiagnostics'; paths: Array<RepoRelativePath>}
+  | {
+      type: 'platform/investigateFailure';
+      failure: FailedOperationContext;
+    }
   | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
   | {type: 'platform/subscribeToVSCodeConfig'; config: string}
   | {

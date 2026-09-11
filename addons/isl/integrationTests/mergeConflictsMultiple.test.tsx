@@ -42,6 +42,7 @@ commit('A', files={"file1.txt": "base\\n", "file2.txt": "base\\n"})
       // this amend onto B will hit conflicts with C
       await sl(['amend', '--rebase']).catch(() => undefined);
     });
+    refresh();
 
     await waitFor(() => expectInMergeConflicts());
     await waitFor(() =>

@@ -7,11 +7,13 @@
 
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import * as utils from 'shared/utils';
-import App from '../App';
-import {Internal} from '../Internal';
 import {tracker} from '../analytics';
+import App from '../App';
+import * as featureFlags from '../featureFlags';
+import {Internal} from '../Internal';
 import {readAtom} from '../jotaiUtils';
-import {operationList} from '../operationsState';
+import {EXIT_CODE_FORGET, operationList} from '../operationsState';
+import platform from '../platform';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
@@ -31,6 +33,26 @@ import {
 const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');
+
+function mockPlatform(values: Partial<typeof platform>): () => void {
+  // Only Doctor eligibility tests need rollout enabled; keep other operation tests unchanged.
+  const useFeatureFlagSync = featureFlags.useFeatureFlagSync;
+  const flagSpy = jest.spyOn(featureFlags, 'useFeatureFlagSync').mockImplementation(name => {
+    const value = useFeatureFlagSync(name);
+    return name === Internal.featureFlags?.VSCodeSelfHealEnabled ? true : value;
+  });
+  const original = {...platform};
+  Object.assign(platform, values);
+  return () => {
+    flagSpy.mockRestore();
+    for (const key of Object.keys(values)) {
+      if (!Object.hasOwn(original, key)) {
+        Reflect.deleteProperty(platform, key);
+      }
+    }
+    Object.assign(platform, original);
+  };
+}
 
 describe('operations', () => {
   beforeEach(() => {
@@ -52,6 +74,7 @@ describe('operations', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     jest.useRealTimers();
   });
 
@@ -200,6 +223,162 @@ describe('operations', () => {
     expect(
       within(screen.getByTestId('progress-container')).getByText('sl goto --rev c'),
     ).toBeInTheDocument();
+  });
+
+  it.each([undefined, 'Structured progress'])(
+    'offers Doctor with failure evidence (tooltip: %s)',
+    async tooltip => {
+      const restorePlatform = mockPlatform({
+        platformName: 'vscode',
+        supportsFailureInvestigation: true,
+      });
+      try {
+        await clickGoto('c');
+        const message = await waitFor(() =>
+          utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+        );
+
+        if (tooltip) {
+          jest
+            .spyOn(
+              utils.nullthrows(readAtom(operationList).currentOperation).operation,
+              'getDescriptionForDisplay',
+            )
+            .mockReturnValue({description: 'Go to commit', tooltip});
+        }
+        act(() => {
+          simulateMessageFromServer({
+            type: 'operationProgress',
+            id: message.operation.id,
+            kind: 'stderr',
+            message:
+              '{"diagnostic":"structured failure"}\nsecret-repo/path failed at private-revset',
+          });
+          simulateMessageFromServer({
+            type: 'operationProgress',
+            id: message.operation.id,
+            kind: 'exit',
+            exitCode: -1,
+            timestamp: 1234,
+          });
+        });
+
+        expect(screen.queryByTestId('investigate-with-doctor-button')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('progress-header-row'));
+
+        const healthButton = screen.getByRole('button', {
+          name: 'Investigate with Doctor',
+        });
+        fireEvent.mouseEnter(healthButton.parentElement as HTMLElement);
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+          'Investigate this ISL failure with Doctor. You can review and confirm before sharing the workspace and error output.',
+        );
+        fireEvent.click(healthButton);
+        const healthMessage = getLastMessageOfTypeSentToServer('platform/investigateFailure');
+        expect(healthMessage).toEqual({
+          type: 'platform/investigateFailure',
+          failure: {
+            operationId: message.operation.id,
+            operationName: message.operation.trackEventName,
+            exitCode: -1,
+            output:
+              '{"diagnostic":"structured failure"}\nsecret-repo/path failed at private-revset',
+            outputTruncated: false,
+          },
+        });
+      } finally {
+        restorePlatform();
+      }
+    },
+  );
+
+  it.each([
+    ['running', undefined],
+    ['successful', 0],
+    ['interrupted externally', 130],
+    ['lost during disconnection', EXIT_CODE_FORGET],
+  ])('does not offer VS Code Doctor for a %s Sapling operation', async (_name, exitCode) => {
+    const restorePlatform = mockPlatform({
+      platformName: 'vscode',
+      supportsFailureInvestigation: true,
+    });
+    try {
+      await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      if (exitCode != null) {
+        act(() => {
+          simulateMessageFromServer({
+            type: 'operationProgress',
+            id: message.operation.id,
+            kind: 'exit',
+            exitCode,
+            timestamp: 1234,
+          });
+        });
+      }
+
+      fireEvent.click(screen.getByTestId('progress-header-row'));
+      expect(screen.queryByTestId('investigate-with-doctor-button')).not.toBeInTheDocument();
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it('does not offer a health check when the platform does not support one', async () => {
+    const restorePlatform = mockPlatform({
+      platformName: 'vscode',
+      supportsFailureInvestigation: false,
+    });
+    try {
+      await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: message.operation.id,
+          kind: 'exit',
+          exitCode: -1,
+          timestamp: 1234,
+        });
+      });
+
+      fireEvent.click(screen.getByTestId('progress-header-row'));
+      expect(screen.queryByTestId('investigate-with-doctor-button')).not.toBeInTheDocument();
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it('does not offer VS Code Doctor for an aborted operation', async () => {
+    const restorePlatform = mockPlatform({
+      platformName: 'vscode',
+      supportsFailureInvestigation: true,
+    });
+    try {
+      await clickGoto('c');
+      const message = await waitFor(() =>
+        utils.nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      fireEvent.click(abortButton() as Element);
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: message.operation.id,
+          kind: 'exit',
+          exitCode: 1,
+          timestamp: 1234,
+        });
+      });
+
+      fireEvent.click(screen.getByTestId('progress-header-row'));
+      expect(screen.queryByTestId('investigate-with-doctor-button')).not.toBeInTheDocument();
+    } finally {
+      restorePlatform();
+    }
   });
 
   it('handles out of order exit messages', async () => {

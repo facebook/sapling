@@ -188,6 +188,7 @@ export type TrackEventName =
   | 'QueryGraphQL'
   | 'UploadImage'
   | 'RunVSCodeCommand'
+  | 'DoctorAgenticInvestigationEntryPoint'
   | 'RageCommand'
   | 'RepoUrlCommand'
   | 'BlameLoaded'

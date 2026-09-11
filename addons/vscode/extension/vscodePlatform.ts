@@ -338,6 +338,10 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           }
           break;
         }
+        case 'platform/investigateFailure': {
+          await Internal.investigateFailure?.(ctx, message.failure);
+          break;
+        }
         case 'platform/resolveAllCommentsWithAI': {
           const {diffId, comments, filePaths, repoPath, userContext} = message;
           Internal.promptAIAgent?.(

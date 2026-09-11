@@ -10,6 +10,10 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import {TextDecoder, TextEncoder} from 'node:util';
+
+// jsdom omits the browser encoding APIs used by bounded evidence handoffs.
+Object.assign(globalThis, {TextDecoder, TextEncoder});
 
 // Use __mocks__/logger so calls to logger don't output to console, but
 // console.log still works for debugging tests.
