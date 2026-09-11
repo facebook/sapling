@@ -1,2 +1,3 @@
 repo_region_acl = "REPO_REGION:repos/hg/fbsource/=mock_restricted_path"
 permission_request_group = "GROUP:mock_restricted_path_request_group"
+rollout_allowlist_group = "path_acl_jobs_allowlist_mock_restricted_path"
