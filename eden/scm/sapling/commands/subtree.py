@@ -858,6 +858,7 @@ def _shallow_clone_git_repo(ui, url, from_rev):
     """
     from .. import git
 
+    subtreeutil.validate_subtree_url(url)
     git_repo_dir = tempfile.mkdtemp(prefix="sl-subtree-")
     # disable partial clone when shallow clone is enabled
     overrides = {("git", "depth"): 1, ("git", "filter"): None}

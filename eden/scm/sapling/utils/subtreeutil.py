@@ -34,6 +34,15 @@ SUPPORTED_SUBTREE_METADATA_VERSIONS = {1}
 SUBTREE_COPY_STATE_FILE = "subtree-copy-state"
 
 
+def validate_subtree_url(url: str) -> None:
+    """Validate a subtree URL before storing or using it."""
+    for char in url:
+        if ord(char) <= 0x1F or ord(char) == 0x7F:
+            raise error.Abort(
+                _("subtree URL %r contains control character %r") % (url, char)
+            )
+
+
 def get_subtree_key(ui) -> str:
     """Get the key used in commit's extra for subtree metadata."""
     return (
@@ -904,6 +913,8 @@ def check_commit_backoutable(repo, node):
 
 
 def get_or_clone_git_repo(ui, url, from_rev=None):
+    validate_subtree_url(url)
+
     def try_reuse_git_repo(git_repo_dir):
         """try to reuse an existing git repo, otherwise return None"""
         if not os.path.exists(git_repo_dir):
