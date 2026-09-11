@@ -1,4 +1,4 @@
-load("//eden/scm:targets.bzl", "sl_rust_library")
+load("//eden/scm:targets.bzl", "sl_rust_binary", "sl_rust_library")
 
 oncall("sapling")
 
@@ -22,5 +22,17 @@ sl_rust_library(
         "fbsource//third-party/rust:futures",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/types:types",
+    ],
+)
+
+sl_rust_binary(
+    name = "find_cas_digests",
+    srcs = ["benchmark/find_cas_digests/main.rs"],
+    autocargo = {"ignore_rule": True},
+    crate_root = "benchmark/find_cas_digests/main.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "//eden/scm/lib/blob:blob",
     ],
 )
