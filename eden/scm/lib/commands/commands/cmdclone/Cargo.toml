@@ -26,6 +26,7 @@ sapling-eagerepo = { version = "0.1.0", path = "../../../eagerepo" }
 sapling-exchange = { version = "0.1.0", path = "../../../exchange" }
 sapling-filters = { version = "0.1.0", path = "../../../filters" }
 sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
+sapling-hgrc-parser = { version = "0.1.0", path = "../../../config/hgrc-parser" }
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
 sapling-migration = { version = "0.1.0", path = "../../../migration" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
