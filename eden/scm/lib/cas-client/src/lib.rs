@@ -19,10 +19,11 @@ pub type CasBatch = Vec<(CasDigest, Result<Option<Blob>>)>;
 
 /// Fetches content-addressed blobs in batches.
 pub trait CasClient: Send + Sync {
-    /// Performs optional eager initialization.
+    /// Performs synchronous initialization required before fetching.
     ///
-    /// Implementations that initialize lazily can use the default no-op. This
-    /// method lets callers surface setup failures separately from fetches.
+    /// Callers should invoke this from a blocking context before the first
+    /// [`fetch`](Self::fetch). Implementations requiring no setup may use the
+    /// default no-op.
     fn init(&self) -> Result<()> {
         Ok(())
     }
