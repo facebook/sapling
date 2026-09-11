@@ -1,4 +1,4 @@
-load("//eden/scm:targets.bzl", "sl_rust_library")
+load("//eden/scm:targets.bzl", "cas_enabled", "sl_rust_library")
 
 oncall("sapling")
 
@@ -18,6 +18,10 @@ sl_rust_library(
             # Cargo feature deps: "pycheckout/eden" etc. require these declared.
             "extra_buck_dependencies": {
                 "dependencies": [
+                    (
+                        None,
+                        "//eden/scm/lib/commands/debugcommands/facebook/cmddebugcas:cmddebugcas",
+                    ),
                     "//eden/scm/lib/indexedlog:indexedlog",
                     "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
                     "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
@@ -25,6 +29,7 @@ sl_rust_library(
                 ],
             },
             "features": {
+                "cas": [],
                 "default": [],
                 "eden": [
                     "sapling-clidispatch/eden",
@@ -60,7 +65,8 @@ sl_rust_library(
     features = [
         "eden",
         "fb",
-    ],
+    ]
+    + (["cas"] if cas_enabled() else []),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ctrlc",
@@ -72,8 +78,8 @@ sl_rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "fbsource//third-party/rust:zstd",
-        "//eden/scm/lib/blackbox:blackbox",
         "//eden/scm/lib/backtrace-python:backtrace-python",
+        "//eden/scm/lib/blackbox:blackbox",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdpy:cmdpy",
         "//eden/scm/lib/config/model:configmodel",
@@ -94,8 +100,8 @@ sl_rust_library(
         "//eden/scm/lib/sampling-profiler/global-profiler:global-profiler",
         "//eden/scm/lib/tracing-backtrace:tracing-backtrace",
         "//eden/scm/lib/tracing-collector:tracing-collector",
-        "//eden/scm/lib/tracing-reload/tracing-reload-states:tracing-reload-states",
         "//eden/scm/lib/tracing-dyn-layer:tracing-dyn-layer",
+        "//eden/scm/lib/tracing-reload/tracing-reload-states:tracing-reload-states",
         "//eden/scm/lib/tracing-sampler:tracing-sampler",
         "//eden/scm/lib/util/atexit:atexit",
         "//eden/scm/lib/util/hgplain:hgplain",
@@ -104,6 +110,9 @@ sl_rust_library(
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/worktree:worktree",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
+    ]
+    + (["//eden/scm/lib/commands/debugcommands/facebook/cmddebugcas:cmddebugcas"] if cas_enabled() else [])
+    + [
         # see update_modules.sh
         # [[[cog
         # import cog, glob, os

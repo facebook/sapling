@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule", "buck_sh_binary")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
@@ -22,6 +23,9 @@ _RUST_DEP_OVERRIDES = {
         "rev": None,
     },
 }
+
+def cas_enabled():
+    return read_bool("sl", "cas", False) and not rust_oss.is_oss_build()
 
 def _minimal_third_party_rust_overrides(deps):
     deps_repr = repr(deps or [])

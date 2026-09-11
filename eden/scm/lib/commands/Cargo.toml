@@ -99,6 +99,7 @@ tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [features]
+cas = []
 default = []
 eden = ["cmdclone/eden", "cmddebugwait/eden", "cmdgoto/eden", "cmdworktree", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden", "sapling-clidispatch/eden"]
 fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "sapling-identity/fb", "sapling-indexedlog/metrics"]

@@ -84,6 +84,8 @@ external_commands![
     cmddebugwait,
     cmddebugwalkdetector,
     // [[[end]]]
+    #[cfg(all(feature = "cas", fbcode_build))]
+    cmddebugcas,
 ];
 
 use clidispatch::command::CommandTable;
