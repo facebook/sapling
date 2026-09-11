@@ -9,6 +9,8 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use hgrc_parser::format::format_config_item;
+use hgrc_parser::format::validate_config_item_name;
 
 use crate::rungit::GitCmd;
 use crate::rungit::GlobalGit;
@@ -48,6 +50,9 @@ impl SubmoduleActiveness {
 }
 
 /// Translate git config to `(user_config, repo_config)`.
+///
+/// Entries that cannot be represented safely are skipped with a warning
+/// so one unsupported entry cannot fail the whole translation.
 fn translate_git_config_output(out: &str) -> (String, String) {
     // Example output (actually separated by a tab, not spaces):
     //  global  user.name Foo Bar
@@ -80,20 +85,28 @@ fn translate_git_config_output(out: &str) -> (String, String) {
                 (_, "user.email") => global_email = value,
                 _ => {
                     if let Some(rest) = name.strip_prefix("remote.") {
-                        if let Some(remote) = rest.strip_suffix(".url") {
-                            paths_config.push(format!(
-                                "# from git config: {}\n{} = {}\n",
-                                name,
-                                normalize_remote_name(remote),
-                                translate_scp_url_to_ssh(value),
-                            ));
-                        } else if let Some(remote) = rest.strip_suffix(".pushurl") {
-                            paths_config.push(format!(
-                                "# from git config: {}\n{}-push = {}\n",
-                                name,
-                                normalize_remote_name(remote),
-                                translate_scp_url_to_ssh(value),
-                            ));
+                        let remote_config = rest
+                            .strip_suffix(".url")
+                            .map(|remote| (remote, ""))
+                            .or_else(|| {
+                                rest.strip_suffix(".pushurl")
+                                    .map(|remote| (remote, "-push"))
+                            });
+                        if let Some((remote, suffix)) = remote_config {
+                            // Validate the remote before "-push" can hide an empty name.
+                            // This also makes the original Git name safe in the comment.
+                            let result = validate_config_item_name(remote).and_then(|remote| {
+                                let item_name =
+                                    format!("{}{suffix}", normalize_remote_name(remote));
+                                format_config_item(&item_name, &translate_scp_url_to_ssh(value))
+                            });
+                            match result {
+                                Ok(formatted) => paths_config
+                                    .push(format!("# from git config: {name}\n{formatted}")),
+                                Err(err) => tracing::warn!(
+                                    "skipping unsupported git config {name:?}={value:?}: {err:#}"
+                                ),
+                            }
                         }
                     } else if let Some(rest_name) = name.strip_prefix("submodule.") {
                         // NOTE: Simplified handling, not fully confront to Git's spec [1].
@@ -127,22 +140,21 @@ fn translate_git_config_output(out: &str) -> (String, String) {
         }
     }
 
-    let mut user_config = String::new();
     let mut repo_config = String::new();
 
     if !paths_config.is_empty() {
         repo_config.push_str(&format!("[paths]\n{}\n", paths_config.concat()));
     }
 
-    if !global_user.is_empty() && !global_email.is_empty() {
-        user_config.push_str(&format!(
-            "[ui]\n# from git config: user.name and user.email\nusername = {global_user} <{global_email}>\n",
-        ));
-    }
+    let user_config = if !global_user.is_empty() && !global_email.is_empty() {
+        translate_git_username("user-level", global_user, global_email)
+    } else {
+        String::new()
+    };
 
     if !local_user.is_empty() || !local_email.is_empty() {
-        repo_config.push_str(&format!(
-            "[ui]\n# from git config: user.name and user.email\nusername = {} <{}>\n",
+        repo_config.push_str(&translate_git_username(
+            "repo-level",
             str_or(local_user, global_user),
             str_or(local_email, global_email),
         ));
@@ -153,14 +165,33 @@ fn translate_git_config_output(out: &str) -> (String, String) {
     repo_config.push_str(bool_str(submodule_global_active));
     repo_config.push('\n');
     for (name, activeness) in submodule_individual_active {
-        repo_config.push_str("active-");
-        repo_config.push_str(name);
-        repo_config.push_str(" = ");
-        repo_config.push_str(bool_str(activeness.is_active()));
-        repo_config.push('\n');
+        let value = bool_str(activeness.is_active());
+        match format_config_item(&format!("active-{name}"), value) {
+            Ok(item) => repo_config.push_str(&item),
+            Err(err) => {
+                tracing::warn!(
+                    "skipping unsupported git config submodule.{name:?}={value:?}: {err:#}"
+                )
+            }
+        }
     }
 
     (user_config, repo_config)
+}
+
+/// Translate a Git identity to a config section, warning and skipping invalid values.
+fn translate_git_username(scope: &str, name: &str, email: &str) -> String {
+    match format_config_item("username", &format!("{name} <{email}>")) {
+        Ok(formatted) => {
+            format!("[ui]\n# from git config: user.name and user.email\n{formatted}")
+        }
+        Err(err) => {
+            tracing::warn!(
+                "skipping unsupported {scope} git config user.name={name:?} and user.email={email:?}: {err:#}"
+            );
+            String::new()
+        }
+    }
 }
 
 fn str_or<'a>(lhs: &'a str, rhs: &'a str) -> &'a str {
@@ -283,6 +314,33 @@ local	submodule.sub/2.active true
         assert_eq!(translate_scp_url_to_ssh("a:b"), "ssh://a/b");
         assert_eq!(translate_scp_url_to_ssh("a@b.com:c/d"), "ssh://a@b.com/c/d");
         assert_eq!(translate_scp_url_to_ssh("./a:b"), "./a:b");
+    }
+
+    #[test]
+    fn test_git_config_translation_skips_control_characters() {
+        let out = "local\tremote.origin.url https://example.invalid/repo\r[extensions]\n";
+        let (user, repo) = translate_git_config_output(out);
+        assert_eq!(user, "");
+        assert_eq!(repo, "[submodule]\nactive = false\n");
+    }
+
+    #[test]
+    fn test_git_config_translation_skips_unsupported_names() {
+        // `remote.a=b.url` is legal git config, but `=` cannot be
+        // represented in a Sapling item name. Translation must succeed
+        // for the remaining entries.
+        let out = concat!(
+            "local\tremote.a=b.url https://example.com/eq\n",
+            "local\tremote..url https://example.com/empty\n",
+            "local\tremote..pushurl https://example.com/empty-push\n",
+            "local\tremote.origin.url https://example.com/foo/repo\n",
+        );
+        let (user, repo) = translate_git_config_output(out);
+        assert_eq!(user, "");
+        assert_eq!(
+            repo,
+            "[paths]\n# from git config: remote.origin.url\ndefault = https://example.com/foo/repo\n\n[submodule]\nactive = false\n"
+        );
     }
 
     #[cfg(windows)]
