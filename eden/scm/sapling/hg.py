@@ -38,6 +38,7 @@ from . import (
     perftrace,
     phases,
     progress,
+    rcutil,
     scmutil,
     sshpeer,
     ui as uimod,
@@ -324,9 +325,11 @@ def postshare(sourcerepo, destrepo, bookmarks: bool = True, defaultpath=None) ->
     """
     default = defaultpath or sourcerepo.ui.config("paths", "default")
     if default:
+        # Format before opening: formatting validates and can raise
+        # error.Abort, and opening with "w" truncates the existing config.
+        data = rcutil.formatconfigsection("paths", "default", default).encode()
         with destrepo.localvfs(destrepo.ui.identity.configrepofile(), "w") as fp:
-            fp.write(b"[paths]\n")
-            fp.write(("default = %s\n" % default).encode())
+            fp.write(data)
 
     with destrepo.wlock():
         if bookmarks:
@@ -653,16 +656,20 @@ def clone(
 def _writehgrc(repo, abspath, configfiles) -> None:
     with repo.wlock(), repo.lock():
         template = _(uimod.samplehgrcs["cloned"])
+        # Format everything before opening the file: formatting validates
+        # and can raise error.Abort, and opening with "wb" truncates it.
+        u = util.url(abspath)
+        u.passwd = None
+        defaulturl = str(u)
+        data = util.tonativeeol(
+            template % rcutil.formatconfigvalue(defaulturl)
+        ).encode()
+        if configfiles:
+            data += util.tonativeeol("\n").encode()
+            for file in configfiles:
+                data += util.tonativeeol(rcutil.formatconfiginclude(file)).encode()
         with repo.localvfs(repo.ui.identity.configrepofile(), "wb") as fp:
-            u = util.url(abspath)
-            u.passwd = None
-            defaulturl = str(u)
-            fp.write(util.tonativeeol(template % defaulturl).encode())
-
-            if configfiles:
-                fp.write(util.tonativeeol("\n").encode())
-                for file in configfiles:
-                    fp.write(util.tonativeeol("%%include %s\n" % file).encode())
+            fp.write(data)
 
 
 def clonepreclose(

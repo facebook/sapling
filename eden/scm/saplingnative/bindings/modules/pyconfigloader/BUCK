@@ -22,6 +22,7 @@ rust_python_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/config/hgrc-parser:hgrc-parser",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",

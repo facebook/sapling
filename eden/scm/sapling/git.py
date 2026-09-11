@@ -89,7 +89,7 @@ def isgitpeer(repo):
 def createrepo(ui, url, destpath, submodule=None):
     repo_config = ""
     if url:
-        repo_config += "\n[paths]\ndefault = %s\n" % url
+        repo_config += "\n" + rcutil.formatconfigsection("paths", "default", url)
 
     return setup_repository(
         ui, destpath, create=True, initial_config=repo_config, submodule=submodule
@@ -1033,6 +1033,7 @@ class Submodule:
         The repo will be created at:
         <parent repo>/.hg/store/gitmodules/<escaped submodule name>
         """
+        # patternlint-disable-next-line poor-choice-of-hash-function
         urldigest = hashlib.sha1(self.url.encode("utf-8")).hexdigest()
         repopath = self.gitmodulesvfs.join("gitmodules", urldigest)
         ident = identity.sniffdir(repopath)
@@ -1327,6 +1328,7 @@ class gitfilelog:
 def hashobj(kind, text):
     """(bytes, bytes) -> bytes. obtain git SHA1 hash"""
     # git blob format: kind + " " + str(size) + "\0" + text
+    # patternlint-disable-next-line poor-choice-of-hash-function
     return hashlib.sha1(b"%s %d\0%s" % (kind, len(text), text)).digest()
 
 

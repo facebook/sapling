@@ -27,6 +27,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::error::AnyhowResultExt;
 use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
+use hgrc_parser::format as configformat;
 use repo_minimal_info::RepoMinimalInfo;
 
 mod impl_into;
@@ -38,6 +39,18 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<config>(py)?;
 
     m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
+    m.add(py, "formatvalue", py_fn!(py, formatvalue(value: &str)))?;
+    m.add(
+        py,
+        "formatsection",
+        py_fn!(py, formatsection(section: &str, name: &str, value: &str)),
+    )?;
+    m.add(py, "formatinclude", py_fn!(py, formatinclude(path: &str)))?;
+    m.add(
+        py,
+        "normalizekey",
+        py_fn!(py, normalizekey(section: &str, name: &str)),
+    )?;
     m.add(py, "unset_obj", unset::create_instance(py)?)?;
 
     impl_into::register(py);
@@ -349,6 +362,42 @@ fn parselist(py: Python, value: String) -> PyResult<Vec<PyString>> {
         .iter()
         .map(|v| PyString::new(py, v))
         .collect())
+}
+
+fn formatvalue(py: Python, value: &str) -> PyResult<String> {
+    format_result(py, configformat::format_config_value(value))
+}
+
+fn formatsection(py: Python, section: &str, name: &str, value: &str) -> PyResult<String> {
+    format_result(
+        py,
+        configformat::format_config_section(section, name, value),
+    )
+}
+
+fn formatinclude(py: Python, path: &str) -> PyResult<String> {
+    format_result(py, configformat::format_config_include(path))
+}
+
+fn normalizekey(py: Python, section: &str, name: &str) -> PyResult<(String, String)> {
+    let (section, name) = format_result(py, configformat::normalize_config_key(section, name))?;
+    Ok((section.to_owned(), name.to_owned()))
+}
+
+/// Preserve the user-facing Abort exception used by Python config writers.
+fn format_result<T>(
+    py: Python,
+    result: std::result::Result<T, configformat::Error>,
+) -> PyResult<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(err) => Err(PyErr::from_instance(
+            py,
+            py.import("sapling.error")?
+                .get(py, "Abort")?
+                .call(py, (err.to_string(),), None)?,
+        )),
+    }
 }
 
 fn errors_to_str_vec(errors: Vec<configloader::error::Error>) -> Vec<String> {

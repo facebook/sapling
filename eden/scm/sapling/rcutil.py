@@ -27,10 +27,43 @@ def defaultpagerenv():
     return {"LESS": "FRX", "LV": "-c"}
 
 
+def formatconfigvalue(value: str) -> str:
+    """Format a config value for writing to a config file.
+
+    Trailing whitespace (including spaces and tabs) is dropped, so a
+    whitespace-only value becomes empty. Config parsers already discard this
+    whitespace when reading. Embedded newlines are written as indented
+    continuation lines, so the value cannot introduce new directives.
+    """
+    return bindings.configloader.formatvalue(value)
+
+
+def formatconfigsection(section: str, name: str, value: str) -> str:
+    """Format a single-item config section, stripping whitespace around names.
+
+    Values follow the whitespace and continuation rules of formatconfigvalue.
+    """
+    return bindings.configloader.formatsection(section, name, value)
+
+
+def formatconfiginclude(path: str) -> str:
+    """Format a config include directive, stripping whitespace around its path.
+
+    '#' and ';' are literal path characters in include directives.
+    """
+    return bindings.configloader.formatinclude(path)
+
+
 def editconfig(ui, path, section, name, value):
     """Add or remove a config item to the given config path.
 
-    If value is None, delete the config item."""
+    If value is None, delete the config item. Otherwise, strip whitespace
+    around section and item names before looking up the item.
+    """
+    if value is not None:
+        section, name = bindings.configloader.normalizekey(section, name)
+        formattedvalue = util.tonativeeol(formatconfigvalue(value))
+
     path = os.path.realpath(path)
     content = ""
     try:
@@ -41,10 +74,6 @@ def editconfig(ui, path, section, name, value):
     cfg = bindings.configloader.config()
     cfg.parse(content, source="editconfig")
     sources = cfg.sources(section, name)
-
-    # add necessary indentation to multi-line value
-    if value and "\n" in value:
-        value = value.rstrip("\n").replace("\n", "\n  ")
 
     if len(sources) > 1:
         ui.status_err(
@@ -70,7 +99,11 @@ def editconfig(ui, path, section, name, value):
         else:
             # in-place edit
             # start end are using bytes offset
-            bcontent = b"%s%s%s" % (bcontent[:start], value.encode(), bcontent[end:])
+            bcontent = b"%s%s%s" % (
+                bcontent[:start],
+                formattedvalue.encode(),
+                bcontent[end:],
+            )
 
         break
     else:
@@ -86,12 +119,12 @@ def editconfig(ui, path, section, name, value):
                     if not insertpos or end > insertpos:
                         insertpos = end
 
-            inserttext = "%s%s = %s" % (os.linesep, name, value)
+            inserttext = "%s%s = %s" % (os.linesep, name, formattedvalue)
 
             # If the section doesn't already exist we need to append a new section.
             if insertpos is None:
                 insertpos = len(bcontent)
-                inserttext = "[%s]%s%s" % (section, inserttext, os.linesep)
+                inserttext = util.tonativeeol(formatconfigsection(section, name, value))
                 if insertpos > 0:
                     inserttext = "%s%s" % (os.linesep, inserttext)
 
