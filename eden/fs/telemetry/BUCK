@@ -97,6 +97,7 @@ cpp_library(
         "LogEvent.h",
     ],
     exported_deps = [
+        ":xplat_keys",
         "//eden/common/os:os",
         "//eden/common/telemetry:log_info",
         "//folly/portability:sys_types",

@@ -226,6 +226,11 @@ inline constexpr std::string_view kStaleCheckoutMountUnmounted =
 // --- PrivhelperShutdown (also uses kExitSignal from SilentDaemonExit) ---
 inline constexpr std::string_view kExitCode = "exit_code";
 
+// --- TccDisclaimSkipped ---
+inline constexpr std::string_view kTccDisclaimProcess = "tcc_disclaim_process";
+inline constexpr std::string_view kTccObservedTeam = "tcc_observed_team";
+inline constexpr std::string_view kTccExpectedTeam = "tcc_expected_team";
+
 // --- CheckoutUpdateError (uses kPath and kReason from common fields) ---
 
 // --- edenfs_errors category

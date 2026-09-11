@@ -1078,12 +1078,20 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
     // (core:disclaim-tcc-team-id here, and the killswitch file could then
     // become core:disclaim-tcc-responsibility). Until then the privhelper
     // uses the compiled default.
-    XLOGF(
-        INFO,
+    //
+    // A real certificate whose team differs (development cert, or a rotated
+    // release team) silently loses the disclaim, so that is a WARN; "none" is
+    // an ad-hoc buck build, which is expected.
+    const auto message = fmt::format(
         "not disclaiming TCC responsibility for the privhelper: code signature "
         "team {}, not the fleet team {}",
         team,
         kTccDisclaimTeamId);
+    if (team == "none") {
+      XLOG(INFO) << message;
+    } else {
+      XLOG(WARN) << message;
+    }
   } else {
     // Make the privhelper its own TCC responsible process so that TCC grants
     // keyed to its code signature apply regardless of what launched EdenFS.

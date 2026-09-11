@@ -508,11 +508,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
   bool disclaimTcc = edenConfig->disclaimTccResponsibility.getValue();
 #ifdef __APPLE__
-  std::string signingTeam;
-  if (disclaimTcc) {
-    signingTeam = selfCodeSigningTeamId();
-    disclaimTcc = signingTeam == edenConfig->disclaimTccTeamId.getValue();
-  }
+  const std::string signingTeam = selfCodeSigningTeamId();
+  disclaimTcc =
+      disclaimTcc && signingTeam == edenConfig->disclaimTccTeamId.getValue();
 #endif
   auto startupLogger = daemonizeIfRequested(
       logPath,
@@ -526,14 +524,38 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   // into edenfs.log inside it, which is where this needs to be visible. A
   // user-run --foreground daemon has an empty logPath and spawned nothing, so
   // there is no skipped disclaim to report.
-  if (!disclaimTcc && edenConfig->disclaimTccResponsibility.getValue() &&
-      !logPath.empty()) {
-    XLOGF(
-        INFO,
+  const bool daemonDisclaimSkipped = !disclaimTcc &&
+      edenConfig->disclaimTccResponsibility.getValue() && !logPath.empty();
+  if (daemonDisclaimSkipped) {
+    // A real certificate whose team differs (development cert, or a rotated
+    // release team) silently loses the disclaim, so that is a WARN; "none" is
+    // an ad-hoc buck build, which is expected.
+    const auto message = fmt::format(
         "not disclaiming TCC responsibility for the daemon: code signature "
         "team {}, not the fleet team {}",
         signingTeam,
         edenConfig->disclaimTccTeamId.getValue());
+    if (signingTeam == "none") {
+      XLOG(INFO) << message;
+    } else {
+      XLOG(WARN) << message;
+    }
+  }
+  // Scuba events for skips caused by a real but mismatched team, logged once
+  // the server exists. The process that spawned the privhelper (process #1
+  // when daemonizing) has no event logger, so the daemon reports that skip
+  // too: it runs the same binary, so csops(2) gives the same team. Ad-hoc
+  // builds ("none") are expected and not reported.
+  std::vector<TccDisclaimSkipped> tccDisclaimSkips;
+  if (signingTeam != "none") {
+    if (daemonDisclaimSkipped) {
+      tccDisclaimSkips.emplace_back(
+          "daemon", signingTeam, edenConfig->disclaimTccTeamId.getValue());
+    }
+    if (!tccDisclaimKillswitchPresent() && signingTeam != kTccDisclaimTeamId) {
+      tccDisclaimSkips.emplace_back(
+          "privhelper", signingTeam, std::string{kTccDisclaimTeamId});
+    }
   }
 #endif
   std::optional<EdenServer> server;
@@ -657,6 +679,12 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(scribeLogger),
         std::move(startupStatusChannel),
         main.getEdenfsVersion());
+
+#ifdef __APPLE__
+    for (const auto& skip : tccDisclaimSkips) {
+      server->getServerState()->getEdenFsEventsLogger()->logEvent(skip);
+    }
+#endif
 
 #ifdef EDEN_HAVE_SYSTEMD
     if (systemdStartupTimeoutExtension > std::chrono::nanoseconds::zero()) {

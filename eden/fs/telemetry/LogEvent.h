@@ -15,6 +15,7 @@
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/XplatKeys.h"
 
 namespace facebook::eden {
 
@@ -569,6 +570,36 @@ struct TccInvalidationDenied : public EdenFSEvent {
 
   const char* getType() const override {
     return "tcc_invalidation_denied";
+  }
+};
+
+/**
+ * edenfs did not disclaim TCC responsibility for `process` ("daemon" or
+ * "privhelper") because its code signature carries a real team identifier
+ * that is not the expected one: a development certificate, or a rotated
+ * release team. Ad-hoc builds carry no team and are not reported.
+ */
+struct TccDisclaimSkipped : public EdenFSEvent {
+  std::string process;
+  std::string observed_team;
+  std::string expected_team;
+
+  TccDisclaimSkipped(
+      std::string process,
+      std::string observed_team,
+      std::string expected_team)
+      : process(std::move(process)),
+        observed_team(std::move(observed_team)),
+        expected_team(std::move(expected_team)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString(std::string{xplat_keys::kTccDisclaimProcess}, process);
+    event.addString(std::string{xplat_keys::kTccObservedTeam}, observed_team);
+    event.addString(std::string{xplat_keys::kTccExpectedTeam}, expected_team);
+  }
+
+  const char* getType() const override {
+    return "tcc_disclaim_skipped";
   }
 };
 
