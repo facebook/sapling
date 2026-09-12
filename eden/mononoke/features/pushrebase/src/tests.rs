@@ -13,6 +13,7 @@ use anyhow::Context;
 use anyhow::format_err;
 use async_trait::async_trait;
 use blobrepo_hg::BlobRepoHg;
+use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkTransactionError;
@@ -47,6 +48,10 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersRef;
 use mutable_counters::SqlMutableCounters;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingEntry;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
+use pushrebase_mutation_mapping::add_pushrebase_mapping;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
@@ -105,6 +110,8 @@ pub(super) struct PushrebaseTestRepo {
 
     #[facet]
     commit_graph_writer: dyn CommitGraphWriter,
+    #[facet]
+    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
 }
 
 fn queued_pushrebase_request(
@@ -638,6 +645,233 @@ async fn rebase_stack_onto_conflict(fb: FacebookInit) -> Result<(), Error> {
         other => panic!("expected a conflict, got {:?}", other.map(|r| r.new_head)),
     }
 
+    Ok(())
+}
+
+/// Stands in for an earlier land's rebase.
+async fn record_rewrite(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    predecessor: ChangesetId,
+    successor: ChangesetId,
+) -> Result<(), Error> {
+    let conn = repo.sql_bookmarks.write_connection().clone();
+    let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
+    let txn = add_pushrebase_mapping(
+        txn,
+        &[PushrebaseMutationMappingEntry::new(
+            repo.repo_identity().id(),
+            predecessor,
+            successor,
+        )],
+    )
+    .await?;
+    txn.commit().await?;
+    Ok(())
+}
+
+fn rejection_of(res: Result<RebasedStack, PushrebaseError>) -> BaselineRejection {
+    match res {
+        Err(PushrebaseError::UnplaceableBaseline { rejection, .. }) => rejection,
+        Err(other) => panic!("expected an unplaceable baseline, got {other:?}"),
+        Ok(rebased) => panic!("expected a rejection, got {}", rebased.new_head),
+    }
+}
+
+/// Baseline off the stack's history: rejected before any range is read.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_rejects_a_non_ancestor_baseline(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let unrelated = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_other", "other")
+        .commit()
+        .await?;
+    let stack = CreateCommitContext::new(&ctx, &repo, vec![unrelated])
+        .add_file("file_stack", "one")
+        .commit()
+        .await?;
+    let current = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+
+    // `base` precedes the head but not the stack.
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), base, stack, current)
+            .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotAncestorOfHead);
+    Ok(())
+}
+
+/// A baseline an earlier land rewrote lands once the mapping says so, and is
+/// rejected until then.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_resolves_a_rewritten_baseline(fb: FacebookInit) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    // Different parents, so the two forms are distinct changesets.
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_server_early", "early")
+        .commit()
+        .await?;
+    let orphan = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_shared", "v1")
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(&ctx, &repo, vec![server])
+        .add_file("file_shared", "v1")
+        .commit()
+        .await?;
+    let current = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    let stack = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("file_author", "author")
+        .commit()
+        .await?;
+    assert_ne!(orphan, landed, "the two forms must be distinct changesets");
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
+            .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+
+    // Recorded twice, as a retried land would leave it: one answer, not two.
+    record_rewrite(&ctx, &repo, orphan, landed).await?;
+    record_rewrite(&ctx, &repo, orphan, landed).await?;
+
+    let rebased =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
+            .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        tip.parents().collect::<Vec<_>>(),
+        vec![current],
+        "the resolved stack must sit on the current head"
+    );
+    assert!(
+        tip.file_changes_map()
+            .contains_key(&NonRootMPath::new("file_author")?),
+        "the rebased head keeps its own change"
+    );
+    Ok(())
+}
+
+/// Two distinct on-branch successors is real ambiguity; never guess.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_refuses_two_distinct_on_branch_successors(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let orphan = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_shared", "v1")
+        .commit()
+        .await?;
+    // Both reachable from the head.
+    let landed_a = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_a", "a")
+        .commit()
+        .await?;
+    let landed_b = CreateCommitContext::new(&ctx, &repo, vec![landed_a])
+        .add_file("file_b", "b")
+        .commit()
+        .await?;
+    let current = CreateCommitContext::new(&ctx, &repo, vec![landed_b])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    let stack = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("file_author", "author")
+        .commit()
+        .await?;
+    assert_ne!(landed_a, landed_b, "the candidates must be distinct");
+
+    record_rewrite(&ctx, &repo, orphan, landed_a).await?;
+    record_rewrite(&ctx, &repo, orphan, landed_b).await?;
+    assert_eq!(
+        repo.pushrebase_mutation_mapping()
+            .get_successor_ids(&ctx, orphan)
+            .await?
+            .len(),
+        2,
+        "both rewrites must be on record for the ambiguity to be real"
+    );
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
+            .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    Ok(())
+}
+
+/// A recorded successor that is not on the branch must not be trusted.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_ignores_an_off_branch_successor(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_for_test();
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let orphan = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_shared", "v1")
+        .commit()
+        .await?;
+    let elsewhere = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_elsewhere", "elsewhere")
+        .commit()
+        .await?;
+    let current = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    let stack = CreateCommitContext::new(&ctx, &repo, vec![orphan])
+        .add_file("file_author", "author")
+        .commit()
+        .await?;
+
+    // Successor is not reachable from the head.
+    record_rewrite(&ctx, &repo, orphan, elsewhere).await?;
+    assert_eq!(
+        repo.pushrebase_mutation_mapping()
+            .get_successor_ids(&ctx, orphan)
+            .await?,
+        vec![elsewhere],
+        "the off-branch rewrite must be on record for the rejection to mean anything"
+    );
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
+            .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
     Ok(())
 }
 

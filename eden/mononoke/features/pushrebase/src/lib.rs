@@ -56,6 +56,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use std::time::Instant;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -156,6 +157,9 @@ define_stats! {
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
+/// Ancestry probes over a baseline's recorded successors. Normally one.
+const BASELINE_SUCCESSOR_CONCURRENCY: usize = 5;
+
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
 pub const FAIL_PUSHREBASE_EXTRA: &str = "failpushrebase";
@@ -194,12 +198,46 @@ pub enum PushrebaseError {
     RebaseOverMerge,
     #[error("Root is too far behind")]
     RootTooFarBehind,
+    #[error("baseline {baseline} {rejection} (onto {onto})")]
+    UnplaceableBaseline {
+        baseline: ChangesetId,
+        onto: ChangesetId,
+        rejection: BaselineRejection,
+    },
     #[error(
         "Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is {0})"
     )]
     ForceFailPushrebase(ChangesetId),
     #[error(transparent)]
     Error(#[from] Error),
+}
+
+/// Why `rebase_stack_onto_with_baseline` could not place a stack on the
+/// branch. Displays as the clause after "baseline <id>"; the wording is
+/// client-visible through Multi-Repo Land's conflict descriptions, where the
+/// stack head is called "the target".
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum BaselineRejection {
+    /// The stack head does not descend from the baseline.
+    NotAncestorOfHead,
+    /// Off the branch, and no rewritten form of it is on the branch either.
+    NotOnBranch,
+    /// Rewritten onto the branch, but sharing no single fork point with the
+    /// head to bound the server range.
+    NoSingleForkPoint,
+}
+
+impl std::fmt::Display for BaselineRejection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::NotAncestorOfHead => "is not an ancestor of the target",
+            Self::NotOnBranch => {
+                "is not an ancestor of the current head and no rewritten form of it is on \
+                 the branch; refusing to rebase across a force-move or unrelated history"
+            }
+            Self::NoSingleForkPoint => "has no single fork point on the current head",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -547,6 +585,143 @@ pub async fn rebase_stack_onto_with_conflict_base(
         rebased_bonsais,
         merge_summary: conflict_result.merge_summary,
     })
+}
+
+/// `rebase_stack_onto` for a caller that knows where its stack was built
+/// (`baseline`) but not whether that point is still on the branch, because
+/// an earlier pushrebase may have rewritten it. A baseline on the branch is
+/// the ordinary case. One off the branch is resolved through the pushrebase
+/// mutation mapping: when exactly one recorded successor is an ancestor of
+/// `onto`, the stack's base landed under another identity and the server
+/// range starts at the fork point of `baseline` and `onto`. Anything else is
+/// `UnplaceableBaseline`, never a parent-swap onto unrelated history.
+pub async fn rebase_stack_onto_with_baseline(
+    ctx: &CoreContext,
+    repo: &(impl Repo + PushrebaseMutationMappingRef),
+    config: &PushrebaseFlags,
+    baseline: ChangesetId,
+    head: ChangesetId,
+    onto: ChangesetId,
+) -> Result<RebasedStack, PushrebaseError> {
+    let unplaceable = |rejection| PushrebaseError::UnplaceableBaseline {
+        baseline,
+        onto,
+        rejection,
+    };
+    let (baseline_precedes_onto, baseline_precedes_head) = try_join(
+        repo.commit_graph().is_ancestor(ctx, baseline, onto),
+        repo.commit_graph().is_ancestor(ctx, baseline, head),
+    )
+    .await
+    .map_err(PushrebaseError::Error)?;
+    if !baseline_precedes_head {
+        return Err(unplaceable(BaselineRejection::NotAncestorOfHead));
+    }
+    let conflict_base = if baseline_precedes_onto {
+        baseline
+    } else {
+        if !rewritten_baseline_is_on_branch(ctx, repo, baseline, onto).await {
+            return Err(unplaceable(BaselineRejection::NotOnBranch));
+        }
+        match repo
+            .commit_graph()
+            .common_base(ctx, baseline, onto)
+            .await
+            .map_err(PushrebaseError::Error)?
+            .as_slice()
+        {
+            [fork_point] => *fork_point,
+            _ => return Err(unplaceable(BaselineRejection::NoSingleForkPoint)),
+        }
+    };
+    rebase_stack_onto_with_conflict_base(ctx, repo, config, baseline, conflict_base, head, onto)
+        .await
+}
+
+/// Whether an earlier pushrebase rewrote `baseline` into a commit that is an
+/// ancestor of `onto`: the proof that the stack's base is on the branch under
+/// another identity.
+///
+/// A candidate must be an ancestor of `onto`, so a bad row cannot place a
+/// stack on unrelated history. Ambiguity, no row, a read failure, or a chain
+/// (one hop only) all mean "no"; a read failure is logged rather than
+/// propagated so the caller's rejection stays a rejection.
+async fn rewritten_baseline_is_on_branch(
+    ctx: &CoreContext,
+    repo: &(impl Repo + PushrebaseMutationMappingRef),
+    baseline: ChangesetId,
+    onto: ChangesetId,
+) -> bool {
+    match try_resolve_rewritten_baseline(ctx, repo, baseline, onto).await {
+        Ok(resolved) => resolved.is_some(),
+        Err(err) => {
+            ctx.scuba()
+                .clone()
+                .add("log_tag", "orphaned_baseline_resolution_failed")
+                .add("repo", repo.repo_identity().name())
+                .add("old_target", baseline.to_string())
+                .add("error", format!("{err:#}"))
+                .unsampled()
+                .log();
+            false
+        }
+    }
+}
+
+async fn try_resolve_rewritten_baseline(
+    ctx: &CoreContext,
+    repo: &(impl Repo + PushrebaseMutationMappingRef),
+    baseline: ChangesetId,
+    onto: ChangesetId,
+) -> Result<Option<ChangesetId>> {
+    let repo_name = repo.repo_identity().name();
+    // Deduped: no unique constraint, so a retried land can record a pair twice.
+    let successors: HashSet<ChangesetId> = repo
+        .pushrebase_mutation_mapping()
+        .get_successor_ids(ctx, baseline)
+        .await
+        .with_context(|| {
+            format!("reading recorded successors of baseline {baseline} in {repo_name}")
+        })?
+        .into_iter()
+        .collect();
+
+    let on_branch: Vec<ChangesetId> =
+        stream::iter(successors.iter().copied().map(|successor| async move {
+            let reachable = repo
+                .commit_graph()
+                .is_ancestor(ctx, successor, onto)
+                .await
+                .with_context(|| {
+                    format!("checking whether recorded successor {successor} is on the branch")
+                })?;
+            anyhow::Ok(reachable.then_some(successor))
+        }))
+        .buffer_unordered(BASELINE_SUCCESSOR_CONCURRENCY)
+        .try_filter_map(|candidate| async move { Ok(candidate) })
+        .try_collect()
+        .await?;
+
+    // Exactly one, or we do not guess.
+    let resolved = match on_branch.as_slice() {
+        [only] => Some(*only),
+        _ => None,
+    };
+    // 0/0 is "no row"; n/0 is "recorded but off-branch".
+    ctx.scuba()
+        .clone()
+        .add("log_tag", "orphaned_baseline_resolution")
+        .add("repo", repo_name)
+        .add("old_target", baseline.to_string())
+        .add("recorded_successors", successors.len())
+        .add("candidates_on_branch", on_branch.len())
+        .add(
+            "resolved_to",
+            resolved.map_or_else(|| "none".to_string(), |cs| cs.to_string()),
+        )
+        .unsampled()
+        .log();
+    Ok(resolved)
 }
 
 /// A successfully rebased request pending the CAS bookmark update.
