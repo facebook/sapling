@@ -5372,3 +5372,65 @@ async fn pushrebase_merge_resolution_override_none_falls_through(
     should_have_conflicts(result);
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn pushrebase_keeps_git_lfs_pointer_flag(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;
+    let path = NonRootMPath::new("blob.bin")?;
+
+    let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+    let root = repo
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, root_hg)
+        .await?
+        .ok_or_else(|| Error::msg("Root missing"))?;
+
+    // Store the content once, then re-add it flagged as an LFS pointer.
+    let seed = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("blob.bin", "binary payload")
+        .commit()
+        .await?;
+    let seed_bcs = seed.load(&ctx, repo.repo_blobstore()).await?;
+    let seed_change = match seed_bcs.file_changes_map().get(&path) {
+        Some(FileChange::Change(tc)) => tc.clone(),
+        _ => return Err(Error::msg("blob.bin change missing")),
+    };
+    let lfs_change = FileChange::tracked(
+        seed_change.content_id(),
+        seed_change.file_type(),
+        seed_change.size(),
+        /* copy_from */ None,
+        GitLfs::canonical_pointer(),
+    );
+    let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file_change(path.clone(), lfs_change)
+        .commit()
+        .await?;
+    let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
+
+    // The bookmark is ahead of the commit's parent, so the commit is rebased.
+    let book = master_bookmark();
+    set_bookmark(
+        ctx.clone(),
+        &repo,
+        &book,
+        "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+    )
+    .await?;
+    let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss).await?;
+    assert_ne!(result.head, bcs, "the commit should have been rebased");
+
+    let result_bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
+    match result_bcs.file_changes_map().get(&path) {
+        Some(FileChange::Change(tc)) => {
+            assert!(
+                tc.git_lfs().is_lfs_pointer(),
+                "a rebased change must still be served as an LFS pointer"
+            );
+            assert_eq!(tc.content_id(), seed_change.content_id());
+        }
+        _ => return Err(Error::msg("blob.bin change missing after rebase")),
+    }
+    Ok(())
+}

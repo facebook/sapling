@@ -2913,6 +2913,14 @@ async fn collect_merge_file_info(
             )));
         }
 
+        // An LFS-tracked file's bonsai content is the blob behind the pointer;
+        // merged bytes would exist on no LFS server.
+        if client_fc.git_lfs().is_lfs_pointer() {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {path} is LFS-tracked",
+            )));
+        }
+
         // Skip files that are too large
         if client_fc.size() > max_file_size {
             return Err(MergeResolutionError::Skipped(format!(
@@ -2931,6 +2939,12 @@ async fn collect_merge_file_info(
                 )));
             }
         };
+
+        if server_fc.git_lfs().is_lfs_pointer() {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {path} is LFS-tracked on server",
+            )));
+        }
 
         // Also check server file size
         if server_fc.size() > max_file_size {
@@ -3345,23 +3359,19 @@ async fn rebase_changeset(
     }
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
-    // copy information for all copied/moved files needs to be updated
+    // copy information for all copied/moved files needs to be updated. Only the copy source
+    // changes; the rest of the change, including how Git serves it, is kept as authored.
     let mut file_changes = bcs.file_changes;
     for file_change in file_changes.values_mut() {
         match file_change {
             FileChange::Change(tc) => {
-                *file_change = FileChange::tracked(
-                    tc.content_id().clone(),
-                    tc.file_type(),
-                    tc.size(),
-                    tc.copy_from().map(|(path, cs)| {
-                        (
-                            path.clone(),
-                            remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
-                        )
-                    }),
-                    GitLfs::FullContent,
-                );
+                let copy_from = tc.copy_from().map(|(path, cs)| {
+                    (
+                        path.clone(),
+                        remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
+                    )
+                });
+                *file_change = FileChange::Change(tc.with_new_copy_from(copy_from));
             }
             FileChange::Deletion
             | FileChange::UntrackedDeletion
