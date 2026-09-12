@@ -34,6 +34,13 @@ impl<'de> Deserializer<'de> {
     #[inline]
     fn read_slice(&mut self) -> Result<&'de [u8]> {
         let len = Deserialize::deserialize(&mut *self)?;
+        if len > self.bytes.len() {
+            return Err(Error::new(format!(
+                "length {} exceeds remaining input of {} bytes",
+                len,
+                self.bytes.len()
+            )));
+        }
         let (slice, rest) = self.bytes.split_at(len);
         self.bytes = rest;
         Ok(slice)
@@ -103,12 +110,22 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
+        if self.bytes.is_empty() {
+            return Err(Error::new("EOF while deserializing char"));
+        }
         let width = utf8_char_width(self.bytes[0]);
         if width == 1 {
             return visitor.visit_char(self.bytes[0] as char);
         }
         if width == 0 {
             return Err(Error::new("invalid char"));
+        }
+        if width > self.bytes.len() {
+            return Err(Error::new(format!(
+                "truncated char: expected {} bytes, only {} remain",
+                width,
+                self.bytes.len()
+            )));
         }
         let res = match str::from_utf8(&self.bytes[..width]) {
             Ok(s) => s.chars().next().unwrap(),
