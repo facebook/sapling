@@ -62,19 +62,7 @@
   $ git config --global http.sslCert "$TEST_CERTDIR/client0.crt"
   $ git config --global http.sslKey "$TEST_CERTDIR/client0.key"
 
--- Test gclone git (upload) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_upload -b master --upload
-  $ cat gclone_git_a_upload/file_a.txt
-  content A
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_upload -b master --upload
-  $ cat gclone_git_b_upload/file_b.txt
-  content B
-
--- Test gclone git (download) --
+-- Test gclone git --
 
   $ cd "$TESTTMP"
   $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a -b master
@@ -86,35 +74,7 @@
   $ cat gclone_git_b/file_b.txt
   content B
 
--- Test gclone git (require cached) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_cached -b master --require-cached
-  $ cat gclone_git_a_cached/file_a.txt
-  content A
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_cached -b master --require-cached
-  $ cat gclone_git_b_cached/file_b.txt
-  content B
-
--- Test gclone git with --verify-on-download --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_verify -b master --verify-on-download=true
-  $ cat gclone_git_a_verify/file_a.txt
-  content A
-
--- Test gclone grepo (upload) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_upload -b master --require-cached-repo-url --upload
-  $ cat gclone_repo_upload/a/file_a.txt
-  content A
-  $ cat gclone_repo_upload/b/file_b.txt
-  content B
-
--- Test gclone grepo (download) --
+-- Test gclone grepo --
 
   $ cd "$TESTTMP"
   $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo -b master --require-cached-repo-url
@@ -123,65 +83,18 @@
   $ cat gclone_repo/b/file_b.txt
   content B
 
--- Test gclone grepo (require cached) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_cached -b master --require-cached-repo-url --require-cached
-  $ cat gclone_repo_cached/a/file_a.txt
-  content A
-  $ cat gclone_repo_cached/b/file_b.txt
-  content B
-
--- Test gclone grepo with --verify-on-download --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_verify -b master --require-cached-repo-url --verify-on-download=true
-  $ cat gclone_repo_verify/a/file_a.txt
-  content A
-  $ cat gclone_repo_verify/b/file_b.txt
-  content B
-
--- Test gclone git --ensure-ttl-duration --
-
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" IGNORED -b master --ensure-ttl-duration
-
--- Test gclone grepo --ensure-ttl-duration --
-
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" IGNORED -b master --require-cached-repo-url --ensure-ttl-duration
-
 -- Test gclone git fails with nonexistent branch --
 
   $ cd "$TESTTMP"
   $ EXPECTED_RC=1 quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" should_fail -b nonexistent-branch
   [1]
 
--- Test gclone git with --partial-clone=false (upload) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_full_upload -b master --partial-clone=false --upload
-  $ cat gclone_git_a_full_upload/file_a.txt
-  content A
-
--- Test gclone git with --partial-clone=false (download) --
+-- Test gclone git with --partial-clone=false --
 
   $ cd "$TESTTMP"
   $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_nopartial -b master --partial-clone=false
   $ cat gclone_git_a_nopartial/file_a.txt
   content A
-
--- Test gclone git with --partial-clone=false (require cached) --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_nopartial_cached -b master --partial-clone=false --require-cached
-  $ cat gclone_git_a_nopartial_cached/file_a.txt
-  content A
-
--- Test gclone git with --verify-on-upload=false --
-
-  $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_no_verify -b master --upload --verify-on-upload=false
-  $ cat gclone_git_b_no_verify/file_b.txt
-  content B
 
 -- Test gclone grepo with --jobs --
 
@@ -195,21 +108,21 @@
 -- Test gclone git default --check-stat (minimal) --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_chkstat_default -b master --upload
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_chkstat_default -b master
   $ git -C gclone_git_a_chkstat_default config --get core.checkStat
   minimal
 
 -- Test gclone git --check-stat=default --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_chkstat_explicit -b master --check-stat=default --upload
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_chkstat_explicit -b master --check-stat=default
   $ git -C gclone_git_b_chkstat_explicit config --get core.checkStat
   default
 
 -- Test gclone grepo default --check-stat (minimal) on all projects --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat -b master --require-cached-repo-url --upload
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat -b master --require-cached-repo-url
   $ git -C gclone_repo_chkstat/a config --get core.checkStat
   minimal
   $ git -C gclone_repo_chkstat/b config --get core.checkStat
@@ -218,7 +131,7 @@
 -- Test gclone grepo --check-stat=default on all projects --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat_def -b master --require-cached-repo-url --check-stat=default --upload
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat_def -b master --require-cached-repo-url --check-stat=default
   $ git -C gclone_repo_chkstat_def/a config --get core.checkStat
   default
   $ git -C gclone_repo_chkstat_def/b config --get core.checkStat
