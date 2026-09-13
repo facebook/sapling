@@ -20,7 +20,7 @@ bitflags = { version = "2.13.1", features = ["serde", "std"], default-features =
 byteorder = "1.5"
 fail = { version = "0.5.1", features = ["failpoints"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
-indexmap = { version = "2.14.0", features = ["arbitrary", "rayon", "serde"] }
+indexmap = { version = "2.14.2", features = ["arbitrary", "rayon", "serde"] }
 rand = "0.10.2"
 sapling-dag-types = { version = "0.1.0", path = "dag-types", default-features = false }
 sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
