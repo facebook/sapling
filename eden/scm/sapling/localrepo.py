@@ -1777,14 +1777,10 @@ class localrepository:
         if tr is not None:
             return tr.nest(desc)
 
-        if not lockfree:
-            try:
-                self.svfs.stat("journal")
-            except FileNotFoundError:
-                # No existing transaction - this is the normal case.
-                pass
-            else:
-                self.recover()
+        # An existing journal means a previous transaction was interrupted.
+        # Lock-free transactions do not own the journal file.
+        if not lockfree and self.svfs.exists("journal"):
+            self.recover()
 
         idbase = b"%.40f#%f" % (random.random(), time.time())
         ha = hex(hashlib.sha1(idbase).digest())
