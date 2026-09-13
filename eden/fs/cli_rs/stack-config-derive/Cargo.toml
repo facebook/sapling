@@ -17,4 +17,4 @@ darling = "0.24.0"
 proc-macro-error2 = "2.0.1"
 proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
 quote = "1.0.47"
-syn = { version = "3", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
+syn = { version = "3.0.5", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
