@@ -19,7 +19,7 @@ doc = false
 
 [dependencies]
 libc = "0.2.186"
-zstd-sys = { version = "2.0.16", features = ["experimental"], default-features = false }
+zstd-sys = { version = "2.1.0", features = ["experimental"], default-features = false }
 
 [dev-dependencies]
 quickcheck = "1.1"
