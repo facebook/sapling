@@ -12,3 +12,6 @@ anyhow = "1.0.104"
 arc-swap = { version = "1.9.2", features = ["weak"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

@@ -7,9 +7,11 @@
 
 //! Unit tests for `MononokeRepos`. `mod tests;` submodule so `super` is the crate root.
 
+use mononoke_macros::mononoke;
+
 use super::*;
 
-#[test]
+#[mononoke::test]
 fn test_reload_if_present() {
     let repos: MononokeRepos<i32> = MononokeRepos::new();
     repos.add("foo", 1, 100);

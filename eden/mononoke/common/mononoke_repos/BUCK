@@ -5,6 +5,7 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "mononoke_repos",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:arc-swap",

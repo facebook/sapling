@@ -65,9 +65,11 @@ impl<R> RepoSlot<R> {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_empty_slot_holds_no_repo() {
         let slot: RepoSlot<i32> = RepoSlot::empty();
         assert!(
@@ -76,13 +78,13 @@ mod tests {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_ready_slot_hands_out_its_repo() {
         let slot = RepoSlot::ready(Arc::new(42));
         assert_eq!(slot.loaded().as_deref(), Some(&42));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_reading_a_slot_shares_rather_than_copies() {
         let repo = Arc::new(42);
         let slot = RepoSlot::ready(Arc::clone(&repo));
