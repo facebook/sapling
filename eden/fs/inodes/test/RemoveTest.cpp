@@ -10,6 +10,7 @@
 
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -163,6 +164,102 @@ TEST_F(UnlinkTest, created) {
 #ifndef _WIN32
   // We should still be able to read from the FileInode
   EXPECT_FILE_INODE(file, contents, 0644);
+#endif
+}
+
+class RemoveRecursivelyTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    FakeTreeBuilder builder;
+    builder.setFiles({
+        {"dir/a.txt", "This is a.txt.\n"},
+        {"dir/keep.txt", "This is keep.txt.\n"},
+        {"other/sub/b.txt", "This is b.txt.\n"},
+        {"readme.txt", "File in the root directory.\n"},
+    });
+    mount_.initialize(builder);
+  }
+
+  void removeRecursively(const TreeInodePtr& dir, PathComponentPiece name) {
+    auto future = dir->removeRecursively(
+                         name,
+                         InvalidationRequired::No,
+                         ObjectFetchContext::getNullContext())
+                      .semi()
+                      .via(mount_.getServerExecutor().get());
+    mount_.drainServerExecutor();
+    std::move(future).get(0ms);
+  }
+
+  bool journalRecordsRemoval(
+      JournalDelta::SequenceNumber since,
+      RelativePathPiece path) {
+    auto delta = mount_.getEdenMount()->getJournal().accumulateRange(since);
+    if (!delta) {
+      return false;
+    }
+    auto it = delta->changedFilesInOverlay.find(RelativePath{path});
+    return it != delta->changedFilesInOverlay.end() &&
+        it->second.existedBefore && !it->second.existedAfter;
+  }
+
+  TestMount mount_;
+};
+
+// Removing a child whose inode is not loaded takes a fast path in
+// TreeInode::tryRemoveUnloadedChild.
+//
+// FIXME: that path removes the entry without materializing the parent or
+// recording the removal in the journal. The directory keeps its source
+// control tree id, so once it is reloaded the removal is lost, or, when a
+// sibling remains, the stale overlay record the removal wrote is loaded into
+// a directory still considered identical to source control.
+TEST_F(RemoveRecursivelyTest, unloadedFileInUnmaterializedDir) {
+  auto& journal = mount_.getEdenMount()->getJournal();
+  auto testStart = journal.observeLatest().value().sequenceID;
+
+  auto dir = mount_.getTreeInode("dir");
+  removeRecursively(dir, "a.txt"_pc);
+  EXPECT_THROW_ERRNO(dir->getChildInodeNumber("a.txt"_pc), ENOENT);
+  EXPECT_FALSE(dir->getContentsUnchecked().rlock()->isMaterialized());
+  EXPECT_FALSE(journalRecordsRemoval(testStart, "dir/a.txt"_relpath));
+  dir.reset();
+
+  // On Windows the overlay is reconciled with the on-disk PrjFS state on
+  // every start, and a materialized directory that is missing from disk is
+  // reset to its source control tree. TestMount puts nothing on disk, so a
+  // remount cannot show whether the removal was persisted there.
+#ifndef _WIN32
+  mount_.remount();
+  EXPECT_FALSE(mount_.hasFileAt("dir/a.txt"));
+  EXPECT_TRUE(mount_.hasFileAt("dir/keep.txt"));
+  EXPECT_FALSE(mount_.getTreeInode("dir")
+                   ->getContentsUnchecked()
+                   .rlock()
+                   ->isMaterialized());
+#endif
+}
+
+TEST_F(RemoveRecursivelyTest, unloadedDirInUnmaterializedDir) {
+  auto& journal = mount_.getEdenMount()->getJournal();
+  auto testStart = journal.observeLatest().value().sequenceID;
+
+  auto dir = mount_.getTreeInode("other");
+  removeRecursively(dir, "sub"_pc);
+  EXPECT_THROW_ERRNO(dir->getChildInodeNumber("sub"_pc), ENOENT);
+  EXPECT_FALSE(dir->getContentsUnchecked().rlock()->isMaterialized());
+  EXPECT_FALSE(journalRecordsRemoval(testStart, "other/sub"_relpath));
+  dir.reset();
+
+  // The remount is guarded for the reason given in
+  // unloadedFileInUnmaterializedDir.
+#ifndef _WIN32
+  mount_.remount();
+  EXPECT_TRUE(mount_.hasFileAt("other/sub/b.txt"));
+  EXPECT_FALSE(mount_.getTreeInode("other")
+                   ->getContentsUnchecked()
+                   .rlock()
+                   ->isMaterialized());
 #endif
 }
 
