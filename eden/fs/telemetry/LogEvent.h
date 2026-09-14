@@ -15,6 +15,7 @@
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/LogEvent.h"
+#include "eden/common/utils/ProcessInfo.h"
 #include "eden/fs/telemetry/XplatKeys.h"
 
 namespace facebook::eden {
@@ -134,16 +135,19 @@ struct FetchHeavy : public EdenFSEvent {
   ProcessId pid;
   uint64_t fetch_count;
   std::optional<uint64_t> loaded_inodes;
+  std::optional<ProcessAttribution> client_attribution;
 
   FetchHeavy(
       std::string client_cmdline,
       ProcessId pid,
       uint64_t fetch_count,
-      std::optional<uint64_t> loaded_inodes)
+      std::optional<uint64_t> loaded_inodes,
+      std::optional<ProcessAttribution> client_attribution = std::nullopt)
       : client_cmdline(std::move(client_cmdline)),
         pid(std::move(pid)),
         fetch_count(fetch_count),
-        loaded_inodes(loaded_inodes) {}
+        loaded_inodes(loaded_inodes),
+        client_attribution(std::move(client_attribution)) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("client_cmdline", client_cmdline);
@@ -151,6 +155,11 @@ struct FetchHeavy : public EdenFSEvent {
     event.addInt("fetch_count", fetch_count);
     if (loaded_inodes.has_value()) {
       event.addTruncatedInt("loaded_inodes", loaded_inodes.value(), 8U);
+    }
+    if (client_attribution.has_value()) {
+      for (const auto& [name, value] : *client_attribution) {
+        event.addString(name, value);
+      }
     }
   }
 

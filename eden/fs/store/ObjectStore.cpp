@@ -111,14 +111,15 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
   if (!processInfoCache_ || !edenFsEventsLogger_) {
     return;
   }
-  auto processName = processInfoCache_->getProcessName(pid.get());
-  if (processName) {
-    std::replace(processName->begin(), processName->end(), '\0', ' ');
+  auto processInfo = processInfoCache_->getProcessInfo(pid.get());
+  if (processInfo) {
+    auto& processName = processInfo->name;
+    std::replace(processName.begin(), processName.end(), '\0', ' ');
     XLOGF(
         WARN,
         "Heavy fetches ({}) from process {}(pid={})",
         fetch_count,
-        *processName,
+        processName,
         pid);
     auto repoName = backingStore_->getRepoName();
     std::optional<uint64_t> loadedInodes = [repoName]() {
@@ -130,7 +131,12 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
     }();
 
     edenFsEventsLogger_->logEvent(
-        FetchHeavy{processName.value(), pid, fetch_count, loadedInodes});
+        FetchHeavy{
+            std::move(processName),
+            pid,
+            fetch_count,
+            loadedInodes,
+            std::move(processInfo->attribution)});
   } else {
     XLOGF(WARN, "Heavy fetches ({}) from pid {})", fetch_count, pid);
   }

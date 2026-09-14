@@ -129,6 +129,10 @@
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
 
+#ifdef EDEN_HAVE_PROCESS_ATTRIBUTION
+#include "eden/common/utils/facebook/ProcessAttribution.h" // @manual
+#endif
+
 #ifdef EDEN_HAVE_USAGE_SERVICE
 #include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
 #endif
@@ -509,6 +513,21 @@ bool shouldRunPeriodicInodeUnload(const EdenConfig& config) {
 
 namespace facebook::eden {
 
+namespace {
+
+ProcessInfoCache::ReadFuncConfig makeProcessInfoReadConfig(
+    [[maybe_unused]] const EdenConfig& edenConfig) {
+  ProcessInfoCache::ReadFuncConfig config;
+#ifdef EDEN_HAVE_PROCESS_ATTRIBUTION
+  if (edenConfig.attributeClientProcesses.getValue()) {
+    config.attribution = attributeProcessToAgent;
+  }
+#endif
+  return config;
+}
+
+} // namespace
+
 class EdenServer::ThriftServerEventHandler
     : public apache::thrift::server::TServerEventHandler,
       public folly::AsyncSignalHandler {
@@ -737,7 +756,8 @@ EdenServer::EdenServer(
               edenConfig->numFsChannelThreads.getValue(),
               "FsChannelThreadPool"),
           std::make_shared<UnixClock>(),
-          std::make_shared<ProcessInfoCache>(),
+          std::make_shared<ProcessInfoCache>(
+              makeProcessInfoReadConfig(*edenConfig)),
           structuredLogger_,
           notificationsStructuredLogger_,
           errorLogger_,

@@ -1683,6 +1683,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether to attribute the processes accessing a mount to whatever launched
+   * them (ProcessInfoCache::ReadFuncConfig::attribution). The attribution is
+   * attached to per-process events (currently FetchHeavy) as opaque string
+   * fields so the activity is credited to the client rather than to the
+   * environment EdenFS itself was started under. Read at startup.
+   */
+  ConfigSetting<bool> attributeClientProcesses{
+      "telemetry:attribute-client-processes",
+      true,
+      this};
+
+  /**
    * Controls which paths eden will log data fetches for when this is set.
    * Fetches for any paths that match the regex will be logged.
    */

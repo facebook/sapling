@@ -459,6 +459,9 @@ cpp_library(
         "//thrift/lib/cpp2/server:round_robin_request_pile",
     ] + select({
         "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/common/utils/facebook:process_attribution",  # @manual
+        ],
         "ovr_config//os:macos": [
             "//folly:subprocess",
         ],
