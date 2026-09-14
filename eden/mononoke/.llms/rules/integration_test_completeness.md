@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/.*(\.rs|\.t)$'
-apply_to_content: 'async fn |fn test_|pub async fn handle|SaplingRemoteApiHandler|service_method|thrift_method'
+name: integration-test-completeness
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*(\.rs|\.t)$'
+  apply_to_content: 'async fn |fn test_|pub async fn handle|SaplingRemoteApiHandler|service_method|thrift_method'
 ---
 
 # Integration Test Completeness
