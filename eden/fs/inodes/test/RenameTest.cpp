@@ -239,10 +239,7 @@ TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
 
   using Names = std::vector<std::string>;
   EXPECT_EQ(RelativePath{"B"}, file->getPath().value());
-  // FIXME: the listing keeps the replaced entry's spelling while the inode's
-  // location and the overlay record use the requested one, so the name
-  // changes across a remount.
-  EXPECT_EQ((Names{"b", "src"}), rootNames());
+  EXPECT_EQ((Names{"B", "src"}), rootNames());
   EXPECT_EQ((Names{"B", "src"}), rootOverlayNames());
 
   src.reset();

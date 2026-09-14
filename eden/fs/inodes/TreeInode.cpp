@@ -3235,19 +3235,24 @@ ImmediateFuture<Unit> TreeInode::doRename(
     deletedInode = locks.destChild()->markUnlinked(
         destParent.get(), destName, locks.renameLock());
 
-    // Replace the destination contents entry with the source data
-    locks.destChildIter()->second = std::move(srcIter->second);
+    // On a case-insensitive mount the existing entry may be spelled
+    // differently from destName. The entry is re-inserted under destName so
+    // the listing agrees with the child's location and the overlay record.
+    auto entry = std::move(srcIter->second);
+    locks.destContents()->erase(locks.destChildIter());
+    auto ret = locks.destContents()->emplace(destName, std::move(entry));
+    XCHECK(ret.second);
   } else {
     auto ret =
         locks.destContents()->emplace(destName, std::move(srcIter->second));
     XCHECK(ret.second);
+  }
 
-    // If the source and destination directory are the same, then inserting the
-    // destination entry may have invalidated our source entry iterator, so we
-    // have to look it up again.
-    if (destParent.get() == this) {
-      srcIter = locks.srcContents()->find(srcName);
-    }
+  // If the source and destination directory are the same, then modifying the
+  // destination entries may have invalidated our source entry iterator, so we
+  // have to look it up again.
+  if (destParent.get() == this) {
+    srcIter = locks.srcContents()->find(srcName);
   }
 
   // Inform the child inode that it has been moved
