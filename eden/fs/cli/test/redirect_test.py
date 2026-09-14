@@ -17,6 +17,7 @@ from eden.fs.cli.redirect import (
     check_redirection,
     FixupCmd,
     get_effective_redirections,
+    is_valid_symlink,
     RedirectionState,
     RedirectionType,
 )
@@ -26,6 +27,19 @@ from ..redirect import Redirection, RepoPathDisposition
 
 
 class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
+    def test_symlink_target_comparison_resolves_parent_symlinks(self) -> None:
+        temp_dir = Path(self.make_temporary_directory())
+        target_root = temp_dir / "target-root"
+        target_root.mkdir()
+        target_alias = temp_dir / "target-alias"
+        target_alias.symlink_to(target_root)
+        expected_target = target_alias / "target"
+        expected_target.mkdir()
+        symlink_path = temp_dir / "redirect"
+        symlink_path.symlink_to(expected_target)
+
+        self.assertTrue(is_valid_symlink(expected_target, symlink_path))
+
     def test_darwin_symlink_bind_redirection_matches_configuration(self) -> None:
         temp_dir = self.make_temporary_directory()
         checkout_path = Path(temp_dir) / "checkout"

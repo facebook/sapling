@@ -92,6 +92,13 @@ def is_bind_mount(path: Path) -> bool:
         return False
 
 
+def _resolve_symlink_target(symlink_path: Path, *, strict: bool) -> Path:
+    target = symlink_path.readlink()
+    if not target.is_absolute():
+        target = symlink_path.parent / target
+    return target.resolve(strict=strict)
+
+
 def is_valid_symlink(expected_target: Optional[Path], mount_path: Path) -> bool:
     """Detect symlink usage and checks if the symlink is valid
     Symlinks can be used on any system but are the only redirect on Windows"""
@@ -100,7 +107,7 @@ def is_valid_symlink(expected_target: Optional[Path], mount_path: Path) -> bool:
         if expected_target:
             expected_target = expected_target.resolve()
         symlink_path = os.fsdecode(mount_path)
-        target = Path(symlink_path).readlink()
+        target = _resolve_symlink_target(Path(symlink_path), strict=False)
         if target != expected_target:
             print(
                 f"EXPECTED redirect to resolve to {expected_target}, got {target}",
