@@ -693,15 +693,17 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
                     os.path.join(repo.root, scmutil.origpath(ui, repo, file)),
                 )
         ui.pushbuffer(True)
-        cmdutil.revert(
-            ui,
-            repo,
-            shelvectx,
-            repo.dirstate.parents(),
-            *pathtofiles(repo, files),
-            **{"no_backup": True},
-        )
-        ui.popbuffer()
+        try:
+            cmdutil.revert(
+                ui,
+                repo,
+                shelvectx,
+                repo.dirstate.parents(),
+                *pathtofiles(repo, files),
+                **{"no_backup": True},
+            )
+        finally:
+            ui.popbuffer()
 
 
 def unshelvecleanup(ui, repo, name, opts) -> None:

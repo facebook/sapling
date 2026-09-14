@@ -65,9 +65,8 @@ A failure inside revert must remain visible.
   $ sl shelve -q --name feedback
   $ setconfig test-revert.fail=true
 
-FIXME: the revert output buffer currently hides the abort diagnostic.
-
   $ sl unshelve -q --keep --name feedback
+  abort: synthetic revert failure
   [255]
   $ cat owned
   base
