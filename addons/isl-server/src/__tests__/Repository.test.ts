@@ -211,6 +211,19 @@ describe('Repository', () => {
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
       [/^sl debugroots/, {stdout: '/path/to/myRepo/submodule\n/path/to/myRepo'}],
+      [
+        /^sl debuggitmodules/,
+        {
+          stdout: JSON.stringify([
+            {
+              name: 'submodule',
+              url: 'https://example.com/submodule',
+              path: 'submodule',
+              active: true,
+            },
+          ]),
+        },
+      ],
     ]);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     const repo = new Repository(info, ctx);
@@ -225,6 +238,34 @@ describe('Repository', () => {
       preferredSubmitCommand: undefined,
       isEdenFs: false,
     });
+  });
+
+  it('drops ancestor repos that are not really submodules', async () => {
+    setConfigOverrideForTests([]);
+    setPathsDefault('mononoke://0.0.0.0/fbsource');
+    // A checkout cloned inside another repo's working copy. `debugroots` reports both, but the
+    // outer repo does not declare it as a submodule, so only the most local repo survives.
+    mockEjeca([
+      [/^sl root --dotdir/, {stdout: '/workspace/project/.sl'}],
+      [/^sl root/, {stdout: '/workspace/project'}],
+      [/^sl debugroots/, {stdout: '/workspace/project\n/workspace'}],
+      [/^sl debuggitmodules/, {stdout: '[]'}],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    expect(info.repoRoots).toEqual(['/workspace/project']);
+  });
+
+  it('drops ancestor repos when submodules cannot be listed', async () => {
+    setConfigOverrideForTests([]);
+    setPathsDefault('mononoke://0.0.0.0/fbsource');
+    mockEjeca([
+      [/^sl root --dotdir/, {stdout: '/workspace/project/.sl'}],
+      [/^sl root/, {stdout: '/workspace/project'}],
+      [/^sl debugroots/, {stdout: '/workspace/project\n/workspace'}],
+      [/^sl debuggitmodules/, new Error('unknown command debuggitmodules')],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    expect(info.repoRoots).toEqual(['/workspace/project']);
   });
 
   it('handles cwd not exists', async () => {
@@ -1230,7 +1271,7 @@ describe('fetchSubmoduleMap', () => {
         {stdout: JSON.stringify(submodulesOfMyRepo)},
       ],
       [/^sl root/, {stdout: submoduleBRoot}],
-      [/^sl debugroots/, {stdout: myRepoRoot + '\n' + submoduleARoot + '\n' + submoduleBRoot}],
+      [/^sl debugroots/, {stdout: submoduleBRoot + '\n' + submoduleARoot + '\n' + myRepoRoot}],
     ]);
     const updatedCtx = {...ctx, cwd: submoduleBRoot};
     const info = (await Repository.getRepoInfo(updatedCtx)) as ValidatedRepoInfo;
