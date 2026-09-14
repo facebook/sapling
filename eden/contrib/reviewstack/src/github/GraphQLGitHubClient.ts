@@ -305,6 +305,7 @@ export default class GraphQLGitHubClient implements GitHubClient {
   async getPullRequests(input: PullsQueryInput): Promise<PullsWithPageInfo | null> {
     const variables = {
       ...input,
+      includeBody: input.includeBody ?? false,
       labels: input.labels.length === 0 ? null : input.labels,
       owner: this.organization,
       name: this.repositoryName,
