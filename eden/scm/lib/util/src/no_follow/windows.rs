@@ -64,6 +64,7 @@ use winapi::shared::ntstatus::STATUS_BUFFER_OVERFLOW;
 use winapi::shared::ntstatus::STATUS_INFO_LENGTH_MISMATCH;
 use winapi::shared::ntstatus::STATUS_NO_MORE_FILES;
 use winapi::shared::ntstatus::STATUS_NO_SUCH_FILE;
+use winapi::shared::winerror::ERROR_ACCESS_DENIED;
 use winapi::shared::winerror::ERROR_CANT_RESOLVE_FILENAME;
 use winapi::um::fileapi::BY_HANDLE_FILE_INFORMATION;
 use winapi::um::fileapi::CreateFileW;
@@ -731,12 +732,21 @@ fn split_parent_leaf(path: &Path) -> io::Result<(&Path, &OsStr)> {
 }
 
 const ROOT_ANCESTOR_PIN_ATTEMPTS: usize = 3;
+const VOLUME_NAME_NONE: DWORD = 0x4;
 
 fn pin_root_ancestors(root: &OwnedHandle) -> io::Result<Vec<OwnedHandle>> {
     for _ in 0..ROOT_ANCESTOR_PIN_ATTEMPTS {
-        let before = final_path_by_handle(root.as_raw_handle() as HANDLE)?;
+        let Some(before) = final_path_for_ancestor_pinning(root.as_raw_handle() as HANDLE)? else {
+            tracing::warn!("the root's DOS path is unavailable; continuing without ancestor pins");
+            return Ok(Vec::new());
+        };
         let pins = open_root_ancestor_pins(&before)?;
-        let after = final_path_by_handle(root.as_raw_handle() as HANDLE)?;
+        let Some(after) = final_path_for_ancestor_pinning(root.as_raw_handle() as HANDLE)? else {
+            tracing::warn!(
+                "the root's DOS path became unavailable; continuing without ancestor pins"
+            );
+            return Ok(Vec::new());
+        };
         if before == after {
             return Ok(pins);
         }
@@ -746,6 +756,22 @@ fn pin_root_ancestors(root: &OwnedHandle) -> io::Result<Vec<OwnedHandle>> {
         io::ErrorKind::Other,
         "root path changed while pinning ancestors",
     ))
+}
+
+fn final_path_for_ancestor_pinning(handle: HANDLE) -> io::Result<Option<PathBuf>> {
+    // `VOLUME_NAME_NONE` avoids the DOS volume lookup. A successful retry proves
+    // the handle can otherwise be resolved, but its volume-relative result cannot
+    // identify which volume to use when opening ancestors, so use it only as a probe.
+    match final_path_by_handle(handle) {
+        Ok(path) => Ok(Some(path)),
+        Err(err)
+            if err.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
+                && final_path_by_handle_with_flags(handle, VOLUME_NAME_NONE).is_ok() =>
+        {
+            Ok(None)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 fn open_root_ancestor_pins(root_path: &Path) -> io::Result<Vec<OwnedHandle>> {
@@ -1731,8 +1757,12 @@ fn clear_readonly(handle: &OwnedHandle, attrs: u32) -> io::Result<()> {
 }
 
 fn final_path_by_handle(handle: HANDLE) -> io::Result<PathBuf> {
+    final_path_by_handle_with_flags(handle, 0)
+}
+
+fn final_path_by_handle_with_flags(handle: HANDLE, flags: DWORD) -> io::Result<PathBuf> {
     let mut stack_buffer = [0u16; 260];
-    let len = final_path_by_handle_into(handle, &mut stack_buffer)?;
+    let len = final_path_by_handle_into(handle, &mut stack_buffer, flags)?;
     if len < stack_buffer.len() {
         return Ok(PathBuf::from(OsString::from_wide(&stack_buffer[..len])));
     }
@@ -1744,7 +1774,7 @@ fn final_path_by_handle(handle: HANDLE) -> io::Result<PathBuf> {
                 .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "path is too long"))?
         ];
     loop {
-        let len = final_path_by_handle_into(handle, &mut buffer)?;
+        let len = final_path_by_handle_into(handle, &mut buffer, flags)?;
         if len < buffer.len() {
             buffer.truncate(len);
             return Ok(PathBuf::from(OsString::from_wide(&buffer)));
@@ -1758,11 +1788,15 @@ fn final_path_by_handle(handle: HANDLE) -> io::Result<PathBuf> {
     }
 }
 
-fn final_path_by_handle_into(handle: HANDLE, buffer: &mut [u16]) -> io::Result<usize> {
+fn final_path_by_handle_into(
+    handle: HANDLE,
+    buffer: &mut [u16],
+    flags: DWORD,
+) -> io::Result<usize> {
     let len = unsafe {
         // SAFETY: `handle` is live and `buffer` points to writable memory
         // for `buffer.len()` UTF-16 code units.
-        GetFinalPathNameByHandleW(handle, buffer.as_mut_ptr(), buffer.len() as u32, 0)
+        GetFinalPathNameByHandleW(handle, buffer.as_mut_ptr(), buffer.len() as u32, flags)
     };
     if len == 0 {
         return Err(io::Error::last_os_error());
