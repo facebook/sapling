@@ -13,6 +13,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -168,6 +169,89 @@ TEST_F(RenameUnloadedDestTest, refusesUnloadedNonEmptyDir) {
 
   EXPECT_EQ(src_, mount_->getTreeInode("src"));
   EXPECT_TRUE(mount_->hasFileAt("full/other.txt"));
+}
+
+// Renaming over an entry whose name differs only in case on a
+// case-insensitive mount. The moved entry should end up under the requested
+// spelling everywhere it is recorded: the parent's listing, the inode's own
+// location, and the overlay record.
+class RenameCaseVariantTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    FakeTreeBuilder builder;
+    builder.setFile("src/file.txt", "new\n");
+    builder.setFile("b", "old\n");
+    // With the WAL the overlay records the rename as a delta keyed by the
+    // requested name rather than rewriting the directory from memory.
+    mount_ = std::make_unique<TestMount>(
+        /*enableActivityBuffer=*/false,
+        CaseSensitivity::Insensitive,
+        /*errorLogger=*/nullptr,
+        [](EdenConfig& config) {
+          config.overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+        });
+    mount_->initialize(builder);
+    root_ = mount_->getEdenMount()->getRootInode();
+  }
+
+  std::vector<std::string> rootNames() {
+    std::vector<std::string> names;
+    auto contents = root_->getContentsUnchecked().rlock();
+    for (const auto& [name, entry] : contents->entries.all()) {
+      if (name.view() != kDotEdenName) {
+        names.push_back(name.asString());
+      }
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+  }
+
+  std::vector<std::string> rootOverlayNames() {
+    std::vector<std::string> names;
+    auto dir = mount_->getEdenMount()->getOverlay()->loadOverlayDir(
+        root_->getNodeId());
+    for (const auto& [name, entry] : dir) {
+      if (name.view() != kDotEdenName) {
+        names.push_back(name.asString());
+      }
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+  }
+
+  std::unique_ptr<TestMount> mount_;
+  TreeInodePtr root_;
+};
+
+TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
+  auto src = mount_->getTreeInode("src");
+  auto file = mount_->getFileInode("src/file.txt");
+  auto future = src->rename(
+                       "file.txt"_pc,
+                       root_,
+                       "B"_pc,
+                       InvalidationRequired::No,
+                       ObjectFetchContext::getNullContext())
+                    .semi()
+                    .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
+  std::move(future).get(0ms);
+
+  using Names = std::vector<std::string>;
+  EXPECT_EQ(RelativePath{"B"}, file->getPath().value());
+  // FIXME: the listing keeps the replaced entry's spelling while the inode's
+  // location and the overlay record use the requested one, so the name
+  // changes across a remount.
+  EXPECT_EQ((Names{"b", "src"}), rootNames());
+  EXPECT_EQ((Names{"B", "src"}), rootOverlayNames());
+
+  src.reset();
+  file.reset();
+  root_.reset();
+  mount_->remount();
+  root_ = mount_->getEdenMount()->getRootInode();
+  EXPECT_EQ((Names{"B", "src"}), rootNames());
+  EXPECT_EQ("new\n", mount_->readFile("B"));
 }
 
 TEST_F(RenameTest, renameFileSameDirectory) {
