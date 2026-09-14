@@ -62,6 +62,9 @@ def determine_bind_redirection_type(instance: EdenInstance) -> str:
     config_value = instance.get_config_value(
         "redirections.darwin-redirection-type", "apfs"
     )
+    if config_value == "symlink":
+        return config_value
+
     default_type = "apfs" if have_apfs_helper() else "dmg"
     if config_value not in ["symlink", "apfs", "dmg"]:
         print(
@@ -323,6 +326,7 @@ class Redirection:
         return (
             self.type == RedirectionType.BIND
             and sys.platform == "darwin"
+            and not self.expand_repo_path(checkout).is_symlink()
             and determine_bind_redirection_type(checkout.instance) == "apfs"
         )
 
@@ -783,32 +787,52 @@ def get_effective_redirections(
                 state=RedirectionState.UNKNOWN_MOUNT,
             )
 
-    for rel_path, redir in get_configured_redirections(checkout).items():
+    configured_redirections = get_configured_redirections(checkout)
+    bind_redirection_uses_symlink = sys.platform == "win32" or (
+        sys.platform == "darwin"
+        and any(
+            redir.type == RedirectionType.BIND
+            for redir in configured_redirections.values()
+        )
+        and instance.get_config_value("redirections.darwin-redirection-type", "apfs")
+        == "symlink"
+    )
+
+    for rel_path, redir in configured_redirections.items():
         is_in_mount_table = rel_path in redirs
+        bind_redirection_is_symlink = (
+            sys.platform == "darwin"
+            and redir.type == RedirectionType.BIND
+            and redir.expand_repo_path(checkout).is_symlink()
+        )
+        uses_symlink = redir.type == RedirectionType.SYMLINK or (
+            redir.type == RedirectionType.BIND
+            and (bind_redirection_uses_symlink or bind_redirection_is_symlink)
+        )
         if is_in_mount_table:
-            if redir.type != RedirectionType.BIND:
+            # A symlink-backed redirection should never appear in the mount
+            # table; if one does, we don't know what is mounted there.
+            # Mount-backed binds found in the table are assumed to be mounted
+            # correctly.
+            if uses_symlink:
                 redir.state = RedirectionState.UNKNOWN_MOUNT
-            # else: we expected them to be in the mount table and they were.
-            # we don't know enough to tell whether the mount points where
-            # we want it to point, so we just assume that it is in the right
-            # state.
         else:
-            if redir.type == RedirectionType.BIND and sys.platform != "win32":
-                # We expected both of these types to be visible in the
-                # mount table, but they were not, so we consider them to
-                # be in the NOT_MOUNTED state.
+            if redir.type == RedirectionType.BIND and not uses_symlink:
                 redir.state = RedirectionState.NOT_MOUNTED
-            elif redir.type == RedirectionType.SYMLINK or sys.platform == "win32":
+            elif uses_symlink:
                 try:
-                    # Resolve to normalize extended-length path on Windows
+                    # Resolve to verify the target exists and normalize
+                    # extended-length paths on Windows.
                     expected_target = redir.expand_target_abspath(checkout)
                     if expected_target:
-                        expected_target = expected_target.resolve()
-                    symlink_path = os.fsdecode(redir.expand_repo_path(checkout))
+                        expected_target = expected_target.resolve(strict=True)
+                    symlink_path = redir.expand_repo_path(checkout)
                     try:
-                        target = Path(symlink_path).readlink()
                         if sys.platform == "win32":
+                            target = symlink_path.readlink()
                             target = remove_unc_prefix(target)
+                        else:
+                            target = _resolve_symlink_target(symlink_path, strict=True)
                     except ValueError as exc:
                         # Windows throws ValueError when the target is not a symlink
                         raise OSError(errno.EINVAL) from exc
@@ -843,22 +867,20 @@ def check_redirection(redir: Redirection, checkout: EdenCheckout) -> bool:
         # looking for the file not existing here.
         return not is_bind_mount(mount_path)
 
-    if sys.platform == "win32":
-        """Special casing for windows projFS since it treats bind mounts as symlinks"""
-        if redir.type != RedirectionType.SYMLINK:
-            return False
+    uses_symlink = redir.type == RedirectionType.SYMLINK or (
+        redir.type == RedirectionType.BIND
+        and (
+            sys.platform == "win32"
+            or (sys.platform == "darwin" and mount_path.is_symlink())
+        )
+    )
+    if uses_symlink:
         expected_target = redir.expand_target_abspath(checkout)
-        return is_valid_windows_symlink(expected_target, mount_path)
-    else:
-        # There should now be a symlink or bind mount at this point
-        if redir.type == RedirectionType.BIND:
-            return is_bind_mount(mount_path)
-        elif redir.type == RedirectionType.SYMLINK:
-            expected_target = redir.expand_target_abspath(checkout)
-            return is_valid_symlink(expected_target, mount_path)
-        else:
-            # Unknown type
-            return False
+        if sys.platform == "win32":
+            return is_valid_windows_symlink(expected_target, mount_path)
+        return is_valid_symlink(expected_target, mount_path)
+    if redir.type == RedirectionType.BIND:
+        return is_bind_mount(mount_path)
     return False
 
 

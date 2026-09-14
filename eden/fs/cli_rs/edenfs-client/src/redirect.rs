@@ -267,16 +267,16 @@ impl Redirection {
             .get_config()
             .map(|config| config.redirections.darwin_redirection_type)
             .and_then(|ty| DarwinBindRedirectionType::from_str(&ty));
-        let has_apfs_helper = Self::have_apfs_helper().unwrap_or(false);
         match config_value {
-            Ok(v) if !has_apfs_helper && v == DarwinBindRedirectionType::APFS => {
+            Ok(DarwinBindRedirectionType::SYMLINK) => DarwinBindRedirectionType::SYMLINK,
+            Ok(DarwinBindRedirectionType::APFS) if !Self::have_apfs_helper().unwrap_or(false) => {
                 eprintln!(
                     "cannot use apfs redirections since apfs_helper '{APFS_HELPER}' is not available. Defaulting to dmg redirections."
                 );
                 DarwinBindRedirectionType::DMG
             }
             Ok(v) => v,
-            Err(e) if has_apfs_helper => {
+            Err(e) if Self::have_apfs_helper().unwrap_or(false) => {
                 eprintln!("{}. Defaulting to apfs.", e);
                 DarwinBindRedirectionType::APFS
             }
@@ -382,7 +382,7 @@ impl Redirection {
         match self.redir_type {
             RedirectionType::Unknown => Ok(None),
             RedirectionType::Bind | RedirectionType::Symlink
-                if self.uses_checkout_path_as_target(instance) =>
+                if self.uses_checkout_path_as_target(instance, checkout) =>
             {
                 Ok(Some(checkout.path().join(&self.repo_path)))
             }
@@ -393,14 +393,30 @@ impl Redirection {
     }
 
     #[cfg(target_os = "macos")]
-    fn uses_checkout_path_as_target(&self, instance: &EdenFsInstance) -> bool {
+    fn uses_checkout_path_as_target(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> bool {
         self.redir_type == RedirectionType::Bind
+            && !self.repo_path_is_symlink(checkout)
             && Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::APFS
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn uses_checkout_path_as_target(&self, _instance: &EdenFsInstance) -> bool {
+    fn uses_checkout_path_as_target(
+        &self,
+        _instance: &EdenFsInstance,
+        _checkout: &EdenFsCheckout,
+    ) -> bool {
         false
+    }
+
+    #[cfg(target_os = "macos")]
+    fn repo_path_is_symlink(&self, checkout: &EdenFsCheckout) -> bool {
+        std::fs::symlink_metadata(self.expand_repo_path(checkout))
+            .map(|metadata| metadata.file_type().is_symlink())
+            .unwrap_or(false)
     }
 
     fn _dmg_file_name(&self, target: &Path) -> PathBuf {
@@ -1327,24 +1343,43 @@ pub fn get_effective_redirections(
             checkout.path().display()
         )
     })?;
+
+    #[cfg(target_os = "macos")]
+    let bind_redirection_uses_symlink = configured_redirections
+        .values()
+        .any(|redir| redir.redir_type == RedirectionType::Bind)
+        && Redirection::determine_bind_redirection_type(instance)
+            == DarwinBindRedirectionType::SYMLINK;
+    #[cfg(target_os = "windows")]
+    let bind_redirection_uses_symlink = true;
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let bind_redirection_uses_symlink = false;
+
     for (rel_path, mut redir) in configured_redirections {
         let is_in_mount_table = redirs.contains_key(&rel_path);
+        #[cfg(target_os = "macos")]
+        let bind_redirection_is_symlink =
+            redir.redir_type == RedirectionType::Bind && redir.repo_path_is_symlink(checkout);
+        #[cfg(not(target_os = "macos"))]
+        let bind_redirection_is_symlink = false;
+        let uses_symlink = redirection_uses_symlink(
+            redir.redir_type,
+            bind_redirection_uses_symlink,
+            bind_redirection_is_symlink,
+        );
         if is_in_mount_table {
             // The configured redirection entries take precedence over the mount table entries.
             // We overwrite them in the `redirs` map.
-            if redir.redir_type != RedirectionType::Bind {
+            //
+            // A symlink-backed redirection should never appear in the mount table; if
+            // one does, we don't know what is mounted there. Mount-backed binds found
+            // in the table are assumed to be mounted correctly.
+            if uses_symlink {
                 redir.state = RedirectionState::UnknownMount;
             }
-            // else: we expected them to be in the mount table and they were.
-            // we don't know enough to tell whether the mount points where
-            // we want it to point, so we just assume that it is in the right
-            // state.
-        } else if redir.redir_type == RedirectionType::Bind && !cfg!(windows) {
-            // We expected both of these types to be visible in the
-            // mount table, but they were not, so we consider them to
-            // be in the NOT_MOUNTED state.
+        } else if redir.redir_type == RedirectionType::Bind && !uses_symlink {
             redir.state = RedirectionState::NotMounted;
-        } else if redir.redir_type == RedirectionType::Symlink || cfg!(windows) {
+        } else if uses_symlink {
             if let Ok(is_correct) = is_symlink_correct(instance, &redir, checkout) {
                 if !is_correct {
                     redir.state = RedirectionState::SymlinkIncorrect;
@@ -1362,6 +1397,16 @@ pub fn get_effective_redirections(
     }
 
     Ok(redirs)
+}
+
+fn redirection_uses_symlink(
+    redirection_type: RedirectionType,
+    bind_redirection_uses_symlink: bool,
+    bind_redirection_is_symlink: bool,
+) -> bool {
+    redirection_type == RedirectionType::Symlink
+        || (redirection_type == RedirectionType::Bind
+            && (bind_redirection_uses_symlink || bind_redirection_is_symlink))
 }
 
 /// We should return success early iff:
@@ -2051,6 +2096,7 @@ mod tests {
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
     use crate::redirect::redirection_needs_repair;
+    use crate::redirect::redirection_uses_symlink;
 
     #[test]
     fn test_broken_redirection_states_need_repair() {
@@ -2063,6 +2109,26 @@ mod tests {
             &RedirectionState::MatchesConfiguration
         ));
         assert!(!redirection_needs_repair(&RedirectionState::UnknownMount));
+    }
+
+    #[test]
+    fn test_bind_redirection_with_symlink_backing_uses_symlink_state() {
+        assert!(
+            redirection_uses_symlink(RedirectionType::Symlink, false, false),
+            "explicit symlink redirections should use symlink state detection"
+        );
+        assert!(
+            redirection_uses_symlink(RedirectionType::Bind, true, false),
+            "bind redirections should use symlink state detection when configured"
+        );
+        assert!(
+            redirection_uses_symlink(RedirectionType::Bind, false, true),
+            "bind redirections should use symlink state detection when already backed by a symlink"
+        );
+        assert!(
+            !redirection_uses_symlink(RedirectionType::Bind, false, false),
+            "mount-backed bind redirections should use mount state detection"
+        );
     }
 
     #[test]
