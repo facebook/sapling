@@ -135,6 +135,9 @@ class EdenStateDir {
    */
   std::string_view getRestartSentinelNamePrefix() const;
 
+  /** Get the path that serializes restart arming and deliberate SIGKILL. */
+  AbsolutePath getRestartSentinelLockPath() const;
+
   /**
    * Get the path to the directory where state for a specific checkout is
    * stored.

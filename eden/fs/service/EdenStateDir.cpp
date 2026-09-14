@@ -27,6 +27,9 @@ constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
 constexpr PathComponentPiece kDaemonArgsName{".edenfs_start_args"_pc};
 // One restart sentinel per daemon generation, named <prefix><pid>.<token>.
 constexpr std::string_view kRestartSentinelNamePrefix{".edenfs_restart_armed."};
+// Also named in eden/fs/cli/daemon_util.py.
+constexpr PathComponentPiece kRestartSentinelLockName{
+    ".edenfs_restart.lock"_pc};
 constexpr StringPiece kHeartbeatFileNamePrefix{"heartbeat_"};
 } // namespace
 
@@ -168,6 +171,10 @@ AbsolutePath EdenStateDir::getRestartSentinelPath(pid_t pid, uint64_t token)
 
 std::string_view EdenStateDir::getRestartSentinelNamePrefix() const {
   return kRestartSentinelNamePrefix;
+}
+
+AbsolutePath EdenStateDir::getRestartSentinelLockPath() const {
+  return path_ + kRestartSentinelLockName;
 }
 
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {

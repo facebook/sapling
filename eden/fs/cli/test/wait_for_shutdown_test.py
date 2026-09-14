@@ -10,6 +10,7 @@ import contextlib
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import typing
@@ -20,22 +21,25 @@ from eden.fs.cli.daemon import wait_for_shutdown
 
 
 class WaitForShutdownTest(unittest.TestCase):
+    def setUp(self) -> None:
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.config_dir = Path(temp_dir.name)
+
     def test_waiting_for_exited_process_finishes_immediately(self) -> None:
         process = AutoReapingChildProcess(["python3", "-c", "0"])
         process.wait()
 
         stop_watch = StopWatch()
-        config_dir = Path("/tmp/eden_test")
         with stop_watch.measure():
-            wait_for_shutdown(process.pid, config_dir, timeout=5)
+            wait_for_shutdown(process.pid, self.config_dir, timeout=5)
         self.assertLessEqual(stop_watch.elapsed, 3)
 
     def test_waiting_for_exiting_process_finishes_without_sigkill(self) -> None:
         process = AutoReapingChildProcess(
             ["python3", "-c", "import time; time.sleep(1)"]
         )
-        config_dir = Path("/tmp/eden_test")
-        wait_for_shutdown(process.pid, config_dir, timeout=5)
+        wait_for_shutdown(process.pid, self.config_dir, timeout=5)
         returncode = process.wait()
         self.assertEqual(returncode, 0, "Process should have exited cleanly")
 
@@ -43,8 +47,7 @@ class WaitForShutdownTest(unittest.TestCase):
         process = AutoReapingChildProcess(
             ["python3", "-c", "import time; time.sleep(30)"]
         )
-        config_dir = Path("/tmp/eden_test")
-        wait_for_shutdown(process.pid, config_dir, timeout=1)
+        wait_for_shutdown(process.pid, self.config_dir, timeout=1)
         returncode = process.wait()
         self.assertEqual(
             returncode,

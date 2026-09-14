@@ -6,14 +6,17 @@
 
 # pyre-strict
 
+import concurrent.futures
 import os
+import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock, patch
 
-from eden.fs.cli import configutil, daemon
+from eden.fs.cli import configutil, daemon, daemon_util, util
 from eden.fs.cli.config import EdenInstance
 
 # (binary, cmd, env, privhelper) -> (cmd, env), matching
@@ -121,6 +124,168 @@ class EdenFSEnvironmentTest(unittest.TestCase):
                 self.assertEqual(environment["VALID"], "value")
                 print_stderr.assert_called_once()
                 self.assertIn(expected_error, print_stderr.call_args.args[0])
+
+
+# The code under test only runs on macOS, but nothing here needs a real one,
+# and gating the class on darwin would leave it unexercised by CI. fcntl is
+# what keeps it off Windows.
+@unittest.skipIf(sys.platform == "win32", "restart sentinel needs fcntl")
+class SigkillRestartSentinelTest(unittest.TestCase):
+    def setUp(self) -> None:
+        darwin = patch.object(daemon.sys, "platform", "darwin")
+        darwin.start()
+        self.addCleanup(darwin.stop)
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.config_dir = Path(temp_dir.name)
+        # Named as EdenStateDir::getRestartSentinelPath() builds it, rather
+        # than from the prefix the code under test uses, so that the two
+        # drifting apart fails here.
+        self.sentinel: Path = (
+            self.config_dir / ".edenfs_restart_armed.1234.000000000badf00d"
+        )
+
+    def _sentinel_for(self, pid: int, token: str) -> Path:
+        return self.config_dir / f".edenfs_restart_armed.{pid}.{token}"
+
+    def _sigkill(self, pid: int, lock_contents: str | None) -> None:
+        if lock_contents is not None:
+            (self.config_dir / util.LOCK_FILE).write_text(lock_contents)
+        with patch.object(daemon, "_send_sigkill"):
+            daemon.sigkill_process(pid=pid, config_dir=self.config_dir, timeout=0)
+
+    def test_sigkill_removes_the_restart_sentinel(self) -> None:
+        self.sentinel.touch()
+
+        self._sigkill(pid=1234, lock_contents="1234\n")
+
+        self.assertFalse(self.sentinel.exists())
+
+    def test_sigkill_removes_a_sentinel_no_daemon_owns(self) -> None:
+        self.sentinel.touch()
+
+        self._sigkill(pid=1234, lock_contents=None)
+
+        self.assertFalse(self.sentinel.exists())
+
+    def test_sigkill_keeps_a_sentinel_owned_by_another_daemon(self) -> None:
+        self.sentinel.touch()
+
+        self._sigkill(pid=1234, lock_contents="5678\n")
+
+        self.assertTrue(self.sentinel.exists())
+
+    def test_sigkill_keeps_a_sentinel_behind_an_unparseable_lock(self) -> None:
+        self.sentinel.touch()
+
+        self._sigkill(pid=1234, lock_contents="not a pid\n")
+
+        self.assertTrue(self.sentinel.exists())
+
+    def test_sigkill_tolerates_a_missing_sentinel(self) -> None:
+        self._sigkill(pid=1234, lock_contents="1234\n")
+
+        self.assertFalse(self.sentinel.exists())
+
+    def test_sigkill_removes_every_sentinel_the_pid_armed(self) -> None:
+        # A daemon that re-arms after a failed takeover keeps its pid and
+        # draws a fresh token, so one generation can leave several behind.
+        first = self._sentinel_for(1234, "0000000000000001")
+        second = self._sentinel_for(1234, "0000000000000002")
+        first.touch()
+        second.touch()
+
+        self._sigkill(pid=1234, lock_contents="1234\n")
+
+        self.assertFalse(first.exists())
+        self.assertFalse(second.exists())
+
+    def test_sigkill_keeps_another_pids_sentinel(self) -> None:
+        # 1234 must not match 12345: the pid is terminated by a separator.
+        neighbour = self._sentinel_for(12345, "000000000badf00d")
+        neighbour.touch()
+        self.sentinel.touch()
+
+        self._sigkill(pid=1234, lock_contents="1234\n")
+
+        self.assertFalse(self.sentinel.exists())
+        self.assertTrue(neighbour.exists())
+
+    def test_sigkill_rechecks_owner_after_restart_lock_contention(self) -> None:
+        self.sentinel.touch()
+        owner_path = self.config_dir / util.LOCK_FILE
+        owner_path.write_text("1234\n")
+        restart_lock_path = self.config_dir / daemon_util.RESTART_SENTINEL_LOCK_NAME
+        lock_attempted = threading.Event()
+        real_flock = daemon.fcntl.flock
+
+        def observe_flock(fd: int, operation: int) -> None:
+            if operation & daemon.fcntl.LOCK_EX:
+                lock_attempted.set()
+            real_flock(fd, operation)
+
+        with restart_lock_path.open("a") as held_lock:
+            real_flock(held_lock.fileno(), daemon.fcntl.LOCK_EX)
+            with (
+                concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor,
+                patch.object(daemon.fcntl, "flock", side_effect=observe_flock),
+                patch.object(daemon, "_send_sigkill") as send_sigkill,
+            ):
+                future = executor.submit(
+                    daemon.sigkill_process,
+                    1234,
+                    self.config_dir,
+                    0,
+                )
+                attempted = lock_attempted.wait(timeout=5)
+                sentinel_existed_while_blocked = self.sentinel.exists()
+                kill_was_blocked = not send_sigkill.called
+                owner_path.write_text("5678\n")
+                real_flock(held_lock.fileno(), daemon.fcntl.LOCK_UN)
+                future.result(timeout=5)
+
+        self.assertTrue(attempted)
+        self.assertTrue(sentinel_existed_while_blocked)
+        self.assertTrue(kill_was_blocked)
+        self.assertTrue(self.sentinel.exists())
+        send_sigkill.assert_called_once_with(1234, None)
+
+    def test_sigkill_holds_restart_lock_through_kill(self) -> None:
+        self.sentinel.touch()
+        (self.config_dir / util.LOCK_FILE).write_text("1234\n")
+        restart_lock_path = self.config_dir / daemon_util.RESTART_SENTINEL_LOCK_NAME
+
+        def check_lock(pid: int, instance: Optional[EdenInstance]) -> None:
+            self.assertEqual(1234, pid)
+            self.assertIsNone(instance)
+            self.assertFalse(self.sentinel.exists())
+            with restart_lock_path.open("a") as contender:
+                with self.assertRaises(BlockingIOError):
+                    daemon.fcntl.flock(
+                        contender.fileno(), daemon.fcntl.LOCK_EX | daemon.fcntl.LOCK_NB
+                    )
+
+        with patch.object(daemon, "_send_sigkill", side_effect=check_lock):
+            daemon.sigkill_process(pid=1234, config_dir=self.config_dir, timeout=0)
+
+        with restart_lock_path.open("a") as contender:
+            daemon.fcntl.flock(
+                contender.fileno(), daemon.fcntl.LOCK_EX | daemon.fcntl.LOCK_NB
+            )
+
+    def test_sigkill_aborts_when_restart_lock_fails(self) -> None:
+        self.sentinel.touch()
+        (self.config_dir / util.LOCK_FILE).write_text("1234\n")
+
+        with (
+            patch.object(daemon.fcntl, "flock", side_effect=OSError("cannot lock")),
+            patch.object(daemon, "_send_sigkill") as send_sigkill,
+            self.assertRaisesRegex(daemon.ShutdownError, "Failed to acquire"),
+        ):
+            daemon.sigkill_process(pid=1234, config_dir=self.config_dir, timeout=0)
+
+        self.assertTrue(self.sentinel.exists())
+        send_sigkill.assert_not_called()
 
 
 class EdenFSSystemdEnvironmentTest(unittest.TestCase):

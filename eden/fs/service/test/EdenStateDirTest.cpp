@@ -45,4 +45,12 @@ TEST_F(EdenStateDirTest, restartSentinelNamesStartWithThePrefix) {
   EXPECT_TRUE(name.starts_with(prefix)) << name;
 }
 
+TEST_F(EdenStateDirTest, restartSentinelLockHasAStableName) {
+  const EdenStateDir stateDir{stateDirPath()};
+
+  EXPECT_EQ(
+      ".edenfs_restart.lock",
+      stateDir.getRestartSentinelLockPath().basename().view());
+}
+
 } // namespace

@@ -17,6 +17,14 @@ from eden.fs.cli.util import write_file_atomically
 
 
 DAEMON_ARGS_FILENAME = ".edenfs_start_args"
+
+# One per daemon generation, named <prefix><pid>.<token>. A SIGKILLed daemon
+# never gets to remove its own, so whoever sends the SIGKILL has to. Keep in
+# step with kRestartSentinelNamePrefix in eden/fs/service/EdenStateDir.cpp.
+RESTART_SENTINEL_NAME_PREFIX = ".edenfs_restart_armed."
+# Serializes restart sentinel changes with deliberate SIGKILL. Keep in step
+# with kRestartSentinelLockName in eden/fs/service/EdenStateDir.cpp.
+RESTART_SENTINEL_LOCK_NAME = ".edenfs_restart.lock"
 SYSTEMD_STARTUP_LOG_FILENAME = ".edenfs_startup.log"
 
 

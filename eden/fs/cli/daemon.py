@@ -15,7 +15,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
+
+if sys.platform != "win32":
+    import fcntl
 
 from eden.fs.cli.util import (
     EdensparseMigrationStep,
@@ -25,7 +28,7 @@ from eden.fs.cli.util import (
 
 from . import configutil, daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
-from .util import poll_until, print_stderr, ShutdownError
+from .util import get_pid_using_lockfile, poll_until, print_stderr, ShutdownError
 
 # The amount of time to wait for the edenfs process to exit after we send SIGKILL.
 # We normally expect the process to be killed and reaped fairly quickly in this
@@ -301,6 +304,57 @@ def _send_sigkill(
         )
 
 
+def _may_remove_restart_sentinel(pid: int, config_dir: Path) -> bool:
+    """Whether pid's killer may remove config_dir's restart sentinel.
+
+    True when pid holds the lock, or when the lock file is absent so that no
+    daemon owns the state dir. A lock file that exists but cannot be read or
+    parsed counts as a live owner.
+    """
+    try:
+        return get_pid_using_lockfile(config_dir) == pid
+    except FileNotFoundError:
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+@contextlib.contextmanager
+def _restart_lock(config_dir: Path) -> Iterator[None]:
+    """Serialize restart arming with a deliberate SIGKILL.
+
+    Raises ShutdownError rather than proceeding unlocked: killing while a
+    daemon arms would let the privhelper relaunch the daemon this kill is
+    meant to retire.
+    """
+    lock_path = config_dir / daemon_util.RESTART_SENTINEL_LOCK_NAME
+    with contextlib.ExitStack() as stack:
+        try:
+            lock_file = stack.enter_context(lock_path.open("a"))
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        except OSError as ex:
+            raise ShutdownError(
+                f"Failed to acquire restart lock {lock_path}: {ex}"
+            ) from ex
+        yield
+
+
+def _remove_restart_sentinels(pid: int, config_dir: Path) -> None:
+    prefix = f"{daemon_util.RESTART_SENTINEL_NAME_PREFIX}{pid}."
+    try:
+        sentinels = list(config_dir.glob(f"{prefix}*"))
+    except OSError as ex:
+        print_stderr(f"Failed to list restart sentinels in {config_dir}: {ex}")
+        return
+    for sentinel in sentinels:
+        try:
+            sentinel.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as ex:
+            print_stderr(f"Failed to delete restart sentinel {sentinel}: {ex}")
+
+
 def sigkill_process(
     pid: int,
     config_dir: Path,
@@ -333,7 +387,18 @@ def sigkill_process(
         except Exception as e:
             print_stderr(f"Failed to delete heartbeat file {heartbeat_file}: {e}")
 
-    _send_sigkill(pid, instance)
+        if sys.platform == "darwin":
+            with _restart_lock(config_dir):
+                # Only pid's own sentinels are removed. A concurrent generation
+                # that took ownership while this call waited is left alone.
+                if _may_remove_restart_sentinel(pid, config_dir):
+                    _remove_restart_sentinels(pid, config_dir)
+                _send_sigkill(pid, instance)
+        else:
+            _send_sigkill(pid, instance)
+
+    else:
+        _send_sigkill(pid, instance)
 
     if timeout <= 0:
         return

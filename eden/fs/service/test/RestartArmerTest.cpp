@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -21,8 +22,10 @@
 #include <utility>
 #include <vector>
 
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/futures/Future.h>
+#include <folly/portability/Fcntl.h>
 #include <folly/portability/Unistd.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
@@ -51,10 +54,14 @@ class RecordingPrivHelper final : public PrivHelper {
   folly::exception_wrapper setRestartArgsError;
   /** When set, requests stay pending until the test completes this. */
   std::optional<folly::Promise<folly::Unit>> pendingRequest;
+  std::function<void(const EdenFsRestartArgs&)> setRestartArgsCallback;
 
   folly::Future<folly::Unit> setRestartArgs(
       const EdenFsRestartArgs& args) override {
     restartArgs.push_back(args);
+    if (setRestartArgsCallback) {
+      setRestartArgsCallback(args);
+    }
     if (pendingRequest) {
       return pendingRequest->getFuture();
     }
@@ -336,6 +343,42 @@ TEST_F(RestartArmerTest, armingReapsBeforeTheRequestIsAnswered) {
   EXPECT_TRUE(armer.armed());
 }
 
+TEST_F(RestartArmerTest, armingHoldsRestartLockThroughRequestEnqueue) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  const auto foreign =
+      makeStateDirFile(".edenfs_restart_armed.1.0000000000000001");
+  privHelper_.pendingRequest.emplace();
+  bool lockWasHeldDuringRequest = false;
+  privHelper_.setRestartArgsCallback = [&](const EdenFsRestartArgs& args) {
+    EXPECT_TRUE(exists(canonicalPath(args.sentinelPath)));
+    EXPECT_FALSE(exists(foreign));
+    folly::File contender{
+        stateDir_.getRestartSentinelLockPath().c_str(), O_RDWR};
+    lockWasHeldDuringRequest = !contender.try_lock();
+  };
+
+  auto armer = makeArmer();
+  armer.arm();
+
+  EXPECT_TRUE(lockWasHeldDuringRequest);
+  folly::File contender{stateDir_.getRestartSentinelLockPath().c_str(), O_RDWR};
+  EXPECT_TRUE(contender.try_lock());
+  privHelper_.pendingRequest->setValue();
+  EXPECT_TRUE(armer.armed());
+}
+
+TEST_F(RestartArmerTest, aRestartLockFailureDoesNotArm) {
+  ASSERT_TRUE(folly::writeFile(kDaemonArgs.str(), daemonArgsPath_.c_str()));
+  makeStateDirSubdir(stateDir_.getRestartSentinelLockPath().basename().view());
+
+  auto armer = makeArmer();
+  armer.arm();
+
+  EXPECT_TRUE(privHelper_.restartArgs.empty());
+  EXPECT_TRUE(sentinelNames().empty());
+  EXPECT_FALSE(armer.armed());
+}
+
 TEST_F(RestartArmerTest, anArmThatNeverGetsASentinelReapsNothing) {
   const auto foreign =
       makeStateDirFile(".edenfs_restart_armed.1.0000000000000001");
@@ -399,6 +442,7 @@ TEST_F(RestartArmerTest, unrelatedFilesInTheStateDirAreLeftAlone) {
 
   std::vector<std::string> expected{
       ".edenfs_start_args",
+      ".edenfs_restart.lock",
       "edenfs_restart_armed.1.0000000000000001",
       "heartbeat_1",
       "lock",

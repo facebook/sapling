@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 #ifdef __APPLE__
@@ -91,6 +92,21 @@ bool createSentinel(const AbsolutePath& sentinel) {
     return false;
   }
   return true;
+}
+
+std::optional<folly::File> acquireRestartLock(const AbsolutePath& lockPath) {
+  try {
+    folly::File lock{lockPath.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0600};
+    lock.lock();
+    return lock;
+  } catch (const std::system_error& ex) {
+    XLOGF(
+        WARN,
+        "failed to lock {}: {}; edenfs will not be auto-restarted",
+        lockPath,
+        ex.what());
+    return std::nullopt;
+  }
 }
 
 bool isDecimalDigit(char c) {
@@ -295,7 +311,14 @@ void RestartArmer::arm() {
   const auto sentinel =
       stateDir_.getRestartSentinelPath(::getpid(), folly::Random::rand64());
   args.sentinelPath = sentinel.asString();
+  std::optional<folly::Future<folly::Unit>> request;
   {
+    auto restartLock =
+        acquireRestartLock(stateDir_.getRestartSentinelLockPath());
+    if (!restartLock.has_value()) {
+      return;
+    }
+
     auto sentinelPath = sentinelPath_.wlock();
     // Created before the request, so the privhelper never sees a missing path
     // and concludes that we already disarmed.
@@ -306,19 +329,22 @@ void RestartArmer::arm() {
     if (previous.has_value()) {
       unlinkSentinel(*previous);
     }
-  }
 
-  // Here, and not sooner or later: a daemon that fails before its own marker
-  // exists must leave earlier ones for their privhelpers to find, and a sweep
-  // deferred to the reply below could outrun a later generation's arm.
-  reapOtherGenerationSentinels(
-      stateDir_.getPath().asString(), stateDir_.getRestartSentinelNamePrefix());
+    // Here, and not sooner or later: a daemon that fails before its own marker
+    // exists must leave earlier ones for their privhelpers to find, and a sweep
+    // deferred to the reply below could outrun a later generation's arm.
+    reapOtherGenerationSentinels(
+        stateDir_.getPath().asString(),
+        stateDir_.getRestartSentinelNamePrefix());
+    request.emplace(privHelper_->setRestartArgs(args));
+  }
 
   // Cannot be waited on: the reply is driven by the main EventBase, the thread
   // we are on. The continuation carries no executor, so it runs inline on
   // whoever completes the request: that EventBase, or shutdownPrivhelper().
   folly::futures::detachOnGlobalCPUExecutor(
-      privHelper_->setRestartArgs(args)
+      std::move(request)
+          .value()
           .thenTry(
               [sentinel, armed = armed_](folly::Try<folly::Unit>&& result) {
                 if (result.hasException()) {
