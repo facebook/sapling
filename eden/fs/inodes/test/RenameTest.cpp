@@ -8,8 +8,10 @@
 #include <folly/String.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -249,6 +251,78 @@ TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
   root_ = mount_->getEdenMount()->getRootInode();
   EXPECT_EQ((Names{"B", "src"}), rootNames());
   EXPECT_EQ("new\n", mount_->readFile("B"));
+}
+
+// Renaming a directory over an empty directory that another thread still
+// holds a reference to. The rename unlinks the destination while it holds
+// the destination's contents lock, and an unlinked inode is destroyed by
+// whoever drops the last reference, so the destination has to stay alive
+// until the rename has released its locks.
+class RenameOverReferencedDirTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    FakeTreeBuilder builder;
+    builder.setFile("src/file.txt", "contents\n");
+    builder.mkdir("dest");
+    mount_ = std::make_unique<TestMount>(builder);
+    root_ = mount_->getEdenMount()->getRootInode();
+  }
+
+  // A failed assertion must not leave the rename thread blocked and
+  // joinable, which would terminate the whole test binary.
+  void TearDown() override {
+    finishRename();
+  }
+
+  // Rename src over dest on another thread and block that thread right
+  // after it has unlinked the destination.
+  void startRename() {
+    faultInjector().injectBlock("TreeInode::doRename", "dest");
+    renamer_ = std::thread([this] {
+      root_
+          ->rename(
+              "src"_pc,
+              root_,
+              "dest"_pc,
+              InvalidationRequired::No,
+              ObjectFetchContext::getNullContext())
+          .get();
+    });
+    ASSERT_TRUE(faultInjector().waitUntilBlocked("TreeInode::doRename", 5s));
+  }
+
+  void finishRename() {
+    if (renamer_.joinable()) {
+      faultInjector().removeFault("TreeInode::doRename", "dest");
+      faultInjector().unblockAll();
+      renamer_.join();
+    }
+  }
+
+  FaultInjector& faultInjector() {
+    return mount_->getServerState()->getFaultInjector();
+  }
+
+  std::unique_ptr<TestMount> mount_;
+  TreeInodePtr root_;
+  std::thread renamer_;
+};
+
+TEST_F(RenameOverReferencedDirTest, destinationOutlivesRenameLocks) {
+  auto* inodeMap = mount_->getEdenMount()->getInodeMap();
+  auto dest = mount_->getTreeInode("dest");
+  auto destIno = dest->getNodeId();
+  ASSERT_NO_FATAL_FAILURE(startRename());
+  EXPECT_TRUE(dest->isUnlinked());
+
+  // Dropping the last outside reference while the rename still holds the
+  // destination's contents lock must not destroy the inode.
+  dest.reset();
+  EXPECT_TRUE(inodeMap->isInodeLoadedOrRemembered(destIno));
+
+  finishRename();
+  EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(destIno));
+  EXPECT_TRUE(mount_->hasFileAt("dest/file.txt"));
 }
 
 TEST_F(RenameTest, renameFileSameDirectory) {

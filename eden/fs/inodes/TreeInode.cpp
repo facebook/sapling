@@ -2886,6 +2886,14 @@ int TreeInode::checkPreRemove(const FileInode& /* child */) {
 class TreeInode::TreeRenameLocks {
  public:
   TreeRenameLocks() = default;
+  ~TreeRenameLocks() {
+    reset();
+  }
+
+  TreeRenameLocks(const TreeRenameLocks&) = delete;
+  TreeRenameLocks& operator=(const TreeRenameLocks&) = delete;
+  TreeRenameLocks(TreeRenameLocks&&) = delete;
+  TreeRenameLocks& operator=(TreeRenameLocks&&) = delete;
 
   void acquireLocks(
       RenameLock&& renameLock,
@@ -2895,18 +2903,28 @@ class TreeInode::TreeRenameLocks {
 
   /**
    * Reset the TreeRenameLocks to the empty state, releasing all locks that it
-   * holds.
+   * holds. The reference on the destination child is dropped last, after the
+   * rename lock, so an unlinked destination is destroyed with no lock held.
    */
   void reset() {
-    *this = TreeRenameLocks();
+    releaseAllButRename();
+    renameLock_ = RenameLock{};
+    destChildRef_.reset();
   }
 
   /**
    * Release all locks held by this TreeRenameLocks object except for the
-   * mount point RenameLock.
+   * mount point RenameLock. The reference on the destination child is kept
+   * until reset().
    */
   void releaseAllButRename() {
-    *this = TreeRenameLocks(std::move(renameLock_));
+    srcContentsLock_ = {};
+    destContentsLock_ = {};
+    destChildContentsLock_ = {};
+    srcContents_ = nullptr;
+    destContents_ = nullptr;
+    destChildContents_ = nullptr;
+    destChildIter_ = {};
   }
 
   const RenameLock& renameLock() const {
@@ -2950,9 +2968,6 @@ class TreeInode::TreeRenameLocks {
   }
 
  private:
-  explicit TreeRenameLocks(RenameLock&& renameLock)
-      : renameLock_{std::move(renameLock)} {}
-
   void lockDestChild(PathComponentPiece destName);
 
   /**
@@ -2988,6 +3003,17 @@ class TreeInode::TreeRenameLocks {
    * does not exist.
    */
   PathMap<DirEntry>::iterator destChildIter_;
+
+  /**
+   * A reference on the loaded destination child, if any.
+   *
+   * doRename() unlinks the destination child while destChildContentsLock_ is
+   * still held on it. Once unlinked, the inode is destroyed by whoever drops
+   * the last InodePtr, which may be another thread. This reference keeps it
+   * alive until reset() has released every lock, so that its destruction,
+   * which may do overlay I/O, happens outside them.
+   */
+  InodePtr destChildRef_;
 };
 
 ImmediateFuture<Unit> TreeInode::rename(
@@ -3228,12 +3254,18 @@ ImmediateFuture<Unit> TreeInode::doRename(
   // Success.
   // Update the destination with the source data (this copies in the id if
   // it happens to be set).
-  std::unique_ptr<InodeBase> deletedInode;
   auto* childInode = srcEntry.getInode();
   bool destChildExists = locks.destChildExists();
   if (destChildExists) {
-    deletedInode = locks.destChild()->markUnlinked(
+    // The reference held by locks keeps the destination alive, so
+    // markUnlinked() never hands ownership back here; locks.reset() below
+    // destroys the inode once every lock is released.
+    locks.destChild()->markUnlinked(
         destParent.get(), destName, locks.renameLock());
+    // Tests block here to drop their own references to the unlinked
+    // destination while the rename still holds its contents lock.
+    getMount()->getServerState()->getFaultInjector().check(
+        "TreeInode::doRename", destName);
 
     // On a case-insensitive mount the existing entry may be spelled
     // differently from destName. The entry is re-inserted under destName so
@@ -3298,10 +3330,9 @@ ImmediateFuture<Unit> TreeInode::doRename(
     }
   }
 
-  // Release the rename lock before we destroy the deleted destination child
-  // inode (if it exists).
+  // Releasing the locks also drops the reference the locks held on the
+  // destination child, which destroys it now that it is unlinked.
   locks.reset();
-  deletedInode.reset();
 
   return folly::unit;
 }
@@ -3376,7 +3407,11 @@ void TreeInode::TreeRenameLocks::acquireLocks(
 void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
   // Look up the destination child entry
   destChildIter_ = destContents_->find(destName);
-  if (destChildExists() && destChildIsDirectory() && destChild() != nullptr) {
+  if (!destChildExists() || destChild() == nullptr) {
+    return;
+  }
+  destChildRef_ = InodePtr::newPtrLocked(destChild());
+  if (destChildIsDirectory()) {
     auto* childTree = boost::polymorphic_downcast<TreeInode*>(destChild());
     destChildContentsLock_ = childTree->lockContentsWrite();
     destChildContents_ = &destChildContentsLock_->entries;
