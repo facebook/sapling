@@ -836,6 +836,11 @@ pub fn maybe_refresh_internalconfig_on_disk(
                 // Attempt to create the directory (ex. ".git/sl") and try again.
                 fs::create_dir_all(&config_dir)?;
                 continue;
+            } else if cfg!(windows) && e.kind() == io::ErrorKind::PermissionDenied {
+                // Restricted Windows environments can deny this probe even when writes work.
+                // Ensure the directory exists and let the actual write report any real error.
+                fs::create_dir_all(&config_dir)?;
+                break;
             } else {
                 return Err(IOError::new(
                     ErrorKind::PermissionDenied,
