@@ -65,6 +65,10 @@ inline constexpr std::string_view kError = "error";
 inline constexpr std::string_view kInterface = "interface";
 inline constexpr std::string_view kActionType = "action_type";
 inline constexpr std::string_view kLoggedBy = "logged_by";
+inline constexpr std::string_view kAgenticFingerprintId =
+    "agentic_fingerprint_id";
+inline constexpr std::string_view kAgenticFingerprintInvocationId =
+    "agentic_fingerprint_invocation_id";
 
 // --- Fsck ---
 inline constexpr std::string_view kAttemptedRepair = "attempted_repair";
