@@ -2373,6 +2373,33 @@ TEST_F(PrivHelperDisarmTest, aServerThatNeverReceivedRestartArgsHasNoState) {
   EXPECT_EQ(std::nullopt, unconfigured.disarmState());
 }
 
+class PrivHelperRealSpawnTestServer : public PrivHelperServer {
+ public:
+  bool launchExecutable(folly::StringPiece binary) {
+    const RestartPlan plan{
+        canonicalPath(binary),
+        RestartSentinel::RelaunchCommand{{"edenfs"}, {}},
+        1,
+        kFakeNow};
+    return launchRestart(plan);
+  }
+
+ private:
+  void validateRestartOwner() const override {}
+};
+
+TEST(PrivHelperRestartLaunchTest, aChildThatExitsNonzeroDidNotFinishStarting) {
+  PrivHelperRealSpawnTestServer server;
+
+  EXPECT_FALSE(server.launchExecutable("/usr/bin/false"));
+}
+
+TEST(PrivHelperRestartLaunchTest, aChildThatExitsZeroFinishedStarting) {
+  PrivHelperRealSpawnTestServer server;
+
+  EXPECT_TRUE(server.launchExecutable("/usr/bin/true"));
+}
+
 /**
  * A PrivHelperServer that records what the restart path would have done rather
  * than resolving a real binary or launching anything.
@@ -2408,6 +2435,7 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
   std::atomic<uint64_t> now{0};
   std::atomic<bool> spawnSucceeds{true};
   std::atomic<bool> restartOwnerValid{true};
+  std::atomic<bool> cleanupRan{false};
   // Every attempt, including the ones spawnSucceeds turned into a failure.
   folly::Synchronized<std::vector<Spawn>> spawns;
 
@@ -2421,6 +2449,10 @@ class PrivHelperRestartTestServer : public PrivHelperServer {
     if (!restartOwnerValid.load()) {
       throw std::runtime_error("real uid is root");
     }
+  }
+
+  void cleanupMountPoints() override {
+    cleanupRan.store(true);
   }
 };
 
@@ -2584,6 +2616,144 @@ TEST_F(PrivHelperRestartDecisionTest, replacesARecordedRestartBudget) {
           std::pair<std::string, std::string>{"EDENFS_RESTART_COUNT", "2"},
           std::pair<std::string, std::string>{
               "EDENFS_FIRST_RESTART_AT", folly::to<std::string>(kFakeNow)}));
+}
+
+/**
+ * Drives a real server through run(), so that closing the client socket
+ * reproduces the death of edenfs.
+ */
+class PrivHelperRestartRunTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    sentinel_ = std::make_unique<TemporaryFile>("edenfs_restart_armed");
+    // Empty: its existence is the whole signal now. TemporaryFile creates
+    // 0666 & ~umask, which the validating open rejects.
+    writeSentinel("");
+    restrictSentinelToOwner(sentinelPath());
+    server_.now.store(kFakeNow);
+
+    File clientConn;
+    File serverConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn);
+    rawClientConn_ = clientConn.dup();
+    serverThread_ =
+        std::thread([this, conn = std::move(serverConn)]() mutable noexcept {
+          server_.initPartial(std::move(conn), getuid(), getgid());
+          server_.run();
+        });
+    client_ = createTestPrivHelper(std::move(clientConn));
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
+  }
+
+  ~PrivHelperRestartRunTest() override {
+    killTheDaemon();
+  }
+
+  void armTheServer() {
+    auto args = makeRestartArgs(sentinelPath());
+    // The command travels in the arguments now, so a relaunch has nothing to
+    // spawn without it.
+    args.relaunchArgv = kSentinelArgv;
+    std::move(client_->setRestartArgs(std::move(args))).get(1s);
+  }
+
+  /** Closes the connection, as a dying daemon would, and waits for run(). */
+  void killTheDaemon() {
+    rawClientConn_.close();
+    client_.reset();
+    if (serverThread_.joinable()) {
+      serverThread_.join();
+    }
+  }
+
+  void triggerReceiveError() {
+    const std::string malformedHeader(16, '\0');
+    ASSERT_EQ(
+        malformedHeader.size(),
+        folly::writeFull(
+            rawClientConn_.fd(),
+            malformedHeader.data(),
+            malformedHeader.size()));
+    serverThread_.join();
+  }
+
+  std::string sentinelPath() const {
+    return sentinel_->path().string();
+  }
+
+  void writeSentinel(const std::string& contents) {
+    ASSERT_TRUE(folly::writeFile(contents, sentinelPath().c_str()));
+  }
+
+  std::unique_ptr<PrivHelper> client_;
+  File rawClientConn_;
+  PrivHelperRestartTestServer server_;
+  std::thread serverThread_;
+  EventBaseThread clientIoThread_;
+  std::unique_ptr<TemporaryFile> sentinel_;
+};
+
+TEST_F(PrivHelperRestartRunTest, crashRestartsAndLeavesTheMountsAlone) {
+  armTheServer();
+  killTheDaemon();
+
+  EXPECT_EQ(1, server_.spawnCount());
+  // The new daemon detects and replaces the stale mounts itself.
+  EXPECT_FALSE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, receiveErrorDoesNotRestart) {
+  armTheServer();
+  triggerReceiveError();
+
+  EXPECT_EQ(0, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, cleanShutdownSkipsTheRestart) {
+  armTheServer();
+  client_->notifyCleanShutdown("stop");
+  killTheDaemon();
+
+  EXPECT_EQ(0, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, aRemovedSentinelSkipsTheRestart) {
+  // What a SIGKILL leaves behind: the daemon never announced a shutdown, so
+  // the removed sentinel is the only thing saying the kill was deliberate.
+  armTheServer();
+  ASSERT_EQ(0, ::unlink(sentinelPath().c_str()));
+  killTheDaemon();
+
+  EXPECT_EQ(0, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, anUnarmedPrivhelperStillCleansUp) {
+  killTheDaemon();
+
+  EXPECT_EQ(0, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, aFailedSpawnCleansUp) {
+  server_.spawnSucceeds.store(false);
+  armTheServer();
+  killTheDaemon();
+
+  EXPECT_EQ(1, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
+}
+
+TEST_F(PrivHelperRestartRunTest, anInvalidRestartOwnerStillCleansUp) {
+  server_.restartOwnerValid.store(false);
+  armTheServer();
+  killTheDaemon();
+
+  EXPECT_EQ(0, server_.spawnCount());
+  EXPECT_TRUE(server_.cleanupRan.load());
 }
 
 #endif // __APPLE__

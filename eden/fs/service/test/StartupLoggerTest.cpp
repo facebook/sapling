@@ -49,6 +49,8 @@
 #include <thread>
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/SpawnedProcess.h"
+#include "eden/common/utils/test/ScopedEnvVar.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 
 using namespace facebook::eden;
@@ -112,8 +114,13 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
       DaemonStartupLogger& logger,
       FileDescriptor& readPipe,
       SpawnedProcess& childProc,
-      StringPiece logPath) {
-    return logger.waitForChildStatus(readPipe, childProc, logPath);
+      StringPiece logPath,
+      std::optional<std::chrono::milliseconds> timeout = std::nullopt) {
+    return logger.waitForChildStatus(readPipe, childProc, logPath, timeout);
+  }
+
+  std::optional<std::chrono::milliseconds> startupTimeout() {
+    return DaemonStartupLogger::startupTimeout();
   }
 
   DaemonStartupLogger::ParentResult spawnInChild(folly::StringPiece name) {
@@ -129,6 +136,20 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
     child.process.kill();
     child.process.wait();
     return result;
+  }
+
+  std::pair<DaemonStartupLogger::ParentResult, ProcessStatus>
+  timeOutChildDuringStartup() {
+    auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+    DaemonStartupLogger logger{startupStatusChannel};
+    auto args = originalCommandLine;
+    args.emplace_back("hangDuringStartup");
+    args.push_back(logPath().asString());
+    auto child = logger.spawnImpl(
+        logPath().view(), nullptr, args, /*disclaimTccResponsibility=*/true);
+    auto result = logger.waitForChildStatus(
+        child.exitStatusPipe, child.process, logPath().view(), 0ms);
+    return {std::move(result), child.process.wait()};
   }
 };
 
@@ -273,6 +294,37 @@ void destroyLoggerWhileDaemonIsStillRunning(const std::string& logPath) {
   optLogger.reset();
 
   /* sleep override */ std::this_thread::sleep_for(30s);
+}
+
+void hangDuringStartup(const std::string&) {
+  while (true) {
+    pause();
+  }
+}
+
+TEST_F(DaemonStartupLoggerTest, aUserStartedDaemonWaitsIndefinitely) {
+  ScopedEnvVar restartCount{kEdenFsRestartCountEnv};
+  restartCount.unset();
+
+  EXPECT_EQ(std::nullopt, startupTimeout());
+}
+
+TEST_F(DaemonStartupLoggerTest, aRelaunchedDaemonWaitsForABoundedTime) {
+  ScopedEnvVar restartCount{kEdenFsRestartCountEnv};
+  restartCount.set("1");
+
+  EXPECT_EQ(
+      std::chrono::milliseconds{kRelaunchStartupTimeout}, startupTimeout());
+}
+
+TEST_F(DaemonStartupLoggerTest, startupTimeoutTerminatesAndReapsChild) {
+  const auto [result, childStatus] = timeOutChildDuringStartup();
+
+  EXPECT_EQ(EX_SOFTWARE, result.exitCode);
+  EXPECT_THAT(
+      result.errorMessage,
+      HasSubstr("EdenFS did not finish initializing within 0 seconds"));
+  EXPECT_NE(0, childStatus.killSignal());
 }
 
 TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
@@ -570,6 +622,7 @@ FunctionResult runFunctionInSeparateProcess(
   XCHECK_FUNCTION(exitWithNoResult);
   XCHECK_FUNCTION(exitSuccessfullyWithNoResult);
   XCHECK_FUNCTION(destroyLoggerWhileDaemonIsStillRunning);
+  XCHECK_FUNCTION(hangDuringStartup);
   XCHECK_FUNCTION(success);
   XCHECK_FUNCTION(failure);
 #undef XCHECK_FUNCTION

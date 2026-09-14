@@ -256,7 +256,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   /**
    * Spawns a new edenfs. Overridable so that tests can exercise the restart
-   * decision without launching anything. Returns false if the spawn failed.
+   * decision without launching anything. Returns false unless the daemon's
+   * startup process exits successfully.
    */
   using SpawnEdenFsFn = std::function<bool(
       const AbsolutePath& binary,
@@ -286,7 +287,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   /**
    * Validate the child credentials and relaunch edenfs from a plan. Returns
-   * whether the replacement process was spawned.
+   * whether the replacement daemon finished starting.
    */
   bool launchRestart(const RestartPlan& plan) const;
 
@@ -336,6 +337,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;
   std::unique_ptr<FileAccessMonitorProcess> famProcess_;
+  // Whether the daemon closed the socket, as opposed to the loop ending for
+  // another reason: a receive error also ends the loop but leaves the daemon
+  // running, and relaunching then would put two daemons on the same mounts.
+  //
+  // Written from eofReceived() and read after the loop exits, both on the
+  // EventBase thread, so it needs no synchronization.
+  bool peerExited_{false};
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state

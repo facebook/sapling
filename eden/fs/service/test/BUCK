@@ -16,6 +16,8 @@ cpp_unittest(
         "//eden/common/telemetry:log_info",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:process",
+        "//eden/common/utils/test:scoped_env_var",
+        "//eden/fs/privhelper:interface",
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
         "//folly:file",

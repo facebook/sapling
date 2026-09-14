@@ -15,6 +15,8 @@
 #include <folly/portability/Unistd.h>
 #include <gflags/gflags.h>
 #include <sys/types.h>
+#include <algorithm>
+#include <cstdlib>
 
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/SessionId.h"
@@ -25,6 +27,7 @@
 #include "eden/fs/service/StartupStatusSubscriber.h"
 
 #ifndef _WIN32
+#include <poll.h>
 #include <sys/wait.h>
 #include <sysexits.h>
 #endif
@@ -415,8 +418,8 @@ void DaemonStartupLogger::runParentProcess(
   // Wait for the child to finish initializing itself and then exit
   // without ever returning to the caller.
   try {
-    auto result =
-        waitForChildStatus(child.exitStatusPipe, child.process, logPath);
+    auto result = waitForChildStatus(
+        child.exitStatusPipe, child.process, logPath, startupTimeout());
     if (!result.errorMessage.empty()) {
       fprintf(stderr, "%s\n", result.errorMessage.c_str());
       fflush(stderr);
@@ -459,13 +462,69 @@ void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
   }
 }
 
+std::optional<std::chrono::milliseconds> DaemonStartupLogger::startupTimeout() {
+  // The privhelper sets this on every daemon it relaunches, and nothing else
+  // does, so its presence is what distinguishes a supervised startup from one
+  // the user began.
+  if (std::getenv(kEdenFsRestartCountEnv.str().c_str()) == nullptr) {
+    return std::nullopt;
+  }
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+      kRelaunchStartupTimeout);
+}
+
 DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
     FileDescriptor& pipe,
     SpawnedProcess& proc,
-    StringPiece logPath) {
+    StringPiece logPath,
+    std::optional<std::chrono::milliseconds> timeout) {
+  // Only a caller that set a deadline gets a daemon terminated on its behalf.
+  const bool enforceDeadline = timeout.has_value();
+
+#ifndef _WIN32
+  if (enforceDeadline) {
+    const auto deadline = std::chrono::steady_clock::now() + *timeout;
+    while (true) {
+      const auto remaining = std::max(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              deadline - std::chrono::steady_clock::now()),
+          0ms);
+      struct pollfd pfd{pipe.fd(), POLLIN, 0};
+      const auto pollResult =
+          ::poll(&pfd, 1, static_cast<int>(remaining.count()));
+      if (pollResult > 0) {
+        break;
+      }
+      if (pollResult < 0 && errno == EINTR) {
+        continue;
+      }
+      if (pollResult < 0) {
+        const auto error = folly::errnoStr(errno);
+        proc.terminateOrKill(kRestartTerminationTimeout);
+        return ParentResult(
+            EX_SOFTWARE,
+            "error waiting for EdenFS initialization status: ",
+            error);
+      }
+
+      proc.terminateOrKill(kRestartTerminationTimeout);
+      return ParentResult(
+          EX_SOFTWARE,
+          "error: EdenFS did not finish initializing within ",
+          std::chrono::duration_cast<std::chrono::seconds>(*timeout).count(),
+          " seconds\nCheck the EdenFS log file at ",
+          logPath,
+          " for more details");
+    }
+  }
+#endif
+
   ResultType status;
   auto readResult = pipe.readFull(&status, sizeof(status));
   if (readResult.hasException()) {
+    if (enforceDeadline) {
+      proc.terminateOrKill(kRestartTerminationTimeout);
+    }
     return ParentResult(
         EX_SOFTWARE,
         "error reading status of EdenFS initialization: ",
@@ -477,10 +536,18 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
   if (static_cast<size_t>(bytesRead) < sizeof(status)) {
     // This should only happen if edenfs crashed before writing its status.
     // Check to see if the child process has died.
-    auto result = handleChildCrash(proc);
+    auto result = handleChildCrash(proc, enforceDeadline);
     result.errorMessage += fmt::format(
         "\nCheck the EdenFS log file at {} for more details", logPath);
     return result;
+  }
+
+  if (enforceDeadline && status != 0) {
+    // A reported failure is not an exit yet, and returning before the child is
+    // gone would leave it running once the privhelper starts unmounting. The
+    // budget is halved so both phases fit the one PrivHelper.h accounts for.
+    proc.waitOrTerminateOrKill(
+        kRestartTerminationTimeout / 2, kRestartTerminationTimeout / 2);
   }
 
   // Return the status code.
@@ -489,7 +556,8 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
 }
 
 DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
-    SpawnedProcess& proc) {
+    SpawnedProcess& proc,
+    bool terminateIfStillRunning) {
   constexpr size_t kMaxRetries = 5;
   constexpr auto kRetrySleep = 100ms;
 
@@ -530,6 +598,9 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
 
     // The child still wasn't waitable after waiting for a while.
     // This should only happen if there is a bug somehow.
+    if (terminateIfStillRunning) {
+      proc.terminateOrKill(kRestartTerminationTimeout);
+    }
     return ParentResult(
         EX_SOFTWARE,
         "error: EdenFS is still running but did not report "

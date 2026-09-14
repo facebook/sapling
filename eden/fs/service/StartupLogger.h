@@ -13,6 +13,7 @@
 #include <folly/lang/Assume.h>
 #include <folly/logging/LogLevel.h>
 #include <gflags/gflags.h>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include "eden/common/utils/FileDescriptor.h"
@@ -245,13 +246,27 @@ class DaemonStartupLogger : public StartupLogger {
   void redirectOutput(folly::StringPiece logPath);
 
   /**
+   * How long to wait for the daemon below to finish starting, or nullopt to
+   * wait indefinitely. Bounded only when the privhelper relaunched us, because
+   * only then is something waiting on this process with a deadline of its own.
+   */
+  static std::optional<std::chrono::milliseconds> startupTimeout();
+
+  /**
    * Wait for the child process to write its initialization status.
+   *
+   * Without a timeout, waits indefinitely and leaves the daemon running
+   * whatever it reports. With one, the wait is bounded and a daemon that
+   * overruns it, fails, or never reports is terminated before returning.
    */
   ParentResult waitForChildStatus(
       FileDescriptor& pipe,
       SpawnedProcess& proc,
-      folly::StringPiece logPath);
-  ParentResult handleChildCrash(SpawnedProcess& childPid);
+      folly::StringPiece logPath,
+      std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+  ParentResult handleChildCrash(
+      SpawnedProcess& childPid,
+      bool terminateIfStillRunning);
 
   void sendResult(ResultType result);
 

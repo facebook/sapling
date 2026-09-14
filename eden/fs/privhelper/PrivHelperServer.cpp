@@ -378,8 +378,16 @@ bool spawnEdenFs(
 
   try {
     SpawnedProcess proc(argv, std::move(opts));
-    XLOGF(INFO, "relaunched edenfs as pid {}", proc.pid());
-    std::move(proc).detach();
+    XLOGF(
+        INFO,
+        "relaunched edenfs as pid {}; waiting for startup to finish",
+        proc.pid());
+    const auto status = proc.waitOrTerminateOrKill(
+        kSupervisorStartupTimeout, kRestartTerminationTimeout);
+    if (status.state() != ProcessStatus::Exited || status.exitStatus() != 0) {
+      throw std::runtime_error(
+          folly::to<std::string>("relaunched edenfs process ", status.str()));
+    }
     return true;
   } catch (const std::exception& ex) {
     XLOGF(ERR, "failed to relaunch edenfs: {}", folly::exceptionStr(ex));
@@ -1852,6 +1860,16 @@ void PrivHelperServer::run() {
   // too.
   XLOG(DBG5, "privhelper process exiting");
 
+#ifdef __APPLE__
+  if (peerExited_) {
+    if (const auto plan = prepareRestart()) {
+      if (launchRestart(*plan)) {
+        return;
+      }
+    }
+  }
+#endif
+
   // Unmount all active mount points
   cleanupMountPoints();
 }
@@ -2010,6 +2028,7 @@ UnixSocket::Message PrivHelperServer::processMessage(
 }
 
 void PrivHelperServer::eofReceived() noexcept {
+  peerExited_ = true;
   eventBase_->terminateLoopSoon();
 }
 

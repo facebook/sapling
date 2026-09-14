@@ -100,6 +100,28 @@ inline constexpr folly::StringPiece kEdenFsFirstRestartAtEnv{
 uint64_t readEdenFsRestartCounterEnv(folly::StringPiece name);
 
 /*
+ * How long a crash relaunch waits for the startup below it, and how long it
+ * then gives that startup to exit once it stops waiting.
+ *
+ * A relaunch is best effort, so these are deliberately far shorter than the
+ * restart window the circuit breaker counts over. `kRelaunchStartupTimeout` is
+ * the daemon waiting on the process it spawned and `kSupervisorStartupTimeout`
+ * is the privhelper waiting on that daemon; the static_assert holds the
+ * daemon's wait, plus the budget it spends terminating a hung child, inside
+ * the privhelper's, whose expiry is a SIGKILL that would leave that child
+ * unsupervised.
+ *
+ * The termination budget matches the daemon's own SIGTERM budget:
+ * core:sigterm-shutdown-timeout defaults to 20s, plus slack to finish exiting.
+ */
+inline constexpr std::chrono::seconds kRestartTerminationTimeout{30};
+inline constexpr std::chrono::seconds kRelaunchStartupTimeout{120};
+inline constexpr std::chrono::seconds kSupervisorStartupTimeout{180};
+static_assert(
+    kRelaunchStartupTimeout + kRestartTerminationTimeout <
+    kSupervisorStartupTimeout);
+
+/*
  * Everything the privhelper needs in order to relaunch edenfs after a crash.
  *
  * The privhelper reads no configuration of its own: edenfs delivers the backoff
