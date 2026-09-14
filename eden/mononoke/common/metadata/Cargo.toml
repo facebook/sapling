@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
-hickory-resolver = { version = "0.26.1", features = ["system-config", "tokio"] }
+hickory-resolver = { version = "0.26.3", features = ["system-config", "tokio"] }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 session_id = { version = "0.1.0", path = "../session_id" }
