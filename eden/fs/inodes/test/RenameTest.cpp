@@ -121,6 +121,32 @@ void RenameTest::renameFile(
   EXPECT_THROW_ERRNO(mount_->getFileInode(srcPath), ENOENT);
 }
 
+// Renaming a loaded directory over an existing directory whose inode has
+// never been loaded.
+//
+// FIXME: TreeInode::rename checks whether the destination directory is empty
+// through a contents pointer that TreeRenameLocks only sets when that inode is
+// loaded, so this dereferences null instead of loading the destination.
+TEST(RenameUnloadedDestTest, renameDirOverUnloadedEmptyDir) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  FakeTreeBuilder builder;
+  builder.setFile("src/file.txt", "contents\n");
+  builder.mkdir("dst");
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+  auto src = mount.getTreeInode("src");
+  auto rename = [&] {
+    return root->rename(
+        "src"_pc,
+        root,
+        "dst"_pc,
+        InvalidationRequired::No,
+        ObjectFetchContext::getNullContext());
+  };
+  ASSERT_DEATH(rename(), "");
+}
+
 TEST_F(RenameTest, renameFileSameDirectory) {
   renameFile("a/b/c/doc.txt", "a/b/c/newdocs.txt", false);
 }
