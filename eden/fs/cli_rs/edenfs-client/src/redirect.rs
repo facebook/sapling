@@ -1485,6 +1485,15 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
     }
 }
 
+fn redirection_needs_repair(state: &RedirectionState) -> bool {
+    matches!(
+        state,
+        RedirectionState::NotMounted
+            | RedirectionState::SymlinkMissing
+            | RedirectionState::SymlinkIncorrect
+    )
+}
+
 pub async fn try_add_redirection(
     instance: &EdenFsInstance,
     checkout: &EdenFsCheckout,
@@ -1551,8 +1560,7 @@ pub async fn try_add_redirection(
         let existing_redir_state = &existing_redir.state;
         if existing_redir.repo_path == redir.repo_path
             && !force_remount_bind_mounts
-            && *existing_redir_state != RedirectionState::NotMounted
-            && *existing_redir_state != RedirectionState::SymlinkMissing
+            && !redirection_needs_repair(existing_redir_state)
         {
             eprintln!(
                 "Skipping {}; it is already configured. (use \
@@ -2042,6 +2050,20 @@ mod tests {
     use crate::redirect::RedirectionState;
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
+    use crate::redirect::redirection_needs_repair;
+
+    #[test]
+    fn test_broken_redirection_states_need_repair() {
+        assert!(redirection_needs_repair(&RedirectionState::NotMounted));
+        assert!(redirection_needs_repair(&RedirectionState::SymlinkMissing));
+        assert!(redirection_needs_repair(
+            &RedirectionState::SymlinkIncorrect
+        ));
+        assert!(!redirection_needs_repair(
+            &RedirectionState::MatchesConfiguration
+        ));
+        assert!(!redirection_needs_repair(&RedirectionState::UnknownMount));
+    }
 
     #[test]
     fn test_apply_symlink() {
