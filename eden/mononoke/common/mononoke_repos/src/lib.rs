@@ -15,6 +15,10 @@ use arc_swap::ArcSwap;
 use futures::stream::AbortHandle;
 use parking_lot::Mutex;
 
+mod slot;
+
+pub use crate::slot::RepoSlot;
+
 /// Set of repos currently associated with an instance of Mononoke
 /// service or command. This type doesn't derive clone and thus
 /// sharing of MononokeRepo should occur under Arc / Rc clones.
