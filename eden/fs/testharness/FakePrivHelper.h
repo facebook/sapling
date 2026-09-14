@@ -52,6 +52,12 @@ class FakePrivHelper final : public PrivHelper {
       AbsolutePathPiece mountPath,
       std::shared_ptr<MountDelegate>);
 
+  /**
+   * Forget a previously registered mount so the same path can be registered
+   * again, for tests that tear down and recreate an EdenMount.
+   */
+  void unregisterMount(AbsolutePathPiece mountPath);
+
   // PrivHelper functions
   void attachEventBase(folly::EventBase* eventBase) override;
   void detachEventBase() override;

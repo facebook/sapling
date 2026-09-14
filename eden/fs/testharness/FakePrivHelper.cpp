@@ -87,6 +87,12 @@ void FakePrivHelper::registerMountDelegate(
   }
 }
 
+void FakePrivHelper::unregisterMount(AbsolutePathPiece mountPath) {
+  if (mountDelegates_.erase(mountPath.asString()) == 0) {
+    throwf<std::range_error>("mount {} not defined", mountPath);
+  }
+}
+
 void FakePrivHelper::attachEventBase(folly::EventBase* /* eventBase */) {}
 
 void FakePrivHelper::detachEventBase() {}
