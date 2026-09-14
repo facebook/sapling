@@ -5,17 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use acl_manifest::RootAclManifestId;
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::override_just_knobs;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgAugmentedManifestEntry;
@@ -150,43 +145,6 @@ async fn test_root_and_waypoint_acl_manifest_pointers(fb: FacebookInit) -> Resul
         get_dir_acl_pointer(&ctx, &repo, &root_envelope, b"unrelated").await?,
         None,
         "unrelated/ should have no ACL pointer (not in sparse ACL tree)"
-    );
-
-    Ok(())
-}
-
-/// Test that all ACL pointers are `None` when the JustKnob
-/// `scm/mononoke:add_acl_manifest_pointer` is disabled, even if `.slacl`
-/// files exist in the repo.
-#[mononoke::fbinit_test]
-async fn test_acl_pointers_none_when_jk_disabled(fb: FacebookInit) -> Result<()> {
-    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
-        "scm/mononoke:add_acl_manifest_pointer".to_string(),
-        KnobVal::Bool(false),
-    )])));
-
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-
-    let root = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file(
-            "foo/bar/.slacl",
-            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
-        )
-        .add_file("foo/bar/file", "content")
-        .commit()
-        .await?;
-
-    let envelope = derive_and_load_augmented_manifest(&ctx, &repo, vec![root], root).await?;
-
-    assert_eq!(
-        envelope.augmented_manifest.acl_manifest_directory_id, None,
-        "Root pointer should be None when JK is disabled"
-    );
-    assert_eq!(
-        get_dir_acl_pointer(&ctx, &repo, &envelope, b"foo").await?,
-        None,
-        "foo/ should be None when JK disabled"
     );
 
     Ok(())

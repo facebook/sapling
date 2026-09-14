@@ -199,17 +199,14 @@ fn parent_aug_id(entry: &HgAugmentedManifestEntry) -> Option<HgAugmentedManifest
 }
 
 /// Normalize an ACL stage output into an optional overlay id, mirroring
-/// `normalize_acl_root`: `None` if the pointer JK is off, the stage has no acl
-/// entry, or the entry is the canonical empty acl manifest; `Some(id)` otherwise.
+/// `normalize_acl_root`: `None` if the stage has no ACL entry or the entry is
+/// the canonical empty ACL manifest; `Some(id)` otherwise.
 fn normalize_acl_stage(
     output: Option<&Option<Entry<AclManifestId, AclManifestRestriction>>>,
     cs_id: ChangesetId,
     stage_path: &MPath,
 ) -> Result<Option<AclManifestId>> {
-    if !justknobs::eval("scm/mononoke:add_acl_manifest_pointer", None, None) {
-        return Ok(None);
-    }
-    // With the JK on, a missing acl output is a broken invariant (an entry absent at this path is fine).
+    // A missing ACL output is a broken invariant; an entry absent at this path is fine.
     let acl_output = output.ok_or_else(|| {
         anyhow!("missing AclManifests stage output for {cs_id} at stage {stage_path}")
     })?;

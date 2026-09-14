@@ -99,7 +99,6 @@
     "scm/mononoke:restrict_user_directories_resolve_unixname_from_employee_service": false,
     "scm/mononoke:per_bookmark_locking": true,
     "scm/mononoke:per_bookmark_locking_shadow": false,
-    "scm/mononoke:add_acl_manifest_pointer": true,
     "scm/mononoke:use_blame_v3": false,
     "scm/mononoke:block_agentic_service_writes": true,
     "scm/mononoke:disable_blobstore_reads": false,

@@ -607,16 +607,11 @@ async fn get_metadata<'a>(
 }
 
 /// Normalize a derived ACL root into an optional overlay.
-/// Returns `None` if the JK is disabled or the ACL manifest is the canonical
-/// empty one (no .slacl files), `Some(id)` otherwise.
+/// Returns `None` if the ACL manifest is the canonical empty one (no .slacl
+/// files), `Some(id)` otherwise.
 pub fn normalize_acl_root(
     root_acl_manifest_id: &acl_manifest::RootAclManifestId,
 ) -> Result<Option<AclManifestId>> {
-    let add_acl_manifest_pointer =
-        justknobs::eval("scm/mononoke:add_acl_manifest_pointer", None, None);
-    if !add_acl_manifest_pointer {
-        return Ok(None);
-    }
     let id = *root_acl_manifest_id.inner_id();
     if id == AclManifest::empty_id() {
         Ok(None)

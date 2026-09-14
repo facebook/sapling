@@ -1454,10 +1454,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn verify_one_validates_acl_pointer_changeset(fb: FacebookInit) -> Result<()> {
         // Given a changeset with an ACL-bearing directory and stored old-path derived data.
-        override_just_knobs(knob_overrides([(
-            "scm/mononoke:add_acl_manifest_pointer",
-            true,
-        )]));
+        override_just_knobs(knob_overrides([]));
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let root = CreateCommitContext::new_root(&ctx, &repo)

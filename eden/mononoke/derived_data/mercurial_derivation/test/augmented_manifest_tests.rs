@@ -1468,88 +1468,76 @@ async fn test_direct_augmented_manifest_matches_existing_path_for_root_commit(
 async fn test_direct_augmented_manifest_entry_matches_canonical_non_root_acl_entry(
     fb: FacebookInit,
 ) -> Result<()> {
-    with_just_knobs_async(
-        JustKnobsInMemory::new(HashMap::from([(
-            "scm/mononoke:add_acl_manifest_pointer".to_string(),
-            KnobVal::Bool(true),
-        )])),
-        async move {
-            // Given: a root commit whose non-root stage has a nested ACL subtree.
-            let ctx = CoreContext::test_mock(fb);
-            let repo: Repo = test_repo_factory::build_empty(fb).await?;
-            let commit = CreateCommitContext::new_root(&ctx, &repo)
-                .add_file("README.md", "hello")
-                .add_file(
-                    "src/restricted/.slacl",
-                    b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
-                )
-                .add_file("src/restricted/lib.rs", "pub fn value() -> u8 { 1 }")
-                .commit()
-                .await?;
-            let root_acl_id = derive_acl_overlay(&ctx, &repo, commit)
-                .await?
-                .context("fixture must have a non-empty ACL manifest")?;
-            let stage_path = MPath::new("src")?;
-            let stage_acl_id = root_acl_id
-                .find_entry(
-                    ctx.clone(),
-                    repo.repo_blobstore().clone(),
-                    stage_path.clone(),
-                )
-                .await?
-                .and_then(Entry::into_tree)
-                .context("fixture must have an ACL tree at src")?;
-            let canonical_root =
-                derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-                    &ctx,
-                    repo.repo_blobstore(),
-                    vec![],
-                    file_changes_from_bonsai(&ctx, &repo, commit).await?,
-                    vec![],
-                    (None, None),
-                    &Default::default(),
-                    repo.restricted_paths().config_based(),
-                    Some(root_acl_id),
-                )
-                .await?;
-            let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
-                .await?
-                .context("fixture must contain src")?;
-            let HgAugmentedManifestEntry::DirectoryNode(expected_dir) = &expected_entry else {
-                return Err(anyhow!("fixture src entry must be a directory"));
-            };
-            assert_eq!(
-                expected_dir.acl_manifest_directory_id,
-                Some(stage_acl_id),
-                "canonical V2 must retain the ACL pointer for src",
-            );
-
-            // When: deriving only src from the ACL id already rooted at src.
-            let stage_entry =
-                derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
-                    &ctx,
-                    repo.repo_blobstore(),
-                    stage_path,
-                    vec![],
-                    HashMap::new(),
-                    file_changes_from_bonsai(&ctx, &repo, commit).await?,
-                    vec![],
-                    (None, None),
-                    &HashMap::new(),
-                    &Default::default(),
-                    repo.restricted_paths().config_based(),
-                    Some(stage_acl_id),
-                )
-                .await?;
-
-            // Then: the stage entry retains the same ACL pointer as canonical V2.
-            assert_eq!(stage_entry, Some(expected_entry));
-
-            Ok(())
-        }
-        .boxed(),
+    // Given: a root commit whose non-root stage has a nested ACL subtree.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("README.md", "hello")
+        .add_file(
+            "src/restricted/.slacl",
+            b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("src/restricted/lib.rs", "pub fn value() -> u8 { 1 }")
+        .commit()
+        .await?;
+    let root_acl_id = derive_acl_overlay(&ctx, &repo, commit)
+        .await?
+        .context("fixture must have a non-empty ACL manifest")?;
+    let stage_path = MPath::new("src")?;
+    let stage_acl_id = root_acl_id
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            stage_path.clone(),
+        )
+        .await?
+        .and_then(Entry::into_tree)
+        .context("fixture must have an ACL tree at src")?;
+    let canonical_root = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        vec![],
+        file_changes_from_bonsai(&ctx, &repo, commit).await?,
+        vec![],
+        (None, None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        Some(root_acl_id),
     )
-    .await
+    .await?;
+    let expected_entry = lookup_augmented_root_child(&ctx, &repo, canonical_root, b"src")
+        .await?
+        .context("fixture must contain src")?;
+    let HgAugmentedManifestEntry::DirectoryNode(expected_dir) = &expected_entry else {
+        return Err(anyhow!("fixture src entry must be a directory"));
+    };
+    assert_eq!(
+        expected_dir.acl_manifest_directory_id,
+        Some(stage_acl_id),
+        "canonical V2 must retain the ACL pointer for src",
+    );
+
+    // When: deriving only src from the ACL id already rooted at src.
+    let stage_entry = derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        stage_path,
+        vec![],
+        HashMap::new(),
+        file_changes_from_bonsai(&ctx, &repo, commit).await?,
+        vec![],
+        (None, None),
+        &HashMap::new(),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        Some(stage_acl_id),
+    )
+    .await?;
+
+    // Then: the stage entry retains the same ACL pointer as canonical V2.
+    assert_eq!(stage_entry, Some(expected_entry));
+
+    Ok(())
 }
 
 #[mononoke::fbinit_test]
@@ -5104,15 +5092,6 @@ async fn test_augmented_manifest_skip_writes_uses_mapped_hg_roots(fb: FacebookIn
 
 const TEST_ACL_CONTENT: &str = "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n";
 
-/// The ACL pointer must be on, or `normalize_acl_root` returns `None` for
-/// everything and these tests would compare nothing against nothing.
-fn acl_pointer_knobs() -> JustKnobsInMemory {
-    JustKnobsInMemory::new(HashMap::from([(
-        "scm/mononoke:add_acl_manifest_pointer".to_string(),
-        KnobVal::Bool(true),
-    )]))
-}
-
 /// The filenode of the ACL file at the root of `cs_id`'s manifest, if any.
 async fn root_acl_file(
     ctx: &CoreContext,
@@ -5188,22 +5167,14 @@ async fn test_upload_acl_node_is_absent_without_an_acl_file(fb: FacebookInit) ->
         .commit()
         .await?;
 
-    with_just_knobs_async(
-        acl_pointer_knobs(),
-        async move {
-            let (via_upload, via_derivation) =
-                upload_and_derived_root_acl(&ctx, &repo, root).await?;
+    let (via_upload, via_derivation) = upload_and_derived_root_acl(&ctx, &repo, root).await?;
 
-            assert_eq!(
-                via_derivation, None,
-                "no .slacl anywhere, so derivation should produce no ACL node"
-            );
-            assert_eq!(via_upload, via_derivation);
-            Ok(())
-        }
-        .boxed(),
-    )
-    .await
+    assert_eq!(
+        via_derivation, None,
+        "no .slacl anywhere, so derivation should produce no ACL node"
+    );
+    assert_eq!(via_upload, via_derivation);
+    Ok(())
 }
 
 /// Adding the ACL file creates the node, and the upload path must produce the
@@ -5220,22 +5191,14 @@ async fn test_upload_acl_node_matches_derivation_for_a_new_acl_file(
         .commit()
         .await?;
 
-    with_just_knobs_async(
-        acl_pointer_knobs(),
-        async move {
-            let (via_upload, via_derivation) =
-                upload_and_derived_root_acl(&ctx, &repo, root).await?;
+    let (via_upload, via_derivation) = upload_and_derived_root_acl(&ctx, &repo, root).await?;
 
-            assert!(
-                via_derivation.is_some(),
-                "a root .slacl should produce an ACL node, otherwise this compares nothing"
-            );
-            assert_eq!(via_upload, via_derivation);
-            Ok(())
-        }
-        .boxed(),
-    )
-    .await
+    assert!(
+        via_derivation.is_some(),
+        "a root .slacl should produce an ACL node, otherwise this compares nothing"
+    );
+    assert_eq!(via_upload, via_derivation);
+    Ok(())
 }
 
 /// A commit that leaves the ACL file alone carries the parent's node forward.
@@ -5257,25 +5220,17 @@ async fn test_upload_acl_node_carries_forward_an_unchanged_acl_file(
         .commit()
         .await?;
 
-    with_just_knobs_async(
-        acl_pointer_knobs(),
-        async move {
-            let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
-            assert!(parent_acl.is_some(), "the parent should have an ACL node");
+    let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
+    assert!(parent_acl.is_some(), "the parent should have an ACL node");
 
-            let (via_upload, via_derivation) =
-                upload_and_derived_root_acl(&ctx, &repo, child).await?;
+    let (via_upload, via_derivation) = upload_and_derived_root_acl(&ctx, &repo, child).await?;
 
-            assert!(
-                via_derivation.is_some(),
-                "the restriction still exists in the child, so its node should too"
-            );
-            assert_eq!(via_upload, via_derivation);
-            Ok(())
-        }
-        .boxed(),
-    )
-    .await
+    assert!(
+        via_derivation.is_some(),
+        "the restriction still exists in the child, so its node should too"
+    );
+    assert_eq!(via_upload, via_derivation);
+    Ok(())
 }
 
 /// Deleting the ACL file drops the node rather than reusing the parent's, which
@@ -5297,25 +5252,17 @@ async fn test_upload_acl_node_is_dropped_when_the_acl_file_is_deleted(
         .commit()
         .await?;
 
-    with_just_knobs_async(
-        acl_pointer_knobs(),
-        async move {
-            // The parent really did have a node, so the child dropping it is a
-            // transition and not just two absences.
-            let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
-            assert!(parent_acl.is_some(), "the parent should have an ACL node");
+    // The parent really did have a node, so the child dropping it is a
+    // transition and not just two absences.
+    let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
+    assert!(parent_acl.is_some(), "the parent should have an ACL node");
 
-            let (via_upload, via_derivation) =
-                upload_and_derived_root_acl(&ctx, &repo, child).await?;
+    let (via_upload, via_derivation) = upload_and_derived_root_acl(&ctx, &repo, child).await?;
 
-            assert_eq!(
-                via_derivation, None,
-                "the only .slacl was deleted, so the node should be gone"
-            );
-            assert_eq!(via_upload, via_derivation);
-            Ok(())
-        }
-        .boxed(),
-    )
-    .await
+    assert_eq!(
+        via_derivation, None,
+        "the only .slacl was deleted, so the node should be gone"
+    );
+    assert_eq!(via_upload, via_derivation);
+    Ok(())
 }
