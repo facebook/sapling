@@ -36,8 +36,10 @@ use crate::ProtocolReader;
 use crate::ProtocolWriter;
 use crate::bufext::BufMutExt as _;
 use crate::compact_protocol::CType;
+use crate::compact_protocol::CompactProtocolSerializer;
 use crate::deserialize::Deserialize;
 use crate::errors::ProtocolError;
+use crate::protocol::DEFAULT_RECURSION_DEPTH;
 use crate::thrift_protocol::MessageType;
 use crate::ttype::TType;
 
@@ -640,4 +642,45 @@ fn test_overallocation() {
         err.downcast_ref::<ProtocolError>(),
         Some(&ProtocolError::EOF),
     );
+}
+
+// Build a map of nested values. {1: {1: {1: 2}}}
+// The `levels` param is for how deep to nest the values.
+// Then attempt to skip over the map during deserialization.
+fn skip_nested_map_values(levels: i32) -> crate::Result<()> {
+    let mut serializer =
+        CompactProtocolSerializer::with_buffer(BytesMut::with_capacity(8 * (levels as usize) + 16));
+
+    for _ in 0..levels - 1 {
+        serializer.write_map_begin(TType::Byte, TType::Map, 1);
+        serializer.write_byte(1);
+    }
+    serializer.write_map_begin(TType::Byte, TType::Byte, 1);
+    serializer.write_byte(1);
+    serializer.write_byte(2);
+    for _ in 0..levels {
+        serializer.write_map_end();
+    }
+
+    let bytes = serializer.finish();
+
+    let mut deserializer = <CompactProtocol>::deserializer(Cursor::new(bytes));
+    deserializer.skip(TType::Map)
+}
+
+#[test]
+fn skip_map_value_nesting_is_depth_limited() {
+    let err = skip_nested_map_values(DEFAULT_RECURSION_DEPTH)
+        .expect_err("skip must refuse to descend past DEFAULT_RECURSION_DEPTH");
+
+    assert_eq!(
+        err.downcast_ref::<ProtocolError>(),
+        Some(&ProtocolError::SkipDepthExceeded),
+    );
+}
+
+#[test]
+fn skip_map_value_nesting_at_limit_succeeds() {
+    skip_nested_map_values(DEFAULT_RECURSION_DEPTH - 1)
+        .expect("nesting exactly at the recursion limit must still skip");
 }

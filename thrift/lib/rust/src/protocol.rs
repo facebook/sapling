@@ -129,7 +129,7 @@ fn skip_inner<P: ProtocolReader + ?Sized>(
                     }
                     skip_inner(p, key_type, max_depth - 1)?;
                     p.read_map_value_begin()?;
-                    skip_inner(p, value_type, max_depth)?;
+                    skip_inner(p, value_type, max_depth - 1)?;
                     p.read_map_value_end()?;
 
                     idx += 1;
