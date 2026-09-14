@@ -3254,7 +3254,9 @@ ImmediateFuture<Unit> TreeInode::doRename(
   // Success.
   // Update the destination with the source data (this copies in the id if
   // it happens to be set).
-  auto* childInode = srcEntry.getInode();
+  // The child is used after the contents locks are released below, when an
+  // unload or FORGET could otherwise destroy it. Hold a reference until then.
+  auto childInode = srcEntry.getInodePtr();
   bool destChildExists = locks.destChildExists();
   if (destChildExists) {
     // The reference held by locks keeps the destination alive, so

@@ -308,6 +308,18 @@ class RenameOverReferencedDirTest : public ::testing::Test {
   std::thread renamer_;
 };
 
+TEST_F(RenameOverReferencedDirTest, sourceStaysReferencedDuringRename) {
+  auto src = mount_->getTreeInode("src");
+  ASSERT_NO_FATAL_FAILURE(startRename());
+
+  // The rename uses the source inode after releasing its contents locks, so
+  // it must hold its own reference rather than rely on the parent's entry.
+  EXPECT_GT(src->debugGetPtrRef(), 1u);
+
+  finishRename();
+  EXPECT_TRUE(mount_->hasFileAt("dest/file.txt"));
+}
+
 TEST_F(RenameOverReferencedDirTest, destinationOutlivesRenameLocks) {
   auto* inodeMap = mount_->getEdenMount()->getInodeMap();
   auto dest = mount_->getTreeInode("dest");
