@@ -412,7 +412,7 @@ impl ConfigSet {
         visited: &mut HashSet<PathBuf>,
         errors: &mut Vec<Error>,
     ) {
-        match path.canonicalize() {
+        match util::path::canonicalize_best_effort(path) {
             Ok(path) => {
                 let path = &path;
                 debug_assert!(path.is_absolute());
