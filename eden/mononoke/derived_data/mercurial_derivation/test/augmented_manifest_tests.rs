@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
+use acl_manifest::DirectoryAclInputs;
 use acl_manifest::RootAclManifestId;
+use acl_manifest::acl_node_for_directory;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -41,6 +44,7 @@ use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
 use metaconfig_types::PathRestrictionMetadata;
@@ -5080,4 +5084,238 @@ async fn test_augmented_manifest_skip_writes_uses_mapped_hg_roots(fb: FacebookIn
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Upload-time ACL node construction.
+//
+// The oracle throughout is `derive_acl_overlay`: the ACL node the per-changeset
+// derivation stamps on the root augmented manifest. Each test rebuilds that
+// same node through `acl_manifest::acl_node_for_directory`, which sees no
+// changeset and no path, and asserts the two agree.
+//
+// Every fixture keeps its ACL file at the repository root, so the root
+// directory has no child carrying an ACL node and the child map is honestly
+// empty. These tests therefore exercise only the directory's own ACL file.
+// Children are covered by the `acl_manifest` unit tests, and composition
+// across directories end to end by the byte-identity tests of the batch
+// builder.
+// ---------------------------------------------------------------------------
+
+const TEST_ACL_CONTENT: &str = "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n";
+
+/// The ACL pointer must be on, or `normalize_acl_root` returns `None` for
+/// everything and these tests would compare nothing against nothing.
+fn acl_pointer_knobs() -> JustKnobsInMemory {
+    JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:add_acl_manifest_pointer".to_string(),
+        KnobVal::Bool(true),
+    )]))
+}
+
+/// The filenode of the ACL file at the root of `cs_id`'s manifest, if any.
+async fn root_acl_file(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    acl_file_name: &str,
+) -> Result<Option<HgFileNodeId>> {
+    let hg_manifest_id = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    let entry = hg_manifest_id
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            MPath::new(acl_file_name)?,
+        )
+        .await?;
+    Ok(match entry {
+        Some(Entry::Leaf((_, filenode_id))) => Some(filenode_id),
+        Some(Entry::Tree(_)) | None => None,
+    })
+}
+
+/// Build the root directory's ACL node the way the tree-upload path does,
+/// alongside the node the per-changeset derivation produces for comparison.
+async fn upload_and_derived_root_acl(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<(Option<AclManifestId>, Option<AclManifestId>)> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+    let acl_file_name = repo
+        .restricted_paths()
+        .config_based()
+        .config()
+        .acl_file_name()
+        .to_string();
+
+    // No parent appears anywhere below: the node is a function of this
+    // commit's own root directory, which is the property under test.
+    let own_acl_file = match root_acl_file(ctx, repo, cs_id, &acl_file_name).await? {
+        Some(filenode_id) => Some(filenode_id.load(ctx, &blobstore).await?.content_id()),
+        None => None,
+    };
+
+    let via_upload = acl_node_for_directory(
+        ctx,
+        &blobstore,
+        DirectoryAclInputs {
+            acl_file_name: &acl_file_name,
+            own_acl_file,
+            children: BTreeMap::new(),
+        },
+    )
+    .await?
+    .map(|entry| entry.id);
+
+    let via_derivation = derive_acl_overlay(ctx, repo, cs_id).await?;
+    Ok((via_upload, via_derivation))
+}
+
+/// A repository with no ACL file has no ACL node anywhere, and the upload path
+/// must agree rather than inventing an empty one.
+#[mononoke::fbinit_test]
+async fn test_upload_acl_node_is_absent_without_an_acl_file(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        acl_pointer_knobs(),
+        async move {
+            let (via_upload, via_derivation) =
+                upload_and_derived_root_acl(&ctx, &repo, root).await?;
+
+            assert_eq!(
+                via_derivation, None,
+                "no .slacl anywhere, so derivation should produce no ACL node"
+            );
+            assert_eq!(via_upload, via_derivation);
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// Adding the ACL file creates the node, and the upload path must produce the
+/// same id from the manifest alone.
+#[mononoke::fbinit_test]
+async fn test_upload_acl_node_matches_derivation_for_a_new_acl_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(".slacl", TEST_ACL_CONTENT)
+        .add_file("dir/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        acl_pointer_knobs(),
+        async move {
+            let (via_upload, via_derivation) =
+                upload_and_derived_root_acl(&ctx, &repo, root).await?;
+
+            assert!(
+                via_derivation.is_some(),
+                "a root .slacl should produce an ACL node, otherwise this compares nothing"
+            );
+            assert_eq!(via_upload, via_derivation);
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// A commit that leaves the ACL file alone carries the parent's node forward.
+/// This is the case that would silently diverge if the upload path rebuilt the
+/// node instead of reusing it.
+#[mononoke::fbinit_test]
+async fn test_upload_acl_node_carries_forward_an_unchanged_acl_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(".slacl", TEST_ACL_CONTENT)
+        .add_file("dir/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("dir/other.rs", "fn other() {}")
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        acl_pointer_knobs(),
+        async move {
+            let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
+            assert!(parent_acl.is_some(), "the parent should have an ACL node");
+
+            let (via_upload, via_derivation) =
+                upload_and_derived_root_acl(&ctx, &repo, child).await?;
+
+            assert!(
+                via_derivation.is_some(),
+                "the restriction still exists in the child, so its node should too"
+            );
+            assert_eq!(via_upload, via_derivation);
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// Deleting the ACL file drops the node rather than reusing the parent's, which
+/// is the negative case: reuse here would keep a restriction alive after it was
+/// removed.
+#[mononoke::fbinit_test]
+async fn test_upload_acl_node_is_dropped_when_the_acl_file_is_deleted(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(".slacl", TEST_ACL_CONTENT)
+        .add_file("dir/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .delete_file(".slacl")
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        acl_pointer_knobs(),
+        async move {
+            // The parent really did have a node, so the child dropping it is a
+            // transition and not just two absences.
+            let parent_acl = derive_acl_overlay(&ctx, &repo, root).await?;
+            assert!(parent_acl.is_some(), "the parent should have an ACL node");
+
+            let (via_upload, via_derivation) =
+                upload_and_derived_root_acl(&ctx, &repo, child).await?;
+
+            assert_eq!(
+                via_derivation, None,
+                "the only .slacl was deleted, so the node should be gone"
+            );
+            assert_eq!(via_upload, via_derivation);
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
 }
