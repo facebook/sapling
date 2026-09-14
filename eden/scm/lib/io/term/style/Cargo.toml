@@ -18,3 +18,4 @@ sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 sapling-io = { version = "0.1.0", path = "../.." }
 termwiz = { version = "0.23.3", default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+wezterm-dynamic = { default-features = false }

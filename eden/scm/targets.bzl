@@ -72,16 +72,50 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
     for crate, override in overrides.items():
         _set_autocargo_dep_override(autocargo, dep_kind, crate, override)
 
-def _set_autocargo_dep_override(autocargo, dep_kind, crate, override):
+    if "termwiz" in overrides:
+        # D105187099 switched fbsource termwiz to the wezterm git workspace.
+        # Buck's wezterm-dynamic target enables std, but autocargo does not inherit that:
+        #
+        #     error[E0599]: no associated function or constant named `from_dynamic`
+        #     found for struct `HashMap<K, V, S, A>` in the current scope
+        #     --> termwiz-0.23.3/src/hyperlink.rs:19:39
+        #
+        # The missing HashMap impl is gated behind wezterm-dynamic/std. The published
+        # wezterm-dynamic 0.2.1 does not have that feature, so disable it in OSS manifests.
+        _set_autocargo_dep_override(
+            autocargo,
+            dep_kind,
+            "wezterm-dynamic",
+            {
+                "default-features": False,
+                "features": ["std"],
+            },
+        )
+        _set_autocargo_dep_override(
+            autocargo,
+            dep_kind,
+            "wezterm-dynamic",
+            {"features": []},
+            override_kind = "oss_dependencies_override",
+        )
+        _add_extra_buck_dependency(autocargo, dep_kind, "fbsource//third-party/rust/vendor/wezterm-dynamic:0.2")
+
+def _set_autocargo_dep_override(autocargo, dep_kind, crate, override, override_kind = "dependencies_override"):
     dep = _set_default(
         autocargo,
         "cargo_toml_config",
-        "dependencies_override",
+        override_kind,
         dep_kind,
         crate,
     )
     for key, value in override.items():
         dep.setdefault(key, value)
+
+def _add_extra_buck_dependency(autocargo, dep_kind, dep):
+    extra = _set_default(autocargo, "cargo_toml_config", "extra_buck_dependencies")
+    deps = extra.get(dep_kind, [])
+    if dep not in deps:
+        extra[dep_kind] = deps + [dep]
 
 def sl_rust_library(**kwargs):
     autocargo = _autocargo_overrides(**kwargs)
