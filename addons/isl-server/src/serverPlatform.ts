@@ -123,6 +123,11 @@ export function makeBrowserServerPlatform(extraCwds?: string[]): ServerPlatform 
             });
           break;
         }
+        case 'platform/openPreview': {
+          // Browser has no markdown preview; fall back to opening the raw file.
+          openFile(repo, ctx, message.path);
+          break;
+        }
       }
     },
   };

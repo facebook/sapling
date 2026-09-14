@@ -156,6 +156,13 @@ export function File({
       {label: t('Open File'), onClick: () => platform.openFile(file.path)},
     ];
 
+    if (isMarkdownPreviewablePath(file.path) && platform.openPreview != null) {
+      options.push({
+        label: t('Open Preview'),
+        onClick: () => platform.openPreview?.(file.path),
+      });
+    }
+
     if (platform.openContainingFolder != null) {
       options.push({
         label: t('Open Containing Folder'),
@@ -312,6 +319,24 @@ function FileActions({
           </Button>
         </Tooltip>
       ),
+    );
+  }
+
+  if (
+    isMarkdownPreviewablePath(file.path) &&
+    platform.openPreview != null &&
+    file.mode !== ChangedFileMode.Submodule
+  ) {
+    actions.push(
+      <Tooltip title={t('Open markdown preview')} key="open-preview" delayMs={1000}>
+        <Button
+          className="file-show-on-hover"
+          icon
+          data-testid="file-open-preview-button"
+          onClick={() => platform.openPreview?.(file.path)}>
+          <Icon icon="open-preview" />
+        </Button>
+      </Tooltip>,
     );
   }
 
@@ -646,6 +671,20 @@ function PartialSelectionPanel({file}: {file: UIChangedFile}) {
         mode="unified"
       />
     </div>
+  );
+}
+
+/**
+ * Whether a file path looks like markdown that VS Code can render in a
+ * preview tab. Used to show an inline preview button in the file list.
+ */
+export function isMarkdownPreviewablePath(path: string): boolean {
+  const lower = path.toLowerCase();
+  return (
+    lower.endsWith('.md') ||
+    lower.endsWith('.markdown') ||
+    lower.endsWith('.mdown') ||
+    lower.endsWith('.mkd')
   );
 }
 

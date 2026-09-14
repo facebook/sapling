@@ -777,6 +777,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/revealInExplorerView'; path: RepoRelativePath}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openFileAtRevset'; path: RepoRelativePath; revset: string}
+  | {type: 'platform/openPreview'; path: RepoRelativePath}
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/openInNewWindow'; path: AbsolutePath}
   | {type: 'platform/openFolder'; path: AbsolutePath}

@@ -77,6 +77,8 @@ const vscodeWebviewPlatform: Platform = {
     window.clientToServerAPI?.postMessage({type: 'platform/openDiff', path, comparison}),
   openFileAtRevset: (path: RepoRelativePath, revset: string) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openFileAtRevset', path, revset}),
+  openPreview: (path: RepoRelativePath) =>
+    window.clientToServerAPI?.postMessage({type: 'platform/openPreview', path}),
   revealInFileExplorer: (path: RepoRelativePath) =>
     window.clientToServerAPI?.postMessage({type: 'platform/revealInFileExplorer', path}),
   revealInExplorerView: (path: RepoRelativePath) =>

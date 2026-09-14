@@ -121,6 +121,24 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           });
           break;
         }
+        case 'platform/openPreview': {
+          if (repo == null) {
+            break;
+          }
+          const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
+          const uri = vscode.Uri.file(path);
+          // Open markdown preview. Use side-by-side when ISL is configured to
+          // open files beside the current editor, otherwise open in place.
+          // Fall back to opening the raw file if the markdown preview command
+          // is unavailable (e.g. markdown extension disabled).
+          const command = shouldOpenBeside()
+            ? 'markdown.showPreviewToSide'
+            : 'markdown.showPreview';
+          vscode.commands
+            .executeCommand(command, uri)
+            .then(undefined, () => openFileInRepo(repo, message.path, undefined, undefined));
+          break;
+        }
         case 'platform/revealInFileExplorer': {
           if (repo != null) {
             const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);

@@ -331,6 +331,53 @@ describe('Changed Files', () => {
       expect(within(row).queryByTestId('file-open-file-button')).not.toBeInTheDocument();
       expect(within(row).queryByTestId('file-open-diff-button')).not.toBeInTheDocument();
     });
+
+    describe('markdown preview button', () => {
+      afterEach(() => {
+        // openPreview is only defined by platforms with a preview (e.g. vscode); clean up our stub.
+        platform.openPreview = undefined;
+      });
+
+      function showMarkdownFile() {
+        act(() => {
+          simulateUncommittedChangedFiles({
+            value: [
+              {path: 'file1.js', status: 'M'},
+              {path: 'NOTES.md', status: 'M'},
+            ],
+          });
+        });
+      }
+
+      it('shows a preview button for markdown files when the platform supports it', () => {
+        platform.openPreview = jest.fn();
+        showMarkdownFile();
+        const row = screen.getByTestId('changed-file-NOTES.md');
+        expect(within(row).getByTestId('file-open-preview-button')).toBeInTheDocument();
+      });
+
+      it('clicking the preview button opens the preview', () => {
+        const openPreview = jest.fn();
+        platform.openPreview = openPreview;
+        showMarkdownFile();
+        const row = screen.getByTestId('changed-file-NOTES.md');
+        fireEvent.click(within(row).getByTestId('file-open-preview-button'));
+        expect(openPreview).toHaveBeenCalledWith('NOTES.md');
+      });
+
+      it('does not show a preview button for non-markdown files', () => {
+        platform.openPreview = jest.fn();
+        showMarkdownFile();
+        const row = screen.getByTestId('changed-file-file1.js');
+        expect(within(row).queryByTestId('file-open-preview-button')).not.toBeInTheDocument();
+      });
+
+      it('does not show a preview button when the platform does not support it', () => {
+        showMarkdownFile();
+        const row = screen.getByTestId('changed-file-NOTES.md');
+        expect(within(row).queryByTestId('file-open-preview-button')).not.toBeInTheDocument();
+      });
+    });
   });
 
   describe('truncated list of changed files', () => {

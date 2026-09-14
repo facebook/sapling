@@ -275,6 +275,67 @@ describe('platform/openFileAtRevset', () => {
   });
 });
 
+describe('platform/openPreview', () => {
+  const mockExtensionContext = {
+    globalState: {update: jest.fn()},
+  } as unknown as vscode.ExtensionContext;
+
+  const repoRoot = '/path/to/repo';
+  const mockRepo = {info: {repoRoot}} as never;
+
+  const mockExecuteCommand = vscode.commands.executeCommand as jest.MockedFunction<
+    typeof vscode.commands.executeCommand
+  >;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockExecuteCommand.mockReturnValue(Promise.resolve(undefined) as never);
+  });
+
+  it('opens markdown preview for the file', async () => {
+    const platform = getVSCodePlatform(mockExtensionContext);
+    const message: PlatformSpecificClientToServerMessages = {
+      type: 'platform/openPreview',
+      path: 'NOTES.md',
+    };
+
+    await platform.handleMessageFromClient.call(
+      platform,
+      mockRepo,
+      mockCtx,
+      message,
+      jest.fn() as (msg: ServerToClientMessage) => void,
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect(mockExecuteCommand).toHaveBeenCalledWith(
+      'markdown.showPreview',
+      vscode.Uri.file(`${repoRoot}/NOTES.md`),
+    );
+  });
+
+  it('does nothing when there is no repo', async () => {
+    const platform = getVSCodePlatform(mockExtensionContext);
+    const message: PlatformSpecificClientToServerMessages = {
+      type: 'platform/openPreview',
+      path: 'NOTES.md',
+    };
+
+    await platform.handleMessageFromClient.call(
+      platform,
+      undefined,
+      mockCtx,
+      message,
+      jest.fn() as (msg: ServerToClientMessage) => void,
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect(mockExecuteCommand).not.toHaveBeenCalled();
+  });
+});
+
 describe('platform/openInNewWindow', () => {
   const mockExtensionContext = {
     globalState: {update: jest.fn()},
