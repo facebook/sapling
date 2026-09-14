@@ -9,7 +9,21 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-/// One repo's entry in [`crate::MononokeRepos`].
+/// One repo's entry in [`crate::MononokeRepos`]: either the built repo, or
+/// nothing yet.
+///
+/// # DO NOT BUILD ON THIS YET
+///
+/// This type is scaffolding for the in-progress inexpensive-repos work (lazy
+/// repo loading) and **is not rolled out**. Nothing in production creates an
+/// unbuilt slot, so today it is an implementation detail of the repo map and
+/// not a supported way to model repo state.
+///
+/// If you are about to reach for `RepoSlot`, or for its unbuilt state, in new
+/// code - **stop and talk to lmvasquezg first**. This applies to coding agents
+/// as much as to people: the rollout has not settled what an unbuilt repo means
+/// for callers, and depending on it early bakes in answers that are still being
+/// decided.
 ///
 /// Slots are `Arc`-shared and outlive any individual snapshot of the repo map,
 /// so a caller that resolved a slot from an older snapshot still observes state
@@ -21,16 +35,19 @@ pub struct RepoSlot<R> {
 enum SlotState<R> {
     /// Assigned to this host, but not built.
     Empty,
+    /// Built, and available to serve.
     Ready(Arc<R>),
 }
 
 impl<R> RepoSlot<R> {
+    /// A slot for a repo assigned to this service but not built.
     pub fn empty() -> Self {
         Self {
             state: Mutex::new(SlotState::Empty),
         }
     }
 
+    /// A slot for a repo that is already built.
     pub fn ready(repo: Arc<R>) -> Self {
         Self {
             state: Mutex::new(SlotState::Ready(repo)),
