@@ -43,13 +43,13 @@ The shelf changes only owned. Its new parent changes an unrelated file.
   $ sl goto -q $REMOTE_UNRELATED
   $ setconfig test-revert.denied=unrelated
 
-FIXME: unrelated parent files must not prevent restoring the shelf.
+Unrelated parent files must not prevent restoring the shelf.
 
   $ sl unshelve -q --keep --name feedback
-  [255]
   $ cat owned
-  base
+  edited
   $ sl status
+  M owned
   $ test -f .sl/shelved/feedback.patch
 
 A failure inside revert must remain visible.

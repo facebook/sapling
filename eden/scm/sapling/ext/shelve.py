@@ -679,9 +679,11 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
     dirstate."""
     with ui.configoverride({("ui", "quiet"): True}):
         hg.update(repo, wctx.node())
-        files = []
-        files.extend(shelvectx.files())
-        files.extend(shelvectx.p1().files())
+        # wctx is the original parent; shelvectx includes any pending changes.
+        status = wctx.status(shelvectx)
+        files = status.modified + status.added + status.removed
+        if not files:
+            return
 
         # revert will overwrite unknown files, so move them out of the way
         for file in repo.status(unknown=True).unknown:
