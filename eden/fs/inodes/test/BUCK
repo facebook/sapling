@@ -20,6 +20,7 @@ cpp_unittest(
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/journal:journal",
+        "//eden/fs/model/git:gitignore",
         "//eden/fs/prjfs:prjfs",
         "//eden/fs/service:pretty_printers",
         "//eden/fs/service:thrift-cpp2-types",

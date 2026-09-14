@@ -32,10 +32,15 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
+#ifdef _WIN32
 #include "eden/fs/prjfs/PrjfsChannel.h"
+#endif
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -406,6 +411,88 @@ void runRemoveFileTests(folly::StringPiece path, bool useCoroutines) {
     SCOPED_TRACE(fmt::format("remove {} load type {}", path, loadType));
     testRemoveFile(path, loadType, useCoroutines);
   }
+}
+
+// A file renamed within a directory keeps its object id. Checkout must not
+// dematerialize the directory to a tree that holds that object under the old
+// name: the directory would then claim to equal the tree, hiding the rename
+// from status and from later checkouts.
+TEST_P(CheckoutTest, renamedFileKeepsDirectoryMaterialized) {
+  FakeTreeBuilder builder1;
+  builder1.setFile("d/keep.txt", "k\n");
+  builder1.setFile("d/x.txt", "same\n");
+  TestMount testMount{builder1};
+  applyParam(testMount);
+
+  // Commit 2 changes the directory so checkout has to walk it.
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("d/keep.txt", "k2\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  testMount.getBackingStore()->putCommit(RootId{"2"}, builder2)->setReady();
+
+  auto dir = testMount.getTreeInode("d");
+  dir->rename(
+         "x.txt"_pc,
+         dir,
+         "y.txt"_pc,
+         InvalidationRequired::No,
+         ObjectFetchContext::getNullContext())
+      .get();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
+
+  EXPECT_EQ("k2\n", testMount.readFile("d/keep.txt"));
+  EXPECT_TRUE(testMount.hasFileAt("d/y.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("d/x.txt"));
+
+  ScmStatusDiffCallback callback;
+  DiffContext diffContext{
+      &callback,
+      folly::CancellationToken{},
+      ObjectFetchContext::getNullContext(),
+      /*listIgnored=*/false,
+      kPathMapDefaultCaseSensitive,
+      testMount.getEdenMount()->getObjectStore(),
+      std::make_unique<TopLevelIgnores>("", "")};
+  auto rootTree =
+      testMount.getEdenMount()
+          ->getObjectStore()
+          ->getRootTree(RootId{"2"}, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(executor);
+  testMount.drainServerExecutor();
+  std::vector<std::shared_ptr<const Tree>> trees{
+      std::move(rootTree).get().tree};
+  auto diffFuture = testMount.getRootInode()
+                        ->diff(
+                            &diffContext,
+                            RelativePathPiece{},
+                            std::move(trees),
+                            diffContext.getToplevelIgnore(),
+                            false)
+                        .semi()
+                        .via(executor);
+  testMount.drainServerExecutor();
+  std::move(diffFuture).get(0ms);
+  auto status = callback.extractStatus();
+
+  // FIXME: the directory only has unmaterialized entries whose object ids
+  // match commit 2's tree position by position, so it is dematerialized to
+  // that tree even though the names differ, and status no longer sees the
+  // rename.
+  EXPECT_FALSE(dir->isMaterialized());
+  EXPECT_THAT(*status.entries(), UnorderedElementsAre());
 }
 
 TEST_P(CheckoutTest, removeFile) {
