@@ -265,8 +265,14 @@ class TestMount {
    * this will prevent it from being destroyed.  This may result in an error
    * trying to create the new EdenMount if the old mount object still exists
    * and is still holding a lock on the overlay or other data structures.
+   *
+   * When simulateUncleanShutdown is true, the overlay's saved next inode
+   * number is deleted after the old mount is destroyed, so the new mount
+   * takes the same fsck recovery path as a mount whose daemon crashed. The
+   * Sqlite catalog used on Windows keeps no such file and reconciles the
+   * overlay with the disk on every start, so the option does nothing there.
    */
-  void remount();
+  void remount(bool simulateUncleanShutdown = false);
 
 #ifndef _WIN32
   /**

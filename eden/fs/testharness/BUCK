@@ -34,6 +34,7 @@ cpp_library(
         "//eden/fs/telemetry:scribe_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:eden_error",
+        "//folly:exception",
         "//folly:file_util",
         "//folly/io:iobuf",
         "//folly/logging:logging",
@@ -197,7 +198,7 @@ cpp_library(
         "//folly/ssl:openssl_hash",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest_prod_headers",
         ":stored_object",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",

@@ -7,6 +7,7 @@
 
 #include "eden/fs/testharness/TestMount.h"
 
+#include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/IOBuf.h>
@@ -393,9 +394,10 @@ void TestMount::updateEdenConfig(
       testConfigSource_, serverState_->getReloadableConfig(), values);
 }
 
-void TestMount::remount() {
+void TestMount::remount(bool simulateUncleanShutdown) {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
+  auto overlayPath = config->getOverlayPath();
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
       backingStore_,
@@ -419,6 +421,16 @@ void TestMount::remount() {
   EXPECT_EQ(0, weakMount.lock().use_count())
       << "All references to EdenMount should be released before calling "
          "remount()";
+
+  if (simulateUncleanShutdown) {
+#ifndef _WIN32
+    auto nextInodeNumberPath = overlayPath + "next-inode-number"_pc;
+    folly::checkUnixError(
+        unlink(nextInodeNumberPath.c_str()),
+        "removing ",
+        nextInodeNumberPath.view());
+#endif
+  }
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
