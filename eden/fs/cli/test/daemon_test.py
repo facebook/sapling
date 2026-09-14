@@ -304,6 +304,29 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
             instance.state_dir,
             ["/usr/local/bin/edenfs", "--edenfs", "--takeover"],
             {"MALLOC_CONF": "narenas:16"},
+            ["/usr/local/bin/edenfs", "--edenfs"],
+        )
+
+    def test_start_records_a_restart_command_without_sudo_or_takeover(self) -> None:
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            _exit_code, write_args, _call = self._start_edenfs_service(
+                instance,
+                prepare_privileges=lambda _binary, cmd, env, _privhelper: (
+                    ["/usr/bin/sudo", "MALLOC_CONF=narenas:16"] + cmd,
+                    env,
+                ),
+            )
+
+        # The restart command was snapshotted before sudo and --takeover were
+        # added, because the privhelper replays it after dropping privileges.
+        launch_cmd = write_args.call_args.args[1]
+        self.assertEqual(launch_cmd[0], "/usr/bin/sudo")
+        self.assertIn("--takeover", launch_cmd)
+        self.assertEqual(
+            write_args.call_args.args[3], ["/usr/local/bin/edenfs", "--edenfs"]
         )
 
     def test_start_skips_the_args_file_on_windows(self) -> None:

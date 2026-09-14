@@ -395,7 +395,10 @@ def _daemon_args_file(instance: EdenInstance) -> Path:
 
 
 def _try_write_daemon_args_file(
-    instance: EdenInstance, cmd: List[str], eden_env: Dict[str, str]
+    instance: EdenInstance,
+    cmd: List[str],
+    eden_env: Dict[str, str],
+    restart_cmd: Optional[List[str]] = None,
 ) -> Optional[str]:
     """Record the daemon command and environment in the state directory.
 
@@ -403,7 +406,9 @@ def _try_write_daemon_args_file(
     """
     try:
         instance.state_dir.mkdir(parents=True, exist_ok=True)
-        daemon_util.write_daemon_args_file(instance.state_dir, cmd, eden_env)
+        daemon_util.write_daemon_args_file(
+            instance.state_dir, cmd, eden_env, restart_cmd
+        )
     except OSError as e:
         with contextlib.suppress(OSError):
             _daemon_args_file(instance).unlink(missing_ok=True)
@@ -444,10 +449,17 @@ def _start_edenfs_service(
     daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
     cmd, privhelper = get_edenfs_cmd(instance, daemon_binary)
 
+    # Snapshot the relaunch command before `--takeover` and the sudo wrapper,
+    # neither of which may be replayed. Must stay above
+    # `prepare_edenfs_privileges`.
+    restart_cmd = list(cmd)
+
     if takeover:
         cmd.append("--takeover")
     if edenfs_args:
+        # A restarted daemon should behave like the one it replaces.
         cmd.extend(edenfs_args)
+        restart_cmd.extend(edenfs_args)
 
     eden_env = get_edenfs_environment(instance, preserved_env)
     systemd_env = os.environ.copy()
@@ -469,7 +481,7 @@ def _start_edenfs_service(
     )
 
     args_file_error = (
-        _try_write_daemon_args_file(instance, cmd, eden_env)
+        _try_write_daemon_args_file(instance, cmd, eden_env, restart_cmd)
         if write_args_file
         else None
     )
