@@ -40,8 +40,31 @@ pub struct ApfsContainer {
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ApfsVolume {
+    #[serde(rename = "APFSVolumeUUID")]
+    pub volume_uuid: String,
     pub device_identifier: String,
     pub name: Option<String>,
+}
+
+/// An EdenFS-managed APFS volume resolved to a stable volume identity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ManagedVolume {
+    volume_uuid: String,
+    volume_name: String,
+}
+
+impl ManagedVolume {
+    /// Return the exact APFS volume name.
+    pub fn name(&self) -> &str {
+        &self.volume_name
+    }
+}
+
+/// The result of deleting a previously resolved managed volume.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DeleteManagedVolumeOutcome {
+    Deleted,
+    NotFound,
 }
 
 impl ApfsVolume {
@@ -290,6 +313,78 @@ impl<T: SystemCommand> ApfsUtil<T> {
         })
     }
 
+    /// Resolve one exact EdenFS-managed APFS volume name.
+    pub fn resolve_managed_volume(&self, volume_name: &str) -> Result<Option<ManagedVolume>> {
+        if !volume_name.starts_with("edenfs:") {
+            bail!("Refusing to resolve unmanaged APFS volume {volume_name}");
+        }
+
+        let containers = self.list_containers()?;
+        resolve_managed_volume(&containers, volume_name)
+    }
+
+    /// Canonicalize a mount point and resolve its exact managed APFS volume.
+    pub fn resolve_managed_volume_for_mount_point(
+        &self,
+        mount_point: impl AsRef<Path>,
+    ) -> Result<Option<ManagedVolume>> {
+        let mount_point = mount_point.as_ref().to_str().ok_or_else(|| {
+            anyhow!(
+                "path {} isn't unicode on macOS",
+                mount_point.as_ref().display()
+            )
+        })?;
+        let canonical_mount_point = canonicalize_mount_point_path(mount_point)?;
+        let volume_name = encode_mount_point_as_volume_name(canonical_mount_point);
+        self.resolve_managed_volume(&volume_name)
+    }
+
+    /// Delete a previously resolved managed APFS volume.
+    pub fn delete_managed_volume(
+        &self,
+        volume: &ManagedVolume,
+    ) -> Result<DeleteManagedVolumeOutcome> {
+        // Re-resolve at deletion time: if the name now maps to a different volume,
+        // the volume was replaced after it was resolved and must not be deleted.
+        let containers = self.list_containers()?;
+        let Some(current_volume) = resolve_managed_volume(&containers, volume.name())? else {
+            return Ok(DeleteManagedVolumeOutcome::NotFound);
+        };
+
+        if current_volume.volume_uuid != volume.volume_uuid {
+            bail!(
+                "APFS volume {} changed volume UUID from {} to {}",
+                volume.name(),
+                volume.volume_uuid,
+                current_volume.volume_uuid
+            );
+        }
+
+        let output =
+            self.diskutil
+                .run_unprivileged(&["apfs", "deleteVolume", &volume.volume_uuid])?;
+        if !output.status.success() {
+            let containers = self
+                .list_containers()
+                .context("checking APFS volume after delete failure")?;
+            let volume_still_exists = containers
+                .iter()
+                .flat_map(|container| &container.volumes)
+                .any(|current_volume| current_volume.volume_uuid == volume.volume_uuid);
+            if !volume_still_exists {
+                return Ok(DeleteManagedVolumeOutcome::Deleted);
+            }
+
+            bail!(
+                "failed to execute diskutil deleteVolume {}: {:?}",
+                volume.volume_uuid,
+                output
+            );
+        }
+
+        Ok(DeleteManagedVolumeOutcome::Deleted)
+    }
+
     pub fn delete_volume(&self, volume_name: &str) -> Result<()> {
         let containers = self.list_containers()?;
         if let Some(volume) = find_existing_volume(&containers, volume_name) {
@@ -374,6 +469,28 @@ pub fn find_existing_volume<'a>(
     None
 }
 
+fn resolve_managed_volume(
+    containers: &[ApfsContainer],
+    volume_name: &str,
+) -> Result<Option<ManagedVolume>> {
+    let mut matches = containers
+        .iter()
+        .flat_map(|container| &container.volumes)
+        .filter(|volume| volume.name.as_deref() == Some(volume_name));
+    let Some(volume) = matches.next() else {
+        return Ok(None);
+    };
+
+    if matches.next().is_some() {
+        bail!("Found multiple APFS volumes named {volume_name}");
+    }
+
+    Ok(Some(ManagedVolume {
+        volume_uuid: volume.volume_uuid.clone(),
+        volume_name: volume_name.to_owned(),
+    }))
+}
+
 /// Prepare a command to be run with no special privs.
 /// We're usually installed setuid root so we already have privs; the
 /// command invocation will restore the real uid/gid of the caller
@@ -443,7 +560,9 @@ pub fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> Stri
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::collections::VecDeque;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
@@ -708,30 +827,37 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
                 container_reference: "disk1".to_owned(),
                 volumes: vec![
                     ApfsVolume {
+                        volume_uuid: "9AA7F3A4-A615-4F8D-91E3-F5C86D988D71".to_owned(),
                         device_identifier: "disk1s1".to_owned(),
                         name: Some("Macintosh HD".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "A91FD4EA-684D-4122-9ACD-27E1465E99F6".to_owned(),
                         device_identifier: "disk1s2".to_owned(),
                         name: Some("Preboot".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "1C94FFC8-7649-470E-952D-16672E135C43".to_owned(),
                         device_identifier: "disk1s3".to_owned(),
                         name: Some("Recovery".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "6BC72964-0CA0-48AE-AAE1-7E9BFA8B2005".to_owned(),
                         device_identifier: "disk1s4".to_owned(),
                         name: Some("VM".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "6C7EEDAD-385B-49AB-857B-AD15D98D13ED".to_owned(),
                         device_identifier: "disk1s5".to_owned(),
                         name: Some("edenfs:/Users/wez/fbsource/buck-out".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "0DAB1407-0283-408E-88EE-CD41CE9E7BCA".to_owned(),
                         device_identifier: "disk1s6".to_owned(),
                         name: Some("edenfs:/Users/wez/fbsource/fbcode/buck-out".to_owned()),
                     },
                     ApfsVolume {
+                        volume_uuid: "253A48CA-074E-496E-9A62-9F64831D7A65".to_owned(),
                         device_identifier: "disk1s7".to_owned(),
                         name: Some("edenfs:/Users/wez/fbsource/fbobjc/buck-out".to_owned()),
                     },
@@ -740,28 +866,35 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
         );
     }
 
-    struct FakeSystemCommand<'a> {
+    struct FakeSystemCommand {
         default_output: Output,
-        output: HashMap<&'a [&'a str], Output>,
+        output: RefCell<HashMap<Vec<String>, VecDeque<Output>>>,
     }
 
-    impl<'a> FakeSystemCommand<'a> {
-        fn new() -> FakeSystemCommand<'a> {
+    impl FakeSystemCommand {
+        fn new() -> FakeSystemCommand {
             FakeSystemCommand {
                 default_output: Output {
                     status: ExitStatus::from_raw(1),
                     stdout: "".into(),
                     stderr: "Unknown command".into(),
                 },
-                output: HashMap::new(),
+                output: RefCell::new(HashMap::new()),
             }
         }
 
-        fn set_output(&mut self, args: &'a [&'a str], output: Output) {
-            self.output.insert(args, output);
+        fn set_output(&mut self, args: &[&str], output: Output) {
+            self.set_outputs(args, [output]);
         }
 
-        fn set_stdout(&mut self, args: &'a [&'a str], stdout: &str) {
+        fn set_outputs(&mut self, args: &[&str], outputs: impl IntoIterator<Item = Output>) {
+            self.output.get_mut().insert(
+                args.iter().map(|arg| (*arg).to_owned()).collect(),
+                outputs.into_iter().collect(),
+            );
+        }
+
+        fn set_stdout(&mut self, args: &[&str], stdout: &str) {
             self.set_output(
                 args,
                 Output {
@@ -773,12 +906,21 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
         }
     }
 
-    impl SystemCommand for FakeSystemCommand<'_> {
+    impl SystemCommand for FakeSystemCommand {
         fn run_unprivileged(&self, args: &[&str]) -> Result<Output, std::io::Error> {
-            Ok(self
-                .output
-                .get(args)
-                .unwrap_or(&self.default_output)
+            let mut outputs = self.output.borrow_mut();
+            let args = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
+            let Some(outputs) = outputs.get_mut(&args) else {
+                return Ok(self.default_output.clone());
+            };
+            if outputs.len() > 1 {
+                return Ok(outputs
+                    .pop_front()
+                    .expect("multiple fake outputs should have a first item"));
+            }
+            Ok(outputs
+                .front()
+                .expect("fake command output sequence should not be empty")
                 .clone())
         }
     }
@@ -1069,6 +1211,264 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
                 "edenfs:b6e8f7353dea3aef8f3c717acb1b590f1fefe7b24bcc3dd3d840458eafc0a0a4"
                     .to_string(),
             ])
+        );
+    }
+
+    fn volume_list_plist(volumes: &[(&str, &str, &str)]) -> String {
+        let volumes = volumes
+            .iter()
+            .map(|(device, name, volume_uuid)| {
+                format!(
+                    "<dict><key>APFSVolumeUUID</key><string>{volume_uuid}</string>\
+                     <key>DeviceIdentifier</key><string>{device}</string>\
+                     <key>Name</key><string>{name}</string></dict>"
+                )
+            })
+            .collect::<String>();
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+             <plist version=\"1.0\"><dict><key>Containers</key><array><dict>\
+             <key>ContainerReference</key><string>disk3</string>\
+             <key>Volumes</key><array>{volumes}</array></dict></array></dict></plist>"
+        )
+    }
+
+    fn fake_apfs_util<'a>(
+        volumes: &[(&str, &str, &str)],
+        command_outputs: impl IntoIterator<Item = (&'a [&'a str], Output)>,
+    ) -> ApfsUtil<FakeSystemCommand> {
+        let mut diskutil = FakeSystemCommand::new();
+        diskutil.set_stdout(&["apfs", "list", "-plist"], &volume_list_plist(volumes));
+        for (args, output) in command_outputs {
+            diskutil.set_output(args, output);
+        }
+        ApfsUtil {
+            diskutil,
+            mount: FakeSystemCommand::new(),
+        }
+    }
+
+    fn successful_output() -> Output {
+        Output {
+            status: ExitStatus::from_raw(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        }
+    }
+
+    fn successful_stdout(stdout: &str) -> Output {
+        Output {
+            status: ExitStatus::from_raw(0),
+            stdout: stdout.into(),
+            stderr: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn resolve_managed_volume_is_exact() {
+        let apfs = fake_apfs_util(
+            &[
+                (
+                    "disk3s1",
+                    "Macintosh HD",
+                    "00000000-0000-0000-0000-000000000001",
+                ),
+                (
+                    "disk3s2",
+                    "edenfs:/checkout/buck-out-extra",
+                    "00000000-0000-0000-0000-000000000002",
+                ),
+            ],
+            [],
+        );
+
+        assert_eq!(
+            apfs.resolve_managed_volume("edenfs:/checkout/buck-out")
+                .expect("volume resolution should succeed"),
+            None
+        );
+        assert!(
+            apfs.resolve_managed_volume("Macintosh HD").is_err(),
+            "unmanaged volumes must be rejected"
+        );
+    }
+
+    #[test]
+    fn resolve_managed_volume_rejects_duplicate_names() {
+        let apfs = fake_apfs_util(
+            &[
+                (
+                    "disk3s1",
+                    "edenfs:/checkout/buck-out",
+                    "00000000-0000-0000-0000-000000000001",
+                ),
+                (
+                    "disk3s2",
+                    "edenfs:/checkout/buck-out",
+                    "00000000-0000-0000-0000-000000000002",
+                ),
+            ],
+            [],
+        );
+
+        let error = apfs
+            .resolve_managed_volume("edenfs:/checkout/buck-out")
+            .expect_err("duplicate names must be rejected");
+        assert!(
+            error.to_string().contains("multiple APFS volumes"),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn resolve_managed_volume_canonicalizes_mount_point() {
+        let temp_dir = tempfile::tempdir().expect("temporary directory should be created");
+        let canonical_mount = temp_dir.path().join("canonical");
+        let mount_alias = temp_dir.path().join("alias");
+        std::fs::create_dir(&canonical_mount).expect("mount point should be created");
+        std::os::unix::fs::symlink(&canonical_mount, &mount_alias)
+            .expect("mount point alias should be created");
+        let canonical_mount =
+            std::fs::canonicalize(&canonical_mount).expect("mount point should be canonicalized");
+        let volume_name = encode_mount_point_as_volume_name(&canonical_mount);
+        let apfs = fake_apfs_util(
+            &[(
+                "disk3s1",
+                &volume_name,
+                "00000000-0000-0000-0000-000000000001",
+            )],
+            [],
+        );
+
+        let volume = apfs
+            .resolve_managed_volume_for_mount_point(&mount_alias)
+            .expect("volume resolution should succeed")
+            .expect("canonical volume should be found");
+        assert_eq!(volume.name(), volume_name);
+    }
+
+    #[test]
+    fn delete_managed_volume_returns_deleted() {
+        let volume_uuid = "00000000-0000-0000-0000-000000000002";
+        let delete_args = ["apfs", "deleteVolume", volume_uuid];
+        let apfs = fake_apfs_util(
+            &[
+                (
+                    "disk3s1",
+                    "Macintosh HD",
+                    "00000000-0000-0000-0000-000000000001",
+                ),
+                ("disk3s2", "edenfs:/checkout/buck-out", volume_uuid),
+                (
+                    "disk3s3",
+                    "edenfs:/checkout/buck-out-extra",
+                    "00000000-0000-0000-0000-000000000003",
+                ),
+            ],
+            [(&delete_args[..], successful_output())],
+        );
+        let volume = apfs
+            .resolve_managed_volume("edenfs:/checkout/buck-out")
+            .expect("volume resolution should succeed")
+            .expect("managed volume should exist");
+
+        assert_eq!(
+            apfs.delete_managed_volume(&volume)
+                .expect("volume deletion should succeed"),
+            DeleteManagedVolumeOutcome::Deleted
+        );
+    }
+
+    #[test]
+    fn delete_managed_volume_returns_not_found() {
+        let apfs = fake_apfs_util(
+            &[(
+                "disk3s1",
+                "edenfs:/unrelated",
+                "00000000-0000-0000-0000-000000000001",
+            )],
+            [],
+        );
+        let volume = ManagedVolume {
+            volume_uuid: "00000000-0000-0000-0000-000000000002".to_owned(),
+            volume_name: "edenfs:/checkout/buck-out".to_owned(),
+        };
+
+        assert_eq!(
+            apfs.delete_managed_volume(&volume)
+                .expect("missing volume should be a typed outcome"),
+            DeleteManagedVolumeOutcome::NotFound
+        );
+    }
+
+    #[test]
+    fn delete_managed_volume_rejects_replaced_volume() {
+        let old_uuid = "00000000-0000-0000-0000-000000000001";
+        let new_uuid = "00000000-0000-0000-0000-000000000002";
+        let apfs = fake_apfs_util(&[("disk3s2", "edenfs:/checkout/buck-out", new_uuid)], []);
+        let volume = ManagedVolume {
+            volume_uuid: old_uuid.to_owned(),
+            volume_name: "edenfs:/checkout/buck-out".to_owned(),
+        };
+
+        let error = apfs
+            .delete_managed_volume(&volume)
+            .expect_err("a replacement volume must not be deleted");
+        assert!(
+            error.to_string().contains(&format!(
+                "changed volume UUID from {old_uuid} to {new_uuid}"
+            )),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn delete_managed_volume_returns_deleted_if_delete_races_with_removal() {
+        let volume_uuid = "00000000-0000-0000-0000-000000000001";
+        let volume = [("disk3s2", "edenfs:/checkout/buck-out", volume_uuid)];
+        let list_args = ["apfs", "list", "-plist"];
+        let mut diskutil = FakeSystemCommand::new();
+        diskutil.set_outputs(
+            &list_args,
+            [
+                successful_stdout(&volume_list_plist(&volume)),
+                successful_stdout(&volume_list_plist(&volume)),
+                successful_stdout(&volume_list_plist(&[])),
+            ],
+        );
+        let apfs = ApfsUtil {
+            diskutil,
+            mount: FakeSystemCommand::new(),
+        };
+        let volume = apfs
+            .resolve_managed_volume("edenfs:/checkout/buck-out")
+            .expect("volume resolution should succeed")
+            .expect("managed volume should exist");
+
+        assert_eq!(
+            apfs.delete_managed_volume(&volume)
+                .expect("concurrent removal should be a typed outcome"),
+            DeleteManagedVolumeOutcome::Deleted
+        );
+    }
+
+    #[test]
+    fn delete_managed_volume_reports_command_failure() {
+        let volume_uuid = "00000000-0000-0000-0000-000000000001";
+        let apfs = fake_apfs_util(&[("disk3s2", "edenfs:/checkout/buck-out", volume_uuid)], []);
+        let volume = apfs
+            .resolve_managed_volume("edenfs:/checkout/buck-out")
+            .expect("volume resolution should succeed")
+            .expect("managed volume should exist");
+
+        let error = apfs
+            .delete_managed_volume(&volume)
+            .expect_err("diskutil failure should be reported");
+        assert!(
+            error.to_string().contains(&format!(
+                "failed to execute diskutil deleteVolume {volume_uuid}"
+            )),
+            "unexpected error: {error:#}"
         );
     }
 }

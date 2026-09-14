@@ -21,6 +21,7 @@ sha2 = "0.10.6"
 
 [dev-dependencies]
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
+tempfile = "3.27.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 serde = { version = "1.0.229", features = ["derive", "rc"] }
