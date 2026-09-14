@@ -96,9 +96,12 @@ impl<R: Repo + HookManagerRef + 'static> PushrebaseClient for BatchedPushrebaseC
             queues
                 .entry(bookmark.clone())
                 .or_insert_with(|| {
-                    PushrebaseQueue::new(self.batch_ctx.clone(), bookmark.clone(), move || {
-                        resolve_repo()
-                    })
+                    PushrebaseQueue::new(
+                        self.batch_ctx.clone(),
+                        repo.repo_identity().name().to_owned(),
+                        bookmark.clone(),
+                        move || resolve_repo(),
+                    )
                 })
                 .clone()
         };

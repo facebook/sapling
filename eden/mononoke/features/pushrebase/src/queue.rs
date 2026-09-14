@@ -96,13 +96,24 @@ pub struct PushrebaseQueue {
 }
 
 impl PushrebaseQueue {
-    pub fn new<R, F>(batch_ctx: CoreContext, bookmark: BookmarkKey, resolve_repo: F) -> Self
+    pub fn new<R, F>(
+        batch_ctx: CoreContext,
+        repo_name: String,
+        bookmark: BookmarkKey,
+        resolve_repo: F,
+    ) -> Self
     where
         R: PushrebaseQueueRepo + 'static,
         F: Fn() -> Option<Arc<R>> + Send + 'static,
     {
         let (sender, receiver) = mpsc::channel(1000);
-        mononoke::spawn_task(run_queue(batch_ctx, bookmark, resolve_repo, receiver));
+        mononoke::spawn_task(run_queue(
+            batch_ctx,
+            repo_name,
+            bookmark,
+            resolve_repo,
+            receiver,
+        ));
         Self { sender }
     }
 
@@ -232,6 +243,7 @@ fn partition_requests(
 
 async fn run_queue<R, F>(
     batch_ctx: CoreContext,
+    repo_name: String,
     bookmark: BookmarkKey,
     resolve_repo: F,
     mut receiver: mpsc::Receiver<PushrebaseRequest>,
@@ -267,10 +279,12 @@ async fn run_queue<R, F>(
         };
         let max_batch_time = Duration::from_millis(justknobs::get_as::<u64>(
             "scm/mononoke:land_service_batch_time_ms",
-            None,
+            Some(&repo_name),
         ));
-        let max_batch_commits =
-            justknobs::get_as::<usize>("scm/mononoke:land_service_batch_max_commits", None);
+        let max_batch_commits = justknobs::get_as::<usize>(
+            "scm/mononoke:land_service_batch_max_commits",
+            Some(&repo_name),
+        );
         let sleep = tokio::time::sleep(max_batch_time);
         tokio::pin!(sleep);
 
@@ -315,8 +329,10 @@ async fn run_queue<R, F>(
             STATS::batch_size.add_value(batch.requests.len() as i64);
             STATS::batch_total_commits.add_value(batch_total_commits as i64);
 
-            let max_requeue =
-                justknobs::get_as::<usize>("scm/mononoke:land_service_batch_max_requeue", None);
+            let max_requeue = justknobs::get_as::<usize>(
+                "scm/mononoke:land_service_batch_max_requeue",
+                Some(&repo_name),
+            );
             let Some(repo) = resolve_repo() else {
                 service_stats::record(false);
                 let error = SharedError::from(PushrebaseError::Error(anyhow!(
