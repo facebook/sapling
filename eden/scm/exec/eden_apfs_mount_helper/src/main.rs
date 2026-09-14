@@ -11,6 +11,8 @@
 //! It is intended to be used together with edenfs, but may also be
 //! useful for non-virtualized repos as a way to move IO out of a recursive
 //! watch.
+use std::io;
+use std::io::ErrorKind;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::path::PathBuf;
@@ -441,6 +443,36 @@ fn disable_trashcan(mount_point: &str) -> Result<()> {
     Ok(())
 }
 
+fn delete_scratch<T: SystemCommand>(apfs_util: &ApfsUtil<T>, mount_point: &str) -> Result<()> {
+    let volume_name = volume_name_for_delete(mount_point)?;
+    let Some(volume) = apfs_util.resolve_managed_volume(&volume_name)? else {
+        return require_deleted(&volume_name, DeleteManagedVolumeOutcome::NotFound);
+    };
+    let outcome = apfs_util.delete_managed_volume(&volume)?;
+    require_deleted(&volume_name, outcome)
+}
+
+fn volume_name_for_delete(mount_point: &str) -> Result<String> {
+    match canonicalize_mount_point_path(mount_point) {
+        Ok(canonical_mount_point) => Ok(encode_mount_point_as_volume_name(canonical_mount_point)),
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            Ok(encode_mount_point_as_volume_name(mount_point))
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+// The delete subcommand has always failed when the volume is missing; keep that
+// contract even though the library treats `NotFound` as idempotent success.
+fn require_deleted(volume_name: &str, outcome: DeleteManagedVolumeOutcome) -> Result<()> {
+    match outcome {
+        DeleteManagedVolumeOutcome::Deleted => Ok(()),
+        DeleteManagedVolumeOutcome::NotFound => {
+            bail!("Did not find a volume named {volume_name}")
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let opts = Opt::parse();
 
@@ -474,7 +506,7 @@ fn main() -> Result<()> {
             let all_checkouts = all_checkouts
                 .iter()
                 .map(|v| canonicalize_mount_point_path(v.as_ref()))
-                .collect::<Result<Vec<_>>>()?;
+                .collect::<io::Result<Vec<_>>>()?;
 
             let mut stale_volume_names = vec![];
             for vol in apfs_util.list_stale_volumes_unsafe(&all_checkouts)? {
@@ -502,7 +534,7 @@ fn main() -> Result<()> {
         }
 
         Opt::Delete { mount_point } => {
-            apfs_util.delete_scratch(mount_point)?;
+            delete_scratch(&apfs_util, &mount_point)?;
             Ok(())
         }
 
@@ -561,5 +593,57 @@ fn main() -> Result<()> {
                 Ok(())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delete_command_still_accepts_mount_point() {
+        let opts = Opt::try_parse_from(["eden_apfs_mount_helper", "delete", "/checkout/out"])
+            .expect("delete command should parse");
+
+        assert!(
+            matches!(
+                opts,
+                Opt::Delete { mount_point } if mount_point == "/checkout/out"
+            ),
+            "delete command should retain its mount-point argument"
+        );
+    }
+
+    #[test]
+    fn delete_volume_name_does_not_require_mount_point_to_exist() {
+        let temp_dir = tempfile::tempdir().expect("temporary directory should be created");
+        let missing_mount_point = temp_dir.path().join("missing");
+
+        assert_eq!(
+            volume_name_for_delete(
+                missing_mount_point
+                    .to_str()
+                    .expect("temporary path should be unicode"),
+            )
+            .expect("missing mount point should still produce a volume name"),
+            format!("edenfs:{}", missing_mount_point.display())
+        );
+    }
+
+    #[test]
+    fn deleted_outcome_preserves_success() {
+        require_deleted("edenfs:/checkout/out", DeleteManagedVolumeOutcome::Deleted)
+            .expect("deleted volume should preserve CLI success");
+    }
+
+    #[test]
+    fn not_found_outcome_preserves_error() {
+        let error = require_deleted("edenfs:/checkout/out", DeleteManagedVolumeOutcome::NotFound)
+            .expect_err("missing volume should preserve CLI failure");
+
+        assert_eq!(
+            error.to_string(),
+            "Did not find a volume named edenfs:/checkout/out"
+        );
     }
 }

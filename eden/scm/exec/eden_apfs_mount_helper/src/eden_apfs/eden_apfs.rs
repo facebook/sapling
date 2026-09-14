@@ -6,6 +6,8 @@
  */
 
 use std::collections::HashSet;
+use std::io;
+use std::io::ErrorKind;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::path::PathBuf;
@@ -521,12 +523,21 @@ pub fn geteuid() -> u32 {
     unsafe { libc::geteuid() }
 }
 
-pub fn canonicalize_mount_point_path(mount_point: &str) -> Result<String> {
-    let canon = std::fs::canonicalize(mount_point)
-        .with_context(|| format!("canonicalizing path {mount_point}"))?;
+pub fn canonicalize_mount_point_path(mount_point: &str) -> io::Result<String> {
+    let canon = std::fs::canonicalize(mount_point).map_err(|error| {
+        io::Error::new(
+            error.kind(),
+            format!("canonicalizing path {mount_point}: {error}"),
+        )
+    })?;
     canon
         .to_str()
-        .ok_or_else(|| anyhow!("path {} somehow isn't unicode on macOS", canon.display()))
+        .ok_or_else(|| {
+            io::Error::new(
+                ErrorKind::InvalidData,
+                format!("path {} somehow isn't unicode on macOS", canon.display()),
+            )
+        })
         .map(str::to_owned)
 }
 
