@@ -71,28 +71,28 @@ mod tests {
 
     #[mononoke::test]
     fn test_empty_slot_holds_no_repo() {
-        let slot: RepoSlot<i32> = RepoSlot::empty();
+        let repo_slot: RepoSlot<i32> = RepoSlot::empty();
         assert!(
-            slot.loaded().is_none(),
+            repo_slot.loaded().is_none(),
             "an unbuilt slot must look absent to every reader"
         );
     }
 
     #[mononoke::test]
     fn test_ready_slot_hands_out_its_repo() {
-        let slot = RepoSlot::ready(Arc::new(42));
-        assert_eq!(slot.loaded().as_deref(), Some(&42));
+        let repo_slot = RepoSlot::ready(Arc::new(42));
+        assert_eq!(repo_slot.loaded().as_deref(), Some(&42));
     }
 
     #[mononoke::test]
     fn test_reading_a_slot_shares_rather_than_copies() {
         let repo = Arc::new(42);
-        let slot = RepoSlot::ready(Arc::clone(&repo));
+        let repo_slot = RepoSlot::ready(Arc::clone(&repo));
 
         // Two reads must hand back the same allocation, not clones of the repo:
         // a repo is expensive and callers rely on sharing one instance.
-        let first = slot.loaded().expect("slot was built");
-        let second = slot.loaded().expect("slot was built");
+        let first = repo_slot.loaded().expect("slot was built");
+        let second = repo_slot.loaded().expect("slot was built");
         assert!(Arc::ptr_eq(&first, &second));
         assert!(Arc::ptr_eq(&first, &repo));
     }
