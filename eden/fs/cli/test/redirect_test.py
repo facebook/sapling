@@ -63,6 +63,45 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         # redirections backed by symlinks use symlink state detection.
         self.assertEqual(redirs["foo"].state, RedirectionState.NOT_MOUNTED)
 
+    def test_apply_repairs_dangling_darwin_symlink_bind_redirection(self) -> None:
+        temp_dir = self.make_temporary_directory()
+        checkout_path = Path(temp_dir) / "checkout"
+        checkout_path.mkdir()
+        target = Path(temp_dir) / "missing-target"
+        symlink_path = checkout_path / "foo"
+        symlink_path.symlink_to(target)
+
+        instance = MagicMock()
+        instance.get_config_value.return_value = "symlink"
+        checkout = MagicMock()
+        checkout.path = checkout_path
+        checkout.instance = instance
+        redir = Redirection(
+            repo_path=Path("foo"),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.SYMLINK_MISSING,
+        )
+
+        def make_scratch_dir(
+            _checkout: MagicMock, _subdir: Path, *, no_create: bool = False
+        ) -> Path:
+            self.assertFalse(no_create)
+            target.mkdir()
+            return target
+
+        with (
+            patch("eden.fs.cli.redirect.sys.platform", "darwin"),
+            patch(
+                "eden.fs.cli.redirect.make_scratch_dir",
+                side_effect=make_scratch_dir,
+            ),
+        ):
+            redir.apply(checkout)
+
+        self.assertEqual(symlink_path.readlink(), target)
+
     @patch("eden.fs.cli.redirect.Redirection._bind_unmount")
     @patch("eden.fs.cli.redirect.RepoPathDisposition.analyze")
     @patch("eden.fs.cli.redirect.Redirection.expand_repo_path")

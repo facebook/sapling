@@ -216,10 +216,10 @@ class RepoPathDisposition(enum.Enum):
 
     @classmethod
     def analyze(cls, path: Path) -> "RepoPathDisposition":
-        if not path.exists():
-            return cls.DOES_NOT_EXIST
         if path.is_symlink():
             return cls.IS_SYMLINK
+        if not path.exists():
+            return cls.DOES_NOT_EXIST
         if path.is_dir():
             if is_bind_mount(path):
                 return cls.IS_BIND_MOUNT
