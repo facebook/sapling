@@ -22,6 +22,7 @@ context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/conte
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hook_manager = { version = "0.1.0", path = "../../../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../../hooks" }
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }

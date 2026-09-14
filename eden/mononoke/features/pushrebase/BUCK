@@ -142,6 +142,7 @@ rust_library(
             if rust_oss.is_oss_build()
             else [
                 "fbsource//third-party/rust:arc-swap",
+                "//eden/mononoke/common/rust/justknobs_ext:justknobs",
                 "//eden/mononoke/servers/land_service/if:land_service_if-rust",
                 "//eden/mononoke/servers/land_service/if:land_service_if-rust-clients",
                 "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
