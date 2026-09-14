@@ -693,6 +693,57 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
+// FIXME: an entry whose name is not a valid path component makes
+// loadWalDelta throw from the case-aware name comparator as soon as the
+// name is compared with another entry. fsck leaves a WAL it cannot replay
+// in place, so the directory stays unloadable.
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_emptyNameThrows) {
+  const InodeNumber parent{308};
+  std::string bytes = makeOldFormatAddWalFrame("ok", 0100644, 1);
+  bytes += makeOldFormatAddWalFrame("", 0100644, 2);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  EXPECT_THROW(store_->loadWalDelta(parent), PathComponentValidationError);
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_invalidUtf8NameThrows) {
+  const InodeNumber parent{309};
+  std::string bytes = makeOldFormatAddWalFrame("ok", 0100644, 1);
+  bytes += makeOldFormatAddWalFrame("\xff\xfe", 0100644, 2);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  EXPECT_THROW(store_->loadWalDelta(parent), PathComponentNotUtf8);
+}
+
+// FIXME: an ADD carrying a mode with bits outside DirEntry's initial mode
+// mask, or a non-positive inode number, is returned in the delta as-is.
+// Building a DirEntry from it aborts on an XCHECK when the directory is
+// loaded.
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsModeOutsideInitialModeMask) {
+  const InodeNumber parent{310};
+  const int32_t badMode = static_cast<int32_t>(0x0f000000 | 0100644);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(
+      testDir_, parent, makeOldFormatAddWalFrame("bad", badMode, 1)));
+
+  auto result = store_->loadWalDelta(parent);
+  ASSERT_EQ(1u, result.delta.size());
+  EXPECT_EQ(badMode, *result.delta.at("bad").entry.mode());
+  EXPECT_EQ(0u, result.parseErrors);
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsNonPositiveInodeNumber) {
+  const InodeNumber parent{311};
+  std::string bytes = makeOldFormatAddWalFrame("zero", 0100644, 0);
+  bytes += makeOldFormatAddWalFrame("neg", 0100644, -1);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  auto result = store_->loadWalDelta(parent);
+  ASSERT_EQ(2u, result.delta.size());
+  EXPECT_EQ(0, *result.delta.at("zero").entry.inodeNumber());
+  EXPECT_EQ(-1, *result.delta.at("neg").entry.inodeNumber());
+  EXPECT_EQ(0u, result.parseErrors);
+}
+
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
   // Regression for the divergence between replayWal and loadWalDelta on
   // the byte-stream [REMOVE x][MATERIALIZE x]. replayWal applies REMOVE

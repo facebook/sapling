@@ -1726,6 +1726,34 @@ TEST(OverlayLoadWalTest, loadAppliesDelta) {
   bundle.overlay->close();
 }
 
+// FIXME: an ADD whose inode number was never allocated is merged as-is, and
+// the base rewrite at the end of loadOverlayDir aborts on the
+// unallocated-inode XCHECK in visitDirEntries.
+TEST(OverlayLoadWalTest, addWithUnallocatedInodeNumberAborts) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  folly::test::TemporaryDirectory tmp("eden_wal_load_unallocated");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto inoA = bundle.overlay->allocateInodeNumber();
+
+  DirContents base(kPathMapDefaultCaseSensitive);
+  base.emplace("a"_pc, S_IFREG | 0644, inoA);
+  bundle.overlay->saveOverlayDir(parent, base);
+
+  overlay::OverlayEntry bogus;
+  bogus.mode() = S_IFREG | 0644;
+  bogus.inodeNumber() = bundle.overlay->getMaxInodeNumber().get() + 1000;
+  bundle.store->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"bogus"}, &bogus);
+
+  ASSERT_DEATH(bundle.overlay->loadOverlayDir(parent), "unallocated inode");
+
+  bundle.overlay->close();
+}
+
 TEST(OverlayLoadWalTest, collapsedAddRemoveIsApplied) {
   folly::test::TemporaryDirectory tmp("eden_wal_load_collapse");
   auto dir = canonicalPath(tmp.path().string());
