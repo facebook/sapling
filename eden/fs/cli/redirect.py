@@ -168,24 +168,25 @@ def is_valid_windows_symlink(expected_target: Optional[Path], mount_path: Path) 
         raise Exception(errMsg)
 
 
-def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
+def make_scratch_dir(
+    checkout: EdenCheckout, subdir: Path, *, no_create: bool = False
+) -> Path:
     sub = Path("edenfs") / Path("redirections") / subdir
 
     mkscratch = mkscratch_bin()
-
-    return Path(
-        subprocess.check_output(
-            [
-                os.fsdecode(mkscratch),
-                "path",
-                os.fsdecode(checkout.path),
-                "--subdir",
-                os.fsdecode(sub),
-            ]
-        )
-        .decode("utf-8")
-        .strip()
+    args = [os.fsdecode(mkscratch)]
+    if no_create:
+        args.append("--no-create")
+    args.extend(
+        [
+            "path",
+            os.fsdecode(checkout.path),
+            "--subdir",
+            os.fsdecode(sub),
+        ]
     )
+
+    return Path(subprocess.check_output(args).decode("utf-8").strip())
 
 
 class RedirectionState(enum.Enum):
@@ -295,38 +296,28 @@ class Redirection:
         return res
 
     def expand_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
-        if self.type == RedirectionType.BIND:
-            if (
-                sys.platform == "darwin"
-                and determine_bind_redirection_type(checkout.instance) == "apfs"
-            ):
-                # Ideally we'd return information about the backing, but
-                # it is a bit awkward to determine this in all contexts;
-                # prior to creating the volume we don't know anything
-                # about where it will reside.
-                # After creating it, we could potentially parse the APFS
-                # volume information and show something like the backing device.
-                # We also have a transitional case where there is a small
-                # population of users on disk image mounts; we actually don't
-                # have enough knowledge in this code to distinguish between
-                # a disk image and an APFS volume (but we can tell whether
-                # either of those is mounted elsewhere in this file, provided
-                # we have a MountTable to inspect).
-                # Given our small user base at the moment, it doesn't seem
-                # super critical to have this tool handle all these cases;
-                # the same information can be extracted by a human running
-                # `mount` and `diskutil list`.
-                # So we just return the mount point path when we believe
-                # that we can use APFS.
-                return checkout.path / self.repo_path
-            else:
-                return make_scratch_dir(checkout, self.repo_path)
-        elif self.type == RedirectionType.SYMLINK:
-            return make_scratch_dir(checkout, self.repo_path)
-        elif self.type == RedirectionType.UNKNOWN:
+        return self._resolve_target_abspath(checkout, no_create=True)
+
+    def ensure_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
+        return self._resolve_target_abspath(checkout, no_create=False)
+
+    def _resolve_target_abspath(
+        self, checkout: EdenCheckout, *, no_create: bool
+    ) -> Optional[Path]:
+        if self.type == RedirectionType.UNKNOWN:
             return None
-        else:
-            raise Exception(f"expand_target_abspath not impl for {self.type}")
+        if self.type not in (RedirectionType.BIND, RedirectionType.SYMLINK):
+            raise Exception(f"target abspath not impl for {self.type}")
+        if self._uses_checkout_path_as_target(checkout):
+            return checkout.path / self.repo_path
+        return make_scratch_dir(checkout, self.repo_path, no_create=no_create)
+
+    def _uses_checkout_path_as_target(self, checkout: EdenCheckout) -> bool:
+        return (
+            self.type == RedirectionType.BIND
+            and sys.platform == "darwin"
+            and determine_bind_redirection_type(checkout.instance) == "apfs"
+        )
 
     def expand_repo_path(self, checkout: EdenCheckout) -> Path:
         return checkout.path / self.repo_path
@@ -657,11 +648,11 @@ class Redirection:
         if disposition == RepoPathDisposition.IS_FILE:
             raise Exception(f"Cannot redirect {self.repo_path} because it is a file")
         if self.type == RedirectionType.BIND:
-            target = self.expand_target_abspath(checkout)
+            target = self.ensure_target_abspath(checkout)
             assert target is not None
             self._bind_mount(checkout.instance, checkout.path, target)
         elif self.type == RedirectionType.SYMLINK:
-            target = self.expand_target_abspath(checkout)
+            target = self.ensure_target_abspath(checkout)
             assert target is not None
             self._apply_symlink(checkout.path, target)
         else:

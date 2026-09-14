@@ -239,8 +239,7 @@ pub struct Redirection {
     pub redir_type: RedirectionType,
     pub source: String,
     pub state: RedirectionState,
-    /// This field is lazily calculated and it is only populated after
-    /// [`Redirection::update_target_abspath`] is called.
+    /// This field is lazily calculated by [`get_effective_redirs_for_mount`].
     pub target: Option<PathBuf>,
 }
 
@@ -303,7 +302,11 @@ impl Redirection {
         PathBuf::from("edenfs").join("redirections")
     }
 
-    fn make_scratch_dir(checkout: &EdenFsCheckout, subdir: &Path) -> Result<PathBuf> {
+    fn resolve_scratch_dir(
+        checkout: &EdenFsCheckout,
+        subdir: &Path,
+        no_create: bool,
+    ) -> Result<PathBuf> {
         // TODO(zeyi): we can probably embed the logic from mkscratch here directly, without asking the CLI
         let mkscratch = Redirection::mkscratch_bin();
         let checkout_path_str = checkout.path().to_string_lossy().into_owned();
@@ -311,16 +314,25 @@ impl Redirection {
             .join(subdir)
             .to_string_lossy()
             .into_owned();
-        let args = &["path", &checkout_path_str, "--subdir", &subdir];
+        let mut args = Vec::with_capacity(5);
+        if no_create {
+            args.push("--no-create".to_owned());
+        }
+        args.extend([
+            "path".to_owned(),
+            checkout_path_str,
+            "--subdir".to_owned(),
+            subdir,
+        ]);
         let output = Command::new(&mkscratch)
-            .args(args)
+            .args(&args)
             .output()
             .from_err()
             .with_context(|| {
                 format!(
                     "Failed to execute mkscratch cmd: `{} {}`",
                     mkscratch.display(),
-                    shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
+                    shlex::try_join(args.iter().map(String::as_str)).unwrap(), // Unwrap OK, we know the args are valid
                 )
             })?;
         if output.status.success() {
@@ -337,7 +349,8 @@ impl Redirection {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
                 mkscratch.display(),
-                shlex::try_join(args.iter().copied()).unwrap_or("<undecodeable>".to_string()),
+                shlex::try_join(args.iter().map(String::as_str))
+                    .unwrap_or("<undecodeable>".to_string()),
                 String::from_utf8_lossy(&output.stderr),
                 output.status,
             )))
@@ -346,75 +359,48 @@ impl Redirection {
 
     pub fn expand_target_abspath(
         &self,
-        #[cfg_attr(
-            not(target_os = "macos"),
-            expect(
-                unused_variables,
-                reason = "instance is only used on macOS for APFS bind redirection detection"
-            )
-        )]
         instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
     ) -> Result<Option<PathBuf>> {
+        self.resolve_target_abspath(instance, checkout, true)
+    }
+
+    fn ensure_target_abspath(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<Option<PathBuf>> {
+        self.resolve_target_abspath(instance, checkout, false)
+    }
+
+    fn resolve_target_abspath(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+        no_create: bool,
+    ) -> Result<Option<PathBuf>> {
         match self.redir_type {
-            #[cfg(target_os = "macos")]
-            RedirectionType::Bind => {
-                if Self::determine_bind_redirection_type(instance)
-                    == DarwinBindRedirectionType::APFS
-                {
-                    // Ideally we'd return information about the backing, but
-                    // it is a bit awkward to determine this in all contexts;
-                    // prior to creating the volume we don't know anything
-                    // about where it will reside.
-                    // After creating it, we could potentially parse the APFS
-                    // volume information and show something like the backing device.
-                    // We also have a transitional case where there is a small
-                    // population of users on disk image mounts; we actually don't
-                    // have enough knowledge in this code to distinguish between
-                    // a disk image and an APFS volume (but we can tell whether
-                    // either of those is mounted elsewhere in this file, provided
-                    // we have a MountTable to inspect).
-                    // Given our small user base at the moment, it doesn't seem
-                    // super critical to have this tool handle all these cases;
-                    // the same information can be extracted by a human running
-                    // `mount` and `diskutil list`.
-                    // So we just return the mount point path when we believe
-                    // that we can use APFS.
-                    Ok(Some(checkout.path().join(&self.repo_path)))
-                } else {
-                    Ok(Some(Redirection::make_scratch_dir(
-                        checkout,
-                        &self.repo_path,
-                    )?))
-                }
-            }
-            #[cfg(not(target_os = "macos"))]
-            RedirectionType::Bind => Ok(Some(Redirection::make_scratch_dir(
-                checkout,
-                &self.repo_path,
-            )?)),
-            RedirectionType::Symlink => Ok(Some(Redirection::make_scratch_dir(
-                checkout,
-                &self.repo_path,
-            )?)),
             RedirectionType::Unknown => Ok(None),
+            RedirectionType::Bind | RedirectionType::Symlink
+                if self.uses_checkout_path_as_target(instance) =>
+            {
+                Ok(Some(checkout.path().join(&self.repo_path)))
+            }
+            RedirectionType::Bind | RedirectionType::Symlink => Ok(Some(
+                Self::resolve_scratch_dir(checkout, &self.repo_path, no_create)?,
+            )),
         }
     }
 
-    pub fn update_target_abspath(
-        &mut self,
-        instance: &EdenFsInstance,
-        checkout: &EdenFsCheckout,
-    ) -> Result<()> {
-        self.target = self
-            .expand_target_abspath(instance, checkout)
-            .with_context(|| {
-                format!(
-                    "Failed to update target abspath for redirection: {}",
-                    self.repo_path.display()
-                )
-            })?;
-        Ok(())
+    #[cfg(target_os = "macos")]
+    fn uses_checkout_path_as_target(&self, instance: &EdenFsInstance) -> bool {
+        self.redir_type == RedirectionType::Bind
+            && Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::APFS
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn uses_checkout_path_as_target(&self, _instance: &EdenFsInstance) -> bool {
+        false
     }
 
     fn _dmg_file_name(&self, target: &Path) -> PathBuf {
@@ -1037,7 +1023,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
         }
 
         if self.redir_type == RedirectionType::Bind {
-            let target = self.expand_target_abspath(instance, checkout)?;
+            let target = self.ensure_target_abspath(instance, checkout)?;
             match target {
                 Some(t) => {
                     self._bind_mount(instance, &checkout.path(), &t, force)
@@ -1050,7 +1036,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
             }
         } else if self.redir_type == RedirectionType::Symlink {
             let target = self
-                .expand_target_abspath(instance, checkout)
+                .ensure_target_abspath(instance, checkout)
                 .with_context(|| {
                     format!(
                         "Failed to expand abspath for target {} in checkout {}",
@@ -1270,8 +1256,17 @@ pub fn get_effective_redirs_for_mount(
 
     redirections
         .values_mut()
-        .map(|v| v.update_target_abspath(instance, &checkout))
-        .collect::<Result<Vec<()>, _>>()
+        .try_for_each(|redir| -> Result<()> {
+            redir.target = redir
+                .expand_target_abspath(instance, &checkout)
+                .with_context(|| {
+                    format!(
+                        "Failed to expand target abspath for redirection: {}",
+                        redir.repo_path.display()
+                    )
+                })?;
+            Ok(())
+        })
         .with_context(|| anyhow!("failed to expand redirection target path"))?;
 
     Ok(redirections)
