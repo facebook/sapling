@@ -218,6 +218,24 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
     Ok(normalize(&path))
 }
 
+/// Canonicalize a path, falling back to lexical normalization when the path still
+/// exists but cannot be canonicalized.
+///
+/// The fallback returns an absolute path but does not resolve symlinks or junctions.
+pub fn canonicalize_best_effort(path: impl AsRef<Path>) -> io::Result<PathBuf> {
+    let path = path.as_ref();
+    match std::fs::canonicalize(path) {
+        Ok(path) => Ok(path),
+        Err(err) => {
+            let full_path = absolute(path)?;
+            match full_path.try_exists() {
+                Ok(true) => Ok(full_path),
+                _ => Err(err),
+            }
+        }
+    }
+}
+
 /// Normalize path to collapse "..", ".", and duplicate separators. This
 /// function does not access the filesystem, so it can return an
 /// incorrect result if the path contains symlinks.
@@ -1243,6 +1261,26 @@ mod tests {
         // only the extended-length prefix \\?\ should be removed.
         let path = PathBuf::from(r"\\server\share\dir");
         assert_eq!(strip_unc_prefix(path), PathBuf::from(r"\\server\share\dir"));
+    }
+
+    #[test]
+    fn test_canonicalize_best_effort_existing_path() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            canonicalize_best_effort(dir.path()).unwrap(),
+            std::fs::canonicalize(dir.path()).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_canonicalize_best_effort_requires_existing_path() {
+        let missing = tempfile::tempdir().unwrap().path().join("missing");
+        let expected = std::fs::canonicalize(&missing).unwrap_err();
+        let actual = canonicalize_best_effort(&missing).unwrap_err();
+
+        assert_eq!(actual.kind(), expected.kind());
+        assert_eq!(actual.raw_os_error(), expected.raw_os_error());
     }
 
     // --- canonical_path_allow_missing tests ---
