@@ -2577,38 +2577,71 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
     throw InodeError(EPERM, inodePtrFromThis());
   }
 #endif
-  auto contents = lockContentsWrite();
-
-  auto it = contents->entries.find(name);
-  if (it == contents->entries.end()) {
-    throw InodeError(ENOENT, inodePtrFromThis(), name);
+  {
+    // Peek first so a missing or already loaded child does not materialize
+    // this directory as a side effect.
+    auto contents = lockContentsRead();
+    auto it = contents->entries.find(name);
+    if (it == contents->entries.end()) {
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
+    }
+    if (auto node = it->second.getInodePtr()) {
+      return node;
+    }
   }
 
-  auto inodeName = copyCanonicalInodeName(it);
-  auto inodeNumber = it->second.getInodeNumber();
+  // Materializing needs the rename lock, which must be acquired before the
+  // contents lock. Holding it also keeps the path recorded in the journal
+  // accurate, as in removeImpl.
+  auto renameLock = getMount()->acquireRenameLock();
+  auto myPath = getPath();
+  if (!myPath.has_value()) {
+    throw InodeError(ENOENT, inodePtrFromThis());
+  }
+  materialize(&renameLock);
 
-  if (auto node = it->second.getInodePtr()) {
-    // The child has a loaded! Fall back to the slow path.
-    return node;
+  std::optional<PathComponent> inodeName;
+  dtype_t dtype;
+  {
+    auto contents = lockContentsWrite();
+
+    auto it = contents->entries.find(name);
+    if (it == contents->entries.end()) {
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
+    }
+
+    inodeName = copyCanonicalInodeName(it);
+    auto inodeNumber = it->second.getInodeNumber();
+
+    if (auto node = it->second.getInodePtr()) {
+      // The child was loaded while the lock was not held. Fall back to the
+      // slow path.
+      return node;
+    }
+
+    // erase() invalidates the iterator.
+    bool isDir = it->second.isDirectory();
+    dtype = it->second.getDtype();
+
+    contents->entries.erase(it);
+    if (InvalidationRequired::Yes == invalidate) {
+      invalidateChannelEntryCache(*contents, *inodeName, inodeNumber)
+          .throwUnlessValue();
+      invalidateChannelDirCache(*contents).get();
+    }
+
+    updateMtimeAndCtimeLocked(contents->entries, getNow());
+    if (isDir) {
+      getOverlay()->recursivelyRemoveOverlayDir(inodeNumber);
+    } else {
+      getOverlay()->removeOverlayFile(inodeNumber);
+    }
+    getOverlay()->removeChild(
+        getNodeId(), inodeName->piece(), contents->entries);
   }
 
-  // erase() invalidates the iterator.
-  bool isDir = it->second.isDirectory();
-
-  contents->entries.erase(it);
-  if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(*contents, inodeName, inodeNumber)
-        .throwUnlessValue();
-    invalidateChannelDirCache(*contents).get();
-  }
-
-  updateMtimeAndCtimeLocked(contents->entries, getNow());
-  if (isDir) {
-    getOverlay()->recursivelyRemoveOverlayDir(inodeNumber);
-  } else {
-    getOverlay()->removeOverlayFile(inodeNumber);
-  }
-  getOverlay()->removeChild(getNodeId(), name, contents->entries);
+  getMount()->getJournal().recordRemoved(
+      myPath.value() + inodeName->piece(), dtype);
   return nullptr;
 }
 

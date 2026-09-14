@@ -423,8 +423,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const RenameLock& renameLock);
 
   /**
-   * For unloaded nodes, the removal should be simpler: remove the node
-   * from entries and update the overlay.
+   * For unloaded nodes, the removal should be simpler: materialize this
+   * directory, remove the node from entries, update the overlay and record
+   * the removal in the journal.
    * If the return value is valid, the entry was not removed, and the child's
    * loaded inode was returned.
    */

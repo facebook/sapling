@@ -207,13 +207,9 @@ class RemoveRecursivelyTest : public ::testing::Test {
 };
 
 // Removing a child whose inode is not loaded takes a fast path in
-// TreeInode::tryRemoveUnloadedChild.
-//
-// FIXME: that path removes the entry without materializing the parent or
-// recording the removal in the journal. The directory keeps its source
-// control tree id, so once it is reloaded the removal is lost, or, when a
-// sibling remains, the stale overlay record the removal wrote is loaded into
-// a directory still considered identical to source control.
+// TreeInode::tryRemoveUnloadedChild. Like the loaded path it must
+// materialize the parent, so the removal survives a reload, and record the
+// removal in the journal.
 TEST_F(RemoveRecursivelyTest, unloadedFileInUnmaterializedDir) {
   auto& journal = mount_.getEdenMount()->getJournal();
   auto testStart = journal.observeLatest().value().sequenceID;
@@ -221,8 +217,8 @@ TEST_F(RemoveRecursivelyTest, unloadedFileInUnmaterializedDir) {
   auto dir = mount_.getTreeInode("dir");
   removeRecursively(dir, "a.txt"_pc);
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber("a.txt"_pc), ENOENT);
-  EXPECT_FALSE(dir->getContentsUnchecked().rlock()->isMaterialized());
-  EXPECT_FALSE(journalRecordsRemoval(testStart, "dir/a.txt"_relpath));
+  EXPECT_TRUE(dir->getContentsUnchecked().rlock()->isMaterialized());
+  EXPECT_TRUE(journalRecordsRemoval(testStart, "dir/a.txt"_relpath));
   dir.reset();
 
   // On Windows the overlay is reconciled with the on-disk PrjFS state on
@@ -233,10 +229,10 @@ TEST_F(RemoveRecursivelyTest, unloadedFileInUnmaterializedDir) {
   mount_.remount();
   EXPECT_FALSE(mount_.hasFileAt("dir/a.txt"));
   EXPECT_TRUE(mount_.hasFileAt("dir/keep.txt"));
-  EXPECT_FALSE(mount_.getTreeInode("dir")
-                   ->getContentsUnchecked()
-                   .rlock()
-                   ->isMaterialized());
+  EXPECT_TRUE(mount_.getTreeInode("dir")
+                  ->getContentsUnchecked()
+                  .rlock()
+                  ->isMaterialized());
 #endif
 }
 
@@ -247,19 +243,20 @@ TEST_F(RemoveRecursivelyTest, unloadedDirInUnmaterializedDir) {
   auto dir = mount_.getTreeInode("other");
   removeRecursively(dir, "sub"_pc);
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber("sub"_pc), ENOENT);
-  EXPECT_FALSE(dir->getContentsUnchecked().rlock()->isMaterialized());
-  EXPECT_FALSE(journalRecordsRemoval(testStart, "other/sub"_relpath));
+  EXPECT_TRUE(dir->getContentsUnchecked().rlock()->isMaterialized());
+  EXPECT_TRUE(journalRecordsRemoval(testStart, "other/sub"_relpath));
   dir.reset();
 
   // The remount is guarded for the reason given in
   // unloadedFileInUnmaterializedDir.
 #ifndef _WIN32
   mount_.remount();
-  EXPECT_TRUE(mount_.hasFileAt("other/sub/b.txt"));
-  EXPECT_FALSE(mount_.getTreeInode("other")
-                   ->getContentsUnchecked()
-                   .rlock()
-                   ->isMaterialized());
+  EXPECT_FALSE(mount_.hasFileAt("other/sub/b.txt"));
+  EXPECT_THROW_ERRNO(mount_.getTreeInode("other/sub"), ENOENT);
+  EXPECT_TRUE(mount_.getTreeInode("other")
+                  ->getContentsUnchecked()
+                  .rlock()
+                  ->isMaterialized());
 #endif
 }
 
