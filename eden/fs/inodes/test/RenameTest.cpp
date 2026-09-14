@@ -122,29 +122,52 @@ void RenameTest::renameFile(
 }
 
 // Renaming a loaded directory over an existing directory whose inode has
-// never been loaded.
-//
-// FIXME: TreeInode::rename checks whether the destination directory is empty
-// through a contents pointer that TreeRenameLocks only sets when that inode is
-// loaded, so this dereferences null instead of loading the destination.
-TEST(RenameUnloadedDestTest, renameDirOverUnloadedEmptyDir) {
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  FakeTreeBuilder builder;
-  builder.setFile("src/file.txt", "contents\n");
-  builder.mkdir("dst");
-  TestMount mount{builder};
+// never been loaded. The destination has to be loaded to check whether it is
+// empty; the rename must not assume its inode is in memory.
+class RenameUnloadedDestTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    FakeTreeBuilder builder;
+    builder.setFile("src/file.txt", "contents\n");
+    builder.mkdir("empty");
+    builder.setFile("full/other.txt", "contents\n");
+    mount_ = std::make_unique<TestMount>(builder);
+    root_ = mount_->getEdenMount()->getRootInode();
+    src_ = mount_->getTreeInode("src");
+  }
 
-  auto root = mount.getEdenMount()->getRootInode();
-  auto src = mount.getTreeInode("src");
-  auto rename = [&] {
-    return root->rename(
-        "src"_pc,
-        root,
-        "dst"_pc,
-        InvalidationRequired::No,
-        ObjectFetchContext::getNullContext());
-  };
-  ASSERT_DEATH(rename(), "");
+  folly::Future<folly::Unit> renameSrcTo(PathComponentPiece destName) {
+    auto future = root_
+                      ->rename(
+                          "src"_pc,
+                          root_,
+                          destName,
+                          InvalidationRequired::No,
+                          ObjectFetchContext::getNullContext())
+                      .semi()
+                      .via(mount_->getServerExecutor().get());
+    mount_->drainServerExecutor();
+    return future;
+  }
+
+  std::unique_ptr<TestMount> mount_;
+  TreeInodePtr root_;
+  TreeInodePtr src_;
+};
+
+TEST_F(RenameUnloadedDestTest, replacesUnloadedEmptyDir) {
+  renameSrcTo("empty"_pc).get(0ms);
+
+  EXPECT_EQ(src_, mount_->getTreeInode("empty"));
+  EXPECT_TRUE(mount_->hasFileAt("empty/file.txt"));
+  EXPECT_THROW_ERRNO(mount_->getTreeInode("src"), ENOENT);
+}
+
+TEST_F(RenameUnloadedDestTest, refusesUnloadedNonEmptyDir) {
+  EXPECT_THROW_ERRNO(renameSrcTo("full"_pc).get(0ms), ENOTEMPTY);
+
+  EXPECT_EQ(src_, mount_->getTreeInode("src"));
+  EXPECT_TRUE(mount_->hasFileAt("full/other.txt"));
 }
 
 TEST_F(RenameTest, renameFileSameDirectory) {

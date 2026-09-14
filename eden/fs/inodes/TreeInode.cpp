@@ -3061,7 +3061,10 @@ ImmediateFuture<Unit> TreeInode::rename(
               destName);
           return ImmediateFuture<Unit>{
               folly::Try<Unit>{InodeError{ENOTDIR, destParent, destName}}};
-        } else if (
+        }
+        // An unloaded destination has no contents to inspect yet; it is
+        // loaded below (needDest) and this check runs again on the retry.
+        if (locks.destChild() != nullptr &&
             locks.destChild() != srcEntry.getInode() &&
             !locks.destChildIsEmpty()) {
           XLOGF(
