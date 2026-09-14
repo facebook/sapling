@@ -62,6 +62,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::RestrictedPathsRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use tokio::sync::Semaphore;
 use uuid::Uuid;
 
 use super::Repo;
@@ -301,78 +302,89 @@ pub async fn commit_throughput(
 
     let run_id = Uuid::new_v4();
     println!("Run ID: {run_id}");
-    let mut built: Vec<Vec<_>> = Vec::new();
-    let mut all = Vec::new();
-    for stack in &shaped {
-        let mut parents = vec![base];
-        let mut changesets = Vec::new();
-        let mut live: HashSet<NonRootMPath> = stack
-            .iter()
-            .flat_map(|cs_id| changes[cs_id].1.iter())
-            .filter(|path| present_at_base.contains(&MPath::from((*path).clone())))
-            .cloned()
-            .collect();
-        for cs_id in stack {
-            let (files, deletions, author_date) = &changes[cs_id];
-            let mut file_changes: Vec<_> = stream::iter(files.iter())
-                .map(|(path, content_id, file_type, size)| async move {
-                    let data = filestore::fetch_concat_exact(
-                        repo.repo_blobstore(),
-                        ctx,
-                        *content_id,
-                        *size,
-                    )
+    let preparation = Instant::now();
+    let file_operations = Semaphore::new(64);
+    let built: Vec<Vec<_>> = stream::iter(shaped.iter().enumerate())
+        .map(async |(index, stack)| {
+            let mut parents = vec![base];
+            let mut changesets = Vec::new();
+            let mut live: HashSet<NonRootMPath> = stack
+                .iter()
+                .flat_map(|cs_id| changes[cs_id].1.iter())
+                .filter(|path| present_at_base.contains(&MPath::from((*path).clone())))
+                .cloned()
+                .collect();
+            for cs_id in stack {
+                let (files, deletions, author_date) = &changes[cs_id];
+                let mut file_changes: Vec<_> = stream::iter(files.iter())
+                    .map(async |(path, content_id, file_type, size)| {
+                        let _permit = file_operations.acquire().await?;
+                        let data = filestore::fetch_concat_exact(
+                            repo.repo_blobstore(),
+                            ctx,
+                            *content_id,
+                            *size,
+                        )
+                        .await?;
+                        let nonced = Bytes::from(
+                            [&data[..], format!("\n# drill-nonce {run_id}\n").as_bytes()].concat(),
+                        );
+                        let len = nonced.len() as u64;
+                        let stored = filestore::store(
+                            repo.repo_blobstore(),
+                            *repo.filestore_config(),
+                            ctx,
+                            &StoreRequest::new(len),
+                            stream::once(async move { Ok(nonced) }),
+                        )
+                        .await?;
+                        anyhow::Ok((
+                            path.clone(),
+                            FileChange::tracked(
+                                stored.content_id,
+                                *file_type,
+                                len,
+                                None,
+                                GitLfs::FullContent,
+                            ),
+                        ))
+                    })
+                    .buffer_unordered(64)
+                    .try_collect()
                     .await?;
-                    let nonced = Bytes::from(
-                        [&data[..], format!("\n# drill-nonce {run_id}\n").as_bytes()].concat(),
-                    );
-                    let len = nonced.len() as u64;
-                    let stored = filestore::store(
-                        repo.repo_blobstore(),
-                        *repo.filestore_config(),
-                        ctx,
-                        &StoreRequest::new(len),
-                        stream::once(async move { Ok(nonced) }),
-                    )
-                    .await?;
-                    anyhow::Ok((
-                        path.clone(),
-                        FileChange::tracked(
-                            stored.content_id,
-                            *file_type,
-                            len,
-                            None,
-                            GitLfs::FullContent,
-                        ),
-                    ))
-                })
-                .buffer_unordered(64)
-                .try_collect()
-                .await?;
-            for (path, _) in &file_changes {
-                live.insert(path.clone());
-            }
-            for path in deletions {
-                if live.remove(path) {
-                    file_changes.push((path.clone(), FileChange::Deletion));
+                for (path, _) in &file_changes {
+                    live.insert(path.clone());
                 }
-            }
+                for path in deletions {
+                    if live.remove(path) {
+                        file_changes.push((path.clone(), FileChange::Deletion));
+                    }
+                }
 
-            let changeset = BonsaiChangesetMut {
-                parents: parents.clone(),
-                author: args.author.clone(),
-                author_date: *author_date,
-                message: format!("[drill] synthetic replay of {cs_id}"),
-                file_changes: file_changes.into_iter().collect(),
-                ..Default::default()
+                let changeset = BonsaiChangesetMut {
+                    parents: parents.clone(),
+                    author: args.author.clone(),
+                    author_date: *author_date,
+                    message: format!("[drill] synthetic replay of {cs_id}"),
+                    file_changes: file_changes.into_iter().collect(),
+                    ..Default::default()
+                }
+                .freeze()?;
+                parents = vec![changeset.get_changeset_id()];
+                changesets.push(changeset);
             }
-            .freeze()?;
-            parents = vec![changeset.get_changeset_id()];
-            changesets.push(changeset);
-        }
-        all.extend(changesets.iter().cloned());
-        built.push(changesets);
-    }
+            println!(
+                "Prepared stack {}/{} ({} commit(s)) at +{:.3}s.",
+                index + 1,
+                shaped.len(),
+                changesets.len(),
+                preparation.elapsed().as_secs_f64(),
+            );
+            anyhow::Ok(changesets)
+        })
+        .buffered(20)
+        .try_collect()
+        .await?;
     if built.len() != args.stacks || built.iter().any(|stack| stack.len() != args.stack_size) {
         bail!(
             "built {} stacks with sizes {:?}, expected exactly {} x {}",
@@ -382,7 +394,9 @@ pub async fn commit_throughput(
             args.stack_size
         );
     }
+    let all: Vec<_> = built.iter().flatten().cloned().collect();
     let commits = all.len();
+    println!("Saving {commits} commits...");
     save_changesets(ctx, repo, all).await?;
     println!(
         "Built {} stacks / {commits} commits on base {}.",
