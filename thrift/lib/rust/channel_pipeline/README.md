@@ -135,6 +135,9 @@ a deferred result, call `DeferredRead::restore_owned` followed by `resume`; to r
 `DeferredRead::fire_write` through `OutboundMessageAdapter`. Unlike `spawn`, `spawn_deferred_read` accepts
 EventBase-confined futures without a `Send` bound.
 
+For reusable EventBase-local endpoint state, call `CallbackContext::local_pipeline_context()` and drop the returned
+`LocalPipelineContext` from the endpoint's `handler_removed` callback.
+
 ## Futures are polled where they live
 
 This is the invariant most likely to be "optimized" back into a bug, so it is
