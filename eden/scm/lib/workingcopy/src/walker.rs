@@ -194,7 +194,7 @@ where
                 shared_data.enqueue_result(Ok(WalkEntry::File(candidate_path, metadata)))?;
             }
         } else if metadata.is_dir() {
-            if !shared_data.skip_dirs.contains(filename)
+            if !shared_data.skip_dirs.contains(&candidate_path)
                 && shared_data
                     .matcher
                     .matches_directory(candidate_path.as_repo_path())?
@@ -481,6 +481,37 @@ mod tests {
 
         assert!(walked_files.contains("root.txt"));
         assert!(!walked_files.contains("nested/file.txt"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiwalker_skip_dirs_are_repo_relative() -> Result<()> {
+        let directories = vec!["examples", "tests/misc/ino2cpp/examples"];
+        let files = vec![
+            "examples/skipped.txt",
+            "tests/misc/ino2cpp/examples/kept.txt",
+            "root.txt",
+        ];
+        let root_dir = create_directory(&directories, &files)?;
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
+        let walker = Walker::new(
+            vfs,
+            ".sl".to_string(),
+            vec![PathBuf::from("examples")],
+            AlwaysMatcher::new(),
+            false,
+        )?;
+
+        let walked_files: Result<Vec<_>> = walker.collect();
+        let walked_files = walked_files?;
+        let walked_files: HashSet<_> = walked_files
+            .into_iter()
+            .map(|file| file.as_ref().to_string())
+            .collect();
+
+        assert!(walked_files.contains("root.txt"));
+        assert!(walked_files.contains("tests/misc/ino2cpp/examples/kept.txt"));
+        assert!(!walked_files.contains("examples/skipped.txt"));
         Ok(())
     }
 
