@@ -5,26 +5,50 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use cpython::ObjectProtocol;
 use cpython::Python;
+use cpython::PythonObject;
+use cpython::ToPyObject;
 use cpython::exc;
 use util::path_error_details;
 
 pub fn translate_io_error(py: Python, e: &std::io::Error) -> cpython::PyErr {
-    if let Some(details) = path_error_details(e) {
-        let e = details.original_io_error;
-        let errno = io_error_errno(e);
-        return cpython::PyErr::new::<exc::OSError, _>(
-            py,
-            (
-                errno,
-                io_error_strerror(e, errno),
-                details.path.display().to_string(),
-            ),
-        );
-    }
+    let (e, filename) = match path_error_details(e) {
+        Some(details) => (
+            details.original_io_error,
+            Some(details.path.display().to_string()),
+        ),
+        None => (e, None),
+    };
 
     let errno = io_error_errno(e);
-    cpython::PyErr::new::<exc::OSError, _>(py, (errno, io_error_strerror(e, errno)))
+    let strerror = io_error_strerror(e, errno);
+
+    // On Windows `raw_os_error` is a Win32 error code, not an errno. Report it
+    // as `OSError.winerror` so CPython replaces the errno above with the
+    // matching one, like it does for its own Windows errors in
+    // `PyErr_SetExcFromWindowsErrWithFilenameObjects`. Without this,
+    // ERROR_PATH_NOT_FOUND (3) would be taken as ESRCH, and ERROR_ACCESS_DENIED
+    // (5) as EIO, picking the wrong exception type below.
+    #[cfg(windows)]
+    let args = (errno, strerror, filename, e.raw_os_error()).to_py_object(py);
+    #[cfg(not(windows))]
+    let args = (errno, strerror, filename).to_py_object(py);
+
+    // Instantiate the exception instead of using
+    // `PyErr::new::<exc::OSError, _>(py, args)`, which would keep `OSError` as
+    // the exception type and only build the instance when the error gets
+    // normalized. Normalization does not adjust the type, so the type stays
+    // `OSError` even though `OSError.__new__` picks a subclass based on errno.
+    // Interpreters matching `except` clauses against the type instead of the
+    // instance (CPython 3.10 and older) then fail to run `except
+    // FileNotFoundError` for an ENOENT error raised from Rust.
+    let os_error_type = py.get_type::<exc::OSError>().into_object();
+    match os_error_type.call(py, args, None) {
+        Ok(instance) => cpython::PyErr::from_instance(py, instance),
+        // Building the exception failed. Report that failure instead.
+        Err(err) => err,
+    }
 }
 
 fn io_error_strerror(e: &std::io::Error, errno: Option<i32>) -> String {
@@ -51,6 +75,11 @@ fn io_error_strerror(e: &std::io::Error, errno: Option<i32>) -> String {
     message
 }
 
+/// The raw OS error code, or an errno inferred from the error type.
+///
+/// On Windows `raw_os_error` is a Win32 error code rather than an errno. It is
+/// still the code Rust puts in the error message, and it is passed to Python as
+/// `OSError.winerror` so that CPython derives the real errno from it.
 fn io_error_errno(e: &std::io::Error) -> Option<i32> {
     if let Some(errno) = e.raw_os_error() {
         return Some(errno);
@@ -82,5 +111,78 @@ fn io_error_errno(e: &std::io::Error) -> Option<i32> {
         TimedOut => Some(libc::ETIMEDOUT),
         Interrupted => Some(libc::EINTR),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use cpython::PythonObjectWithTypeObject;
+
+    use super::*;
+
+    #[test]
+    fn test_missing_file_is_a_file_not_found_error() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let io_error = std::fs::metadata("this-path-does-not-exist").unwrap_err();
+        let err = translate_io_error(py, &io_error);
+
+        // `PyErr::matches` is what an `except FileNotFoundError` clause does on
+        // CPython 3.10 and older: it compares against the exception type rather
+        // than the exception instance. Newer CPython compares against the
+        // instance and hides the difference when the error is actually raised,
+        // so this checks the exception type directly to stay meaningful on
+        // every Python version.
+        assert!(err.matches(py, py.get_type::<exc::FileNotFoundError>()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_errno_selects_the_exception_type() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        assert_error::<exc::FileNotFoundError>(py, libc::ENOENT, libc::ENOENT);
+        assert_error::<exc::PermissionError>(py, libc::EACCES, libc::EACCES);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_win32_error_code_selects_the_exception_type() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // Win32 error codes are not errno values. Used as errno,
+        // ERROR_PATH_NOT_FOUND would be ESRCH and ERROR_ACCESS_DENIED would be
+        // EIO.
+        const ERROR_FILE_NOT_FOUND: i32 = 2;
+        const ERROR_PATH_NOT_FOUND: i32 = 3;
+        const ERROR_ACCESS_DENIED: i32 = 5;
+        const ERROR_ALREADY_EXISTS: i32 = 183;
+
+        assert_error::<exc::FileNotFoundError>(py, ERROR_FILE_NOT_FOUND, libc::ENOENT);
+        assert_error::<exc::FileNotFoundError>(py, ERROR_PATH_NOT_FOUND, libc::ENOENT);
+        assert_error::<exc::PermissionError>(py, ERROR_ACCESS_DENIED, libc::EACCES);
+        assert_error::<exc::FileExistsError>(py, ERROR_ALREADY_EXISTS, libc::EEXIST);
+    }
+
+    /// Check that an `io::Error` with `raw_os_error` becomes an exception of
+    /// type `T` carrying `errno`.
+    fn assert_error<T: PythonObjectWithTypeObject>(py: Python, raw_os_error: i32, errno: i32) {
+        let mut err = translate_io_error(py, &io::Error::from_raw_os_error(raw_os_error));
+        assert!(
+            err.matches(py, py.get_type::<T>()),
+            "os error {raw_os_error} has an unexpected exception type"
+        );
+        let actual = err
+            .instance(py)
+            .getattr(py, "errno")
+            .unwrap()
+            .extract::<i32>(py)
+            .unwrap();
+        assert_eq!(actual, errno, "os error {raw_os_error} has a wrong errno");
     }
 }
