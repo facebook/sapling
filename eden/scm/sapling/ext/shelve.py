@@ -679,11 +679,9 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
     dirstate."""
     with ui.configoverride({("ui", "quiet"): True}):
         hg.update(repo, wctx.node())
-        # wctx is the original parent; shelvectx includes any pending changes.
-        status = wctx.status(shelvectx)
-        files = status.modified + status.added + status.removed
-        if not files:
-            return
+        files = []
+        files.extend(shelvectx.files())
+        files.extend(shelvectx.p1().files())
 
         # revert will overwrite unknown files, so move them out of the way
         for file in repo.status(unknown=True).unknown:
@@ -693,17 +691,15 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
                     os.path.join(repo.root, scmutil.origpath(ui, repo, file)),
                 )
         ui.pushbuffer(True)
-        try:
-            cmdutil.revert(
-                ui,
-                repo,
-                shelvectx,
-                repo.dirstate.parents(),
-                *pathtofiles(repo, files),
-                **{"no_backup": True},
-            )
-        finally:
-            ui.popbuffer()
+        cmdutil.revert(
+            ui,
+            repo,
+            shelvectx,
+            repo.dirstate.parents(),
+            *pathtofiles(repo, files),
+            **{"no_backup": True},
+        )
+        ui.popbuffer()
 
 
 def unshelvecleanup(ui, repo, name, opts) -> None:
