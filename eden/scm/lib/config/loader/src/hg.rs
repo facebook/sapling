@@ -855,7 +855,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
         version,
         repo_name.as_ref().map_or("no_repo", |r| r.as_ref()),
         canary.as_ref(),
-        &user_name,
+        user_name,
         client_network_override
             .map(|client_network| format!("# domain-override={}\n", client_network.to_str()))
             .unwrap_or_default(),
