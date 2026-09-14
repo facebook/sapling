@@ -18,6 +18,8 @@ import type {
   LandConfirmationInfo,
   LandInfo,
   OperationCommandProgressReporter,
+  PullRequestReviewAction,
+  PullRequestReviewData,
   Result,
   ServerToClientMessage,
 } from 'isl/src/types';
@@ -87,6 +89,15 @@ export interface CodeReviewProvider {
 
   /** Convert usernames/emails to avatar URIs */
   fetchComments?(diffId: DiffId): Promise<Array<DiffComment>>;
+
+  /** Fetch line-level review threads for a pull request. */
+  fetchPullRequestReview?(diffId: DiffId): Promise<PullRequestReviewData>;
+
+  /** Mutate a pull request review and return its refreshed state. */
+  runPullRequestReviewAction?(
+    diffId: DiffId,
+    action: PullRequestReviewAction,
+  ): Promise<PullRequestReviewData>;
 
   renderMarkup?: (markup: string) => Promise<string>;
 

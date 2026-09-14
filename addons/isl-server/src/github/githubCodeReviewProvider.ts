@@ -12,6 +12,8 @@ import type {
   DiffSignalSummary,
   Disposable,
   Hash,
+  PullRequestReviewAction,
+  PullRequestReviewData,
   Result,
 } from 'isl/src/types';
 import type {CodeReviewProvider} from '../CodeReviewProvider';
@@ -32,7 +34,9 @@ import type {
 
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
+import {ejeca} from 'shared/ejeca';
 import {notEmpty} from 'shared/utils';
+import {Internal} from '../Internal';
 import {
   MergeQueueSupportQuery,
   PullRequestCommentsQuery,
@@ -41,6 +45,7 @@ import {
   YourPullRequestsQuery,
   YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
+import {GitHubReviewService, type GitHubReviewRestRequest} from './githubReview';
 import queryGraphQL from './queryGraphQL';
 
 export type GitHubDiffSummary = {
@@ -72,10 +77,24 @@ const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
+  private reviewService: GitHubReviewService;
+
   constructor(
     private codeReviewSystem: GitHubCodeReviewSystem,
     private logger: Logger,
-  ) {}
+  ) {
+    this.reviewService = new GitHubReviewService(
+      {
+        owner: codeReviewSystem.owner,
+        repo: codeReviewSystem.repo,
+        prUrl: diffId => this.getPrUrl(diffId),
+      },
+      {
+        query: <D, V>(query: string, variables: V) => this.query<D, V>(query, variables),
+        rest: request => this.runReviewRestRequest(request),
+      },
+    );
+  }
   private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
 
@@ -239,6 +258,36 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         };
       }) ?? []
     );
+  }
+
+  public fetchPullRequestReview(diffId: string): Promise<PullRequestReviewData> {
+    return this.reviewService.fetch(diffId);
+  }
+
+  public runPullRequestReviewAction(
+    diffId: string,
+    action: PullRequestReviewAction,
+  ): Promise<PullRequestReviewData> {
+    return this.reviewService.runAction(diffId, action);
+  }
+
+  private async runReviewRestRequest(request: GitHubReviewRestRequest): Promise<void> {
+    const args = [
+      'api',
+      '--hostname',
+      this.codeReviewSystem.hostname,
+      '--method',
+      request.method,
+      request.endpoint,
+    ];
+    for (const [key, value] of Object.entries(request.fields ?? {})) {
+      args.push(typeof value === 'number' ? '-F' : '-f', `${key}=${value}`);
+    }
+    await ejeca('gh', args, {
+      env: {
+        ...((await Internal.additionalGhEnvVars?.()) ?? {}),
+      },
+    });
   }
 
   private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {

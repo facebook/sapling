@@ -216,6 +216,51 @@ td.lineNumber.patch-expanded-number {
   color: var(--foreground);
 }
 
+td.lineNumber {
+  position: relative;
+}
+
+td.lineNumber.split-diff-review-selected-line {
+  color: var(--button-foreground);
+  background: var(--button-background);
+}
+
+td.lineNumber.split-diff-review-commented-line {
+  color: #fff;
+  background-color: #007acc;
+}
+
+.split-diff-review-add-button {
+  display: none;
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  color: var(--button-foreground);
+  background: var(--button-background);
+  cursor: pointer;
+  line-height: 18px;
+}
+
+td.lineNumber:hover .split-diff-review-add-button,
+.split-diff-review-add-button:focus-visible {
+  display: block;
+}
+
+.split-diff-view-hunk-table tr.split-diff-review-row > td {
+  padding: 0;
+  border-top: 1px solid var(--panel-view-border);
+  border-bottom: 1px solid var(--panel-view-border);
+  background: var(--editor-background);
+  color: var(--foreground);
+  white-space: normal;
+  word-break: normal;
+}
+
 .lineNumber.clickable {
   cursor: pointer;
 }

@@ -29441,6 +29441,59 @@ export enum __TypeKind {
   NonNull = 'NON_NULL'
 }
 
+export type CreatePendingPullRequestReviewVariables = Exact<{
+  pullRequestId: Scalars['ID'];
+  commitOid: Scalars['GitObjectID'];
+}>;
+
+
+export type CreatePendingPullRequestReviewData = { __typename?: 'Mutation', addPullRequestReview?: { __typename?: 'AddPullRequestReviewPayload', pullRequestReview?: { __typename?: 'PullRequestReview', id: string } | null } | null };
+
+export type CreateSubmittedPullRequestReviewVariables = Exact<{
+  pullRequestId: Scalars['ID'];
+  event: PullRequestReviewEvent;
+  body?: InputMaybe<Scalars['String']>;
+}>;
+
+
+export type CreateSubmittedPullRequestReviewData = { __typename?: 'Mutation', addPullRequestReview?: { __typename?: 'AddPullRequestReviewPayload', pullRequestReview?: { __typename?: 'PullRequestReview', id: string } | null } | null };
+
+export type AddPullRequestReviewThreadVariables = Exact<{
+  pullRequestReviewId: Scalars['ID'];
+  body: Scalars['String'];
+  path: Scalars['String'];
+  line: Scalars['Int'];
+  side: DiffSide;
+  startLine?: InputMaybe<Scalars['Int']>;
+  startSide?: InputMaybe<DiffSide>;
+}>;
+
+
+export type AddPullRequestReviewThreadData = { __typename?: 'Mutation', addPullRequestReviewThread?: { __typename?: 'AddPullRequestReviewThreadPayload', thread?: { __typename?: 'PullRequestReviewThread', id: string } | null } | null };
+
+export type SubmitPullRequestReviewVariables = Exact<{
+  pullRequestReviewId: Scalars['ID'];
+  event: PullRequestReviewEvent;
+  body?: InputMaybe<Scalars['String']>;
+}>;
+
+
+export type SubmitPullRequestReviewData = { __typename?: 'Mutation', submitPullRequestReview?: { __typename?: 'SubmitPullRequestReviewPayload', pullRequestReview?: { __typename?: 'PullRequestReview', id: string } | null } | null };
+
+export type ResolvePullRequestReviewThreadVariables = Exact<{
+  threadId: Scalars['ID'];
+}>;
+
+
+export type ResolvePullRequestReviewThreadData = { __typename?: 'Mutation', resolveReviewThread?: { __typename?: 'ResolveReviewThreadPayload', thread?: { __typename?: 'PullRequestReviewThread', id: string, isResolved: boolean } | null } | null };
+
+export type UnresolvePullRequestReviewThreadVariables = Exact<{
+  threadId: Scalars['ID'];
+}>;
+
+
+export type UnresolvePullRequestReviewThreadData = { __typename?: 'Mutation', unresolveReviewThread?: { __typename?: 'UnresolveReviewThreadPayload', thread?: { __typename?: 'PullRequestReviewThread', id: string, isResolved: boolean } | null } | null };
+
 export type MergeQueueSupportQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -29502,6 +29555,16 @@ export type PullRequestCommentsQueryVariables = Exact<{
 
 export type PullRequestCommentsQueryData = { __typename?: 'Query', resource?: { __typename: 'Bot' } | { __typename: 'CheckRun' } | { __typename: 'ClosedEvent' } | { __typename: 'Commit' } | { __typename: 'ConvertToDraftEvent' } | { __typename: 'CrossReferencedEvent' } | { __typename: 'Gist' } | { __typename: 'Issue' } | { __typename: 'Mannequin' } | { __typename: 'MergedEvent' } | { __typename: 'Milestone' } | { __typename: 'Organization' } | { __typename: 'PullRequest', comments: { __typename?: 'IssueCommentConnection', totalCount: number, nodes?: Array<{ __typename?: 'IssueComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null }, reviews?: { __typename?: 'PullRequestReviewConnection', nodes?: Array<{ __typename?: 'PullRequestReview', comments: { __typename?: 'PullRequestReviewCommentConnection', nodes?: Array<{ __typename?: 'PullRequestReviewComment', line?: number | null, path: string, bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null } } | null> | null } | null } | { __typename: 'PullRequestCommit' } | { __typename: 'ReadyForReviewEvent' } | { __typename: 'Release' } | { __typename: 'Repository' } | { __typename: 'RepositoryTopic' } | { __typename: 'ReviewDismissedEvent' } | { __typename: 'TeamDiscussion' } | { __typename: 'TeamDiscussionComment' } | { __typename: 'User' } | { __typename: 'Workflow' } | { __typename: 'WorkflowRun' } | { __typename: 'WorkflowRunFile' } | null };
 
+export type ReviewThreadCommentParts = { __typename?: 'PullRequestReviewComment', id: string, databaseId?: number | null, body: string, bodyHTML: string, createdAt: string, publishedAt?: string | null, state: PullRequestReviewCommentState, url: string, viewerCanDelete: boolean, viewerCanUpdate: boolean, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type PullRequestReviewQueryVariables = Exact<{
+  url: Scalars['URI'];
+  numToFetch: Scalars['Int'];
+}>;
+
+
+export type PullRequestReviewQueryData = { __typename?: 'Query', viewer: { __typename?: 'User', login: string }, resource?: { __typename: 'Bot' } | { __typename: 'CheckRun' } | { __typename: 'ClosedEvent' } | { __typename: 'Commit' } | { __typename: 'ConvertToDraftEvent' } | { __typename: 'CrossReferencedEvent' } | { __typename: 'Gist' } | { __typename: 'Issue' } | { __typename: 'Mannequin' } | { __typename: 'MergedEvent' } | { __typename: 'Milestone' } | { __typename: 'Organization' } | { __typename: 'PullRequest', id: string, headRefOid: string, reviews?: { __typename?: 'PullRequestReviewConnection', nodes?: Array<{ __typename?: 'PullRequestReview', id: string, state: PullRequestReviewState, commit?: { __typename?: 'Commit', oid: string } | null, author?: { __typename?: 'Bot', login: string } | { __typename?: 'EnterpriseUserAccount', login: string } | { __typename?: 'Mannequin', login: string } | { __typename?: 'Organization', login: string } | { __typename?: 'User', login: string } | null } | null> | null } | null, reviewThreads: { __typename?: 'PullRequestReviewThreadConnection', nodes?: Array<{ __typename?: 'PullRequestReviewThread', id: string, path: string, line?: number | null, originalLine?: number | null, startLine?: number | null, originalStartLine?: number | null, diffSide: DiffSide, startDiffSide?: DiffSide | null, isOutdated: boolean, isResolved: boolean, viewerCanReply: boolean, viewerCanResolve: boolean, viewerCanUnresolve: boolean, comments: { __typename?: 'PullRequestReviewCommentConnection', nodes?: Array<{ __typename?: 'PullRequestReviewComment', id: string, databaseId?: number | null, body: string, bodyHTML: string, createdAt: string, publishedAt?: string | null, state: PullRequestReviewCommentState, url: string, viewerCanDelete: boolean, viewerCanUpdate: boolean, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null } } | null> | null } } | { __typename: 'PullRequestCommit' } | { __typename: 'ReadyForReviewEvent' } | { __typename: 'Release' } | { __typename: 'Repository' } | { __typename: 'RepositoryTopic' } | { __typename: 'ReviewDismissedEvent' } | { __typename: 'TeamDiscussion' } | { __typename: 'TeamDiscussionComment' } | { __typename: 'User' } | { __typename: 'Workflow' } | { __typename: 'WorkflowRun' } | { __typename: 'WorkflowRunFile' } | null };
+
 export type YourPullRequestsQueryVariables = Exact<{
   searchQuery: Scalars['String'];
   numToFetch: Scalars['Int'];
@@ -29536,6 +29599,96 @@ export const ReactionParts = `
       user {
         login
       }
+    }
+  }
+}
+    `;
+export const ReviewThreadCommentParts = `
+    fragment ReviewThreadCommentParts on PullRequestReviewComment {
+  id
+  databaseId
+  body
+  bodyHTML
+  createdAt
+  publishedAt
+  state
+  url
+  viewerCanDelete
+  viewerCanUpdate
+  author {
+    login
+    avatarUrl
+  }
+  reactions(first: 20) {
+    nodes {
+      content
+      user {
+        login
+      }
+    }
+  }
+}
+    `;
+export const CreatePendingPullRequestReview = `
+    mutation CreatePendingPullRequestReview($pullRequestId: ID!, $commitOid: GitObjectID!) {
+  addPullRequestReview(
+    input: {pullRequestId: $pullRequestId, commitOID: $commitOid}
+  ) {
+    pullRequestReview {
+      id
+    }
+  }
+}
+    `;
+export const CreateSubmittedPullRequestReview = `
+    mutation CreateSubmittedPullRequestReview($pullRequestId: ID!, $event: PullRequestReviewEvent!, $body: String) {
+  addPullRequestReview(
+    input: {pullRequestId: $pullRequestId, event: $event, body: $body}
+  ) {
+    pullRequestReview {
+      id
+    }
+  }
+}
+    `;
+export const AddPullRequestReviewThread = `
+    mutation AddPullRequestReviewThread($pullRequestReviewId: ID!, $body: String!, $path: String!, $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide) {
+  addPullRequestReviewThread(
+    input: {pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side, startLine: $startLine, startSide: $startSide}
+  ) {
+    thread {
+      id
+    }
+  }
+}
+    `;
+export const SubmitPullRequestReview = `
+    mutation SubmitPullRequestReview($pullRequestReviewId: ID!, $event: PullRequestReviewEvent!, $body: String) {
+  submitPullRequestReview(
+    input: {pullRequestReviewId: $pullRequestReviewId, event: $event, body: $body}
+  ) {
+    pullRequestReview {
+      id
+    }
+  }
+}
+    `;
+export const ResolvePullRequestReviewThread = `
+    mutation ResolvePullRequestReviewThread($threadId: ID!) {
+  resolveReviewThread(input: {threadId: $threadId}) {
+    thread {
+      id
+      isResolved
+    }
+  }
+}
+    `;
+export const UnresolvePullRequestReviewThread = `
+    mutation UnresolvePullRequestReviewThread($threadId: ID!) {
+  unresolveReviewThread(input: {threadId: $threadId}) {
+    thread {
+      id
+      isResolved
     }
   }
 }
@@ -29576,6 +29729,54 @@ export const PullRequestCommentsQuery = `
 }
     ${CommentParts}
 ${ReactionParts}`;
+export const PullRequestReviewQuery = `
+    query PullRequestReviewQuery($url: URI!, $numToFetch: Int!) {
+  viewer {
+    login
+  }
+  resource(url: $url) {
+    __typename
+    ... on PullRequest {
+      id
+      headRefOid
+      reviews(first: 10, states: [PENDING]) {
+        nodes {
+          id
+          state
+          commit {
+            oid
+          }
+          author {
+            login
+          }
+        }
+      }
+      reviewThreads(first: $numToFetch) {
+        nodes {
+          id
+          path
+          line
+          originalLine
+          startLine
+          originalStartLine
+          diffSide
+          startDiffSide
+          isOutdated
+          isResolved
+          viewerCanReply
+          viewerCanResolve
+          viewerCanUnresolve
+          comments(first: 50) {
+            nodes {
+              ...ReviewThreadCommentParts
+            }
+          }
+        }
+      }
+    }
+  }
+}
+    ${ReviewThreadCommentParts}`;
 export const YourPullRequestsQuery = `
     query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {

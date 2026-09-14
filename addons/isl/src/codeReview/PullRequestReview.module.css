@@ -1,0 +1,128 @@
+.toolbar {
+  width: 100%;
+  padding: var(--pad);
+  border: 1px solid var(--panel-view-border);
+  background: var(--editor-background);
+}
+
+.toolbarTitle,
+.actions,
+.threadActions,
+.commentHeader,
+.commentActions {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+.toolbarTitle {
+  min-height: 28px;
+}
+
+.pendingBadge,
+.outdated {
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: var(--badge-foreground);
+  background: var(--badge-background);
+  font-size: 11px;
+}
+
+.warning,
+.actionError {
+  margin-top: var(--halfpad);
+  color: var(--error-foreground);
+}
+
+.submitReview {
+  margin-top: var(--halfpad);
+}
+
+.submitReview summary {
+  cursor: pointer;
+  margin-bottom: var(--halfpad);
+}
+
+.lineReview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+  padding: var(--halfpad) max(70px, 8%);
+  font-family: var(--font-family);
+}
+
+.thread,
+.composer {
+  border: 1px solid var(--panel-view-border);
+  border-radius: 4px;
+  background: var(--sideBar-background);
+  padding: var(--pad);
+}
+
+.resolved {
+  opacity: 0.75;
+}
+
+.resolvedHeader {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--halfpad);
+}
+
+.resolvedSummary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment {
+  display: flex;
+  gap: var(--pad);
+  padding-block: var(--halfpad);
+}
+
+.comment + .comment {
+  border-top: 1px solid var(--panel-view-border);
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.commentBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.commentHeader {
+  margin-bottom: var(--halfpad);
+}
+
+.commentHeader a {
+  margin-left: auto;
+}
+
+.commentActions {
+  justify-content: flex-end;
+}
+
+.threadActions,
+.actions {
+  justify-content: flex-end;
+  margin-top: var(--halfpad);
+}
+
+.replyComposer {
+  margin-top: var(--halfpad);
+}
+
+.composer textarea,
+.replyComposer textarea,
+.submitReview textarea,
+.commentBody textarea {
+  width: 100%;
+  font-family: var(--font-family);
+}

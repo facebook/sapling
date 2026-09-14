@@ -172,6 +172,76 @@ export type DiffComment = {
   isResolved?: boolean;
 };
 
+export type PullRequestReviewSide = 'LEFT' | 'RIGHT';
+
+export type PullRequestReviewComment = {
+  /** GraphQL node ID, used for permissions and mutations. */
+  id: string;
+  /** REST database ID, used by GitHub's reply, edit, and delete endpoints. */
+  databaseId?: number;
+  author: string;
+  authorAvatarUri?: string;
+  body: string;
+  html: string;
+  created: Date;
+  url: string;
+  state: 'PENDING' | 'SUBMITTED';
+  viewerCanDelete: boolean;
+  viewerCanUpdate: boolean;
+  reactions: Array<DiffCommentReaction>;
+};
+
+export type PullRequestReviewThread = {
+  id: string;
+  path: RepoRelativePath;
+  line?: number;
+  originalLine?: number;
+  startLine?: number;
+  originalStartLine?: number;
+  side: PullRequestReviewSide;
+  startSide?: PullRequestReviewSide;
+  isOutdated: boolean;
+  isResolved: boolean;
+  viewerCanReply: boolean;
+  viewerCanResolve: boolean;
+  viewerCanUnresolve: boolean;
+  comments: Array<PullRequestReviewComment>;
+};
+
+export type PullRequestReviewData = {
+  pullRequestId: string;
+  headOid: Hash;
+  pendingReviewId?: string;
+  pendingReviewCommitOid?: Hash;
+  threads: Array<PullRequestReviewThread>;
+};
+
+export type PullRequestReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES';
+
+export type PullRequestReviewAction =
+  | {
+      type: 'createComment';
+      body: string;
+      path: RepoRelativePath;
+      line: number;
+      side: PullRequestReviewSide;
+      startLine?: number;
+      startSide?: PullRequestReviewSide;
+      mode: 'single' | 'pending';
+      commitOid: Hash;
+      expectedHeadOid: Hash;
+    }
+  | {type: 'reply'; body: string; commentDatabaseId: number}
+  | {type: 'editComment'; body: string; commentDatabaseId: number}
+  | {type: 'deleteComment'; commentDatabaseId: number}
+  | {type: 'setResolved'; threadId: string; resolved: boolean}
+  | {
+      type: 'submitReview';
+      event: PullRequestReviewEvent;
+      body: string;
+      expectedHeadOid: Hash;
+    };
+
 /**
  * Summary of CI test results for a Diff.
  * 'running' if tests are in progress with no issues so far.
@@ -1078,6 +1148,13 @@ export type ClientToServerMessage =
    */
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>; partial?: boolean}
   | {type: 'fetchDiffComments'; diffId: DiffId}
+  | {type: 'fetchPullRequestReview'; diffId: DiffId}
+  | {
+      type: 'runPullRequestReviewAction';
+      diffId: DiffId;
+      requestId: string;
+      action: PullRequestReviewAction;
+    }
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
@@ -1248,6 +1325,17 @@ export type ServerToClientMessage =
   | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
+  | {
+      type: 'fetchedPullRequestReview';
+      diffId: DiffId;
+      review: Result<PullRequestReviewData>;
+    }
+  | {
+      type: 'pullRequestReviewActionResult';
+      diffId: DiffId;
+      requestId: string;
+      review: Result<PullRequestReviewData>;
+    }
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
