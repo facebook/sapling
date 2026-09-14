@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[cfg(not(windows))]
 use std::ffi::c_int;
 use std::ffi::c_void;
 
