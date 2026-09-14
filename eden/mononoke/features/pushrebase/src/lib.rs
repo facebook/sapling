@@ -1009,6 +1009,7 @@ async fn do_batched_pushrebase(
                 STATS::commits_rebased.add_value(all_rebased_pairs.len() as i64, repo_args);
             }
 
+            let batch_size = pending.len();
             for p in pending {
                 // Per-request: the batch success sample above is per-batch, so
                 // record each landed request's retries-until-success separately.
@@ -1034,6 +1035,10 @@ async fn do_batched_pushrebase(
                 let mut sample = request_ctx.scuba().clone();
                 sample
                     .add("repo_name", repo.repo_identity().name())
+                    .add("bookmark_log_id", log_id.0)
+                    .add("batch_size", batch_size)
+                    .add("batch_total_commits", all_rebased_pairs.len())
+                    .add("rebased_changesets", stack_pairs.len())
                     .add("retry_num", p.request.retry_num.0 as i64);
                 // Clone for Scuba so the original can be moved into the
                 // returned PushrebaseOutcome below; see rebase_with_lock
@@ -2087,6 +2092,7 @@ fn dispatch_batch_results(
     log_id: u64,
     all_rebased_pairs: &[PushrebaseChangesetPair],
 ) {
+    let batch_size = pending.len();
     for p in pending {
         let stack_pairs: Vec<PushrebaseChangesetPair> = all_rebased_pairs
             .iter()
@@ -2104,6 +2110,10 @@ fn dispatch_batch_results(
         let mut sample = request_ctx.scuba().clone();
         sample
             .add("repo_name", repo.repo_identity().name())
+            .add("bookmark_log_id", log_id)
+            .add("batch_size", batch_size)
+            .add("batch_total_commits", all_rebased_pairs.len())
+            .add("rebased_changesets", stack_pairs.len())
             .add("retry_num", p.request.retry_num.0 as i64);
         p.merge_summary.add_to_scuba(&mut sample);
         sample.log_with_msg("batched_pushrebase_request_complete", None);

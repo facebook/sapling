@@ -307,30 +307,13 @@ async fn run_queue<R, F>(
         STATS::intra_batch_conflict_count.add_value(conflicts as i64);
 
         for mut batch in batches {
+            let batch_total_commits = batch
+                .requests
+                .iter()
+                .map(|request| request.stack.changesets.len())
+                .sum::<usize>();
             STATS::batch_size.add_value(batch.requests.len() as i64);
-            STATS::batch_total_commits.add_value(
-                batch
-                    .requests
-                    .iter()
-                    .map(|request| request.stack.changesets.len())
-                    .sum::<usize>() as i64,
-            );
-            for request in &batch.requests {
-                STATS::batch_queue_time_ms.add_value(
-                    request
-                        .enqueued_at
-                        .elapsed()
-                        .as_millis()
-                        .try_into()
-                        .unwrap_or(i64::MAX),
-                );
-                request
-                    .ctx
-                    .scuba()
-                    .clone()
-                    .add("batch_size", batch.requests.len())
-                    .log_with_msg("Batch received", None);
-            }
+            STATS::batch_total_commits.add_value(batch_total_commits as i64);
 
             let max_requeue =
                 justknobs::get_as::<usize>("scm/mononoke:land_service_batch_max_requeue", None);
@@ -348,9 +331,36 @@ async fn run_queue<R, F>(
                 scuba
                     .add("repo_name", repo.repo_identity().name())
                     .add("bookmark", bookmark.to_string())
-                    .add("batch_size", batch.requests.len());
+                    .add("batch_size", batch.requests.len())
+                    .add("batch_total_commits", batch_total_commits);
                 scuba
             });
+            let batch_size = batch.requests.len();
+            for request in &mut batch.requests {
+                let queue_time_ms = request
+                    .enqueued_at
+                    .elapsed()
+                    .as_millis()
+                    .try_into()
+                    .unwrap_or(i64::MAX);
+                STATS::batch_queue_time_ms.add_value(queue_time_ms);
+                request.ctx = request.ctx.with_mutated_scuba(|mut scuba| {
+                    scuba
+                        .add("repo_name", repo.repo_identity().name())
+                        .add("bookmark", bookmark.as_str())
+                        .add("changesets_count", request.stack.changesets.len());
+                    scuba
+                });
+                request
+                    .ctx
+                    .scuba()
+                    .clone()
+                    .add("batch_size", batch_size)
+                    .add("batch_total_commits", batch_total_commits)
+                    .add("batch_queue_time_ms", queue_time_ms)
+                    .add("retry_num", request.retry_num.0)
+                    .log_with_msg("Batch received", None);
+            }
             let mut hooks = match get_pushrebase_hooks(
                 &ctx,
                 repo.as_ref(),
