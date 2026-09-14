@@ -694,37 +694,30 @@ impl Redirection {
     }
 
     #[cfg(target_os = "macos")]
-    fn _bind_unmount_darwin(
-        &self,
-        instance: &EdenFsInstance,
-        checkout: &EdenFsCheckout,
-    ) -> Result<()> {
+    fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
-        if Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::SYMLINK {
-            let repo_path = self.expand_repo_path(checkout);
-            remove_symlink(&repo_path)
-                .with_context(|| format!("Failed to remove symlink {}", repo_path.display()))?;
-        } else {
-            // We use unmount instead of eject here since eject has caused issues
-            // by unmounting unrelated apfs volumes in the past. See S325232.
-            let args = &["unmount", "force", &mount_path.to_string_lossy()];
-            let output = Command::new("diskutil")
-                .args(args)
-                .output()
-                .from_err()
-                .with_context(|| {
-                    format!(
-                        "Failed to execute command `diskutil {}`",
-                        shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
-                    )
-                })?;
-            if !output.status.success() {
-                return Err(EdenFsError::Other(anyhow!(format!(
-                    "failed to remove bind mount. stderr: {}\n stdout: {}",
-                    String::from_utf8_lossy(&output.stderr),
-                    String::from_utf8_lossy(&output.stdout)
-                ))));
-            }
+        // Only reached for paths that are real mounts: remove_existing unlinks
+        // symlink-backed redirections based on disposition analysis first.
+        //
+        // We use unmount instead of eject here since eject has caused issues
+        // by unmounting unrelated apfs volumes in the past. See S325232.
+        let args = &["unmount", "force", &mount_path.to_string_lossy()];
+        let output = Command::new("diskutil")
+            .args(args)
+            .output()
+            .from_err()
+            .with_context(|| {
+                format!(
+                    "Failed to execute command `diskutil {}`",
+                    shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
+                )
+            })?;
+        if !output.status.success() {
+            return Err(EdenFsError::Other(anyhow!(format!(
+                "failed to remove bind mount. stderr: {}\n stdout: {}",
+                String::from_utf8_lossy(&output.stderr),
+                String::from_utf8_lossy(&output.stdout)
+            ))));
         }
         Ok(())
     }
@@ -749,10 +742,10 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     async fn _bind_unmount(
         &self,
-        instance: &EdenFsInstance,
+        _instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
     ) -> Result<()> {
-        self._bind_unmount_darwin(instance, checkout)
+        self._bind_unmount_darwin(checkout)
     }
 
     #[cfg(target_os = "linux")]

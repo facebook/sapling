@@ -203,6 +203,28 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(symlink_path.readlink(), target)
 
+    @patch("eden.fs.cli.redirect.run_cmd_quietly")
+    def test_bind_unmount_darwin_ignores_configured_backing(
+        self, mock_run_cmd_quietly: MagicMock
+    ) -> None:
+        checkout = MagicMock()
+        checkout.path = Path("/checkout")
+        checkout.instance.get_config_value.return_value = "symlink"
+        redir = Redirection(
+            repo_path=Path("foo"),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.UNKNOWN_MOUNT,
+        )
+
+        redir._bind_unmount_darwin(checkout)
+
+        mock_run_cmd_quietly.assert_called_once_with(
+            ["diskutil", "unmount", "force", Path("/checkout/foo")]
+        )
+        checkout.instance.get_config_value.assert_not_called()
+
     @patch("eden.fs.cli.redirect.Redirection._bind_unmount")
     @patch("eden.fs.cli.redirect.RepoPathDisposition.analyze")
     @patch("eden.fs.cli.redirect.Redirection.expand_repo_path")

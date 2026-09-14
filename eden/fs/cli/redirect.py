@@ -407,12 +407,12 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout) -> None:
         mount_path = checkout.path / self.repo_path
-        if determine_bind_redirection_type(checkout.instance) == "symlink":
-            mount_path.unlink()
-        else:
-            # We use unmount instead of eject here since eject has caused issues
-            # by unmounting unrelated apfs volumes in the past. See S325232.
-            run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
+        # Only reached for paths that are real mounts: remove_existing unlinks
+        # symlink-backed redirections based on disposition analysis first.
+        #
+        # We use unmount instead of eject here since eject has caused issues
+        # by unmounting unrelated apfs volumes in the past. See S325232.
+        run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: Path, target: Path
