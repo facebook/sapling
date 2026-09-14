@@ -25,7 +25,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn canonicalize(py: Python, path: &str) -> PyResult<String> {
-    let canonical_path = std::fs::canonicalize(path).map_pyerr(py)?;
+    let canonical_path = util::path::canonicalize_best_effort(path).map_pyerr(py)?;
     match canonical_path.to_str() {
         Some(s) => Ok(s.to_string()),
         None => {

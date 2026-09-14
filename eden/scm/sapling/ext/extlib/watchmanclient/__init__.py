@@ -546,6 +546,8 @@ def getcanonicalpath(name, use_ctypes=False):
 
     # Match the old code behavior, not sure if necessary or correct.
     if os.name == "nt":
-        canonical = canonical[4:].replace("\\", "/")
+        if canonical.startswith("\\\\?\\"):
+            canonical = canonical[4:]
+        canonical = canonical.replace("\\", "/")
 
     return canonical
