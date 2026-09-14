@@ -547,6 +547,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * Returns true if the overlay should be rewritten.
    */
   bool buildDirEntries(
+      InodeNumber inodeNumber,
       OverlayEntrySource source,
       folly::fbvector<std::pair<PathComponent, DirEntry>>& entries);
 

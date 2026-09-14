@@ -93,6 +93,16 @@ class DirEntry {
   DirEntry(const DirEntry& e) = delete;
   DirEntry& operator=(const DirEntry& e) = delete;
 
+  /**
+   * Whether `m` fits in the bits DirEntry keeps for the initial mode. Modes
+   * read from disk must be checked with this before constructing a DirEntry.
+   * Takes the on-disk width rather than mode_t, which is narrower on macOS
+   * and would drop the offending bits in the conversion.
+   */
+  static constexpr bool isValidInitialMode(uint32_t m) {
+    return (m & ~kInitialModeMask) == 0;
+  }
+
   bool isMaterialized() const {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the

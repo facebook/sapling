@@ -748,6 +748,7 @@ void Overlay::saveInodeReservation(uint64_t reservation) {
 #endif
 
 bool Overlay::buildDirEntries(
+    InodeNumber inodeNumber,
     OverlayEntrySource source,
     folly::fbvector<std::pair<PathComponent, DirEntry>>& entries) {
   bool shouldRewriteOverlay = false;
@@ -757,6 +758,21 @@ bool Overlay::buildDirEntries(
       shouldRewriteOverlay = true;
       return;
     }
+
+    auto rawMode = static_cast<uint32_t>(*value.mode());
+    if (!DirEntry::isValidInitialMode(rawMode)) {
+      // Corrupt on-disk data; DirEntry would abort on it. fsck can also
+      // fold a corrupt WAL entry into the base, since it cannot check modes.
+      XLOGF(
+          ERR,
+          "Dropping entry {} from overlay dir {}: invalid mode {:o}",
+          name,
+          inodeNumber,
+          rawMode);
+      shouldRewriteOverlay = true;
+      return;
+    }
+    auto mode = static_cast<mode_t>(rawMode);
 
     InodeNumber ino;
     if (*value.inodeNumber()) {
@@ -770,13 +786,10 @@ bool Overlay::buildDirEntries(
     if (value.hash() && !value.hash()->empty()) {
       auto hash = ObjectId{folly::ByteRange{folly::StringPiece{*value.hash()}}};
       entries.emplace_back(
-          PathComponent{name},
-          DirEntry{
-              static_cast<mode_t>(*value.mode()), ino, hash, aclRootState});
+          PathComponent{name}, DirEntry{mode, ino, hash, aclRootState});
     } else {
       entries.emplace_back(
-          PathComponent{name},
-          DirEntry{static_cast<mode_t>(*value.mode()), ino, aclRootState});
+          PathComponent{name}, DirEntry{mode, ino, aclRootState});
     }
   });
 
@@ -798,7 +811,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
       inodeNumber,
       [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
         entries.reserve(count);
-        shouldRewriteOverlay = buildDirEntries(iterate, entries);
+        shouldRewriteOverlay = buildDirEntries(inodeNumber, iterate, entries);
       });
   if (!found && !hasWal) {
     stats_->increment(&OverlayStats::loadOverlayDirFailure);
@@ -824,23 +837,38 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     // base file and clearWalAfterFullWrite removes the WAL.
     auto walResult = inodeCatalog_->loadWalDelta(inodeNumber, caseSensitive_);
     auto& delta = walResult.delta;
-    stats_->increment(&OverlayStats::walReplay);
-    stats_->increment(
-        &OverlayStats::walEntriesReplayed,
-        static_cast<double>(walResult.rawEntriesParsed));
-    if (walResult.parseErrors > 0) {
-      stats_->increment(
-          &OverlayStats::walParseFailure,
-          static_cast<double>(walResult.parseErrors));
-    }
 
     DirContents merged{std::move(entries), caseSensitive_};
 
     for (auto& [name, walDelta] : delta) {
       switch (walDelta.type) {
         case WalOpType::ADD: {
-          auto mode = static_cast<mode_t>(*walDelta.entry.mode());
-          auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
+          auto rawMode = static_cast<uint32_t>(*walDelta.entry.mode());
+          auto rawIno = *walDelta.entry.inodeNumber();
+          auto nextIno = nextInodeNumber_.load(std::memory_order_relaxed);
+          // The WAL reader already rejects malformed frames and invalid
+          // names, but only the Overlay knows which inode numbers exist and
+          // which mode bits a DirEntry can hold. Dropping the entry here
+          // beats aborting on the DirEntry or visitDirEntries checks below.
+          bool validMode = DirEntry::isValidInitialMode(rawMode);
+          bool validIno = rawIno > 0 && static_cast<uint64_t>(rawIno) < nextIno;
+          if (!validMode || !validIno) {
+            XLOGF(
+                ERR,
+                "Dropping WAL entry {} in overlay dir {}: {} (mode {:o}, inode number {}, next inode number {})",
+                name,
+                inodeNumber,
+                validMode ? "inode number not allocated" : "invalid mode",
+                rawMode,
+                rawIno,
+                nextIno);
+            ++walResult.parseErrors;
+            // The WAL reader counted this entry as parsed; it is not replayed.
+            --walResult.rawEntriesParsed;
+            break;
+          }
+          auto mode = static_cast<mode_t>(rawMode);
+          auto ino = InodeNumber::fromThrift(rawIno);
           const auto aclRootState = getOverlayEntryAclRootState(walDelta.entry);
           DirEntry entry{mode, ino, aclRootState};
           if (walDelta.entry.hash().has_value() &&
@@ -880,6 +908,16 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     // pending inserts and tombstones now instead of leaving lookups and
     // iteration on the two-region path until the next mutation.
     merged.compact();
+
+    stats_->increment(&OverlayStats::walReplay);
+    stats_->increment(
+        &OverlayStats::walEntriesReplayed,
+        static_cast<double>(walResult.rawEntriesParsed));
+    if (walResult.parseErrors > 0) {
+      stats_->increment(
+          &OverlayStats::walParseFailure,
+          static_cast<double>(walResult.parseErrors));
+    }
 
     if (!shouldDeferWalFlush() || walResult.parseErrors > 0 ||
         shouldRewriteOverlay) {

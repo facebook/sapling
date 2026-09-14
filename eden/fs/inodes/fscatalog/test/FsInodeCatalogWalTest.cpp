@@ -693,33 +693,39 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
-// FIXME: an entry whose name is not a valid path component makes
-// loadWalDelta throw from the case-aware name comparator as soon as the
-// name is compared with another entry. fsck leaves a WAL it cannot replay
-// in place, so the directory stays unloadable.
-TEST_P(FsInodeCatalogWalTest, loadWalDelta_emptyNameThrows) {
+// An entry whose name is not a valid path component is skipped and counted
+// as a parse error, so the frame after it is still applied and the caller
+// rewrites the base and removes the WAL.
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_skipsEmptyName) {
   const InodeNumber parent{308};
-  std::string bytes = makeOldFormatAddWalFrame("ok", 0100644, 1);
-  bytes += makeOldFormatAddWalFrame("", 0100644, 2);
+  std::string bytes = makeOldFormatAddWalFrame("", 0100644, 1);
+  bytes += makeOldFormatAddWalFrame("ok", 0100644, 2);
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
 
-  EXPECT_THROW(store_->loadWalDelta(parent), PathComponentValidationError);
+  auto result = store_->loadWalDelta(parent);
+  ASSERT_EQ(1u, result.delta.size());
+  EXPECT_EQ(2, *result.delta.at("ok").entry.inodeNumber());
+  EXPECT_EQ(1u, result.parseErrors);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
-TEST_P(FsInodeCatalogWalTest, loadWalDelta_invalidUtf8NameThrows) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_skipsInvalidUtf8Name) {
   const InodeNumber parent{309};
-  std::string bytes = makeOldFormatAddWalFrame("ok", 0100644, 1);
-  bytes += makeOldFormatAddWalFrame("\xff\xfe", 0100644, 2);
+  std::string bytes = makeOldFormatAddWalFrame("\xff\xfe", 0100644, 1);
+  bytes += makeOldFormatAddWalFrame("ok", 0100644, 2);
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
 
-  EXPECT_THROW(store_->loadWalDelta(parent), PathComponentNotUtf8);
+  auto result = store_->loadWalDelta(parent);
+  ASSERT_EQ(1u, result.delta.size());
+  EXPECT_EQ(2, *result.delta.at("ok").entry.inodeNumber());
+  EXPECT_EQ(1u, result.parseErrors);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
-// FIXME: an ADD carrying a mode with bits outside DirEntry's initial mode
-// mask, or a non-positive inode number, is returned in the delta as-is.
-// Building a DirEntry from it aborts on an XCHECK when the directory is
-// loaded.
-TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsModeOutsideInitialModeMask) {
+// The reader cannot tell which modes a DirEntry accepts, so a mode outside
+// the initial mode mask is passed through for Overlay::loadOverlayDir to
+// reject.
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_passesThroughUnknownModeBits) {
   const InodeNumber parent{310};
   const int32_t badMode = static_cast<int32_t>(0x0f000000 | 0100644);
   ASSERT_NO_FATAL_FAILURE(writeRawWal(
@@ -731,17 +737,18 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsModeOutsideInitialModeMask) {
   EXPECT_EQ(0u, result.parseErrors);
 }
 
-TEST_P(FsInodeCatalogWalTest, loadWalDelta_acceptsNonPositiveInodeNumber) {
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_skipsNonPositiveInodeNumber) {
   const InodeNumber parent{311};
   std::string bytes = makeOldFormatAddWalFrame("zero", 0100644, 0);
   bytes += makeOldFormatAddWalFrame("neg", 0100644, -1);
+  bytes += makeOldFormatAddWalFrame("ok", 0100644, 3);
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
 
   auto result = store_->loadWalDelta(parent);
-  ASSERT_EQ(2u, result.delta.size());
-  EXPECT_EQ(0, *result.delta.at("zero").entry.inodeNumber());
-  EXPECT_EQ(-1, *result.delta.at("neg").entry.inodeNumber());
-  EXPECT_EQ(0u, result.parseErrors);
+  ASSERT_EQ(1u, result.delta.size());
+  EXPECT_EQ(3, *result.delta.at("ok").entry.inodeNumber());
+  EXPECT_EQ(2u, result.parseErrors);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {

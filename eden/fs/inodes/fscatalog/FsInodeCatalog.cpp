@@ -895,6 +895,17 @@ bool FsFileContentStore::hasWal(InodeNumber parent) {
       err, fmt::format("error stat'ing WAL file for inode {}", parent));
 }
 
+namespace {
+bool isValidPathComponent(const std::string& name) {
+  try {
+    PathComponentPiece{name};
+    return true;
+  } catch (const PathComponentValidationError&) {
+    return false;
+  }
+}
+} // namespace
+
 LoadWalResult FsFileContentStore::loadWalDelta(
     InodeNumber parent,
     CaseSensitivity caseSensitive) {
@@ -975,99 +986,126 @@ LoadWalResult FsFileContentStore::loadWalDelta(
 
     bool valid = true;
     bool skipped = false;
-    switch (opType) {
-      case WalOpType::ADD: {
-        if (entryOffset + sizeof(int32_t) > entryLen) {
-          valid = false;
-          break;
-        }
-        int32_t mode;
-        memcpy(&mode, entryData + entryOffset, sizeof(int32_t));
-        entryOffset += sizeof(int32_t);
-
-        if (entryOffset + sizeof(int64_t) > entryLen) {
-          valid = false;
-          break;
-        }
-        int64_t inodeNum;
-        memcpy(&inodeNum, entryData + entryOffset, sizeof(int64_t));
-        entryOffset += sizeof(int64_t);
-
-        if (entryOffset + sizeof(uint8_t) > entryLen) {
-          valid = false;
-          break;
-        }
-        uint8_t hashLen = entryData[entryOffset];
-        entryOffset += sizeof(uint8_t);
-
-        if (entryOffset + hashLen > entryLen) {
-          valid = false;
-          break;
-        }
-
-        overlay::OverlayEntry overlayEntry;
-        overlayEntry.mode() = mode;
-        overlayEntry.inodeNumber() = inodeNum;
-        if (hashLen > 0) {
-          overlayEntry.hash() = std::string(
-              reinterpret_cast<const char*>(entryData + entryOffset), hashLen);
-        }
-        entryOffset += hashLen;
-
-        auto remaining = entryLen - entryOffset;
-        if (remaining > 0) {
-          if (remaining != kWalAclRootStateTailSize) {
+    if (!isValidPathComponent(name)) {
+      // The frame is intact, so skip just this entry. Letting the name
+      // reach the delta map would throw from its comparator and leave the
+      // directory unloadable until the WAL is removed by hand.
+      ++result.parseErrors;
+      XLOGF(
+          WARN,
+          "Skipping WAL entry for inode {} whose name is not a valid path component",
+          parent);
+      skipped = true;
+    } else {
+      switch (opType) {
+        case WalOpType::ADD: {
+          if (entryOffset + sizeof(int32_t) > entryLen) {
             valid = false;
             break;
           }
-          auto isRestricted = entryData[entryOffset] != 0;
+          int32_t mode;
+          memcpy(&mode, entryData + entryOffset, sizeof(int32_t));
+          entryOffset += sizeof(int32_t);
+
+          if (entryOffset + sizeof(int64_t) > entryLen) {
+            valid = false;
+            break;
+          }
+          int64_t inodeNum;
+          memcpy(&inodeNum, entryData + entryOffset, sizeof(int64_t));
+          entryOffset += sizeof(int64_t);
+
+          if (inodeNum <= 0) {
+            ++result.parseErrors;
+            XLOGF(
+                WARN,
+                "Skipping WAL ADD entry {} for inode {} with invalid inode number {}",
+                name,
+                parent,
+                inodeNum);
+            skipped = true;
+            break;
+          }
+
+          if (entryOffset + sizeof(uint8_t) > entryLen) {
+            valid = false;
+            break;
+          }
+          uint8_t hashLen = entryData[entryOffset];
           entryOffset += sizeof(uint8_t);
 
-          auto aclRootState = entryData[entryOffset];
-          entryOffset += sizeof(uint8_t);
+          if (entryOffset + hashLen > entryLen) {
+            valid = false;
+            break;
+          }
 
-          overlayEntry.isRestricted() = isRestricted;
-          overlayEntry.aclRootState() = static_cast<int32_t>(aclRootState);
+          overlay::OverlayEntry overlayEntry;
+          overlayEntry.mode() = mode;
+          overlayEntry.inodeNumber() = inodeNum;
+          if (hashLen > 0) {
+            overlayEntry.hash() = std::string(
+                reinterpret_cast<const char*>(entryData + entryOffset),
+                hashLen);
+          }
+          entryOffset += hashLen;
+
+          auto remaining = entryLen - entryOffset;
+          if (remaining > 0) {
+            if (remaining != kWalAclRootStateTailSize) {
+              valid = false;
+              break;
+            }
+            auto isRestricted = entryData[entryOffset] != 0;
+            entryOffset += sizeof(uint8_t);
+
+            auto aclRootState = entryData[entryOffset];
+            entryOffset += sizeof(uint8_t);
+
+            overlayEntry.isRestricted() = isRestricted;
+            overlayEntry.aclRootState() = static_cast<int32_t>(aclRootState);
+          }
+
+          assignDelta(
+              std::move(name),
+              WalDelta{WalOpType::ADD, std::move(overlayEntry)});
+          break;
         }
 
-        assignDelta(
-            std::move(name), WalDelta{WalOpType::ADD, std::move(overlayEntry)});
-        break;
-      }
-
-      case WalOpType::REMOVE: {
-        assignDelta(std::move(name), WalDelta{WalOpType::REMOVE, {}});
-        break;
-      }
-
-      case WalOpType::MATERIALIZE: {
-        auto it = delta.find(name);
-        if (it == delta.end()) {
-          // No prior delta for this name — record the MATERIALIZE so the
-          // mutator merge can clear the hash on the base entry.
-          delta.emplace(std::move(name), WalDelta{WalOpType::MATERIALIZE, {}});
-        } else if (it->second.type == WalOpType::ADD) {
-          // Materialize an ADD we already have — clear the hash in place.
-          it->second.entry.hash().reset();
+        case WalOpType::REMOVE: {
+          assignDelta(std::move(name), WalDelta{WalOpType::REMOVE, {}});
+          break;
         }
-        // REMOVE stays REMOVE; mirrors replayWal's MATERIALIZE-on-missing
-        // no-op (covered by loadWalDelta_materializeAfterRemoveLeavesRemove).
-        break;
-      }
 
-      default:
-        // Forward-compat: an unknown opcode with a valid entryLen frame is
-        // safe to skip — the entryLen prefix told us exactly how many bytes
-        // this entry occupies. Older binaries reading a newer WAL log and
-        // continue rather than dropping every entry past the unknown op.
-        ++result.parseErrors;
-        XLOGF(
-            WARN,
-            "Unknown WAL op {} for inode {}; skipping entry",
-            static_cast<int>(opType),
-            parent);
-        skipped = true;
-        break;
+        case WalOpType::MATERIALIZE: {
+          auto it = delta.find(name);
+          if (it == delta.end()) {
+            // No prior delta for this name — record the MATERIALIZE so the
+            // mutator merge can clear the hash on the base entry.
+            delta.emplace(
+                std::move(name), WalDelta{WalOpType::MATERIALIZE, {}});
+          } else if (it->second.type == WalOpType::ADD) {
+            // Materialize an ADD we already have — clear the hash in place.
+            it->second.entry.hash().reset();
+          }
+          // REMOVE stays REMOVE; mirrors replayWal's MATERIALIZE-on-missing
+          // no-op (covered by loadWalDelta_materializeAfterRemoveLeavesRemove).
+          break;
+        }
+
+        default:
+          // Forward-compat: an unknown opcode with a valid entryLen frame is
+          // safe to skip — the entryLen prefix told us exactly how many bytes
+          // this entry occupies. Older binaries reading a newer WAL log and
+          // continue rather than dropping every entry past the unknown op.
+          ++result.parseErrors;
+          XLOGF(
+              WARN,
+              "Unknown WAL op {} for inode {}; skipping entry",
+              static_cast<int>(opType),
+              parent);
+          skipped = true;
+          break;
+      }
     }
 
     if (!valid) {

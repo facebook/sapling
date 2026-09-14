@@ -1726,32 +1726,86 @@ TEST(OverlayLoadWalTest, loadAppliesDelta) {
   bundle.overlay->close();
 }
 
-// FIXME: an ADD whose inode number was never allocated is merged as-is, and
-// the base rewrite at the end of loadOverlayDir aborts on the
-// unallocated-inode XCHECK in visitDirEntries.
-TEST(OverlayLoadWalTest, addWithUnallocatedInodeNumberAborts) {
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  folly::test::TemporaryDirectory tmp("eden_wal_load_unallocated");
-  auto dir = canonicalPath(tmp.path().string());
-  auto bundle = makeWalLifecycleOverlay(dir);
-  ASSERT_NE(nullptr, bundle.store);
+// A WAL ADD the Overlay cannot represent, because its inode number was never
+// allocated or its mode has bits DirEntry cannot hold, is dropped from the
+// merged directory instead of aborting on the DirEntry or visitDirEntries
+// checks. The drop counts as a parse error, so the base is rewritten and the
+// WAL removed.
+class OverlayLoadCorruptWalTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    bundle_ = makeWalLifecycleOverlay(canonicalPath(tmp_.path().string()));
+    ASSERT_NE(nullptr, bundle_.store);
+    parent_ = bundle_.overlay->allocateInodeNumber();
+    DirContents base(kPathMapDefaultCaseSensitive);
+    base.emplace(
+        "a"_pc, S_IFREG | 0644, bundle_.overlay->allocateInodeNumber());
+    bundle_.overlay->saveOverlayDir(parent_, base);
+  }
 
-  auto parent = bundle.overlay->allocateInodeNumber();
-  auto inoA = bundle.overlay->allocateInodeNumber();
+  void TearDown() override {
+    bundle_.overlay->close();
+  }
 
-  DirContents base(kPathMapDefaultCaseSensitive);
-  base.emplace("a"_pc, S_IFREG | 0644, inoA);
-  bundle.overlay->saveOverlayDir(parent, base);
+  void appendAdd(PathComponentPiece name, int32_t mode, uint64_t inodeNumber) {
+    overlay::OverlayEntry entry;
+    entry.mode() = mode;
+    entry.inodeNumber() = inodeNumber;
+    bundle_.store->appendWalEntry(parent_, WalOpType::ADD, name, &entry);
+  }
 
-  overlay::OverlayEntry bogus;
-  bogus.mode() = S_IFREG | 0644;
-  bogus.inodeNumber() = bundle.overlay->getMaxInodeNumber().get() + 1000;
-  bundle.store->appendWalEntry(
-      parent, WalOpType::ADD, PathComponentPiece{"bogus"}, &bogus);
+  void expectOnlyBaseEntrySurvives() {
+    auto loaded = bundle_.overlay->loadOverlayDir(parent_);
+    EXPECT_EQ(1u, loaded.size());
+    EXPECT_NE(loaded.end(), loaded.find("a"_pc));
+    EXPECT_FALSE(bundle_.store->hasWal(parent_));
+  }
 
-  ASSERT_DEATH(bundle.overlay->loadOverlayDir(parent), "unallocated inode");
+  folly::test::TemporaryDirectory tmp_{"eden_wal_load_corrupt"};
+  WalLifecycleOverlay bundle_;
+  InodeNumber parent_;
+};
 
-  bundle.overlay->close();
+TEST_F(OverlayLoadCorruptWalTest, dropsAddWithUnallocatedInodeNumber) {
+  appendAdd(
+      "bogus"_pc,
+      S_IFREG | 0644,
+      bundle_.overlay->getMaxInodeNumber().get() + 1000);
+  expectOnlyBaseEntrySurvives();
+}
+
+TEST_F(OverlayLoadCorruptWalTest, dropsAddWithInvalidMode) {
+  appendAdd(
+      "bogus"_pc,
+      0x0f000000 | S_IFREG | 0644,
+      bundle_.overlay->allocateInodeNumber().get());
+  expectOnlyBaseEntrySurvives();
+}
+
+// fsck folds WAL entries into the base file without being able to check
+// their modes, so the base is validated the same way: an entry with a mode
+// DirEntry cannot hold is dropped and the base rewritten without it.
+TEST_F(OverlayLoadCorruptWalTest, dropsBaseEntryWithInvalidMode) {
+  overlay::OverlayEntry good;
+  good.mode() = S_IFREG | 0644;
+  good.inodeNumber() = bundle_.overlay->allocateInodeNumber().get();
+  overlay::OverlayEntry bad;
+  bad.mode() = 0x0f000000 | S_IFREG | 0644;
+  bad.inodeNumber() = bundle_.overlay->allocateInodeNumber().get();
+  overlay::OverlayDir dir;
+  dir.entries()->emplace("a", good);
+  dir.entries()->emplace("bogus", bad);
+  auto* catalog = bundle_.overlay->getRawInodeCatalog();
+  catalog->saveOverlayDir(parent_, std::move(dir));
+
+  auto loaded = bundle_.overlay->loadOverlayDir(parent_);
+  EXPECT_EQ(1u, loaded.size());
+  EXPECT_NE(loaded.end(), loaded.find("a"_pc));
+
+  auto rewritten = catalog->loadOverlayDir(parent_);
+  ASSERT_TRUE(rewritten.has_value());
+  EXPECT_EQ(1u, rewritten->entries()->size());
+  EXPECT_EQ(1u, rewritten->entries()->count("a"));
 }
 
 TEST(OverlayLoadWalTest, collapsedAddRemoveIsApplied) {
