@@ -695,6 +695,8 @@ impl WalkNode {
 
                 if !keep {
                     tracing::trace!(%path, has_walk=child.has_walk(), "GC deleting node");
+                    // Finalize any walks before dropping the node.
+                    child.clear_except_children(path);
                 }
 
                 path.pop();

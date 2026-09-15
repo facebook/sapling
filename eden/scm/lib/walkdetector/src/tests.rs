@@ -508,6 +508,15 @@ fn test_gc_stats() {
 
     detector.file_loaded(p("dir1/a"), 0);
     detector.file_loaded(p("dir1/b"), 0);
+    let logged_end = detector
+        .inner
+        .read()
+        .node
+        .get_node(&p("dir1"))
+        .and_then(|n| n.get_walk_for_type(WalkType::File))
+        .expect("dir1 file walk should exist")
+        .logged_end
+        .clone();
 
     detector.file_loaded(p("dir2/a"), 0);
 
@@ -533,6 +542,10 @@ fn test_gc_stats() {
 
     // "dir1"
     assert_eq!(walks_removed, 1);
+    assert!(
+        logged_end.load(Ordering::Relaxed),
+        "GC should finalize the removed dir1 walk"
+    );
 }
 
 #[test]
