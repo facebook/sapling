@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -297,6 +298,44 @@ TEST(RemoveDuringLoadTest, loadFinishingAfterRemovalDoesNotClobberNewEntry) {
   EXPECT_THROW_ERRNO(std::move(loadFuture).get(0ms), ENOENT);
   EXPECT_EQ(recreatedNumber, mount.getTreeInode("dir")->getNodeId());
 }
+
+#ifndef _WIN32
+// Clearing a directory must leave the overlay state of a loaded child alone.
+// The child can still be in use, by another thread or by the kernel, and like
+// every other removal path it frees its own overlay state when it is
+// unloaded.
+TEST(RemoveAllChildrenTest, loadedChildKeepsItsOverlayStateUntilUnloaded) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/sub/file.txt", "This is file.txt.\n");
+  TestMount mount{builder};
+  mount.overwriteFile("dir/sub/file.txt", "This is the new file.txt.\n");
+
+  auto dir = mount.getTreeInode("dir");
+  auto sub = mount.getTreeInode("dir/sub");
+  auto subNumber = sub->getNodeId();
+  auto* metadata = mount.getEdenMount()->getInodeMetadataTable();
+  auto* overlay = mount.getEdenMount()->getOverlay();
+  ASSERT_TRUE(overlay->hasOverlayDir(subNumber));
+  ASSERT_TRUE(metadata->getOptional(subNumber).has_value());
+
+  {
+    auto renameLock = mount.getEdenMount()->acquireRenameLock();
+    dir->removeAllChildrenRecursively(
+        InvalidationRequired::No,
+        ObjectFetchContext::getNullContext(),
+        renameLock);
+  }
+
+  // FIXME: sub is still referenced here, but its overlay state has already
+  // been freed, so touching its timestamps throws.
+  EXPECT_FALSE(overlay->hasOverlayDir(subNumber));
+  EXPECT_FALSE(metadata->getOptional(subNumber).has_value());
+
+  sub.reset();
+  EXPECT_FALSE(overlay->hasOverlayDir(subNumber));
+  EXPECT_FALSE(metadata->getOptional(subNumber).has_value());
+}
+#endif
 
 // TODO: It would be nice to adds some tests for concurrent load+unlink
 // However, loading a FileInode does not wait for the file data to be loaded
