@@ -16,8 +16,6 @@
 #include <folly/synchronization/CallOnce.h>
 #include <gtest/gtest_prod.h>
 #include <stdlib.h>
-#include <condition_variable>
-#include <deque>
 #include <iosfwd>
 #include <memory>
 #include <optional>
@@ -36,6 +34,7 @@
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/utils/FsChannelTypes.h"
+#include "eden/fs/utils/InvalidationQueue.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <fmt/format.h>
@@ -735,19 +734,17 @@ class FuseChannel final : public FsChannel {
   enum class InvalidationType : uint32_t {
     INODE,
     DIR_ENTRY,
-    FLUSH,
-    STOP,
   };
   struct InvalidationEntry {
-    InvalidationEntry();
-    InvalidationEntry(InodeNumber inode, int64_t offset, int64_t length);
+    explicit InvalidationEntry(
+        InodeNumber inode,
+        int64_t offset = 0,
+        int64_t length = 0);
     InvalidationEntry(InodeNumber inode, PathComponentPiece name);
-    explicit InvalidationEntry(folly::Promise<folly::Unit> promise);
     InvalidationEntry(const InvalidationEntry&) = delete;
     InvalidationEntry& operator=(const InvalidationEntry&) = delete;
     InvalidationEntry(InvalidationEntry&& other) noexcept(
         std::is_nothrow_move_constructible_v<PathComponent> &&
-        std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>> &&
         std::is_nothrow_move_constructible_v<DataRange>);
     InvalidationEntry& operator=(InvalidationEntry&&) = delete;
     ~InvalidationEntry();
@@ -757,34 +754,15 @@ class FuseChannel final : public FsChannel {
     union {
       PathComponent name;
       DataRange range{0, 0};
-      folly::Promise<folly::Unit> promise;
     };
-  };
-  enum class InvalidationQueueState : uint32_t {
-    ACCEPTING,
-    DRAINING,
-    STOPPED,
-  };
-  struct InvalidationQueue {
-    std::deque<InvalidationEntry> queue;
-    bool flushInProgress{false};
-    InvalidationQueueState state{InvalidationQueueState::ACCEPTING};
   };
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
   FRIEND_TEST(FuseChannelTest, formatting_inode);
   FRIEND_TEST(FuseChannelTest, formatting_dir);
-  FRIEND_TEST(FuseChannelTest, formatting_flush);
   FRIEND_TEST(FuseChannelTest, formatting_unknown);
-  FRIEND_TEST(FuseChannelTest, flushPreventsLaterDispatchWhileWaiting);
-  FRIEND_TEST(FuseChannelTest, stopEntryDrainsQueuedFlushes);
-  FRIEND_TEST(FuseChannelTest, singleInvalidationThreadUsesSerialFlush);
   FRIEND_TEST(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker);
   FRIEND_TEST(FuseChannelTest, excessiveInvalidationThreadsAreCapped);
-  FRIEND_TEST(FuseChannelTest, concurrentInvalidationStopsAreSerialized);
-  FRIEND_TEST(FuseChannelTest, invalidationWaitsForQueueCapacity);
-  FRIEND_TEST(FuseChannelTest, invalidationQueueWaitIsCancellable);
-  FRIEND_TEST(FuseChannelTest, invalidationQueueShutdownUnblocksProducer);
   /**
    * Private destructor.
    *
@@ -941,9 +919,7 @@ class FuseChannel final : public FsChannel {
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
-  void invalidationThread() noexcept;
   void stopInvalidationThread();
-  void notifyInvalidationCapacityWaiters();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
@@ -1104,22 +1080,10 @@ class FuseChannel final : public FsChannel {
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
 
-  // State for sending inode invalidation requests to the kernel. Entries must
-  // be safe to complete out of dequeue order because dedicated threads process
-  // them concurrently.
-  folly::Synchronized<InvalidationQueue, std::mutex> invalidationQueue_;
-  std::condition_variable invalidationCV_;
-  std::condition_variable invalidationCapacityCV_;
-  std::atomic<size_t> invalidationCapacityWaiters_{0};
-  std::vector<std::thread> invalidationThreads_;
-  folly::once_flag stopInvalidationThreadsFlag_;
-  // Tracks the number of invalidation entries currently being processed.
-  // Used by FLUSH entries to wait until all prior work is complete.
-  // Uses a separate mutex from invalidationQueue_ to avoid blocking
-  // other threads from taking entries while a FLUSH waits.
-  std::atomic<uint64_t> inflightInvalidations_{0};
-  std::mutex inflightInvalidationsMutex_;
-  std::condition_variable inflightInvalidationsCV_;
+  // Inode invalidation requests to the kernel, sent from dedicated threads.
+  // Entries must be safe to complete out of dequeue order because the threads
+  // process them concurrently.
+  InvalidationQueue<InvalidationEntry> invalidationQueue_;
 
   ProcessAccessLog processAccessLog_;
 
@@ -1196,10 +1160,6 @@ struct formatter<facebook::eden::FuseChannel::InvalidationEntry>
       case facebook::eden::FuseChannel::InvalidationType::DIR_ENTRY:
         return fmt::format_to(
             out, "(inode {}, child \"{}\")", entry.inode, entry.name);
-      case facebook::eden::FuseChannel::InvalidationType::FLUSH:
-        return fmt::format_to(out, "(invalidation flush)");
-      case facebook::eden::FuseChannel::InvalidationType::STOP:
-        return fmt::format_to(out, "(invalidation stop)");
       default:
         return fmt::format_to(
             out,

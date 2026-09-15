@@ -73,6 +73,19 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "invalidation_queue",
+    srcs = ["InvalidationQueueTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/utils:invalidation_queue",
+        "//folly:cancellation_token",
+        "//folly:scope_guard",
+    ],
+)
+
+cpp_unittest(
     name = "ring_buffer",
     srcs = ["RingBufferTest.cpp"],
     network_access = network_access_utils.none(),

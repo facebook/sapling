@@ -249,6 +249,22 @@ cpp_library(
 )
 
 cpp_library(
+    name = "invalidation_queue",
+    headers = ["InvalidationQueue.h"],
+    exported_deps = [
+        "//eden/common/utils:immediate_future",
+        "//folly:cancellation_token",
+        "//folly:function",
+        "//folly:scope_guard",
+        "//folly:synchronized",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/synchronization:call_once",
+        "//folly/system:thread_name",
+    ],
+)
+
+cpp_library(
     name = "thread",
     srcs = ["Thread.cpp"],
     external_deps = [
