@@ -341,6 +341,35 @@ export function extractRepoInfoFromUrl(
   return {owner, repo, hostname: hostname1 ?? hostname2};
 }
 
+/**
+ * The repo URLs that may hold this checkout's pull requests, best candidate first.
+ *
+ * A fork pushes to itself but its pull requests belong upstream, which is already how the CLI
+ * behaves: `try_find_upstream` in the github extension resolves a bare pull request number against
+ * `paths.upstream` before `paths.default`. Follow the same order so ISL reports on the same pull
+ * requests `sl pr` does, and let `github.pull_request_repo` override it for checkouts whose
+ * remotes do not follow that convention.
+ *
+ * `github.pull_request_repo` accepts either a full URL or a bare `owner/name`, which is resolved
+ * against the host the checkout already uses.
+ */
+export function codeReviewRepoUrls(configs: {
+  pathsDefault: string;
+  pathsUpstream: string;
+  pullRequestRepo: string | undefined;
+}): Array<string> {
+  const {pathsDefault, pathsUpstream, pullRequestRepo} = configs;
+  const fallbacks = [pathsUpstream, pathsDefault].filter(url => url !== '');
+  if (pullRequestRepo == null || pullRequestRepo === '') {
+    return fallbacks;
+  }
+  if (!/^[^/\s]+\/[^/\s]+$/.test(pullRequestRepo)) {
+    return [pullRequestRepo];
+  }
+  const hostname = fallbacks.map(url => extractRepoInfoFromUrl(url)?.hostname).find(h => h != null);
+  return [`https://${hostname ?? 'github.com'}/${pullRequestRepo}`];
+}
+
 export function computeNewConflicts(
   previousConflicts: MergeConflicts,
   commandOutput: ResolveCommandConflictOutput,
