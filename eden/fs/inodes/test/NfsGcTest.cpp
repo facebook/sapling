@@ -16,6 +16,8 @@
 #include <thread>
 #include <vector>
 
+#include <fb303/ServiceData.h>
+#include <fb303/ThreadCachedServiceData.h>
 #include <folly/CancellationToken.h>
 #include <folly/container/F14Set.h>
 #include <folly/executors/ManualExecutor.h>
@@ -335,6 +337,17 @@ class NfsGcTest : public ::testing::Test {
     return res.tag;
   }
 
+  /**
+   * Number of chmods GC has issued to invalidate directories so far.
+   */
+  int64_t numInvalidationAttempts() {
+    testMount_->getServerState()->getStats()->flush();
+    facebook::fb303::ThreadCachedServiceData::get()->publishStats();
+    return facebook::fb303::ServiceData::get()
+        ->getCounterIfExists("nfs.invalidation.gc.attempt.sum")
+        .value_or(0);
+  }
+
   FakeTreeBuilder builder_;
   folly::EventBase evb_;
   std::shared_ptr<folly::ManualExecutor> manualExecutor_;
@@ -425,6 +438,29 @@ TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
   EXPECT_EQ(2, numInvalidated);
   EXPECT_TRUE(isLoaded(child));
   EXPECT_TRUE(isLoaded(sibling));
+}
+
+TEST_F(NfsGcTest, directoryWithNothingToClearIsNotInvalidatedAgain) {
+  createOnDisk("parent/child");
+  // A materialized directory is never invalidated, so "parent/child" keeps
+  // its FS reference and stays loaded across GC runs.
+  testMount_->addFile("parent/untracked.txt", "u\n");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto two = inodeNumberOf("parent/child/two.txt");
+
+  // The first run clears the two files under "parent/child", and the sweep
+  // forgets them.
+  EXPECT_EQ(2, runGc(std::chrono::system_clock::time_point::max()));
+  sweep();
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(two));
+
+  // A second run has no FS reference left to clear under "parent/child".
+  auto attemptsBefore = numInvalidationAttempts();
+  EXPECT_EQ(0, runGc(std::chrono::system_clock::time_point::max()));
+  // FIXME: GC chmods "parent/child" again anyway, and will keep doing so on
+  // every run for as long as its parent cannot be invalidated.
+  EXPECT_EQ(attemptsBefore + 1, numInvalidationAttempts());
 }
 
 #endif

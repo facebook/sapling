@@ -182,6 +182,8 @@ cpp_unittest(
         "//eden/fs/nfs/testharness:nfs_request_utils",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
+        "//fb303:service_data",
+        "//fb303:thread_cached_service_data",
         "//folly:cancellation_token",
         "//folly/container:f14_hash",
         "//folly/executors:manual_executor",
