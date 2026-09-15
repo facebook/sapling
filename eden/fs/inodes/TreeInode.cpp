@@ -6210,7 +6210,13 @@ void TreeInode::saveOverlayPostCheckout(
           return std::nullopt;
         }
 
-        // TODO: This needs to compare filenames too.
+        // A renamed child keeps its object id, so the id alone can match a
+        // different entry of the Tree at the same position. The name has
+        // to match as well, or reloading from the Tree would change the
+        // directory.
+        if (inodeIter->first != scmIter->first) {
+          return std::nullopt;
+        }
 
         // If the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our

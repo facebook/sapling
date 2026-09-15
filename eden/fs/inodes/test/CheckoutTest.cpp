@@ -487,12 +487,12 @@ TEST_P(CheckoutTest, renamedFileKeepsDirectoryMaterialized) {
   std::move(diffFuture).get(0ms);
   auto status = callback.extractStatus();
 
-  // FIXME: the directory only has unmaterialized entries whose object ids
-  // match commit 2's tree position by position, so it is dematerialized to
-  // that tree even though the names differ, and status no longer sees the
-  // rename.
-  EXPECT_FALSE(dir->isMaterialized());
-  EXPECT_THAT(*status.entries(), UnorderedElementsAre());
+  EXPECT_TRUE(dir->isMaterialized());
+  EXPECT_THAT(
+      *status.entries(),
+      UnorderedElementsAre(
+          std::make_pair("d/x.txt", ScmFileStatus::REMOVED),
+          std::make_pair("d/y.txt", ScmFileStatus::ADDED)));
 }
 
 TEST_P(CheckoutTest, removeFile) {
