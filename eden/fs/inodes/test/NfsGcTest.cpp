@@ -173,7 +173,8 @@ class NfsGcTest : public ::testing::Test {
    */
   folly::Future<uint64_t> startGc(
       std::chrono::system_clock::time_point cutoff,
-      PinnedInodeSet pinnedInodes = noPins()) {
+      PinnedInodeSet pinnedInodes = noPins(),
+      folly::CancellationToken cancellationToken = {}) {
     // Bound to the server executor, which the wait helpers drain, so the
     // walk's deferred continuations run while a test waits on it; a
     // SemiFuture's would only run once something drove it.
@@ -183,7 +184,7 @@ class NfsGcTest : public ::testing::Test {
             cutoff,
             ObjectFetchContext::getNullContext(),
             /*pressureBased=*/true,
-            folly::CancellationToken{},
+            std::move(cancellationToken),
             std::move(pinnedInodes))
         .semi()
         .via(testMount_->getServerExecutor().get());
@@ -718,6 +719,27 @@ TEST_F(NfsGcTest, lookupBeforeTheForgetIsForgottenWithTheRest) {
   EXPECT_EQ(4, numInvalidated);
   EXPECT_FALSE(isLoaded(child));
   EXPECT_FALSE(isLoaded(sibling));
+}
+
+TEST_F(NfsGcTest, cancellationWaitsForTheChmodItAlreadyQueued) {
+  createOnDisk("parent/child");
+  hold("parent/child");
+  folly::CancellationSource cancellation;
+  auto gc = startGc(
+      std::chrono::system_clock::time_point::max(),
+      noPins(),
+      cancellation.getToken());
+  waitUntilInvalidationBlocked("parent/child");
+
+  // The chmod of "parent/child" is in flight. Cancelling the walk must not
+  // let it finish before that chmod has: its forget callback holds inode
+  // references, and the walk's completion releases the GC lease.
+  cancellation.requestCancellation();
+  pump();
+  EXPECT_FALSE(gc.isReady());
+  release("parent/child");
+  finishGc(std::move(gc));
+  EXPECT_TRUE(faultInjector().getBlockedFaults(kInvalidationFault).empty());
 }
 
 TEST_F(NfsGcTest, directoryWithNothingToClearIsNotInvalidatedAgain) {

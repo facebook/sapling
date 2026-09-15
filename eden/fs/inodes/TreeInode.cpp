@@ -6648,12 +6648,9 @@ processTreeChildren(
           futures.push_back(childProcessor(name.piece(), tree));
         }
 
-        // Check for cancellation after processing children
-        if (shouldCancelGC(cancellationToken)) {
-          return ImmediateFuture<std::vector<ResultType>>(
-              std::vector<ResultType>());
-        }
-
+        // Cancellation stops new work, but the child walks already started
+        // hold inode references and may have chmods in flight, so they are
+        // joined before the GC lease is released.
         return collectAllSafe(std::move(futures));
       });
 }
@@ -7236,46 +7233,42 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
 #endif
 
   return std::move(stepFuture)
-      .thenValue(
-          [cancellationToken](
-              NfsGcStep&& step) -> ImmediateFuture<NfsGcResult> {
-            if (shouldCancelGC(cancellationToken)) {
-              return NfsGcResult{0, false, /*containsPin=*/true};
-            }
-            NfsGcResult result{
-                step.numInvalidated, step.invalidated, step.containsPin};
-            if (!step.done) {
-              return result;
-            }
-            // Wait for this directory's own chmod rather than for the whole
-            // queue to drain, so chmods of unrelated directories can be in
-            // flight at once when the channel has several invalidation threads.
-            // The directory counts as invalidated only if its chmod reached
-            // EdenFS and the children were cleared, and it contributes the
-            // number of children whose FS reference was cleared, matching what
-            // the FUSE pass counts. A broken future means the channel stopped
-            // first.
-            return ImmediateFuture<std::optional<uint64_t>>{
-                std::move(*step.done)}
-                .thenTry(
-                    [result](folly::Try<std::optional<uint64_t>>&& cleared) {
-                      auto finished = result;
-                      if (cleared.hasException()) {
-                        // The channel stopped first, or forget threw.
-                        XLOGF(
-                            WARN,
-                            "NFS GC invalidation did not complete: {}",
-                            cleared.exception().what());
-                      }
-                      if (cleared.hasValue() && cleared->has_value()) {
-                        finished.numInvalidated += **cleared;
-                        finished.invalidated = true;
-                      } else {
-                        finished.invalidated = false;
-                      }
-                      return finished;
-                    });
-          });
+      .thenValue([](NfsGcStep&& step) -> ImmediateFuture<NfsGcResult> {
+        NfsGcResult result{
+            step.numInvalidated, step.invalidated, step.containsPin};
+        if (!step.done) {
+          return result;
+        }
+        // Wait for this directory's own chmod rather than for the whole
+        // queue to drain, so chmods of unrelated directories can be in
+        // flight at once when the channel has several invalidation threads.
+        // A cancelled walk waits too: the chmod was accepted, its forget
+        // callback holds inode references, and the SETATTR it turns into
+        // needs the channel to still be serving.
+        // The directory counts as invalidated only if its chmod reached
+        // EdenFS and the children were cleared, and it contributes the
+        // number of children whose FS reference was cleared, matching what
+        // the FUSE pass counts. A broken future means the channel stopped
+        // first.
+        return ImmediateFuture<std::optional<uint64_t>>{std::move(*step.done)}
+            .thenTry([result](folly::Try<std::optional<uint64_t>>&& cleared) {
+              auto finished = result;
+              if (cleared.hasException()) {
+                // The channel stopped first, or forget threw.
+                XLOGF(
+                    WARN,
+                    "NFS GC invalidation did not complete: {}",
+                    cleared.exception().what());
+              }
+              if (cleared.hasValue() && cleared->has_value()) {
+                finished.numInvalidated += **cleared;
+                finished.invalidated = true;
+              } else {
+                finished.invalidated = false;
+              }
+              return finished;
+            });
+      });
 }
 
 ImmediateFuture<uint64_t /* numInvalidated */>
