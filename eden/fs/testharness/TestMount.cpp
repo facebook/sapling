@@ -421,6 +421,23 @@ void TestMount::remount(bool simulateUncleanShutdown) {
   EXPECT_EQ(0, weakMount.lock().use_count())
       << "All references to EdenMount should be released before calling "
          "remount()";
+  // Dropping the last reference only starts tearing the mount down. Inodes
+  // are unloaded through the server executor, and the overlay lock the new
+  // mount has to acquire is released once that finishes. A probe on the lock
+  // file from a separate descriptor sees the old mount's lock until then.
+  auto infoPath = overlayPath + "info"_pc;
+  if (access(infoPath.c_str(), F_OK) == 0) {
+    folly::File probe{infoPath.c_str(), O_RDONLY | O_CLOEXEC};
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{30};
+    while (!probe.try_lock()) {
+      drainServerExecutor();
+      XCHECK(std::chrono::steady_clock::now() < deadline)
+          << "old EdenMount still holds the overlay lock";
+      // @lint-ignore CLANGTIDY facebook-hte-BadCall-sleep_for
+      std::this_thread::sleep_for(std::chrono::milliseconds{1});
+    }
+    probe.unlock();
+  }
 
   if (simulateUncleanShutdown) {
 #ifndef _WIN32
