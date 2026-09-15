@@ -131,6 +131,7 @@ pub enum SaplingRemoteApiMethod {
     ListBookmarkPatterns,
     Lookup,
     PathHistory,
+    ReplayIdenticalMoves,
     SetBookmark,
     StreamingClone,
     SuffixQuery,
@@ -183,6 +184,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::ListBookmarkPatterns => "list_bookmark_patterns",
             Self::Lookup => "lookup",
             Self::PathHistory => "path_history",
+            Self::ReplayIdenticalMoves => "replay_identical_moves",
             Self::SetBookmark => "set_bookmark",
             Self::StreamingClone => "streaming_clone",
             Self::SuffixQuery => "suffix_query",
@@ -525,6 +527,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<blame::BlameHandler>(route);
         Handlers::setup::<bookmarks::Bookmarks2Handler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
+        Handlers::setup::<bookmarks::ReplayIdenticalMovesHandler>(route);
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
         Handlers::setup::<commit_cloud::CommitCloudOtherRepoWorkspaces>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
