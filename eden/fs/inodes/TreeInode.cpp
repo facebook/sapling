@@ -4832,6 +4832,12 @@ folly::Try<folly::Unit> TreeInode::removeOrReplaceCheckoutEntryLocked(
     } else {
       getOverlay()->recursivelyRemoveOverlayDir(oldEntryInodeNumber);
     }
+  } else if (!loadedChild) {
+    // A loaded child frees its overlay state when it is destroyed. An
+    // unloaded one was never materialized, so it has no overlay file, but
+    // it may still have a metadata record from an earlier load, and nothing
+    // else will free it.
+    getOverlay()->freeInodeMetadata(oldEntryInodeNumber);
   }
 
   return folly::Try<folly::Unit>{folly::unit};

@@ -533,8 +533,7 @@ TEST_P(CheckoutTest, removingUnloadedFileFreesInodeMetadata) {
   EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
   EXPECT_FALSE(testMount.hasFileAt("a.txt"));
 
-  // FIXME: the record for the removed file is never freed.
-  EXPECT_TRUE(metadata->getOptional(ino).has_value());
+  EXPECT_FALSE(metadata->getOptional(ino).has_value());
 }
 #endif
 

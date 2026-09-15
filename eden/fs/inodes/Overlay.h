@@ -252,6 +252,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   void removeOverlayFile(InodeNumber inodeNumber);
 
+  /**
+   * Free the InodeMetadataTable record of an inode that has no overlay file,
+   * if there is one. A no-op on Windows, which has no metadata table.
+   */
+  void freeInodeMetadata(InodeNumber inodeNumber);
+
   void removeOverlayDir(InodeNumber inodeNumber);
 
   /**

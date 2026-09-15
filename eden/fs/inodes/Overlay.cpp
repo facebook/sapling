@@ -1159,6 +1159,11 @@ void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
 #endif
 }
 
+void Overlay::freeInodeMetadata(InodeNumber inodeNumber) {
+  IORequest req{this};
+  freeInodeFromMetadataTable(inodeNumber);
+}
+
 void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::removeOverlayFile};
   try {
