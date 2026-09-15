@@ -49,10 +49,13 @@ const MRL_TIER: &str = "mononoke-multi-repo-land-service";
 
 /// Explicit per-attempt budget: the land's whole regenerate-and-retry loop
 /// runs inside this one RPC.
-const MRL_THRIFT_PROCESSING_TIMEOUT: Duration = Duration::from_secs(300);
+const MRL_THRIFT_PROCESSING_TIMEOUT: Duration = Duration::from_secs(1800);
 
-/// Total client-side wall clock across SR retries; fits one retry.
-const MRL_THRIFT_OVERALL_TIMEOUT: Duration = Duration::from_secs(600);
+/// Total client-side wall clock across SR retries. Equal to the processing
+/// budget on purpose: the tier retries only connection and overload
+/// failures, which fail in milliseconds, so a retry still gets the whole
+/// budget.
+const MRL_THRIFT_OVERALL_TIMEOUT: Duration = Duration::from_secs(1800);
 
 /// Check whether this push should be diverted.
 ///
