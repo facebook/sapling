@@ -5915,6 +5915,28 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 } // namespace
 #endif
 
+namespace {
+/**
+ * Whether the NFS GC invalidation of a directory may clear this child's FS
+ * reference. Pinned inodes and directories whose subtree contains a pin are
+ * kept, and so are all directories when pin information is unavailable; see
+ * TreeInode::handleChildrenNotAccessedRecently.
+ */
+bool nfsGcMayClearChild(
+    const DirEntry& entry,
+    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
+    const folly::F14FastSet<InodeNumber>& pinnedChildren) {
+  const auto ino = entry.getInodeNumber();
+  if (pinnedInodes && pinnedInodes->count(ino)) {
+    return false;
+  }
+  if (entry.isDirectory()) {
+    return pinnedInodes && !pinnedChildren.count(ino);
+  }
+  return true;
+}
+} // namespace
+
 #ifndef _WIN32
 bool TreeInode::nfsInvalidateDirCacheLocked(
     TreeInodeState& state,
@@ -5936,7 +5958,8 @@ bool TreeInode::nfsInvalidateDirCacheLocked(
 
 std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
     TreeInodeState& state,
-    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes) {
+    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
+    const folly::F14FastSet<InodeNumber>& pinnedChildren) {
   const auto path = getPath();
   if (!path.has_value() || !getMount()->getNfsdChannel()) {
     return nullptr;
@@ -5946,10 +5969,9 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
   std::vector<InodeNumber> childInodes;
   childInodes.reserve(state.entries.size());
   for (const auto& entry : state.entries.all()) {
-    if (entry.second.isDirectory() && !pinnedInodes) {
-      continue;
+    if (nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
+      childInodes.push_back(entry.second.getInodeNumber());
     }
-    childInodes.push_back(entry.second.getInodeNumber());
   }
   auto outcome = std::make_shared<NfsGcInvalidation>();
   auto stats = getMount()->getStats().copy();
@@ -6640,8 +6662,7 @@ TreeInode::handleChildrenNotAccessedRecently(
   if (getMount()->getNfsdChannel()) {
     return invalidateChildrenNotMaterializedNFS(
                cutoff, context, cancellationToken, std::move(pinnedInodes))
-        .thenValue(
-            [](std::pair<uint64_t, bool> result) { return result.first; });
+        .thenValue([](NfsGcResult result) { return result.numInvalidated; });
 
   } else if (getMount()->getPrjfsChannel()) {
     return invalidateChildrenNotMaterializedPrjFS(
@@ -6999,20 +7020,20 @@ namespace {
 struct NfsGcStep {
   uint64_t numInvalidated{0};
   bool invalidated{false};
+  bool containsPin{false};
   std::shared_ptr<NfsGcInvalidation> pending;
 };
 } // namespace
 
-ImmediateFuture<std::pair<
-    uint64_t /* numInvalidated */,
-    bool /* allDescendantsInvalidated */>>
-TreeInode::invalidateChildrenNotMaterializedNFS(
+ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     folly::CancellationToken cancellationToken,
     std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes) {
   if (shouldCancelGC(cancellationToken, getMount())) {
-    return std::make_pair(0u, false);
+    // This subtree was not examined, so report it as possibly pinned to keep
+    // ancestors from clearing its reference.
+    return NfsGcResult{0, false, /*containsPin=*/true};
   }
 
   return processTreeChildren(
@@ -7024,26 +7045,38 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
               context = context.copy(),
               cancellationToken,
               pinnedInodes](PathComponentPiece /*name*/, TreeInodePtr tree) {
-               return tree->invalidateChildrenNotMaterializedNFS(
-                   cutoff, context, cancellationToken, pinnedInodes);
+               return tree
+                   ->invalidateChildrenNotMaterializedNFS(
+                       cutoff, context, cancellationToken, pinnedInodes)
+                   .thenValue([ino = tree->getNodeId()](NfsGcResult result) {
+                     return std::make_pair(ino, result);
+                   });
              })
       .thenValue([self = inodePtrFromThis(),
                   cutoff,
                   cancellationToken,
                   pinnedInodes = std::move(pinnedInodes)](
-                     const std::vector<std::pair<uint64_t, bool>>&
-                         invalidations) {
+                     const std::vector<std::pair<InodeNumber, NfsGcResult>>&
+                         childResults) {
         NfsGcStep step;
+        step.containsPin =
+            pinnedInodes && pinnedInodes->count(self->getNodeId());
         // Check for cancellation before processing results
         if (shouldCancelGC(cancellationToken)) {
+          step.containsPin = true;
           return step;
         }
 
         bool allDescendantsInvalidated = true;
-        for (auto invalidation : invalidations) {
-          step.numInvalidated += invalidation.first;
-          if (!invalidation.second) {
+        folly::F14FastSet<InodeNumber> pinnedChildren;
+        for (const auto& [childIno, childResult] : childResults) {
+          step.numInvalidated += childResult.numInvalidated;
+          if (!childResult.invalidated) {
             allDescendantsInvalidated = false;
+          }
+          if (childResult.containsPin) {
+            step.containsPin = true;
+            pinnedChildren.insert(childIno);
           }
         }
 
@@ -7054,6 +7087,17 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         }
 
         auto contents = self->lockContentsWrite();
+        if (pinnedInodes && !step.containsPin) {
+          // Pinned directories reported themselves above; pinned files are
+          // only visible here.
+          for (auto& entry : contents->entries.all()) {
+            if (!entry.second.isDirectory() &&
+                pinnedInodes->count(entry.second.getInodeNumber())) {
+              step.containsPin = true;
+              break;
+            }
+          }
+        }
         if (!allDescendantsInvalidated) {
           // If any of the children are not invalidated, we should skip
           // invalidation of this directory.
@@ -7118,7 +7162,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         auto* inodeMap = self->getInodeMap();
         bool anyChildReferenced = false;
         for (auto& entry : contents->entries.all()) {
-          if (entry.second.isDirectory() && !pinnedInodes) {
+          if (!nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
             continue;
           }
           if (entry.second.getInode() ||
@@ -7133,19 +7177,18 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         }
 #ifndef _WIN32
         // Windows platforms should not get to this path
-        step.pending =
-            self->nfsInvalidateCacheEntryForGC(*contents, pinnedInodes);
+        step.pending = self->nfsInvalidateCacheEntryForGC(
+            *contents, pinnedInodes, pinnedChildren);
 #endif
         return step;
       })
       .thenTry(
-          [self = inodePtrFromThis(),
-           cancellationToken](folly::Try<NfsGcStep>&& result)
-              -> ImmediateFuture<std::pair<uint64_t, bool>> {
+          [self = inodePtrFromThis(), cancellationToken](
+              folly::Try<NfsGcStep>&& result) -> ImmediateFuture<NfsGcResult> {
             // Check for cancellation before waiting for invalidation to
             // complete
             if (shouldCancelGC(cancellationToken)) {
-              return std::make_pair(uint64_t{0}, false);
+              return NfsGcResult{0, false, /*containsPin=*/true};
             }
             auto finish = [](folly::Try<NfsGcStep>&& stepTry) {
               auto& step = stepTry.value();
@@ -7161,7 +7204,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
                 numInvalidated +=
                     step.pending->numCleared.load(std::memory_order_acquire);
               }
-              return std::make_pair(numInvalidated, invalidated);
+              return NfsGcResult{numInvalidated, invalidated, step.containsPin};
             };
             auto* nfsdChannel = self->getMount()->getNfsdChannel();
             if (nfsdChannel) {

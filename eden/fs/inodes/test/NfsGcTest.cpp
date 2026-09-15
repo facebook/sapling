@@ -454,12 +454,13 @@ TEST_F(NfsGcTest, pinnedInodesAndTheirAncestorsKeepTheirReferences) {
       runGc(std::chrono::system_clock::time_point::max(), pins);
   sweep();
 
-  // FIXME: the pins are ignored, so the pinned files and the directory whose
-  // subtree contains one are all forgotten along with "two.txt".
-  EXPECT_EQ(4, numInvalidated);
-  EXPECT_FALSE(isLoaded(one));
-  EXPECT_FALSE(isLoaded(sibling));
-  EXPECT_FALSE(isLoaded(child));
+  // The pinned files keep their references, and so does "parent/child"
+  // because its subtree contains a pin. Only "two.txt" is reclaimed.
+  EXPECT_EQ(1, numInvalidated);
+  EXPECT_TRUE(isLoaded(one));
+  EXPECT_TRUE(isLoaded(sibling));
+  EXPECT_TRUE(isLoaded(child));
+  EXPECT_NE(0, testMount_->getTreeInode("parent/child")->debugGetFsRefcount());
   EXPECT_FALSE(isLoaded(two));
 }
 
@@ -476,9 +477,11 @@ TEST_F(NfsGcTest, pinnedDirectoryStillHasItsChildrenReclaimed) {
       runGc(std::chrono::system_clock::time_point::max(), pins);
   sweep();
 
-  // FIXME: the pin is ignored and the working directory is forgotten too.
-  EXPECT_EQ(4, numInvalidated);
-  EXPECT_FALSE(isLoaded(child));
+  // The working directory keeps its reference, so the process keeps a valid
+  // handle, while its children and its sibling are reclaimed: relative
+  // lookups through the directory reload them by name.
+  EXPECT_EQ(3, numInvalidated);
+  EXPECT_TRUE(isLoaded(child));
   EXPECT_FALSE(isLoaded(one));
   EXPECT_FALSE(isLoaded(sibling));
 }

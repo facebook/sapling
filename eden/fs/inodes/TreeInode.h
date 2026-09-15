@@ -106,6 +106,20 @@ struct NfsGcInvalidation {
 enum class NfsInvalidationSource : uint8_t;
 
 /**
+ * What one directory reports to its parent from the NFS GC walk.
+ */
+struct NfsGcResult {
+  uint64_t numInvalidated{0};
+  /** Whether this directory and all of its descendants were invalidated. */
+  bool invalidated{false};
+  /**
+   * Whether this directory or something below it is pinned, in which case
+   * the parent must keep this directory's FS reference.
+   */
+  bool containsPin{false};
+};
+
+/**
  * Represents a directory in the file system.
  */
 class TreeInode final : public InodeBaseMetadata<DirContents> {
@@ -665,10 +679,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * and all directory entries are skipped.
    *
    * NFS GC clears FS references itself, so forgetting a directory that is
-   * some process's working directory makes every request that process sends
-   * with the directory's handle fail with ESTALE. It therefore applies the
-   * same rule: without pin information (null) it leaves directories
-   * referenced and reclaims files only.
+   * some process's working directory, or a file some process holds open,
+   * makes every request that process sends with the handle fail with
+   * ESTALE. It therefore applies the same rule: pinned inodes and the
+   * directories above them keep their references, and without pin
+   * information (null) it leaves all directories referenced and reclaims
+   * files only. Unlike FUSE, NFS pins may be files.
    */
   ImmediateFuture<uint64_t /* numInvalidated */>
   handleChildrenNotAccessedRecently(
@@ -853,14 +869,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * inodes will also be invalidated if all of their children's have been
    * invalidated.
    *
-   * Returns the number of tree inodes invalidated underneath this tree (for
-   * logging purposes) and if this inode and all of its descendants were
-   * invalidated (for use as an unloading parameter)
+   * Returns the number of inodes whose FS reference was cleared underneath
+   * this tree, whether this inode and all of its descendants were
+   * invalidated, and whether the subtree contains a pinned inode; see
+   * NfsGcResult.
    */
-  ImmediateFuture<std::pair<
-      uint64_t /* numInvalidated */,
-      bool /* allDescendantsInvalidated */>>
-  invalidateChildrenNotMaterializedNFS(
+  ImmediateFuture<NfsGcResult> invalidateChildrenNotMaterializedNFS(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
       folly::CancellationToken cancellationToken = {},
@@ -1381,17 +1395,19 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Sends a request to the kernel to invalidate its cache for this tree and,
    * once that has succeeded, clears the FS references of its children so the
-   * GC sweep can unload them. Directory children are only cleared when
-   * pinnedInodes is non-null, see handleChildrenNotAccessedRecently. In NFS,
-   * this function is distinct from `invalidateChannelEntryCache` and is used
-   * exclusively for garbage collection.
+   * GC sweep can unload them. Pinned children, directory children whose
+   * subtree contains a pin (pinnedChildren), and, without pin information,
+   * all directory children keep their reference; see
+   * handleChildrenNotAccessedRecently. In NFS, this function is distinct from
+   * `invalidateChannelEntryCache` and is used exclusively for garbage
+   * collection.
    *
    * Returns the outcome of the invalidation, or nullptr if none was queued.
    */
   std::shared_ptr<NfsGcInvalidation> nfsInvalidateCacheEntryForGC(
       TreeInodeState& state,
-      const std::shared_ptr<const folly::F14FastSet<InodeNumber>>&
-          pinnedInodes);
+      const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
+      const folly::F14FastSet<InodeNumber>& pinnedChildren);
 
   /**
    * Queue the chmod that makes the NFS client flush its cache for this
