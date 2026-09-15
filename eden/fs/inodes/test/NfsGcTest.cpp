@@ -14,6 +14,7 @@
 #include <memory>
 
 #include <folly/CancellationToken.h>
+#include <folly/container/F14Set.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/async/EventBase.h>
 #include <gtest/gtest.h>
@@ -124,17 +125,40 @@ class NfsGcTest : public ::testing::Test {
   }
 
   /**
+   * Create the directory on local disk under the mount path so that the
+   * chmod invalidating it succeeds.
+   */
+  void createOnDisk(folly::StringPiece dir) {
+    ensureDirectoryExists(
+        testMount_->getEdenMount()->getPath() + RelativePathPiece{dir});
+  }
+
+  using PinnedInodeSet = std::shared_ptr<const folly::F14FastSet<InodeNumber>>;
+
+  /**
+   * Pin information saying that nothing is pinned, as opposed to the null
+   * set meaning pins are unknown.
+   */
+  static PinnedInodeSet noPins() {
+    return std::make_shared<const folly::F14FastSet<InodeNumber>>();
+  }
+
+  /**
    * Run the invalidation pass of GC and return what it reports as the number
    * of invalidated entries.
    */
-  uint64_t runGc(std::chrono::system_clock::time_point cutoff) {
+  uint64_t runGc(
+      std::chrono::system_clock::time_point cutoff,
+      PinnedInodeSet pinnedInodes = noPins()) {
     auto* executor = testMount_->getServerExecutor().get();
     return testMount_->getEdenMount()
         ->getRootInode()
         ->handleChildrenNotAccessedRecently(
             cutoff,
             ObjectFetchContext::getNullContext(),
-            /*pressureBased=*/true)
+            /*pressureBased=*/true,
+            folly::CancellationToken{},
+            std::move(pinnedInodes))
         .semi()
         .via(executor)
         .within(kTimeout)
@@ -188,6 +212,31 @@ TEST_F(NfsGcTest, failedInvalidationIsNotCountedAsProgress) {
   EXPECT_TRUE(isLoaded(one));
   EXPECT_TRUE(isLoaded(two));
   EXPECT_TRUE(isLoaded(sibling));
+}
+
+TEST_F(NfsGcTest, directoriesStayReferencedWithoutPinInformation) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+
+  // Without pin information, a directory might be some process's working
+  // directory, so only the files are cleared: "parent/child" keeps its FS
+  // reference even though "parent" was invalidated.
+  EXPECT_EQ(
+      3,
+      runGc(
+          std::chrono::system_clock::time_point::max(),
+          /*pinnedInodes=*/nullptr));
+  sweep();
+  EXPECT_TRUE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(sibling));
+
+  // Knowing that nothing is pinned, the next run clears the directory too.
+  EXPECT_EQ(1, runGc(std::chrono::system_clock::time_point::max(), noPins()));
+  sweep();
+  EXPECT_FALSE(isLoaded(child));
 }
 
 #endif

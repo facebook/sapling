@@ -3578,7 +3578,6 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
     pinnedInodes = buildPinnedInodeSet(mount, scan ? &scan.value() : nullptr);
   }
 #endif
-
   return garbageCollectInodesWithLease(
       mount,
       std::move(inode),

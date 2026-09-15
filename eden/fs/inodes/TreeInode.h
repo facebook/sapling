@@ -661,6 +661,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * ancestors are protected by propagating a contains-pin flag up the
    * bottom-up traversal. When it is null, pin information is unavailable
    * and all directory entries are skipped.
+   *
+   * NFS GC clears FS references itself, so forgetting a directory that is
+   * some process's working directory makes every request that process sends
+   * with the directory's handle fail with ESTALE. It therefore applies the
+   * same rule: without pin information (null) it leaves directories
+   * referenced and reclaims files only.
    */
   ImmediateFuture<uint64_t /* numInvalidated */>
   handleChildrenNotAccessedRecently(
@@ -855,7 +861,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   invalidateChildrenNotMaterializedNFS(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
-      folly::CancellationToken cancellationToken = {});
+      folly::CancellationToken cancellationToken = {},
+      std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes =
+          nullptr);
 
   ImmediateFuture<uint64_t /* numInvalidated */>
   invalidateChildrenNotMaterializedPrjFS(
@@ -1370,15 +1378,18 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #ifndef _WIN32
   /**
    * Sends a request to the kernel to invalidate its cache for this tree and,
-   * once that has succeeded, clears the FS references of all of its children
-   * so the GC sweep can unload them. In NFS, this function is distinct from
-   * `invalidateChannelEntryCache` and is used exclusively for garbage
-   * collection.
+   * once that has succeeded, clears the FS references of its children so the
+   * GC sweep can unload them. Directory children are only cleared when
+   * pinnedInodes is non-null, see handleChildrenNotAccessedRecently. In NFS,
+   * this function is distinct from `invalidateChannelEntryCache` and is used
+   * exclusively for garbage collection.
    *
    * Returns the outcome of the invalidation, or nullptr if none was queued.
    */
   std::shared_ptr<NfsGcInvalidation> nfsInvalidateCacheEntryForGC(
-      TreeInodeState& state);
+      TreeInodeState& state,
+      const std::shared_ptr<const folly::F14FastSet<InodeNumber>>&
+          pinnedInodes);
 #endif
 
   /**

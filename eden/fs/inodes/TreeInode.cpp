@@ -5917,7 +5917,8 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 
 #ifndef _WIN32
 std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
-    TreeInodeState& state) {
+    TreeInodeState& state,
+    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes) {
   auto* nfsdChannel = getMount()->getNfsdChannel();
   if (!nfsdChannel) {
     return nullptr;
@@ -5932,6 +5933,9 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
   std::vector<InodeNumber> childInodes;
   childInodes.reserve(state.entries.size());
   for (const auto& entry : state.entries.all()) {
+    if (entry.second.isDirectory() && !pinnedInodes) {
+      continue;
+    }
     childInodes.push_back(entry.second.getInodeNumber());
   }
   auto outcome = std::make_shared<NfsGcInvalidation>();
@@ -6624,7 +6628,7 @@ TreeInode::handleChildrenNotAccessedRecently(
         pinnedInodes) {
   if (getMount()->getNfsdChannel()) {
     return invalidateChildrenNotMaterializedNFS(
-               cutoff, context, cancellationToken)
+               cutoff, context, cancellationToken, std::move(pinnedInodes))
         .thenValue(
             [](std::pair<uint64_t, bool> result) { return result.first; });
 
@@ -6994,7 +6998,8 @@ ImmediateFuture<std::pair<
 TreeInode::invalidateChildrenNotMaterializedNFS(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
-    folly::CancellationToken cancellationToken) {
+    folly::CancellationToken cancellationToken,
+    std::shared_ptr<const folly::F14FastSet<InodeNumber>> pinnedInodes) {
   if (shouldCancelGC(cancellationToken, getMount())) {
     return std::make_pair(0u, false);
   }
@@ -7004,12 +7009,17 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
              getInodeMap(),
              context,
              cancellationToken,
-             [cutoff, context = context.copy(), cancellationToken](
-                 PathComponentPiece /*name*/, TreeInodePtr tree) {
+             [cutoff,
+              context = context.copy(),
+              cancellationToken,
+              pinnedInodes](PathComponentPiece /*name*/, TreeInodePtr tree) {
                return tree->invalidateChildrenNotMaterializedNFS(
-                   cutoff, context, cancellationToken);
+                   cutoff, context, cancellationToken, pinnedInodes);
              })
-      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken](
+      .thenValue([self = inodePtrFromThis(),
+                  cutoff,
+                  cancellationToken,
+                  pinnedInodes = std::move(pinnedInodes)](
                      const std::vector<std::pair<uint64_t, bool>>&
                          invalidations) {
         NfsGcStep step;
@@ -7089,7 +7099,8 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         }
 #ifndef _WIN32
         // Windows platforms should not get to this path
-        step.pending = self->nfsInvalidateCacheEntryForGC(*contents);
+        step.pending =
+            self->nfsInvalidateCacheEntryForGC(*contents, pinnedInodes);
 #endif
         return step;
       })

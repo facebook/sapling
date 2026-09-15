@@ -179,6 +179,7 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
         "//folly:cancellation_token",
+        "//folly/container:f14_hash",
         "//folly/executors:manual_executor",
         "//folly/io/async:async_base",
     ],

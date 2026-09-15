@@ -256,8 +256,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
     async def test_active_invalidation_preserves_getcwd_of_running_process(
         self,
     ) -> None:
-        if sys.platform != "linux":
-            self.skipTest("active FUSE invalidation is Linux-only")
+        if sys.platform not in ("linux", "darwin"):
+            self.skipTest("active invalidation needs FUSE or NFS")
 
         for i in range(self.deep_file_count):
             self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
@@ -272,7 +272,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             # GC discovers pinned working directories via the privhelper
             # scan-pins mode and skips invalidating the pinned chain (or, if
             # pin information is unavailable, skips all directories), so
-            # getcwd() keeps working.
+            # getcwd() keeps working. On NFS a forgotten working directory
+            # would mean ESTALE for the process, so the same rule applies.
             self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
     async def test_active_invalidation_reclaims_unpinned_directories(self) -> None:
@@ -379,8 +380,8 @@ class PressureGcWithoutPinScanTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     async def test_skips_directory_invalidation_without_pin_info(self) -> None:
-        if sys.platform != "linux":
-            self.skipTest("active FUSE invalidation is Linux-only")
+        if sys.platform not in ("linux", "darwin"):
+            self.skipTest("active invalidation needs FUSE or NFS")
 
         for i in range(self.file_count):
             self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
