@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -494,6 +495,48 @@ TEST_P(CheckoutTest, renamedFileKeepsDirectoryMaterialized) {
           std::make_pair("d/x.txt", ScmFileStatus::REMOVED),
           std::make_pair("d/y.txt", ScmFileStatus::ADDED)));
 }
+
+#ifndef _WIN32
+// Removing an unloaded, unmaterialized file during checkout only erases the
+// parent's entry. The file's inode metadata record, created when the file
+// was last loaded, has to be freed too or it outlives the inode.
+TEST_P(CheckoutTest, removingUnloadedFileFreesInodeMetadata) {
+  FakeTreeBuilder builder1;
+  builder1.setFile("a.txt", "a\n");
+  builder1.setFile("keep.txt", "k\n");
+  TestMount testMount{builder1};
+  applyParam(testMount);
+
+  auto builder2 = builder1.clone();
+  builder2.removeFile("a.txt");
+  builder2.finalize(testMount.getBackingStore(), true);
+  testMount.getBackingStore()->putCommit(RootId{"2"}, builder2)->setReady();
+
+  // Loading the file creates its metadata record; unloading it afterwards
+  // keeps the record so a later load sees the same timestamps.
+  auto ino = testMount.getFileInode("a.txt")->getNodeId();
+  auto* metadata = testMount.getEdenMount()->getInodeMetadataTable();
+  ASSERT_TRUE(metadata->getOptional(ino).has_value());
+  testMount.getRootInode()->unloadChildrenNow();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, std::move(checkoutResult).get().conflicts.size());
+  EXPECT_FALSE(testMount.hasFileAt("a.txt"));
+
+  // FIXME: the record for the removed file is never freed.
+  EXPECT_TRUE(metadata->getOptional(ino).has_value());
+}
+#endif
 
 TEST_P(CheckoutTest, removeFile) {
   // Test with file names that will be at the beginning of the directory,
