@@ -64,7 +64,6 @@ cpp_library(
         "//folly:scope_guard",
         "//folly:string",
         "//folly:utility",
-        "//folly/futures:core",
         "//folly/portability:stdlib",
     ],
     exported_deps = [
@@ -84,6 +83,7 @@ cpp_library(
         "//folly:synchronized",
         "//folly:token_bucket",
         "//folly/container:f14_hash",
+        "//folly/futures:core",
     ],
 )
 

@@ -1276,11 +1276,14 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * The number of threads per NFS mount that send directory invalidations
-   * (chmods) to the kernel. One keeps them in the order they were queued,
-   * which is how the serial executor this replaced behaved; more lets them
-   * complete in any order. Order is believed not to matter, since each chmod
-   * only bumps its directory's mtime and the GC walk sequences its own, but
-   * that has not been verified under load, so the default stays at one.
+   * (chmods) to the kernel. Each chmod is a round trip through the kernel
+   * back to EdenFS, so this bounds how fast inode GC can invalidate. GC
+   * orders its own work through per-directory completion, not through the
+   * queue, so more threads only let the chmods of unrelated directories
+   * overlap; checkout's invalidations do not depend on the order either.
+   * The default of one matches the serial executor this replaced; raising it
+   * is believed safe for the reasons above but has not been verified under
+   * load.
    */
   ConfigSetting<uint32_t> nfsNumInvalidationThreads{
       "nfs:num-invalidation-threads",

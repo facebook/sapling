@@ -5976,18 +5976,16 @@ std::optional<NfsGcPreparedInvalidation> TreeInode::nfsPrepareGcInvalidation(
   // children to clear is decided when the chmod reaches EdenFS, not here:
   // the chmod may wait in the invalidation queue, and a child the client
   // looks up meanwhile is referenced again by that lookup.
-  auto outcome = std::make_shared<NfsGcInvalidation>();
   auto stats = getMount()->getStats().copy();
   auto forget = [self = inodePtrFromThis(),
                  inodeMapWeak = getInodeMapWeak(),
                  stats = std::move(stats),
                  pinnedInodes,
-                 pinnedChildren = std::move(pinnedChildren),
-                 outcome]() {
+                 pinnedChildren = std::move(pinnedChildren)]() -> uint64_t {
     auto inodeMap = inodeMapWeak.lock();
     if (!inodeMap) {
       XLOG(WARN, "InodeMap is killed before GC completes");
-      return;
+      return 0;
     }
     // The client is about to forget the directory's names. Drop the
     // children's references with it, as a FUSE FORGET would; whatever the
@@ -6010,8 +6008,7 @@ std::optional<NfsGcPreparedInvalidation> TreeInode::nfsPrepareGcInvalidation(
         stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountCleared);
       }
     }
-    outcome->numCleared.store(numCleared, std::memory_order_release);
-    outcome->succeeded.store(true, std::memory_order_release);
+    return numCleared;
   };
   // Read without the parents' locks: a rename racing with this walk only
   // changes which ancestors' request times the chmod leaves alone, and each
@@ -6025,8 +6022,7 @@ std::optional<NfsGcPreparedInvalidation> TreeInode::nfsPrepareGcInvalidation(
       std::move(target->first),
       target->second,
       std::move(forget),
-      std::move(lineage),
-      std::move(outcome)};
+      std::move(lineage)};
 }
 #endif
 
@@ -7026,15 +7022,15 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
 
 namespace {
 /**
- * One directory's contribution to the NFS GC walk. `pending` is set when the
- * directory queued its own invalidation, whose outcome is only known once the
- * channel's pending invalidations have completed.
+ * One directory's contribution to the NFS GC walk. `done` is set when the
+ * directory queued its own invalidation; see Nfsd3::invalidateWithQueueLimit
+ * for what it completes with.
  */
 struct NfsGcStep {
   uint64_t numInvalidated{0};
   bool invalidated{false};
   bool containsPin{false};
-  std::shared_ptr<NfsGcInvalidation> pending;
+  std::optional<folly::SemiFuture<std::optional<uint64_t>>> done;
 };
 } // namespace
 
@@ -7215,14 +7211,14 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     const auto maxQueued = self->getMount()
                                ->getEdenConfig()
                                ->nfsMaxQueuedGcInvalidations.getValue();
-    if (channel->invalidateWithQueueLimit(
+    if (auto done = channel->invalidateWithQueueLimit(
             std::move(prepared->path),
             prepared->mode,
             std::move(prepared->forget),
             std::move(prepared->lineage),
             maxQueued,
             cancellationToken)) {
-      step.pending = std::move(prepared->outcome);
+      step.done = std::move(done);
     }
 #endif
     return step;
@@ -7240,39 +7236,45 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
 #endif
 
   return std::move(stepFuture)
-      .thenTry(
-          [self = inodePtrFromThis(), cancellationToken](
-              folly::Try<NfsGcStep>&& result) -> ImmediateFuture<NfsGcResult> {
-            // Check for cancellation before waiting for invalidation to
-            // complete
+      .thenValue(
+          [cancellationToken](
+              NfsGcStep&& step) -> ImmediateFuture<NfsGcResult> {
             if (shouldCancelGC(cancellationToken)) {
               return NfsGcResult{0, false, /*containsPin=*/true};
             }
-            auto finish = [](folly::Try<NfsGcStep>&& stepTry) {
-              auto& step = stepTry.value();
-              auto numInvalidated = step.numInvalidated;
-              auto invalidated = step.invalidated;
-              if (step.pending) {
-                // The invalidation has completed by now. The directory only
-                // counts as invalidated if its chmod reached EdenFS and the
-                // children were cleared, and it contributes the number of
-                // children whose FS reference was cleared, matching what the
-                // FUSE pass counts.
-                invalidated =
-                    step.pending->succeeded.load(std::memory_order_acquire);
-                numInvalidated +=
-                    step.pending->numCleared.load(std::memory_order_acquire);
-              }
-              return NfsGcResult{numInvalidated, invalidated, step.containsPin};
-            };
-            auto* nfsdChannel = self->getMount()->getNfsdChannel();
-            if (nfsdChannel) {
-              return nfsdChannel->completeInvalidations().thenTry(
-                  [result = std::move(result), finish](auto&&) mutable {
-                    return finish(std::move(result));
-                  });
+            NfsGcResult result{
+                step.numInvalidated, step.invalidated, step.containsPin};
+            if (!step.done) {
+              return result;
             }
-            return finish(std::move(result));
+            // Wait for this directory's own chmod rather than for the whole
+            // queue to drain, so chmods of unrelated directories can be in
+            // flight at once when the channel has several invalidation threads.
+            // The directory counts as invalidated only if its chmod reached
+            // EdenFS and the children were cleared, and it contributes the
+            // number of children whose FS reference was cleared, matching what
+            // the FUSE pass counts. A broken future means the channel stopped
+            // first.
+            return ImmediateFuture<std::optional<uint64_t>>{
+                std::move(*step.done)}
+                .thenTry(
+                    [result](folly::Try<std::optional<uint64_t>>&& cleared) {
+                      auto finished = result;
+                      if (cleared.hasException()) {
+                        // The channel stopped first, or forget threw.
+                        XLOGF(
+                            WARN,
+                            "NFS GC invalidation did not complete: {}",
+                            cleared.exception().what());
+                      }
+                      if (cleared.hasValue() && cleared->has_value()) {
+                        finished.numInvalidated += **cleared;
+                        finished.invalidated = true;
+                      } else {
+                        finished.invalidated = false;
+                      }
+                      return finished;
+                    });
           });
 }
 

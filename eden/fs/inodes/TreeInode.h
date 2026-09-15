@@ -92,17 +92,6 @@ struct TreeInodeState {
   std::optional<ObjectId> treeId;
 };
 
-/**
- * Outcome of one directory's NFS GC invalidation. The invalidation callback
- * fills it in once the chmod that flushes the NFS client's cache for the
- * directory has completed, so it is only final after the channel's
- * completeInvalidations() resolves.
- */
-struct NfsGcInvalidation {
-  std::atomic<bool> succeeded{false};
-  std::atomic<uint64_t> numCleared{0};
-};
-
 enum class NfsInvalidationSource : uint8_t;
 
 /**
@@ -133,10 +122,9 @@ struct NfsGcPreparedInvalidation {
    * makes the client forget the directory's names; see
    * Nfsd3::invalidateWithQueueLimit.
    */
-  folly::Function<void()> forget;
+  folly::Function<uint64_t()> forget;
   /** The directory and its ancestors, see Nfsd3::invalidateWithQueueLimit. */
   std::vector<InodeNumber> lineage;
-  std::shared_ptr<NfsGcInvalidation> outcome;
 };
 
 /**

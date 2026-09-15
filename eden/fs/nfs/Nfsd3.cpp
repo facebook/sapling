@@ -2945,23 +2945,35 @@ void Nfsd3::invalidate(
       Invalidation{.path = std::move(path), .mode = mode, .source = source});
 }
 
-bool Nfsd3::invalidateWithQueueLimit(
+std::optional<folly::SemiFuture<std::optional<uint64_t>>>
+Nfsd3::invalidateWithQueueLimit(
     AbsolutePath path,
     mode_t mode,
-    folly::Function<void()> forget,
+    folly::Function<uint64_t()> forget,
     std::vector<InodeNumber> lineage,
     size_t maxQueueSize,
     const folly::CancellationToken& cancellationToken) {
-  const bool added = invalidationQueue_.addWithLimit(
-      Invalidation{
-          std::move(path),
-          mode,
-          NfsInvalidationSource::Gc,
-          std::move(lineage),
-          std::move(forget)},
-      maxQueueSize,
-      cancellationToken);
-  return added;
+  folly::Promise<uint64_t> result;
+  auto resultFuture = result.getSemiFuture();
+  Invalidation invalidation{
+      std::move(path),
+      mode,
+      NfsInvalidationSource::Gc,
+      std::move(lineage),
+      [forget = std::move(forget), result = std::move(result)]() mutable {
+        auto outcome = folly::makeTryWith([&] { return forget(); });
+        // Release the inode references forget holds before waking the walk.
+        forget = nullptr;
+        result.setTry(std::move(outcome));
+      },
+      std::move(resultFuture)};
+  invalidation.done = folly::Promise<std::optional<uint64_t>>{};
+  auto done = invalidation.done.getSemiFuture();
+  if (!invalidationQueue_.addWithLimit(
+          std::move(invalidation), maxQueueSize, cancellationToken)) {
+    return std::nullopt;
+  }
+  return done;
 }
 
 /**
@@ -3046,6 +3058,17 @@ void Nfsd3::runInvalidation(Invalidation& invalidation) {
   invalidatingInodes_.add(invalidation.lineage, std::move(invalidation.forget));
   SCOPE_EXIT {
     invalidatingInodes_.remove(invalidation.lineage);
+    if (invalidation.done.valid()) {
+      // remove() destroyed forget if no SETATTR took it, breaking result.
+      auto result = std::move(invalidation.result).getTry();
+      if (result.hasValue()) {
+        invalidation.done.setValue(result.value());
+      } else if (result.hasException<folly::BrokenPromise>()) {
+        invalidation.done.setValue(std::nullopt);
+      } else {
+        invalidation.done.setException(result.exception());
+      }
+    }
   };
   // Tests hold the chmod here, with the directory registered above, and send
   // the requests the kernel would make for it themselves.

@@ -16,6 +16,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
+#include <folly/futures/Future.h>
 #include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
@@ -310,11 +311,19 @@ class Nfsd3 final : public FsChannel {
    * not refresh their last FS request time, so that GC's own work does not
    * make them look in use. Requests that resolve a directory's entries
    * always do.
+   *
+   * Returns a future that completes once the chmod has run and forget, if it
+   * ran, has returned: with what forget returned, or with nullopt if the
+   * chmod never reached EdenFS as a SETATTR. It fails if the channel stopped
+   * before getting to the chmod. GC waits on it for each directory instead of
+   * flushing the whole queue, so that with several invalidation threads the
+   * chmods of unrelated directories overlap.
    */
-  bool invalidateWithQueueLimit(
+  std::optional<folly::SemiFuture<std::optional<uint64_t>>>
+  invalidateWithQueueLimit(
       AbsolutePath path,
       mode_t mode,
-      folly::Function<void()> forget,
+      folly::Function<uint64_t()> forget,
       std::vector<InodeNumber> lineage,
       size_t maxQueueSize,
       const folly::CancellationToken& cancellationToken);
@@ -400,6 +409,12 @@ class Nfsd3 final : public FsChannel {
     return *traceBus_;
   }
 
+  /** How many threads send invalidation chmods, see
+   * nfs:num-invalidation-threads. */
+  size_t numInvalidationThreads() const {
+    return invalidationQueue_.numWorkers();
+  }
+
  private:
   struct TelemetryState {
     std::unordered_map<uint64_t, OutstandingRequest> requests;
@@ -443,6 +458,14 @@ class Nfsd3 final : public FsChannel {
      * chmod reaches EdenFS as a SETATTR. */
     std::vector<InodeNumber> lineage;
     folly::Function<void()> forget;
+    /** GC only: what forget returned, once it has run. Broken if it never
+     * ran. */
+    folly::SemiFuture<uint64_t> result{
+        folly::SemiFuture<uint64_t>::makeEmpty()};
+    /** Fulfilled once the chmod and its callback are done; empty for
+     * invalidations nobody waits on. Broken if the entry is abandoned. */
+    folly::Promise<std::optional<uint64_t>> done{
+        folly::Promise<std::optional<uint64_t>>::makeEmpty()};
   };
   void runInvalidation(Invalidation& invalidation);
 

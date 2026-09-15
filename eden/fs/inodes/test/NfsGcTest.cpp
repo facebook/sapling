@@ -74,6 +74,7 @@ class NfsGcTest : public ::testing::Test {
     builder_.setFile("parent/child/two.txt", "2\n");
     builder_.setFile("parent/sibling.txt", "3\n");
     testMount_ = std::make_unique<TestMount>(builder_);
+    configureMount();
     attachNfsChannel();
     faultInjector().injectBlock(kInvalidationFault, ".*");
 
@@ -245,6 +246,25 @@ class NfsGcTest : public ::testing::Test {
     evb_.loopOnce(EVLOOP_NONBLOCK);
     manualExecutor_->run();
     testMount_->drainServerExecutor();
+  }
+
+  /**
+   * Adjust the mount's configuration before the NFS channel reads it.
+   */
+  virtual void configureMount() {}
+
+  /**
+   * Wait, driving the mount's server executor, until GC has issued at least
+   * the given number of chmods.
+   */
+  void waitForInvalidationAttempts(int64_t count) {
+    auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (numInvalidationAttempts() < count) {
+      pump();
+      emulateClient();
+      ASSERT_LT(std::chrono::steady_clock::now(), deadline)
+          << "GC never issued " << count << " invalidations";
+    }
   }
 
   /**
@@ -759,6 +779,45 @@ TEST_F(NfsGcTest, rememberedFilesAreReclaimedBeforeTheSweep) {
   EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(one));
 }
 
+/**
+ * Siblings, with three invalidation threads.
+ */
+class NfsGcParallelTest : public NfsGcSiblingsTest {
+ protected:
+  void configureMount() override {
+    testMount_->updateEdenConfig({{"nfs:num-invalidation-threads", "3"}});
+  }
+};
+
+TEST_F(NfsGcParallelTest, siblingsAreInvalidatedConcurrently) {
+  for (const char* dir : {"parent/child", "parent/second", "parent/third"}) {
+    createOnDisk(dir);
+  }
+  auto five = inodeNumberOf("parent/third/five.txt");
+
+  // Hold the first sibling's chmod. The other two siblings do not wait for
+  // it: their chmods run on the other threads and complete. Only "parent"
+  // waits, for all three.
+  ASSERT_EQ(
+      3u,
+      testMount_->getEdenMount()->getNfsdChannel()->numInvalidationThreads());
+  hold("parent/child");
+  auto attemptsBefore = numInvalidationAttempts();
+  auto gc = startGc(std::chrono::system_clock::time_point::max());
+  waitUntilInvalidationBlocked("parent/child");
+  waitForInvalidationAttempts(attemptsBefore + 3);
+  EXPECT_EQ(attemptsBefore + 3, numInvalidationAttempts());
+  EXPECT_TRUE(isLoaded(inodeNumberOf("parent")));
+
+  release("parent/child");
+  auto numInvalidated = finishGc(std::move(gc));
+  sweep();
+
+  EXPECT_EQ(attemptsBefore + 4, numInvalidationAttempts());
+  EXPECT_EQ(8, numInvalidated);
+  EXPECT_FALSE(isLoaded(five));
+}
+
 TEST_F(NfsGcSiblingsTest, queuedInvalidationsAreCapped) {
   testMount_->updateEdenConfig({{"nfs:max-queued-gc-invalidations", "1"}});
   for (const char* dir : {"parent/child", "parent/second", "parent/third"}) {
@@ -768,8 +827,9 @@ TEST_F(NfsGcSiblingsTest, queuedInvalidationsAreCapped) {
 
   // Hold the first sibling's chmod. The single invalidation worker takes what
   // is queued in one batch and is now stuck on it, so entries queued after
-  // that stay in the queue. "parent/child" is walked first because entries
-  // are visited in name order.
+  // that stay in the queue, and the walk goes on to queue the siblings'
+  // chmods, since each directory waits only for its own. "parent/child" is
+  // walked first because entries are visited in name order.
   hold("parent/child");
   auto attemptsBefore = numInvalidationAttempts();
   auto gc = startGc(std::chrono::system_clock::time_point::max());
