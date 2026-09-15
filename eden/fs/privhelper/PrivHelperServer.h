@@ -182,30 +182,84 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       bool isHardMount);
 
   /**
+   * How detectAndUnmountStaleMount probes the mount point.
+   */
+  struct StaleMountCheck {
+    bool isNFS;
+    bool isHardMount;
+  };
+
+  /**
+   * What sanityCheckMountPoint and openAndSanityCheckMountPoint do around the
+   * ownership and access checks. Only the factories can build one, so every
+   * call site names the kind of mount it is checking.
+   */
+  class SanityCheckOptions {
+   public:
+    /**
+     * The mount the daemon inherited across a graceful restart. Redirection
+     * bind mounts are left alone: the kernel preserves live ones (e.g.
+     * buck-out) across the restart, so detaching them would unmount user
+     * state.
+     */
+    static SanityCheckOptions forTakeover() {
+      return SanityCheckOptions(
+          StaleMountCheck{/*isNFS=*/false, /*isHardMount=*/false},
+          /*performBindMountCleanup=*/false);
+    }
+
+    /** A fresh FUSE mount. */
+    static SanityCheckOptions forFuseMount() {
+      return SanityCheckOptions(
+          StaleMountCheck{/*isNFS=*/false, /*isHardMount=*/false},
+          /*performBindMountCleanup=*/true);
+    }
+
+    /** A fresh NFS mount. Hard mounts skip the probes that can hang. */
+    static SanityCheckOptions forNfsMount(bool isHardMount) {
+      return SanityCheckOptions(
+          StaleMountCheck{/*isNFS=*/true, isHardMount},
+          /*performBindMountCleanup=*/true);
+    }
+
+    /** The stale mount probe to run first, or nullopt to run none. */
+    const std::optional<StaleMountCheck>& staleMountCheck() const {
+      return staleMountCheck_;
+    }
+
+    /**
+     * Whether stale redirection bind mounts under the checkout are detached
+     * after the checkout path passes the ownership and access checks.
+     */
+    bool performBindMountCleanup() const {
+      return performBindMountCleanup_;
+    }
+
+   private:
+    SanityCheckOptions(
+        std::optional<StaleMountCheck> staleMountCheck,
+        bool performBindMountCleanup)
+        : staleMountCheck_(staleMountCheck),
+          performBindMountCleanup_(performBindMountCleanup) {}
+
+    std::optional<StaleMountCheck> staleMountCheck_;
+    bool performBindMountCleanup_;
+  };
+
+  /**
    * Verify that the user has the right credentials to mount/unmount this path.
    *
    * This will check that the user has RW access to every path component
    * leading to the mount point. A std::domain_error exception will be raised
    * if the user doesn't have access to the mount point.
-   *
-   * When performBindMountCleanup is true (the default), stale redirection
-   * bind mounts under the checkout are detached after the checkout path passes
-   * the ownership and access checks. The takeover path passes false because
-   * the kernel preserves legitimate bind mounts (e.g. Sapling redirections like
-   * buck-out) across a graceful restart, and running cleanup there would
-   * unmount live user state.
    */
   SanityCheckResult sanityCheckMountPoint(
       const std::string& mountPoint,
-      bool isNFS = false,
-      bool isHardMount = false,
-      bool performBindMountCleanup = true);
+      const SanityCheckOptions& options);
 #ifndef __APPLE__
   CheckedMountPoint openAndSanityCheckMountPoint(
       const std::string& mountPoint,
-      bool isNFS = false,
-      bool isHardMount = false,
-      bool performBindMountCleanup = true);
+      const SanityCheckOptions& options);
 #endif
 
   // These methods are virtual so we can override them during unit tests

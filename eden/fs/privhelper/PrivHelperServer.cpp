@@ -1119,11 +1119,8 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
   // Skip stale bind mount cleanup on takeover: the kernel preserves live
   // redirections (e.g. buck-out) across a graceful restart, so unmounting
   // them here would destroy legitimate user state.
-  auto sanityResult = sanityCheckMountPoint(
-      mountPath,
-      /*isNFS=*/false,
-      /*isHardMount=*/false,
-      /*performBindMountCleanup=*/false);
+  auto sanityResult =
+      sanityCheckMountPoint(mountPath, SanityCheckOptions::forTakeover());
 
   registerMountPoint(mountPath);
   auto response = makeResponse();
@@ -1142,7 +1139,8 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
 
 #ifndef __APPLE__
   if (useModernMountApi()) {
-    auto checkedMount = openAndSanityCheckMountPoint(mountPath);
+    auto checkedMount = openAndSanityCheckMountPoint(
+        mountPath, SanityCheckOptions::forFuseMount());
     auto mountResult = fuseMountByFd(
         std::move(checkedMount.targetFd),
         mountPath.c_str(),
@@ -1166,7 +1164,8 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   }
 #endif
 
-  auto sanityResult = sanityCheckMountPoint(mountPath);
+  auto sanityResult =
+      sanityCheckMountPoint(mountPath, SanityCheckOptions::forFuseMount());
   auto fuseDev = fuseMount(mountPath.c_str(), readOnly, vfsType.c_str());
   registerMountPoint(mountPath);
 
@@ -1186,7 +1185,8 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
 #ifndef __APPLE__
   if (useModernMountApi()) {
     auto checkedMount = openAndSanityCheckMountPoint(
-        mountPath, /*isNFS=*/true, !options.useSoftMount);
+        mountPath,
+        SanityCheckOptions::forNfsMount(/*isHardMount=*/!options.useSoftMount));
     registerMountPoint(
         mountPath,
         nfsMountByFd(std::move(checkedMount.targetFd), mountPath, options));
@@ -1207,8 +1207,9 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   }
 #endif
 
-  auto sanityResult =
-      sanityCheckMountPoint(mountPath, /*isNFS=*/true, !options.useSoftMount);
+  auto sanityResult = sanityCheckMountPoint(
+      mountPath,
+      SanityCheckOptions::forNfsMount(/*isHardMount=*/!options.useSoftMount));
   nfsMount(mountPath, std::move(options));
   registerMountPoint(mountPath);
 

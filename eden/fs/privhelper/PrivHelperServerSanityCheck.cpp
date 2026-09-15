@@ -397,9 +397,7 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
 
 SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
     const std::string& mountPoint,
-    bool isNFS,
-    bool isHardMount,
-    bool performBindMountCleanup) {
+    const SanityCheckOptions& options) {
   XLOGF(INFO, "Sanity checking mount {}", mountPoint);
   if (getuid() == 0) {
     XLOG(INFO, "Skipping sanity check for root user.");
@@ -407,8 +405,10 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
   }
 
   SanityCheckResult result{};
-  result.staleCheckoutMountUnmounted =
-      detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
+  if (const auto& staleMountCheck = options.staleMountCheck()) {
+    result.staleCheckoutMountUnmounted = detectAndUnmountStaleMount(
+        mountPoint, staleMountCheck->isNFS, staleMountCheck->isHardMount);
+  }
 
   if (access(mountPoint.c_str(), W_OK) < 0) {
     auto err = errno;
@@ -430,7 +430,7 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
         folly::errnoStr(e.code().value()));
   }
   sanityCheckOpenedMountPoint(mountPoint, file.fd(), uid_);
-  if (performBindMountCleanup) {
+  if (options.performBindMountCleanup()) {
     // Only clean up mounts under a checkout after the checkout path itself has
     // passed the ownership and access checks.
     auto cleanupResult = cleanupStaleBindMounts(mountPoint);
@@ -448,9 +448,7 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
 PrivHelperServer::CheckedMountPoint
 PrivHelperServer::openAndSanityCheckMountPoint(
     const std::string& mountPoint,
-    bool isNFS,
-    bool isHardMount,
-    bool performBindMountCleanup) {
+    const SanityCheckOptions& options) {
   XLOGF(INFO, "Sanity checking mount {}", mountPoint);
   if (getuid() == 0) {
     XLOG(INFO, "Skipping sanity check for root user.");
@@ -459,12 +457,14 @@ PrivHelperServer::openAndSanityCheckMountPoint(
   }
 
   SanityCheckResult result{};
-  result.staleCheckoutMountUnmounted =
-      detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
+  if (const auto& staleMountCheck = options.staleMountCheck()) {
+    result.staleCheckoutMountUnmounted = detectAndUnmountStaleMount(
+        mountPoint, staleMountCheck->isNFS, staleMountCheck->isHardMount);
+  }
 
   auto targetFd = openCheckedMountTarget(mountPoint);
   sanityCheckOpenedMountPoint(mountPoint, targetFd.fd(), uid_);
-  if (performBindMountCleanup) {
+  if (options.performBindMountCleanup()) {
     // Only clean up mounts under a checkout after the checkout path itself has
     // passed the ownership and access checks.
     auto cleanupResult = cleanupStaleBindMounts(mountPoint);
