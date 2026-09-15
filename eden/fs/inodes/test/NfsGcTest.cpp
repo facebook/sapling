@@ -358,6 +358,26 @@ class NfsGcTest : public ::testing::Test {
   uint32_t nextXid_{1};
 };
 
+/**
+ * The same tree with two more directories under "parent", so that several
+ * directories' invalidations can be queued at the same time.
+ */
+class NfsGcSiblingsTest : public NfsGcTest {
+ protected:
+  void SetUp() override {
+    builder_.setFile("parent/second/four.txt", "4\n");
+    builder_.setFile("parent/third/five.txt", "5\n");
+    NfsGcTest::SetUp();
+    for (const char* dir : {"parent/second", "parent/third"}) {
+      testMount_->getTreeInode(dir)->incFsRefcount();
+    }
+    for (const char* file :
+         {"parent/second/four.txt", "parent/third/five.txt"}) {
+      testMount_->getFileInode(file)->incFsRefcount();
+    }
+  }
+};
+
 } // namespace
 
 TEST_F(NfsGcTest, failedInvalidationIsNotCountedAsProgress) {
@@ -543,6 +563,41 @@ TEST_F(NfsGcTest, rememberedFilesAreReclaimedBeforeTheSweep) {
   EXPECT_EQ(4, runGc(std::chrono::system_clock::time_point::max()));
   EXPECT_EQ(before + 2, inodeMap->getInodeCounts().forgottenInodeCount);
   EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(one));
+}
+
+TEST_F(NfsGcSiblingsTest, queuedInvalidationsAreCapped) {
+  testMount_->updateEdenConfig({{"nfs:max-queued-gc-invalidations", "1"}});
+  for (const char* dir : {"parent/child", "parent/second", "parent/third"}) {
+    createOnDisk(dir);
+  }
+  auto five = inodeNumberOf("parent/third/five.txt");
+
+  // Hold the first sibling's chmod in its completion callback. The single
+  // invalidation worker takes what is queued in one batch and is now stuck
+  // on it, so entries queued after that stay in the queue. "parent/child" is
+  // walked first because entries are visited in name order.
+  auto& faultInjector = testMount_->getServerState()->getFaultInjector();
+  faultInjector.injectBlock("nfsGcInvalidation", "parent/child");
+  auto attemptsBefore = numInvalidationAttempts();
+  auto gc = startGc(std::chrono::system_clock::time_point::max());
+  waitUntilInvalidationBlocked();
+
+  // With a cap of one, at most one sibling's chmod is queued behind the one
+  // in flight (whether "parent/second" got in depends on whether the worker
+  // had taken its batch before the walk reached it); without the cap all
+  // three would be queued at once.
+  EXPECT_GE(numInvalidationAttempts(), attemptsBefore + 1);
+  EXPECT_LE(numInvalidationAttempts(), attemptsBefore + 2);
+
+  faultInjector.unblock("nfsGcInvalidation", "parent/child");
+  auto numInvalidated = finishGc(std::move(gc));
+  sweep();
+
+  // Once the queue drained the walk went on: the third sibling and then
+  // "parent" were invalidated, clearing everything.
+  EXPECT_EQ(attemptsBefore + 4, numInvalidationAttempts());
+  EXPECT_EQ(8, numInvalidated);
+  EXPECT_FALSE(isLoaded(five));
 }
 
 #endif

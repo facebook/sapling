@@ -5938,31 +5938,44 @@ bool nfsGcMayClearChild(
 } // namespace
 
 #ifndef _WIN32
+std::optional<std::pair<AbsolutePath, mode_t>>
+TreeInode::nfsPrepareDirInvalidationLocked(TreeInodeState& state) {
+  if (!getMount()->getNfsdChannel()) {
+    return std::nullopt;
+  }
+  const auto path = getPath();
+  if (!path.has_value()) {
+    return std::nullopt;
+  }
+  return std::make_pair(
+      getMount()->getPath() + *path, getMetadataLocked(state.entries).mode);
+}
+
 bool TreeInode::nfsInvalidateDirCacheLocked(
     TreeInodeState& state,
     folly::Function<void()> onSuccess,
     std::optional<NfsInvalidationSource> source) {
-  auto* nfsdChannel = getMount()->getNfsdChannel();
-  if (!nfsdChannel) {
+  auto* channel = getMount()->getNfsdChannel();
+  auto target = nfsPrepareDirInvalidationLocked(state);
+  if (!channel || !target) {
     return false;
   }
-  const auto path = getPath();
-  if (!path.has_value()) {
-    return false;
-  }
-  auto mode = getMetadataLocked(state.entries).mode;
-  nfsdChannel->invalidate(
-      getMount()->getPath() + *path, mode, std::move(onSuccess), source);
+  channel->invalidate(
+      std::move(target->first), target->second, std::move(onSuccess), source);
   return true;
 }
 
-std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
+std::optional<NfsGcPreparedInvalidation> TreeInode::nfsPrepareGcInvalidation(
     TreeInodeState& state,
     const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
     const folly::F14FastSet<InodeNumber>& pinnedChildren) {
   const auto path = getPath();
   if (!path.has_value() || !getMount()->getNfsdChannel()) {
-    return nullptr;
+    return std::nullopt;
+  }
+  auto target = nfsPrepareDirInvalidationLocked(state);
+  if (!target) {
+    return std::nullopt;
   }
 
   // The contents lock is held by invalidateChildrenNotMaterialized
@@ -5975,45 +5988,45 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
   }
   auto outcome = std::make_shared<NfsGcInvalidation>();
   auto stats = getMount()->getStats().copy();
-  const bool queued = nfsInvalidateDirCacheLocked(
-      state,
-      [inodeMapWeak = getInodeMapWeak(),
-       stats = std::move(stats),
-       childInodes = std::move(childInodes),
-       outcome,
-       faultInjector = &getMount()->getServerState()->getFaultInjector(),
-       pathStr = path->asString()]() {
-        // Code to run after successful invalidation
-        auto inodeMap = inodeMapWeak.lock();
-        if (!inodeMap) {
-          XLOG(WARN, "InodeMap is killed before GC completes");
-          return;
+  auto onSuccess = [inodeMapWeak = getInodeMapWeak(),
+                    stats = std::move(stats),
+                    childInodes = std::move(childInodes),
+                    outcome,
+                    faultInjector =
+                        &getMount()->getServerState()->getFaultInjector(),
+                    pathStr = path->asString()]() {
+    // Code to run after successful invalidation
+    auto inodeMap = inodeMapWeak.lock();
+    if (!inodeMap) {
+      XLOG(WARN, "InodeMap is killed before GC completes");
+      return;
+    }
+    // The mount, which owns the fault injector, is alive while its
+    // InodeMap is.
+    faultInjector->check("nfsGcInvalidation", pathStr);
+    // The directory got invalidated, now we can dereference all of its
+    // contents
+    uint64_t numCleared = 0;
+    for (auto ino : childInodes) {
+      stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountAttempt);
+      if (inodeMap->isInodeLoadedOrRemembered(ino)) {
+        XLOGF(DBG9, "GC invalidated inode {}", ino);
+        if (inodeMap->clearFsRefcount(ino)) {
+          numCleared++;
+          stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountCleared);
         }
-        // The mount, which owns the fault injector, is alive while its
-        // InodeMap is.
-        faultInjector->check("nfsGcInvalidation", pathStr);
-        // The directory got invalidated, now we can dereference all of its
-        // contents
-        uint64_t numCleared = 0;
-        for (auto ino : childInodes) {
-          stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountAttempt);
-          if (inodeMap->isInodeLoadedOrRemembered(ino)) {
-            XLOGF(DBG9, "GC invalidated inode {}", ino);
-            if (inodeMap->clearFsRefcount(ino)) {
-              numCleared++;
-              stats->increment(
-                  &NfsStats::nfsInvalidationGcClearFsRefcountCleared);
-            }
-          } else {
-            stats->increment(
-                &NfsStats::nfsInvalidationGcClearFsRefcountSkipped);
-          }
-        }
-        outcome->numCleared.store(numCleared, std::memory_order_release);
-        outcome->succeeded.store(true, std::memory_order_release);
-      },
-      NfsInvalidationSource::Gc);
-  return queued ? outcome : nullptr;
+      } else {
+        stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountSkipped);
+      }
+    }
+    outcome->numCleared.store(numCleared, std::memory_order_release);
+    outcome->succeeded.store(true, std::memory_order_release);
+  };
+  return NfsGcPreparedInvalidation{
+      std::move(target->first),
+      target->second,
+      std::move(onSuccess),
+      std::move(outcome)};
 }
 #endif
 
@@ -7036,152 +7049,196 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     return NfsGcResult{0, false, /*containsPin=*/true};
   }
 
-  return processTreeChildren(
-             this,
-             getInodeMap(),
-             context,
-             cancellationToken,
-             [cutoff,
-              context = context.copy(),
-              cancellationToken,
-              pinnedInodes](PathComponentPiece /*name*/, TreeInodePtr tree) {
-               return tree
-                   ->invalidateChildrenNotMaterializedNFS(
-                       cutoff, context, cancellationToken, pinnedInodes)
-                   .thenValue([ino = tree->getNodeId()](NfsGcResult result) {
-                     return std::make_pair(ino, result);
-                   });
-             })
-      .thenValue([self = inodePtrFromThis(),
-                  cutoff,
-                  cancellationToken,
-                  pinnedInodes = std::move(pinnedInodes)](
-                     const std::vector<std::pair<InodeNumber, NfsGcResult>>&
-                         childResults) {
-        NfsGcStep step;
-        step.containsPin =
-            pinnedInodes && pinnedInodes->count(self->getNodeId());
-        // Check for cancellation before processing results
-        if (shouldCancelGC(cancellationToken)) {
-          step.containsPin = true;
-          return step;
-        }
+  auto childResults = processTreeChildren(
+      this,
+      getInodeMap(),
+      context,
+      cancellationToken,
+      [cutoff, context = context.copy(), cancellationToken, pinnedInodes](
+          PathComponentPiece /*name*/, TreeInodePtr tree) {
+        return tree
+            ->invalidateChildrenNotMaterializedNFS(
+                cutoff, context, cancellationToken, pinnedInodes)
+            .thenValue([ino = tree->getNodeId()](NfsGcResult result) {
+              return std::make_pair(ino, result);
+            });
+      });
 
-        bool allDescendantsInvalidated = true;
-        folly::F14FastSet<InodeNumber> pinnedChildren;
-        for (const auto& [childIno, childResult] : childResults) {
-          step.numInvalidated += childResult.numInvalidated;
-          if (!childResult.invalidated) {
-            allDescendantsInvalidated = false;
-          }
-          if (childResult.containsPin) {
-            step.containsPin = true;
-            pinnedChildren.insert(childIno);
-          }
-        }
-
-        if (!self->getPath().has_value()) {
-          // This directory was removed, no need to do anything.
-          step.invalidated = true;
-          return step;
-        }
-
-        auto contents = self->lockContentsWrite();
-        if (pinnedInodes && !step.containsPin) {
-          // Pinned directories reported themselves above; pinned files are
-          // only visible here.
-          for (auto& entry : contents->entries.all()) {
-            if (!entry.second.isDirectory() &&
-                pinnedInodes->count(entry.second.getInodeNumber())) {
-              step.containsPin = true;
-              break;
-            }
-          }
-        }
-        if (!allDescendantsInvalidated) {
-          // If any of the children are not invalidated, we should skip
-          // invalidation of this directory.
-          return step;
-        }
-        if (contents->isMaterialized()) {
-          return step;
-        }
-
-        // if cutoff is max, we should invalidate everything, so we don't
-        // need to check the last fs request time
-        bool shouldInvalidate =
-            (cutoff == std::chrono::system_clock::time_point::max());
-        if (!shouldInvalidate) {
-          auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-              self->getLastFsRequestTime().toTimespec().tv_sec);
-          // As we didn't update parent's last fs request time when children
-          // are accessed via the fs channel dispatcher, we need to check
-          // the children's last fs request time here.
-          for (auto& entry : contents->entries.all()) {
-            auto* entryInode = entry.second.getInode();
-            if (!entryInode) {
-              continue;
-            }
-            auto childLastFsRequestTime =
-                std::chrono::system_clock::from_time_t(
-                    entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-            if (lastFsRequestTime < childLastFsRequestTime) {
-              lastFsRequestTime = childLastFsRequestTime;
-            }
-          }
-          shouldInvalidate = (lastFsRequestTime < cutoff);
-          XLOGF(
-              DBG9,
-              "For path: {}, last fs request time: {}, cutoff: {}, shouldInvalidate by GC is {}",
-              self->getPath().value().asString(),
-              self->getLastFsRequestTime().toTimespec().tv_sec,
-              cutoff.time_since_epoch().count(),
-              shouldInvalidate);
-        }
-        if (!shouldInvalidate) {
-          return step;
-        }
-
-        // Attempt to invalidate the directory, and then clear the FS
-        // references of all of its children. The call order here is
-        // recursively bottom-up. The directory itself is cleared later by its
-        // parent's invalidation.
-
-        // Check for cancellation before invalidation
-        if (shouldCancelGC(cancellationToken)) {
-          step.numInvalidated = 0;
-          return step;
-        }
-
-        // The invalidation exists to clear the children's FS references. A
-        // child that is neither loaded nor remembered has none, and a
-        // directory child is left alone without pin information, so when
-        // no child would be cleared the chmod would do nothing. Skip it, but
-        // let the parent proceed as if this directory had been invalidated
-        // so it can clear this directory's own reference.
-        auto* inodeMap = self->getInodeMap();
-        bool anyChildReferenced = false;
-        for (auto& entry : contents->entries.all()) {
-          if (!nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
-            continue;
-          }
-          if (entry.second.getInode() ||
-              inodeMap->isInodeRemembered(entry.second.getInodeNumber())) {
-            anyChildReferenced = true;
-            break;
-          }
-        }
-        if (!anyChildReferenced) {
-          step.invalidated = true;
-          return step;
-        }
+  // Deciding whether to invalidate this directory and queuing the
+  // invalidation run on the GC invalidation executor, as the FUSE walk does:
+  // queuing may wait for the invalidation queue to drain, which must not hold
+  // up the threads that serve requests. The continuation is attached to the
+  // folly::Future from via() rather than an ImmediateFuture, which would run
+  // it inline on the calling thread whenever the hop had already completed.
+  // The decision captures the executor to keep it alive for as long as the
+  // continuation, which the keep-alive token via() is given does not do.
+  std::shared_ptr<UnboundedQueueExecutor> invalidationExecutor;
 #ifndef _WIN32
-        // Windows platforms should not get to this path
-        step.pending = self->nfsInvalidateCacheEntryForGC(
-            *contents, pinnedInodes, pinnedChildren);
+  invalidationExecutor = getMount()->getInodeGCInvalidationExecutor();
 #endif
-        return step;
-      })
+  auto decide =
+      [self = inodePtrFromThis(),
+       cutoff,
+       cancellationToken,
+       pinnedInodes = std::move(pinnedInodes),
+       invalidationExecutor](
+          const std::vector<std::pair<InodeNumber, NfsGcResult>>& childResults)
+      -> NfsGcStep {
+    NfsGcStep step;
+    step.containsPin = pinnedInodes && pinnedInodes->count(self->getNodeId());
+    // Check for cancellation before processing results
+    if (shouldCancelGC(cancellationToken)) {
+      step.containsPin = true;
+      return step;
+    }
+
+    bool allDescendantsInvalidated = true;
+    folly::F14FastSet<InodeNumber> pinnedChildren;
+    for (const auto& [childIno, childResult] : childResults) {
+      step.numInvalidated += childResult.numInvalidated;
+      if (!childResult.invalidated) {
+        allDescendantsInvalidated = false;
+      }
+      if (childResult.containsPin) {
+        step.containsPin = true;
+        pinnedChildren.insert(childIno);
+      }
+    }
+
+    if (!self->getPath().has_value()) {
+      // This directory was removed, no need to do anything.
+      step.invalidated = true;
+      return step;
+    }
+
+    auto contents = self->lockContentsWrite();
+    if (pinnedInodes && !step.containsPin) {
+      // Pinned directories reported themselves above; pinned files are
+      // only visible here.
+      for (auto& entry : contents->entries.all()) {
+        if (!entry.second.isDirectory() &&
+            pinnedInodes->count(entry.second.getInodeNumber())) {
+          step.containsPin = true;
+          break;
+        }
+      }
+    }
+    if (!allDescendantsInvalidated) {
+      // If any of the children are not invalidated, we should skip
+      // invalidation of this directory.
+      return step;
+    }
+    if (contents->isMaterialized()) {
+      return step;
+    }
+
+    // if cutoff is max, we should invalidate everything, so we don't
+    // need to check the last fs request time
+    bool shouldInvalidate =
+        (cutoff == std::chrono::system_clock::time_point::max());
+    if (!shouldInvalidate) {
+      auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+          self->getLastFsRequestTime().toTimespec().tv_sec);
+      // As we didn't update parent's last fs request time when children
+      // are accessed via the fs channel dispatcher, we need to check
+      // the children's last fs request time here.
+      for (auto& entry : contents->entries.all()) {
+        auto* entryInode = entry.second.getInode();
+        if (!entryInode) {
+          continue;
+        }
+        auto childLastFsRequestTime = std::chrono::system_clock::from_time_t(
+            entryInode->getLastFsRequestTime().toTimespec().tv_sec);
+        if (lastFsRequestTime < childLastFsRequestTime) {
+          lastFsRequestTime = childLastFsRequestTime;
+        }
+      }
+      shouldInvalidate = (lastFsRequestTime < cutoff);
+      XLOGF(
+          DBG9,
+          "For path: {}, last fs request time: {}, cutoff: {}, shouldInvalidate by GC is {}",
+          self->getPath().value().asString(),
+          self->getLastFsRequestTime().toTimespec().tv_sec,
+          cutoff.time_since_epoch().count(),
+          shouldInvalidate);
+    }
+    if (!shouldInvalidate) {
+      return step;
+    }
+
+    // Attempt to invalidate the directory, and then clear the FS
+    // references of all of its children. The call order here is
+    // recursively bottom-up. The directory itself is cleared later by its
+    // parent's invalidation.
+
+    // Check for cancellation before invalidation
+    if (shouldCancelGC(cancellationToken)) {
+      step.numInvalidated = 0;
+      return step;
+    }
+
+    // The invalidation exists to clear the children's FS references. A
+    // child that is neither loaded nor remembered has none, and a
+    // directory child is left alone without pin information, so when
+    // no child would be cleared the chmod would do nothing. Skip it, but
+    // let the parent proceed as if this directory had been invalidated
+    // so it can clear this directory's own reference.
+    auto* inodeMap = self->getInodeMap();
+    bool anyChildReferenced = false;
+    for (auto& entry : contents->entries.all()) {
+      if (!nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
+        continue;
+      }
+      if (entry.second.getInode() ||
+          inodeMap->isInodeRemembered(entry.second.getInodeNumber())) {
+        anyChildReferenced = true;
+        break;
+      }
+    }
+    if (!anyChildReferenced) {
+      step.invalidated = true;
+      return step;
+    }
+#ifndef _WIN32
+    auto prepared =
+        self->nfsPrepareGcInvalidation(*contents, pinnedInodes, pinnedChildren);
+    if (!prepared) {
+      return step;
+    }
+    // Queue with the contents lock released: the channel bounds how many
+    // GC invalidations may be queued at once, so this may wait.
+    contents.unlock();
+    auto* channel = self->getMount()->getNfsdChannel();
+    if (!channel) {
+      return step;
+    }
+    const auto maxQueued = self->getMount()
+                               ->getEdenConfig()
+                               ->nfsMaxQueuedGcInvalidations.getValue();
+    if (channel->invalidateWithQueueLimit(
+            std::move(prepared->path),
+            prepared->mode,
+            std::move(prepared->onSuccess),
+            maxQueued,
+            cancellationToken)) {
+      step.pending = std::move(prepared->outcome);
+    }
+#endif
+    return step;
+  };
+
+#ifndef _WIN32
+  ImmediateFuture<NfsGcStep> stepFuture =
+      std::move(childResults)
+          .semi()
+          .via(folly::getKeepAliveToken(invalidationExecutor.get()))
+          .thenValue(std::move(decide));
+#else
+  ImmediateFuture<NfsGcStep> stepFuture =
+      std::move(childResults).thenValue(std::move(decide));
+#endif
+
+  return std::move(stepFuture)
       .thenTry(
           [self = inodePtrFromThis(), cancellationToken](
               folly::Try<NfsGcStep>&& result) -> ImmediateFuture<NfsGcResult> {

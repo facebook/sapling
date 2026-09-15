@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/RpcServer.h"
+#include "eden/fs/utils/InvalidationQueue.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 #include "folly/Function.h"
 
@@ -239,6 +240,20 @@ class Nfsd3 final : public FsChannel {
       folly::Function<void()> onSuccess = nullptr,
       std::optional<NfsInvalidationSource> source = std::nullopt);
 
+  /**
+   * Queue a GC invalidation like invalidate() with source Gc, but only once
+   * the invalidation queue holds fewer than maxQueueSize entries, waiting for
+   * it to drain otherwise. Returns false without queuing if cancellation was
+   * requested first or the channel is stopping. Must not be called while
+   * holding inode locks, since it can block.
+   */
+  bool invalidateWithQueueLimit(
+      AbsolutePath path,
+      mode_t mode,
+      folly::Function<void()> onSuccess,
+      size_t maxQueueSize,
+      const folly::CancellationToken& cancellationToken);
+
   bool takeoverStop() override;
 
   ImmediateFuture<folly::Unit> waitForPendingWrites() override {
@@ -342,14 +357,28 @@ class Nfsd3 final : public FsChannel {
   std::shared_ptr<RpcServer> server_;
   ProcessAccessLog processAccessLog_;
   std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
-  // It is critical that this is a SerialExecutor. invalidation for parent
-  // directories should happen after children, and we flush invalidations by
-  // adding one work item to the queue.
-  folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
   std::atomic<size_t> traceDetailedArguments_;
-  // The TraceBus must be the last member because its subscribed functions may
-  // close over `this` and can run until the TraceBus itself is deallocated.
+  // The TraceBus is declared after every member its subscribed functions may
+  // use, since they close over `this` and can run until the TraceBus itself
+  // is deallocated. Only the invalidation queue follows it, whose workers do
+  // not use the TraceBus.
   std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
+
+  /**
+   * One directory invalidation: a chmod of the directory to its current
+   * mode, which makes the NFS client refetch its attributes.
+   */
+  struct Invalidation {
+    AbsolutePath path;
+    mode_t mode;
+    folly::Function<void()> onSuccess;
+    std::optional<NfsInvalidationSource> source;
+  };
+  void runInvalidation(Invalidation& invalidation);
+
+  // Declared last: its workers use the members above, so it must be stopped,
+  // which its destructor does, before they are destroyed.
+  InvalidationQueue<Invalidation> invalidationQueue_;
 };
 
 // Returns a view backed by the static NFS handler table.

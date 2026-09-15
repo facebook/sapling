@@ -1275,6 +1275,31 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useReaddirplus{"nfs:use-readdirplus", false, this};
 
   /**
+   * The number of threads per NFS mount that send directory invalidations
+   * (chmods) to the kernel. One keeps them in the order they were queued,
+   * which is how the serial executor this replaced behaved; more lets them
+   * complete in any order. Order is believed not to matter, since each chmod
+   * only bumps its directory's mtime and the GC walk sequences its own, but
+   * that has not been verified under load, so the default stays at one.
+   */
+  ConfigSetting<uint32_t> nfsNumInvalidationThreads{
+      "nfs:num-invalidation-threads",
+      1,
+      this};
+
+  /**
+   * Upper bound on the number of directory invalidations inode GC may have
+   * queued at once on an NFS mount. The queue is shared with checkout's
+   * invalidations, so an unbounded GC queue would delay a checkout by however
+   * many GC invalidations were ahead of it. When the bound is reached the GC
+   * walk waits for the queue to drain before queuing more.
+   */
+  ConfigSetting<uint32_t> nfsMaxQueuedGcInvalidations{
+      "nfs:max-queued-gc-invalidations",
+      1024,
+      this};
+
+  /**
    * When set to true, NFS mounts are mounted with the "soft" mount option. This
    * setting applies to all NFS mounts. Behavior when set to false differs
    * between platforms:

@@ -18,7 +18,6 @@
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>
 #include <folly/container/F14Map.h>
-#include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/portability/Stdlib.h>
 
@@ -2747,7 +2746,9 @@ Nfsd3::Nfsd3(
             traceBus_,
             longRunningFSRequestThreshold,
             fastPathRPCs,
-            std::move(config));
+            // Not moved: the invalidation queue below reads its thread count
+            // from the config too.
+            config);
         proc->setFsChannel(this);
         return RpcServer::create(
             std::move(proc),
@@ -2759,15 +2760,19 @@ Nfsd3::Nfsd3(
       }()),
       processAccessLog_(std::move(processInfoCache)),
       edenFsEventsLogger_{edenFsEventsLogger},
-      invalidationExecutor_{
-          folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
       traceDetailedArguments_{0},
-      traceBus_{TraceBus<NfsTraceEvent>::create("NfsTrace", traceBusCapacity)} {
+      traceBus_{TraceBus<NfsTraceEvent>::create("NfsTrace", traceBusCapacity)},
+      invalidationQueue_{
+          config ? config->getEdenConfig()->nfsNumInvalidationThreads.getValue()
+                 : 1,
+          [this](Invalidation& invalidation) { runInvalidation(invalidation); },
+          fmt::format("nfsinval{}", mountPath_.basename())} {
   XLOGF(
       INFO,
       "Creating Nfsd3: mountPath={}, caseSensitive={}",
       mountPath_,
       caseSensitive);
+  invalidationQueue_.start();
 
   initializeInflightRequestsRateLimiter(maximumInFlightRequests);
 
@@ -2841,79 +2846,109 @@ void Nfsd3::invalidate(
     mode_t mode,
     folly::Function<void()> onSuccess,
     std::optional<NfsInvalidationSource> source) {
-  auto stats = stats_.copy();
   incrementNfsGcInvalidationCounter(
-      stats, source, &NfsStats::nfsInvalidationGcAttempt);
-  invalidationExecutor_->add([path = std::move(path),
-                              mode,
-                              onSuccess = std::move(onSuccess),
-                              source,
-                              stats = std::move(stats),
-                              logger = edenFsEventsLogger_]() mutable {
-    XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
-    const auto chmodResult = chmod(path.c_str(), mode);
-    const auto error = errno;
-    if (chmodResult == 0) {
-      incrementNfsGcInvalidationCounter(
-          stats, source, &NfsStats::nfsInvalidationGcSuccess);
-      XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
-      if (onSuccess) {
-        onSuccess();
-      }
-    } else if (error == ENOENT) {
-      incrementNfsGcInvalidationCounter(
-          stats, source, &NfsStats::nfsInvalidationGcEnoent);
-      // ENOENT is expected after removing files.
-      XLOGF(DBG9, "Finished invalidating (no longer exists): {}", path.c_str());
-    } else if (error == EACCES) {
-      incrementNfsGcInvalidationCounter(
-          stats, source, &NfsStats::nfsInvalidationGcFailure);
-      // Restricted directories can reject the synthetic chmod used to
-      // invalidate the NFS client cache.
-      XLOGF(
-          DBG9, "Finished invalidating (permission denied): {}", path.c_str());
-#ifdef __APPLE__
-    } else if (error == EPERM) {
-      incrementNfsGcInvalidationCounter(
-          stats, source, &NfsStats::nfsInvalidationGcFailure);
-      // On macOS, EPERM is a known operational condition rather than a
-      // programming error: it typically means TCC denied the synthetic chmod
-      // because the daemon's responsible process lacks the
-      // SystemPolicyNetworkVolumes grant. When that happens every GC
-      // invalidation fails identically, so one line per daemon lifetime
-      // carries all the information. On other platforms EPERM stays in the
-      // generic DFATAL branch below: there it is a genuine anomaly.
-      XLOGF_FIRST_N(
-          ERR,
-          1,
-          "Permission denied invalidating path {} to mode {} using chmod. "
-          "This usually means TCC denied SystemPolicyNetworkVolumes "
-          "for the daemon's responsible process. Run `eden doctor`, or "
-          "restart EdenFS with `eden restart` to recover. Further EPERM "
-          "failures will not be logged; see the nfs.invalidation.gc.failure "
-          "counter.",
-          path,
-          mode);
-      // Emit the telemetry event on every EPERM failure so the event table
-      // carries the true failure count; the log line above stays
-      // once-per-daemon to avoid log spam. Per-failure emission is cheap and
-      // non-blocking: XplatLogger enqueues into a bounded queue (dropping,
-      // never blocking, when full) drained by a background Scribe producer.
-      if (logger) {
-        logger->logEvent(TccInvalidationDenied{error, path.asString()});
-      }
-#endif
-    } else {
-      incrementNfsGcInvalidationCounter(
-          stats, source, &NfsStats::nfsInvalidationGcFailure);
-      XLOGF(
-          DFATAL,
-          "Error invalidating path {} to mode {} using chmod: {}",
-          path,
+      stats_, source, &NfsStats::nfsInvalidationGcAttempt);
+  invalidationQueue_.add(
+      Invalidation{std::move(path), mode, std::move(onSuccess), source});
+}
+
+bool Nfsd3::invalidateWithQueueLimit(
+    AbsolutePath path,
+    mode_t mode,
+    folly::Function<void()> onSuccess,
+    size_t maxQueueSize,
+    const folly::CancellationToken& cancellationToken) {
+  const bool added = invalidationQueue_.addWithLimit(
+      Invalidation{
+          std::move(path),
           mode,
-          folly::errnoStr(error));
+          std::move(onSuccess),
+          NfsInvalidationSource::Gc},
+      maxQueueSize,
+      cancellationToken);
+  if (added) {
+    incrementNfsGcInvalidationCounter(
+        stats_, NfsInvalidationSource::Gc, &NfsStats::nfsInvalidationGcAttempt);
+  }
+  return added;
+}
+
+/**
+ * Runs on the invalidation queue's threads. The chmod runs off the request
+ * threads because both the kernel and EdenFS hold locks that would otherwise
+ * deadlock; see InvalidationQueue.
+ */
+void Nfsd3::runInvalidation(Invalidation& invalidation) {
+  const auto& path = invalidation.path;
+  const auto mode = invalidation.mode;
+  const auto source = invalidation.source;
+  const auto& stats = stats_;
+  XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
+  const auto chmodResult = chmod(path.c_str(), mode);
+  const auto error = errno;
+  if (chmodResult == 0) {
+    incrementNfsGcInvalidationCounter(
+        stats, source, &NfsStats::nfsInvalidationGcSuccess);
+    XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
+    if (invalidation.onSuccess) {
+      invalidation.onSuccess();
     }
-  });
+  } else if (error == ENOENT) {
+    incrementNfsGcInvalidationCounter(
+        stats, source, &NfsStats::nfsInvalidationGcEnoent);
+    // ENOENT is expected after removing files.
+    XLOGF(DBG9, "Finished invalidating (no longer exists): {}", path.c_str());
+  } else if (error == EACCES) {
+    incrementNfsGcInvalidationCounter(
+        stats, source, &NfsStats::nfsInvalidationGcFailure);
+    // Restricted directories can reject the synthetic chmod used to
+    // invalidate the NFS client cache.
+    XLOGF(DBG9, "Finished invalidating (permission denied): {}", path.c_str());
+#ifdef __APPLE__
+  } else if (error == EPERM) {
+    incrementNfsGcInvalidationCounter(
+        stats, source, &NfsStats::nfsInvalidationGcFailure);
+    // On macOS, EPERM is a known operational condition rather than a
+    // programming error: it typically means TCC denied the synthetic chmod
+    // because the daemon's responsible process lacks the
+    // SystemPolicyNetworkVolumes grant. When that happens every GC
+    // invalidation fails identically, so one line per daemon lifetime
+    // carries all the information. On other platforms EPERM stays in the
+    // generic DFATAL branch below: there it is a genuine anomaly.
+    XLOGF_FIRST_N(
+        ERR,
+        1,
+        "Permission denied invalidating path {} to mode {} using chmod. "
+        "This usually means TCC denied SystemPolicyNetworkVolumes "
+        "for the daemon's responsible process. Run `eden doctor`, or "
+        "restart EdenFS with `eden restart` to recover. Further EPERM "
+        "failures will not be logged; see the nfs.invalidation.gc.failure "
+        "counter.",
+        path,
+        mode);
+    // Emit the telemetry event on every EPERM failure so the event table
+    // carries the true failure count; the log line above stays
+    // once-per-daemon to avoid log spam. Per-failure emission is cheap and
+    // non-blocking: XplatLogger enqueues into a bounded queue (dropping,
+    // never blocking, when full) drained by a background Scribe producer.
+    if (edenFsEventsLogger_) {
+      edenFsEventsLogger_->logEvent(
+          TccInvalidationDenied{error, path.asString()});
+    }
+#endif
+  } else {
+    incrementNfsGcInvalidationCounter(
+        stats, source, &NfsStats::nfsInvalidationGcFailure);
+    // Not a programming error: the path is on the mount, so the chmod can
+    // fail for any reason an NFS request can.
+    XLOGF_EVERY_MS(
+        ERR,
+        60'000,
+        "Error invalidating path {} to mode {} using chmod: {}",
+        path,
+        mode,
+        folly::errnoStr(error));
+  }
 }
 
 uint32_t Nfsd3::getProgramNumber() {
@@ -2932,23 +2967,11 @@ void Nfsd3::invalidateInodes(
 }
 
 ImmediateFuture<folly::Unit> Nfsd3::completeInvalidations() {
-  folly::Promise<folly::Unit> promise;
-  auto result = promise.getFuture();
-  invalidationExecutor_->add([promise = std::move(promise)]() mutable {
-    // Since the invalidationExecutor_ is a SerialExecutor, this lambda will
-    // run only when all the previously added open have completed.
-    promise.setValue(folly::unit);
-  });
-  return result;
+  return invalidationQueue_.flush();
 }
 
 folly::coro::now_task<folly::Unit> Nfsd3::co_completeInvalidations() {
-  folly::Promise<folly::Unit> promise;
-  auto result = promise.getSemiFuture();
-  invalidationExecutor_->add([promise = std::move(promise)]() mutable {
-    promise.setValue(folly::unit);
-  });
-  co_await std::move(result);
+  co_await invalidationQueue_.flush().semi();
   co_return folly::unit;
 }
 

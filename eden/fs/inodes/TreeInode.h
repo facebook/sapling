@@ -120,6 +120,18 @@ struct NfsGcResult {
 };
 
 /**
+ * A directory invalidation that GC has prepared under the directory's
+ * contents lock and still has to queue on the NFS channel. Queuing may wait
+ * for queue capacity, so it happens with the lock released.
+ */
+struct NfsGcPreparedInvalidation {
+  AbsolutePath path;
+  mode_t mode;
+  folly::Function<void()> onSuccess;
+  std::shared_ptr<NfsGcInvalidation> outcome;
+};
+
+/**
  * Represents a directory in the file system.
  */
 class TreeInode final : public InodeBaseMetadata<DirContents> {
@@ -1393,29 +1405,36 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
 #ifndef _WIN32
   /**
-   * Sends a request to the kernel to invalidate its cache for this tree and,
-   * once that has succeeded, clears the FS references of its children so the
-   * GC sweep can unload them. Pinned children, directory children whose
+   * Prepare the NFS invalidation of this directory for GC: the chmod that
+   * makes the kernel refetch the directory, and the callback that, once it
+   * has succeeded, clears the FS references of the directory's children so
+   * the GC sweep can unload them. Pinned children, directory children whose
    * subtree contains a pin (pinnedChildren), and, without pin information,
    * all directory children keep their reference; see
-   * handleChildrenNotAccessedRecently. In NFS, this function is distinct from
-   * `invalidateChannelEntryCache` and is used exclusively for garbage
-   * collection.
+   * handleChildrenNotAccessedRecently. The contents lock must be held; the
+   * caller queues the result once it has released the lock.
    *
-   * Returns the outcome of the invalidation, or nullptr if none was queued.
+   * Returns nullopt if the mount has no NFS channel or this directory has
+   * been unlinked.
    */
-  std::shared_ptr<NfsGcInvalidation> nfsInvalidateCacheEntryForGC(
+  std::optional<NfsGcPreparedInvalidation> nfsPrepareGcInvalidation(
       TreeInodeState& state,
       const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
       const folly::F14FastSet<InodeNumber>& pinnedChildren);
 
   /**
-   * Queue the chmod that makes the NFS client flush its cache for this
-   * directory, calling onSuccess once it has completed. The contents lock
-   * must be held.
-   *
-   * Returns false, without doing anything, if the mount has no NFS channel
-   * or this directory has been unlinked.
+   * The path and mode for the chmod that makes the NFS client flush its
+   * cache for this directory. The contents lock must be held. Returns
+   * nullopt if the mount has no NFS channel or this directory has been
+   * unlinked.
+   */
+  std::optional<std::pair<AbsolutePath, mode_t>>
+  nfsPrepareDirInvalidationLocked(TreeInodeState& state);
+
+  /**
+   * Queue the chmod prepared by nfsPrepareDirInvalidationLocked(), calling
+   * onSuccess once it has completed. Returns false, without doing anything,
+   * if there was nothing to prepare.
    */
   bool nfsInvalidateDirCacheLocked(
       TreeInodeState& state,
