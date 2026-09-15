@@ -19,7 +19,7 @@ import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {
   ComparisonType,
@@ -34,7 +34,8 @@ import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
-import {latestHeadCommit} from '../serverAPIState';
+import {dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
+import {latestHeadCommit, latestUncommittedChangesData} from '../serverAPIState';
 import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
@@ -71,6 +72,47 @@ const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
         (event.ignoreWhitespace ?? false) === ignoreWhitespace,
     );
     return mapResult(event.data.diff, parsePatchAndFilter);
+  }),
+);
+
+/**
+ * Whether the right side of a comparison matches the current version of the
+ * file on disk, so clickable line numbers can be offered.
+ * Derived state (head commit + optimistic working-copy status), kept in a
+ * Jotai atom family so it's reusable/testable and stays in sync with previews.
+ */
+const comparisonTargetIsCurrentAtom = atomFamilyWeak((comparison: Comparison) =>
+  atom(get => {
+    if (comparisonIsAgainstHead(comparison)) {
+      return true;
+    }
+    // Use preview-aware dag so head hash reflects optimistic state while an
+    // operation (e.g. amend/goto) is in flight, not the last fetched status.
+    const headHash = get(dagWithPreviews).resolve('.')?.hash;
+    if (headHash == null) {
+      return false;
+    }
+    // Before the first uncommittedChanges subscription result arrives, files
+    // is [] which would incorrectly look clean. Be conservative and don't
+    // offer clickable line numbers until we've fetched at least once.
+    const uncommittedData = get(latestUncommittedChangesData);
+    if (uncommittedData.fetchCompletedTimestamp <= 0) {
+      return false;
+    }
+    // Use preview-aware changes so dirtiness reflects optimistic state.
+    const workingCopyDirty = get(uncommittedChangesWithPreviews).length > 0;
+    if (workingCopyDirty) {
+      return false;
+    }
+    switch (comparison.type) {
+      case ComparisonType.Committed:
+      case ComparisonType.SinceLastCodeReviewSubmit:
+        return comparison.hash === headHash;
+      case ComparisonType.CommitRange:
+        return comparison.hashTo === headHash;
+      default:
+        return false;
+    }
   }),
 );
 
@@ -440,12 +482,15 @@ function ComparisonViewFile({
   displayMode: ComparisonDisplayMode;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
+  // Offer clickable line numbers whenever the right side of the comparison matches
+  // the current version of the file on disk and the working copy is clean.
+  const comparisonTargetIsCurrent = useAtomValue(comparisonTargetIsCurrentAtom(comparison));
   const context: Context = {
     id: {path, comparison},
     copy: platform.clipboardCopy,
     openFile: () => platform.openFile(path),
-    // only offer clickable line numbers for comparisons against head, otherwise line numbers will be inaccurate
-    openFileToLine: comparisonIsAgainstHead(comparison)
+    // only offer clickable line numbers when the right side line numbers match the file on disk
+    openFileToLine: comparisonTargetIsCurrent
       ? (line: number) => platform.openFile(path, {line})
       : undefined,
 

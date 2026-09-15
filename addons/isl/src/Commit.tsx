@@ -308,12 +308,7 @@ export const Commit = memo(
       if (!isPublic) {
         items.push({
           label: <T>View Changes in Commit</T>,
-          onClick: () =>
-            showComparison(
-              commit.isDot && !hasUncommittedChanges
-                ? {type: ComparisonType.HeadChanges}
-                : {type: ComparisonType.Committed, hash: commit.hash},
-            ),
+          onClick: () => showComparison({type: ComparisonType.Committed, hash: commit.hash}),
           loggingLabel: 'View Changes in Commit',
         });
 
