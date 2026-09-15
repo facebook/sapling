@@ -5946,13 +5946,18 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
       [inodeMapWeak = getInodeMapWeak(),
        stats = std::move(stats),
        childInodes = std::move(childInodes),
-       outcome]() {
+       outcome,
+       faultInjector = &getMount()->getServerState()->getFaultInjector(),
+       pathStr = path->asString()]() {
         // Code to run after successful invalidation
         auto inodeMap = inodeMapWeak.lock();
         if (!inodeMap) {
           XLOG(WARN, "InodeMap is killed before GC completes");
           return;
         }
+        // The mount, which owns the fault injector, is alive while its
+        // InodeMap is.
+        faultInjector->check("nfsGcInvalidation", pathStr);
         // The directory got invalidated, now we can dereference all of its
         // contents
         uint64_t numCleared = 0;

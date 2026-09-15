@@ -7,18 +7,24 @@
 
 #ifndef _WIN32
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <memory>
+#include <thread>
+#include <vector>
 
 #include <folly/CancellationToken.h>
 #include <folly/container/F14Set.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <gtest/gtest.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -27,6 +33,9 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/nfs/rpc/Rpc.h"
+#include "eden/fs/nfs/testharness/NfsRequestUtils.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
@@ -41,10 +50,11 @@ constexpr auto kTimeout = std::chrono::seconds{10};
  * (TreeInode::invalidateChildrenNotMaterializedNFS) against a real Nfsd3
  * attached to a TestMount.
  *
- * The Nfsd3 is only used for its invalidation machinery. It invalidates a
- * directory by chmod'ing the directory's path under the mount path, which
- * here is a plain directory on local disk, so a directory's invalidation
- * succeeds only when the test created that directory on disk first.
+ * The Nfsd3 invalidates a directory by chmod'ing the directory's path under
+ * the mount path, which here is a plain directory on local disk, so a
+ * directory's invalidation succeeds only when the test created that directory
+ * on disk first. The requests an NFS client would send are written to the
+ * Nfsd3 over a socketpair.
  */
 class NfsGcTest : public ::testing::Test {
  protected:
@@ -144,13 +154,15 @@ class NfsGcTest : public ::testing::Test {
   }
 
   /**
-   * Run the invalidation pass of GC and return what it reports as the number
-   * of invalidated entries.
+   * Start the invalidation pass of GC. finishGc() waits for it and returns
+   * what it reports as the number of invalidated entries.
    */
-  uint64_t runGc(
+  folly::Future<uint64_t> startGc(
       std::chrono::system_clock::time_point cutoff,
       PinnedInodeSet pinnedInodes = noPins()) {
-    auto* executor = testMount_->getServerExecutor().get();
+    // Bound to the server executor, which the wait helpers drain, so the
+    // walk's deferred continuations run while a test waits on it; a
+    // SemiFuture's would only run once something drove it.
     return testMount_->getEdenMount()
         ->getRootInode()
         ->handleChildrenNotAccessedRecently(
@@ -160,9 +172,46 @@ class NfsGcTest : public ::testing::Test {
             folly::CancellationToken{},
             std::move(pinnedInodes))
         .semi()
-        .via(executor)
-        .within(kTimeout)
-        .getVia(executor);
+        .via(testMount_->getServerExecutor().get());
+  }
+
+  /**
+   * Drive the walk to completion and return what it reports.
+   */
+  uint64_t finishGc(folly::Future<uint64_t> gc) {
+    auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (!gc.isReady()) {
+      testMount_->drainServerExecutor();
+      manualExecutor_->run();
+      evb_.loopOnce(EVLOOP_NONBLOCK);
+      if (std::chrono::steady_clock::now() > deadline) {
+        ADD_FAILURE() << "GC did not finish";
+        return 0;
+      }
+      gc.wait(std::chrono::milliseconds{1});
+    }
+    return std::move(gc).value();
+  }
+
+  uint64_t runGc(
+      std::chrono::system_clock::time_point cutoff,
+      PinnedInodeSet pinnedInodes = noPins()) {
+    return finishGc(startGc(cutoff, std::move(pinnedInodes)));
+  }
+
+  /**
+   * Wait until GC is blocked on the nfsGcInvalidation fault, driving the
+   * mount's server executor in case the walk needs it to get there.
+   */
+  void waitUntilInvalidationBlocked() {
+    auto& faultInjector = testMount_->getServerState()->getFaultInjector();
+    auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (!faultInjector.waitUntilBlocked(
+        "nfsGcInvalidation", std::chrono::milliseconds{10})) {
+      testMount_->drainServerExecutor();
+      ASSERT_LT(std::chrono::steady_clock::now(), deadline)
+          << "GC never reached the invalidation";
+    }
   }
 
   /**
@@ -184,6 +233,108 @@ class NfsGcTest : public ::testing::Test {
         !inodeMap->isInodeRemembered(ino);
   }
 
+  /**
+   * Send one NFS request to the Nfsd3 over the socketpair and return its
+   * reply, driving the server's executors and the mount's server executor
+   * until the reply arrives.
+   */
+  std::unique_ptr<folly::IOBuf> sendAndReceive(
+      std::unique_ptr<folly::IOBuf> request) {
+    auto bytes = request->coalesce();
+    while (!bytes.empty()) {
+      auto written = write(clientFd_, bytes.data(), bytes.size());
+      if (written <= 0) {
+        ADD_FAILURE() << "writing the request failed";
+        return folly::IOBuf::create(0);
+      }
+      bytes.advance(static_cast<size_t>(written));
+    }
+
+    std::vector<uint8_t> reply;
+    size_t expectedSize = 0;
+    auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+      evb_.loopOnce(EVLOOP_NONBLOCK);
+      manualExecutor_->run();
+      testMount_->drainServerExecutor();
+
+      struct pollfd pfd{};
+      pfd.fd = clientFd_;
+      pfd.events = POLLIN;
+      if (poll(&pfd, 1, 10) <= 0) {
+        continue;
+      }
+      uint8_t buf[64 * 1024];
+      auto n = read(clientFd_, buf, sizeof(buf));
+      if (n <= 0) {
+        break;
+      }
+      reply.insert(reply.end(), buf, buf + n);
+      if (expectedSize == 0 && reply.size() >= sizeof(uint32_t)) {
+        // Record mark: high bit is the last-fragment flag, the rest the
+        // fragment length.
+        uint32_t mark = (uint32_t{reply[0]} << 24) |
+            (uint32_t{reply[1]} << 16) | (uint32_t{reply[2]} << 8) |
+            uint32_t{reply[3]};
+        // Nfsd3 sends every reply as one fragment, which is all this reads.
+        if (!(mark & 0x80000000)) {
+          ADD_FAILURE() << "multi-fragment RPC reply";
+          return folly::IOBuf::create(0);
+        }
+        expectedSize = sizeof(uint32_t) + (mark & 0x7fffffff);
+      }
+      if (expectedSize != 0 && reply.size() >= expectedSize) {
+        break;
+      }
+    }
+    if (expectedSize == 0 || reply.size() < expectedSize) {
+      ADD_FAILURE() << "no complete RPC reply";
+      return folly::IOBuf::create(0);
+    }
+    return folly::IOBuf::copyBuffer(reply.data(), reply.size());
+  }
+
+  /**
+   * Parse an accepted RPC reply and deserialize the procedure's result.
+   */
+  template <typename Res>
+  Res parseReply(std::unique_ptr<folly::IOBuf> reply) {
+    if (reply->computeChainDataLength() == 0) {
+      // sendAndReceive already recorded the failure.
+      return Res{};
+    }
+    folly::io::Cursor cursor(reply.get());
+    cursor.skip(sizeof(uint32_t)); // record mark
+    auto msg = XdrTrait<rpc_msg_reply>::deserialize(cursor);
+    if (msg.rbody.tag != reply_stat::MSG_ACCEPTED) {
+      ADD_FAILURE() << "RPC reply rejected";
+      return Res{};
+    }
+    if (std::get<accepted_reply>(msg.rbody.v).stat != accept_stat::SUCCESS) {
+      ADD_FAILURE() << "RPC reply not successful";
+      return Res{};
+    }
+    return XdrTrait<Res>::deserialize(cursor);
+  }
+
+  opaque_auth credentials() {
+    return makeAuthSysCred(
+        authsys_parms{/*stamp=*/0, "nfs-gc-test", getuid(), getgid(), {}});
+  }
+
+  /**
+   * SETATTR the inode's permission bits, as the NFS client does for a chmod,
+   * returning the NFS status of the reply.
+   */
+  nfsstat3 setattrMode(InodeNumber ino, mode_t mode) {
+    SETATTR3args args{nfs_fh3{ino}, sattr3{}, sattrguard3{}};
+    args.new_attributes.mode.tag = true;
+    args.new_attributes.mode.v = uint32_t{mode};
+    auto res = parseReply<SETATTR3res>(sendAndReceive(
+        buildNfsRequest(nextXid_++, nfsv3Procs::setattr, credentials(), args)));
+    return res.tag;
+  }
+
   FakeTreeBuilder builder_;
   folly::EventBase evb_;
   std::shared_ptr<folly::ManualExecutor> manualExecutor_;
@@ -191,6 +342,7 @@ class NfsGcTest : public ::testing::Test {
   folly::SemiFuture<FsStopDataPtr> stopFuture_{
       folly::SemiFuture<FsStopDataPtr>::makeEmpty()};
   int clientFd_{-1};
+  uint32_t nextXid_{1};
 };
 
 } // namespace
@@ -237,6 +389,42 @@ TEST_F(NfsGcTest, directoriesStayReferencedWithoutPinInformation) {
   EXPECT_EQ(1, runGc(std::chrono::system_clock::time_point::max(), noPins()));
   sweep();
   EXPECT_FALSE(isLoaded(child));
+}
+
+TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+  auto childMode =
+      testMount_->getTreeInode("parent/child")->getMetadata().mode & 07777;
+
+  // Everything was last used at the clock's initial time. Move the clock
+  // forward so all of it is older than the cutoff.
+  auto& clock = testMount_->getClock();
+  clock.advance(std::chrono::hours{2});
+  auto cutoff = clock.getTimePoint() - std::chrono::hours{1};
+
+  // The chmod that invalidates "parent/child" reaches EdenFS as a SETATTR of
+  // the directory's current mode. Here the chmod lands on local disk instead,
+  // so send that SETATTR by hand while the invalidation callback is blocked:
+  // after the chmod completed, and before the parent decides whether the
+  // child is stale.
+  auto& faultInjector = testMount_->getServerState()->getFaultInjector();
+  faultInjector.injectBlock("nfsGcInvalidation", "parent/child");
+  auto gc = startGc(cutoff);
+  waitUntilInvalidationBlocked();
+  EXPECT_EQ(nfsstat3::NFS3_OK, setattrMode(child, childMode));
+  faultInjector.unblock("nfsGcInvalidation", "parent/child");
+  auto numInvalidated = finishGc(std::move(gc));
+  sweep();
+
+  // FIXME: "parent" saw its child's request time refreshed by GC's own chmod,
+  // concluded that it was recently used, and skipped invalidating itself. Only
+  // the child's own invalidation happened, clearing its two files, while the
+  // child and its sibling file keep their FS references and stay loaded.
+  EXPECT_EQ(2, numInvalidated);
+  EXPECT_TRUE(isLoaded(child));
+  EXPECT_TRUE(isLoaded(sibling));
 }
 
 #endif
