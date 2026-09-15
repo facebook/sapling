@@ -671,6 +671,9 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
     {FUSE_WRITEBACK_CACHE, "WRITEBACK_CACHE"},
     {FUSE_PARALLEL_DIROPS, "PARALLEL_DIROPS"},
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
+#ifdef FUSE_HANDLE_KILLPRIV_V2
+    {FUSE_HANDLE_KILLPRIV_V2, "HANDLE_KILLPRIV_V2"},
+#endif
     {FUSE_POSIX_ACL, "POSIX_ACL"},
     {FUSE_ABORT_ERROR, "ABORT_ERROR"},
     {FUSE_MAX_PAGES, "MAX_PAGES"},
@@ -1013,6 +1016,7 @@ FuseChannel::FuseChannel(
     size_t fuseTraceBusCapacity,
     std::optional<uint32_t> fuseBdiReadAheadKb,
     uint32_t fuseMaxPages,
+    bool handleKillPrivV2,
     bool useIoUring,
     std::string ioUringKernelReleaseRegex,
     uint32_t ioUringQueueDepth,
@@ -1052,6 +1056,7 @@ FuseChannel::FuseChannel(
       useWriteBackCache_{useWriteBackCache},
       fuseBdiReadAheadKb_{fuseBdiReadAheadKb},
       fuseMaxPages_{fuseMaxPages},
+      handleKillPrivV2_{handleKillPrivV2},
       useIoUring_{useIoUring},
       ioUringKernelReleaseRegex_{std::move(ioUringKernelReleaseRegex)},
       ioUringQueueDepth_{ioUringQueueDepth},
@@ -1895,6 +1900,17 @@ void FuseChannel::readInitPacket() {
 #ifdef __linux__
   // We don't support setuid and setgid mode bits anyway.
   want |= FUSE_HANDLE_KILLPRIV;
+#ifdef FUSE_HANDLE_KILLPRIV_V2
+  if (handleKillPrivV2_) {
+    // Files never carry setuid, setgid or sticky bits here (setattr rejects
+    // them and create/mknod strip them), so the kill requests this flag makes
+    // the kernel send on write, truncate and chown have nothing to do. What
+    // the flag buys is SB_NOSEC on the superblock: after the first write to a
+    // file the kernel marks it S_NOSEC and stops asking for the
+    // security.capability xattr before every later write.
+    want |= FUSE_HANDLE_KILLPRIV_V2;
+  }
+#endif
   // Allow the kernel to cache ACL xattrs, even though we will fail all setxattr
   // calls.
   want |= FUSE_POSIX_ACL;

@@ -120,6 +120,32 @@ TEST_F(EdenDispatcherTest, linkReturnsNameTooLong) {
   }
 }
 
+TEST_F(EdenDispatcherTest, createStripsPrivilegeBits) {
+  // The kernel is told (FUSE_HANDLE_KILLPRIV_V2) that files never carry
+  // setuid, setgid or sticky bits, so create must not store them.
+  auto entry = mount.getDispatcher()
+                   ->create(
+                       kRootNodeId,
+                       "f"_pc,
+                       S_IFREG | 04755,
+                       O_WRONLY,
+                       ObjectFetchContext::getNullContext())
+                   .get(0ms);
+  EXPECT_EQ(S_IFREG | 0755, entry.attr.mode);
+}
+
+TEST_F(EdenDispatcherTest, mknodStripsPrivilegeBits) {
+  auto entry = mount.getDispatcher()
+                   ->mknod(
+                       kRootNodeId,
+                       "f"_pc,
+                       S_IFREG | 02644,
+                       0,
+                       ObjectFetchContext::getNullContext())
+                   .get(0ms);
+  EXPECT_EQ(S_IFREG | 0644, entry.attr.mode);
+}
+
 TEST_F(EdenDispatcherTest, createReturnsNameTooLong) {
   try {
     mount.getDispatcher()

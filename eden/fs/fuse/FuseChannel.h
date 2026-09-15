@@ -300,6 +300,8 @@ class FuseChannel final : public FsChannel {
    * fuseMaxPages -
    *      The maximum number of pages per FUSE read request. Set to 0 to use
    *      the kernel default (32). Maximum 256 (1MB).
+   * handleKillPrivV2 -
+   *      Whether to negotiate FUSE_HANDLE_KILLPRIV_V2 during FUSE_INIT.
    * useIoUring -
    *      Whether to use io_uring for FUSE request/reply transport instead of
    *      traditional /dev/fuse read/write when the running kernel is known to
@@ -338,6 +340,7 @@ class FuseChannel final : public FsChannel {
       size_t fuseTraceBusCapacity,
       std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt,
       uint32_t fuseMaxPages = 0,
+      bool handleKillPrivV2 = true,
       bool useIoUring = false,
       std::string ioUringKernelReleaseRegex = {},
       uint32_t ioUringQueueDepth = 8,
@@ -1025,6 +1028,7 @@ class FuseChannel final : public FsChannel {
   bool useWriteBackCache_;
   std::optional<uint32_t> fuseBdiReadAheadKb_;
   uint32_t fuseMaxPages_{0};
+  bool handleKillPrivV2_{true};
   bool useIoUring_{false};
   std::string ioUringKernelReleaseRegex_;
   uint32_t ioUringQueueDepth_{8};

@@ -1008,6 +1008,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Negotiate FUSE_HANDLE_KILLPRIV_V2, which lets the kernel stop asking for
+   * the security.capability xattr before every write. Only safe while files
+   * in the mount never carry setuid, setgid or sticky bits.
+   */
+  ConfigSetting<bool> experimentalFuseHandleKillPrivV2{
+      "experimental:fuse-handle-killpriv-v2",
+      true,
+      this};
+
+  /**
    * Whether to use io_uring for FUSE request/reply transport instead of
    * traditional /dev/fuse read/write. Requires Linux 6.11+ with
    * CONFIG_FUSE_IO_URING=y. Falls back to /dev/fuse automatically if

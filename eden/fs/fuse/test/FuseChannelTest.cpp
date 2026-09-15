@@ -89,7 +89,8 @@ class FuseChannelTest : public ::testing::Test {
       bool useIoUring = false,
       std::string ioUringKernelReleaseRegex = {},
       bool ioUringPreCreateQueues = false,
-      size_t numInvalidationThreads = 4) {
+      size_t numInvalidationThreads = 4,
+      bool handleKillPrivV2 = true) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
@@ -116,6 +117,7 @@ class FuseChannelTest : public ::testing::Test {
         /*fuseTraceBusCapacity*/ kTraceBusCapacity,
         /*fuseBdiReadAheadKb=*/std::nullopt,
         /*fuseMaxPages=*/fuseMaxPages,
+        /*handleKillPrivV2=*/handleKillPrivV2,
         /*useIoUring=*/useIoUring,
         std::move(ioUringKernelReleaseRegex),
         /*ioUringQueueDepth=*/8,
@@ -1031,6 +1033,52 @@ TEST_F(FuseChannelTest, testAllowIdmapNotSetWhenKernelLacksSupport) {
       static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32))
       << "FUSE_ALLOW_IDMAP should not be set when kernel doesn't support it";
 #endif
+}
+#endif
+
+#if defined(__linux__) && defined(FUSE_HANDLE_KILLPRIV_V2)
+TEST_F(FuseChannelTest, testHandleKillPrivV2Negotiation) {
+  auto channel = createChannel();
+
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_HANDLE_KILLPRIV_V2);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseSettings.flags & FUSE_HANDLE_KILLPRIV_V2);
+}
+
+TEST_F(FuseChannelTest, testHandleKillPrivV2Disabled) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/false,
+      /*ioUringKernelReleaseRegex=*/{},
+      /*ioUringPreCreateQueues=*/false,
+      /*numInvalidationThreads=*/4,
+      /*handleKillPrivV2=*/false);
+
+  // The kernel advertises the flag, so only the config keeps it unset.
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_HANDLE_KILLPRIV_V2);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_FALSE(fuseStopData->fuseSettings.flags & FUSE_HANDLE_KILLPRIV_V2);
 }
 #endif
 
