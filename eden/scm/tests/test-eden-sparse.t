@@ -20,6 +20,12 @@
 Allow adhoc use of sparse commands to debug sparse profiles:
   $ sl debugsparsematch -q --sparse-profile=sparse excluded --config extensions.sparse=
 
+Reading a revision still works when sparse is loaded but edensparse is not. The
+repo keeps the edensparse requirement while neither reposetup supplies
+sparsematch(), so cat must not assume the method exists:
+  $ sl cat -r . included --config extensions.sparse= --config extensions.edensparse=!
+  foo
+
 Test diff command against a commit that updated files excluded by the sparse profile
 
   $ cd

@@ -504,7 +504,18 @@ def _setupcat(ui) -> None:
     def _cat(orig, ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
         # Enforce sparse matcher check for edensparse repos. Disallows access
         # to filtered file content.
-        if _isedensparse(repo) and not repo.ui.configbool("sparse", "killsparsecat"):
+        # The edensparse requirement does not guarantee sparsematch() exists:
+        # this extension's reposetup returns early for eden checkouts, and
+        # edensparse's reposetup never runs when that extension is not loaded.
+        # Checking the requirement alone makes every revision read raise
+        # AttributeError on such a repo. Do not swap in _hassparse() here -- it
+        # also matches legacy non-eden sparse repos, which this wrapper is not
+        # meant to filter.
+        if (
+            _isedensparse(repo)
+            and hasattr(repo, "sparsematch")
+            and not repo.ui.configbool("sparse", "killsparsecat")
+        ):
             sparsematch = repo.sparsematch()
             matcher = matchmod.intersectmatchers(matcher, sparsematch)
 
