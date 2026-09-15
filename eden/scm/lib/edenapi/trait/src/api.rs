@@ -53,11 +53,13 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
+use edenapi_types::MirrorBookmarkMove;
 use edenapi_types::PathHistoryRequestPaginationCursor;
 use edenapi_types::PathHistoryResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::ReplayIdenticalMovesResponse;
 use edenapi_types::RollbackWorkspaceRequest;
 use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
@@ -270,6 +272,24 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         pushvars: HashMap<String, String>,
     ) -> Result<SetBookmarkResponse, SaplingRemoteApiError> {
         let _ = (bookmark, to, from, pushvars);
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    /// Mirror a contiguous chain of source bookmark moves to a `*_shadow`
+    /// replica. modern_sync uses this to keep the replica's bookmark and
+    /// bookmarks_update_log identical to the source, row for row: the replica
+    /// reuses each source move's log id, changesets, and reason.
+    ///
+    /// `moves` must be non-empty, ordered by strictly increasing `log_id`, and
+    /// contiguous (each move's `from` equals the previous move's `to`). If the
+    /// first move's `from` is `None`, the server creates the bookmark.
+    async fn replay_identical_moves(
+        &self,
+        bookmark: String,
+        moves: Vec<MirrorBookmarkMove>,
+        pushvars: HashMap<String, String>,
+    ) -> Result<ReplayIdenticalMovesResponse, SaplingRemoteApiError> {
+        let _ = (bookmark, moves, pushvars);
         Err(SaplingRemoteApiError::NotSupported)
     }
 
