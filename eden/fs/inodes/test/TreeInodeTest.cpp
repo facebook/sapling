@@ -343,6 +343,7 @@ namespace {
 struct ReaddirIndexCounters {
   int64_t hit;
   int64_t cached;
+  int64_t droppedByGc;
 };
 
 ReaddirIndexCounters getReaddirIndexCounters(TestMount& mount) {
@@ -353,7 +354,8 @@ ReaddirIndexCounters getReaddirIndexCounters(TestMount& mount) {
   };
   return {
       get("inodes.readdir_index_hit.sum"),
-      get("inodes.readdir_index_cached.sum")};
+      get("inodes.readdir_index_cached.sum"),
+      get("inodes.readdir_index_dropped_by_gc.sum")};
 }
 
 /**
@@ -511,6 +513,43 @@ TEST_P(TreeInodeTestBase, readdirIndexIsRebuiltAfterRenameOverAnEntry) {
     EXPECT_EQ(1u, seen[name]) << name;
   }
   EXPECT_EQ(2, getReaddirIndexCounters(mount).cached - before.cached);
+}
+
+TEST_P(TreeInodeTestBase, readdirIndexIsDroppedByInodeGc) {
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile(name, "");
+  }
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  auto root = mount.getEdenMount()->getRootInode();
+
+  const auto before = getReaddirIndexCounters(mount);
+  auto firstPage =
+      root->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+  ASSERT_FALSE(firstPage.empty());
+  EXPECT_EQ(1, getReaddirIndexCounters(mount).cached - before.cached);
+
+  // The listing is abandoned here; a GC pass over the directory frees the
+  // index it left behind.
+  root->unloadChildrenNow();
+  auto after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(1, after.droppedByGc - before.droppedByGc);
+
+  // Resuming the listing works, it just has to build the index again.
+  std::map<std::string, unsigned> seen;
+  for (auto& entry : firstPage) {
+    ++seen[entry.name];
+  }
+  listToEnd(root, firstPage.back().offset, seen);
+  for (const auto& name : names) {
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(2, after.cached - before.cached);
 }
 
 TEST_P(TreeInodeTestBase, readdirIndexCacheCanBeDisabled) {

@@ -6530,6 +6530,11 @@ size_t unloadChildrenIf(
     auto contents = self->getContentsUnchecked().wlock();
     auto inodeMapLock = inodeMap->lockForUnload();
 
+    // A listing that stopped before its end, or an NFS listing, leaves its
+    // readdir index behind until the directory changes; GC is the backstop
+    // that bounds how long that memory is held.
+    self->dropReaddirIndex();
+
     for (auto& entry : contents->entries.all()) {
       if (shouldCancel()) {
         break;
@@ -6600,6 +6605,12 @@ std::vector<TreeInodePtr> getTreeChildren(
 }
 
 } // namespace
+
+void TreeInode::dropReaddirIndex() {
+  if (std::exchange(*readdirIndex_.wlock(), nullptr)) {
+    getMount()->getStats()->increment(&TreeInodeStats::readdirIndexDroppedByGc);
+  }
+}
 
 size_t TreeInode::unloadChildrenNow() {
   auto neverCancel = [] { return false; };

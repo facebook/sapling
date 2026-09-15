@@ -40,6 +40,10 @@ The list of all the EdenStats Counter/Duration are as follows:
      times a listing that did not fit in one request cached its index for the
      remaining requests.
 
+  3. `Counter readdirIndexDroppedByGc{"inodes.readdir_index_dropped_by_gc"}` :
+     Number of cached indexes freed by inode garbage collection, which is what
+     reclaims the index of a listing that stopped before its end.
+
 - JournalStats
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a
      truncated read happens in Journal.

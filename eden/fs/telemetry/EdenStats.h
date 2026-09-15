@@ -811,6 +811,7 @@ struct CheckoutStats : StatsGroup<CheckoutStats> {
 struct TreeInodeStats : StatsGroup<TreeInodeStats> {
   Counter readdirIndexHit{"inodes.readdir_index_hit"};
   Counter readdirIndexCached{"inodes.readdir_index_cached"};
+  Counter readdirIndexDroppedByGc{"inodes.readdir_index_dropped_by_gc"};
 };
 
 /*

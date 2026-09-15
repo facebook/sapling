@@ -663,6 +663,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   size_t unloadChildrenNow();
 
   /**
+   * Drop the readdir index of a listing that never reached its end, so that
+   * inode GC bounds how long it is held. See readdirImpl.
+   */
+  void dropReaddirIndex();
+
+  /**
    * Unload all children, recursively, neither referenced internally by Eden
    * nor by FUSE or ProjectedFS.
    *
