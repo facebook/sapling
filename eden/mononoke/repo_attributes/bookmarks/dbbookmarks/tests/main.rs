@@ -15,6 +15,7 @@ use bookmarks::Bookmark;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkMoveAlreadyProcessed;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
@@ -23,6 +24,7 @@ use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::Freshness;
+use bookmarks::MirrorBookmarkMove;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
@@ -452,6 +454,295 @@ async fn test_update_non_existent_bookmark(fb: FacebookInit) {
     txn.update(&key_1, TWOS_CSID, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap().is_none());
+}
+
+#[mononoke::fbinit_test]
+async fn test_mirror_batch_create_and_update_chain(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    // A brand-new bookmark. The first move creates it (old = None); the next two
+    // moves update it. The store reuses the source log ids 1, 2, 3.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![
+            MirrorBookmarkMove {
+                log_id: 1,
+                old: None,
+                new: ONES_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+            MirrorBookmarkMove {
+                log_id: 2,
+                old: Some(ONES_CSID),
+                new: TWOS_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+            MirrorBookmarkMove {
+                log_id: 3,
+                old: Some(TWOS_CSID),
+                new: THREES_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+        ],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+
+    // The bookmark points to the last move's changeset and carries the last
+    // move's log id.
+    assert_eq!(
+        bookmarks
+            .get_raw(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
+            .await
+            .unwrap(),
+        Some((THREES_CSID, Some(3)))
+    );
+
+    // One log row per move, each reusing the source log id, changesets, and
+    // reason.
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entries(
+                ctx.clone(),
+                BookmarkUpdateLogId(0),
+                10,
+                Freshness::MostRecent,
+            )
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap(),
+        vec![
+            BookmarkUpdateLogEntry {
+                id: BookmarkUpdateLogId(1),
+                repo_id: REPO_ZERO,
+                bookmark_name: key.clone(),
+                to_changeset_id: Some(ONES_CSID),
+                from_changeset_id: None,
+                reason: BookmarkUpdateReason::TestMove,
+                timestamp: Timestamp::now(),
+            },
+            BookmarkUpdateLogEntry {
+                id: BookmarkUpdateLogId(2),
+                repo_id: REPO_ZERO,
+                bookmark_name: key.clone(),
+                to_changeset_id: Some(TWOS_CSID),
+                from_changeset_id: Some(ONES_CSID),
+                reason: BookmarkUpdateReason::TestMove,
+                timestamp: Timestamp::now(),
+            },
+            BookmarkUpdateLogEntry {
+                id: BookmarkUpdateLogId(3),
+                repo_id: REPO_ZERO,
+                bookmark_name: key,
+                to_changeset_id: Some(THREES_CSID),
+                from_changeset_id: Some(TWOS_CSID),
+                reason: BookmarkUpdateReason::TestMove,
+                timestamp: Timestamp::now(),
+            },
+        ],
+    );
+}
+
+#[mononoke::fbinit_test]
+async fn test_mirror_batch_idempotent_replay(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    let create_move = MirrorBookmarkMove {
+        log_id: 1,
+        old: None,
+        new: ONES_CSID,
+        reason: BookmarkUpdateReason::TestMove,
+    };
+    let update_move = MirrorBookmarkMove {
+        log_id: 2,
+        old: Some(ONES_CSID),
+        new: TWOS_CSID,
+        reason: BookmarkUpdateReason::TestMove,
+    };
+
+    // Apply the chain once.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![create_move.clone(), update_move.clone()],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+
+    // Replay the identical batch (a lost-ack replay). Every move's log id is
+    // already stored, so the store applies nothing and reports
+    // AlreadyProcessed. This is the path that increments the
+    // bookmarks_insert_already_processed counter.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![create_move.clone(), update_move.clone()],
+    )
+    .unwrap();
+    let err = txn.commit().await.unwrap_err();
+    assert!(err.is::<BookmarkMoveAlreadyProcessed>());
+
+    // The replay left the bookmark untouched.
+    assert_eq!(
+        bookmarks
+            .get_raw(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
+            .await
+            .unwrap(),
+        Some((TWOS_CSID, Some(2)))
+    );
+
+    // A retry that regroups the seen moves with one new move applies only the
+    // unseen suffix, reusing its source log id.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![
+            create_move,
+            update_move,
+            MirrorBookmarkMove {
+                log_id: 3,
+                old: Some(TWOS_CSID),
+                new: THREES_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+        ],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+    assert_eq!(
+        bookmarks
+            .get_raw(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
+            .await
+            .unwrap(),
+        Some((THREES_CSID, Some(3)))
+    );
+}
+
+#[mononoke::fbinit_test]
+async fn test_mirror_batch_replay_of_applied_prefix(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    let create_move = MirrorBookmarkMove {
+        log_id: 1,
+        old: None,
+        new: ONES_CSID,
+        reason: BookmarkUpdateReason::TestMove,
+    };
+    let second_move = MirrorBookmarkMove {
+        log_id: 2,
+        old: Some(ONES_CSID),
+        new: TWOS_CSID,
+        reason: BookmarkUpdateReason::TestMove,
+    };
+
+    // The replica applies three moves and stops at THREES with log id 3.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![
+            create_move.clone(),
+            second_move.clone(),
+            MirrorBookmarkMove {
+                log_id: 3,
+                old: Some(TWOS_CSID),
+                new: THREES_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+        ],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+
+    // A retry regroups the seen moves into a shorter batch that stops before
+    // the replica's current move. Every log id is already stored, so the store
+    // reports AlreadyProcessed. The replica's changeset is expected to differ
+    // from this batch's last move, so it must not count as divergence.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![create_move, second_move],
+    )
+    .unwrap();
+    let err = txn.commit().await.unwrap_err();
+    assert!(err.is::<BookmarkMoveAlreadyProcessed>());
+
+    // The replay left the bookmark untouched.
+    assert_eq!(
+        bookmarks
+            .get_raw(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
+            .await
+            .unwrap(),
+        Some((THREES_CSID, Some(3)))
+    );
+}
+
+#[mononoke::fbinit_test]
+async fn test_mirror_batch_diverged_replica_logic_error(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    // The replica sits at ONES with log id 1.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![MirrorBookmarkMove {
+            log_id: 1,
+            old: None,
+            new: ONES_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        }],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+
+    // A later move whose old changeset (TWOS) does not match the replica's
+    // current changeset (ONES). The compare-and-swap matches no row, so the
+    // store reports a logic error and the commit returns None.
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![MirrorBookmarkMove {
+            log_id: 2,
+            old: Some(TWOS_CSID),
+            new: THREES_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        }],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_none());
+
+    // The failed batch left the bookmark untouched.
+    assert_eq!(
+        bookmarks
+            .get_raw(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
+            .await
+            .unwrap(),
+        Some((ONES_CSID, Some(1)))
+    );
 }
 
 #[mononoke::fbinit_test]

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkKind;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use mononoke_types::ChangesetId;
@@ -29,10 +30,26 @@ pub enum BookmarkTransactionError {
     // the entire pushrebase needs to be retried
     #[error("BookmarkTransactionError::LogicError")]
     LogicError,
+    // A modern_sync mirror move that the replica already applied (a lost-ack
+    // replay), identified because the replica's current log id for the bookmark
+    // is already at or past the batch's source log ids, so no move is left to
+    // apply. The CAS matching no rows alone can mean any divergence; the
+    // already-advanced log id is what marks the replay. Not an error to retry:
+    // reusing the source log id makes the move idempotent and safe to replay.
+    #[error("BookmarkTransactionError::AlreadyProcessed")]
+    AlreadyProcessed,
     // Something unexpected went wrong
     #[error("BookmarkTransactionError::Other")]
     Other(#[from] Error),
 }
+
+/// Marker error for a modern_sync mirror bookmark move that the replica
+/// already applied (a lost-ack replay). `commit`/`commit_with_hooks` return it
+/// inside their `anyhow::Error` so higher layers can downcast for it and map
+/// the condition to a distinct response code instead of a generic failure.
+#[derive(Debug, Error)]
+#[error("bookmark move already processed")]
+pub struct BookmarkMoveAlreadyProcessed;
 
 pub type BookmarkTransactionHook = Arc<
     dyn Fn(
@@ -42,6 +59,20 @@ pub type BookmarkTransactionHook = Arc<
         + Sync
         + Send,
 >;
+
+/// One bookmark move in a modern_sync mirror batch (see `mirror_batch`).
+/// Carries the source repo's bookmarks_update_log entry id, the move's old and
+/// new changesets, and its reason, so the `*_shadow` replica's log row matches
+/// the source row for row. modern_sync mirrors only the main publishing
+/// bookmark, which is never deleted, so `new` is always set. `old` is `None`
+/// only for the first move of a brand-new repo, when the bookmark is created.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirrorBookmarkMove {
+    pub log_id: u64,
+    pub old: Option<ChangesetId>,
+    pub new: ChangesetId,
+    pub reason: BookmarkUpdateReason,
+}
 
 pub trait BookmarkTransaction: Send + Sync + 'static {
     /// Adds set() operation to the transaction set.
@@ -53,6 +84,27 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+    ) -> Result<()>;
+
+    /// Adds a modern_sync batch mirror operation to the transaction set.
+    /// Applies a contiguous chain of source bookmark moves to a `*_shadow`
+    /// replica as one compare-and-swap, then writes one bookmarks_update_log row
+    /// per move. Each row reuses the source move's log id, changesets, and
+    /// reason, so the replica's log matches the source row for row. The store
+    /// applies only the moves the replica has not seen yet, so a replayed
+    /// (lost-ack) batch is idempotent even when a retry regroups the moves.
+    ///
+    /// If the first unseen move's `old` is `None`, the store creates the
+    /// bookmark with `kind` instead of moving it; `kind` is ignored otherwise.
+    ///
+    /// `moves` must be non-empty, ordered by strictly increasing `log_id`, and
+    /// contiguous (`moves[i].old` equals `moves[i-1].new`). Only modern_sync
+    /// calls it; every other caller uses `update`.
+    fn mirror_batch(
+        &mut self,
+        bookmark: &BookmarkKey,
+        kind: BookmarkKind,
+        moves: Vec<MirrorBookmarkMove>,
     ) -> Result<()>;
 
     /// Adds create() operation to the transaction set.

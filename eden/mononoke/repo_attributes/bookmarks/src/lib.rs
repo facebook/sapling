@@ -44,9 +44,11 @@ pub use log::BookmarkUpdateLogId;
 pub use log::BookmarkUpdateLogRef;
 pub use log::BookmarkUpdateReason;
 pub use subscription::BookmarksSubscription;
+pub use transaction::BookmarkMoveAlreadyProcessed;
 pub use transaction::BookmarkTransaction;
 pub use transaction::BookmarkTransactionError;
 pub use transaction::BookmarkTransactionHook;
+pub use transaction::MirrorBookmarkMove;
 
 #[facet::facet]
 #[async_trait]

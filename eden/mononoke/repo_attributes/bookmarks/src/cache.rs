@@ -39,6 +39,7 @@ use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
 use crate::transaction::BookmarkTransaction;
 use crate::transaction::BookmarkTransactionHook;
+use crate::transaction::MirrorBookmarkMove;
 
 type CacheData = BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>;
 
@@ -355,6 +356,16 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.update(bookmark, new_cs, old_cs, reason)
     }
 
+    fn mirror_batch(
+        &mut self,
+        bookmark: &BookmarkKey,
+        kind: BookmarkKind,
+        moves: Vec<MirrorBookmarkMove>,
+    ) -> Result<()> {
+        self.dirty = true;
+        self.transaction.mirror_batch(bookmark, kind, moves)
+    }
+
     fn create(
         &mut self,
         bookmark: &BookmarkKey,
@@ -609,6 +620,15 @@ mod tests {
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        fn mirror_batch(
+            &mut self,
+            _bookmark: &BookmarkKey,
+            _kind: BookmarkKind,
+            _moves: Vec<MirrorBookmarkMove>,
         ) -> Result<()> {
             Ok(())
         }

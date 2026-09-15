@@ -533,6 +533,15 @@ where
                 STATS::cas_failure.add_value(1);
                 return Ok(MultiRepoBookmarksTransactionResult::CasFailure);
             }
+            Err(BookmarkTransactionError::AlreadyProcessed) => {
+                // Multi-repo transactions do not use modern_sync mirror log ids,
+                // so this variant is unreachable here. Treat it as an error.
+                STATS::attempt_count.add_value(attempt as i64);
+                STATS::other_error.add_value(1);
+                return Err(anyhow!(
+                    "Multi-repo bookmark transaction returned AlreadyProcessed unexpectedly"
+                ));
+            }
             Err(BookmarkTransactionError::RetryableError(err)) if attempt < max_attempts => {
                 STATS::retry.add_value(1);
                 ctx.scuba()

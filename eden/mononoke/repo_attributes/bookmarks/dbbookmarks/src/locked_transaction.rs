@@ -190,6 +190,9 @@ impl LockedBookmarkTransaction {
                     BookmarkTransactionError::LogicError => {
                         anyhow!("Transaction hook returned LogicError")
                     }
+                    BookmarkTransactionError::AlreadyProcessed => {
+                        anyhow!("Transaction hook returned AlreadyProcessed")
+                    }
                     BookmarkTransactionError::Other(e) => e,
                 })
                 .context("Transaction hook failed in LockedBookmarkTransaction::commit")?;

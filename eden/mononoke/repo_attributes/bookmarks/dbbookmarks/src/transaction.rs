@@ -13,11 +13,13 @@ use anyhow::anyhow;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkMoveAlreadyProcessed;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::MirrorBookmarkMove;
 use context::CoreContext;
 use context::PerfCounterType;
 use futures::future;
@@ -46,6 +48,7 @@ define_stats! {
     bookmarks_insert_logic_error_attempt_count: timeseries(Rate, Average, Sum),
     bookmarks_insert_other_error: timeseries(Rate, Sum),
     bookmarks_insert_other_error_attempt_count: timeseries(Rate, Average, Sum),
+    bookmarks_insert_already_processed: timeseries(Rate, Sum),
 }
 
 mononoke_queries! {
@@ -254,6 +257,13 @@ struct SqlBookmarksTransactionPayload {
 
     /// Operations to delete a bookmark with an old id.
     deletes: Vec<(BookmarkKey, ChangesetId, Option<NewUpdateLogEntry>)>,
+
+    /// modern_sync batch mirror operations. Each applies a contiguous chain of
+    /// source bookmark moves to a `*_shadow` replica as one compare-and-swap and
+    /// one bookmarks_update_log row per move, reusing the source ids. The
+    /// `BookmarkKind` is used only when the batch creates the bookmark. See
+    /// `store_mirror_batches`.
+    mirror_batches: Vec<(BookmarkKey, BookmarkKind, Vec<MirrorBookmarkMove>)>,
 }
 
 /// Source of log IDs for a bookmark transaction.
@@ -326,6 +336,7 @@ impl SqlBookmarksTransactionPayload {
             updates: Vec::new(),
             force_deletes: Vec::new(),
             deletes: Vec::new(),
+            mirror_batches: Vec::new(),
         }
     }
 
@@ -367,6 +378,9 @@ impl SqlBookmarksTransactionPayload {
             bookmark_names.push(bk.name());
         }
         for (bk, _, _) in &self.deletes {
+            bookmark_names.push(bk.name());
+        }
+        for (bk, _, _) in &self.mirror_batches {
             bookmark_names.push(bk.name());
         }
 
@@ -565,6 +579,177 @@ impl SqlBookmarksTransactionPayload {
         Ok(txn)
     }
 
+    /// Apply modern_sync batch mirror moves to a `*_shadow` replica.
+    ///
+    /// Each batch is a contiguous chain of source bookmark moves for one
+    /// bookmark, ordered by increasing log id. The replica must keep the same
+    /// log ids as the source, so the moves reuse the source ids for both the
+    /// compare-and-swap and the log rows. To stay idempotent when modern_sync
+    /// replays a batch whose ack was lost -- and when a retry regroups the moves
+    /// into a different batch -- the store applies only the moves the replica has
+    /// not seen yet:
+    ///
+    /// Shadow replicas are read only and this path is their only writer, so the
+    /// log id stored on the bookmark is always a source log id.
+    ///
+    /// 1. Read the bookmark's current changeset and log id.
+    /// 2. Drop the moves whose log id the replica already stored. Because the
+    ///    moves are ordered, the rest form a suffix. If none remain, the replica
+    ///    already applied the whole chain, so return `AlreadyProcessed` and let
+    ///    modern_sync advance its checkpoint. Compare the changeset only when
+    ///    the replica stopped at this batch's last move; a replica that is
+    ///    further ahead applied later moves, so a different changeset is
+    ///    expected there rather than a sign of divergence.
+    /// 3. Apply the suffix as one compare-and-swap from the first unseen move's
+    ///    old changeset to the last move's new changeset, tagged with the last
+    ///    move's log id. The CAS also enforces that the replica sits exactly at
+    ///    the first unseen move's old changeset; if it does not, the replica has
+    ///    diverged, so return `LogicError`.
+    /// 4. Insert one bookmarks_update_log row per applied move, reusing each
+    ///    move's source id, changesets, and reason.
+    ///
+    /// Returns the first applied move's log id, if any, for the caller's
+    /// `first_id` bookkeeping.
+    async fn store_mirror_batches(
+        &self,
+        mut txn: SqlTransaction,
+    ) -> Result<(SqlTransaction, Option<u64>), BookmarkTransactionError> {
+        let timestamp = Timestamp::now();
+        let mut first_applied_id: Option<u64> = None;
+        let mut any_applied = false;
+        for (bookmark, create_kind, moves) in self.mirror_batches.iter() {
+            let (txn_, current) = SelectBookmark::query_with_transaction(
+                txn,
+                &self.repo_id,
+                bookmark.name(),
+                bookmark.category(),
+            )
+            .await?;
+            txn = txn_;
+            let current_log_id = current.first().and_then(|row| row.1);
+
+            let unapplied = match current_log_id {
+                Some(id) => moves.iter().filter(|m| m.log_id > id).collect::<Vec<_>>(),
+                None => moves.iter().collect::<Vec<_>>(),
+            };
+            let (first_unapplied, last) = match (unapplied.first(), unapplied.last()) {
+                (Some(first), Some(last)) => (*first, *last),
+                // The replica already applied this batch (a lost-ack replay),
+                // so skip it. Only a replica that stopped at this batch's last
+                // move can be checked against that move's changeset: if the
+                // replica sits at that log id but a different changeset, it
+                // diverged, so fail hard instead of reporting success. A
+                // replica whose log id is past the batch already applied later
+                // moves, so its changeset is expected to differ and comparing
+                // it would report a false divergence. If every batch turns out
+                // already applied, the transaction returns AlreadyProcessed
+                // below and the caller advances its checkpoint.
+                _ => {
+                    if let Some(last_move) = moves.last() {
+                        if current_log_id == Some(last_move.log_id)
+                            && current.first().map(|row| row.0) != Some(last_move.new)
+                        {
+                            return Err(BookmarkTransactionError::LogicError);
+                        }
+                    }
+                    continue;
+                }
+            };
+
+            match first_unapplied.old {
+                Some(old) => {
+                    // Move the bookmark from the first unseen move's old
+                    // changeset to the last move's new changeset. The CAS also
+                    // enforces the replica sits exactly at `old`; if not, it has
+                    // diverged.
+                    let (txn_, result) = UpdateBookmark::query_with_transaction(
+                        txn,
+                        &self.repo_id,
+                        &Some(last.log_id),
+                        bookmark.name(),
+                        bookmark.category(),
+                        &old,
+                        &last.new,
+                        BookmarkKind::ALL_PUBLISHING,
+                    )
+                    .await?;
+                    txn = txn_;
+                    if result.affected_rows() != 1 {
+                        return Err(BookmarkTransactionError::LogicError);
+                    }
+                }
+                None => {
+                    // The first unseen move is a create (its `old` is None),
+                    // which only happens at repo genesis. INSERT OR IGNORE
+                    // affects one row only if the bookmark is absent; zero rows
+                    // means it already exists, so the replica diverged and we
+                    // fail hard.
+                    let create_log_id = Some(last.log_id);
+                    let data = [(
+                        &self.repo_id,
+                        &create_log_id,
+                        bookmark.name(),
+                        bookmark.category(),
+                        &last.new,
+                        create_kind,
+                    )];
+                    let (txn_, result) =
+                        InsertBookmarks::query_with_transaction(txn, &data[..]).await?;
+                    txn = txn_;
+                    if result.affected_rows() != 1 {
+                        return Err(BookmarkTransactionError::LogicError);
+                    }
+                }
+            }
+
+            let owned = unapplied
+                .iter()
+                .map(|m| (m.log_id, m.old, Some(m.new), m.reason))
+                .collect::<Vec<_>>();
+            let data = owned
+                .iter()
+                .map(|(id, old, new, reason)| {
+                    (
+                        id,
+                        &self.repo_id,
+                        bookmark.name(),
+                        bookmark.category(),
+                        old,
+                        new,
+                        reason,
+                        &timestamp,
+                    )
+                })
+                .collect::<Vec<_>>();
+            let (txn_, _) = AddBookmarkLog::query_with_transaction(txn, data.as_slice()).await?;
+            txn = txn_;
+
+            first_applied_id = first_applied_id.or(Some(first_unapplied.log_id));
+            any_applied = true;
+        }
+        // AlreadyProcessed below rolls back the whole SQL transaction. That is
+        // only safe when the transaction carries mirror batches and nothing
+        // else, so a lost-ack replay cannot silently drop other bookmark ops.
+        // The mirror path always builds its own transaction; assert the
+        // invariant so a future change that mixes ops fails loudly in tests.
+        debug_assert!(
+            self.mirror_batches.is_empty()
+                || (self.force_sets.is_empty()
+                    && self.creates.is_empty()
+                    && self.creates_or_updates.is_empty()
+                    && self.updates.is_empty()
+                    && self.force_deletes.is_empty()
+                    && self.deletes.is_empty()),
+            "mirror batch transaction must not carry non-mirror bookmark ops"
+        );
+        if !any_applied && !self.mirror_batches.is_empty() {
+            // Every batch was already applied by the replica, so signal the
+            // caller to advance its checkpoint instead of retrying.
+            return Err(BookmarkTransactionError::AlreadyProcessed);
+        }
+        Ok((txn, first_applied_id))
+    }
+
     async fn store_updates<'op, 'log: 'op>(
         &'log self,
         _ctx: &CoreContext,
@@ -691,6 +876,7 @@ impl SqlBookmarksTransactionPayload {
                 .chain(self.updates.iter().map(|(bk, _, _, _, _)| bk.name()))
                 .chain(self.force_deletes.iter().map(|(bk, _)| bk.name()))
                 .chain(self.deletes.iter().map(|(bk, _, _)| bk.name()))
+                .chain(self.mirror_batches.iter().map(|(bk, _, _)| bk.name()))
                 .map(|n| n.to_string())
                 .collect();
             ctx.scuba()
@@ -749,9 +935,17 @@ impl SqlBookmarksTransactionPayload {
             .store_log(ctx, txn, &log)
             .await
             .map_err(BookmarkTransactionError::RetryableError)?;
+        // modern_sync mirror batches insert their own log rows with source ids,
+        // so they run after store_log rather than through it.
+        let (txn, mirror_first_id) = self.store_mirror_batches(txn).await?;
 
         // Return the first log ID (used by callers for ensure_backsynced)
-        let first_id = log.log_entries.first().map(|(id, _, _)| *id).unwrap_or(0);
+        let first_id = log
+            .log_entries
+            .first()
+            .map(|(id, _, _)| *id)
+            .or(mirror_first_id)
+            .unwrap_or(0);
         Ok((txn, first_id))
     }
 }
@@ -808,6 +1002,19 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
             BookmarkKind::ALL_PUBLISHING,
             Some(log),
         ));
+        Ok(())
+    }
+
+    fn mirror_batch(
+        &mut self,
+        bookmark: &BookmarkKey,
+        kind: BookmarkKind,
+        moves: Vec<MirrorBookmarkMove>,
+    ) -> Result<()> {
+        self.check_not_seen(bookmark)?;
+        self.payload
+            .mirror_batches
+            .push((bookmark.clone(), kind, moves));
         Ok(())
     }
 
@@ -1005,6 +1212,15 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     STATS::bookmarks_insert_logic_error.add_value(1);
                     STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempt as i64);
                     Ok(None)
+                }
+                Err(BookmarkTransactionError::AlreadyProcessed) => {
+                    // A modern_sync mirror move was already applied on the
+                    // replica (a lost-ack replay). The transaction is rolled
+                    // back. Report a distinct error so higher layers map it to a
+                    // response code that tells modern_sync to advance its
+                    // checkpoint instead of retrying forever.
+                    STATS::bookmarks_insert_already_processed.add_value(1);
+                    Err(BookmarkMoveAlreadyProcessed.into())
                 }
                 Err(BookmarkTransactionError::RetryableError(err)) => {
                     // Attempt count for `RetryableError` should always be equal
