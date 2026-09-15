@@ -12,6 +12,7 @@ use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::MirrorBookmarkMove;
 use bookmarks_types::AnnotatedTags;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
@@ -101,6 +102,7 @@ pub struct UpdateBookmarkOp<'op> {
     annotated_tags: Option<&'op AnnotatedTags>,
     log_new_public_commits_to_scribe: bool,
     only_log_acl_checks: bool,
+    mirror_moves: Option<Vec<MirrorBookmarkMove>>,
 }
 
 impl<'op> UpdateBookmarkOp<'op> {
@@ -122,6 +124,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             annotated_tags: None,
             log_new_public_commits_to_scribe: false,
             only_log_acl_checks: false,
+            mirror_moves: None,
         }
     }
 
@@ -175,6 +178,45 @@ impl<'op> UpdateBookmarkOp<'op> {
     pub fn only_log_acl_checks(mut self, only_log: bool) -> Self {
         self.only_log_acl_checks = only_log;
         self
+    }
+
+    /// Build an op that mirrors a contiguous chain of source bookmark moves to a
+    /// `*_shadow` replica instead of doing a normal update. The op derives its
+    /// targets from the chain — `old` from the first move, `new` from the last —
+    /// so the targets and the mirrored moves cannot disagree. The replica reuses
+    /// the source log ids, changesets, and reasons, so its log matches the source
+    /// row for row. `moves` must be non-empty and describe an update: the first
+    /// move's `old` is `Some`. A create must use
+    /// `CreateBookmarkOp::try_new_mirror`. modern_sync is the only caller.
+    pub fn try_new_mirror(
+        bookmark: BookmarkKey,
+        moves: Vec<MirrorBookmarkMove>,
+    ) -> Result<UpdateBookmarkOp<'op>, BookmarkMovementError> {
+        let (Some(first), Some(last)) = (moves.first(), moves.last()) else {
+            return Err(anyhow::anyhow!("mirror bookmark move chain is empty").into());
+        };
+        let old = first.old.ok_or_else(|| {
+            anyhow::anyhow!("mirror bookmark update chain must start with an update, not a create")
+        })?;
+        let targets = BookmarkUpdateTargets { old, new: last.new };
+        Ok(UpdateBookmarkOp {
+            bookmark,
+            targets,
+            // The source already enforced its own policy on this move.
+            // AnyPermittedByConfig re-applies the replica's configured policy
+            // here; it does not bypass the check. The mirrored publishing
+            // bookmark only fast-forwards, so the replayed move satisfies it.
+            update_policy: BookmarkUpdatePolicy::AnyPermittedByConfig,
+            reason: BookmarkUpdateReason::ApiRequest,
+            kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
+            affected_changesets: AffectedChangesets::new(),
+            pushvars: None,
+            annotated_tags: None,
+            log_new_public_commits_to_scribe: false,
+            only_log_acl_checks: false,
+            mirror_moves: Some(moves),
+        })
     }
 
     pub async fn run_with_transaction(
@@ -243,10 +285,39 @@ impl<'op> UpdateBookmarkOp<'op> {
         )
         .await?;
 
+        let is_mirror_upload = crate::is_mirror_upload(self.pushvars);
+
+        // Mirror moves reuse the source repo's log ids, so they are only valid
+        // inside a mirror upload. Refuse to write them when the caller did not
+        // declare one, rather than inferring the intent from the moves.
+        if self.mirror_moves.is_some() && !is_mirror_upload {
+            return Err(anyhow::anyhow!(
+                "cannot mirror bookmark moves to {} without the {} pushvar",
+                self.bookmark,
+                crate::MIRROR_UPLOAD_PUSHVAR
+            )
+            .into());
+        }
+
+        if is_mirror_upload {
+            authz.require_mirror_upload_operations(ctx, repo).await?;
+        }
+
         let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
 
         let commits_to_log = match kind {
             BookmarkKind::Scratch => {
+                if self.mirror_moves.is_some() {
+                    // The scratch path writes no log rows, so it would drop the
+                    // mirrored moves and still report success, letting
+                    // modern_sync advance its checkpoint past moves the replica
+                    // never stored.
+                    return Err(anyhow::anyhow!(
+                        "cannot mirror bookmark moves to scratch bookmark {}",
+                        self.bookmark
+                    )
+                    .into());
+                }
                 ctx.scuba()
                     .clone()
                     .add("bookmark", self.bookmark.to_string())
@@ -286,12 +357,19 @@ impl<'op> UpdateBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Updating public bookmark", None);
 
-                txn.update(
-                    &self.bookmark,
-                    self.targets.new,
-                    self.targets.old,
-                    self.reason,
-                )?;
+                match self.mirror_moves.take() {
+                    Some(moves) => {
+                        txn.mirror_batch(&self.bookmark, kind, moves)?;
+                    }
+                    None => {
+                        txn.update(
+                            &self.bookmark,
+                            self.targets.new,
+                            self.targets.old,
+                            self.reason,
+                        )?;
+                    }
+                }
                 to_log
             }
         };
