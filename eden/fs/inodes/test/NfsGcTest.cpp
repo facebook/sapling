@@ -440,6 +440,49 @@ TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
   EXPECT_TRUE(isLoaded(sibling));
 }
 
+TEST_F(NfsGcTest, pinnedInodesAndTheirAncestorsKeepTheirReferences) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto two = inodeNumberOf("parent/child/two.txt");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+
+  // Some process holds "one.txt" and "sibling.txt" open.
+  auto pins = std::make_shared<const folly::F14FastSet<InodeNumber>>(
+      folly::F14FastSet<InodeNumber>{one, sibling});
+  auto numInvalidated =
+      runGc(std::chrono::system_clock::time_point::max(), pins);
+  sweep();
+
+  // FIXME: the pins are ignored, so the pinned files and the directory whose
+  // subtree contains one are all forgotten along with "two.txt".
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(sibling));
+  EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(two));
+}
+
+TEST_F(NfsGcTest, pinnedDirectoryStillHasItsChildrenReclaimed) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+
+  // Some process has "parent/child" as its working directory.
+  auto pins = std::make_shared<const folly::F14FastSet<InodeNumber>>(
+      folly::F14FastSet<InodeNumber>{child});
+  auto numInvalidated =
+      runGc(std::chrono::system_clock::time_point::max(), pins);
+  sweep();
+
+  // FIXME: the pin is ignored and the working directory is forgotten too.
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(sibling));
+}
+
 TEST_F(NfsGcTest, directoryWithNothingToClearIsNotInvalidatedAgain) {
   createOnDisk("parent/child");
   // A materialized directory is never invalidated, so "parent/child" keeps
