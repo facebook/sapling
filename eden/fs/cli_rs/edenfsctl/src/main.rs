@@ -138,33 +138,6 @@ fn setup_logging() {
     }
 }
 
-/// Whether edenfs_cli_usage telemetry should route through XplatLogger, per the
-/// `telemetry:enable-xplatlogger-cli-usage` gate in the on-disk dynamic config
-/// (edenfs_dynamic.rc). Daemon-free, since edenfsctl often runs with no daemon.
-/// Returns false when telemetry is disabled (skipping the config read) or when
-/// the gate is absent/false.
-#[cfg(fbcode_build)]
-fn should_use_xplat_cli_usage() -> bool {
-    // The gate only matters when a sample is actually emitted. When telemetry is
-    // disabled, create_logger returns a NullLogger regardless of the gate, so
-    // reading the config would be wasted I/O on every edenfsctl invocation.
-    if edenfs_telemetry::telemetry_disabled() {
-        return false;
-    }
-
-    let etc_eden_dir = edenfs_client::utils::get_etc_eden_dir(&None);
-    match edenfs_config::load_dynamic_config(&etc_eden_dir) {
-        Ok(config) => config.enable_xplatlogger_cli_usage(),
-        Err(error) => {
-            tracing::debug!(
-                ?error,
-                "failed to read enable-xplatlogger-cli-usage config; using legacy logger"
-            );
-            false
-        }
-    }
-}
-
 fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
     if cmd.debug {
         setup_logging();
@@ -359,8 +332,7 @@ fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(fbcode_build)]
     {
         sample.set_exit_code(*code.as_ref().unwrap_or(&1));
-        let enable_xplat = should_use_xplat_cli_usage();
-        send_edenfs_cli_usage(sample.sample, enable_xplat);
+        send_edenfs_cli_usage(sample.sample);
     }
 
     match code {
