@@ -218,18 +218,12 @@ void clearMountHealthIssues(
   emittedIssues->erase(mountPath);
 }
 
-void clearAllMountHealthIssues(
-    const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues) {
-  auto emittedIssues = emittedMountHealthIssues->wlock();
-  emittedIssues->clear();
-}
-
 void pruneMountHealthIssues(
     const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues,
-    const std::unordered_set<std::string>& configuredMountPaths) {
+    const std::unordered_set<std::string>& retainedMountPaths) {
   auto emittedIssues = emittedMountHealthIssues->wlock();
   for (auto it = emittedIssues->begin(); it != emittedIssues->end();) {
-    if (configuredMountPaths.find(it->first) == configuredMountPaths.end()) {
+    if (retainedMountPaths.find(it->first) == retainedMountPaths.end()) {
       it = emittedIssues->erase(it);
     } else {
       ++it;
@@ -3895,8 +3889,75 @@ void EdenServer::scheduleRunningMountHealthCheck(
           });
 }
 
+bool EdenServer::shouldProbeMountHealth(MountState state) {
+  switch (state) {
+    case MountState::RUNNING:
+      return true;
+    case MountState::UNINITIALIZED:
+    case MountState::INITIALIZING:
+    case MountState::INITIALIZED:
+    case MountState::STARTING:
+      // Has not asked the kernel to mount yet.
+      return false;
+    case MountState::FUSE_ERROR:
+    case MountState::INIT_ERROR:
+      // Never finished mounting, so the kernel was never told about it.
+      return false;
+    case MountState::SHUTTING_DOWN:
+    case MountState::SHUT_DOWN:
+    case MountState::DESTROYING:
+      // Already torn down.
+      return false;
+  }
+  // MountState is a Thrift enum, so a value outside the enumerators above is
+  // representable. Nothing useful can be probed about a state we do not know.
+  return false;
+}
+
+void EdenServer::checkMountHealth() {
+  // Health checks only apply to mounts the daemon believes it is serving, so
+  // the live mount map -- not config.json -- is the authoritative input. Both
+  // the paths to prune against and the paths to probe are collected under a
+  // single lock, so they cannot describe two different snapshots.
+  std::unordered_set<std::string> registeredMountPaths;
+  std::vector<std::pair<AbsolutePath, std::string>> probeTargets;
+  {
+    const auto mountPoints = mountPoints_->rlock();
+    registeredMountPaths.reserve(mountPoints->size());
+    probeTargets.reserve(mountPoints->size());
+    for (const auto& [mountPath, mountInfo] : *mountPoints) {
+      // Prune against every registered mount, not just the probed ones.
+      // Dropping the dedup state of a mount that is skipped below would let an
+      // already-reported issue be emitted a second time once that mount
+      // reaches RUNNING.
+      registeredMountPaths.insert(std::string{mountPath.view()});
+
+      // Only probe mounts EdenFS is actually serving; see
+      // shouldProbeMountHealth for why the other states are skipped. Skipping
+      // loses nothing: those states are transient, so such a mount is either
+      // probed on a later tick once it reaches RUNNING, or it leaves
+      // mountPoints_ and is pruned above.
+      const auto& mount = mountInfo.edenMount;
+      if (!shouldProbeMountHealth(mount->getState())) {
+        continue;
+      }
+      probeTargets.emplace_back(
+          mountPath, mount->getCheckoutConfig()->getRepoSource());
+    }
+  }
+  pruneMountHealthIssues(emittedMountHealthIssues_, registeredMountPaths);
+
+  // The probe only needs the path and the repo source, both copied above, so
+  // no reference to the mount is held across the asynchronous check.
+  for (auto& [mountPath, repoSource] : probeTargets) {
+    scheduleRunningMountHealthCheck(mountPath, std::move(repoSource));
+  }
+}
+
 void EdenServer::accidentalUnmountRecovery() {
   XLOGF(DBG5, "Performing accidental unmount recovery.");
+  checkMountHealth();
+
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
@@ -3909,19 +3970,11 @@ void EdenServer::accidentalUnmountRecovery() {
   }
 
   if (dirs.empty()) {
-    clearAllMountHealthIssues(emittedMountHealthIssues_);
     XLOGF(
         DBG5,
         "No mount points currently configured, skipping accidental unmount recovery.");
     return;
   }
-
-  std::unordered_set<std::string> configuredMountPaths;
-  for (const auto& client : dirs.items()) {
-    configuredMountPaths.insert(
-        std::string{canonicalPath(client.first.stringPiece()).view()});
-  }
-  pruneMountHealthIssues(emittedMountHealthIssues_, configuredMountPaths);
 
   for (const auto& client : dirs.items()) {
     auto mountPath = canonicalPath(client.first.stringPiece());
@@ -3931,11 +3984,7 @@ void EdenServer::accidentalUnmountRecovery() {
       isMounted = mountPoints->find(mountPath) != mountPoints->end();
     }
 
-    if (isMounted) {
-      scheduleRunningMountHealthCheck(mountPath, client.second.asString());
-    } else {
-      clearMountHealthIssues(
-          emittedMountHealthIssues_, std::string{mountPath.view()});
+    if (!isMounted) {
       // This mount point is not currently mounted, but it was configured
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.

@@ -601,4 +601,25 @@ TEST_F(
   EXPECT_TRUE(stopResult.get());
 }
 
+TEST(EdenServerMountHealthTest, OnlyRunningMountsAreProbed) {
+  EXPECT_TRUE(EdenServer::shouldProbeMountHealth(MountState::RUNNING));
+
+  // Probing any other state asks whether the kernel agrees about a mount it
+  // was never told about, or has already forgotten, which reports a
+  // DaemonRunningKernelMountMissing that is guaranteed to be false.
+  for (auto state :
+       {MountState::UNINITIALIZED,
+        MountState::INITIALIZING,
+        MountState::INITIALIZED,
+        MountState::STARTING,
+        MountState::FUSE_ERROR,
+        MountState::INIT_ERROR,
+        MountState::SHUTTING_DOWN,
+        MountState::SHUT_DOWN,
+        MountState::DESTROYING}) {
+    EXPECT_FALSE(EdenServer::shouldProbeMountHealth(state))
+        << "MountState " << static_cast<int>(state) << " must not be probed";
+  }
+}
+
 } // namespace facebook::eden

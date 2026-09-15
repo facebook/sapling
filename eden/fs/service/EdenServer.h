@@ -574,6 +574,20 @@ class EdenServer : private TakeoverHandler {
    */
   void clearStartupStatusPublishers();
 
+  /**
+   * Whether the mount health check should probe a mount in this state.
+   *
+   * The probe asks whether the kernel agrees with a mount the daemon believes
+   * it is serving, which is only a meaningful question once the mount is
+   * RUNNING. Every other state either has not asked the kernel to mount yet or
+   * has already torn the mount down, so probing it would report a
+   * DaemonRunningKernelMountMissing that is guaranteed to be false.
+   *
+   * Static and public so the policy can be exercised directly, without
+   * standing up a mount in each state.
+   */
+  static bool shouldProbeMountHealth(MountState state);
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronization between unmountFinished
@@ -728,6 +742,10 @@ class EdenServer : private TakeoverHandler {
   // Detects when a mount point accidentally gets unmounted, and
   // attempts to recover it.
   void accidentalUnmountRecovery();
+
+  // Probes every mount the daemon believes it is serving and reports the ones
+  // the kernel disagrees about.
+  void checkMountHealth();
 
   // Checks a running mount point without blocking the main EventBase.
   void scheduleRunningMountHealthCheck(
