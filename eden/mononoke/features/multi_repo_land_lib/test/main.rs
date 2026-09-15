@@ -81,6 +81,7 @@ async fn test_creates_commit_on_top_of_parent(fb: FacebookInit) -> Result<()> {
         &manifest_path,
         Bytes::from("<manifest/>"),
         "test_service",
+        None,
     )
     .await?;
 
@@ -110,6 +111,7 @@ async fn test_commit_has_correct_file_change(fb: FacebookInit) -> Result<()> {
         &manifest_path,
         Bytes::from(content.as_slice()),
         "test_service",
+        None,
     )
     .await?;
 
@@ -138,8 +140,16 @@ async fn test_commit_stores_correct_content(fb: FacebookInit) -> Result<()> {
 
     let manifest_path = NonRootMPath::new("manifest.xml")?;
     let content = Bytes::from("test content 12345");
-    let cs_id =
-        create_manifest_commit(&ctx, &repo, parent, &manifest_path, content.clone(), "svc").await?;
+    let cs_id = create_manifest_commit(
+        &ctx,
+        &repo,
+        parent,
+        &manifest_path,
+        content.clone(),
+        "svc",
+        None,
+    )
+    .await?;
 
     // Verify the stored file size matches.
     let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
@@ -394,6 +404,7 @@ async fn test_prepare_manifest_commit_default_parent(fb: FacebookInit) -> Result
             manifest_path: &manifest_path,
             content: Bytes::from("<manifest/>"),
             service_identity: "svc",
+            message: None,
             parent_override: None,
             baseline: CasBaseline::CurrentHead,
         },
@@ -459,6 +470,7 @@ async fn test_prepare_manifest_commit_parent_override(fb: FacebookInit) -> Resul
             manifest_path: &manifest_path,
             content: Bytes::from("<manifest/>"),
             service_identity: "svc",
+            message: None,
             parent_override: Some(user_commit),
             baseline: CasBaseline::CurrentHead,
         },
@@ -496,6 +508,7 @@ async fn test_prepare_manifest_commit_bookmark_not_found(fb: FacebookInit) -> Re
             manifest_path: &manifest_path,
             content: Bytes::from("<manifest/>"),
             service_identity: "svc",
+            message: None,
             parent_override: None,
             baseline: CasBaseline::CurrentHead,
         },
@@ -741,6 +754,7 @@ async fn generated_from_pins_the_cas_baseline_against_a_concurrent_land(
             manifest_path: &manifest_path,
             content: Bytes::from("<manifest/>"),
             service_identity: "svc",
+            message: None,
             parent_override: None,
             baseline: CasBaseline::GeneratedFrom(generated_from),
         },
@@ -759,6 +773,7 @@ async fn generated_from_pins_the_cas_baseline_against_a_concurrent_land(
             manifest_path: &manifest_path,
             content: Bytes::from("<manifest/>"),
             service_identity: "svc",
+            message: None,
             parent_override: None,
             baseline: CasBaseline::CurrentHead,
         },

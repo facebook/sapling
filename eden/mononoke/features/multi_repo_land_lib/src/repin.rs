@@ -69,8 +69,11 @@ pub struct ManifestCommitSpec<'a> {
     pub bookmark: &'a BookmarkKey,
     pub manifest_path: &'a NonRootMPath,
     pub content: Bytes,
-    /// Recorded as the author of the generated commit.
+    /// Recorded as the author and committer of the generated commit.
     pub service_identity: &'a str,
+    /// Commit message. `None` falls back to a bare "updated the manifest",
+    /// which says nothing about what the re-pin changed.
+    pub message: Option<String>,
     /// Parent for the generated commit when the caller's own manifest edit
     /// must sit between the head and the generated commit; the baseline head
     /// otherwise. Never the CAS baseline — that stays the branch head.
@@ -121,6 +124,7 @@ where
         spec.manifest_path,
         spec.content,
         spec.service_identity,
+        spec.message,
     )
     .await?;
 
@@ -144,6 +148,8 @@ pub struct RepinOptions {
     /// See [`CasBaseline`]. `GeneratedFrom` whenever the caller read the
     /// branch itself and generated the content from that read.
     pub baseline: CasBaseline,
+    /// See [`ManifestCommitSpec::message`].
+    pub message: Option<String>,
 }
 
 impl Default for RepinOptions {
@@ -151,6 +157,7 @@ impl Default for RepinOptions {
         Self {
             log_scribe: true,
             baseline: CasBaseline::CurrentHead,
+            message: None,
         }
     }
 }
@@ -209,6 +216,7 @@ where
             manifest_path,
             content: new_content,
             service_identity,
+            message: opts.message.clone(),
             // No user-manifest parent: build on the head.
             parent_override: None,
             baseline: opts.baseline,

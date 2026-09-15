@@ -40,6 +40,7 @@ pub async fn create_manifest_commit(
     manifest_path: &NonRootMPath,
     manifest_content: Bytes,
     service_identity: &str,
+    message: Option<String>,
 ) -> Result<ChangesetId> {
     let size = manifest_content.len() as u64;
 
@@ -62,13 +63,17 @@ pub async fn create_manifest_commit(
         ),
     };
 
+    // Git has no notion of a commit without a committer, so a bonsai that omits
+    // one derives to the epoch-0 default signature and every generated commit
+    // dates to 1970 in git tooling.
+    let now = DateTime::now();
     let bcs_mut = BonsaiChangesetMut {
         parents: vec![parent],
         author: service_identity.to_string(),
-        author_date: DateTime::now(),
-        committer: None,
-        committer_date: None,
-        message: format!("Update static manifest at {manifest_path}"),
+        author_date: now,
+        committer: Some(service_identity.to_string()),
+        committer_date: Some(now),
+        message: message.unwrap_or_else(|| format!("Update static manifest at {manifest_path}")),
         hg_extra: Default::default(),
         git_extra_headers: None,
         file_changes,
