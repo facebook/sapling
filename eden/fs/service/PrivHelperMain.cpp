@@ -88,8 +88,8 @@ DEFINE_int32(
     "The gid of the owner of this eden instance");
 
 int main(int argc, char** argv) {
-#ifdef __linux__
-  // One-shot mode used by EdenFS pressure GC to discover pinned directories.
+#if defined(__linux__) || defined(__APPLE__)
+  // One-shot mode used by EdenFS pressure GC to discover pinned inodes.
   // Handled before folly::Init so no flag or environment parsing happens on
   // this path: as a mode of a setuid binary it is invocable by any local
   // user, so it takes no input and reports only pins on the caller's own
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
   if (argc == 2 && strcmp(argv[1], "--scan-pins") == 0) {
     return facebook::eden::runScanPinsMode();
   }
-#endif
+#endif // __linux__ || __APPLE__
 
   const folly::Init init(&argc, &argv);
 

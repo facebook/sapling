@@ -27,11 +27,16 @@ namespace facebook::eden {
  */
 inline constexpr const char kEdenFsMountSource[] = "edenfs:";
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 /**
- * A directory pinned by some process, identified by device and inode number.
- * For EdenFS FUSE mounts the inode number is the EdenFS InodeNumber.
+ * An inode pinned by some process, identified by device and inode number.
+ * For EdenFS mounts the inode number is the EdenFS InodeNumber.
+ *
+ * On Linux pins are the directories processes have as their working
+ * directory or root. On macOS they also include the files processes hold
+ * open or have memory-mapped, since NFS gives EdenFS no kernel-side reference
+ * that would keep an open file's inode from being forgotten.
  */
 struct PinnedInode {
   uint64_t dev{};
@@ -43,6 +48,7 @@ struct PinnedInode {
   }
 };
 
+#ifdef __linux__
 /**
  * Extract the value of the `user_id=` option from a fuse mount's option
  * string. The kernel stamps this option with the uid that created the mount,
@@ -61,6 +67,36 @@ std::optional<uid_t> parseFuseUserId(std::string_view mountOptions);
 folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
     const std::vector<uint64_t>& devices,
     const char* procRoot = "/proc");
+#endif // __linux__
+
+#ifdef __APPLE__
+/**
+ * Scan every process libproc lets the caller inspect for pins on the given
+ * devices: the working directory, the root directory, open files, and
+ * memory-mapped files. Processes that cannot be read (other users' when not
+ * running as root, or exited mid-scan) are skipped; failure to list
+ * processes at all is returned as an errno.
+ */
+folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
+    const std::vector<uint64_t>& devices);
+
+/**
+ * A mounted filesystem as reported by getfsstat(2), reduced to what the pin
+ * scan and its consumers need. `dev` is the device number that stat(2) on
+ * the mount reports as st_dev, so it matches the devices in PinnedInode.
+ */
+struct PinScanMount {
+  std::string mountPoint;
+  std::string mountSource;
+  std::string fsType;
+  uint64_t dev{};
+};
+
+/**
+ * List all mounts without contacting their filesystems (MNT_NOWAIT).
+ */
+folly::Expected<std::vector<PinScanMount>, int> listMountsForPinScan();
+#endif // __APPLE__
 
 /**
  * Result of a pin scan, as exchanged between `edenfs_privhelper --scan-pins`
@@ -93,17 +129,18 @@ std::optional<PinScanReport> parsePinScanReport(std::string_view output);
  * Entry point for the `edenfs_privhelper --scan-pins` one-shot mode.
  *
  * Takes no input: the set of mounts to scan is derived entirely from the
- * mount table, restricted to EdenFS mounts whose kernel-stamped fuse
- * user_id option matches the caller's real uid; NFS mounts carry no such
- * option, so only the caller's own FUSE mounts are scanned. This keeps the
- * mode safe to expose to arbitrary local users via the setuid binary: it
- * parses no attacker controlled input and only ever reports pins on the
- * caller's own mounts.
+ * mount table, restricted to EdenFS mounts owned by the caller. On Linux
+ * that is the kernel-stamped fuse user_id option, which only FUSE mounts
+ * carry. On macOS the privhelper performs the NFS mount as root, so
+ * ownership is taken from the uid EdenFS reports for the mount's root
+ * directory instead. This keeps the mode safe to expose to arbitrary local
+ * users via the setuid binary: it parses no attacker controlled input and
+ * only ever reports pins on the caller's own mounts.
  *
  * Writes a PinScanReport to stdout and returns the process exit code.
  */
 int runScanPinsMode();
 
-#endif // __linux__
+#endif // __linux__ || __APPLE__
 
 } // namespace facebook::eden

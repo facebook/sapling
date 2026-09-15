@@ -5,18 +5,16 @@
  * GNU General Public License version 2.
  */
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "eden/fs/privhelper/PinScan.h"
 
-#include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/sysmacros.h>
 #include <unistd.h>
 
 #include <algorithm>
-#include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <set>
@@ -25,9 +23,26 @@
 #include <folly/String.h>
 
 #include "eden/common/utils/FSDetect.h"
+
+#ifdef __linux__
+#include <dirent.h>
+#include <sys/sysmacros.h>
+
+#include <cctype>
+
 #include "eden/fs/utils/MountInfoTable.h"
+#endif
+
+#ifdef __APPLE__
+#include <libproc.h> // @manual
+#include <sys/mount.h> // @manual
+#include <sys/param.h> // @manual
+#include <sys/proc_info.h> // @manual
+#endif
 
 namespace facebook::eden {
+
+#ifdef __linux__
 
 std::optional<uid_t> parseFuseUserId(std::string_view mountOptions) {
   std::vector<std::string_view> options;
@@ -126,6 +141,305 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
   return std::vector<PinnedInode>{pins.begin(), pins.end()};
 }
 
+#endif // __linux__
+
+#ifdef __APPLE__
+
+namespace {
+
+/**
+ * libproc's public header only offers PROC_PIDREGIONPATHINFO, which returns
+ * one VM region per call, anonymous or not, so walking a process costs one
+ * syscall per mapping (a few thousand each). Flavor 22 is
+ * PROC_PIDREGIONPATHINFO2 from XNU's proc_info_private.h: it returns the
+ * next region at or above the given address that is backed by a vnode,
+ * skipping the rest inside the kernel. lsof uses it for the same purpose.
+ * Measured with ~1200 processes: 2.3M calls and 2.5s with the public flavor
+ * against 36K calls and 250ms with this one, finding the same pins.
+ */
+constexpr int kProcPidRegionPathInfo2 = 22;
+
+void recordIfOnDevice(
+    const vnode_info_path& vip,
+    const std::vector<uint64_t>& devices,
+    std::set<PinnedInode>& pins) {
+  // Compared with the 32-bit device numbers callerMountDevices() collects.
+  const uint64_t dev =
+      static_cast<uint64_t>(static_cast<uint32_t>(vip.vip_vi.vi_stat.vst_dev));
+  if (std::find(devices.begin(), devices.end(), dev) != devices.end()) {
+    pins.insert(PinnedInode{dev, vip.vip_vi.vi_stat.vst_ino});
+  }
+}
+
+/**
+ * Returns 0, or an errno when the process's directories could not be seen
+ * for a reason other than it being off limits or gone.
+ */
+int scanWorkingAndRootDirectories(
+    pid_t pid,
+    const std::vector<uint64_t>& devices,
+    std::set<PinnedInode>& pins) {
+  proc_vnodepathinfo info{};
+  errno = 0;
+  if (proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &info, sizeof(info)) !=
+      static_cast<int>(sizeof(info))) {
+    return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+  }
+  recordIfOnDevice(info.pvi_cdir, devices, pins);
+  // A process that has not chroot'ed reports an empty root.
+  if (info.pvi_rdir.vip_vi.vi_stat.vst_dev != 0) {
+    recordIfOnDevice(info.pvi_rdir, devices, pins);
+  }
+  return 0;
+}
+
+/**
+ * Returns 0, or an errno when the process's descriptors could not all be
+ * seen: a missed pin is worse than a failed scan, which leaves GC to files.
+ */
+int scanOpenFiles(
+    pid_t pid,
+    const std::vector<uint64_t>& devices,
+    std::vector<proc_fdinfo>& fds,
+    std::set<PinnedInode>& pins) {
+  errno = 0;
+  int bytes = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nullptr, 0);
+  if (bytes <= 0) {
+    // No descriptors, or a process the caller may not inspect or that exited.
+    return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+  }
+  // LISTFDS silently truncates a full buffer, so a buffer that came back
+  // full is grown and the list fetched again, up to a bound.
+  constexpr size_t kMaxFds = 1 << 20;
+  fds.resize(bytes / sizeof(proc_fdinfo) + 16);
+  while (true) {
+    errno = 0;
+    bytes = proc_pidinfo(
+        pid, PROC_PIDLISTFDS, 0, fds.data(), fds.size() * sizeof(proc_fdinfo));
+    if (bytes <= 0) {
+      return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+    }
+    if (static_cast<size_t>(bytes) < fds.size() * sizeof(proc_fdinfo)) {
+      break;
+    }
+    if (fds.size() >= kMaxFds) {
+      return EOVERFLOW;
+    }
+    fds.resize(fds.size() * 2);
+  }
+  const size_t count = bytes / sizeof(proc_fdinfo);
+  for (size_t i = 0; i < count; ++i) {
+    if (fds[i].proc_fdtype != PROX_FDTYPE_VNODE) {
+      continue;
+    }
+    vnode_fdinfowithpath info{};
+    errno = 0;
+    if (proc_pidfdinfo(
+            pid,
+            fds[i].proc_fd,
+            PROC_PIDFDVNODEPATHINFO,
+            &info,
+            sizeof(info)) != static_cast<int>(sizeof(info))) {
+      // EBADF: the descriptor was closed after the list was taken.
+      if (errno == 0 || errno == EPERM || errno == ESRCH || errno == EBADF) {
+        continue;
+      }
+      return errno;
+    }
+    recordIfOnDevice(info.pvip, devices, pins);
+  }
+  return 0;
+}
+
+int scanThreadWorkingDirectories(
+    pid_t pid,
+    const std::vector<uint64_t>& devices,
+    std::vector<uint64_t>& threads,
+    std::set<PinnedInode>& pins) {
+  proc_bsdshortinfo process{};
+  if (proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, &process, sizeof(process)) ==
+          static_cast<int>(sizeof(process)) &&
+      !(process.pbsi_flags & PROC_FLAG_THCWD)) {
+    return 0;
+  }
+
+  // LISTTHREADS cannot size a buffer with a null query, and silently truncates
+  // a full buffer. Bound retries and reject an incomplete snapshot.
+  constexpr size_t kMaxThreads = 65536;
+  int bytes;
+  while (true) {
+    errno = 0;
+    bytes = proc_pidinfo(
+        pid,
+        PROC_PIDLISTTHREADS,
+        0,
+        threads.data(),
+        threads.size() * sizeof(uint64_t));
+    if (bytes <= 0) {
+      // No threads to report (a zombie, or one that exited mid-scan) is
+      // not a reason to distrust the scan; a real error is.
+      return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+    }
+    if (bytes % sizeof(uint64_t) != 0) {
+      return EIO;
+    }
+    if (static_cast<size_t>(bytes) < threads.size() * sizeof(uint64_t)) {
+      break;
+    }
+    if (threads.size() >= kMaxThreads) {
+      return EOVERFLOW;
+    }
+    threads.resize(threads.size() * 2);
+  }
+  for (size_t i = 0; i < bytes / sizeof(uint64_t); ++i) {
+    proc_threadwithpathinfo info{};
+    errno = 0;
+    if (proc_pidinfo(
+            pid, PROC_PIDTHREADPATHINFO, threads[i], &info, sizeof(info)) !=
+        static_cast<int>(sizeof(info))) {
+      if (errno == 0 || errno == EPERM || errno == ESRCH) {
+        continue;
+      }
+      return errno;
+    }
+    recordIfOnDevice(info.pvip, devices, pins);
+  }
+  return 0;
+}
+
+/**
+ * Returns whether the walk saw any region at all. The private flavor ends
+ * the walk with an error whose errno is not documented, so a kernel that
+ * rejects the flavor outright is told apart by every process reporting no
+ * region, which scanProcessPins checks.
+ */
+bool scanMappedFiles(
+    pid_t pid,
+    const std::vector<uint64_t>& devices,
+    std::set<PinnedInode>& pins) {
+  bool sawRegion = false;
+  uint64_t address = 0;
+  while (true) {
+    // A kernel whose layout of the private flavor differs would fill less
+    // than the struct; the walk then ends rather than read a partial fill.
+    proc_regionwithpathinfo info{};
+    if (proc_pidinfo(
+            pid, kProcPidRegionPathInfo2, address, &info, sizeof(info)) !=
+        static_cast<int>(sizeof(info))) {
+      return sawRegion;
+    }
+    sawRegion = true;
+    if (info.prp_vip.vip_vi.vi_stat.vst_dev != 0) {
+      recordIfOnDevice(info.prp_vip, devices, pins);
+    }
+    // Always move forward, even past a region reported with no size.
+    const uint64_t next =
+        info.prp_prinfo.pri_address + info.prp_prinfo.pri_size;
+    address = next > address ? next : address + 1;
+  }
+}
+
+} // namespace
+
+folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
+    const std::vector<uint64_t>& devices) {
+  std::set<PinnedInode> pins;
+  if (devices.empty()) {
+    return std::vector<PinnedInode>{};
+  }
+
+  // With no buffer, libproc reports how many pids there are right now. Leave
+  // room for processes started before the next call, and since a full buffer
+  // is silently truncated, grow it and list again when it comes back full.
+  errno = 0;
+  int count = proc_listallpids(nullptr, 0);
+  if (count <= 0) {
+    return folly::makeUnexpected(errno == 0 ? EIO : errno);
+  }
+  std::vector<pid_t> pids(static_cast<size_t>(count) * 2 + 64);
+  while (true) {
+    errno = 0;
+    count = proc_listallpids(pids.data(), pids.size() * sizeof(pid_t));
+    if (count <= 0) {
+      return folly::makeUnexpected(errno == 0 ? EIO : errno);
+    }
+    if (static_cast<size_t>(count) < pids.size()) {
+      break;
+    }
+    pids.resize(pids.size() * 2);
+  }
+  pids.resize(count);
+
+  std::vector<proc_fdinfo> fds;
+  std::vector<uint64_t> threads(64);
+  bool sawRegion = false;
+  for (pid_t pid : pids) {
+    if (pid <= 0) {
+      continue;
+    }
+    // Each call fails with EPERM for processes the caller may not inspect
+    // and ESRCH for ones that exited mid-scan; both are skipped. Any other
+    // failure fails the scan: a missed pin is worse than no pin set, which
+    // leaves GC to files.
+    if (auto error = scanWorkingAndRootDirectories(pid, devices, pins)) {
+      return folly::makeUnexpected(error);
+    }
+    if (auto error =
+            scanThreadWorkingDirectories(pid, devices, threads, pins)) {
+      return folly::makeUnexpected(error);
+    }
+    if (auto error = scanOpenFiles(pid, devices, fds, pins)) {
+      return folly::makeUnexpected(error);
+    }
+    sawRegion |= scanMappedFiles(pid, devices, pins);
+  }
+  if (!sawRegion) {
+    // Every process maps at least its executable: none reporting a region
+    // means the kernel rejected the private flavor.
+    return folly::makeUnexpected(ENOTSUP);
+  }
+  return std::vector<PinnedInode>{pins.begin(), pins.end()};
+}
+
+folly::Expected<std::vector<PinScanMount>, int> listMountsForPinScan() {
+  // MNT_NOWAIT returns the cached statfs data rather than asking every
+  // filesystem, so listing mounts cannot block on a slow or wedged one.
+  int count = getfsstat(nullptr, 0, MNT_NOWAIT);
+  if (count < 0) {
+    return folly::makeUnexpected(errno);
+  }
+  // A full buffer is silently truncated, so grow it and list again then.
+  std::vector<struct statfs> stats(static_cast<size_t>(count) + 16);
+  while (true) {
+    count = getfsstat(
+        stats.data(), stats.size() * sizeof(struct statfs), MNT_NOWAIT);
+    if (count < 0) {
+      return folly::makeUnexpected(errno);
+    }
+    if (static_cast<size_t>(count) < stats.size()) {
+      break;
+    }
+    stats.resize(stats.size() * 2);
+  }
+  std::vector<PinScanMount> mounts;
+  mounts.reserve(count);
+  for (int i = 0; i < count; ++i) {
+    const auto& st = stats[i];
+    // For NFS mounts, the only kind that consults the pin scan, the kernel
+    // reports f_fsid.val[0] as st_dev, so the daemon can map its mounts to
+    // the devices the scanner reports without a stat of its own mounts.
+    mounts.push_back(
+        PinScanMount{
+            st.f_mntonname,
+            st.f_mntfromname,
+            st.f_fstypename,
+            static_cast<uint64_t>(static_cast<uint32_t>(st.f_fsid.val[0]))});
+  }
+  return mounts;
+}
+
+#endif // __APPLE__
+
 namespace {
 constexpr folly::StringPiece kDoneMarker{"done"};
 } // namespace
@@ -188,20 +502,22 @@ std::optional<PinScanReport> parsePinScanReport(std::string_view output) {
   return std::nullopt;
 }
 
-int runScanPinsMode() {
+namespace {
+
+/**
+ * The devices of the caller's own EdenFS mounts, or an errno if the mount
+ * table could not be read.
+ */
+folly::Expected<std::vector<uint64_t>, int> callerMountDevices() {
+  const uid_t uid = getuid();
+  std::vector<uint64_t> devices;
+#ifdef __linux__
   auto mounts = getAllMounts(
       MountInfoOptions{
           .includeMountSource = true, .includeMountOptions = true});
   if (mounts.hasError()) {
-    fprintf(
-        stderr,
-        "scan-pins: unable to list mounts: %s\n",
-        folly::errnoStr(mounts.error()).c_str());
-    return 1;
+    return folly::makeUnexpected(mounts.error());
   }
-
-  const uid_t uid = getuid();
-  std::vector<uint64_t> devices;
   for (const auto& mount : mounts.value()) {
     if (!is_edenfs_mount(mount.mountSource, mount.fsType)) {
       continue;
@@ -212,17 +528,56 @@ int runScanPinsMode() {
     }
     devices.push_back(makedev(mount.devMajor, mount.devMinor));
   }
+#else
+  auto mounts = listMountsForPinScan();
+  if (mounts.hasError()) {
+    return folly::makeUnexpected(mounts.error());
+  }
+  for (const auto& mount : mounts.value()) {
+    if (!is_edenfs_mount(mount.mountSource, mount.fsType)) {
+      continue;
+    }
+    // The privhelper mounts as root, so the mount table does not record the
+    // owner. EdenFS reports its owner as the uid of everything it serves,
+    // the mount's root directory included. This stat is answered by whichever
+    // daemon serves the mount, the caller's or another user's, and hangs
+    // while that daemon is wedged. EdenFS mounts are interruptible, so the
+    // SIGTERM/SIGKILL the requesting daemon sends when its deadline on the
+    // scan passes ends the wait.
+    struct stat st{};
+    if (stat(mount.mountPoint.c_str(), &st) != 0 || st.st_uid != uid) {
+      continue;
+    }
+    // libproc reports st_dev for the mount's vnodes, whatever the mount type,
+    // as an unsigned 32-bit value; dev_t is signed, so widen without sign.
+    devices.push_back(static_cast<uint64_t>(static_cast<uint32_t>(st.st_dev)));
+  }
+#endif
+  return devices;
+}
 
-  auto pins = scanProcessPins(devices);
+} // namespace
+
+int runScanPinsMode() {
+  auto devices = callerMountDevices();
+  if (devices.hasError()) {
+    fprintf(
+        stderr,
+        "scan-pins: unable to list mounts: %s\n",
+        folly::errnoStr(devices.error()).c_str());
+    return 1;
+  }
+
+  auto pins = scanProcessPins(devices.value());
   if (pins.hasError()) {
     fprintf(
         stderr,
-        "scan-pins: unable to scan /proc: %s\n",
+        "scan-pins: unable to scan processes: %s\n",
         folly::errnoStr(pins.error()).c_str());
     return 1;
   }
   PinScanReport report;
-  report.scannedDevices.insert(devices.begin(), devices.end());
+  report.scannedDevices.insert(devices.value().begin(), devices.value().end());
   for (const auto& pin : pins.value()) {
     report.pinsByDevice[pin.dev].push_back(pin.ino);
   }
@@ -236,4 +591,4 @@ int runScanPinsMode() {
 
 } // namespace facebook::eden
 
-#endif // __linux__
+#endif // __linux__ || __APPLE__
