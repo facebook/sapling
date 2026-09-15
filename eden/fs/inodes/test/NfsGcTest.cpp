@@ -458,9 +458,27 @@ TEST_F(NfsGcTest, directoryWithNothingToClearIsNotInvalidatedAgain) {
   // A second run has no FS reference left to clear under "parent/child".
   auto attemptsBefore = numInvalidationAttempts();
   EXPECT_EQ(0, runGc(std::chrono::system_clock::time_point::max()));
-  // FIXME: GC chmods "parent/child" again anyway, and will keep doing so on
-  // every run for as long as its parent cannot be invalidated.
-  EXPECT_EQ(attemptsBefore + 1, numInvalidationAttempts());
+  // GC must not chmod "parent/child" again.
+  EXPECT_EQ(attemptsBefore, numInvalidationAttempts());
+}
+
+TEST_F(
+    NfsGcTest,
+    directoryWhoseOnlyReferencedChildrenAreDirectoriesIsLeftAlone) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+
+  // Without pin information the first run clears the three files but leaves
+  // "parent/child" referenced.
+  EXPECT_EQ(3, runGc(std::chrono::system_clock::time_point::max(), nullptr));
+  sweep();
+  ASSERT_TRUE(isLoaded(child));
+
+  // "parent" now has nothing this run may clear, since its only referenced
+  // child is a directory, so it is not chmod'ed either.
+  auto attemptsBefore = numInvalidationAttempts();
+  EXPECT_EQ(0, runGc(std::chrono::system_clock::time_point::max(), nullptr));
+  EXPECT_EQ(attemptsBefore, numInvalidationAttempts());
 }
 
 #endif

@@ -7102,6 +7102,29 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
           step.numInvalidated = 0;
           return step;
         }
+
+        // The invalidation exists to clear the children's FS references. A
+        // child that is neither loaded nor remembered has none, and a
+        // directory child is left alone without pin information, so when
+        // no child would be cleared the chmod would do nothing. Skip it, but
+        // let the parent proceed as if this directory had been invalidated
+        // so it can clear this directory's own reference.
+        auto* inodeMap = self->getInodeMap();
+        bool anyChildReferenced = false;
+        for (auto& entry : contents->entries.all()) {
+          if (entry.second.isDirectory() && !pinnedInodes) {
+            continue;
+          }
+          if (entry.second.getInode() ||
+              inodeMap->isInodeRemembered(entry.second.getInodeNumber())) {
+            anyChildReferenced = true;
+            break;
+          }
+        }
+        if (!anyChildReferenced) {
+          step.invalidated = true;
+          return step;
+        }
 #ifndef _WIN32
         // Windows platforms should not get to this path
         step.pending =
