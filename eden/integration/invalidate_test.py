@@ -65,8 +65,11 @@ class InvalidateTest(testcase.EdenRepoTest):
     ) -> None:
         """
         On macOS and Windows, both trees and files are invalidated.
-        On macOS, only invalidated trees are included in the
-        invalidated count; invalidated file counts are not.
+        On macOS, the count is the number of FS references the
+        invalidation cleared: one per file under an invalidated
+        directory. The top-level directories themselves stay referenced,
+        since the root, which holds .eden, is materialized and never
+        invalidated.
         On Linux, we don't invalidate any inode as the first step of GC.
         Because FUSE decrease the inode FS refcounts when needed
 
@@ -120,7 +123,7 @@ class InvalidateTest(testcase.EdenRepoTest):
         invalidated = await self.invalidate("")
         await self.assert_invalidation(
             invalidated,
-            expected_invalidated_darwin=3,
+            expected_invalidated_darwin=30,
             expected_invalidated_windows=33,
             expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 2,
@@ -136,7 +139,7 @@ class InvalidateTest(testcase.EdenRepoTest):
         invalidated = await self.invalidate("a")
         await self.assert_invalidation(
             invalidated,
-            expected_invalidated_darwin=1,
+            expected_invalidated_darwin=10,
             expected_invalidated_windows=10,
             expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 23,
@@ -161,7 +164,7 @@ class InvalidateTest(testcase.EdenRepoTest):
         invalidated = await self.invalidate("a", seconds=5)
         await self.assert_invalidation(
             invalidated,
-            expected_invalidated_darwin=1,
+            expected_invalidated_darwin=10,
             expected_invalidated_windows=10,
             expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 23,
@@ -180,7 +183,7 @@ class InvalidateTest(testcase.EdenRepoTest):
         invalidated = await self.invalidate("", seconds=5)
         await self.assert_invalidation(
             invalidated,
-            expected_invalidated_darwin=1,
+            expected_invalidated_darwin=10,
             expected_invalidated_windows=11,
             expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 11,

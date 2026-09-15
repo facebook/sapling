@@ -728,18 +728,24 @@ void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
   }
 }
 
-void InodeMap::clearFsRefcount(InodeNumber number) {
+bool InodeMap::clearFsRefcount(InodeNumber number) {
   InodePtr inodePtr;
+  bool wasReferenced = false;
   {
     auto data = data_.wlock();
+    auto unloadedIter = data->unloadedInodes_.find(number);
+    if (unloadedIter != data->unloadedInodes_.end()) {
+      wasReferenced = unloadedIter->second.numFsReferences != 0;
+    }
     inodePtr =
         decFsRefcountHelper(data, number, /*count=*/0, /*clearRefCount=*/true);
   }
   // Now release our lock before clearing the inode's FS reference
   // count and immediately releasing our pointer reference.
   if (inodePtr) {
-    inodePtr->clearFsRefcount();
+    wasReferenced = inodePtr->clearFsRefcount();
   }
+  return wasReferenced;
 }
 
 InodePtr InodeMap::decFsRefcountHelper(

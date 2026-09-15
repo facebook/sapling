@@ -133,8 +133,8 @@ class InodeBase {
    * where the kernel does not tell us when an inode has been dereferenced.
    * (NFS and Windows).
    */
-  void clearFsRefcount() {
-    numFsReferences_.store(0u, std::memory_order_release);
+  bool clearFsRefcount() {
+    return numFsReferences_.exchange(0u, std::memory_order_acq_rel) != 0;
   }
 
   /**

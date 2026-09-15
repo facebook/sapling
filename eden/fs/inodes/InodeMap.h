@@ -250,9 +250,11 @@ class InodeMap {
 
   /**
    * Clear the FS refcount for an inode number.
-   * This is used when we are deleting an inode and want to clear the refcount
+   * This is used when we are deleting an inode and want to clear the refcount.
+   *
+   * Returns true if the inode had a non-zero FS refcount.
    */
-  void clearFsRefcount(InodeNumber number);
+  bool clearFsRefcount(InodeNumber number);
 
   /**
    * See EdenMount::forgetStaleInodes

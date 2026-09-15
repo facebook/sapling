@@ -124,8 +124,10 @@ automatically.
 2. For each non-materialized directory older than the cutoff:
    - Invalidate the directory in the NFS cache via
      `nfsInvalidateCacheEntryForGC()`
-   - The invalidation callback decrements the FS refcount for all children
-3. Return the count of invalidated inodes
+   - The invalidation callback clears the FS refcount of all children
+3. Return the number of children whose FS refcount was cleared. A directory
+   whose invalidation failed contributes nothing and blocks the invalidation
+   of its ancestors
 
 **Key Considerations:**
 

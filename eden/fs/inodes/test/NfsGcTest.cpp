@@ -182,10 +182,9 @@ TEST_F(NfsGcTest, failedInvalidationIsNotCountedAsProgress) {
   auto numInvalidated = runGc(std::chrono::system_clock::time_point::max());
   sweep();
 
-  // FIXME: GC reports both directories as invalidated even though neither
-  // chmod succeeded. Nothing had its FS reference cleared, so it should
-  // report no progress.
-  EXPECT_EQ(2, numInvalidated);
+  // Neither chmod succeeded, so nothing had its FS reference cleared and GC
+  // must report no progress.
+  EXPECT_EQ(0, numInvalidated);
   EXPECT_TRUE(isLoaded(one));
   EXPECT_TRUE(isLoaded(two));
   EXPECT_TRUE(isLoaded(sibling));

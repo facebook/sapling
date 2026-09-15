@@ -184,17 +184,16 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         invalidated = await self.invalidate("")
 
         loaded_after = await self.get_loaded_count()
-        if sys.platform == "linux":
-            # On Linux with active FUSE invalidation, inodes should
-            # actually get unloaded (unlike the legacy path which can't
-            # invalidate on FUSE).
+        if sys.platform in ("linux", "darwin"):
+            # With active invalidation (FUSE on Linux, NFS on macOS), inodes
+            # should actually get unloaded (unlike the legacy FUSE path which
+            # can't invalidate).
             self.assertGreater(invalidated, 0)
             # Pressure GC should invalidate stale entries individually instead
             # of relying on one parent directory invalidation to reclaim an
-            # entire subtree.
+            # entire subtree. On NFS the count is the FS references cleared,
+            # one per file.
             self.assertGreaterEqual(invalidated, len(self.directories) * self.num_files)
-            self.assertLess(loaded_after, loaded_after_read)
-        elif sys.platform == "darwin":
             self.assertLess(loaded_after, loaded_after_read)
 
         # Files should still be readable
@@ -218,7 +217,7 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # Invalidate with 2s age: "a" is stale and "b" is fresh, so GC should
         # invalidate the stale entries under "a" individually.
         invalidated = await self.invalidate("", seconds=2)
-        if sys.platform == "linux":
+        if sys.platform in ("linux", "darwin"):
             self.assertGreaterEqual(invalidated, self.num_files)
 
         loaded_after = await self.get_loaded_count()

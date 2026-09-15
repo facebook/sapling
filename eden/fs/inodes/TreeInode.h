@@ -16,6 +16,7 @@
 #include <folly/Synchronized.h>
 #include <folly/container/F14Set.h>
 #include <folly/coro/safe/NowTask.h>
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -89,6 +90,17 @@ struct TreeInodeState {
    * treeId will be none.
    */
   std::optional<ObjectId> treeId;
+};
+
+/**
+ * Outcome of one directory's NFS GC invalidation. The invalidation callback
+ * fills it in once the chmod that flushes the NFS client's cache for the
+ * directory has completed, so it is only final after the channel's
+ * completeInvalidations() resolves.
+ */
+struct NfsGcInvalidation {
+  std::atomic<bool> succeeded{false};
+  std::atomic<uint64_t> numCleared{0};
 };
 
 /**
@@ -1357,13 +1369,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
 #ifndef _WIN32
   /**
-   * Sends a request to the kernel to invalidate its cache for this tree and
-   * then deletes all its children's inode. In NFS, this function is distinct
-   * from `invalidateChannelEntryCache` and is used exclusively for garbage
-   * collection because inodes need to be deleted after invalidation during NFS
-   * garbage collection.
+   * Sends a request to the kernel to invalidate its cache for this tree and,
+   * once that has succeeded, clears the FS references of all of its children
+   * so the GC sweep can unload them. In NFS, this function is distinct from
+   * `invalidateChannelEntryCache` and is used exclusively for garbage
+   * collection.
+   *
+   * Returns the outcome of the invalidation, or nullptr if none was queued.
    */
-  [[nodiscard]] folly::Try<folly::Unit> nfsInvalidateCacheEntryForGC(
+  std::shared_ptr<NfsGcInvalidation> nfsInvalidateCacheEntryForGC(
       TreeInodeState& state);
 #endif
 
