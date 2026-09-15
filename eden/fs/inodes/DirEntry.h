@@ -7,8 +7,8 @@
 
 #pragma once
 #include <cstdint>
+#include <iterator>
 #include <optional>
-#include <ranges>
 #include <utility>
 
 #include "eden/common/utils/CaseSensitivity.h"
@@ -349,15 +349,73 @@ struct DirContents : PathMap<DirEntry> {
 };
 
 /**
+ * Forward walk over the entries of a DirContents or Tree that skips
+ * restricted ACL roots when asked to. A hand-written walk rather than
+ * std::views::filter: libstdc++'s filter iterator increments through an
+ * out-of-line find_if that copies the 48-byte PathMap iterator through
+ * memory on every step, which costs several times the walk itself.
+ */
+template <typename Iter>
+class VisibleEntriesIterator {
+ public:
+  VisibleEntriesIterator(Iter it, Iter end, bool omitRestricted)
+      : it_{std::move(it)},
+        end_{std::move(end)},
+        omitRestricted_{omitRestricted} {
+    skipHidden();
+  }
+
+  decltype(auto) operator*() const {
+    return *it_;
+  }
+
+  VisibleEntriesIterator& operator++() {
+    ++it_;
+    skipHidden();
+    return *this;
+  }
+
+  bool operator==(std::default_sentinel_t) const {
+    return it_ == end_;
+  }
+
+ private:
+  void skipHidden() {
+    while (omitRestricted_ && it_ != end_ && (*it_).second.isRestricted()) {
+      ++it_;
+    }
+  }
+
+  Iter it_;
+  Iter end_;
+  bool omitRestricted_;
+};
+
+template <typename Dir>
+class VisibleEntries {
+ public:
+  VisibleEntries(Dir& dir, bool omitRestricted)
+      : dir_{&dir}, omitRestricted_{omitRestricted} {}
+
+  auto begin() const {
+    return VisibleEntriesIterator{dir_->begin(), dir_->end(), omitRestricted_};
+  }
+  std::default_sentinel_t end() const {
+    return {};
+  }
+
+ private:
+  Dir* dir_;
+  bool omitRestricted_;
+};
+
+/**
  * Entries of `dir` (a DirContents or Tree) as users see them: restricted ACL
  * roots drop out in omitted mode. Explicit lookup by name is unaffected.
  */
 template <typename Dir>
 auto visibleEntries(Dir& dir, RestrictedContentMode mode) {
-  const bool omit = mode == RestrictedContentMode::Omitted;
-  return dir | std::views::filter([omit](const auto& entry) {
-           return !omit || !entry.second.isRestricted();
-         });
+  return VisibleEntries<Dir>{dir, mode == RestrictedContentMode::Omitted};
 }
 
 /**
