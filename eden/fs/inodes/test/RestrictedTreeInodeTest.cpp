@@ -1101,13 +1101,52 @@ TEST(RestrictedTreeInode, omittedMode_fuseReaddirResumesAcrossOmittedEntry) {
   }
 }
 
+CO_TEST(RestrictedTreeInode, omittedMode_readdirIndexReflectsPermissionGrant) {
+  // Granting access clears the restricted bit in place, which leaves the
+  // entries' mutation count alone. An index cached by a listing that was
+  // abandoned before its end therefore stays usable, and must list the
+  // entry that just became visible.
+  FakeTreeBuilder builder;
+  builder.setFile("parent/a.txt", "a");
+  builder.setFile("parent/b.txt", "b");
+  builder.setFile("parent/c.txt", "c");
+  builder.setFile("parent/z_restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("parent/z_restricted");
+  auto testMount = makeOmittedModeTestMount(builder);
+
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto restrictedInode = testMount->getTreeInode("parent/z_restricted"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  CO_ASSERT_TRUE(restrictedInode->isRestricted());
+
+  // Too small for ".", "..", "a.txt", "b.txt" and "c.txt", so the listing
+  // ends early and leaves its index behind.
+  auto firstPage =
+      parentInode->fuseReaddir(FuseDirList{128}, 0, context).extract();
+  CO_ASSERT_FALSE(firstPage.empty());
+  CO_ASSERT_LT(firstPage.size(), 5u);
+
+  testMount->getBackingStore()->setCheckPermissionResult(
+      restrictedInode->getObjectId().value(), true);
+  co_await restrictedInode->co_stat(context);
+  CO_ASSERT_FALSE(restrictedInode->isRestricted());
+
+  auto relisted =
+      parentInode->fuseReaddir(FuseDirList{4096}, 0, context).extract();
+  EXPECT_NE(
+      std::find_if(
+          relisted.begin(),
+          relisted.end(),
+          [](const auto& entry) { return entry.name == "z_restricted"; }),
+      relisted.end());
+}
+
 TEST(
     RestrictedTreeInode,
     omittedMode_nfsReaddirReportsEofWithTrailingOmittedEntry) {
   // NFS is the only consumer of readdirImpl's EOF bit, and the planned
-  // batched enumeration-time permission refresh will rework this loop.
-  // Restricted entries never enter the offset index, so pin now that a
-  // drain whose trailing entry is omitted still reports EOF.
+  // batched enumeration-time permission refresh will rework this loop, so
+  // pin now that a drain whose trailing entry is omitted still reports EOF.
   //
   // Inode numbers are allocated in name order, so z_restricted's inode
   // number (and thus readdir offset) is the largest — the omitted entry

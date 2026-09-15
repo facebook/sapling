@@ -42,6 +42,7 @@ struct TreeCacheStats;
 struct ScmStatusCacheStats;
 struct TakeoverStats;
 struct CheckoutStats;
+struct TreeInodeStats;
 struct FakeStats;
 
 class EdenStats : public RefCounted {
@@ -99,6 +100,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<ScmStatusCacheStats> scmStatusCacheStats_;
   ThreadLocal<TakeoverStats> takeoverStats_;
   ThreadLocal<CheckoutStats> checkoutStats_;
+  ThreadLocal<TreeInodeStats> treeInodeStats_;
   ThreadLocal<FakeStats> fakeStats_;
 };
 
@@ -186,6 +188,11 @@ inline TakeoverStats& EdenStats::getStatsForCurrentThread<TakeoverStats>() {
 template <>
 inline CheckoutStats& EdenStats::getStatsForCurrentThread<CheckoutStats>() {
   return *checkoutStats_.get();
+}
+
+template <>
+inline TreeInodeStats& EdenStats::getStatsForCurrentThread<TreeInodeStats>() {
+  return *treeInodeStats_.get();
 }
 
 template <>
@@ -799,6 +806,11 @@ struct TakeoverStats : StatsGroup<TakeoverStats> {
 
 struct CheckoutStats : StatsGroup<CheckoutStats> {
   Counter avoidedDestinationConflicts{"checkout.avoided_destination_conflicts"};
+};
+
+struct TreeInodeStats : StatsGroup<TreeInodeStats> {
+  Counter readdirIndexHit{"inodes.readdir_index_hit"};
+  Counter readdirIndexCached{"inodes.readdir_index_cached"};
 };
 
 /*

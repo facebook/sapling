@@ -3426,6 +3426,101 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
   }
 }
 
+namespace {
+
+/**
+ * Index the entries past `minOffset` by inode number. A request building an
+ * index for itself passes its own offset, so the request that ends a
+ * listing, which finds nothing past its offset, sorts nothing and allocates
+ * nothing.
+ *
+ * Restricted entries are indexed too. Granting access to one clears its
+ * restricted bit in place, which leaves entries.mutationCount() alone, so an
+ * index that left the entry out would keep hiding it from listings that
+ * should now show it.
+ */
+ReaddirIndex buildReaddirIndex(const DirEntries& entries, off_t minOffset) {
+  ReaddirIndex index{entries.mutationCount(), minOffset, {}};
+  if (minOffset == 0) {
+    index.entries.reserve(entries.size());
+  }
+  for (const auto& mapEntry : entries.all()) {
+    const auto inodeNumber = mapEntry.second.getInodeNumber();
+    if (static_cast<off_t>(inodeNumber.get() + 2) > minOffset) {
+      index.entries.emplace_back(inodeNumber, &mapEntry);
+    }
+  }
+  std::sort(
+      index.entries.begin(),
+      index.entries.end(),
+      [](const auto& a, const auto& b) { return a.first < b.first; });
+  return index;
+}
+
+/**
+ * A cached index serves a request at `offset` only while the map has not
+ * been mutated since the index was built (its entry pointers would
+ * otherwise dangle) and it covers everything past `offset`.
+ */
+bool isReaddirIndexCurrent(
+    const ReaddirIndex& index,
+    const TreeInodeState& state,
+    off_t offset) {
+  return index.mutationCount == state.entries.mutationCount() &&
+      offset >= index.minOffset;
+}
+
+/**
+ * The first indexed entry a request at `offset` lists. Omitted entries are
+ * skipped here as well as during emission, so that a request with nothing
+ * but omitted entries left reaches the end of the index and is recognized as
+ * the end of the listing.
+ */
+auto firstIndexedAfter(
+    const ReaddirIndex& index,
+    RestrictedContentMode mode,
+    off_t offset) {
+  auto it = std::lower_bound(
+      index.entries.begin(),
+      index.entries.end(),
+      offset,
+      [](const auto& indexed, off_t off) {
+        return static_cast<off_t>(indexed.first.get() + 2) <= off;
+      });
+  if (mode == RestrictedContentMode::Omitted) {
+    it = std::find_if(it, index.entries.end(), [](const auto& indexed) {
+      return !indexed.second->second.isRestricted();
+    });
+  }
+  return it;
+}
+
+/**
+ * Emit the indexed entries from `it` on, in offset order, until `add`
+ * declines one. Returns whether the index was exhausted.
+ */
+template <typename Iter, typename Fn>
+bool emitReaddirIndex(
+    const ReaddirIndex& index,
+    RestrictedContentMode mode,
+    Iter it,
+    Fn& add) {
+  const bool omit = mode == RestrictedContentMode::Omitted;
+  for (; it != index.entries.end(); ++it) {
+    const auto& [name, entry] = *it->second;
+    XDCHECK(entry.getInodeNumber() == it->first);
+    if (omit && entry.isRestricted()) {
+      continue;
+    }
+    if (!add(name.view(), entry, static_cast<off_t>(it->first.get() + 2))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
+
 template <typename Fn>
 bool TreeInode::readdirImpl(
     off_t off,
@@ -3456,8 +3551,10 @@ bool TreeInode::readdirImpl(
    *
    * Today, Eden does not support hard links. Therefore, in the short term, we
    * can store inode numbers in off_t and treat them as an index into an
-   * inode-sorted list of entries. This has quadratic time complexity without an
-   * additional index but is correct.
+   * inode-sorted list of entries. Building that list costs a sort of the
+   * whole directory, so a listing that spans several requests caches it in
+   * TreeInode::readdirIndex_ for the later ones and drops it once the
+   * listing ends; the map's mutation count says whether it is still valid.
    *
    * In the long term, especially when Eden's tree directory structure is stored
    * in SQLite or something similar, we should maintain a seekdir/readdir cookie
@@ -3510,33 +3607,50 @@ bool TreeInode::readdirImpl(
     }
   }
 
+  // Offsets are ino + 2, not list positions, so omitting an entry never
+  // shifts the offsets of the rest across resumed readdir calls.
+  const auto mode = restrictedContentMode();
+  const bool cacheIndex =
+      getMount()->getEdenConfig()->experimentalReaddirIndexCache.getValue();
+  const auto& stats = getMount()->getStats();
+
   auto dir = lockContentsRead();
-
-  // Index the visible entries by InodeNumber, only including those past the
-  // given offset. Offsets are ino + 2, not list positions, so omitting an
-  // entry never shifts the offsets of the rest across resumed readdir calls.
-  std::vector<std::pair<InodeNumber, const DirContents::value_type*>> indices;
-  indices.reserve(dir->entries.size());
-  for (const auto& mapEntry : dir->entries.visible(restrictedContentMode())) {
-    auto inodeNumber = mapEntry.second.getInodeNumber();
-    if (static_cast<off_t>(inodeNumber.get() + 2) > off) {
-      indices.emplace_back(inodeNumber, &mapEntry);
-    }
-  }
-  std::make_heap(indices.begin(), indices.end(), std::greater<>{});
-
-  // The provided FuseDirList has limited space. Add entries until no more fit.
-  while (!indices.empty()) {
-    std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
-    auto& [name, entry] = *indices.back().second;
-    indices.pop_back();
-
-    if (!add(name.view(), entry, entry.getInodeNumber().get() + 2)) {
-      return false;
+  std::shared_ptr<const ReaddirIndex> cached;
+  if (cacheIndex) {
+    // Building the index costs a sort of the whole directory, so a listing
+    // that takes several requests shares one index between them. The read
+    // lock held here keeps entries.mutationCount() stable, so an index that
+    // matches it can be used for the rest of this request.
+    cached = readdirIndex_.copy();
+    if (cached && isReaddirIndexCurrent(*cached, *dir, off)) {
+      stats->increment(&TreeInodeStats::readdirIndexHit);
+      const auto first = firstIndexedAfter(*cached, mode, off);
+      if (first == cached->entries.end()) {
+        // Nothing left to list past `off`: the listing is over.
+        readdirIndex_.wlock()->reset();
+        return true;
+      }
+      return emitReaddirIndex(*cached, mode, first, add);
     }
   }
 
-  return true;
+  // Only entries past `off` are indexed, so emission starts at the front.
+  auto index = buildReaddirIndex(dir->entries, off);
+  const bool finished =
+      emitReaddirIndex(index, mode, index.entries.begin(), add);
+  if (cacheIndex) {
+    if (!finished) {
+      // More requests will follow; let them reuse this index.
+      *readdirIndex_.wlock() =
+          std::make_shared<const ReaddirIndex>(std::move(index));
+      stats->increment(&TreeInodeStats::readdirIndexCached);
+    } else if (cached) {
+      // The cached index failed isReaddirIndexCurrent above and this listing
+      // is over, so nothing will use it again.
+      readdirIndex_.wlock()->reset();
+    }
+  }
+  return finished;
 }
 
 #ifndef _WIN32
@@ -3568,6 +3682,11 @@ std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
       [&list](StringPiece name, const DirEntry& entry, uint64_t offset) {
         return list.add(name, entry.getInodeNumber(), offset);
       });
+  if (isEof) {
+    // NFS clients stop at eof without the empty request that ends a FUSE
+    // listing, so this is where a cached index is dropped.
+    readdirIndex_.wlock()->reset();
+  }
 
   return {std::move(list), isEof};
 }

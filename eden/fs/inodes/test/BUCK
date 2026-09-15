@@ -594,6 +594,7 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:case_sensitivity",
@@ -608,6 +609,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
+        "//fb303:service_data",
         "//folly:exception",
         "//folly:random",
         "//folly/coro:gtest_helpers",

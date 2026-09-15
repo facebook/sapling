@@ -9,6 +9,8 @@
 
 #include "eden/fs/model/TreeAuxData.h"
 
+#include <fb303/ServiceData.h>
+#include <fmt/format.h>
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/coro/GtestHelpers.h>
@@ -336,6 +338,205 @@ TEST_P(TreeInodeTestBase, fuseReaddirIgnoresWildOffsets) {
   EXPECT_EQ(0, result.size());
 }
 
+namespace {
+
+struct ReaddirIndexCounters {
+  int64_t hit;
+  int64_t cached;
+};
+
+ReaddirIndexCounters getReaddirIndexCounters(TestMount& mount) {
+  mount.getServerState()->getStats()->flush();
+  auto* data = facebook::fb303::ServiceData::get();
+  auto get = [&](folly::StringPiece key) {
+    return data->getCounterIfExists(key).value_or(0);
+  };
+  return {
+      get("inodes.readdir_index_hit.sum"),
+      get("inodes.readdir_index_cached.sum")};
+}
+
+/**
+ * Enough same-length names that a listing with a 4 KiB buffer takes several
+ * readdir requests.
+ */
+std::vector<std::string> manyNames(size_t count = 300) {
+  std::vector<std::string> names;
+  names.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+    names.push_back(fmt::format("file{:03}", i));
+  }
+  return names;
+}
+
+/**
+ * Lists `dir` from `offset` until a request returns nothing, counting how
+ * often each name is returned. Returns the number of requests made.
+ */
+unsigned listToEnd(
+    const TreeInodePtr& dir,
+    off_t offset,
+    std::map<std::string, unsigned>& seen) {
+  unsigned requests = 0;
+  for (;;) {
+    auto result =
+        dir->fuseReaddir(
+               FuseDirList{4096}, offset, ObjectFetchContext::getNullContext())
+            .extract();
+    ++requests;
+    if (result.empty()) {
+      return requests;
+    }
+    for (auto& entry : result) {
+      ++seen[entry.name];
+    }
+    offset = result.back().offset;
+  }
+}
+
+} // namespace
+
+TEST_P(TreeInodeTestBase, readdirIndexIsReusedByTheRequestsOfOneListing) {
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile(name, "");
+  }
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  auto root = mount.getEdenMount()->getRootInode();
+
+  const auto before = getReaddirIndexCounters(mount);
+  std::map<std::string, unsigned> seen;
+  const auto requests = listToEnd(root, 0, seen);
+  ASSERT_GT(requests, 2u);
+  for (const auto& name : names) {
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  auto after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(1, after.cached - before.cached);
+  // Every request after the first, including the empty one that ends the
+  // listing, is served from the cached index.
+  EXPECT_EQ(requests - 1, after.hit - before.hit);
+
+  // The index is dropped when the listing ends, so the next listing caches
+  // its own.
+  seen.clear();
+  listToEnd(root, 0, seen);
+  after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(2, after.cached - before.cached);
+}
+
+TEST_P(TreeInodeTestBase, readdirIndexIsRebuiltAfterTheDirectoryChanges) {
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile(name, "");
+  }
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  auto root = mount.getEdenMount()->getRootInode();
+
+  const auto before = getReaddirIndexCounters(mount);
+  auto firstPage =
+      root->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+  ASSERT_FALSE(firstPage.empty());
+  EXPECT_EQ(1, getReaddirIndexCounters(mount).cached - before.cached);
+
+  // Creating an entry mutates the map, so the rest of the listing cannot
+  // trust the cached index and builds a new one.
+  root->symlink("zzz"_pc, "target", InvalidationRequired::No);
+
+  std::map<std::string, unsigned> seen;
+  for (auto& entry : firstPage) {
+    ++seen[entry.name];
+  }
+  listToEnd(root, firstPage.back().offset, seen);
+  for (const auto& name : names) {
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  const auto after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(2, after.cached - before.cached);
+}
+
+TEST_P(TreeInodeTestBase, readdirIndexIsRebuiltAfterRenameOverAnEntry) {
+  // Renaming over an existing entry replaces that entry's DirEntry rather
+  // than inserting or erasing one; it still has to count as a mutation of
+  // the destination directory for the cached index to be rebuilt.
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile("dir/" + name, "");
+  }
+  builder.setFile("other/src", "");
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  auto dir = mount.getTreeInode("dir"_relpath);
+  auto other = mount.getTreeInode("other"_relpath);
+
+  const auto before = getReaddirIndexCounters(mount);
+  auto firstPage =
+      dir->fuseReaddir(
+             FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+  ASSERT_FALSE(firstPage.empty());
+  EXPECT_EQ(1, getReaddirIndexCounters(mount).cached - before.cached);
+
+  // Entries were given inode numbers in name order when `dir` was loaded, so
+  // the last name is on a later page.
+  const auto& replaced = names.back();
+  auto fut = other
+                 ->rename(
+                     "src"_pc,
+                     dir,
+                     PathComponentPiece{replaced},
+                     InvalidationRequired::No,
+                     ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
+
+  std::map<std::string, unsigned> seen;
+  for (auto& entry : firstPage) {
+    ++seen[entry.name];
+  }
+  listToEnd(dir, firstPage.back().offset, seen);
+  for (const auto& name : names) {
+    if (name == replaced) {
+      continue;
+    }
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  EXPECT_EQ(2, getReaddirIndexCounters(mount).cached - before.cached);
+}
+
+TEST_P(TreeInodeTestBase, readdirIndexCacheCanBeDisabled) {
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile(name, "");
+  }
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  mount.updateEdenConfig({
+      {"experimental:readdir-index-cache", "false"},
+  });
+  auto root = mount.getEdenMount()->getRootInode();
+
+  const auto before = getReaddirIndexCounters(mount);
+  std::map<std::string, unsigned> seen;
+  ASSERT_GT(listToEnd(root, 0, seen), 2u);
+  for (const auto& name : names) {
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  const auto after = getReaddirIndexCounters(mount);
+  EXPECT_EQ(0, after.cached - before.cached);
+  EXPECT_EQ(0, after.hit - before.hit);
+}
+
 TEST_P(TreeInodeTestBase, nfsReaddirEofIsCorrect) {
   FakeTreeBuilder builder;
   builder.setFiles({{"foo", ""}, {"bar", ""}, {"baz", ""}});
@@ -373,6 +574,54 @@ TEST_P(TreeInodeTestBase, nfsReaddirEofIsCorrect) {
   // then we know we've covered that case.
   ASSERT_NE(listingSizesReturned.contains(5), 0);
   ASSERT_NE(listingSizesReturned.contains(6), 0);
+}
+
+TEST_P(TreeInodeTestBase, nfsReaddirDropsTheIndexAtEof) {
+  // NFS clients stop at eof rather than sending the empty request that ends
+  // a FUSE listing, so eof is where the cached index has to go.
+  FakeTreeBuilder builder;
+  const auto names = manyNames();
+  for (const auto& name : names) {
+    builder.setFile(name, "");
+  }
+  TestMount mount{builder};
+  maybeEnableCoroutines(mount);
+  auto root = mount.getEdenMount()->getRootInode();
+
+  auto listAll = [&] {
+    std::map<std::string, unsigned> seen;
+    uint64_t cookie = 0;
+    for (;;) {
+      auto [list, isEof] = root->nfsReaddir(
+          NfsDirList{4096, nfsv3Procs::readdir},
+          cookie,
+          ObjectFetchContext::getNullContext());
+      const auto entries = list.extractList<entry3>().list;
+      for (const auto& entry : entries) {
+        ++seen[entry.name];
+      }
+      if (isEof) {
+        return seen;
+      }
+      if (entries.empty()) {
+        ADD_FAILURE() << "empty page before eof";
+        return seen;
+      }
+      cookie = entries.back().cookie;
+    }
+  };
+
+  const auto before = getReaddirIndexCounters(mount);
+  auto seen = listAll();
+  for (const auto& name : names) {
+    EXPECT_EQ(1u, seen[name]) << name;
+  }
+  EXPECT_EQ(1, getReaddirIndexCounters(mount).cached - before.cached);
+
+  // Had the index lingered past eof, this listing would be served from it
+  // instead of caching one of its own.
+  listAll();
+  EXPECT_EQ(2, getReaddirIndexCounters(mount).cached - before.cached);
 }
 
 namespace {

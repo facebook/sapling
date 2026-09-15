@@ -810,6 +810,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Keep the inode-number-ordered index that readdir builds for a directory
+   * across the requests of one listing, instead of rebuilding it for every
+   * request. The index is dropped once the listing ends or the directory
+   * changes.
+   */
+  ConfigSetting<bool> experimentalReaddirIndexCache{
+      "experimental:readdir-index-cache",
+      true,
+      this};
+
+  /**
    * Specify the interval of periodic accidental unmount recovery.
    */
   ConfigSetting<std::chrono::nanoseconds> accidentalUnmountRecoveryInterval{

@@ -16,6 +16,7 @@
 #include <folly/Synchronized.h>
 #include <folly/container/F14Set.h>
 #include <folly/coro/safe/NowTask.h>
+#include <folly/small_vector.h>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -125,6 +126,32 @@ struct NfsGcPreparedInvalidation {
   folly::Function<uint64_t()> forget;
   /** The directory and its ancestors, see Nfsd3::invalidateWithQueueLimit. */
   std::vector<InodeNumber> lineage;
+};
+
+/**
+ * The entries of a directory in inode-number order, which is the order
+ * readdir lists them in. Restricted entries are indexed like any other: a
+ * permission grant makes one visible without mutating the map, so whether an
+ * entry is listed has to be decided when it is emitted rather than here.
+ * TreeInode::readdirImpl shares one index between the requests of a listing;
+ * see there for when it is trusted and dropped.
+ */
+struct ReaddirIndex {
+  /**
+   * entries.mutationCount() when the index was built. The index is used only
+   * while the count is unchanged, which guarantees the entry pointers are
+   * still valid.
+   */
+  uint64_t mutationCount;
+  /** Only entries whose offset follows this one are indexed. */
+  off_t minOffset;
+  /**
+   * Inline storage covers a directory of ordinary size, so a listing that
+   * fits in one request allocates nothing.
+   */
+  folly::
+      small_vector<std::pair<InodeNumber, const DirContents::value_type*>, 16>
+          entries;
 };
 
 /**
@@ -1554,6 +1581,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Only prefetch children aux data once.
    */
   std::atomic<PrefetchState> prefetchState_{NeverEnumerated};
+
+  /**
+   * Index shared by the requests of a listing in flight; see readdirImpl.
+   * Its lock is held only to copy or replace the pointer, so readdir never
+   * needs the contents write lock.
+   */
+  folly::Synchronized<std::shared_ptr<const ReaddirIndex>> readdirIndex_;
 
   /**
    * This number is not guaranteed to be completely accurate as it is modified

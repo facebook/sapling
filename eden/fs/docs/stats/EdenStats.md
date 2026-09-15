@@ -32,6 +32,14 @@ The list of all the EdenStats Counter/Duration are as follows:
      Number of conflicts avoided because a loaded inode already matched the
      checkout destination.
 
+- TreeInodeStats
+  1. `Counter readdirIndexHit{"inodes.readdir_index_hit"}` : Number of readdir
+     requests served from a directory's cached inode-ordered index.
+
+  2. `Counter readdirIndexCached{"inodes.readdir_index_cached"}` : Number of
+     times a listing that did not fit in one request cached its index for the
+     remaining requests.
+
 - JournalStats
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a
      truncated read happens in Journal.
