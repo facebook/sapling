@@ -5916,20 +5916,33 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 #endif
 
 #ifndef _WIN32
-std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
+bool TreeInode::nfsInvalidateDirCacheLocked(
     TreeInodeState& state,
-    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes) {
+    folly::Function<void()> onSuccess,
+    std::optional<NfsInvalidationSource> source) {
   auto* nfsdChannel = getMount()->getNfsdChannel();
   if (!nfsdChannel) {
-    return nullptr;
+    return false;
   }
   const auto path = getPath();
   if (!path.has_value()) {
+    return false;
+  }
+  auto mode = getMetadataLocked(state.entries).mode;
+  nfsdChannel->invalidate(
+      getMount()->getPath() + *path, mode, std::move(onSuccess), source);
+  return true;
+}
+
+std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
+    TreeInodeState& state,
+    const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes) {
+  const auto path = getPath();
+  if (!path.has_value() || !getMount()->getNfsdChannel()) {
     return nullptr;
   }
 
   // The contents lock is held by invalidateChildrenNotMaterialized
-  auto mode = getMetadataLocked(state.entries).mode;
   std::vector<InodeNumber> childInodes;
   childInodes.reserve(state.entries.size());
   for (const auto& entry : state.entries.all()) {
@@ -5940,9 +5953,8 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
   }
   auto outcome = std::make_shared<NfsGcInvalidation>();
   auto stats = getMount()->getStats().copy();
-  nfsdChannel->invalidate(
-      getMount()->getPath() + *path,
-      mode,
+  const bool queued = nfsInvalidateDirCacheLocked(
+      state,
       [inodeMapWeak = getInodeMapWeak(),
        stats = std::move(stats),
        childInodes = std::move(childInodes),
@@ -5979,7 +5991,7 @@ std::shared_ptr<NfsGcInvalidation> TreeInode::nfsInvalidateCacheEntryForGC(
         outcome->succeeded.store(true, std::memory_order_release);
       },
       NfsInvalidationSource::Gc);
-  return outcome;
+  return queued ? outcome : nullptr;
 }
 #endif
 
@@ -6039,12 +6051,9 @@ ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
     // when an entry is removed or modified. But when new entries are
     // added, the inode itself must be invalidated.
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
-  } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
-    const auto path = getPath();
-    if (path.has_value()) {
-      auto mode = getMetadataLocked(state.entries).mode;
-      nfsdChannel->invalidate(getMount()->getPath() + *path, mode);
-    }
+  } else {
+    // Does nothing when the mount has no NFS channel either.
+    nfsInvalidateDirCacheLocked(state);
   }
 #else
   (void)state;
@@ -6080,12 +6089,9 @@ TreeInode::InvalidationSnapshot TreeInode::prepareInvalidateDirCache(
   // which protects access to `state` for the NFS mode lookup.
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
-  } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
-    const auto path = getPath();
-    if (path.has_value()) {
-      auto mode = getMetadataLocked(state.entries).mode;
-      nfsdChannel->invalidate(getMount()->getPath() + *path, mode);
-    }
+  } else {
+    // Does nothing when the mount has no NFS channel either.
+    nfsInvalidateDirCacheLocked(state);
   }
 #else
   (void)state;

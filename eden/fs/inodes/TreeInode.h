@@ -103,6 +103,8 @@ struct NfsGcInvalidation {
   std::atomic<uint64_t> numCleared{0};
 };
 
+enum class NfsInvalidationSource : uint8_t;
+
 /**
  * Represents a directory in the file system.
  */
@@ -1390,6 +1392,19 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodeState& state,
       const std::shared_ptr<const folly::F14FastSet<InodeNumber>>&
           pinnedInodes);
+
+  /**
+   * Queue the chmod that makes the NFS client flush its cache for this
+   * directory, calling onSuccess once it has completed. The contents lock
+   * must be held.
+   *
+   * Returns false, without doing anything, if the mount has no NFS channel
+   * or this directory has been unlinked.
+   */
+  bool nfsInvalidateDirCacheLocked(
+      TreeInodeState& state,
+      folly::Function<void()> onSuccess = nullptr,
+      std::optional<NfsInvalidationSource> source = std::nullopt);
 #endif
 
   /**
