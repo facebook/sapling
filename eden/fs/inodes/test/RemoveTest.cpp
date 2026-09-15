@@ -326,14 +326,46 @@ TEST(RemoveAllChildrenTest, loadedChildKeepsItsOverlayStateUntilUnloaded) {
         renameLock);
   }
 
-  // FIXME: sub is still referenced here, but its overlay state has already
-  // been freed, so touching its timestamps throws.
-  EXPECT_FALSE(overlay->hasOverlayDir(subNumber));
-  EXPECT_FALSE(metadata->getOptional(subNumber).has_value());
+  EXPECT_TRUE(overlay->hasOverlayDir(subNumber));
+  EXPECT_TRUE(metadata->getOptional(subNumber).has_value());
+  EXPECT_NO_THROW(sub->getMetadata());
 
   sub.reset();
   EXPECT_FALSE(overlay->hasOverlayDir(subNumber));
   EXPECT_FALSE(metadata->getOptional(subNumber).has_value());
+}
+
+// The same holds for a loaded file: it stays readable, and its overlay file
+// and metadata record are freed only when it is unloaded.
+TEST(RemoveAllChildrenTest, loadedFileKeepsItsOverlayStateUntilUnloaded) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "This is file.txt.\n");
+  TestMount mount{builder};
+  mount.overwriteFile("dir/file.txt", "This is the new file.txt.\n");
+
+  auto dir = mount.getTreeInode("dir");
+  auto file = mount.getFileInode("dir/file.txt");
+  auto fileNumber = file->getNodeId();
+  auto* metadata = mount.getEdenMount()->getInodeMetadataTable();
+  auto* overlay = mount.getEdenMount()->getOverlay();
+  ASSERT_TRUE(overlay->hasOverlayFile(fileNumber));
+  ASSERT_TRUE(metadata->getOptional(fileNumber).has_value());
+
+  {
+    auto renameLock = mount.getEdenMount()->acquireRenameLock();
+    dir->removeAllChildrenRecursively(
+        InvalidationRequired::No,
+        ObjectFetchContext::getNullContext(),
+        renameLock);
+  }
+
+  EXPECT_TRUE(overlay->hasOverlayFile(fileNumber));
+  EXPECT_TRUE(metadata->getOptional(fileNumber).has_value());
+  EXPECT_FILE_INODE(file, "This is the new file.txt.\n", 0644);
+
+  file.reset();
+  EXPECT_FALSE(overlay->hasOverlayFile(fileNumber));
+  EXPECT_FALSE(metadata->getOptional(fileNumber).has_value());
 }
 #endif
 

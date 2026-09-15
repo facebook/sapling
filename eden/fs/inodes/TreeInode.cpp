@@ -2525,7 +2525,8 @@ void TreeInode::removeAllChildrenRecursively(
   while (it != contents->entries.end()) {
     auto inodeNum = it->second.getInodeNumber();
     bool isDir = it->second.isDirectory();
-    if (it->second.getInode()) {
+    bool isLoaded = it->second.getInode() != nullptr;
+    if (isLoaded) {
       // If a treeInode is not empty, i.e. files were added to the tree
       // between step2 and step3, an exception will be thrown.
 
@@ -2555,10 +2556,15 @@ void TreeInode::removeAllChildrenRecursively(
     // Erase from contents must happen right after markUnlink
     it = contents->entries.erase(it);
 
-    if (isDir) {
-      getOverlay()->recursivelyRemoveOverlayDir(inodeNum);
-    } else {
-      getOverlay()->removeOverlayFile(inodeNum);
+    // A loaded child frees its own overlay state when it is unloaded, which
+    // may not happen until the kernel drops its references to it. Freeing it
+    // here would take that state away from an inode that is still in use.
+    if (!isLoaded) {
+      if (isDir) {
+        getOverlay()->recursivelyRemoveOverlayDir(inodeNum);
+      } else {
+        getOverlay()->removeOverlayFile(inodeNum);
+      }
     }
   }
 
