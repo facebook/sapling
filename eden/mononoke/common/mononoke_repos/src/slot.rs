@@ -51,7 +51,7 @@ impl<R> RepoSlot<R> {
     }
 
     /// A slot for a repo that is already built.
-    pub fn ready(repo: Arc<R>) -> Self {
+    pub(crate) fn ready(repo: Arc<R>) -> Self {
         Self {
             state: ArcSwap::from_pointee(SlotState::Ready(repo)),
         }
