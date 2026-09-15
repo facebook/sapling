@@ -638,6 +638,22 @@ void Overlay::initOverlay(
       MappedDiskVectorOptions{
           .useSigbusProtection = useSigbusProtection,
       });
+  if (!hadCleanStartup_) {
+    // The next inode number was rediscovered by scanning the overlay, so
+    // numbers at or above it will be handed out again. Records for them
+    // belong to inodes that no longer exist.
+    auto freed =
+        inodeMetadataTable_->freeInodesFrom(InodeNumber{nextInodeNumber});
+    if (freed > 0) {
+      XLOGF(
+          INFO,
+          "Overlay {}: dropped {} inode metadata records at or above the "
+          "rediscovered next inode number {}",
+          localDir_,
+          freed,
+          nextInodeNumber);
+    }
+  }
 #endif // !_WIN32
 }
 

@@ -233,6 +233,30 @@ class InodeTable {
   }
 
   /**
+   * Free every record whose inode number is `first` or greater, and return
+   * how many were freed.
+   *
+   * Used when the next inode number has been rediscovered by scanning the
+   * overlay: records at or above it belong to inodes that no longer exist,
+   * and a new inode given one of those numbers must not inherit them.
+   */
+  size_t freeInodesFrom(InodeNumber first) {
+    std::vector<InodeNumber> stale;
+    {
+      auto state = state_.rlock();
+      for (const auto& entry : state->indices) {
+        if (entry.first >= first) {
+          stale.push_back(entry.first);
+        }
+      }
+    }
+    for (auto ino : stale) {
+      freeInode(ino);
+    }
+    return stale.size();
+  }
+
+  /**
    * Iterate over all entries of the table and call fn with the inode
    * and record
    *

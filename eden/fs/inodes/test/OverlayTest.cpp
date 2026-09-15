@@ -756,19 +756,21 @@ TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
 // and a new inode must not inherit them.
 TEST_P(RawOverlayTest, uncleanRestartDropsMetadataAboveNextInodeNumber) {
   auto ino = overlay->allocateInodeNumber();
-  overlay->getInodeMetadataTable()->populateIfNotSet(ino, [] {
+  auto record = [] {
     return InodeMetadata{S_IFLNK | 0755, 0, 0, InodeTimestamps{}};
-  });
+  };
+  // The root is the highest inode number the scan finds, so its record is
+  // the last one that must survive.
+  overlay->getInodeMetadataTable()->populateIfNotSet(kRootNodeId, record);
+  overlay->getInodeMetadataTable()->populateIfNotSet(ino, record);
   ASSERT_TRUE(overlay->getInodeMetadataTable()->getOptional(ino).has_value());
 
   recreate(OverlayRestartMode::UNCLEAN);
 
-  // FIXME: the stale record survives and the reissued inode number starts
-  // life as a symlink.
+  EXPECT_TRUE(
+      overlay->getInodeMetadataTable()->getOptional(kRootNodeId).has_value());
+  EXPECT_FALSE(overlay->getInodeMetadataTable()->getOptional(ino).has_value());
   EXPECT_EQ(ino, overlay->allocateInodeNumber());
-  auto record = overlay->getInodeMetadataTable()->getOptional(ino);
-  ASSERT_TRUE(record.has_value());
-  EXPECT_EQ(S_IFLNK | 0755, record->mode);
 }
 
 TEST_P(RawOverlayTest, allocateInodeNumbers) {
