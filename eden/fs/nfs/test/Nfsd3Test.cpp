@@ -33,6 +33,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/nfs/testharness/NfsRequestUtils.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -104,71 +105,6 @@ class FakeNfsDispatcher : public NfsDispatcher {
   ENOENT_STUB(statfs, struct statfs, Ino, Ctx)
 #undef ENOENT_STUB
 };
-
-opaque_auth makeAuthSysCred(const authsys_parms& creds) {
-  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
-  folly::io::QueueAppender ser(&queue, 256);
-  XdrTrait<authsys_parms>::serialize(ser, creds);
-  auto buf = queue.move();
-  auto bytes = buf->coalesce();
-  return opaque_auth{
-      auth_flavor::AUTH_SYS, OpaqueBytes{bytes.begin(), bytes.end()}};
-}
-
-/**
- * Serialize an NFSv3 request for the given procedure with the given
- * credential, framed with a record-mark fragment header. serializeArgs is
- * called with the QueueAppender to append the procedure arguments.
- */
-template <typename SerializeArgs>
-std::unique_ptr<folly::IOBuf> buildNfsRequestImpl(
-    uint32_t xid,
-    nfsv3Procs proc,
-    opaque_auth cred,
-    SerializeArgs&& serializeArgs) {
-  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
-  folly::io::QueueAppender ser(&queue, 1024);
-
-  XdrTrait<uint32_t>::serialize(ser, 0); // fragment header placeholder
-  rpc_msg_call call{
-      xid,
-      msg_type::CALL,
-      call_body{
-          kRPCVersion,
-          kNfsdProgNumber,
-          kNfsd3ProgVersion,
-          folly::to_underlying(proc),
-          std::move(cred),
-          opaque_auth{auth_flavor::AUTH_NONE, {}},
-      },
-  };
-  XdrTrait<rpc_msg_call>::serialize(ser, call);
-  serializeArgs(ser);
-
-  auto len = static_cast<uint32_t>(queue.chainLength() - sizeof(uint32_t));
-  auto buf = queue.move();
-  auto* header = reinterpret_cast<uint32_t*>(buf->writableData());
-  *header = folly::Endian::big(len | 0x80000000);
-  return buf;
-}
-
-template <typename Args>
-std::unique_ptr<folly::IOBuf> buildNfsRequest(
-    uint32_t xid,
-    nfsv3Procs proc,
-    opaque_auth cred,
-    const Args& args) {
-  return buildNfsRequestImpl(
-      xid, proc, std::move(cred), [&](folly::io::QueueAppender& ser) {
-        XdrTrait<Args>::serialize(ser, args);
-      });
-}
-
-std::unique_ptr<folly::IOBuf>
-buildNfsRequest(uint32_t xid, nfsv3Procs proc, opaque_auth cred) {
-  return buildNfsRequestImpl(
-      xid, proc, std::move(cred), [](folly::io::QueueAppender&) {});
-}
 
 /**
  * Drives a real Nfsd3 server over a Unix socketpair. The ManualExecutor

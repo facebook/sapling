@@ -13,3 +13,16 @@ cpp_library(
         "//folly/io:iobuf",
     ],
 )
+
+cpp_library(
+    name = "nfs_request_utils",
+    srcs = ["NfsRequestUtils.cpp"],
+    headers = ["NfsRequestUtils.h"],
+    exported_deps = [
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:utility",
+        "//folly/io:iobuf",
+        "//folly/lang:bits",
+    ],
+)

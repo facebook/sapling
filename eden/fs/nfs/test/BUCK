@@ -19,6 +19,7 @@ cpp_unittest(
         "//eden/fs/nfs:nfsd3",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
+        "//eden/fs/nfs/testharness:nfs_request_utils",
         "//eden/fs/nfs/testharness:xdr_test_utils",
         "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:stats",
