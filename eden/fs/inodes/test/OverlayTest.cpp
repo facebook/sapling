@@ -31,6 +31,8 @@
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeMetadata.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/fscatalog/InodePath.h"
@@ -746,6 +748,27 @@ TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
 
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
+}
+
+// An unclean restart rediscovers the next inode number by scanning the
+// overlay, so numbers above the highest referenced one get handed out again.
+// Metadata records for those numbers belong to inodes that no longer exist,
+// and a new inode must not inherit them.
+TEST_P(RawOverlayTest, uncleanRestartDropsMetadataAboveNextInodeNumber) {
+  auto ino = overlay->allocateInodeNumber();
+  overlay->getInodeMetadataTable()->populateIfNotSet(ino, [] {
+    return InodeMetadata{S_IFLNK | 0755, 0, 0, InodeTimestamps{}};
+  });
+  ASSERT_TRUE(overlay->getInodeMetadataTable()->getOptional(ino).has_value());
+
+  recreate(OverlayRestartMode::UNCLEAN);
+
+  // FIXME: the stale record survives and the reissued inode number starts
+  // life as a symlink.
+  EXPECT_EQ(ino, overlay->allocateInodeNumber());
+  auto record = overlay->getInodeMetadataTable()->getOptional(ino);
+  ASSERT_TRUE(record.has_value());
+  EXPECT_EQ(S_IFLNK | 0755, record->mode);
 }
 
 TEST_P(RawOverlayTest, allocateInodeNumbers) {
