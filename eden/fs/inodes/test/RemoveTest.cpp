@@ -260,6 +260,44 @@ TEST_F(RemoveRecursivelyTest, unloadedDirInUnmaterializedDir) {
 #endif
 }
 
+// Removing an unloaded child can race with an in-flight load of that same
+// child: the fast path in TreeInode::tryRemoveUnloadedChild erases the entry
+// while the load is still running. If the name is used again before the load
+// finishes, TreeInode::inodeLoadComplete must not attach the inode it just
+// loaded to the unrelated entry that now holds the name.
+TEST(RemoveDuringLoadTest, loadFinishingAfterRemovalDoesNotClobberNewEntry) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "This is a.txt.\n");
+  TestMount mount{builder, /*startReady=*/false};
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto root = mount.getEdenMount()->getRootInode();
+  auto loadFuture = root->getOrLoadChild("dir"_pc, context)
+                        .semi()
+                        .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  ASSERT_FALSE(loadFuture.isReady());
+
+  auto removeFuture =
+      root->removeRecursively("dir"_pc, InvalidationRequired::No, context)
+          .semi()
+          .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(removeFuture).get(0ms);
+
+  auto recreated =
+      root->mkdir("dir"_pc, S_IFDIR | 0755, InvalidationRequired::No);
+  auto recreatedNumber = recreated->getNodeId();
+  recreated.reset();
+
+  builder.setReady("dir");
+  mount.drainServerExecutor();
+  ASSERT_TRUE(loadFuture.isReady());
+
+  EXPECT_THROW_ERRNO(std::move(loadFuture).get(0ms), ENOENT);
+  EXPECT_EQ(recreatedNumber, mount.getTreeInode("dir")->getNodeId());
+}
+
 // TODO: It would be nice to adds some tests for concurrent load+unlink
 // However, loading a FileInode does not wait for the file data to be loaded
 // from the ObjectStore, so we currently don't have a good way to test

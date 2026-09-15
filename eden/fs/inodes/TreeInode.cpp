@@ -1416,19 +1416,22 @@ void TreeInode::inodeLoadComplete(
   {
     auto contents = lockContentsWrite();
     auto iter = contents->entries.find(childName);
-    if (iter == contents->entries.end()) {
-      // This shouldn't ever happen.
-      // The rename(), unlink(), and rmdir() code should always ensure
-      // the child inode in question is loaded before removing or renaming
-      // it.  (We probably could allow renaming/removing unloaded inodes,
-      // but the loading process would have to be significantly more
-      // complicated to deal with this, both here and in the parent lookup
-      // process in InodeMap::lookupInode().)
+    if (iter == contents->entries.end() ||
+        iter->second.getInodeNumber() != childInode->getNodeId()) {
+      // The child was removed while this load was in flight. Removing an
+      // unloaded child does not wait for a load in flight, and the name may
+      // have been reused since, so the entry found here can belong to a
+      // different inode. Fail the load instead of attaching this inode to an
+      // entry that does not refer to it.
       XLOGF(
           ERR,
-          "child {} in {} removed before it finished loading",
+          "child {} in {} removed before it finished loading: loaded inode {}, entry now {}",
           childName,
-          getLogPath());
+          getLogPath(),
+          childInode->getNodeId(),
+          iter == contents->entries.end()
+              ? std::string{"gone"}
+              : folly::to<std::string>(iter->second.getInodeNumber().get()));
       throw InodeError(
           ENOENT,
           inodePtrFromThis(),
@@ -1436,12 +1439,9 @@ void TreeInode::inodeLoadComplete(
           "inode removed before loading finished");
     }
     // This load completed after releasing the parent lock. Only cache the
-    // restricted bit if the current slot still names the same unloaded SCM
-    // child we fetched. These checks only make the cache update conservative;
-    // inodeLoadComplete() still relies on the stronger invariant that this
-    // name still maps to the inode load it is completing.
-    if (iter->second.isDirectory() && !iter->second.isMaterialized() &&
-        iter->second.getInodeNumber() == childInode->getNodeId()) {
+    // restricted bit if the entry still describes the unloaded SCM child we
+    // fetched, since it may have been materialized in the meantime.
+    if (iter->second.isDirectory() && !iter->second.isMaterialized()) {
       if (auto* childTree = dynamic_cast<TreeInode*>(childInode.get())) {
         auto childTreeId = childTree->getObjectId();
         if (childTreeId &&
