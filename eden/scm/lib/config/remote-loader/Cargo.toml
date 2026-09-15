@@ -26,7 +26,7 @@ serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"], optional = true }
 url = { version = "2.5.8", optional = true }
-zstd = { version = "0.13.3", features = ["experimental", "zstdmt"], optional = true }
+zstd = { version = "0.14.0", features = ["experimental", "zstdmt"], optional = true }
 
 [features]
 default = []
