@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use parking_lot::Mutex;
+use arc_swap::ArcSwap;
 
 /// One repo's entry in [`crate::MononokeRepos`]: either the built repo, or
 /// nothing yet.
@@ -29,7 +29,10 @@ use parking_lot::Mutex;
 /// so a caller that resolved a slot from an older snapshot still observes state
 /// transitions made through a newer one.
 pub struct RepoSlot<R> {
-    state: Mutex<SlotState<R>>,
+    /// Read on every repo lookup, so it is swapped rather than locked: serving
+    /// a built repo is a read, and readers must not have to exclude each other
+    /// to do it.
+    state: ArcSwap<SlotState<R>>,
 }
 
 enum SlotState<R> {
@@ -43,20 +46,20 @@ impl<R> RepoSlot<R> {
     /// A slot for a repo assigned to this service but not built.
     pub fn empty() -> Self {
         Self {
-            state: Mutex::new(SlotState::Empty),
+            state: ArcSwap::from_pointee(SlotState::Empty),
         }
     }
 
     /// A slot for a repo that is already built.
     pub fn ready(repo: Arc<R>) -> Self {
         Self {
-            state: Mutex::new(SlotState::Ready(repo)),
+            state: ArcSwap::from_pointee(SlotState::Ready(repo)),
         }
     }
 
     /// The built repo, or `None` if this slot has not been built.
     pub fn loaded(&self) -> Option<Arc<R>> {
-        match &*self.state.lock() {
+        match &**self.state.load() {
             SlotState::Empty => None,
             SlotState::Ready(repo) => Some(Arc::clone(repo)),
         }
