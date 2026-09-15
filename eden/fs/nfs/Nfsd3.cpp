@@ -14,12 +14,17 @@
 
 #include <fb303/ThreadCachedServiceData.h>
 #include <fmt/format.h>
+#include <utility>
+
+#include <folly/ScopeGuard.h>
+
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>
 #include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
 #include <folly/portability/Stdlib.h>
+#include "eden/common/utils/FaultInjector.h"
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/IDGen.h"
@@ -179,7 +184,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus,
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       bool fastPathRPCs,
-      std::shared_ptr<ReloadableConfig> config)
+      std::shared_ptr<ReloadableConfig> config,
+      InvalidatingInodes& invalidatingInodes)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         edenFsEventsLogger_(edenFsEventsLogger),
@@ -195,7 +201,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         traceBus_(traceBus),
         longRunningFSRequestThreshold_(longRunningFSRequestThreshold),
         fastPathRPCs_(fastPathRPCs),
-        config_{std::move(config)} {}
+        config_{std::move(config)},
+        invalidatingInodes_{invalidatingInodes} {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -231,6 +238,9 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   bool acceptsMultipleConnections() const override {
     return !config_ ||
         !config_->getEdenConfig()->nfsRefuseExtraClientConnections.getValue();
+  }
+  bool gcStaleReplyEnabled() const {
+    return !config_ || config_->getEdenConfig()->nfsGcStaleReply.getValue();
   }
   bool isUnimplementedProc(uint32_t proc) const override;
 
@@ -369,6 +379,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool fastPathRPCs_;
   std::shared_ptr<ReloadableConfig> config_;
+  InvalidatingInodes& invalidatingInodes_;
   // Per-id budgets for NfsAccessMode::RateLimit entries, scoped to this
   // mount's processor. Created on first use and kept for the processor's
   // lifetime: the id set is small and bounded by config.
@@ -610,6 +621,27 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
           XdrTrait<SETATTR3res>::serialize(ser, res);
         } else {
           const auto& setattrRes = try_.value();
+          if (setattrRes.noop && gcStaleReplyEnabled()) {
+            // A no-op SETATTR of a directory whose GC chmod is running is that
+            // chmod, see Nfsd3::invalidateWithQueueLimit. The stale reply is
+            // what makes the client forget the directory's names, so the
+            // children's references are cleared now, before it is sent:
+            // anything the client looks up afterwards it references anew. No
+            // lock is held here, so forget may take the directory's contents
+            // lock. Nothing tells GC's chmod apart from a client's own
+            // same-mode chmod of the directory while it runs: such a client
+            // takes the stale reply, fails once, and GC's chmod is then
+            // answered normally with nothing left to do. With the stale reply
+            // disabled the chmod is answered normally and
+            // Nfsd3::runInvalidation forgets once it succeeded.
+            if (auto forget = invalidatingInodes_.takeForget(ino)) {
+              forget();
+              stats->increment(&NfsStats::nfsInvalidationGcStaleReply);
+              SETATTR3res res{{{nfsstat3::NFS3ERR_STALE, SETATTR3resfail{}}}};
+              XdrTrait<SETATTR3res>::serialize(ser, res);
+              return folly::unit;
+            }
+          }
 
           SETATTR3res res{
               {{nfsstat3::NFS3_OK,
@@ -693,7 +725,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                 ser = std::move(ser),
                 dirAttrFut = std::move(dirAttrFut),
                 stats = dispatcher_->getStats().copy(),
-                ino = dirIno](
+                ino = dirIno,
+                &context](
                    folly::Try<std::tuple<InodeNumber, struct stat>>&&
                        lookupTry) mutable {
         return std::move(dirAttrFut)
@@ -701,9 +734,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                       ser = std::move(ser),
                       lookupTry = std::move(lookupTry),
                       stats = std::move(stats),
-                      ino](const folly::Try<struct stat>& dirStat) mutable {
+                      ino,
+                      &context](
+                         const folly::Try<struct stat>& dirStat) mutable {
               if (lookupTry.hasException()) {
                 auto error = exceptionToNfsError(lookupTry.exception(), stats);
+                // Whatever the error, no entry was handed out.
+                context.markNegativeLookup();
                 detail::logNfsError(
                     error,
                     lookupTry.exception(),
@@ -2372,6 +2409,16 @@ struct LiveRequest {
   uint32_t procNumber_;
 };
 
+/**
+ * Whether the procedure resolves a directory's entries, handing the client
+ * handles for (or names of) its children.
+ */
+bool resolvesEntries(uint32_t procNumber) {
+  const auto proc = static_cast<nfsv3Procs>(procNumber);
+  return proc == nfsv3Procs::lookup || proc == nfsv3Procs::readdir ||
+      proc == nfsv3Procs::readdirplus;
+}
+
 SamplingGroup nfsProcSamplingGroup(uint32_t procNumber) {
   XDCHECK(procNumber < kNfs3dHandlers.size())
       << "got invalid NFS procedure: " << procNumber;
@@ -2654,16 +2701,29 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
            return (this->*handlerEntry.handler)(
                std::move(deser), std::move(ser), contextRef);
          })
-      .thenValue([this, inodeNumber = std::move(inodeNumber)](auto&&) {
-        if (inodeNumber.has_value()) {
-          XLOGF(
-              DBG9,
-              "Update last fs request time for inode: {}",
-              inodeNumber.value());
-          return dispatcher_->updateLastFsRequestTime(inodeNumber.value());
-        }
-        return ImmediateFuture<folly::Unit>(folly::unit);
-      })
+      .thenValue(
+          [this, inodeNumber = std::move(inodeNumber), procNumber, &contextRef](
+              auto&&) {
+            if (inodeNumber.has_value()) {
+              const bool handsOutEntries =
+                  resolvesEntries(procNumber) && !contextRef.isNegativeLookup();
+              if (!handsOutEntries &&
+                  invalidatingInodes_.contains(inodeNumber.value())) {
+                XLOGF(
+                    DBG9,
+                    "Not updating last fs request time for inode {} being "
+                    "invalidated",
+                    inodeNumber.value());
+                return ImmediateFuture<folly::Unit>(folly::unit);
+              }
+              XLOGF(
+                  DBG9,
+                  "Update last fs request time for inode: {}",
+                  inodeNumber.value());
+              return dispatcher_->updateLastFsRequestTime(inodeNumber.value());
+            }
+            return ImmediateFuture<folly::Unit>(folly::unit);
+          })
       .thenTry([this, &handlerEntry](folly::Try<folly::Unit>&& res) {
         if (res.hasException()) {
           if (dispatcher_->getStats() && handlerEntry.countFailure) {
@@ -2726,9 +2786,11 @@ Nfsd3::Nfsd3(
     std::chrono::nanoseconds longRunningFSRequestThreshold,
     size_t traceBusCapacity,
     bool fastPathRPCs,
-    std::shared_ptr<ReloadableConfig> config)
+    std::shared_ptr<ReloadableConfig> config,
+    FaultInjector& faultInjector)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
+      faultInjector_{faultInjector},
       stats_{dispatcher->getStats().copy()},
       server_([&]() {
         auto proc = std::make_shared<Nfsd3ServerProcessor>(
@@ -2748,7 +2810,8 @@ Nfsd3::Nfsd3(
             fastPathRPCs,
             // Not moved: the invalidation queue below reads its thread count
             // from the config too.
-            config);
+            config,
+            invalidatingInodes_);
         proc->setFsChannel(this);
         return RpcServer::create(
             std::move(proc),
@@ -2844,32 +2907,27 @@ folly::SemiFuture<folly::Unit> Nfsd3::unmount(UnmountOptions /* options */) {
 void Nfsd3::invalidate(
     AbsolutePath path,
     mode_t mode,
-    folly::Function<void()> onSuccess,
     std::optional<NfsInvalidationSource> source) {
-  incrementNfsGcInvalidationCounter(
-      stats_, source, &NfsStats::nfsInvalidationGcAttempt);
   invalidationQueue_.add(
-      Invalidation{std::move(path), mode, std::move(onSuccess), source});
+      Invalidation{.path = std::move(path), .mode = mode, .source = source});
 }
 
 bool Nfsd3::invalidateWithQueueLimit(
     AbsolutePath path,
     mode_t mode,
-    folly::Function<void()> onSuccess,
+    folly::Function<void()> forget,
+    std::vector<InodeNumber> lineage,
     size_t maxQueueSize,
     const folly::CancellationToken& cancellationToken) {
   const bool added = invalidationQueue_.addWithLimit(
       Invalidation{
           std::move(path),
           mode,
-          std::move(onSuccess),
-          NfsInvalidationSource::Gc},
+          NfsInvalidationSource::Gc,
+          std::move(lineage),
+          std::move(forget)},
       maxQueueSize,
       cancellationToken);
-  if (added) {
-    incrementNfsGcInvalidationCounter(
-        stats_, NfsInvalidationSource::Gc, &NfsStats::nfsInvalidationGcAttempt);
-  }
   return added;
 }
 
@@ -2878,20 +2936,117 @@ bool Nfsd3::invalidateWithQueueLimit(
  * threads because both the kernel and EdenFS hold locks that would otherwise
  * deadlock; see InvalidationQueue.
  */
+void InvalidatingInodes::add(
+    const std::vector<InodeNumber>& lineage,
+    folly::Function<void()> forget) {
+  if (lineage.empty()) {
+    return;
+  }
+  // A replaced forget holds inode references and is destroyed outside the
+  // lock, as in remove().
+  folly::Function<void()> replaced;
+  auto inodes = inodes_.wlock();
+  for (auto ino : lineage) {
+    ++(*inodes)[ino].count;
+  }
+  auto& head = (*inodes)[lineage[0]];
+  if (head.forget) {
+    // Both forgets clear the same directory's children, so replacing the
+    // earlier one only leaves its walk reporting no invalidation.
+    XLOGF_EVERY_MS(
+        ERR,
+        60'000,
+        "directory {} is already being invalidated",
+        lineage[0].get());
+  }
+  replaced = std::exchange(head.forget, std::move(forget));
+  numLineages_.fetch_add(1, std::memory_order_release);
+}
+
+void InvalidatingInodes::remove(const std::vector<InodeNumber>& lineage) {
+  if (lineage.empty()) {
+    return;
+  }
+  // A forget that no SETATTR took holds inode references; destroying it
+  // can take inode locks, so it dies after the lock below is released.
+  folly::Function<void()> forget;
+  auto inodes = inodes_.wlock();
+  if (auto head = inodes->find(lineage[0]); head != inodes->end()) {
+    forget = std::move(head->second.forget);
+  }
+  for (auto ino : lineage) {
+    auto it = inodes->find(ino);
+    XDCHECK(it != inodes->end()) << "inode " << ino.get() << " not registered";
+    if (it != inodes->end() && --it->second.count == 0) {
+      inodes->erase(it);
+    }
+  }
+  numLineages_.fetch_sub(1, std::memory_order_release);
+}
+
+bool InvalidatingInodes::contains(InodeNumber ino) const {
+  if (numLineages_.load(std::memory_order_acquire) == 0) {
+    return false;
+  }
+  return inodes_.rlock()->count(ino) != 0;
+}
+
+folly::Function<void()> InvalidatingInodes::takeForget(InodeNumber ino) {
+  if (numLineages_.load(std::memory_order_acquire) == 0) {
+    return nullptr;
+  }
+  auto inodes = inodes_.wlock();
+  if (auto it = inodes->find(ino); it != inodes->end()) {
+    return std::move(it->second.forget);
+  }
+  return nullptr;
+}
+
 void Nfsd3::runInvalidation(Invalidation& invalidation) {
   const auto& path = invalidation.path;
   const auto mode = invalidation.mode;
   const auto source = invalidation.source;
   const auto& stats = stats_;
+  const bool isGc = !invalidation.lineage.empty();
+  incrementNfsGcInvalidationCounter(
+      stats, source, &NfsStats::nfsInvalidationGcAttempt);
+  invalidatingInodes_.add(invalidation.lineage, std::move(invalidation.forget));
+  SCOPE_EXIT {
+    invalidatingInodes_.remove(invalidation.lineage);
+  };
+  // Tests hold the chmod here, with the directory registered above, and send
+  // the requests the kernel would make for it themselves.
+  std::string_view relative = path.view();
+  const auto mountPrefix = mountPath_.view();
+  relative = relative.size() > mountPrefix.size() &&
+          relative.substr(0, mountPrefix.size()) == mountPrefix &&
+          relative[mountPrefix.size()] == '/'
+      ? relative.substr(mountPrefix.size() + 1)
+      : std::string_view{};
+  faultInjector_.check("nfsInvalidation", relative);
   XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
   const auto chmodResult = chmod(path.c_str(), mode);
   const auto error = errno;
-  if (chmodResult == 0) {
+  // GC's chmod is answered with a stale handle error on purpose, see
+  // invalidateWithQueueLimit, so ESTALE is its success.
+  bool staleReply = false;
+#ifndef _WIN32
+  staleReply = isGc && error == ESTALE;
+#endif
+  if (chmodResult == 0 || staleReply) {
     incrementNfsGcInvalidationCounter(
         stats, source, &NfsStats::nfsInvalidationGcSuccess);
     XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
-    if (invalidation.onSuccess) {
-      invalidation.onSuccess();
+    if (chmodResult == 0 && !invalidation.lineage.empty()) {
+      // The SETATTR was answered normally, because
+      // experimental:nfs-gc-stale-reply is off or because it did not look
+      // like GC's own: forget the children now that the chmod succeeded, as
+      // GC did before the stale reply. The client keeps its names, so a
+      // forgotten child it uses again comes back as a stale file handle.
+      if (auto forget =
+              invalidatingInodes_.takeForget(invalidation.lineage[0])) {
+        forget();
+      }
     }
   } else if (error == ENOENT) {
     incrementNfsGcInvalidationCounter(

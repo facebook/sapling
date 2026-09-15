@@ -47,6 +47,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":nfs_utils",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
@@ -60,10 +61,9 @@ cpp_library(
         "//eden/fs/utils:clock",
         "//eden/fs/utils:static_assert",
         "//fb303:thread_cached_service_data",
+        "//folly:scope_guard",
         "//folly:string",
-        "//folly:synchronized",
         "//folly:utility",
-        "//folly/container:f14_hash",
         "//folly/futures:core",
         "//folly/portability:stdlib",
     ],
@@ -81,7 +81,9 @@ cpp_library(
         "//eden/fs/utils:process_access_log",
         "//folly:exception_wrapper",
         "//folly:function",
+        "//folly:synchronized",
         "//folly:token_bucket",
+        "//folly/container:f14_hash",
     ],
 )
 

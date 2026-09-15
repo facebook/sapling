@@ -10,6 +10,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",

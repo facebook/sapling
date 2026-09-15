@@ -46,8 +46,21 @@ class NfsRequestContext : public RequestContext {
     return xid_;
   }
 
+  /**
+   * Whether this LOOKUP found no entry. A negative lookup hands the client no
+   * handle, so it does not count as resolving the directory's entries.
+   */
+  bool isNegativeLookup() const {
+    return negativeLookup_;
+  }
+
+  void markNegativeLookup() {
+    negativeLookup_ = true;
+  }
+
  private:
   uint32_t xid_;
+  bool negativeLookup_{false};
 };
 
 } // namespace facebook::eden

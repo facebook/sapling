@@ -5953,79 +5953,79 @@ TreeInode::nfsPrepareDirInvalidationLocked(TreeInodeState& state) {
 
 bool TreeInode::nfsInvalidateDirCacheLocked(
     TreeInodeState& state,
-    folly::Function<void()> onSuccess,
     std::optional<NfsInvalidationSource> source) {
   auto* channel = getMount()->getNfsdChannel();
   auto target = nfsPrepareDirInvalidationLocked(state);
   if (!channel || !target) {
     return false;
   }
-  channel->invalidate(
-      std::move(target->first), target->second, std::move(onSuccess), source);
+  channel->invalidate(std::move(target->first), target->second, source);
   return true;
 }
 
 std::optional<NfsGcPreparedInvalidation> TreeInode::nfsPrepareGcInvalidation(
     TreeInodeState& state,
     const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
-    const folly::F14FastSet<InodeNumber>& pinnedChildren) {
-  const auto path = getPath();
-  if (!path.has_value() || !getMount()->getNfsdChannel()) {
-    return std::nullopt;
-  }
+    folly::F14FastSet<InodeNumber> pinnedChildren) {
   auto target = nfsPrepareDirInvalidationLocked(state);
   if (!target) {
     return std::nullopt;
   }
 
-  // The contents lock is held by invalidateChildrenNotMaterialized
-  std::vector<InodeNumber> childInodes;
-  childInodes.reserve(state.entries.size());
-  for (const auto& entry : state.entries.all()) {
-    if (nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
-      childInodes.push_back(entry.second.getInodeNumber());
-    }
-  }
+  // The contents lock is held by invalidateChildrenNotMaterialized. Which
+  // children to clear is decided when the chmod reaches EdenFS, not here:
+  // the chmod may wait in the invalidation queue, and a child the client
+  // looks up meanwhile is referenced again by that lookup.
   auto outcome = std::make_shared<NfsGcInvalidation>();
   auto stats = getMount()->getStats().copy();
-  auto onSuccess = [inodeMapWeak = getInodeMapWeak(),
-                    stats = std::move(stats),
-                    childInodes = std::move(childInodes),
-                    outcome,
-                    faultInjector =
-                        &getMount()->getServerState()->getFaultInjector(),
-                    pathStr = path->asString()]() {
-    // Code to run after successful invalidation
+  auto forget = [self = inodePtrFromThis(),
+                 inodeMapWeak = getInodeMapWeak(),
+                 stats = std::move(stats),
+                 pinnedInodes,
+                 pinnedChildren = std::move(pinnedChildren),
+                 outcome]() {
     auto inodeMap = inodeMapWeak.lock();
     if (!inodeMap) {
       XLOG(WARN, "InodeMap is killed before GC completes");
       return;
     }
-    // The mount, which owns the fault injector, is alive while its
-    // InodeMap is.
-    faultInjector->check("nfsGcInvalidation", pathStr);
-    // The directory got invalidated, now we can dereference all of its
-    // contents
+    // The client is about to forget the directory's names. Drop the
+    // children's references with it, as a FUSE FORGET would; whatever the
+    // client looks up again from here on is referenced anew by that lookup.
     uint64_t numCleared = 0;
-    for (auto ino : childInodes) {
+    auto contents = self->getContentsUnchecked().rlock();
+    for (const auto& entry : contents->entries.all()) {
+      if (!nfsGcMayClearChild(entry.second, pinnedInodes, pinnedChildren)) {
+        continue;
+      }
+      const auto ino = entry.second.getInodeNumber();
       stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountAttempt);
-      if (inodeMap->isInodeLoadedOrRemembered(ino)) {
-        XLOGF(DBG9, "GC invalidated inode {}", ino);
-        if (inodeMap->clearFsRefcount(ino)) {
-          numCleared++;
-          stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountCleared);
-        }
-      } else {
+      if (!entry.second.getInode() && !inodeMap->isInodeRemembered(ino)) {
         stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountSkipped);
+        continue;
+      }
+      XLOGF(DBG9, "GC invalidated inode {}", ino);
+      if (inodeMap->clearFsRefcount(ino)) {
+        numCleared++;
+        stats->increment(&NfsStats::nfsInvalidationGcClearFsRefcountCleared);
       }
     }
     outcome->numCleared.store(numCleared, std::memory_order_release);
     outcome->succeeded.store(true, std::memory_order_release);
   };
+  // Read without the parents' locks: a rename racing with this walk only
+  // changes which ancestors' request times the chmod leaves alone, and each
+  // step moves up one level, so the walk ends at the root.
+  std::vector<InodeNumber> lineage{getNodeId()};
+  for (auto parent = getParentRacy(); parent;
+       parent = parent->getParentRacy()) {
+    lineage.push_back(parent->getNodeId());
+  }
   return NfsGcPreparedInvalidation{
       std::move(target->first),
       target->second,
-      std::move(onSuccess),
+      std::move(forget),
+      std::move(lineage),
       std::move(outcome)};
 }
 #endif
@@ -7200,8 +7200,8 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
       return step;
     }
 #ifndef _WIN32
-    auto prepared =
-        self->nfsPrepareGcInvalidation(*contents, pinnedInodes, pinnedChildren);
+    auto prepared = self->nfsPrepareGcInvalidation(
+        *contents, pinnedInodes, std::move(pinnedChildren));
     if (!prepared) {
       return step;
     }
@@ -7218,7 +7218,8 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     if (channel->invalidateWithQueueLimit(
             std::move(prepared->path),
             prepared->mode,
-            std::move(prepared->onSuccess),
+            std::move(prepared->forget),
+            std::move(prepared->lineage),
             maxQueued,
             cancellationToken)) {
       step.pending = std::move(prepared->outcome);
@@ -7253,9 +7254,10 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
               auto invalidated = step.invalidated;
               if (step.pending) {
                 // The invalidation has completed by now. The directory only
-                // counts as invalidated if its chmod succeeded, and it
-                // contributes the number of children whose FS reference was
-                // cleared, matching what the FUSE pass counts.
+                // counts as invalidated if its chmod reached EdenFS and the
+                // children were cleared, and it contributes the number of
+                // children whose FS reference was cleared, matching what the
+                // FUSE pass counts.
                 invalidated =
                     step.pending->succeeded.load(std::memory_order_acquire);
                 numInvalidated +=

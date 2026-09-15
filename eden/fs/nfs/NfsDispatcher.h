@@ -66,6 +66,12 @@ class NfsDispatcher {
     std::optional<struct stat> preStat;
     /** Attributes of the file after changing its attributes */
     std::optional<struct stat> postStat;
+    /**
+     * Whether the request asked only for attributes the file already had.
+     * Such a request changes nothing and is what the chmod EdenFS issues to
+     * invalidate the NFS client's cache of a directory looks like.
+     */
+    bool noop{false};
   };
 
   /**

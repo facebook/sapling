@@ -2113,6 +2113,20 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether NFS inode GC answers its own invalidation chmod with a stale
+   * handle error, which makes the macOS client drop the directory's cached
+   * names at once, and forgets the directory's children at that moment. When
+   * disabled, the chmod is answered normally and the children are forgotten
+   * once it has succeeded, as before the stale reply; the client then keeps
+   * the names it has cached until a stale file handle sends it back to
+   * EdenFS. A fallback for the stale reply misbehaving, not a mode to run in.
+   */
+  ConfigSetting<bool> nfsGcStaleReply{
+      "experimental:nfs-gc-stale-reply",
+      true,
+      this};
+
+  /**
    * Whether to use systemd for EdenFS lifecycle management
    * (start/stop/restart). Only used in the CLI, including here to get rid of
    * warnings.

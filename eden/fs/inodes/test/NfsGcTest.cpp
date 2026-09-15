@@ -11,8 +11,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
+#include <set>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -57,6 +60,12 @@ constexpr auto kTimeout = std::chrono::seconds{10};
  * directory's invalidation succeeds only when the test created that directory
  * on disk first. The requests an NFS client would send are written to the
  * Nfsd3 over a socketpair.
+ *
+ * Every invalidation chmod is held at the nfsInvalidation fault, and the
+ * fixture plays the kernel: for a directory that exists on disk it sends the
+ * SETATTR the chmod would have turned into, then lets the chmod go. A test
+ * that wants to send requests while a directory's chmod is pending holds
+ * that directory and releases it itself.
  */
 class NfsGcTest : public ::testing::Test {
  protected:
@@ -66,6 +75,7 @@ class NfsGcTest : public ::testing::Test {
     builder_.setFile("parent/sibling.txt", "3\n");
     testMount_ = std::make_unique<TestMount>(builder_);
     attachNfsChannel();
+    faultInjector().injectBlock(kInvalidationFault, ".*");
 
     // Load every inode and give each an FS reference, as if the NFS client
     // had looked them all up.
@@ -126,7 +136,8 @@ class NfsGcTest : public ::testing::Test {
         /*longRunningFSRequestThreshold=*/std::chrono::nanoseconds{0},
         /*traceBusCapacity=*/1000,
         /*fastPathRPCs=*/false,
-        serverState.getReloadableConfig()));
+        serverState.getReloadableConfig(),
+        serverState.getFaultInjector()));
 
     int fds[2];
     PCHECK(0 == socketpair(AF_UNIX, SOCK_STREAM, 0, fds));
@@ -178,14 +189,14 @@ class NfsGcTest : public ::testing::Test {
   }
 
   /**
-   * Drive the walk to completion and return what it reports.
+   * Drive the walk to completion, playing the kernel for every chmod that
+   * is not held, and return what it reports.
    */
   uint64_t finishGc(folly::Future<uint64_t> gc) {
     auto deadline = std::chrono::steady_clock::now() + kTimeout;
     while (!gc.isReady()) {
-      testMount_->drainServerExecutor();
-      manualExecutor_->run();
-      evb_.loopOnce(EVLOOP_NONBLOCK);
+      pump();
+      emulateClient();
       if (std::chrono::steady_clock::now() > deadline) {
         ADD_FAILURE() << "GC did not finish";
         return 0;
@@ -201,18 +212,83 @@ class NfsGcTest : public ::testing::Test {
     return finishGc(startGc(cutoff, std::move(pinnedInodes)));
   }
 
+  static constexpr folly::StringPiece kInvalidationFault = "nfsInvalidation";
+
+  FaultInjector& faultInjector() {
+    return testMount_->getServerState()->getFaultInjector();
+  }
+
   /**
-   * Wait until GC is blocked on the nfsGcInvalidation fault, driving the
-   * mount's server executor in case the walk needs it to get there.
+   * Keep the fixture from playing the kernel for this directory's chmod: it
+   * stays held until release(), so the test can send requests of its own
+   * while it is pending.
    */
-  void waitUntilInvalidationBlocked() {
-    auto& faultInjector = testMount_->getServerState()->getFaultInjector();
+  void hold(std::string path) {
+    held_.insert(std::move(path));
+  }
+
+  /**
+   * Let the held chmod go, playing the kernel for it first: the SETATTR it
+   * turns into, if the directory exists on disk, precedes its return. A
+   * second SETATTR after one the test sent itself is answered normally and
+   * changes nothing.
+   */
+  void release(const std::string& path) {
+    held_.erase(path);
+    emulateClientFor(path);
+  }
+
+  /**
+   * Run the server's event loops and the mount's executor once.
+   */
+  void pump() {
+    evb_.loopOnce(EVLOOP_NONBLOCK);
+    manualExecutor_->run();
+    testMount_->drainServerExecutor();
+  }
+
+  /**
+   * Play the kernel for every pending chmod that is not held: a directory
+   * that exists on disk gets the SETATTR of its current mode, which GC
+   * answers with a stale handle error and uses to forget its children; one
+   * that does not exist gets nothing, and the chmod fails with ENOENT.
+   */
+  void emulateClient() {
+    for (const auto& path :
+         faultInjector().getBlockedFaults(kInvalidationFault)) {
+      if (!held_.count(path)) {
+        emulateClientFor(path);
+      }
+    }
+  }
+
+  void emulateClientFor(const std::string& path) {
+    auto onDisk =
+        testMount_->getEdenMount()->getPath() + RelativePathPiece{path};
+    if (access(onDisk.c_str(), F_OK) == 0) {
+      auto dir = testMount_->getTreeInode(path);
+      setattrMode(dir->getNodeId(), dir->getMetadata().mode & 07777);
+    }
+    faultInjector().unblock(kInvalidationFault, path);
+  }
+
+  /**
+   * Wait until GC has queued the chmod of this held directory and the worker
+   * is holding it, playing the kernel for everything else meanwhile.
+   */
+  void waitUntilInvalidationBlocked(const std::string& path) {
     auto deadline = std::chrono::steady_clock::now() + kTimeout;
-    while (!faultInjector.waitUntilBlocked(
-        "nfsGcInvalidation", std::chrono::milliseconds{10})) {
-      testMount_->drainServerExecutor();
+    while (true) {
+      pump();
+      emulateClient();
+      auto blocked = faultInjector().getBlockedFaults(kInvalidationFault);
+      if (std::find(blocked.begin(), blocked.end(), path) != blocked.end()) {
+        return;
+      }
       ASSERT_LT(std::chrono::steady_clock::now(), deadline)
-          << "GC never reached the invalidation";
+          << "GC never reached the chmod of " << path;
+      faultInjector().waitUntilBlocked(
+          kInvalidationFault, std::chrono::milliseconds{1});
     }
   }
 
@@ -325,6 +401,32 @@ class NfsGcTest : public ::testing::Test {
   }
 
   /**
+   * GETATTR the inode, as the NFS client does for a stat, returning the NFS
+   * status of the reply.
+   */
+  nfsstat3 getattrStatus(InodeNumber ino) {
+    auto res = parseReply<GETATTR3res>(sendAndReceive(buildNfsRequest(
+        nextXid_++,
+        nfsv3Procs::getattr,
+        credentials(),
+        GETATTR3args{nfs_fh3{ino}})));
+    return res.tag;
+  }
+
+  /**
+   * LOOKUP `name` in `dir`, as the NFS client does when a process walks into
+   * the directory, returning the NFS status of the reply.
+   */
+  nfsstat3 lookupStatus(InodeNumber dir, std::string name) {
+    auto res = parseReply<LOOKUP3res>(sendAndReceive(buildNfsRequest(
+        nextXid_++,
+        nfsv3Procs::lookup,
+        credentials(),
+        LOOKUP3args{diropargs3{nfs_fh3{dir}, std::move(name)}})));
+    return res.tag;
+  }
+
+  /**
    * SETATTR the inode's permission bits, as the NFS client does for a chmod,
    * returning the NFS status of the reply.
    */
@@ -356,6 +458,7 @@ class NfsGcTest : public ::testing::Test {
       folly::SemiFuture<FsStopDataPtr>::makeEmpty()};
   int clientFd_{-1};
   uint32_t nextXid_{1};
+  std::set<std::string> held_;
 };
 
 /**
@@ -426,7 +529,9 @@ TEST_F(NfsGcTest, directoriesStayReferencedWithoutPinInformation) {
 
 TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
   createOnDisk("parent/child");
+  auto parent = inodeNumberOf("parent");
   auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
   auto sibling = inodeNumberOf("parent/sibling.txt");
   auto childMode =
       testMount_->getTreeInode("parent/child")->getMetadata().mode & 07777;
@@ -437,27 +542,31 @@ TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
   clock.advance(std::chrono::hours{2});
   auto cutoff = clock.getTimePoint() - std::chrono::hours{1};
 
-  // The chmod that invalidates "parent/child" reaches EdenFS as a SETATTR of
-  // the directory's current mode. Here the chmod lands on local disk instead,
-  // so send that SETATTR by hand while the invalidation callback is blocked:
-  // after the chmod completed, and before the parent decides whether the
-  // child is stale.
-  auto& faultInjector = testMount_->getServerState()->getFaultInjector();
-  faultInjector.injectBlock("nfsGcInvalidation", "parent/child");
+  // The chmod that invalidates "parent/child" reaches EdenFS as the requests
+  // the macOS kernel makes to resolve and authorize it: a GETATTR of the
+  // directory when the client's attribute cache for it has expired, a LOOKUP
+  // of the AppleDouble name "._child" in the parent, and the SETATTR of the
+  // directory's current mode, which GC answers with a stale handle error.
+  // Send them while the chmod is held.
+  hold("parent/child");
   auto gc = startGc(cutoff);
-  waitUntilInvalidationBlocked();
-  EXPECT_EQ(nfsstat3::NFS3_OK, setattrMode(child, childMode));
-  faultInjector.unblock("nfsGcInvalidation", "parent/child");
+  waitUntilInvalidationBlocked("parent/child");
+  clock.advance(std::chrono::minutes{1});
+  EXPECT_EQ(nfsstat3::NFS3_OK, getattrStatus(child));
+  EXPECT_EQ(nfsstat3::NFS3ERR_NOENT, lookupStatus(parent, "._child"));
+  EXPECT_EQ(nfsstat3::NFS3ERR_STALE, setattrMode(child, childMode));
+  release("parent/child");
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 
-  // FIXME: "parent" saw its child's request time refreshed by GC's own chmod,
-  // concluded that it was recently used, and skipped invalidating itself. Only
-  // the child's own invalidation happened, clearing its two files, while the
-  // child and its sibling file keep their FS references and stay loaded.
-  EXPECT_EQ(2, numInvalidated);
-  EXPECT_TRUE(isLoaded(child));
-  EXPECT_TRUE(isLoaded(sibling));
+  // The requests behind GC's own chmod must not make "parent" consider
+  // itself or its child recently used: the child's invalidation cleared its
+  // two files, and the parent's invalidation cleared the child and its
+  // sibling file.
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(sibling));
 }
 
 TEST_F(NfsGcTest, pinnedInodesAndTheirAncestorsKeepTheirReferences) {
@@ -503,6 +612,91 @@ TEST_F(NfsGcTest, pinnedDirectoryStillHasItsChildrenReclaimed) {
   EXPECT_EQ(3, numInvalidated);
   EXPECT_TRUE(isLoaded(child));
   EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(sibling));
+}
+
+TEST_F(NfsGcTest, lookupAfterTheForgetReferencesTheChildAnew) {
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto two = inodeNumberOf("parent/child/two.txt");
+  auto childMode =
+      testMount_->getTreeInode("parent/child")->getMetadata().mode & 07777;
+
+  // GC's chmod of "parent/child" reaches EdenFS as a SETATTR. The stale
+  // reply is the moment the client forgets the directory's names and EdenFS
+  // clears its children's references, like a FUSE FORGET. A process that
+  // then looks "two.txt" up references it anew, like a FUSE lookup would; a
+  // GETATTR with a handle the client already has hands out nothing new.
+  hold("parent/child");
+  auto gc = startGc(std::chrono::system_clock::time_point::max());
+  waitUntilInvalidationBlocked("parent/child");
+  EXPECT_EQ(nfsstat3::NFS3ERR_STALE, setattrMode(child, childMode));
+  EXPECT_EQ(nfsstat3::NFS3_OK, lookupStatus(child, "two.txt"));
+  EXPECT_EQ(nfsstat3::NFS3_OK, getattrStatus(one));
+  release("parent/child");
+  auto numInvalidated = finishGc(std::move(gc));
+  sweep();
+
+  // Both files were cleared, and the parent cleared the child directory and
+  // the sibling file; only "two.txt" is referenced again and stays.
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_TRUE(isLoaded(two));
+  EXPECT_FALSE(isLoaded(one));
+}
+
+TEST_F(NfsGcTest, withoutTheStaleReplyChildrenAreForgottenAfterTheChmod) {
+  testMount_->updateEdenConfig({{"experimental:nfs-gc-stale-reply", "false"}});
+  createOnDisk("parent/child");
+  auto child = inodeNumberOf("parent/child");
+  auto one = testMount_->getFileInode("parent/child/one.txt");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+  auto childMode =
+      testMount_->getTreeInode("parent/child")->getMetadata().mode & 07777;
+
+  // With the fallback on, GC's SETATTR is answered normally and clears
+  // nothing; the children are forgotten once the chmod has succeeded, as
+  // GC did before the stale reply.
+  hold("parent/child");
+  auto gc = startGc(std::chrono::system_clock::time_point::max());
+  waitUntilInvalidationBlocked("parent/child");
+  EXPECT_EQ(nfsstat3::NFS3_OK, setattrMode(child, childMode));
+  EXPECT_NE(0, one->debugGetFsRefcount());
+  release("parent/child");
+  auto numInvalidated = finishGc(std::move(gc));
+  EXPECT_EQ(0, one->debugGetFsRefcount());
+  one.reset();
+  sweep();
+
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(sibling));
+}
+
+TEST_F(NfsGcTest, lookupBeforeTheForgetIsForgottenWithTheRest) {
+  createOnDisk("parent/child");
+  auto parent = inodeNumberOf("parent");
+  auto child = inodeNumberOf("parent/child");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+  auto parentMode =
+      testMount_->getTreeInode("parent")->getMetadata().mode & 07777;
+
+  // A process looks "child" up in "parent" and fetches its attributes after
+  // GC decided on "parent" but before its chmod reaches EdenFS. The stale
+  // reply then makes the client drop the names it cached for "parent",
+  // including that one, so the child is cleared with the rest.
+  hold("parent");
+  auto gc = startGc(std::chrono::system_clock::time_point::max());
+  waitUntilInvalidationBlocked("parent");
+  EXPECT_EQ(nfsstat3::NFS3_OK, lookupStatus(parent, "child"));
+  EXPECT_EQ(nfsstat3::NFS3_OK, getattrStatus(child));
+  EXPECT_EQ(nfsstat3::NFS3ERR_STALE, setattrMode(parent, parentMode));
+  release("parent");
+  auto numInvalidated = finishGc(std::move(gc));
+  sweep();
+
+  EXPECT_EQ(4, numInvalidated);
+  EXPECT_FALSE(isLoaded(child));
   EXPECT_FALSE(isLoaded(sibling));
 }
 
@@ -572,24 +766,22 @@ TEST_F(NfsGcSiblingsTest, queuedInvalidationsAreCapped) {
   }
   auto five = inodeNumberOf("parent/third/five.txt");
 
-  // Hold the first sibling's chmod in its completion callback. The single
-  // invalidation worker takes what is queued in one batch and is now stuck
-  // on it, so entries queued after that stay in the queue. "parent/child" is
-  // walked first because entries are visited in name order.
-  auto& faultInjector = testMount_->getServerState()->getFaultInjector();
-  faultInjector.injectBlock("nfsGcInvalidation", "parent/child");
+  // Hold the first sibling's chmod. The single invalidation worker takes what
+  // is queued in one batch and is now stuck on it, so entries queued after
+  // that stay in the queue. "parent/child" is walked first because entries
+  // are visited in name order.
+  hold("parent/child");
   auto attemptsBefore = numInvalidationAttempts();
   auto gc = startGc(std::chrono::system_clock::time_point::max());
-  waitUntilInvalidationBlocked();
+  waitUntilInvalidationBlocked("parent/child");
 
   // With a cap of one, at most one sibling's chmod is queued behind the one
-  // in flight (whether "parent/second" got in depends on whether the worker
-  // had taken its batch before the walk reached it); without the cap all
-  // three would be queued at once.
+  // the worker holds, and only chmods the worker has started count as
+  // attempts; without the cap all three would be queued at once.
   EXPECT_GE(numInvalidationAttempts(), attemptsBefore + 1);
   EXPECT_LE(numInvalidationAttempts(), attemptsBefore + 2);
 
-  faultInjector.unblock("nfsGcInvalidation", "parent/child");
+  release("parent/child");
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 

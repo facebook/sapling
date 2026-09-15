@@ -96,7 +96,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     uint32_t writeIoSize,
     size_t traceBusCapacity,
     bool fastPathRPCs,
-    std::shared_ptr<ReloadableConfig> config) {
+    std::shared_ptr<ReloadableConfig> config,
+    FaultInjector& faultInjector) {
   auto nfsd = std::unique_ptr<Nfsd3, FsChannelDeleter>{new Nfsd3{
       privHelper_,
       AbsolutePath{path},
@@ -118,7 +119,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       longRunningFSRequestThreshold_,
       traceBusCapacity,
       fastPathRPCs,
-      std::move(config)}};
+      std::move(config),
+      faultInjector}};
   mountd_.registerMount(path, rootIno);
 
   return {std::move(nfsd), mountd_.getAddr()};

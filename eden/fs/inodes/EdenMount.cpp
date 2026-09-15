@@ -2825,7 +2825,8 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    edenConfig->nfsWriteIoSize.getValue(),
                    edenConfig->nfsTraceBusCapacity.getValue(),
                    edenConfig->nfsFastPathRPCs.getValue(),
-                   mount->getServerState()->getReloadableConfig());
+                   mount->getServerState()->getReloadableConfig(),
+                   mount->getServerState()->getFaultInjector());
              })
       .thenValue([mount,
                   nfsServer,

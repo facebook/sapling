@@ -11,8 +11,11 @@
 // https://tools.ietf.org/html/rfc1813
 
 #include <optional>
+#include <vector>
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
@@ -132,6 +135,48 @@ struct NfsTraceEvent : TraceEventBase {
   Details details_;
 };
 
+/**
+ * The directories whose GC invalidation chmod is currently running, with
+ * their ancestors: the inodes the kernel may name while it resolves and
+ * authorizes the chmod, see Nfsd3::invalidateWithQueueLimit().
+ */
+class InvalidatingInodes {
+ public:
+  /**
+   * Register a running invalidation of lineage[0], whose ancestors follow.
+   * forget runs when the SETATTR the chmod turns into arrives, see
+   * takeForget(). GC invalidates a directory once per pass, so no other
+   * invalidation of lineage[0] may be registered at the time.
+   */
+  void add(
+      const std::vector<InodeNumber>& lineage,
+      folly::Function<void()> forget);
+  void remove(const std::vector<InodeNumber>& lineage);
+  /** Whether the inode is a directory being invalidated or an ancestor. */
+  bool contains(InodeNumber ino) const;
+  /**
+   * The forget callback of the running invalidation of this directory, if it
+   * has not been taken yet: null for an ancestor, and for the directory once
+   * a SETATTR has taken it. The SETATTR handler takes it exactly once, so a
+   * second no-op SETATTR of the directory while its chmod runs is answered
+   * normally and changes nothing.
+   */
+  folly::Function<void()> takeForget(InodeNumber ino);
+
+ private:
+  struct Entry {
+    /** Number of running invalidations naming the inode. */
+    uint32_t count{0};
+    /** Set while the inode is the directory being invalidated itself. */
+    folly::Function<void()> forget;
+  };
+  folly::Synchronized<folly::F14FastMap<InodeNumber, Entry>> inodes_;
+  /** Number of running invalidations, so requests skip the lock while idle. */
+  std::atomic<size_t> numLineages_{0};
+};
+
+class FaultInjector;
+
 class Nfsd3 final : public FsChannel {
  public:
   /**
@@ -171,7 +216,8 @@ class Nfsd3 final : public FsChannel {
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       size_t traceBusCapacity,
       bool fastPathRPCs,
-      std::shared_ptr<ReloadableConfig> config);
+      std::shared_ptr<ReloadableConfig> config,
+      FaultInjector& faultInjector);
 
   void destroy() override;
 
@@ -213,7 +259,10 @@ class Nfsd3 final : public FsChannel {
    *   seem to function this way.
    *   2. When the kernel sees the mtime in the post op attr in the response
    *   from EdenFS has updated in the response to chmod, it will drop its
-   *   caches for the children of the directory.
+   *   caches for the children of the directory. Mutations update the mtime
+   *   before invalidating. Inode GC changes nothing, so its chmod is instead
+   *   answered with a stale handle error, which makes the client drop those
+   *   caches at once; see invalidateWithQueueLimit().
    *
    * 1. is implied by the NFS mode 2. isn't really guaranteed anywhere, but
    * this works well enough on Linux and macOS and we don't have many other
@@ -231,13 +280,10 @@ class Nfsd3 final : public FsChannel {
    *
    * @param path the path to invalidate
    * @param mode the mode to set. Use the previous mode to only invalidate.
-   * @param onSuccess a callback to run when the invalidation successfully
-   * completes
    */
   void invalidate(
       AbsolutePath path,
       mode_t mode,
-      folly::Function<void()> onSuccess = nullptr,
       std::optional<NfsInvalidationSource> source = std::nullopt);
 
   /**
@@ -246,11 +292,30 @@ class Nfsd3 final : public FsChannel {
    * it to drain otherwise. Returns false without queuing if cancellation was
    * requested first or the channel is stopping. Must not be called while
    * holding inode locks, since it can block.
+   *
+   * GC's chmod changes nothing, so the client would keep every name it has
+   * cached for the directory; NFS has no way to tell it otherwise except a
+   * stale handle error, on which the client drops the directory's own name
+   * and all of its children's at once. So the SETATTR the chmod turns into is
+   * answered NFS3ERR_STALE, and forget runs right before that reply: it is
+   * GC's equivalent of the FORGET FUSE gets from the kernel, and clears the
+   * FS references of the directory's children. A LOOKUP that arrives later
+   * references a child anew, as a FUSE lookup would. The chmod then fails
+   * with ESTALE, which counts as its success, and since it failed the kernel
+   * emits no file system event for it.
+   *
+   * lineage holds the inode numbers of the directory and of its ancestors.
+   * While the chmod runs, the requests the kernel makes on those inodes to
+   * resolve and authorize it (GETATTR, ACCESS, negative LOOKUP, SETATTR) do
+   * not refresh their last FS request time, so that GC's own work does not
+   * make them look in use. Requests that resolve a directory's entries
+   * always do.
    */
   bool invalidateWithQueueLimit(
       AbsolutePath path,
       mode_t mode,
-      folly::Function<void()> onSuccess,
+      folly::Function<void()> forget,
+      std::vector<InodeNumber> lineage,
       size_t maxQueueSize,
       const folly::CancellationToken& cancellationToken);
 
@@ -351,6 +416,8 @@ class Nfsd3 final : public FsChannel {
 
   folly::Synchronized<TelemetryState> telemetryState_;
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
+  InvalidatingInodes invalidatingInodes_;
+  FaultInjector& faultInjector_;
 
   folly::Promise<FsStopDataPtr> stopPromise_;
   EdenStatsPtr stats_;
@@ -371,8 +438,11 @@ class Nfsd3 final : public FsChannel {
   struct Invalidation {
     AbsolutePath path;
     mode_t mode;
-    folly::Function<void()> onSuccess;
     std::optional<NfsInvalidationSource> source;
+    /** GC only: the directory and its ancestors, and what to do when the
+     * chmod reaches EdenFS as a SETATTR. */
+    std::vector<InodeNumber> lineage;
+    folly::Function<void()> forget;
   };
   void runInvalidation(Invalidation& invalidation);
 

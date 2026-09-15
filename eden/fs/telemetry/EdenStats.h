@@ -409,6 +409,7 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"};
   Counter nfsInvalidationGcFailure{"nfs.invalidation.gc.failure"};
   Counter nfsInvalidationGcEnoent{"nfs.invalidation.gc.enoent"};
+  Counter nfsInvalidationGcStaleReply{"nfs.invalidation.gc.stale_reply"};
 
   Counter nfsInvalidationGcClearFsRefcountAttempt{
       "nfs.invalidation.gc.clear_fs_refcount.attempt"};

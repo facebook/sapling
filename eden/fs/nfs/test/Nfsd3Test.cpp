@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/common/utils/FaultInjector.h"
 
 #include "eden/fs/nfs/NfsAccessRateLimiter.h"
 
@@ -146,7 +147,8 @@ struct Nfsd3Test : ::testing::Test {
         /*longRunningFSRequestThreshold=*/std::chrono::nanoseconds{0},
         /*traceBusCapacity=*/1000,
         /*fastPathRPCs=*/false,
-        reloadableConfig_));
+        reloadableConfig_,
+        faultInjector_));
 
     int fds[2];
     ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_STREAM, 0, fds));
@@ -345,6 +347,7 @@ struct Nfsd3Test : ::testing::Test {
   std::shared_ptr<folly::ManualExecutor> manualExecutor_;
   std::shared_ptr<EdenConfig> config_;
   std::shared_ptr<ReloadableConfig> reloadableConfig_;
+  FaultInjector faultInjector_{/*enabled=*/false};
   std::unique_ptr<ErrorLogger> errorLogger_;
   folly::Logger straceLogger_{"eden.test.nfsd3"};
   UnixClock clock_;
@@ -691,6 +694,28 @@ TEST(NfsAccessRateLimiterTest, budget_refills_over_time) {
   // everything.
   EXPECT_FALSE(limiter.allow(0, 60, 1120.0));
   EXPECT_TRUE(limiter.allow(2, 0, 1120.0));
+}
+
+TEST(InvalidatingInodesTest, removingAnInvalidationReleasesItsForgetCallback) {
+  InvalidatingInodes inodes;
+  const std::vector<InodeNumber> first{InodeNumber{2}, InodeNumber{1}};
+  const std::vector<InodeNumber> second{InodeNumber{3}, InodeNumber{1}};
+  auto captured = std::make_shared<int>(0);
+  std::weak_ptr<int> weak = captured;
+  inodes.add(first, [captured] { ++*captured; });
+  inodes.add(second, [] {});
+  captured.reset();
+  EXPECT_FALSE(weak.expired());
+
+  // A forget that never ran, because no SETATTR arrived, is released with
+  // its invalidation even though the two share an ancestor.
+  inodes.remove(first);
+  EXPECT_TRUE(weak.expired());
+  EXPECT_TRUE(inodes.contains(InodeNumber{1}));
+  EXPECT_FALSE(inodes.contains(InodeNumber{2}));
+  EXPECT_FALSE(inodes.takeForget(InodeNumber{2}));
+  inodes.remove(second);
+  EXPECT_FALSE(inodes.contains(InodeNumber{1}));
 }
 
 } // namespace

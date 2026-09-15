@@ -57,15 +57,20 @@ ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
     InodeNumber ino,
     DesiredMetadata desired,
     const ObjectFetchContextPtr& context) {
-  return inodeMap_->lookupInode(ino)
-      .thenValue([desired = std::move(desired),
-                  context = context.copy()](const InodePtr& inode) {
-        // TODO(xavierd): Modify setattr to obtain pre stat of the file.
-        return inode->setattr(desired, context);
-      })
-      .thenValue([](struct stat st) {
-        return NfsDispatcher::SetattrRes{std::nullopt, st};
-      });
+  return inodeMap_->lookupInode(ino).thenValue([desired = std::move(desired),
+                                                context = context.copy()](
+                                                   const InodePtr& inode) {
+#ifndef _WIN32
+    const bool noop =
+        inode->getMetadata().shouldShortCircuitMetadataUpdate(desired);
+#else
+    const bool noop = desired.is_nop(/*ignoreAtime=*/false);
+#endif
+    // TODO(xavierd): Modify setattr to obtain pre stat of the file.
+    return inode->setattr(desired, context).thenValue([noop](struct stat st) {
+      return NfsDispatcher::SetattrRes{std::nullopt, st, noop};
+    });
+  });
 }
 
 ImmediateFuture<InodeNumber> NfsDispatcherImpl::getParent(

@@ -30,6 +30,7 @@ class PrivHelper;
 class ReloadableConfig;
 class Rpcbindd;
 class Nfsd3;
+class FaultInjector;
 
 class NfsServer {
  public:
@@ -97,7 +98,8 @@ class NfsServer {
       uint32_t writeIoSize,
       size_t traceBusCapacity,
       bool fastPathRPCs,
-      std::shared_ptr<ReloadableConfig> config);
+      std::shared_ptr<ReloadableConfig> config,
+      FaultInjector& faultInjector);
 
   /**
    * Registers an RPC service running a certain protocol version on port.

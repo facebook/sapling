@@ -127,7 +127,15 @@ struct NfsGcResult {
 struct NfsGcPreparedInvalidation {
   AbsolutePath path;
   mode_t mode;
-  folly::Function<void()> onSuccess;
+  /**
+   * Clears the FS references of the directory's children. Runs when the
+   * chmod reaches EdenFS as a SETATTR, right before the stale reply that
+   * makes the client forget the directory's names; see
+   * Nfsd3::invalidateWithQueueLimit.
+   */
+  folly::Function<void()> forget;
+  /** The directory and its ancestors, see Nfsd3::invalidateWithQueueLimit. */
+  std::vector<InodeNumber> lineage;
   std::shared_ptr<NfsGcInvalidation> outcome;
 };
 
@@ -1406,9 +1414,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #ifndef _WIN32
   /**
    * Prepare the NFS invalidation of this directory for GC: the chmod that
-   * makes the kernel refetch the directory, and the callback that, once it
-   * has succeeded, clears the FS references of the directory's children so
-   * the GC sweep can unload them. Pinned children, directory children whose
+   * makes the client forget the directory's names, and the callback that,
+   * as it does, clears the FS references of the directory's children so the
+   * GC sweep can unload them. Pinned children, directory children whose
    * subtree contains a pin (pinnedChildren), and, without pin information,
    * all directory children keep their reference; see
    * handleChildrenNotAccessedRecently. The contents lock must be held; the
@@ -1420,7 +1428,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   std::optional<NfsGcPreparedInvalidation> nfsPrepareGcInvalidation(
       TreeInodeState& state,
       const std::shared_ptr<const folly::F14FastSet<InodeNumber>>& pinnedInodes,
-      const folly::F14FastSet<InodeNumber>& pinnedChildren);
+      folly::F14FastSet<InodeNumber> pinnedChildren);
 
   /**
    * The path and mode for the chmod that makes the NFS client flush its
@@ -1432,13 +1440,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   nfsPrepareDirInvalidationLocked(TreeInodeState& state);
 
   /**
-   * Queue the chmod prepared by nfsPrepareDirInvalidationLocked(), calling
-   * onSuccess once it has completed. Returns false, without doing anything,
-   * if there was nothing to prepare.
+   * Queue the chmod prepared by nfsPrepareDirInvalidationLocked(). Returns
+   * false, without doing anything, if there was nothing to prepare.
    */
   bool nfsInvalidateDirCacheLocked(
       TreeInodeState& state,
-      folly::Function<void()> onSuccess = nullptr,
       std::optional<NfsInvalidationSource> source = std::nullopt);
 #endif
 
