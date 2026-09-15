@@ -7041,6 +7041,12 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     // ancestors from clearing its reference.
     return NfsGcResult{0, false, /*containsPin=*/true};
   }
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    // EdenFS's own directory, which tools resolve constantly: nothing to
+    // gain from forgetting it or its handful of entries. Report it as done
+    // and pinned, so the root goes on without clearing its reference.
+    return NfsGcResult{0, /*invalidated=*/true, /*containsPin=*/true};
+  }
 
   auto childResults = processTreeChildren(
       this,
@@ -7121,9 +7127,8 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
       // invalidation of this directory.
       return step;
     }
-    if (contents->isMaterialized()) {
-      return step;
-    }
+    // A materialized directory is reclaimed like any other: its state is in
+    // the overlay, so an unloaded child reloads from there, as on FUSE.
 
     // if cutoff is max, we should invalidate everything, so we don't
     // need to check the last fs request time

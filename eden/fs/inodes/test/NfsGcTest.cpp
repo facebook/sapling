@@ -66,6 +66,10 @@ constexpr auto kTimeout = std::chrono::seconds{10};
  * SETATTR the chmod would have turned into, then lets the chmod go. A test
  * that wants to send requests while a directory's chmod is pending holds
  * that directory and releases it itself.
+ *
+ * The mount path exists on disk, so the root's own chmod succeeds and the
+ * root clears its children's references when pins are known; the walk
+ * leaves the root's ".eden" directory alone.
  */
 class NfsGcTest : public ::testing::Test {
  protected:
@@ -542,10 +546,13 @@ TEST_F(NfsGcTest, directoriesStayReferencedWithoutPinInformation) {
   EXPECT_FALSE(isLoaded(one));
   EXPECT_FALSE(isLoaded(sibling));
 
-  // Knowing that nothing is pinned, the next run clears the directory too.
-  EXPECT_EQ(1, runGc(std::chrono::system_clock::time_point::max(), noPins()));
+  // Knowing that nothing is pinned, the next run clears the directories too:
+  // "parent" clears "child", and the root clears "parent".
+  auto parent = inodeNumberOf("parent");
+  EXPECT_EQ(2, runGc(std::chrono::system_clock::time_point::max(), noPins()));
   sweep();
   EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(parent));
 }
 
 TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
@@ -582,9 +589,9 @@ TEST_F(NfsGcTest, parentIsInvalidatedAfterItsChildWasInvalidated) {
 
   // The requests behind GC's own chmod must not make "parent" consider
   // itself or its child recently used: the child's invalidation cleared its
-  // two files, and the parent's invalidation cleared the child and its
-  // sibling file.
-  EXPECT_EQ(4, numInvalidated);
+  // two files, the parent's cleared the child and its sibling file, and the
+  // root's cleared the parent.
+  EXPECT_EQ(5, numInvalidated);
   EXPECT_FALSE(isLoaded(one));
   EXPECT_FALSE(isLoaded(child));
   EXPECT_FALSE(isLoaded(sibling));
@@ -659,9 +666,10 @@ TEST_F(NfsGcTest, lookupAfterTheForgetReferencesTheChildAnew) {
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 
-  // Both files were cleared, and the parent cleared the child directory and
-  // the sibling file; only "two.txt" is referenced again and stays.
-  EXPECT_EQ(4, numInvalidated);
+  // Both files were cleared, the parent cleared the child directory and the
+  // sibling file, and the root cleared the parent; only "two.txt" is
+  // referenced again and stays.
+  EXPECT_EQ(5, numInvalidated);
   EXPECT_TRUE(isLoaded(two));
   EXPECT_FALSE(isLoaded(one));
 }
@@ -689,7 +697,7 @@ TEST_F(NfsGcTest, withoutTheStaleReplyChildrenAreForgottenAfterTheChmod) {
   one.reset();
   sweep();
 
-  EXPECT_EQ(4, numInvalidated);
+  EXPECT_EQ(5, numInvalidated);
   EXPECT_FALSE(isLoaded(child));
   EXPECT_FALSE(isLoaded(sibling));
 }
@@ -716,7 +724,7 @@ TEST_F(NfsGcTest, lookupBeforeTheForgetIsForgottenWithTheRest) {
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 
-  EXPECT_EQ(4, numInvalidated);
+  EXPECT_EQ(5, numInvalidated);
   EXPECT_FALSE(isLoaded(child));
   EXPECT_FALSE(isLoaded(sibling));
 }
@@ -744,24 +752,53 @@ TEST_F(NfsGcTest, cancellationWaitsForTheChmodItAlreadyQueued) {
 
 TEST_F(NfsGcTest, directoryWithNothingToClearIsNotInvalidatedAgain) {
   createOnDisk("parent/child");
-  // A materialized directory is never invalidated, so "parent/child" keeps
+  // Some process has "parent/child" as its working directory, so it keeps
   // its FS reference and stays loaded across GC runs.
-  testMount_->addFile("parent/untracked.txt", "u\n");
+  auto child = inodeNumberOf("parent/child");
+  auto pins = std::make_shared<const folly::F14FastSet<InodeNumber>>(
+      folly::F14FastSet<InodeNumber>{child});
   auto one = inodeNumberOf("parent/child/one.txt");
   auto two = inodeNumberOf("parent/child/two.txt");
 
-  // The first run clears the two files under "parent/child", and the sweep
-  // forgets them.
-  EXPECT_EQ(2, runGc(std::chrono::system_clock::time_point::max()));
+  // The first run clears the files under "parent/child" and next to it,
+  // and the sweep forgets them.
+  EXPECT_EQ(3, runGc(std::chrono::system_clock::time_point::max(), pins));
   sweep();
   EXPECT_FALSE(isLoaded(one));
   EXPECT_FALSE(isLoaded(two));
+  EXPECT_TRUE(isLoaded(child));
 
   // A second run has no FS reference left to clear under "parent/child".
   auto attemptsBefore = numInvalidationAttempts();
-  EXPECT_EQ(0, runGc(std::chrono::system_clock::time_point::max()));
+  EXPECT_EQ(0, runGc(std::chrono::system_clock::time_point::max(), pins));
   // GC must not chmod "parent/child" again.
   EXPECT_EQ(attemptsBefore, numInvalidationAttempts());
+}
+
+TEST_F(NfsGcTest, materializedDirectoriesAreReclaimedToo) {
+  createOnDisk("parent/child");
+  // Writing a file materializes "parent", whose state is then in the
+  // overlay. That is no reason to leave it, or anything under it, loaded.
+  testMount_->addFile("parent/untracked.txt", "u\n");
+  auto untracked = inodeNumberOf("parent/untracked.txt");
+  testMount_->getFileInode("parent/untracked.txt")->incFsRefcount();
+  auto child = inodeNumberOf("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto sibling = inodeNumberOf("parent/sibling.txt");
+
+  // "parent/child" clears its two files; "parent" clears the child
+  // directory, the sibling and the untracked file; the root clears "parent".
+  auto parent = inodeNumberOf("parent");
+  EXPECT_EQ(6, runGc(std::chrono::system_clock::time_point::max()));
+  sweep();
+  EXPECT_FALSE(isLoaded(one));
+  EXPECT_FALSE(isLoaded(child));
+  EXPECT_FALSE(isLoaded(parent));
+  EXPECT_FALSE(isLoaded(sibling));
+  EXPECT_FALSE(isLoaded(untracked));
+
+  // The unloaded untracked file is still there, from the overlay.
+  EXPECT_EQ("u\n", testMount_->readFile("parent/untracked.txt"));
 }
 
 TEST_F(
@@ -796,7 +833,7 @@ TEST_F(NfsGcTest, rememberedFilesAreReclaimedBeforeTheSweep) {
   ASSERT_TRUE(inodeMap->isInodeRemembered(one));
   auto before = inodeMap->getInodeCounts().forgottenInodeCount;
 
-  EXPECT_EQ(4, runGc(std::chrono::system_clock::time_point::max()));
+  EXPECT_EQ(5, runGc(std::chrono::system_clock::time_point::max()));
   EXPECT_EQ(before + 2, inodeMap->getInodeCounts().forgottenInodeCount);
   EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(one));
 }
@@ -818,8 +855,8 @@ TEST_F(NfsGcParallelTest, siblingsAreInvalidatedConcurrently) {
   auto five = inodeNumberOf("parent/third/five.txt");
 
   // Hold the first sibling's chmod. The other two siblings do not wait for
-  // it: their chmods run on the other threads and complete. Only "parent"
-  // waits, for all three.
+  // it: their chmods run on the other threads and complete. "parent" waits
+  // for all three, and the root for "parent".
   ASSERT_EQ(
       3u,
       testMount_->getEdenMount()->getNfsdChannel()->numInvalidationThreads());
@@ -835,8 +872,8 @@ TEST_F(NfsGcParallelTest, siblingsAreInvalidatedConcurrently) {
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 
-  EXPECT_EQ(attemptsBefore + 4, numInvalidationAttempts());
-  EXPECT_EQ(8, numInvalidated);
+  EXPECT_EQ(attemptsBefore + 5, numInvalidationAttempts());
+  EXPECT_EQ(9, numInvalidated);
   EXPECT_FALSE(isLoaded(five));
 }
 
@@ -867,10 +904,10 @@ TEST_F(NfsGcSiblingsTest, queuedInvalidationsAreCapped) {
   auto numInvalidated = finishGc(std::move(gc));
   sweep();
 
-  // Once the queue drained the walk went on: the third sibling and then
-  // "parent" were invalidated, clearing everything.
-  EXPECT_EQ(attemptsBefore + 4, numInvalidationAttempts());
-  EXPECT_EQ(8, numInvalidated);
+  // Once the queue drained the walk went on: the remaining siblings, then
+  // "parent", then the root were invalidated, clearing everything.
+  EXPECT_EQ(attemptsBefore + 5, numInvalidationAttempts());
+  EXPECT_EQ(9, numInvalidated);
   EXPECT_FALSE(isLoaded(five));
 }
 

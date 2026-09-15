@@ -62,14 +62,18 @@ class InvalidateTest(testcase.EdenRepoTest):
         expected_loaded_windows: int,
         expected_loaded_linux: int,
         delta: int = 0,
+        darwin_bounds: bool = False,
     ) -> None:
         """
         On macOS and Windows, both trees and files are invalidated.
         On macOS, the count is the number of FS references the
         invalidation cleared: one per file under an invalidated
-        directory. The top-level directories themselves stay referenced,
-        since the root, which holds .eden, is materialized and never
-        invalidated.
+        directory. Directories stay referenced: without pressure GC there is
+        no pin set, and the NFS pass only clears directories it knows are
+        not in use. When the whole checkout is invalidated, whatever files
+        under .hg the tools have read during the test are reclaimed too, and
+        how many were loaded varies, so with darwin_bounds the count is a
+        lower bound and the loaded count an upper bound.
         On Linux, we don't invalidate any inode as the first step of GC.
         Because FUSE decrease the inode FS refcounts when needed
 
@@ -86,6 +90,10 @@ class InvalidateTest(testcase.EdenRepoTest):
         else:
             expected_invalidated = expected_invalidated_linux
             expected_loaded = expected_loaded_linux
+        if sys.platform == "darwin" and darwin_bounds:
+            self.assertGreaterEqual(invalidated, expected_invalidated)
+            self.assertLessEqual(await self.get_loaded_count(), expected_loaded)
+            return
         self.assertEqual(invalidated, expected_invalidated)
         self.assertAlmostEqual(
             await self.get_loaded_count(), expected_loaded, delta=delta
@@ -129,6 +137,7 @@ class InvalidateTest(testcase.EdenRepoTest):
             expected_loaded_darwin=initial_loaded + 2,
             expected_loaded_windows=initial_loaded - 1,
             expected_loaded_linux=1,
+            darwin_bounds=True,
         )
         self.read_all()
 

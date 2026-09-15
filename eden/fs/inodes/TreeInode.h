@@ -871,7 +871,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool async);
 
   /**
-   * Invalidate old non-materialized children's recursively.
+   * Invalidate old children recursively, materialized or not.
    *
    * File inodes touched before the passed in cutoff will be invalidated. Tree
    * inodes will also be invalidated if all of their children's have been
