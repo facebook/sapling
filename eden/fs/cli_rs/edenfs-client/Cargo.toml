@@ -40,7 +40,7 @@ subprocess = "0.2.15"
 sysinfo = "0.39.6"
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
-toml = { version = "1.1.4", features = ["preserve_order"] }
+toml = { version = "1.1.6", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uuid = { version = "1.26.1", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
 whoami = "2.1.3"
