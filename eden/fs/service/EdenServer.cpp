@@ -3923,12 +3923,15 @@ void EdenServer::accidentalUnmountRecovery() {
   }
   pruneMountHealthIssues(emittedMountHealthIssues_, configuredMountPaths);
 
-  const auto mountPoints = mountPoints_->rlock();
   for (const auto& client : dirs.items()) {
     auto mountPath = canonicalPath(client.first.stringPiece());
-    const auto it = mountPoints->find(mountPath);
+    bool isMounted = false;
+    {
+      const auto mountPoints = mountPoints_->rlock();
+      isMounted = mountPoints->find(mountPath) != mountPoints->end();
+    }
 
-    if (it != mountPoints->end()) {
+    if (isMounted) {
       scheduleRunningMountHealthCheck(mountPath, client.second.asString());
     } else {
       clearMountHealthIssues(
