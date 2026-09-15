@@ -167,6 +167,24 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "nfs_gc",
+    srcs = ["NfsGcTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/nfs:nfsd3",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly:cancellation_token",
+        "//folly/executors:manual_executor",
+        "//folly/io/async:async_base",
+    ],
+)
+
+cpp_unittest(
     name = "eden_mount",
     srcs = ["EdenMountTest.cpp"],
     # TODO: This doesn't pass on macOS yet, remove once fixed.
