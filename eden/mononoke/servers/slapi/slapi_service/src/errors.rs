@@ -114,6 +114,11 @@ impl MononokeErrorExt for MononokeError {
             MergeConflicts { .. } => HttpError::e400,
             LargeRepoNotFound(_) => HttpError::e400,
             RedactionError { .. } => HttpError::e403,
+            // The set_bookmark handler normally reports this in-band. If it
+            // reaches here, the move was still already applied, so the server
+            // did its job. That is not a server fault, so do not map it to a
+            // 5xx.
+            BookmarkMoveAlreadyProcessed => HttpError::e400,
         })(Error::from(self).context(context))
     }
 }

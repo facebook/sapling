@@ -328,6 +328,11 @@ impl From<MononokeError> for ServiceError {
                     ..Default::default()
                 })
             }
+            error @ MononokeError::BookmarkMoveAlreadyProcessed => {
+                // Only modern_sync mirror moves produce this, and SCS never
+                // sends them. Treat an unexpected leak as an internal error.
+                Self::Internal(internal_error(error))
+            }
             MononokeError::InternalError(error) => {
                 let reason = format!("{error:#}");
                 let backtrace = match error.backtrace().status() {
