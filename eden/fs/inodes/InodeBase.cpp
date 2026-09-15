@@ -14,10 +14,13 @@
 #include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/NotImplemented.h"
 
@@ -94,10 +97,38 @@ InodeBase::InodeBase(
 InodeBase::~InodeBase() {
   XLOGF(
       DBG5, "inode {} ({}) destroyed: {}", fmt::ptr(this), ino_, getLogPath());
+  if (removeOverlayDataOnDestruction_) {
+    removeOverlayData();
+  }
   auto p = getParentRacy();
   while (p) {
     p->increaseInMemoryDescendants(-1);
     p = p->getParentRacy();
+  }
+}
+
+void InodeBase::removeOverlayData() noexcept {
+  try {
+    auto* overlay = mount_->getOverlay();
+    if (getType() == dtype_t::Dir) {
+      overlay->removeOverlayDir(ino_);
+    } else {
+      overlay->removeOverlayFile(ino_);
+    }
+  } catch (const std::exception& ex) {
+    // Nothing more can be done: the inode is gone and fsck reclaims orphaned
+    // overlay data. The usual cause is overlay data left corrupt by a crash
+    // that did not sync the filesystem.
+    XLOGF(
+        ERR,
+        "error removing overlay data of unlinked inode {} ({}): {}",
+        ino_,
+        getLogPath(),
+        folly::exceptionStr(ex));
+    mount_->getServerState()->getErrorLogger().log(
+        EdenErrorInfo::overlay(ex, ino_.getRawValue())
+            .withMountPoint(mount_->getPath().asString())
+            .withErrorType("overlay_unload_failed"));
   }
 }
 

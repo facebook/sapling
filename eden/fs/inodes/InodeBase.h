@@ -70,6 +70,14 @@ class InodeBase {
     return mode_to_dtype(initialMode_);
   }
 
+  /**
+   * Have the destructor remove this inode's overlay data. Only for InodeMap,
+   * when unloading an unlinked inode that nothing references any more.
+   */
+  void removeOverlayDataOnDestruction() {
+    removeOverlayDataOnDestruction_ = true;
+  }
+
   mode_t getInitialMode() const {
     return initialMode_;
   }
@@ -640,7 +648,17 @@ class InodeBase {
    * writing metadata into this inode's metadata storage.  The type
    * bits can never change - they can be accessed via getType().
    */
+  void removeOverlayData() noexcept;
+
   mode_t const initialMode_;
+
+  /**
+   * Set by InodeMap when this inode is unloaded while unlinked and no longer
+   * referenced by the filesystem: its overlay data is removed by the
+   * destructor, which every unload path runs after releasing the InodeMap and
+   * parent contents locks, rather than while holding them.
+   */
+  bool removeOverlayDataOnDestruction_{false};
 
   /**
    * A reference count tracking the outstanding lookups that the kernel's FUSE

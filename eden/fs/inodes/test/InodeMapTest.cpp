@@ -523,6 +523,45 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
 
 #ifndef _WIN32
 
+TEST(InodeMap, unloadedUnlinkedFilesAreRemovedFromOverlay) {
+  TestMount mount{FakeTreeBuilder{}};
+  auto edenMount = mount.getEdenMount();
+  auto* overlay = edenMount->getOverlay();
+  auto root = edenMount->getRootInode();
+
+  auto file1 =
+      root->mknod("file1"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  auto file2 =
+      root->mknod("file2"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  auto file1ino = file1->getNodeId();
+  auto file2ino = file2->getNodeId();
+  EXPECT_TRUE(overlay->hasOverlayFile(file1ino));
+  EXPECT_TRUE(overlay->hasOverlayFile(file2ino));
+
+  // Test both having a positive and zero fuse reference counts.
+  file2->incFsRefcount();
+  file1.reset();
+  file2.reset();
+
+  for (auto name : {"file1"_pc, "file2"_pc}) {
+    auto fut = root->unlink(
+                       name,
+                       InvalidationRequired::No,
+                       ObjectFetchContext::getNullContext())
+                   .semi()
+                   .via(mount.getServerExecutor().get());
+    mount.drainServerExecutor();
+    std::move(fut).get(0ms);
+  }
+
+  // Unlinked and unreferenced: gone as soon as the unlink finished.
+  EXPECT_FALSE(overlay->hasOverlayFile(file1ino));
+  // Still referenced by the filesystem: kept until that reference drops.
+  EXPECT_TRUE(overlay->hasOverlayFile(file2ino));
+  edenMount->getInodeMap()->decFsRefcount(file2ino);
+  EXPECT_FALSE(overlay->hasOverlayFile(file2ino));
+}
+
 TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   FakeTreeBuilder builder;
   builder.setFile("dir1/file.txt", "contents");
