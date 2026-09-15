@@ -1803,13 +1803,24 @@ NfsArgsDetails formatSattr3(const sattr3& attr) {
     return std::string();
   };
 
-  // TODO(xavierd): format the times too?
+  auto formatTime = [](const auto& time) {
+    if (time.tag == time_how::SET_TO_SERVER_TIME) {
+      return std::string{"now"};
+    }
+    if (time.tag == time_how::SET_TO_CLIENT_TIME) {
+      const auto& value = std::get<nfstime3>(time.v);
+      return fmt::format("{}.{:09}", value.seconds, value.nseconds);
+    }
+    return std::string{};
+  };
   return fmt::format(
-      FMT_STRING("mode={}, uid={}, gid={}, size={}"),
+      FMT_STRING("mode={}, uid={}, gid={}, size={}, atime={}, mtime={}"),
       formatOpt(attr.mode, "{:#o}"),
       formatOpt(attr.uid),
       formatOpt(attr.gid),
-      formatOpt(attr.size));
+      formatOpt(attr.size),
+      formatTime(attr.atime),
+      formatTime(attr.mtime));
 }
 
 NfsArgsDetails formatSetattr(folly::io::Cursor deser) {
@@ -2384,12 +2395,23 @@ struct LiveRequest {
       const HandlerEntry& handlerEntry,
       folly::io::Cursor& deser,
       uint32_t xid,
-      uint32_t procNumber)
+      uint32_t procNumber,
+      const std::optional<authsys_parms>& authSysCreds)
       : traceBus_{std::move(traceBus)}, xid_{xid}, procNumber_{procNumber} {
     if (traceDetailedArguments.load(std::memory_order_acquire)) {
+      auto details = handlerEntry.formatArgs(deser);
+      // The kernel issues requests of its own, as root, next to those it
+      // makes for processes; the credential tells them apart in a trace.
+      if (authSysCreds) {
+        // Named apart from the uid and gid a SETATTR asks to set.
+        details.str += fmt::format(
+            "{}cred_uid={}, cred_gid={}",
+            details.str.empty() ? "" : ", ",
+            authSysCreds->uid,
+            authSysCreds->gid);
+      }
       traceBus_->publish(
-          NfsTraceEvent::start(
-              xid, procNumber, handlerEntry.formatArgs(deser)));
+          NfsTraceEvent::start(xid, procNumber, std::move(details)));
     } else {
       traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
     }
@@ -2544,6 +2566,11 @@ void Nfsd3ServerProcessor::serializeInlineReject(
 }
 
 bool Nfsd3ServerProcessor::shouldParseAuthSysCreds() {
+  // A detailed trace shows each request's uid and gid, which needs the
+  // credential parsed.
+  if (traceDetailedArguments_.load(std::memory_order_acquire) != 0) {
+    return true;
+  }
   if (!config_) {
     return false;
   }
@@ -2680,7 +2707,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   auto inodeNumber = handlerEntry.formatArgs(deser).inode;
 
   auto liveRequest = LiveRequest{
-      traceBus_, traceDetailedArguments_, handlerEntry, deser, xid, procNumber};
+      traceBus_,
+      traceDetailedArguments_,
+      handlerEntry,
+      deser,
+      xid,
+      procNumber,
+      authSysCreds};
 
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
