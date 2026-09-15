@@ -90,15 +90,13 @@ impl FromStr for RedirectionType {
     }
 }
 
-#[cfg(target_os = "macos")]
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DarwinBindRedirectionType {
     APFS,
     DMG,
     SYMLINK,
 }
 
-#[cfg(target_os = "macos")]
 impl fmt::Display for DarwinBindRedirectionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -113,7 +111,6 @@ impl fmt::Display for DarwinBindRedirectionType {
     }
 }
 
-#[cfg(target_os = "macos")]
 impl FromStr for DarwinBindRedirectionType {
     type Err = EdenFsError;
 
@@ -127,8 +124,7 @@ impl FromStr for DarwinBindRedirectionType {
         } else {
             // deliberately did not implement "Unknown"
             Err(EdenFsError::ConfigurationError(format!(
-                "Unknown darwin bind redirection type: {}. Must be one of: apfs, dmg",
-                s
+                "Unknown darwin bind redirection type: {s}. Must be one of: apfs, dmg, symlink"
             )))
         }
     }
@@ -259,15 +255,23 @@ impl Redirection {
         .from_err()
     }
 
+    /// Read the configured darwin bind redirection implementation without
+    /// applying apfs-helper availability fallbacks.
+    #[cfg(target_os = "macos")]
+    pub fn configured_bind_redirection_type(
+        instance: &EdenFsInstance,
+    ) -> Result<DarwinBindRedirectionType> {
+        instance
+            .get_config()
+            .map(|config| config.redirections.darwin_redirection_type)
+            .and_then(|ty| DarwinBindRedirectionType::from_str(&ty))
+    }
+
     /// Determine what bind redirection type should be used on macOS. There are currently only 2
     /// options: apfs or dmg. We default to the old behavior, apfs.
     #[cfg(target_os = "macos")]
     pub fn determine_bind_redirection_type(instance: &EdenFsInstance) -> DarwinBindRedirectionType {
-        let config_value = instance
-            .get_config()
-            .map(|config| config.redirections.darwin_redirection_type)
-            .and_then(|ty| DarwinBindRedirectionType::from_str(&ty));
-        match config_value {
+        match Self::configured_bind_redirection_type(instance) {
             Ok(DarwinBindRedirectionType::SYMLINK) => DarwinBindRedirectionType::SYMLINK,
             Ok(DarwinBindRedirectionType::APFS) if !Self::have_apfs_helper().unwrap_or(false) => {
                 eprintln!(
