@@ -37,6 +37,7 @@ sl_rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:tracing",
         "//common/rust/monitoring:obc_lib",
         "//common/rust/shed/fbinit:fbinit",

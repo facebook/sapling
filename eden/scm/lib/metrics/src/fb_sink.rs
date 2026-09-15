@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::OnceLock;
 
 use anyhow::Result;
@@ -17,6 +18,7 @@ use obc_lib::obc_client::OBCClient;
 use obc_lib::obc_client::OBCClientOptions;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use regex::Regex;
 use stats_traits::stat_types::BoxSingletonCounter;
 use sysutil::hostname;
 
@@ -29,11 +31,13 @@ impl OBCClientWrapper {
     fn new(client: Arc<OBCClient>) -> Self {
         let hostname = hostname().to_string();
         let remote_execution_worker = std::env::var("REMOTE_EXECUTION_WORKER").ok();
-        let entity_keys = if let Some(worker) = remote_execution_worker {
-            vec![hostname.clone(), format!("{}:{}", hostname, worker)]
-        } else {
-            vec![hostname]
-        };
+        let aggregate_containers =
+            std::env::var("EDEN_ODS_AGGREGATE_CONTAINER_HOSTNAMES").as_deref() != Ok("0");
+        let entity_keys = ods_entity_keys(
+            &hostname,
+            remote_execution_worker.as_deref(),
+            aggregate_containers,
+        );
         OBCClientWrapper {
             client,
             entity_keys,
@@ -49,6 +53,26 @@ impl OBCClientWrapper {
                 tracing::warn!(?err, entity_key, metric = name, "failed to bump OBC metric");
             }
         }
+    }
+}
+
+fn ods_entity_keys(
+    hostname: &str,
+    worker: Option<&str>,
+    aggregate_containers: bool,
+) -> Vec<String> {
+    static CONTAINER_HOST: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^[0-9a-f]{4}-[0-9a-f]{4}(-[0-9a-f]{4}-[0-9a-f]{4})?\.twshared[0-9]+\.")
+            .unwrap()
+    });
+    if aggregate_containers && CONTAINER_HOST.is_match(hostname) {
+        // Worker IDs and container prefixes churn; the physical host is stable.
+        return vec![hostname.split_once('.').unwrap().1.to_owned()];
+    }
+    if let Some(worker) = worker {
+        vec![hostname.to_owned(), format!("{hostname}:{worker}")]
+    } else {
+        vec![hostname.to_owned()]
     }
 }
 
@@ -108,6 +132,10 @@ impl Sink for FbSink {
     }
 }
 
+/// Installs the fb303 sink and optionally enables OBC export.
+/// OBC aggregates build-container metrics by physical host. Set
+/// `EDEN_ODS_AGGREGATE_CONTAINER_HOSTNAMES=0` in this process's environment
+/// before enabling OBC to retain per-container entities.
 pub fn install(enable_obc: bool) -> Result<()> {
     static FB_SINK: Mutex<Option<Arc<FbSink>>> = Mutex::new(None);
 
@@ -128,4 +156,41 @@ pub fn install(enable_obc: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ods_entity_keys;
+
+    #[test]
+    fn containers_share_physical_worker_entity() {
+        let worker = "twshared63901.04.rva3.tw.fbinfra.net";
+        for prefix in ["8c50-153b-0004-0000", "abcd-1234-5678-9abc", "ed77-8a84"] {
+            let hostname = format!("{prefix}.{worker}");
+            assert_eq!(
+                ods_entity_keys(&hostname, Some("ephemeral-worker-id"), true),
+                vec![worker.to_owned()]
+            );
+            assert_eq!(
+                ods_entity_keys(&hostname, Some("ephemeral-worker-id"), false),
+                vec![hostname.clone(), format!("{hostname}:ephemeral-worker-id")]
+            );
+        }
+    }
+
+    #[test]
+    fn other_host_entities_are_preserved() {
+        for hostname in [
+            "devvm123.frc0",
+            "123.od.fbinfra.net",
+            "twshared63901.04.rva3.tw.fbinfra.net",
+            "8c50-153b-0004-0000.example.com",
+        ] {
+            assert_eq!(ods_entity_keys(hostname, None, true), vec![hostname]);
+            assert_eq!(
+                ods_entity_keys(hostname, Some("worker"), true),
+                vec![hostname.to_owned(), format!("{hostname}:worker")]
+            );
+        }
+    }
 }
