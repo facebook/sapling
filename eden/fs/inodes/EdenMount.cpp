@@ -1203,31 +1203,29 @@ constexpr uint64_t kPressureGcStallMinInvalidated = 10'000;
 
 void EdenMount::recordPressureGcOutcome(
     uint64_t numInvalidated,
-    uint64_t inodesBefore,
-    uint64_t inodesAfter) {
+    uint64_t numUnloaded) {
   // GC flushes the invalidation queue between invalidating entries and
   // sweeping, and the kernel FORGETs triggered by the invalidations arrive
-  // quickly in practice, so most of a run's invalidations should be dropped
-  // from the inode count by the run's own sweep. Concurrent lookups can
-  // offset some of the drop, but a healthy run reclaims far more than 10%;
-  // should a run be misjudged anyway, the cost is one cycle at the regular
-  // GC cadence.
-  auto numDropped =
-      static_cast<int64_t>(inodesBefore) - static_cast<int64_t>(inodesAfter);
+  // quickly in practice, so most of a run's invalidations should be unloaded
+  // by the run's own sweep. A healthy run reclaims far more than 10%; should
+  // a run be misjudged anyway, the cost is one cycle at the regular GC
+  // cadence. The sweep's own count is used rather than the change in the
+  // mount's inode count, which concurrent lookups (a build, a crawl) can
+  // push the other way while GC runs.
   bool stalled = numInvalidated >= kPressureGcStallMinInvalidated &&
-      numDropped <= static_cast<int64_t>(numInvalidated / 10);
+      numUnloaded <= numInvalidated / 10;
 
   if (pressureGcStalled_.exchange(stalled, std::memory_order_relaxed) !=
       stalled) {
     if (stalled) {
       XLOGF(
           INFO,
-          "Pressure-based GC for {} invalidated {} inodes but only dropped "
+          "Pressure-based GC for {} invalidated {} inodes but only reclaimed "
           "{}; the kernel may no longer hold the invalidated entries. "
           "Falling back to the regular GC period.",
           getPath(),
           numInvalidated,
-          numDropped);
+          numUnloaded);
     } else {
       XLOGF(
           INFO,

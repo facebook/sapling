@@ -868,6 +868,29 @@ TEST(InodeMap, totalInodeCountFastMatchesInodeCounts) {
   EXPECT_LT(inodeMap->getTotalInodeCountFast(), countBeforeForget);
 }
 
+TEST(InodeMap, forgottenCountExcludesReloadedInodes) {
+  FakeTreeBuilder builder;
+  builder.setFile("file", "contents");
+  TestMount testMount{builder};
+  auto* mount = testMount.getEdenMount().get();
+  auto* inodeMap = mount->getInodeMap();
+  auto file = testMount.getInode("file"_relpath);
+  const auto ino = file->getNodeId();
+  file->incFsRefcount();
+  file.reset();
+  mount->getRootInode()->unloadChildrenNow();
+  ASSERT_TRUE(inodeMap->isInodeRemembered(ino));
+  const auto before = inodeMap->getInodeCounts().forgottenInodeCount;
+
+  file = inodeMap->lookupInode(ino).get();
+  EXPECT_EQ(before, inodeMap->getInodeCounts().forgottenInodeCount);
+  file.reset();
+  mount->getRootInode()->unloadChildrenNow();
+  EXPECT_TRUE(inodeMap->clearFsRefcount(ino));
+  EXPECT_EQ(before + 1, inodeMap->getInodeCounts().forgottenInodeCount);
+  EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(ino));
+}
+
 TEST(InodeMap, inodeLoadFailureLogsError) {
   CapturingXplatLogger xplatLogger;
   auto config = EdenConfig::createTestEdenConfig();

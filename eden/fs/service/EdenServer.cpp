@@ -3352,6 +3352,9 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
     uint64_t numInvalidated;
     size_t numUnloaded;
     size_t zeroFsRefTreesRetained;
+    /** The run was cancelled before or during its sweep, which the sweep
+     * then cut short, so what it reclaimed says nothing about the run. */
+    bool cancelled;
   };
 
   folly::stop_watch<> inodeGCRuntime;
@@ -3398,7 +3401,8 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
               folly::Try<uint64_t>&& invalidatedTry) -> InodeGCResult {
             size_t numUnloaded = 0;
             size_t zeroFsRefTreesRetained = 0;
-            if (!gcToken.isCancellationRequested()) {
+            bool cancelled = gcToken.isCancellationRequested();
+            if (!cancelled) {
               if (keepRememberedParentTreesLoaded) {
                 auto unloadResult =
                     inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken);
@@ -3407,9 +3411,15 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
               } else {
                 numUnloaded = inode->unloadChildrenUnreferencedByFs(gcToken);
               }
+              // The sweep stops early once cancelled, so a partial count
+              // must not be judged either.
+              cancelled = gcToken.isCancellationRequested();
             }
             return {
-                invalidatedTry.value(), numUnloaded, zeroFsRefTreesRetained};
+                invalidatedTry.value(),
+                numUnloaded,
+                zeroFsRefTreesRetained,
+                cancelled};
           })
       .ensure([lease = std::move(lease)] {})
       .thenTry([inodeGCRuntime,
@@ -3417,6 +3427,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
                 &mount,
                 mountPath,
                 inodeMap = mount.getInodeMap(),
+                forgottenBeforeGC = inodeCountsBeforeGC.forgottenInodeCount,
                 totalNumberOfInodesBeforeGC,
                 pressureBased](folly::Try<InodeGCResult> resultTry) {
         auto runtime = std::chrono::duration<double>{inodeGCRuntime.elapsed()};
@@ -3428,6 +3439,15 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         size_t zeroFsRefTreesRetained =
             success ? resultTry.value().zeroFsRefTreesRetained : 0;
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
+        // Remembered inodes forgotten while the run was in progress. The
+        // count is mount-wide, but attributable to the run: on NFS only GC
+        // clears FS references, and on FUSE the sweep erases zero-reference
+        // inodes rather than remembering them, so nothing is counted twice.
+        // A FORGET the kernel sends for other reasons meanwhile, or
+        // InodeMap::forgetStaleInodes() running, only makes the run look
+        // healthier, never stalled.
+        auto numForgotten =
+            inodeCountsAfterGC.forgottenInodeCount - forgottenBeforeGC;
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
             inodeCountsAfterGC.unloadedInodeCount;
@@ -3443,7 +3463,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         auto logMessage = [&] {
           return fmt::format(
               "{} GC for: {}, completed in: {} seconds, "
-              "invalidated: {}, unloaded: {}, "
+              "invalidated: {}, unloaded: {}, forgotten: {}, "
               "inodes before: {}, inodes after: {}, "
               "fsRefCount==0 trees retained: {}",
               pressureBased ? "Pressure-based" : "Config-based",
@@ -3451,6 +3471,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
               runtime.count(),
               numInvalidated,
               numUnloaded,
+              numForgotten,
               totalNumberOfInodesBeforeGC,
               totalNumberOfInodesAfterGC,
               zeroFsRefTreesRetained);
@@ -3461,11 +3482,11 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
           XLOG(DBG4) << logMessage();
         }
 
-        if (success && pressureBased) {
+        // A cancelled run skipped or cut short its sweep, so it has nothing
+        // to judge.
+        if (success && pressureBased && !resultTry.value().cancelled) {
           mount.recordPressureGcOutcome(
-              resultTry.value().numInvalidated,
-              totalNumberOfInodesBeforeGC,
-              totalNumberOfInodesAfterGC);
+              resultTry.value().numInvalidated, numUnloaded + numForgotten);
         }
 
         return resultTry.value().numInvalidated;

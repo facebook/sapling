@@ -675,12 +675,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Record the outcome of a completed pressure-based GC run, updating
-   * isPressureGcStalled().
+   * isPressureGcStalled(). numUnloaded is what the run reclaimed: what its
+   * own sweep unloaded plus the remembered inodes forgotten while it ran.
    */
-  void recordPressureGcOutcome(
-      uint64_t numInvalidated,
-      uint64_t inodesBefore,
-      uint64_t inodesAfter);
+  void recordPressureGcOutcome(uint64_t numInvalidated, uint64_t numUnloaded);
 
   /**
    * Whether the most recent pressure-based GC run failed to reclaim the

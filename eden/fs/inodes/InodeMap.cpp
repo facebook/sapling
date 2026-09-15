@@ -800,6 +800,7 @@ InodePtr InodeMap::decFsRefcountHelper(
         number,
         unloadedEntry.parent,
         unloadedEntry.name);
+    ++data->numForgottenInodes_;
     eraseUnloadedInode(data, unloadedIter);
   }
   return nullptr;
@@ -1423,6 +1424,7 @@ InodeMap::InodeCounts InodeMap::getInodeCounts() const {
   counts.treeCount = data->numTreeInodes_;
   counts.fileCount = data->numFileInodes_;
   counts.unloadedInodeCount = data->unloadedInodes_.size();
+  counts.forgottenInodeCount = data->numForgottenInodes_;
   counts.periodicUnlinkedUnloadInodeCount =
       numPeriodicallyUnloadedUnlinkedInodes_.load(std::memory_order_relaxed);
   counts.periodicLinkedUnloadInodeCount =

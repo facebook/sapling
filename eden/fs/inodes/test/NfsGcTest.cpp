@@ -527,4 +527,22 @@ TEST_F(
   EXPECT_EQ(attemptsBefore, numInvalidationAttempts());
 }
 
+TEST_F(NfsGcTest, rememberedFilesAreReclaimedBeforeTheSweep) {
+  createOnDisk("parent/child");
+  auto child = testMount_->getTreeInode("parent/child");
+  auto one = inodeNumberOf("parent/child/one.txt");
+  auto* inodeMap = testMount_->getEdenMount()->getInodeMap();
+
+  // The files under "parent/child" are unloaded but remembered, since the
+  // client still references them. Clearing such a reference forgets the
+  // inode right away, before the sweep, so the sweep never sees it.
+  child->unloadChildrenNow();
+  ASSERT_TRUE(inodeMap->isInodeRemembered(one));
+  auto before = inodeMap->getInodeCounts().forgottenInodeCount;
+
+  EXPECT_EQ(4, runGc(std::chrono::system_clock::time_point::max()));
+  EXPECT_EQ(before + 2, inodeMap->getInodeCounts().forgottenInodeCount);
+  EXPECT_FALSE(inodeMap->isInodeLoadedOrRemembered(one));
+}
+
 #endif

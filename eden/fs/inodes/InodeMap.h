@@ -427,6 +427,8 @@ class InodeMap {
     size_t unloadedInodeCount = 0;
     size_t periodicUnlinkedUnloadInodeCount = 0;
     size_t periodicLinkedUnloadInodeCount = 0;
+    /** Cumulative remembered records removed when FS references reach zero. */
+    size_t forgottenInodeCount = 0;
   };
 
   /**
@@ -633,6 +635,12 @@ class InodeMap {
      * hold true to make sure our calculations are correct.
      */
     size_t numFileInodes_{0};
+
+    /**
+     * Running total of inodes forgotten outright by clearFsRefcount() while
+     * unloaded, which the GC sweep therefore never counts as unloaded.
+     */
+    size_t numForgottenInodes_{0};
 
     /**
      * A promise to fulfill once shutdown() completes.
