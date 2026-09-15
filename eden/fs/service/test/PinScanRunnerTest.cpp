@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "eden/fs/service/PinScanRunner.h"
 
@@ -46,16 +46,23 @@ TEST_F(PinScanRunnerTest, returnsTheHelpersReport) {
 
   auto report = runPinScan(helper, folly::CancellationToken{});
 
-  ASSERT_TRUE(report.has_value());
+  ASSERT_TRUE(report.hasValue());
   EXPECT_EQ(1u, report->scannedDevices.count(5));
   const std::vector<uint64_t> expectedPins{7, 9};
   EXPECT_EQ(expectedPins, report->pinsByDevice.at(5));
 }
 
-TEST_F(PinScanRunnerTest, failsSafeWhenTheHelperFails) {
-  auto helper = fakeHelper("fail", "printf 'dev 5\\n'\nexit 1\n");
+TEST_F(PinScanRunnerTest, reportsWhyTheHelperFailed) {
+  auto helper = fakeHelper(
+      "fail", "printf 'dev 5\\n'\necho 'scan-pins: boom' >&2\nexit 1\n");
 
-  EXPECT_FALSE(runPinScan(helper, folly::CancellationToken{}).has_value());
+  auto report = runPinScan(helper, folly::CancellationToken{});
+
+  ASSERT_FALSE(report.hasValue());
+  EXPECT_EQ("exit_status", report.error().reason);
+  EXPECT_NE(std::string::npos, report.error().detail.find("1"));
+  EXPECT_EQ("dev 5\n", report.error().stdoutPrefix);
+  EXPECT_EQ("scan-pins: boom\n", report.error().stderrPrefix);
 }
 
 TEST_F(PinScanRunnerTest, stopsWaitingWhenCancelled) {
@@ -71,7 +78,8 @@ TEST_F(PinScanRunnerTest, stopsWaitingWhenCancelled) {
   auto elapsed = std::chrono::steady_clock::now() - start;
   canceller.join();
 
-  EXPECT_FALSE(report.has_value());
+  ASSERT_FALSE(report.hasValue());
+  EXPECT_EQ("cancelled", report.error().reason);
   // Well under the 10 second default timeout: the wait ended on
   // cancellation, not on the deadline.
   EXPECT_LT(elapsed, 5s);
@@ -84,8 +92,9 @@ TEST_F(PinScanRunnerTest, stopsWaitingAtTheDeadline) {
   auto report = runPinScan(helper, folly::CancellationToken{}, 300ms);
   auto elapsed = std::chrono::steady_clock::now() - start;
 
-  EXPECT_FALSE(report.has_value());
+  ASSERT_FALSE(report.hasValue());
+  EXPECT_EQ("timeout", report.error().reason);
   EXPECT_LT(elapsed, 5s);
 }
 
-#endif // __linux__
+#endif // __linux__ || __APPLE__

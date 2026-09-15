@@ -228,8 +228,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         self.read_all()
 
     async def test_active_invalidation_reclaims_siblings_of_open_file(self) -> None:
-        if sys.platform != "linux":
-            self.skipTest("active FUSE invalidation is Linux-only")
+        if sys.platform not in ("linux", "darwin"):
+            self.skipTest("active invalidation needs FUSE or NFS")
 
         for i in range(self.deep_file_count):
             self.assertEqual(f"{i}\n", self.read_file(f"deep/parent/child/{i}"))
@@ -246,7 +246,15 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             time.sleep(3)
 
             invalidated = await self.invalidate("")
-            self.assertGreaterEqual(invalidated, self.deep_file_count)
+            # FUSE invalidates the open file's entry too; the kernel just keeps
+            # the inode. On NFS the pin scan finds the open file and GC leaves
+            # its reference alone, so it counts one fewer.
+            expected = (
+                self.deep_file_count
+                if sys.platform == "linux"
+                else self.deep_file_count - 1
+            )
+            self.assertGreaterEqual(invalidated, expected)
 
             loaded_after_gc = await self.get_loaded_count()
             self.assertLess(loaded_after_gc, loaded_after_read)

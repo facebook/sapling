@@ -3472,11 +3472,23 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
       });
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 struct PinScanData {
   PinScanReport report;
   folly::F14FastMap<std::string, uint64_t> devByMountPoint;
 };
+
+/**
+ * Whether pressure-based GC on this mount consults the pin scan: FUSE mounts
+ * on Linux, NFS mounts on macOS.
+ */
+bool usesPinScan(EdenMount& mount) {
+#ifdef __linux__
+  return mount.getFuseChannel() != nullptr;
+#else
+  return mount.getNfsdChannel() != nullptr;
+#endif
+}
 
 /**
  * Run the privhelper's pin scan and map this daemon's mounts to the devices
@@ -3484,7 +3496,8 @@ struct PinScanData {
  * which case pressure GC must not invalidate any directory entries.
  */
 std::optional<PinScanData> runPinnedInodeScan(
-    const folly::CancellationToken& cancellationToken) {
+    const folly::CancellationToken& cancellationToken,
+    const EdenFsEventsLogger& edenFsEventsLogger) {
   std::string helperPath = FLAGS_privhelper_path;
   if (helperPath.empty()) {
     helperPath =
@@ -3492,22 +3505,35 @@ std::optional<PinScanData> runPinnedInodeScan(
   }
   auto report = runPinScan(helperPath, cancellationToken);
   if (!report) {
+    if (report.error().reason != "cancelled") {
+      edenFsEventsLogger.logEvent(report.error());
+    }
     return std::nullopt;
   }
   PinScanData data;
   data.report = std::move(*report);
 
+#ifdef __linux__
   auto mounts = getAllMounts();
+#else
+  auto mounts = listMountsForPinScan();
+#endif
   if (mounts.hasError()) {
     XLOGF(
         WARN,
         "unable to map mounts to devices for pin scan: {}",
         folly::errnoStr(mounts.error()));
+    edenFsEventsLogger.logEvent(
+        PinScanFailure{"mounts_unreadable", folly::errnoStr(mounts.error())});
     return std::nullopt;
   }
   for (const auto& mount : mounts.value()) {
+#ifdef __linux__
     data.devByMountPoint[mount.mountPoint] =
         makedev(mount.devMajor, mount.devMinor);
+#else
+    data.devByMountPoint[mount.mountPoint] = mount.dev;
+#endif
   }
   return data;
 }
@@ -3517,7 +3543,10 @@ std::optional<PinScanData> runPinnedInodeScan(
  * nullptr (meaning "pins unknown, do not invalidate directories") if the
  * scan failed or the mount cannot be mapped to a device.
  */
-PinnedInodeSet buildPinnedInodeSet(EdenMount& mount, const PinScanData* scan) {
+PinnedInodeSet buildPinnedInodeSet(
+    EdenMount& mount,
+    const PinScanData* scan,
+    const EdenFsEventsLogger& edenFsEventsLogger) {
   if (scan == nullptr) {
     return nullptr;
   }
@@ -3532,6 +3561,8 @@ PinnedInodeSet buildPinnedInodeSet(EdenMount& mount, const PinScanData* scan) {
         60'000,
         "pin scan did not cover mount {}; skipping directory invalidation",
         mount.getPath());
+    edenFsEventsLogger.logEvent(
+        PinScanFailure{"mount_not_covered", mount.getPath().asString()});
     return nullptr;
   }
   auto pins = std::make_shared<folly::F14FastSet<InodeNumber>>();
@@ -3543,7 +3574,7 @@ PinnedInodeSet buildPinnedInodeSet(EdenMount& mount, const PinScanData* scan) {
   }
   return pins;
 }
-#endif // __linux__
+#endif // __linux__ || __APPLE__
 
 } // namespace
 
@@ -3566,16 +3597,18 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
   }
 
   PinnedInodeSet pinnedInodes;
-#ifdef __linux__
-  if (pressureBased && mount.getFuseChannel() != nullptr &&
+#if defined(__linux__) || defined(__APPLE__)
+  if (pressureBased && usesPinScan(mount) &&
       serverState_->getReloadableConfig()
           ->getEdenConfig()
           ->pressureBasedGcScanPins.getValue()) {
+    const auto& edenFsEventsLogger = *serverState_->getEdenFsEventsLogger();
     auto scan = runPinnedInodeScan(
         folly::cancellation_token_merge(
-            gcCancelSource_.rlock()->getToken(),
-            lease->getCancellationToken()));
-    pinnedInodes = buildPinnedInodeSet(mount, scan ? &scan.value() : nullptr);
+            gcCancelSource_.rlock()->getToken(), lease->getCancellationToken()),
+        edenFsEventsLogger);
+    pinnedInodes = buildPinnedInodeSet(
+        mount, scan ? &scan.value() : nullptr, edenFsEventsLogger);
   }
 #endif
   return garbageCollectInodesWithLease(
@@ -3719,28 +3752,29 @@ void EdenServer::garbageCollectAllMounts() {
        shutdownToken = std::move(shutdownToken),
        edenFsEventsLogger = std::move(edenFsEventsLogger),
        threadPool]() mutable {
-        (void)scanPins; // consumed only on Linux
-#ifdef __linux__
+        (void)scanPins; // consumed only where pin scans exist
+#if defined(__linux__) || defined(__APPLE__)
         std::optional<PinScanData> scan;
         if (scanPins) {
-          bool anyFuseMount = false;
+          bool anyMountUsesPins = false;
           for (auto& dueMount : dueMounts) {
-            anyFuseMount = anyFuseMount ||
-                dueMount.mountHandle.getEdenMount().getFuseChannel() != nullptr;
+            anyMountUsesPins = anyMountUsesPins ||
+                usesPinScan(dueMount.mountHandle.getEdenMount());
           }
-          if (anyFuseMount) {
-            scan = runPinnedInodeScan(shutdownToken);
+          if (anyMountUsesPins) {
+            scan = runPinnedInodeScan(shutdownToken, *edenFsEventsLogger);
           }
         }
 #endif
         for (auto& dueMount : dueMounts) {
           PinnedInodeSet pinnedInodes;
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
           if (pressureBasedGc &&
-              dueMount.mountHandle.getEdenMount().getFuseChannel() != nullptr) {
+              usesPinScan(dueMount.mountHandle.getEdenMount())) {
             pinnedInodes = buildPinnedInodeSet(
                 dueMount.mountHandle.getEdenMount(),
-                scan ? &scan.value() : nullptr);
+                scan ? &scan.value() : nullptr,
+                *edenFsEventsLogger);
           }
 #endif
           folly::via(

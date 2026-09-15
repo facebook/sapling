@@ -248,7 +248,9 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/fs/privhelper:pin_scan",
+        "//eden/fs/telemetry:log_info",
         "//folly:cancellation_token",
+        "//folly:expected",
     ],
 )
 

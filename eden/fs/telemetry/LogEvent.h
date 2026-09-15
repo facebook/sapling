@@ -768,6 +768,38 @@ struct WorkingCopyGc : public EdenFSEvent {
   }
 };
 
+/**
+ * A pin scan (`edenfs_privhelper --scan-pins`) that produced no usable
+ * report, so the GC run that asked for it treated pins as unknown. `reason`
+ * is one of spawn_error, poll_error, read_error, timeout, output_too_large,
+ * exit_status and malformed_output from running the helper, or
+ * mounts_unreadable and mount_not_covered from mapping its report to this
+ * daemon's mounts.
+ */
+struct PinScanFailure : public EdenFSEvent {
+  std::string reason;
+  // Errno text, exit status, or the mount the scan did not cover.
+  std::string detail;
+  std::string stdoutPrefix;
+  std::string stderrPrefix;
+  int64_t durationMs = 0;
+
+  PinScanFailure(std::string reason, std::string detail)
+      : reason(std::move(reason)), detail(std::move(detail)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("reason", reason);
+    event.addString("detail", detail);
+    event.addString("stdout_prefix", stdoutPrefix);
+    event.addString("stderr_prefix", stderrPrefix);
+    event.addInt("duration_ms", durationMs);
+  }
+
+  const char* getType() const override {
+    return "pin_scan_failure";
+  }
+};
+
 struct SilentDaemonExit : public EdenFSEvent {
   uint64_t last_daemon_heartbeat = 0;
   uint8_t daemon_exit_signal = 0;

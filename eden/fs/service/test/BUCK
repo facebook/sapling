@@ -140,7 +140,9 @@ cpp_unittest(
     srcs = ["PinScanRunnerTest.cpp"],
     compatible_with = [
         "ovr_config//os:linux",
+        "ovr_config//os:macos",
     ],
+    network_access = network_access_utils.none(),
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/service:pin_scan_runner",

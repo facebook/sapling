@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "eden/fs/service/PinScanRunner.h"
 
@@ -32,21 +32,64 @@ constexpr auto kKillTimeout = std::chrono::milliseconds{250};
 // waiting for scan output.
 constexpr auto kPollSlice = std::chrono::milliseconds{100};
 constexpr size_t kMaxOutput = 1024 * 1024;
+// How much of each stream a failure event quotes.
+constexpr size_t kPrefixBytes = 1024;
+
+/**
+ * Read what the non-blocking descriptor has, keeping the first `limit` bytes.
+ * Returns 0, or the errno of a failed read.
+ */
+int drain(int fd, std::string& buffer, size_t limit, bool& eof) {
+  while (true) {
+    char buf[4096];
+    auto n = ::read(fd, buf, sizeof(buf));
+    if (n > 0) {
+      if (buffer.size() < limit) {
+        buffer.append(
+            buf, std::min(static_cast<size_t>(n), limit - buffer.size()));
+      }
+      continue;
+    }
+    if (n == 0) {
+      eof = true;
+      return 0;
+    }
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      return 0;
+    }
+    if (errno == EINTR) {
+      continue;
+    }
+    return errno;
+  }
+}
 
 } // namespace
 
-std::optional<PinScanReport> runPinScan(
+folly::Expected<PinScanReport, PinScanFailure> runPinScan(
     const std::string& helperPath,
     const folly::CancellationToken& cancellationToken,
     std::chrono::milliseconds timeout) {
+  const auto start = std::chrono::steady_clock::now();
+  std::string output;
+  std::string errors;
+  auto fail = [&](std::string reason, std::string detail) {
+    PinScanFailure failure{std::move(reason), std::move(detail)};
+    failure.stdoutPrefix = output.substr(0, kPrefixBytes);
+    failure.stderrPrefix = errors.substr(0, kPrefixBytes);
+    failure.durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - start)
+                             .count();
+    return folly::makeUnexpected(std::move(failure));
+  };
   if (cancellationToken.isCancellationRequested()) {
-    return std::nullopt;
+    return fail("cancelled", "");
   }
 
-  std::string output;
   try {
     SpawnedProcess::Options options;
     options.pipeStdout();
+    options.pipeStderr();
     options.nullStdin();
     SpawnedProcess proc(
         std::vector<std::string>{helperPath, "--scan-pins"},
@@ -57,69 +100,77 @@ std::optional<PinScanReport> runPinScan(
       proc.terminateOrKill(kKillTimeout);
     };
     auto out = proc.stdoutFd();
-    int flags = fcntl(out.fd(), F_GETFL);
-    folly::checkUnixError(
-        fcntl(out.fd(), F_SETFL, flags | O_NONBLOCK), "fcntl");
+    auto err = proc.stderrFd();
+    for (int fd : {out.fd(), err.fd()}) {
+      int flags = fcntl(fd, F_GETFL);
+      folly::checkUnixError(fcntl(fd, F_SETFL, flags | O_NONBLOCK), "fcntl");
+    }
 
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    bool eof = false;
-    while (!eof) {
+    // stdout is the report; stderr is kept only as far as a failure quotes
+    // it. Both are read until the child closes them.
+    struct Stream {
+      int fd{};
+      std::string& buffer;
+      size_t limit{};
+      bool eof{false};
+    };
+    Stream streams[] = {
+        {out.fd(), output, kMaxOutput + 1},
+        {err.fd(), errors, kPrefixBytes},
+    };
+    const auto deadline = start + timeout;
+    while (!streams[0].eof || !streams[1].eof) {
       if (cancellationToken.isCancellationRequested()) {
         proc.terminateOrKill(kKillTimeout);
         XLOG(DBG2, "pin scan cancelled");
-        return std::nullopt;
+        return fail("cancelled", "");
       }
       auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
           deadline - std::chrono::steady_clock::now());
       if (remaining.count() <= 0) {
         proc.terminateOrKill(kKillTimeout);
         XLOG(WARN, "pin scan timed out; skipping directory invalidation");
-        return std::nullopt;
+        return fail("timeout", std::to_string(timeout.count()) + "ms");
       }
-      struct pollfd pfd{out.fd(), POLLIN, 0};
+      // poll ignores a negative descriptor, which stands for a closed stream.
+      struct pollfd pfds[2];
+      for (size_t i = 0; i < 2; ++i) {
+        pfds[i] = pollfd{streams[i].eof ? -1 : streams[i].fd, POLLIN, 0};
+      }
       int pollResult = ::poll(
-          &pfd, 1, static_cast<int>(std::min(remaining, kPollSlice).count()));
+          pfds, 2, static_cast<int>(std::min(remaining, kPollSlice).count()));
       if (pollResult < 0 && errno != EINTR) {
-        auto err = errno;
+        auto pollErrno = errno;
         proc.terminateOrKill(kKillTimeout);
         XLOGF(
             WARN,
             "pin scan poll failed: {}; skipping directory invalidation",
-            folly::errnoStr(err));
-        return std::nullopt;
+            folly::errnoStr(pollErrno));
+        return fail("poll_error", folly::errnoStr(pollErrno));
       }
       if (pollResult <= 0) {
         continue;
       }
-      while (true) {
-        char buf[4096];
-        auto n = ::read(out.fd(), buf, sizeof(buf));
-        if (n > 0) {
-          output.append(buf, n);
-          if (output.size() > kMaxOutput) {
-            proc.terminateOrKill(kKillTimeout);
-            XLOG(WARN, "pin scan produced unreasonably large output");
-            return std::nullopt;
-          }
+      for (size_t i = 0; i < 2; ++i) {
+        if (pfds[i].fd < 0 || pfds[i].revents == 0) {
           continue;
         }
-        if (n == 0) {
-          eof = true;
-          break;
+        auto& stream = streams[i];
+        if (int readErrno =
+                drain(stream.fd, stream.buffer, stream.limit, stream.eof)) {
+          proc.terminateOrKill(kKillTimeout);
+          XLOGF(
+              WARN,
+              "pin scan read failed: {}; skipping directory invalidation",
+              folly::errnoStr(readErrno));
+          return fail("read_error", folly::errnoStr(readErrno));
         }
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          break;
-        }
-        if (errno == EINTR) {
-          continue;
-        }
-        auto err = errno;
+      }
+      if (output.size() > kMaxOutput) {
         proc.terminateOrKill(kKillTimeout);
-        XLOGF(
-            WARN,
-            "pin scan read failed: {}; skipping directory invalidation",
-            folly::errnoStr(err));
-        return std::nullopt;
+        XLOG(WARN, "pin scan produced unreasonably large output");
+        return fail(
+            "output_too_large", std::to_string(output.size()) + " bytes");
       }
     }
 
@@ -138,11 +189,12 @@ std::optional<PinScanReport> runPinScan(
       XLOGF_EVERY_MS(
           WARN,
           60'000,
-          "pin scan ({} --scan-pins) failed: {}; "
+          "pin scan ({} --scan-pins) failed: {}: {}; "
           "skipping directory invalidation",
           helperPath,
-          status.str());
-      return std::nullopt;
+          status.str(),
+          folly::rtrimWhitespace(errors).str());
+      return fail("exit_status", status.str());
     }
   } catch (const std::exception& ex) {
     XLOGF(
@@ -151,7 +203,7 @@ std::optional<PinScanReport> runPinScan(
         "skipping directory invalidation",
         helperPath,
         folly::exceptionStr(ex));
-    return std::nullopt;
+    return fail("spawn_error", folly::exceptionStr(ex).toStdString());
   }
 
   auto report = parsePinScanReport(output);
@@ -160,11 +212,11 @@ std::optional<PinScanReport> runPinScan(
         WARN,
         "pin scan output is malformed or incomplete; "
         "skipping directory invalidation");
-    return std::nullopt;
+    return fail("malformed_output", "");
   }
-  return report;
+  return std::move(*report);
 }
 
 } // namespace facebook::eden
 
-#endif // __linux__
+#endif // __linux__ || __APPLE__

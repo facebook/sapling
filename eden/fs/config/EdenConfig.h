@@ -667,16 +667,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether pressure-based GC discovers directories pinned as process
-   * working directories or roots (via the privhelper `scan-pins` mode) so it
-   * can invalidate all other directories while skipping the pinned chains.
-   * Invalidating a pinned directory's entry breaks getcwd() and path
-   * resolution for the pinning process without reclaiming anything, since
-   * the kernel cannot FORGET a pinned inode.
+   * Whether pressure-based GC discovers inodes pinned by processes (via the
+   * privhelper `scan-pins` mode) so it can reclaim everything else while
+   * skipping the pinned chains. On Linux (FUSE) pins are the directories
+   * used as working directories or roots: invalidating one's entry breaks
+   * getcwd() and path resolution for the pinning process without reclaiming
+   * anything, since the kernel cannot FORGET a pinned inode. On macOS (NFS)
+   * pins also include files held open or mapped, since EdenFS forgets the
+   * inode itself and the process would get ESTALE.
    *
-   * When disabled, or whenever the scan fails, pressure-based GC skips
-   * invalidating directory entries entirely (file reclamation is
-   * unaffected).
+   * When disabled, or whenever the scan fails, pressure-based GC leaves all
+   * directories alone (file reclamation is unaffected).
    */
   ConfigSetting<bool> pressureBasedGcScanPins{
       "mount:pressure-gc-scan-pins",
