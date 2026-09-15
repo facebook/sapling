@@ -646,8 +646,20 @@ PrivHelperServer::FuseMountResult PrivHelperServer::fuseMountByFd(
       gid_,
       fuseDev.fd());
 
-  auto fsFd = fsOpen(vfsType);
+  // fsopen(2) resolves only the base filesystem type. Unlike mount(2), it does
+  // not turn a dotted type such as "fuse.edenfs" into a FUSE subtype, so pass
+  // the suffix explicitly to keep the advertised type identical on both paths.
+  folly::StringPiece fsType{vfsType};
+  folly::StringPiece subtype;
+  if (const auto dot = fsType.find('.'); dot != folly::StringPiece::npos) {
+    subtype = fsType.subpiece(dot + 1);
+    fsType = fsType.subpiece(0, dot);
+  }
+  auto fsFd = fsOpen(fsType);
   fsConfigString(fsFd.fd(), "source", kEdenFsMountSource);
+  if (!subtype.empty()) {
+    fsConfigString(fsFd.fd(), "subtype", subtype);
+  }
   fsConfigCommaSeparatedOptions(fsFd.fd(), mountOpts);
   fsConfigSet(fsFd.fd(), FSCONFIG_CMD_CREATE, nullptr, nullptr);
 

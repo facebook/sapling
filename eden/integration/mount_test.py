@@ -45,6 +45,11 @@ class MountTest(testcase.EdenRepoTest):
     expected_mount_entries: Set[str]
     enable_fault_injection: bool = True
 
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("fuse", []).append('vfs-type = "fuse.edenfs"')
+        return configs
+
     def populate_repo(self) -> None:
         self.maxDiff = None
         self.repo.write_file("hello", "hola\n")
@@ -479,6 +484,24 @@ class MountTest(testcase.EdenRepoTest):
             self.assertTrue(
                 len(errored_mount_list) == 0, f"errored mounts: {errored_mount_list}"
             )
+
+    @unittest.skipIf(sys.platform != "linux", "FUSE subtypes are Linux-only")
+    @unittest.skipUnless(
+        os.environ.get("EDENFS_PRIVHELPER_PATH"),
+        "mounts are made by the installed privhelper unless "
+        "EDENFS_PRIVHELPER_PATH points at the privhelper under test",
+    )
+    def test_fuse_mount_advertises_edenfs_subtype(self) -> None:
+        if self.use_nfs():
+            self.skipTest("only FUSE mounts carry a subtype")
+
+        mount_entries = [
+            mount
+            for mount in mtab.new().read()
+            if mount.mount_point.decode() == self.mount
+        ]
+        self.assertEqual(len(mount_entries), 1, f"mount entries: {mount_entries}")
+        self.assertEqual(mount_entries[0].vfstype, b"fuse.edenfs")
 
 
 @testcase.eden_repo_test(run_on_nfs=False)
