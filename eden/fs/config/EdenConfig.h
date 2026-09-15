@@ -817,6 +817,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Specify the interval of periodic mount health checks.
+   *
+   * Health checks only observe and report; they never mount or unmount
+   * anything. They are therefore safe to enable independently of
+   * accidental-unmount-recovery-interval, which admits remounts.
+   */
+  ConfigSetting<std::chrono::nanoseconds> mountHealthCheckInterval{
+      "mount:mount-health-check-interval",
+      std::chrono::minutes(0),
+      this};
+
+  /**
    * The soong build system used in AOSP loves to crawls the entirety of the
    * repository, including the .eden directory. In doing so, it infinitely
    * recurse into the this-dir.

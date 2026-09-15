@@ -1072,6 +1072,9 @@ class EdenServer : private TakeoverHandler {
       "detect_nfs_crawl"};
   PeriodicFnTask<&EdenServer::accidentalUnmountRecovery>
       accidentalUnmountRecoveryTask_{this, "accidental_unmount_recovery"};
+  PeriodicFnTask<&EdenServer::checkMountHealth> mountHealthCheckTask_{
+      this,
+      "mount_health_check"};
 #ifndef _WIN32
   PeriodicFnTask<&EdenServer::createOrUpdateEdenHeartbeatFile>
       updateEdenHeartbeatFileTask_{this, "update-eden-heartbeat"};

@@ -1440,6 +1440,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.accidentalUnmountRecoveryInterval.getValue()));
 
+  mountHealthCheckTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.mountHealthCheckInterval.getValue()));
+
 #ifndef _WIN32
   updateEdenHeartbeatFileTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -3956,8 +3960,6 @@ void EdenServer::checkMountHealth() {
 
 void EdenServer::accidentalUnmountRecovery() {
   XLOGF(DBG5, "Performing accidental unmount recovery.");
-  checkMountHealth();
-
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
