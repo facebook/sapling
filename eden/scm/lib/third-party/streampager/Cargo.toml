@@ -15,7 +15,7 @@ name = "streampager"
 edition = "2021"
 
 [dependencies]
-dirs = "6.0"
+dirs = "7.0"
 enum_dispatch = "0.3.13"
 lru = { version = "0.18.4", default-features = false }
 memmap2 = "0.9.11"
