@@ -1119,6 +1119,10 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
   // Skip stale bind mount cleanup on takeover: the kernel preserves live
   // redirections (e.g. buck-out) across a graceful restart, so unmounting
   // them here would destroy legitimate user state.
+  //
+  // Skip the stale mount check too: the daemon is already serving this mount
+  // when it sends the takeover startup request, so there is nothing stale to
+  // detect.
   auto sanityResult =
       sanityCheckMountPoint(mountPath, SanityCheckOptions::forTakeover());
 

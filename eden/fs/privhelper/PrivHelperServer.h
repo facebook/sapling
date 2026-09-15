@@ -197,14 +197,16 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   class SanityCheckOptions {
    public:
     /**
-     * The mount the daemon inherited across a graceful restart. Redirection
-     * bind mounts are left alone: the kernel preserves live ones (e.g.
-     * buck-out) across the restart, so detaching them would unmount user
-     * state.
+     * The mount the daemon inherited across a graceful restart. No stale
+     * mount probe: the daemon is already serving the mount when it sends the
+     * takeover startup request, so there is nothing stale to detect.
+     * Redirection bind mounts are left alone: the kernel preserves live ones
+     * (e.g. buck-out) across the restart, so detaching them would unmount
+     * user state.
      */
     static SanityCheckOptions forTakeover() {
       return SanityCheckOptions(
-          StaleMountCheck{/*isNFS=*/false, /*isHardMount=*/false},
+          /*staleMountCheck=*/std::nullopt,
           /*performBindMountCleanup=*/false);
     }
 
