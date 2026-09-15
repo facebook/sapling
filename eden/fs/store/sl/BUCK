@@ -60,6 +60,7 @@ cpp_library(
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
+        "//eden/fs/facebook:normalized_hostname",
         "//eden/fs/service:thrift_util",
         "//eden/fs/telemetry:error_info",
         "//eden/fs/telemetry:log_info",

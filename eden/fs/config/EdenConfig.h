@@ -1807,6 +1807,11 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  ConfigSetting<bool> aggregateContainerOdsHostnames{
+      "telemetry:aggregate-container-ods-hostnames",
+      true,
+      this};
+
   /**
    * Controls which configs we want to send with the request logging.
    * The elements are full config keys, e.g. "hg:import-batch-size".

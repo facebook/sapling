@@ -59,6 +59,7 @@
 #endif
 #ifdef EDEN_HAVE_OBC
 #include "common/network/Hostname.h"
+#include "eden/fs/facebook/NormalizedHostname.h"
 #endif
 
 DEFINE_bool(
@@ -328,6 +329,9 @@ SaplingBackingStore::~SaplingBackingStore() {
 void SaplingBackingStore::initializeOBCCounters() {
   // Get the hostname without the ".facebook.com" suffix
   auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
+  if (config_->getEdenConfig()->aggregateContainerOdsHostnames.getValue()) {
+    hostname = detail::getOdsHostname(hostname);
+  }
   getBlobPerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
       fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName_),
