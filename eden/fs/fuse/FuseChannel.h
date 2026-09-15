@@ -981,10 +981,16 @@ class FuseChannel final : public FsChannel {
 
   PrivHelper* const privHelper_;
 
+  /**
+   * The size of the buffer a worker reads a request into. Sized from
+   * fuse:max-pages for a fresh mount, and from the negotiated max_write when
+   * taking over an established connection.
+   */
+  size_t bufferSize_{0};
+
   /*
    * Constant state that does not change for the lifetime of the FuseChannel
    */
-  const size_t bufferSize_{0};
   std::shared_ptr<folly::Executor> threadPool_;
   // The number of worker threads that are configured to be created.
   const size_t configuredWorkerThreadCount_;

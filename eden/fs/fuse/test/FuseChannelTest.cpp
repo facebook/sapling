@@ -302,6 +302,26 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   EXPECT_EQ(flags, fuseStopData->fuseSettings.flags);
 }
 
+TEST_F(FuseChannelTest, testTakeoverBufferSizeFollowsNegotiatedMaxWrite) {
+  // fuse:max-pages is 0, so a fresh mount would get the minimum buffer, but
+  // the inherited connection lets the kernel send 1 MB writes.
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0);
+  fuse_init_out connInfo = {};
+  connInfo.major = FUSE_KERNEL_VERSION;
+  connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+  connInfo.max_write = 256 * 4096;
+
+  auto completeFuture = channel->initializeFromTakeover(connInfo);
+
+  EXPECT_EQ(connInfo.max_write + 4096, channel->getTransportBufferSize());
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_EQ(FuseChannel::StopReason::TAKEOVER, fuseStopData->reason);
+}
+
 #if EDEN_HAVE_FUSE_IO_URING
 std::string getRunningKernelReleaseForTest() {
   struct utsname uts = {};

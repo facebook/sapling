@@ -258,6 +258,12 @@ static_assert(CheckSize<FuseTraceEvent, 72>());
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
 
+// The buffer a worker reads into must hold the largest request the kernel can
+// send, which is a write of max_write bytes plus its headers.
+size_t requestBufferSize(size_t maxWrite) {
+  return std::max(MIN_BUFSIZE, maxWrite + 0x1000);
+}
+
 using Handler = ImmediateFuture<folly::Unit> (FuseChannel::*)(
     FuseRequestContext& request,
     const fuse_in_header& header,
@@ -1030,11 +1036,7 @@ FuseChannel::FuseChannel(
       // optimistic: if the kernel doesn't support FUSE_MAX_PAGES, the buffer
       // will be larger than necessary but still correct.
       bufferSize_(
-          std::max(
-              MIN_BUFSIZE,
-              fuseMaxPages > 0
-                  ? size_t(fuseMaxPages) * size_t(getpagesize()) + 0x1000
-                  : size_t(getpagesize()) + 0x1000)),
+          requestBufferSize(size_t(fuseMaxPages) * size_t(getpagesize()))),
       threadPool_{std::move(threadPool)},
       configuredWorkerThreadCount_(numThreads),
       numInvalidationThreads_{std::clamp<size_t>(
@@ -1262,6 +1264,11 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   takeoverReadinessStarted_.store(true, std::memory_order_release);
   connInfo_ = connInfo;
+  // The kernel may send requests as large as the max_write it negotiated with
+  // the process we took over from. fuse:max-pages has no say over an
+  // established connection, so a buffer sized from it would be too small to
+  // read those requests whenever the two disagree.
+  bufferSize_ = requestBufferSize(connInfo.max_write);
   if (negotiatedIoUringTransport(connInfo)) {
     // TODO: fuse:io-uring-pre-create-queues is deliberately not honored here.
     // io_uring was already negotiated by the process we took over from, so
