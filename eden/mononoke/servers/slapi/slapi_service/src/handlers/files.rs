@@ -115,7 +115,7 @@ impl SaplingRemoteApiHandler for Files2Handler {
     const ENDPOINT: &'static str = "/files2";
 
     fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
-        nonzero_ext::nonzero!(256u64)
+        nonzero_ext::nonzero!(1024u64)
     }
 
     async fn handler(

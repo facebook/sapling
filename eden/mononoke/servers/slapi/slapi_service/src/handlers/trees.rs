@@ -127,7 +127,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
         rd.add_request(&request);
     };
 
-    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
+    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(1024_u64));
 
     Ok(custom_cbor_stream(
         super::monitor_request(state, fetch_all_trees(repo, request, slapi_flavour)),
