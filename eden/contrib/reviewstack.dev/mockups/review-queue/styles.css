@@ -530,7 +530,26 @@ kbd {
   border: 1px solid var(--border);
   border-radius: 9px;
   box-shadow: var(--shadow);
-  overflow: hidden;
+  max-height: min(520px, 56vh);
+  overflow: auto;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.table-card::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.table-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-card::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid var(--surface);
+  border-radius: 999px;
 }
 
 .pr-table {
@@ -548,8 +567,11 @@ kbd {
   height: 34px;
   letter-spacing: 0.045em;
   padding: 0 14px;
+  position: sticky;
   text-align: left;
+  top: 0;
   text-transform: uppercase;
+  z-index: 2;
 }
 
 .pr-table th:first-child,
