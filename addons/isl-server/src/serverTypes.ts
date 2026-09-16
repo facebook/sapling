@@ -16,6 +16,9 @@ import type {Logger} from './logger';
  */
 export type RepositoryContext = {
   cmd: string;
+  /**
+   * Working directory for this connection, normalized via `realpath`.
+   */
   cwd: string;
   logger: Logger;
   tracker: ServerSideTracker;

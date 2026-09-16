@@ -11,6 +11,7 @@ import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
 
+import fs from 'node:fs';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
@@ -90,6 +91,32 @@ describe('RepositoryCache', () => {
     );
 
     ref.unref();
+  });
+
+  it('canonicalizes cwd via realpath when binding a context to a repo', async () => {
+    // OnDemand: a symlinked cwd resolves to a different canonical path; canonicalizing it avoids the
+    // downstream "... is not under root" abort.
+    const logicalCwd = '/path/to/symlink/cwd';
+    const canonicalCwd = '/path/to/repo/cwd';
+    const realpathSpy = jest
+      .spyOn(fs, 'realpathSync')
+      .mockImplementation(((p: string) =>
+        p === logicalCwd ? canonicalCwd : p) as unknown as typeof fs.realpathSync);
+
+    const cache = new RepositoryCache(SimpleMockRepository);
+    const symlinkedCtx: RepositoryContext = {...ctx, cwd: logicalCwd};
+    const ref = cache.getOrCreate(symlinkedCtx);
+
+    const repo = await ref.promise;
+    // getRepoInfo (mock) only recognizes the canonical path as a repo, so this proves cwd was
+    // canonicalized before getRepoInfo ran.
+    expect(repo).toEqual(
+      expect.objectContaining({info: expect.objectContaining({repoRoot: '/path/to/repo'})}),
+    );
+    expect(symlinkedCtx.cwd).toBe(canonicalCwd);
+
+    ref.unref();
+    realpathSpy.mockRestore();
   });
 
   it('Gives error for paths without repos', async () => {

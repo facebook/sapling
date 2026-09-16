@@ -355,6 +355,43 @@ describe('Repository', () => {
       );
     });
 
+    it('produces repo-root-relative file args when cwd is a deeper subdir of the root', async () => {
+      // Regression for "cwd relative path ... is not under root": once cwd is canonicalized to the
+      // root's namespace, the relativized file arg must not climb above the root with `../`.
+      const canonicalRoot = '/data/repos/fbsource';
+      const canonicalCwd = '/data/repos/fbsource/www';
+
+      const symlinkedRepoInfo: ValidatedRepoInfo = {
+        ...repoInfo,
+        dotdir: `${canonicalRoot}/.sl`,
+        repoRoot: canonicalRoot,
+        isEdenFs: true,
+      };
+      const symlinkedCtx: RepositoryContext = {...ctx, cwd: canonicalCwd};
+      const repo = new Repository(symlinkedRepoInfo, symlinkedCtx);
+      const relativeFile =
+        'flib/intern/aurora/lint_rules/ast_linters/graphql/__tests__/GraphQLBuildSandboxCacheTopologyLintRuleTest.php';
+
+      await repo.runOrQueueOperation(
+        symlinkedCtx,
+        {
+          id: '1',
+          trackEventName: 'AmendFileSubsetOperation',
+          runner: CommandRunner.Sapling,
+          args: ['amend', {type: 'repo-relative-file', path: `www/${relativeFile}`}],
+        },
+        jest.fn(),
+      );
+
+      expect(ejecaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['amend', relativeFile, '--noninteractive'],
+        expect.anything(),
+      );
+      const passedArgs = ejecaSpy.mock.calls[0][1] as Array<string>;
+      expect(passedArgs.some(arg => arg.startsWith('..'))).toBe(false);
+    });
+
     it('handles allowed configs', async () => {
       await runOperation({
         args: ['commit', {type: 'config', key: 'ui.allowemptycommit', value: 'True'}],

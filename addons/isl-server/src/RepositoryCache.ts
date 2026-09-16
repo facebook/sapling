@@ -8,6 +8,7 @@
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 import type {RepositoryContext} from './serverTypes';
 
+import fs from 'node:fs';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
 import {Repository} from './Repository';
@@ -136,6 +137,12 @@ class RepositoryCache {
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
   getOrCreate(ctx: RepositoryContext): RepositoryReference {
+    // Resolve symlinks so cwd shares a namespace with the canonical repoRoot from `sl root`.
+    // Sync (not async) so repo creation isn't delayed; falls back to the raw path if realpath fails.
+    try {
+      ctx.cwd = fs.realpathSync(ctx.cwd) as AbsolutePath;
+    } catch {}
+
     // Fast path: if this cwd is already a known repo root, we can use it directly.
     // This only works if the cwd happens to be the repo root.
     const found = this.lookup(ctx.cwd);

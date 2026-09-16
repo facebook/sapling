@@ -295,7 +295,7 @@ export class Repository {
             ) ?? Promise.resolve()
           );
         } else if (operation.runner === CommandRunner.Conf) {
-          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
+          const {args: normalizedArgs} = this.normalizeOperationArgs(ctx, operation);
           if (this.codeReviewProvider?.runConfCommand == null) {
             return Promise.reject(
               Error('CodeReviewProvider does not support running conf commands'),
@@ -312,7 +312,7 @@ export class Repository {
           );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
           // TODO: support stdin
-          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
+          const {args: normalizedArgs} = this.normalizeOperationArgs(ctx, operation);
           if (Internal.runArcanistCommand == null) {
             return Promise.reject(Error('InternalArcanist runner is not supported'));
           }
@@ -668,9 +668,10 @@ export class Repository {
   }
 
   private normalizeOperationArgs(
-    cwd: string,
+    ctx: RepositoryContext,
     operation: RunnableOperation,
   ): {args: Array<string>; stdin?: string | undefined} {
+    const {cwd} = ctx;
     const repoRoot = nullthrows(this.info.repoRoot);
     const illegalArgs = new Set(['--cwd', '--config', '--insecure', '--repository', '-R']);
     let stdin = operation.stdin;
@@ -780,7 +781,7 @@ export class Repository {
     signal: AbortSignal,
   ): Promise<void> {
     const {cwd} = ctx;
-    const {args: cwdRelativeArgs, stdin} = this.normalizeOperationArgs(cwd, operation);
+    const {args: cwdRelativeArgs, stdin} = this.normalizeOperationArgs(ctx, operation);
 
     const env = await Promise.all([
       Internal.additionalEnvForCommand?.(operation),
