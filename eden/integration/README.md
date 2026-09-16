@@ -12,7 +12,7 @@ e.g. `status_test.py` is testing sl status works correctly with Eden.
 
 ### Write a New Integration Test
 
-If you are starting a whole new group of new tests for testing a new sapling command, e.g. sl awesome, then you want to implement a new test class based on top of EdenHgTestCase.
+If you are starting a whole new group of new tests for testing a Sapling command, then you want to implement a new test class based on top of EdenHgTestCase.
 
 Otherwise, just identify the right testing file and testing class that matches your testing purpose and simply add a new test case for that.
 
@@ -51,7 +51,7 @@ You call `sl` command from the test by using this helper function
 
 **Run an Integration Test**
 
-See `eden/.claude/CLAUDE.md` → "Running Tests" for `buck2 test` commands and examples.
+See `.claude/CLAUDE.md` → "Verification" for the `buck2 test` command.
 
 ### Debug an Integration Test
 
