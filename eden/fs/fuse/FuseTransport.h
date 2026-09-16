@@ -37,6 +37,7 @@ class FuseTransport {
       FuseChannel& channel,
       const fuse_in_header& request,
       int errorCode) const = 0;
+  virtual void replyNone(FuseChannel&, const fuse_in_header&) const {}
 
   // The iovec array and all iov_base pointers are borrowed and may point to
   // caller-owned stack storage. Implementations MUST either fully consume the

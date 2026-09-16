@@ -61,6 +61,8 @@ class IoUringFuseTransport final : public FuseTransport {
       FuseChannel& channel,
       const fuse_in_header& request,
       int errorCode) const override;
+  void replyNone(FuseChannel& channel, const fuse_in_header& request)
+      const override;
   void sendRawReply(FuseChannel& channel, const iovec iov[], size_t count)
       const override;
 

@@ -1293,6 +1293,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
           }
           registerOutstandingEntry(request.header.unique, *request.entry);
           channel.dispatchRequestFromTransport(
+              *this,
               request.header,
               folly::ByteRange{
                   request.arguments.data(), request.arguments.size()},
@@ -1340,6 +1341,13 @@ void IoUringFuseTransport::replyError(
   (void)errorCode;
   throwIoUringNotImplemented("replyError", queueDepth_);
 #endif
+}
+
+void IoUringFuseTransport::replyNone(
+    FuseChannel& channel,
+    const fuse_in_header& request) const {
+  // A request without a FUSE reply still owns a ring entry to recycle.
+  replyError(channel, request, 0);
 }
 
 void IoUringFuseTransport::sendRawReply(

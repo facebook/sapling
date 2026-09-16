@@ -98,7 +98,7 @@ void DevFuseTransport::processSession(FuseChannel& channel) {
         reinterpret_cast<const uint8_t*>(header + 1),
         argSize - sizeof(fuse_in_header)};
 
-    channel.dispatchRequestFromTransport(*header, arg, myPid);
+    channel.dispatchRequestFromTransport(*this, *header, arg, myPid);
   }
 }
 

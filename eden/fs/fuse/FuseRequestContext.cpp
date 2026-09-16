@@ -15,6 +15,7 @@
 
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/FuseTransport.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -35,6 +36,7 @@ constexpr bool shouldLogFuseError(int errnum) {
 
 FuseRequestContext::FuseRequestContext(
     FuseChannel* channel,
+    const FuseTransport& source,
     const fuse_in_header& fuseHeader)
     : RequestContext(
           channel->getProcessAccessLog(),
@@ -44,6 +46,7 @@ FuseRequestContext::FuseRequestContext(
               ProcessId{fuseHeader.pid},
               fuseHeader.opcode)),
       channel_(channel),
+      source_(source),
       fuseHeader_(fuseHeader) {}
 
 fuse_in_header FuseRequestContext::stealReqWithResult(int64_t result) {
@@ -111,11 +114,11 @@ void FuseRequestContext::timeoutErrorHandler(
 
 void FuseRequestContext::replyError(int err) {
   XCHECK(err >= 0) << "errno values are positive";
-  channel_->replyError(stealReqWithResult(-err), err);
+  channel_->replyError(source_, stealReqWithResult(-err), err);
 }
 
 void FuseRequestContext::replyNone() {
-  stealReqWithResult(0);
+  source_.replyNone(*channel_, stealReqWithResult(0));
 }
 
 } // namespace facebook::eden

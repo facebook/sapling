@@ -400,7 +400,9 @@ class FuseChannel final : public FsChannel {
   bool isFuseDeviceValidForWrites() const {
     return isFuseDeviceValid(state_.rlock()->stopReason);
   }
+  // source must outlive all requests dispatched through it, including replies.
   void dispatchRequestFromTransport(
+      const FuseTransport& source,
       const fuse_in_header& header,
       folly::ByteRange arg,
       pid_t myPid);
@@ -548,7 +550,10 @@ class FuseChannel final : public FsChannel {
    * throws system_error if the write fails.  Writes can fail if the
    * data we send to the kernel is invalid.
    */
-  void replyError(const fuse_in_header& request, int err);
+  void replyError(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      int err);
 
   /**
    * Sends a raw data packet to the kernel.
@@ -561,7 +566,10 @@ class FuseChannel final : public FsChannel {
    * throws system_error if the write fails.  Writes can fail if the
    * data we send to the kernel is invalid.
    */
-  void sendRawReply(const iovec iov[], size_t count) const;
+  void sendRawReply(
+      const FuseTransport& source,
+      const iovec iov[],
+      size_t count) const;
 
   /**
    * Sends a range of contiguous bytes as a reply to the kernel.
@@ -572,11 +580,16 @@ class FuseChannel final : public FsChannel {
    * throws system_error if the write fails.  Writes can fail if the
    * data we send to the kernel is invalid.
    */
-  void sendReply(const fuse_in_header& request, folly::ByteRange bytes) const;
+  void sendReply(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      folly::ByteRange bytes) const;
 
-  void sendReply(const fuse_in_header& request, folly::StringPiece bytes)
-      const {
-    sendReply(request, folly::ByteRange{bytes});
+  void sendReply(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      folly::StringPiece bytes) const {
+    sendReply(source, request, folly::ByteRange{bytes});
   }
 
   /**
@@ -588,8 +601,10 @@ class FuseChannel final : public FsChannel {
    * throws system_error if the write fails.  Writes can fail if the
    * data we send to the kernel is invalid.
    */
-  void sendReply(const fuse_in_header& request, folly::fbvector<iovec>&& vec)
-      const;
+  void sendReply(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      folly::fbvector<iovec>&& vec) const;
 
   /**
    * Sends a reply to a kernel request potentially consisting of multiple
@@ -598,7 +613,10 @@ class FuseChannel final : public FsChannel {
    * throws system_error if the write fails.  Writes can fail if the
    * data we send to the kernel is invalid.
    */
-  void sendReply(const fuse_in_header& request, const folly::IOBuf& buf) const;
+  void sendReply(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      const folly::IOBuf& buf) const;
 
   /**
    * Sends a reply to the kernel.
@@ -609,10 +627,14 @@ class FuseChannel final : public FsChannel {
    * data we send to the kernel is invalid.
    */
   template <typename T>
-  void sendReply(const fuse_in_header& request, const T& payload) const {
+  void sendReply(
+      const FuseTransport& source,
+      const fuse_in_header& request,
+      const T& payload) const {
     static_assert(std::is_standard_layout_v<T>);
     static_assert(std::is_trivial_v<T>);
     sendReply(
+        source,
         request,
         folly::ByteRange{
             reinterpret_cast<const uint8_t*>(&payload), sizeof(T)});
@@ -965,6 +987,7 @@ class FuseChannel final : public FsChannel {
   // is configured. For io_uring, it is the number of CPU cores.
   void updateEffectiveWorkerThreadCount();
   void dispatchRequest(
+      const FuseTransport& source,
       const fuse_in_header& header,
       folly::ByteRange arg,
       pid_t myPid);

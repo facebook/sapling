@@ -917,11 +917,15 @@ FuseChannel::InvalidationEntry::
   }
 }
 
-void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
-  transport_->replyError(*this, request, errorCode);
+void FuseChannel::replyError(
+    const FuseTransport& source,
+    const fuse_in_header& request,
+    int errorCode) {
+  source.replyError(*this, request, errorCode);
 }
 
 void FuseChannel::sendReply(
+    const FuseTransport& source,
     const fuse_in_header& request,
     folly::fbvector<iovec>&& vec) const {
   fuse_out_header out;
@@ -930,10 +934,11 @@ void FuseChannel::sendReply(
 
   vec.insert(vec.begin(), make_iovec(out));
 
-  sendRawReply(vec.data(), vec.size());
+  sendRawReply(source, vec.data(), vec.size());
 }
 
 void FuseChannel::sendReply(
+    const FuseTransport& source,
     const fuse_in_header& request,
     const folly::IOBuf& buf) const {
   fuse_out_header out;
@@ -945,10 +950,11 @@ void FuseChannel::sendReply(
   vec.push_back(make_iovec(out));
   buf.appendToIov(&vec);
 
-  sendRawReply(vec.data(), vec.size());
+  sendRawReply(source, vec.data(), vec.size());
 }
 
 void FuseChannel::sendReply(
+    const FuseTransport& source,
     const fuse_in_header& request,
     folly::ByteRange bytes) const {
   fuse_out_header out;
@@ -961,11 +967,14 @@ void FuseChannel::sendReply(
   iov[1].iov_base = const_cast<uint8_t*>(bytes.data());
   iov[1].iov_len = bytes.size();
 
-  sendRawReply(iov.data(), iov.size());
+  sendRawReply(source, iov.data(), iov.size());
 }
 
-void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
-  transport_->sendRawReply(const_cast<FuseChannel&>(*this), iov, count);
+void FuseChannel::sendRawReply(
+    const FuseTransport& source,
+    const iovec iov[],
+    size_t count) const {
+  source.sendRawReply(const_cast<FuseChannel&>(*this), iov, count);
 }
 
 void FuseChannel::sendRawReplyDevFuse(const iovec iov[], size_t count) const {
@@ -1187,10 +1196,11 @@ void FuseChannel::logTakeoverTransportMismatch(
 }
 
 void FuseChannel::dispatchRequestFromTransport(
+    const FuseTransport& source,
     const fuse_in_header& header,
     folly::ByteRange arg,
     pid_t myPid) {
-  dispatchRequest(header, arg, myPid);
+  dispatchRequest(source, header, arg, myPid);
 }
 
 void FuseChannel::requestSessionExitFromTransport(StopReason reason) {
@@ -1849,7 +1859,7 @@ void FuseChannel::readInitPacket() {
   }
 
   if (init.header.opcode != FUSE_INIT) {
-    replyError(init.header, EPROTO);
+    replyError(*transport_, init.header, EPROTO);
     throw_<std::runtime_error>(
         "expected to receive FUSE_INIT for \"",
         mountPath_,
@@ -2032,7 +2042,7 @@ void FuseChannel::readInitPacket() {
 #endif
 
   if (init.init.major != FUSE_KERNEL_VERSION) {
-    replyError(init.header, EPROTO);
+    replyError(*transport_, init.header, EPROTO);
     throw_<std::runtime_error>(
         "Unsupported FUSE kernel version ",
         init.init.major,
@@ -2056,12 +2066,13 @@ void FuseChannel::readInitPacket() {
       FUSE_KERNEL_MINOR_VERSION > 22,
       "Your kernel headers are too old to build Eden.");
   if (init.init.minor > 22) {
-    sendReply(init.header, connInfo);
+    sendReply(*transport_, init.header, connInfo);
   } else {
     // If the protocol version predates the expansion of fuse_init_out, only
     // send the start of the packet.
     static_assert(FUSE_COMPAT_22_INIT_OUT_SIZE <= sizeof(connInfo));
     sendReply(
+        *transport_,
         init.header,
         ByteRange{
             reinterpret_cast<const uint8_t*>(&connInfo),
@@ -2156,6 +2167,7 @@ void FuseChannel::updateEffectiveWorkerThreadCount() {
 }
 
 void FuseChannel::dispatchRequest(
+    const FuseTransport& source,
     const fuse_in_header& header,
     ByteRange arg,
     pid_t myPid) {
@@ -2196,7 +2208,7 @@ void FuseChannel::dispatchRequest(
     bool matched = false;
     for (auto fastTrack : kFastTracks) {
       if (namePiece == fastTrack) {
-        replyError(header, ENODATA);
+        replyError(source, header, ENODATA);
         matched = true;
         break;
       }
@@ -2215,7 +2227,7 @@ void FuseChannel::dispatchRequest(
   // to resolve this deadlock on kernel inode locks without rebooting the
   // system.
   if (UNLIKELY(static_cast<pid_t>(header.pid) == myPid)) {
-    replyError(header, EIO);
+    replyError(source, header, EIO);
     XLOGF(
         CRITICAL,
         "Received FUSE request from our own pid: opcode={} nodeid={} pid={}",
@@ -2232,7 +2244,7 @@ void FuseChannel::dispatchRequest(
 
   switch (header.opcode) {
     case FUSE_INIT:
-      replyError(header, EPROTO);
+      replyError(source, header, EPROTO);
       throw std::runtime_error(
           "received FUSE_INIT after we have been initialized!?");
 
@@ -2242,7 +2254,7 @@ void FuseChannel::dispatchRequest(
       // Deliberately not handling locking; this causes
       // the kernel to do it for us
       XLOG(DBG7, fuseOpcodeName(header.opcode));
-      replyError(header, ENOSYS);
+      replyError(source, header, ENOSYS);
       break;
 
 #ifdef __linux__
@@ -2251,14 +2263,14 @@ void FuseChannel::dispatchRequest(
       // for us.  Returning ENOSYS causes the kernel to implement it for us,
       // and will cause it to stop sending subsequent FUSE_LSEEK requests.
       XLOG(DBG7, "FUSE_LSEEK");
-      replyError(header, ENOSYS);
+      replyError(source, header, ENOSYS);
       break;
 #endif
 
     case FUSE_POLL:
       // We do not currently implement FUSE_POLL.
       XLOG(DBG7, "FUSE_POLL");
-      replyError(header, ENOSYS);
+      replyError(source, header, ENOSYS);
       break;
 
     case FUSE_INTERRUPT:
@@ -2268,14 +2280,7 @@ void FuseChannel::dispatchRequest(
       // that interrupting functions correctly.
       // In addition, the kernel (certainly on macOS) may recycle
       // ids too quickly for us to safely track by `unique` id.
-      if (usesIoUringTransport()) {
-        // Classic /dev/fuse can treat this as a true no-reply request.
-        // io_uring cannot: each decoded kernel request owns a ring entry that
-        // stays outstanding until we submit a commit back through io_uring.
-        // Sending a synthetic success reply is how we drive that commit path
-        // and return the entry to the kernel so it can fetch the next request.
-        replyError(header, 0);
-      }
+      source.replyNone(*this, header);
       break;
 
     case FUSE_DESTROY:
@@ -2286,7 +2291,7 @@ void FuseChannel::dispatchRequest(
       // we have responded, which in turn blocks our attempt to gracefully
       // unmount, so we respond here.  It doesn't hurt Linux to respond
       // so we do it for both platforms.
-      replyError(header, 0);
+      replyError(source, header, 0);
       break;
 
     case FUSE_NOTIFY_REPLY:
@@ -2294,19 +2299,13 @@ void FuseChannel::dispatchRequest(
       // Don't strictly need to do anything here, but may want to
       // turn the kernel notifications in Futures and use this as
       // a way to fulfil the promise
-      if (usesIoUringTransport()) {
-        // Classic /dev/fuse can drop this on the floor, but io_uring must
-        // still commit the outstanding ring entry for this request. A
-        // zero-error reply is the transport-level completion that recycles the
-        // entry and lets the kernel post another fetch on it.
-        replyError(header, 0);
-      }
+      source.replyNone(*this, header);
       break;
 
     case FUSE_IOCTL:
       // Rather than the default ENOSYS, we need to return ENOTTY
       // to indicate that the requested ioctl is not supported
-      replyError(header, ENOTTY);
+      replyError(source, header, ENOTTY);
       break;
 
     default: {
@@ -2330,7 +2329,8 @@ void FuseChannel::dispatchRequest(
         // This is a shared_ptr because, due to timeouts, the internal request
         // lifetime may not match the FUSE request lifetime, so we capture it
         // in both. I'm sure this could be improved with some cleverness.
-        auto request = std::make_shared<FuseRequestContext>(this, header);
+        auto request =
+            std::make_shared<FuseRequestContext>(this, source, header);
 
         auto now = std::chrono::steady_clock::now();
         auto should_log = false;
@@ -2463,7 +2463,7 @@ void FuseChannel::dispatchRequest(
           });
 
       try {
-        replyError(header, ENOSYS);
+        replyError(source, header, ENOSYS);
       } catch (const std::system_error& exc) {
         XLOGF(ERR, "Failed to write error response to fuse: {}", exc.what());
         errorLogger_.log(
@@ -2586,15 +2586,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseForget(
   XLOGF(
       DBG7, "FUSE_FORGET inode={} nlookup={}", header.nodeid, forget->nlookup);
   dispatcher_->forget(InodeNumber{header.nodeid}, forget->nlookup);
-  if (usesIoUringTransport()) {
-    // FORGET has no semantic FUSE reply, but the io_uring transport still has
-    // to commit the ring entry that delivered the request. replyError(0)
-    // produces the minimal success completion needed to hand that entry back
-    // to the kernel so it can be reused for future fetches.
-    request.replyError(0);
-  } else {
-    request.replyNone();
-  }
+  request.replyNone();
   return folly::unit;
 }
 
@@ -3119,15 +3111,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseBatchForget(
     dispatcher_->forget(InodeNumber{item->nodeid}, item->nlookup);
     ++item;
   }
-  if (usesIoUringTransport()) {
-    // BATCH_FORGET is the same transport issue as FORGET above: there is no
-    // logical reply payload, but io_uring still requires a success completion
-    // so the outstanding ring entry can commit and return to the kernel's
-    // fetch pool.
-    request.replyError(0);
-  } else {
-    request.replyNone();
-  }
+  request.replyNone();
   return folly::unit;
 }
 

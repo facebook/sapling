@@ -51,6 +51,7 @@ class FuseRequestContext : public RequestContext {
  public:
   explicit FuseRequestContext(
       FuseChannel* channel,
+      const FuseTransport& source,
       const fuse_in_header& fuseHeader);
 
   FuseRequestContext(const FuseRequestContext&) = delete;
@@ -127,7 +128,8 @@ class FuseRequestContext : public RequestContext {
 
   template <typename... T>
   void sendReply(T&&... payload) {
-    channel_->sendReply(stealReqWithResult(0), std::forward<T>(payload)...);
+    channel_->sendReply(
+        source_, stealReqWithResult(0), std::forward<T>(payload)...);
   }
 
   /**
@@ -137,13 +139,14 @@ class FuseRequestContext : public RequestContext {
    */
   template <typename T>
   void sendReplyWithInode(uint64_t nodeid, T&& reply) {
-    channel_->sendReply(stealReqWithResult(nodeid), std::forward<T>(reply));
+    channel_->sendReply(
+        source_, stealReqWithResult(nodeid), std::forward<T>(reply));
   }
 
   // Reply with a negative errno value or 0 for success
   void replyError(int err);
 
-  // Don't send a reply, just release req_
+  // Complete the request without a FUSE reply payload.
   void replyNone();
 
  private:
@@ -152,6 +155,7 @@ class FuseRequestContext : public RequestContext {
   fuse_in_header stealReqWithResult(int64_t result);
 
   FuseChannel* channel_;
+  const FuseTransport& source_;
   const fuse_in_header fuseHeader_;
 
   std::optional<int64_t> result_;
