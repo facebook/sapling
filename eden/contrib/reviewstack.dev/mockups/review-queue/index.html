@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -9,7 +9,7 @@
   <body>
     <header class="app-header">
       <div class="header-inner">
-        <a class="brand" href="#" aria-label="ReviewStack home">
+        <a class="brand" href="./" aria-label="ReviewStack home">
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
             <path d="m6 9 10-5 10 5-10 5L6 9Z" />
             <path d="m6 15 10 5 10-5" />
@@ -18,7 +18,7 @@
           <span>ReviewStack</span>
         </a>
         <nav class="primary-nav" aria-label="Primary">
-          <a class="nav-item active" href="#">Review work</a>
+          <a class="nav-item active" href="./">Review work</a>
           <a class="nav-item" href="#">Repositories</a>
         </nav>
         <div class="header-actions">
@@ -40,19 +40,22 @@
     <main class="page-shell">
       <section class="page-heading">
         <div>
-          <p class="eyebrow">ReviewStack home</p>
-          <h1>Review work</h1>
-          <p class="page-description">Everything waiting for you, across all repositories.</p>
+          <a class="back-link" id="back-link" href="./">← Review work</a>
+          <p class="eyebrow" id="page-eyebrow">ReviewStack home</p>
+          <h1 id="page-title">Review work</h1>
+          <p class="page-description" id="page-description">
+            Everything waiting for you, across all repositories.
+          </p>
         </div>
         <div class="summary-strip" aria-label="Review summary">
-          <div class="summary-item attention">
+          <a class="summary-item attention" href="?view=reviews">
             <strong id="summary-review-count">0</strong>
             <span>Need your review</span>
-          </div>
-          <div class="summary-item">
+          </a>
+          <a class="summary-item" href="?view=authored">
             <strong id="summary-author-count">0</strong>
             <span>Open by you</span>
-          </div>
+          </a>
         </div>
       </section>
 
@@ -88,10 +91,24 @@
             <option value="all">All statuses</option>
           </select>
         </label>
+        <div class="filter-control date-filter">
+          <span>Updated</span>
+          <div class="date-inputs">
+            <label>
+              <span class="sr-only">Updated from</span>
+              <input id="date-from-filter" type="date" aria-label="Updated from" />
+            </label>
+            <span class="date-separator">to</span>
+            <label>
+              <span class="sr-only">Updated to</span>
+              <input id="date-to-filter" type="date" aria-label="Updated to" />
+            </label>
+          </div>
+        </div>
         <button id="clear-filters" class="clear-button" type="button">Clear filters</button>
       </section>
 
-      <section class="queue-section" aria-labelledby="review-queue-title">
+      <section class="queue-section" id="review-section" aria-labelledby="review-queue-title">
         <div class="section-heading">
           <div>
             <div class="section-title-line">
@@ -101,7 +118,9 @@
                   <circle cx="12" cy="12" r="9" />
                 </svg>
               </span>
-              <h2 id="review-queue-title">Needs your review</h2>
+              <h2 id="review-queue-title">
+                <a class="section-link" href="?view=reviews">Needs your review</a>
+              </h2>
               <span class="count-badge" id="review-count">0</span>
             </div>
             <p>Pull requests where you are a requested reviewer.</p>
@@ -111,7 +130,7 @@
         <div class="table-card" id="review-table"></div>
       </section>
 
-      <section class="queue-section" aria-labelledby="your-prs-title">
+      <section class="queue-section" id="author-section" aria-labelledby="your-prs-title">
         <div class="section-heading">
           <div>
             <div class="section-title-line">
@@ -121,7 +140,9 @@
                   <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z" />
                 </svg>
               </span>
-              <h2 id="your-prs-title">Your open pull requests</h2>
+              <h2 id="your-prs-title">
+                <a class="section-link" href="?view=authored">Your open pull requests</a>
+              </h2>
               <span class="count-badge" id="author-count">0</span>
             </div>
             <p>Changes you authored that still need attention.</p>

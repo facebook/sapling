@@ -19,6 +19,7 @@ const reviewQueue = [
     reviewDetail: 'Requested yesterday',
     tone: 'attention',
     updated: '18 min ago',
+    updatedAt: '2026-09-16',
     comments: 5,
     stack: 3,
     additions: 328,
@@ -34,6 +35,7 @@ const reviewQueue = [
     reviewDetail: 'New revision · 2h ago',
     tone: 'blocked',
     updated: '2 hours ago',
+    updatedAt: '2026-09-16',
     comments: 12,
     stack: 1,
     additions: 186,
@@ -49,6 +51,7 @@ const reviewQueue = [
     reviewDetail: 'Requested 4h ago',
     tone: 'attention',
     updated: '4 hours ago',
+    updatedAt: '2026-09-16',
     comments: 3,
     stack: 4,
     additions: 544,
@@ -64,6 +67,7 @@ const reviewQueue = [
     reviewDetail: 'Draft updated today',
     tone: 'neutral',
     updated: '6 hours ago',
+    updatedAt: '2026-09-16',
     comments: 8,
     stack: 2,
     additions: 93,
@@ -79,6 +83,7 @@ const reviewQueue = [
     reviewDetail: 'Requested yesterday',
     tone: 'attention',
     updated: 'Yesterday',
+    updatedAt: '2026-09-15',
     comments: 2,
     stack: 1,
     additions: 2911,
@@ -94,6 +99,7 @@ const reviewQueue = [
     reviewDetail: 'Merged this week',
     tone: 'approved',
     updated: 'Monday',
+    updatedAt: '2026-09-14',
     comments: 7,
     stack: 1,
     additions: 74,
@@ -112,6 +118,7 @@ const authoredPullRequests = [
     reviewDetail: 'Ready to land',
     tone: 'approved',
     updated: '11 min ago',
+    updatedAt: '2026-09-16',
     comments: 4,
     stack: 3,
     additions: 412,
@@ -127,6 +134,7 @@ const authoredPullRequests = [
     reviewDetail: '1 unresolved thread',
     tone: 'blocked',
     updated: '1 hour ago',
+    updatedAt: '2026-09-16',
     comments: 9,
     stack: 2,
     additions: 208,
@@ -142,6 +150,7 @@ const authoredPullRequests = [
     reviewDetail: 'Not requested yet',
     tone: 'neutral',
     updated: '3 hours ago',
+    updatedAt: '2026-09-16',
     comments: 0,
     stack: 5,
     additions: 681,
@@ -157,6 +166,7 @@ const authoredPullRequests = [
     reviewDetail: '2 reviewers requested',
     tone: 'attention',
     updated: 'Yesterday',
+    updatedAt: '2026-09-15',
     comments: 1,
     stack: 1,
     additions: 73,
@@ -172,6 +182,7 @@ const authoredPullRequests = [
     reviewDetail: 'Superseded by #44',
     tone: 'neutral',
     updated: 'Last week',
+    updatedAt: '2026-09-08',
     comments: 6,
     stack: 1,
     additions: 119,
@@ -184,9 +195,12 @@ const filters = {
   repo: document.querySelector('#repo-filter'),
   author: document.querySelector('#author-filter'),
   status: document.querySelector('#status-filter'),
+  dateFrom: document.querySelector('#date-from-filter'),
+  dateTo: document.querySelector('#date-to-filter'),
 };
 
 const allPullRequests = [...reviewQueue, ...authoredPullRequests];
+const view = new URLSearchParams(window.location.search).get('view');
 
 function shortRepo(repo) {
   return repo.split('/')[1];
@@ -216,7 +230,9 @@ function matchesFilters(pr) {
     (filters.author.value === 'all' || filters.author.value === pr.author) &&
     (filters.status.value === 'all' ||
       (filters.status.value === 'active' && (pr.state === 'open' || pr.state === 'draft')) ||
-      filters.status.value === pr.state)
+      filters.status.value === pr.state) &&
+    (filters.dateFrom.value === '' || pr.updatedAt >= filters.dateFrom.value) &&
+    (filters.dateTo.value === '' || pr.updatedAt <= filters.dateTo.value)
   );
 }
 
@@ -268,10 +284,14 @@ function rowTemplate(pr) {
       <span class="review-detail">${pr.reviewDetail}</span>
     </td>
     <td>
-      <span class="activity"><strong>${pr.updated}</strong>${pr.comments} comment${pr.comments === 1 ? '' : 's'}</span>
+      <span class="activity"><strong>${pr.updated}</strong>${pr.comments} comment${
+    pr.comments === 1 ? '' : 's'
+  }</span>
     </td>
     <td class="changes-cell">
-      <span class="change-counts"><span class="additions">+${pr.additions}</span><span class="deletions">−${pr.deletions}</span></span>
+      <span class="change-counts"><span class="additions">+${
+        pr.additions
+      }</span><span class="deletions">−${pr.deletions}</span></span>
     </td>
   </tr>`;
 }
@@ -306,6 +326,15 @@ function render() {
   document.querySelector('#summary-author-count').textContent = authoredPullRequests.filter(
     pr => pr.state === 'open',
   ).length;
+  if (view === 'reviews') {
+    document.querySelector('#page-description').textContent = `${
+      visibleReviews.length
+    } pull request${visibleReviews.length === 1 ? '' : 's'} matching the current filters.`;
+  } else if (view === 'authored') {
+    document.querySelector('#page-description').textContent = `${
+      visibleAuthored.length
+    } pull request${visibleAuthored.length === 1 ? '' : 's'} matching the current filters.`;
+  }
 }
 
 for (const control of Object.values(filters)) {
@@ -317,6 +346,8 @@ document.querySelector('#clear-filters').addEventListener('click', () => {
   filters.repo.value = 'all';
   filters.author.value = 'all';
   filters.status.value = 'active';
+  filters.dateFrom.value = '';
+  filters.dateTo.value = '';
   render();
 });
 
@@ -332,5 +363,25 @@ document.querySelector('#theme-toggle').addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
 });
 
+function configureView() {
+  if (view !== 'reviews' && view !== 'authored') {
+    return;
+  }
+  document.body.classList.add('detail-mode');
+  document.querySelector('#back-link').classList.add('visible');
+  document.querySelector('#page-eyebrow').textContent = 'Focused queue';
+  document.querySelector('.summary-strip').hidden = true;
+  if (view === 'reviews') {
+    document.title = 'Needs your review · ReviewStack mock-up';
+    document.querySelector('#page-title').textContent = 'Needs your review';
+    document.querySelector('#author-section').hidden = true;
+  } else {
+    document.title = 'Your pull requests · ReviewStack mock-up';
+    document.querySelector('#page-title').textContent = 'Your pull requests';
+    document.querySelector('#review-section').hidden = true;
+  }
+}
+
+configureView();
 populateFilters();
 render();
