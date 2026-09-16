@@ -41,8 +41,10 @@ export default function Username(): React.ReactElement | null {
     if (username != null) {
       return (
         <>
-          <Text fontWeight="bold">{username}</Text>
-          {' | '}
+          <Text className="reviewstack-username-name" fontWeight="bold">
+            {username}
+          </Text>
+          <span className="reviewstack-username-separator"> | </span>
           <Link as="button" onClick={onLogout}>
             Logout
           </Link>

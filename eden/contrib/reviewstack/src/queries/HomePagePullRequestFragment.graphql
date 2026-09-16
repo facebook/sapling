@@ -1,10 +1,22 @@
 fragment HomePagePullRequestFragment on PullRequest {
   __typename
+  additions
+  author {
+    avatarUrl
+    login
+  }
+  changedFiles
+  comments {
+    totalCount
+  }
+  deletions
+  isDraft
   number
-  titleHTML
   repository {
     nameWithOwner
   }
-  state
   reviewDecision
+  state
+  title
+  updatedAt
 }

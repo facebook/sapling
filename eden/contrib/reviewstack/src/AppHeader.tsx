@@ -12,10 +12,12 @@ import URLFor from './URLFor';
 import Username from './Username';
 import {APP_HEADER_HEIGHT} from './constants';
 import {primerColorModeAtom} from './jotai/atoms';
-import {HomeIcon} from '@primer/octicons-react';
-import {Box, Header, Text, ToggleSwitch} from '@primer/react';
+import {MoonIcon, StackIcon, SunIcon} from '@primer/octicons-react';
+import {Box, Header} from '@primer/react';
 import {useAtom} from 'jotai';
 import {useCallback} from 'react';
+
+import './AppHeader.css';
 
 type Props = {
   orgAndRepo: GitHubOrgAndRepo | null;
@@ -24,22 +26,29 @@ type Props = {
 export default function AppHeader({orgAndRepo}: Props): React.ReactElement {
   return (
     <Header
+      className="reviewstack-app-header"
       sx={{
         fontSize: 2,
         height: APP_HEADER_HEIGHT,
         justifyContent: 'space-between',
       }}>
-      <Header.Item>
-        <Box pr={2}>
+      <Header.Item className="reviewstack-header-left">
+        <Link href="/">
+          <span className="reviewstack-brand">
+            <StackIcon size={24} aria-hidden="true" />
+            <span>ReviewStack</span>
+          </span>
+        </Link>
+        <nav className="reviewstack-primary-nav" aria-label="Primary navigation">
           <Link href="/">
-            <HomeIcon size="medium" aria-label="homepage" />
+            <span className="reviewstack-nav-item">Review work</span>
           </Link>
-        </Box>
-        <Box>{orgAndRepo != null && <PullsLink {...orgAndRepo} />}</Box>
+          {orgAndRepo != null && <ProjectLink {...orgAndRepo} />}
+        </nav>
       </Header.Item>
-      <Header.Item>
-        <Box>
-          <ThemeSelector />
+      <Header.Item className="reviewstack-header-actions">
+        <ThemeSelector />
+        <Box className="reviewstack-header-user">
           <Username />
         </Box>
       </Header.Item>
@@ -47,36 +56,29 @@ export default function AppHeader({orgAndRepo}: Props): React.ReactElement {
   );
 }
 
-function PullsLink({org, repo}: {org: string; repo: string}) {
+function ProjectLink({org, repo}: {org: string; repo: string}): React.ReactElement {
   return (
     <Link href={URLFor.project({org, repo})}>
-      <Text color="fg.onEmphasis" fontWeight="bold">
-        {org}
-        {' / '}
-        {repo}
-      </Text>
+      <span className="reviewstack-nav-item reviewstack-project-link">
+        {org} / {repo}
+      </span>
     </Link>
   );
 }
 
-function ThemeSelector() {
+function ThemeSelector(): React.ReactElement {
   const [colorMode, setColorMode] = useAtom(primerColorModeAtom);
-  const checked = colorMode === 'night';
+  const isDark = colorMode === 'night';
   const onClick = useCallback(() => {
-    setColorMode(colorMode === 'night' ? 'day' : 'night');
-  }, [colorMode, setColorMode]);
-  // sx trick to hide label taken from https://github.com/primer/react/issues/2078
-  const sx = {'> [aria-hidden]': {display: 'none'}};
+    setColorMode(isDark ? 'day' : 'night');
+  }, [isDark, setColorMode]);
   return (
-    <Text>
-      <span id="theme-switch-label">Dark Mode</span>:{' '}
-      <ToggleSwitch
-        checked={checked}
-        onClick={onClick}
-        size="small"
-        aria-labelledby="theme-switch-label"
-        sx={sx}
-      />{' '}
-    </Text>
+    <button
+      className="reviewstack-theme-button"
+      type="button"
+      onClick={onClick}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+      {isDark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+    </button>
   );
 }

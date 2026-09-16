@@ -1559,7 +1559,7 @@ export const gitHubUserHomePageDataAtom = atom<Promise<UserHomePageQueryData | n
   }
 
   // Based on search query for https://github.com/pulls/review-requested
-  const reviewRequestedQuery = 'is:open is:pr archived:false review-requested:@me';
+  const reviewRequestedQuery = 'is:pr archived:false review-requested:@me';
 
   const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
   const graphQLEndpoint = createGraphQLEndpointForHostname(hostname);
