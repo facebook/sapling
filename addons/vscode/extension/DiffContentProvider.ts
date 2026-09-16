@@ -188,6 +188,8 @@ type SaplingDiffEncodedUri = vscode.Uri;
 
 type SaplingURIEncodedData = {
   revset: string;
+  /** Commit whose GitHub review belongs on this document. Only set on the changed side. */
+  reviewCommitHash?: string;
 };
 
 /**
@@ -196,7 +198,11 @@ type SaplingURIEncodedData = {
  * that file at that revset.
  * Decoded by {@link decodeSaplingDiffUri}.
  */
-export function encodeSaplingDiffUri(uri: vscode.Uri, revset: string): SaplingDiffEncodedUri {
+export function encodeSaplingDiffUri(
+  uri: vscode.Uri,
+  revset: string,
+  reviewCommitHash?: string,
+): SaplingDiffEncodedUri {
   if (uri.scheme !== 'file') {
     throw new Error('encoding non-file:// uris as sapling diff uris is not supported');
   }
@@ -204,6 +210,7 @@ export function encodeSaplingDiffUri(uri: vscode.Uri, revset: string): SaplingDi
     scheme: SAPLING_DIFF_PROVIDER_SCHEME,
     query: JSON.stringify({
       revset,
+      reviewCommitHash,
     } as SaplingURIEncodedData),
   });
 }
@@ -215,10 +222,12 @@ export function encodeSaplingDiffUri(uri: vscode.Uri, revset: string): SaplingDi
 export function decodeSaplingDiffUri(uri: SaplingDiffEncodedUri): {
   originalUri: vscode.Uri;
   revset: string;
+  reviewCommitHash?: string;
 } {
   const data = JSON.parse(uri.query) as SaplingURIEncodedData;
   return {
     originalUri: uri.with({scheme: 'file', query: ''}),
     revset: data.revset,
+    reviewCommitHash: data.reviewCommitHash,
   };
 }

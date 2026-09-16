@@ -15,6 +15,7 @@ import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import * as path from 'node:path';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
+import {decodeSaplingDiffUri, SAPLING_DIFF_PROVIDER_SCHEME} from './DiffContentProvider';
 
 const COMMENT_CONTROLLER_ID = 'sapling-review-comments';
 const REFRESH_INTERVAL_MS = 30_000;
@@ -56,7 +57,11 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     };
     this.controller.commentingRangeProvider = {
       provideCommentingRanges: document => {
-        if (!this.contexts.has(document.uri.toString()) || document.lineCount === 0) {
+        const isReviewDocument = this.isReviewDocument(document.uri);
+        if (isReviewDocument) {
+          this.trackEncodedUri(document.uri);
+        }
+        if (!isReviewDocument || document.lineCount === 0) {
           return [];
         }
         return [new vscode.Range(0, 0, document.lineCount - 1, 0)];
@@ -82,17 +87,59 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       ),
       vscode.window.onDidChangeActiveTextEditor(editor => {
         if (editor != null) {
+          this.trackEncodedUri(editor.document.uri);
           void this.refreshByUri(editor.document.uri);
         }
       }),
     );
+    this.disposables.push({
+      dispose: repositoryCache.onChangeActiveRepos(() => {
+        for (const document of vscode.workspace.textDocuments) {
+          this.trackEncodedUri(document.uri);
+        }
+      }),
+    });
+    for (const document of vscode.workspace.textDocuments) {
+      this.trackEncodedUri(document.uri);
+    }
     this.refreshTimer = setInterval(() => this.refreshAll(), REFRESH_INTERVAL_MS);
   }
 
   track(uri: vscode.Uri, fileUri: vscode.Uri, comparison: Comparison): void {
     const hash = reviewCommitHash(comparison);
+    if (hash != null) {
+      this.trackCommit(uri, fileUri, hash);
+    }
+  }
+
+  private isReviewDocument(uri: vscode.Uri): boolean {
+    if (uri.scheme !== SAPLING_DIFF_PROVIDER_SCHEME) {
+      return this.contexts.has(uri.toString());
+    }
+    try {
+      return decodeSaplingDiffUri(uri).reviewCommitHash != null;
+    } catch {
+      return false;
+    }
+  }
+
+  private trackEncodedUri(uri: vscode.Uri): void {
+    if (uri.scheme !== SAPLING_DIFF_PROVIDER_SCHEME) {
+      return;
+    }
+    try {
+      const {originalUri, reviewCommitHash} = decodeSaplingDiffUri(uri);
+      if (reviewCommitHash != null) {
+        this.trackCommit(uri, originalUri, reviewCommitHash);
+      }
+    } catch {
+      // Another provider owns malformed URIs; it will report the content error.
+    }
+  }
+
+  private trackCommit(uri: vscode.Uri, fileUri: vscode.Uri, hash: string): void {
     const repo = repositoryCache.cachedRepositoryForPath(fileUri.fsPath);
-    if (hash == null || repo == null || repo.info.codeReviewSystem.type !== 'github') {
+    if (repo == null || repo.info.codeReviewSystem.type !== 'github') {
       return;
     }
 
@@ -115,11 +162,13 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       refreshGeneration: 0,
     };
     this.contexts.set(key, context);
+    this.ctx.logger.info(`Enabled GitHub review comments for ${relativePath} at ${hash}`);
     void repo
       .lookupCommits(repo.initialConnectionContext, [hash])
       .then(commits => {
         const commit = commits.values().next().value;
         if (commit?.diffId == null) {
+          this.ctx.logger.info(`Commit ${hash} is not linked to a GitHub pull request`);
           return;
         }
         context.diffId = commit.diffId;

@@ -535,7 +535,11 @@ async function getRightUri(uri: vscode.Uri, comparison: Comparison): Promise<vsc
     comparison.type === ComparisonType.CommitRange ||
     isSubmodule(uri.fsPath)
   ) {
-    return encodeSaplingDiffUri(uri, rightRev);
+    return encodeSaplingDiffUri(
+      uri,
+      rightRev,
+      comparison.type === ComparisonType.Committed ? comparison.hash : undefined,
+    );
   }
   return (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri);
 }

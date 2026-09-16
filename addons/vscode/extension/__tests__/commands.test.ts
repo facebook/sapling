@@ -227,7 +227,7 @@ describe('open-file-diff', () => {
     const expectedLeftRev = 'abc123^';
     const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
     const expectedRightRev = 'abc123';
-    const expectedRightUri = encodeSaplingDiffUri(fileUri, expectedRightRev);
+    const expectedRightUri = encodeSaplingDiffUri(fileUri, expectedRightRev, 'abc123');
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',
@@ -245,7 +245,7 @@ describe('open-file-diff', () => {
     const expectedLeftRev = 'abc123^';
     const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
     const expectedRightRev = 'abc123';
-    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev, 'abc123');
 
     expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
       'vscode.diff',
