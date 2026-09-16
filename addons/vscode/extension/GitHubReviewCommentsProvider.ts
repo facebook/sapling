@@ -28,6 +28,7 @@ type ReviewContext = {
   path: string;
   repo: Repository;
   diffId?: string;
+  activeRange?: vscode.Range;
   remoteThreads: Set<vscode.CommentThread>;
   refreshGeneration: number;
 };
@@ -55,6 +56,13 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
   private readonly draftThreads = new Set<vscode.CommentThread>();
   private readonly disposables: Array<vscode.Disposable> = [];
   private readonly refreshTimer: ReturnType<typeof setInterval>;
+  private readonly activeRangeDecoration = vscode.window.createTextEditorDecorationType({
+    isWholeLine: true,
+    backgroundColor: new vscode.ThemeColor('editorCommentsWidget.rangeActiveBackground'),
+    borderColor: new vscode.ThemeColor('editorGutter.commentRangeForeground'),
+    borderStyle: 'solid',
+    borderWidth: '0 0 0 3px',
+  });
 
   constructor(private readonly ctx: RepositoryContext) {
     this.controller.options = {
@@ -99,21 +107,19 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       ),
       vscode.commands.registerCommand(
         'sapling.cancel-empty-review-comment',
-        (reply: vscode.CommentReply) => reply.thread.dispose(),
+        (reply: vscode.CommentReply) => {
+          this.clearActiveRange(reply.thread);
+          reply.thread.dispose();
+        },
       ),
       vscode.window.onDidChangeActiveTextEditor(editor => {
         if (editor != null) {
           this.trackEncodedUri(editor.document.uri);
           void this.refreshByUri(editor.document.uri);
         }
+        this.updateActiveRangeDecorations();
       }),
-      vscode.window.onDidChangeTextEditorSelection(event => {
-        if (this.isReviewDocument(event.textEditor.document.uri)) {
-          // VS Code owns empty comment threads and does not expose a creation event. Collapsing
-          // before the next selection opens prevents abandoned editors from accumulating.
-          void vscode.commands.executeCommand('workbench.action.collapseAllComments');
-        }
-      }),
+      vscode.window.onDidChangeTextEditorSelection(event => this.handleSelectionChange(event)),
     );
     this.disposables.push({
       dispose: repositoryCache.onChangeActiveRepos(() => {
@@ -244,7 +250,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
           [],
         );
         const allComments = [comment, ...comment.replies];
-        thread.comments = allComments.map(item => this.toVSCodeComment(item, thread));
+        thread.comments = allComments.map(item => this.toVSCodeComment(item, thread, context));
         thread.canReply = comment.isResolved !== true;
         thread.label = comment.isResolved === true ? 'Resolved' : undefined;
         thread.collapsibleState = vscode.CommentThreadCollapsibleState.Collapsed;
@@ -255,9 +261,17 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     }
   }
 
-  private toVSCodeComment(comment: DiffComment, thread: vscode.CommentThread): ReviewComment {
+  private toVSCodeComment(
+    comment: DiffComment,
+    thread: vscode.CommentThread,
+    context: ReviewContext,
+  ): ReviewComment {
     return new ReviewComment(
-      reviewCommentMarkdown(comment.content ?? comment.html, comment.url),
+      reviewCommentMarkdown(
+        comment.content ?? comment.html,
+        comment.url,
+        this.reviewStackUrl(context),
+      ),
       vscode.CommentMode.Preview,
       {
         name: comment.authorName ?? comment.author,
@@ -299,6 +313,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       'saplingSuggestionDraft',
     );
     reply.thread.comments = [comment];
+    this.setActiveRange(reply.thread);
     this.draftThreads.add(reply.thread);
     reply.thread.contextValue = 'saplingSuggestionDraft';
     reply.thread.canReply = false;
@@ -325,6 +340,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     this.draftThreads.delete(thread);
     const remaining = thread.comments.filter(item => item !== comment);
     if (remaining.length === 0) {
+      this.clearActiveRange(thread);
       thread.dispose();
       return;
     }
@@ -343,6 +359,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     const provider = context?.repo.codeReviewProvider;
     context?.remoteThreads.delete(thread);
     this.draftThreads.add(thread);
+    this.setActiveRange(thread);
     const pending = new ReviewComment(
       body,
       vscode.CommentMode.Preview,
@@ -381,7 +398,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
         {location: vscode.ProgressLocation.Notification, title: 'Posting GitHub review comment…'},
         () => createInlineComment(diffId, input),
       );
-      this.markCommentAsPosted(pending, created, body);
+      this.markCommentAsPosted(pending, created, body, context);
       this.draftThreads.delete(thread);
       thread.contextValue = undefined;
       thread.canReply = true;
@@ -399,8 +416,13 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     comment: ReviewComment,
     created: CreatedInlineComment | void,
     fallbackBody: string,
+    context: ReviewContext,
   ): void {
-    comment.body = reviewCommentMarkdown(created?.body || fallbackBody, created?.url);
+    comment.body = reviewCommentMarkdown(
+      created?.body || fallbackBody,
+      created?.url,
+      this.reviewStackUrl(context),
+    );
     comment.remoteId = created?.id;
     comment.author = {
       name: created?.author || 'You',
@@ -412,6 +434,86 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     comment.label = undefined;
     comment.mode = vscode.CommentMode.Preview;
     comment.parent.comments = [...comment.parent.comments];
+  }
+
+  private reviewStackUrl(context: ReviewContext): string | undefined {
+    const system = context.repo.info.codeReviewSystem;
+    if (context.diffId == null || system.type !== 'github') {
+      return undefined;
+    }
+    return reviewStackPullRequestUrl(
+      system.owner,
+      system.repo,
+      context.diffId,
+      context.repo.info.pullRequestDomain,
+    );
+  }
+
+  private handleSelectionChange(event: vscode.TextEditorSelectionChangeEvent): void {
+    const context = this.contexts.get(event.textEditor.document.uri.toString());
+    if (context == null) {
+      return;
+    }
+    const selection = event.selections[0];
+    if (selection == null) {
+      return;
+    }
+
+    if (!selection.isEmpty) {
+      context.activeRange = new vscode.Range(selection.start.line, 0, selection.end.line, 0);
+      this.updateActiveRangeDecorations();
+      // VS Code owns empty comment threads and does not expose a creation event. Collapsing the
+      // previous thread during a new drag prevents abandoned editors from accumulating.
+      void vscode.commands.executeCommand('workbench.action.collapseAllComments');
+      return;
+    }
+
+    const threadAtCursor = [...this.draftThreads, ...context.remoteThreads].find(
+      thread =>
+        thread.uri.toString() === context.uri.toString() &&
+        selection.active.line >= thread.range.start.line &&
+        selection.active.line <= thread.range.end.line,
+    );
+    if (threadAtCursor != null) {
+      context.activeRange = threadAtCursor.range;
+      this.updateActiveRangeDecorations();
+      return;
+    }
+
+    // VS Code collapses a gutter drag selection to the final line before it creates the comment
+    // thread. Keep the captured range until the user moves elsewhere or cancels the comment.
+    if (context.activeRange?.end.line === selection.active.line) {
+      return;
+    }
+    context.activeRange = undefined;
+    this.updateActiveRangeDecorations();
+    void vscode.commands.executeCommand('workbench.action.collapseAllComments');
+  }
+
+  private setActiveRange(thread: vscode.CommentThread): void {
+    const context = this.contexts.get(thread.uri.toString());
+    if (context != null) {
+      context.activeRange = thread.range;
+      this.updateActiveRangeDecorations();
+    }
+  }
+
+  private clearActiveRange(thread: vscode.CommentThread): void {
+    const context = this.contexts.get(thread.uri.toString());
+    if (context != null && rangesEqual(context.activeRange, thread.range)) {
+      context.activeRange = undefined;
+      this.updateActiveRangeDecorations();
+    }
+  }
+
+  private updateActiveRangeDecorations(): void {
+    for (const editor of vscode.window.visibleTextEditors) {
+      const context = this.contexts.get(editor.document.uri.toString());
+      editor.setDecorations(
+        this.activeRangeDecoration,
+        context?.activeRange == null ? [] : [context.activeRange],
+      );
+    }
   }
 
   private markCommentAsFailed(comment: ReviewComment): void {
@@ -431,6 +533,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       }
     }
     this.disposables.forEach(disposable => disposable.dispose());
+    this.activeRangeDecoration.dispose();
     this.controller.dispose();
     this.contexts.clear();
     this.draftThreads.clear();
@@ -460,14 +563,46 @@ export function suggestionBody(selectedLines: string, existingComment = ''): str
   return `${prefix}${prefix === '' ? '' : '\n\n'}\`\`\`suggestion\n${selectedLines}\n\`\`\``;
 }
 
-export function reviewCommentBody(body: string, remoteUrl?: string): string {
-  return remoteUrl == null ? body : `[View on GitHub](${remoteUrl})\n\n${body}`;
+export function reviewStackPullRequestUrl(
+  owner: string,
+  repo: string,
+  pullRequest: string,
+  domain = 'https://reviewstack.dev',
+): string {
+  const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+  return `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pull/${encodeURIComponent(pullRequest)}`;
 }
 
-function reviewCommentMarkdown(body: string, remoteUrl?: string): vscode.MarkdownString {
-  const markdown = new vscode.MarkdownString(reviewCommentBody(body, remoteUrl));
+export function reviewCommentBody(
+  body: string,
+  remoteUrl?: string,
+  reviewStackUrl?: string,
+): string {
+  const links = [
+    remoteUrl == null ? undefined : `[View on GitHub](${remoteUrl})`,
+    reviewStackUrl == null ? undefined : `[View in ReviewStack](${reviewStackUrl})`,
+  ].filter(link => link != null);
+  return links.length === 0 ? body : `${links.join(' · ')}\n\n${body}`;
+}
+
+function reviewCommentMarkdown(
+  body: string,
+  remoteUrl?: string,
+  reviewStackUrl?: string,
+): vscode.MarkdownString {
+  const markdown = new vscode.MarkdownString(reviewCommentBody(body, remoteUrl, reviewStackUrl));
   markdown.isTrusted = false;
   return markdown;
+}
+
+function rangesEqual(left: vscode.Range | undefined, right: vscode.Range): boolean {
+  return (
+    left != null &&
+    left.start.line === right.start.line &&
+    left.start.character === right.start.character &&
+    left.end.line === right.end.line &&
+    left.end.character === right.end.character
+  );
 }
 
 function commentBody(comment: ReviewComment): string {
