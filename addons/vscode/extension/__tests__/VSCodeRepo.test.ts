@@ -14,6 +14,7 @@ import type {EnabledSCMApiFeature} from '../types';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {Logger} from 'isl-server/src/logger';
+import fs from 'node:fs';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {nextTick} from 'shared/utils';
 import * as vscode from 'vscode';
@@ -74,6 +75,14 @@ jest.mock('isl-server/src/Repository', () => {
   return {
     Repository: MockRepository as unknown as Repository,
   };
+});
+
+beforeEach(() => {
+  // realpath resolves via async threadpool I/O that may not settle within a single `nextTick()`,
+  // so stub it to resolve synchronously and keep repo-creation timing deterministic.
+  jest
+    .spyOn(fs.promises, 'realpath')
+    .mockImplementation((async (p: string) => p) as unknown as typeof fs.promises.realpath);
 });
 
 describe('adding and removing repositories', () => {

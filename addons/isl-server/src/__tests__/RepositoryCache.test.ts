@@ -99,9 +99,9 @@ describe('RepositoryCache', () => {
     const logicalCwd = '/path/to/symlink/cwd';
     const canonicalCwd = '/path/to/repo/cwd';
     const realpathSpy = jest
-      .spyOn(fs, 'realpathSync')
-      .mockImplementation(((p: string) =>
-        p === logicalCwd ? canonicalCwd : p) as unknown as typeof fs.realpathSync);
+      .spyOn(fs.promises, 'realpath')
+      .mockImplementation((async (p: string) =>
+        p === logicalCwd ? canonicalCwd : p) as unknown as typeof fs.promises.realpath);
 
     const cache = new RepositoryCache(SimpleMockRepository);
     const symlinkedCtx: RepositoryContext = {...ctx, cwd: logicalCwd};
@@ -116,6 +116,32 @@ describe('RepositoryCache', () => {
     expect(symlinkedCtx.cwd).toBe(canonicalCwd);
 
     ref.unref();
+    realpathSpy.mockRestore();
+  });
+
+  it('reuses the fast path for a symlinked cwd after caching its canonical path', async () => {
+    const logicalCwd = '/path/to/symlink-root';
+    const canonicalRoot = '/path/to/repo';
+    const realpathSpy = jest
+      .spyOn(fs.promises, 'realpath')
+      .mockImplementation((async (p: string) =>
+        p === logicalCwd ? canonicalRoot : p) as unknown as typeof fs.promises.realpath);
+
+    const cache = new RepositoryCache(SimpleMockRepository);
+    const ref1 = cache.getOrCreate({...ctx, cwd: logicalCwd});
+    await ref1.promise;
+    expect(realpathSpy).toHaveBeenCalledTimes(1);
+
+    realpathSpy.mockClear();
+    const ref2 = cache.getOrCreate({...ctx, cwd: logicalCwd});
+    const repo2 = await ref2.promise;
+    expect(realpathSpy).not.toHaveBeenCalled();
+    expect(repo2).toEqual(
+      expect.objectContaining({info: expect.objectContaining({repoRoot: canonicalRoot})}),
+    );
+
+    ref1.unref();
+    ref2.unref();
     realpathSpy.mockRestore();
   });
 

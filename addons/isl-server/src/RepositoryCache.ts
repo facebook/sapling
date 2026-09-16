@@ -121,6 +121,10 @@ class RepositoryCache {
   private repoMap = new RepoMap();
   private activeReposEmitter = new TypedEventEmitter<'change', undefined>();
 
+  // Caches a symlinked cwd's realpath result so the fast path can reuse a repo without resolving
+  // the symlink (async) again.
+  private canonicalCwds = new Map<string, AbsolutePath>();
+
   private lookup(dirGuess: AbsolutePath): RefCounted<Repository> | undefined {
     const found = this.repoMap.get(dirGuess);
     return found && !found.isDisposed ? found : undefined;
@@ -137,11 +141,11 @@ class RepositoryCache {
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
   getOrCreate(ctx: RepositoryContext): RepositoryReference {
-    // Resolve symlinks so cwd shares a namespace with the canonical repoRoot from `sl root`.
-    // Sync (not async) so repo creation isn't delayed; falls back to the raw path if realpath fails.
-    try {
-      ctx.cwd = fs.realpathSync(ctx.cwd) as AbsolutePath;
-    } catch {}
+    // Resolve a previously-seen symlink up front so the fast path runs on the canonical cwd.
+    const knownCanonical = this.canonicalCwds.get(ctx.cwd);
+    if (knownCanonical != null) {
+      ctx.cwd = knownCanonical;
+    }
 
     // Fast path: if this cwd is already a known repo root, we can use it directly.
     // This only works if the cwd happens to be the repo root.
@@ -156,6 +160,15 @@ class RepositoryCache {
     // eslint-disable-next-line prefer-const
     let ref: RepositoryReferenceImpl;
     const lookupRepoInfoAndReuseIfPossible = async (): Promise<Repository | RepositoryError> => {
+      // Resolve symlinks so cwd shares a namespace with the canonical repoRoot from `sl root`.
+      // Falls back to the raw path if realpath fails.
+      const rawCwd = ctx.cwd;
+      ctx.cwd = await fs.promises.realpath(rawCwd).catch(() => rawCwd);
+      if (ctx.cwd !== rawCwd) {
+        // cwd was a symlink; cache it so future calls hit the fast path above.
+        this.canonicalCwds.set(rawCwd, ctx.cwd as AbsolutePath);
+      }
+
       // TODO: we should rate limit how many getRepoInfos we run at a time, and make other callers just wait.
       // this would guard against querying lots of redundant paths within the same repo.
       // This is probably not necessary right now, but would be useful for a VS Code extension where we need to query
@@ -236,6 +249,7 @@ class RepositoryCache {
   clearCache() {
     this.repoMap.forEach(repo => repo.dispose());
     this.repoMap = new RepoMap();
+    this.canonicalCwds.clear();
     this.activeReposEmitter.removeAllListeners();
   }
 
