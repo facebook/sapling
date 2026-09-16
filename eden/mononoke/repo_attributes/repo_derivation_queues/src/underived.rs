@@ -180,39 +180,16 @@ pub async fn build_underived_batched_graph<'a>(
     batch_size: u64,
     priority: Option<DerivationPriority>,
 ) -> Result<Option<EnqueueResponse>> {
-    let use_v2 = justknobs::eval(
-        "scm/mononoke:build_underived_batched_graph_v2",
-        None,
-        Some(ddm.repo_name()),
-    );
-    let builder_version = if use_v2 { "v2" } else { "v1" };
-    let (stats, build_result) = async {
-        if use_v2 {
-            build_underived_batched_graph_v2(
-                ctx,
-                queue,
-                ddm,
-                derived_data_type,
-                head,
-                bubble_id,
-                batch_size,
-                priority,
-            )
-            .await
-        } else {
-            build_underived_batched_graph_v1(
-                ctx,
-                queue,
-                ddm,
-                derived_data_type,
-                head,
-                bubble_id,
-                batch_size,
-                priority,
-            )
-            .await
-        }
-    }
+    let (stats, build_result) = build_underived_batched_graph_impl(
+        ctx,
+        queue,
+        ddm,
+        derived_data_type,
+        head,
+        bubble_id,
+        batch_size,
+        priority,
+    )
     .timed()
     .await;
     let build_result = build_result?;
@@ -220,7 +197,7 @@ pub async fn build_underived_batched_graph<'a>(
     let mut scuba = ctx.scuba().clone();
     scuba.unsampled();
     scuba.add_future_stats(&stats);
-    scuba.add("graph_builder_version", builder_version);
+    scuba.add("graph_builder_version", "v2");
     scuba.add("derived_data_type", derived_data_type.name());
     scuba.add("head_cs_id", head.to_string());
     scuba.add("commits_walked", build_result.commits_walked);
@@ -231,236 +208,7 @@ pub async fn build_underived_batched_graph<'a>(
     Ok(build_result.response)
 }
 
-async fn build_underived_batched_graph_v1<'a>(
-    ctx: &'a CoreContext,
-    queue: Arc<dyn DerivationQueue + Send + Sync>,
-    ddm: &'a DerivedDataManager,
-    derived_data_type: DerivableType,
-    head: ChangesetId,
-    bubble_id: Option<BubbleId>,
-    batch_size: u64,
-    priority: Option<DerivationPriority>,
-) -> Result<UnderivedGraphBuildResult> {
-    let priority = priority.unwrap_or(DerivationPriority::LOW);
-    let repo_id = ddm.repo_id();
-    let config_name = ddm.config_name();
-    let commit_graph = ddm.commit_graph_arc();
-    let commits_walked = Arc::new(AtomicU64::new(0));
-    let items_enqueued = Arc::new(AtomicU64::new(0));
-    let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(
-        future::ok(false).boxed(),
-    ))));
-    bounded_traversal::bounded_traversal_dag(
-        100,
-        head,
-        |cs| {
-            cloned!(commit_graph, derived_data_type, commits_walked);
-            async move {
-                // Walk down by parent until batch full or found merge or derived
-                let mut root = cs;
-                let head = cs;
-                let generation = commit_graph.changeset_generation(ctx, cs).await?;
-
-                let cur_batch_index = batch_generation_number(generation.value(), batch_size);
-                let mut next = Vec::new();
-                loop {
-                    let parents = commit_graph.changeset_parents(ctx, root).await?;
-                    commits_walked.fetch_add(1, Ordering::Relaxed);
-                    // Gather underived parents for the current changeset.
-                    let mut underived_parents = Vec::new();
-                    for parent_cs in parents.clone() {
-                        if !ddm.is_derived(ctx, parent_cs, None, derived_data_type).await? {
-                            underived_parents.push(parent_cs);
-                        }
-                    }
-                    // All parents are derived, we found last underived commit
-                    if underived_parents.is_empty() {
-                        break;
-                    }
-                    // Merge commit, always break batch
-                    if parents.len() > 1 {
-                        next = underived_parents;
-                        break;
-                    }
-                    // Non-merge commit, break batch at generation boundary
-                    let parent_cs = parents.first().expect("Parent should exist").clone();
-                    let parent_generation = commit_graph
-                        .changeset_generation(ctx, parent_cs)
-                        .await?;
-                    let parent_batch_index =
-                        batch_generation_number(parent_generation.value(), batch_size);
-                    if parent_batch_index != cur_batch_index {
-                        // Parent should be in different batch
-                        next = vec![parent_cs];
-                        break;
-                    }
-                    // Add parent to the current batch
-                    root = parent_cs;
-                }
-                anyhow::Ok(((root, head), next))
-            }
-            .boxed()
-        },
-        |(root_cs_id, head_cs_id), deps| {
-            cloned!(
-                derived_data_type,
-                config_name,
-                queue,
-                commit_graph,
-                watch,
-                items_enqueued
-            );
-            async move {
-                let item = DerivationDagItem::new(
-                    repo_id,
-                    config_name.to_string(),
-                    derived_data_type,
-                    root_cs_id,
-                    head_cs_id,
-                    bubble_id,
-                    deps.flatten().unique().collect(),
-                    ctx.metadata().client_info(),
-                    priority,
-                    None,
-                    None, // stage_payload (no pipeline stages in this code path)
-                )?;
-
-                let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None);
-
-                let mut upstream_dep: Option<DagItemDep> = Some(DagItemDep {
-                    dag_item_id: item.id().clone(),
-                    head_cs_id: item.head_cs_id(),
-                    stage_path: None, // non-pipeline derivation
-                });
-                let mut cur_item = Some(item);
-                let mut failed_attempt = 0;
-                let mut err_msg = None;
-                while let Some(item) = cur_item {
-                    if failed_attempt >= max_failed_attempts {
-                        return Err(anyhow!(
-                            "Couldn't enqueue item {item:?} into zeus after {failed_attempt} attempts. Last err: {err_msg:?}",
-                        ));
-                    } else if failed_attempt > 0 {
-                        let backoff_time = Duration::from_millis(failed_attempt * failed_attempt * 100);
-                        tokio::time::sleep(backoff_time).await;
-                    }
-                    let maybe_inserted = {
-                        let enqueue_res = queue.enqueue(ctx, item.clone()).await;
-                        match enqueue_res {
-                            Ok(resp) => {
-                                items_enqueued.fetch_add(1, Ordering::Relaxed);
-                                *watch.lock() = Some(resp);
-                                None
-                            }
-                            Err(InternalError::ItemExists(existing)) => {
-                                // Item already in DAG, another request for derivation trigger that
-                                // we need to return watch for this existing item.
-                                let existing_item_id = item.id().clone();
-                                if *existing == item {
-                                    *watch.lock() =
-                                        Some(queue.watch_existing(ctx, existing_item_id.clone()).await?);
-                                    None
-                                } else {
-                                    // Items are different, we need to deduplicate or discard
-                                    let maybe_dedup = deduplicate(ctx, item, *existing, bubble_id, commit_graph.clone())
-                                        .await?;
-                                    // We couldn't deduplicate because rejected commits are in the existing item
-                                    // set watch for existing item
-                                    if maybe_dedup.is_none() {
-                                        upstream_dep = None;
-                                        *watch.lock() =
-                                            Some(queue.watch_existing(ctx, existing_item_id).await?);
-                                    }
-                                    maybe_dedup
-                                }
-                            }
-                            Err(e) => {
-                                let root_generation = commit_graph.changeset_generation(ctx, item.root_cs_id()).await?;
-                                // Find the highest derived changeset in the batch or the parents of the batch
-                                // if none of the changesets are derived.
-                                let derived_ancestors_or_parents = commit_graph.ancestors_frontier_with(ctx, vec![item.head_cs_id()],
-                                    |cs_id| {
-                                        cloned!(commit_graph);
-                                        async move {
-                                            if commit_graph.changeset_generation(ctx, cs_id).await? < root_generation {
-                                                Ok(true)
-                                            } else {
-                                                Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
-                                            }
-                                        }
-                                    }
-                                )
-                                .await?;
-
-                                let mut underived_batch = commit_graph.ancestors_difference(ctx, vec![item.head_cs_id()], derived_ancestors_or_parents).await?;
-                                match underived_batch.pop() {
-                                    // All changesets in the batch were derived
-                                    None => {
-                                        let err_msg_str = format!("Failed to enqueue with error: {e}, but the data was derived");
-                                        debug!("{}", err_msg_str);
-                                        err_msg = Some(err_msg_str);
-                                        // derived, update ready watch and return no dependency
-                                        *watch.lock() =
-                                            Some(EnqueueResponse::new(future::ok(true).boxed()));
-                                        None
-                                    }
-                                    // None of the changesets in the batch were derived, but enqueuing failed
-                                    Some(root_cs_id) if root_cs_id == item.root_cs_id() => {
-                                        // return same item for enqueue and increment failures count
-                                        failed_attempt += 1;
-                                        let err_msg_str = format!("Failed to enqueue into DAG: {e}");
-                                        error!("{}", err_msg_str);
-                                        err_msg = Some(err_msg_str);
-                                        Some(item)
-                                    }
-                                    // Some of the changesets in the batch were derived
-                                    Some(root_cs_id) => {
-                                        // Create a new item with only the underived changesets
-                                        Some(
-                                            DerivationDagItem::new(
-                                                item.repo_id(),
-                                                item.config_name().to_string(),
-                                                item.derived_data_type(),
-                                                root_cs_id,
-                                                item.head_cs_id(),
-                                                item.bubble_id(),
-                                                vec![],
-                                                item.client_info(),
-                                                priority,
-                                                None,
-                                                None, // stage_payload
-                                            )?
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    };
-                    cur_item = maybe_inserted.inspect(|item| {
-                        upstream_dep = Some(DagItemDep {
-                            dag_item_id: item.id().clone(),
-                            head_cs_id: item.head_cs_id(),
-                            stage_path: None, // non-pipeline derivation
-                        });
-                    });
-                }
-
-                anyhow::Ok(upstream_dep)
-            }
-            .boxed()
-        },
-    )
-    .await?;
-
-    let mut res = watch.lock();
-    Ok(UnderivedGraphBuildResult {
-        response: res.take(),
-        commits_walked: commits_walked.load(Ordering::Relaxed),
-        items_enqueued: items_enqueued.load(Ordering::Relaxed),
-    })
-}
-
-async fn build_underived_batched_graph_v2<'a>(
+async fn build_underived_batched_graph_impl<'a>(
     ctx: &'a CoreContext,
     queue: Arc<dyn DerivationQueue + Send + Sync>,
     ddm: &'a DerivedDataManager,
