@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {HomePagePullRequestFragment, UserHomePageQueryData} from './generated/graphql';
+import type {HomePagePullRequestFragment} from './generated/graphql';
+import type {GitHubUserHomePageData} from './jotai/atoms';
 
 import ActorAvatar from './ActorAvatar';
 import CenteredSpinner from './CenteredSpinner';
@@ -51,10 +52,7 @@ export default function UserHomePage(): React.ReactElement {
 function UserHomePageRoot(): React.ReactElement {
   const data = useAtomValue(gitHubUserHomePageDataAtom);
   const reviewRequests = useMemo(() => extractReviewRequests(data), [data]);
-  const authoredPullRequests = useMemo(
-    () => data?.viewer.pullRequests.nodes?.filter(notEmpty) ?? [],
-    [data],
-  );
+  const authoredPullRequests = useMemo(() => data?.pullRequests.filter(notEmpty) ?? [], [data]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const view = getQueueView();
   const filteredReviews = reviewRequests.filter(pullRequest =>
@@ -392,8 +390,8 @@ function PullRequestRow({pullRequest}: {pullRequest: PullRequest}): React.ReactE
   );
 }
 
-function extractReviewRequests(data: UserHomePageQueryData | null): PullRequest[] {
-  return (data?.search.nodes ?? [])
+function extractReviewRequests(data: GitHubUserHomePageData | null): PullRequest[] {
+  return (data?.reviewRequests ?? [])
     .map(node => (node?.__typename === 'PullRequest' ? node : null))
     .filter(notEmpty);
 }

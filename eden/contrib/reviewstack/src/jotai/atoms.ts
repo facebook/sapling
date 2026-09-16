@@ -11,11 +11,14 @@
 
 import type {
   CheckRunFragment,
+  HomePagePullRequestFragment,
   LabelFragment,
   StackPullRequestFragment,
   UserFragment,
   UserHomePageQueryData,
   UserHomePageQueryVariables,
+  UserReviewRequestsQueryData,
+  UserReviewRequestsQueryVariables,
   UsernameQueryData,
   UsernameQueryVariables,
 } from '../generated/graphql';
@@ -43,7 +46,12 @@ import type {
 import type {SaplingPullRequestBody} from '../saplingStack';
 
 import {lineToPositionAtom} from '../diffServiceClient';
-import {DiffSide, UsernameQuery, UserHomePageQuery} from '../generated/graphql';
+import {
+  DiffSide,
+  UsernameQuery,
+  UserHomePageQuery,
+  UserReviewRequestsQuery,
+} from '../generated/graphql';
 import {pullRequestNumbersFromBody} from '../ghstackUtils';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
@@ -1552,10 +1560,15 @@ export const gitHubPullRequestCheckRunsAtom = atom<CheckRun[]>(get => {
  * Async atom that fetches the viewer's home-page PR data.
  * This includes review requests and recent pull requests.
  */
-export const gitHubUserHomePageDataAtom = atom<Promise<UserHomePageQueryData | null>>(_get => {
+export type GitHubUserHomePageData = {
+  pullRequests: Array<HomePagePullRequestFragment | null>;
+  reviewRequests: NonNullable<UserReviewRequestsQueryData['search']['nodes']>;
+};
+
+export const gitHubUserHomePageDataAtom = atom<Promise<GitHubUserHomePageData | null>>(async _get => {
   const token = localStorage.getItem('github.token');
   if (token == null) {
-    return Promise.resolve(null);
+    return null;
   }
 
   // Based on search query for https://github.com/pulls/review-requested
@@ -1563,12 +1576,25 @@ export const gitHubUserHomePageDataAtom = atom<Promise<UserHomePageQueryData | n
 
   const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
   const graphQLEndpoint = createGraphQLEndpointForHostname(hostname);
-  return queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
-    UserHomePageQuery,
-    {reviewRequestedQuery},
-    createRequestHeaders(token),
-    graphQLEndpoint,
-  );
+  const requestHeaders = createRequestHeaders(token);
+  const [homePageData, reviewRequestsData] = await Promise.all([
+    queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
+      UserHomePageQuery,
+      {},
+      requestHeaders,
+      graphQLEndpoint,
+    ),
+    queryGraphQL<UserReviewRequestsQueryData, UserReviewRequestsQueryVariables>(
+      UserReviewRequestsQuery,
+      {reviewRequestedQuery},
+      requestHeaders,
+      graphQLEndpoint,
+    ),
+  ]);
+  return {
+    pullRequests: homePageData.viewer.pullRequests.nodes ?? [],
+    reviewRequests: reviewRequestsData.search.nodes ?? [],
+  };
 });
 
 // =============================================================================
@@ -1997,4 +2023,3 @@ export const stackedPullRequestFragmentsAtom = atom<Promise<StackPullRequestFrag
     return client.getStackPullRequests(prs);
   },
 );
-

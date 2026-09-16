@@ -1,14 +1,9 @@
-query UserHomePageQuery($reviewRequestedQuery: String!) {
+query UserHomePageQuery {
   viewer {
     pullRequests(first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
         ...HomePagePullRequestFragment
       }
-    }
-  }
-  search(first: 100, query: $reviewRequestedQuery, type: ISSUE) {
-    nodes {
-      ...HomePagePullRequestFragment
     }
   }
 }
