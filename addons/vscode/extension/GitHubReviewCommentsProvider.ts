@@ -54,22 +54,9 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
   private readonly contexts = new Map<string, ReviewContext>();
   private readonly draftThreads = new Set<vscode.CommentThread>();
   private readonly disposables: Array<vscode.Disposable> = [];
-  private readonly activeRangeDecoration: vscode.TextEditorDecorationType;
-  private decoratedEditor?: vscode.TextEditor;
   private readonly refreshTimer: ReturnType<typeof setInterval>;
 
-  constructor(
-    private readonly ctx: RepositoryContext,
-    extensionContext: vscode.ExtensionContext,
-  ) {
-    this.activeRangeDecoration = vscode.window.createTextEditorDecorationType({
-      gutterIconPath: vscode.Uri.file(
-        extensionContext.asAbsolutePath('resources/review-comment-range.svg'),
-      ),
-      gutterIconSize: 'contain',
-      isWholeLine: true,
-    });
-    this.disposables.push(this.activeRangeDecoration);
+  constructor(private readonly ctx: RepositoryContext) {
     this.controller.options = {
       prompt: 'Add a GitHub review comment',
       placeHolder: 'Write a comment…',
@@ -112,15 +99,9 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
       ),
       vscode.commands.registerCommand(
         'sapling.cancel-empty-review-comment',
-        (reply: vscode.CommentReply) => {
-          this.clearActiveRangeDecoration();
-          reply.thread.dispose();
-        },
+        (reply: vscode.CommentReply) => reply.thread.dispose(),
       ),
       vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor !== this.decoratedEditor) {
-          this.clearActiveRangeDecoration();
-        }
         if (editor != null) {
           this.trackEncodedUri(editor.document.uri);
           void this.refreshByUri(editor.document.uri);
@@ -131,9 +112,6 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
           // VS Code owns empty comment threads and does not expose a creation event. Collapsing
           // before the next selection opens prevents abandoned editors from accumulating.
           void vscode.commands.executeCommand('workbench.action.collapseAllComments');
-          this.updateActiveRangeDecoration(event.textEditor, event.selections);
-        } else {
-          this.clearActiveRangeDecoration();
         }
       }),
     );
@@ -166,26 +144,6 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     } catch {
       return false;
     }
-  }
-
-  private updateActiveRangeDecoration(
-    editor: vscode.TextEditor,
-    selections: readonly vscode.Selection[],
-  ): void {
-    if (this.decoratedEditor != null && this.decoratedEditor !== editor) {
-      this.decoratedEditor.setDecorations(this.activeRangeDecoration, []);
-    }
-    const ranges = selectedMultilineRanges(selections).map(
-      ({startLine, endLine}) =>
-        new vscode.Range(startLine, 0, endLine, editor.document.lineAt(endLine).text.length),
-    );
-    editor.setDecorations(this.activeRangeDecoration, ranges);
-    this.decoratedEditor = ranges.length === 0 ? undefined : editor;
-  }
-
-  private clearActiveRangeDecoration(): void {
-    this.decoratedEditor?.setDecorations(this.activeRangeDecoration, []);
-    this.decoratedEditor = undefined;
   }
 
   private trackEncodedUri(uri: vscode.Uri): void {
@@ -364,7 +322,6 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
 
   private discardComment(comment: ReviewComment): void {
     const thread = comment.parent;
-    this.clearActiveRangeDecoration();
     this.draftThreads.delete(thread);
     const remaining = thread.comments.filter(item => item !== comment);
     if (remaining.length === 0) {
@@ -507,26 +464,6 @@ export function reviewCommentBody(body: string, remoteUrl?: string): string {
   return remoteUrl == null ? body : `[View on GitHub](${remoteUrl})\n\n${body}`;
 }
 
-export function selectedMultilineRanges(
-  selections: ReadonlyArray<{
-    isEmpty: boolean;
-    start: {line: number};
-    end: {line: number; character: number};
-  }>,
-): Array<{startLine: number; endLine: number}> {
-  return selections.flatMap(selection => {
-    if (selection.isEmpty) {
-      return [];
-    }
-    const startLine = selection.start.line;
-    const endLine =
-      selection.end.character === 0 && selection.end.line > startLine
-        ? selection.end.line - 1
-        : selection.end.line;
-    return endLine > startLine ? [{startLine, endLine}] : [];
-  });
-}
-
 function reviewCommentMarkdown(body: string, remoteUrl?: string): vscode.MarkdownString {
   const markdown = new vscode.MarkdownString(reviewCommentBody(body, remoteUrl));
   markdown.isTrusted = false;
@@ -539,12 +476,9 @@ function commentBody(comment: ReviewComment): string {
 
 let activeProvider: GitHubReviewCommentsProvider | undefined;
 
-export function registerGitHubReviewCommentsProvider(
-  ctx: RepositoryContext,
-  extensionContext: vscode.ExtensionContext,
-): vscode.Disposable {
+export function registerGitHubReviewCommentsProvider(ctx: RepositoryContext): vscode.Disposable {
   activeProvider?.dispose();
-  const provider = new GitHubReviewCommentsProvider(ctx, extensionContext);
+  const provider = new GitHubReviewCommentsProvider(ctx);
   activeProvider = provider;
   return {
     dispose: () => {

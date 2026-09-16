@@ -5,11 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  reviewCommentBody,
-  selectedMultilineRanges,
-  suggestionBody,
-} from '../GitHubReviewCommentsProvider';
+import {reviewCommentBody, suggestionBody} from '../GitHubReviewCommentsProvider';
 
 describe('GitHub review suggestions', () => {
   it('copies selected lines into a GitHub suggestion block', () => {
@@ -30,28 +26,5 @@ describe('GitHub review comment display', () => {
     expect(reviewCommentBody('Looks good.', 'https://github.com/o/r/pull/1#discussion_r2')).toBe(
       `[View on GitHub](https://github.com/o/r/pull/1#discussion_r2)\n\nLooks good.`,
     );
-  });
-});
-
-describe('active multiline comment range', () => {
-  it('marks every fully or partially selected line', () => {
-    expect(
-      selectedMultilineRanges([{isEmpty: false, start: {line: 4}, end: {line: 7, character: 3}}]),
-    ).toEqual([{startLine: 4, endLine: 7}]);
-  });
-
-  it('does not include the next line when the selection ends at column zero', () => {
-    expect(
-      selectedMultilineRanges([{isEmpty: false, start: {line: 4}, end: {line: 7, character: 0}}]),
-    ).toEqual([{startLine: 4, endLine: 6}]);
-  });
-
-  it('does not mark a cursor or a single-line selection', () => {
-    expect(
-      selectedMultilineRanges([
-        {isEmpty: true, start: {line: 4}, end: {line: 4, character: 0}},
-        {isEmpty: false, start: {line: 5}, end: {line: 5, character: 8}},
-      ]),
-    ).toEqual([]);
   });
 });
