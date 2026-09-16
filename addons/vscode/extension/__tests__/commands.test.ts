@@ -63,6 +63,7 @@ const mockBasecampOpenFolderAsNewTile = Internal.basecampOpenFolderAsNewTile as 
 
 describe('open-file-diff', () => {
   const openDiffView = vscodeCommands['sapling.open-file-diff'];
+  const expectedDiffOptions = {viewColumn: undefined, preview: false};
 
   const repoRoot = '/repo/root';
   const filePath = 'path/to/file';
@@ -100,7 +101,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       fileUri,
       'file (Uncommitted Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -120,7 +121,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'submodule (Uncommitted Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -139,7 +140,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'file (Uncommitted Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -157,7 +158,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       fileUri,
       'file (Head Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -177,7 +178,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'submodule (Head Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -195,7 +196,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       fileUri,
       'file (Stack Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -215,7 +216,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'submodule (Stack Changes)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -233,7 +234,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'file (In abc123)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -251,7 +252,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'submodule (In abc123)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -273,7 +274,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'file (abc111 to def222)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 
@@ -295,7 +296,7 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'submodule (abc111 to def222)',
-      {viewColumn: undefined},
+      expectedDiffOptions,
     );
   });
 });

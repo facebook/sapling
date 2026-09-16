@@ -55,8 +55,15 @@ export const islDrawerState = localStorageBackedAtom<AllDrawersState>('isl.drawe
 
 // On startup, override existing state to collapse the sidebar if the screen is too small.
 // This allows collapsing even if the size has been previous persisted.
-function autoCloseBasedOnWindowWidth() {
-  const windowWidth = getWindowWidthInPixels();
+function autoCloseBasedOnWindowWidth(
+  windowWidth = getWindowWidthInPixels(),
+  visibility = document.visibilityState,
+) {
+  if (visibility === 'hidden') {
+    // VS Code can load a retained webview while its editor tab is hidden. Its body can have an
+    // intermediate narrow width at that point, which must not overwrite the user's drawer state.
+    return;
+  }
   if (windowWidth === 0) {
     // window not loaded yet
     return;
@@ -99,3 +106,5 @@ registerCleanup(
   },
   import.meta.hot,
 );
+
+export const __TEST__ = {autoCloseBasedOnWindowWidth};

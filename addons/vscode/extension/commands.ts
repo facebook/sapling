@@ -503,7 +503,11 @@ async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<un
   const leftUri = getLeftUri(uri, comparison);
   const rightUri = await getRightUri(uri, comparison);
   const title = `${path.basename(uri.fsPath)} (${t(labelForComparison(comparison))})`;
-  const opts = {viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined};
+  const opts = {
+    viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined,
+    // Pin each diff so opening another file does not replace it as a preview editor.
+    preview: false,
+  };
   return executeVSCodeCommand('vscode.diff', leftUri, rightUri, title, opts);
 }
 
