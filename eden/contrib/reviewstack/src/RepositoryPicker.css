@@ -1,0 +1,218 @@
+.reviewstack-landing {
+  align-items: center;
+  background:
+    radial-gradient(circle at 16% 18%, rgb(137 151 255 / 18%), transparent 34%),
+    linear-gradient(135deg, #f6f8ff 0%, #eef1f8 52%, #e6ebf4 100%);
+  display: flex;
+  justify-content: center;
+  min-height: calc(100vh - 64px);
+  padding: 48px 24px;
+}
+
+.reviewstack-landing-panel {
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid #d8deeb;
+  border-radius: 8px;
+  box-shadow: 0 18px 55px rgb(41 51 78 / 14%);
+  max-width: 720px;
+  padding: 48px;
+  width: 100%;
+}
+
+.reviewstack-landing-mark {
+  align-items: center;
+  background: #252a3a;
+  border-radius: 8px;
+  color: #aab4ff;
+  display: flex;
+  height: 54px;
+  justify-content: center;
+  margin-bottom: 28px;
+  width: 54px;
+}
+
+.reviewstack-landing-eyebrow {
+  color: #59627a;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.reviewstack-landing h1 {
+  color: #1f2637;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.reviewstack-landing-description {
+  color: #59627a;
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 16px 0 32px;
+  max-width: 520px;
+}
+
+.reviewstack-repository-status,
+.reviewstack-repository-empty {
+  color: #59627a;
+  font-size: 13px;
+  margin: 0;
+}
+
+.reviewstack-repository-list {
+  border-top: 1px solid #d8deeb;
+  padding-top: 24px;
+}
+
+.reviewstack-repository-list-header {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.reviewstack-repository-list h2,
+.reviewstack-manual-repository h2 {
+  color: #30394d;
+  font-size: 14px;
+  margin: 0;
+}
+
+.reviewstack-repository-list-header span {
+  color: #59627a;
+  font-size: 12px;
+}
+
+.reviewstack-repository-filter {
+  background: #fff;
+  border: 1px solid #aeb8cc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: #1f2637;
+  font: inherit;
+  margin-bottom: 8px;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.reviewstack-repository-options {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.reviewstack-repository-option {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e5e9f1;
+  border-radius: 0;
+  color: #30394d;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  font: inherit;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.reviewstack-repository-option:hover {
+  background: #eef1ff;
+  color: #303da6;
+}
+
+.reviewstack-repository-option small {
+  color: #59627a;
+  font-size: 11px;
+}
+
+.reviewstack-manual-repository {
+  border-top: 1px solid #d8deeb;
+  margin-top: 24px;
+  padding-top: 24px;
+}
+
+.reviewstack-manual-repository h2 {
+  margin-bottom: 10px;
+}
+
+.reviewstack-landing form label {
+  color: #30394d;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.reviewstack-landing-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.reviewstack-landing input {
+  background: #fff;
+  border: 1px solid #aeb8cc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: #1f2637;
+  flex: 1;
+  font: inherit;
+  min-width: 0;
+  padding: 11px 12px;
+}
+
+.reviewstack-landing input:focus {
+  border-color: #5967d9;
+  box-shadow: 0 0 0 3px rgb(89 103 217 / 18%);
+  outline: none;
+}
+
+.reviewstack-open-button {
+  align-items: center;
+  background: #3d4abb;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font: inherit;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.reviewstack-open-button:hover {
+  background: #303da6;
+}
+
+.reviewstack-landing-error {
+  color: #b42318;
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+@media (max-width: 560px) {
+  .reviewstack-landing {
+    align-items: flex-start;
+    padding: 24px 14px;
+  }
+
+  .reviewstack-landing-panel {
+    padding: 28px 22px;
+  }
+
+  .reviewstack-landing-input-row {
+    flex-direction: column;
+  }
+
+  .reviewstack-open-button {
+    min-height: 44px;
+  }
+}

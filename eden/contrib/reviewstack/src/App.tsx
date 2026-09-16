@@ -16,9 +16,9 @@ import NotificationBanner from './NotificationBanner';
 import PrimerStyles from './PrimerStyles';
 import PullRequestLayout from './PullRequestLayout';
 import PullsView from './PullsView';
+import RepositoryPicker from './RepositoryPicker';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import TextMateStyles from './TextMateStyles';
-import UserHomePage from './UserHomePage';
 import {
   gitHubTokenListenerAtom,
   gitHubTokenPersistenceAtom,
@@ -142,7 +142,7 @@ const ThemeListener = React.memo(function ThemeListener(): React.ReactElement {
 const AppContent = React.memo(({page}: {page: Page}): React.ReactElement => {
   switch (page.type) {
     case 'home':
-      return <UserHomePage />;
+      return <RepositoryPicker />;
     case 'project':
       return <GitHubProjectPage {...page} />;
     case 'pulls':

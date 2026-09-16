@@ -14,7 +14,13 @@ import PullRequestHeader from './PullRequestHeader';
 import PullRequestTimeline from './PullRequestTimeline';
 import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
-import {gitHubOrgAndRepoAtom, gitHubPullRequestIDAtom} from './jotai';
+import {
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestIDAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+} from './jotai';
 import {Box, Text} from '@primer/react';
 import {atom, useSetAtom} from 'jotai';
 import React, {Component, Suspense, useEffect} from 'react';
@@ -44,6 +50,9 @@ export default function PullRequestLayout({
 }): React.ReactElement {
   const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
   const setPullRequestID = useSetAtom(gitHubPullRequestIDAtom);
+  const setPullRequest = useSetAtom(gitHubPullRequestAtom);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
+  const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
 
   useEffect(() => {
     setOrgAndRepo({org, repo});
@@ -52,6 +61,19 @@ export default function PullRequestLayout({
   useEffect(() => {
     setPullRequestID(number);
   }, [number, setPullRequestID]);
+
+  useEffect(() => {
+    setPullRequest(null);
+    setComparableVersions(null);
+    setSelectedVersionIndex(0);
+  }, [
+    number,
+    org,
+    repo,
+    setComparableVersions,
+    setPullRequest,
+    setSelectedVersionIndex,
+  ]);
 
   const setDrawerState = useSetAtom(drawerStateAtom);
   useCommand('ToggleSidebar', () => {

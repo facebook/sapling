@@ -57,7 +57,6 @@ import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
 import {ALL_DB_NAMES_EVER} from '../github/databaseInfo';
 import {diffCommitWithParent, diffCommits} from '../github/diff';
-import {diffVersions} from '../github/diffVersions';
 import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
 import {broadcastLogoutMessage, subscribeToLogout} from '../github/logoutBroadcastChannel';
 import queryGraphQL from '../github/queryGraphQL';
@@ -791,45 +790,30 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
       return null;
     }
 
-    // Get the base parent for the "after" commit
-    const afterBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(afterCommitID));
-    const afterBaseCommitID = afterBaseParent?.oid;
-
     if (beforeCommitID != null) {
-      // Comparing two explicit versions
-      const beforeBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(beforeCommitID));
-      const beforeBaseCommitID = beforeBaseParent?.oid;
+      // An explicit comparison is a direct tree diff between the selected
+      // commits. Diffing each commit against a changing branch base first can
+      // reintroduce unrelated files from a rebased stacked branch.
+      return get(
+        gitHubDiffForCommitsAtom({baseCommitID: beforeCommitID, commitID: afterCommitID}),
+      );
+    }
 
-      if (beforeBaseCommitID != null && afterBaseCommitID != null) {
-        // If the base parents are the same, then there was no rebase and the
-        // two versions can be diffed directly
-        if (beforeBaseCommitID === afterBaseCommitID) {
-          return get(
-            gitHubDiffForCommitsAtom({baseCommitID: beforeCommitID, commitID: afterCommitID}),
-          );
-        }
+    // With no explicit "before", compare the selected commit against its base.
+    // A Sapling PR's base is the head of the previous PR in the stack, not
+    // necessarily the merge base with the repository's default branch.
+    const stackedPR = get(stackedPullRequestAtom);
+    let afterBaseCommitID: GitObjectID | null = null;
+    if (stackedPR.type === 'sapling') {
+      const fragments = await get(stackedPullRequestFragmentsAtom);
+      afterBaseCommitID = fragments[stackedPR.body.currentStackEntry + 1]?.headRefOid ?? null;
+    }
+    if (afterBaseCommitID == null) {
+      const afterBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(afterCommitID));
+      afterBaseCommitID = afterBaseParent?.oid ?? null;
+    }
 
-        // Different base parents - need to diff the versions against their respective bases
-        // and then diff the diffs
-        const [beforeDiff, afterDiff] = await Promise.all([
-          get(
-            gitHubDiffForCommitsAtom({baseCommitID: beforeBaseCommitID, commitID: beforeCommitID}),
-          ),
-          get(gitHubDiffForCommitsAtom({baseCommitID: afterBaseCommitID, commitID: afterCommitID})),
-        ]);
-
-        if (beforeDiff != null && afterDiff != null) {
-          return {
-            diff: diffVersions(beforeDiff.diff, afterDiff.diff),
-            commitIDs: {
-              before: beforeCommitID,
-              after: afterCommitID,
-            },
-          };
-        }
-      }
-    } else if (afterBaseCommitID != null) {
-      // No explicit "before" - compare "after" against its base
+    if (afterBaseCommitID != null) {
       return get(
         gitHubDiffForCommitsAtom({baseCommitID: afterBaseCommitID, commitID: afterCommitID}),
       );

@@ -57,10 +57,14 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
           whenever any async selector is resolved, so every use of <Suspense>
           runs the risk of a hard-to-debug performance issue.
           */}
-        <Suspense fallback={null}>
-          <PullRequestVersions />
+        <Suspense fallback={<LoadingVersionsButton />}>
+          <PullRequestVersions key={pullRequest.id} />
         </Suspense>
       </Box>
     </Box>
   );
+}
+
+function LoadingVersionsButton(): React.ReactElement {
+  return <Text color="fg.muted">Loading versions...</Text>;
 }
