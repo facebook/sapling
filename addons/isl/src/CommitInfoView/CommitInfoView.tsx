@@ -81,7 +81,7 @@ import {showToast} from '../toast';
 import {GeneratedStatus, succeedableRevset} from '../types';
 import {UncommittedChanges} from '../UncommittedChanges';
 import {confirmUnsavedFiles} from '../UnsavedFiles';
-import {useModal} from '../useModal';
+import {showConfirmation, useModal} from '../useModal';
 import {firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
@@ -760,10 +760,11 @@ function ActionsBar({
           hasUnsavedEditedCommitMessage(isCommitMode ? 'head' : commit.hash),
         );
         if (hasUnsavedEdits) {
-          const confirmed = await platform.confirm(
-            t('Are you sure you want to discard your edited message?'),
-          );
-          if (confirmed === false) {
+          const confirmed = await showConfirmation({
+            title: t('Are you sure you want to discard your edited message?'),
+            confirmLabel: t('Discard'),
+          });
+          if (!confirmed) {
             return;
           }
         }

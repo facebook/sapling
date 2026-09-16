@@ -8,7 +8,6 @@
 import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import {nextTick} from 'shared/utils';
 import App from '../../App';
-import platform from '../../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';
 import {
   COMMIT,
@@ -45,10 +44,16 @@ describe('RevertOperation', () => {
         ],
       });
     });
-
-    // confirm all prompts about reverting files
-    jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
   });
+
+  const confirmModal = async (label: string) => {
+    await act(async () => {
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByRole('button', {name: 'Cancel'})).toHaveFocus();
+      fireEvent.click(within(dialog).getByRole('button', {name: label}));
+      await nextTick();
+    });
+  };
 
   const clickRevert = async (inside: HTMLElement, fileName: string) => {
     await act(async () => {
@@ -57,9 +62,8 @@ describe('RevertOperation', () => {
       ).getByTestId('file-revert-button');
       expect(revertButton).toBeInTheDocument();
       fireEvent.click(revertButton);
-      // confirm modal takes 1 tick to resolve
-      await nextTick();
     });
+    await confirmModal('Revert');
   };
 
   const clickDelete = async (inside: HTMLElement, fileName: string) => {
@@ -69,9 +73,8 @@ describe('RevertOperation', () => {
       ).getByTestId('file-action-delete');
       expect(revertButton).toBeInTheDocument();
       fireEvent.click(revertButton);
-      // confirm modal takes 1 tick to resolve
-      await nextTick();
     });
+    await confirmModal('Delete');
   };
 
   const clickCheckboxForFile = async (inside: HTMLElement, fileName: string) => {
@@ -164,9 +167,7 @@ describe('RevertOperation', () => {
   });
 
   describe('bulk discard', () => {
-    let confirmSpy: jest.SpyInstance;
     beforeEach(() => {
-      confirmSpy = jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
       act(() => {
         simulateUncommittedChangedFiles({
           value: [
@@ -179,12 +180,17 @@ describe('RevertOperation', () => {
       });
     });
 
-    it('discards all changes with goto --clean if everything selected', async () => {
+    const clickDiscardSelected = async () => {
       await act(async () => {
         fireEvent.click(
           within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
         );
       });
+      await confirmModal('Discard');
+    };
+
+    it('discards all changes with goto --clean if everything selected', async () => {
+      await clickDiscardSelected();
 
       expectMessageSentToServer({
         type: 'runOperation',
@@ -206,7 +212,7 @@ describe('RevertOperation', () => {
         },
       });
 
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('discards selected changes with revert and purge', async () => {
@@ -214,11 +220,7 @@ describe('RevertOperation', () => {
       await clickCheckboxForFile(commitTree, 'myFile1.txt');
       await clickCheckboxForFile(commitTree, 'untracked1.txt');
 
-      await act(async () => {
-        fireEvent.click(
-          within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
-        );
-      });
+      await clickDiscardSelected();
 
       expectMessageSentToServer({
         type: 'runOperation',
@@ -245,7 +247,7 @@ describe('RevertOperation', () => {
         },
       });
 
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('uses purge for added and renamed files for selected changes', async () => {
@@ -262,11 +264,7 @@ describe('RevertOperation', () => {
       const commitTree = screen.getByTestId('commit-tree-root');
       await clickCheckboxForFile(commitTree, 'myFile2.txt');
 
-      await act(async () => {
-        fireEvent.click(
-          within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
-        );
-      });
+      await clickDiscardSelected();
 
       expectMessageSentToServer({
         type: 'runOperation',
@@ -299,7 +297,7 @@ describe('RevertOperation', () => {
         },
       });
 
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('no need to run purge if no files are untracked', async () => {
@@ -307,11 +305,7 @@ describe('RevertOperation', () => {
       await clickCheckboxForFile(commitTree, 'untracked1.txt');
       await clickCheckboxForFile(commitTree, 'untracked2.txt');
 
-      await act(async () => {
-        fireEvent.click(
-          within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
-        );
-      });
+      await clickDiscardSelected();
 
       expectMessageSentToServer({
         type: 'runOperation',
@@ -336,7 +330,33 @@ describe('RevertOperation', () => {
         },
       });
 
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('does not discard when cancelled', async () => {
+      await act(async () => {
+        fireEvent.click(
+          within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
+        );
+      });
+
+      await act(async () => {
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Cancel'}));
+        await nextTick();
+      });
+
+      expectMessageNOTSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          trackEventName: 'DiscardOperation',
+        }),
+      });
+      expectMessageNOTSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          trackEventName: 'PurgeOperation',
+        }),
+      });
     });
   });
 

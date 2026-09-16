@@ -101,7 +101,7 @@ import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
-import {showModal} from './useModal';
+import {showConfirmation, showModal} from './useModal';
 import {short} from './utils';
 
 export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
@@ -1160,8 +1160,9 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
     return WarningCheckResult.PASS;
   }
 
-  const confirmed = await platform.confirm(
-    t(
+  const confirmed = await showConfirmation({
+    title: t('Go to Older Commit?'),
+    message: t(
       Internal.warnAboutOldGotoReason ??
         'The destination commit is $age older than the current commit. ' +
           "Going here may be slow. It's often faster to rebase the commit to a newer base before going. " +
@@ -1172,7 +1173,8 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
         },
       },
     ),
-  );
+    confirmLabel: t('Goto Anyway'),
+  });
   return confirmed ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
 }
 

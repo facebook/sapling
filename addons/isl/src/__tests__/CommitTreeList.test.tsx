@@ -525,12 +525,12 @@ describe('CommitTreeList', () => {
 
       it('runs revert command when clicking revert button', async () => {
         const revertButtons = screen.getAllByTestId('file-revert-button');
-        jest.spyOn(window, 'confirm').mockImplementation(() => true);
         act(() => {
           fireEvent.click(revertButtons[0]);
         });
+        const dialog = await screen.findByRole('dialog', {name: 'Revert File?'});
+        fireEvent.click(within(dialog).getByRole('button', {name: 'Revert'}));
         await waitFor(() => {
-          expect(window.confirm).toHaveBeenCalled();
           expectMessageSentToServer({
             type: 'runOperation',
             operation: {

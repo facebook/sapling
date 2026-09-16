@@ -47,6 +47,7 @@ import platform from './platform';
 import {optimisticMergeConflicts} from './previews';
 import {copyAndShowToast} from './toast';
 import {ChangedFileMode, ConflictType, succeedableRevset} from './types';
+import {showConfirmation} from './useModal';
 import {usePromise} from './usePromise';
 
 /**
@@ -364,14 +365,17 @@ function FileActions({
               return;
             }
 
-            const ok = await platform.confirm(
-              comparison.type === ComparisonType.UncommittedChanges
-                ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
-                : t(
-                    'Are you sure you want to revert $file back to how it was just before the last commit? Uncommitted changes to this file will be lost.',
-                    {replace: {$file: file.path}},
-                  ),
-            );
+            const ok = await showConfirmation({
+              title: t('Revert File?'),
+              message:
+                comparison.type === ComparisonType.UncommittedChanges
+                  ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
+                  : t(
+                      'Are you sure you want to revert $file back to how it was just before the last commit? Uncommitted changes to this file will be lost.',
+                      {replace: {$file: file.path}},
+                    ),
+              confirmLabel: t('Revert'),
+            });
             if (!ok) {
               return;
             }
@@ -433,9 +437,13 @@ function FileActions({
             icon
             data-testid="file-action-delete"
             onClick={async () => {
-              const ok = await platform.confirm(
-                t('Are you sure you want to delete $file?', {replace: {$file: file.path}}),
-              );
+              const ok = await showConfirmation({
+                title: t('Delete File?'),
+                message: t('Are you sure you want to delete $file?', {
+                  replace: {$file: file.path},
+                }),
+                confirmLabel: t('Delete'),
+              });
               if (!ok) {
                 return;
               }

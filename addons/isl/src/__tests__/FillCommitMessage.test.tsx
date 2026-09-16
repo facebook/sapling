@@ -8,7 +8,6 @@
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
-import platform from '../platform';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
   COMMIT,
@@ -203,13 +202,23 @@ describe('FillCommitMessage', () => {
     expect(getTitleEditor()).toHaveValue('');
     expect(getDescriptionEditor()).toHaveValue('');
 
-    const confirmSpy = jest
-      .spyOn(platform, 'confirm')
-      .mockImplementation(() => Promise.resolve(true));
+    act(() => {
+      userEvent.type(getTitleEditor(), 'Draft title');
+      userEvent.type(getDescriptionEditor(), 'Draft description');
+    });
 
     fireEvent.click(screen.getByTestId('fill-commit-message-more-options'));
     fireEvent.click(screen.getByText('Clear commit message'));
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Are you sure you want to clear the currently edited commit message?',
+      }),
+    ).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Clear'}));
 
-    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(getTitleEditor()).toHaveValue('');
+      expect(getDescriptionEditor()).toHaveValue('');
+    });
   });
 });

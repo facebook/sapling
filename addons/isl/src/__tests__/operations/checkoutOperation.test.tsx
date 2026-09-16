@@ -7,10 +7,9 @@
 
 import type {Hash} from '../../types';
 
-import {act, fireEvent, render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import {nextTick} from 'shared/utils';
 import App from '../../App';
-import platform from '../../platform';
 import {
   COMMIT,
   closeCommitInfoSidebar,
@@ -147,9 +146,7 @@ describe('GotoOperation', () => {
   });
 
   describe('age warning', () => {
-    let confirmSpy: jest.SpyInstance;
     beforeEach(() => {
-      confirmSpy = jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
       act(() => {
         simulateCommits({
           value: [
@@ -166,13 +163,16 @@ describe('GotoOperation', () => {
 
     it('warns if going to an old commit', async () => {
       await clickGoto('1');
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.getByRole('dialog', {name: 'Go to Older Commit?'})).toBeInTheDocument();
     });
 
     it("cancels goto if you don't confirm", async () => {
-      confirmSpy = jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(false));
       await clickGoto('1');
-      expect(confirmSpy).toHaveBeenCalled();
+      fireEvent.click(
+        within(screen.getByRole('dialog', {name: 'Go to Older Commit?'})).getByRole('button', {
+          name: 'Cancel',
+        }),
+      );
       expectMessageNOTSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
@@ -183,12 +183,12 @@ describe('GotoOperation', () => {
 
     it('does not warn for short goto', async () => {
       await clickGoto('a');
-      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('compares base public commit, not destination itself', async () => {
       await clickGoto('x'); // x is only 1 day old, but its parent is months older than b's public base.
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(screen.getByRole('dialog', {name: 'Go to Older Commit?'})).toBeInTheDocument();
     });
 
     it('only warns going backwards, not forwards', async () => {
@@ -205,7 +205,7 @@ describe('GotoOperation', () => {
         });
       });
       await clickGoto('b');
-      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });

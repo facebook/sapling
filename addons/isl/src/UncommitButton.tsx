@@ -14,8 +14,8 @@ import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import {useRunOperation} from './operationsState';
-import platform from './platform';
 import {dagWithPreviews} from './previews';
+import {showConfirmation} from './useModal';
 
 export function UncommitButton() {
   const dag = useAtomValue(dagWithPreviews);
@@ -51,16 +51,17 @@ export function UncommitButton() {
         onClick={async e => {
           e.stopPropagation();
           const [confirmed, changedFilesResult] = await Promise.all([
-            platform.confirm(
-              t('Are you sure you want to Uncommit?'),
-              hasChildren
+            showConfirmation({
+              title: t('Are you sure you want to Uncommit?'),
+              message: hasChildren
                 ? t(
                     'Uncommitting will not hide the original commit because it has children, but will move to the parent commit and keep its changes as uncommitted changes.',
                   )
                 : t(
                     'Uncommitting will hide this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
                   ),
-            ),
+              confirmLabel: t('Uncommit'),
+            }),
             getChangedFilesForHash(headCommit.hash),
           ]);
           if (!confirmed) {

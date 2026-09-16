@@ -26,7 +26,7 @@ import {Internal} from '../Internal';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
-import {useModal} from '../useModal';
+import {showConfirmation, useModal} from '../useModal';
 import {
   commitMessageTemplate,
   editedCommitMessages,
@@ -113,9 +113,10 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
     {
       label: t('Clear commit message'),
       onClick: async () => {
-        const confirmed = await platform.confirm(
-          t('Are you sure you want to clear the currently edited commit message?'),
-        );
+        const confirmed = await showConfirmation({
+          title: t('Are you sure you want to clear the currently edited commit message?'),
+          confirmLabel: t('Clear'),
+        });
         if (confirmed) {
           writeAtom(editedCommitMessages('head'), {});
         }

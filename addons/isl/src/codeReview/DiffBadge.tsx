@@ -25,9 +25,9 @@ import {IconStack} from '../icons/IconStack';
 import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
-import platform from '../platform';
 import {inMergeConflicts, repositoryInfo} from '../serverAPIState';
 import {exactRevset} from '../types';
+import {showConfirmation} from '../useModal';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import './DiffBadge.css';
 import css from './DiffBadge.module.css';
@@ -218,8 +218,12 @@ function DownloadNewVersionButton({
         icon
         onClick={async () => {
           if (bothChanged) {
-            const confirmed = await platform.confirm(tooltip);
-            if (confirmed !== true) {
+            const confirmed = await showConfirmation({
+              title: t('Download New Version?'),
+              message: tooltip,
+              confirmLabel: t('Download'),
+            });
+            if (!confirmed) {
               return;
             }
           }

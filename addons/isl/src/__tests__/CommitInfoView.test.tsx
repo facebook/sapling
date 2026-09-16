@@ -10,7 +10,6 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {__TEST__ as ChangedFilesTestUtils} from '../ChangedFilesWithFetching';
 import {tracker} from '../analytics';
-import platform from '../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../testQueries';
 import {
   COMMIT,
@@ -271,10 +270,10 @@ describe('CommitInfoView', () => {
 
         expect(screen.queryByText('Amend and Submit')).not.toBeInTheDocument();
 
-        jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
         act(() => {
           fireEvent.click(screen.getByText('Uncommit'));
         });
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Uncommit'}));
         act(() => {
           simulateMessageFromServer({
             type: 'fetchedCommitChangedFiles',
@@ -1086,40 +1085,38 @@ describe('CommitInfoView', () => {
       describe('discarding message', () => {
         it('confirms cancel button if you have made changes to the title', async () => {
           clickToEditTitle();
-          const confirmSpy = jest
-            .spyOn(platform, 'confirm')
-            .mockImplementation(() => Promise.resolve(true));
 
           act(() => {
             userEvent.type(getTitleEditor(), 'Q');
           });
 
           clickCancel();
+          fireEvent.click(
+            within(screen.getByRole('dialog')).getByRole('button', {name: 'Discard'}),
+          );
 
           await waitFor(() => {
             expectIsNOTEditingTitle();
             expectIsNOTEditingDescription();
           });
-          expect(confirmSpy).toHaveBeenCalled();
         });
 
         it('confirms cancel button if you have made changes to the description', async () => {
           clickToEditDescription();
-          const confirmSpy = jest
-            .spyOn(platform, 'confirm')
-            .mockImplementation(() => Promise.resolve(true));
 
           act(() => {
             userEvent.type(getDescriptionEditor(), 'W');
           });
 
           clickCancel();
+          fireEvent.click(
+            within(screen.getByRole('dialog')).getByRole('button', {name: 'Discard'}),
+          );
 
           await waitFor(() => {
             expectIsNOTEditingTitle();
             expectIsNOTEditingDescription();
           });
-          expect(confirmSpy).toHaveBeenCalled();
         });
 
         it('does not cancel if you do not confirm', async () => {
@@ -1127,9 +1124,6 @@ describe('CommitInfoView', () => {
             clickToEditTitle();
             clickToEditDescription();
           });
-          const confirmSpy = jest
-            .spyOn(platform, 'confirm')
-            .mockImplementation(() => Promise.resolve(false));
 
           act(() => {
             userEvent.type(getTitleEditor(), 'Q');
@@ -1137,6 +1131,7 @@ describe('CommitInfoView', () => {
           });
 
           clickCancel();
+          fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Cancel'}));
 
           await waitFor(() => {
             expectIsEditingTitle();
@@ -1147,7 +1142,6 @@ describe('CommitInfoView', () => {
               expect.stringContaining('stacked commitW'),
             );
           });
-          expect(confirmSpy).toHaveBeenCalled();
         });
 
         it('does not confirm when clearing for amend', async () => {
@@ -1158,7 +1152,6 @@ describe('CommitInfoView', () => {
           );
 
           clickToEditDescription();
-          const confirmSpy = jest.spyOn(platform, 'confirm');
 
           act(() => {
             userEvent.type(getDescriptionEditor(), 'W');
@@ -1169,7 +1162,7 @@ describe('CommitInfoView', () => {
           await waitForWithTick(() => {
             expectIsNOTEditingTitle();
             expectIsNOTEditingDescription();
-            expect(confirmSpy).not.toHaveBeenCalled();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
           });
         });
       });

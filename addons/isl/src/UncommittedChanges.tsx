@@ -104,6 +104,7 @@ import {
 import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
 import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
 import {GeneratedStatus} from './types';
+import {showConfirmation, showInfoModal} from './useModal';
 
 import './UncommittedChanges.css';
 
@@ -621,7 +622,13 @@ export function UncommittedChanges({place}: {place: Place}) {
                   ) {
                     return;
                   }
-                  if (!(await platform.confirm(t('confirmDiscardChanges')))) {
+                  if (
+                    !(await showConfirmation({
+                      title: t('Discard Changes?'),
+                      message: t('confirmDiscardChanges'),
+                      confirmLabel: t('Discard'),
+                    }))
+                  ) {
                     return;
                   }
                   if (allFilesSelected) {
@@ -921,14 +928,14 @@ function MergeConflictButtons({
                   platform.openExternalLink(link);
                   return;
                 }
-                platform.confirm(
-                  t('Configuring External Merge Tools'),
-                  t(
+                void showInfoModal({
+                  title: t('Configuring External Merge Tools'),
+                  message: t(
                     'You can configure ISL to use an external merge tool for resolving conflicts.\n' +
                       'Set both `ui.merge = mymergetool` and `merge-tool.mymergetool`.\n' +
                       'See `sl help config.merge-tools` for more information about setting up merge tools.\n',
                   ),
-                );
+                });
               }}>
               <Icon icon="gear" />
               <T>Configure External Merge Tool</T>

@@ -58,3 +58,7 @@
 #use-modal-message {
   padding: 0 var(--pad);
 }
+
+#use-modal-message {
+  white-space: pre-wrap;
+}

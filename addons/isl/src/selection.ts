@@ -26,11 +26,11 @@ import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {operationBeingPreviewed, useRunOperation} from './operationsState';
-import platform from './platform';
 import {dagWithPreviews} from './previews';
 import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {exactRevset, type CommitInfo, type Hash} from './types';
+import {showConfirmation} from './useModal';
 import {registerCleanup} from './utils';
 
 /**
@@ -386,9 +386,13 @@ export function useShortcutToRebaseSelected(): void {
       );
     } else {
       if (
-        await platform.confirm(
-          t('Are you sure you want to rebase $count commits?', {count: selectedRevsets.length}),
-        )
+        await showConfirmation({
+          title: t('Rebase Commits?'),
+          message: t('Are you sure you want to rebase $count commits?', {
+            count: selectedRevsets.length,
+          }),
+          confirmLabel: t('Rebase'),
+        })
       ) {
         runOperation(new BulkRebaseOperation(selectedRevsets, baseCommitRevset));
       }

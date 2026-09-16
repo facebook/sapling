@@ -7,13 +7,15 @@
 
 import type {ChangedFile} from '../../types';
 
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {KeyCode} from 'isl-components/KeyboardShortcuts';
 import App from '../../App';
-import platform from '../../platform';
+import {__TEST__ as ChangedFilesTestUtils} from '../../ChangedFilesWithFetching';
 import {CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';
 import {
   COMMIT,
   closeCommitInfoSidebar,
+  expectMessageNOTSentToServer,
   expectMessageSentToServer,
   resetTestMessages,
   simulateCommits,
@@ -52,11 +54,13 @@ describe('UncommitOperation', () => {
         ],
       });
     });
-
-    jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
   });
 
-  const clickUncommit = async (hash: string, filesSample: Array<ChangedFile>) => {
+  afterEach(() => {
+    ChangedFilesTestUtils.commitFilesCache.clear();
+  });
+
+  const openUncommitDialog = async (hash: string, filesSample: Array<ChangedFile>) => {
     const quickCommitButton = screen.queryByTestId('uncommit-button');
     act(() => {
       fireEvent.click(quickCommitButton as Element);
@@ -68,7 +72,7 @@ describe('UncommitOperation', () => {
         limit: undefined,
       });
     });
-    act(() => {
+    await act(async () => {
       simulateMessageFromServer({
         type: 'fetchedCommitChangedFiles',
         hash,
@@ -80,6 +84,14 @@ describe('UncommitOperation', () => {
         },
       });
     });
+    expectMessageNOTSentToServer({type: 'runOperation', operation: expect.anything()});
+    return screen.getByRole('dialog', {name: 'Are you sure you want to Uncommit?'});
+  };
+
+  const clickUncommit = async (hash: string, filesSample: Array<ChangedFile>) => {
+    const dialog = await openUncommitDialog(hash, filesSample);
+    expect(within(dialog).getByRole('button', {name: 'Cancel'})).toHaveFocus();
+    fireEvent.click(within(dialog).getByRole('button', {name: 'Uncommit'}));
     await waitFor(() =>
       expectMessageSentToServer({
         type: 'runOperation',
@@ -98,13 +110,25 @@ describe('UncommitOperation', () => {
     expect(withinCommitTree().queryByText(ignoreRTL('file2.txt'))).not.toBeInTheDocument();
     expect(withinCommitTree().queryByText(ignoreRTL('file3.txt'))).not.toBeInTheDocument();
 
-    const spy = jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
     await clickUncommit('c', [FILE1, FILE2, FILE3]);
-    expect(spy).toHaveBeenCalledTimes(1);
 
     expect(withinCommitTree().getByText(ignoreRTL('file1.txt'))).toBeInTheDocument();
     expect(withinCommitTree().getByText(ignoreRTL('file2.txt'))).toBeInTheDocument();
     expect(withinCommitTree().getByText(ignoreRTL('file3.txt'))).toBeInTheDocument();
+  });
+
+  it.each(['Cancel', 'Escape'])('does not uncommit when dismissed with %s', async dismissal => {
+    const dialog = await openUncommitDialog('c', [FILE1, FILE2, FILE3]);
+    await act(async () => {
+      if (dismissal === 'Cancel') {
+        fireEvent.click(within(dialog).getByRole('button', {name: 'Cancel'}));
+      } else {
+        fireEvent.keyDown(dialog, {key: 'Escape', keyCode: KeyCode.Escape});
+      }
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expectMessageNOTSentToServer({type: 'runOperation', operation: expect.anything()});
+    expect(withinCommitTree().queryByText(ignoreRTL('file1.txt'))).not.toBeInTheDocument();
   });
 
   it('works on commit with children', async () => {

@@ -14,6 +14,7 @@ import React, {useCallback, useEffect, useRef} from 'react';
 import {defer} from 'shared/utils';
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
+import {t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 
 import './useModal.css';
@@ -177,4 +178,54 @@ export function showModal<T>(config: ModalConfig<T>): Promise<T | undefined> {
   });
 
   return deferred.promise as Promise<T>;
+}
+
+export async function showConfirmation({
+  title,
+  message = null,
+  confirmLabel = t('Continue'),
+  cancelLabel = t('Cancel'),
+  icon,
+  dataTestId,
+}: {
+  title: React.ReactNode;
+  message?: React.ReactNode;
+  confirmLabel?: React.ReactNode;
+  cancelLabel?: React.ReactNode;
+  icon?: string;
+  dataTestId?: string;
+}): Promise<boolean> {
+  const confirmButton = {label: confirmLabel};
+  const result = await showModal({
+    type: 'confirm',
+    title,
+    message,
+    icon,
+    dataTestId,
+    buttons: [{label: cancelLabel, primary: true}, confirmButton],
+  });
+  return result === confirmButton;
+}
+
+export function showInfoModal({
+  title,
+  message,
+  buttonLabel = t('OK'),
+  icon,
+  dataTestId,
+}: {
+  title: React.ReactNode;
+  message: React.ReactNode;
+  buttonLabel?: React.ReactNode;
+  icon?: string;
+  dataTestId?: string;
+}): Promise<unknown> {
+  return showModal({
+    type: 'confirm',
+    title,
+    message,
+    icon,
+    dataTestId,
+    buttons: [{label: buttonLabel, primary: true}],
+  });
 }
