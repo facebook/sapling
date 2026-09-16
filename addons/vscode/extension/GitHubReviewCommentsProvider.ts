@@ -1,0 +1,334 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import type {CreateInlineCommentInput} from 'isl-server/src/CodeReviewProvider';
+import type {Repository} from 'isl-server/src/Repository';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
+import type {DiffComment} from 'isl/src/types';
+import type {Comparison} from 'shared/Comparison';
+
+import {repositoryCache} from 'isl-server/src/RepositoryCache';
+import * as path from 'node:path';
+import {ComparisonType} from 'shared/Comparison';
+import * as vscode from 'vscode';
+
+const COMMENT_CONTROLLER_ID = 'sapling-review-comments';
+const REFRESH_INTERVAL_MS = 30_000;
+
+type ReviewContext = {
+  uri: vscode.Uri;
+  path: string;
+  repo: Repository;
+  diffId?: string;
+  remoteThreads: Set<vscode.CommentThread>;
+  refreshGeneration: number;
+};
+
+class ReviewComment implements vscode.Comment {
+  constructor(
+    public body: string | vscode.MarkdownString,
+    public mode: vscode.CommentMode,
+    public author: vscode.CommentAuthorInformation,
+    public parent: vscode.CommentThread,
+    public remoteId?: string,
+    public contextValue?: string,
+    public timestamp?: Date,
+  ) {}
+}
+
+class GitHubReviewCommentsProvider implements vscode.Disposable {
+  private readonly controller = vscode.comments.createCommentController(
+    COMMENT_CONTROLLER_ID,
+    'Sapling Review Comments',
+  );
+  private readonly contexts = new Map<string, ReviewContext>();
+  private readonly disposables: Array<vscode.Disposable> = [];
+  private readonly refreshTimer: ReturnType<typeof setInterval>;
+
+  constructor(private readonly ctx: RepositoryContext) {
+    this.controller.options = {
+      prompt: 'Add a GitHub review comment',
+      placeHolder: 'Write a comment…',
+    };
+    this.controller.commentingRangeProvider = {
+      provideCommentingRanges: document => {
+        if (!this.contexts.has(document.uri.toString()) || document.lineCount === 0) {
+          return [];
+        }
+        return [new vscode.Range(0, 0, document.lineCount - 1, 0)];
+      },
+    };
+
+    this.disposables.push(
+      vscode.commands.registerCommand(
+        'sapling.submit-review-comment',
+        (reply: vscode.CommentReply) => this.submitReply(reply),
+      ),
+      vscode.commands.registerCommand(
+        'sapling.suggest-review-change',
+        (reply: vscode.CommentReply) => this.startSuggestion(reply),
+      ),
+      vscode.commands.registerCommand(
+        'sapling.submit-review-suggestion',
+        (comment: ReviewComment) => this.submitSuggestion(comment),
+      ),
+      vscode.commands.registerCommand(
+        'sapling.cancel-review-suggestion',
+        (comment: ReviewComment) => comment.parent.dispose(),
+      ),
+      vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (editor != null) {
+          void this.refreshByUri(editor.document.uri);
+        }
+      }),
+    );
+    this.refreshTimer = setInterval(() => this.refreshAll(), REFRESH_INTERVAL_MS);
+  }
+
+  track(uri: vscode.Uri, fileUri: vscode.Uri, comparison: Comparison): void {
+    const hash = reviewCommitHash(comparison);
+    const repo = repositoryCache.cachedRepositoryForPath(fileUri.fsPath);
+    if (hash == null || repo == null || repo.info.codeReviewSystem.type !== 'github') {
+      return;
+    }
+
+    const relativePath = path
+      .relative(repo.info.repoRoot, fileUri.fsPath)
+      .split(path.sep)
+      .join('/');
+    const key = uri.toString();
+    const existing = this.contexts.get(key);
+    if (existing != null) {
+      void this.refresh(existing);
+      return;
+    }
+
+    const context: ReviewContext = {
+      uri,
+      path: relativePath,
+      repo,
+      remoteThreads: new Set(),
+      refreshGeneration: 0,
+    };
+    this.contexts.set(key, context);
+    void repo
+      .lookupCommits(repo.initialConnectionContext, [hash])
+      .then(commits => {
+        const commit = commits.values().next().value;
+        if (commit?.diffId == null) {
+          return;
+        }
+        context.diffId = commit.diffId;
+        return this.refresh(context);
+      })
+      .catch(error => this.ctx.logger.error('Failed to load review comments', error));
+  }
+
+  private async refreshByUri(uri: vscode.Uri): Promise<void> {
+    const context = this.contexts.get(uri.toString());
+    if (context != null) {
+      await this.refresh(context);
+    }
+  }
+
+  private refreshAll(): void {
+    for (const context of this.contexts.values()) {
+      void this.refresh(context);
+    }
+  }
+
+  private async refresh(context: ReviewContext): Promise<void> {
+    const provider = context.repo.codeReviewProvider;
+    if (context.diffId == null || provider?.fetchComments == null) {
+      return;
+    }
+    const generation = ++context.refreshGeneration;
+    try {
+      const comments = await provider.fetchComments(context.diffId);
+      if (generation !== context.refreshGeneration) {
+        return;
+      }
+      for (const thread of context.remoteThreads) {
+        thread.dispose();
+      }
+      context.remoteThreads.clear();
+      for (const comment of comments) {
+        if (comment.filename !== context.path || comment.line == null || comment.side === 'LEFT') {
+          continue;
+        }
+        const startLine = Math.max(0, (comment.startLine ?? comment.line) - 1);
+        const endLine = Math.max(startLine, comment.line - 1);
+        const thread = this.controller.createCommentThread(
+          context.uri,
+          new vscode.Range(startLine, 0, endLine, 0),
+          [],
+        );
+        const allComments = [comment, ...comment.replies];
+        thread.comments = allComments.map(item => this.toVSCodeComment(item, thread));
+        thread.canReply = comment.isResolved !== true;
+        thread.label = comment.isResolved === true ? 'Resolved' : undefined;
+        thread.collapsibleState = vscode.CommentThreadCollapsibleState.Collapsed;
+        context.remoteThreads.add(thread);
+      }
+    } catch (error) {
+      this.ctx.logger.error('Failed to refresh GitHub review comments', error);
+    }
+  }
+
+  private toVSCodeComment(comment: DiffComment, thread: vscode.CommentThread): ReviewComment {
+    const markdown = new vscode.MarkdownString(comment.content ?? comment.html);
+    markdown.isTrusted = false;
+    return new ReviewComment(
+      markdown,
+      vscode.CommentMode.Preview,
+      {
+        name: comment.authorName ?? comment.author,
+        iconPath:
+          comment.authorAvatarUri == null ? undefined : vscode.Uri.parse(comment.authorAvatarUri),
+      },
+      thread,
+      comment.id,
+      undefined,
+      comment.created,
+    );
+  }
+
+  private async submitReply(reply: vscode.CommentReply): Promise<void> {
+    const body = reply.text.trim();
+    if (body === '') {
+      return;
+    }
+    const first = reply.thread.comments[0] as ReviewComment | undefined;
+    await this.submit(reply.thread, body, first?.remoteId);
+  }
+
+  private startSuggestion(reply: vscode.CommentReply): void {
+    const document = vscode.workspace.textDocuments.find(
+      document => document.uri.toString() === reply.thread.uri.toString(),
+    );
+    if (document == null) {
+      vscode.window.showErrorMessage('Could not read the selected diff lines.');
+      return;
+    }
+    const selected = selectedLineText(document, reply.thread.range);
+    const body = suggestionBody(selected, reply.text);
+    const comment = new ReviewComment(
+      body,
+      vscode.CommentMode.Editing,
+      {name: 'You'},
+      reply.thread,
+      undefined,
+      'saplingSuggestionDraft',
+    );
+    reply.thread.comments = [comment];
+    reply.thread.contextValue = 'saplingSuggestionDraft';
+    reply.thread.canReply = false;
+  }
+
+  private async submitSuggestion(comment: ReviewComment): Promise<void> {
+    await this.submit(comment.parent, commentBody(comment));
+  }
+
+  private async submit(
+    thread: vscode.CommentThread,
+    body: string,
+    replyTo?: string,
+  ): Promise<void> {
+    const context = this.contexts.get(thread.uri.toString());
+    const provider = context?.repo.codeReviewProvider;
+    if (context?.diffId == null || provider?.createInlineComment == null) {
+      vscode.window.showErrorMessage('This diff is not linked to a GitHub pull request.');
+      return;
+    }
+
+    const input: CreateInlineCommentInput = {
+      body,
+      path: context.path,
+      line: thread.range.end.line + 1,
+      startLine: thread.range.start.line + 1,
+      side: 'RIGHT',
+      replyTo,
+    };
+    const createInlineComment = provider.createInlineComment.bind(provider);
+    const diffId = context.diffId;
+    try {
+      await vscode.window.withProgress(
+        {location: vscode.ProgressLocation.Notification, title: 'Posting GitHub review comment…'},
+        () => createInlineComment(diffId, input),
+      );
+      provider.triggerDiffSummariesFetch([diffId], true, true);
+      thread.dispose();
+      context.remoteThreads.delete(thread);
+      await this.refresh(context);
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to post review comment: ${String(error)}`);
+    }
+  }
+
+  dispose(): void {
+    clearInterval(this.refreshTimer);
+    for (const context of this.contexts.values()) {
+      for (const thread of context.remoteThreads) {
+        thread.dispose();
+      }
+    }
+    this.disposables.forEach(disposable => disposable.dispose());
+    this.controller.dispose();
+    this.contexts.clear();
+  }
+}
+
+function reviewCommitHash(comparison: Comparison): string | undefined {
+  switch (comparison.type) {
+    case ComparisonType.Committed:
+    case ComparisonType.SinceLastCodeReviewSubmit:
+      return comparison.hash;
+    default:
+      return undefined;
+  }
+}
+
+export function selectedLineText(document: vscode.TextDocument, range: vscode.Range): string {
+  const lines = [];
+  for (let line = range.start.line; line <= range.end.line; line++) {
+    lines.push(document.lineAt(line).text);
+  }
+  return lines.join('\n');
+}
+
+export function suggestionBody(selectedLines: string, existingComment = ''): string {
+  const prefix = existingComment.trim();
+  return `${prefix}${prefix === '' ? '' : '\n\n'}\`\`\`suggestion\n${selectedLines}\n\`\`\``;
+}
+
+function commentBody(comment: ReviewComment): string {
+  return typeof comment.body === 'string' ? comment.body : comment.body.value;
+}
+
+let activeProvider: GitHubReviewCommentsProvider | undefined;
+
+export function registerGitHubReviewCommentsProvider(ctx: RepositoryContext): vscode.Disposable {
+  activeProvider?.dispose();
+  const provider = new GitHubReviewCommentsProvider(ctx);
+  activeProvider = provider;
+  return {
+    dispose: () => {
+      provider.dispose();
+      if (activeProvider === provider) {
+        activeProvider = undefined;
+      }
+    },
+  };
+}
+
+export function trackGitHubReviewDiff(
+  uri: vscode.Uri,
+  fileUri: vscode.Uri,
+  comparison: Comparison,
+): void {
+  activeProvider?.track(uri, fileUri, comparison);
+}

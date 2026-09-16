@@ -164,6 +164,10 @@ export type DiffComment = {
   filename?: string;
   /** If it's an inline comment, this is the line it was added */
   line?: number;
+  /** First line of a multi-line inline comment. */
+  startLine?: number;
+  /** Side of the diff where an inline comment was added. */
+  side?: 'LEFT' | 'RIGHT';
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: SuggestedChange;

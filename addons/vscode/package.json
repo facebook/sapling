@@ -258,6 +258,23 @@
         "icon": "$(file-symlink-file)"
       },
       {
+        "command": "sapling.submit-review-comment",
+        "title": "Add Comment",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "sapling.suggest-review-change",
+        "title": "Suggest Changes"
+      },
+      {
+        "command": "sapling.submit-review-suggestion",
+        "title": "Submit Suggestion"
+      },
+      {
+        "command": "sapling.cancel-review-suggestion",
+        "title": "Cancel"
+      },
+      {
         "command": "sapling.worktree.switch",
         "title": "%sapling.worktree.switch-command%",
         "category": "%sapling.command-category%"
@@ -342,6 +359,46 @@
         {
           "command": "sapling.isl.focus",
           "when": "config.sapling.isl.showInSidebar"
+        },
+        {
+          "command": "sapling.submit-review-comment",
+          "when": "false"
+        },
+        {
+          "command": "sapling.suggest-review-change",
+          "when": "false"
+        },
+        {
+          "command": "sapling.submit-review-suggestion",
+          "when": "false"
+        },
+        {
+          "command": "sapling.cancel-review-suggestion",
+          "when": "false"
+        }
+      ],
+      "comments/commentThread/context": [
+        {
+          "command": "sapling.submit-review-comment",
+          "group": "inline@1",
+          "when": "commentController == sapling-review-comments"
+        },
+        {
+          "command": "sapling.suggest-review-change",
+          "group": "inline@2",
+          "when": "commentController == sapling-review-comments && commentThreadIsEmpty"
+        }
+      ],
+      "comments/comment/context": [
+        {
+          "command": "sapling.cancel-review-suggestion",
+          "group": "inline@1",
+          "when": "commentController == sapling-review-comments && comment == saplingSuggestionDraft"
+        },
+        {
+          "command": "sapling.submit-review-suggestion",
+          "group": "inline@2",
+          "when": "commentController == sapling-review-comments && comment == saplingSuggestionDraft"
         }
       ],
       "scm/resourceState/context": [

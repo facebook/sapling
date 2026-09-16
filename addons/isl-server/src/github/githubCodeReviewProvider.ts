@@ -14,16 +14,14 @@ import type {
   Hash,
   Result,
 } from 'isl/src/types';
-import type {CodeReviewProvider} from '../CodeReviewProvider';
+import type {CodeReviewProvider, CreateInlineCommentInput} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
   MergeQueueSupportQueryData,
   MergeQueueSupportQueryVariables,
   PullRequestCommentsQueryData,
   PullRequestCommentsQueryVariables,
-  PullRequestReviewComment,
   PullRequestReviewDecision,
-  ReactionContent,
   YourPullRequestsQueryData,
   YourPullRequestsQueryVariables,
   YourPullRequestsWithoutMergeQueueQueryData,
@@ -42,6 +40,7 @@ import {
   YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
 import queryGraphQL from './queryGraphQL';
+import queryREST from './queryREST';
 
 export type GitHubDiffSummary = {
   type: 'github';
@@ -211,34 +210,87 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
 
     const comments = pr?.comments.nodes ?? [];
 
-    const inline =
-      pr?.reviews?.nodes?.filter(notEmpty).flatMap(review => review.comments.nodes) ?? [];
+    const inline = pr?.reviewThreads.nodes?.filter(notEmpty) ?? [];
 
     this.logger.info(`fetched ${comments?.length} comments for github PR ${diffId}}`);
 
-    return (
-      [...comments, ...inline]?.filter(notEmpty).map(comment => {
+    return [
+      ...comments.filter(notEmpty).map(comment => {
         return {
+          id: comment.id,
           author: comment.author?.login ?? '',
           authorAvatarUri: comment.author?.avatarUrl,
+          content: comment.body,
           html: comment.bodyHTML,
           created: new Date(comment.createdAt),
-          filename: (comment as PullRequestReviewComment).path ?? undefined,
-          line: (comment as PullRequestReviewComment).line ?? undefined,
           reactions:
-            comment.reactions?.nodes
-              ?.filter(
-                (reaction): reaction is {user: {login: string}; content: ReactionContent} =>
-                  reaction?.user?.login != null,
-              )
-              .map(reaction => ({
-                name: reaction.user.login,
-                reaction: reaction.content,
-              })) ?? [],
+            comment.reactions?.nodes?.flatMap(reaction =>
+              reaction?.user?.login == null
+                ? []
+                : [{name: reaction.user.login, reaction: reaction.content}],
+            ) ?? [],
           replies: [], // PR top level doesn't have nested replies, you just reply to their name
         };
-      }) ?? []
+      }),
+      ...inline
+        .map(thread => {
+          const threadComments = thread.comments.nodes?.filter(notEmpty) ?? [];
+          const first = threadComments[0];
+          if (first == null) {
+            return null;
+          }
+          const mapComment = (comment: (typeof threadComments)[number]): DiffComment => ({
+            id: String(comment.databaseId ?? comment.id),
+            author: comment.author?.login ?? '',
+            authorAvatarUri: comment.author?.avatarUrl,
+            content: comment.body,
+            html: comment.bodyHTML,
+            created: new Date(comment.createdAt),
+            filename: thread.path,
+            line: thread.line ?? thread.originalLine ?? undefined,
+            startLine: thread.startLine ?? thread.originalStartLine ?? undefined,
+            side: thread.diffSide,
+            reactions:
+              comment.reactions?.nodes?.flatMap(reaction =>
+                reaction?.user?.login == null
+                  ? []
+                  : [{name: reaction.user.login, reaction: reaction.content}],
+              ) ?? [],
+            replies: [],
+            isResolved: thread.isResolved,
+          });
+          const result = mapComment(first);
+          result.replies = threadComments.slice(1).map(mapComment);
+          return result;
+        })
+        .filter(notEmpty),
+    ];
+  }
+
+  public async createInlineComment(diffId: string, input: CreateInlineCommentInput): Promise<void> {
+    const endpoint = `repos/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pulls/${diffId}/comments`;
+    if (input.replyTo != null) {
+      await queryREST(endpoint, this.codeReviewSystem.hostname, 'POST', {
+        body: input.body,
+        in_reply_to: Number(input.replyTo),
+      });
+      return;
+    }
+
+    const pullRequest = await queryREST<{head: {sha: string}}>(
+      `repos/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pulls/${diffId}`,
+      this.codeReviewSystem.hostname,
     );
+    await queryREST(endpoint, this.codeReviewSystem.hostname, 'POST', {
+      body: input.body,
+      commit_id: pullRequest.head.sha,
+      path: input.path,
+      line: input.line,
+      side: input.side,
+      ...(input.startLine == null || input.startLine === input.line
+        ? {}
+        : {start_line: input.startLine, start_side: input.side}),
+    });
   }
 
   private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {

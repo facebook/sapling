@@ -38,6 +38,7 @@ import {
   encodeSaplingDiffUri,
   SAPLING_DIFF_PROVIDER_SCHEME,
 } from './DiffContentProvider';
+import {trackGitHubReviewDiff} from './GitHubReviewCommentsProvider';
 import {t} from './i18n';
 import {Internal} from './Internal';
 
@@ -502,6 +503,7 @@ function fileExists(uri: vscode.Uri): Promise<boolean> {
 async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<unknown> {
   const leftUri = getLeftUri(uri, comparison);
   const rightUri = await getRightUri(uri, comparison);
+  trackGitHubReviewDiff(rightUri, uri, comparison);
   const title = `${path.basename(uri.fsPath)} (${t(labelForComparison(comparison))})`;
   const opts = {
     viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined,

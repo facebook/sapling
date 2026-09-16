@@ -1,4 +1,6 @@
 fragment CommentParts on Comment {
+  id
+  body
   bodyHTML
   author {
     login
@@ -29,13 +31,23 @@ query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
           ...ReactionParts
         }
       }
-      reviews(first: $numToFetch) {
+      reviewThreads(first: $numToFetch) {
         nodes {
+          id
+          isResolved
+          path
+          line
+          startLine
+          originalLine
+          originalStartLine
+          diffSide
           comments(first: 50) {
             nodes {
               ...CommentParts
               ...ReactionParts
+              databaseId
               line
+              startLine
               path
             }
           }

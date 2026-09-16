@@ -23,6 +23,15 @@ import type {
 } from 'isl/src/types';
 
 export type DiffSummaries = Map<DiffId, DiffSummary>;
+
+export type CreateInlineCommentInput = {
+  body: string;
+  path: string;
+  line: number;
+  startLine?: number;
+  side: 'LEFT' | 'RIGHT';
+  replyTo?: string;
+};
 /**
  * API to fetch data from Remote Code Review system, like GitHub and Phabricator.
  */
@@ -87,6 +96,9 @@ export interface CodeReviewProvider {
 
   /** Convert usernames/emails to avatar URIs */
   fetchComments?(diffId: DiffId): Promise<Array<DiffComment>>;
+
+  /** Add a line comment or reply to the remote code review. */
+  createInlineComment?(diffId: DiffId, input: CreateInlineCommentInput): Promise<void>;
 
   renderMarkup?: (markup: string) => Promise<string>;
 
