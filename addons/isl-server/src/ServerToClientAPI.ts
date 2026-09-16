@@ -945,6 +945,69 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchPullRequestReview': {
+        const fetchReview = repo.codeReviewProvider?.fetchPullRequestReview;
+        if (fetchReview == null) {
+          this.postMessage({
+            type: 'fetchedPullRequestReview',
+            diffId: data.diffId,
+            review: {
+              error: new Error('Pull request reviews are not supported in this repository.'),
+            },
+          });
+          break;
+        }
+        fetchReview
+          .call(repo.codeReviewProvider, data.diffId)
+          .then(review => {
+            this.postMessage({
+              type: 'fetchedPullRequestReview',
+              diffId: data.diffId,
+              review: {value: review},
+            });
+          })
+          .catch(error => {
+            this.postMessage({
+              type: 'fetchedPullRequestReview',
+              diffId: data.diffId,
+              review: {error: error as Error},
+            });
+          });
+        break;
+      }
+      case 'runPullRequestReviewAction': {
+        const runAction = repo.codeReviewProvider?.runPullRequestReviewAction;
+        if (runAction == null) {
+          this.postMessage({
+            type: 'pullRequestReviewActionResult',
+            diffId: data.diffId,
+            requestId: data.requestId,
+            review: {
+              error: new Error('Pull request reviews are not supported in this repository.'),
+            },
+          });
+          break;
+        }
+        runAction
+          .call(repo.codeReviewProvider, data.diffId, data.action)
+          .then(review => {
+            this.postMessage({
+              type: 'pullRequestReviewActionResult',
+              diffId: data.diffId,
+              requestId: data.requestId,
+              review: {value: review},
+            });
+          })
+          .catch(error => {
+            this.postMessage({
+              type: 'pullRequestReviewActionResult',
+              diffId: data.diffId,
+              requestId: data.requestId,
+              review: {error: error as Error},
+            });
+          });
+        break;
+      }
       case 'renderMarkup': {
         repo.codeReviewProvider
           ?.renderMarkup?.(data.markup)

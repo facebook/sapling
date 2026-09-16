@@ -6,6 +6,7 @@
  */
 
 import type {RenderResult} from '@testing-library/react';
+import type {PullRequestReviewData} from '../types';
 
 import {act, cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import fs from 'node:fs';
@@ -18,10 +19,12 @@ import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
 import {
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
+  simulateRepoConnected,
   simulateUncommittedChangedFiles,
   waitForWithTick,
 } from '../testUtils';
@@ -85,6 +88,61 @@ diff --git someFile.js someFile.js
  }
 `;
 
+const PULL_REQUEST_DIFF = `\
+diff --git src/model.py src/model.py
+--- src/model.py
++++ src/model.py
+@@ -11,1 +11,3 @@
+ existing_line = True
++new_line = True
++another_new_line = True
+`;
+
+function pullRequestReview(
+  headOid: string,
+  threads: PullRequestReviewData['threads'] = [],
+): PullRequestReviewData {
+  return {
+    pullRequestId: 'PR_node',
+    headOid,
+    threads,
+  };
+}
+
+function reviewThread(
+  isResolved: boolean,
+  range: {startLine: number; line: number} = {startLine: 12, line: 12},
+): PullRequestReviewData['threads'][number] {
+  return {
+    id: 'thread_1',
+    path: 'src/model.py',
+    line: range.line,
+    originalLine: 12,
+    ...(range.startLine === range.line ? {} : {startLine: range.startLine}),
+    side: 'RIGHT',
+    isOutdated: false,
+    isResolved,
+    viewerCanReply: true,
+    viewerCanResolve: !isResolved,
+    viewerCanUnresolve: isResolved,
+    comments: [
+      {
+        id: 'comment_1',
+        databaseId: 42,
+        author: 'reviewer',
+        body: 'Please add a regression test.',
+        html: '<p>Please add a regression test.</p>',
+        created: new Date('2026-09-01T10:00:00Z'),
+        url: 'https://github.com/owner/repo/pull/194#discussion_r42',
+        state: 'SUBMITTED',
+        viewerCanDelete: true,
+        viewerCanUpdate: true,
+        reactions: [],
+      },
+    ],
+  };
+}
+
 Object.defineProperty(navigator, 'clipboard', {
   value: {
     writeText: jest.fn(() => Promise.resolve()),
@@ -100,6 +158,7 @@ describe('ComparisonView', () => {
     resetTestMessages();
     app = render(<App />);
     act(() => {
+      simulateRepoConnected();
       openCommitInfoSidebar();
       simulateCommits({
         value: [
@@ -164,6 +223,50 @@ describe('ComparisonView', () => {
       await nextTick();
     });
   }
+
+  async function openPullRequestComparison(
+    remoteHead = 'b',
+    threads: PullRequestReviewData['threads'] = [],
+  ) {
+    act(() => {
+      simulateCommits({
+        value: [
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('a', 'My Commit', '1'),
+          COMMIT('b', 'Another Commit', 'a', {isDot: true, diffId: '194'}),
+        ],
+      });
+    });
+    const openButton = await screen.findByTestId('open-comparison-view-button-Commit');
+    fireEvent.click(openButton);
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'requestComparison',
+        comparison: {type: ComparisonType.Committed, hash: 'b'},
+        ignoreWhitespace: true,
+      });
+    });
+    await waitFor(() => {
+      expectMessageSentToServer({type: 'fetchPullRequestReview', diffId: '194'});
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedPullRequestReview',
+        diffId: '194',
+        review: {value: pullRequestReview(remoteHead, threads)},
+      });
+      simulateMessageFromServer({
+        type: 'comparison',
+        comparison: {type: ComparisonType.Committed, hash: 'b'},
+        data: {diff: {value: PULL_REQUEST_DIFF}},
+        ignoreWhitespace: true,
+      });
+      simulateMessageFromServer({type: 'fetchedGeneratedStatuses', results: {}});
+    });
+    await waitFor(() => {
+      expect(inComparisonView().getByText('12')).toBeInTheDocument();
+    });
+  }
   function inComparisonView() {
     return within(screen.getByTestId('comparison-view'));
   }
@@ -179,6 +282,259 @@ describe('ComparisonView', () => {
   it('Loads comparison', async () => {
     await openUncommittedChangesComparison();
     // Prevent act(..) warnings. This cannot be afterEach() which is too late.
+    unmountNow();
+  });
+
+  it('creates a GitHub comment from an added diff line', async () => {
+    await openPullRequestComparison();
+
+    const commentButton = await inComparisonView().findByRole('button', {
+      name: 'Add comment on src/model.py:12',
+    });
+    fireEvent.click(commentButton);
+    fireEvent.change(inComparisonView().getByPlaceholderText('Comment on src/model.py:12'), {
+      target: {value: 'Please add a regression test.'},
+    });
+    fireEvent.click(inComparisonView().getByText('Add single comment'));
+
+    await waitFor(() => {
+      expectMessageSentToServer(
+        expect.objectContaining({
+          type: 'runPullRequestReviewAction',
+          diffId: '194',
+          action: {
+            type: 'createComment',
+            body: 'Please add a regression test.',
+            path: 'src/model.py',
+            line: 12,
+            side: 'RIGHT',
+            mode: 'single',
+            commitOid: 'b',
+            expectedHeadOid: 'b',
+          },
+        }),
+      );
+    });
+    const message = getLastMessageOfTypeSentToServer('runPullRequestReviewAction');
+    expect(message).toBeDefined();
+    act(() => {
+      simulateMessageFromServer({
+        type: 'pullRequestReviewActionResult',
+        diffId: '194',
+        requestId: nullthrows(message).requestId,
+        review: {
+          value: pullRequestReview('b', [
+            {
+              id: 'thread_1',
+              path: 'src/model.py',
+              line: 12,
+              originalLine: 12,
+              side: 'RIGHT',
+              isOutdated: false,
+              isResolved: false,
+              viewerCanReply: true,
+              viewerCanResolve: true,
+              viewerCanUnresolve: false,
+              comments: [
+                {
+                  id: 'comment_1',
+                  databaseId: 42,
+                  author: 'reviewer',
+                  body: 'Please add a regression test.',
+                  html: '<p>Please add a regression test.</p>',
+                  created: new Date('2026-09-01T10:00:00Z'),
+                  url: 'https://github.com/OpenTSLM/TimeNet/pull/194#discussion_r42',
+                  state: 'SUBMITTED',
+                  viewerCanDelete: true,
+                  viewerCanUpdate: true,
+                  reactions: [],
+                },
+              ],
+            },
+          ]),
+        },
+      });
+    });
+    await waitFor(() => {
+      expect(inComparisonView().getByText('Please add a regression test.')).toBeInTheDocument();
+    });
+    unmountNow();
+  });
+
+  it('collapses a resolved comment and lets it be expanded', async () => {
+    await openPullRequestComparison('b', [reviewThread(false)]);
+
+    expect(
+      await inComparisonView().findByText('Please add a regression test.'),
+    ).toBeInTheDocument();
+    fireEvent.click(inComparisonView().getByRole('button', {name: 'Resolve'}));
+
+    await waitFor(() => {
+      expectMessageSentToServer(
+        expect.objectContaining({
+          type: 'runPullRequestReviewAction',
+          diffId: '194',
+          action: {type: 'setResolved', threadId: 'thread_1', resolved: true},
+        }),
+      );
+    });
+    const message = getLastMessageOfTypeSentToServer('runPullRequestReviewAction');
+    act(() => {
+      simulateMessageFromServer({
+        type: 'pullRequestReviewActionResult',
+        diffId: '194',
+        requestId: nullthrows(message).requestId,
+        review: {value: pullRequestReview('b', [reviewThread(true)])},
+      });
+    });
+
+    const expand = await inComparisonView().findByRole('button', {
+      name: 'Show resolved comment',
+    });
+    expect(inComparisonView().queryByText('Please add a regression test.')).not.toBeInTheDocument();
+    fireEvent.click(expand);
+    expect(inComparisonView().getByText('Please add a regression test.')).toBeInTheDocument();
+    expect(inComparisonView().getByRole('button', {name: 'Hide resolved comment'})).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    unmountNow();
+  });
+
+  it('marks every line covered by a review comment', async () => {
+    await openPullRequestComparison('b', [reviewThread(false, {startLine: 12, line: 13})]);
+    await inComparisonView().findByText('Please add a regression test.');
+
+    const comparison = screen.getByTestId('comparison-view');
+    expect(
+      comparison.querySelector(
+        'td.lineNumber-RIGHT[data-line-number="11"].split-diff-review-commented-line',
+      ),
+    ).toBeNull();
+    for (const line of [12, 13]) {
+      expect(
+        comparison.querySelector(
+          `td.lineNumber-RIGHT[data-line-number="${line}"].split-diff-review-commented-line`,
+        ),
+      ).not.toBeNull();
+    }
+    unmountNow();
+  });
+
+  it('creates a GitHub comment for a dragged line range', async () => {
+    await openPullRequestComparison();
+    await inComparisonView().findByRole('button', {name: 'Add comment on src/model.py:12'});
+
+    const comparison = screen.getByTestId('comparison-view');
+    const firstLine = nullthrows(
+      comparison.querySelector<HTMLElement>(
+        'td.lineNumber-RIGHT[data-path="src/model.py"][data-line-number="12"]',
+      ),
+    );
+    const lastLine = nullthrows(
+      comparison.querySelector<HTMLElement>(
+        'td.lineNumber-RIGHT[data-path="src/model.py"][data-line-number="13"]',
+      ),
+    );
+    fireEvent.mouseDown(firstLine, {button: 0, buttons: 1});
+    fireEvent.mouseEnter(lastLine, {buttons: 1});
+    fireEvent.mouseUp(lastLine, {button: 0});
+
+    expect(comparison.querySelectorAll('td[aria-selected="true"]')).toHaveLength(2);
+    fireEvent.click(within(lastLine).getByRole('button', {name: 'Add comment on src/model.py:13'}));
+    fireEvent.change(inComparisonView().getByPlaceholderText('Comment on src/model.py:12-13'), {
+      target: {value: 'Please explain this whole block.'},
+    });
+    fireEvent.click(inComparisonView().getByText('Add single comment'));
+
+    await waitFor(() => {
+      expect(getLastMessageOfTypeSentToServer('runPullRequestReviewAction')).toBeDefined();
+    });
+    const message = getLastMessageOfTypeSentToServer('runPullRequestReviewAction');
+    expect(message).toMatchObject({
+      type: 'runPullRequestReviewAction',
+      diffId: '194',
+      action: {
+        type: 'createComment',
+        body: 'Please explain this whole block.',
+        path: 'src/model.py',
+        startLine: 12,
+        startSide: 'RIGHT',
+        line: 13,
+        side: 'RIGHT',
+        mode: 'single',
+        commitOid: 'b',
+        expectedHeadOid: 'b',
+      },
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'pullRequestReviewActionResult',
+        diffId: '194',
+        requestId: nullthrows(message).requestId,
+        review: {value: pullRequestReview('b')},
+      });
+    });
+    unmountNow();
+  });
+
+  it('creates a GitHub code suggestion for selected lines', async () => {
+    await openPullRequestComparison();
+    await inComparisonView().findByRole('button', {name: 'Add comment on src/model.py:12'});
+
+    const comparison = screen.getByTestId('comparison-view');
+    const firstLine = nullthrows(
+      comparison.querySelector<HTMLElement>(
+        'td.lineNumber-RIGHT[data-path="src/model.py"][data-line-number="12"]',
+      ),
+    );
+    const lastLine = nullthrows(
+      comparison.querySelector<HTMLElement>(
+        'td.lineNumber-RIGHT[data-path="src/model.py"][data-line-number="13"]',
+      ),
+    );
+    fireEvent.mouseDown(firstLine, {button: 0, buttons: 1});
+    fireEvent.mouseEnter(lastLine, {buttons: 1});
+    fireEvent.mouseUp(lastLine, {button: 0});
+    fireEvent.click(within(lastLine).getByRole('button', {name: 'Add comment on src/model.py:13'}));
+    fireEvent.click(inComparisonView().getByRole('button', {name: 'Suggest change'}));
+
+    const composer = inComparisonView().getByPlaceholderText('Comment on src/model.py:12-13');
+    expect(composer).toHaveValue('```suggestion\nnew_line = True\nanother_new_line = True\n```');
+    fireEvent.change(composer, {
+      target: {value: '```suggestion\nnew_line = False\nanother_new_line = False\n```'},
+    });
+    fireEvent.click(inComparisonView().getByText('Add single comment'));
+
+    await waitFor(() => {
+      expectMessageSentToServer(
+        expect.objectContaining({
+          type: 'runPullRequestReviewAction',
+          diffId: '194',
+          action: expect.objectContaining({
+            type: 'createComment',
+            body: '```suggestion\nnew_line = False\nanother_new_line = False\n```',
+            startLine: 12,
+            line: 13,
+            side: 'RIGHT',
+          }),
+        }),
+      );
+    });
+    unmountNow();
+  });
+
+  it('disables review comments when the local commit is stale', async () => {
+    await openPullRequestComparison('new_remote_head');
+
+    expect(
+      await inComparisonView().findByText(
+        /local commit does not match the current pull request head/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      inComparisonView().queryByRole('button', {name: 'Add comment on src/model.py:12'}),
+    ).not.toBeInTheDocument();
     unmountNow();
   });
 

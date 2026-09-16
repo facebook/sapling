@@ -8,7 +8,7 @@
 import type {Comparison} from 'shared/Comparison';
 import type {ParsedDiff} from 'shared/patch/types';
 import type {Result} from '../types';
-import type {Context} from './SplitDiffView/types';
+import type {Context, DiffLineLocation} from './SplitDiffView/types';
 
 import deepEqual from 'fast-deep-equal';
 import {Button} from 'isl-components/Button';
@@ -31,10 +31,15 @@ import {group, notEmpty} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
+import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
+import {
+  type PullRequestReviewController,
+  usePullRequestReviewController,
+} from '../codeReview/PullRequestReview';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
-import {latestHeadCommit} from '../serverAPIState';
+import {commitByHash, latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
@@ -95,6 +100,19 @@ export default function ComparisonView({
   focusedFile?: string;
 }) {
   const compared = useAtomValue(currentComparisonData(comparison));
+  const committedHash = comparison.type === ComparisonType.Committed ? comparison.hash : undefined;
+  const comparedCommit = useAtomValue(commitByHash(committedHash ?? ''));
+  const reviewDiffId = comparedCommit?.diffId;
+  const uiCodeReviewProvider = useAtomValue(codeReviewProvider);
+  const review = usePullRequestReviewController(
+    committedHash == null || reviewDiffId == null || uiCodeReviewProvider?.system.type !== 'github'
+      ? undefined
+      : {
+          diffId: reviewDiffId,
+          commitOid: committedHash,
+          pullRequestHead: committedHash,
+        },
+  );
 
   const displayMode = useComparisonDisplayMode();
 
@@ -150,6 +168,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.Manual}
             displayMode={displayMode}
+            review={review}
           />
         ))}
         {fileGroups[GeneratedStatus.PartiallyGenerated]?.map((parsed, i) => (
@@ -163,6 +182,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.PartiallyGenerated}
             displayMode={displayMode}
+            review={review}
           />
         ))}
         {fileGroups[GeneratedStatus.Generated]?.map((parsed, i) => (
@@ -176,6 +196,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.Generated}
             displayMode={displayMode}
+            review={review}
           />
         ))}
       </>
@@ -191,7 +212,10 @@ export default function ComparisonView({
         dismiss={dismiss}
         focusedFile={focusedFile}
       />
-      <div className="comparison-view-details">{content}</div>
+      <div className="comparison-view-details">
+        {review.header}
+        {content}
+      </div>
     </div>
   );
 }
@@ -431,6 +455,7 @@ function ComparisonViewFile({
   setCollapsed,
   generatedStatus,
   displayMode,
+  review,
 }: {
   diff: ParsedDiff;
   comparison: Comparison;
@@ -438,6 +463,7 @@ function ComparisonViewFile({
   setCollapsed: (isCollapsed: boolean) => void;
   generatedStatus: GeneratedStatus;
   displayMode: ComparisonDisplayMode;
+  review: PullRequestReviewController;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
@@ -482,6 +508,12 @@ function ComparisonViewFile({
     collapsed,
     setCollapsed,
     display: displayMode,
+    onStartComment:
+      review.onStartComment == null
+        ? undefined
+        : location => review.onStartComment?.(location, selectedTextFromDiff(diff, location)),
+    isLineCommented: review.isLineCommented,
+    renderLineAddon: review.renderLineAddon,
   };
   return (
     <div className="comparison-view-file" key={path}>
@@ -490,4 +522,41 @@ function ComparisonViewFile({
       </ErrorBoundary>
     </div>
   );
+}
+
+function selectedTextFromDiff(diff: ParsedDiff, location: DiffLineLocation): string | undefined {
+  const lines = new Map<number, string>();
+  for (const hunk of diff.hunks) {
+    let oldLine = hunk.oldStart;
+    let newLine = hunk.newStart;
+    for (const rawLine of hunk.lines) {
+      const prefix = rawLine.charAt(0);
+      const content = rawLine.slice(1);
+      if (prefix === ' ') {
+        lines.set(location.side === 'LEFT' ? oldLine : newLine, content);
+        oldLine++;
+        newLine++;
+      } else if (prefix === '-') {
+        if (location.side === 'LEFT') {
+          lines.set(oldLine, content);
+        }
+        oldLine++;
+      } else if (prefix === '+') {
+        if (location.side === 'RIGHT') {
+          lines.set(newLine, content);
+        }
+        newLine++;
+      }
+    }
+  }
+
+  const selected = [];
+  for (let line = location.startLine ?? location.line; line <= location.line; line++) {
+    const content = lines.get(line);
+    if (content == null) {
+      return undefined;
+    }
+    selected.push(content);
+  }
+  return selected.join('\n');
 }

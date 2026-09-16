@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- GitHub pull request review tools are now available in committed comparisons.
+  - The tools create single comments, pending comments, multiline comments, and suggestions.
+  - You can reply to comments. You can edit or delete your comments.
+  - You can resolve or reopen threads. You can also submit approvals or change requests.
 - Reduced fetching frequency for better performance
 - Go to time in download commit menu
 - Remember the last selected ISL workspace folder within a window session

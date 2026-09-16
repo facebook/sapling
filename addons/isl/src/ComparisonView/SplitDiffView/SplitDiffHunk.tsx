@@ -9,19 +9,19 @@ import type {ReactNode} from 'react';
 import type {Hunk, ParsedDiff} from 'shared/patch/types';
 import type {Result} from '../../types';
 import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlightingTypes';
-import type {Context, OneIndexedLineNumber} from './types';
+import type {Context, DiffLineLocation, OneIndexedLineNumber} from './types';
 
 import {diffChars} from 'diff';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {comparisonStringKey} from 'shared/Comparison';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
   applyTokenizationToLine,
   createTokenizedIntralineDiff,
 } from 'shared/createTokenizedIntralineDiff';
-import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
+import SplitDiffRow, {BlankLineNumber, type DiffCommentSelectionController} from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 
@@ -52,6 +52,7 @@ export const SplitDiffTable = React.memo(
     const tokenization = useTokenizedHunks(patch.newFileName ?? '', patch.hunks, ctx.useThemeHook);
 
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
+    const commentSelection = useDiffCommentSelection(ctx.onStartComment, ctx.isLineCommented);
 
     const isDeleted = patch.newFileName === '/dev/null';
     const isAdded = patch.type === 'Added';
@@ -97,6 +98,8 @@ export const SplitDiffTable = React.memo(
           tokenization?.[index],
           ctx.openFileToLine,
           displayLineNumbers,
+          commentSelection,
+          ctx.renderLineAddon,
         );
 
         const isLast = index === lastHunkIndex;
@@ -171,6 +174,102 @@ export const SplitDiffTable = React.memo(
   },
 );
 
+type DiffCommentLineSelection = {
+  anchor: DiffLineLocation;
+  focus: DiffLineLocation;
+};
+
+function useDiffCommentSelection(
+  onStartComment: Context['onStartComment'],
+  isLineCommented: Context['isLineCommented'],
+): DiffCommentSelectionController | undefined {
+  const [selection, setSelection] = useState<DiffCommentLineSelection>();
+  const selectionRef = useRef<DiffCommentLineSelection | undefined>(undefined);
+  const dragging = useRef(false);
+
+  useEffect(() => {
+    const finish = () => {
+      dragging.current = false;
+    };
+    window.addEventListener('mouseup', finish);
+    return () => window.removeEventListener('mouseup', finish);
+  }, []);
+
+  if (onStartComment == null) {
+    return undefined;
+  }
+
+  const range = selection == null ? undefined : normalizeCommentRange(selection);
+  return {
+    isSelected: location => range != null && rangeContainsLocation(range, location),
+    isCommented: location => isLineCommented?.(location) === true,
+    begin: (location, event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      dragging.current = true;
+      const previous = selectionRef.current;
+      const next =
+        event.shiftKey && previous != null && sameCommentColumn(previous.anchor, location)
+          ? {anchor: previous.anchor, focus: location}
+          : {anchor: location, focus: location};
+      selectionRef.current = next;
+      setSelection(next);
+    },
+    extend: location => {
+      if (!dragging.current) {
+        return;
+      }
+      const previous = selectionRef.current;
+      if (previous != null && sameCommentColumn(previous.anchor, location)) {
+        const next = {...previous, focus: location};
+        selectionRef.current = next;
+        setSelection(next);
+      }
+    },
+    finish: () => {
+      dragging.current = false;
+    },
+    startComment: location => {
+      const currentSelection = selectionRef.current;
+      const currentRange =
+        currentSelection == null ? undefined : normalizeCommentRange(currentSelection);
+      onStartComment(
+        currentRange != null && rangeContainsLocation(currentRange, location)
+          ? currentRange
+          : location,
+      );
+    },
+  };
+}
+
+function normalizeCommentRange(selection: DiffCommentLineSelection): DiffLineLocation {
+  const {anchor, focus} = selection;
+  if (!sameCommentColumn(anchor, focus) || anchor.line === focus.line) {
+    return focus;
+  }
+  return {
+    path: anchor.path,
+    startLine: Math.min(anchor.line, focus.line) as OneIndexedLineNumber,
+    startSide: anchor.side,
+    line: Math.max(anchor.line, focus.line) as OneIndexedLineNumber,
+    side: anchor.side,
+  };
+}
+
+function sameCommentColumn(a: DiffLineLocation, b: DiffLineLocation): boolean {
+  return a.path === b.path && a.side === b.side;
+}
+
+function rangeContainsLocation(range: DiffLineLocation, location: DiffLineLocation): boolean {
+  return (
+    sameCommentColumn(range, location) &&
+    location.line >= (range.startLine ?? range.line) &&
+    location.line <= range.line
+  );
+}
+
 /**
  * If the last hunk of a file doesn't have as many context lines as it should,
  * it's because it's at the end of the file. This is a clue we can skip showing
@@ -194,6 +293,8 @@ function addRowsForHunk(
   tokenization: TokenizedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
+  commentSelection?: DiffCommentSelectionController,
+  renderLineAddon?: Context['renderLineAddon'],
 ): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
@@ -217,6 +318,8 @@ function addRowsForHunk(
       tokenization?.[1].slice(afterTokenizedIndex),
       openFileToLine,
       displayLineNumbers,
+      commentSelection,
+      renderLineAddon,
     );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
@@ -256,6 +359,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          commentSelection,
         });
 
         if (unified) {
@@ -266,12 +370,34 @@ function addRowsForHunk(
               {beforeChange}
             </tr>,
           );
+          pushLineAddon(
+            linesA,
+            `${beforeLineNumber}/${afterLineNumber}:bc`,
+            {
+              path,
+              line: beforeLineNumber as OneIndexedLineNumber,
+              side: 'LEFT',
+            },
+            unified,
+            renderLineAddon,
+          );
           linesB.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}:a`}>
               {displayLineNumbers && <BlankLineNumber after />}
               {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
+          );
+          pushLineAddon(
+            linesB,
+            `${beforeLineNumber}/${afterLineNumber}:ac`,
+            {
+              path,
+              line: afterLineNumber as OneIndexedLineNumber,
+              side: 'RIGHT',
+            },
+            unified,
+            renderLineAddon,
           );
         } else {
           linesA.push(
@@ -281,6 +407,28 @@ function addRowsForHunk(
               {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
+          );
+          pushLineAddon(
+            linesA,
+            `${beforeLineNumber}/${afterLineNumber}:bc`,
+            {
+              path,
+              line: beforeLineNumber as OneIndexedLineNumber,
+              side: 'LEFT',
+            },
+            unified,
+            renderLineAddon,
+          );
+          pushLineAddon(
+            linesA,
+            `${beforeLineNumber}/${afterLineNumber}:ac`,
+            {
+              path,
+              line: afterLineNumber as OneIndexedLineNumber,
+              side: 'RIGHT',
+            },
+            unified,
+            renderLineAddon,
           );
         }
         ++beforeLineNumber;
@@ -300,6 +448,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          commentSelection,
         });
 
         if (unified) {
@@ -310,6 +459,17 @@ function addRowsForHunk(
               {beforeChange}
             </tr>,
           );
+          pushLineAddon(
+            linesA,
+            `${beforeLineNumber}/:c`,
+            {
+              path,
+              line: beforeLineNumber as OneIndexedLineNumber,
+              side: 'LEFT',
+            },
+            unified,
+            renderLineAddon,
+          );
         } else {
           linesA.push(
             <tr key={`${beforeLineNumber}/`}>
@@ -318,6 +478,17 @@ function addRowsForHunk(
               {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
+          );
+          pushLineAddon(
+            linesA,
+            `${beforeLineNumber}/:c`,
+            {
+              path,
+              line: beforeLineNumber as OneIndexedLineNumber,
+              side: 'LEFT',
+            },
+            unified,
+            renderLineAddon,
           );
         }
         ++beforeLineNumber;
@@ -335,6 +506,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          commentSelection,
         });
 
         if (unified) {
@@ -345,6 +517,17 @@ function addRowsForHunk(
               {afterChange}
             </tr>,
           );
+          pushLineAddon(
+            linesB,
+            `/${afterLineNumber}:c`,
+            {
+              path,
+              line: afterLineNumber as OneIndexedLineNumber,
+              side: 'RIGHT',
+            },
+            unified,
+            renderLineAddon,
+          );
         } else {
           linesA.push(
             <tr key={`/${afterLineNumber}`}>
@@ -353,6 +536,17 @@ function addRowsForHunk(
               {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
+          );
+          pushLineAddon(
+            linesA,
+            `/${afterLineNumber}:c`,
+            {
+              path,
+              line: afterLineNumber as OneIndexedLineNumber,
+              side: 'RIGHT',
+            },
+            unified,
+            renderLineAddon,
           );
         }
         ++afterLineNumber;
@@ -390,6 +584,8 @@ function addUnmodifiedRows(
   tokenizationAfter?: TokenizedHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
+  commentSelection?: DiffCommentSelectionController,
+  renderLineAddon?: Context['renderLineAddon'],
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
@@ -409,6 +605,7 @@ function addUnmodifiedRows(
       path,
       unified,
       openFileToLine,
+      commentSelection,
     });
     if (unified) {
       rows.push(
@@ -417,6 +614,30 @@ function addUnmodifiedRows(
           {displayLineNumbers && afterLine}
           {beforeChange}
         </tr>,
+      );
+      if (rowType === 'common') {
+        pushLineAddon(
+          rows,
+          `${beforeLineNumber}/${afterLineNumber}:bc`,
+          {
+            path,
+            line: beforeLineNumber as OneIndexedLineNumber,
+            side: 'LEFT',
+          },
+          unified,
+          renderLineAddon,
+        );
+      }
+      pushLineAddon(
+        rows,
+        `${beforeLineNumber}/${afterLineNumber}:c`,
+        {
+          path,
+          line: afterLineNumber as OneIndexedLineNumber,
+          side: 'RIGHT',
+        },
+        unified,
+        renderLineAddon,
       );
     } else {
       rows.push(
@@ -427,10 +648,52 @@ function addUnmodifiedRows(
           {afterChange}
         </tr>,
       );
+      if (rowType === 'common') {
+        pushLineAddon(
+          rows,
+          `${beforeLineNumber}/${afterLineNumber}:bc`,
+          {
+            path,
+            line: beforeLineNumber as OneIndexedLineNumber,
+            side: 'LEFT',
+          },
+          unified,
+          renderLineAddon,
+        );
+      }
+      pushLineAddon(
+        rows,
+        `${beforeLineNumber}/${afterLineNumber}:c`,
+        {
+          path,
+          line: afterLineNumber as OneIndexedLineNumber,
+          side: 'RIGHT',
+        },
+        unified,
+        renderLineAddon,
+      );
     }
     ++beforeLineNumber;
     ++afterLineNumber;
   });
+}
+
+function pushLineAddon(
+  rows: React.ReactElement[],
+  key: string,
+  location: DiffLineLocation,
+  unified: boolean,
+  renderLineAddon?: Context['renderLineAddon'],
+): void {
+  const addon = renderLineAddon?.(location);
+  if (addon == null) {
+    return;
+  }
+  rows.push(
+    <tr key={`${key}:review`} className="split-diff-review-row">
+      <td colSpan={unified ? 3 : 4}>{addon}</td>
+    </tr>,
+  );
 }
 
 function createIntralineDiff(before: string, after: string): [React.ReactNode, React.ReactNode] {

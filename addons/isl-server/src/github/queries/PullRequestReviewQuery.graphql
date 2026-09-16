@@ -1,0 +1,71 @@
+fragment ReviewThreadCommentParts on PullRequestReviewComment {
+  id
+  databaseId
+  body
+  bodyHTML
+  createdAt
+  publishedAt
+  state
+  url
+  viewerCanDelete
+  viewerCanUpdate
+  author {
+    login
+    avatarUrl
+  }
+  reactions(first: 20) {
+    nodes {
+      content
+      user {
+        login
+      }
+    }
+  }
+}
+
+query PullRequestReviewQuery($url: URI!, $numToFetch: Int!) {
+  viewer {
+    login
+  }
+  resource(url: $url) {
+    __typename
+    ... on PullRequest {
+      id
+      headRefOid
+      reviews(first: 10, states: [PENDING]) {
+        nodes {
+          id
+          state
+          commit {
+            oid
+          }
+          author {
+            login
+          }
+        }
+      }
+      reviewThreads(first: $numToFetch) {
+        nodes {
+          id
+          path
+          line
+          originalLine
+          startLine
+          originalStartLine
+          diffSide
+          startDiffSide
+          isOutdated
+          isResolved
+          viewerCanReply
+          viewerCanResolve
+          viewerCanUnresolve
+          comments(first: 50) {
+            nodes {
+              ...ReviewThreadCommentParts
+            }
+          }
+        }
+      }
+    }
+  }
+}
