@@ -62,7 +62,7 @@ export async function activate(
       context.subscriptions.push(new InlineBlameProvider(reposList, ctx));
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
-    context.subscriptions.push(registerGitHubReviewCommentsProvider(ctx));
+    context.subscriptions.push(registerGitHubReviewCommentsProvider(ctx, context));
     context.subscriptions.push(new DeletedFileContentProvider());
     const inlineCommentsProvider = Internal.registerInlineCommentsProvider?.(
       context,
