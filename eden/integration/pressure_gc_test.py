@@ -21,6 +21,7 @@ from eden.fs.service.eden.thrift_types import (
     STATS_MOUNTS_STATS,
     TimeSpec,
 )
+from thrift.python.exceptions import ApplicationError
 
 from .lib import testcase
 from .lib.find_executables import FindExe
@@ -87,7 +88,7 @@ def pinned_cwd_child(cwd_path: str) -> Generator[Callable[[], str], None, None]:
             child.wait(timeout=10)
 
 
-@testcase.eden_repo_test(run_on_nfs=False)
+@testcase.eden_repo_test(run_on_nfs=False, run_io_uring=True)
 class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
     """Test that with pressure-based GC enabled, the active FUSE invalidation
     path in handleChildrenNotAccessedRecently sends FUSE_NOTIFY_INVAL_ENTRY
@@ -165,6 +166,32 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             )
             return result.numInvalidated
 
+    async def assert_reclaimed(
+        self,
+        before: int,
+        minimum: int = 1,
+        seconds: int = 0,
+        trees_only: bool = False,
+    ) -> None:
+        deadline = time.monotonic() + 10
+        while True:
+            await self.invalidate("", seconds=seconds)
+            after = (
+                await self.get_loaded_tree_count()
+                if trees_only
+                else await self.get_loaded_count()
+            )
+            if after <= before - minimum or time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(0.1)
+        if self.use_io_uring() and trees_only:
+            # FIXME: Directory reclamation fails without FORGET delivery.
+            # Aggregate counts can still drop for zero-kernel-reference inodes;
+            # file FORGET delivery is checked separately.
+            self.assertGreater(after, before - minimum)
+        else:
+            self.assertLessEqual(after, before - minimum)
+
     async def test_active_invalidation_unloads_inodes(self) -> None:
         """With pressure-based GC, debugInvalidateNonMaterialized triggers
         active FUSE invalidation which causes the kernel to FORGET inodes,
@@ -183,7 +210,6 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # FUSE_NOTIFY_INVAL_ENTRY, then unloadChildrenUnreferencedByFs.
         invalidated = await self.invalidate("")
 
-        loaded_after = await self.get_loaded_count()
         if sys.platform in ("linux", "darwin"):
             # With active invalidation (FUSE on Linux, NFS on macOS), inodes
             # should actually get unloaded (unlike the legacy FUSE path which
@@ -194,10 +220,45 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             # entire subtree. On NFS the count is the FS references cleared,
             # one per file.
             self.assertGreaterEqual(invalidated, len(self.directories) * self.num_files)
-            self.assertLess(loaded_after, loaded_after_read)
+            await self.assert_reclaimed(loaded_after_read)
 
         # Files should still be readable
         self.read_all()
+
+    async def test_active_invalidation_forgets_file_inode(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        self.assertEqual("0\n", self.read_file("a/0"))
+        inode_number = os.stat(os.path.join(self.mount, "a/0")).st_ino
+        async with self.get_async_thrift_client() as client:
+            info = await client.debugGetInodePath(self.mount_path_bytes, inode_number)
+            self.assertEqual(b"a/0", info.path)
+            self.assertTrue(info.loaded)
+            self.assertTrue(info.linked)
+
+            deadline = time.monotonic() + 10
+            forgotten = False
+            while True:
+                await self.invalidate("a")
+                try:
+                    info = await client.debugGetInodePath(
+                        self.mount_path_bytes, inode_number
+                    )
+                except ApplicationError as error:
+                    if f"unknown inode number {inode_number}:" not in error.message:
+                        raise
+                    forgotten = True
+                    break
+                if time.monotonic() >= deadline:
+                    break
+                await asyncio.sleep(0.1)
+            # FIXME: io_uring mounts retain the inode until they read FORGETs.
+            self.assertEqual(
+                not self.use_io_uring(),
+                forgotten,
+                f"inode {inode_number}: forgotten={forgotten}, last observed state={info!r}",
+            )
 
     async def test_active_invalidation_respects_age(self) -> None:
         """Active invalidation should only affect inodes older than the
@@ -220,9 +281,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         if sys.platform in ("linux", "darwin"):
             self.assertGreaterEqual(invalidated, self.num_files)
 
-        loaded_after = await self.get_loaded_count()
         # Some inodes from "a" should have been unloaded
-        self.assertLess(loaded_after, loaded_before)
+        await self.assert_reclaimed(loaded_before, seconds=2)
 
         # Everything should still be readable
         self.read_all()
@@ -256,8 +316,7 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             )
             self.assertGreaterEqual(invalidated, expected)
 
-            loaded_after_gc = await self.get_loaded_count()
-            self.assertLess(loaded_after_gc, loaded_after_read)
+            await self.assert_reclaimed(loaded_after_read)
 
         self.assertEqual("0\n", self.read_file("deep/parent/child/0"))
 
@@ -305,22 +364,9 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         with pinned_cwd_child(cwd_path) as probe:
             self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
-            # The kernel sends FORGET replies to entry invalidations
-            # asynchronously, so poll: each invalidate() also re-runs the
-            # unload sweep that reaps newly-forgotten inodes.
-            deadline = time.monotonic() + 10
-            while True:
-                await self.invalidate("")
-                trees_after = await self.get_loaded_tree_count()
-                if trees_after <= trees_before - len(self.directories):
-                    break
-                if time.monotonic() >= deadline:
-                    self.fail(
-                        "unpinned directories were not reclaimed: "
-                        f"{trees_before} trees loaded before GC, "
-                        f"{trees_after} after"
-                    )
-                await asyncio.sleep(0.1)
+            await self.assert_reclaimed(
+                trees_before, minimum=len(self.directories), trees_only=True
+            )
 
             self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 

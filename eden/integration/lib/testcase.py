@@ -301,6 +301,9 @@ class EdenTestCase(EdenTestCaseBase):
         """
         return []
 
+    def use_io_uring(self) -> bool:
+        return False
+
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         """
         Get additional configs to write to the edenfs.rc file before starting
@@ -923,11 +926,13 @@ eden_nfs_repo_test_with_wal_variant = test_replicator(
 MixinList = List[Tuple[str, List[Type[Any]]]]
 
 
-def _replicate_eden_repo_test(
+# The complexity check includes the methods of these generated classes.
+def _replicate_eden_repo_test(  # noqa: C901
     test_class: Type[EdenRepoTest],
     run_on_nfs: bool = True,
     case_sensitivity_dependent: bool = False,
     run_coroutines: bool = True,
+    run_io_uring: bool = False,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     nfs_variants: MixinList = [("", [])]
     if run_on_nfs and eden.config.HAVE_NFS:
@@ -981,6 +986,40 @@ def _replicate_eden_repo_test(
 
         variants.append(
             ("Coroutines", typing.cast(Type[EdenRepoTest], CoroutinesVariantRepoTest))
+        )
+
+    if run_io_uring and sys.platform == "linux":
+
+        class IoUringVariantRepoTest(HgRepoTestMixin, test_class):
+            def use_io_uring(self) -> bool:
+                return True
+
+            def edenfs_extra_config(self) -> dict[str, list[str]]:
+                configs = super().edenfs_extra_config() or {}
+                configs.setdefault("fuse", []).extend(
+                    [
+                        "use-io-uring = true",
+                        'io-uring-kernel-release-regex = ".*"',
+                    ]
+                )
+                return configs
+
+            def setUp(self) -> None:
+                release = os.uname().release
+                # The FUSE io_uring ABI is kernel-specific; extend this allowlist
+                # when another fbk release is validated.
+                if "fbk" not in release or not release.startswith(("6.13.", "6.16.")):
+                    self.skipTest("requires an fbk 6.13 or 6.16 FUSE io_uring kernel")
+                super().setUp()
+                with self.get_thrift_client() as client:
+                    mounts = {m.mountPoint: m for m in client.listMounts()}
+                self.assertIn(self.mount_path_bytes, mounts)
+                self.assertEqual(
+                    "io_uring", mounts[self.mount_path_bytes].fuseTransport
+                )
+
+        variants.append(
+            ("IoUring", typing.cast(Type[EdenRepoTest], IoUringVariantRepoTest))
         )
 
     return variants

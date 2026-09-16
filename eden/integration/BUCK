@@ -254,6 +254,7 @@ python_integration_test(
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
+        "//thrift/lib/python:types",
     ],
 )
 
