@@ -32,6 +32,15 @@ export type CreateInlineCommentInput = {
   side: 'LEFT' | 'RIGHT';
   replyTo?: string;
 };
+
+export type CreatedInlineComment = {
+  id?: string;
+  url?: string;
+  body: string;
+  author: string;
+  authorAvatarUri?: string;
+  created: Date;
+};
 /**
  * API to fetch data from Remote Code Review system, like GitHub and Phabricator.
  */
@@ -98,7 +107,10 @@ export interface CodeReviewProvider {
   fetchComments?(diffId: DiffId): Promise<Array<DiffComment>>;
 
   /** Add a line comment or reply to the remote code review. */
-  createInlineComment?(diffId: DiffId, input: CreateInlineCommentInput): Promise<void>;
+  createInlineComment?(
+    diffId: DiffId,
+    input: CreateInlineCommentInput,
+  ): Promise<CreatedInlineComment | void>;
 
   renderMarkup?: (markup: string) => Promise<string>;
 

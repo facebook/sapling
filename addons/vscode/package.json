@@ -275,6 +275,18 @@
         "title": "Cancel"
       },
       {
+        "command": "sapling.retry-review-comment",
+        "title": "Retry"
+      },
+      {
+        "command": "sapling.discard-review-comment",
+        "title": "Discard"
+      },
+      {
+        "command": "sapling.cancel-empty-review-comment",
+        "title": "Cancel"
+      },
+      {
         "command": "sapling.worktree.switch",
         "title": "%sapling.worktree.switch-command%",
         "category": "%sapling.command-category%"
@@ -375,6 +387,18 @@
         {
           "command": "sapling.cancel-review-suggestion",
           "when": "false"
+        },
+        {
+          "command": "sapling.retry-review-comment",
+          "when": "false"
+        },
+        {
+          "command": "sapling.discard-review-comment",
+          "when": "false"
+        },
+        {
+          "command": "sapling.cancel-empty-review-comment",
+          "when": "false"
         }
       ],
       "comments/commentThread/context": [
@@ -386,6 +410,11 @@
         {
           "command": "sapling.suggest-review-change",
           "group": "inline@2",
+          "when": "commentController == sapling-review-comments && commentThreadIsEmpty"
+        },
+        {
+          "command": "sapling.cancel-empty-review-comment",
+          "group": "inline@3",
           "when": "commentController == sapling-review-comments && commentThreadIsEmpty"
         }
       ],
@@ -399,6 +428,16 @@
           "command": "sapling.submit-review-suggestion",
           "group": "inline@2",
           "when": "commentController == sapling-review-comments && comment == saplingSuggestionDraft"
+        },
+        {
+          "command": "sapling.discard-review-comment",
+          "group": "inline@1",
+          "when": "commentController == sapling-review-comments && comment == saplingFailedDraft"
+        },
+        {
+          "command": "sapling.retry-review-comment",
+          "group": "inline@2",
+          "when": "commentController == sapling-review-comments && comment == saplingFailedDraft"
         }
       ],
       "scm/resourceState/context": [

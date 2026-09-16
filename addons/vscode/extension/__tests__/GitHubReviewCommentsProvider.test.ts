@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {suggestionBody} from '../GitHubReviewCommentsProvider';
+import {reviewCommentBody, suggestionBody} from '../GitHubReviewCommentsProvider';
 
 describe('GitHub review suggestions', () => {
   it('copies selected lines into a GitHub suggestion block', () => {
@@ -17,6 +17,14 @@ describe('GitHub review suggestions', () => {
   it('preserves an existing comment before the suggestion', () => {
     expect(suggestionBody('return result;', 'Please simplify this.')).toBe(
       'Please simplify this.\n\n```suggestion\nreturn result;\n```',
+    );
+  });
+});
+
+describe('GitHub review comment display', () => {
+  it('puts a remote comment link above the body', () => {
+    expect(reviewCommentBody('Looks good.', 'https://github.com/o/r/pull/1#discussion_r2')).toBe(
+      `[View on GitHub](https://github.com/o/r/pull/1#discussion_r2)\n\nLooks good.`,
     );
   });
 });

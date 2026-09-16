@@ -153,6 +153,8 @@ export type SuggestedChange = {
 
 export type DiffComment = {
   id?: string;
+  /** Direct URL to this comment in the remote code review system. */
+  url?: string;
   author: string;
   authorName?: string;
   authorAvatarUri?: string;

@@ -14,7 +14,11 @@ import type {
   Hash,
   Result,
 } from 'isl/src/types';
-import type {CodeReviewProvider, CreateInlineCommentInput} from '../CodeReviewProvider';
+import type {
+  CodeReviewProvider,
+  CreatedInlineComment,
+  CreateInlineCommentInput,
+} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
   MergeQueueSupportQueryData,
@@ -66,6 +70,25 @@ export type GitHubDiffSummary = {
   /** Name of the branch on GitHub, which should match the local bookmark */
   branchName?: string;
 };
+
+type GitHubCreatedReviewComment = {
+  id?: number;
+  html_url?: string;
+  body?: string;
+  created_at?: string;
+  user?: {login?: string; avatar_url?: string};
+};
+
+function createdInlineComment(comment: GitHubCreatedReviewComment): CreatedInlineComment {
+  return {
+    id: comment.id == null ? undefined : String(comment.id),
+    url: comment.html_url,
+    body: comment.body ?? '',
+    author: comment.user?.login ?? '',
+    authorAvatarUri: comment.user?.avatar_url,
+    created: comment.created_at == null ? new Date() : new Date(comment.created_at),
+  };
+}
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
 
@@ -241,6 +264,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           }
           const mapComment = (comment: (typeof threadComments)[number]): DiffComment => ({
             id: String(comment.databaseId ?? comment.id),
+            url:
+              comment.databaseId == null
+                ? undefined
+                : `${this.getPrUrl(diffId)}#discussion_r${comment.databaseId}`,
             author: comment.author?.login ?? '',
             authorAvatarUri: comment.author?.avatarUrl,
             content: comment.body,
@@ -267,30 +294,44 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     ];
   }
 
-  public async createInlineComment(diffId: string, input: CreateInlineCommentInput): Promise<void> {
+  public async createInlineComment(
+    diffId: string,
+    input: CreateInlineCommentInput,
+  ): Promise<CreatedInlineComment> {
     const endpoint = `repos/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pulls/${diffId}/comments`;
     if (input.replyTo != null) {
-      await queryREST(endpoint, this.codeReviewSystem.hostname, 'POST', {
-        body: input.body,
-        in_reply_to: Number(input.replyTo),
-      });
-      return;
+      const comment = await queryREST<GitHubCreatedReviewComment>(
+        endpoint,
+        this.codeReviewSystem.hostname,
+        'POST',
+        {
+          body: input.body,
+          in_reply_to: Number(input.replyTo),
+        },
+      );
+      return createdInlineComment(comment);
     }
 
     const pullRequest = await queryREST<{head: {sha: string}}>(
       `repos/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pulls/${diffId}`,
       this.codeReviewSystem.hostname,
     );
-    await queryREST(endpoint, this.codeReviewSystem.hostname, 'POST', {
-      body: input.body,
-      commit_id: pullRequest.head.sha,
-      path: input.path,
-      line: input.line,
-      side: input.side,
-      ...(input.startLine == null || input.startLine === input.line
-        ? {}
-        : {start_line: input.startLine, start_side: input.side}),
-    });
+    const comment = await queryREST<GitHubCreatedReviewComment>(
+      endpoint,
+      this.codeReviewSystem.hostname,
+      'POST',
+      {
+        body: input.body,
+        commit_id: pullRequest.head.sha,
+        path: input.path,
+        line: input.line,
+        side: input.side,
+        ...(input.startLine == null || input.startLine === input.line
+          ? {}
+          : {start_line: input.startLine, start_side: input.side}),
+      },
+    );
+    return createdInlineComment(comment);
   }
 
   private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {

@@ -80,22 +80,35 @@ describe('GitHubCodeReviewProvider comments', () => {
     await expect(provider.fetchComments('42')).resolves.toMatchObject([
       {
         id: '101',
+        url: 'https://github.com/owner/repo/pull/42#discussion_r101',
         content: 'Please change this.',
         filename: 'src/example.ts',
         startLine: 10,
         line: 12,
         side: 'RIGHT',
         isResolved: false,
-        replies: [{id: '102', content: 'Done.'}],
+        replies: [
+          {
+            id: '102',
+            url: 'https://github.com/owner/repo/pull/42#discussion_r102',
+            content: 'Done.',
+          },
+        ],
       },
     ]);
   });
 
   it('posts a multiline comment against the latest pull request head', async () => {
     mockQueryREST.mockResolvedValueOnce({head: {sha: 'head-sha'}} as never);
-    mockQueryREST.mockResolvedValueOnce({} as never);
+    mockQueryREST.mockResolvedValueOnce({
+      id: 123,
+      html_url: 'https://github.com/owner/repo/pull/42#discussion_r123',
+      body: '```suggestion\nreplacement\n```',
+      created_at: '2026-09-16T10:00:00Z',
+      user: {login: 'reviewer', avatar_url: 'https://example.com/avatar'},
+    } as never);
 
-    await provider.createInlineComment('42', {
+    const created = await provider.createInlineComment('42', {
       body: '```suggestion\nreplacement\n```',
       path: 'src/example.ts',
       startLine: 10,
@@ -118,6 +131,14 @@ describe('GitHubCodeReviewProvider comments', () => {
         side: 'RIGHT',
       },
     );
+    expect(created).toEqual({
+      id: '123',
+      url: 'https://github.com/owner/repo/pull/42#discussion_r123',
+      body: '```suggestion\nreplacement\n```',
+      author: 'reviewer',
+      authorAvatarUri: 'https://example.com/avatar',
+      created: new Date('2026-09-16T10:00:00Z'),
+    });
   });
 
   it('posts replies without looking up the pull request head', async () => {
