@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReviewStack · Review work mock-up</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="#" aria-label="ReviewStack home">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="m6 9 10-5 10 5-10 5L6 9Z" />
+            <path d="m6 15 10 5 10-5" />
+            <path d="m6 21 10 5 10-5" />
+          </svg>
+          <span>ReviewStack</span>
+        </a>
+        <nav class="primary-nav" aria-label="Primary">
+          <a class="nav-item active" href="#">Review work</a>
+          <a class="nav-item" href="#">Repositories</a>
+        </nav>
+        <div class="header-actions">
+          <span class="prototype-pill">Local prototype</span>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Toggle theme">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 3v2m0 14v2M3 12h2m14 0h2m-3.64-6.36-1.42 1.42M8.06 16.94l-1.42 1.42m0-12.72 1.42 1.42m7.88 9.88 1.42 1.42M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+            </svg>
+          </button>
+          <div class="viewer">
+            <span class="avatar avatar-you">TS</span>
+            <span class="viewer-name">Timo Stoffregen</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">ReviewStack home</p>
+          <h1>Review work</h1>
+          <p class="page-description">Everything waiting for you, across all repositories.</p>
+        </div>
+        <div class="summary-strip" aria-label="Review summary">
+          <div class="summary-item attention">
+            <strong id="summary-review-count">0</strong>
+            <span>Need your review</span>
+          </div>
+          <div class="summary-item">
+            <strong id="summary-author-count">0</strong>
+            <span>Open by you</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="filters" aria-label="Pull request filters">
+        <div class="filter-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m16.5 16.5 4 4" />
+          </svg>
+          <input id="search-filter" type="search" placeholder="Filter by title or number…" />
+          <kbd>/</kbd>
+        </div>
+        <label class="filter-control">
+          <span>Repository</span>
+          <select id="repo-filter">
+            <option value="all">All repositories</option>
+          </select>
+        </label>
+        <label class="filter-control">
+          <span>Author</span>
+          <select id="author-filter">
+            <option value="all">All authors</option>
+          </select>
+        </label>
+        <label class="filter-control">
+          <span>PR status</span>
+          <select id="status-filter">
+            <option value="active">Open and draft</option>
+            <option value="open">Open</option>
+            <option value="draft">Draft</option>
+            <option value="merged">Merged</option>
+            <option value="closed">Closed</option>
+            <option value="all">All statuses</option>
+          </select>
+        </label>
+        <button id="clear-filters" class="clear-button" type="button">Clear filters</button>
+      </section>
+
+      <section class="queue-section" aria-labelledby="review-queue-title">
+        <div class="section-heading">
+          <div>
+            <div class="section-title-line">
+              <span class="section-icon review-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 12.5 10.5 15 16 9.5" />
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              </span>
+              <h2 id="review-queue-title">Needs your review</h2>
+              <span class="count-badge" id="review-count">0</span>
+            </div>
+            <p>Pull requests where you are a requested reviewer.</p>
+          </div>
+          <button class="section-menu" type="button" aria-label="Review queue options">•••</button>
+        </div>
+        <div class="table-card" id="review-table"></div>
+      </section>
+
+      <section class="queue-section" aria-labelledby="your-prs-title">
+        <div class="section-heading">
+          <div>
+            <div class="section-title-line">
+              <span class="section-icon author-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z" />
+                </svg>
+              </span>
+              <h2 id="your-prs-title">Your open pull requests</h2>
+              <span class="count-badge" id="author-count">0</span>
+            </div>
+            <p>Changes you authored that still need attention.</p>
+          </div>
+          <button class="section-menu" type="button" aria-label="Your pull requests options">
+            •••
+          </button>
+        </div>
+        <div class="table-card" id="author-table"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
