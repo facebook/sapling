@@ -14,7 +14,14 @@ type GraphQLResponseError = {
 };
 
 export class GitHubGraphQLError extends Error {
-  constructor(readonly errors: GraphQLResponseError[], readonly data: unknown) {
+  readonly isRateLimitError: boolean;
+  readonly rateLimitReset: number | null;
+
+  constructor(
+    readonly errors: GraphQLResponseError[],
+    readonly data: unknown,
+    responseHeaders?: Headers,
+  ) {
     super(
       errors
         .map(error => {
@@ -24,6 +31,12 @@ export class GitHubGraphQLError extends Error {
         .join('\n'),
     );
     this.name = 'GitHubGraphQLError';
+    this.isRateLimitError = errors.some(
+      error => error.type === 'RATE_LIMIT' || error.message.includes('rate limit'),
+    );
+    const rateLimitReset = Number(responseHeaders?.get('x-ratelimit-reset'));
+    this.rateLimitReset =
+      Number.isFinite(rateLimitReset) && rateLimitReset > 0 ? rateLimitReset : null;
   }
 }
 
@@ -51,7 +64,7 @@ export default async function queryGraphQL<TData, TVariables>(
   const json = await response.json();
 
   if (Array.isArray(json.errors) && json.errors.length > 0) {
-    throw new GitHubGraphQLError(json.errors, json.data);
+    throw new GitHubGraphQLError(json.errors, json.data, response.headers);
   }
 
   return json.data;

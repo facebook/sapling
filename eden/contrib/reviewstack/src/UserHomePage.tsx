@@ -12,11 +12,13 @@ import ActorAvatar from './ActorAvatar';
 import CenteredSpinner from './CenteredSpinner';
 import Link from './Link';
 import {PullRequestReviewDecision, PullRequestState} from './generated/graphql';
+import {GitHubGraphQLError} from './github/queryGraphQL';
 import {gitHubUserHomePageDataAtom} from './jotai/atoms';
 import {SearchIcon} from '@primer/octicons-react';
-import {useTheme} from '@primer/react';
+import {Box, Button, Flash, Text, useTheme} from '@primer/react';
 import {useAtomValue} from 'jotai';
-import React, {Suspense, useMemo, useState} from 'react';
+import {loadable} from 'jotai/utils';
+import React, {useMemo, useState} from 'react';
 import {notEmpty} from 'shared/utils';
 
 import './UserHomePage.css';
@@ -41,16 +43,51 @@ const DEFAULT_FILTERS: Filters = {
   dateTo: '',
 };
 
+const loadableGitHubUserHomePageDataAtom = loadable(gitHubUserHomePageDataAtom);
+
 export default function UserHomePage(): React.ReactElement {
+  const result = useAtomValue(loadableGitHubUserHomePageDataAtom);
+  switch (result.state) {
+    case 'loading':
+      return <CenteredSpinner />;
+    case 'hasError':
+      if (result.error instanceof GitHubGraphQLError && result.error.isRateLimitError) {
+        return <RateLimitNotice error={result.error} />;
+      }
+      throw result.error;
+    case 'hasData':
+      return <UserHomePageRoot data={result.data} />;
+  }
+}
+
+function RateLimitNotice({error}: {error: GitHubGraphQLError}): React.ReactElement {
+  const resetTime =
+    error.rateLimitReset == null
+      ? null
+      : new Date(error.rateLimitReset * 1000).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short',
+        });
   return (
-    <Suspense fallback={<CenteredSpinner />}>
-      <UserHomePageRoot />
-    </Suspense>
+    <Box sx={{maxWidth: 720, margin: '40px auto', padding: '0 24px'}}>
+      <Flash variant="warning">
+        <Text as="h1" sx={{display: 'block', fontSize: 2, fontWeight: 'bold', marginBottom: 2}}>
+          GitHub API limit reached
+        </Text>
+        <Text as="p" sx={{display: 'block', margin: 0}}>
+          GitHub is temporarily rejecting GraphQL requests for your account.
+          {resetTime == null ? '' : ` GitHub says the limit resets at ${resetTime}.`}
+        </Text>
+        <Button sx={{marginTop: 3}} onClick={() => window.location.reload()}>
+          Try again
+        </Button>
+      </Flash>
+    </Box>
   );
 }
 
-function UserHomePageRoot(): React.ReactElement {
-  const data = useAtomValue(gitHubUserHomePageDataAtom);
+function UserHomePageRoot({data}: {data: GitHubUserHomePageData | null}): React.ReactElement {
   const reviewRequests = useMemo(() => extractReviewRequests(data), [data]);
   const authoredPullRequests = useMemo(() => data?.pullRequests.filter(notEmpty) ?? [], [data]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
