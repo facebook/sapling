@@ -11,6 +11,7 @@
 
 #include <folly/Random.h>
 #include <folly/ScopeGuard.h>
+#include <folly/Synchronized.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -26,6 +27,8 @@
 #include <cerrno>
 #include <system_error>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -81,6 +84,23 @@ fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
   return response;
 }
 
+class ForgetRecordingDispatcher : public TestDispatcher {
+ public:
+  using TestDispatcher::TestDispatcher;
+  using Forget = std::pair<uint64_t, uint64_t>;
+
+  void forget(InodeNumber ino, unsigned long nlookup) override {
+    forgets_.wlock()->emplace_back(ino.get(), nlookup);
+  }
+
+  std::vector<Forget> getForgets() const {
+    return *forgets_.rlock();
+  }
+
+ private:
+  folly::Synchronized<std::vector<Forget>> forgets_;
+};
+
 class FuseChannelTest : public ::testing::Test {
  protected:
   std::unique_ptr<FuseChannel, FsChannelDeleter> createChannel(
@@ -91,7 +111,8 @@ class FuseChannelTest : public ::testing::Test {
       bool ioUringPreCreateQueues = false,
       size_t numInvalidationThreads = 4,
       bool handleKillPrivV2 = true) {
-    auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
+    auto testDispatcher =
+        std::make_unique<ForgetRecordingDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
         nullptr,
@@ -164,6 +185,22 @@ class FuseChannelTest : public ::testing::Test {
     return std::move(initFuture).get(kTimeout);
   }
 
+  void expectForgetsWithoutReply(
+      FuseChannel& channel,
+      const std::vector<ForgetRecordingDispatcher::Forget>& expected) {
+    // With one worker, this lookup starts after the FORGET handler finishes.
+    auto lookupId = fuse_.sendLookup(FUSE_ROOT_ID, "after-forget");
+    auto lookup = dispatcher_->waitForLookup(lookupId, kTimeout);
+    EXPECT_EQ(expected, dispatcher_->getForgets());
+    lookup.promise.setValue(genRandomLookupResponse(99));
+
+    auto response = fuse_.recvResponse();
+    EXPECT_EQ(lookupId, response.header.unique);
+    EXPECT_EQ(0, response.header.error);
+    EXPECT_EQ(sizeof(fuse_entry_out), response.body.size());
+    EXPECT_FALSE(channel.isStopRequested());
+  }
+
   FakeFuse fuse_;
   EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
   ErrorLogger noopErrorLogger_{};
@@ -175,7 +212,7 @@ class FuseChannelTest : public ::testing::Test {
       std::make_shared<ReloadableConfig>(edenConfig_);
   ErrorLogger capturingErrorLogger_{reloadableConfig_, &xplatLogger_};
   ErrorLogger* errorLoggerOverride_ = nullptr;
-  TestDispatcher* dispatcher_;
+  ForgetRecordingDispatcher* dispatcher_;
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };
 
@@ -845,6 +882,40 @@ TEST_F(FuseChannelTest, expectedErrnoIsNotLogged) {
   EXPECT_NE(0, received.header.error);
 
   EXPECT_TRUE(xplatLogger_.events().empty());
+}
+
+TEST_F(FuseChannelTest, devFuseForgetHasNoReply) {
+  auto channel = createChannel(/*numThreads=*/1);
+  auto completeFuture = performInit(channel.get());
+
+  const fuse_forget_in arg{.nlookup = 3};
+  fuse_.sendRequest(FUSE_FORGET, 17, arg);
+
+  expectForgetsWithoutReply(*channel, {{17, 3}});
+  EXPECT_FALSE(completeFuture.isReady());
+  channel->takeoverStop();
+  std::move(completeFuture).get(kTimeout);
+}
+
+TEST_F(FuseChannelTest, devFuseBatchForgetHasNoReply) {
+  auto channel = createChannel(/*numThreads=*/1);
+  auto completeFuture = performInit(channel.get());
+
+  const struct {
+    fuse_batch_forget_in header;
+    fuse_forget_one entries[2];
+  } arg{
+      .header = {.count = 2},
+      .entries = {{.nodeid = 17, .nlookup = 3}, {.nodeid = 29, .nlookup = 5}}};
+  static_assert(
+      sizeof(arg) ==
+      sizeof(fuse_batch_forget_in) + 2 * sizeof(fuse_forget_one));
+  fuse_.sendRequest(FUSE_BATCH_FORGET, 0, arg);
+
+  expectForgetsWithoutReply(*channel, {{17, 3}, {29, 5}});
+  EXPECT_FALSE(completeFuture.isReady());
+  channel->takeoverStop();
+  std::move(completeFuture).get(kTimeout);
 }
 
 TEST_F(FuseChannelTest, interruptLookups) {
