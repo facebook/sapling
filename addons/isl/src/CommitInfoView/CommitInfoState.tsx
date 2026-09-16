@@ -83,6 +83,9 @@ registerCleanup(
  */
 export const diffUpdateMessagesState = atomFamilyWeak((_hash: Hash) => atom<string>(''));
 
+/** Reviewers to request the next time this commit or its stack is submitted. */
+export const submitReviewersState = atomFamilyWeak((_hash: Hash) => atom<string>(''));
+
 export const getDefaultEditedCommitMessage = (): EditedMessage => ({});
 
 /**

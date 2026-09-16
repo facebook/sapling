@@ -16,7 +16,7 @@ import {configBackedAtom} from '../jotaiUtils';
  * Note: When this is set to false, publishWhenReady is also set to false
  * (since publish-when-ready requires draft mode).
  */
-const submitAsDraftRaw = configBackedAtom<boolean>('isl.submitAsDraft', false);
+const submitAsDraftRaw = configBackedAtom<boolean>('isl.submitAsDraft', true);
 
 export const submitAsDraft = atom(
   get => get(submitAsDraftRaw),

@@ -12,7 +12,7 @@ the API calls directly so we can (1) avoid spawning so many processes, and
 
 import enum
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from sapling.i18n import _
 from sapling.result import Err, Ok, Result
@@ -117,6 +117,7 @@ class PullRequestDetails:
     body: str
     title: str
     state: PullRequestState
+    is_draft: bool
 
 
 async def get_pull_request_details(
@@ -145,6 +146,7 @@ async def get_pull_request_details(
             body=data["body"],
             title=data["title"],
             state=PullRequestState[data["state"]],
+            is_draft=data["isDraft"],
         )
     )
 
@@ -353,6 +355,44 @@ async def update_pull_request(
         return Err(result.unwrap_err())
     else:
         return Ok(result.unwrap()["data"]["updatePullRequest"]["pullRequest"]["id"])
+
+
+async def request_reviewers(
+    hostname: str,
+    owner: str,
+    name: str,
+    pull_request_number: int,
+    reviewers: List[str],
+) -> Result[JsonDict, str]:
+    """Request GitHub users as reviewers on a pull request."""
+    endpoint = f"repos/{owner}/{name}/pulls/{pull_request_number}/requested_reviewers"
+    last_response: Result[JsonDict, str] = Ok({})
+    for reviewer in reviewers:
+        last_response = await gh_cli.make_request(
+            {"reviewers[]": reviewer},
+            hostname=hostname,
+            endpoint=endpoint,
+            method="POST",
+        )
+        if last_response.is_err():
+            return last_response
+    return last_response
+
+
+async def set_pull_request_draft_state(
+    hostname: str,
+    pull_request_id: str,
+    is_draft: bool,
+) -> Result[JsonDict, str]:
+    query_text = (
+        query.GRAPHQL_CONVERT_PULL_REQUEST_TO_DRAFT
+        if is_draft
+        else query.GRAPHQL_MARK_PULL_REQUEST_READY
+    )
+    return await gh_cli.make_request(
+        {"query": query_text, "pullRequestId": pull_request_id},
+        hostname=hostname,
+    )
 
 
 async def create_branch(

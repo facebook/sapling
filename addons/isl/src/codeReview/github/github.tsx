@@ -26,6 +26,7 @@ import {Internal} from '../../Internal';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../../operations/PrSubmitOperation';
+import {exactRevset, succeedableRevset} from '../../types';
 
 import './GitHubPRBadge.css';
 
@@ -99,13 +100,26 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return false;
   }
   submitOperation(
-    _commits: Array<CommitInfo>,
-    options: {draft?: boolean; updateMessage?: string; publishWhenReady?: boolean},
+    commits: Array<CommitInfo>,
+    options: {
+      draft?: boolean;
+      updateMessage?: string;
+      publishWhenReady?: boolean;
+      submitStack?: boolean;
+      reviewers?: Array<string>;
+    },
   ): Operation {
     if (this.preferredSubmitCommand === 'ghstack') {
       return new GhStackSubmitOperation(options);
     } else if (this.preferredSubmitCommand === 'pr') {
-      return new PrSubmitOperation(options);
+      return new PrSubmitOperation({
+        ...options,
+        revision: options.submitStack
+          ? undefined
+          : commits.length === 1 && !commits[0].isDot
+            ? succeedableRevset(commits[0].hash)
+            : exactRevset('.'),
+      });
     } else {
       throw new Error('Not yet implemented');
     }
@@ -138,7 +152,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   commitMessageFieldsSchema =
     Internal.CommitMessageFieldSchemaForGitHub ?? OSSCommitMessageFieldSchema;
 
-  supportSubmittingAsDraft = 'newDiffsOnly' as const;
+  supportSubmittingAsDraft = 'always' as const;
   supportsUpdateMessage = false;
   submitDisabledReason = () =>
     Internal.submitForGitHubDisabledReason?.(this.preferredSubmitCommand);
@@ -156,6 +170,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   enableMessageSyncing = false;
 
   supportsSuggestedReviewers = false;
+
+  supportsRequestReviewers = this.preferredSubmitCommand === 'pr';
 
   supportsComparingSinceLastSubmit = false;
 

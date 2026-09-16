@@ -44,6 +44,10 @@ export interface UICodeReviewProvider {
       updateFields?: boolean;
       /** Whether to automatically publish when all CI signals pass */
       publishWhenReady?: boolean;
+      /** Whether to submit the complete stack instead of only the selected commit(s). */
+      submitStack?: boolean;
+      /** Usernames to request as reviewers after submitting. */
+      reviewers?: Array<string>;
     },
   ): Operation;
 
@@ -109,6 +113,9 @@ export interface UICodeReviewProvider {
   enableMessageSyncing: boolean;
 
   supportsSuggestedReviewers: boolean;
+
+  /** Whether submit operations can request reviewers by username. */
+  supportsRequestReviewers?: boolean;
 
   supportsComparingSinceLastSubmit: boolean;
 

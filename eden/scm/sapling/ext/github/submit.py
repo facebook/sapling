@@ -39,9 +39,20 @@ def submit(ui, repo, *args, **opts) -> int:
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
     is_open = opts.get("open")
+    rev = opts.get("rev") or None
+    include_stack = opts.get("stack", False)
+    reviewers = [reviewer.lstrip("@") for reviewer in opts.get("reviewer") or []]
+    reviewers = [reviewer for reviewer in reviewers if reviewer]
     return asyncio.run(
         update_commits_in_stack(
-            ui, repo, github_repo, is_draft=is_draft, is_open=is_open
+            ui,
+            repo,
+            github_repo,
+            is_draft=is_draft,
+            is_open=is_open,
+            rev=rev,
+            include_stack=include_stack,
+            reviewers=reviewers,
         )
     )
 
@@ -133,9 +144,12 @@ class PullRequestParams:
     number: int
 
 
-async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
+async def get_partitions(ui, repo, store, filter, *filter_args) -> List[List[CommitData]]:
     commits_to_process = await asyncio.gather(
-        *[derive_commit_data(node, repo, store) for node in repo.nodes(filter)]
+        *[
+            derive_commit_data(node, repo, store)
+            for node in repo.nodes(filter, *filter_args)
+        ]
     )
     if not commits_to_process:
         return []
@@ -156,7 +170,14 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
 
 
 async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False
+    ui,
+    repo,
+    github_repo: GitHubRepo,
+    is_draft: bool,
+    is_open: bool = False,
+    rev: Optional[str] = None,
+    include_stack: bool = False,
+    reviewers: Optional[List[str]] = None,
 ) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
@@ -167,7 +188,12 @@ async def update_commits_in_stack(
 
     workflow = SubmitWorkflow.from_config(ui)
 
-    partitions = await get_partitions(ui, repo, store, "sort(. %% public(), -rev)")
+    if rev:
+        commit_filter = "sort(%r %% public(), -rev)" if include_stack else "%r"
+        partitions = await get_partitions(ui, repo, store, commit_filter, rev)
+    else:
+        # Preserve the command's historical behavior when no revision is supplied.
+        partitions = await get_partitions(ui, repo, store, "sort(. %% public(), -rev)")
     if not partitions:
         ui.status_err(_("no commits to submit\n"))
         return 0
@@ -212,7 +238,19 @@ async def update_commits_in_stack(
         return gitdir
 
     if not refs_to_update:
-        ui.status_err(_("no pull requests to update\n"))
+        updated_draft_state = await update_pull_request_draft_states(
+            partitions, is_draft, github_repo.hostname, ui
+        )
+        if reviewers:
+            repository = await get_repository_for_origin(
+                get_push_origin(ui), github_repo.hostname
+            )
+            await request_reviewers_for_partitions(
+                partitions, reviewers, repository, ui
+            )
+            return 0
+        if not updated_draft_state:
+            ui.status_err(_("no pull requests to update\n"))
         return 0
 
     repository = params.repository
@@ -309,6 +347,13 @@ async def update_commits_in_stack(
     ]
     await asyncio.gather(*rewrite_and_archive_requests)
 
+    await update_pull_request_draft_states(
+        partitions, is_draft, repository.hostname, ui
+    )
+
+    if reviewers:
+        await request_reviewers_for_partitions(partitions, reviewers, repository, ui)
+
     # Open pull requests in browser if --open flag was specified
     if is_open:
         pr_urls = [none_throws(p[0].pr).url for p in partitions if p[0].pr]
@@ -317,6 +362,66 @@ async def update_commits_in_stack(
             webbrowser.open(url)
 
     return 0
+
+
+async def update_pull_request_draft_states(
+    partitions: List[List[CommitData]], is_draft: bool, hostname: str, ui
+) -> bool:
+    pull_requests = []
+    for partition in partitions:
+        pr = none_throws(partition[0].pr)
+        if pr.state == PullRequestState.OPEN and pr.is_draft != is_draft:
+            pull_requests.append(pr)
+    results = await asyncio.gather(
+        *[
+            gh_submit.set_pull_request_draft_state(
+                hostname, pr.node_id, is_draft
+            )
+            for pr in pull_requests
+        ]
+    )
+    for pr, result in zip(pull_requests, results):
+        if result.is_err():
+            desired_state = _("draft") if is_draft else _("ready for review")
+            ui.status_err(
+                _("warning, marking #%d %s may not have succeeded: %s\n")
+                % (pr.number, desired_state, result.unwrap_err())
+            )
+        else:
+            if is_draft:
+                ui.status_err(_("marked %s as draft\n") % pr.url)
+            else:
+                ui.status_err(_("marked %s as ready for review\n") % pr.url)
+    return bool(pull_requests)
+
+
+async def request_reviewers_for_partitions(
+    partitions: List[List[CommitData]],
+    reviewers: List[str],
+    repository: Repository,
+    ui,
+) -> None:
+    owner, name = repository.get_upstream_owner_and_name()
+    reviewer_requests = [
+        gh_submit.request_reviewers(
+            repository.hostname,
+            owner,
+            name,
+            none_throws(partition[0].pr).number,
+            reviewers,
+        )
+        for partition in partitions
+    ]
+    reviewer_results = await asyncio.gather(*reviewer_requests)
+    for partition, result in zip(partitions, reviewer_results):
+        pr = none_throws(partition[0].pr)
+        if result.is_err():
+            ui.status_err(
+                _("warning, requesting reviewers for #%d may not have succeeded: %s\n")
+                % (pr.number, result.unwrap_err())
+            )
+        else:
+            ui.status_err(_("requested reviewers for %s\n") % pr.url)
 
 
 async def rewrite_pull_request_body(

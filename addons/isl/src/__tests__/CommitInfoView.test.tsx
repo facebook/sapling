@@ -290,7 +290,7 @@ describe('CommitInfoView', () => {
 
         await waitFor(() => {
           expect(withinCommitInfo().queryByText(ignoreRTL('cb.js'))).toBeInTheDocument();
-          expect(screen.queryByText('Amend and Submit')).toBeInTheDocument();
+          expect(screen.queryByText('Amend and Submit Draft')).toBeInTheDocument();
         });
       });
     });

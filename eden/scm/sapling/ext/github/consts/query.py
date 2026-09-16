@@ -47,6 +47,7 @@ query ($owner: String!, $name: String!, $number: Int!) {
       headRefName
       body
       title
+      isDraft
     }
   }
 }
@@ -76,6 +77,28 @@ mutation ($pullRequestId: ID!, $title: String!, $body: String!, $base: String!) 
   ) {
     pullRequest {
       id
+    }
+  }
+}
+"""
+
+GRAPHQL_CONVERT_PULL_REQUEST_TO_DRAFT = """
+mutation ($pullRequestId: ID!) {
+  convertPullRequestToDraft(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+      isDraft
+    }
+  }
+}
+"""
+
+GRAPHQL_MARK_PULL_REQUEST_READY = """
+mutation ($pullRequestId: ID!) {
+  markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+      isDraft
     }
   }
 }

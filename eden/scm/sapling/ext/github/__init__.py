@@ -96,8 +96,16 @@ subcmd = pull_request_command.subcommand(
             False,
             _("also include draft ancestors"),
         ),
+        ("r", "rev", "", _("revision to submit"), _("REV")),
+        (
+            "",
+            "reviewer",
+            [],
+            _("request review from a GitHub user (repeatable)"),
+            _("USER"),
+        ),
         ("m", "message", None, _("message describing changes to updated commits")),
-        ("d", "draft", False, _("mark new pull requests as draft")),
+        ("d", "draft", False, _("submit pull requests as drafts")),
         ("o", "open", False, _("open pull requests in browser after creation")),
     ],
 )

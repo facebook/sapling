@@ -315,6 +315,20 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_request_reviewers(
+        self,
+        pr_number: int,
+        reviewer: str,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "GenericRequest":
+        params: ParamsType = {"reviewers[]": reviewer}
+        endpoint = f"repos/{owner}/{name}/pulls/{pr_number}/requested_reviewers"
+        key = create_request_key(params, self.hostname, endpoint=endpoint, method="POST")
+        request = GenericRequest({"requested_reviewers": [{"login": reviewer}]})
+        self._add_request(key, request)
+        return request
+
     def expect_get_username_request(
         self,
     ) -> "GetUsernameRequest":
@@ -501,6 +515,7 @@ class GetPrDetailsRequest(MockRequest):
         base_ref_oid: str = "",
         body: str = "",
         title: str = "",
+        is_draft: bool = False,
     ):
         head_ref_name = head_ref_name or f"pr{self._pr_number}"
         head_ref_oid = head_ref_oid or gen_hash_hexdigest(pr_id)
@@ -518,6 +533,7 @@ class GetPrDetailsRequest(MockRequest):
                         "baseRefName": base_ref_name,
                         "body": body,
                         "title": title,
+                        "isDraft": is_draft,
                     }
                 }
             }

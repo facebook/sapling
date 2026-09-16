@@ -20,7 +20,9 @@ import {Column} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
+import {extractTokens} from 'isl-components/Tokens';
 import {Tooltip} from 'isl-components/Tooltip';
+import {Typeahead} from 'isl-components/Typeahead';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
@@ -78,7 +80,7 @@ import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../successionUtils';
 import {SuggestedRebaseButton} from '../SuggestedRebase';
 import {showToast} from '../toast';
-import {GeneratedStatus, succeedableRevset} from '../types';
+import {exactRevset, GeneratedStatus, succeedableRevset} from '../types';
 import {UncommittedChanges} from '../UncommittedChanges';
 import {confirmUnsavedFiles} from '../UnsavedFiles';
 import {useModal} from '../useModal';
@@ -91,6 +93,7 @@ import {
   editedCommitMessages,
   forceNextCommitToEditAllFields,
   hasUnsavedEditedCommitMessage,
+  submitReviewersState,
   unsavedFieldsBeingEdited,
 } from './CommitInfoState';
 import {
@@ -485,6 +488,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             </div>
           </Section>
         )}
+        {isCommitMode || provider?.supportsRequestReviewers !== true ? null : (
+          <ReviewerField commit={commit} />
+        )}
       </div>
       {!isAmendDisabled && (
         <div className="commit-info-view-toolbar-bottom">
@@ -507,6 +513,32 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
       )}
     </div>
   );
+}
+
+function ReviewerField({commit}: {commit: CommitInfo}) {
+  const [reviewers, setReviewers] = useAtom(submitReviewersState(commit.hash));
+
+  return (
+    <Section data-testid="submit-reviewers">
+      <SmallCapsTitle>
+        <Icon icon="account" />
+        <T>Add Reviewer</T>
+      </SmallCapsTitle>
+      <Typeahead
+        tokenString={reviewers}
+        setTokenString={setReviewers}
+        autoFocus={false}
+        aria-label={t('Add reviewer')}
+        data-testid="submit-reviewers-field"
+        fetchTokens={() => Promise.resolve({values: [], fetchStartTimestamp: Date.now()})}
+      />
+    </Section>
+  );
+}
+
+function parseReviewers(value: string): Array<string> {
+  const [tokens, remaining] = extractTokens(value);
+  return [...new Set([...tokens, remaining.trim()].filter(Boolean))];
 }
 
 /**
@@ -989,6 +1021,9 @@ function SubmitButton({
   const submittable =
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
+  const canSubmitSelectedCommit =
+    canSubmitIndividualDiffs ||
+    (codeReviewProviderType === 'github' && repoInfo?.preferredSubmitCommand !== 'ghstack');
 
   const showOptionModal = useModal();
   const forceEnableSubmit = useAtomValue(overrideDisabledSubmitModes);
@@ -1011,7 +1046,9 @@ function SubmitButton({
         ? t('No code review system found for this repository')
         : null;
 
-  const getApplicableOperations = async (): Promise<Array<Operation> | undefined> => {
+  const getApplicableOperations = async (
+    submitStack = false,
+  ): Promise<Array<Operation> | undefined> => {
     const shouldContinue = await confirmUnsavedFiles();
     if (!shouldContinue) {
       return;
@@ -1090,6 +1127,13 @@ function SubmitButton({
           : answer === 'pr'
             ? new PrSubmitOperation({
                 draft: shouldSubmitAsDraft,
+                revision: submitStack
+                  ? undefined
+                  : commit.isDot
+                    ? exactRevset('.')
+                    : succeedableRevset(commit.hash),
+                submitStack,
+                reviewers: parseReviewers(readAtom(submitReviewersState(commit.hash))),
               })
             : null;
 
@@ -1106,12 +1150,14 @@ function SubmitButton({
     const submitOp = isBranchingPREnabled
       ? null // branching PRs will show a follow-up modal which controls submitting
       : nullthrows(provider).submitOperation(
-          commit.isDot ? [] : [commit], // [] means to submit the head commit
+          submitStack || commit.isDot ? [] : [commit], // [] means to submit from the current head
           {
             draft: shouldSubmitAsDraft,
             updateFields: shouldUpdateMessage,
             updateMessage: updateMessage || undefined,
             publishWhenReady: shouldPublishWhenReady,
+            submitStack,
+            reviewers: parseReviewers(readAtom(submitReviewersState(commit.hash))),
           },
         );
 
@@ -1123,78 +1169,108 @@ function SubmitButton({
     return [amendOrCommitOp, submitOp].filter(notEmpty);
   };
 
-  return (commit.isDot && (anythingToCommit || !isAnythingBeingEdited)) ||
-    (!commit.isDot &&
-      canSubmitIndividualDiffs &&
-      // For non-head commits, "submit" doesn't update the message, which is confusing.
-      // Just hide the submit button so you're encouraged to "amend message" first.
-      !isAnythingBeingEdited) ? (
-    <Tooltip
-      title={
-        disabledReason ??
-        t('Submit for code review with $provider', {
-          replace: {$provider: provider?.label ?? 'remote'},
-        })
-      }
-      placement="top">
-      {isBranchingPREnabled ? (
-        <Button
-          primary
-          disabled={disabledReason != null}
-          onClick={async () => {
-            try {
-              const operations = await getApplicableOperations();
-              if (operations == null || operations.length === 0) {
-                return;
-              }
+  const selectedSubmitButton =
+    ((commit.isDot && (anythingToCommit || !isAnythingBeingEdited)) ||
+      (!commit.isDot &&
+        canSubmitSelectedCommit &&
+        // For non-head commits, "submit" doesn't update the message, which is confusing.
+        // Just hide the submit button so you're encouraged to "amend message" first.
+        !isAnythingBeingEdited)) &&
+    repoInfo?.preferredSubmitCommand !== 'ghstack' ? (
+      <Tooltip
+        title={
+          disabledReason ??
+          t('Submit for code review with $provider', {
+            replace: {$provider: provider?.label ?? 'remote'},
+          })
+        }
+        placement="top">
+        {isBranchingPREnabled ? (
+          <Button
+            primary
+            disabled={disabledReason != null}
+            onClick={async () => {
+              try {
+                const operations = await getApplicableOperations();
+                if (operations == null || operations.length === 0) {
+                  return;
+                }
 
-              for (const operation of operations) {
-                runOperation(operation);
+                for (const operation of operations) {
+                  runOperation(operation);
+                }
+                const dag = readAtom(dagWithPreviews);
+                const topOfStack = commit.isDot && isCommitMode ? dag.resolve('.') : commit;
+                if (topOfStack == null) {
+                  throw new Error('could not find commit to push');
+                }
+                const pushOps = await showBranchingPrModal(topOfStack);
+                if (pushOps == null) {
+                  return;
+                }
+                for (const pushOp of pushOps) {
+                  runOperation(pushOp);
+                }
+              } catch (err) {
+                const error = err as Error;
+                showToast(<ErrorNotice error={error} title={<T>Failed to push commits</T>} />, {
+                  durationMs: 10000,
+                });
               }
-              const dag = readAtom(dagWithPreviews);
-              const topOfStack = commit.isDot && isCommitMode ? dag.resolve('.') : commit;
-              if (topOfStack == null) {
-                throw new Error('could not find commit to push');
-              }
-              const pushOps = await showBranchingPrModal(topOfStack);
-              if (pushOps == null) {
-                return;
-              }
-              for (const pushOp of pushOps) {
-                runOperation(pushOp);
-              }
-            } catch (err) {
-              const error = err as Error;
-              showToast(<ErrorNotice error={error} title={<T>Failed to push commits</T>} />, {
-                durationMs: 10000,
-              });
-            }
-          }}>
-          {commit.isDot && anythingToCommit ? (
-            isCommitMode ? (
-              <T>Commit and Push...</T>
+            }}>
+            {commit.isDot && anythingToCommit ? (
+              isCommitMode ? (
+                <T>Commit and Push...</T>
+              ) : (
+                <T>Amend and Push...</T>
+              )
             ) : (
-              <T>Amend and Push...</T>
-            )
-          ) : (
-            <T>Push...</T>
-          )}
-        </Button>
-      ) : (
+              <T>Push...</T>
+            )}
+          </Button>
+        ) : (
+          <OperationDisabledButton
+            kind="primary"
+            contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
+            disabled={disabledReason != null}
+            runOperation={getApplicableOperations}>
+            <SubmitButtonLabel
+              showCommitOrAmend={commit.isDot && anythingToCommit}
+              isCommitMode={isCommitMode}
+              shouldSubmitAsDraft={shouldSubmitAsDraft}
+            />
+          </OperationDisabledButton>
+        )}
+      </Tooltip>
+    ) : null;
+
+  const submitAllButton =
+    !isCommitMode &&
+    codeReviewProviderType === 'github' &&
+    repoInfo?.preferredSubmitCommand !== 'push' ? (
+      <Tooltip
+        title={
+          disabledReason ??
+          t('Submit the complete stack for code review with $provider', {
+            replace: {$provider: provider?.label ?? 'remote'},
+          })
+        }
+        placement="top">
         <OperationDisabledButton
-          kind="primary"
-          contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
+          contextKey={`submit-all-${commit.hash}`}
           disabled={disabledReason != null}
-          runOperation={getApplicableOperations}>
-          <SubmitButtonLabel
-            showCommitOrAmend={commit.isDot && anythingToCommit}
-            isCommitMode={isCommitMode}
-            shouldSubmitAsDraft={shouldSubmitAsDraft}
-          />
+          runOperation={() => getApplicableOperations(true)}>
+          <T>Submit All</T>
         </OperationDisabledButton>
-      )}
-    </Tooltip>
-  ) : null;
+      </Tooltip>
+    ) : null;
+
+  return (
+    <>
+      {selectedSubmitButton}
+      {submitAllButton}
+    </>
+  );
 }
 
 async function tryToUpdateRemoteMessage(
