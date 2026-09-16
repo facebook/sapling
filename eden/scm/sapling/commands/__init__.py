@@ -87,6 +87,7 @@ with hgdemandimport.deactivated():
         debugconflictcontext,
         debugdirs,
         debugdryup,
+        debugmergetext,
         debugmetalog,
         debugmutation,
         debugrebuildchangelog,
