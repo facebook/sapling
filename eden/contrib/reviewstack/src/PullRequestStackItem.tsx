@@ -111,6 +111,7 @@ export default React.memo(function PullRequestStackItem({
   graphPosition,
   isSelected,
   comments,
+  isDraft,
   number,
   reviewDecision,
   state,
@@ -135,6 +136,7 @@ export default React.memo(function PullRequestStackItem({
           </Box>
           <BulletItems>
             <PullRequestStateLabel
+              isDraft={isDraft}
               reviewDecision={reviewDecision ?? null}
               state={state}
               variant="small"

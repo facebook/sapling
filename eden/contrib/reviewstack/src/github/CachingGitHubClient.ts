@@ -62,6 +62,7 @@ type NormalizedStackPullRequestFragment = {
   title: string;
   updatedAt: string;
   state: PullRequestState;
+  isDraft: boolean;
   reviewDecision: PullRequestReviewDecision | null | undefined;
   headRefOid: GitObjectID;
   numComments: number;
@@ -148,6 +149,14 @@ class OpenTransaction<S extends Store, O = StoreTypes[S]> {
           reject(event);
         }
       };
+    });
+  }
+
+  put(obj: O): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = this.store.put(obj);
+      request.onsuccess = _event => resolve();
+      request.onerror = reject;
     });
   }
 
@@ -322,7 +331,7 @@ export default class CachingGitHubClient implements GitHubClient {
         //   possible to evict/update entries in the table, as appropriate.
         // - StackPullRequestFragment is defined in StackPullRequestFragment.graphql,
         //   so if it changes, then this must be updated, as well.
-        return tx.add(normalizedFragment);
+        return tx.put(normalizedFragment);
       }),
     );
     await tx.commit();
@@ -469,13 +478,21 @@ export default class CachingGitHubClient implements GitHubClient {
               return;
             }
 
-            const {title, updatedAt, state, reviewDecision, headRefOid, numComments} = result;
+            const {title, updatedAt, state, isDraft, reviewDecision, headRefOid, numComments} =
+              result;
+            // Refetch cache entries written before StackPullRequestFragment
+            // included the draft state.
+            if (typeof isDraft !== 'boolean') {
+              resolve(null);
+              return;
+            }
             resolve({
               __typename: 'PullRequest',
               number: pr,
               title,
               updatedAt,
               state,
+              isDraft,
               reviewDecision,
               headRefOid,
               comments: {
@@ -632,7 +649,7 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {number, title, updatedAt, state, reviewDecision, headRefOid, comments} = fragment;
+  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid, comments} = fragment;
   return {
     owner,
     name,
@@ -640,6 +657,7 @@ function normalizePullRequestFragment(
     title,
     updatedAt,
     state,
+    isDraft,
     reviewDecision,
     headRefOid,
     numComments: comments.totalCount,

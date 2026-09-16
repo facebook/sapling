@@ -18,6 +18,7 @@ query PullRequestQuery(
       bodyHTML
       baseRefOid
       state
+      isDraft
       reviewDecision
       viewerCanUpdate
       viewerDidAuthor

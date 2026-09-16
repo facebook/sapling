@@ -25,7 +25,7 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
     return null;
   }
 
-  const {number, reviewDecision, state, titleHTML, url} = pullRequest;
+  const {isDraft, number, reviewDecision, state, titleHTML, url} = pullRequest;
 
   return (
     <Box
@@ -44,7 +44,11 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
         </Link>
       </Box>
       <Box display="flex" gridGap={2}>
-        <PullRequestStateLabel reviewDecision={reviewDecision ?? null} state={state} />
+        <PullRequestStateLabel
+          isDraft={isDraft}
+          reviewDecision={reviewDecision ?? null}
+          state={state}
+        />
         <PullRequestStack />
         {/*
           Our goal here is to minimize re-rendering when the user selects a

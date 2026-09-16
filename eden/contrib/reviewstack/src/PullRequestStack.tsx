@@ -91,7 +91,7 @@ export default function PullRequestStack(): React.ReactElement | null {
     <ButtonGroup>
       <ActionMenu>
         <ActionMenu.Button sx={{display: 'inline-block'}}>{buttonLabel}</ActionMenu.Button>
-        <ActionMenu.Overlay width="xxlarge">
+        <ActionMenu.Overlay width="xxlarge" sx={{zIndex: 100}}>
           <ActionList selectionVariant="single">
             {graphRows != null
               ? graphRows.map(({graphPosition, pullRequest}) => (

@@ -14,15 +14,17 @@ import {StateLabel} from '@primer/react';
 type Status = 'pullClosed' | 'pullMerged' | 'pullOpened';
 
 export default function PullRequestStateLabel({
+  isDraft = false,
   reviewDecision,
   state,
   variant = 'normal',
 }: {
+  isDraft?: boolean;
   reviewDecision: PullRequestReviewDecision | null;
   state: PullRequestState;
   variant?: 'small' | 'normal';
 }) {
-  const {status, label, color} = statusAndLabel(state, reviewDecision);
+  const {status, label, color} = statusAndLabel(state, reviewDecision, isDraft);
   return (
     <StateLabel status={status} variant={variant} sx={{backgroundColor: color}}>
       {label}
@@ -33,6 +35,7 @@ export default function PullRequestStateLabel({
 function statusAndLabel(
   state: PullRequestState,
   reviewDecision: PullRequestReviewDecision | null,
+  isDraft: boolean,
 ): {
   status: Status;
   label: string;
@@ -45,6 +48,9 @@ function statusAndLabel(
       return {status: 'pullMerged', label: 'Merged'};
     case PullRequestState.Open: {
       const status = 'pullOpened';
+      if (isDraft) {
+        return {status, label: 'Draft Review', color: 'fg.muted'};
+      }
       if (reviewDecision === null) {
         return {status, label: 'Open', color: 'success.fg'};
       }
