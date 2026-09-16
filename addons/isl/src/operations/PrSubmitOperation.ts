@@ -25,7 +25,7 @@ export class PrSubmitOperation extends Operation {
   }
 
   getArgs() {
-    const args: Array<CommandArg> = ['pr', 'submit'];
+    const args: Array<CommandArg> = ['pr', 'submit', '--config', 'github.submit-to-upstream=false'];
     if (this.options?.draft) {
       args.push('--draft');
     }

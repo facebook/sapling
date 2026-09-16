@@ -29,6 +29,8 @@ describe('PrSubmitOperation', () => {
     expect(operation.getArgs()).toEqual([
       'pr',
       'submit',
+      '--config',
+      'github.submit-to-upstream=false',
       '--draft',
       '--rev',
       succeedableRevset('abc123'),
@@ -42,7 +44,15 @@ describe('PrSubmitOperation', () => {
   it('resolves the current commit when the head may change first', () => {
     const operation = provider.submitOperation([], {draft: true});
 
-    expect(operation.getArgs()).toEqual(['pr', 'submit', '--draft', '--rev', exactRevset('.')]);
+    expect(operation.getArgs()).toEqual([
+      'pr',
+      'submit',
+      '--config',
+      'github.submit-to-upstream=false',
+      '--draft',
+      '--rev',
+      exactRevset('.'),
+    ]);
   });
 
   it('submits the complete current stack', () => {
@@ -52,6 +62,14 @@ describe('PrSubmitOperation', () => {
       reviewers: ['alice'],
     });
 
-    expect(operation.getArgs()).toEqual(['pr', 'submit', '--stack', '--reviewer', 'alice']);
+    expect(operation.getArgs()).toEqual([
+      'pr',
+      'submit',
+      '--config',
+      'github.submit-to-upstream=false',
+      '--stack',
+      '--reviewer',
+      'alice',
+    ]);
   });
 });

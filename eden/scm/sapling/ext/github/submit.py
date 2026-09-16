@@ -144,10 +144,17 @@ class PullRequestParams:
     number: int
 
 
-async def get_partitions(ui, repo, store, filter, *filter_args) -> List[List[CommitData]]:
+async def get_partitions(
+    ui,
+    repo,
+    store,
+    filter,
+    *filter_args,
+    target_repository: Optional[Tuple[str, str, str]] = None,
+) -> List[List[CommitData]]:
     commits_to_process = await asyncio.gather(
         *[
-            derive_commit_data(node, repo, store)
+            derive_commit_data(node, repo, store, target_repository)
             for node in repo.nodes(filter, *filter_args)
         ]
     )
@@ -188,16 +195,35 @@ async def update_commits_in_stack(
 
     workflow = SubmitWorkflow.from_config(ui)
 
+    origin = get_push_origin(ui)
+    submit_to_upstream = ui.configbool("github", "submit-to-upstream", True)
+    target_repository = None
+    if not submit_to_upstream:
+        owner, name = get_owner_and_name(origin)
+        target_repository = (github_repo.hostname, owner, name)
+
     if rev:
         commit_filter = "sort(%r %% public(), -rev)" if include_stack else "%r"
-        partitions = await get_partitions(ui, repo, store, commit_filter, rev)
+        partitions = await get_partitions(
+            ui,
+            repo,
+            store,
+            commit_filter,
+            rev,
+            target_repository=target_repository,
+        )
     else:
         # Preserve the command's historical behavior when no revision is supplied.
-        partitions = await get_partitions(ui, repo, store, "sort(. %% public(), -rev)")
+        partitions = await get_partitions(
+            ui,
+            repo,
+            store,
+            "sort(. %% public(), -rev)",
+            target_repository=target_repository,
+        )
     if not partitions:
         ui.status_err(_("no commits to submit\n"))
         return 0
-    origin = get_push_origin(ui)
     use_placeholder_strategy = ui.configbool("github", "placeholder-strategy")
     if use_placeholder_strategy:
         params = await create_placeholder_strategy_params(
@@ -242,7 +268,8 @@ async def update_commits_in_stack(
             partitions, is_draft, github_repo.hostname, ui
         )
         if reviewers:
-            repository = await get_repository_for_origin(
+            repository = await get_submit_repository(
+                ui,
                 get_push_origin(ui), github_repo.hostname
             )
             await request_reviewers_for_partitions(
@@ -267,8 +294,8 @@ async def update_commits_in_stack(
         ]
         if existing_prs:
             if not repository:
-                repository = await get_repository_for_origin(
-                    origin, github_repo.hostname
+                repository = await get_submit_repository(
+                    ui, origin, github_repo.hostname
                 )
             # Update base branches on existing PRs before pushing.
             # Process from bottom of stack to top so bases are set correctly.
@@ -298,7 +325,7 @@ async def update_commits_in_stack(
 
     if params.pull_requests_to_create:
         if not repository:
-            repository = await get_repository_for_origin(origin, github_repo.hostname)
+            repository = await get_submit_repository(ui, origin, github_repo.hostname)
         if use_placeholder_strategy:
             assert isinstance(params, PlaceholderStrategyParams)
             await create_pull_requests_from_placeholder_issues(
@@ -330,7 +357,7 @@ async def update_commits_in_stack(
     tip = hex(partitions[0][0].node)
 
     if not repository:
-        repository = await get_repository_for_origin(origin, github_repo.hostname)
+        repository = await get_submit_repository(ui, origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
             partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
@@ -559,8 +586,8 @@ async def create_serial_strategy_params(
             # top.node will become the head of a new PR, so it needs a branch
             # name.
             if next_pull_request_number is None:
-                repository = await get_repository_for_origin(
-                    origin, github_repo.hostname
+                repository = await get_submit_repository(
+                    ui, origin, github_repo.hostname
                 )
                 upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
                 result = await gh_submit.guess_next_pull_request_number(
@@ -618,7 +645,7 @@ async def create_pull_requests_serially(
     Each CommitData in `commits` will be updated such that its `.pr` field is
     set appropriately.
     """
-    head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
+    head_ref_prefix = f"{repository.owner}:" if repository.upstream else ""
     owner, name = repository.get_upstream_owner_and_name()
     hostname = repository.hostname
 
@@ -726,7 +753,7 @@ async def create_placeholder_strategy_params(
     repository: Optional[Repository] = None
     pull_requests_to_create: List[PullRequestParams] = []
     if commits_that_need_pull_requests:
-        repository = await get_repository_for_origin(origin, github_repo.hostname)
+        repository = await get_submit_repository(ui, origin, github_repo.hostname)
         issue_numbers = await _create_placeholder_issues(
             repository, len(commits_that_need_pull_requests)
         )
@@ -765,7 +792,7 @@ async def create_pull_requests_from_placeholder_issues(
     Each entry in `commits` is a (CommitData, branch_name, issue_number). Each
     CommitData will be updated such that its `.pr` field is set appropriately.
     """
-    head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
+    head_ref_prefix = f"{repository.owner}:" if repository.upstream else ""
     owner, name = repository.get_upstream_owner_and_name()
     base_branch_for_repo = repository.get_base_branch()
     hostname = repository.hostname
@@ -863,6 +890,13 @@ async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
     return await get_repo(hostname, origin_owner, origin_name)
 
 
+async def get_submit_repository(ui, origin: str, hostname: str) -> Repository:
+    repository = await get_repository_for_origin(origin, hostname)
+    if not ui.configbool("github", "submit-to-upstream", True):
+        repository.upstream = None
+    return repository
+
+
 def get_push_origin(ui) -> str:
     test_url = os.environ.get("SL_TEST_GH_URL")
     if test_url:
@@ -892,9 +926,22 @@ async def get_repo(hostname: str, owner: str, name: str) -> Repository:
         raise error.Abort(_("failed to fetch repo id: %s") % repo_result.unwrap_err())
 
 
-async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
+async def derive_commit_data(
+    node: bytes,
+    repo,
+    store: PullRequestStore,
+    target_repository: Optional[Tuple[str, str, str]] = None,
+) -> CommitData:
     ctx = repo[node]
     pr_id = get_pull_request_for_context(store, repo, ctx)
+    if pr_id and target_repository:
+        hostname, owner, name = target_repository
+        if (pr_id.get_hostname(), pr_id.owner, pr_id.name) != (
+            hostname,
+            owner,
+            name,
+        ):
+            pr_id = None
     pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
     msg = None
     if pr:

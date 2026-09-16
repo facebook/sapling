@@ -65,6 +65,8 @@ describe('submitting from Commit Info', () => {
           args: [
             'pr',
             'submit',
+            '--config',
+            'github.submit-to-upstream=false',
             '--draft',
             '--rev',
             succeedableRevset('a'),
@@ -88,7 +90,14 @@ describe('submitting from Commit Info', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['pr', 'submit', '--draft', '--stack'],
+          args: [
+            'pr',
+            'submit',
+            '--config',
+            'github.submit-to-upstream=false',
+            '--draft',
+            '--stack',
+          ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'PrSubmitOperation',
@@ -104,7 +113,15 @@ describe('submitting from Commit Info', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: ['pr', 'submit', '--draft', '--rev', exactRevset('.')],
+          args: [
+            'pr',
+            'submit',
+            '--config',
+            'github.submit-to-upstream=false',
+            '--draft',
+            '--rev',
+            exactRevset('.'),
+          ],
         }),
       }),
     );
@@ -118,7 +135,7 @@ describe('submitting from Commit Info', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: ['pr', 'submit', '--stack'],
+          args: ['pr', 'submit', '--config', 'github.submit-to-upstream=false', '--stack'],
         }),
       }),
     );
