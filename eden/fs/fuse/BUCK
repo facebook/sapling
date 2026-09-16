@@ -55,6 +55,7 @@ cpp_library(
         "//eden/fs/utils:process_access_log",
         "//folly:cancellation_token",
         "//folly:file",
+        "//folly:function",
         "//folly:portability",
         "//folly:range",
         "//folly:shared_mutex",

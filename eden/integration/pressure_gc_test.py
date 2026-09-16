@@ -104,6 +104,9 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
     num_files: int = 10
     deep_file_count: int = 20
 
+    def select_storage_engine(self) -> str:
+        return "sqlite"
+
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         result = super().edenfs_extra_config() or {}
         result.setdefault("experimental", []).append("enable-pressure-based-gc = true")
@@ -184,13 +187,7 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             if after <= before - minimum or time.monotonic() >= deadline:
                 break
             await asyncio.sleep(0.1)
-        if self.use_io_uring() and trees_only:
-            # FIXME: Directory reclamation fails without FORGET delivery.
-            # Aggregate counts can still drop for zero-kernel-reference inodes;
-            # file FORGET delivery is checked separately.
-            self.assertGreater(after, before - minimum)
-        else:
-            self.assertLessEqual(after, before - minimum)
+        self.assertLessEqual(after, before - minimum)
 
     async def test_active_invalidation_unloads_inodes(self) -> None:
         """With pressure-based GC, debugInvalidateNonMaterialized triggers
@@ -225,16 +222,17 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # Files should still be readable
         self.read_all()
 
-    async def test_active_invalidation_forgets_file_inode(self) -> None:
+    def load_file_inode(self) -> int:
+        self.assertEqual("0\n", self.read_file("a/0"))
+        return os.stat(os.path.join(self.mount, "a/0")).st_ino
+
+    async def assert_file_inode_forgotten(self, inode_number: int) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")
 
-        self.assertEqual("0\n", self.read_file("a/0"))
-        inode_number = os.stat(os.path.join(self.mount, "a/0")).st_ino
         async with self.get_async_thrift_client() as client:
             info = await client.debugGetInodePath(self.mount_path_bytes, inode_number)
             self.assertEqual(b"a/0", info.path)
-            self.assertTrue(info.loaded)
             self.assertTrue(info.linked)
 
             deadline = time.monotonic() + 10
@@ -253,12 +251,27 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
                 if time.monotonic() >= deadline:
                     break
                 await asyncio.sleep(0.1)
-            # FIXME: io_uring mounts retain the inode until they read FORGETs.
-            self.assertEqual(
-                not self.use_io_uring(),
+            self.assertTrue(
                 forgotten,
                 f"inode {inode_number}: forgotten={forgotten}, last observed state={info!r}",
             )
+
+    async def test_active_invalidation_forgets_file_inode(self) -> None:
+        await self.assert_file_inode_forgotten(self.load_file_inode())
+
+    async def test_active_invalidation_forgets_file_inode_after_takeover(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        inode_number = self.load_file_inode()
+        device = os.stat(self.mount).st_dev
+        with self.get_thrift_client() as client:
+            transport = client.listMounts()[0].fuseTransport
+        self.eden.graceful_restart()
+        self.assertEqual(device, os.stat(self.mount).st_dev)
+        with self.get_thrift_client() as client:
+            self.assertEqual(transport, client.listMounts()[0].fuseTransport)
+        await self.assert_file_inode_forgotten(inode_number)
 
     async def test_active_invalidation_respects_age(self) -> None:
         """Active invalidation should only affect inodes older than the

@@ -407,6 +407,14 @@ void IoUringFuseTransport::initializeRingPool(
     size_t queueCount,
     size_t maxRequestPayloadSize) {
   auto ringPool = std::make_unique<RingPool>();
+  const auto stopFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+  if (stopFd < 0) {
+    throw std::system_error(
+        errno,
+        std::generic_category(),
+        "failed to create companion FUSE reader wakeup fd");
+  }
+  ringPool->devFuseStopFd = folly::File{stopFd, /*ownsFd=*/true};
   ringPool->queueDepth = queueDepth_;
   ringPool->maxRequestPayloadSize = maxRequestPayloadSize;
   ringPool->queues.resize(queueCount);
@@ -435,7 +443,12 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
 
 std::optional<std::string> IoUringFuseTransport::prepareAllQueues(
     FuseChannel& channel) {
-  initializeSession(channel);
+  try {
+    initializeSession(channel);
+  } catch (const std::exception& ex) {
+    destroyRingPool();
+    return fmt::format("failed to prepare io_uring ring pool: {}", ex.what());
+  }
   if (!ringPool_) {
     return "io_uring ring pool was not created";
   }
@@ -1165,7 +1178,9 @@ const char* IoUringFuseTransport::getName() const {
 size_t IoUringFuseTransport::getWorkerThreadCount(
     size_t defaultThreadCount) const {
 #if EDEN_HAVE_FUSE_IO_URING
-  return getConfiguredQueueCount(defaultThreadCount);
+  // FORGETs still arrive on /dev/fuse, so keep one dedicated reader in
+  // addition to the io_uring queue workers.
+  return getConfiguredQueueCount(defaultThreadCount) + 1;
 #else
   return defaultThreadCount;
 #endif
@@ -1182,6 +1197,17 @@ void IoUringFuseTransport::requestStopWakeup() {
   std::shared_lock lock{ringPoolMutex_};
   if (!ringPool_) {
     return;
+  }
+
+  int result;
+  do {
+    result = eventfd_write(ringPool_->devFuseStopFd.fd(), 1);
+  } while (result < 0 && errno == EINTR);
+  if (result < 0 && errno != EAGAIN) {
+    XLOGF(
+        ERR,
+        "failed to wake companion FUSE reader during shutdown: {}",
+        folly::errnoStr(errno));
   }
 
   for (auto& queue : ringPool_->queues) {
@@ -1210,15 +1236,28 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
 #if EDEN_HAVE_FUSE_IO_URING
   initializeSession(channel);
 
-  const auto queueId = nextQueueId_.fetch_add(1, std::memory_order_acq_rel);
-  if (!ringPool_ || queueId >= ringPool_->queues.size()) {
+  const auto workerId = nextWorkerId_.fetch_add(1, std::memory_order_acq_rel);
+  if (!ringPool_ || workerId > ringPool_->queues.size()) {
     throw std::runtime_error(
         fmt::format(
-            "failed to assign io_uring queue {} (queue_count={})",
-            queueId,
+            "failed to assign io_uring worker {} (queue_count={})",
+            workerId,
             ringPool_ ? ringPool_->queues.size() : 0));
   }
 
+  const auto workerCount = ringPool_->queues.size() + 1;
+  if (workerId == 0) {
+    // FORGET and other control requests remain on /dev/fuse after io_uring
+    // negotiation. This reader shares the managed workers' stop/join lifetime.
+    devFuseTransport_.processSession(
+        channel, ringPool_->devFuseStopFd.fd(), [&] {
+          channel.notifyTransportWorkerReady(
+              ringPool_->queues.size(), workerCount);
+        });
+    return;
+  }
+
+  const auto queueId = workerId - 1;
   auto& queue = ringPool_->queues[queueId];
   queue.ownerThreadId = std::this_thread::get_id();
   const auto myPid = getpid();
@@ -1235,7 +1274,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
   }
 
   initializeQueueForWorker(queue, channel.getFuseDeviceFd());
-  channel.notifyTransportWorkerReady(queue.queueId, ringPool_->queues.size());
+  channel.notifyTransportWorkerReady(queue.queueId, workerCount);
 
   while (true) {
     processPendingCommits(queue);

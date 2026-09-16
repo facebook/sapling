@@ -12,9 +12,13 @@
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseChannel.h"
 
+#include <folly/ScopeGuard.h>
 #include <folly/logging/xlog.h>
 
+#include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
+#include <cerrno>
 #include <limits>
 
 namespace facebook::eden {
@@ -32,15 +36,88 @@ ssize_t DevFuseTransport::readInitPacket(int fd, void* buf, size_t size) const {
 }
 
 void DevFuseTransport::processSession(FuseChannel& channel) {
+  processSession(channel, -1, [] {});
+}
+
+void DevFuseTransport::processSession(
+    FuseChannel& channel,
+    int stopFd,
+    folly::FunctionRef<void()> onReady) {
   std::vector<char> buf(channel.getTransportBufferSize());
+  const auto fuseFd = channel.getFuseDeviceFd();
+  auto fcntlRetry = [fuseFd](int command, int flags = 0) {
+    int result;
+    do {
+      result = fcntl(fuseFd, command, flags);
+    } while (result < 0 && errno == EINTR);
+    return result;
+  };
+  int originalFlags = -1;
+  SCOPE_EXIT {
+    if (originalFlags >= 0 && fcntlRetry(F_SETFL, originalFlags) < 0) {
+      XLOGF(
+          ERR,
+          "failed to restore FUSE device flags after companion reader: {}",
+          folly::errnoStr(errno));
+    }
+  };
+  if (stopFd >= 0) {
+    const auto flags = fcntlRetry(F_GETFL);
+    if (flags < 0) {
+      folly::throwSystemError("failed to read FUSE device flags");
+    }
+    // poll readiness can disappear before read(), including when the kernel
+    // removes an interrupted request. The read must not block after a stop.
+    if (fcntlRetry(F_SETFL, flags | O_NONBLOCK) < 0) {
+      folly::throwSystemError(
+          "failed to make companion FUSE reader nonblocking");
+    }
+    originalFlags = flags;
+  }
   // Save this for the sanity check later in the loop to avoid
   // additional syscalls on each loop iteration.
   auto myPid = getpid();
+  onReady();
 
   while (!channel.isStopRequested()) {
+    if (stopFd >= 0) {
+      pollfd fds[] = {{fuseFd, POLLIN, 0}, {stopFd, POLLIN, 0}};
+      if (poll(fds, 2, -1) < 0) {
+        if (errno == EINTR) {
+          continue;
+        }
+        folly::throwSystemError("failed to poll companion FUSE reader");
+      }
+      if (channel.isStopRequested()) {
+        break;
+      }
+      if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+        throw std::runtime_error("companion FUSE reader wakeup fd failed");
+      }
+      if (fds[1].revents & POLLIN) {
+        uint64_t value;
+        ssize_t result;
+        do {
+          result = read(stopFd, &value, sizeof(value));
+        } while (result < 0 && errno == EINTR);
+        if (result < 0 && errno != EAGAIN) {
+          folly::throwSystemError("failed to drain companion FUSE wakeup fd");
+        }
+        if (result >= 0 && static_cast<size_t>(result) != sizeof(value)) {
+          throw std::runtime_error("short read from companion FUSE wakeup fd");
+        }
+      }
+      if (fds[0].revents & POLLNVAL) {
+        folly::throwSystemErrorExplicit(
+            EBADF, "invalid device fd for companion FUSE reader");
+      }
+      if (!(fds[0].revents & (POLLIN | POLLHUP | POLLERR))) {
+        continue;
+      }
+    }
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
     // We can look at turning this on once the main plumbing is complete.
-    auto res = read(channel.getFuseDeviceFd(), buf.data(), buf.size());
+    auto res = read(fuseFd, buf.data(), buf.size());
     if (res < 0) {
       int error = errno;
       if (channel.isStopRequested()) {
@@ -98,6 +175,8 @@ void DevFuseTransport::processSession(FuseChannel& channel) {
         reinterpret_cast<const uint8_t*>(header + 1),
         argSize - sizeof(fuse_in_header)};
 
+    // A successfully dequeued FORGET cannot be retried, even if stop raced
+    // with read(). Dispatch it before leaving the reader.
     channel.dispatchRequestFromTransport(*this, *header, arg, myPid);
   }
 }

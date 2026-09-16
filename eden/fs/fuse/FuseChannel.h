@@ -984,7 +984,8 @@ class FuseChannel final : public FsChannel {
   void failTakeoverReadiness(folly::exception_wrapper&& ew);
 
   // Update the effective number of worker threads. For traditional dev/fuse, it
-  // is configured. For io_uring, it is the number of CPU cores.
+  // is configured. For io_uring, it is the number of CPU cores plus one
+  // /dev/fuse reader.
   void updateEffectiveWorkerThreadCount();
   void dispatchRequest(
       const FuseTransport& source,

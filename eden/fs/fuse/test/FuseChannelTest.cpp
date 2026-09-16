@@ -13,6 +13,7 @@
 #include <folly/ScopeGuard.h>
 #include <folly/Synchronized.h>
 #include <folly/executors/GlobalExecutor.h>
+#include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #if EDEN_HAVE_FUSE_IO_URING
@@ -100,6 +101,69 @@ class ForgetRecordingDispatcher : public TestDispatcher {
  private:
   folly::Synchronized<std::vector<Forget>> forgets_;
 };
+
+#if EDEN_HAVE_FUSE_IO_URING
+class IoUringReader {
+ public:
+  IoUringReader(FuseChannel& channel, FakeFuse& fuse)
+      : channel_{channel}, fuse_{fuse} {}
+
+  ~IoUringReader() {
+    stop();
+    if (thread_.joinable()) {
+      if (!stopped_.wait(kTimeout).isReady()) {
+        ADD_FAILURE() << "io_uring /dev/fuse reader did not stop";
+        if (fuse_.isStarted()) {
+          fuse_.close();
+        }
+      }
+      thread_.join();
+    }
+    XCHECK(waitForRequestsToFinish())
+        << "pending requests still reference the reader transport";
+  }
+
+  void start() {
+    // The first processSession worker reads /dev/fuse without creating a ring.
+    thread_ = std::thread([this] {
+      stoppedPromise_.setWith([this] {
+        transport_.processSession(channel_);
+        return folly::unit;
+      });
+    });
+  }
+
+  void stop() {
+    channel_.takeoverStop();
+    transport_.requestStopWakeup();
+  }
+
+  void join() {
+    if (!stopped_.wait(kTimeout).isReady()) {
+      throw std::runtime_error("io_uring /dev/fuse reader did not stop");
+    }
+    thread_.join();
+    std::move(stopped_).get();
+  }
+
+  bool waitForRequestsToFinish() {
+    const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (channel_.hasPendingRequests() &&
+           std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::yield();
+    }
+    return !channel_.hasPendingRequests();
+  }
+
+ private:
+  FuseChannel& channel_;
+  FakeFuse& fuse_;
+  IoUringFuseTransport transport_{8};
+  folly::Promise<folly::Unit> stoppedPromise_;
+  folly::Future<folly::Unit> stopped_{stoppedPromise_.getFuture()};
+  std::thread thread_;
+};
+#endif
 
 class FuseChannelTest : public ::testing::Test {
  protected:
@@ -199,6 +263,27 @@ class FuseChannelTest : public ::testing::Test {
     EXPECT_EQ(0, response.header.error);
     EXPECT_EQ(sizeof(fuse_entry_out), response.body.size());
     EXPECT_FALSE(channel.isStopRequested());
+  }
+
+  void expectSingleForgetWithoutReply(FuseChannel& channel) {
+    const fuse_forget_in arg{.nlookup = 3};
+    fuse_.sendRequest(FUSE_FORGET, 17, arg);
+    expectForgetsWithoutReply(channel, {{17, 3}});
+  }
+
+  void expectBatchForgetWithoutReply(FuseChannel& channel) {
+    const struct {
+      fuse_batch_forget_in header;
+      fuse_forget_one entries[2];
+    } arg{
+        .header = {.count = 2, .dummy = 0},
+        .entries = {
+            {.nodeid = 17, .nlookup = 3}, {.nodeid = 29, .nlookup = 5}}};
+    static_assert(
+        sizeof(arg) ==
+        sizeof(fuse_batch_forget_in) + 2 * sizeof(fuse_forget_one));
+    fuse_.sendRequest(FUSE_BATCH_FORGET, 0, arg);
+    expectForgetsWithoutReply(channel, {{17, 3}, {29, 5}});
   }
 
   FakeFuse fuse_;
@@ -888,10 +973,7 @@ TEST_F(FuseChannelTest, devFuseForgetHasNoReply) {
   auto channel = createChannel(/*numThreads=*/1);
   auto completeFuture = performInit(channel.get());
 
-  const fuse_forget_in arg{.nlookup = 3};
-  fuse_.sendRequest(FUSE_FORGET, 17, arg);
-
-  expectForgetsWithoutReply(*channel, {{17, 3}});
+  expectSingleForgetWithoutReply(*channel);
   EXPECT_FALSE(completeFuture.isReady());
   channel->takeoverStop();
   std::move(completeFuture).get(kTimeout);
@@ -901,22 +983,114 @@ TEST_F(FuseChannelTest, devFuseBatchForgetHasNoReply) {
   auto channel = createChannel(/*numThreads=*/1);
   auto completeFuture = performInit(channel.get());
 
-  const struct {
-    fuse_batch_forget_in header;
-    fuse_forget_one entries[2];
-  } arg{
-      .header = {.count = 2},
-      .entries = {{.nodeid = 17, .nlookup = 3}, {.nodeid = 29, .nlookup = 5}}};
-  static_assert(
-      sizeof(arg) ==
-      sizeof(fuse_batch_forget_in) + 2 * sizeof(fuse_forget_one));
-  fuse_.sendRequest(FUSE_BATCH_FORGET, 0, arg);
-
-  expectForgetsWithoutReply(*channel, {{17, 3}, {29, 5}});
+  expectBatchForgetWithoutReply(*channel);
   EXPECT_FALSE(completeFuture.isReady());
   channel->takeoverStop();
   std::move(completeFuture).get(kTimeout);
 }
+
+#if EDEN_HAVE_FUSE_IO_URING
+TEST_F(FuseChannelTest, ioUringWorkerCountIncludesDevFuseReader) {
+  IoUringFuseTransport transport{8};
+  const auto cpuCount = get_nprocs_conf();
+  const size_t queueCount = cpuCount > 0 ? static_cast<size_t>(cpuCount) : 2;
+  EXPECT_EQ(queueCount + 1, transport.getWorkerThreadCount(2));
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseForgetHasNoReply) {
+  auto channel = createChannel(/*numThreads=*/1);
+  IoUringReader reader{*channel, fuse_};
+  reader.start();
+
+  expectSingleForgetWithoutReply(*channel);
+  ASSERT_TRUE(reader.waitForRequestsToFinish());
+  reader.stop();
+  reader.join();
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseBatchForgetHasNoReply) {
+  auto channel = createChannel(/*numThreads=*/1);
+  IoUringReader reader{*channel, fuse_};
+  reader.start();
+
+  expectBatchForgetWithoutReply(*channel);
+  ASSERT_TRUE(reader.waitForRequestsToFinish());
+  reader.stop();
+  reader.join();
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseIdleStopRestoresFlags) {
+  auto channel = createChannel(/*numThreads=*/1);
+  const int originalFlags = fcntl(channel->getFuseDeviceFd(), F_GETFL);
+  ASSERT_GE(originalFlags, 0);
+  IoUringReader reader{*channel, fuse_};
+  reader.start();
+  expectForgetsWithoutReply(*channel, {});
+  ASSERT_TRUE(reader.waitForRequestsToFinish());
+  EXPECT_NE(0, fcntl(channel->getFuseDeviceFd(), F_GETFL) & O_NONBLOCK);
+
+  reader.stop();
+  reader.join();
+
+  EXPECT_TRUE(fuse_.isStarted());
+  EXPECT_EQ(originalFlags, fcntl(channel->getFuseDeviceFd(), F_GETFL));
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseStopBeforeStart) {
+  auto channel = createChannel(/*numThreads=*/1);
+  const int originalFlags = fcntl(channel->getFuseDeviceFd(), F_GETFL);
+  ASSERT_GE(originalFlags, 0);
+  IoUringReader reader{*channel, fuse_};
+  reader.stop();
+
+  reader.start();
+  reader.join();
+
+  EXPECT_TRUE(channel->isStopRequested());
+  EXPECT_TRUE(fuse_.isStarted());
+  EXPECT_EQ(originalFlags, fcntl(channel->getFuseDeviceFd(), F_GETFL));
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseEofRestoresFlags) {
+  auto channel = createChannel(/*numThreads=*/1);
+  const int originalFlags = fcntl(channel->getFuseDeviceFd(), F_GETFL);
+  ASSERT_GE(originalFlags, 0);
+  IoUringReader reader{*channel, fuse_};
+  reader.start();
+  expectForgetsWithoutReply(*channel, {});
+  ASSERT_TRUE(reader.waitForRequestsToFinish());
+  EXPECT_NE(0, fcntl(channel->getFuseDeviceFd(), F_GETFL) & O_NONBLOCK);
+
+  fuse_.close();
+  reader.join();
+
+  EXPECT_TRUE(channel->isStopRequested());
+  EXPECT_EQ(originalFlags, fcntl(channel->getFuseDeviceFd(), F_GETFL));
+}
+
+TEST_F(FuseChannelTest, ioUringDevFuseReplyAfterReaderStops) {
+  auto channel = createChannel(/*numThreads=*/1);
+  IoUringReader reader{*channel, fuse_};
+  reader.start();
+  const auto lookupId = fuse_.sendLookup(FUSE_ROOT_ID, "deferred");
+  auto lookup = dispatcher_->waitForLookup(lookupId, kTimeout);
+  ASSERT_TRUE(channel->hasPendingRequests());
+
+  reader.stop();
+  reader.join();
+  EXPECT_TRUE(channel->hasPendingRequests());
+
+  const auto expected = genRandomLookupResponse(99);
+  lookup.promise.setValue(expected);
+  const auto response = fuse_.recvResponse();
+  EXPECT_EQ(lookupId, response.header.unique);
+  EXPECT_EQ(0, response.header.error);
+  EXPECT_EQ(
+      ByteRange(reinterpret_cast<const uint8_t*>(&expected), sizeof(expected)),
+      ByteRange(response.body.data(), response.body.size()));
+  EXPECT_TRUE(reader.waitForRequestsToFinish());
+}
+#endif
 
 TEST_F(FuseChannelTest, interruptLookups) {
   auto channel = createChannel();

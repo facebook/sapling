@@ -23,12 +23,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <folly/File.h>
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/synchronization/CallOnce.h>
 
 #include <gtest/gtest_prod.h>
 
+#include "eden/fs/fuse/DevFuseTransport.h"
 #include "eden/fs/fuse/FuseFeatures.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
@@ -165,6 +167,7 @@ class IoUringFuseTransport final : public FuseTransport {
 
     size_t queueDepth{0};
     size_t maxRequestPayloadSize{0};
+    folly::File devFuseStopFd;
     std::vector<RingQueue> queues;
   };
 
@@ -203,6 +206,8 @@ class IoUringFuseTransport final : public FuseTransport {
   // shared lock too.
   mutable folly::SharedMutex ringPoolMutex_;
   std::unique_ptr<RingPool> ringPool_;
+  // Request contexts retain their source transport after the reader exits.
+  DevFuseTransport devFuseTransport_;
 
   // Sentinel stored in RingQueue::eventFd to record that requestStopWakeup()
   // observed the queue before its eventfd was published. See
@@ -279,7 +284,7 @@ class IoUringFuseTransport final : public FuseTransport {
   mutable folly::Synchronized<std::unordered_map<uint64_t, RingEntry*>>
       outstandingEntries_;
   mutable folly::once_flag sessionInitFlag_;
-  mutable std::atomic<size_t> nextQueueId_{0};
+  mutable std::atomic<size_t> nextWorkerId_{0};
   // When true, pass IORING_ENTER_NO_IOWAIT on io_uring_enter so that a worker
   // parked waiting for completions is not charged as iowait, which otherwise
   // inflates /proc/stat iowait and cgroup io.pressure (PSI) even when no real
