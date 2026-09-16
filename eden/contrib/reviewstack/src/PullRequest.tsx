@@ -12,6 +12,7 @@ import type {GitHubPullRequestParams} from './jotai';
 import CenteredSpinner from './CenteredSpinner';
 import DiffView from './DiffView';
 import PullRequestChangeCount from './PullRequestChangeCount';
+import PullRequestFileTree from './PullRequestFileTree';
 import PullRequestLabels from './PullRequestLabels';
 import PullRequestReviewers from './PullRequestReviewers';
 import PullRequestSignals from './PullRequestSignals';
@@ -160,6 +161,9 @@ function PullRequestDetails() {
         padding={3}>
         <TrustedRenderedMarkdown trustedHTML={pullRequestBodyHTML} />
       </Box>
+      <Suspense fallback={<CenteredSpinner message="Loading changed files..." />}>
+        <PullRequestFileTree />
+      </Suspense>
       <PullRequestSignals />
       <Suspense fallback={<CenteredSpinner />}>
         <div>

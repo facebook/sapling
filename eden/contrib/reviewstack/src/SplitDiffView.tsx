@@ -26,7 +26,7 @@ import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
 import {primerColorModeAtom} from './jotai/atoms';
 import {useSplitDiffViewData} from './jotai/hooks/';
-import {groupBy} from './utils';
+import {getFileAnchorID, groupBy} from './utils';
 import {UnfoldIcon} from '@primer/octicons-react';
 import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
@@ -100,7 +100,12 @@ export default function SplitDiffView({
 
   if (loadable.state === 'loading') {
     return (
-      <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+      <Box
+        id={getFileAnchorID(path)}
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border.default"
+        borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
         <Box padding={3} display="flex" justifyContent="center" alignItems="center">
           <Spinner size="small" />
@@ -117,7 +122,12 @@ export default function SplitDiffView({
         ? loadable.error
         : loadable.error?.message ?? 'Unknown error';
     return (
-      <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+      <Box
+        id={getFileAnchorID(path)}
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border.default"
+        borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
         <Box padding={3} color="danger.fg">
           <Text>Error loading diff: {errorMessage}</Text>
@@ -140,7 +150,12 @@ export default function SplitDiffView({
   const shouldShowDiff = !isLargeDiff || diffLoaded;
 
   return (
-    <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+    <Box
+      id={getFileAnchorID(path)}
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor="border.default"
+      borderRadius={2}>
       <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
       {open &&
         (shouldShowDiff ? (

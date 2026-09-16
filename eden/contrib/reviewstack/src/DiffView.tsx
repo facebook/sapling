@@ -13,6 +13,7 @@ import SplitDiffView from './SplitDiffView';
 import hasBinaryContent from './hasBinaryContent';
 import joinPath from './joinPath';
 import {fileContentsDeltaAtom, gitHubBlobAtom} from './jotai/atoms';
+import {getFileAnchorID} from './utils';
 import {Box, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import React, {Suspense, useMemo} from 'react';
@@ -102,7 +103,7 @@ function RemovedFile({basePath, name, oid}: {basePath: string; name: string; oid
   // useAtomValue will suspend until the blob is loaded
   useAtomValue(blobAtom);
   return (
-    <div>
+    <div id={getFileAnchorID(path)}>
       <FileHeader path={path} />
       <div className="patch-remove-line">File removed.</div>
     </div>
@@ -155,7 +156,7 @@ function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequ
 
 function BinaryFile({path}: {path: string}) {
   return (
-    <Box>
+    <Box id={getFileAnchorID(path)}>
       <FileHeader path={path} />
       <Text>Binary file not shown.</Text>
     </Box>

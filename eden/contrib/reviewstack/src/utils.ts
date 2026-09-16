@@ -92,6 +92,10 @@ export function getPathForChange(change: CommitChange): string {
   }
 }
 
+export function getFileAnchorID(path: string): string {
+  return `reviewstack-file-${encodeURIComponent(path)}`;
+}
+
 export function getTreeEntriesForChange(change: CommitChange): {
   before: TreeEntry | null;
   after: TreeEntry | null;
