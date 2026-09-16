@@ -84,7 +84,7 @@ ${defineStyleOnBody(theme)}
   margin-bottom: 0 !important;
 }
 
-/* Use similar styles for changes as Github's */
+/* Render GitHub suggestion blocks as a compact, two-part diff. */
 .PRT-bodyHTML .blob-code-deletion,
 .PRT-bodyHTML .blob-code-marker-deletion {
   background-color: ${theme?.colors.diffBlob.deletion.lineBg};
@@ -105,79 +105,101 @@ ${defineStyleOnBody(theme)}
   color: ${theme?.colors.diffBlob.addition.numText};
 }
 
-/* Style the suggestion container */
-.PRT-bodyHTML .js-suggested-changes-blob,
-.PRT-bodyHTML .diff-view {
+/* GitHub returns this markup in bodyHTML. Keep its table semantics intact so
+ * all deleted rows appear above all added rows. */
+.PRT-bodyHTML .js-suggested-changes-blob {
   border: 1px solid ${theme?.colors.border.default};
   border-radius: 6px;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   margin: 8px 0;
-  /* Use flexbox to collapse whitespace text nodes between elements */
-  display: flex;
-  flex-direction: column;
 }
 
-/* Reduce padding in suggestion header - style like GitHub */
 .PRT-bodyHTML .js-suggested-changes-blob > div:first-child {
+  align-items: center;
+  display: flex;
   padding: 8px 10px;
   background-color: ${theme?.colors.canvas.subtle};
   border-bottom: 1px solid ${theme?.colors.border.default};
   font-size: 12px;
+  line-height: 18px;
   color: ${theme?.colors.fg.muted};
-  /* Collapse whitespace inside header */
-  display: flex;
-  flex-direction: column;
 }
 
-/* Collapse whitespace around "Suggested change" text */
 .PRT-bodyHTML .js-suggested-changes-blob > div:first-child .color-fg-muted {
-  display: inline;
+  flex: 1 1 auto;
 }
 
-/* Remove excessive padding in blob wrapper */
 .PRT-bodyHTML .js-suggested-changes-blob .blob-wrapper {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
   padding: 0;
-  /* Collapse whitespace inside blob wrapper */
-  display: flex;
-  flex-direction: column;
 }
 
-/* Hide empty js-apply-changes div */
 .PRT-bodyHTML .js-suggested-changes-blob .js-apply-changes:empty {
   display: none;
 }
 
-/* Ensure table fills width */
 .PRT-bodyHTML .js-suggested-changes-blob table {
-  width: 100%;
+  border: 0;
   border-collapse: collapse;
+  border-spacing: 0;
+  display: table;
+  margin: 0;
+  min-width: 100%;
+  table-layout: auto;
 }
 
 .PRT-bodyHTML .js-suggested-changes-blob td {
+  border: 0;
   font-family: ${theme?.fonts.mono};
   font-size: 12px;
   line-height: 20px;
+  padding-block: 0;
 }
 
-/* Style line number cells */
 .PRT-bodyHTML .js-suggested-changes-blob .blob-num {
   width: 1%;
-  min-width: 40px;
-  padding: 0 10px;
+  min-width: 44px;
+  padding: 0 8px;
   text-align: right;
   vertical-align: top;
-  /* Hide the unhelpful "·" character */
-  font-size: 0;
+  user-select: none;
+  white-space: nowrap;
 }
 
-/* Style code cells with proper padding */
+.PRT-bodyHTML .js-suggested-changes-blob .blob-num::before {
+  content: attr(data-line-number);
+}
+
 .PRT-bodyHTML .js-suggested-changes-blob .blob-code-inner {
-  padding: 0 10px;
-  white-space: pre-wrap;
-  word-break: break-all;
+  min-width: max-content;
+  padding: 0 10px 0 6px;
+  vertical-align: top;
+  white-space: pre;
+  word-break: normal;
 }
 
-/* Word-level diff highlighting for changed characters */
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-marker-deletion::before,
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-marker-addition::before {
+  display: inline-block;
+  width: 16px;
+}
+
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-marker-deletion::before {
+  color: ${theme?.colors.diffBlob.deletion.numText};
+  content: '-';
+}
+
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-marker-addition::before {
+  color: ${theme?.colors.diffBlob.addition.numText};
+  content: '+';
+}
+
 .PRT-bodyHTML .js-suggested-changes-blob .x {
   background-color: ${theme?.colors.diffBlob.addition.wordBg};
 }
