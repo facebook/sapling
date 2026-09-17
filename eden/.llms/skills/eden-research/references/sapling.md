@@ -1,53 +1,40 @@
-# Sapling Architecture
+# Sapling reference
 
-**Oncall**: `sapling` · **Language**: Rust + Python
+Oncall: `sapling` · Languages: Rust and Python
 
-## Component Overview
+Use this reference to locate command, library, working-copy, and remote-access
+code in `eden/scm/`.
 
-| Component | Path | Key Types | Purpose |
-|-----------|------|-----------|---------|
-| Binary entry | `exec/hgmain/` | `main.rs` | Entry point — dispatches to Rust or Python |
-| Rust commands | `lib/commands/` | `define_flags!`, `run()` | Rust command implementations |
-| Python commands | `sapling/commands/` | `@command` decorator | Python command implementations |
-| Rust libraries | `lib/` | — | Pure Rust libs (no Python deps) |
-| Python-Rust bindings | `saplingnative/bindings/` | `py_class!` macro | ~70 Rust-to-Python binding modules |
-| Python core | `sapling/` | `dispatch.py`, `extensions.py` | Commands, extensions, repo operations |
-| EdenFS FFI | `lib/backingstore/` | BackingStore | C++ FFI so EdenFS can fetch data |
-| Tests | `tests/` | `.t` files, `tinit.sh` | Test suite |
+## Start here
 
-## Architecture
+| Need | Path | Primary symbols or pattern |
+|------|------|----------------------------|
+| Binary startup | `fbcode/eden/scm/exec/hgmain/` | `main.rs` |
+| Rust command dispatch | `fbcode/eden/scm/lib/commands/src/run.rs` | command table, `fallback!()` |
+| Rust command implementation | `fbcode/eden/scm/lib/commands/commands/` | `define_flags!`, `run()` |
+| Python command implementation | `fbcode/eden/scm/sapling/commands/` | `@command` |
+| Extensions | `fbcode/eden/scm/sapling/ext/` | extension modules |
+| Rust-to-Python bridge | `fbcode/eden/scm/saplingnative/bindings/` | `py_class!` modules |
+| Working-copy state | `fbcode/eden/scm/lib/workingcopy/`, `fbcode/eden/scm/lib/treestate/` | working copy and treestate APIs |
+| Remote EdenAPI client | `fbcode/eden/scm/lib/edenapi/` | EdenAPI requests |
+| EdenFS C++ bridge | `fbcode/eden/scm/lib/backingstore/` | backing-store FFI |
+| CLI tests | `fbcode/eden/scm/tests/` | `.t` files, `tinit.sh` |
 
+## Dispatch model
+
+```text
+exec/hgmain
+  -> Rust command table
+  -> Rust implementation, or `fallback!()`
+  -> embedded Python -> sapling/dispatch.py
+
+Python -> saplingnative bindings -> Rust libraries
 ```
-Command dispatch:
-  exec/hgmain/ → Rust command table (lib/commands/src/run.rs)
-    → found? → execute in Rust
-    → not found / fallback!() → init Python (HgPython) → sapling/dispatch.py
 
-Dependency flow: Python → Rust bindings (saplingnative/) → Rust libs (lib/)
-```
+The binary supports `SL`, `HG`, and `SL_GIT` identities. In an EdenFS checkout,
+Sapling delegates working-copy operations over Thrift. Embedded Python reloads
+from fbsource during local development.
 
-## Key Concepts
-
-- **Identity system**: Binary supports SL/HG/SL_GIT identities — controls `.sl/` vs `.hg/` directory, CLI name
-- **EdenFS mode**: Communicates via Thrift when working copy is virtualized; `lib/backingstore/` provides C++ FFI
-- **Python embedding**: All Python source is compiled into the Rust binary but live-reloads from fbsource without recompiling
-
-## Quick Reference
-
-| Task | Where to Start |
-|------|---------------|
-| Add Rust command | `lib/commands/commands/` — `define_flags!` + `run()` |
-| Add Python command | `sapling/commands/` — `@command` decorator |
-| Add Rust-Python binding | `saplingnative/bindings/modules/py*/` — `py_class!` macro |
-| Debug command dispatch | `lib/commands/src/run.rs` → Python fallback |
-| Modify EdenFS FFI | `lib/backingstore/` |
-
-## Common Mistakes
-
-| Mistake | Correct Approach |
-|---------|-----------------|
-| Editing `Cargo.toml` | They're generated from BUCK — edit BUCK files |
-| Using `$ hg` in new .t tests | Use `$ sl` (Sapling branding) |
-| Adding Python dep to Rust lib | Rust libs in `lib/` must be pure Rust — use `saplingnative/bindings/` |
-
-For detailed library reference, build commands, .t test format, identity system, extensions, and conventions, see `eden/scm/.claude/CLAUDE.md`.
+For generated Cargo manifests, read `fbcode/eden/.claude/CLAUDE.md`.
+For identity conventions and focused test commands, read
+`fbcode/eden/scm/.claude/CLAUDE.md` when those details affect the task.
