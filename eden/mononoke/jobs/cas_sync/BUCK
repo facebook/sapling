@@ -22,7 +22,6 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_retry:futures_retry",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",

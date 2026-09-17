@@ -66,7 +66,19 @@ deterministic content may already exist from prior runs.
   $ mononoke_admin cas-store --repo-name repo upload --full --blobs-only -i $B -p restricted
   [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 1, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
-Validate that the "restricted" tree was NOT uploaded by the sync: a trees-only
-walk of the restricted subtree has to upload it.
+Validate that the admin tool applies the same policy: a trees-only walk of the
+restricted subtree skips the "restricted" tree instead of uploading it.
   $ mononoke_admin cas-store --repo-name repo upload --full --trees-only -i $B -p restricted
-  [INFO] Upload completed. Upload stats: uploaded digests: 1, already present digests: 0, uploaded bytes: 210 B, the largest uploaded blob: 210 B
+  [INFO] Skipped 1 trees under restricted paths for changeset * (glob)
+  [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 0, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
+A full walk of commit B finds everything the sync uploaded already present
+(root tree, "public" tree, public/readme, restricted/secret) and skips the
+"restricted" tree, so it stays absent from CAS.
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $B
+  [INFO] Skipped 1 trees under restricted paths for changeset * (glob)
+  [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 4, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
+Uploading the restricted file by path is allowed (content is not ACL'd).
+  $ mononoke_admin cas-store --repo-name repo upload --full -i $B -p restricted/secret
+  [INFO] Upload completed. Upload stats: uploaded digests: 0, already present digests: 1, uploaded bytes: 0 B, the largest uploaded blob: 0 B

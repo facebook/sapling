@@ -141,7 +141,6 @@ pub async fn cas_store_upload(
                 &changeset_id,
                 upload_policy,
                 PriorLookupPolicy::All,
-                &[],
             )
             .await?
     };

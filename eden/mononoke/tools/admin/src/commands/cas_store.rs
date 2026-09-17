@@ -24,6 +24,7 @@ use mononoke_app::args::RepoArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
 use tree_info::CasStoreTreeInfoArgs;
 use upload::CasStoreUploadArgs;
 
@@ -68,6 +69,9 @@ pub struct Repo {
 
     #[facet]
     repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 #[derive(Subcommand)]

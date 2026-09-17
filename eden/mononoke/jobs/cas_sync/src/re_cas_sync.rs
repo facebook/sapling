@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use cas_client::CasClient;
@@ -25,10 +24,7 @@ use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
-use mononoke_types::NonRootMPath;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use restricted_paths::RestrictedPathsRef;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -109,33 +105,6 @@ pub async fn try_sync<'a>(
     ctx: &'a CoreContext,
     bcs_id: ChangesetId,
 ) -> Result<UploadStats, Error> {
-    let restricted_path_roots = if repo.restricted_paths().may_have_restricted_paths() {
-        let bonsai: mononoke_types::BonsaiChangeset =
-            bcs_id.load(ctx, &repo.repo_blobstore()).await?;
-        let changed_paths: Vec<NonRootMPath> = bonsai
-            .file_changes()
-            .map(|(path, _)| path.clone())
-            .collect();
-        let roots: Vec<_> = repo
-            .restricted_paths()
-            .get_path_restriction_info(ctx, Some(bcs_id), &changed_paths)
-            .await?
-            .into_iter()
-            .map(|info| info.restriction_root)
-            .collect();
-        if !roots.is_empty() {
-            info!(
-                "Found {} restricted path roots for changeset {}: {:?}",
-                roots.len(),
-                bcs_id,
-                roots,
-            );
-        }
-        roots
-    } else {
-        Vec::new()
-    };
-
     let stats = re_cas_client
         .upload_single_changeset(
             ctx,
@@ -143,7 +112,6 @@ pub async fn try_sync<'a>(
             &bcs_id,
             UploadPolicy::All,
             PriorLookupPolicy::None,
-            &restricted_path_roots,
         )
         .await?;
     Ok(stats)
