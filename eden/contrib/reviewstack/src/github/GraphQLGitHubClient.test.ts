@@ -65,6 +65,46 @@ describe('recursive Git tree prefetch', () => {
   });
 });
 
+describe('commit comparisons', () => {
+  test('keeps per-file line totals from the REST response', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          commits: [],
+          files: [
+            {
+              additions: 12,
+              deletions: 4,
+              filename: 'src/new.ts',
+              previous_filename: 'src/old.ts',
+              status: 'renamed',
+            },
+          ],
+          merge_base_commit: {sha: 'base', commit: {committer: {date: '2026-09-17'}}},
+        }),
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await expect(client.getCommitComparison('base', 'head')).resolves.toEqual({
+      commits: [],
+      files: [
+        {
+          additions: 12,
+          deletions: 4,
+          filename: 'src/new.ts',
+          previousFilename: 'src/old.ts',
+          status: 'renamed',
+        },
+      ],
+      mergeBaseCommit: {sha: 'base', commit: {committer: {date: '2026-09-17'}}},
+    });
+
+    fetchMock.mockRestore();
+  });
+});
+
 describe('GraphQLGitHubClient comment mutations', () => {
   test('updates and deletes issue and review comments', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({

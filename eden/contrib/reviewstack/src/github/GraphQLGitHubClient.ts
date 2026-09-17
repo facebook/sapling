@@ -333,6 +333,21 @@ export default class GraphQLGitHubClient implements GitHubClient {
     return {
       mergeBaseCommit: json.merge_base_commit,
       commits: json.commits,
+      files: (json.files ?? []).map(
+        (file: {
+          additions: number;
+          deletions: number;
+          filename: string;
+          previous_filename?: string;
+          status: string;
+        }) => ({
+          additions: file.additions,
+          deletions: file.deletions,
+          filename: file.filename,
+          previousFilename: file.previous_filename,
+          status: file.status,
+        }),
+      ),
     };
   }
 

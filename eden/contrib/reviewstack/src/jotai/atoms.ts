@@ -830,6 +830,35 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
   },
 );
 
+export type FileLineStats = {additions: number; deletions: number};
+
+/** Per-file line totals for the active version comparison. */
+export const gitHubPullRequestFileLineStatsAtom = atom<Promise<Map<string, FileLineStats>>>(
+  async get => {
+    const client = await get(gitHubClientAtom);
+    const diff = await get(gitHubPullRequestVersionDiffAtom);
+    if (client == null || diff?.commitIDs == null) {
+      return new Map();
+    }
+
+    try {
+      const comparison = await client.getCommitComparison(
+        diff.commitIDs.before,
+        diff.commitIDs.after,
+      );
+      return new Map(
+        (comparison?.files ?? []).map(file => [
+          file.filename,
+          {additions: file.additions, deletions: file.deletions},
+        ]),
+      );
+    } catch {
+      // File navigation should remain usable if GitHub cannot provide stats.
+      return new Map();
+    }
+  },
+);
+
 /**
  *
  * Extracts the commit IDs from the current diff.

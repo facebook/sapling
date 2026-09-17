@@ -45,6 +45,7 @@ export {
   gitHubPullRequestCommitBaseParentAtom,
   gitHubDiffForCommitsAtom,
   gitHubPullRequestVersionDiffAtom,
+  gitHubPullRequestFileLineStatsAtom,
   gitHubDiffCommitIDsAtom,
   gitHubPullRequestVersionsAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
@@ -90,6 +91,7 @@ export type {
   PendingScrollRestore,
   FileMod,
   FileContentsDelta,
+  FileLineStats,
   NotificationMessage,
   StackedPullRequest,
 } from './atoms';

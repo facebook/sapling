@@ -42,4 +42,13 @@ export type CommitComparison = {
     };
   };
   commits: Commit[];
+  files: CommitComparisonFile[];
+};
+
+export type CommitComparisonFile = {
+  additions: number;
+  deletions: number;
+  filename: string;
+  previousFilename?: string;
+  status: 'added' | 'changed' | 'copied' | 'modified' | 'removed' | 'renamed' | 'unchanged';
 };
