@@ -218,24 +218,34 @@ impl crate::Subcommand for ChangesSinceCmd {
             )
             .await?;
 
+        let subscription_result = if self.subscribe {
+            Some(
+                client
+                    .stream_changes_since(
+                        &self.mount_point,
+                        self.throttle,
+                        position,
+                        &self.relative_root,
+                        &self.included_roots,
+                        &self.included_suffixes,
+                        &self.excluded_roots,
+                        &self.excluded_suffixes,
+                        self.include_vcs_roots,
+                        !self.deferred_states.is_empty(),
+                    )
+                    .await,
+            )
+        } else {
+            None
+        };
+        // Preserve the initial snapshot if subscription setup fails. A
+        // successfully emitted snapshot also signals that the stream is ready.
         let _ = self.print_result(&result).await;
+
         let mut nonempty_count: usize = 0;
         let mut rc = 0;
-        if self.subscribe {
-            let mut stream = client
-                .stream_changes_since(
-                    &self.mount_point,
-                    self.throttle,
-                    position,
-                    &self.relative_root,
-                    &self.included_roots,
-                    &self.included_suffixes,
-                    &self.excluded_roots,
-                    &self.excluded_suffixes,
-                    self.include_vcs_roots,
-                    !self.deferred_states.is_empty(),
-                )
-                .await?;
+        if let Some(subscription_result) = subscription_result {
+            let mut stream = subscription_result?;
             if !self.deferred_states.is_empty() {
                 let stream_client =
                     get_streaming_changes_client(&get_mount_point(&self.mount_point)?, &client)?;

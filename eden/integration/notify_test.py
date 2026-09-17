@@ -197,6 +197,12 @@ class NotifyTest(testcase.EdenRepoTest):
             if timeout <= 0:
                 raise RuntimeError(f"Timed out waiting for {path}")
 
+    async def wait_for_state(self, state: str) -> None:
+        await self.wait_for_file(
+            f".edenfs-notifications-state/{state}/{state}.notify",
+            timeout=10.0,
+        )
+
     async def test_debug_subscribe(self) -> None:
         subscription = await self.subscribe()
 
@@ -239,7 +245,6 @@ class NotifyTest(testcase.EdenRepoTest):
         self.assertListEqual(event["changes"], [])
 
         self.write_file("hello2", "test")
-        time.sleep(1)
         event = await self.wait_for_next_event(subscription)
         self.assertIsNotNone(event)
         self.assertTrue(
@@ -256,7 +261,7 @@ class NotifyTest(testcase.EdenRepoTest):
         )
 
         state_process = await self.enter_state("hello")
-        time.sleep(1)
+        await self.wait_for_state("hello")
         event = await self.wait_for_next_event(subscription)
         if event and "event_type" not in event:
             # Sometimes the Modified change from the previous change gets chunked
@@ -384,7 +389,6 @@ class NotifyTest(testcase.EdenRepoTest):
         self.assertListEqual(event["changes"], [])
 
         self.write_file("hello2", "test")
-        time.sleep(1)
         event = await self.wait_for_next_event(subscription)
         self.assertIsNotNone(event)
         self.assertTrue(
@@ -401,7 +405,7 @@ class NotifyTest(testcase.EdenRepoTest):
         )
 
         hello_process = await self.enter_state("hello")
-        time.sleep(1)
+        await self.wait_for_state("hello")
         event = await self.wait_for_next_event(subscription)
         if event and "event_type" not in event:
             # Sometimes the Modified change from the previous change gets chunked
@@ -423,7 +427,7 @@ class NotifyTest(testcase.EdenRepoTest):
         self.assertIsNone(event)
 
         goodbye_process = await self.enter_state("goodbye")
-        time.sleep(1)
+        await self.wait_for_state("goodbye")
         event = await self.wait_for_next_event(subscription)
         self.assertIsNotNone(event)
         self.assertEqual(event["event_type"], "Entered", msg=f"event: {event}")
