@@ -609,27 +609,14 @@ pub async fn process_bookmark_update_log_entry(
         .send_changeset(ChangesetMessage::CheckpointInEntry(0, entry.id.0 as i64))
         .await?;
 
-    let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
-        Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
-    } else {
-        None
-    };
-
-    let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
-        Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
-    } else {
-        None
-    };
-
     send_manager
-        .send_changeset(ChangesetMessage::FinishEntry(
-            BookmarkInfo {
-                name: entry.bookmark_name.name().to_string(),
-                from_cs_id: from_changeset,
-                to_cs_id: to_changeset,
-            },
-            entry.id.0 as i64,
-        ))
+        .send_changeset(ChangesetMessage::FinishEntry(BookmarkInfo {
+            name: entry.bookmark_name.name().to_string(),
+            from_cs_id: entry.from_changeset_id,
+            to_cs_id: entry.to_changeset_id,
+            log_id: entry.id.0 as i64,
+            reason: entry.reason,
+        }))
         .await?;
 
     // FIXME(acampi) Temporarily disable to fix stuck sync: https://fb.workplace.com/groups/1708850869939124/permalink/1994176751406533/

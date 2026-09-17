@@ -67,6 +67,15 @@ Sync all bookmarks moves
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
+
+The replica reuses the source log ids, changesets and reasons. The replica
+stamps its own rows with the local time, so drop the timestamp column.
+  $ mononoke_admin bookmarks -R orig log master_bookmark -S hg | cut -d' ' -f1-4 > $TESTTMP/orig-bookmark-log.out
+  $ mononoke_admin bookmarks -R dest log master_bookmark -S hg | cut -d' ' -f1-4 > $TESTTMP/dest-bookmark-log.out
+  $ diff $TESTTMP/orig-bookmark-log.out $TESTTMP/dest-bookmark-log.out
+  $ cut -d' ' -f1 $TESTTMP/dest-bookmark-log.out
+  2
+  1
   $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'Start sync process' .normal.log_tag .normal.repo .normal.run_id .int.start_id
   {
     "log_tag": "Start sync process",
@@ -192,6 +201,6 @@ Sync all bookmarks moves
   [INFO] [sync{repo=orig}] Skipping 0 batches from entry 2
   [INFO] [sync{repo=orig}] Starting sync of 0 missing commits, 4 were already synced
   [INFO] [sync{repo=orig}] Setting checkpoint from entry 2 to 0
-  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
-  [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) over 2 move(s)
+  [INFO] [sync{repo=orig}] Bookmark moves already processed by the replica: Bookmark move already processed
   [INFO] [sync{repo=orig}] Marking entry 2 as done

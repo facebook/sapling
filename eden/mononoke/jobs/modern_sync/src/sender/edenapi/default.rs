@@ -13,6 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
 use async_trait::async_trait;
+use bookmarks::BookmarkUpdateReason;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
@@ -24,9 +25,12 @@ use edenapi::api::UploadLookupPolicy;
 use edenapi::paths;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::CODE_BOOKMARK_MOVE_ALREADY_PROCESSED;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
-use edenapi_types::SetBookmarkResponse;
+use edenapi_types::MirrorBookmarkMove;
+use edenapi_types::MirrorBookmarkUpdateReason;
+use edenapi_types::ReplayIdenticalMovesResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
 use edenapi_types::bookmark::Freshness;
@@ -43,6 +47,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 
+use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiConfig;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::util;
@@ -245,26 +250,36 @@ impl EdenapiSender for DefaultEdenapiSender {
         Ok(())
     }
 
-    async fn set_bookmark(
-        &self,
-        bookmark: String,
-        from: Option<HgChangesetId>,
-        to: Option<HgChangesetId>,
-    ) -> Result<()> {
+    async fn set_bookmark(&self, bookmark: String, moves: Vec<BookmarkMove>) -> Result<()> {
+        ensure!(
+            !moves.is_empty(),
+            "set_bookmark called with no moves for {bookmark}"
+        );
+
+        let pushvars = HashMap::from([
+            ("BYPASS_READONLY".to_owned(), "true".to_owned()),
+            ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
+        ]);
+
+        // Replay the whole chain to the replica, reusing each source move's
+        // log id and reason, so the replica's bookmarks_update_log matches
+        // the source row for row.
+        let wire_moves = moves
+            .iter()
+            .map(|m| MirrorBookmarkMove {
+                log_id: m.log_id as u64,
+                from: m.from.map(|cs| cs.into()),
+                to: m.to.into(),
+                reason: to_wire_reason(m.reason),
+            })
+            .collect::<Vec<_>>();
+
         let res = self
             .client
-            .set_bookmark(
-                bookmark,
-                to.map(|cs| cs.into()),
-                from.map(|cs| cs.into()),
-                HashMap::from([
-                    ("BYPASS_READONLY".to_owned(), "true".to_owned()),
-                    ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
-                ]),
-            )
+            .replay_identical_moves(bookmark, wire_moves, pushvars)
             .await
-            .with_context(|| "setting bookmark")?;
-        handle_set_bookmark_response(res)
+            .with_context(|| "mirroring bookmark moves")?;
+        handle_replay_identical_response(res)
     }
 
     async fn upload_identical_changeset(
@@ -348,14 +363,40 @@ impl EdenapiSender for DefaultEdenapiSender {
     }
 }
 
-fn handle_set_bookmark_response(response: SetBookmarkResponse) -> Result<()> {
-    if response.data.is_err() {
-        return response
-            .data
-            .with_context(|| "server rejected bookmark update");
+fn to_wire_reason(reason: BookmarkUpdateReason) -> MirrorBookmarkUpdateReason {
+    match reason {
+        BookmarkUpdateReason::Pushrebase => MirrorBookmarkUpdateReason::Pushrebase,
+        BookmarkUpdateReason::Push => MirrorBookmarkUpdateReason::Push,
+        BookmarkUpdateReason::Blobimport => MirrorBookmarkUpdateReason::Blobimport,
+        BookmarkUpdateReason::ManualMove => MirrorBookmarkUpdateReason::ManualMove,
+        BookmarkUpdateReason::TestMove => MirrorBookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::Backsyncer => MirrorBookmarkUpdateReason::Backsyncer,
+        BookmarkUpdateReason::XRepoSync => MirrorBookmarkUpdateReason::XRepoSync,
+        BookmarkUpdateReason::ApiRequest => MirrorBookmarkUpdateReason::ApiRequest,
+        BookmarkUpdateReason::MultiRepoLand => MirrorBookmarkUpdateReason::MultiRepoLand,
     }
-    tracing::info!("Moved bookmark with result {:?}", response);
-    Ok(())
+}
+
+fn handle_replay_identical_response(response: ReplayIdenticalMovesResponse) -> Result<()> {
+    match &response.data {
+        Ok(()) => {
+            tracing::info!("Mirrored bookmark moves with result {:?}", response);
+            Ok(())
+        }
+        Err(err) if err.code == CODE_BOOKMARK_MOVE_ALREADY_PROCESSED => {
+            // The replica already recorded these moves under the source log ids
+            // (a lost-ack replay). Treat it as success so the checkpoint
+            // advances past this entry instead of retrying the moves forever.
+            tracing::info!(
+                "Bookmark moves already processed by the replica: {}",
+                err.message
+            );
+            Ok(())
+        }
+        Err(_) => response
+            .data
+            .with_context(|| "server rejected mirrored bookmark moves"),
+    }
 }
 
 fn get_missing_in_order(
@@ -397,18 +438,31 @@ mod test {
     use super::*;
 
     #[mononoke::test]
-    fn rejected_set_bookmark_response_returns_error() {
-        let response = SetBookmarkResponse {
+    fn rejected_replay_identical_response_returns_error() {
+        let response = ReplayIdenticalMovesResponse {
             data: Err(ServerError::generic("Bookmark transaction failed")),
         };
 
-        let error = handle_set_bookmark_response(response)
-            .expect_err("a rejected bookmark update must fail");
+        let error = handle_replay_identical_response(response)
+            .expect_err("a rejected mirror batch must fail");
 
         assert_eq!(
             format!("{error:#}"),
-            "server rejected bookmark update: server error (code 0): Bookmark transaction failed"
+            "server rejected mirrored bookmark moves: server error (code 0): Bookmark transaction failed"
         );
+    }
+
+    #[mononoke::test]
+    fn already_processed_replay_identical_response_returns_ok() {
+        let response = ReplayIdenticalMovesResponse {
+            data: Err(ServerError::new(
+                "bookmark move already processed",
+                CODE_BOOKMARK_MOVE_ALREADY_PROCESSED,
+            )),
+        };
+
+        handle_replay_identical_response(response)
+            .expect("an already-processed mirror batch must be treated as success");
     }
 
     #[mononoke::test]

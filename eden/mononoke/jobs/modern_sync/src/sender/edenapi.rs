@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkUpdateReason;
 use edenapi_types::AnyFileContentId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
@@ -30,6 +31,25 @@ pub(crate) use filter::MethodFilter;
 pub(crate) use noop::NoopEdenapiSender;
 pub(crate) use retry::RetryEdenapiSender;
 
+/// One bookmark move in a contiguous chain, taken from a source
+/// bookmarks_update_log entry. The mirror path replays the whole chain to a
+/// `*_shadow` replica and reuses each move's `log_id` and `reason`, so the
+/// replica's log matches the source row for row.
+///
+/// The changesets stay in the bonsai form the source log holds them in.
+/// modern_sync uploads each changeset to the replica under the source's own
+/// bonsai id, so the replica resolves the same ids and neither end translates.
+///
+/// `to` is required. A source move that clears the bookmark is a deletion,
+/// which must never reach the shadow replica, so the mirror path rejects it
+/// where it reads the log entry rather than carrying it this far.
+pub(crate) struct BookmarkMove {
+    pub log_id: i64,
+    pub from: Option<ChangesetId>,
+    pub to: ChangesetId,
+    pub reason: BookmarkUpdateReason,
+}
+
 #[async_trait]
 pub(crate) trait EdenapiSender {
     async fn upload_contents(&self, contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()>;
@@ -38,12 +58,9 @@ pub(crate) trait EdenapiSender {
 
     async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()>;
 
-    async fn set_bookmark(
-        &self,
-        bookmark: String,
-        from: Option<HgChangesetId>,
-        to: Option<HgChangesetId>,
-    ) -> Result<()>;
+    // Move a bookmark over a contiguous chain of source moves. `moves` is
+    // non-empty and ordered by strictly increasing `log_id`.
+    async fn set_bookmark(&self, bookmark: String, moves: Vec<BookmarkMove>) -> Result<()>;
 
     async fn upload_identical_changeset(
         &self,

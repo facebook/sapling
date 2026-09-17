@@ -169,7 +169,7 @@ redaction remains enforced.
   [INFO] [sync{repo=orig}] Resuming from latest entry checkpoint 0
   [INFO] [sync{repo=orig}] Skipping 0 batches from entry 1
   [INFO] [sync{repo=orig}] Starting sync of 3 missing commits, 0 were already synced
-  [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] [sync{repo=orig}] Mirrored bookmark moves with result ReplayIdenticalMovesResponse { data: Ok(()) }
 
 Destination reads remain redacted after the authorised upload.
   $ hg clone -q mono:dest dest

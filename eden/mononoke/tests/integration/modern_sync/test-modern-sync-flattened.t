@@ -78,13 +78,22 @@ Sync all bookmarks moves
   [INFO] [sync{repo=orig}] Done calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5 in *ms (glob)
   [INFO] [sync{repo=orig}] Skipping 0 batches from entry 2
   [INFO] [sync{repo=orig}] Starting sync of 5 missing commits, 0 were already synced
-  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
-  [INFO] [sync{repo=orig}] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] [sync{repo=orig}] Setting bookmark master_bookmark from None to Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) over 1 move(s)
+  [INFO] [sync{repo=orig}] Mirrored bookmark moves with result ReplayIdenticalMovesResponse { data: Ok(()) }
   [INFO] [sync{repo=orig}] Marking entry 2 as done
 
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
+
+The flattened sync groups both source entries into one macro-entry, so the
+replica stores one log row. That row carries the last source log id, which
+keeps the replica log id comparable to the source log id.
+  $ mononoke_admin bookmarks -R orig log master_bookmark -S hg | cut -d' ' -f1
+  2
+  1
+  $ mononoke_admin bookmarks -R dest log master_bookmark -S hg | cut -d' ' -f1
+  2
 
   $ cd ..
 

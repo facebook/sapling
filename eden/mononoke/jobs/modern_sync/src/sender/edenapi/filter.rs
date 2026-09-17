@@ -20,6 +20,7 @@ use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
+use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiSender;
 
 #[derive(Eq, Hash, PartialEq)]
@@ -85,18 +86,13 @@ impl EdenapiSender for FilterEdenapiSender {
         }
     }
 
-    async fn set_bookmark(
-        &self,
-        bookmark: String,
-        from: Option<HgChangesetId>,
-        to: Option<HgChangesetId>,
-    ) -> Result<()> {
+    async fn set_bookmark(&self, bookmark: String, moves: Vec<BookmarkMove>) -> Result<()> {
         if self
             .allowed
             .get(&MethodFilter::SetBookmark)
             .map_or(false, |v| *v)
         {
-            return self.inner.set_bookmark(bookmark, from, to).await;
+            return self.inner.set_bookmark(bookmark, moves).await;
         } else {
             Ok(())
         }

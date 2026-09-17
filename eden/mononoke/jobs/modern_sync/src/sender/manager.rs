@@ -13,15 +13,16 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use futures::channel::oneshot;
-use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::blobs::HgBlobChangeset;
 use metaconfig_types::ModernSyncConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
 use repo_blobstore::RepoBlobstore;
@@ -91,7 +92,7 @@ pub enum ChangesetMessage {
     // Checkpoint position (first argument) within the BUL entry (second argument)
     CheckpointInEntry(u64, i64),
     // Perform bookmark movement and mark BUL entry as completed once the changeset is synced
-    FinishEntry(BookmarkInfo, i64),
+    FinishEntry(BookmarkInfo),
     // Notify changeset sending is done
     NotifyCompletion(oneshot::Sender<Result<()>>),
     // Log changeset completion
@@ -100,8 +101,12 @@ pub enum ChangesetMessage {
 
 pub struct BookmarkInfo {
     pub name: String,
-    pub from_cs_id: Option<HgChangesetId>,
-    pub to_cs_id: Option<HgChangesetId>,
+    pub from_cs_id: Option<ChangesetId>,
+    pub to_cs_id: Option<ChangesetId>,
+    // Source bookmarks_update_log id and reason for this move. The mirror path
+    // reuses both so the replica's log row matches the source row for row.
+    pub log_id: i64,
+    pub reason: BookmarkUpdateReason,
 }
 
 impl SendManager {

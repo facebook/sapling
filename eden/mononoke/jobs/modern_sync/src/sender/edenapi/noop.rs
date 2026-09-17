@@ -16,6 +16,7 @@ use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
+use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiSender;
 
 #[derive(Default)]
@@ -35,12 +36,7 @@ impl EdenapiSender for NoopEdenapiSender {
         Ok(())
     }
 
-    async fn set_bookmark(
-        &self,
-        _bookmark: String,
-        _from: Option<HgChangesetId>,
-        _to: Option<HgChangesetId>,
-    ) -> Result<()> {
+    async fn set_bookmark(&self, _bookmark: String, _moves: Vec<BookmarkMove>) -> Result<()> {
         Ok(())
     }
 

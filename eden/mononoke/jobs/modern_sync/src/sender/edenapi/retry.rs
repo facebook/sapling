@@ -21,6 +21,7 @@ use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
+use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiSender;
 
 const MAX_RETRIES: usize = 3;
@@ -60,13 +61,8 @@ impl EdenapiSender for RetryEdenapiSender {
             .await
     }
 
-    async fn set_bookmark(
-        &self,
-        bookmark: String,
-        from: Option<HgChangesetId>,
-        to: Option<HgChangesetId>,
-    ) -> Result<()> {
-        self.inner.set_bookmark(bookmark, from, to).await
+    async fn set_bookmark(&self, bookmark: String, moves: Vec<BookmarkMove>) -> Result<()> {
+        self.inner.set_bookmark(bookmark, moves).await
     }
 
     async fn upload_identical_changeset(

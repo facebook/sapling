@@ -12,8 +12,10 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use context::CoreContext;
 use futures::channel::oneshot;
+use itertools::Itertools;
 use mercurial_types::blobs::HgBlobChangeset;
 use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
@@ -24,6 +26,7 @@ use stats::prelude::*;
 use tokio::sync::mpsc;
 use tokio::time::interval;
 
+use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
@@ -74,7 +77,7 @@ impl ChangesetManager {
         pending_log: &mut VecDeque<Option<i64>>,
         latest_checkpoint: &mut Option<(u64, i64)>,
         latest_entry_id: &mut Option<i64>,
-        latest_bookmark: &mut Option<BookmarkInfo>,
+        latest_bookmark_chain: &mut Vec<BookmarkInfo>,
         pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
     ) -> Result<(), anyhow::Error> {
         if !current_batch.is_empty() {
@@ -122,16 +125,45 @@ impl ChangesetManager {
             }
         }
 
-        if let Some(info) = latest_bookmark.take() {
-            tracing::info!(
-                "Setting bookmark {} from {:?} to {:?}",
-                info.name,
-                info.from_cs_id,
-                info.to_cs_id
-            );
-            changeset_es
-                .set_bookmark(info.name, info.from_cs_id, info.to_cs_id)
-                .await?;
+        if !latest_bookmark_chain.is_empty() {
+            let chain = std::mem::take(latest_bookmark_chain);
+            // A flush can hold moves for more than one bookmark, so group the
+            // moves by bookmark name and replay each chain under its own name.
+            // Preserve per-bookmark order for the compare-and-swap chain.
+            let by_name = chain
+                .into_iter()
+                .into_group_map_by(|info| info.name.clone());
+            for (name, infos) in by_name {
+                // A deletion clears the bookmark. It must never reach the
+                // shadow replica, so fail hard and loudly instead of removing
+                // the replica's bookmark.
+                let moves = infos
+                    .iter()
+                    .map(|info| {
+                        anyhow::Ok(BookmarkMove {
+                            log_id: info.log_id,
+                            from: info.from_cs_id,
+                            to: info.to_cs_id.ok_or_else(|| {
+                                anyhow!(
+                                    "refusing to mirror deletion of bookmark {} (log id {}): \
+                                     a bookmark deletion must not propagate to the shadow replica",
+                                    name,
+                                    info.log_id
+                                )
+                            })?,
+                            reason: info.reason,
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                tracing::info!(
+                    "Setting bookmark {} from {:?} to {:?} over {} move(s)",
+                    name,
+                    moves.first().and_then(|mv| mv.from),
+                    moves.last().map(|mv| mv.to),
+                    moves.len()
+                );
+                changeset_es.set_bookmark(name, moves).await?;
+            }
         }
 
         if let Some(id) = latest_entry_id.take() {
@@ -171,7 +203,7 @@ impl Manager for ChangesetManager {
 
             let mut latest_in_entry_checkpoint = None;
             let mut latest_entry_id = None;
-            let mut latest_bookmark: Option<BookmarkInfo> = None;
+            let mut latest_bookmark_chain: Vec<BookmarkInfo> = Vec::new();
             let mut pending_notification = None;
 
             let mut current_batch = Vec::new();
@@ -235,19 +267,14 @@ impl Manager for ChangesetManager {
                                 latest_in_entry_checkpoint = Some((position, id));
                             }
 
-                            Some(ChangesetMessage::FinishEntry(bookmark, id))
+                            Some(ChangesetMessage::FinishEntry(bookmark))
                                 if encountered_error.is_none() =>
                             {
-                                latest_entry_id = Some(id);
-                                if let Some(prev_bookmark) = latest_bookmark {
-                                    latest_bookmark = Some(BookmarkInfo {
-                                        name: prev_bookmark.name,
-                                        from_cs_id: prev_bookmark.from_cs_id,
-                                        to_cs_id: bookmark.to_cs_id,
-                                    });
-                                } else {
-                                    latest_bookmark = Some(bookmark);
-                                }
+                                // Accumulate the contiguous chain of moves. The
+                                // flush replays every move to the replica so it
+                                // reuses each source log id.
+                                latest_entry_id = Some(bookmark.log_id);
+                                latest_bookmark_chain.push(bookmark);
                             }
 
                             Some(ChangesetMessage::NotifyCompletion(sender))
@@ -279,7 +306,7 @@ impl Manager for ChangesetManager {
                             let now = std::time::Instant::now();
                             let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                             stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
+                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark_chain, &mut pending_notification)
                             .await
                             {
                                 Ok(()) => {
@@ -299,7 +326,7 @@ impl Manager for ChangesetManager {
                         let now = std::time::Instant::now();
                         let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                         stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
+                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark_chain, &mut pending_notification)
                         .await
                         {
                             Ok(()) => {
