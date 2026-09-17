@@ -11,6 +11,7 @@ import type {GitObjectID} from './github/types';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffView from './SplitDiffView';
 import coalesceRenamedFiles, {type DisplayChange, type RenamedFile} from './coalesceRenamedFiles';
+import {diffFileAnchorID, getDisplayChangePath} from './diffFileNavigation';
 import hasBinaryContent from './hasBinaryContent';
 import joinPath from './joinPath';
 import {fileContentsDeltaAtom, gitHubBlobAtom} from './jotai/atoms';
@@ -37,6 +38,7 @@ export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullReque
     return (
       <div>
         {coalesceRenamedFiles(diff).map(change => {
+          const path = getDisplayChangePath(change);
           const key =
             change.type === 'rename'
               ? `rename:${change.before.basePath}/${change.before.entry.name}:${change.after.basePath}/${change.after.entry.name}`
@@ -44,11 +46,11 @@ export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullReque
                   change.type === 'modify' ? change.before.name : change.entry.name
                 }`;
           return (
-            <Suspense key={key} fallback={<DiffFileSkeleton />}>
-              <Box paddingY={1}>
+            <Box key={key} id={diffFileAnchorID(path)} paddingY={1} sx={{scrollMarginTop: '8px'}}>
+              <Suspense fallback={<DiffFileSkeleton />}>
                 <ChangeDisplay change={change} isPullRequest={isPullRequest} />
-              </Box>
-            </Suspense>
+              </Suspense>
+            </Box>
           );
         })}
       </div>

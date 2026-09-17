@@ -10,6 +10,7 @@ import type {AllDrawersState} from 'shared/Drawers';
 import CenteredSpinner from './CenteredSpinner';
 import {useCommand} from './KeyboardShortcuts';
 import PullRequest from './PullRequest';
+import PullRequestFiles from './PullRequestFiles';
 import PullRequestHeader from './PullRequestHeader';
 import PullRequestTimeline from './PullRequestTimeline';
 import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
@@ -28,7 +29,7 @@ const COMMENT_INPUT_HEIGHT = 125;
 
 const drawerStateAtom = atom<AllDrawersState>({
   right: {size: 500, collapsed: false},
-  left: {size: 200, collapsed: true},
+  left: {size: 280, collapsed: false},
   top: {size: 200, collapsed: true},
   bottom: {size: 200, collapsed: true},
 });
@@ -68,6 +69,8 @@ export default function PullRequestLayout({
         <Drawers
           drawerState={drawerStateAtom}
           errorBoundary={ErrorBoundary}
+          leftLabel={<Text className="drawer-label-text">Files</Text>}
+          left={<PullRequestFiles />}
           rightLabel={<Text className="drawer-label-text">...</Text>}
           right={<TimelineDrawer />}>
           <Box display="flex" flexDirection="row">
