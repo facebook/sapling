@@ -782,6 +782,20 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
       return null;
     }
 
+    // Sapling submits every commit in a stack as a PR based on the repository's
+    // main branch. GitHub's merge-base comparison therefore includes all lower
+    // commits in the stack. Compare the selected Sapling commit with its Git
+    // parent so the diff contains only the change represented by this PR.
+    if (beforeCommitID == null && get(stackedPullRequestAtom).type === 'sapling') {
+      const afterCommit = await get(gitHubCommitAtom(afterCommitID));
+      const parentCommitID = afterCommit?.parents.length === 1 ? afterCommit.parents[0] : null;
+      if (parentCommitID != null) {
+        return get(
+          gitHubDiffForCommitsAtom({baseCommitID: parentCommitID, commitID: afterCommitID}),
+        );
+      }
+    }
+
     // Get the base parent for the "after" commit
     const afterBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(afterCommitID));
     const afterBaseCommitID = afterBaseParent?.oid;
