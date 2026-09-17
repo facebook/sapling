@@ -107,9 +107,10 @@ class EdenTestCase(EdenTestCaseBase):
 
         super().setUp()
 
-        # Set an environment variable to prevent telemetry logging
-        # during integration tests
+        # Set environment variables to prevent telemetry logging during
+        # integration tests.
         self.setenv("EDENFS_INTEGRATION_TEST", "1")
+        self.setenv("EDENFS_NO_TELEMETRY", "1")
 
         # Set this environment variable to enable Sl tracing during the test
         # self.setenv("SL_LOG", "trace")
