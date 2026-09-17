@@ -89,7 +89,6 @@ use tracing::warn;
 use crate::repo::Repo;
 
 pub const HEAD_SYMREF: &str = "HEAD";
-const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
 // Retry policy for the one-shot bulk bookmark listing.
 const BOOKMARK_LIST_RETRY_DELAY: Duration = Duration::from_secs(1);
 const BOOKMARK_LIST_RETRY_ATTEMPTS: usize = 4;
@@ -288,6 +287,11 @@ struct GitimportArgs {
     /// before deciding that the file is missing.
     #[clap(long, default_value_t = 5)]
     lfs_import_max_attempts: u32,
+    /// Maximum number of LFS objects downloaded from the LFS server at the
+    /// same time. Lower it for repos with many multi-hundred-MB objects so
+    /// each transfer finishes before the forward proxy drops it.
+    #[clap(long, default_value_t = 20)]
+    lfs_concurrency: usize,
     /// If any bookmarks were present in Mononoke but are not present in Git, delete them in
     /// Mononoke.
     /// This is necessary for a catch-up import situation if a Git branch was deleted between both
@@ -438,7 +442,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     url_format,
                     args.allow_dangling_lfs_pointers,
                     args.lfs_import_max_attempts,
-                    Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+                    Some(args.lfs_concurrency),
                     args.tls_args,
                 )?
             }
@@ -459,7 +463,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     https_proxy,
                     args.allow_dangling_lfs_pointers,
                     args.lfs_import_max_attempts,
-                    Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+                    Some(args.lfs_concurrency),
                 )?
             }
             (None, None) => GitImportLfs::new_internal(
