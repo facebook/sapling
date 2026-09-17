@@ -21,6 +21,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "eden/fs/service/HeartbeatManager.h"
 
@@ -3280,9 +3281,16 @@ void EdenServer::shutdownSubscribers() {
   // those down now, otherwise they will block the server_->stop() call
   // below
   XLOG(DBG1, "cancel all subscribers prior to stopping thrift");
-  auto mountPoints = mountPoints_->wlock();
-  for (auto& [path, info] : *mountPoints) {
-    info.edenMount->getJournal().cancelAllSubscribers();
+  std::vector<std::shared_ptr<EdenMount>> mounts;
+  {
+    auto mountPoints = mountPoints_->rlock();
+    mounts.reserve(mountPoints->size());
+    for (auto& entry : *mountPoints) {
+      mounts.push_back(entry.second.edenMount);
+    }
+  }
+  for (auto& mount : mounts) {
+    mount->getJournal().cancelAllSubscribers();
   }
 }
 
