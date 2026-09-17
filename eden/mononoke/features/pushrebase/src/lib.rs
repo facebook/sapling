@@ -327,6 +327,52 @@ pub struct PushrebaseStack {
     pub head: ChangesetId,
     /// Root of the pushed stack.
     pub root: ChangesetId,
+    conflict_check_base: ChangesetId,
+    carried_merge_file_info: Vec<MergedFileInfo>,
+}
+
+impl PushrebaseStack {
+    /// Precomputes conflict information against a bookmark snapshot.
+    /// Calling this method is optional; the batch worker performs any remaining work.
+    pub async fn precompute(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+        flags: &PushrebaseFlags,
+        bookmark: &BookmarkKey,
+    ) -> Result<(), PushrebaseError> {
+        let ctx = pushrebase_context(ctx, flags);
+        let start = Instant::now();
+        let onto = get_bookmark_value(&ctx, repo, bookmark)
+            .await?
+            .unwrap_or(self.root);
+        let checked = check_pushrebase_conflicts(
+            &ctx,
+            repo,
+            flags,
+            self.root,
+            self.conflict_check_base,
+            onto,
+            &self.changesets,
+            &self.changed_files,
+        )
+        .await?;
+        self.carried_merge_file_info = reconcile_merge_file_info(
+            &self.carried_merge_file_info,
+            &checked.merged_file_overrides.unwrap_or_default(),
+        );
+        self.conflict_check_base = onto;
+        ctx.scuba()
+            .clone()
+            .add("repo_name", repo.repo_identity().name())
+            .add("bookmark", bookmark.as_str())
+            .add(
+                "pushrebase_preparation_duration_ms",
+                start.elapsed().as_millis() as i64,
+            )
+            .log_with_msg("pushrebase_prepared", None);
+        Ok(())
+    }
 }
 
 pub trait Repo = BookmarksRef
@@ -444,6 +490,8 @@ pub async fn index_pushrebase_request(
         changesets: client_bcs,
         head,
         root,
+        conflict_check_base: root,
+        carried_merge_file_info: vec![],
     })
 }
 
@@ -816,15 +864,13 @@ async fn do_batched_pushrebase(
     while let Some(mut request) = requests_iter.next() {
         let request_ctx = pushrebase_context(&request.ctx, flags);
         let bookmark_val = old_bookmark_value.unwrap_or(request.stack.root);
-        // Narrow-range scan: use conflict_check_base as ancestor so retries
-        // only scan the delta since the last attempt. On first attempt,
-        // conflict_check_base == root, so the full range is scanned.
+        // Only scan the delta since preparation or the last attempt.
         let conflict_result = match check_pushrebase_conflicts(
             &request_ctx,
             repo,
             flags,
             request.stack.root,
-            request.conflict_check_base,
+            request.stack.conflict_check_base,
             bookmark_val,
             &request.stack.changesets,
             &request.stack.changed_files,
@@ -841,11 +887,11 @@ async fn do_batched_pushrebase(
         // Reconcile carried merge info with delta info from this attempt
         let reconciled_overrides = match conflict_result.merged_file_overrides {
             Some(delta_info) => Some(reconcile_merge_file_info(
-                &request.carried_merge_file_info,
+                &request.stack.carried_merge_file_info,
                 &delta_info,
             )),
-            None if !request.carried_merge_file_info.is_empty() => {
-                Some(request.carried_merge_file_info.clone())
+            None if !request.stack.carried_merge_file_info.is_empty() => {
+                Some(request.stack.carried_merge_file_info.clone())
             }
             None => None,
         };
@@ -858,15 +904,15 @@ async fn do_batched_pushrebase(
         // MR previously succeeded — otherwise a clean delta on retry would
         // hide a successful MR run. `carried_merge_file_info` is the
         // signal: non-empty means an earlier attempt resolved conflicts.
-        let merge_summary = synthesize_carried_summary(&request.carried_merge_file_info)
+        let merge_summary = synthesize_carried_summary(&request.stack.carried_merge_file_info)
             .map(|carried| {
                 MergeResolutionSummary::combine(carried, conflict_result.merge_summary.clone())
             })
             .unwrap_or(conflict_result.merge_summary);
 
         // Store reconciled overrides on the request for carry-forward on re-queue
-        request.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
-        request.conflict_check_base = bookmark_val;
+        request.stack.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
+        request.stack.conflict_check_base = bookmark_val;
 
         let pushrebase_distance = match try_join(
             repo.commit_graph()
@@ -1802,7 +1848,7 @@ async fn speculative_batch_check(
             repo,
             flags,
             request.stack.root,
-            request.conflict_check_base,
+            request.stack.conflict_check_base,
             bookmark_val,
             &request.stack.changesets,
             &request.stack.changed_files,
@@ -1930,14 +1976,14 @@ async fn rebase_batch_under_lock(
         }
 
         let reconciled_overrides = if merge_info.is_empty() {
-            if !request.carried_merge_file_info.is_empty() {
-                Some(request.carried_merge_file_info.clone())
+            if !request.stack.carried_merge_file_info.is_empty() {
+                Some(request.stack.carried_merge_file_info.clone())
             } else {
                 None
             }
         } else {
             Some(reconcile_merge_file_info(
-                &request.carried_merge_file_info,
+                &request.stack.carried_merge_file_info,
                 &merge_info,
             ))
         };
@@ -1948,12 +1994,12 @@ async fn rebase_batch_under_lock(
 
         // Fold in any carried summary from prior CAS-failure retries
         // (mirrors the legacy non-pessimistic batched loop's semantics).
-        if let Some(carried) = synthesize_carried_summary(&request.carried_merge_file_info) {
+        if let Some(carried) = synthesize_carried_summary(&request.stack.carried_merge_file_info) {
             merge_summary = MergeResolutionSummary::combine(carried, merge_summary);
         }
 
-        request.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
-        request.conflict_check_base = auth_value.unwrap_or(request.stack.root);
+        request.stack.carried_merge_file_info = reconciled_overrides.clone().unwrap_or_default();
+        request.stack.conflict_check_base = auth_value.unwrap_or(request.stack.root);
 
         let request_old_bookmark_value = running_head;
         let onto = running_head.unwrap_or(request.stack.root);

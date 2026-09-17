@@ -119,12 +119,9 @@ fn queued_pushrebase_request(
     stack: PushrebaseStack,
     response_tx: oneshot::Sender<Result<PushrebaseOutcome, SharedError<PushrebaseError>>>,
 ) -> QueuedPushrebaseRequest {
-    let conflict_check_base = stack.root;
     QueuedPushrebaseRequest {
         ctx: ctx.clone(),
         stack,
-        conflict_check_base,
-        carried_merge_file_info: vec![],
         retry_num: PushrebaseRetryNum(0),
         response_tx,
         enqueued_at: tokio::time::Instant::now(),
@@ -4674,9 +4671,10 @@ async fn batched_pushrebase_merge_resolution(fb: FacebookInit) -> Result<(), Err
 
     let client_bcs = client_cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let config = PushrebaseFlags::default();
-    let stack =
+    let mut stack =
         index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![client_bcs]).await?;
 
+    stack.precompute(&ctx, &repo, &config, &bookmark).await?;
     let (tx, rx) = oneshot::channel();
     let request = queued_pushrebase_request(&ctx, stack, tx);
 
@@ -4754,7 +4752,7 @@ async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
     // Exercise optimistic batching and pessimistic checks both with and without
     // a bookmark move between the speculative check and lock acquisition.
     for speculative_head in [None, Some(base), Some(server)] {
-        bookmark(&ctx, &repo, book.clone()).set_to(server).await?;
+        bookmark(&ctx, &repo, book.clone()).set_to(base).await?;
         let mut requests = Vec::new();
         let mut receivers = Vec::new();
         for (path, content) in [
@@ -4767,13 +4765,15 @@ async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
                 .commit()
                 .await?;
             let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
-            let stack =
+            let mut stack =
                 index_pushrebase_request(&ctx, &repo, &config, &book, &hashset![bcs]).await?;
+            stack.precompute(&ctx, &repo, &config, &book).await?;
             let (tx, rx) = oneshot::channel();
             requests.push(queued_pushrebase_request(&ctx, stack, tx));
             receivers.push(rx);
         }
 
+        bookmark(&ctx, &repo, book.clone()).set_to(server).await?;
         let requeued = if let Some(speculative_head) = speculative_head {
             let checked =
                 speculative_batch_check(&repo, &config, Some(speculative_head), requests).await;
@@ -4797,10 +4797,10 @@ async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
         let error = receivers.remove(1).await?.expect_err("merge should fail");
         assert!(matches!(error.inner(), PushrebaseError::Conflicts(_)));
         assert_eq!(requeued.len(), 2);
-        assert_eq!(requeued[0].conflict_check_base, server);
-        assert_eq!(requeued[0].carried_merge_file_info.len(), 1);
-        assert_eq!(requeued[1].conflict_check_base, base);
-        assert!(requeued[1].carried_merge_file_info.is_empty());
+        assert_eq!(requeued[0].stack.conflict_check_base, server);
+        assert_eq!(requeued[0].stack.carried_merge_file_info.len(), 1);
+        assert_eq!(requeued[1].stack.conflict_check_base, base);
+        assert!(requeued[1].stack.carried_merge_file_info.is_empty());
 
         let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requeued, &[]).await;
         assert!(requeued.is_empty());
@@ -4821,10 +4821,6 @@ async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
 
 #[mononoke::fbinit_test]
 async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> Result<(), Error> {
-    // Test: when batched pushrebase is re-queued after CAS failure,
-    // carried_merge_file_info is preserved and reconciled on retry.
-    // We simulate this by setting conflict_check_base to S1 and
-    // providing carried MergedFileInfo from a prior attempt.
     let ctx = CoreContext::test_mock(fb);
     let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
 
@@ -4862,30 +4858,17 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
 
     let client_bcs = client_cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let config = PushrebaseFlags::default();
-    let stack =
+    let mut stack =
         index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![client_bcs]).await?;
 
-    // First, get MergedFileInfo from a base→S1 check (simulating attempt 1)
-    let result1 = check_pushrebase_conflicts(
-        &ctx,
-        &repo,
-        &Default::default(),
-        base,
-        base,
-        s1,
-        std::slice::from_ref(stack.changesets.first().unwrap()),
-        &stack.changed_files,
-    )
-    .await?;
-    let carried = result1
-        .merged_file_overrides
-        .expect("Should have overrides from attempt 1");
-
-    // Now simulate a retry: conflict_check_base = S1, carried info from attempt 1
+    let hg_s1 = repo.derive_hg_changeset(&ctx, s1).await?;
+    set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{hg_s1}")).await?;
+    stack.precompute(&ctx, &repo, &config, &bookmark).await?;
+    assert_eq!(stack.conflict_check_base, s1);
+    assert!(!stack.carried_merge_file_info.is_empty());
+    set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{hg_s2}")).await?;
     let (tx, rx) = oneshot::channel();
     let mut request = queued_pushrebase_request(&ctx, stack, tx);
-    request.conflict_check_base = s1;
-    request.carried_merge_file_info = carried;
     request.retry_num = PushrebaseRetryNum(1);
 
     let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, vec![request], &[]).await;
@@ -4928,6 +4911,130 @@ async fn batched_pushrebase_merge_resolution_carry_forward(fb: FacebookInit) -> 
         "should have client's change"
     );
 
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn batched_precomputation_survives_cas_retry(fb: FacebookInit) -> Result<(), Error> {
+    struct MoveBookmark(PushrebaseTestRepo, ChangesetId);
+
+    #[async_trait]
+    impl PushrebaseHook for MoveBookmark {
+        async fn in_critical_section(
+            &self,
+            ctx: &CoreContext,
+            _old_bookmark_value: Option<ChangesetId>,
+        ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+            bookmark(ctx, &self.0, master_bookmark())
+                .set_to(self.1)
+                .await?;
+            Ok(Box::new(SleepHook))
+        }
+    }
+
+    init_just_knobs_for_merge_test();
+    for same_file in [false, true] {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+        let config = PushrebaseFlags::default();
+        let book = master_bookmark();
+        let base = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\n")
+            .commit()
+            .await?;
+        let s1 = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file(
+                "file",
+                "server\ntwo\nthree\nfour\nfive\nsix\nseven\neight\n",
+            )
+            .commit()
+            .await?;
+        let s2 = CreateCommitContext::new(&ctx, &repo, vec![s1])
+            .add_file(
+                if same_file { "file" } else { "unrelated" },
+                "server\ntwo\nserver2\nfour\nfive\nsix\nseven\neight\n",
+            )
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, book.clone()).set_to(s1).await?;
+        let c1 = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file(
+                "file",
+                "one\ntwo\nthree\nfour\nclient1\nsix\nseven\neight\n",
+            )
+            .commit()
+            .await?;
+        let c2 = CreateCommitContext::new(&ctx, &repo, vec![c1])
+            .add_file(
+                "file",
+                "one\ntwo\nthree\nfour\nclient1\nsix\nseven\nclient2\n",
+            )
+            .commit()
+            .await?;
+        let mut stack = index_pushrebase_request(
+            &ctx,
+            &repo,
+            &config,
+            &book,
+            &hashset![
+                c1.load(&ctx, repo.repo_blobstore()).await?,
+                c2.load(&ctx, repo.repo_blobstore()).await?
+            ],
+        )
+        .await?;
+        stack.precompute(&ctx, &repo, &config, &book).await?;
+        let carried = stack.carried_merge_file_info.clone();
+        assert_eq!(carried.len(), 1);
+        let (tx, rx) = oneshot::channel();
+        let mut retries = do_batched_pushrebase(
+            &ctx,
+            &repo,
+            &config,
+            &book,
+            vec![queued_pushrebase_request(&ctx, stack, tx)],
+            &[Box::new(MoveBookmark(repo.clone(), s2))],
+        )
+        .await;
+        assert_eq!(retries.len(), 1);
+        assert_eq!(retries[0].stack.conflict_check_base, s1);
+        assert_eq!(retries[0].stack.carried_merge_file_info, carried);
+        let fresh_id = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("fresh", "fresh")
+            .commit()
+            .await?;
+        let mut fresh = index_pushrebase_request(
+            &ctx,
+            &repo,
+            &config,
+            &book,
+            &hashset![fresh_id.load(&ctx, repo.repo_blobstore()).await?],
+        )
+        .await?;
+        fresh.precompute(&ctx, &repo, &config, &book).await?;
+        let (fresh_tx, fresh_rx) = oneshot::channel();
+        retries.push(queued_pushrebase_request(&ctx, fresh, fresh_tx));
+        assert!(
+            do_batched_pushrebase(&ctx, &repo, &config, &book, retries, &[])
+                .await
+                .is_empty()
+        );
+        let outcome = rx.await??;
+        assert_eq!(outcome.retry_num.0, 1);
+        assert_eq!(outcome.log_id, fresh_rx.await??.log_id);
+        for (id, last_line) in [(c1, "eight"), (c2, "client2")] {
+            let pair = outcome
+                .rebased_changesets
+                .iter()
+                .find(|pair| pair.id_old == id)
+                .unwrap();
+            let files = list_working_copy(&ctx, &repo, pair.id_new).await?;
+            let expected = format!(
+                "server\ntwo\n{}\nfour\nclient1\nsix\nseven\n{last_line}\n",
+                if same_file { "server2" } else { "three" }
+            );
+            assert_eq!(&files[&NonRootMPath::new("file")?][..], expected.as_bytes());
+        }
+    }
     Ok(())
 }
 

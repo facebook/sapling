@@ -17,7 +17,6 @@ use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
 use mononoke_macros::mononoke;
 use mononoke_types::CaseConflictTrie;
-use mononoke_types::ChangesetId;
 use mononoke_types::PrefixTrie;
 use pushrebase_hooks::RepoLockPushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
@@ -26,7 +25,6 @@ use stats::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use crate::MergedFileInfo;
 use crate::PushrebaseError;
 use crate::PushrebaseOutcome;
 use crate::PushrebaseQueueRepo;
@@ -75,8 +73,6 @@ mod service_stats {
 pub(super) struct QueuedPushrebaseRequest {
     pub(super) ctx: CoreContext,
     pub(super) stack: PushrebaseStack,
-    pub(super) conflict_check_base: ChangesetId,
-    pub(super) carried_merge_file_info: Vec<MergedFileInfo>,
     pub(super) retry_num: PushrebaseRetryNum,
     pub(super) response_tx:
         oneshot::Sender<Result<PushrebaseOutcome, SharedError<PushrebaseError>>>,
@@ -137,7 +133,6 @@ fn partition_requests(
     let mut batches = vec![];
     let mut conflicts = 0;
     let request_batches = requests.into_iter().map(|request| {
-        let conflict_check_base = request.stack.root;
         let ctx = pushrebase_context(&request.ctx, &request.flags);
         let mut flags = request.flags;
         // Attribution belongs to each request, not to the shared execution.
@@ -149,8 +144,6 @@ fn partition_requests(
             requests: vec![QueuedPushrebaseRequest {
                 ctx,
                 stack: request.stack,
-                conflict_check_base,
-                carried_merge_file_info: vec![],
                 retry_num: PushrebaseRetryNum(0),
                 response_tx: request.response_tx,
                 enqueued_at: request.enqueued_at,
@@ -443,6 +436,7 @@ mod tests {
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangesetMut;
+    use mononoke_types::ChangesetId;
     use mononoke_types::ContentId;
     use mononoke_types::FileChange;
     use mononoke_types::FileType;
@@ -484,6 +478,8 @@ mod tests {
                 changesets: vec![changeset],
                 head: id,
                 root: id,
+                conflict_check_base: id,
+                carried_merge_file_info: vec![],
             },
             flags: PushrebaseFlags::default(),
             repo_lock: RepoLockPolicy::Bypass,
@@ -585,6 +581,8 @@ mod tests {
                         ctx: ctx.clone(),
                         stack: PushrebaseStack {
                             root,
+                            conflict_check_base: root,
+                            carried_merge_file_info: vec![],
                             head: changeset.get_changeset_id(),
                             changesets: vec![changeset.clone()],
                             changed_files: vec![],

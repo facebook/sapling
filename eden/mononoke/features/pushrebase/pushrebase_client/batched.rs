@@ -81,7 +81,7 @@ impl<R: Repo + HookManagerRef + 'static> PushrebaseClient for BatchedPushrebaseC
         )
         .await?;
         let source_changesets = changesets.iter().cloned().collect();
-        let stack = pushrebase::index_pushrebase_request(
+        let mut stack = pushrebase::index_pushrebase_request(
             ctx,
             repo.as_ref(),
             &prepared.flags,
@@ -90,6 +90,10 @@ impl<R: Repo + HookManagerRef + 'static> PushrebaseClient for BatchedPushrebaseC
         )
         .await
         .map_err(BookmarkMovementError::PushrebaseError)?;
+        stack
+            .precompute(ctx, repo.as_ref(), &prepared.flags, bookmark)
+            .await
+            .map_err(BookmarkMovementError::PushrebaseError)?;
         let queue = {
             let mut queues = self.queues.lock().await;
             let resolve_repo = self.resolve_repo.clone();
