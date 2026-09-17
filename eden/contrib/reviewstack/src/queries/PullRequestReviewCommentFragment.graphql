@@ -6,6 +6,7 @@ fragment PullRequestReviewCommentFragment on PullRequestReviewComment {
   replyTo {
     id
   }
+  body
   bodyHTML
   state
   outdated

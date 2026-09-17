@@ -1,0 +1,9 @@
+mutation UpdatePullRequestReviewCommentMutation($input: UpdatePullRequestReviewCommentInput!) {
+  updatePullRequestReviewComment(input: $input) {
+    pullRequestReviewComment {
+      id
+      body
+      bodyHTML
+    }
+  }
+}

@@ -1,0 +1,9 @@
+mutation UpdateIssueCommentMutation($input: UpdateIssueCommentInput!) {
+  updateIssueComment(input: $input) {
+    issueComment {
+      id
+      body
+      bodyHTML
+    }
+  }
+}

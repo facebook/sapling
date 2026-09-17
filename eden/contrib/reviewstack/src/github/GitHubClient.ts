@@ -17,6 +17,10 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  DeleteIssueCommentInput,
+  DeleteIssueCommentMutationData,
+  DeletePullRequestReviewCommentInput,
+  DeletePullRequestReviewCommentMutationData,
   LabelFragment,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
@@ -25,6 +29,10 @@ import type {
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
+  UpdateIssueCommentInput,
+  UpdateIssueCommentMutationData,
+  UpdatePullRequestReviewCommentInput,
+  UpdatePullRequestReviewCommentMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -78,6 +86,15 @@ export default interface GitHubClient {
   addPullRequestReviewComment(
     input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData>;
+
+  updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData>;
+  deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData>;
+  updatePullRequestReviewComment(
+    input: UpdatePullRequestReviewCommentInput,
+  ): Promise<UpdatePullRequestReviewCommentMutationData>;
+  deletePullRequestReviewComment(
+    input: DeletePullRequestReviewCommentInput,
+  ): Promise<DeletePullRequestReviewCommentMutationData>;
 
   /**
    * Removes labels from a Labelable object.

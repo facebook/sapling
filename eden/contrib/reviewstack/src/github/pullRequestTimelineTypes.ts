@@ -62,6 +62,7 @@ export type GitHubPullRequestReviewThreadComment = {
   author: Actor | null;
   originalCommit?: GitObject | null;
   path: string;
+  body: string;
   bodyHTML: string;
   state: PullRequestReviewCommentState;
 };

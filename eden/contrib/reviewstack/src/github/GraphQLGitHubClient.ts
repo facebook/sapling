@@ -24,6 +24,12 @@ import type {
   AddPullRequestReviewCommentMutationVariables,
   CommitQueryData,
   CommitQueryVariables,
+  DeleteIssueCommentInput,
+  DeleteIssueCommentMutationData,
+  DeleteIssueCommentMutationVariables,
+  DeletePullRequestReviewCommentInput,
+  DeletePullRequestReviewCommentMutationData,
+  DeletePullRequestReviewCommentMutationVariables,
   LabelFragment,
   PullRequestQueryData,
   PullRequestQueryVariables,
@@ -47,6 +53,12 @@ import type {
   SubmitPullRequestReviewMutationVariables,
   TreeQueryData,
   TreeQueryVariables,
+  UpdateIssueCommentInput,
+  UpdateIssueCommentMutationData,
+  UpdateIssueCommentMutationVariables,
+  UpdatePullRequestReviewCommentInput,
+  UpdatePullRequestReviewCommentMutationData,
+  UpdatePullRequestReviewCommentMutationVariables,
   UserFragment,
 } from '../generated/graphql';
 
@@ -59,6 +71,8 @@ import {
   AddPullRequestReviewMutation,
   AddPullRequestReviewCommentMutation,
   CommitQuery,
+  DeleteIssueCommentMutation,
+  DeletePullRequestReviewCommentMutation,
   PullRequestQuery,
   PullsQuery,
   RemoveLabelsFromLabelableMutation,
@@ -68,6 +82,8 @@ import {
   StackPullRequestQuery,
   SubmitPullRequestReviewMutation,
   TreeQuery,
+  UpdateIssueCommentMutation,
+  UpdatePullRequestReviewCommentMutation,
 } from '../generated/graphql';
 import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
@@ -406,6 +422,38 @@ export default class GraphQLGitHubClient implements GitHubClient {
       AddPullRequestReviewCommentMutationData,
       AddPullRequestReviewCommentMutationVariables
     >(AddPullRequestReviewCommentMutation, {input});
+  }
+
+  updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
+    return this.query<UpdateIssueCommentMutationData, UpdateIssueCommentMutationVariables>(
+      UpdateIssueCommentMutation,
+      {input},
+    );
+  }
+
+  deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData> {
+    return this.query<DeleteIssueCommentMutationData, DeleteIssueCommentMutationVariables>(
+      DeleteIssueCommentMutation,
+      {input},
+    );
+  }
+
+  updatePullRequestReviewComment(
+    input: UpdatePullRequestReviewCommentInput,
+  ): Promise<UpdatePullRequestReviewCommentMutationData> {
+    return this.query<
+      UpdatePullRequestReviewCommentMutationData,
+      UpdatePullRequestReviewCommentMutationVariables
+    >(UpdatePullRequestReviewCommentMutation, {input});
+  }
+
+  deletePullRequestReviewComment(
+    input: DeletePullRequestReviewCommentInput,
+  ): Promise<DeletePullRequestReviewCommentMutationData> {
+    return this.query<
+      DeletePullRequestReviewCommentMutationData,
+      DeletePullRequestReviewCommentMutationVariables
+    >(DeletePullRequestReviewCommentMutation, {input});
   }
 
   removeLabels(

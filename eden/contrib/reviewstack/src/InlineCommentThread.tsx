@@ -9,9 +9,9 @@ import type {GitHubPullRequestReviewThreadComment} from './github/pullRequestTim
 import type {GitObjectID, ID} from './github/types';
 
 import ActorHeading from './ActorHeading';
+import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
 import PullRequestInlineCommentInput from './PullRequestInlineCommentInput';
-import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {PullRequestReviewCommentState} from './generated/graphql';
 import {gitHubPullRequestJumpToCommentIDAtom} from './jotai/atoms';
 import {Box, Button} from '@primer/react';
@@ -77,7 +77,13 @@ function Comment({comment}: {comment: GitHubPullRequestReviewThreadComment}): Re
         {pendingLabel}
       </Box>
       <Box fontSize={1} sx={{wordBreak: 'break-word'}}>
-        <TrustedRenderedMarkdown trustedHTML={comment.bodyHTML} />
+        <EditableComment
+          id={comment.id}
+          authorLogin={comment.author?.login}
+          body={comment.body}
+          bodyHTML={comment.bodyHTML}
+          kind="review"
+        />
       </Box>
     </Box>
   );

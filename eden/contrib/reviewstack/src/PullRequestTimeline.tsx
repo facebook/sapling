@@ -23,6 +23,7 @@ import type {
 import ActorHeading from './ActorHeading';
 import CenteredSpinner from './CenteredSpinner';
 import CommitLink from './CommitLink';
+import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
 import PullRequestReviewComment from './PullRequestReviewComment';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
@@ -241,9 +242,13 @@ function ReviewAction({
 function IssueComment({item}: {item: IssueCommentItem}): React.ReactElement {
   return (
     <TimelineCallout actor={item.author}>
-      <TrustedRenderedMarkdown
+      <EditableComment
+        id={item.id}
+        authorLogin={item.author?.login}
+        body={item.body}
+        kind="issue"
         className="PRT-bodyHTML PRT-review-comment-text"
-        trustedHTML={item.bodyHTML}
+        bodyHTML={item.bodyHTML}
       />
     </TimelineCallout>
   );

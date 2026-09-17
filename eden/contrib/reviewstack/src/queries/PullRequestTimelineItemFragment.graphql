@@ -47,9 +47,11 @@ fragment PullRequestTimelineItemFragment on PullRequestTimelineItems {
     }
   }
   ... on IssueComment {
+    id
     author {
       ...ActorFragment
     }
+    body
     bodyHTML
   }
   ... on RenamedTitleEvent {

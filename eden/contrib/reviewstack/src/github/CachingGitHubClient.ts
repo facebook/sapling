@@ -18,6 +18,10 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  DeleteIssueCommentInput,
+  DeleteIssueCommentMutationData,
+  DeletePullRequestReviewCommentInput,
+  DeletePullRequestReviewCommentMutationData,
   LabelFragment,
   PullRequestReviewDecision,
   PullRequestState,
@@ -28,6 +32,10 @@ import type {
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
+  UpdateIssueCommentInput,
+  UpdateIssueCommentMutationData,
+  UpdatePullRequestReviewCommentInput,
+  UpdatePullRequestReviewCommentMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -356,6 +364,26 @@ export default class CachingGitHubClient implements GitHubClient {
     input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData> {
     return this.client.addPullRequestReviewComment(input);
+  }
+
+  updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
+    return this.client.updateIssueComment(input);
+  }
+
+  deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData> {
+    return this.client.deleteIssueComment(input);
+  }
+
+  updatePullRequestReviewComment(
+    input: UpdatePullRequestReviewCommentInput,
+  ): Promise<UpdatePullRequestReviewCommentMutationData> {
+    return this.client.updatePullRequestReviewComment(input);
+  }
+
+  deletePullRequestReviewComment(
+    input: DeletePullRequestReviewCommentInput,
+  ): Promise<DeletePullRequestReviewCommentMutationData> {
+    return this.client.deletePullRequestReviewComment(input);
   }
 
   removeLabels(

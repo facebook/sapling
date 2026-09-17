@@ -7,8 +7,8 @@
 
 import type {ID, GitObject} from './github/types';
 
+import EditableComment from './EditableComment';
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
-import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {gitHubPullRequestCommentForIDAtom} from './jotai';
 import {Box} from '@primer/react';
 import {useAtomValue} from 'jotai';
@@ -18,6 +18,8 @@ type Props = {
     id: ID;
     originalCommit?: GitObject | null;
     path: string;
+    author?: {login: string} | null;
+    body: string;
     bodyHTML: string;
   };
 };
@@ -44,9 +46,13 @@ export default function PullRequestReviewComment({comment}: Props): React.ReactE
           )}
         </Box>
         <Box paddingLeft={2}>
-          <TrustedRenderedMarkdown
+          <EditableComment
+            id={comment.id}
+            authorLogin={comment.author?.login}
+            body={comment.body}
+            kind="review"
             className="PRT-review-comment-text"
-            trustedHTML={comment.bodyHTML}
+            bodyHTML={comment.bodyHTML}
           />
         </Box>
       </Box>
