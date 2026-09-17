@@ -18,6 +18,8 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  AddPullRequestReviewThreadInput,
+  AddPullRequestReviewThreadMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
@@ -100,6 +102,12 @@ export default class RejectingGitHubClient implements GitHubClient {
   addPullRequestReviewComment(
     _input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  addPullRequestReviewThread(
+    _input: AddPullRequestReviewThreadInput,
+  ): Promise<AddPullRequestReviewThreadMutationData> {
     return Promise.reject('Method not implemented.');
   }
 

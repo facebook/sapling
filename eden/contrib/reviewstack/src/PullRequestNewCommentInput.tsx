@@ -13,6 +13,7 @@ import {
   gitHubPullRequestAtom,
   gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestNewCommentInputCellAtom,
+  gitHubPullRequestPendingReviewIDAtom,
 } from './jotai';
 import {reviewCommentRangeAtom} from './reviewCommentRange';
 import useRefreshPullRequest from './useRefreshPullRequest';
@@ -67,6 +68,7 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
   // Read pull request and comparable versions from Jotai
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const comparableVersions = useAtomValue(gitHubPullRequestComparableVersionsAtom);
+  const pendingReviewID = useAtomValue(gitHubPullRequestPendingReviewIDAtom);
 
   const selectedRange = useAtomValue(reviewCommentRangeAtom);
   const range = useMemo(
@@ -95,21 +97,27 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
         return Promise.reject('comparableVersions not found');
       }
 
-      await client.addPullRequestReview({
-        commitOID: comparableVersions.afterCommitID,
-        pullRequestId,
-        threads: [
-          {
-            body: comment,
-            line: range.endLine,
-            path,
-            side,
-            ...(range.startLine === range.endLine
-              ? {}
-              : {startLine: range.startLine, startSide: side}),
-          },
-        ],
-      });
+      const thread = {
+        body: comment,
+        line: range.endLine,
+        path,
+        side,
+        ...(range.startLine === range.endLine
+          ? {}
+          : {startLine: range.startLine, startSide: side}),
+      };
+      if (pendingReviewID == null) {
+        await client.addPullRequestReview({
+          commitOID: comparableVersions.afterCommitID,
+          pullRequestId,
+          threads: [thread],
+        });
+      } else {
+        await client.addPullRequestReviewThread({
+          ...thread,
+          pullRequestReviewId: pendingReviewID,
+        });
+      }
 
       // Note that onCancel() will reset gitHubPullRequestNewCommentInputCellAtom
       // to null, which will result in this component being removed from the
@@ -117,7 +125,17 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
       onCancel();
       refreshPullRequest();
     },
-    [client, comparableVersions, onCancel, path, pullRequest, range, refreshPullRequest, side],
+    [
+      client,
+      comparableVersions,
+      onCancel,
+      path,
+      pendingReviewID,
+      pullRequest,
+      range,
+      refreshPullRequest,
+      side,
+    ],
   );
 
   const lineLabel =

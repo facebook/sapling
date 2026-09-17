@@ -6,6 +6,7 @@
  */
 
 import GraphQLGitHubClient, {treesFromRecursiveResponse} from './GraphQLGitHubClient';
+import {DiffSide} from '../generated/graphql';
 
 describe('recursive Git tree prefetch', () => {
   test('builds directly addressable trees while preserving sorted entries', () => {
@@ -104,6 +105,44 @@ describe('GraphQLGitHubClient comment mutations', () => {
         variables: {input: {id: 'review-id'}},
       }),
     ]);
+
+    fetchMock.mockRestore();
+  });
+
+  test('adds another thread to an existing pending review', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({data: {}}),
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await client.addPullRequestReviewThread({
+      body: 'second comment',
+      line: 12,
+      path: 'src/example.ts',
+      pullRequestReviewId: 'pending-review-id',
+      side: DiffSide.Right,
+      startLine: 10,
+      startSide: DiffSide.Right,
+    });
+
+    const request = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(request).toEqual(
+      expect.objectContaining({
+        query: expect.stringContaining('mutation AddPullRequestReviewThreadMutation'),
+        variables: {
+          input: {
+            body: 'second comment',
+            line: 12,
+            path: 'src/example.ts',
+            pullRequestReviewId: 'pending-review-id',
+            side: 'RIGHT',
+            startLine: 10,
+            startSide: 'RIGHT',
+          },
+        },
+      }),
+    );
 
     fetchMock.mockRestore();
   });

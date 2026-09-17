@@ -1,0 +1,7 @@
+mutation AddPullRequestReviewThreadMutation($input: AddPullRequestReviewThreadInput!) {
+  addPullRequestReviewThread(input: $input) {
+    thread {
+      id
+    }
+  }
+}

@@ -18,6 +18,8 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  AddPullRequestReviewThreadInput,
+  AddPullRequestReviewThreadMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
@@ -393,6 +395,12 @@ export default class CachingGitHubClient implements GitHubClient {
     input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData> {
     return this.client.addPullRequestReviewComment(input);
+  }
+
+  addPullRequestReviewThread(
+    input: AddPullRequestReviewThreadInput,
+  ): Promise<AddPullRequestReviewThreadMutationData> {
+    return this.client.addPullRequestReviewThread(input);
   }
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {

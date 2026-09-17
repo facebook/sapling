@@ -19,6 +19,8 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  AddPullRequestReviewThreadInput,
+  AddPullRequestReviewThreadMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
@@ -105,6 +107,12 @@ export default class TestGitHubClient implements GitHubClient {
   addPullRequestReviewComment(
     _input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData> {
+    return Promise.resolve({});
+  }
+
+  addPullRequestReviewThread(
+    _input: AddPullRequestReviewThreadInput,
+  ): Promise<AddPullRequestReviewThreadMutationData> {
     return Promise.resolve({});
   }
 

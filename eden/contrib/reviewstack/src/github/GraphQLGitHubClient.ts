@@ -22,6 +22,9 @@ import type {
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewCommentMutationVariables,
+  AddPullRequestReviewThreadInput,
+  AddPullRequestReviewThreadMutationData,
+  AddPullRequestReviewThreadMutationVariables,
   CommitQueryData,
   CommitQueryVariables,
   DeleteIssueCommentInput,
@@ -70,6 +73,7 @@ import {
   AddLabelsToLabelableMutation,
   AddPullRequestReviewMutation,
   AddPullRequestReviewCommentMutation,
+  AddPullRequestReviewThreadMutation,
   CommitQuery,
   DeleteIssueCommentMutation,
   DeletePullRequestReviewCommentMutation,
@@ -490,6 +494,15 @@ export default class GraphQLGitHubClient implements GitHubClient {
       AddPullRequestReviewCommentMutationData,
       AddPullRequestReviewCommentMutationVariables
     >(AddPullRequestReviewCommentMutation, {input});
+  }
+
+  addPullRequestReviewThread(
+    input: AddPullRequestReviewThreadInput,
+  ): Promise<AddPullRequestReviewThreadMutationData> {
+    return this.query<
+      AddPullRequestReviewThreadMutationData,
+      AddPullRequestReviewThreadMutationVariables
+    >(AddPullRequestReviewThreadMutation, {input});
   }
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {

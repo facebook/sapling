@@ -17,6 +17,8 @@ import type {
   AddPullRequestReviewMutationData,
   AddPullRequestReviewCommentInput,
   AddPullRequestReviewCommentMutationData,
+  AddPullRequestReviewThreadInput,
+  AddPullRequestReviewThreadMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
@@ -87,6 +89,11 @@ export default interface GitHubClient {
   addPullRequestReviewComment(
     input: AddPullRequestReviewCommentInput,
   ): Promise<AddPullRequestReviewCommentMutationData>;
+
+  /** Adds a new thread to an existing pending pull request review. */
+  addPullRequestReviewThread(
+    input: AddPullRequestReviewThreadInput,
+  ): Promise<AddPullRequestReviewThreadMutationData>;
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData>;
   deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData>;
