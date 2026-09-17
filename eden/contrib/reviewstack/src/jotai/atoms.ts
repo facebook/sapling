@@ -999,14 +999,14 @@ export const gitHubPullRequestVersionsAtom = atom<Promise<Version[]>>(async get 
   const stackedPR = get(stackedPullRequestAtom);
   if (stackedPR.type === 'sapling') {
     const fragments = await get(stackedPullRequestFragmentsAtom);
-    if (fragments.length !== stackedPR.body.stack.length) {
-      // This is unexpected: bail out.
-      return [];
-    }
     versions.reverse();
 
     const index = stackedPR.body.currentStackEntry;
-    const parentFragment = fragments[index + 1];
+    const parentPullRequest = stackedPR.body.stack[index + 1];
+    const parentFragment =
+      parentPullRequest == null
+        ? null
+        : fragments.find(fragment => fragment.number === parentPullRequest.number);
 
     const saplingStack = stackedPR.body;
 

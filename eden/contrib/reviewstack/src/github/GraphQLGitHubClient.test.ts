@@ -108,3 +108,46 @@ describe('GraphQLGitHubClient comment mutations', () => {
     fetchMock.mockRestore();
   });
 });
+
+describe('GraphQLGitHubClient stack fragments', () => {
+  test('skips pull requests that no longer exist', async () => {
+    const pullRequest = {
+      __typename: 'PullRequest' as const,
+      comments: {totalCount: 0},
+      headRefOid: 'head',
+      isDraft: false,
+      number: 6,
+      reviewDecision: null,
+      state: 'OPEN',
+      title: 'Existing pull request',
+      updatedAt: '2026-09-17T00:00:00Z',
+    };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
+      const {variables} = JSON.parse(String(init?.body));
+      const json =
+        variables.pr === 61
+          ? {
+              data: {repository: {pullRequest: null}},
+              errors: [
+                {
+                  message: 'Could not resolve to a PullRequest with the number of 61.',
+                  path: ['repository', 'pullRequest'],
+                  type: 'NOT_FOUND',
+                },
+              ],
+            }
+          : {data: {repository: {pullRequest}}};
+      return Promise.resolve({
+        headers: new Headers(),
+        json: () => Promise.resolve(json),
+        ok: true,
+      } as Response);
+    });
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await expect(client.getStackPullRequests([6, 61])).resolves.toEqual([pullRequest]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    fetchMock.mockRestore();
+  });
+});

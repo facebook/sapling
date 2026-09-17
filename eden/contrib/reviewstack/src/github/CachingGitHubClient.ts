@@ -43,6 +43,7 @@ import {globalCacheStats} from './GitHubClientStats';
 import {DB_VERSION, DB_NAME} from './databaseInfo';
 import {subscribeToLogout} from './logoutBroadcastChannel';
 import rejectAfterTimeout from 'shared/rejectAfterTimeout';
+import {notEmpty} from 'shared/utils';
 
 const DB_COMMIT_STORE_NAME = 'commit';
 const DB_TREE_STORE_NAME = 'tree';
@@ -339,11 +340,9 @@ export default class CachingGitHubClient implements GitHubClient {
     // We record each cache miss with the necessary bookkeeping information to
     // patch up the cachedFragments array.
     const prsToFetch: number[] = [];
-    const prsToFetchIndex: number[] = [];
     cachedFragments.forEach((fragment, index) => {
       if (fragment == null) {
         prsToFetch.push(prs[index]);
-        prsToFetchIndex.push(index);
       }
     });
 
@@ -354,9 +353,12 @@ export default class CachingGitHubClient implements GitHubClient {
 
     const tx = new OpenTransaction(this.db, PR_FRAGMENT_STORE_NAME);
     await Promise.all(
-      fetchedFragments.map((fragment, index) => {
-        const originalIndex = prsToFetchIndex[index];
-        cachedFragments[originalIndex] = fragment;
+      fetchedFragments.map(fragment => {
+        prs.forEach((pr, index) => {
+          if (pr === fragment.number) {
+            cachedFragments[index] = fragment;
+          }
+        });
         const normalizedFragment = normalizePullRequestFragment(owner, name, fragment);
         // Stores a StackPullRequestFragment in IndexedDB, which uses
         // [owner, name, number] as the key. Of note:
@@ -370,7 +372,7 @@ export default class CachingGitHubClient implements GitHubClient {
       }),
     );
     await tx.commit();
-    return cachedFragments as StackPullRequestFragment[];
+    return cachedFragments.filter(notEmpty);
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {

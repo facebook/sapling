@@ -92,6 +92,22 @@ const MAX_PARENT_COMMITS_TO_FETCH = 10;
 const NUM_COMMENTS_TO_FETCH = 10;
 const NUM_TIMELINE_ITEMS_TO_FETCH = 100;
 
+function isMissingPullRequestError(error: unknown): boolean {
+  return (
+    error instanceof GitHubGraphQLError &&
+    !error.isRateLimitError &&
+    error.errors.length > 0 &&
+    error.errors.every(
+      ({message, path, type}) =>
+        type === 'NOT_FOUND' &&
+        message.startsWith('Could not resolve to a PullRequest') &&
+        path?.length === 2 &&
+        path[0] === 'repository' &&
+        path[1] === 'pullRequest',
+    )
+  );
+}
+
 /**
  * Implementation of GitHub client that fetches data via GraphQL.
  */
@@ -414,19 +430,30 @@ export default class GraphQLGitHubClient implements GitHubClient {
     // not one of them, so we have to make a separate GraphQL call for each PR.
     // It would be nice to update this if the API changes.
     const data = await Promise.all(
-      prs.map(pr =>
-        this.query<StackPullRequestQueryData, StackPullRequestQueryVariables>(
-          StackPullRequestQuery,
-          {
-            owner: this.organization,
-            name: this.repositoryName,
-            pr,
-          },
-        ),
-      ),
+      prs.map(async pr => {
+        try {
+          return await this.query<StackPullRequestQueryData, StackPullRequestQueryVariables>(
+            StackPullRequestQuery,
+            {
+              owner: this.organization,
+              name: this.repositoryName,
+              pr,
+            },
+          );
+        } catch (error) {
+          // Stack metadata can outlive a deleted PR or refer to a PR that the
+          // current user cannot access. GitHub returns partial data together
+          // with a NOT_FOUND error in that case. Keep the remaining stack
+          // usable while continuing to surface all other GraphQL failures.
+          if (isMissingPullRequestError(error)) {
+            return null;
+          }
+          throw error;
+        }
+      }),
     );
 
-    return data.map(({repository}) => repository?.pullRequest).filter(notEmpty);
+    return data.map(result => result?.repository?.pullRequest).filter(notEmpty);
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {

@@ -70,11 +70,20 @@ export function buildStackTopology(
   currentPullRequest: number,
   currentPath: number[],
   pullRequests: StackBody[],
+  availablePullRequests?: ReadonlySet<number>,
 ): StackTopology {
-  const paths = [currentPath, ...pullRequests.map(({body}) => stackPathFromBody(body))].filter(
-    path => path.length > 0,
+  const filterAvailable = (path: number[]): number[] =>
+    availablePullRequests == null
+      ? path
+      : path.filter(number => availablePullRequests.has(number));
+  const availableCurrentPath = filterAvailable(currentPath);
+  const paths = [
+    availableCurrentPath,
+    ...pullRequests.map(({body}) => filterAvailable(stackPathFromBody(body))),
+  ].filter(path => path.length > 0);
+  const connected = new Set(
+    availableCurrentPath.length > 0 ? availableCurrentPath : [currentPullRequest],
   );
-  const connected = new Set(currentPath.length > 0 ? currentPath : [currentPullRequest]);
   connected.add(currentPullRequest);
 
   let changed = true;
@@ -121,8 +130,8 @@ export function buildStackTopology(
     .filter(number => !connected.has(parentByChild.get(number) ?? -1))
     .sort((a, b) => a - b);
   const preferredChildByParent = new Map<number, number>();
-  for (let index = 0; index < currentPath.length - 1; ++index) {
-    preferredChildByParent.set(currentPath[index + 1], currentPath[index]);
+  for (let index = 0; index < availableCurrentPath.length - 1; ++index) {
+    preferredChildByParent.set(availableCurrentPath[index + 1], availableCurrentPath[index]);
   }
 
   const orderedChildren = (number: number): number[] => {
@@ -262,7 +271,7 @@ export function usePullRequestStackGraph(
     setLoadable({state: 'loading'});
     const load = async (): Promise<void> => {
       const openPullRequests = await loadOpenPullRequests(client);
-      const topology = buildStackTopology(
+      let topology = buildStackTopology(
         currentPullRequest,
         currentStack.map(({number}) => number),
         openPullRequests.filter(
@@ -271,10 +280,18 @@ export function usePullRequestStackGraph(
         ),
       );
       const fragments = await client.getStackPullRequests(topology.rows.map(({number}) => number));
-      if (fragments.length !== topology.rows.length) {
-        throw new Error('GitHub did not return every pull request in the connected stack graph.');
-      }
       const fragmentsByNumber = new Map(fragments.map(fragment => [fragment.number, fragment]));
+      if (fragments.length !== topology.rows.length) {
+        topology = buildStackTopology(
+          currentPullRequest,
+          currentStack.map(({number}) => number),
+          openPullRequests.filter(
+            (pullRequest): pullRequest is PullsPullRequest & StackBody =>
+              typeof pullRequest.body === 'string',
+          ),
+          new Set(fragmentsByNumber.keys()),
+        );
+      }
       const rows = topology.rows.flatMap(({graphPosition, number}) => {
         const pullRequest = fragmentsByNumber.get(number);
         return pullRequest == null ? [] : [{graphPosition, pullRequest}];
