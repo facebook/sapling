@@ -6,7 +6,7 @@
 # debugmutation.py - command processing for debug commands for mutation and visibility
 
 
-from .. import mutation, node as nodemod, scmutil, util, visibility
+from .. import error, json, mutation, node as nodemod, scmutil, util, visibility
 from ..i18n import _, _x
 from .cmdtable import command
 
@@ -17,11 +17,72 @@ from .cmdtable import command
         ("r", "rev", [], _("display predecessors of REV")),
         ("s", "successors", False, _("show successors instead of predecessors")),
         ("t", "time-range", [], _("select time range"), _("TIME")),
+        ("T", "template", "", _("display with template"), _("TEMPLATE")),
     ],
+    cmdtype=command.readonly,
 )
 def debugmutation(ui, repo, **opts) -> int:
-    """display the mutation history (or future) of a commit"""
+    """display the mutation history (or future) of a commit
+
+    ``-Tjson`` outputs the predecessor mutations for one target. The output
+    contains raw mutation facts and does not attest that the history is complete.
+    """
     unfi = repo
+
+    template = opts.get("template")
+    if template and template != "json":
+        raise error.Abort(_("debugmutation only supports -Tjson"))
+
+    if template == "json":
+        if opts.get("successors"):
+            raise error.Abort(_("-Tjson does not support --successors"))
+        if opts.get("time_range"):
+            raise error.Abort(_("-Tjson does not support --time-range"))
+
+        revs = scmutil.revrange(repo, opts.get("rev") or ["."])
+        if len(revs) != 1:
+            raise error.Abort(_("-Tjson requires exactly one revision"))
+
+        target = repo[revs.first()].node()
+        remaining = [target]
+        seen = set()
+        entries = []
+        while remaining:
+            current = remaining.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+
+            entry = mutation.lookup(unfi, current)
+            if entry is None:
+                continue
+
+            successor = nodemod.hex(entry.succ())
+            split_successors = {nodemod.hex(node) for node in entry.split()}
+            if split_successors:
+                split_successors.add(successor)
+            predecessors = sorted({nodemod.hex(node) for node in entry.preds()})
+            entries.append(
+                {
+                    "successor": successor,
+                    "predecessors": predecessors,
+                    "split_successors": sorted(split_successors),
+                    "operation": entry.op(),
+                }
+            )
+            remaining.extend(entry.preds())
+
+        entries.sort(key=lambda entry: entry["successor"])
+        ui.write(
+            "%s\n"
+            % json.dumps(
+                {
+                    "target": nodemod.hex(target),
+                    "mutations": entries,
+                }
+            )
+        )
+        return 0
 
     matchdatefuncs = []
     for timerange in opts.get("time_range") or []:
