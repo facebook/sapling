@@ -70,16 +70,27 @@ export default function PullRequestLayout({
           drawerState={drawerStateAtom}
           errorBoundary={ErrorBoundary}
           leftLabel={<Text className="drawer-label-text">Files</Text>}
-          left={<PullRequestFiles />}
+          left={<FilesDrawer />}
           rightLabel={<Text className="drawer-label-text">...</Text>}
           right={<TimelineDrawer />}>
           <Box display="flex" flexDirection="row">
-            <Box height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`} overflow="auto">
+            <Box
+              data-reviewstack-diff-scroll="true"
+              height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`}
+              overflow="auto">
               <PullRequest />
             </Box>
           </Box>
         </Drawers>
       </Suspense>
+    </Box>
+  );
+}
+
+function FilesDrawer() {
+  return (
+    <Box height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`} minHeight={0} overflow="hidden">
+      <PullRequestFiles />
     </Box>
   );
 }

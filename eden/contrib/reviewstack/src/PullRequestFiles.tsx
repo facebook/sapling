@@ -9,13 +9,18 @@ import type {DisplayChange} from './coalesceRenamedFiles';
 import type {PullRequestFileTreeNode} from './pullRequestFileTree';
 
 import coalesceRenamedFiles from './coalesceRenamedFiles';
-import {getDisplayChangeLabel, scrollToDiffFile} from './diffFileNavigation';
+import {
+  diffFileAnchorID,
+  getDisplayChangeLabel,
+  getDisplayChangePath,
+  scrollToDiffFile,
+} from './diffFileNavigation';
 import {gitHubPullRequestComparisonFilesAtom, gitHubPullRequestVersionDiffAtom} from './jotai';
 import buildPullRequestFileTree from './pullRequestFileTree';
 import {ChevronDownIcon, ChevronRightIcon, FileDirectoryIcon} from '@primer/octicons-react';
 import {Box, Button, StyledOcticon, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 
 const symbolForChange: Record<DisplayChange['type'], string> = {
   add: '+',
@@ -71,8 +76,77 @@ export default function PullRequestFiles(): React.ReactElement {
     () => (diff == null ? [] : coalesceRenamedFiles(diff.diff, comparisonFiles)),
     [comparisonFiles, diff],
   );
+  const filePaths = useMemo(() => changes.map(getDisplayChangePath), [changes]);
   const tree = useMemo(() => buildPullRequestFileTree(changes), [changes]);
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(() => new Set());
+  const [activePath, setActivePath] = useState<string | null>(() => filePaths[0] ?? null);
+  const fileListRef = useRef<HTMLDivElement>(null);
+  const fileRowRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  useEffect(() => {
+    const scrollContainer = document.querySelector<HTMLElement>(
+      '[data-reviewstack-diff-scroll="true"]',
+    );
+    if (scrollContainer == null) {
+      return;
+    }
+
+    let animationFrame: number | null = null;
+    const updateActivePath = () => {
+      if (animationFrame != null) {
+        cancelAnimationFrame(animationFrame);
+      }
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = null;
+        const viewportTop = scrollContainer.getBoundingClientRect().top + 8;
+        let nextPath = filePaths[0] ?? null;
+        for (const path of filePaths) {
+          const file = document.getElementById(diffFileAnchorID(path));
+          if (file == null) {
+            continue;
+          }
+          if (file.getBoundingClientRect().top > viewportTop) {
+            break;
+          }
+          nextPath = path;
+        }
+        setActivePath(current => (current === nextPath ? current : nextPath));
+      });
+    };
+
+    const mutationObserver = new MutationObserver(updateActivePath);
+    mutationObserver.observe(scrollContainer, {childList: true, subtree: true});
+    scrollContainer.addEventListener('scroll', updateActivePath, {passive: true});
+    window.addEventListener('resize', updateActivePath);
+    updateActivePath();
+
+    return () => {
+      if (animationFrame != null) {
+        cancelAnimationFrame(animationFrame);
+      }
+      mutationObserver.disconnect();
+      scrollContainer.removeEventListener('scroll', updateActivePath);
+      window.removeEventListener('resize', updateActivePath);
+    };
+  }, [filePaths]);
+
+  useEffect(() => {
+    if (activePath == null) {
+      return;
+    }
+    const list = fileListRef.current;
+    const row = fileRowRefs.current.get(activePath);
+    if (list == null || row == null) {
+      return;
+    }
+    const listRect = list.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    if (rowRect.top < listRect.top) {
+      list.scrollTop -= listRect.top - rowRect.top;
+    } else if (rowRect.bottom > listRect.bottom) {
+      list.scrollTop += rowRect.bottom - listRect.bottom;
+    }
+  }, [activePath, collapsedDirectories]);
 
   const toggleDirectory = (path: string) => {
     setCollapsedDirectories(current => {
@@ -130,18 +204,33 @@ export default function PullRequestFiles(): React.ReactElement {
       }
 
       const label = getDisplayChangeLabel(node.change);
+      const isActive = node.path === activePath;
       return (
         <Button
           key={`${node.change.type}:${node.path}`}
           aria-label={`Go to ${label}`}
+          aria-current={isActive ? 'location' : undefined}
+          data-active={isActive ? 'true' : undefined}
+          data-file-path={node.path}
           onClick={() => scrollToDiffFile(node.path)}
+          ref={element => {
+            if (element == null) {
+              fileRowRefs.current.delete(node.path);
+            } else {
+              fileRowRefs.current.set(node.path, element);
+            }
+          }}
           title={label}
           variant="invisible"
           sx={{
             alignItems: 'center',
+            backgroundColor: isActive ? 'accent.subtle' : 'transparent',
+            borderLeftColor: isActive ? 'accent.emphasis' : 'transparent',
+            borderLeftStyle: 'solid',
+            borderLeftWidth: '3px',
             borderRadius: 0,
             display: 'flex',
-            fontWeight: 'normal',
+            fontWeight: isActive ? 'semibold' : 'normal',
             height: 28,
             justifyContent: 'flex-start',
             paddingLeft: `${28 + depth * 12}px`,
@@ -191,6 +280,7 @@ export default function PullRequestFiles(): React.ReactElement {
         borderBottomColor="border.default"
         borderBottomStyle="solid"
         borderBottomWidth={1}
+        flexShrink={0}
         padding={2}>
         <Text fontSize={1} fontWeight="bold">
           Files changed
@@ -213,7 +303,14 @@ export default function PullRequestFiles(): React.ReactElement {
           </Text>
         </Box>
       </Box>
-      <Box overflow="auto" paddingY={1}>
+      <Box
+        ref={fileListRef}
+        data-testid="pull-request-file-list"
+        flexGrow={1}
+        minHeight={0}
+        overflowY="scroll"
+        paddingY={1}
+        sx={{scrollbarGutter: 'stable'}}>
         {renderNodes(tree)}
       </Box>
     </Box>
