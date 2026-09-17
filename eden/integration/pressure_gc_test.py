@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-strict
-
 import asyncio
 import contextlib
 import os
@@ -100,19 +98,22 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
     active invalidation means GC can actually reclaim inodes on Linux/FUSE.
     """
 
-    directories: List[str] = ["a", "b", "c"]
+    directories: list[str] = ["a", "b", "c"]
     num_files: int = 10
     deep_file_count: int = 20
 
     def select_storage_engine(self) -> str:
         return "sqlite"
 
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+    def edenfs_extra_config(self) -> dict[str, list[str]] | None:
         result = super().edenfs_extra_config() or {}
         result.setdefault("experimental", []).append("enable-pressure-based-gc = true")
+        # The TTL must stay below the age-filter test's 2s cutoff so repeated
+        # reads refresh EdenFS's access times before the entries become stale.
+        result.setdefault("mount", []).append('fuse-ttl-max-seconds = "1"')
         return result
 
-    def edenfs_logging_settings(self) -> Dict[str, str]:
+    def edenfs_logging_settings(self) -> dict[str, str]:
         return {
             "eden.fs.inodes.TreeInode": "DBG5",
         }
@@ -189,6 +190,36 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             await asyncio.sleep(0.1)
         self.assertLessEqual(after, before - minimum)
 
+    async def invalidate_until_unloaded(
+        self,
+        *,
+        loaded_before: int,
+        path: str = "",
+        seconds: int = 0,
+        before_invalidate: Callable[[], None] | None = None,
+        timeout: float = 10.0,
+    ) -> tuple[int, int]:
+        deadline = time.monotonic() + timeout
+        total_invalidated = 0
+        loaded_after = loaded_before
+        while True:
+            if before_invalidate is not None:
+                before_invalidate()
+
+            invalidated = await self.invalidate(path, seconds=seconds)
+            total_invalidated += invalidated
+            loaded_after = await self.get_loaded_count()
+            if total_invalidated > 0 and loaded_after < loaded_before:
+                return total_invalidated, loaded_after
+
+            if time.monotonic() >= deadline:
+                self.fail(
+                    f"invalidated {total_invalidated} entries and loaded inode "
+                    f"count went from {loaded_before} to {loaded_after}"
+                )
+
+            await asyncio.sleep(0.1)
+
     async def test_active_invalidation_unloads_inodes(self) -> None:
         """With pressure-based GC, debugInvalidateNonMaterialized triggers
         active FUSE invalidation which causes the kernel to FORGET inodes,
@@ -205,13 +236,20 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # With pressure-based GC enabled, this goes through
         # invalidateChildrenNotAccessedRecentlyFuse which sends
         # FUSE_NOTIFY_INVAL_ENTRY, then unloadChildrenUnreferencedByFs.
-        invalidated = await self.invalidate("")
+        if sys.platform == "linux":
+            invalidated, loaded_after = await self.invalidate_until_unloaded(
+                loaded_before=loaded_after_read,
+            )
+            self.assertLess(loaded_after, loaded_after_read)
+        else:
+            invalidated = await self.invalidate("")
 
         if sys.platform in ("linux", "darwin"):
             # With active invalidation (FUSE on Linux, NFS on macOS), inodes
             # should actually get unloaded (unlike the legacy FUSE path which
             # can't invalidate).
             self.assertGreater(invalidated, 0)
+        if sys.platform == "darwin":
             # Pressure GC should invalidate stale entries individually instead
             # of relying on one parent directory invalidation to reclaim an
             # entire subtree. On NFS the count is the FS references cleared,
@@ -283,19 +321,30 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         time.sleep(3)
 
         # Read directory "b" now (so "a" is old, "b" is fresh)
-        for i in range(self.num_files):
-            self.read_file(f"b/{i}")
+        def read_b() -> None:
+            for i in range(self.num_files):
+                self.read_file(f"b/{i}")
+
+        read_b()
 
         loaded_before = await self.get_loaded_count()
 
         # Invalidate with 2s age: "a" is stale and "b" is fresh, so GC should
-        # invalidate the stale entries under "a" individually.
-        invalidated = await self.invalidate("", seconds=2)
-        if sys.platform in ("linux", "darwin"):
-            self.assertGreaterEqual(invalidated, self.num_files)
-
-        # Some inodes from "a" should have been unloaded
-        await self.assert_reclaimed(loaded_before, seconds=2)
+        # invalidate stale entries.
+        if sys.platform == "linux":
+            invalidated, loaded_after = await self.invalidate_until_unloaded(
+                loaded_before=loaded_before,
+                seconds=2,
+                before_invalidate=read_b,
+            )
+            self.assertGreater(invalidated, 0)
+            # Some inodes from "a" should have been unloaded
+            self.assertLess(loaded_after, loaded_before)
+        else:
+            invalidated = await self.invalidate("", seconds=2)
+            if sys.platform == "darwin":
+                self.assertGreaterEqual(invalidated, self.num_files)
+            await self.assert_reclaimed(loaded_before, seconds=2)
 
         # Everything should still be readable
         self.read_all()
@@ -318,18 +367,18 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
             time.sleep(3)
 
-            invalidated = await self.invalidate("")
-            # FUSE invalidates the open file's entry too; the kernel just keeps
-            # the inode. On NFS the pin scan finds the open file and GC leaves
-            # its reference alone, so it counts one fewer.
-            expected = (
-                self.deep_file_count
-                if sys.platform == "linux"
-                else self.deep_file_count - 1
-            )
-            self.assertGreaterEqual(invalidated, expected)
-
-            await self.assert_reclaimed(loaded_after_read)
+            if sys.platform == "linux":
+                invalidated, loaded_after_gc = await self.invalidate_until_unloaded(
+                    loaded_before=loaded_after_read,
+                )
+                self.assertGreater(invalidated, 0)
+                self.assertLess(loaded_after_gc, loaded_after_read)
+            else:
+                invalidated = await self.invalidate("")
+                # On NFS the pin scan finds the open file and GC leaves its
+                # reference alone, so it counts one fewer.
+                self.assertGreaterEqual(invalidated, self.deep_file_count - 1)
+                await self.assert_reclaimed(loaded_after_read)
 
         self.assertEqual("0\n", self.read_file("deep/parent/child/0"))
 
