@@ -202,6 +202,14 @@
   flex-grow: 0;
 }
 
+.commit-tree-narrow:not(.commit-tree-very-narrow) .pre-node-line {
+  min-height: calc(var(--halfpad) + 2px);
+}
+
+.commit-tree-very-narrow .pre-node-line {
+  min-height: calc(var(--halfpad) + 0.5lh - 10px);
+}
+
 .commit-details {
   cursor: pointer;
   display: flex;
