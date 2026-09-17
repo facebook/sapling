@@ -84,3 +84,90 @@ fn io_error_errno(e: &std::io::Error) -> Option<i32> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use cpython::ObjectProtocol;
+
+    use super::*;
+
+    #[test]
+    fn test_io_error_subclasses() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        for (kind, errno, exception_type) in [
+            (
+                io::ErrorKind::NotFound,
+                Some(libc::ENOENT),
+                py.get_type::<exc::FileNotFoundError>(),
+            ),
+            (
+                io::ErrorKind::PermissionDenied,
+                Some(libc::EPERM),
+                py.get_type::<exc::PermissionError>(),
+            ),
+            (io::ErrorKind::Other, None, py.get_type::<exc::OSError>()),
+        ] {
+            let mut err = translate_io_error(py, &io::Error::new(kind, "test error"));
+            // FIXME: specific I/O errors should match their built-in subclasses.
+            assert!(err.matches(py, py.get_type::<exc::OSError>()));
+            assert_eq!(
+                err.matches(py, exception_type),
+                kind == io::ErrorKind::Other
+            );
+            let value = err.instance(py);
+            assert_eq!(
+                value
+                    .getattr(py, "errno")
+                    .unwrap()
+                    .extract::<Option<i32>>(py)
+                    .unwrap(),
+                errno,
+            );
+            assert_eq!(
+                value
+                    .getattr(py, "strerror")
+                    .unwrap()
+                    .extract::<String>(py)
+                    .unwrap(),
+                "test error",
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_windows_io_error_codes() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // ERROR_FILE_NOT_FOUND and ERROR_PATH_NOT_FOUND both map to ENOENT.
+        for winerror in [2, 3] {
+            let mut err = translate_io_error(py, &io::Error::from_raw_os_error(winerror));
+            // FIXME: these errors should match FileNotFoundError immediately.
+            assert!(err.matches(py, py.get_type::<exc::OSError>()));
+            assert!(!err.matches(py, py.get_type::<exc::FileNotFoundError>()));
+            let value = err.instance(py);
+            // FIXME: translate the native code to ENOENT and preserve winerror.
+            assert_eq!(
+                value
+                    .getattr(py, "errno")
+                    .unwrap()
+                    .extract::<i32>(py)
+                    .unwrap(),
+                winerror,
+            );
+            assert_eq!(
+                value
+                    .getattr(py, "winerror")
+                    .unwrap()
+                    .extract::<Option<i32>>(py)
+                    .unwrap(),
+                None,
+            );
+        }
+    }
+}
