@@ -283,19 +283,22 @@ pub async fn upload_file(
         // 1. actual file the pointer is pointing at
         let (meta, fetch_result) = lfs
             .with(ctx.clone(), lfs_pointer_data.clone(), {
-                move |ctx, lfs_pointer_data, req, bstream, fetch_result| async move {
-                    info!(
-                        "Uploading LFS {} sha256:{} size:{}",
-                        path,
-                        lfs_pointer_data.sha256.to_brief(),
-                        lfs_pointer_data.size,
-                    );
-                    Ok((
-                        filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
-                            .await
-                            .context("filestore (lfs contents)")?,
-                        fetch_result,
-                    ))
+                move |ctx, lfs_pointer_data, req, bstream, fetch_result| {
+                    cloned!(blobstore, path);
+                    async move {
+                        info!(
+                            "Uploading LFS {} sha256:{} size:{}",
+                            path,
+                            lfs_pointer_data.sha256.to_brief(),
+                            lfs_pointer_data.size,
+                        );
+                        Ok((
+                            filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
+                                .await
+                                .context("filestore (lfs contents)")?,
+                            fetch_result,
+                        ))
+                    }
                 }
             })
             .await?;

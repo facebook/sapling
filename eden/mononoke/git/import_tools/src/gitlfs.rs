@@ -129,6 +129,12 @@ fn build_github_https_client(
 /// pool that failed mid-POST during long jarvis-scale imports.
 const GITHUB_LFS_POOL_IDLE_TIMEOUT_SECS: u64 = 10;
 
+/// How many times `GitImportLfs::with` fetches an object and runs the consumer
+/// before giving up, and the base of the jittered exponential delay between
+/// attempts (1st retry within 2 s, 2nd within 4 s, ...).
+pub const CONSUMER_RETRY_ATTEMPTS: u32 = 4;
+const CONSUMER_RETRY_BASE_DELAY_MS: u32 = 1000;
+
 /// URL pattern used by the upstream LFS server to serve a single object keyed by SHA256.
 /// `LegacyDewey` matches Dewey's bare-suffix scheme; `MononokeGitLfs` matches the
 /// Mononoke LFS server's `/{repo}/download_sha256/{oid}` route.
@@ -789,6 +795,12 @@ impl GitImportLfs {
         }
     }
 
+    /// Fetch the LFS object and hand its byte stream to `f`. If `f` fails, the
+    /// object is fetched again and `f` re-run, up to `CONSUMER_RETRY_ATTEMPTS`
+    /// times. `fetch_bytes` only retries the request; the body is streamed
+    /// lazily, so a connection dropped mid-transfer (fwdproxy resets long
+    /// downloads without notice) surfaces inside `f`, which is the only place
+    /// it can be retried from. `f` must therefore be safe to run more than once.
     pub async fn with<F, T, Fut>(
         self,
         ctx: CoreContext,
@@ -796,7 +808,7 @@ impl GitImportLfs {
         f: F,
     ) -> Result<T, Error>
     where
-        F: FnOnce(
+        F: Fn(
                 CoreContext,
                 LfsPointerData,
                 StoreRequest,
@@ -827,8 +839,32 @@ impl GitImportLfs {
                 GitImportLfsInner::Internal(_) => None,
             };
 
-            let (req, bstream, fetch_result) = self.fetch_bytes(&ctx, &metadata).await?;
-            f(ctx, metadata, req, bstream, fetch_result).await
+            let mut attempt: u32 = 1;
+            loop {
+                let (req, bstream, fetch_result) = self.fetch_bytes(&ctx, &metadata).await?;
+                match f(ctx.clone(), metadata.clone(), req, bstream, fetch_result).await {
+                    Ok(v) => return Ok(v),
+                    Err(err) if attempt < CONSUMER_RETRY_ATTEMPTS => {
+                        let sleep_time_ms =
+                            rand::random_range(0..CONSUMER_RETRY_BASE_DELAY_MS << attempt);
+                        warn!(
+                            sha256 = %metadata.sha256,
+                            size = metadata.size,
+                            attempt,
+                            max_attempts = CONSUMER_RETRY_ATTEMPTS,
+                            "{err:#}. Re-fetching LFS object in {sleep_time_ms} ms",
+                        );
+                        attempt += 1;
+                        sleep(Duration::from_millis(sleep_time_ms.into())).await;
+                    }
+                    Err(err) => {
+                        return Err(err.context(format!(
+                            "LFS object sha256:{} size:{} failed after {} attempts",
+                            metadata.sha256, metadata.size, attempt,
+                        )));
+                    }
+                }
+            }
         })
         .await?
     }

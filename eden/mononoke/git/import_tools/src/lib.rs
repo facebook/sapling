@@ -82,6 +82,7 @@ pub use crate::gitimport_objects::GitimportPreferences;
 pub use crate::gitimport_objects::GitimportTarget;
 pub use crate::gitimport_objects::TagMetadata;
 pub use crate::gitimport_objects::oid_to_sha1;
+pub use crate::gitlfs::CONSUMER_RETRY_ATTEMPTS as LFS_CONSUMER_RETRY_ATTEMPTS;
 pub use crate::gitlfs::GitImportLfs;
 pub use crate::gitlfs::LfsServerUrlFormat;
 pub use crate::internal_refs::COMMIT_CLOUD_REF_PREFIX;

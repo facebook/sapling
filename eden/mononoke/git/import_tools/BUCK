@@ -1,4 +1,5 @@
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
 
 oncall("scm_server_treehugger")
 
@@ -62,5 +63,26 @@ rust_library(
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/repo/url:repourl",
+    ],
+)
+
+rust_unittest(
+    name = "import_tools_test",
+    srcs = glob(["test/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-hash",
+        ":import_tools",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/repo_attributes/filestore:filestore",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
