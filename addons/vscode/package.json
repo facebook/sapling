@@ -21,7 +21,8 @@
     "workspace"
   ],
   "enabledApiProposals": [
-    "contribMultiDiffEditorMenus"
+    "contribMultiDiffEditorMenus",
+    "editorInsets"
   ],
   "galleryBanner": {
     "color": "#2e8555",
