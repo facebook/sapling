@@ -20,11 +20,15 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  ConvertPullRequestToDraftInput,
+  ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
   DeletePullRequestReviewCommentMutationData,
   LabelFragment,
+  MarkPullRequestReadyForReviewInput,
+  MarkPullRequestReadyForReviewMutationData,
   PullRequestReviewDecision,
   PullRequestState,
   RemoveLabelsFromLabelableInput,
@@ -377,6 +381,18 @@ export default class CachingGitHubClient implements GitHubClient {
     );
     await tx.commit();
     return cachedFragments.filter(notEmpty);
+  }
+
+  convertPullRequestToDraft(
+    input: ConvertPullRequestToDraftInput,
+  ): Promise<ConvertPullRequestToDraftMutationData> {
+    return this.client.convertPullRequestToDraft(input);
+  }
+
+  markPullRequestReadyForReview(
+    input: MarkPullRequestReadyForReviewInput,
+  ): Promise<MarkPullRequestReadyForReviewMutationData> {
+    return this.client.markPullRequestReadyForReview(input);
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {

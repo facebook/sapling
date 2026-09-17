@@ -27,6 +27,9 @@ import type {
   AddPullRequestReviewThreadMutationVariables,
   CommitQueryData,
   CommitQueryVariables,
+  ConvertPullRequestToDraftInput,
+  ConvertPullRequestToDraftMutationData,
+  ConvertPullRequestToDraftMutationVariables,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeleteIssueCommentMutationVariables,
@@ -34,6 +37,9 @@ import type {
   DeletePullRequestReviewCommentMutationData,
   DeletePullRequestReviewCommentMutationVariables,
   LabelFragment,
+  MarkPullRequestReadyForReviewInput,
+  MarkPullRequestReadyForReviewMutationData,
+  MarkPullRequestReadyForReviewMutationVariables,
   PullRequestQueryData,
   PullRequestQueryVariables,
   PullsQueryData,
@@ -75,8 +81,10 @@ import {
   AddPullRequestReviewCommentMutation,
   AddPullRequestReviewThreadMutation,
   CommitQuery,
+  ConvertPullRequestToDraftMutation,
   DeleteIssueCommentMutation,
   DeletePullRequestReviewCommentMutation,
+  MarkPullRequestReadyForReviewMutation,
   PullRequestQuery,
   PullsQuery,
   RemoveLabelsFromLabelableMutation,
@@ -473,6 +481,24 @@ export default class GraphQLGitHubClient implements GitHubClient {
     );
 
     return data.map(result => result?.repository?.pullRequest).filter(notEmpty);
+  }
+
+  convertPullRequestToDraft(
+    input: ConvertPullRequestToDraftInput,
+  ): Promise<ConvertPullRequestToDraftMutationData> {
+    return this.query<
+      ConvertPullRequestToDraftMutationData,
+      ConvertPullRequestToDraftMutationVariables
+    >(ConvertPullRequestToDraftMutation, {input});
+  }
+
+  markPullRequestReadyForReview(
+    input: MarkPullRequestReadyForReviewInput,
+  ): Promise<MarkPullRequestReadyForReviewMutationData> {
+    return this.query<
+      MarkPullRequestReadyForReviewMutationData,
+      MarkPullRequestReadyForReviewMutationVariables
+    >(MarkPullRequestReadyForReviewMutation, {input});
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {

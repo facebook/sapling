@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import PullRequestDraftStateMenu from './PullRequestDraftStateMenu';
 import PullRequestStack from './PullRequestStack';
-import PullRequestStateLabel from './PullRequestStateLabel';
 import PullRequestVersions from './PullRequestVersions';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {gitHubPullRequestAtom} from './jotai';
@@ -25,7 +25,7 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
     return null;
   }
 
-  const {isDraft, number, reviewDecision, state, titleHTML, url} = pullRequest;
+  const {id, isDraft, number, reviewDecision, state, titleHTML, url, viewerCanUpdate} = pullRequest;
 
   return (
     <Box
@@ -44,10 +44,12 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
         </Link>
       </Box>
       <Box display="flex" gridGap={2}>
-        <PullRequestStateLabel
+        <PullRequestDraftStateMenu
+          id={id}
           isDraft={isDraft}
           reviewDecision={reviewDecision ?? null}
           state={state}
+          viewerCanUpdate={viewerCanUpdate}
         />
         <PullRequestStack />
         {/*

@@ -1,0 +1,8 @@
+mutation ConvertPullRequestToDraftMutation($input: ConvertPullRequestToDraftInput!) {
+  convertPullRequestToDraft(input: $input) {
+    pullRequest {
+      id
+      isDraft
+    }
+  }
+}

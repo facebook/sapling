@@ -19,11 +19,15 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  ConvertPullRequestToDraftInput,
+  ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
   DeletePullRequestReviewCommentMutationData,
   LabelFragment,
+  MarkPullRequestReadyForReviewInput,
+  MarkPullRequestReadyForReviewMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RequestReviewsInput,
@@ -60,6 +64,14 @@ export default interface GitHubClient {
   getRepoAssignableUsers(query: string | null): Promise<UserFragment[]>;
   getRepoLabels(query: string | null): Promise<LabelFragment[]>;
   getStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]>;
+
+  convertPullRequestToDraft(
+    input: ConvertPullRequestToDraftInput,
+  ): Promise<ConvertPullRequestToDraftMutationData>;
+
+  markPullRequestReadyForReview(
+    input: MarkPullRequestReadyForReviewInput,
+  ): Promise<MarkPullRequestReadyForReviewMutationData>;
 
   /**
    * Add a comment to an issue or pull request:

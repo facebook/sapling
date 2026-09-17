@@ -21,11 +21,15 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  ConvertPullRequestToDraftInput,
+  ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
   DeleteIssueCommentMutationData,
   DeletePullRequestReviewCommentInput,
   DeletePullRequestReviewCommentMutationData,
   LabelFragment,
+  MarkPullRequestReadyForReviewInput,
+  MarkPullRequestReadyForReviewMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RequestReviewsInput,
@@ -88,6 +92,18 @@ export default class TestGitHubClient implements GitHubClient {
 
   getStackPullRequests(_prs: number[]): Promise<StackPullRequestFragment[]> {
     return Promise.resolve([]);
+  }
+
+  convertPullRequestToDraft(
+    _input: ConvertPullRequestToDraftInput,
+  ): Promise<ConvertPullRequestToDraftMutationData> {
+    return Promise.resolve({});
+  }
+
+  markPullRequestReadyForReview(
+    _input: MarkPullRequestReadyForReviewInput,
+  ): Promise<MarkPullRequestReadyForReviewMutationData> {
+    return Promise.resolve({});
   }
 
   addComment(_id: ID, _body: string): Promise<AddCommentMutationData> {
