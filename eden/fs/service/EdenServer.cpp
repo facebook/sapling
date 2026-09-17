@@ -2531,10 +2531,12 @@ void EdenServer::mountFinished(
         // `eden rm` relies on that to delete the checkout's configuration
         // without leaving the daemon serving a mount that no on-disk
         // configuration describes.
+        std::shared_ptr<EdenMount> removedMount;
         {
           const auto mountPoints = mountPoints_->wlock();
           const auto it = mountPoints->find(mountPath);
           if (it != mountPoints->end()) {
+            removedMount = std::move(it->second.edenMount);
             mountPoints->erase(it);
           }
         }
