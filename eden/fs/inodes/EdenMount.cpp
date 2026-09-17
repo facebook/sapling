@@ -652,6 +652,7 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   auto mountPath = getPath();
+  auto edenDir = getEdenConfig()->edenDir.getValue();
   auto systemConfigDir = getEdenConfig()->getSystemConfigDir();
   SpawnedProcess::Options opts;
 #ifdef _WIN32
@@ -663,6 +664,8 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   return folly::makeSemiFutureWith([&] {
            std::vector<std::string> argv{
                FLAGS_edenfsctlPath,
+               "--config-dir",
+               edenDir.c_str(),
                "--etc-eden-dir",
                systemConfigDir.c_str(),
                "redirect",
