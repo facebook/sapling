@@ -150,6 +150,17 @@ python_integration_test(
 )
 
 python_integration_test(
+    name = "fifo",
+    srcs = ["fifo_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "fsck",
     srcs = ["fsck_test.py"],
     compatible_with = [
