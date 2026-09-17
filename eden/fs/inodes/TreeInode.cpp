@@ -2905,8 +2905,8 @@ class TreeInode::TreeRenameLocks {
 
   void acquireLocks(
       RenameLock&& renameLock,
-      TreeInode* srcTree,
-      TreeInode* destTree,
+      TreeInode& srcTree,
+      TreeInode& destTree,
       PathComponentPiece destName);
 
   /**
@@ -2976,7 +2976,11 @@ class TreeInode::TreeRenameLocks {
   }
 
  private:
-  void lockDestChild(PathComponentPiece destName);
+  bool isBeforeInLockOrder(const TreeInode& a, const TreeInode& b) const;
+  void lockSource(TreeInode& srcTree);
+  void lockDestination(TreeInode& destTree);
+  TreeInode* FOLLY_NULLABLE findDestChild(PathComponentPiece destName);
+  void lockDestChild(TreeInode& destChildTree);
 
   /**
    * The mountpoint-wide rename lock.
@@ -3059,7 +3063,7 @@ ImmediateFuture<Unit> TreeInode::rename(
 
     // Acquire the locks required to do the rename
     TreeRenameLocks locks;
-    locks.acquireLocks(std::move(renameLock), this, destParent.get(), destName);
+    locks.acquireLocks(std::move(renameLock), *this, *destParent, destName);
 
     // Look up the source entry.  The destination entry info was already
     // loaded by TreeRenameLocks::acquireLocks().
@@ -3205,6 +3209,52 @@ bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
   return false;
 }
 } // namespace
+
+/**
+ * Order ancestors before descendants and keep disjoint subtrees together.
+ * Compare the first differing ancestors, since preallocation and earlier
+ * renames can give a child a lower inode number than its parent. The rename
+ * lock keeps the hierarchy stable while comparing and acquiring locks.
+ * The caller keeps both inodes alive through references or their parent's
+ * contents lock; each inode in turn retains its ancestors. Do not create an
+ * InodePtr from the destination child, which may have no pointer references.
+ */
+bool TreeInode::TreeRenameLocks::isBeforeInLockOrder(
+    const TreeInode& a,
+    const TreeInode& b) const {
+  const auto getDepth = [this](const TreeInode& inode) {
+    size_t depth = 0;
+    for (auto parent = inode.getParent(renameLock_); parent;
+         parent = parent->getParent(renameLock_)) {
+      ++depth;
+    }
+    return depth;
+  };
+
+  const auto aDepth = getDepth(a);
+  const auto bDepth = getDepth(b);
+  const auto* aAncestor = &a;
+  const auto* bAncestor = &b;
+  for (auto depth = aDepth; depth > bDepth; --depth) {
+    aAncestor = aAncestor->getParent(renameLock_).get();
+  }
+  for (auto depth = bDepth; depth > aDepth; --depth) {
+    bAncestor = bAncestor->getParent(renameLock_).get();
+  }
+  if (aAncestor == bAncestor) {
+    return aDepth < bDepth;
+  }
+
+  while (true) {
+    auto* aParent = aAncestor->getParent(renameLock_).get();
+    auto* bParent = bAncestor->getParent(renameLock_).get();
+    if (aParent == bParent) {
+      return aAncestor->getNodeId() < bAncestor->getNodeId();
+    }
+    aAncestor = aParent;
+    bAncestor = bParent;
+  }
+}
 
 ImmediateFuture<Unit> TreeInode::doRename(
     TreeRenameLocks&& locks,
@@ -3360,72 +3410,94 @@ ImmediateFuture<Unit> TreeInode::doRename(
  * This function ensures the locks are held with the proper ordering.
  * Since we hold the rename lock first, we can acquire multiple TreeInode
  * contents_ locks at once, but we must still ensure that we acquire locks on
- * ancestor TreeInode's before any of their descendants.
+ * ancestor TreeInodes before any of their descendants. Disjoint subtrees are
+ * ordered by the inode numbers of their first differing ancestors.
+ *
+ * Moving directories can reverse the order of the same inode locks across
+ * renames, so TSan may still report lock-order cycles. The mountpoint rename
+ * lock serializes those operations, preventing them from deadlocking each
+ * other. Ancestor-before-descendant ordering remains necessary to avoid
+ * deadlocks with operations that do not acquire the rename lock.
  */
 void TreeInode::TreeRenameLocks::acquireLocks(
     RenameLock&& renameLock,
-    TreeInode* srcTree,
-    TreeInode* destTree,
+    TreeInode& srcTree,
+    TreeInode& destTree,
     PathComponentPiece destName) {
   // Store the mountpoint-wide rename lock.
   renameLock_ = std::move(renameLock);
 
-  if (srcTree == destTree) {
+  if (&srcTree == &destTree) {
     // If the source and destination directories are the same,
     // then there is really only one parent directory to lock.
-    srcContentsLock_ = srcTree->lockContentsWrite();
+    srcContentsLock_ = srcTree.lockContentsWrite();
     srcContents_ = &srcContentsLock_->entries;
     destContents_ = &srcContentsLock_->entries;
     // Look up the destination child entry, and lock it if it is a directory
-    lockDestChild(destName);
-  } else if (isAncestor(renameLock_, srcTree, destTree)) {
-    // If srcTree is an ancestor of destTree, we must acquire the lock on
-    // srcTree first.
-    srcContentsLock_ = srcTree->lockContentsWrite();
-    srcContents_ = &srcContentsLock_->entries;
-    destContentsLock_ = destTree->lockContentsWrite();
-    destContents_ = &destContentsLock_->entries;
-    lockDestChild(destName);
-  } else {
-    // In all other cases, lock destTree and destChild before srcTree,
-    // as long as we verify that destChild and srcTree are not the same.
-    //
-    // It is not possible for srcTree to be an ancestor of destChild,
-    // since we have confirmed that srcTree is not destTree nor an ancestor of
-    // destTree.
-    destContentsLock_ = destTree->lockContentsWrite();
-    destContents_ = &destContentsLock_->entries;
-    lockDestChild(destName);
-
-    // While srcTree cannot be an ancestor of destChild, it might be the
-    // same inode.  Don't try to lock the same TreeInode twice in this case.
-    //
-    // The rename will be failed later since this must be an error, but for now
-    // we keep going and let the exact error be determined later.
-    // This will either be ENOENT (src entry doesn't exist) or ENOTEMPTY
-    // (destChild is not empty since the src entry exists).
-    if (destChildExists() && destChild() == srcTree) {
-      XCHECK_NE(destChildContents_, nullptr);
-      srcContents_ = destChildContents_;
-    } else {
-      srcContentsLock_ = srcTree->lockContentsWrite();
-      srcContents_ = &srcContentsLock_->entries;
+    if (auto* destChildTree = findDestChild(destName)) {
+      lockDestChild(*destChildTree);
     }
+    return;
+  }
+
+  if (isBeforeInLockOrder(srcTree, destTree)) {
+    lockSource(srcTree);
+    lockDestination(destTree);
+    if (auto* destChildTree = findDestChild(destName)) {
+      lockDestChild(*destChildTree);
+    }
+    return;
+  }
+
+  lockDestination(destTree);
+  auto* destChildTree = findDestChild(destName);
+  if (destChildTree == nullptr) {
+    lockSource(srcTree);
+    return;
+  }
+  if (destChildTree == &srcTree) {
+    lockDestChild(*destChildTree);
+    XCHECK_NE(destChildContents_, nullptr);
+    srcContents_ = destChildContents_;
+    return;
+  }
+
+  if (isBeforeInLockOrder(*destChildTree, srcTree)) {
+    lockDestChild(*destChildTree);
+    lockSource(srcTree);
+  } else {
+    lockSource(srcTree);
+    lockDestChild(*destChildTree);
   }
 }
 
-void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
+void TreeInode::TreeRenameLocks::lockSource(TreeInode& srcTree) {
+  srcContentsLock_ = srcTree.lockContentsWrite();
+  srcContents_ = &srcContentsLock_->entries;
+}
+
+void TreeInode::TreeRenameLocks::lockDestination(TreeInode& destTree) {
+  destContentsLock_ = destTree.lockContentsWrite();
+  destContents_ = &destContentsLock_->entries;
+}
+
+TreeInode* FOLLY_NULLABLE
+TreeInode::TreeRenameLocks::findDestChild(PathComponentPiece destName) {
   // Look up the destination child entry
   destChildIter_ = destContents_->find(destName);
   if (!destChildExists() || destChild() == nullptr) {
-    return;
+    return nullptr;
   }
   destChildRef_ = InodePtr::newPtrLocked(destChild());
   if (destChildIsDirectory()) {
-    auto* childTree = boost::polymorphic_downcast<TreeInode*>(destChild());
-    destChildContentsLock_ = childTree->lockContentsWrite();
-    destChildContents_ = &destChildContentsLock_->entries;
+    return boost::polymorphic_downcast<TreeInode*>(destChild());
   }
+  return nullptr;
+}
+
+void TreeInode::TreeRenameLocks::lockDestChild(TreeInode& destChildTree) {
+  destChildContentsLock_ = destChildTree.lockContentsWrite();
+  destChildContents_ = &destChildContentsLock_->entries;
 }
 
 namespace {

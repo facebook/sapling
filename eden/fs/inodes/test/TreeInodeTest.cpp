@@ -18,6 +18,8 @@
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <array>
 #include <optional>
 
 #include "eden/common/utils/CaseSensitivity.h"
@@ -70,6 +72,79 @@ class TreeInodeTestBase : public ::testing::TestWithParam<bool> {
     }
   }
 };
+
+TEST_P(TreeInodeTestBase, renameOrdersUnrelatedDestinationChildLock) {
+  for (const bool reverseInodeOrder : {false, true}) {
+    SCOPED_TRACE(
+        reverseInodeOrder ? "child < src < dest" : "dest < src < child");
+    FakeTreeBuilder builder;
+    TestMount mount{builder};
+    maybeEnableCoroutines(mount);
+
+    auto root = mount.getEdenMount()->getRootInode();
+    std::array directories{
+        root->mkdir("one"_pc, S_IFDIR | 0755, InvalidationRequired::No),
+        root->mkdir("two"_pc, S_IFDIR | 0755, InvalidationRequired::No),
+        root->mkdir("three"_pc, S_IFDIR | 0755, InvalidationRequired::No)};
+    // Preallocation makes creation order independent of inode-number order.
+    std::sort(
+        directories.begin(),
+        directories.end(),
+        [](const auto& a, const auto& b) {
+          return a->getNodeId() < b->getNodeId();
+        });
+    auto dest = directories[reverseInodeOrder ? 2 : 0];
+    auto src = directories[1];
+    auto destChild = directories[reverseInodeOrder ? 0 : 2];
+    const auto childPath = destChild->getPath();
+    ASSERT_TRUE(childPath.has_value());
+    root->rename(
+            childPath->basename(),
+            dest,
+            "child"_pc,
+            InvalidationRequired::No,
+            ObjectFetchContext::getNullContext())
+        .get(1s);
+    auto sourceFile =
+        src->mknod("file"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+
+    if (reverseInodeOrder) {
+      ASSERT_LT(destChild->getNodeId(), src->getNodeId());
+      ASSERT_LT(src->getNodeId(), dest->getNodeId());
+    } else {
+      ASSERT_LT(dest->getNodeId(), src->getNodeId());
+      ASSERT_LT(src->getNodeId(), destChild->getNodeId());
+    }
+
+    EXPECT_THROW_ERRNO(
+        src->rename(
+               "file"_pc,
+               dest,
+               "child"_pc,
+               InvalidationRequired::No,
+               ObjectFetchContext::getNullContext())
+            .get(1s),
+        EISDIR);
+
+    src->rename(
+           "file"_pc,
+           destChild,
+           "moved"_pc,
+           InvalidationRequired::No,
+           ObjectFetchContext::getNullContext())
+        .get(1s);
+    EXPECT_EQ(
+        sourceFile,
+        destChild
+            ->getOrLoadChild("moved"_pc, ObjectFetchContext::getNullContext())
+            .get(1s)
+            .asFilePtr());
+    EXPECT_THROW_ERRNO(
+        src->getOrLoadChild("file"_pc, ObjectFetchContext::getNullContext())
+            .get(1s),
+        ENOENT);
+  }
+}
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   DirContents dir(CaseSensitivity::Sensitive);
