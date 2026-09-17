@@ -226,6 +226,9 @@ export function startServer({
         case 'obsidian':
           platformImpl = (await import('../platform/obsidianServerPlatform')).platform;
           break;
+        case 'vscode-agents':
+          // @fb-only: platformImpl = (await import('../src/facebook/vscodeAgentsServerPlatform')).platform;
+          break;
         case 'agentHome':
           // @fb-only: platformImpl = (await import('../src/facebook/agentHomeServerPlatform')).platform;
           break;

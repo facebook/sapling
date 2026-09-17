@@ -35,6 +35,7 @@ export type PlatformName =
   | 'chromelike_app'
   | 'visualStudio'
   | 'obsidian'
+  | 'vscode-agents'
   | 'agentHome'
   | 'tui';
 

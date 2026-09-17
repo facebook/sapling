@@ -301,6 +301,7 @@ const validPlatforms: Array<PlatformName> = [
   'chromelike_app',
   'visualStudio',
   'obsidian',
+  'vscode-agents',
   'agentHome',
 ];
 function isValidCustomPlatform(name: string): name is PlatformName {
