@@ -2310,12 +2310,14 @@ FileInodePtr TreeInode::mknod(
   RelativePath targetName;
   FileInodePtr inode;
 
-  if (!S_ISSOCK(mode) && !S_ISREG(mode)) {
+  bool supported = S_ISSOCK(mode) || S_ISREG(mode);
+#ifdef __linux__
+  supported = supported ||
+      (S_ISFIFO(mode) && getMount()->getEdenConfig()->enableFifo.getValue());
+#endif
+  if (!supported) {
     throw InodeError(
-        EPERM,
-        inodePtrFromThis(),
-        name,
-        "only unix domain sockets and regular files are supported by mknod");
+        EPERM, inodePtrFromThis(), name, "unsupported file type for mknod");
   }
 
   // The dev parameter to mknod only applies to block and character devices,

@@ -212,6 +212,9 @@ class EdenConfig : private ConfigSettingManager {
       kUnspecifiedDefault,
       this};
 
+  /** Allow creating named pipes on Linux. */
+  ConfigSetting<bool> enableFifo{"core:enable-fifo", true, this};
+
   /**
    * How often to check the on-disk lock file to ensure it is still valid.
    * EdenFS will exit if the lock file is no longer valid.
