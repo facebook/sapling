@@ -2661,10 +2661,10 @@ class SystemdStartCmd(Subcmd):
 def unmount_redirections_for_path(
     repo_path: str, complain_about_failing_to_unmount_redirs: bool
 ) -> None:
-    parser = create_parser()
-    args = parser.parse_args(["redirect", "unmount", "--mount", repo_path])
     try:
-        args.func(args)
+        args = create_parser().parse_args([])
+        instance, checkout, _rel_path = require_checkout(args, repo_path)
+        redirect_mod.unmount_redirections(instance, checkout)
     except Exception as exc:
         if complain_about_failing_to_unmount_redirs:
             print(

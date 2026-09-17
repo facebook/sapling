@@ -1058,21 +1058,7 @@ class UnmountCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
-        mount_table = mtab.new()
-        redirs = get_effective_redirections(checkout, mount_table, instance)
-
-        for redir in redirs.values():
-            redir.remove_existing(checkout)
-            if redir.type == RedirectionType.UNKNOWN:
-                continue
-
-        # recompute and display the current state
-        redirs = get_effective_redirections(checkout, mount_table, instance)
-        ok = True
-        for redir in redirs.values():
-            if redir.state == RedirectionState.MATCHES_CONFIGURATION:
-                ok = False
-        return 0 if ok else 1
+        return unmount_redirections(instance, checkout)
 
 
 @redirect_cmd(
@@ -1467,3 +1453,22 @@ class RedirectCmd(Subcmd):
         # FIXME: I'd rather just show the help here automatically
         print("Specify a subcommand! See `eden redirect --help`", file=sys.stderr)
         return 1
+
+
+def unmount_redirections(instance: EdenInstance, checkout: EdenCheckout) -> int:
+    """Unmount all effective redirections for the checkout, preserving the
+    configuration so that a subsequent `edenfsctl redirect fixup` restores
+    them."""
+    mount_table = mtab.new()
+    redirs = get_effective_redirections(checkout, mount_table, instance)
+
+    for redir in redirs.values():
+        redir.remove_existing(checkout)
+
+    # recompute and verify the current state
+    redirs = get_effective_redirections(checkout, mount_table, instance)
+    ok = True
+    for redir in redirs.values():
+        if redir.state == RedirectionState.MATCHES_CONFIGURATION:
+            ok = False
+    return 0 if ok else 1
