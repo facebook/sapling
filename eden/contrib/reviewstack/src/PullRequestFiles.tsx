@@ -10,19 +10,12 @@ import type {PullRequestFileTreeNode} from './pullRequestFileTree';
 
 import coalesceRenamedFiles from './coalesceRenamedFiles';
 import {getDisplayChangeLabel, scrollToDiffFile} from './diffFileNavigation';
-import {
-  gitHubPullRequestFileLineStatsAtom,
-  gitHubPullRequestVersionDiffAtom,
-} from './jotai';
+import {gitHubPullRequestComparisonFilesAtom, gitHubPullRequestVersionDiffAtom} from './jotai';
 import buildPullRequestFileTree from './pullRequestFileTree';
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  FileDirectoryIcon,
-} from '@primer/octicons-react';
+import {ChevronDownIcon, ChevronRightIcon, FileDirectoryIcon} from '@primer/octicons-react';
 import {Box, Button, StyledOcticon, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
-import {Suspense, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 
 const symbolForChange: Record<DisplayChange['type'], string> = {
   add: '+',
@@ -45,18 +38,23 @@ const labelForChange: Record<DisplayChange['type'], string> = {
   rename: 'Moved or renamed',
 };
 
-function FileStats({path}: {path: string}): React.ReactElement | null {
-  const stats = useAtomValue(gitHubPullRequestFileLineStatsAtom).get(path);
-  if (stats == null) {
+function FileStats({
+  additions,
+  deletions,
+}: {
+  additions?: number;
+  deletions?: number;
+}): React.ReactElement | null {
+  if (additions == null || deletions == null) {
     return null;
   }
   return (
     <Box display="flex" flexShrink={0} marginLeft="auto" sx={{gap: '5px'}}>
       <Text color="success.fg" fontFamily="mono" fontSize={0}>
-        +{stats.additions}
+        +{additions}
       </Text>
       <Text color="danger.fg" fontFamily="mono" fontSize={0}>
-        −{stats.deletions}
+        −{deletions}
       </Text>
     </Box>
   );
@@ -64,11 +62,17 @@ function FileStats({path}: {path: string}): React.ReactElement | null {
 
 export default function PullRequestFiles(): React.ReactElement {
   const diff = useAtomValue(gitHubPullRequestVersionDiffAtom);
-  const changes = useMemo(() => (diff == null ? [] : coalesceRenamedFiles(diff.diff)), [diff]);
-  const tree = useMemo(() => buildPullRequestFileTree(changes), [changes]);
-  const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(
-    () => new Set(),
+  const comparisonFiles = useAtomValue(gitHubPullRequestComparisonFilesAtom);
+  const fileInfoByPath = useMemo(
+    () => new Map(comparisonFiles.map(file => [file.filename, file])),
+    [comparisonFiles],
   );
+  const changes = useMemo(
+    () => (diff == null ? [] : coalesceRenamedFiles(diff.diff, comparisonFiles)),
+    [comparisonFiles, diff],
+  );
+  const tree = useMemo(() => buildPullRequestFileTree(changes), [changes]);
+  const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(() => new Set());
 
   const toggleDirectory = (path: string) => {
     setCollapsedDirectories(current => {
@@ -173,9 +177,10 @@ export default function PullRequestFiles(): React.ReactElement {
             }}>
             {node.name}
           </Text>
-          <Suspense fallback={null}>
-            <FileStats path={node.path} />
-          </Suspense>
+          <FileStats
+            additions={fileInfoByPath.get(node.path)?.additions}
+            deletions={fileInfoByPath.get(node.path)?.deletions}
+          />
         </Button>
       );
     });

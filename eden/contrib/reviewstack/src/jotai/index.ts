@@ -45,6 +45,7 @@ export {
   gitHubPullRequestCommitBaseParentAtom,
   gitHubDiffForCommitsAtom,
   gitHubPullRequestVersionDiffAtom,
+  gitHubPullRequestComparisonFilesAtom,
   gitHubPullRequestFileLineStatsAtom,
   gitHubDiffCommitIDsAtom,
   gitHubPullRequestVersionsAtom,

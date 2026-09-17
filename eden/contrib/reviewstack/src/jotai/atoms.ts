@@ -32,7 +32,7 @@ import type {
   PullRequestCommitItem,
 } from '../github/pullRequestTimelineTypes';
 import type {PullsQueryInput, PullsWithPageInfo} from '../github/pullsTypes';
-import type {CommitComparison} from '../github/restApiTypes';
+import type {CommitComparison, CommitComparisonFile} from '../github/restApiTypes';
 import type {
   Blob,
   Commit,
@@ -832,13 +832,13 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
 
 export type FileLineStats = {additions: number; deletions: number};
 
-/** Per-file line totals for the active version comparison. */
-export const gitHubPullRequestFileLineStatsAtom = atom<Promise<Map<string, FileLineStats>>>(
+/** GitHub's per-file metadata for the active version comparison. */
+export const gitHubPullRequestComparisonFilesAtom = atom<Promise<CommitComparisonFile[]>>(
   async get => {
     const client = await get(gitHubClientAtom);
     const diff = await get(gitHubPullRequestVersionDiffAtom);
     if (client == null || diff?.commitIDs == null) {
-      return new Map();
+      return [];
     }
 
     try {
@@ -846,17 +846,23 @@ export const gitHubPullRequestFileLineStatsAtom = atom<Promise<Map<string, FileL
         diff.commitIDs.before,
         diff.commitIDs.after,
       );
-      return new Map(
-        (comparison?.files ?? []).map(file => [
-          file.filename,
-          {additions: file.additions, deletions: file.deletions},
-        ]),
-      );
+      return comparison?.files ?? [];
     } catch {
-      // File navigation should remain usable if GitHub cannot provide stats.
-      return new Map();
+      // File navigation should remain usable if GitHub cannot provide metadata.
+      return [];
     }
   },
+);
+
+/** Per-file line totals for the active version comparison. */
+export const gitHubPullRequestFileLineStatsAtom = atom<Promise<Map<string, FileLineStats>>>(
+  async get =>
+    new Map(
+      (await get(gitHubPullRequestComparisonFilesAtom)).map(file => [
+        file.filename,
+        {additions: file.additions, deletions: file.deletions},
+      ]),
+    ),
 );
 
 /**

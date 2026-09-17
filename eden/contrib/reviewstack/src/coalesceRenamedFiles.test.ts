@@ -6,6 +6,7 @@
  */
 
 import type {AddChange, Diff, RemoveChange} from './github/diffTypes';
+import type {CommitComparisonFile} from './github/restApiTypes';
 import type {TreeEntry} from './github/types';
 
 import coalesceRenamedFiles from './coalesceRenamedFiles';
@@ -20,6 +21,16 @@ function remove(name: string, oid: string, mode?: number): RemoveChange {
 
 function add(name: string, oid: string, mode?: number): AddChange {
   return {type: 'add', basePath: '', entry: entry(name, oid, mode)};
+}
+
+function renamedFile(filename: string, previousFilename: string): CommitComparisonFile {
+  return {
+    additions: 1,
+    deletions: 1,
+    filename,
+    previousFilename,
+    status: 'renamed',
+  };
 }
 
 test('pairs an unchanged removal and addition as one renamed file', () => {
@@ -39,6 +50,21 @@ test('does not hide content or mode changes', () => {
   ];
 
   expect(coalesceRenamedFiles(diff)).toEqual(diff);
+});
+
+test('pairs an edited rename using GitHub comparison metadata', () => {
+  const removal = remove('old.ts', 'before');
+  const addition = add('new.ts', 'after');
+
+  expect(coalesceRenamedFiles([removal, addition], [renamedFile('new.ts', 'old.ts')])).toEqual([
+    {type: 'rename', before: removal, after: addition},
+  ]);
+});
+
+test('ignores rename metadata when either path is absent from the diff', () => {
+  const diff: Diff = [remove('old.ts', 'before'), add('different.ts', 'after')];
+
+  expect(coalesceRenamedFiles(diff, [renamedFile('new.ts', 'old.ts')])).toEqual(diff);
 });
 
 test('pairs duplicate blobs one-to-one and leaves copies visible', () => {

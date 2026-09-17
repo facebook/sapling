@@ -21,6 +21,7 @@ import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 import LargeDiffPlaceholder from './LargeDiffPlaceholder';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
+import canExpandLines from './canExpandLines';
 import {lineRangeAtom} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
@@ -39,7 +40,6 @@ import {
   MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF,
 } from 'shared/createTokenizedIntralineDiff';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
-import {unwrap} from 'shared/utils';
 
 /**
  * Threshold for the number of lines in a diff before we consider it "large"
@@ -53,6 +53,7 @@ const LARGE_DIFF_LINE_THRESHOLD = 500;
  */
 export type Props = {
   path: string;
+  previousPath?: string;
   before: GitObjectID | null;
   after: GitObjectID | null;
   isPullRequest: boolean;
@@ -76,6 +77,7 @@ function getFilepathClassifier(): FilepathClassifier {
 
 export default function SplitDiffView({
   path,
+  previousPath,
   before,
   after,
   isPullRequest,
@@ -101,7 +103,12 @@ export default function SplitDiffView({
   if (loadable.state === 'loading') {
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+        <FileHeader
+          path={path}
+          previousPath={previousPath}
+          open={open}
+          onChangeOpen={open => setOpen(open)}
+        />
         <Box padding={3} display="flex" justifyContent="center" alignItems="center">
           <Spinner size="small" />
           <Text marginLeft={2}>Loading diff...</Text>
@@ -118,7 +125,12 @@ export default function SplitDiffView({
         : loadable.error?.message ?? 'Unknown error';
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+        <FileHeader
+          path={path}
+          previousPath={previousPath}
+          open={open}
+          onChangeOpen={open => setOpen(open)}
+        />
         <Box padding={3} color="danger.fg">
           <Text>Error loading diff: {errorMessage}</Text>
         </Box>
@@ -141,7 +153,12 @@ export default function SplitDiffView({
 
   return (
     <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-      <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+      <FileHeader
+        path={path}
+        previousPath={previousPath}
+        open={open}
+        onChangeOpen={open => setOpen(open)}
+      />
       {open &&
         (shouldShowDiff ? (
           <SplitDiffViewTable
@@ -217,11 +234,15 @@ const SplitDiffViewTable = React.memo(
       if (index === 0 && (hunk.oldStart !== 1 || hunk.newStart !== 1)) {
         // TODO: test empty file that went from 644 to 755?
         const key = 's0';
-        if (expandedSeparators.has(key)) {
+        const numLines = hunk.oldStart - 1;
+        if (!canExpandLines(numLines, beforeOID)) {
+          // A newly added file has no original lines to expand. Diff parsing
+          // can also leave a zero-length gap at the file boundary.
+        } else if (expandedSeparators.has(key)) {
           const range = {
-            oid: unwrap(beforeOID),
+            oid: beforeOID,
             start: 1,
-            numLines: hunk.oldStart - 1,
+            numLines,
           };
           rows.push(
             <ExpandingSeparator
@@ -235,7 +256,6 @@ const SplitDiffViewTable = React.memo(
             />,
           );
         } else {
-          const numLines = Math.max(hunk.oldStart, hunk.newStart) - 1;
           rows.push(<HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} />);
         }
       }
@@ -245,11 +265,13 @@ const SplitDiffViewTable = React.memo(
       if (index !== lastHunkIndex) {
         const nextHunk = hunks[index + 1];
         const key = `s${hunk.oldStart}`;
-        if (expandedSeparators.has(key)) {
-          const start = hunk.oldStart + hunk.oldLines;
-          const numLines = nextHunk.oldStart - start;
+        const start = hunk.oldStart + hunk.oldLines;
+        const numLines = nextHunk.oldStart - start;
+        if (!canExpandLines(numLines, beforeOID)) {
+          // Adjacent hunks do not have hidden lines between them.
+        } else if (expandedSeparators.has(key)) {
           const range = {
-            oid: unwrap(beforeOID),
+            oid: beforeOID,
             start,
             numLines,
           };
@@ -265,7 +287,6 @@ const SplitDiffViewTable = React.memo(
             />,
           );
         } else {
-          const numLines = nextHunk.oldStart - hunk.oldLines - hunk.oldStart;
           rows.push(<HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} />);
         }
       }
@@ -279,11 +300,13 @@ const SplitDiffViewTable = React.memo(
     if (tokenization.before != null && hunks.length > 0) {
       const key = 's-last';
       const lastHunk = hunks[lastHunkIndex];
-      if (expandedSeparators.has(key)) {
-        const start = lastHunk.oldStart + lastHunk.oldLines;
-        const numLines = tokenization.before.length - start;
+      const start = lastHunk.oldStart + lastHunk.oldLines;
+      const numLines = tokenization.before.length - start;
+      if (!canExpandLines(numLines, beforeOID)) {
+        // Do not render an "Expand 0 lines" action at the end of a file.
+      } else if (expandedSeparators.has(key)) {
         const range = {
-          oid: unwrap(beforeOID),
+          oid: beforeOID,
           start,
           numLines,
         };
@@ -299,7 +322,6 @@ const SplitDiffViewTable = React.memo(
           />,
         );
       } else {
-        const numLines = tokenization.before.length - lastHunk.oldStart - lastHunk.oldLines;
         rows.push(<HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} />);
       }
     }

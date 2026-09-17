@@ -23,6 +23,7 @@ import {
   gitHubPullRequestForParamsAtom,
   gitHubPullRequestIDAtom,
   gitHubPullRequestVersionDiffAtom,
+  gitHubPullRequestComparisonFilesAtom,
   pendingScrollRestoreAtom,
   stackedPullRequestAtom,
 } from './jotai';
@@ -188,12 +189,13 @@ function PullRequestDetails() {
 
 function PullRequestVersionDiff() {
   const diff = useAtomValue(gitHubPullRequestVersionDiffAtom);
+  const comparisonFiles = useAtomValue(gitHubPullRequestComparisonFilesAtom);
 
   if (diff != null) {
     return (
       <Suspense
         fallback={<CenteredSpinner message={'Loading ' + diff.diff.length + ' changes...'} />}>
-        <DiffView diff={diff.diff} isPullRequest={true} />
+        <DiffView diff={diff.diff} isPullRequest={true} comparisonFiles={comparisonFiles} />
       </Suspense>
     );
   } else {
