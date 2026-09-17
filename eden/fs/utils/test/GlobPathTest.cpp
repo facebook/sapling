@@ -8,29 +8,30 @@
 #include "eden/fs/utils/GlobPath.h"
 
 #include <gtest/gtest.h>
+#include <thrift/lib/cpp2/op/Encode.h>
 #include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
+#include <thrift/lib/cpp2/type/Tag.h>
 #include <algorithm>
 
 namespace facebook::eden {
 
 namespace {
 
+using GlobPathTag = apache::thrift::type::
+    adapted<GlobPathAdapter, apache::thrift::type::binary_t>;
+
 template <typename Protocol>
 void expectSerializedSizesMatchIOBuf(const GlobPath& path) {
-  using ProtocolMethods = apache::thrift::detail::pm::protocol_methods<
-      apache::thrift::type_class::binary,
-      GlobPath,
-      apache::thrift::type::binary_t>;
-
   Protocol protocol;
   auto buf = path.toIOBuf();
   EXPECT_EQ(
       protocol.serializedSizeBinary(buf),
-      ProtocolMethods::template serializedSize<false>(protocol, path));
+      (apache::thrift::op::serialized_size<false, GlobPathTag>(
+          protocol, path)));
   EXPECT_EQ(
       protocol.serializedSizeZCBinary(buf),
-      ProtocolMethods::template serializedSize<true>(protocol, path));
+      (apache::thrift::op::serialized_size<true, GlobPathTag>(protocol, path)));
 }
 
 } // namespace
@@ -138,19 +139,16 @@ TEST(GlobPathTest, computesSerializedSizeFromPathLength) {
 }
 
 TEST(GlobPathTest, roundTripsThroughCompactProtocol) {
-  using ProtocolMethods = apache::thrift::detail::pm::protocol_methods<
-      apache::thrift::type_class::binary,
-      GlobPath,
-      apache::thrift::type::binary_t>;
-
   GlobPath path{GlobPath::makeDir("foo/bar"_relpath), "baz.txt"_pc};
   folly::IOBufQueue queue;
   apache::thrift::CompactProtocolWriter writer;
   writer.setOutput(&queue);
 
-  const auto size = ProtocolMethods::serializedSize<false>(writer, path);
-  const auto zeroCopySize = ProtocolMethods::serializedSize<true>(writer, path);
-  const auto written = ProtocolMethods::write(writer, path);
+  const auto size =
+      apache::thrift::op::serialized_size<false, GlobPathTag>(writer, path);
+  const auto zeroCopySize =
+      apache::thrift::op::serialized_size<true, GlobPathTag>(writer, path);
+  const auto written = apache::thrift::op::encode<GlobPathTag>(writer, path);
   EXPECT_GE(size, written);
   EXPECT_GE(zeroCopySize, written);
 
@@ -158,17 +156,12 @@ TEST(GlobPathTest, roundTripsThroughCompactProtocol) {
   apache::thrift::CompactProtocolReader reader;
   reader.setInput(serialized.get());
   GlobPath decoded;
-  ProtocolMethods::read(reader, decoded);
+  apache::thrift::op::decode<GlobPathTag>(reader, decoded);
 
   EXPECT_EQ(path, decoded);
 }
 
 TEST(GlobPathTest, deserializesPathWithoutAdditionalValidation) {
-  using ProtocolMethods = apache::thrift::detail::pm::protocol_methods<
-      apache::thrift::type_class::binary,
-      GlobPath,
-      apache::thrift::type::binary_t>;
-
   constexpr folly::StringPiece path{"/foo/../bar/"};
   folly::IOBufQueue queue;
   apache::thrift::CompactProtocolWriter writer;
@@ -179,7 +172,7 @@ TEST(GlobPathTest, deserializesPathWithoutAdditionalValidation) {
   apache::thrift::CompactProtocolReader reader;
   reader.setInput(serialized.get());
   GlobPath decoded;
-  ProtocolMethods::read(reader, decoded);
+  apache::thrift::op::decode<GlobPathTag>(reader, decoded);
 
   EXPECT_EQ(path, decoded.asString());
 }

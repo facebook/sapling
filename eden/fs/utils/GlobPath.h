@@ -12,7 +12,6 @@
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
-#include <thrift/lib/cpp2/protocol/detail/protocol_methods.h>
 
 #include <algorithm>
 #include <array>
@@ -280,6 +279,55 @@ class GlobPath {
   PathComponent::storage_type basename_;
 };
 
+struct GlobPathAdapter {
+  static GlobPath fromThrift(std::string path) {
+    return GlobPath{PathComponent::storage_type{path.data(), path.size()}};
+  }
+
+  static std::string toThrift(const GlobPath& path) {
+    return path.asString();
+  }
+
+  template <typename Tag, typename Protocol>
+  static auto encode(Protocol& protocol, const GlobPath& path) {
+    auto buf = path.toIOBuf();
+    return protocol.writeBinary(buf);
+  }
+
+  template <typename Tag, typename Protocol>
+  static void decode(Protocol& protocol, GlobPath& path) {
+    PathComponent::storage_type storage;
+    protocol.readBinary(storage);
+    path = GlobPath{std::move(storage)};
+  }
+
+  template <bool ZeroCopy, typename Tag, typename Protocol>
+  static uint32_t serializedSize(Protocol& protocol, const GlobPath& path) {
+    using ProtocolType = std::remove_cv_t<std::remove_reference_t<Protocol>>;
+    if constexpr (
+        std::is_same_v<ProtocolType, apache::thrift::BinaryProtocolWriter> ||
+        std::is_same_v<ProtocolType, apache::thrift::CompactProtocolWriter>) {
+      const auto dataSize = path.size();
+      const auto sizePrefix = protocol.serializedSizeI32();
+      if constexpr (ZeroCopy) {
+        return static_cast<uint32_t>(
+            sizePrefix +
+            (dataSize <= folly::IOBufQueue::kMaxPackCopy ? dataSize : 0));
+      }
+      if (dataSize <= std::numeric_limits<uint32_t>::max() - sizePrefix) {
+        return static_cast<uint32_t>(sizePrefix + dataSize);
+      }
+    }
+
+    auto buf = path.toIOBuf();
+    if constexpr (ZeroCopy) {
+      return protocol.serializedSizeZCBinary(buf);
+    } else {
+      return protocol.serializedSizeBinary(buf);
+    }
+  }
+};
+
 using GlobPathList = std::vector<GlobPath>;
 
 class GlobPathBuilder {
@@ -304,55 +352,3 @@ class GlobPathBuilder {
 };
 
 } // namespace facebook::eden
-
-namespace apache::thrift::detail::pm {
-
-template <typename ExpectedTag>
-struct protocol_methods<
-    type_class::binary,
-    facebook::eden::GlobPath,
-    ExpectedTag> {
-  template <typename Protocol>
-  static void read(Protocol& protocol, facebook::eden::GlobPath& out) {
-    facebook::eden::PathComponent::storage_type path;
-    protocol.readBinary(path);
-    out = facebook::eden::GlobPath{std::move(path)};
-  }
-
-  template <typename Protocol>
-  static std::size_t write(
-      Protocol& protocol,
-      const facebook::eden::GlobPath& in) {
-    auto buf = in.toIOBuf();
-    return protocol.writeBinary(buf);
-  }
-
-  template <bool ZeroCopy, typename Protocol>
-  static std::size_t serializedSize(
-      Protocol& protocol,
-      const facebook::eden::GlobPath& in) {
-    using ProtocolType = std::remove_cv_t<std::remove_reference_t<Protocol>>;
-    if constexpr (
-        std::is_same_v<ProtocolType, BinaryProtocolWriter> ||
-        std::is_same_v<ProtocolType, CompactProtocolWriter>) {
-      const auto dataSize = in.size();
-      const auto sizePrefix = protocol.serializedSizeI32();
-      if constexpr (ZeroCopy) {
-        return sizePrefix +
-            (dataSize <= folly::IOBufQueue::kMaxPackCopy ? dataSize : 0);
-      }
-      if (dataSize <= std::numeric_limits<uint32_t>::max() - sizePrefix) {
-        return sizePrefix + dataSize;
-      }
-    }
-
-    auto buf = in.toIOBuf();
-    if constexpr (ZeroCopy) {
-      return protocol.serializedSizeZCBinary(buf);
-    } else {
-      return protocol.serializedSizeBinary(buf);
-    }
-  }
-};
-
-} // namespace apache::thrift::detail::pm

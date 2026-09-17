@@ -82,7 +82,6 @@ cpp_library(
         "//eden/common/utils:path",
         "//folly:range",
         "//folly/io:iobuf",
-        "//thrift/lib/cpp2/protocol/detail:protocol_methods",
     ],
 )
 

@@ -143,7 +143,9 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:glob_path",
+        "//thrift/lib/cpp2/op:encode",
         "//thrift/lib/cpp2/protocol:protocol",
+        "//thrift/lib/cpp2/type:tag",
     ],
 )
 
