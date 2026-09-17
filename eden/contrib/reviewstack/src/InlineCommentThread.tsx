@@ -9,9 +9,11 @@ import type {GitHubPullRequestReviewThreadComment} from './github/pullRequestTim
 import type {GitObjectID, ID} from './github/types';
 
 import ActorHeading from './ActorHeading';
+import CommentLink from './CommentLink';
 import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
 import PullRequestInlineCommentInput from './PullRequestInlineCommentInput';
+import {commentAnchorID} from './commentLinkUtils';
 import {PullRequestReviewCommentState} from './generated/graphql';
 import {gitHubPullRequestJumpToCommentIDAtom} from './jotai/atoms';
 import {Box, Button} from '@primer/react';
@@ -71,10 +73,13 @@ function Comment({comment}: {comment: GitHubPullRequestReviewThreadComment}): Re
   }
 
   return (
-    <Box ref={ref} padding={2}>
+    <Box id={commentAnchorID(comment.id, 'diff')} ref={ref} padding={2}>
       <Box display="flex" justifyContent="space-between">
         <ActorHeading actor={comment.author} />
-        {pendingLabel}
+        <Box display="flex" alignItems="center" gridGap={1}>
+          {pendingLabel}
+          <CommentLink id={comment.id} location="diff" />
+        </Box>
       </Box>
       <Box fontSize={1} sx={{wordBreak: 'break-word'}}>
         <EditableComment

@@ -7,8 +7,10 @@
 
 import type {ID, GitObject} from './github/types';
 
+import CommentLink from './CommentLink';
 import EditableComment from './EditableComment';
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
+import {commentAnchorID} from './commentLinkUtils';
 import {gitHubPullRequestCommentForIDAtom} from './jotai';
 import {Box} from '@primer/react';
 import {useAtomValue} from 'jotai';
@@ -31,9 +33,10 @@ export default function PullRequestReviewComment({comment}: Props): React.ReactE
   const lineNumber = reviewComment?.originalLine;
 
   return (
-    <div className="PRT-review-comment">
-      <Box color="accent.fg">
+    <div className="PRT-review-comment" id={commentAnchorID(comment.id)}>
+      <Box color="accent.fg" display="flex" justifyContent="space-between">
         <div className="PRT-review-comment-path-link">{comment.path}</div>
+        <CommentLink id={comment.id} />
       </Box>
       <Box display="grid" gridTemplateColumns="25px 1fr">
         <Box textAlign="right">
