@@ -49,8 +49,9 @@ export default function PullRequestInlineCommentInput({
       });
 
       refreshPullRequest();
+      onCancel();
     },
-    [client, commentID, commitID, pullRequest, refreshPullRequest],
+    [client, commentID, commitID, onCancel, pullRequest, refreshPullRequest],
   );
 
   return (

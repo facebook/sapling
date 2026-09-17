@@ -5,15 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ChevronDownIcon, ChevronRightIcon} from '@primer/octicons-react';
+import {ArrowRightIcon, ChevronDownIcon, ChevronRightIcon} from '@primer/octicons-react';
 import {Box, Text, Tooltip} from '@primer/react';
 
 export function FileHeader({
   path,
+  previousPath,
   open,
   onChangeOpen,
 }: {
   path: string;
+  previousPath?: string;
   open?: boolean;
   onChangeOpen?: (open: boolean) => void;
 }) {
@@ -21,15 +23,12 @@ export function FileHeader({
   // have to define it again here or things don't look right.
   const color = 'fg.muted';
 
-  const pathSeparator = '/';
-  const pathParts = path.split(pathSeparator);
-
-  const filePathParts = (
+  const filePathParts = (filePath: string) => (
     <Text fontFamily="mono" fontSize={12} sx={{flexGrow: 1}}>
-      {pathParts.reduce((acc, part, idx) => {
+      {filePath.split('/').reduce((acc, part, idx, pathParts) => {
         // Nest path parts in a particular way so we can use plain CSS
         // hover selectors to underline nested sub-paths.
-        const pathSoFar = pathParts.slice(idx).join(pathSeparator);
+        const pathSoFar = pathParts.slice(idx).join('/');
         return (
           <span className="file-header-copyable-path" key={idx}>
             {acc}
@@ -42,7 +41,7 @@ export function FileHeader({
                   navigator.clipboard.writeText(pathSoFar);
                 }}>
                 {part}
-                {idx < pathParts.length - 1 ? pathSeparator : ''}
+                {idx < pathParts.length - 1 ? '/' : ''}
               </span>
             </Tooltip>
           </span>
@@ -78,7 +77,19 @@ export function FileHeader({
           {open ? <ChevronDownIcon size={16} /> : <ChevronRightIcon size={16} />}
         </Box>
       )}
-      <Box sx={{display: 'flex', flexGrow: 1}}>{filePathParts}</Box>
+      <Box sx={{display: 'flex', flexGrow: 1, alignItems: 'center'}}>
+        {previousPath == null ? (
+          filePathParts(path)
+        ) : (
+          <>
+            {filePathParts(previousPath)}
+            <Box aria-label="moved to" display="flex" marginX={2}>
+              <ArrowRightIcon size={16} />
+            </Box>
+            {filePathParts(path)}
+          </>
+        )}
+      </Box>
     </Box>
   );
 }

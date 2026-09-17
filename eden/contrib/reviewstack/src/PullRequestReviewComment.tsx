@@ -8,12 +8,14 @@
 import type {ID, GitObject} from './github/types';
 
 import CommentLink from './CommentLink';
+import CommentReply from './CommentReply';
 import EditableComment from './EditableComment';
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
 import {commentAnchorID} from './commentLinkUtils';
 import {gitHubPullRequestCommentForIDAtom} from './jotai';
 import {Box} from '@primer/react';
 import {useAtomValue} from 'jotai';
+import {useState} from 'react';
 
 type Props = {
   comment: {
@@ -27,6 +29,7 @@ type Props = {
 };
 
 export default function PullRequestReviewComment({comment}: Props): React.ReactElement {
+  const [isReplying, setIsReplying] = useState(false);
   const reviewComment = useAtomValue(gitHubPullRequestCommentForIDAtom(comment.id));
   const commentID = comment.id;
   const commit = comment.originalCommit?.oid;
@@ -57,6 +60,15 @@ export default function PullRequestReviewComment({comment}: Props): React.ReactE
             className="PRT-review-comment-text"
             bodyHTML={comment.bodyHTML}
           />
+          {commit != null && (
+            <CommentReply
+              commentID={commentID}
+              commitID={commit}
+              isReplying={isReplying}
+              onReply={() => setIsReplying(true)}
+              onCancel={() => setIsReplying(false)}
+            />
+          )}
         </Box>
       </Box>
     </div>

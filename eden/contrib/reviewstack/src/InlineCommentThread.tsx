@@ -6,17 +6,17 @@
  */
 
 import type {GitHubPullRequestReviewThreadComment} from './github/pullRequestTimelineTypes';
-import type {GitObjectID, ID} from './github/types';
+import type {ID} from './github/types';
 
 import ActorHeading from './ActorHeading';
 import CommentLink from './CommentLink';
+import CommentReply from './CommentReply';
 import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
-import PullRequestInlineCommentInput from './PullRequestInlineCommentInput';
 import {commentAnchorID} from './commentLinkUtils';
 import {PullRequestReviewCommentState} from './generated/graphql';
 import {gitHubPullRequestJumpToCommentIDAtom} from './jotai/atoms';
-import {Box, Button} from '@primer/react';
+import {Box} from '@primer/react';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 
@@ -26,16 +26,9 @@ type Props = {
 
 export default function InlineCommentThread({comments}: Props): React.ReactElement | null {
   const lastComment = comments[comments.length - 1];
+  const [replyingToID, setReplyingToID] = useState<ID | null>(null);
   if (lastComment == null) {
     return null;
-  }
-
-  const commentID = lastComment.id;
-  const commitID = lastComment.originalCommit?.oid;
-
-  let reply = null;
-  if (commitID != null) {
-    reply = <Reply commentID={commentID} commitID={commitID} />;
   }
 
   return (
@@ -45,16 +38,31 @@ export default function InlineCommentThread({comments}: Props): React.ReactEleme
         borderColor="border.default"
         borderWidth={1}
         borderStyle="solid">
-        {comments.map((comment, index) => (
-          <Comment key={index} comment={comment} />
+        {comments.map(comment => (
+          <Comment
+            key={comment.id}
+            comment={comment}
+            isReplying={replyingToID === comment.id}
+            onReply={() => setReplyingToID(comment.id)}
+            onCancelReply={() => setReplyingToID(null)}
+          />
         ))}
-        {reply}
       </Box>
     </Box>
   );
 }
 
-function Comment({comment}: {comment: GitHubPullRequestReviewThreadComment}): React.ReactElement {
+function Comment({
+  comment,
+  isReplying,
+  onReply,
+  onCancelReply,
+}: {
+  comment: GitHubPullRequestReviewThreadComment;
+  isReplying: boolean;
+  onReply: () => void;
+  onCancelReply: () => void;
+}): React.ReactElement {
   const ref = useRef<HTMLDivElement | null>(null);
   const [jumpToCommentID, setJumpToCommentID] = useAtom(
     gitHubPullRequestJumpToCommentIDAtom(comment.id),
@@ -90,27 +98,15 @@ function Comment({comment}: {comment: GitHubPullRequestReviewThreadComment}): Re
           kind="review"
         />
       </Box>
-    </Box>
-  );
-}
-
-function Reply(props: {commentID: ID; commitID: GitObjectID}): React.ReactElement {
-  const [showReply, setShowReply] = useState(false);
-
-  if (showReply) {
-    return <PullRequestInlineCommentInput {...props} onCancel={() => setShowReply(false)} />;
-  }
-
-  return (
-    <Box
-      display="flex"
-      justifyContent="flex-end"
-      backgroundColor="canvas.subtle"
-      borderTopColor="border.default"
-      borderTopWidth={1}
-      borderTopStyle="solid"
-      padding={2}>
-      <Button onClick={() => setShowReply(true)}>Reply</Button>
+      {comment.originalCommit?.oid != null && (
+        <CommentReply
+          commentID={comment.id}
+          commitID={comment.originalCommit.oid}
+          isReplying={isReplying}
+          onReply={onReply}
+          onCancel={onCancelReply}
+        />
+      )}
     </Box>
   );
 }

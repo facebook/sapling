@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitChange, Diff, ModifyChange} from './github/diffTypes';
+import type {Diff, ModifyChange} from './github/diffTypes';
 import type {GitObjectID} from './github/types';
 
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffView from './SplitDiffView';
+import coalesceRenamedFiles, {type DisplayChange, type RenamedFile} from './coalesceRenamedFiles';
 import hasBinaryContent from './hasBinaryContent';
 import joinPath from './joinPath';
 import {fileContentsDeltaAtom, gitHubBlobAtom} from './jotai/atoms';
@@ -35,9 +36,13 @@ export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullReque
   if (diff != null) {
     return (
       <div>
-        {diff.map(change => {
-          const name = change.type === 'modify' ? change.before.name : change.entry.name;
-          const key = `${change.basePath}/${name}`;
+        {coalesceRenamedFiles(diff).map(change => {
+          const key =
+            change.type === 'rename'
+              ? `rename:${change.before.basePath}/${change.before.entry.name}:${change.after.basePath}/${change.after.entry.name}`
+              : `${change.basePath}/${
+                  change.type === 'modify' ? change.before.name : change.entry.name
+                }`;
           return (
             <Suspense key={key} fallback={<DiffFileSkeleton />}>
               <Box paddingY={1}>
@@ -53,7 +58,7 @@ export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullReque
   }
 }
 
-function ChangeDisplay({change, isPullRequest}: {change: CommitChange; isPullRequest: boolean}) {
+function ChangeDisplay({change, isPullRequest}: {change: DisplayChange; isPullRequest: boolean}) {
   switch (change.type) {
     case 'add': {
       const {basePath, entry} = change;
@@ -68,7 +73,20 @@ function ChangeDisplay({change, isPullRequest}: {change: CommitChange; isPullReq
     case 'modify': {
       return <ModifiedFile modify={change} isPullRequest={isPullRequest} />;
     }
+    case 'rename': {
+      return <RenamedFileDisplay rename={change} />;
+    }
   }
+}
+
+function RenamedFileDisplay({rename}: {rename: RenamedFile}) {
+  const previousPath = joinPath(rename.before.basePath, rename.before.entry.name);
+  const path = joinPath(rename.after.basePath, rename.after.entry.name);
+  return (
+    <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+      <FileHeader path={path} previousPath={previousPath} />
+    </Box>
+  );
 }
 
 function AddedFile({
@@ -88,9 +106,7 @@ function AddedFile({
   const {isBinary, text} = blob ?? {};
   // Check both the isBinary flag and perform our own binary content detection
   if (text != null && !isBinary && !hasBinaryContent(text)) {
-    return (
-      <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
-    );
+    return <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />;
   } else {
     return <BinaryFile path={path} />;
   }
