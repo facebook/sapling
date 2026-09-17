@@ -41,6 +41,7 @@ import type {
   UserFragment,
 } from '../generated/graphql';
 
+import isFreshStackPullRequestCacheEntry from '../stackPullRequestCache';
 import {globalCacheStats} from './GitHubClientStats';
 import {DB_VERSION, DB_NAME} from './databaseInfo';
 import {subscribeToLogout} from './logoutBroadcastChannel';
@@ -77,6 +78,7 @@ type NormalizedStackPullRequestFragment = {
   reviewDecision: PullRequestReviewDecision | null | undefined;
   headRefOid: GitObjectID;
   numComments: number;
+  cachedAt: number;
 };
 
 /** Name of an IDBObjectStore in our IDBDatabase. */
@@ -543,11 +545,19 @@ export default class CachingGitHubClient implements GitHubClient {
               return;
             }
 
-            const {title, updatedAt, state, isDraft, reviewDecision, headRefOid, numComments} =
-              result;
+            const {
+              title,
+              updatedAt,
+              state,
+              isDraft,
+              reviewDecision,
+              headRefOid,
+              numComments,
+              cachedAt,
+            } = result;
             // Refetch cache entries written before StackPullRequestFragment
-            // included the draft state.
-            if (typeof isDraft !== 'boolean') {
+            // included the draft state, and refresh mutable review metadata.
+            if (typeof isDraft !== 'boolean' || !isFreshStackPullRequestCacheEntry(cachedAt)) {
               resolve(null);
               return;
             }
@@ -726,5 +736,6 @@ function normalizePullRequestFragment(
     reviewDecision,
     headRefOid,
     numComments: comments.totalCount,
+    cachedAt: Date.now(),
   };
 }

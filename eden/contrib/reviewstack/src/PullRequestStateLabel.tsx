@@ -5,13 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {PullRequestReviewDecision} from './generated/graphql';
+import type {PullRequestReviewDecision, PullRequestState} from './generated/graphql';
 
-import {PullRequestState} from './generated/graphql';
-import {pullRequestReviewDecisionLabel} from './utils';
+import pullRequestStatusAndLabel from './pullRequestStatusAndLabel';
 import {StateLabel} from '@primer/react';
-
-type Status = 'pullClosed' | 'pullMerged' | 'pullOpened';
 
 export default function PullRequestStateLabel({
   isDraft = false,
@@ -24,38 +21,10 @@ export default function PullRequestStateLabel({
   state: PullRequestState;
   variant?: 'small' | 'normal';
 }) {
-  const {status, label, color} = statusAndLabel(state, reviewDecision, isDraft);
+  const {status, label, color} = pullRequestStatusAndLabel(state, reviewDecision, isDraft);
   return (
     <StateLabel status={status} variant={variant} sx={{backgroundColor: color}}>
       {label}
     </StateLabel>
   );
-}
-
-function statusAndLabel(
-  state: PullRequestState,
-  reviewDecision: PullRequestReviewDecision | null,
-  isDraft: boolean,
-): {
-  status: Status;
-  label: string;
-  color?: string;
-} {
-  switch (state) {
-    case PullRequestState.Closed:
-      return {status: 'pullClosed', label: 'Closed'};
-    case PullRequestState.Merged:
-      return {status: 'pullMerged', label: 'Merged'};
-    case PullRequestState.Open: {
-      const status = 'pullOpened';
-      if (isDraft) {
-        return {status, label: 'Draft Review', color: 'fg.muted'};
-      }
-      if (reviewDecision === null) {
-        return {status, label: 'Open', color: 'success.fg'};
-      }
-      const {label, variant} = pullRequestReviewDecisionLabel(reviewDecision);
-      return {status, label, color: `${variant}.fg`};
-    }
-  }
 }
