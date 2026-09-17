@@ -52,9 +52,8 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
   // We check if the filter is cached. If so, we can avoid fetching the Filter
   // Profile from Mercurial.
   {
-    auto profiles = profiles_->rlock();
+    auto profiles = profiles_->wlock();
     auto profileIt = profiles->find(id);
-    profiles.unlock();
     if (profileIt != profiles->end()) {
       return ImmediateFuture<FilterCoverage>{
           determineFilterCoverage(profileIt->second, path.view())};
@@ -80,7 +79,6 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
                 auto profiles = profilesLock->wlock();
                 auto [profileIt, _] =
                     profiles->try_emplace(filterId, std::move(res));
-                profiles.unlock();
                 return determineFilterCoverage(profileIt->second, path.view());
               })};
 }
@@ -94,12 +92,11 @@ HgSparseFilter::co_getFilterCoverageForPath(
     co_return FilterCoverage::RECURSIVELY_UNFILTERED;
   }
 
-  // Check cache under rlock. F14NodeMap provides iterator/reference stability,
-  // so we can unlock before using the iterator.
+  // Check cache under lock. The Rust matcher is not Sync, so serialize calls
+  // through the profile lock.
   {
-    auto profiles = profiles_->rlock();
+    auto profiles = profiles_->wlock();
     auto profileIt = profiles->find(id);
-    profiles.unlock();
     if (profileIt != profiles->end()) {
       co_return determineFilterCoverage(profileIt->second, path.view());
     }
@@ -123,12 +120,10 @@ HgSparseFilter::co_getFilterCoverageForPath(
   // co_await without holding any lock
   auto matcher = co_await std::move(rootFuture);
 
-  // Cache the result under wlock, then release before determineFilterCoverage.
-  // F14NodeMap provides iterator/reference stability across insertions.
+  // Cache the result, then call the Rust matcher while still holding the lock.
   auto profiles = profiles_->wlock();
   auto [profileIt, _] =
       profiles->try_emplace(std::move(ownedId), std::move(matcher));
-  profiles.unlock();
   co_return determineFilterCoverage(profileIt->second, ownedPath.view());
 }
 
