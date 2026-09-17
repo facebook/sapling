@@ -154,9 +154,9 @@ class WorkerPool {
     // - keeping track of idle workers when deciding who to assign to
     // - resizing the pool based on demand
     // - worker affinity based on scopeName
-    const client = this.findAvailableClient();
-    if (client != null) {
-      return client.sendMessage(message);
+    const worker = this.takeAvailableWorker();
+    if (worker != null) {
+      return worker.client.sendMessage(message);
     }
 
     // No available workers! Create a new worker if we haven't hit MAX_SERVICE_WORKERS
@@ -172,8 +172,10 @@ class WorkerPool {
     if (workerIndex !== -1) {
       const workerName = createWorkerName(workerIndex);
       const client = new DiffServiceClient(workerName);
-      // Mark as available immediately since we're about to use it
-      this.workers[workerIndex] = {client, available: true};
+      // Reserve the worker synchronously. Waiting for its BroadcastChannel
+      // "busy" message leaves a window where every initial request is sent to
+      // the same worker.
+      this.workers[workerIndex] = {client, available: false};
       // Send the actual message directly - don't wait for availability
       return client.sendMessage(message);
     }
@@ -196,8 +198,8 @@ class WorkerPool {
   }
 
   private trySendingPendingMessage(): void {
-    const client = this.findAvailableClient();
-    if (client == null) {
+    const worker = this.takeAvailableWorker();
+    if (worker == null) {
       return;
     }
 
@@ -207,13 +209,14 @@ class WorkerPool {
     }
 
     const {message, resolve, reject} = pendingMessage;
-    client.sendMessage(message).then(resolve, reject);
+    worker.client.sendMessage(message).then(resolve, reject);
   }
 
-  private findAvailableClient(): DiffServiceClient | null {
+  private takeAvailableWorker(): {client: DiffServiceClient; available: boolean} | null {
     for (const worker of this.workers) {
       if (worker !== undefined && worker.available) {
-        return worker.client;
+        worker.available = false;
+        return worker;
       }
     }
     return null;

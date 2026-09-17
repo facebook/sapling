@@ -315,43 +315,20 @@ export function useSplitDiffViewData(
     }
   }, [isPullRequest, lineToPositionLoadable, setJotaiLineToPosition]);
 
-  // Handle loading state from all sources
-  // Also wait for versions to be loaded for PR case
-  if (
-    commitIDsLoadable.state === 'loading' ||
-    diffAndTokenizeLoadable.state === 'loading' ||
-    (isPullRequest && lineToPositionLoadable.state === 'loading')
-  ) {
+  // Rendering the code only depends on the blob diff and tokenization. Commit
+  // IDs, versions, and line-to-position mappings support commenting and can
+  // finish in the background. Waiting for them here made every visible diff
+  // disappear during a comment-only PR refresh.
+  if (diffAndTokenizeLoadable.state === 'loading') {
     return {state: 'loading'};
   }
 
-  // PR case: versions haven't loaded yet, or commitIDs aren't yet available.
-  // This handles the race condition where versions are still loading.
-  if (
-    isPullRequest &&
-    (versionsLoadable.state !== 'hasData' ||
-      versionsLoadable.data.length === 0 ||
-      (commitIDsLoadable.state === 'hasData' && commitIDsLoadable.data == null))
-  ) {
-    return {state: 'loading'};
-  }
-
-  // Handle error state from all sources
-  if (commitIDsLoadable.state === 'hasError') {
-    return {state: 'hasError', error: commitIDsLoadable.error as Error};
-  }
   if (diffAndTokenizeLoadable.state === 'hasError') {
     return {state: 'hasError', error: diffAndTokenizeLoadable.error as Error};
   }
-  if (isPullRequest && lineToPositionLoadable.state === 'hasError') {
-    return {state: 'hasError', error: lineToPositionLoadable.error as Error};
-  }
-  if (isPullRequest && versionsLoadable.state === 'hasError') {
-    return {state: 'hasError', error: versionsLoadable.error as Error};
-  }
 
   const diffAndTokenizeResult = diffAndTokenizeLoadable.data;
-  const commitIDs = commitIDsLoadable.data;
+  const commitIDs = commitIDsLoadable.state === 'hasData' ? commitIDsLoadable.data : null;
 
   return {
     state: 'hasValue',

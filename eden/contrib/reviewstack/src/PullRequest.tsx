@@ -30,7 +30,7 @@ import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {Box, Flash, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {Suspense, useEffect, useMemo} from 'react';
+import {Suspense, useEffect, useMemo, useRef} from 'react';
 
 export default function PullRequest() {
   // Note: comparableVersions sync is handled by JotaiRecoilSync component
@@ -60,20 +60,24 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   // refreshing in the background
   const loadablePRAtom = useMemo(() => loadable(gitHubPullRequestForParamsAtom(params)), [params]);
   const pullRequestLoadable = useAtomValue(loadablePRAtom);
+  const currentPullRequest = useAtomValue(gitHubPullRequestAtom);
   const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
+  const paramsKey = `${params.orgAndRepo.org}\0${params.orgAndRepo.repo}\0${params.number}`;
+  const loadedParamsKey = useRef<string | null>(null);
   const pullRequest = pullRequestLoadable.state === 'hasData' ? pullRequestLoadable.data : null;
   const isPullRequestNotFound = pullRequestLoadable.state === 'hasData' && pullRequest == null;
 
   useEffect(() => {
     if (pullRequest != null) {
+      loadedParamsKey.current = paramsKey;
       // Here we should diff the new value with the existing value for the
       // gitHubPullRequestAtom, preserving as many of the original references
       // as possible to limit the number of updates to the dataflow graph,
       // which will short-circuit a bunch off diff'ing React will have to do.
       setPullRequestJotai(pullRequest);
     }
-  }, [pullRequest, setPullRequestJotai]);
+  }, [paramsKey, pullRequest, setPullRequestJotai]);
 
   // Restore scroll position after pull request data updates.
   // This runs after the effect above updates the atoms, and uses
@@ -113,7 +117,10 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
         </Text>
       </Flash>
     );
-  } else if (pullRequestLoadable.state === 'loading') {
+  } else if (
+    pullRequestLoadable.state === 'loading' &&
+    (currentPullRequest == null || loadedParamsKey.current !== paramsKey)
+  ) {
     return <CenteredSpinner />;
   } else if (isPullRequestNotFound) {
     return <PullRequestNotFound />;

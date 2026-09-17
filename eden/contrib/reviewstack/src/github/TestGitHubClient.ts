@@ -56,6 +56,10 @@ export default class TestGitHubClient implements GitHubClient {
     return Promise.resolve(null);
   }
 
+  prefetchTree(_oid: GitObjectID): Promise<void> {
+    return Promise.resolve();
+  }
+
   getTree(oid: GitObjectID): Promise<Tree | null> {
     return Promise.resolve(this.trees.get(oid) ?? null);
   }

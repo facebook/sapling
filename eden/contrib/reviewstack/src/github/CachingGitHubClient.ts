@@ -186,6 +186,8 @@ function implementsGitObject(obj: unknown): obj is GitObject {
  * Decorates a GitHubClient, but uses IndexedDB as a caching layer.
  */
 export default class CachingGitHubClient implements GitHubClient {
+  private commitComparisons = new Map<string, Promise<CommitComparison | null>>();
+
   /**
    * owner and name must be non-null if the getStackPullRequests() will be
    * used.
@@ -237,8 +239,33 @@ export default class CachingGitHubClient implements GitHubClient {
   }
 
   getCommitComparison(base: GitObjectID, head: GitObjectID): Promise<CommitComparison | null> {
-    // No caching done for now.
-    return this.client.getCommitComparison(base, head);
+    // Both inputs are immutable commit IDs. Cache completed comparisons and
+    // deduplicate concurrent requests from the version picker, code diff, and
+    // comment-position calculations.
+    const key = `${base}\0${head}`;
+    const cached = this.commitComparisons.get(key);
+    if (cached != null) {
+      return cached;
+    }
+
+    const comparison = this.client.getCommitComparison(base, head).then(
+      result => {
+        if (result == null) {
+          this.commitComparisons.delete(key);
+        }
+        return result;
+      },
+      error => {
+        this.commitComparisons.delete(key);
+        throw error;
+      },
+    );
+    this.commitComparisons.set(key, comparison);
+    return comparison;
+  }
+
+  prefetchTree(oid: GitObjectID): Promise<void> {
+    return this.client.prefetchTree(oid);
   }
 
   async getTree(oid: GitObjectID): Promise<Tree | null> {

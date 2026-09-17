@@ -98,6 +98,8 @@ const NUM_TIMELINE_ITEMS_TO_FETCH = 100;
 export default class GraphQLGitHubClient implements GitHubClient {
   private requestHeaders: Record<string, string>;
   private graphQLEndpoint: string;
+  private prefetchedTrees = new Map<GitObjectID, Tree>();
+  private treePrefetches = new Map<GitObjectID, Promise<void>>();
 
   /**
    * An instance of GraphQLGitHubClient is specific to a GitHub
@@ -171,6 +173,11 @@ export default class GraphQLGitHubClient implements GitHubClient {
   }
 
   async getTree(oid: GitObjectID): Promise<Tree | null> {
+    const prefetchedTree = this.prefetchedTrees.get(oid);
+    if (prefetchedTree != null) {
+      return prefetchedTree;
+    }
+
     const variables = {
       org: this.organization,
       repo: this.repositoryName,
@@ -180,6 +187,40 @@ export default class GraphQLGitHubClient implements GitHubClient {
     const data = await this.query<TreeQueryData, TreeQueryVariables>(TreeQuery, variables);
     ++globalCacheStats.gitHubGetTree;
     return objectToTree(data?.repositoryOwner?.repository?.object);
+  }
+
+  prefetchTree(oid: GitObjectID): Promise<void> {
+    const existing = this.treePrefetches.get(oid);
+    if (existing != null) {
+      return existing;
+    }
+
+    const url = `https://api.${this.hostname}/repos/${encodeURIComponent(
+      this.organization,
+    )}/${encodeURIComponent(this.repositoryName)}/git/trees/${oid}?recursive=1`;
+    const prefetch = fetch(url, {headers: this.requestHeaders, method: 'GET'})
+      .then(async response => {
+        if (response.status === 403 || response.status === 404 || response.status === 409) {
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP request error: ${response.status}: ${response.statusText}`);
+        }
+
+        const json = await response.json();
+        if (json.truncated) {
+          return;
+        }
+        for (const tree of treesFromRecursiveResponse(json.sha ?? oid, json.tree ?? [])) {
+          this.prefetchedTrees.set(tree.oid, tree);
+        }
+      })
+      .catch(error => {
+        this.treePrefetches.delete(oid);
+        throw error;
+      });
+    this.treePrefetches.set(oid, prefetch);
+    return prefetch;
   }
 
   async getBlob(oid: GitObjectID): Promise<Blob | null> {
@@ -494,6 +535,51 @@ function objectToTree(object: any): Tree {
     oid,
     entries,
   };
+}
+
+type RecursiveTreeEntry = {
+  mode: string;
+  path: string;
+  sha: GitObjectID;
+  type: string;
+};
+
+export function treesFromRecursiveResponse(
+  rootOID: GitObjectID,
+  entries: RecursiveTreeEntry[],
+): Tree[] {
+  const oidByPath = new Map<string, GitObjectID>([['', rootOID]]);
+  for (const entry of entries) {
+    if (entry.type === 'tree') {
+      oidByPath.set(entry.path, entry.sha);
+    }
+  }
+
+  const treeByPath = new Map<string, Tree>();
+  for (const [path, oid] of oidByPath) {
+    treeByPath.set(path, {id: oid, oid, entries: []});
+  }
+
+  for (const entry of entries) {
+    const slash = entry.path.lastIndexOf('/');
+    const parentPath = slash === -1 ? '' : entry.path.slice(0, slash);
+    const parent = treeByPath.get(parentPath);
+    if (parent == null) {
+      continue;
+    }
+    parent.entries.push({
+      mode: parseInt(entry.mode, 8),
+      name: slash === -1 ? entry.path : entry.path.slice(slash + 1),
+      oid: entry.sha,
+      path: entry.path,
+      type: entry.type === 'tree' ? 'tree' : 'blob',
+    });
+  }
+
+  for (const tree of treeByPath.values()) {
+    tree.entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+  return [...treeByPath.values()];
 }
 
 /**

@@ -642,6 +642,20 @@ export type ComparableVersions = {
 const gitHubPullRequestComparableVersionsBaseAtom = atom<ComparableVersions | null>(null);
 
 /**
+ * The latest commit OID is kept as a primitive dependency so refreshing PR
+ * comments does not invalidate the code diff when the head commit is unchanged.
+ */
+const gitHubPullRequestLatestCommitOIDAtom = atom<GitObjectID | null>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  const commits = (pullRequest?.timelineItems?.nodes ?? [])
+    .map(item =>
+      item?.__typename === 'PullRequestCommit' ? (item as PullRequestCommitItem).commit.oid : null,
+    )
+    .filter(notEmpty);
+  return commits[commits.length - 1] ?? null;
+});
+
+/**
  * Derived atom that provides a default value when the base atom is null.
  * The default uses the latest version's head commit as the afterCommitID.
  */
@@ -652,32 +666,14 @@ export const gitHubPullRequestComparableVersionsAtom = atom(
       return stored;
     }
 
-    // Compute default from the pull request's timeline commits
-    const pullRequest = get(gitHubPullRequestAtom);
-    if (pullRequest == null) {
-      return null;
-    }
-
-    // Get the latest commit from the PR timeline (same logic as gitHubPullRequestCommitsAtom)
-    const commits = (pullRequest.timelineItems?.nodes ?? [])
-      .map(item => {
-        if (item?.__typename === 'PullRequestCommit') {
-          const commit = item as PullRequestCommitItem;
-          return commit.commit;
-        } else {
-          return null;
-        }
-      })
-      .filter(notEmpty);
-
-    const latestCommit = commits[commits.length - 1];
-    if (latestCommit == null) {
+    const latestCommitOID = get(gitHubPullRequestLatestCommitOIDAtom);
+    if (latestCommitOID == null) {
       return null;
     }
 
     return {
       beforeCommitID: null,
-      afterCommitID: latestCommit.oid,
+      afterCommitID: latestCommitOID,
     };
   },
   (get, set, newValue: ComparableVersions | null) => {
@@ -712,13 +708,8 @@ export const gitHubPullRequestCommitBaseParentAtom = atomFamily(
   (commitID: GitObjectID) =>
     atom<Promise<{oid: GitObjectID; committedDate: DateTime} | null>>(async get => {
       const client = await get(gitHubClientAtom);
-      const pullRequest = get(gitHubPullRequestAtom);
-      if (client == null || pullRequest == null) {
-        return null;
-      }
-
-      const baseRef = pullRequest.baseRefOid;
-      if (baseRef == null) {
+      const baseRef = get(gitHubPullRequestBaseRefAtom);
+      if (client == null || baseRef == null) {
         return null;
       }
 

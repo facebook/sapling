@@ -51,6 +51,10 @@ export default class RejectingGitHubClient implements GitHubClient {
     return Promise.reject('Method not implemented.');
   }
 
+  prefetchTree(_oid: GitObjectID): Promise<void> {
+    return Promise.reject('Method not implemented.');
+  }
+
   getTree(_oid: GitObjectID): Promise<Tree> {
     return Promise.reject('Method not implemented.');
   }

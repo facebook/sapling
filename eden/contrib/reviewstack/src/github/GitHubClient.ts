@@ -50,6 +50,7 @@ import type {
 export default interface GitHubClient {
   getCommit(oid: GitObjectID): Promise<Commit | null>;
   getCommitComparison(base: GitObjectID, head: GitObjectID): Promise<CommitComparison | null>;
+  prefetchTree(oid: GitObjectID): Promise<void>;
   getTree(oid: GitObjectID): Promise<Tree | null>;
   getBlob(oid: GitObjectID): Promise<Blob | null>;
   getPullRequest(pr: number): Promise<PullRequest | null>;

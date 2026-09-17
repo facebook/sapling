@@ -36,6 +36,10 @@ export async function diffCommits(
   headCommit: Commit,
   client: GitHubClient,
 ): Promise<DiffWithCommitIDs> {
+  await Promise.all([
+    client.prefetchTree(baseCommit.tree.oid),
+    client.prefetchTree(headCommit.tree.oid),
+  ]);
   const diff: Diff = [];
   await diffTree(diff, '', baseCommit.tree, headCommit.tree, client);
   return {
@@ -54,14 +58,23 @@ export async function diffTree(
   headTree: Tree,
   client: GitHubClient,
 ): Promise<void> {
+  diff.push(...(await collectTreeChanges(basePath, baseTree, headTree, client)));
+}
+
+async function collectTreeChanges(
+  basePath: string,
+  baseTree: Tree,
+  headTree: Tree,
+  client: GitHubClient,
+): Promise<Diff> {
   const {entries: baseEntries} = baseTree;
   const {entries: headEntries} = headTree;
   let baseIndex = 0;
   let headIndex = 0;
   const maxBaseIndex = baseEntries.length;
   const maxHeadIndex = headEntries.length;
+  const pendingChanges: Array<Promise<Diff>> = [];
 
-  /* eslint-disable no-await-in-loop */
   while (true) {
     // We define things as follows so that TypeScript thinks that baseEntry and
     // headEntry are always non-null, though that is not the case once one of
@@ -89,10 +102,10 @@ export async function diffTree(
       case 'less': {
         // baseEntry was removed in headTree
         if (baseEntry.type === 'blob') {
-          diff.push({type: 'remove', basePath, entry: baseEntry});
+          pendingChanges.push(Promise.resolve([{type: 'remove', basePath, entry: baseEntry}]));
         } else {
           const pathToSubtree = joinPath(basePath, baseEntry.name);
-          await recordChangesInTree(baseEntry, pathToSubtree, 'remove', diff, client);
+          pendingChanges.push(recordChangesInTree(baseEntry, pathToSubtree, 'remove', client));
         }
         ++baseIndex;
         break;
@@ -100,10 +113,10 @@ export async function diffTree(
       case 'greater': {
         // headEntry was introduced in headTree
         if (headEntry.type === 'blob') {
-          diff.push({type: 'add', basePath, entry: headEntry});
+          pendingChanges.push(Promise.resolve([{type: 'add', basePath, entry: headEntry}]));
         } else {
           const pathToSubtree = joinPath(basePath, headEntry.name);
-          await recordChangesInTree(headEntry, pathToSubtree, 'add', diff, client);
+          pendingChanges.push(recordChangesInTree(headEntry, pathToSubtree, 'add', client));
         }
         ++headIndex;
         break;
@@ -118,27 +131,31 @@ export async function diffTree(
         const isHeadBlob = headEntry.type === 'blob';
         const pathToEntry = joinPath(basePath, baseEntry.name);
         if (isBaseBlob && isHeadBlob) {
-          diff.push({type: 'modify', basePath, before: baseEntry, after: headEntry});
+          pendingChanges.push(
+            Promise.resolve([{type: 'modify', basePath, before: baseEntry, after: headEntry}]),
+          );
         } else if (!isBaseBlob && !isHeadBlob) {
-          const [subdirBaseTree, subdirHeadTree] = await Promise.all([
-            client.getTree(baseEntry.oid),
-            client.getTree(headEntry.oid),
-          ]);
-          if (subdirBaseTree == null) {
-            throw new Error(`could not find Tree ${baseEntry.oid} for ${pathToEntry}`);
-          }
-          if (subdirHeadTree == null) {
-            throw new Error(`could not find Tree ${headEntry.oid} for ${pathToEntry}`);
-          }
-          await diffTree(diff, pathToEntry, subdirBaseTree, subdirHeadTree, client);
+          pendingChanges.push(
+            Promise.all([client.getTree(baseEntry.oid), client.getTree(headEntry.oid)]).then(
+              ([subdirBaseTree, subdirHeadTree]) => {
+                if (subdirBaseTree == null) {
+                  throw new Error(`could not find Tree ${baseEntry.oid} for ${pathToEntry}`);
+                }
+                if (subdirHeadTree == null) {
+                  throw new Error(`could not find Tree ${headEntry.oid} for ${pathToEntry}`);
+                }
+                return collectTreeChanges(pathToEntry, subdirBaseTree, subdirHeadTree, client);
+              },
+            ),
+          );
         } else if (isBaseBlob) {
           // A blob was replaced with a tree.
-          diff.push({type: 'remove', basePath, entry: baseEntry});
-          await recordChangesInTree(headEntry, pathToEntry, 'add', diff, client);
+          pendingChanges.push(Promise.resolve([{type: 'remove', basePath, entry: baseEntry}]));
+          pendingChanges.push(recordChangesInTree(headEntry, pathToEntry, 'add', client));
         } else {
           // A tree was replaced with a blob.
-          diff.push({type: 'add', basePath, entry: headEntry});
-          await recordChangesInTree(baseEntry, pathToEntry, 'remove', diff, client);
+          pendingChanges.push(Promise.resolve([{type: 'add', basePath, entry: headEntry}]));
+          pendingChanges.push(recordChangesInTree(baseEntry, pathToEntry, 'remove', client));
         }
         ++baseIndex;
         ++headIndex;
@@ -146,37 +163,31 @@ export async function diffTree(
       }
     }
   }
-  /* eslint-enable no-await-in-loop */
+
+  return (await Promise.all(pendingChanges)).flat();
 }
 
 async function recordChangesInTree(
   treeEntry: TreeEntry,
   pathToTreeEntry: string,
   type: 'add' | 'remove',
-  diff: Diff,
   client: GitHubClient,
-): Promise<void> {
+): Promise<Diff> {
   const tree = await client.getTree(treeEntry.oid);
   if (tree == null) {
-    return;
+    return [];
   }
 
-  for (const entry of tree.entries) {
-    if (entry.type === 'blob') {
-      diff.push({
-        type,
-        basePath: pathToTreeEntry,
-        entry,
-      });
-    } else {
+  const changes = await Promise.all(
+    tree.entries.map(entry => {
+      if (entry.type === 'blob') {
+        return Promise.resolve<Diff>([{type, basePath: pathToTreeEntry, entry}]);
+      }
       const pathToSubtree = joinPath(pathToTreeEntry, entry.name);
-      // Although we may want to consider using Promise.all() to do more
-      // fetching in parallel, for now, we implement things this way to ensure
-      // changes are recorded in depth-first pre-order.
-      // eslint-disable-next-line no-await-in-loop
-      await recordChangesInTree(entry, pathToSubtree, type, diff, client);
-    }
-  }
+      return recordChangesInTree(entry, pathToSubtree, type, client);
+    }),
+  );
+  return changes.flat();
 }
 
 type TreeEntryCompare = 'less' | 'greater' | 'equal' | 'changed';
