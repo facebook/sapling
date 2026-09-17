@@ -1,5 +1,7 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps", "get_oss_suffix", "get_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
+load("@fbcode_macros//build_defs:sanitizers.bzl", "sanitizers")
+load("@fbsource//tools/build_defs:selects.bzl", "selects")
 
 oncall("scm_client_infra")
 
@@ -357,7 +359,13 @@ python_integration_test(
 python_integration_test(
     name = "mount",
     srcs = ["mount_test.py"],
-    env = artifacts["env"],
+    env = selects.apply(
+        sanitizers.get_sanitizer_v2(),
+        lambda sanitizer: dict(
+            artifacts["env"],
+            EDEN_TEST_TSAN = "1" if sanitizer and "thread" in sanitizer else "0",
+        ),
+    ),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",

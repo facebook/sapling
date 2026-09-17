@@ -505,6 +505,10 @@ class MountTest(testcase.EdenRepoTest):
 
 
 @testcase.eden_repo_test(run_on_nfs=False)
+@unittest.skipIf(
+    os.environ.get("EDEN_TEST_TSAN") == "1",
+    "FUSE io_uring uses kernel shared rings that TSan reports as liburing races",
+)
 @unittest.skipIf(sys.platform != "linux", "FUSE connection abort is Linux-only")
 class FuseIoUringMountTest(testcase.EdenRepoTest):
     git_test_supported: bool = False
