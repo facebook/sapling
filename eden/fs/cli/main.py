@@ -3521,7 +3521,6 @@ def create_parser() -> argparse.ArgumentParser:
         subcmd_mod.HelpCmd,
         stats_mod.StatsCmd,
         trace_mod.TraceCmd,
-        redirect_mod.RedirectCmd,
         prefetch_mod.GlobCmd,
         prefetch_mod.PrefetchCmd,
     ]
