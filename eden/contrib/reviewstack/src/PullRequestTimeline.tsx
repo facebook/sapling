@@ -28,6 +28,7 @@ import CommitLink from './CommitLink';
 import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
 import PullRequestReviewComment from './PullRequestReviewComment';
+import PullRequestTimelineReply from './PullRequestTimelineReply';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {commentAnchorID} from './commentLinkUtils';
 import {
@@ -208,6 +209,7 @@ function PullRequestReview({item}: {item: PullRequestReviewItem}): React.ReactEl
                 className="PRT-bodyHTML PRT-review-comment-text"
                 trustedHTML={item.bodyHTML}
               />
+              <PullRequestTimelineReply commentID={item.id} authorLogin={item.author?.login} />
             </Box>
           )}
           {comments.length > 0 && (
@@ -259,6 +261,7 @@ function IssueComment({item}: {item: IssueCommentItem}): React.ReactElement {
         className="PRT-bodyHTML PRT-review-comment-text"
         bodyHTML={item.bodyHTML}
       />
+      <PullRequestTimelineReply commentID={item.id} authorLogin={item.author?.login} />
     </TimelineCallout>
   );
 }

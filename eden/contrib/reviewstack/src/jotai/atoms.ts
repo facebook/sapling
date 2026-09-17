@@ -1681,11 +1681,12 @@ export const gitHubPullRequestReviewThreadsAtom = atom<GitHubPullRequestReviewTh
           return null;
         }
 
-        const {id, author, originalCommit, path, state, body, bodyHTML} = comment;
+        const {id, author, originalCommit, commit, path, state, body, bodyHTML} = comment;
         const reviewThreadComment = {
           id,
           author: author ?? null,
           originalCommit,
+          commit,
           path,
           state,
           body,

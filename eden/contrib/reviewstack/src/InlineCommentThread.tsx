@@ -63,6 +63,7 @@ function Comment({
   onReply: () => void;
   onCancelReply: () => void;
 }): React.ReactElement {
+  const commitID = comment.originalCommit?.oid ?? comment.commit?.oid;
   const ref = useRef<HTMLDivElement | null>(null);
   const [jumpToCommentID, setJumpToCommentID] = useAtom(
     gitHubPullRequestJumpToCommentIDAtom(comment.id),
@@ -98,10 +99,10 @@ function Comment({
           kind="review"
         />
       </Box>
-      {comment.originalCommit?.oid != null && (
+      {commitID != null && (
         <CommentReply
           commentID={comment.id}
-          commitID={comment.originalCommit.oid}
+          commitID={commitID}
           isReplying={isReplying}
           onReply={onReply}
           onCancel={onCancelReply}

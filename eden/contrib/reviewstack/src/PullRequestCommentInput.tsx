@@ -29,6 +29,7 @@ type Props = {
   actionSelector?: React.ReactNode;
   enableSuggestedChange?: boolean;
   suggestedChangeText?: string;
+  initialComment?: string;
 };
 
 /**
@@ -63,8 +64,9 @@ export default function PullRequestCommentInput({
   actionSelector,
   enableSuggestedChange = false,
   suggestedChangeText,
+  initialComment = '',
 }: Props): React.ReactElement {
-  const [comment, setComment] = useState<string>('');
+  const [comment, setComment] = useState<string>(initialComment);
   const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,10 +97,10 @@ export default function PullRequestCommentInput({
     }
 
     if (resetInputAfterAddingComment) {
-      setComment('');
+      setComment(initialComment);
       setDisabled(false);
     }
-  }, [addComment, resetInputAfterAddingComment, comment, setDisabled, setComment]);
+  }, [addComment, resetInputAfterAddingComment, comment, initialComment, setDisabled, setComment]);
 
   const isAddCommentDisabled = disabled || (!allowEmptyMessage && comment.trim() === '');
 

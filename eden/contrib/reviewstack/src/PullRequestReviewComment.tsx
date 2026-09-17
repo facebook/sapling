@@ -11,16 +11,17 @@ import CommentLink from './CommentLink';
 import CommentReply from './CommentReply';
 import EditableComment from './EditableComment';
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
+import {pullRequestTimelineReplyIDAtom} from './PullRequestTimelineReply';
 import {commentAnchorID} from './commentLinkUtils';
 import {gitHubPullRequestCommentForIDAtom} from './jotai';
 import {Box} from '@primer/react';
-import {useAtomValue} from 'jotai';
-import {useState} from 'react';
+import {useAtom, useAtomValue} from 'jotai';
 
 type Props = {
   comment: {
     id: ID;
     originalCommit?: GitObject | null;
+    commit?: GitObject | null;
     path: string;
     author?: {login: string} | null;
     body: string;
@@ -29,10 +30,10 @@ type Props = {
 };
 
 export default function PullRequestReviewComment({comment}: Props): React.ReactElement {
-  const [isReplying, setIsReplying] = useState(false);
+  const [replyingToID, setReplyingToID] = useAtom(pullRequestTimelineReplyIDAtom);
   const reviewComment = useAtomValue(gitHubPullRequestCommentForIDAtom(comment.id));
   const commentID = comment.id;
-  const commit = comment.originalCommit?.oid;
+  const commit = comment.originalCommit?.oid ?? comment.commit?.oid;
   const lineNumber = reviewComment?.originalLine;
 
   return (
@@ -64,9 +65,9 @@ export default function PullRequestReviewComment({comment}: Props): React.ReactE
             <CommentReply
               commentID={commentID}
               commitID={commit}
-              isReplying={isReplying}
-              onReply={() => setIsReplying(true)}
-              onCancel={() => setIsReplying(false)}
+              isReplying={replyingToID === commentID}
+              onReply={() => setReplyingToID(commentID)}
+              onCancel={() => setReplyingToID(null)}
             />
           )}
         </Box>
