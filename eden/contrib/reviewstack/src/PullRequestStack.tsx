@@ -20,6 +20,11 @@ import {useCallback, useEffect, useState} from 'react';
 
 const loadableStackedPullRequestFragmentsAtom = loadable(stackedPullRequestFragmentsAtom);
 const loadableGitHubClientAtom = loadable(gitHubClientAtom);
+const STACK_MENU_ITEM_HEIGHT = 57;
+const STACK_MENU_VERTICAL_PADDING = 16;
+const MAX_VISIBLE_STACK_ITEMS = 12;
+const MAX_STACK_MENU_HEIGHT =
+  STACK_MENU_ITEM_HEIGHT * MAX_VISIBLE_STACK_ITEMS + STACK_MENU_VERTICAL_PADDING;
 
 export default function PullRequestStack(): React.ReactElement | null {
   const navigateToPullRequest = useNavigateToPullRequest();
@@ -91,7 +96,13 @@ export default function PullRequestStack(): React.ReactElement | null {
     <ButtonGroup>
       <ActionMenu>
         <ActionMenu.Button sx={{display: 'inline-block'}}>{buttonLabel}</ActionMenu.Button>
-        <ActionMenu.Overlay width="xxlarge" sx={{zIndex: 100}}>
+        <ActionMenu.Overlay
+          width="xxlarge"
+          sx={{
+            maxHeight: `min(${MAX_STACK_MENU_HEIGHT}px, calc(100vh - 32px))`,
+            overflowY: 'auto',
+            zIndex: 100,
+          }}>
           <ActionList selectionVariant="single">
             {graphRows != null
               ? graphRows.map(({graphPosition, pullRequest}) => (

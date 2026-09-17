@@ -1556,7 +1556,10 @@ export type GitHubUserHomePageData = {
   reviewRequests: NonNullable<UserReviewRequestsQueryData['search']['nodes']>;
 };
 
-export const gitHubUserHomePageDataAtom = atom<Promise<GitHubUserHomePageData | null>>(async _get => {
+export const gitHubUserHomePageRefreshTriggerAtom = atom(0);
+
+export const gitHubUserHomePageDataAtom = atom<Promise<GitHubUserHomePageData | null>>(async get => {
+  get(gitHubUserHomePageRefreshTriggerAtom);
   const token = localStorage.getItem('github.token');
   if (token == null) {
     return null;

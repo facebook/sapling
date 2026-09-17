@@ -430,7 +430,15 @@ function PullRequestRow({pullRequest}: {pullRequest: PullRequest}): React.ReactE
 function extractReviewRequests(data: GitHubUserHomePageData | null): PullRequest[] {
   return (data?.reviewRequests ?? [])
     .map(node => (node?.__typename === 'PullRequest' ? node : null))
-    .filter(notEmpty);
+    .filter(notEmpty)
+    .filter(needsReview);
+}
+
+function needsReview(pullRequest: PullRequest): boolean {
+  return (
+    pullRequest.reviewDecision !== PullRequestReviewDecision.Approved &&
+    pullRequest.reviewDecision !== PullRequestReviewDecision.ChangesRequested
+  );
 }
 
 function getQueueView(): QueueView {

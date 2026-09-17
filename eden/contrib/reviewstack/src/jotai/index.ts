@@ -16,6 +16,7 @@ export {
   gitHubTokenStateAtom,
   gitHubTokenListenerAtom,
   gitHubTokenPersistenceAtom,
+  gitHubUserHomePageRefreshTriggerAtom,
   gitHubHostnameAtom,
   isConsumerGitHubAtom,
   gitHubGraphQLEndpointAtom,

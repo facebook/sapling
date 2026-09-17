@@ -8,14 +8,20 @@
 import PullRequestCommentInput from './PullRequestCommentInput';
 import PullRequestReviewSelector from './PullRequestReviewSelector';
 import {PullRequestReviewEvent} from './generated/graphql';
-import {gitHubClientAtom, gitHubPullRequestAtom, gitHubPullRequestPendingReviewIDAtom} from './jotai';
+import {
+  gitHubClientAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestPendingReviewIDAtom,
+  gitHubUserHomePageRefreshTriggerAtom,
+} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {useCallback, useState} from 'react';
 
 export default function PullRequestTimelineCommentInput(): React.ReactElement {
   const pendingReviewID = useAtomValue(gitHubPullRequestPendingReviewIDAtom);
   const refreshPullRequest = useRefreshPullRequest();
+  const refreshHomePage = useSetAtom(gitHubUserHomePageRefreshTriggerAtom);
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [event, setEvent] = useState(PullRequestReviewEvent.Comment);
 
@@ -52,9 +58,15 @@ export default function PullRequestTimelineCommentInput(): React.ReactElement {
       }
 
       refreshPullRequest();
+      if (
+        event === PullRequestReviewEvent.Approve ||
+        event === PullRequestReviewEvent.RequestChanges
+      ) {
+        refreshHomePage(value => value + 1);
+      }
       setEvent(PullRequestReviewEvent.Comment);
     },
-    [client, event, pendingReviewID, pullRequest, refreshPullRequest],
+    [client, event, pendingReviewID, pullRequest, refreshHomePage, refreshPullRequest],
   );
 
   return (
