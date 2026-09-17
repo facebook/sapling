@@ -26,7 +26,7 @@ query YourPullRequestsWithoutMergeQueueQuery($searchQuery: String!, $numToFetch:
           name
         }
         headRefName
-        commits(last: 100) {
+        commits(last: 1) {
           nodes {
             commit {
               oid

@@ -29821,7 +29821,7 @@ export const YourPullRequestsQuery = `
           name
         }
         headRefName
-        commits(last: 100) {
+        commits(last: 1) {
           nodes {
             commit {
               oid
@@ -29865,7 +29865,7 @@ export const YourPullRequestsWithoutMergeQueueQuery = `
           name
         }
         headRefName
-        commits(last: 100) {
+        commits(last: 1) {
           nodes {
             commit {
               oid

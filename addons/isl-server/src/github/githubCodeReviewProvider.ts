@@ -96,6 +96,7 @@ function createdInlineComment(comment: GitHubCreatedReviewComment): CreatedInlin
 }
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
+const DIFF_SUMMARIES_AUTO_REFRESH_INTERVAL = 5 * 60_000;
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
@@ -119,6 +120,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   }
   private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
+  private lastDiffSummariesFetchAt = 0;
 
   onChangeDiffSummaries(
     callback: (result: Result<Map<DiffId, GitHubDiffSummary>>) => unknown,
@@ -179,7 +181,15 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   }
 
   triggerDiffSummariesFetch = debounce(
-    async () => {
+    async (_diffs: Array<DiffId>, force = false) => {
+      const now = Date.now();
+      if (!force && now - this.lastDiffSummariesFetchAt < DIFF_SUMMARIES_AUTO_REFRESH_INTERVAL) {
+        return;
+      }
+      // Record attempts as well as successful fetches. When GitHub rejects a request, retrying from
+      // every repository poll only adds noise and prevents the rate limit from recovering cleanly.
+      this.lastDiffSummariesFetchAt = now;
+
       try {
         const hasMergeQueueSupport = await this.detectMergeQueueSupport();
         this.logger.info('fetching github PR summaries');

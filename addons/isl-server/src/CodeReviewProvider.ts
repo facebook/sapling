@@ -58,8 +58,8 @@ export interface CodeReviewProvider {
    * others: the Phabricator provider skips the cache-wide invalidation it does for `force` alone,
    * and since that cache has no per-diff eviction, the named diffs' cached counts survive too.
    *
-   * Both are requests rather than guarantees: the GitHub provider takes no arguments at all and
-   * stays on its own debounce.
+   * Both are requests rather than guarantees: the GitHub provider ignores `diffs`, throttles
+   * automatic refreshes, and lets `force` bypass that longer refresh interval.
    */
   triggerDiffSummariesFetch(diffs: Array<DiffId>, force?: boolean, partial?: boolean): unknown;
 

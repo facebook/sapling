@@ -161,3 +161,45 @@ describe('GitHubCodeReviewProvider comments', () => {
     );
   });
 });
+
+describe('GitHubCodeReviewProvider summaries', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-17T06:00:00Z'));
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('throttles automatic refreshes while allowing a forced refresh', async () => {
+    mockQueryGraphQL.mockResolvedValueOnce({__type: null} as never).mockResolvedValue({
+      search: {nodes: []},
+    } as never);
+    const summariesProvider = new GitHubCodeReviewProvider(
+      {type: 'github', hostname: 'github.com', owner: 'owner', repo: 'repo'},
+      {info: jest.fn(), error: jest.fn()} as unknown as Logger,
+    );
+
+    summariesProvider.triggerDiffSummariesFetch([]);
+    await jest.runAllTimersAsync();
+    expect(mockQueryGraphQL).toHaveBeenCalledTimes(2);
+    expect(mockQueryGraphQL.mock.calls[1][0]).toContain('commits(last: 1)');
+
+    summariesProvider.triggerDiffSummariesFetch([]);
+    await jest.runAllTimersAsync();
+    expect(mockQueryGraphQL).toHaveBeenCalledTimes(2);
+
+    summariesProvider.triggerDiffSummariesFetch([], true);
+    await jest.runAllTimersAsync();
+    expect(mockQueryGraphQL).toHaveBeenCalledTimes(3);
+
+    jest.advanceTimersByTime(5 * 60_000);
+    summariesProvider.triggerDiffSummariesFetch([]);
+    await jest.runAllTimersAsync();
+    expect(mockQueryGraphQL).toHaveBeenCalledTimes(4);
+
+    summariesProvider.dispose();
+  });
+});
