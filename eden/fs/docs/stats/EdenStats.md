@@ -67,6 +67,15 @@ The list of all the EdenStats Counter/Duration are as follows:
      into the cache when the number of the entries from the calculated result is
      larger than the limit configured [here](https://fburl.com/code/flwry2g4).
 
+- GlobStats
+  1. `Counter memoizedFailureStateLimitExceeded{"glob_match.memoized_failure_state_limit_exceeded"}`
+     : Number of glob matches that stopped retaining new failed states after
+     reaching their configured memo limit.
+
+  2. `Counter backtrackingStepLimitExceeded{"glob_match.backtracking_step_limit_exceeded"}`
+     : Number of individual glob matches stopped and reported as non-matches
+     after reaching their configured backtracking step limit.
+
 - ThriftStats
   1. `Duration streamChangesSince{ "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"}`
      : Duration of thrift stream change calls.

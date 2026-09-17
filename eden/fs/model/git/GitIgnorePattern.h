@@ -48,8 +48,9 @@ class GitIgnorePattern {
    */
   GitIgnore::MatchResult match(
       RelativePathPiece path,
-      GitIgnore::FileType fileType) const {
-    return match(path, path.basename(), fileType);
+      GitIgnore::FileType fileType,
+      const GlobMatchOptions& matchOptions = {}) const {
+    return match(path, path.basename(), fileType, matchOptions);
   }
 
   /**
@@ -67,7 +68,8 @@ class GitIgnorePattern {
   GitIgnore::MatchResult match(
       RelativePathPiece path,
       PathComponentPiece basename,
-      GitIgnore::FileType fileType) const;
+      GitIgnore::FileType fileType,
+      const GlobMatchOptions& matchOptions = {}) const;
 
  private:
   /**

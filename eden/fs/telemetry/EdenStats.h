@@ -33,6 +33,7 @@ struct PrjfsStats;
 struct ObjectStoreStats;
 struct SaplingBackingStoreStats;
 struct JournalStats;
+struct GlobStats;
 struct ThriftStats;
 struct OverlayStats;
 struct InodeMapStats;
@@ -90,6 +91,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
   ThreadLocal<SaplingBackingStoreStats> saplingBackingStoreStats_;
   ThreadLocal<JournalStats> journalStats_;
+  ThreadLocal<GlobStats> globStats_;
   ThreadLocal<ThriftStats> thriftStats_;
   ThreadLocal<TelemetryStats> telemetryStats_;
   ThreadLocal<OverlayStats> overlayStats_;
@@ -136,6 +138,11 @@ EdenStats::getStatsForCurrentThread<SaplingBackingStoreStats>() {
 template <>
 inline JournalStats& EdenStats::getStatsForCurrentThread<JournalStats>() {
   return *journalStats_.get();
+}
+
+template <>
+inline GlobStats& EdenStats::getStatsForCurrentThread<GlobStats>() {
+  return *globStats_.get();
 }
 
 template <>
@@ -653,6 +660,13 @@ struct JournalStats : StatsGroup<JournalStats> {
   Counter journalStatusCacheMiss{"journal.status_cache_miss"};
   Counter journalStatusCacheSkip{"journal.status_cache_skip"};
   Duration accumulateRange{"journal.accumulate_range_us"};
+};
+
+struct GlobStats : StatsGroup<GlobStats> {
+  Counter memoizedFailureStateLimitExceeded{
+      "glob_match.memoized_failure_state_limit_exceeded"};
+  Counter backtrackingStepLimitExceeded{
+      "glob_match.backtracking_step_limit_exceeded"};
 };
 
 struct ThriftStats : StatsGroup<ThriftStats> {

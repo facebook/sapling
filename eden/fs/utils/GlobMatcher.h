@@ -9,6 +9,7 @@
 
 #include <folly/Expected.h>
 #include <stdint.h>
+#include <functional>
 #include <string_view>
 #include <vector>
 
@@ -29,6 +30,27 @@ enum class GlobOptions : uint32_t {
 GlobOptions operator|(GlobOptions a, GlobOptions b);
 GlobOptions& operator|=(GlobOptions& a, GlobOptions b);
 bool operator&(GlobOptions a, GlobOptions b);
+
+enum class GlobMatchLimit {
+  MemoizedFailureStates,
+  BacktrackingSteps,
+};
+
+struct GlobMatchOptions {
+  static constexpr size_t kDefaultMaxMemoizedFailureStates = 65'536;
+  static constexpr size_t kDefaultMaxBacktrackingSteps = 100'000;
+
+  // The two limits are per match() invocation. Once the memo reaches its
+  // limit, existing entries remain readable but new failures are not retained.
+  // A backtracking limit of zero rejects the first recursive retry.
+  bool enableFailureMemoization{true};
+  size_t maxMemoizedFailureStates{kDefaultMaxMemoizedFailureStates};
+  size_t maxBacktrackingSteps{kDefaultMaxBacktrackingSteps};
+
+  // Invoked once when each limit is reached. Callback exceptions are logged
+  // and ignored so telemetry cannot alter the match result.
+  std::function<void(GlobMatchLimit)> limitReachedCallback;
+};
 
 /**
  * GlobMatcher performs matching of filename glob patterns.
@@ -75,10 +97,16 @@ class GlobMatcher {
    * Returns true if the text matches the pattern, or false otherwise.
    * The entire text must match the pattern.  (If a only substring matches the
    * pattern this method will still return false.)
+   *
+   * Returns false if matching reaches the configured backtracking step limit.
    */
-  bool match(std::string_view text) const;
+  bool match(
+      std::string_view text,
+      const GlobMatchOptions& options = GlobMatchOptions{}) const;
 
  private:
+  struct MatchStateMemo;
+
   explicit GlobMatcher(
       std::vector<uint8_t> pattern,
       CaseSensitivity caseSensitive);
@@ -100,8 +128,17 @@ class GlobMatcher {
    * textIdx) is a pattern for the trailing portion of the pattern buffer
    * (starting at patternIdx).
    */
-  bool tryMatchAt(std::string_view text, size_t textIdx, size_t patternIdx)
-      const;
+  bool tryMatchAt(
+      std::string_view text,
+      size_t textIdx,
+      size_t patternIdx,
+      MatchStateMemo& memo) const;
+
+  bool tryMatchAtMemoized(
+      std::string_view text,
+      size_t textIdx,
+      size_t patternIdx,
+      MatchStateMemo& memo) const;
 
   /**
    * Check to see if the given character matches the character class opcode

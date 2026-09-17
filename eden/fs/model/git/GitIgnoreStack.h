@@ -67,7 +67,8 @@ class GitIgnoreStack {
    */
   GitIgnore::MatchResult match(
       RelativePathPiece path,
-      GitIgnore::FileType fileType) const;
+      GitIgnore::FileType fileType,
+      const GlobMatchOptions& matchOptions = {}) const;
 
   bool empty() const {
     return ignore_.empty();

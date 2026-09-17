@@ -3953,7 +3953,8 @@ TreeInode::prepareDeferredDiffEntries(
                                                 : GitIgnore::TYPE_FILE;
       auto entryPath = currentPath + name;
       if (!isIgnored) {
-        auto ignoreStatus = ignore->match(entryPath, fileType);
+        auto ignoreStatus =
+            ignore->match(entryPath, fileType, context->getGlobMatchOptions());
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // Completely skip over hidden entries.
           // This is used for reserved directories like .hg and .eden
@@ -4043,7 +4044,8 @@ TreeInode::prepareDeferredDiffEntries(
       if (!isIgnored && (inodeEntry->isDirectory() || scmEntries[0].isTree())) {
         auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
                                                   : GitIgnore::TYPE_FILE;
-        auto ignoreStatus = ignore->match(entryPath, fileType);
+        auto ignoreStatus =
+            ignore->match(entryPath, fileType, context->getGlobMatchOptions());
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // This is rather unexpected.  We don't expect to find entries in
           // source control using reserved hidden names.

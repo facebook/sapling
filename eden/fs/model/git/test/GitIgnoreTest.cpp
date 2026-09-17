@@ -6,6 +6,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <string>
 
 #include "eden/fs/model/git/GitIgnore.h"
 
@@ -667,4 +668,29 @@ TEST(GitIgnore, directory) {
   // the GitIgnore code completely skips directory-only rules when processing a
   // path known to be a file.  It expects ignored directories earlier in the
   // path to have already been filtered out.
+}
+
+TEST(GitIgnore, propagatesGlobMatchLimits) {
+  std::string text(8, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "*a";
+  }
+  glob += "b\n";
+
+  GitIgnore ignore;
+  ignore.loadFile(glob);
+
+  GlobMatchOptions options;
+  options.maxMemoizedFailureStates = 4;
+  size_t callbackCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit limit) {
+    EXPECT_EQ(GlobMatchLimit::MemoizedFailureStates, limit);
+    ++callbackCount;
+  };
+
+  EXPECT_EQ(
+      GitIgnore::NO_MATCH,
+      ignore.match(RelativePath{text}, GitIgnore::TYPE_FILE, options));
+  EXPECT_EQ(1, callbackCount);
 }

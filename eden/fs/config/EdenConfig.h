@@ -2775,6 +2775,31 @@ class EdenConfig : private ConfigSettingManager {
       3,
       this};
 
+  /**
+   * Whether GlobMatcher memoizes failed backtracking states. Disabling this is
+   * an emergency rollback mechanism; the backtracking step limit remains
+   * active to keep pathological matches bounded.
+   */
+  ConfigSetting<bool> globEnableFailureMemoization{
+      "glob:enable-failure-memoization",
+      true,
+      this};
+
+  /**
+   * Maximum number of failed backtracking states retained by one match.
+   * Matching continues without retaining new states after reaching this cap.
+   */
+  ConfigSetting<size_t> globMaxMemoizedFailureStates{
+      "glob:max-memoized-failure-states",
+      65'536,
+      this};
+
+  /** Maximum number of recursive backtracking attempts made by one match. */
+  ConfigSetting<size_t> globMaxBacktrackingSteps{
+      "glob:max-backtracking-steps",
+      100'000,
+      this};
+
   // [doctor]
 
   /**

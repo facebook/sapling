@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <fb303/ServiceData.h>
 #include <folly/coro/GtestHelpers.h>
 #include <folly/coro/Task.h>
 #include <gtest/gtest.h>
@@ -15,9 +16,11 @@
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestServerState.h"
+#include "eden/fs/utils/GlobMatcher.h"
 
 namespace facebook::eden {
 
@@ -205,6 +208,35 @@ CO_TEST_F(ThriftGlobImplTest, dedupesOverlappingSuffixPatterns) {
       "other/bar/dir1/file.txt",
   };
   EXPECT_EQ(expected, getMatchingFiles(*result));
+}
+
+TEST_F(ThriftGlobImplTest, recordsMemoLimitBreachesInOds) {
+  auto serverState = createTestServerState();
+  auto& stats = serverState->getStats();
+  auto counterName = std::string{
+      stats->getName(&GlobStats::memoizedFailureStateLimitExceeded)};
+  stats->flush();
+  auto before = facebook::fb303::ServiceData::get()
+                    ->getCounterIfExists(counterName + ".sum")
+                    .value_or(0);
+
+  std::string text(8, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  auto options = serverState->getGlobMatchOptions();
+  options.maxMemoizedFailureStates = 4;
+  EXPECT_FALSE(matcher.match(text, options));
+
+  stats->flush();
+  auto after = facebook::fb303::ServiceData::get()
+                   ->getCounterIfExists(counterName + ".sum")
+                   .value_or(0);
+  EXPECT_EQ(before + 1, after);
 }
 
 } // namespace facebook::eden

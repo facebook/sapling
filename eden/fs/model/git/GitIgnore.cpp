@@ -72,9 +72,10 @@ void GitIgnore::loadFile(StringPiece contents) {
 GitIgnore::MatchResult GitIgnore::match(
     RelativePathPiece path,
     PathComponentPiece basename,
-    FileType fileType) const {
+    FileType fileType,
+    const GlobMatchOptions& matchOptions) const {
   for (const auto& pattern : rules_) {
-    auto result = pattern.match(path, basename, fileType);
+    auto result = pattern.match(path, basename, fileType, matchOptions);
     if (result != NO_MATCH) {
       return result;
     }

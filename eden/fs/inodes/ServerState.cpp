@@ -181,6 +181,27 @@ void ServerState::shutdown() {
   });
 }
 
+GlobMatchOptions ServerState::getGlobMatchOptions() {
+  auto config = getEdenConfig();
+  GlobMatchOptions options;
+  options.enableFailureMemoization =
+      config->globEnableFailureMemoization.getValue();
+  options.maxMemoizedFailureStates =
+      config->globMaxMemoizedFailureStates.getValue();
+  options.maxBacktrackingSteps = config->globMaxBacktrackingSteps.getValue();
+  // RefPtr is move-only, while std::function requires a copyable callable.
+  auto stats = std::make_shared<EdenStatsPtr>(edenStats_.copy());
+  options.limitReachedCallback = [stats =
+                                      std::move(stats)](GlobMatchLimit limit) {
+    if (limit == GlobMatchLimit::MemoizedFailureStates) {
+      (*stats)->increment(&GlobStats::memoizedFailureStateLimitExceeded);
+    } else {
+      (*stats)->increment(&GlobStats::backtrackingStepLimitExceeded);
+    }
+  };
+  return options;
+}
+
 const std::shared_ptr<folly::IOThreadPoolExecutor>&
 ServerState::getPreloadThreadPool() const {
   // Most EdenFS processes never run a preload, so defer paying for the

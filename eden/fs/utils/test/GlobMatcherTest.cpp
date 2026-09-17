@@ -9,6 +9,8 @@
 
 #include <fmt/core.h>
 #include <gtest/gtest.h>
+#include <stdexcept>
+#include <string>
 
 namespace {
 
@@ -48,6 +50,10 @@ using namespace std::literals::string_view_literals;
   EXPECT_MATCH_IMPL(text, glob, GlobOptions::CASE_INSENSITIVE, false)
 #define EXPECT_BADGLOB(glob) \
   EXPECT_TRUE(GlobMatcher::create(glob, GlobOptions::DEFAULT).hasError())
+
+[[noreturn]] void throwTelemetryFailure(GlobMatchLimit) {
+  throw std::runtime_error{"telemetry failure"};
+}
 
 TEST(Glob, testsFromGit) {
   // Patterns taken from git's test cases,
@@ -386,6 +392,182 @@ TEST(Glob, fuzz_examples) {
   EXPECT_NOMATCH("aa", "[a]");
   EXPECT_NOMATCH("[[", "[\\[]");
   EXPECT_NOMATCH("\0\0"sv, "[\0]"sv);
+}
+
+TEST(Glob, memoizesOverlappingStarLiteralFailures) {
+  std::string text(64, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 64; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  EXPECT_NOMATCH(text, glob);
+}
+
+TEST(Glob, memoizesRecursiveWildcardFailures) {
+  std::string text;
+  for (size_t idx = 0; idx < 30; ++idx) {
+    text += "dir/";
+  }
+  text += "file.txt";
+
+  std::string glob;
+  for (size_t idx = 0; idx < 20; ++idx) {
+    glob += "**/";
+  }
+
+  EXPECT_NOMATCH(text, glob + "nomatch");
+  EXPECT_MATCH(text, glob + "*.txt");
+}
+
+TEST(Glob, fallsBackWhenMemoizedFailureStateLimitIsReached) {
+  std::string text(8, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.maxMemoizedFailureStates = 4;
+  size_t callbackCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit limit) {
+    EXPECT_EQ(GlobMatchLimit::MemoizedFailureStates, limit);
+    ++callbackCount;
+  };
+
+  EXPECT_FALSE(matcher.match(text, options));
+  EXPECT_EQ(1, callbackCount);
+}
+
+TEST(Glob, canDisableFailureMemoization) {
+  std::string text(8, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.enableFailureMemoization = false;
+  options.maxMemoizedFailureStates = 0;
+  size_t callbackCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit) { ++callbackCount; };
+
+  EXPECT_FALSE(matcher.match(text, options));
+  EXPECT_EQ(0, callbackCount);
+}
+
+TEST(Glob, backtrackingLimitAppliesWhenMemoizationIsDisabled) {
+  std::string text(32, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 32; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.enableFailureMemoization = false;
+  options.maxBacktrackingSteps = 100;
+  size_t callbackCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit limit) {
+    EXPECT_EQ(GlobMatchLimit::BacktrackingSteps, limit);
+    ++callbackCount;
+  };
+
+  EXPECT_FALSE(matcher.match(text, options));
+  EXPECT_EQ(1, callbackCount);
+}
+
+TEST(Glob, backtrackingLimitAppliesAfterMemoLimitIsReached) {
+  std::string text(32, 'a');
+  std::string glob;
+  for (size_t idx = 0; idx < 32; ++idx) {
+    glob += "*a";
+  }
+  glob += "b";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.maxMemoizedFailureStates = 4;
+  options.maxBacktrackingSteps = 100;
+  size_t memoLimitCount = 0;
+  size_t backtrackingLimitCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit limit) {
+    if (limit == GlobMatchLimit::MemoizedFailureStates) {
+      ++memoLimitCount;
+    } else {
+      ++backtrackingLimitCount;
+    }
+  };
+
+  EXPECT_FALSE(matcher.match(text, options));
+  EXPECT_EQ(1, memoLimitCount);
+  EXPECT_EQ(1, backtrackingLimitCount);
+}
+
+TEST(Glob, backtrackingLimitCountsMemoizedRetryProbes) {
+  std::string text;
+  for (size_t idx = 0; idx < 30; ++idx) {
+    text += "a/";
+  }
+  text += "file";
+
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "**/";
+  }
+  glob += "nomatch";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.maxMemoizedFailureStates = 1'000;
+  options.maxBacktrackingSteps = 300;
+  size_t memoLimitCount = 0;
+  size_t backtrackingLimitCount = 0;
+  options.limitReachedCallback = [&](GlobMatchLimit limit) {
+    if (limit == GlobMatchLimit::MemoizedFailureStates) {
+      ++memoLimitCount;
+    } else {
+      ++backtrackingLimitCount;
+    }
+  };
+
+  EXPECT_FALSE(matcher.match(text, options));
+  EXPECT_EQ(0, memoLimitCount);
+  EXPECT_EQ(1, backtrackingLimitCount);
+}
+
+TEST(Glob, matchingInputNearBacktrackingLimitStillMatches) {
+  std::string text;
+  for (size_t idx = 0; idx < 25; ++idx) {
+    text += "dir/";
+  }
+  text += "target";
+  std::string glob;
+  for (size_t idx = 0; idx < 8; ++idx) {
+    glob += "**/";
+  }
+  glob += "target";
+
+  auto matcher = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.maxBacktrackingSteps = 33;
+
+  EXPECT_TRUE(matcher.match(text, options));
+}
+
+TEST(Glob, ignoresThrowingLimitCallback) {
+  auto matcher = GlobMatcher::create("*a", GlobOptions::DEFAULT).value();
+  GlobMatchOptions options;
+  options.maxBacktrackingSteps = 0;
+  options.limitReachedCallback = throwTelemetryFailure;
+
+  EXPECT_FALSE(matcher.match("b", options));
 }
 
 TEST(Glob, testRangeMerging) {

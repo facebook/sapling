@@ -8,9 +8,13 @@
 #include "eden/fs/utils/GlobMatcher.h"
 
 #include <fmt/core.h>
+#include <folly/container/F14Set.h>
 #include <folly/logging/xlog.h>
 #include <algorithm>
+#include <exception>
+#include <functional>
 #include <limits>
+#include <optional>
 
 using folly::Expected;
 using std::string;
@@ -168,7 +172,75 @@ char toUpper(char c) {
   }
   return c;
 }
+
 } // namespace
+
+struct GlobMatcher::MatchStateMemo {
+  explicit MatchStateMemo(const GlobMatchOptions& options) : options{options} {
+    if (options.enableFailureMemoization) {
+      failedStates.emplace();
+    }
+  }
+
+  static uint64_t makeState(size_t textIdx, size_t patternIdx) {
+    // Eden paths and compiled glob patterns are both bounded well below 4 GiB.
+    XDCHECK_LE(textIdx, std::numeric_limits<uint32_t>::max());
+    XDCHECK_LE(patternIdx, std::numeric_limits<uint32_t>::max());
+    return (static_cast<uint64_t>(textIdx) << 32) |
+        static_cast<uint32_t>(patternIdx);
+  }
+
+  bool recordBacktrackingStep() {
+    if (backtrackingSteps >= options.maxBacktrackingSteps) {
+      aborted = true;
+      notifyLimitReached(GlobMatchLimit::BacktrackingSteps);
+      return false;
+    }
+    ++backtrackingSteps;
+    return true;
+  }
+
+  bool hasFailed(size_t textIdx, size_t patternIdx) const {
+    return failedStates &&
+        failedStates->find(makeState(textIdx, patternIdx)) !=
+        failedStates->end();
+  }
+
+  void addFailure(size_t textIdx, size_t patternIdx) {
+    if (!failedStates || memoLimitReached) {
+      return;
+    }
+
+    auto state = makeState(textIdx, patternIdx);
+    if (failedStates->find(state) != failedStates->end()) {
+      return;
+    }
+    if (failedStates->size() >= options.maxMemoizedFailureStates) {
+      memoLimitReached = true;
+      notifyLimitReached(GlobMatchLimit::MemoizedFailureStates);
+      return;
+    }
+    failedStates->insert(state);
+  }
+
+  void notifyLimitReached(GlobMatchLimit limitKind) const noexcept {
+    if (options.limitReachedCallback) {
+      try {
+        options.limitReachedCallback(limitKind);
+      } catch (const std::exception& ex) {
+        XLOGF(ERR, "Glob match limit callback threw: {}", ex.what());
+      } catch (...) {
+        XLOG(ERR) << "Glob match limit callback threw a non-standard exception";
+      }
+    }
+  }
+
+  const GlobMatchOptions& options;
+  size_t backtrackingSteps{0};
+  bool memoLimitReached{false};
+  bool aborted{false};
+  std::optional<folly::F14FastSet<uint64_t>> failedStates;
+};
 
 GlobOptions operator|(GlobOptions a, GlobOptions b) {
   return static_cast<GlobOptions>(
@@ -607,14 +679,49 @@ bool GlobMatcher::addCharClass(
   return false;
 }
 
-bool GlobMatcher::match(std::string_view text) const {
-  return tryMatchAt(text, 0, 0);
+bool GlobMatcher::match(std::string_view text, const GlobMatchOptions& options)
+    const {
+  MatchStateMemo memo{options};
+  return tryMatchAt(text, 0, 0, memo);
+}
+
+bool GlobMatcher::tryMatchAtMemoized(
+    std::string_view text,
+    size_t textIdx,
+    size_t patternIdx,
+    MatchStateMemo& memo) const {
+  if (memo.aborted) {
+    return false;
+  }
+  if (!memo.recordBacktrackingStep()) {
+    return false;
+  }
+  if (memo.hasFailed(textIdx, patternIdx)) {
+    return false;
+  }
+  if (tryMatchAt(text, textIdx, patternIdx, memo)) {
+    return true;
+  }
+  memo.addFailure(textIdx, patternIdx);
+  return false;
 }
 
 bool GlobMatcher::tryMatchAt(
     std::string_view text,
     size_t textIdx,
-    size_t patternIdx) const {
+    size_t patternIdx,
+    MatchStateMemo& memo) const {
+  // Deliberately does not consult or populate `memo` here: only the
+  // recursive backtracking retry loops below (GLOB_STAR's literal/generic
+  // retries and GLOB_STAR_STAR_SLASH's retry) can ever revisit the same
+  // (textIdx, patternIdx) state, so memoization is invoked only around their
+  // recursive calls. Doing it unconditionally for every
+  // call -- including the single top-level call from match(), and every
+  // deterministic non-backtracking opcode below -- previously put a
+  // hashtable insert on the allocation-free common path (a plain literal or
+  // character-class mismatch can never be revisited, so memoizing it is
+  // pure overhead).
+
   // Loop through all opcodes in the pattern buffer.
   // It's kind of unfortunate how big and complicated this while loop is.
   //
@@ -704,8 +811,18 @@ bool GlobMatcher::tryMatchAt(
           if (nextSlash < literalIdx) {
             return false;
           }
-          if (tryMatchAt(text, literalIdx + literalLength, patternIdx)) {
+          // Overlapping literal occurrences (e.g. many "*a" segments matched
+          // against a run of "a"s) can make different outer choices of
+          // literalIdx recurse into this exact same (nextTextIdx, patternIdx)
+          // state. Memoize failures here -- and only here, where a revisit is
+          // actually possible -- to avoid re-exploring a known-dead suffix
+          // exponentially many times.
+          auto nextTextIdx = literalIdx + literalLength;
+          if (tryMatchAtMemoized(text, nextTextIdx, patternIdx, memo)) {
             return true;
+          }
+          if (memo.aborted) {
+            return false;
           }
           // No match here.  Move forwards and try again.
           textIdx = literalIdx + 1;
@@ -717,8 +834,15 @@ bool GlobMatcher::tryMatchAt(
         //
         // In practice this type of pattern is rare.
         while (textIdx < text.size()) {
-          if (tryMatchAt(text, textIdx, patternIdx)) {
+          // Different outer backtracking choices (e.g. from an enclosing '*')
+          // can recurse into this loop with the same textIdx for this
+          // patternIdx, so memoize failures here the same way as the literal
+          // retry loop above.
+          if (tryMatchAtMemoized(text, textIdx, patternIdx, memo)) {
             return true;
+          }
+          if (memo.aborted) {
+            return false;
           }
           if (text[textIdx] == '/') {
             return false;
@@ -790,8 +914,15 @@ bool GlobMatcher::tryMatchAt(
       // characters followed by a slash.
       ++patternIdx;
       while (true) {
-        if (tryMatchAt(text, textIdx, patternIdx)) {
+        // As with the GLOB_STAR retry loops above, an enclosing backtracking
+        // choice can recurse into this "**/" retry with a textIdx it has
+        // already tried and failed for this patternIdx, so memoize failures
+        // here too.
+        if (tryMatchAtMemoized(text, textIdx, patternIdx, memo)) {
           return true;
+        }
+        if (memo.aborted) {
+          return false;
         }
 
         auto prevTextIdx = textIdx;

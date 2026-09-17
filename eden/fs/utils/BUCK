@@ -64,6 +64,7 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//folly/container:f14_hash",
         "//folly/logging:logging",
     ],
     exported_deps = [

@@ -20,6 +20,7 @@
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/inodes/PreloadOperation.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
+#include "eden/fs/utils/GlobMatcher.h"
 
 namespace folly {
 class EventBase;
@@ -125,6 +126,9 @@ class ServerState {
    * Get the EdenConfig data.
    */
   folly::ReadMostlySharedPtr<const EdenConfig> getEdenConfig();
+
+  /** Snapshot the glob matcher limits and ODS accounting callback. */
+  GlobMatchOptions getGlobMatchOptions();
 
   /**
    * Get the TopLevelIgnores. It is based on the system and user git ignore

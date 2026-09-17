@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 #include <vector>
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/utils/GlobMatcher.h"
 
 namespace facebook::eden {
 
@@ -137,8 +138,11 @@ class GitIgnore {
    * GitIgnore object, provided no modifying operations are being done to the
    * GitIgnore object at the same time.
    */
-  MatchResult match(RelativePathPiece path, FileType fileType) const {
-    return match(path, path.basename(), fileType);
+  MatchResult match(
+      RelativePathPiece path,
+      FileType fileType,
+      const GlobMatchOptions& matchOptions = {}) const {
+    return match(path, path.basename(), fileType, matchOptions);
   }
 
   /**
@@ -156,7 +160,8 @@ class GitIgnore {
   MatchResult match(
       RelativePathPiece path,
       PathComponentPiece basename,
-      FileType fileType) const;
+      FileType fileType,
+      const GlobMatchOptions& matchOptions = {}) const;
 
   /**
    * @return true if there are no rules.

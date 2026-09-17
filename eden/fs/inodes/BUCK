@@ -253,6 +253,7 @@ cpp_library(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:bufvec",
         "//eden/fs/utils:glob",
+        "//eden/fs/utils:matcher",
         "//eden/fs/utils:mini_tracer",
         "//eden/fs/utils:static_assert",
         "//folly:cancellation_token",

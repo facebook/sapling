@@ -21,7 +21,8 @@ DiffContext::DiffContext(
     CaseSensitivity caseSensitive,
     std::shared_ptr<ObjectStore> os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-    bool throwOnCancel)
+    bool throwOnCancel,
+    GlobMatchOptions globMatchOptions)
     : callback{cb},
       store{std::move(os)},
       listIgnored{listIgnored},
@@ -34,7 +35,8 @@ DiffContext::DiffContext(
           fetchContext->getRequestInfo())},
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
-      throwOnCancel_{throwOnCancel} {
+      throwOnCancel_{throwOnCancel},
+      globMatchOptions_{std::move(globMatchOptions)} {
   // Propagate certain fields from the caller's fetch context. This is basically
   // so important fields from checkout's context are propagated to the diff
   // operation that checkout runs.

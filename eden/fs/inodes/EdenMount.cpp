@@ -2473,7 +2473,8 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       getCheckoutConfig()->getCaseSensitive(),
       getObjectStore(),
       serverState_->getTopLevelIgnores(),
-      getEdenConfig()->throwOnCancel.getValue());
+      getEdenConfig()->throwOnCancel.getValue(),
+      serverState_->getGlobMatchOptions());
 }
 
 folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(

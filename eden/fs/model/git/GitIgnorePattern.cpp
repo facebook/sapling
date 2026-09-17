@@ -148,7 +148,8 @@ GitIgnorePattern::~GitIgnorePattern() = default;
 GitIgnore::MatchResult GitIgnorePattern::match(
     RelativePathPiece path,
     PathComponentPiece basename,
-    GitIgnore::FileType fileType) const {
+    GitIgnore::FileType fileType,
+    const GlobMatchOptions& matchOptions) const {
   if ((flags_ & FLAG_MUST_BE_DIR) && (fileType != GitIgnore::TYPE_DIR)) {
     return GitIgnore::NO_MATCH;
   }
@@ -156,10 +157,10 @@ GitIgnore::MatchResult GitIgnorePattern::match(
   bool isMatch = false;
   if (flags_ & FLAG_BASENAME_ONLY) {
     // Match only on the file basename.
-    isMatch = matcher_.match(basename.view());
+    isMatch = matcher_.match(basename.view(), matchOptions);
   } else {
     // Match on full relative path to the file from this directory.
-    isMatch = matcher_.match(path.view());
+    isMatch = matcher_.match(path.view(), matchOptions);
   }
 
   if (isMatch) {

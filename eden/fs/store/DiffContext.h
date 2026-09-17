@@ -12,6 +12,7 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/StatsFetchContext.h"
+#include "eden/fs/utils/GlobMatcher.h"
 #include "eden/fs/utils/MiniTracer.h"
 
 namespace facebook::eden {
@@ -44,7 +45,8 @@ class DiffContext {
       CaseSensitivity caseSensitive,
       std::shared_ptr<ObjectStore> os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-      bool throwOnCancel = false);
+      bool throwOnCancel = false,
+      GlobMatchOptions globMatchOptions = {});
 
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;
@@ -83,6 +85,10 @@ class DiffContext {
     return caseSensitive_;
   }
 
+  const GlobMatchOptions& getGlobMatchOptions() const {
+    return globMatchOptions_;
+  }
+
   /**
    * Create a span for timing instrumentation if a time tracer is set.
    * Returns nullopt if no time tracer is set.
@@ -107,6 +113,8 @@ class DiffContext {
 
   // Whether to throw an exception when the operation is canceled.
   bool throwOnCancel_;
+
+  GlobMatchOptions globMatchOptions_;
 };
 
 } // namespace facebook::eden

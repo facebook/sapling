@@ -17,7 +17,8 @@ constexpr static PathComponentPiece kEdenName{".eden"};
 
 GitIgnore::MatchResult GitIgnoreStack::match(
     RelativePathPiece path,
-    GitIgnore::FileType fileType) const {
+    GitIgnore::FileType fileType,
+    const GlobMatchOptions& matchOptions) const {
   // Explicitly hide any entry named .hg or .sl or .eden
   //
   // We only check the very last component of the path.  Since these
@@ -51,7 +52,7 @@ GitIgnore::MatchResult GitIgnoreStack::match(
     const GitIgnore* ignore = &node->ignore_;
     node = node->parent_;
 
-    const auto result = ignore->match(suffix, basename, fileType);
+    const auto result = ignore->match(suffix, basename, fileType, matchOptions);
     if (result != GitIgnore::NO_MATCH) {
       return result;
     }

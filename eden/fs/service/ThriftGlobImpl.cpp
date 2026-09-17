@@ -67,6 +67,7 @@ folly::coro::now_task<std::unique_ptr<LocalFiles>> computeLocalFiles(
                             ->enforceParents.getValue();
   bool caseSensitive =
       serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue();
+  auto globMatchOptions = serverState->getGlobMatchOptions();
 
   auto status = co_await edenMount->co_diff(
       rootInode,
@@ -107,7 +108,7 @@ folly::coro::now_task<std::unique_ptr<LocalFiles>> computeLocalFiles(
        status->entries_ref().value()) {
     if (scmFileStatus == ScmFileStatus::ADDED) {
       for (auto& matcher : globMatchers) {
-        if (matcher.match(pathString)) {
+        if (matcher.match(pathString, globMatchOptions)) {
           localFiles->addedFiles.insert(pathString);
         }
       }
@@ -115,7 +116,7 @@ folly::coro::now_task<std::unique_ptr<LocalFiles>> computeLocalFiles(
       localFiles->removedFiles.insert(pathString);
     } else if (scmFileStatus == ScmFileStatus::MODIFIED) {
       for (auto& matcher : globMatchers) {
-        if (matcher.match(pathString)) {
+        if (matcher.match(pathString, globMatchOptions)) {
           localFiles->modifiedFiles.insert(pathString);
         }
       }
@@ -150,6 +151,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::vector<std::string> globs,
     const ObjectFetchContextPtr& fetchContext) {
   auto config = serverState->getEdenConfig();
+  auto globMatchOptions = serverState->getGlobMatchOptions();
   size_t prefetchBlobBatchSize = config->prefetchBlobBatchSize.getValue();
   if (prefetchBlobBatchSize == 0) {
     XLOG_EVERY_MS(ERR, 60'000)
@@ -189,7 +191,8 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     globTree = std::make_shared<GlobTree>(
         bool(includeDotfiles_),
         caseSensitivity,
-        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue());
+        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue(),
+        globMatchOptions);
     compileGlobs(globs, *globTree);
     for (auto& rootId : rootIds_) {
       const RootId& originRootId = originRootIds->emplace_back(
@@ -232,8 +235,8 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
         : CaseSensitivity::Sensitive;
     uint32_t asyncDepth =
         serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue();
-    globNode =
-        std::make_shared<GlobNode>(includeDotfiles, caseSensitive, asyncDepth);
+    globNode = std::make_shared<GlobNode>(
+        includeDotfiles, caseSensitive, asyncDepth, globMatchOptions);
     compileGlobs(globs, *globNode);
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());
