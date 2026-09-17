@@ -6,6 +6,7 @@
  */
 
 import type {Logger} from 'isl-server/src/logger';
+import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
@@ -22,9 +23,11 @@ interface ISLWebviewResult<W extends WebviewPanel | WebviewView> {
 }
 
 import {onClientConnection} from 'isl-server/src';
+import {generatedFilesDetector} from 'isl-server/src/GeneratedFiles';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
+import {GeneratedStatus} from 'isl/src/types';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import type {Deferred} from 'shared/utils';
 import {defer} from 'shared/utils';
@@ -282,6 +285,7 @@ function replaceExistingOrphanedISLWindows(
 async function openNativeMultiDiffEditor(
   comparison: Comparison,
   repoRoot?: string,
+  logger?: Logger,
 ): Promise<boolean> {
   if (!(await hasMultiDiffEditorSupport())) {
     return false;
@@ -323,12 +327,53 @@ async function openNativeMultiDiffEditor(
       return true; // Handled, just nothing to show
     }
 
-    await openMultiDiffEditor(repo.info.repoRoot, comparison, files);
+    await openMultiDiffEditor(
+      repo.info.repoRoot,
+      comparison,
+      await sortGeneratedFilesToEnd(repo, files, logger),
+    );
     return true;
   } catch (err) {
     // If multi-diff editor fails, fall back to webview
+    logger?.warn('Failed to open native multi-diff editor, falling back to webview:', err);
     return false;
   }
+}
+
+/**
+ * Sort generated files to the end of the native multi-diff editor, matching how
+ * ISL sorts generated files to the end of its own comparison view: manual files
+ * first, then partially generated, then fully generated last.
+ * Falls back to the original order if generated statuses can't be determined.
+ */
+export async function sortGeneratedFilesToEnd<T extends {path: string}>(
+  repo: Repository,
+  files: Array<T>,
+  logger?: Logger,
+): Promise<Array<T>> {
+  let statuses: Record<string, GeneratedStatus>;
+  try {
+    statuses = await generatedFilesDetector.queryFilesGenerated(
+      repo,
+      repo.initialConnectionContext,
+      repo.info.repoRoot,
+      files.map(file => file.path),
+    );
+  } catch (err) {
+    logger?.warn(
+      'Failed to query generated file statuses, leaving multi-diff order unchanged:',
+      err,
+    );
+    return files;
+  }
+  // GeneratedStatus is numbered in visual sort order (Manual = 0,
+  // PartiallyGenerated = 1, Generated = 2), so a numeric ascending sort places
+  // manual files first and generated files last. Unknown paths sort as manual.
+  // Array.prototype.sort is stable, so relative order within each group is preserved.
+  return [...files].sort(
+    (a, b) =>
+      (statuses[a.path] ?? GeneratedStatus.Manual) - (statuses[b.path] ?? GeneratedStatus.Manual),
+  );
 }
 
 export function registerISLCommands(
@@ -468,19 +513,19 @@ export function registerISLCommands(
     }),
     vscode.commands.registerCommand('sapling.open-comparison-view-uncommitted', async () => {
       const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
-      if (!(await openNativeMultiDiffEditor(comparison))) {
+      if (!(await openNativeMultiDiffEditor(comparison, undefined, logger))) {
         createComparisonWebviewCommand(comparison);
       }
     }),
     vscode.commands.registerCommand('sapling.open-comparison-view-head', async () => {
       const comparison: Comparison = {type: ComparisonType.HeadChanges};
-      if (!(await openNativeMultiDiffEditor(comparison))) {
+      if (!(await openNativeMultiDiffEditor(comparison, undefined, logger))) {
         createComparisonWebviewCommand(comparison);
       }
     }),
     vscode.commands.registerCommand('sapling.open-comparison-view-stack', async () => {
       const comparison: Comparison = {type: ComparisonType.StackChanges};
-      if (!(await openNativeMultiDiffEditor(comparison))) {
+      if (!(await openNativeMultiDiffEditor(comparison, undefined, logger))) {
         createComparisonWebviewCommand(comparison);
       }
     }),
@@ -491,7 +536,7 @@ export function registerISLCommands(
         if (!isComparison(comparison)) {
           return;
         }
-        if (!(await openNativeMultiDiffEditor(comparison, repoRoot))) {
+        if (!(await openNativeMultiDiffEditor(comparison, repoRoot, logger))) {
           createComparisonWebviewCommand(comparison);
         }
       },
