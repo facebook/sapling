@@ -34,10 +34,9 @@ export default function pullRequestStatusAndLabel(
         case PullRequestReviewDecision.ChangesRequested:
           return {status, label: 'Changes Req.', color: 'danger.fg'};
         case PullRequestReviewDecision.ReviewRequired:
-          return {status, label: 'Review Required', color: 'attention.fg'};
         case null:
         case undefined:
-          return {status, label: 'Open', color: 'accent.fg'};
+          return {status, label: 'Review Required', color: 'attention.fg'};
       }
     }
   }
