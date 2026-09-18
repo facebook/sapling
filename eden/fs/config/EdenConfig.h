@@ -1723,15 +1723,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Deprecated. Retained temporarily so older Configerator output remains
-   * accepted while the XplatLogger-only error path rolls out.
-   */
-  ConfigSetting<std::string> errorScribeCategory{
-      "telemetry:error-scribe-category",
-      "",
-      this};
-
-  /**
    * Kill switch for the entire structured error logging feature.
    */
   ConfigSetting<bool> enableErrorLogging{
@@ -1929,35 +1920,10 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether to enable XplatLogger for edenfs_events telemetry.
-   */
-  ConfigSetting<bool> enableXplatLoggerEvents{
-      "telemetry:enable-xplatlogger-events",
-      false,
-      this};
-
-  /**
-   * Deprecated. ErrorLogger always uses XplatLogger. Retained temporarily so
-   * older Configerator output remains accepted during the rollout.
-   */
-  ConfigSetting<bool> enableXplatLoggerErrors{
-      "telemetry:enable-xplatlogger-errors",
-      false,
-      this};
-
-  /**
    * Whether to enable XplatLogger for edenfs_rollouts telemetry.
    */
   ConfigSetting<bool> enableXplatLoggerRollouts{
       "telemetry:enable-xplatlogger-rollouts",
-      false,
-      this};
-
-  /**
-   * Whether to enable XplatLogger for edenfs_cli_usage telemetry.
-   */
-  ConfigSetting<bool> enableXplatLoggerCliUsage{
-      "telemetry:enable-xplatlogger-cli-usage",
       false,
       this};
 
@@ -2228,15 +2194,6 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableCoroutinesPhase9{
       "coroutines:enable-phase9",
-      false,
-      this};
-
-  /**
-   * Controls whether EdenFS uses phase 4 coroutine implementations
-   * (readdir and VirtualInode attribute fetching coroutine paths).
-   */
-  ConfigSetting<bool> enableCoroutinesPhase4{
-      "coroutines:enable-phase4",
       false,
       this};
 

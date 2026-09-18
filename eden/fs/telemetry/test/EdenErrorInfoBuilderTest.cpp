@@ -211,7 +211,6 @@ TEST(EdenErrorInfoTest, SymbolizationIsDeferredUntilCreate) {
 TEST(EdenErrorInfoTest, RoutesToXplatLoggerWithoutLegacyGate) {
   auto config = EdenConfig::createTestEdenConfig();
   config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
-  // enableXplatLoggerErrors remains at its deprecated default (false).
   auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
   CapturingXplatLogger xplatLogger;
   auto stats = makeRefPtr<EdenStats>();

@@ -468,7 +468,6 @@ class TestMount {
 };
 inline void enableCoroutinesConfig(TestMount& mount) {
   mount.updateEdenConfig({
-      {"coroutines:enable-phase4", "true"},
       {"coroutines:enable-phase7", "true"},
       {"coroutines:enable-phase8", "true"},
       {"coroutines:enable-phase9", "true"},

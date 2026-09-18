@@ -24,6 +24,7 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "coroutines:enable-phase1",
     "coroutines:enable-phase2",
     "coroutines:enable-phase3",
+    "coroutines:enable-phase4",
     "coroutines:enable-phase5",
     "coroutines:enable-phase6",
     "coroutines:enable-phase11",
@@ -44,7 +45,11 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "nfs:wheel-access-rate-limit-count",
     "nfs:wheel-access-rate-limit-window-seconds",
     "overlay:direct-serialization",
+    "telemetry:enable-xplatlogger-cli-usage",
+    "telemetry:enable-xplatlogger-errors",
     "telemetry:enable-xplatlogger-events",
+    "telemetry:error-scribe-category",
+    "telemetry:file-access-scribe-category",
 };
 
 inline bool isDeadConfigKey(std::string_view section, std::string_view key) {
