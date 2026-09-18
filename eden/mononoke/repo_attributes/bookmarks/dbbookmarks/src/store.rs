@@ -199,6 +199,26 @@ mononoke_queries! {
          LIMIT {limit}"
     }
 
+    read ReadNextBookmarkLogEntriesByBookmark(
+        min_id: u64,
+        repo_id: RepositoryId,
+        name: BookmarkName,
+        category: BookmarkCategory,
+        limit: u64,
+    ) -> (
+        i64, RepositoryId, BookmarkName, BookmarkCategory, Option<ChangesetId>, Option<ChangesetId>,
+        BookmarkUpdateReason, Timestamp
+    ) {
+        "SELECT id, repo_id, name, category, to_changeset_id, from_changeset_id, reason, timestamp
+         FROM bookmarks_update_log
+         WHERE id > {min_id}
+           AND repo_id = {repo_id}
+           AND name = {name}
+           AND category = {category}
+         ORDER BY id ASC
+         LIMIT {limit}"
+    }
+
     read CountFurtherBookmarkLogEntries(min_id: u64, repo_id: RepositoryId) -> (u64) {
         "SELECT COUNT(*)
         FROM bookmarks_update_log
@@ -933,6 +953,60 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 ctx.sql_query_telemetry(),
                 &id,
                 &repo_id,
+                &limit,
+            )
+            .await?;
+
+            Ok(
+                stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
+                    let (id, repo_id, name, category, to_cs_id, from_cs_id, reason, timestamp) =
+                        entry;
+                    Ok(BookmarkUpdateLogEntry {
+                        id: id.try_into()?,
+                        repo_id,
+                        bookmark_name: BookmarkKey::with_name_and_category(name, category),
+                        to_changeset_id: to_cs_id,
+                        from_changeset_id: from_cs_id,
+                        reason,
+                        timestamp,
+                    })
+                }),
+            )
+        }
+        .try_flatten_stream()
+        .boxed()
+    }
+
+    fn read_next_bookmark_log_entries_by_bookmark(
+        &self,
+        ctx: CoreContext,
+        bookmark: BookmarkKey,
+        id: BookmarkUpdateLogId,
+        limit: u64,
+        freshness: Freshness,
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
+        let connection = if freshness == Freshness::MostRecent {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            self.connections.read_master_connection.clone()
+        } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
+            self.connections.read_connection.clone()
+        };
+
+        let repo_id = self.repo_id;
+        let name = bookmark.name().clone();
+        let category = bookmark.category().clone();
+
+        async move {
+            let entries = ReadNextBookmarkLogEntriesByBookmark::query(
+                &connection,
+                ctx.sql_query_telemetry(),
+                &id,
+                &repo_id,
+                &name,
+                &category,
                 &limit,
             )
             .await?;

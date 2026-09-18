@@ -1240,6 +1240,56 @@ async fn test_log_correct_order(fb: FacebookInit) {
         .map(|entry| entry.to_changeset_id.unwrap())
         .collect();
     assert_eq!(cs_ids, vec![FIVES_CSID]);
+
+    let entries = bookmarks
+        .read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            key_1.clone(),
+            BookmarkUpdateLogId(0),
+            10,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        entries
+            .iter()
+            .map(|entry| entry.to_changeset_id.unwrap())
+            .collect::<Vec<_>>(),
+        vec![
+            ONES_CSID,
+            TWOS_CSID,
+            THREES_CSID,
+            FOURS_CSID,
+            FIVES_CSID,
+            SIXES_CSID,
+        ]
+    );
+    assert!(
+        entries
+            .windows(2)
+            .all(|entries| entries[0].id < entries[1].id)
+    );
+
+    let entries = bookmarks
+        .read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            key_1.clone(),
+            BookmarkUpdateLogId(3),
+            2,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        entries
+            .into_iter()
+            .map(|entry| entry.to_changeset_id.unwrap())
+            .collect::<Vec<_>>(),
+        vec![FOURS_CSID, FIVES_CSID]
+    );
 }
 
 #[mononoke::fbinit_test]

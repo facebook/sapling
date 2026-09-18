@@ -90,6 +90,17 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
 
+    /// Read the next up to `limit` entries for a single bookmark with an id
+    /// greater than `id`, ordered by log id.
+    fn read_next_bookmark_log_entries_by_bookmark(
+        &self,
+        ctx: CoreContext,
+        bookmark: BookmarkKey,
+        id: BookmarkUpdateLogId,
+        limit: u64,
+        freshness: Freshness,
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
+
     /// Same as `read_next_bookmark_log_entries`, but limits the stream of returned entries
     /// to all have the same reason and bookmark
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
