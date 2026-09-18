@@ -77,6 +77,9 @@ rpm.builder(
         ),
     ],
     features = make_rpm_features(),
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
+    ],
     summary = "Source control aware virtual filesystem",
 )
 

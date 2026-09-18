@@ -27,6 +27,17 @@ _RUST_DEP_OVERRIDES = {
 def cas_enabled():
     return read_bool("sl", "cas", False) and not rust_oss.is_oss_build()
 
+def edenfs_cas_select(values):
+    if rust_oss.is_oss_build():
+        return []
+    return select({
+        "DEFAULT": [],
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]": select({
+            "DEFAULT": [],
+            "ovr_config//os:linux": values,
+        }),
+    })
+
 def _minimal_third_party_rust_overrides(deps):
     deps_repr = repr(deps or [])
     overrides = {}

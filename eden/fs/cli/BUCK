@@ -18,6 +18,9 @@ buck_command_alias(
     ],
     env = get_dev_edenfsctl_env(),
     exe = ":edenfsctl",
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
+    ],
 )
 
 buck_command_alias(
@@ -41,6 +44,9 @@ buck_command_alias(
     ],
     env = get_dev_edenfsctl_env({"EDENFS_PRIVHELPER_PATH": "$(location //eden/fs/service:edenfs_privhelper)"}),
     exe = ":edenfsctl-with-privhelper",
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
+    ],
 )
 
 python_binary(

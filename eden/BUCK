@@ -15,6 +15,9 @@ buck_genrule(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
+    ],
 )
 
 fbpkg.builder(
@@ -28,6 +31,9 @@ fbpkg.builder(
     ),
     compatible_with = [
         "ovr_config//os:linux",
+    ],
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
     ],
     # This is doing (almost) the same as the historical EdenFS packaging config
     # (https://fburl.com/code/lmpy7mvj).

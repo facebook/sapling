@@ -79,6 +79,9 @@ cpp_binary(
             "/STACK:2097152",  # This was picked arbitrarily as 2 MB
         ],
     }),
+    modifiers = [
+        "fbcode//eden/scm/lib/backingstore:edenfs-cas[enabled]",
+    ],
     deps = [
         ":main",
         ":server",

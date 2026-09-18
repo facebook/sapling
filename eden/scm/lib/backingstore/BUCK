@@ -1,11 +1,19 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
-load("//eden/scm:targets.bzl", "cas_enabled", "sl_rust_library")
+load("//eden/scm:targets.bzl", "edenfs_cas_select", "sl_rust_library")
 
 oncall("sapling")
 
-_CAS_ENABLED = cas_enabled()
+constraint(
+    name = "edenfs-cas",
+    default = "disabled",
+    values = [
+        "disabled",
+        "enabled",
+    ],
+    visibility = ["PUBLIC"],
+)
 
 cpp_library(
     name = "sapling_backingstore_error",
@@ -84,7 +92,7 @@ sl_rust_library(
     ],
     crate_root = "src/lib.rs",
     cxx_bridge = "src/ffi.rs",
-    features = ["scuba"] + (["cas"] if _CAS_ENABLED else []),
+    features = ["scuba"] + edenfs_cas_select(["cas"]),
     test_deps = [
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:rand_chacha",
@@ -126,16 +134,9 @@ sl_rust_library(
         "//eden/scm/lib/util/testutil:testutil",
         "//eden/scm/lib/walkdetector:walkdetector",
     ]
-    + (
-        []
-        if not _CAS_ENABLED
-        else select({
-            "DEFAULT": [],
-            "ovr_config//os:linux": [
-                "//eden/scm/lib/cas-client/facebook:casd-client",
-            ],
-        })
-    ),
+    + edenfs_cas_select([
+        "//eden/scm/lib/cas-client/facebook:casd-client",
+    ]),
 )
 
 cpp_unittest(
