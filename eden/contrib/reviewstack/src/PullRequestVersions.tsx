@@ -8,12 +8,31 @@
 import PullRequestLatestVersionLink from './PullRequestLatestVersionLink';
 import PullRequestVersionCommitSelector from './PullRequestVersionCommitSelector';
 import PullRequestVersionSelector from './PullRequestVersionSelector';
-import {gitHubOrgAndRepoAtom} from './jotai';
+import {
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestVersionsAtom,
+} from './jotai';
 import {Box} from '@primer/react';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
+import {useEffect} from 'react';
 
 export default function PullRequestVersions(): React.ReactElement | null {
   const {org, repo} = useAtomValue(gitHubOrgAndRepoAtom) ?? {};
+  const versions = useAtomValue(gitHubPullRequestVersionsAtom);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
+  const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
+  const latestVersion = versions[versions.length - 1];
+  const latestHeadCommit = latestVersion?.headCommit;
+
+  useEffect(() => {
+    if (latestHeadCommit == null) {
+      return;
+    }
+    setSelectedVersionIndex(versions.length - 1);
+    setComparableVersions({beforeCommitID: null, afterCommitID: latestHeadCommit});
+  }, [latestHeadCommit, setComparableVersions, setSelectedVersionIndex, versions.length]);
 
   if (org == null || repo == null) {
     return null;
