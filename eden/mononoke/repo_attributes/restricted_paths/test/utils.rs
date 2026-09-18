@@ -415,6 +415,19 @@ impl RestrictedPathsTestDataBuilder {
         Ok(self)
     }
 
+    /// Replaces the caller's default `USER:myusername0` identity with the same
+    /// id carrying an `agent/id` attribute, so `Metadata::likely_an_agent`
+    /// returns true. Only available in fbcode builds: OSS has no JSON identity
+    /// decoder and its `likely_an_agent` is always false.
+    #[cfg(fbcode_build)]
+    pub fn with_agentic_client_identity(mut self) -> Result<Self> {
+        let identities = MononokeIdentity::try_from_json_encoded(
+            r#"{"authn":["mid://TEST/USER/myusername0?agent.id=AGENT%3aclaude_code"]}"#,
+        )?;
+        self.client_identity = identities.into_iter().next();
+        Ok(self)
+    }
+
     /// Adds a MACHINE_TIER identity to the simulated caller. Used by tests
     /// that exercise the `machine_tiers` enforcement condition. Default (no
     /// call) leaves the caller without a MACHINE_TIER identity.
@@ -1128,6 +1141,7 @@ pub(crate) struct EnforcementConditionSetBuilder {
     restriction_acls: Vec<MononokeIdentity>,
     machine_tiers: Vec<String>,
     client_identity_regexes: Vec<ComparableRegex>,
+    is_agent: Option<bool>,
 }
 
 impl EnforcementConditionSetBuilder {
@@ -1186,6 +1200,11 @@ impl EnforcementConditionSetBuilder {
         self
     }
 
+    pub(crate) fn with_is_agent(mut self, is_agent: bool) -> Self {
+        self.is_agent = Some(is_agent);
+        self
+    }
+
     pub(crate) fn build(self) -> EnforcementConditionSet {
         EnforcementConditionSet {
             always_enabled: self.always_enabled,
@@ -1198,6 +1217,7 @@ impl EnforcementConditionSetBuilder {
             // tests leave it empty. Coverage lives in the `.t` integration test.
             build_rules: Vec::new(),
             client_identity_regexes: self.client_identity_regexes,
+            is_agent: self.is_agent,
         }
     }
 }

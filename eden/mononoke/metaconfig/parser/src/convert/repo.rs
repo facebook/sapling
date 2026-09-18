@@ -1511,6 +1511,7 @@ impl Convert for RawRestrictedPathsConfig {
                             })
                         })
                         .collect::<Result<Vec<_>>>()?,
+                    is_agent: raw.is_agent,
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -1794,6 +1795,31 @@ mod tests {
             regexes[0].is_match("USER:foo"),
             "compiled regex should match the canonical identity Display form",
         );
+    }
+
+    #[mononoke::test]
+    fn test_parse_is_agent_passthrough() {
+        let raw_sets = vec![
+            RawEnforcementConditionSet {
+                is_agent: Some(true),
+                ..Default::default()
+            },
+            RawEnforcementConditionSet {
+                is_agent: Some(false),
+                ..Default::default()
+            },
+            RawEnforcementConditionSet {
+                is_agent: None,
+                ..Default::default()
+            },
+        ];
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.enforcement_condition_sets = Some(raw_sets);
+        let cfg: RestrictedPathsConfig = raw.convert().unwrap();
+        assert_eq!(cfg.enforcement_condition_sets.len(), 3);
+        assert_eq!(cfg.enforcement_condition_sets[0].is_agent, Some(true));
+        assert_eq!(cfg.enforcement_condition_sets[1].is_agent, Some(false));
+        assert_eq!(cfg.enforcement_condition_sets[2].is_agent, None);
     }
 
     #[mononoke::test]

@@ -2582,6 +2582,9 @@ pub struct EnforcementConditionSet {
     /// Empty = don't filter on this dimension. Substring semantics
     /// (`Regex::is_match`). Invalid regexes are rejected at config parse time.
     pub client_identity_regexes: Vec<ComparableRegex>,
+    /// `None` = don't filter on this dimension; `Some(want)` = match only callers
+    /// whose `Metadata::likely_an_agent()` equals `want`.
+    pub is_agent: Option<bool>,
 }
 
 /// Parse a bare AMP group name into a `GROUP:` identity.

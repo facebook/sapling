@@ -875,6 +875,150 @@ async fn empty_client_identity_regexes_with_no_other_filter_does_not_enforce(
     Ok(())
 }
 
+// What it tests: condition set with only `is_agent = Some(true)` and a caller
+// whose identity carries an `agent` attribute.
+// Expected: the dimension alone counts as an active filter and matches, so
+// unauthorized access is enforced.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn is_agent_true_matches_agentic_caller_triggers_enforcement(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_agentic_client_identity()?
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_is_agent(true)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "caller carries an `agent` attribute, so an is_agent=Some(true) set should fire"
+    );
+    Ok(())
+}
+
+// What it tests: condition set with only `is_agent = Some(true)` and the default
+// caller, whose identity carries no `agent` attribute.
+// Expected: filter does not match, so unauthorized access is not enforced.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn is_agent_true_non_agent_caller_does_not_trigger_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_is_agent(true)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        !was_denied,
+        "caller has no `agent` attribute, so an is_agent=Some(true) set should not fire"
+    );
+    Ok(())
+}
+
+// What it tests: AND semantics between `is_agent` and
+// `client_identity_regexes`. The agentic caller's id is still
+// `USER:myusername0`, so both dimensions match.
+// Expected: filter matches, so unauthorized access is enforced.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn is_agent_true_and_identity_regex_both_match_triggers_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_agentic_client_identity()?
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_is_agent(true)
+                .with_client_identity_regexes(["^USER:myusername0$"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "agentic caller `USER:myusername0` satisfies both is_agent=Some(true) and the regex, so enforcement should fire"
+    );
+    Ok(())
+}
+
+// What it tests: condition set with only `is_agent = Some(false)` and the
+// default caller, whose identity carries no `agent` attribute.
+// Expected: the dimension alone counts as an active filter and matches, so
+// unauthorized access is enforced.
+#[mononoke::fbinit_test]
+async fn is_agent_false_matches_non_agent_caller_triggers_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_is_agent(false)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "caller has no `agent` attribute, so an is_agent=Some(false) set should fire"
+    );
+    Ok(())
+}
+
+// What it tests: condition set with only `is_agent = Some(false)` and a caller
+// whose identity carries an `agent` attribute.
+// Expected: filter does not match, so unauthorized access is not enforced.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn is_agent_false_agentic_caller_does_not_trigger_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_agentic_client_identity()?
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_is_agent(false)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        !was_denied,
+        "caller carries an `agent` attribute, so an is_agent=Some(false) set should not fire"
+    );
+    Ok(())
+}
+
 // What it tests: enforcement should not depend on the access-log JK once
 // source fetches are spawned for enforcement independently from logging.
 // Expected: disabling `enabled_restricted_paths_access_logging` still denies

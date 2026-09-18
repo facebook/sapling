@@ -908,6 +908,7 @@ pub(crate) fn pre_filter_condition_sets<'a>(
     let server_side_tenting = ctx.session().server_side_tenting();
     let client_machine_tier = ctx.metadata().machine_tier();
     let server_build_rule = server_build_rule();
+    let caller_is_agent = ctx.metadata().likely_an_agent();
 
     let candidates = condition_sets
         .iter()
@@ -940,11 +941,13 @@ pub(crate) fn pre_filter_condition_sets<'a>(
                         .iter()
                         .any(|re| re.is_match(&identity_str))
                 });
+            let is_agent_matches = set.is_agent.is_none_or(|want| want == caller_is_agent);
 
             entry_point_matches
                 && machine_tier_matches
                 && build_rule_matches
                 && identity_regex_matches
+                && is_agent_matches
                 && (!set.require_client_request_flag || server_side_tenting)
         })
         .collect::<Vec<_>>();
@@ -968,6 +971,7 @@ fn condition_set_has_active_filter(set: &EnforcementConditionSet) -> bool {
         || !set.machine_tiers.is_empty()
         || !set.build_rules.is_empty()
         || !set.client_identity_regexes.is_empty()
+        || set.is_agent.is_some()
 }
 
 /// The build rule of the running server binary (the Buck target it was built
