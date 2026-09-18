@@ -63,16 +63,28 @@ impl From<types::hash::HexError> for ServerError {
     }
 }
 
-pub fn find_permission_denied(err: &anyhow::Error) -> Option<(crate::HgId, Option<String>)> {
+/// Manifest permission-denied details found in an error chain.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PermissionDeniedInfo {
+    pub tree_id: crate::HgId,
+    pub request_acl: String,
+    pub denial_message: Option<String>,
+}
+
+pub fn find_permission_denied(err: &anyhow::Error) -> Option<PermissionDeniedInfo> {
     for err in err.chain() {
         if let Some(slapi_err) = err.downcast_ref::<crate::SaplingRemoteApiServerError>() {
             if let crate::SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id,
                 request_acl,
-                ..
+                denial_message,
             } = &slapi_err.err
             {
-                return Some((*tree_id, Some(request_acl.clone())));
+                return Some(PermissionDeniedInfo {
+                    tree_id: *tree_id,
+                    request_acl: request_acl.clone(),
+                    denial_message: denial_message.clone(),
+                });
             }
         }
     }

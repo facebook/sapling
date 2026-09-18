@@ -38,13 +38,15 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             ctx: ImplInto<CoreContext>,
             path: String,
             hgid: String,
-            request_acl: String
+            request_acl: String,
+            denial_message: Option<String>
         ) -> PyResult<String> {
             let ctx: CoreContext = ctx.into();
             let err = types::errors::PermissionDenied {
                 path: path.try_into().map_pyerr(py)?,
                 hgid: hgid.parse().map_pyerr(py)?,
                 request_acl,
+                denial_message,
             };
             Ok(acl::format_permission_denied_error(&err, ctx.config.as_ref()))
         }),

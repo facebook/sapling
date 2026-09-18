@@ -48,6 +48,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::PathAclEntry;
 use storemodel::PathAclInfo;
+use storemodel::PermissionDenial;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
 use storemodel::TreeFetch;
@@ -115,7 +116,7 @@ pub(crate) type AclCheckCache = Cache<HgId, AclCheckResult>;
 #[derive(Clone)]
 pub(crate) enum AclCheckResult {
     Allowed,
-    Denied(String),
+    Denied(PermissionDenial),
 }
 
 pub(crate) fn new_acl_check_cache() -> AclCheckCache {
@@ -333,13 +334,13 @@ impl TreeStore {
         let acl_check_cache = self.acl_check_cache.clone();
         Some(Arc::new(
             move |children_with_acl: Vec<(PathComponentBuf, HgId)>| {
-                let mut denied_map: HashMap<HgId, String> = HashMap::new();
+                let mut denied_map: HashMap<HgId, PermissionDenial> = HashMap::new();
 
                 let manifest_ids = children_with_acl
                     .iter()
                     .filter_map(|(_, hgid)| match acl_check_cache.get(hgid) {
-                        Some(AclCheckResult::Denied(acl)) => {
-                            denied_map.insert(*hgid, acl);
+                        Some(AclCheckResult::Denied(denial)) => {
+                            denied_map.insert(*hgid, denial);
                             None
                         }
                         Some(AclCheckResult::Allowed) => None,
@@ -355,11 +356,14 @@ impl TreeStore {
                         let result = if resp.has_access {
                             AclCheckResult::Allowed
                         } else {
-                            let acl = resp
-                                .request_acl
-                                .unwrap_or_else(|| "unknown-acl".to_string());
-                            denied_map.insert(resp.manifest_id, acl.clone());
-                            AclCheckResult::Denied(acl)
+                            let denial = PermissionDenial {
+                                request_acl: resp
+                                    .request_acl
+                                    .unwrap_or_else(|| "unknown-acl".to_string()),
+                                denial_message: resp.denial_message,
+                            };
+                            denied_map.insert(resp.manifest_id, denial.clone());
+                            AclCheckResult::Denied(denial)
                         };
                         acl_check_cache.insert(resp.manifest_id, result);
                     }
@@ -367,26 +371,28 @@ impl TreeStore {
 
                 if mode == RestrictedTreeMode::Logged {
                     for (path, hgid) in &children_with_acl {
-                        if let Some(acl) = denied_map.get(hgid) {
+                        if let Some(denial) = denied_map.get(hgid) {
                             tracing::info!(
-                                %path, %hgid, %acl,
+                                %path, %hgid, acl = %denial.request_acl,
                                 "restricted tree detected (logged mode, not enforcing)"
                             );
                         }
                     }
                     return Ok(Box::new(std::iter::empty())
-                        as BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>);
+                        as BoxIterator<
+                            anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>,
+                        >);
                 }
                 let iter = children_with_acl
                     .into_iter()
                     .filter_map(move |(path, hgid)| {
                         denied_map
                             .get(&hgid)
-                            .map(|acl| Ok((path, hgid, acl.clone())))
+                            .map(|denial| Ok((path, hgid, denial.clone())))
                     });
                 Ok(Box::new(iter)
                     as BoxIterator<
-                        anyhow::Result<(PathComponentBuf, HgId, String)>,
+                        anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>,
                     >)
             },
         ))
@@ -1101,8 +1107,9 @@ impl storemodel::KeyStore for TreeStore {
 type AclChecker = Arc<
     dyn Fn(
             Vec<(PathComponentBuf, HgId)>,
-        ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>>
-        + Send
+        ) -> anyhow::Result<
+            BoxIterator<anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>>,
+        > + Send
         + Sync,
 >;
 
@@ -1201,7 +1208,8 @@ impl TreeEntry for ScmStoreTreeEntry {
     fn filter_permission_denied(
         &self,
         children_with_acl: Vec<(PathComponentBuf, HgId)>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>>>
+    {
         let acl_checker = match &self.acl_checker {
             Some(c) => c.clone(),
             None => return Ok(Box::new(std::iter::empty())),

@@ -239,6 +239,7 @@ fn register_error_handlers() {
                     e.path.to_string(),
                     format!("{}", e.hgid),
                     e.request_acl.clone(),
+                    e.denial_message.clone(),
                 ),
             ))
         } else if e.is::<pathmatcher::Error>() {
@@ -301,6 +302,7 @@ mod tests {
             path: RepoPathBuf::from_string("restricted".to_string()).unwrap(),
             hgid: HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap(),
             request_acl: "some-acl".to_string(),
+            denial_message: None,
         };
 
         log_permission_denied_binding(py, &err);

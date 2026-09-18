@@ -93,12 +93,13 @@ impl InnerStore {
 }
 
 fn convert_permission_denied(err: anyhow::Error, path: &RepoPath) -> anyhow::Error {
-    if let Some((hgid, request_acl)) = edenapi_types::errors::find_permission_denied(&err) {
+    if let Some(denied) = edenapi_types::errors::find_permission_denied(&err) {
         crate::acl_metrics::ACL_DENIED.increment();
         return types::errors::PermissionDenied {
             path: path.to_owned(),
-            hgid,
-            request_acl: request_acl.unwrap_or_default(),
+            hgid: denied.tree_id,
+            request_acl: denied.request_acl,
+            denial_message: denied.denial_message,
         }
         .into();
     }

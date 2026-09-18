@@ -68,12 +68,15 @@ impl std::fmt::Debug for SharedError {
 /// Error indicating that access to a tree was denied by a path ACL.
 #[derive(Debug, Clone, PartialEq, Error)]
 #[error(
-    "permission denied: path '{path}' (tree {hgid}) is restricted (request access via ACL '{request_acl}')"
+    "permission denied: path '{path}' (tree {hgid}) is restricted (request access via ACL '{request_acl}'){}",
+    .denial_message.as_deref().map_or_else(String::new, |message| format!("\n{message}"))
 )]
 pub struct PermissionDenied {
     pub path: crate::RepoPathBuf,
     pub hgid: crate::HgId,
     pub request_acl: String,
+    /// Repo-configured text to show with the denial, if any.
+    pub denial_message: Option<String>,
 }
 
 #[derive(Default)]

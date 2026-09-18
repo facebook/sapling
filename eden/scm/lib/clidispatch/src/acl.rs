@@ -50,7 +50,13 @@ pub fn check_permission_denied_paths(
         .get_or("slacl", "request-access-url-template", String::new)
         .unwrap_or_default();
     let by_acl = group_by_acl(denied.iter().cloned());
-    let acl_details = format_acl_details(&by_acl, &url_template);
+    let mut acl_details = format_acl_details(&by_acl, &url_template);
+    if let Some(denial_message) = denied
+        .iter()
+        .find_map(|err| err.denial_message.as_deref().filter(|m| !m.is_empty()))
+    {
+        acl_details.push(format!("  {denial_message}\n"));
+    }
 
     let mode = config.get_or("slacl", "on-permission-denied", || "error".to_string())?;
     if mode == "ignore" {
@@ -128,6 +134,9 @@ pub fn format_permission_denied_error(
             msg.push_str(&format!(" by ACL '{}'", err.request_acl));
         }
     }
+    if let Some(denial_message) = &err.denial_message {
+        msg.push_str(&format!("\n{denial_message}"));
+    }
     msg
 }
 
@@ -135,6 +144,7 @@ pub fn format_permission_denied_error(
 mod tests {
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
+    use std::sync::Arc;
 
     use super::*;
 
@@ -209,6 +219,7 @@ mod tests {
             path: "secret/dir".to_string().try_into().unwrap(),
             hgid: types::HgId::null_id().clone(),
             request_acl: "my-acl".to_string(),
+            denial_message: None,
         };
         let config = configset::ConfigSet::new();
         let msg = format_permission_denied_error(&err, &config);
@@ -221,6 +232,7 @@ mod tests {
             path: "secret/dir".to_string().try_into().unwrap(),
             hgid: types::HgId::null_id().clone(),
             request_acl: String::new(),
+            denial_message: None,
         };
         let config = configset::ConfigSet::new();
         let msg = format_permission_denied_error(&err, &config);
@@ -233,6 +245,7 @@ mod tests {
             path: "secret/dir".to_string().try_into().unwrap(),
             hgid: types::HgId::null_id().clone(),
             request_acl: "my-acl".to_string(),
+            denial_message: None,
         };
         let mut config = configset::ConfigSet::new();
         config.set(
@@ -245,6 +258,44 @@ mod tests {
         assert_eq!(
             msg,
             "path 'secret/dir' is restricted by ACL 'my-acl' - request access at https://access.example.com/?acl=my-acl"
+        );
+    }
+
+    #[test]
+    fn test_format_permission_denied_error_with_denial_message() {
+        let err = types::errors::PermissionDenied {
+            path: "secret/dir".to_string().try_into().unwrap(),
+            hgid: types::HgId::null_id().clone(),
+            request_acl: "my-acl".to_string(),
+            denial_message: Some("Ask the repo owners for access.".to_string()),
+        };
+        let config = configset::ConfigSet::new();
+        let msg = format_permission_denied_error(&err, &config);
+        assert_eq!(
+            msg,
+            "path 'secret/dir' is restricted by ACL 'my-acl'\nAsk the repo owners for access."
+        );
+    }
+
+    #[test]
+    fn test_check_permission_denied_paths_appends_denial_message() {
+        let paths = context::PermissionDeniedPaths::default();
+        for (path, denial_message) in [("a/dir", None), ("b/dir", Some("Ask the repo owners."))] {
+            paths.record(types::errors::PermissionDenied {
+                path: path.to_string().try_into().unwrap(),
+                hgid: types::HgId::null_id().clone(),
+                request_acl: "my-acl".to_string(),
+                denial_message: denial_message.map(str::to_string),
+            });
+        }
+        let config: Arc<dyn Config> = Arc::new(configset::ConfigSet::new());
+        let result = check_permission_denied_paths(&paths, &config).unwrap();
+        assert_eq!(
+            result.acl_details,
+            vec![
+                "  'a/dir' [and 1 more] are restricted by ACL 'my-acl'\n",
+                "  Ask the repo owners.\n",
+            ]
         );
     }
 }

@@ -20,6 +20,7 @@ use slex::Batch;
 use slex::Items;
 use slex::Work;
 use slex::WorkOptions;
+use storemodel::PermissionDenial;
 use storemodel::TreeEntry;
 use types::FetchContext;
 use types::HgId;
@@ -43,7 +44,7 @@ pub(crate) fn num_workers() -> usize {
 fn tree_entry_to_links(
     parent_path: &types::RepoPath,
     entry: Arc<dyn TreeEntry>,
-    denied_hgids: &HashMap<HgId, String>,
+    denied_hgids: &HashMap<HgId, PermissionDenial>,
 ) -> Result<BTreeMap<PathComponentBuf, Link>> {
     let mut links = BTreeMap::new();
     for item in entry.iter_owned()? {
@@ -51,13 +52,14 @@ fn tree_entry_to_links(
         let link = match flag {
             store::Flag::File(file_type) => Link::leaf(FileMetadata::new(hgid, file_type)),
             store::Flag::Directory => {
-                if let Some(request_acl) = denied_hgids.get(&hgid) {
+                if let Some(denial) = denied_hgids.get(&hgid) {
                     let mut path = parent_path.to_owned();
                     path.push(component.as_path_component());
                     Link::durable_permission_denied(types::errors::PermissionDenied {
                         path,
                         hgid,
-                        request_acl: request_acl.clone(),
+                        request_acl: denial.request_acl.clone(),
+                        denial_message: denial.denial_message.clone(),
                     })
                 } else {
                     Link::durable(hgid)
@@ -119,10 +121,10 @@ fn build_links(
         Ok(iter) => {
             for item in iter {
                 match item {
-                    Ok((_component, hgid, reason)) => {
-                        tracing::debug!(%hgid, reason, "marking child tree as permission denied");
+                    Ok((_component, hgid, denial)) => {
+                        tracing::debug!(%hgid, acl = %denial.request_acl, "marking child tree as permission denied");
                         acl_metrics::ACL_AVOIDED.increment();
-                        denied_hgids.insert(hgid, reason);
+                        denied_hgids.insert(hgid, denial);
                     }
                     Err(err) => {
                         tracing::debug!(?err, "error reading permission_denied_children");
@@ -222,10 +224,11 @@ pub(crate) fn prefetch_trees<'a>(
                     work.entry.links.get_or_init(|| links);
                 }
                 Err(err) => {
-                    let (hgid, request_acl) = match find_permission_denied(&err) {
-                        Some(permission_denied) => permission_denied,
+                    let denied = match find_permission_denied(&err) {
+                        Some(denied) => denied,
                         None => return Err(err),
                     };
+                    let hgid = denied.tree_id;
 
                     let work = match remote_work_by_hgid
                         .get_mut(&hgid)
@@ -245,7 +248,8 @@ pub(crate) fn prefetch_trees<'a>(
                     let perm_err = types::errors::PermissionDenied {
                         path: work.path,
                         hgid,
-                        request_acl: request_acl.unwrap_or_default(),
+                        request_acl: denied.request_acl,
+                        denial_message: denied.denial_message,
                     };
                     work.entry
                         .links

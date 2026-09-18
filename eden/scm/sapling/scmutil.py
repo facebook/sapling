@@ -238,14 +238,16 @@ def callcatch(ui, req, func):
         else:
             ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
     except error.PermissionDeniedError as inst:
-        path, hgid, request_acl = inst.args
+        path, hgid, request_acl, denial_message = inst.args
         rctx = getattr(getattr(ui, "_uiconfig", None), "_rctx", None)
         if rctx:
             msg = bindings.context.format_permission_denied(
-                rctx, path, hgid, request_acl
+                rctx, path, hgid, request_acl, denial_message
             )
         else:
             msg = "path '%s' is restricted by ACL '%s'" % (path, request_acl)
+            if denial_message:
+                msg += "\n%s" % denial_message
         ui.warn("%s\n" % msg, error=_("abort"))
         if req:
             req._permission_denied_handled = True

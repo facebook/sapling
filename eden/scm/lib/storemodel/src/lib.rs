@@ -395,7 +395,8 @@ pub trait TreeEntry: Send + Sync + 'static {
     /// Get children entries that will be denied permission when fetched.
     fn permission_denied_children(
         &self,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>>>
+    {
         self.filter_permission_denied(self.children_with_acls()?)
     }
 
@@ -403,7 +404,8 @@ pub trait TreeEntry: Send + Sync + 'static {
     fn filter_permission_denied(
         &self,
         _children_with_acl: Vec<(PathComponentBuf, HgId)>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, PermissionDenial)>>>
+    {
         Ok(Box::new(std::iter::empty()))
     }
 
@@ -415,6 +417,15 @@ pub trait TreeEntry: Send + Sync + 'static {
 
     /// Get number of entries, if available. Useful to pre-allocate vector capacity, etc.
     fn size_hint(&self) -> Option<usize>;
+}
+
+/// Why a `has_acl` directory child was denied, as reported by the server.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PermissionDenial {
+    /// ACL to request access through.
+    pub request_acl: String,
+    /// Repo-configured text to show with the denial, if any.
+    pub denial_message: Option<String>,
 }
 
 #[derive(Clone, Debug)]

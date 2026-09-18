@@ -348,7 +348,7 @@ impl SaplingRemoteApi for EagerRepo {
                                     tree_id: key.hgid,
                                     request_acl: crate::eager_repo::EAGER_PLACEHOLDER_ACL
                                         .to_string(),
-                                    denial_message: None,
+                                    denial_message: self.server_denial_message(),
                                 },
                             })));
                             continue;
@@ -1309,16 +1309,20 @@ impl SaplingRemoteApi for EagerRepo {
         let mut values = Vec::new();
         for manifest_id in request.manifest_ids {
             let has_slacl = self.tree_has_slacl(manifest_id)?;
+            let (request_acl, denial_message) = if has_slacl {
+                (
+                    Some(crate::eager_repo::EAGER_PLACEHOLDER_ACL.to_string()),
+                    self.server_denial_message(),
+                )
+            } else {
+                (None, None)
+            };
 
             values.push(Ok(CheckManifestPermissionResponse {
                 manifest_id,
                 has_access: !has_slacl,
-                request_acl: if has_slacl {
-                    Some(crate::eager_repo::EAGER_PLACEHOLDER_ACL.to_string())
-                } else {
-                    None
-                },
-                denial_message: None,
+                request_acl,
+                denial_message,
             }));
         }
 
@@ -1814,6 +1818,10 @@ pub fn edenapi_from_config(
                     .get_or_default::<bool>("slacl", "server-acl-enforcement")
                     .map_err(|err| edenapi::SaplingRemoteApiError::Other(err.into()))?;
                 repo.set_enforce_server_acls(enforce_server_acls);
+                let server_denial_message = config
+                    .get_nonempty_opt::<String>("slacl", "server-denial-message")
+                    .map_err(|err| edenapi::SaplingRemoteApiError::Other(err.into()))?;
+                repo.set_server_denial_message(server_denial_message);
                 return Ok(Some(Arc::new(repo)));
             }
         }
