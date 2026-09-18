@@ -586,10 +586,7 @@ export default class CachingGitHubClient implements GitHubClient {
               isDraft,
               reviewDecision,
               headRefOid,
-              comments: {
-                __typename: 'IssueCommentConnection',
-                totalCount: numComments,
-              },
+              totalCommentsCount: numComments,
             });
           };
           request.onerror = reject;
@@ -740,7 +737,16 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid, comments} = fragment;
+  const {
+    number,
+    title,
+    updatedAt,
+    state,
+    isDraft,
+    reviewDecision,
+    headRefOid,
+    totalCommentsCount,
+  } = fragment;
   return {
     owner,
     name,
@@ -751,7 +757,7 @@ function normalizePullRequestFragment(
     isDraft,
     reviewDecision,
     headRefOid,
-    numComments: comments.totalCount,
+    numComments: totalCommentsCount ?? 0,
     cachedAt: Date.now(),
   };
 }

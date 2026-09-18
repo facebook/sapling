@@ -36,7 +36,9 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
       display="flex"
       flexDirection="column"
       gridGap={2}
-      padding={3}>
+      padding={3}
+      position="relative"
+      zIndex={100}>
       <Box fontWeight="bold">
         #{number} <TrustedRenderedMarkdown trustedHTML={titleHTML} inline={true} />{' '}
         <Link href={url} target="_blank">
