@@ -56,28 +56,42 @@ pub enum RestrictedPathAccess {
 }
 
 #[derive(Clone, Debug, Error)]
-#[error("Access denied: unauthorized access to restricted path: {access}")]
 pub struct RestrictedPathsAuthorizationError {
     access: RestrictedPathAccess,
     // Boxed because `PermissionRequestGroup` is a `MononokeIdentity`, i.e. a whole
     // `AuthenticatedIdentity` thrift struct, which would otherwise make every
     // `Result<_, MononokeError>` in the codebase 248 bytes wide.
-    permission_request_group: Box<PermissionRequestGroup>,
+    details: Box<RestrictedPathsDenialDetails>,
+}
+
+#[derive(Clone, Debug)]
+struct RestrictedPathsDenialDetails {
+    permission_request_group: PermissionRequestGroup,
+    denial_message: Option<String>,
 }
 
 impl RestrictedPathsAuthorizationError {
     pub fn new(
         access: RestrictedPathAccess,
         permission_request_group: PermissionRequestGroup,
+        denial_message: Option<String>,
     ) -> Self {
         Self {
             access,
-            permission_request_group: Box::new(permission_request_group),
+            details: Box::new(RestrictedPathsDenialDetails {
+                permission_request_group,
+                denial_message,
+            }),
         }
     }
 
     pub fn permission_request_group(&self) -> &PermissionRequestGroup {
-        &self.permission_request_group
+        &self.details.permission_request_group
+    }
+
+    /// Repo-configured text appended to the error message, if any.
+    pub fn denial_message(&self) -> Option<&str> {
+        self.details.denial_message.as_deref()
     }
 
     pub fn access(&self) -> &RestrictedPathAccess {
@@ -96,6 +110,20 @@ pub enum RestrictedPathsError {
     AuthorizationError(RestrictedPathsAuthorizationError),
     #[error("Internal error: {0}")]
     InternalError(#[from] anyhow::Error),
+}
+
+impl std::fmt::Display for RestrictedPathsAuthorizationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Access denied: unauthorized access to restricted path: {}",
+            self.access
+        )?;
+        if let Some(denial_message) = self.denial_message() {
+            write!(f, "\n{denial_message}")?;
+        }
+        Ok(())
+    }
 }
 
 impl std::fmt::Display for RestrictedPathAccess {
@@ -574,10 +602,11 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
                 })
                 .flatten(),
         },
-        move |permission_request_group| {
+        move |permission_request_group, denial_message| {
             RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
                 RestrictedPathAccess::Path((*path).clone()),
                 permission_request_group,
+                denial_message,
             ))
         },
     )
@@ -660,10 +689,11 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                 })
                 .flatten(),
         },
-        move |permission_request_group| {
+        move |permission_request_group, denial_message| {
             RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
                 RestrictedPathAccess::Manifest(manifest_id),
                 permission_request_group,
+                denial_message,
             ))
         },
     )
@@ -718,7 +748,7 @@ async fn spawn_enforce_restricted_access<T>(
     access_type: &'static str,
     access_data: access_log::RestrictedPathAccessData,
     build_handles: impl FnOnce(SourceFetches) -> SourceHandles<T>,
-    authorization_error: impl FnOnce(PermissionRequestGroup) -> RestrictedPathsError,
+    authorization_error: impl FnOnce(PermissionRequestGroup, Option<String>) -> RestrictedPathsError,
 ) -> Result<(), RestrictedPathsError>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
@@ -800,7 +830,10 @@ where
     let enforcement_outcome = enforcement_outcome?;
 
     if let Some(permission_request_group) = enforcement_outcome.denial_permission_request_group {
-        Err(authorization_error(permission_request_group))
+        Err(authorization_error(
+            permission_request_group,
+            config.denial_message.clone(),
+        ))
     } else {
         Ok(())
     }
@@ -1016,6 +1049,29 @@ mod tests {
     use crate::test_utils::RestrictedPathsConfigBuilder;
     use crate::test_utils::build_test_restricted_paths_with_dummy_acl_provider as build_test_restricted_paths;
     use crate::test_utils::build_test_restricted_paths_with_options;
+
+    // What it tests: `denial_message` is appended to the error text on its own line.
+    // Expected: no message keeps the base text unchanged.
+    #[mononoke::test]
+    fn test_authorization_error_display_appends_denial_message() -> Result<()> {
+        let access = RestrictedPathAccess::Path(MPath::new("restricted/file")?);
+        let group: PermissionRequestGroup = "REPO_REGION:test_acl".parse()?;
+        let base = "Access denied: unauthorized access to restricted path: restricted/file";
+
+        let without = RestrictedPathsAuthorizationError::new(access.clone(), group.clone(), None);
+        assert_eq!(without.to_string(), base);
+
+        let with = RestrictedPathsAuthorizationError::new(
+            access,
+            group,
+            Some("see https://fburl.com/example".to_string()),
+        );
+        assert_eq!(
+            with.to_string(),
+            format!("{base}\nsee https://fburl.com/example")
+        );
+        Ok(())
+    }
 
     #[mononoke::fbinit_test]
     async fn test_empty_config(fb: FacebookInit) -> Result<()> {

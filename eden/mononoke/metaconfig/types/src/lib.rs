@@ -2667,6 +2667,8 @@ pub struct RestrictedPathsConfig {
     pub enforcement_enabled: bool,
     /// 4-stage rollout state for AclManifest. Defaults to `Disabled`.
     pub acl_manifest_mode: AclManifestMode,
+    /// Free text appended to restricted-path denial errors.
+    pub denial_message: Option<String>,
 }
 
 const DEFAULT_ACL_FILE_NAME: &str = ".slacl";
@@ -2683,6 +2685,7 @@ impl Default for RestrictedPathsConfig {
             enforcement_condition_sets: Vec::new(),
             enforcement_enabled: false,
             acl_manifest_mode: AclManifestMode::Disabled,
+            denial_message: None,
         }
     }
 }

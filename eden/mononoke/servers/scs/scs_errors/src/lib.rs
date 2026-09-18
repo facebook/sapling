@@ -119,6 +119,7 @@ impl ServiceError {
                 reason,
                 access,
                 permission_request_group,
+                denial_message,
                 ..
             }) => {
                 let reason = format!("{context}: {reason}");
@@ -126,6 +127,7 @@ impl ServiceError {
                     reason,
                     access,
                     permission_request_group,
+                    denial_message,
                     ..Default::default()
                 })
             }
@@ -296,6 +298,7 @@ impl From<MononokeError> for ServiceError {
                     reason,
                     access,
                     permission_request_group,
+                    denial_message: err.denial_message().map(str::to_string),
                     ..Default::default()
                 })
             }

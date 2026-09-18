@@ -82,8 +82,13 @@ fn format_restricted_paths_authz(e: &thrift::RestrictedPathsAuthorizationError) 
             );
         }
     };
+    let denial_message = e
+        .denial_message
+        .as_deref()
+        .filter(|message| !message.is_empty())
+        .map_or(String::new(), |message| format!("\n{message}"));
     anyhow::anyhow!(
-        "Access denied to {target}\nTo gain access, request access to: {group}",
+        "Access denied to {target}\nTo gain access, request access to: {group}{denial_message}",
         group = e.permission_request_group,
     )
 }

@@ -3362,6 +3362,9 @@ stateful client exception RestrictedPathsAuthorizationError {
   2: RestrictedPathAccess access;
   /// Group name only, e.g. "gradient_source_control".
   3: string permission_request_group;
+  /// Repo-configured text appended to `reason`; exposed separately so clients
+  /// that format their own message can show it.
+  4: optional string denial_message;
 }
 
 /// Service Definition

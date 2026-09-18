@@ -1528,6 +1528,7 @@ impl Convert for RawRestrictedPathsConfig {
             enforcement_condition_sets,
             enforcement_enabled: self.enforcement_enabled.unwrap_or(false),
             acl_manifest_mode: parse_acl_manifest_mode(self.acl_manifest_mode.as_deref())?,
+            denial_message: self.denial_message,
         })
     }
 }
@@ -1820,6 +1821,20 @@ mod tests {
         assert_eq!(cfg.enforcement_condition_sets[0].is_agent, Some(true));
         assert_eq!(cfg.enforcement_condition_sets[1].is_agent, Some(false));
         assert_eq!(cfg.enforcement_condition_sets[2].is_agent, None);
+    }
+
+    #[mononoke::test]
+    fn test_parse_denial_message_passthrough() {
+        let cfg: RestrictedPathsConfig = empty_raw_restricted_paths_config().convert().unwrap();
+        assert_eq!(cfg.denial_message, None);
+
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.denial_message = Some("see https://fburl.com/example".to_string());
+        let cfg: RestrictedPathsConfig = raw.convert().unwrap();
+        assert_eq!(
+            cfg.denial_message.as_deref(),
+            Some("see https://fburl.com/example")
+        );
     }
 
     #[mononoke::test]

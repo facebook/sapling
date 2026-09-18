@@ -757,7 +757,7 @@ mod tests {
     ) -> Result<Error> {
         let permission_request_group: PermissionRequestGroup = permission_request_group.parse()?;
         Ok(Error::new(MononokeError::RestrictedPathsAuthorizationError(
-            RestrictedPathsAuthorizationError::new(access, permission_request_group),
+            RestrictedPathsAuthorizationError::new(access, permission_request_group, None),
         ))
         .context("failed to fetch tree"))
     }
