@@ -98,6 +98,7 @@ inline constexpr std::string_view kIsDaemonInRootMountNamespace =
 inline constexpr std::string_view kIsPrivhelperInRootMountNamespace =
     "is_privhelper_in_root_mount_namespace";
 inline constexpr std::string_view kCgroup = "cgroup";
+inline constexpr std::string_view kNumRestarts = "num_restarts";
 
 // --- FinishedCheckout ---
 inline constexpr std::string_view kMode = "mode";

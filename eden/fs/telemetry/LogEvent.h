@@ -197,6 +197,10 @@ struct DaemonStart : public EdenFSEvent {
   std::optional<bool> is_daemon_in_root_mount_namespace;
   std::optional<bool> is_privhelper_in_root_mount_namespace;
   std::optional<std::string> cgroup;
+  // Restarts already spent in the current backoff window. Set only when this
+  // daemon was relaunched by the privhelper, so its presence is itself the
+  // "this was an auto-restart" signal.
+  std::optional<uint64_t> num_restarts;
 
   DaemonStart(
       double duration,
@@ -208,7 +212,8 @@ struct DaemonStart : public EdenFSEvent {
       std::optional<uint64_t> privhelper_pid_namespace = std::nullopt,
       std::optional<bool> is_daemon_in_root_mount_namespace = std::nullopt,
       std::optional<bool> is_privhelper_in_root_mount_namespace = std::nullopt,
-      std::optional<std::string> cgroup = std::nullopt)
+      std::optional<std::string> cgroup = std::nullopt,
+      std::optional<uint64_t> num_restarts = std::nullopt)
       : duration(duration),
         is_takeover(is_takeover),
         success(success),
@@ -219,7 +224,8 @@ struct DaemonStart : public EdenFSEvent {
         is_daemon_in_root_mount_namespace(is_daemon_in_root_mount_namespace),
         is_privhelper_in_root_mount_namespace(
             is_privhelper_in_root_mount_namespace),
-        cgroup(std::move(cgroup)) {}
+        cgroup(std::move(cgroup)),
+        num_restarts(num_restarts) {}
 
   void populate(DynamicEvent& event) const override {
     event.addDouble("duration", duration);
@@ -256,6 +262,9 @@ struct DaemonStart : public EdenFSEvent {
     }
     if (cgroup.has_value()) {
       event.addString("cgroup", *cgroup);
+    }
+    if (num_restarts.has_value()) {
+      event.addInt("num_restarts", static_cast<int64_t>(*num_restarts));
     }
   }
 
