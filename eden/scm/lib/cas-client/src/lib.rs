@@ -51,7 +51,8 @@ pub trait CasClient: Send + Sync {
     ///
     /// Implementations may split the input into multiple batches and yield
     /// results out of input order, so callers must associate results using the
-    /// digest in each entry.
+    /// digest in each entry. Successful blobs must match the size declared by
+    /// their digest.
     fn fetch<'a>(
         &'a self,
         digests: &'a [CasDigest],
