@@ -40,8 +40,11 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
@@ -51,6 +54,7 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
+use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use cloned::cloned;
 use commit_graph::CommitGraph;
@@ -110,6 +114,10 @@ use tracing::info;
 use tracing::warn;
 use wireproto_handler::TargetRepoDbs;
 
+const BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB: &str =
+    "scm/mononoke:backsyncer_bookmark_discovery_page_size";
+const MAX_DISCOVERED_BOOKMARKS_JUST_KNOB: &str = "scm/mononoke:backsyncer_max_discovered_bookmarks";
+
 #[derive(Clone)]
 #[facet::container]
 pub struct Repo(
@@ -157,6 +165,8 @@ pub enum BacksyncLimit {
 pub struct BacksyncDelayInfo {
     pub delay_secs: i64,
     pub remaining_entries: u64,
+    /// Bookmark workers whose backlog could not be measured because they failed.
+    pub failed_bookmarks: u64,
 }
 
 /// Block until a specific bookmark transaction (identified by its log id) is confirmed to be
@@ -272,6 +282,7 @@ where
             .first()
             .map_or(0, |entry| entry.timestamp.since_seconds()),
         remaining_entries: next_entries.len() as u64,
+        failed_bookmarks: 0,
     };
 
     // Before syncing entries, check if cancellation has been
@@ -411,6 +422,7 @@ where
         return Ok(BacksyncDelayInfo {
             delay_secs: 0,
             remaining_entries: 1,
+            failed_bookmarks: 0,
         });
     };
 
@@ -436,6 +448,7 @@ where
             .first()
             .map_or(0, |entry| entry.timestamp.since_seconds()),
         remaining_entries: entries.len() as u64,
+        failed_bookmarks: 0,
     };
     if cancellation_requested.load(Ordering::Relaxed) {
         return Ok(delay_info);
@@ -457,6 +470,177 @@ where
         )
         .await?
         .await;
+    }
+
+    Ok(delay_info)
+}
+
+/// Discover source bookmark keys whose exact update-log streams can affect the
+/// target repository.
+///
+/// Current source bookmarks find creates and moves. Configured common bookmarks
+/// are always included because they live outside the prefix.
+async fn discover_backsync_bookmarks<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    bookmark_prefix: &BookmarkPrefix,
+    common_bookmarks: &[BookmarkKey],
+) -> Result<HashSet<BookmarkKey>, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let bookmark_discovery_page_size = justknobs::get(BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB, None);
+    if bookmark_discovery_page_size <= 0 {
+        bail!("{BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB} must be positive");
+    }
+    let bookmark_discovery_page_size = bookmark_discovery_page_size.try_into()?;
+    let max_discovered_bookmarks = justknobs::get(MAX_DISCOVERED_BOOKMARKS_JUST_KNOB, None);
+    if max_discovered_bookmarks <= 0 {
+        bail!("{MAX_DISCOVERED_BOOKMARKS_JUST_KNOB} must be positive");
+    }
+    let max_discovered_bookmarks = max_discovered_bookmarks.try_into()?;
+
+    let mut bookmarks = common_bookmarks.iter().cloned().collect::<HashSet<_>>();
+    let mut discovered_bookmarks = 0;
+
+    // Pagination is name-only, so list each category separately. This avoids
+    // skipping another category with the same name at a page boundary.
+    for category in BookmarkCategory::ALL {
+        let mut pagination = BookmarkPagination::FromStart;
+        loop {
+            let source_bookmarks = commit_sync_data
+                .get_source_repo()
+                .bookmarks()
+                .list(
+                    ctx.clone(),
+                    Freshness::MostRecent,
+                    bookmark_prefix,
+                    std::slice::from_ref(category),
+                    BookmarkKind::ALL_PUBLISHING,
+                    &pagination,
+                    bookmark_discovery_page_size,
+                )
+                .try_collect::<Vec<_>>()
+                .await?;
+            let page_len = source_bookmarks.len();
+            discovered_bookmarks += page_len;
+            if discovered_bookmarks > max_discovered_bookmarks {
+                warn!(
+                    "bookmark prefix {:?} matched {} publishing bookmarks, exceeding {} configured by {}",
+                    bookmark_prefix,
+                    discovered_bookmarks,
+                    max_discovered_bookmarks,
+                    MAX_DISCOVERED_BOOKMARKS_JUST_KNOB,
+                );
+                bail!(
+                    "bookmark prefix {bookmark_prefix:?} matched more than {max_discovered_bookmarks} publishing bookmarks",
+                );
+            }
+            let next_page = source_bookmarks
+                .last()
+                .map(|(bookmark, _)| BookmarkPagination::After(bookmark.name().clone()));
+            bookmarks.extend(
+                source_bookmarks
+                    .into_iter()
+                    .map(|(bookmark, _)| bookmark.into_key()),
+            );
+
+            if page_len < bookmark_discovery_page_size as usize {
+                break;
+            }
+            pagination = next_page.ok_or_else(|| {
+                format_err!("full bookmark discovery page did not contain a final bookmark")
+            })?;
+        }
+    }
+
+    Ok(bookmarks)
+}
+
+/// Backsync the source bookmark-log entries relevant to one small repository.
+///
+/// The configured prefix and common bookmarks form a single logical source-log
+/// selector. Current source bookmarks and configured common bookmarks are
+/// unioned in memory, then each candidate reads forward from its own durable
+/// cursor. The legacy global cursor is only an initialization and fallback
+/// boundary; this path does not advance it.
+pub async fn backsync_latest_by_prefix<R>(
+    ctx: CoreContext,
+    commit_sync_data: CommitSyncData<R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark_prefix: BookmarkPrefix,
+    common_bookmarks: &[BookmarkKey],
+    limit: BacksyncLimit,
+    bookmark_concurrency: usize,
+    cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
+    disable_lease: bool,
+) -> Result<BacksyncDelayInfo, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let global_counter_name = format_counter(&source_repo_id);
+    let global_counter: BookmarkUpdateLogId = target_repo_dbs
+        .counters
+        .get_counter(&ctx, &global_counter_name)
+        .await?
+        .unwrap_or(0)
+        .try_into()?;
+
+    let bookmarks =
+        discover_backsync_bookmarks(&ctx, &commit_sync_data, &bookmark_prefix, common_bookmarks)
+            .await?;
+
+    let progress = stream::iter(bookmarks)
+        .map(|bookmark| {
+            cloned!(
+                ctx,
+                commit_sync_data,
+                target_repo_dbs,
+                cancellation_requested
+            );
+            async move {
+                let result = backsync_bookmark_through(
+                    ctx,
+                    commit_sync_data,
+                    target_repo_dbs,
+                    bookmark.clone(),
+                    global_counter,
+                    limit,
+                    cancellation_requested,
+                    sync_context,
+                    disable_lease,
+                )
+                .await;
+                (bookmark, result)
+            }
+        })
+        .buffer_unordered(bookmark_concurrency.max(1))
+        .collect::<Vec<_>>()
+        .await;
+
+    let mut delay_info = BacksyncDelayInfo {
+        delay_secs: 0,
+        remaining_entries: 0,
+        failed_bookmarks: 0,
+    };
+    for (bookmark, result) in progress {
+        match result {
+            Ok(bookmark_delay) => {
+                delay_info.delay_secs = delay_info.delay_secs.max(bookmark_delay.delay_secs);
+                delay_info.remaining_entries += bookmark_delay.remaining_entries;
+            }
+            Err(error) => {
+                // One bad bookmark must not cancel successful in-flight work or
+                // terminate the repo-pair loop. Its durable cursor is unchanged,
+                // so the next polling iteration retries it.
+                error!("Failed to backsync bookmark {:?}: {:#}", bookmark, error);
+                // Keep `remaining_entries` limited to measured backlog rather
+                // than inventing a count for a worker that returned no result.
+                delay_info.failed_bookmarks += 1;
+            }
+        }
     }
 
     Ok(delay_info)

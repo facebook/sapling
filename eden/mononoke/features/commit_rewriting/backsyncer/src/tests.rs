@@ -21,6 +21,7 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
@@ -100,8 +101,11 @@ use tests_utils::store_files;
 use tests_utils::store_rename;
 use wireproto_handler::TargetRepoDbs;
 
+use crate::BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB;
 use crate::BacksyncLimit;
+use crate::MAX_DISCOVERED_BOOKMARKS_JUST_KNOB;
 use crate::backsync_latest;
+use crate::backsync_latest_by_prefix;
 use crate::backsync_latest_for_bookmark;
 use crate::format_bookmark_counter;
 use crate::format_counter;
@@ -304,6 +308,84 @@ async fn existing_bookmark_cursor_does_not_jump_to_global_cursor(
             .get_counter(&ctx, &bookmark_counter)
             .await?,
         Some(bookmark_log_id.try_into()?),
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn prefix_backsync_processes_prefix_and_common_bookmarks(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let source_repo = commit_sync_data.get_source_repo();
+    let source_repo_id = source_repo.repo_identity().id();
+    let prefixed_bookmark = BookmarkKey::new("anotherbookmark")?;
+    let common_bookmark = BookmarkKey::new("master")?;
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+
+    backsync_latest_by_prefix(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        BookmarkPrefix::new("another")?,
+        std::slice::from_ref(&common_bookmark),
+        BacksyncLimit::NoLimit,
+        2,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+
+    assert_eq!(
+        small_repo_dbs
+            .counters
+            .get_counter(&ctx, &format_counter(&source_repo_id))
+            .await?,
+        Some(0),
+    );
+    for bookmark in [prefixed_bookmark, common_bookmark] {
+        let cursor = small_repo_dbs
+            .counters
+            .get_counter(&ctx, &format_bookmark_counter(&source_repo_id, &bookmark)?)
+            .await?;
+        assert!(cursor.is_some_and(|cursor| cursor > 0));
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn prefix_backsync_enforces_discovery_limit(fb: FacebookInit) -> Result<(), Error> {
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+
+    let result = with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB.to_string() => KnobVal::Int(1),
+            MAX_DISCOVERED_BOOKMARKS_JUST_KNOB.to_string() => KnobVal::Int(1),
+        }),
+        backsync_latest_by_prefix(
+            CoreContext::test_mock(fb),
+            commit_sync_data,
+            Arc::new(small_repo_dbs),
+            BookmarkPrefix::empty(),
+            &[],
+            BacksyncLimit::NoLimit,
+            1,
+            Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::Backsyncer,
+            false,
+        )
+        .boxed(),
+    )
+    .await;
+
+    assert_matches!(
+        result,
+        Err(error) if error.to_string().contains("matched more than 1 publishing bookmarks")
     );
     Ok(())
 }
@@ -1525,6 +1607,8 @@ async fn init_repos(
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits".to_string() => KnobVal::Bool(false),
         "scm/mononoke:ignore_change_xrepo_mapping_extra".to_string() => KnobVal::Bool(false),
+        BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB.to_string() => KnobVal::Int(10_000),
+        MAX_DISCOVERED_BOOKMARKS_JUST_KNOB.to_string() => KnobVal::Int(100_000),
     }));
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
