@@ -40,6 +40,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLog;
@@ -82,6 +83,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
+use mutable_counters::validate_counter_name;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
@@ -806,4 +808,22 @@ pub async fn open_backsyncer_dbs(repo: &impl RepoLike) -> Result<TargetRepoDbs, 
 
 pub fn format_counter(repo_to_backsync_from: &RepositoryId) -> String {
     format!("backsync_from_{}", repo_to_backsync_from.id())
+}
+
+/// Format a human-readable mutable-counter name for one source bookmark.
+///
+/// The source repository and bookmark category keep otherwise identical
+/// bookmark names in separate cursor domains.
+pub fn format_bookmark_counter(
+    repo_to_backsync_from: &RepositoryId,
+    bookmark: &BookmarkKey,
+) -> Result<String, Error> {
+    let counter_name = format!(
+        "backsync_by_bookmark_v1_{}_{}_{}",
+        repo_to_backsync_from.id(),
+        bookmark.category(),
+        bookmark.as_str(),
+    );
+    validate_counter_name(&counter_name)?;
+    Ok(counter_name)
 }

@@ -19,6 +19,7 @@ use assert_matches::assert_matches;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
@@ -76,6 +77,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Movers;
+use mutable_counters::MAX_COUNTER_NAME_LENGTH;
 use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
 use rendezvous::RendezVousOptions;
@@ -100,12 +102,42 @@ use wireproto_handler::TargetRepoDbs;
 
 use crate::BacksyncLimit;
 use crate::backsync_latest;
+use crate::format_bookmark_counter;
 use crate::format_counter;
 use crate::sync_entries;
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
 const BRANCHMERGE_FILE: &str = "branchmerge";
+
+#[mononoke::test]
+fn bookmark_counter_name_is_bounded_and_category_specific() -> Result<(), Error> {
+    let repo_id = RepositoryId::new(2100);
+    let branch = BookmarkKey::new("whatsapp/common/master")?;
+    let same_branch = BookmarkKey::new("whatsapp/common/master")?;
+    let tag = BookmarkKey::with_name_and_category(branch.name().clone(), BookmarkCategory::Tag);
+
+    let branch_counter = format_bookmark_counter(&repo_id, &branch)?;
+    assert_eq!(
+        branch_counter,
+        "backsync_by_bookmark_v1_2100_branch_whatsapp/common/master"
+    );
+    assert_eq!(
+        branch_counter,
+        format_bookmark_counter(&repo_id, &same_branch)?
+    );
+    assert_ne!(branch_counter, format_bookmark_counter(&repo_id, &tag)?);
+
+    let longest_persisted_bookmark = BookmarkKey::new("a".repeat(512))?;
+    assert!(
+        format_bookmark_counter(&repo_id, &longest_persisted_bookmark)?.len()
+            <= MAX_COUNTER_NAME_LENGTH
+    );
+    let overlong_bookmark = BookmarkKey::new("a".repeat(MAX_COUNTER_NAME_LENGTH))?;
+    assert!(format_bookmark_counter(&repo_id, &overlong_bookmark).is_err());
+
+    Ok(())
+}
 
 #[mononoke::fbinit_test]
 async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {

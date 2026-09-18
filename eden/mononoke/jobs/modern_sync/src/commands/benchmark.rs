@@ -23,6 +23,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::MonitoringArgs;
 use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
+use mutable_counters::validate_counter_name;
 
 #[cfg(fbcode_build)]
 mod stats;
@@ -100,11 +101,28 @@ impl MutableCounters for MemoryMutableCounters {
         value: i64,
         _prev_value: Option<i64>,
     ) -> Result<bool> {
+        validate_counter_name(name)?;
         self.counters
             .write()
             .unwrap()
             .insert(name.to_string(), value);
         Ok(true)
+    }
+
+    async fn set_counter_if_absent(
+        &self,
+        _ctx: &CoreContext,
+        name: &str,
+        value: i64,
+    ) -> Result<bool> {
+        validate_counter_name(name)?;
+        let mut counters = self.counters.write().unwrap();
+        if counters.contains_key(name) {
+            Ok(false)
+        } else {
+            counters.insert(name.to_string(), value);
+            Ok(true)
+        }
     }
 
     async fn get_all_counters(&self, _ctx: &CoreContext) -> Result<Vec<(String, i64)>> {

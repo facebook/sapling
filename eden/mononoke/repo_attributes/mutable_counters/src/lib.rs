@@ -13,6 +13,8 @@
 //! database.
 
 use anyhow::Result;
+use anyhow::ensure;
+use anyhow::format_err;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -34,6 +36,19 @@ define_stats! {
     cur_value: dynamic_singleton_counter("{}.cur_value", (name: String)),
 }
 
+/// Maximum supported mutable-counter name length.
+pub const MAX_COUNTER_NAME_LENGTH: usize = 640;
+
+pub fn validate_counter_name(name: &str) -> Result<()> {
+    ensure!(
+        name.len() <= MAX_COUNTER_NAME_LENGTH,
+        "mutable counter name is {} bytes; maximum is {}",
+        name.len(),
+        MAX_COUNTER_NAME_LENGTH,
+    );
+    Ok(())
+}
+
 #[facet::facet]
 #[async_trait]
 pub trait MutableCounters {
@@ -50,6 +65,15 @@ pub trait MutableCounters {
         name: &str,
         value: i64,
         prev_value: Option<i64>,
+    ) -> Result<bool>;
+
+    /// Initialize a counter if it does not exist yet. Returns whether this
+    /// call inserted the counter.
+    async fn set_counter_if_absent(
+        &self,
+        ctx: &CoreContext,
+        name: &str,
+        value: i64,
     ) -> Result<bool>;
 
     /// Get the names and values of all the counters for the repository.
@@ -80,6 +104,21 @@ mononoke_queries! {
         sqlite(
             "UPDATE mutable_counters SET value = {value}
             WHERE repo_id = {repo_id} AND name = CAST({name} AS TEXT) AND value = {prev_value}"
+        )
+    }
+
+    write SetCounterIfAbsent(
+        repo_id: RepositoryId, name: &str, value: i64
+    ) {
+        none,
+        mysql(
+            "INSERT IGNORE INTO mutable_counters (repo_id, name, value)
+             VALUES ({repo_id}, {name}, {value})"
+        )
+        sqlite(
+            "INSERT INTO mutable_counters (repo_id, name, value)
+             VALUES ({repo_id}, CAST({name} AS TEXT), {value})
+             ON CONFLICT(repo_id, name) DO NOTHING"
         )
     }
 
@@ -165,6 +204,7 @@ impl MutableCounters for SqlMutableCounters {
         value: i64,
         prev_value: Option<i64>,
     ) -> Result<bool> {
+        validate_counter_name(name)?;
         let conn = &self.connections.write_connection;
         let txn = conn.start_transaction(ctx.sql_query_telemetry()).await?;
 
@@ -178,6 +218,50 @@ impl MutableCounters for SqlMutableCounters {
             }
             TransactionResult::Failed => Ok(false),
         }
+    }
+
+    async fn set_counter_if_absent(
+        &self,
+        ctx: &CoreContext,
+        name: &str,
+        value: i64,
+    ) -> Result<bool> {
+        validate_counter_name(name)?;
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+        let result = SetCounterIfAbsent::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &name,
+            &value,
+        )
+        .await?;
+        // INSERT IGNORE has unambiguous row accounting even if a client uses
+        // CLIENT_FOUND_ROWS: an insert affects one row and an existing primary
+        // key affects none. Name validation above prevents the only input
+        // warning (truncation) that IGNORE could otherwise suppress.
+        let inserted = result.affected_rows() == 1;
+        let observed_value = if inserted {
+            value
+        } else {
+            GetCounter::query(
+                &self.connections.write_connection,
+                ctx.sql_query_telemetry(),
+                &self.repo_id,
+                &name,
+            )
+            .await?
+            .first()
+            .map(|entry| entry.0)
+            .ok_or_else(|| {
+                format_err!(
+                    "mutable counter insert was ignored, but counter {name:?} does not exist"
+                )
+            })?
+        };
+        STATS::cur_value.set_value(ctx.fb, observed_value, (name.to_owned(),));
+        Ok(inserted)
     }
 
     async fn get_all_counters(&self, ctx: &CoreContext) -> Result<Vec<(String, i64)>> {
@@ -199,6 +283,7 @@ impl SqlMutableCounters {
         prev_value: Option<i64>,
         txn: SqlTransaction,
     ) -> Result<TransactionResult> {
+        validate_counter_name(name)?;
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
         let (txn, result) = if let Some(prev_value) = prev_value {

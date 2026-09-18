@@ -10,6 +10,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use mutable_counters::MAX_COUNTER_NAME_LENGTH;
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
@@ -90,5 +91,49 @@ async fn test_counter_conditional_update(fb: FacebookInit) -> Result<()> {
     );
     assert_eq!(mutable_counters.get_counter(&ctx, "counter2").await?, None);
 
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_counter_initialize_if_absent(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let mutable_counters = create_db()?;
+
+    assert!(
+        mutable_counters
+            .set_counter_if_absent(&ctx, "counter", 1)
+            .await?
+    );
+    assert!(
+        !mutable_counters
+            .set_counter_if_absent(&ctx, "counter", 2)
+            .await?
+    );
+    assert_eq!(
+        mutable_counters.get_counter(&ctx, "counter").await?,
+        Some(1)
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_counter_name_length_limit(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let mutable_counters = create_db()?;
+    let maximum_name = "x".repeat(MAX_COUNTER_NAME_LENGTH);
+    let oversized_name = "x".repeat(MAX_COUNTER_NAME_LENGTH + 1);
+
+    assert!(
+        mutable_counters
+            .set_counter(&ctx, &maximum_name, 1, None)
+            .await?
+    );
+    assert!(
+        mutable_counters
+            .set_counter_if_absent(&ctx, &oversized_name, 1)
+            .await
+            .is_err()
+    );
     Ok(())
 }
