@@ -10,7 +10,7 @@ import pullRequestStatusAndLabel from './pullRequestStatusAndLabel';
 
 describe('pullRequestStatusAndLabel', () => {
   it.each([
-    [null, 'Open', 'accent.fg'],
+    [null, 'Review Required', 'attention.fg'],
     [PullRequestReviewDecision.Approved, 'Approved', 'success.fg'],
     [PullRequestReviewDecision.ChangesRequested, 'Changes Req.', 'danger.fg'],
     [PullRequestReviewDecision.ReviewRequired, 'Review Required', 'attention.fg'],
