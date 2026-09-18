@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {pullRequestNumbersFromBody, stripStackInfoFromBodyHTML} from './ghstackUtils';
+import {
+  commitMessageFromGhstackBody,
+  pullRequestNumbersFromBody,
+  replaceGhstackCommitMessage,
+  stripStackInfoFromBodyHTML,
+} from './ghstackUtils';
 
 describe('pullRequestNumbersFromBody', () => {
   test('returns array of numbers for pull requests listed in the body', () => {
@@ -69,6 +74,14 @@ This is the commit message with some bullets.\r
 `;
     expect(pullRequestNumbersFromBody(body)).toEqual([80477, 80418, 80416]);
   });
+});
+
+test('replaces a ghstack description without changing its stack metadata', () => {
+  const body = 'Stack from [ghstack]:\n* #1\n* #2\n\nOld description';
+  const updated = replaceGhstackCommitMessage(body, 'New description');
+
+  expect(commitMessageFromGhstackBody(updated)).toBe('New description');
+  expect(updated.startsWith('Stack from [ghstack]:\n* #1\n* #2\n\n')).toBe(true);
 });
 
 describe('stripStackInfoFromBodyHTML', () => {

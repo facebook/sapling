@@ -36,3 +36,16 @@ export function stripStackInfoFromBodyHTML(bodyHTML: string): string {
   // Retain any other lists that may be present as part of the commit message
   return index !== -1 ? bodyHTML.slice(index + delimiter.length) : bodyHTML;
 }
+
+export function commitMessageFromGhstackBody(body: string): string {
+  const match = /\r?\n\r?\n/.exec(body);
+  return match == null ? '' : body.slice(match.index + match[0].length);
+}
+
+export function replaceGhstackCommitMessage(body: string, commitMessage: string): string {
+  const match = /\r?\n\r?\n/.exec(body);
+  if (match == null) {
+    throw new Error('Could not preserve the ghstack footer while editing the description.');
+  }
+  return body.slice(0, match.index + match[0].length) + commitMessage.trimEnd();
+}

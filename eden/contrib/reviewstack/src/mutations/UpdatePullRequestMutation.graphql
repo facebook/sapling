@@ -1,0 +1,9 @@
+mutation UpdatePullRequestMutation($input: UpdatePullRequestInput!) {
+  updatePullRequest(input: $input) {
+    pullRequest {
+      id
+      body
+      bodyHTML
+    }
+  }
+}

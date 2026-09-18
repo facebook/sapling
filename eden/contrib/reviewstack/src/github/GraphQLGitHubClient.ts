@@ -74,6 +74,9 @@ import type {
   UpdateIssueCommentInput,
   UpdateIssueCommentMutationData,
   UpdateIssueCommentMutationVariables,
+  UpdatePullRequestInput,
+  UpdatePullRequestMutationData,
+  UpdatePullRequestMutationVariables,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
   UpdatePullRequestReviewCommentMutationVariables,
@@ -110,6 +113,7 @@ import {
   SubmitPullRequestReviewMutation,
   TreeQuery,
   UpdateIssueCommentMutation,
+  UpdatePullRequestMutation,
   UpdatePullRequestReviewCommentMutation,
   UnresolveReviewThreadMutation,
 } from '../generated/graphql';
@@ -575,9 +579,7 @@ export default class GraphQLGitHubClient implements GitHubClient {
     );
   }
 
-  resolveReviewThread(
-    input: ResolveReviewThreadInput,
-  ): Promise<ResolveReviewThreadMutationData> {
+  resolveReviewThread(input: ResolveReviewThreadInput): Promise<ResolveReviewThreadMutationData> {
     return this.query<ResolveReviewThreadMutationData, ResolveReviewThreadMutationVariables>(
       ResolveReviewThreadMutation,
       {input},
@@ -596,6 +598,13 @@ export default class GraphQLGitHubClient implements GitHubClient {
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
     return this.query<UpdateIssueCommentMutationData, UpdateIssueCommentMutationVariables>(
       UpdateIssueCommentMutation,
+      {input},
+    );
+  }
+
+  updatePullRequest(input: UpdatePullRequestInput): Promise<UpdatePullRequestMutationData> {
+    return this.query<UpdatePullRequestMutationData, UpdatePullRequestMutationVariables>(
+      UpdatePullRequestMutation,
       {input},
     );
   }

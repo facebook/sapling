@@ -46,6 +46,8 @@ import type {
   SubmitPullRequestReviewMutationData,
   UpdateIssueCommentInput,
   UpdateIssueCommentMutationData,
+  UpdatePullRequestInput,
+  UpdatePullRequestMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
   UnresolveReviewThreadInput,
@@ -437,9 +439,7 @@ export default class CachingGitHubClient implements GitHubClient {
     return this.client.removeReaction(input);
   }
 
-  resolveReviewThread(
-    input: ResolveReviewThreadInput,
-  ): Promise<ResolveReviewThreadMutationData> {
+  resolveReviewThread(input: ResolveReviewThreadInput): Promise<ResolveReviewThreadMutationData> {
     return this.client.resolveReviewThread(input);
   }
 
@@ -451,6 +451,10 @@ export default class CachingGitHubClient implements GitHubClient {
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
     return this.client.updateIssueComment(input);
+  }
+
+  updatePullRequest(input: UpdatePullRequestInput): Promise<UpdatePullRequestMutationData> {
+    return this.client.updatePullRequest(input);
   }
 
   deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData> {
@@ -765,16 +769,8 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {
-    number,
-    title,
-    updatedAt,
-    state,
-    isDraft,
-    reviewDecision,
-    headRefOid,
-    totalCommentsCount,
-  } = fragment;
+  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid, totalCommentsCount} =
+    fragment;
   return {
     owner,
     name,

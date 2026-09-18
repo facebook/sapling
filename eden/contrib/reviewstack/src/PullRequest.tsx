@@ -11,12 +11,11 @@ import type {GitHubPullRequestParams} from './jotai';
 
 import CenteredSpinner from './CenteredSpinner';
 import DiffView from './DiffView';
+import EditablePullRequestDescription from './EditablePullRequestDescription';
 import PullRequestChangeCount from './PullRequestChangeCount';
 import PullRequestLabels from './PullRequestLabels';
 import PullRequestReviewers from './PullRequestReviewers';
 import PullRequestSignals from './PullRequestSignals';
-import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {stripStackInfoFromBodyHTML} from './ghstackUtils';
 import {
   gitHubOrgAndRepoAtom,
   gitHubPullRequestComparableVersionsAtom,
@@ -27,9 +26,7 @@ import {
   gitHubPullRequestVersionDiffAtom,
   gitHubPullRequestComparisonFilesAtom,
   pendingScrollRestoreAtom,
-  stackedPullRequestAtom,
 } from './jotai';
-import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {Box, Flash, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
@@ -145,23 +142,8 @@ function PullRequestNotFound() {
 
 function PullRequestDetails() {
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
-  const stack = useAtomValue(stackedPullRequestAtom);
   if (pullRequest == null) {
     return null;
-  }
-
-  const {bodyHTML} = pullRequest;
-  let pullRequestBodyHTML;
-  switch (stack.type) {
-    case 'no-stack':
-      pullRequestBodyHTML = bodyHTML;
-      break;
-    case 'sapling':
-      pullRequestBodyHTML = stripStackInfoFromSaplingBodyHTML(bodyHTML, stack.body.format);
-      break;
-    case 'ghstack':
-      pullRequestBodyHTML = stripStackInfoFromBodyHTML(bodyHTML);
-      break;
   }
 
   return (
@@ -175,7 +157,7 @@ function PullRequestDetails() {
         borderRadius={4}
         fontSize={14}
         padding={3}>
-        <TrustedRenderedMarkdown trustedHTML={pullRequestBodyHTML} />
+        <EditablePullRequestDescription />
       </Box>
       <PullRequestSignals />
       <Suspense fallback={<CenteredSpinner />}>

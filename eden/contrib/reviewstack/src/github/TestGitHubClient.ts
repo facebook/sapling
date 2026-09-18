@@ -45,6 +45,8 @@ import type {
   SubmitPullRequestReviewMutationData,
   UpdateIssueCommentInput,
   UpdateIssueCommentMutationData,
+  UpdatePullRequestInput,
+  UpdatePullRequestMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
   UnresolveReviewThreadInput,
@@ -148,9 +150,7 @@ export default class TestGitHubClient implements GitHubClient {
     return Promise.resolve({});
   }
 
-  resolveReviewThread(
-    _input: ResolveReviewThreadInput,
-  ): Promise<ResolveReviewThreadMutationData> {
+  resolveReviewThread(_input: ResolveReviewThreadInput): Promise<ResolveReviewThreadMutationData> {
     return Promise.resolve({});
   }
 
@@ -161,6 +161,10 @@ export default class TestGitHubClient implements GitHubClient {
   }
 
   updateIssueComment(_input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
+    return Promise.resolve({});
+  }
+
+  updatePullRequest(_input: UpdatePullRequestInput): Promise<UpdatePullRequestMutationData> {
     return Promise.resolve({});
   }
 
