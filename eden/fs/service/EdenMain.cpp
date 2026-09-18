@@ -8,7 +8,9 @@
 #include "eden/fs/service/EdenMain.h"
 #include "eden/common/telemetry/SessionId.h"
 
+#include <algorithm>
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -416,6 +418,19 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
   folly::stop_watch<> daemonStart;
 
+  // A non-zero restart count in the environment is how a daemon learns that it
+  // was relaunched by the privhelper rather than started by the user. It is
+  // clamped to the uint32_t range the privhelper keeps its restart budget in.
+  std::optional<uint64_t> numRestarts;
+#ifdef __APPLE__
+  if (const auto restartCount = std::min<uint64_t>(
+          readEdenFsRestartCounterEnv(kEdenFsRestartCountEnv),
+          std::numeric_limits<uint32_t>::max());
+      restartCount > 0) {
+    numRestarts = restartCount;
+  }
+#endif
+
 #ifdef __linux__
   auto cgroupInfo = readCgroup();
 
@@ -591,6 +606,23 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         ", session_id ",
         getSessionId());
 
+#ifdef __APPLE__
+    // Exported even when zero, so that a normal start is distinguishable from
+    // a daemon too old to export the key. Platforms without privhelper-driven
+    // restarts never reach here and leave the key absent.
+    fb303::fbData->setCounter(
+        "privhelper_restart_count",
+        static_cast<int64_t>(numRestarts.value_or(0)));
+    if (numRestarts.has_value()) {
+      // States the evidence rather than the conclusion: edenfsctl forwards
+      // every EDEN-prefixed variable, so a manual start can inherit this one.
+      XLOGF(
+          INFO,
+          "started with a restart budget of {} already spent, which the privhelper sets when it relaunches edenfs",
+          *numRestarts);
+    }
+#endif
+
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
@@ -716,7 +748,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
               privhelperPidNamespace,
               isDaemonInRootMountNamespace,
               isPrivhelperInRootMountNamespace,
-              cgroupInfo});
+              cgroupInfo,
+              numRestarts});
     }
     startupLogger->exitUnsuccessfully(
         kExitCodeError, "error starting EdenFS: ", folly::exceptionStr(ex));
@@ -770,6 +803,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                isDaemonInRootMountNamespace,
                isPrivhelperInRootMountNamespace,
                cgroupInfo,
+               numRestarts,
                &server] {
         // This value is slightly different from `startTimeInSeconds`
         // we pass into `startupLogger->success()`, but should be
@@ -791,7 +825,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                 privhelperPidNamespace,
                 isDaemonInRootMountNamespace,
                 isPrivhelperInRootMountNamespace,
-                cgroupInfo});
+                cgroupInfo,
+                numRestarts});
 
 #ifndef _WIN32
         // Check for previous heartbeat files and handle crash detection
