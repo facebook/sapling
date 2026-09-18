@@ -678,7 +678,7 @@ def bisect(repo, subset, x):
     return subset & state
 
 
-@predicate("bsearch(condition, top)", safe=True)
+@predicate("bsearch(condition, heads[, roots])", safe=True)
 def bsearch(repo, subset, x):
     """Use binary search to find the first changeset in ``condition``.
 
@@ -686,49 +686,47 @@ def bsearch(repo, subset, x):
 
         bsearch(date(">2010-1-1"),.)
 
-    The search range is the first ancestors of ``top``:
-    ``_firstancestors(top)``. By only following the first parents, the
-    range is guaranteed to be linear.
+    The search starts from ``heads`` and follows their ancestors. ``roots``
+    can be provided to limit how far back the search goes.
 
-    Binary search requires the linear search range to be sorted by
-    ``condition``. If a changeset is in ``condition``, then all of its
-    descendants in the range should also be part of ``condition``. Otherwise
-    this function could return wrong results.
+    Binary search requires the search range to be sorted by ``condition``. If
+    a changeset is in ``condition``, then all of its descendants in the range
+    should also be part of ``condition``. Otherwise this function could return
+    wrong results.
     """
-    args = getargs(x, 2, 2, _("bsearch takes two arguments"))
-    cond = getset(repo, fullreposet(repo), args[0])
-    top = getset(repo, fullreposet(repo), args[1])
-
-    if len(top) > 1:
-        raise error.Abort(_("top should be a single changeset to ensure linearity"))
+    args = getargsdict(x, "bsearch", "condition heads roots")
+    if "condition" not in args or "heads" not in args:
+        raise error.ParseError(_("bsearch takes at least two arguments"))
+    cond = getset(repo, fullreposet(repo), args["condition"])
+    headrevs = getset(repo, fullreposet(repo), args["heads"])
 
     cl = repo.changelog
+    dag = cl.dag
     rev = cl.rev
-    linear = cl.dag.firstancestors(cl.tonodes(top))
+    heads = dag.sort(
+        node for node in dag.headsancestors(cl.tonodes(headrevs)) if rev(node) in cond
+    )
+    if not heads:
+        return baseset(repo=repo)
 
-    from bisect import bisect_left
-
-    # NOTE: Remove BisectArray and use `key=` provided by Python 3.10
-    # once Python 3.10 is used.
-
-    class BisectArray:
-        def __init__(self, array, keyfunc):
-            self.array = array
-            self.keyfunc = keyfunc
-
-        def __getitem__(self, i):
-            return self.keyfunc(self.array[i])
-
-        def __len__(self):
-            return len(self.array)
-
-    i = bisect_left(BisectArray(linear, lambda node: rev(node) not in cond), True)
-    if i == 0:
-        nodes = []
+    if "roots" in args:
+        rootrevs = getset(repo, fullreposet(repo), args["roots"])
+        roots = dag.sort(cl.tonodes(rootrevs))
     else:
-        nodes = [linear[i - 1]]
-    nodes = cl.dag.sort(nodes)
-    return subset & cl.torevset(nodes)
+        roots = dag.roots(dag.ancestors(heads))
+    matchingroots = dag.sort(node for node in roots if rev(node) in cond)
+    if matchingroots:
+        return subset & cl.torevset(matchingroots.take(1))
+
+    skip = dag.sort([])
+    while True:
+        node, _untested, firstheads = dag.suggest_bisect(roots, heads, skip)
+        if node is None:
+            return subset & cl.torevset(firstheads)
+        if rev(node) in cond:
+            heads += dag.sort([node])
+        else:
+            roots += dag.sort([node])
 
 
 # Backward-compatibility

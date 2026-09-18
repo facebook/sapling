@@ -31,8 +31,38 @@ Not found in the given range:
 
   $ sl log -r 'bsearch(date(">2004"),desc(2003))' -T '{desc}\n'
 
-"top" containing more than 1 commit:
+Multiple heads:
 
-  $ sl log -r 'bsearch(date(">2004"),all())' -T '{desc}\n'
-  abort: top should be a single changeset to ensure linearity
-  [255]
+  $ sl log -r 'bsearch(date(">2003"),desc(2002) + desc(2004))' -T '{desc}\n'
+  2003
+
+Limit the search with roots:
+
+  $ sl log -r 'bsearch(date(">2003"),heads=desc(2004),roots=desc(2004))' -T '{desc}\n'
+  2004
+
+Non-linear history:
+
+  $ newrepo nonlinear
+  $ drawdag <<'EOS'
+  >     M
+  >    / \
+  >   C   D
+  >   |   |
+  >   B   A
+  >    \ /
+  >     R
+  > EOS
+  $ sl log -r 'bsearch(desc(A)::,desc(M))' -T '{desc}\n'
+  A
+
+Return one result when multiple roots match:
+
+  $ newrepo multiroot
+  $ drawdag <<'EOS'
+  > M
+  > |\
+  > A B
+  > EOS
+  $ sl log -r 'bsearch(all(),desc(M))' -T 'result\n'
+  result
