@@ -11,6 +11,7 @@ import {
   gitHubPullRequestRefreshTriggerAtom,
   pendingScrollRestoreAtom,
 } from './jotai';
+import {capturePullRequestScrollPosition} from './pullRequestScroll';
 import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {useCallback} from 'react';
 
@@ -35,10 +36,7 @@ export default function useRefreshPullRequest(): () => void {
 
     // Save scroll position before refresh. This will be restored by
     // PullRequestWithParams after the pull request data updates.
-    setPendingScrollRestore({
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-    });
+    setPendingScrollRestore(capturePullRequestScrollPosition());
 
     const params = {number, orgAndRepo};
     // Increment the refresh trigger to cause the PR atom to re-fetch

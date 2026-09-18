@@ -1901,8 +1901,8 @@ export const fileContentsDeltaAtom = atomFamily(
  * Type for pending scroll restore position.
  */
 export type PendingScrollRestore = {
-  scrollX: number;
-  scrollY: number;
+  scrollLeft: number;
+  scrollTop: number;
 } | null;
 
 /**

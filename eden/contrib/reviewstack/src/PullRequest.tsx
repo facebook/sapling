@@ -27,6 +27,7 @@ import {
   gitHubPullRequestComparisonFilesAtom,
   pendingScrollRestoreAtom,
 } from './jotai';
+import {restorePullRequestScrollPosition} from './pullRequestScroll';
 import {Box, Flash, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
@@ -99,7 +100,7 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
         requestAnimationFrame(() => {
           setPendingScrollRestore(prev => {
             if (prev != null) {
-              window.scrollTo(prev.scrollX, prev.scrollY);
+              restorePullRequestScrollPosition(prev);
             }
             return null;
           });
