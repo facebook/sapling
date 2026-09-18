@@ -307,6 +307,11 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
+            error @ MononokeError::ManifestNotDerived(_) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::MANIFEST_NOT_DERIVED,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
             error @ MononokeError::HookFailure(_) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
                 reason: error.to_string(),
@@ -424,6 +429,7 @@ impl_into_thrift_error!(service::RepoMoveBookmarkExn);
 impl_into_thrift_error!(service::RepoMultipleCommitLookupExn);
 impl_into_thrift_error!(service::RepoDeleteBookmarkExn);
 impl_into_thrift_error!(service::RepoLandStackExn);
+impl_into_thrift_error!(service::RepoRebaseStackExn);
 impl_into_thrift_error!(service::RepoBookmarkInfoExn);
 impl_into_thrift_error!(service::RepoStackInfoExn);
 impl_into_thrift_error!(service::RepoStackGitBundleStoreExn);

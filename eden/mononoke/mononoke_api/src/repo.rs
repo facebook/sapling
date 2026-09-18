@@ -193,6 +193,7 @@ pub mod fold_commits;
 pub mod git;
 pub mod land_stack;
 pub mod move_bookmark;
+pub mod rebase_stack;
 pub mod update_submodule_expansion;
 
 pub use git::upload_non_blob_git_object;

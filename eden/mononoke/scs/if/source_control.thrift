@@ -1289,6 +1289,44 @@ struct RepoLandStackParams {
   9: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
 }
 
+enum RepoRebaseStackMergeResolution {
+  /// Follow the repo's `pushrebase_enable_merge_resolution` knob, the same
+  /// one that governs merge resolution at land time.
+  DEFAULT = 0,
+  /// Any path changed on both sides is a conflict; pure parent swap. This
+  /// includes a commit already present in `onto`, which is only dropped
+  /// when content merging is on.
+  DISABLED = 1,
+}
+
+struct RepoRebaseStackParams {
+  /// Top of the stack to rebase. Must be a draft.
+  1: CommitId head;
+
+  /// The commit the stack sits on; `base..head` is rebased. Must be an
+  /// ancestor of `head` and have derived manifests.
+  2: CommitId base;
+
+  /// Destination. Any ancestry relationship to `base` is allowed: it may be
+  /// a descendant, an ancestor, or unrelated. Must have derived manifests.
+  3: CommitId onto;
+
+  /// The set of commit identity schemes to return in the response.
+  4: set<CommitIdentityScheme> identity_schemes;
+
+  /// Identity schemes for the old commit ids in the response. Defaults to
+  /// `identity_schemes`.
+  5: optional set<CommitIdentityScheme> old_identity_schemes;
+
+  /// Whether paths changed on both sides may be content-merged.
+  6: RepoRebaseStackMergeResolution merge_resolution = RepoRebaseStackMergeResolution.DEFAULT;
+
+  /// Service identity to authorize as.
+  7: optional string service_identity;
+  // 8: reserved for dry_run
+  // 9: reserved for inferring base when absent
+}
+
 struct RepoPrepareCommitsParams {
   /// The list of commits for which data must be derived
   1: list<CommitId> commits;
@@ -2427,6 +2465,33 @@ struct RepoLandStackResponse {
   1: PushrebaseOutcome pushrebase_outcome;
 }
 
+struct RepoRebaseStackRebasedCommit {
+  1: map<CommitIdentityScheme, CommitId> old_ids;
+  /// Empty when `dropped`.
+  2: map<CommitIdentityScheme, CommitId> new_ids;
+  /// Paths whose content the server 3-way merged in this commit. Empty
+  /// means a pure parent swap, where a client merge driver would not have
+  /// run either.
+  3: list<Path> merged_paths;
+  /// Every change in this commit was already present in the new parent, so
+  /// no commit was created, as `sl rebase` would do. Nothing records a
+  /// successor for it.
+  4: bool dropped;
+}
+
+struct RepoRebaseStackResponse {
+  /// The new head. Equal to `onto` when every commit was dropped.
+  1: map<CommitIdentityScheme, CommitId> head;
+  /// Bottom to top, one entry per commit in `base..head`.
+  2: list<RepoRebaseStackRebasedCommit> rebased_commits;
+  /// Paths changed both in the stack and between `base` and `onto`. Always
+  /// 0 on a successful call with merging disabled, since any overlap is
+  /// then a conflict.
+  3: i64 overlapping_path_count;
+  /// Distinct paths the server content-merged.
+  4: i64 merged_path_count;
+}
+
 struct RepoPrepareCommitsResponse {}
 
 struct RepoUploadFileContentResponse {
@@ -3272,6 +3337,8 @@ enum RequestErrorKind {
   MERGE_CONFLICTS = 11,
   LARGE_REPO_NOT_FOUND = 12,
   REDACTED = 13,
+  /// A commit the request needs a derived manifest for has none yet.
+  MANIFEST_NOT_DERIVED = 14,
 }
 
 stateful client exception RequestError {
@@ -3569,6 +3636,19 @@ service SourceControlService extends fb303_core.BaseService {
     3: PushrebaseConflictsException pushrebase_conflicts,
     4: HookRejectionsException hook_rejections,
     5: OverloadError overload_error,
+  );
+
+  /// Rebase a draft stack onto a commit without moving any bookmark. Runs
+  /// no hooks and never derives data for the inputs; see
+  /// `RepoRebaseStackParams`.
+  RepoRebaseStackResponse repo_rebase_stack(
+    1: RepoSpecifier repo,
+    2: RepoRebaseStackParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: PushrebaseConflictsException pushrebase_conflicts,
+    4: OverloadError overload_error,
   );
 
   /// Derive data for commits in a repo

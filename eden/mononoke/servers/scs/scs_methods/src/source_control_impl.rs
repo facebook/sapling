@@ -1760,6 +1760,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoLandStackParams,
         ) -> Result<thrift::RepoLandStackResponse, service::RepoLandStackExn>;
 
+        async fn repo_rebase_stack(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoRebaseStackParams,
+        ) -> Result<thrift::RepoRebaseStackResponse, service::RepoRebaseStackExn>;
+
         async fn repo_prepare_commits(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoPrepareCommitsParams,

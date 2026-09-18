@@ -54,6 +54,7 @@ const CONCURRENCY_LIMIT: usize = 100;
 
 mod create_commit;
 mod land_stack;
+mod rebase_stack;
 
 impl SourceControlServiceImpl {
     /// Detailed repo info.

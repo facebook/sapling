@@ -103,6 +103,8 @@ pub enum MononokeError {
     HookFailure(Vec<HookRejection>),
     #[error("not available: {0}")]
     NotAvailable(String),
+    #[error("manifest not derived for {0}")]
+    ManifestNotDerived(ChangesetId),
     #[error("permission denied: {0}")]
     AuthorizationError(String),
     #[error("permission denied: {0}")]
