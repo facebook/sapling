@@ -8,6 +8,7 @@
 import './SplitDiffView.css';
 
 import type {LineRangeParams, TokenizedSplitDiff} from './diffServiceWorker';
+import type {DiffSide} from './generated/graphql';
 import type {DiffCommitIDs} from './github/diffTypes';
 import type {
   GitHubPullRequestReviewThread,
@@ -18,16 +19,16 @@ import type {NewCommentInputCallbacks} from './jotai/hooks/useSplitDiffViewData'
 import type {Hunk, ParsedDiff} from 'diff';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
+import InlineCommentThread from './InlineCommentThread';
 import LargeDiffPlaceholder from './LargeDiffPlaceholder';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
 import canExpandLines from './canExpandLines';
 import {lineRangeAtom} from './diffServiceClient';
-import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
 import {primerColorModeAtom} from './jotai/atoms';
 import {useSplitDiffViewData} from './jotai/hooks/';
-import {groupBy} from './utils';
+import threadsForDiffDisplay from './threadsForDiffDisplay';
 import {UnfoldIcon} from '@primer/octicons-react';
 import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
@@ -215,19 +216,17 @@ const SplitDiffViewTable = React.memo(
       [expandedSeparators, setExpandedSeparators],
     );
 
-    const threads =
-      allThreads == null
-        ? {
-            before: new Map() as GitHubPullRequestReviewThreadsByLine,
-            after: new Map() as GitHubPullRequestReviewThreadsByLine,
-          }
-        : {
-            before: threadsByLine(allThreads[DiffSide.Left]),
-            after: threadsByLine(allThreads[DiffSide.Right]),
-          };
+    const {historical: historicalThreads, before, after} = threadsForDiffDisplay(allThreads);
+    const threads = {before, after};
     const {hunks} = patch;
     const lastHunkIndex = hunks.length - 1;
-    const rows: React.ReactElement[] = [];
+    const rows: React.ReactElement[] = historicalThreads.map(thread => (
+      <tr key={`historical-${thread.id}`}>
+        <td colSpan={4}>
+          <InlineCommentThread thread={thread} />
+        </td>
+      </tr>
+    ));
     hunks.forEach((hunk, index) => {
       // Show a separator before the first hunk if the file starts with a
       // section of unmodified lines that is hidden by default.
@@ -529,12 +528,6 @@ function createIntralineDiff(
   });
 
   return [beforeElements, afterElements];
-}
-
-function threadsByLine(
-  threads: GitHubPullRequestReviewThread[],
-): GitHubPullRequestReviewThreadsByLine {
-  return groupBy(threads, thread => thread.originalLine ?? null);
 }
 
 /**
