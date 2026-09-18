@@ -504,26 +504,14 @@ class MountTest(testcase.EdenRepoTest):
         self.assertEqual(mount_entries[0].vfstype, b"fuse.edenfs")
 
 
-@testcase.eden_repo_test(run_on_nfs=False)
+@testcase.eden_repo_test(run_on_nfs=False, run_io_uring=False)
 @unittest.skipIf(
     os.environ.get("EDEN_TEST_TSAN") == "1",
     "FUSE io_uring uses kernel shared rings that TSan reports as liburing races",
 )
 @unittest.skipIf(sys.platform != "linux", "FUSE connection abort is Linux-only")
-class FuseIoUringMountTest(testcase.EdenRepoTest):
+class FuseIoUringMountTest(testcase.IoUringTestMixin, testcase.EdenRepoTest):
     git_test_supported: bool = False
-
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        configs = super().edenfs_extra_config()
-        if configs is None:
-            configs = {}
-        configs.setdefault("fuse", []).extend(
-            [
-                "use-io-uring = true",
-                'io-uring-kernel-release-regex = ".*"',
-            ]
-        )
-        return configs
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -534,10 +522,7 @@ class FuseIoUringMountTest(testcase.EdenRepoTest):
             mounts = await client.listMounts()
             mount = self._find_mount(mounts)
             self.assertIsNotNone(mount)
-            if mount.fuseTransport != "io_uring":
-                self.skipTest(
-                    f"FUSE io_uring was not negotiated: {mount.fuseTransport!r}"
-                )
+            self.assertEqual("io_uring", mount.fuseTransport)
 
         connection_id = os.lstat(self.mount).st_dev
         abort_path = Path("/sys/fs/fuse/connections") / str(connection_id) / "abort"

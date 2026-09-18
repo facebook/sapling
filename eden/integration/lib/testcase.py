@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import configparser
 import errno
 import inspect
@@ -97,6 +95,13 @@ class EdenTestCase(EdenTestCaseBase):
         self.last_event = now
 
     def setUp(self) -> None:
+        if self.use_io_uring():
+            release = os.uname().release if sys.platform == "linux" else ""
+            # The FUSE io_uring ABI is kernel-specific; extend this allowlist
+            # when another fbk release is validated.
+            if "fbk" not in release or not release.startswith(("6.13.", "6.16.")):
+                self.skipTest("requires an fbk 6.13 or 6.16 FUSE io_uring kernel")
+
         self.start = time.time()
         self.last_event = self.start
         self.system_hgrc: Optional[str] = None
@@ -156,6 +161,11 @@ class EdenTestCase(EdenTestCaseBase):
 
         self.report_time("test setup done")
 
+    def assert_running_fuse_transports(self) -> None:
+        expected = "io_uring" if self.use_io_uring() else "devfuse"
+        with self.get_thrift_client() as client:
+            edenclient.assert_fuse_transports(client.listMounts(), expected)
+
     def tearDown(self) -> None:
         self.report_time("clean up started")
         super().tearDown()
@@ -185,9 +195,16 @@ class EdenTestCase(EdenTestCaseBase):
         # to point to our test home directory for the duration of the test.
         self.setenv("HOME", str(self.eden.home_dir))
 
-        extra_config = self.edenfs_extra_config()
-        if extra_config:
-            self.write_configs(extra_config, self.eden.system_rc_path)
+        extra_config = dict(self.edenfs_extra_config() or {})
+        fuse_config = list(extra_config.get("fuse", []))
+        extra_config["fuse"] = fuse_config
+        enabled = "true" if self.use_io_uring() else "false"
+        fuse_config.append(f"use-io-uring = {enabled}")
+        if self.use_io_uring():
+            fuse_config.append('io-uring-kernel-release-regex = ".*"')
+            # Allocate queues before replying to INIT to allow devfuse fallback.
+            fuse_config.append("io-uring-pre-create-queues = true")
+        self.write_configs(extra_config, self.eden.system_rc_path)
 
         # Default to using the Rust version of commands when running
         # integration tests. An empty edenfsctl_rollout file means that all
@@ -691,6 +708,7 @@ class EdenRepoTest(EdenTestCase):
             case_sensitive=self.is_case_sensitive,
             backing_store=self.backing_store_type,
         )
+        self.assert_running_fuse_transports()
         self.eden_repo = self.create_eden_repo()
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
@@ -991,33 +1009,8 @@ def _replicate_eden_repo_test(  # noqa: C901
 
     if run_io_uring and sys.platform == "linux":
 
-        class IoUringVariantRepoTest(HgRepoTestMixin, test_class):
-            def use_io_uring(self) -> bool:
-                return True
-
-            def edenfs_extra_config(self) -> dict[str, list[str]]:
-                configs = super().edenfs_extra_config() or {}
-                configs.setdefault("fuse", []).extend(
-                    [
-                        "use-io-uring = true",
-                        'io-uring-kernel-release-regex = ".*"',
-                    ]
-                )
-                return configs
-
-            def setUp(self) -> None:
-                release = os.uname().release
-                # The FUSE io_uring ABI is kernel-specific; extend this allowlist
-                # when another fbk release is validated.
-                if "fbk" not in release or not release.startswith(("6.13.", "6.16.")):
-                    self.skipTest("requires an fbk 6.13 or 6.16 FUSE io_uring kernel")
-                super().setUp()
-                with self.get_thrift_client() as client:
-                    mounts = {m.mountPoint: m for m in client.listMounts()}
-                self.assertIn(self.mount_path_bytes, mounts)
-                self.assertEqual(
-                    "io_uring", mounts[self.mount_path_bytes].fuseTransport
-                )
+        class IoUringVariantRepoTest(IoUringTestMixin, HgRepoTestMixin, test_class):
+            pass
 
         variants.append(
             ("IoUring", typing.cast(Type[EdenRepoTest], IoUringVariantRepoTest))
@@ -1083,6 +1076,11 @@ class GitRepoTestMixin:
 
 class NFSTestMixin:
     def use_nfs(self) -> bool:
+        return True
+
+
+class IoUringTestMixin:
+    def use_io_uring(self) -> bool:
         return True
 
 

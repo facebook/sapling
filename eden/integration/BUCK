@@ -8,6 +8,17 @@ oncall("scm_client_infra")
 artifacts = get_integration_test_env_and_deps()
 
 python_integration_test(
+    name = "testcase",
+    srcs = ["testcase_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "basic" + get_oss_suffix(),
     srcs = ["basic_test.py"],
     env = artifacts["env"],

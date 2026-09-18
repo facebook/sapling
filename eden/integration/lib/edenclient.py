@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import json
 import logging
@@ -18,14 +18,26 @@ import sys
 import tempfile
 import threading
 import time
+import unittest
 from contextlib import contextmanager
 from pathlib import Path
 from types import TracebackType
-from typing import Any, cast, Dict, Generator, List, Optional, TextIO, Tuple, Union
+from typing import (
+    Any,
+    cast,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 from eden.fs.cli import proc_utils as proc_utils_mod, util
 from eden.fs.service.eden.thrift_clients import EdenService
-from eden.fs.service.eden.thrift_types import MountState
+from eden.fs.service.eden.thrift_types import MountInfo, MountState
 from eden.thrift import client
 from fb303_core.thrift_types import fb303_status
 
@@ -35,6 +47,35 @@ from .find_executables import FindExe
 # and many-core machines under load.
 EDENFS_START_TIMEOUT = 120
 EDENFS_STOP_TIMEOUT = 240
+
+
+def assert_fuse_transport(
+    mount_point: bytes, expected: str, actual: str | None
+) -> None:
+    if actual == expected:
+        return
+    message = (
+        f"FUSE transport for {os.fsdecode(mount_point)}: "
+        f"expected {expected!r}, got {actual!r}"
+    )
+    if expected == "io_uring" and actual == "devfuse":
+        raise unittest.SkipTest(
+            f"{message}; io_uring unavailable, using devfuse fallback"
+        )
+    raise AssertionError(message)
+
+
+def assert_fuse_transports(mounts: Iterable[MountInfo], expected: str) -> None:
+    fallbacks = []
+    for mount in mounts:
+        if mount.state != MountState.RUNNING or mount.fsChannelType != "fuse":
+            continue
+        try:
+            assert_fuse_transport(mount.mountPoint, expected, mount.fuseTransport)
+        except unittest.SkipTest as ex:
+            fallbacks.append(str(ex))
+    if fallbacks:
+        raise unittest.SkipTest("; ".join(fallbacks))
 
 
 def is_process_running(pid: Optional[int]) -> bool:
