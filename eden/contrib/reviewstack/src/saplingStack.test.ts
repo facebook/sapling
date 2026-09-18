@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {parseSaplingStackBody} from './saplingStack';
+import {parseSaplingStackBody, replaceSaplingCommitMessage} from './saplingStack';
 
 describe('parseSaplingStackBody', () => {
   test('extract all sections', () => {
@@ -137,5 +137,21 @@ Stack created with [Sapling](https://sapling-scm.com/github).
   test('not a Sapling stack pull request body', () => {
     const parsedBody = parseSaplingStackBody('hello world');
     expect(parsedBody).toBe(null);
+  });
+});
+
+describe('replaceSaplingCommitMessage', () => {
+  test.each([
+    `[//]: # (BEGIN SAPLING FOOTER)\nStack created with [Sapling](https://sapling-scm.com/github).\n\n* __->__ #123\n\nOld description\n`,
+    `Old description\n---\n[//]: # (BEGIN SAPLING FOOTER)\nStack created with [Sapling](https://sapling-scm.com/github).\n\n* __->__ #123\n`,
+  ])('preserves stack metadata for each body format', body => {
+    const stack = parseSaplingStackBody(body);
+    expect(stack).not.toBeNull();
+
+    const updated = replaceSaplingCommitMessage(body, stack!, 'New description');
+
+    expect(updated).toContain('New description');
+    expect(updated).not.toContain('Old description');
+    expect(parseSaplingStackBody(updated)?.stack).toEqual(stack?.stack);
   });
 });

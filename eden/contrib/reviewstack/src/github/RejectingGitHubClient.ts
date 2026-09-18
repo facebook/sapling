@@ -44,6 +44,8 @@ import type {
   SubmitPullRequestReviewMutationData,
   UpdateIssueCommentInput,
   UpdateIssueCommentMutationData,
+  UpdatePullRequestInput,
+  UpdatePullRequestMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
   UnresolveReviewThreadInput,
@@ -143,9 +145,7 @@ export default class RejectingGitHubClient implements GitHubClient {
     return Promise.reject('Method not implemented.');
   }
 
-  resolveReviewThread(
-    _input: ResolveReviewThreadInput,
-  ): Promise<ResolveReviewThreadMutationData> {
+  resolveReviewThread(_input: ResolveReviewThreadInput): Promise<ResolveReviewThreadMutationData> {
     return Promise.reject('Method not implemented.');
   }
 
@@ -156,6 +156,10 @@ export default class RejectingGitHubClient implements GitHubClient {
   }
 
   updateIssueComment(_input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  updatePullRequest(_input: UpdatePullRequestInput): Promise<UpdatePullRequestMutationData> {
     return Promise.reject('Method not implemented.');
   }
 

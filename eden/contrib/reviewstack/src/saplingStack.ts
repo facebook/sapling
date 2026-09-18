@@ -35,6 +35,30 @@ export function stripStackInfoFromSaplingBodyHTML(
   }
 }
 
+export function replaceSaplingCommitMessage(
+  body: string,
+  stack: SaplingPullRequestBody,
+  commitMessage: string,
+): string {
+  const normalizedMessage = commitMessage.trimEnd();
+  if (stack.format === 'prefix') {
+    const messageStart = body.length - stack.commitMessage.length;
+    if (messageStart < 0 || body.slice(messageStart) !== stack.commitMessage) {
+      throw new Error('Could not preserve the Sapling stack footer while editing the description.');
+    }
+    return body.slice(0, messageStart) + normalizedMessage;
+  }
+
+  const footerMarker = `---\n${_STACK_SECTION_START}`;
+  const footerStart = body.lastIndexOf(footerMarker);
+  if (footerStart === -1) {
+    throw new Error('Could not preserve the Sapling stack footer while editing the description.');
+  }
+  return normalizedMessage === ''
+    ? body.slice(footerStart)
+    : `${normalizedMessage}\n${body.slice(footerStart)}`;
+}
+
 /**
  * Sapling's built-in GitHub extension produces pull request bodies that
  * conform to the following rules:
