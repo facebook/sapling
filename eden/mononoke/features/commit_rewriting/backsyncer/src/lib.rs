@@ -692,6 +692,18 @@ where
         {
             continue;
         }
+        if advance_global_counter_for_completed_bookmark(
+            &ctx,
+            commit_sync_data,
+            target_repo_dbs.as_ref(),
+            &entry,
+            &mut counter,
+            counter_name,
+        )
+        .await?
+        {
+            continue;
+        }
         let mut scuba_sample = ctx.scuba().clone();
         let pc = ctx.fork_perf_counters();
         let mut scuba_log_tag = "Backsyncing".to_string();
@@ -774,6 +786,94 @@ async fn advance_bookmark_counter_for_completed_global(
     debug!(
         "legacy global cursor {} already covered {}; advanced bookmark cursor without replaying",
         global_counter, entry.id
+    );
+    Ok(true)
+}
+
+/// Let the legacy global loop acknowledge an entry already committed by the
+/// per-bookmark path. This is what makes a JustKnob rollback safe after only a
+/// subset of the parallel bookmark workers completed.
+///
+/// `sync_entries` invokes this for the globally ordered log entries one at a
+/// time. Advancing to `entry.id` therefore acknowledges only the current row;
+/// every earlier row for this repository has already been handled. Numeric ID
+/// gaps can belong to other repositories because the database sequence is
+/// shared.
+///
+/// A per-bookmark cursor is the same completion boundary used by the normal
+/// worker: mapped bookmarks advance it only after commit sync and the atomic
+/// bookmark/counter transaction complete. For an unmapped bookmark it records
+/// the legacy best-effort commit-only behavior after that task is scheduled.
+async fn advance_global_counter_for_completed_bookmark<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_repo_dbs: &TargetRepoDbs,
+    entry: &BookmarkUpdateLogEntry,
+    counter: &mut BookmarkUpdateLogId,
+    counter_name: &str,
+) -> Result<bool, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let global_counter_name = format_counter(&source_repo_id);
+    if counter_name != global_counter_name {
+        return Ok(false);
+    }
+
+    let bookmark_counter_name = format_bookmark_counter(&source_repo_id, &entry.bookmark_name)?;
+    let bookmark_counter: BookmarkUpdateLogId = match target_repo_dbs
+        .counters
+        .get_counter(ctx, &bookmark_counter_name)
+        .await?
+    {
+        Some(bookmark_counter) => bookmark_counter.try_into()?,
+        None => return Ok(false),
+    };
+    if bookmark_counter < entry.id {
+        return Ok(false);
+    }
+
+    while *counter < entry.id {
+        if target_repo_dbs
+            .counters
+            .set_counter(
+                ctx,
+                &global_counter_name,
+                entry.id.try_into()?,
+                Some((*counter).try_into()?),
+            )
+            .await?
+        {
+            *counter = entry.id;
+            break;
+        }
+
+        let observed: BookmarkUpdateLogId = target_repo_dbs
+            .counters
+            .get_counter(ctx, &global_counter_name)
+            .await?
+            .unwrap_or(0)
+            .try_into()?;
+        if observed <= *counter {
+            return Err(format_err!(
+                "failed to advance global backsync cursor past bookmark entry {}; observed {}",
+                entry.id,
+                observed,
+            ));
+        }
+        if observed > entry.id {
+            debug!(
+                "global backsync cursor advanced concurrently past {} to {}; another legacy worker completed the intervening ordered entries",
+                entry.id, observed
+            );
+        }
+        *counter = observed;
+    }
+
+    debug!(
+        "bookmark cursor already covered {}; advanced legacy cursor without replaying",
+        entry.id
     );
     Ok(true)
 }

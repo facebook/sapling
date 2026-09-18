@@ -49,3 +49,19 @@ Only the configured prefix and common bookmark were projected.
   $ mononoke_admin bookmarks -R small-mon list | cut -d " " -f2 | sort
   feature
   master_bookmark
+
+Disable prefix polling and restart from the legacy global cursor. The legacy
+loop must acknowledge the entries already completed by the per-bookmark
+workers before applying the next common-bookmark move.
+
+  $ killandwait "$BACKSYNCER_PID"
+  $ backsync_large_to_small_forever
+
+  $ cd "$TESTTMP/large-hg-client"
+  $ echo rollback > smallrepofolder/rollback
+  $ hg ci -Aqm "legacy move after prefix rollback"
+  $ hg push -r . --to master_bookmark -q
+  $ quiet wait_for_bookmark_move_to_commit "legacy move after prefix rollback" small-mon master_bookmark
+
+  $ mononoke_admin fetch -R small-mon -B master_bookmark | rg '^Message:'
+  Message: legacy move after prefix rollback
