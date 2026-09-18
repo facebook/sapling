@@ -25,6 +25,9 @@ import type {
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
   AddPullRequestReviewThreadMutationVariables,
+  AddReactionInput,
+  AddReactionMutationData,
+  AddReactionMutationVariables,
   CommitQueryData,
   CommitQueryVariables,
   ConvertPullRequestToDraftInput,
@@ -47,6 +50,9 @@ import type {
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RemoveLabelsFromLabelableMutationVariables,
+  RemoveReactionInput,
+  RemoveReactionMutationData,
+  RemoveReactionMutationVariables,
   RepoAssignableUsersQueryData,
   RepoAssignableUsersQueryVariables,
   RepoLabelsQueryData,
@@ -54,6 +60,9 @@ import type {
   RequestReviewsInput,
   RequestReviewsMutationData,
   RequestReviewsMutationVariables,
+  ResolveReviewThreadInput,
+  ResolveReviewThreadMutationData,
+  ResolveReviewThreadMutationVariables,
   StackPullRequestFragment,
   StackPullRequestQueryVariables,
   StackPullRequestQueryData,
@@ -68,6 +77,9 @@ import type {
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
   UpdatePullRequestReviewCommentMutationVariables,
+  UnresolveReviewThreadInput,
+  UnresolveReviewThreadMutationData,
+  UnresolveReviewThreadMutationVariables,
   UserFragment,
 } from '../generated/graphql';
 
@@ -80,6 +92,7 @@ import {
   AddPullRequestReviewMutation,
   AddPullRequestReviewCommentMutation,
   AddPullRequestReviewThreadMutation,
+  AddReactionMutation,
   CommitQuery,
   ConvertPullRequestToDraftMutation,
   DeleteIssueCommentMutation,
@@ -88,14 +101,17 @@ import {
   PullRequestQuery,
   PullsQuery,
   RemoveLabelsFromLabelableMutation,
+  RemoveReactionMutation,
   RepoAssignableUsersQuery,
   RepoLabelsQuery,
   RequestReviewsMutation,
+  ResolveReviewThreadMutation,
   StackPullRequestQuery,
   SubmitPullRequestReviewMutation,
   TreeQuery,
   UpdateIssueCommentMutation,
   UpdatePullRequestReviewCommentMutation,
+  UnresolveReviewThreadMutation,
 } from '../generated/graphql';
 import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
@@ -544,6 +560,37 @@ export default class GraphQLGitHubClient implements GitHubClient {
       AddPullRequestReviewThreadMutationData,
       AddPullRequestReviewThreadMutationVariables
     >(AddPullRequestReviewThreadMutation, {input});
+  }
+
+  addReaction(input: AddReactionInput): Promise<AddReactionMutationData> {
+    return this.query<AddReactionMutationData, AddReactionMutationVariables>(AddReactionMutation, {
+      input,
+    });
+  }
+
+  removeReaction(input: RemoveReactionInput): Promise<RemoveReactionMutationData> {
+    return this.query<RemoveReactionMutationData, RemoveReactionMutationVariables>(
+      RemoveReactionMutation,
+      {input},
+    );
+  }
+
+  resolveReviewThread(
+    input: ResolveReviewThreadInput,
+  ): Promise<ResolveReviewThreadMutationData> {
+    return this.query<ResolveReviewThreadMutationData, ResolveReviewThreadMutationVariables>(
+      ResolveReviewThreadMutation,
+      {input},
+    );
+  }
+
+  unresolveReviewThread(
+    input: UnresolveReviewThreadInput,
+  ): Promise<UnresolveReviewThreadMutationData> {
+    return this.query<UnresolveReviewThreadMutationData, UnresolveReviewThreadMutationVariables>(
+      UnresolveReviewThreadMutation,
+      {input},
+    );
   }
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {

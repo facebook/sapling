@@ -19,6 +19,8 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  AddReactionInput,
+  AddReactionMutationData,
   ConvertPullRequestToDraftInput,
   ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
@@ -30,8 +32,12 @@ import type {
   MarkPullRequestReadyForReviewMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
+  RemoveReactionInput,
+  RemoveReactionMutationData,
   RequestReviewsInput,
   RequestReviewsMutationData,
+  ResolveReviewThreadInput,
+  ResolveReviewThreadMutationData,
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
@@ -39,6 +45,8 @@ import type {
   UpdateIssueCommentMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
+  UnresolveReviewThreadInput,
+  UnresolveReviewThreadMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -106,6 +114,15 @@ export default interface GitHubClient {
   addPullRequestReviewThread(
     input: AddPullRequestReviewThreadInput,
   ): Promise<AddPullRequestReviewThreadMutationData>;
+
+  addReaction(input: AddReactionInput): Promise<AddReactionMutationData>;
+  removeReaction(input: RemoveReactionInput): Promise<RemoveReactionMutationData>;
+  resolveReviewThread(
+    input: ResolveReviewThreadInput,
+  ): Promise<ResolveReviewThreadMutationData>;
+  unresolveReviewThread(
+    input: UnresolveReviewThreadInput,
+  ): Promise<UnresolveReviewThreadMutationData>;
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData>;
   deleteIssueComment(input: DeleteIssueCommentInput): Promise<DeleteIssueCommentMutationData>;

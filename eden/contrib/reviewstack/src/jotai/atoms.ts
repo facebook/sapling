@@ -61,6 +61,7 @@ import {diffVersions} from '../github/diffVersions';
 import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
 import {broadcastLogoutMessage, subscribeToLogout} from '../github/logoutBroadcastChannel';
 import queryGraphQL from '../github/queryGraphQL';
+import reviewThreadsForVersion from '../reviewThreadsForVersion';
 import {parseSaplingStackBody} from '../saplingStack';
 import {getPathForChange, getTreeEntriesForChange} from '../utils';
 import {atom} from 'jotai';
@@ -1352,16 +1353,27 @@ const gitHubPullRequestThreadsForCommitFileBySideAtom = atomFamily(
  */
 export const gitHubPullRequestThreadsForDiffFileAtom = atomFamily(
   (path: string) =>
-    atom<ThreadsBySide | null>(get => {
+    atom<Promise<ThreadsBySide | null>>(async get => {
       const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
       if (comparableVersions == null) {
         return null;
       }
 
       const {beforeCommitID, afterCommitID} = comparableVersions;
-      const afterThreads = get(
-        gitHubPullRequestThreadsForCommitFileBySideAtom({commitID: afterCommitID, path}),
-      );
+      const versions = await get(gitHubPullRequestVersionsAtom);
+      const allThreads = get(gitHubPullRequestReviewThreadsAtom);
+
+      const threadsThroughVersion = (commitID: GitObjectID | null): ThreadsBySide | null => {
+        if (commitID == null) {
+          return null;
+        }
+        return (
+          reviewThreadsForVersion(allThreads, versions, commitID, path) ??
+          get(gitHubPullRequestThreadsForCommitFileBySideAtom({commitID, path}))
+        );
+      };
+
+      const afterThreads = threadsThroughVersion(afterCommitID);
 
       // If there is no explicit "before" (i.e., the "after" is being compared
       // against its base), show the "after" threads as they are, according to
@@ -1370,9 +1382,7 @@ export const gitHubPullRequestThreadsForDiffFileAtom = atomFamily(
         return afterThreads;
       }
 
-      const beforeThreads = get(
-        gitHubPullRequestThreadsForCommitFileBySideAtom({commitID: beforeCommitID, path}),
-      );
+      const beforeThreads = threadsThroughVersion(beforeCommitID);
 
       // If both "before" and "after" are explicitly selected, then both commits
       // themselves are being shown (i.e., we are comparing two `Right` sides).
@@ -1403,7 +1413,7 @@ export type ThreadsBySide = {[key in DiffSide]: GitHubPullRequestReviewThread[]}
  */
 export const gitHubThreadsForDiffFileAtom = atomFamily(
   (path: string) =>
-    atom<ThreadsBySide | null>(get => {
+    atom(get => {
       const pullRequest = get(gitHubPullRequestAtom);
       if (pullRequest != null) {
         return get(gitHubPullRequestThreadsForDiffFileAtom(path));
@@ -1723,14 +1733,32 @@ export const gitHubPullRequestPendingReviewIDAtom = atom<ID | null>(get => {
 export const gitHubPullRequestReviewThreadsAtom = atom<GitHubPullRequestReviewThread[]>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
   return (pullRequest?.reviewThreads.nodes ?? []).filter(notEmpty).map(reviewThread => {
-    const {originalLine, diffSide, comments} = reviewThread;
+    const {
+      id,
+      isResolved,
+      viewerCanResolve,
+      viewerCanUnresolve,
+      originalLine,
+      diffSide,
+      comments,
+    } = reviewThread;
     const normalizedComments = (comments?.nodes ?? [])
       .map(comment => {
         if (comment == null) {
           return null;
         }
 
-        const {id, author, originalCommit, commit, path, state, body, bodyHTML} = comment;
+        const {
+          id,
+          author,
+          originalCommit,
+          commit,
+          path,
+          state,
+          body,
+          bodyHTML,
+          reactionGroups,
+        } = comment;
         const reviewThreadComment = {
           id,
           author: author ?? null,
@@ -1740,13 +1768,22 @@ export const gitHubPullRequestReviewThreadsAtom = atom<GitHubPullRequestReviewTh
           state,
           body,
           bodyHTML,
+          reactionGroups: (reactionGroups ?? []).map(group => ({
+            content: group.content,
+            count: group.reactors.totalCount,
+            viewerHasReacted: group.viewerHasReacted,
+          })),
         };
         return reviewThreadComment;
       })
       .filter(notEmpty);
     const firstCommentID = normalizedComments[0].id;
     return {
+      id,
       firstCommentID,
+      isResolved,
+      viewerCanResolve,
+      viewerCanUnresolve,
       originalLine,
       diffSide,
       comments: normalizedComments,

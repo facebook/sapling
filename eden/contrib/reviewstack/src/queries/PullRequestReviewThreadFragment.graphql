@@ -1,4 +1,8 @@
 fragment PullRequestReviewThreadFragment on PullRequestReviewThread {
+  id
+  isResolved
+  viewerCanResolve
+  viewerCanUnresolve
   originalLine
   diffSide
   comments(first: $numComments) {

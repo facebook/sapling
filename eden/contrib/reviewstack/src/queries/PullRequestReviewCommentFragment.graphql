@@ -8,6 +8,13 @@ fragment PullRequestReviewCommentFragment on PullRequestReviewComment {
   }
   body
   bodyHTML
+  reactionGroups {
+    content
+    reactors {
+      totalCount
+    }
+    viewerHasReacted
+  }
   state
   outdated
   path
