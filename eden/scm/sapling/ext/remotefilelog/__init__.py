@@ -518,13 +518,14 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             prefetch = []
             mf1 = ctx1.manifest()
+            removedset = set(removed)
             for fname in modified + added + removed:
                 if mf1.lookupfile(fname):
                     fnode = getfilectx(fname, ctx1).filenode()
                     # fnode can be None if it's a edited working ctx file
                     if fnode:
                         prefetch.append((fname, fnode))
-                if fname not in removed:
+                if fname not in removedset:
                     fnode = getfilectx(fname, ctx2).filenode()
                     if fnode:
                         prefetch.append((fname, fnode))
