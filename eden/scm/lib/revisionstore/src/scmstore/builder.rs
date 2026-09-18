@@ -346,6 +346,7 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_cache,
 
             edenapi,
+            cas_manager: Default::default(),
             lfs_client,
 
             activity_logger,

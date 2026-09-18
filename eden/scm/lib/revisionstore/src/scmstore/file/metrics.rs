@@ -23,24 +23,28 @@ static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.file.fetch.indexedlog");
 static_local_cache_fetch_metrics!(LFS, "scmstore.file.fetch.lfs");
 static_local_cache_fetch_metrics!(AUX, "scmstore.file.fetch.aux");
 static_fetch_metrics!(EDENAPI, "scmstore.file.fetch.edenapi");
+static_fetch_metrics!(CAS, "scmstore.file.fetch.cas");
 
 pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
     indexedlog: &INDEXEDLOG,
     lfs: &LFS,
     aux: &AUX,
     edenapi: &EDENAPI,
+    cas: &CAS,
 };
 
 static_local_cache_fetch_metrics!(INDEXEDLOG_PREFETCH, "scmstore.file.prefetch.indexedlog");
 static_local_cache_fetch_metrics!(LFS_PREFETCH, "scmstore.file.prefetch.lfs");
 static_local_cache_fetch_metrics!(AUX_PREFETCH, "scmstore.file.prefetch.aux");
 static_fetch_metrics!(EDENAPI_PREFETCH, "scmstore.file.prefetch.edenapi");
+static_fetch_metrics!(CAS_PREFETCH, "scmstore.file.prefetch.cas");
 
 pub(crate) static FILE_STORE_PREFETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
     indexedlog: &INDEXEDLOG_PREFETCH,
     lfs: &LFS_PREFETCH,
     aux: &AUX_PREFETCH,
     edenapi: &EDENAPI_PREFETCH,
+    cas: &CAS_PREFETCH,
 };
 
 pub struct FileStoreFetchMetrics {
@@ -48,6 +52,7 @@ pub struct FileStoreFetchMetrics {
     pub(crate) lfs: &'static LocalAndCacheFetchMetrics,
     pub(crate) aux: &'static LocalAndCacheFetchMetrics,
     pub(crate) edenapi: &'static FetchMetrics,
+    pub(crate) cas: &'static FetchMetrics,
 }
 
 #[derive(Clone, Debug, Default)]

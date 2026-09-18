@@ -89,7 +89,7 @@ pub(crate) struct CommonFetchState<'a, T: StoreValue + Send + 'static> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashMap<Key, PendingValue<T>>,
 
-    /// Which attributes were requested
+    /// Attributes originally requested by caller for each key.
     pub request_attrs: T::Attrs,
 
     pub results: &'a mut FetchItemsWriter<T>,
@@ -427,6 +427,18 @@ impl FetchErrors {
         self.fetch_errors
             .entry(key)
             .or_insert_with(|| SharedError::new(err));
+    }
+
+    pub(crate) fn multiple_keyed_error(
+        &mut self,
+        keys: impl IntoIterator<Item = Key>,
+        context: impl fmt::Display + Send + Sync + 'static,
+        err: Error,
+    ) {
+        let err = SharedError::new(err.context(context));
+        keys.into_iter().for_each(|key| {
+            self.fetch_errors.entry(key).or_insert_with(|| err.clone());
+        });
     }
 
     pub(crate) fn other_error(&mut self, err: Error) {

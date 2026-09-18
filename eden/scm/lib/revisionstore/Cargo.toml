@@ -31,6 +31,7 @@ quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/fac
 rand = "0.10.2"
 redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
+sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
@@ -61,6 +62,7 @@ serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 slex = { version = "0.1.0", path = "../slex" }
+smallvec = { version = "1.16.1", default-features = false }
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.19", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

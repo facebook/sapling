@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -15,13 +16,19 @@ use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use blob::Blob;
+use cas_client::CasDigest;
+use cas_client::CasDigestType;
+use cas_client::CasFetchManager;
+use cas_client::CasFetchOutcome;
 use edenapi::SaplingRemoteApiError;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
 use futures::TryFutureExt;
+use futures::stream;
 use minibytes::Bytes;
 use progress_model::ProgressBar;
+use smallvec::SmallVec;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
@@ -61,8 +68,8 @@ use crate::util;
 
 // How many files we buffer in memory before writing to the file cache.
 const FILE_CACHE_THRESHOLD: usize = 100;
-const EDENAPI_PROCESS_BATCH_SIZE: usize = 32;
-const EDENAPI_PROCESS_CONCURRENCY: usize = 4;
+const REMOTE_PROCESS_BATCH_SIZE: usize = 32;
+const REMOTE_PROCESS_CONCURRENCY: usize = 4;
 
 pub struct FetchState<'a> {
     common: CommonFetchState<'a, StoreFile>,
@@ -137,7 +144,9 @@ impl<'a> FetchState<'a> {
         self.format
     }
 
-    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
+    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer,
+    /// and for which additional attributes may be gathered by querying a store which provides
+    /// the specified attributes.
     fn pending_nonlfs(&self, fetchable: FileAttributes) -> Vec<Key> {
         if fetchable.none() {
             return vec![];
@@ -265,16 +274,27 @@ impl<'a> FetchState<'a> {
         }
     }
 
-    pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, loc: StoreLocation) {
+    pub(crate) fn fetch_aux_indexedlog(
+        &mut self,
+        store: &AuxStore,
+        loc: StoreLocation,
+        fetch_for_cas: bool,
+    ) {
         let fetch_start = std::time::Instant::now();
 
         let mut found = 0;
         let mut errors = 0;
         let mut count = 0;
         let mut error: Option<String> = None;
-        let ignore_results = self.fctx.mode().ignore_result();
+        let ignore_results = self.fctx.mode().ignore_result() && !fetch_for_cas;
 
         let mut wants_aux = FileAttributes::AUX;
+        if fetch_for_cas && loc == StoreLocation::Cache {
+            // Also fetch AUX data if we are going to try fetching from CAS. This does two things:
+            // 1. Fetches hash and size info needed to query CAS for file contents.
+            // 2. Fetches hg content header, which is not available from CAS.
+            wants_aux |= FileAttributes::PURE_CONTENT;
+        }
 
         // If we are querying for content header without content, that can be satisfied
         // purely from AUX. Otherwise, don't say AUX can satisfy CONTENT_HEADER (to avoid
@@ -556,7 +576,7 @@ impl<'a> FetchState<'a> {
         let ignore_result = self.fctx.mode().ignore_result();
         let entries = response
             .entries
-            .ready_chunks(EDENAPI_PROCESS_BATCH_SIZE)
+            .ready_chunks(REMOTE_PROCESS_BATCH_SIZE)
             .map(move |entry_batch| {
                 let lfs_cache = lfs_cache.clone();
                 let indexedlog_cache = indexedlog_cache.clone();
@@ -592,7 +612,7 @@ impl<'a> FetchState<'a> {
                 // memory usage. So let's process responses in parallel to stay ahead
                 // of download speeds while avoiding one blocking task per file.
             })
-            .buffer_unordered(EDENAPI_PROCESS_CONCURRENCY);
+            .buffer_unordered(REMOTE_PROCESS_CONCURRENCY);
 
         // Record found entries
         let mut unknown_error: Option<ClonableError> = None;
@@ -714,6 +734,269 @@ impl<'a> FetchState<'a> {
         self.metrics.edenapi.fetch(count - found_pointers);
         self.metrics.edenapi.err(errors);
         self.metrics.edenapi.hit(found);
+    }
+
+    pub(crate) fn fetch_cas(&mut self, cas_manager: &CasFetchManager) {
+        if self.common.request_attrs == FileAttributes::AUX {
+            return;
+        }
+
+        let span = tracing::info_span!(
+            "fetch_cas",
+            keys = field::Empty,
+            hits = field::Empty,
+            errors = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+            scmstore = true,
+        );
+        let _enter = span.enter();
+
+        let digest_to_keys = self
+            .pending_nonlfs(FileAttributes::PURE_CONTENT)
+            .into_iter()
+            .filter_map(|key| {
+                let store_file = &self.common.pending.get(&key)?.value;
+                let aux_data = store_file.aux_data.as_ref()?;
+
+                if !cas_manager.can_fetch_blob(aux_data.total_size) {
+                    tracing::trace!(
+                        target: "cas_client",
+                        ?key,
+                        size = aux_data.total_size,
+                        "skipping CAS fetch for oversized file"
+                    );
+                    return None;
+                }
+
+                if !store_file.attrs().content_header {
+                    tracing::trace!(
+                        target: "cas_client",
+                        ?key,
+                        "skipping CAS fetch because file header metadata is unavailable"
+                    );
+                    return None;
+                }
+
+                Some((
+                    CasDigest {
+                        hash: aux_data.blake3,
+                        size: aux_data.total_size,
+                    },
+                    key,
+                    aux_data.clone(),
+                ))
+            })
+            .fold(
+                HashMap::<CasDigest, SmallVec<[(Key, FileAuxData); 1]>>::new(),
+                |mut by_digest, (digest, key, aux_data)| {
+                    by_digest.entry(digest).or_default().push((key, aux_data));
+                    by_digest
+                },
+            );
+        let keys_fetch_count = digest_to_keys.values().map(|keys| keys.len()).sum();
+        span.record("keys", keys_fetch_count);
+        if keys_fetch_count == 0 {
+            return;
+        }
+
+        let digests: Vec<_> = digest_to_keys.keys().copied().collect();
+        let Some((guard, mut batches)) = cas_manager.fetch(&digests, CasDigestType::File) else {
+            tracing::debug!(
+                target: "cas_client",
+                keys = keys_fetch_count,
+                "skipping CAS file fetch"
+            );
+            return;
+        };
+        self.fctx.set_fetch_from_cas_attempted(true);
+
+        let mut pending = digest_to_keys;
+        let mut hits = 0;
+        let mut errors = 0;
+        let mut requests = 0;
+        let mut healthy = true;
+        let start = Instant::now();
+        let bar = ProgressBar::new_adhoc("CAS", digests.len() as u64, "files");
+
+        while let Some(batch) = block_on(batches.next()) {
+            requests += 1;
+            let batch = match batch {
+                Ok(batch) => batch,
+                Err(error) => {
+                    healthy = false;
+                    errors += 1;
+                    tracing::warn!(
+                        target: "cas_client",
+                        ?error,
+                        "CAS batch fetch failed; falling back to EdenAPI"
+                    );
+                    continue;
+                }
+            };
+            let files_to_process = batch
+                .into_iter()
+                .filter_map(|(digest, result)| {
+                    bar.increase_position(1);
+                    let Some(keys) = pending.remove(&digest) else {
+                        healthy = false;
+                        tracing::error!(
+                            target: "cas_client",
+                            ?digest,
+                            "CAS returned an unrequested digest"
+                        );
+                        return None;
+                    };
+
+                    match result {
+                        Ok(Some(content)) => Some((keys, content)),
+                        Ok(None) => None,
+                        Err(error) => {
+                            healthy = false;
+                            let key_count = keys.len();
+                            errors += key_count;
+                            tracing::warn!(
+                                target: "cas_client",
+                                ?digest,
+                                ?error,
+                                key_count,
+                                "CAS digest fetch failed; falling back to EdenAPI"
+                            );
+                            self.errors.multiple_keyed_error(
+                                keys.into_iter().map(|(key, _)| key),
+                                format!("CAS fetch failed for {digest:?}"),
+                                error,
+                            );
+                            None
+                        }
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            let file_cache = self.file_cache.clone();
+            let ignore_result = self.fctx.mode().ignore_result();
+            // Cache compression is CPU intensive. Process bounded groups in parallel so CAS
+            // responses do not queue in memory behind the coordinator thread.
+            let processed_files = stream::iter(files_to_process)
+                .ready_chunks(REMOTE_PROCESS_BATCH_SIZE)
+                .map(move |batch| {
+                    let file_cache = file_cache.clone();
+                    spawn_blocking(move || {
+                        let file_cache = file_cache.as_deref();
+                        batch
+                            .into_iter()
+                            .flat_map(|(keys, content)| {
+                                keys.into_iter().map(move |(key, aux_data)| {
+                                    Self::process_cas_file(
+                                        key,
+                                        aux_data,
+                                        content.clone(),
+                                        file_cache,
+                                        ignore_result,
+                                    )
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .buffer_unordered(REMOTE_PROCESS_CONCURRENCY);
+
+            for processed_batch in stream_to_iter(processed_files) {
+                let processed_batch = match processed_batch {
+                    Ok(processed_batch) => processed_batch,
+                    Err(error) => {
+                        errors += 1;
+                        tracing::warn!(
+                            target: "cas_client",
+                            ?error,
+                            "failed to process CAS files; falling back to EdenAPI"
+                        );
+                        continue;
+                    }
+                };
+
+                for (key, result) in processed_batch {
+                    match result {
+                        Ok((file, cache_entry)) => {
+                            if let Some(cache_entry) = cache_entry {
+                                self.cache_entry(cache_entry);
+                            }
+                            self.found_attributes(key, file);
+                            hits += 1;
+                        }
+                        Err(error) => {
+                            errors += 1;
+                            tracing::warn!(
+                                target: "cas_client",
+                                ?key,
+                                ?error,
+                                "failed to process CAS file; falling back to EdenAPI"
+                            );
+                            self.errors.keyed_error(key, error);
+                        }
+                    }
+                }
+            }
+        }
+
+        guard.finish(if healthy {
+            CasFetchOutcome::Healthy
+        } else {
+            CasFetchOutcome::Failed
+        });
+
+        self.flush_to_indexedlog();
+
+        let elapsed = start.elapsed();
+        span.record("hits", hits);
+        span.record("errors", errors);
+        span.record("requests", requests);
+        span.record("time", elapsed.as_millis() as u64);
+
+        self.metrics.cas.fetch(keys_fetch_count);
+        self.metrics.cas.hit(hits);
+        self.metrics.cas.err(errors);
+        self.metrics.cas.miss(keys_fetch_count - hits);
+        self.metrics.cas.time_from_duration(elapsed).ok();
+        tracing::debug!(
+            target: "cas_client",
+            keys = keys_fetch_count,
+            hits,
+            errors,
+            requests,
+            duration = ?elapsed,
+            "CAS file fetch completed"
+        );
+    }
+
+    fn process_cas_file(
+        key: Key,
+        aux_data: FileAuxData,
+        content: Blob,
+        file_cache: Option<&IndexedLogHgIdDataStore>,
+        ignore_result: bool,
+    ) -> (Key, Result<(StoreFile, Option<Entry>)>) {
+        let result = (|| {
+            let mut file = StoreFile {
+                content: Some(LazyFile::Raw(content)),
+                aux_data: Some(aux_data),
+            };
+            let cache_entry = file_cache
+                .map(|cache| -> Result<Entry> {
+                    let mut entry = Entry::new(key.hgid, file.hg_content()?, Metadata::default());
+                    cache.maybe_compress_content(&mut entry)?;
+                    Ok(entry)
+                })
+                .transpose()?;
+
+            if ignore_result {
+                file.content = Some(LazyFile::Raw(Blob::Bytes(Bytes::new())));
+            }
+
+            Ok((file, cache_entry))
+        })();
+
+        (key, result)
     }
 
     pub(crate) fn fetch_lfs_remote(&mut self, client: &LfsClient, buffer_in_memory: bool) {
