@@ -9,4 +9,19 @@ fragment StackPullRequestFragment on PullRequest {
   reviewDecision
   headRefOid
   totalCommentsCount
+  comments {
+    totalCount
+  }
+  reviews(first: 100) {
+    nodes {
+      body
+    }
+  }
+  reviewThreads(first: 100) {
+    nodes {
+      comments(first: 1) {
+        totalCount
+      }
+    }
+  }
 }
