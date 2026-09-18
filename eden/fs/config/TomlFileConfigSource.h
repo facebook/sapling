@@ -9,12 +9,20 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ConfigSource.h"
+#include "eden/fs/config/MinVersionGate.h"
 
 namespace facebook::eden {
 
 class TomlFileConfigSource final : public ConfigSource {
  public:
-  TomlFileConfigSource(AbsolutePath path, ConfigSourceType sourceType);
+  /**
+   * `buildVersion` is what `@min-version=` gated keys are resolved against;
+   * nullopt stands for a development build, which satisfies every gate.
+   */
+  TomlFileConfigSource(
+      AbsolutePath path,
+      ConfigSourceType sourceType,
+      std::optional<EdenVersion> buildVersion = getBuildEdenVersion());
 
   ConfigSourceType getSourceType() override {
     return sourceType_;
@@ -37,6 +45,7 @@ class TomlFileConfigSource final : public ConfigSource {
 
   AbsolutePath path_;
   ConfigSourceType sourceType_;
+  std::optional<EdenVersion> buildVersion_;
   std::optional<FileStat> lastStat_;
 };
 

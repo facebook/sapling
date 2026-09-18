@@ -13,6 +13,8 @@
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
 
+#include <map>
+
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/DeadConfigKeys.h"
 
@@ -20,8 +22,11 @@ namespace facebook::eden {
 
 TomlFileConfigSource::TomlFileConfigSource(
     AbsolutePath path,
-    ConfigSourceType sourceType)
-    : path_{std::move(path)}, sourceType_{sourceType} {}
+    ConfigSourceType sourceType,
+    std::optional<EdenVersion> buildVersion)
+    : path_{std::move(path)},
+      sourceType_{sourceType},
+      buildVersion_{buildVersion} {}
 
 FileChangeReason TomlFileConfigSource::shouldReload() {
   std::optional<FileStat> currentStat;
@@ -160,8 +165,49 @@ void TomlFileConfigSource::parseAndApply(
       continue;
     }
 
+    // Resolve version gates before applying anything. A satisfied gate beats
+    // the plain entry and a higher satisfied gate beats a lower one, and table
+    // iteration order cannot be relied on to express that.
+    struct ChosenEntry {
+      std::optional<EdenVersion> gate;
+      std::shared_ptr<cpptoml::base> value;
+    };
+    std::map<std::string, ChosenEntry> chosenEntries;
+    for (const auto& [rawKey, entryValue] : *sectionTable) {
+      std::string entryKey = rawKey;
+      std::optional<EdenVersion> gate;
+      if (auto gated = parseMinVersionGatedKey(rawKey)) {
+        gate = parseEdenVersion(gated->minVersion);
+        if (!gate) {
+          XLOGF(
+              WARNING,
+              "Ignoring config entry with malformed min-version {} {}:{}",
+              path_,
+              sectionName,
+              rawKey);
+          continue;
+        }
+        if (buildVersion_ && *buildVersion_ < *gate) {
+          XLOGF(
+              DBG2,
+              "Skipping config entry {} {}:{}: requires a newer EdenFS",
+              path_,
+              sectionName,
+              rawKey);
+          continue;
+        }
+        entryKey = std::string{gated->name};
+      }
+      auto& chosen = chosenEntries[entryKey];
+      bool gateBeatsChosen = gate && (!chosen.gate || *chosen.gate < *gate);
+      if (!chosen.value || gateBeatsChosen) {
+        chosen = ChosenEntry{gate, entryValue};
+      }
+    }
+
     // Report unknown config settings.
-    for (const auto& [entryKey, entryValue] : *sectionTable) {
+    for (const auto& [entryKey, chosen] : chosenEntries) {
+      const auto& entryValue = chosen.value;
       auto* configMapKeyEntry = folly::get_ptr(*configMapEntry, entryKey);
       if (!configMapKeyEntry) {
         if (!isDeadConfigKey(sectionName, entryKey)) {
