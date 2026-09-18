@@ -68,6 +68,7 @@ use rate_limiting::Metric;
 use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use restricted_paths::RestrictedPathsArc;
 use serde::Deserialize;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
@@ -164,22 +165,26 @@ fn fetch_all_trees<R: MononokeRepo>(
 }
 
 fn tree_fetch_error_to_slapi_error(key: Key, err: Error) -> SaplingRemoteApiServerError {
-    let permission_request_group =
+    let manifest_denial =
         err.chain()
             .find_map(|cause| match cause.downcast_ref::<MononokeError>() {
                 Some(MononokeError::RestrictedPathsAuthorizationError(err))
                     if err.is_manifest_access() =>
                 {
-                    Some(err.permission_request_group().to_string())
+                    Some((
+                        err.permission_request_group().to_string(),
+                        err.denial_message().map(str::to_string),
+                    ))
                 }
                 _ => None,
             });
 
-    if let Some(permission_request_group) = permission_request_group {
+    if let Some((permission_request_group, denial_message)) = manifest_denial {
         SaplingRemoteApiServerError {
             err: SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id: key.hgid,
                 request_acl: permission_request_group,
+                denial_message,
             },
             key: Some(key),
         }
@@ -602,10 +607,21 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                             .log_with_msg("Checked manifest permission", None);
                     }
 
+                    let denial_message = if has_access {
+                        None
+                    } else {
+                        repo.repo()
+                            .restricted_paths_arc()
+                            .config()
+                            .denial_message
+                            .clone()
+                    };
+
                     Ok(CheckManifestPermissionResponse {
                         manifest_id,
                         has_access,
                         request_acl: permission_request_group,
+                        denial_message,
                     })
                 }
             })
@@ -718,6 +734,7 @@ mod tests {
                 "1111111111111111111111111111111111111111",
             )),
             "REPO_REGION:test_acl",
+            None,
         )?;
 
         let slapi_error = tree_fetch_error_to_slapi_error(key.clone(), err);
@@ -725,13 +742,39 @@ mod tests {
             SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id,
                 request_acl: permission_request_group,
+                denial_message,
             } => {
                 assert_eq!(tree_id, key.hgid);
                 assert_eq!(permission_request_group, "REPO_REGION:test_acl");
+                assert_eq!(denial_message, None);
             }
             err => anyhow::bail!("expected PermissionDenied, got {err:?}"),
         }
         assert_eq!(slapi_error.key, Some(key));
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_tree_fetch_error_to_slapi_error_carries_denial_message() -> Result<()> {
+        let key = test_key()?;
+        let err = restricted_paths_error(
+            RestrictedPathAccess::Manifest(RestrictedManifestId::from(
+                "1111111111111111111111111111111111111111",
+            )),
+            "REPO_REGION:test_acl",
+            Some("Ask the repo owners for access."),
+        )?;
+
+        let slapi_error = tree_fetch_error_to_slapi_error(key, err);
+        match slapi_error.err {
+            SaplingRemoteApiServerErrorKind::PermissionDenied { denial_message, .. } => {
+                assert_eq!(
+                    denial_message.as_deref(),
+                    Some("Ask the repo owners for access.")
+                );
+            }
+            err => anyhow::bail!("expected PermissionDenied, got {err:?}"),
+        }
         Ok(())
     }
 
@@ -741,6 +784,7 @@ mod tests {
         let err = restricted_paths_error(
             RestrictedPathAccess::Path(MPath::new("restricted")?),
             "REPO_REGION:test_acl",
+            None,
         )?;
 
         let slapi_error = tree_fetch_error_to_slapi_error(key.clone(), err);
@@ -754,10 +798,15 @@ mod tests {
     fn restricted_paths_error(
         access: RestrictedPathAccess,
         permission_request_group: &str,
+        denial_message: Option<&str>,
     ) -> Result<Error> {
         let permission_request_group: PermissionRequestGroup = permission_request_group.parse()?;
         Ok(Error::new(MononokeError::RestrictedPathsAuthorizationError(
-            RestrictedPathsAuthorizationError::new(access, permission_request_group, None),
+            RestrictedPathsAuthorizationError::new(
+                access,
+                permission_request_group,
+                denial_message.map(str::to_string),
+            ),
         ))
         .context("failed to fetch tree"))
     }

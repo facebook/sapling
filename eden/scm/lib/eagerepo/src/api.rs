@@ -348,6 +348,7 @@ impl SaplingRemoteApi for EagerRepo {
                                     tree_id: key.hgid,
                                     request_acl: crate::eager_repo::EAGER_PLACEHOLDER_ACL
                                         .to_string(),
+                                    denial_message: None,
                                 },
                             })));
                             continue;
@@ -1317,6 +1318,7 @@ impl SaplingRemoteApi for EagerRepo {
                 } else {
                     None
                 },
+                denial_message: None,
             }));
         }
 

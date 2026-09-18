@@ -372,6 +372,8 @@ pub enum WireSaplingRemoteApiServerError {
     PermissionDenied {
         tree_id: WireHgId,
         request_acl: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        denial_message: Option<String>,
     },
 
     #[serde(other, rename = "0")]
@@ -388,9 +390,11 @@ impl ToWire for SaplingRemoteApiServerErrorKind {
             PermissionDenied {
                 tree_id,
                 request_acl,
+                denial_message,
             } => WireSaplingRemoteApiServerError::PermissionDenied {
                 tree_id: tree_id.to_wire(),
                 request_acl,
+                denial_message,
             },
         }
     }
@@ -412,9 +416,11 @@ impl ToApi for WireSaplingRemoteApiServerError {
             PermissionDenied {
                 tree_id,
                 request_acl,
+                denial_message,
             } => SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id: tree_id.to_api()?,
                 request_acl,
+                denial_message,
             },
         })
     }

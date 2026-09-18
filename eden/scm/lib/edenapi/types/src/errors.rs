@@ -69,6 +69,7 @@ pub fn find_permission_denied(err: &anyhow::Error) -> Option<(crate::HgId, Optio
             if let crate::SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id,
                 request_acl,
+                ..
             } = &slapi_err.err
             {
                 return Some((*tree_id, Some(request_acl.clone())));

@@ -223,6 +223,7 @@ mod tests {
             err: SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id: key.hgid,
                 request_acl: "test-acl".to_string(),
+                denial_message: None,
             },
             key: Some(key.clone()),
         }

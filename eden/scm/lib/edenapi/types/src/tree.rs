@@ -424,6 +424,10 @@ pub struct CheckManifestPermissionResponse {
     // responses can expose every request ACL that covers the manifest.
     #[id(3)]
     pub request_acl: Option<String>,
+    /// Repo-configured text to show with the denial. Present only when
+    /// has_access is false and the repo configures one.
+    #[id(4)]
+    pub denial_message: Option<String>,
 }
 
 #[auto_wire]

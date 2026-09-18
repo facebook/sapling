@@ -206,6 +206,7 @@ mod tests {
                     err: SaplingRemoteApiServerErrorKind::PermissionDenied {
                         tree_id: HgId::null_id().clone(),
                         request_acl: "test-acl".to_string(),
+                        denial_message: None,
                     },
                     key: None,
                 })),
@@ -320,6 +321,7 @@ mod tests {
             err: SaplingRemoteApiServerErrorKind::PermissionDenied {
                 tree_id: HgId::null_id().clone(),
                 request_acl: "test-acl".to_string(),
+                denial_message: None,
             },
             key: None,
         };
