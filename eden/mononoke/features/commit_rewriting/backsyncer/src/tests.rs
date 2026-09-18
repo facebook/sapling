@@ -102,6 +102,7 @@ use wireproto_handler::TargetRepoDbs;
 
 use crate::BacksyncLimit;
 use crate::backsync_latest;
+use crate::backsync_latest_for_bookmark;
 use crate::format_bookmark_counter;
 use crate::format_counter;
 use crate::sync_entries;
@@ -136,6 +137,174 @@ fn bookmark_counter_name_is_bounded_and_category_specific() -> Result<(), Error>
     let overlong_bookmark = BookmarkKey::new("a".repeat(MAX_COUNTER_NAME_LENGTH))?;
     assert!(format_bookmark_counter(&repo_id, &overlong_bookmark).is_err());
 
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn backsync_single_bookmark_uses_independent_cursor(fb: FacebookInit) -> Result<(), Error> {
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let bookmark = BookmarkKey::new("anotherbookmark")?;
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let expected_log_id = commit_sync_data
+        .get_source_repo()
+        .bookmark_update_log()
+        .read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            bookmark.clone(),
+            BookmarkUpdateLogId(0),
+            u64::MAX,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await?
+        .last()
+        .unwrap()
+        .id;
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+
+    backsync_latest_for_bookmark(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        bookmark.clone(),
+        BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+
+    assert_eq!(
+        small_repo_dbs
+            .counters
+            .get_counter(&ctx, &format_bookmark_counter(&source_repo_id, &bookmark)?)
+            .await?,
+        Some(expected_log_id.try_into()?),
+    );
+    assert_eq!(
+        small_repo_dbs
+            .counters
+            .get_counter(&ctx, &format_counter(&source_repo_id))
+            .await?,
+        Some(0),
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn backsync_single_bookmark_honors_zero_limit(fb: FacebookInit) -> Result<(), Error> {
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let bookmark = BookmarkKey::new("anotherbookmark")?;
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+
+    backsync_latest_for_bookmark(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        bookmark.clone(),
+        BacksyncLimit::Limit(0),
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+
+    assert_eq!(
+        small_repo_dbs
+            .counters
+            .get_counter(&ctx, &format_bookmark_counter(&source_repo_id, &bookmark)?)
+            .await?,
+        Some(0),
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn existing_bookmark_cursor_does_not_jump_to_global_cursor(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let bookmark = BookmarkKey::new("anotherbookmark")?;
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let bookmark_counter = format_bookmark_counter(&source_repo_id, &bookmark)?;
+    let bookmark_target =
+        resolve_cs_id(&ctx, commit_sync_data.get_source_repo(), "anotherbookmark").await?;
+    move_bookmark(
+        ctx.clone(),
+        commit_sync_data.get_source_repo().clone(),
+        &BookmarkKey::new("master")?,
+        bookmark_target,
+    )
+    .await?;
+    let max_log_id = BookmarkUpdateLogId(
+        commit_sync_data
+            .get_source_repo()
+            .bookmark_update_log()
+            .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+            .await?
+            .unwrap(),
+    );
+    let bookmark_log_id = commit_sync_data
+        .get_source_repo()
+        .bookmark_update_log()
+        .read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            bookmark.clone(),
+            BookmarkUpdateLogId(0),
+            u64::MAX,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await?
+        .last()
+        .expect("fixture has an update for anotherbookmark")
+        .id;
+    assert!(bookmark_log_id < max_log_id);
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+    small_repo_dbs
+        .counters
+        .set_counter_if_absent(&ctx, &bookmark_counter, 0)
+        .await?;
+
+    let (_, commit_only_future) = backsync_latest(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+        Box::new(future::ready(())),
+    )
+    .await?;
+    commit_only_future.await;
+
+    backsync_latest_for_bookmark(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        bookmark.clone(),
+        BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+
+    assert_eq!(
+        small_repo_dbs
+            .counters
+            .get_counter(&ctx, &bookmark_counter)
+            .await?,
+        Some(bookmark_log_id.try_into()?),
+    );
     Ok(())
 }
 
@@ -246,6 +415,8 @@ async fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         small_repo_dbs.clone(),
         next_log_entries.clone(),
         BookmarkUpdateLogId(0),
+        &format_counter(&large_repo.repo_identity().id()),
+        None,
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
         false,

@@ -291,6 +291,8 @@ where
             target_repo_dbs,
             next_entries,
             counter,
+            &counter_name,
+            None,
             cancellation_requested,
             sync_context,
             disable_lease,
@@ -302,12 +304,172 @@ where
     }
 }
 
+async fn get_bookmark_counter_or_initialize<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_repo_dbs: &TargetRepoDbs,
+    bookmark: &BookmarkKey,
+    initial_counter: BookmarkUpdateLogId,
+) -> Result<Option<(String, BookmarkUpdateLogId)>, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let initial_counter_value: i64 = initial_counter.try_into()?;
+    let counter_name = format_bookmark_counter(&source_repo_id, bookmark)?;
+    let Some(counter) = target_repo_dbs
+        .counters
+        .get_counter(ctx, &counter_name)
+        .await?
+    else {
+        let inserted = target_repo_dbs
+            .counters
+            .set_counter_if_absent(ctx, &counter_name, initial_counter_value)
+            .await?;
+        return Ok(inserted.then_some((counter_name, initial_counter)));
+    };
+
+    // Once present, the per-bookmark cursor is authoritative. If prefix
+    // polling is re-enabled after a JustKnob rollback, this cursor can lag the
+    // global cursor and must catch up its bookmark rows one by one.
+    Ok(Some((counter_name, counter.try_into()?)))
+}
+
+/// Backsync all outstanding log entries for one bookmark.
+///
+/// A new per-bookmark cursor starts at the legacy global cursor. The
+/// insert-if-absent operation is atomic, so replicas racing to observe a new
+/// bookmark agree on the same durable cursor before processing it.
+///
+/// If prefix polling is re-enabled after a JustKnob rollback, an existing
+/// bookmark cursor can lag the legacy global cursor. It deliberately reads
+/// those bookmark rows again; reconciliation below recognizes rows already
+/// committed by the global worker and advances the bookmark cursor one exact
+/// entry at a time.
+pub async fn backsync_latest_for_bookmark<R>(
+    ctx: CoreContext,
+    commit_sync_data: CommitSyncData<R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark: BookmarkKey,
+    limit: BacksyncLimit,
+    cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
+    disable_lease: bool,
+) -> Result<BacksyncDelayInfo, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let global_counter_snapshot = target_repo_dbs
+        .counters
+        .get_counter(&ctx, &format_counter(&source_repo_id))
+        .await?
+        .unwrap_or(0)
+        .try_into()?;
+    backsync_bookmark_through(
+        ctx,
+        commit_sync_data,
+        target_repo_dbs,
+        bookmark,
+        global_counter_snapshot,
+        limit,
+        cancellation_requested,
+        sync_context,
+        disable_lease,
+    )
+    .await
+}
+
+async fn backsync_bookmark_through<R>(
+    ctx: CoreContext,
+    commit_sync_data: CommitSyncData<R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark: BookmarkKey,
+    global_counter_snapshot: BookmarkUpdateLogId,
+    limit: BacksyncLimit,
+    cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
+    disable_lease: bool,
+) -> Result<BacksyncDelayInfo, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let Some((counter_name, counter)) = get_bookmark_counter_or_initialize(
+        &ctx,
+        &commit_sync_data,
+        target_repo_dbs.as_ref(),
+        &bookmark,
+        global_counter_snapshot,
+    )
+    .await?
+    else {
+        // Another replica won the initialization CAS. Do not re-read and
+        // proceed here: that would make the losing replica compete with the
+        // winner on this bookmark. `remaining_entries: 1` is deliberately an
+        // immediate-retry sentinel, not a measured backlog; the next polling
+        // iteration reads the durable cursor written by the winner.
+        return Ok(BacksyncDelayInfo {
+            delay_secs: 0,
+            remaining_entries: 1,
+        });
+    };
+
+    let log_entries_limit = match limit {
+        BacksyncLimit::Limit(limit) => limit,
+        BacksyncLimit::NoLimit => u64::MAX,
+    };
+    let entries: Vec<_> = commit_sync_data
+        .get_source_repo()
+        .bookmark_update_log()
+        .read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            bookmark,
+            counter,
+            log_entries_limit,
+            Freshness::MostRecent,
+        )
+        .boxed()
+        .try_collect()
+        .await?;
+    let delay_info = BacksyncDelayInfo {
+        delay_secs: entries
+            .first()
+            .map_or(0, |entry| entry.timestamp.since_seconds()),
+        remaining_entries: entries.len() as u64,
+    };
+    if cancellation_requested.load(Ordering::Relaxed) {
+        return Ok(delay_info);
+    }
+
+    if !entries.is_empty() {
+        sync_entries(
+            ctx.clone(),
+            &commit_sync_data,
+            target_repo_dbs.clone(),
+            entries,
+            counter,
+            &counter_name,
+            Some(global_counter_snapshot),
+            Arc::clone(&cancellation_requested),
+            sync_context,
+            disable_lease,
+            Box::new(future::ready(())),
+        )
+        .await?
+        .await;
+    }
+
+    Ok(delay_info)
+}
+
 async fn sync_entries<R>(
     mut ctx: CoreContext,
     commit_sync_data: &CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: BookmarkUpdateLogId,
+    counter_name: &str,
+    global_counter_snapshot: Option<BookmarkUpdateLogId>,
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
     disable_lease: bool,
@@ -323,6 +485,29 @@ where
             info!("sync stopping due to cancellation request");
             return Ok(commit_only_backsync_future);
         }
+        // A cursor only advances after this execution model has acknowledged
+        // the corresponding row. If a competing replica moved it beyond the
+        // entry, that replica also completed all preceding rows in this same
+        // ordered stream.
+        if counter >= entry.id {
+            continue;
+        }
+        // Reconcile legacy completion before attempting the bookmark
+        // transaction. This keeps transaction-conflict handling independent:
+        // a genuine conflict below still returns an error rather than being
+        // reclassified after the fact.
+        if advance_bookmark_counter_for_completed_global(
+            &ctx,
+            target_repo_dbs.as_ref(),
+            &entry,
+            &mut counter,
+            counter_name,
+            global_counter_snapshot,
+        )
+        .await?
+        {
+            continue;
+        }
         let mut scuba_sample = ctx.scuba().clone();
         let pc = ctx.fork_perf_counters();
         let mut scuba_log_tag = "Backsyncing".to_string();
@@ -332,6 +517,7 @@ where
             &target_repo_dbs,
             entry,
             &mut counter,
+            counter_name,
             sync_context,
             disable_lease,
             commit_only_backsync_future,
@@ -349,6 +535,65 @@ where
     Ok(commit_only_backsync_future)
 }
 
+/// Let a per-bookmark worker acknowledge an entry already completed by the
+/// legacy globally ordered worker after a JustKnob rollback and re-enablement.
+///
+/// The global cursor proves every source-log row through its value completed.
+/// We still advance the bookmark cursor one exact row at a time so no bookmark
+/// update is skipped when returning to per-bookmark polling.
+async fn advance_bookmark_counter_for_completed_global(
+    ctx: &CoreContext,
+    target_repo_dbs: &TargetRepoDbs,
+    entry: &BookmarkUpdateLogEntry,
+    counter: &mut BookmarkUpdateLogId,
+    counter_name: &str,
+    global_counter_snapshot: Option<BookmarkUpdateLogId>,
+) -> Result<bool, Error> {
+    let Some(global_counter) = global_counter_snapshot else {
+        return Ok(false);
+    };
+    if global_counter < entry.id {
+        return Ok(false);
+    }
+
+    while *counter < entry.id {
+        if target_repo_dbs
+            .counters
+            .set_counter(
+                ctx,
+                counter_name,
+                entry.id.try_into()?,
+                Some((*counter).try_into()?),
+            )
+            .await?
+        {
+            *counter = entry.id;
+            break;
+        }
+
+        let observed: BookmarkUpdateLogId = target_repo_dbs
+            .counters
+            .get_counter(ctx, counter_name)
+            .await?
+            .unwrap_or(0)
+            .try_into()?;
+        if observed <= *counter {
+            return Err(format_err!(
+                "failed to reconcile bookmark cursor through globally completed entry {}; observed {}",
+                entry.id,
+                observed,
+            ));
+        }
+        *counter = observed;
+    }
+
+    debug!(
+        "legacy global cursor {} already covered {}; advanced bookmark cursor without replaying",
+        global_counter, entry.id
+    );
+    Ok(true)
+}
+
 // This function is the inner function for sync_entries and shouldn't be called by other callers.
 // It encapsulates of what we consider as doing a single "backsyncing" for bookmark entry: an
 // activity that we want to time and log.
@@ -358,6 +603,7 @@ async fn do_sync_entry<R>(
     target_repo_dbs: &Arc<TargetRepoDbs>,
     entry: BookmarkUpdateLogEntry,
     counter: &mut BookmarkUpdateLogId,
+    counter_name: &str,
     sync_context: CommitSyncContext,
     disable_lease: bool,
     mut commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
@@ -388,7 +634,7 @@ where
             .counters
             .set_counter(
                 &ctx,
-                &format_counter(&commit_sync_data.get_source_repo().repo_identity().id()),
+                counter_name,
                 entry.id.try_into()?,
                 Some((*counter).try_into()?),
             )
@@ -446,7 +692,7 @@ where
                 .counters
                 .set_counter(
                     &ctx,
-                    &format_counter(&commit_sync_data.get_source_repo().repo_identity().id()),
+                    counter_name,
                     entry.id.try_into()?,
                     Some((*counter).try_into()?),
                 )
@@ -476,6 +722,7 @@ where
         commit_sync_data,
         target_repo_dbs.clone(),
         Some(*counter),
+        counter_name,
         &entry,
     )
     .await?;
@@ -503,26 +750,24 @@ where
         // Transaction failed, it could be because another process already backsynced it
         // Verify that counter was moved and continue if that's the case
 
-        let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-        let counter_name = format_counter(&source_repo_id);
-        let new_counter = target_repo_dbs
+        let observed_counter: BookmarkUpdateLogId = target_repo_dbs
             .counters
-            .get_counter(&ctx, &counter_name)
+            .get_counter(&ctx, counter_name)
             .await?
             .unwrap_or(0)
             .try_into()?;
-        if new_counter <= *counter {
+        if observed_counter <= *counter {
             return Err(format_err!(
                 "backsync transaction failed, but the counter didn't move forward. Was {}, became {}",
                 *counter,
-                new_counter,
+                observed_counter,
             ));
         } else {
             debug!(
                 "verified that another process has already synced {}",
                 entry_id
             );
-            *counter = new_counter;
+            *counter = observed_counter;
         }
     }
     Ok(commit_only_backsync_future)
@@ -562,6 +807,7 @@ async fn backsync_bookmark<R>(
     commit_sync_data: &CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<BookmarkUpdateLogId>,
+    counter_name: &str,
     log_entry: &BookmarkUpdateLogEntry,
 ) -> Result<Option<BookmarkUpdateLogId>, Error>
 where
@@ -569,7 +815,7 @@ where
 {
     let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;
     let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
-    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let counter_name = counter_name.to_owned();
     debug!("preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
@@ -717,10 +963,11 @@ where
                 }
             };
             let new_counter = new_counter.try_into()?;
+            let counter_name_for_txn = counter_name.clone();
 
             let txn_hook = Arc::new({
                 move |ctx: CoreContext, txn: Transaction| {
-                    cloned!(globalrev_entries);
+                    cloned!(counter_name_for_txn, globalrev_entries);
                     async move {
                         // This is an abstraction leak: it only works because the
                         // mutable counters/globalrevs are stored in the same db as the
@@ -728,7 +975,7 @@ where
                         let txn_result = SqlMutableCounters::set_counter_on_txn(
                             &ctx,
                             target_repo_id,
-                            &format_counter(&source_repo_id),
+                            &counter_name_for_txn,
                             new_counter,
                             prev_counter,
                             txn,
@@ -782,12 +1029,7 @@ where
 
     let maybe_log_id = if target_repo_dbs
         .counters
-        .set_counter(
-            &ctx,
-            &format_counter(&source_repo_id),
-            new_counter.try_into()?,
-            prev_counter,
-        )
+        .set_counter(&ctx, &counter_name, new_counter.try_into()?, prev_counter)
         .await?
     {
         Some(new_counter)
