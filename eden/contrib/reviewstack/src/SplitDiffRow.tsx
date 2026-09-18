@@ -18,7 +18,6 @@ import {reviewCommentRangeAtom} from './reviewCommentRange';
 import {Box} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import {useMemo} from 'react';
-import {notEmpty} from 'shared/utils';
 
 type Props = {
   beforeLineNumber: number | null;
@@ -212,14 +211,13 @@ function SplitDiffRowCommentThreads({
     return null;
   }
 
-  const threadsComments = threads.map(thread => thread.comments.filter(notEmpty));
   return (
     <>
-      {threadsComments.map((comments, index) => {
+      {threads.map((thread, index) => {
         // Add a prefix to keys for this component to ensure they are distinct
         // from the integer keys returned by createTokenizedIntralineDiff().
         const key = `c-${index}`;
-        return <InlineCommentThread key={key} comments={comments} />;
+        return <InlineCommentThread key={key} thread={thread} />;
       })}
     </>
   );

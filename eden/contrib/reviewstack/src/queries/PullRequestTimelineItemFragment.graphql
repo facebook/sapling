@@ -53,6 +53,13 @@ fragment PullRequestTimelineItemFragment on PullRequestTimelineItems {
     }
     body
     bodyHTML
+    reactionGroups {
+      content
+      reactors {
+        totalCount
+      }
+      viewerHasReacted
+    }
   }
   ... on RenamedTitleEvent {
     actor {

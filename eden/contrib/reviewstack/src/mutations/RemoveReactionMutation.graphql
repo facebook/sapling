@@ -1,0 +1,7 @@
+mutation RemoveReactionMutation($input: RemoveReactionInput!) {
+  removeReaction(input: $input) {
+    subject {
+      id
+    }
+  }
+}

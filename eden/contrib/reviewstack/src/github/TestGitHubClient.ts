@@ -21,6 +21,8 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  AddReactionInput,
+  AddReactionMutationData,
   ConvertPullRequestToDraftInput,
   ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
@@ -32,8 +34,12 @@ import type {
   MarkPullRequestReadyForReviewMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
+  RemoveReactionInput,
+  RemoveReactionMutationData,
   RequestReviewsInput,
   RequestReviewsMutationData,
+  ResolveReviewThreadInput,
+  ResolveReviewThreadMutationData,
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
@@ -41,6 +47,8 @@ import type {
   UpdateIssueCommentMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
+  UnresolveReviewThreadInput,
+  UnresolveReviewThreadMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -129,6 +137,26 @@ export default class TestGitHubClient implements GitHubClient {
   addPullRequestReviewThread(
     _input: AddPullRequestReviewThreadInput,
   ): Promise<AddPullRequestReviewThreadMutationData> {
+    return Promise.resolve({});
+  }
+
+  addReaction(_input: AddReactionInput): Promise<AddReactionMutationData> {
+    return Promise.resolve({});
+  }
+
+  removeReaction(_input: RemoveReactionInput): Promise<RemoveReactionMutationData> {
+    return Promise.resolve({});
+  }
+
+  resolveReviewThread(
+    _input: ResolveReviewThreadInput,
+  ): Promise<ResolveReviewThreadMutationData> {
+    return Promise.resolve({});
+  }
+
+  unresolveReviewThread(
+    _input: UnresolveReviewThreadInput,
+  ): Promise<UnresolveReviewThreadMutationData> {
     return Promise.resolve({});
   }
 

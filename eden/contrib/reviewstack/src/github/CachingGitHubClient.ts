@@ -20,6 +20,8 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  AddReactionInput,
+  AddReactionMutationData,
   ConvertPullRequestToDraftInput,
   ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
@@ -33,8 +35,12 @@ import type {
   PullRequestState,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
+  RemoveReactionInput,
+  RemoveReactionMutationData,
   RequestReviewsInput,
   RequestReviewsMutationData,
+  ResolveReviewThreadInput,
+  ResolveReviewThreadMutationData,
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
@@ -42,6 +48,8 @@ import type {
   UpdateIssueCommentMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
+  UnresolveReviewThreadInput,
+  UnresolveReviewThreadMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -419,6 +427,26 @@ export default class CachingGitHubClient implements GitHubClient {
     input: AddPullRequestReviewThreadInput,
   ): Promise<AddPullRequestReviewThreadMutationData> {
     return this.client.addPullRequestReviewThread(input);
+  }
+
+  addReaction(input: AddReactionInput): Promise<AddReactionMutationData> {
+    return this.client.addReaction(input);
+  }
+
+  removeReaction(input: RemoveReactionInput): Promise<RemoveReactionMutationData> {
+    return this.client.removeReaction(input);
+  }
+
+  resolveReviewThread(
+    input: ResolveReviewThreadInput,
+  ): Promise<ResolveReviewThreadMutationData> {
+    return this.client.resolveReviewThread(input);
+  }
+
+  unresolveReviewThread(
+    input: UnresolveReviewThreadInput,
+  ): Promise<UnresolveReviewThreadMutationData> {
+    return this.client.unresolveReviewThread(input);
   }
 
   updateIssueComment(input: UpdateIssueCommentInput): Promise<UpdateIssueCommentMutationData> {

@@ -20,6 +20,8 @@ import type {
   AddPullRequestReviewCommentMutationData,
   AddPullRequestReviewThreadInput,
   AddPullRequestReviewThreadMutationData,
+  AddReactionInput,
+  AddReactionMutationData,
   ConvertPullRequestToDraftInput,
   ConvertPullRequestToDraftMutationData,
   DeleteIssueCommentInput,
@@ -31,8 +33,12 @@ import type {
   MarkPullRequestReadyForReviewMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
+  RemoveReactionInput,
+  RemoveReactionMutationData,
   RequestReviewsInput,
   RequestReviewsMutationData,
+  ResolveReviewThreadInput,
+  ResolveReviewThreadMutationData,
   StackPullRequestFragment,
   SubmitPullRequestReviewInput,
   SubmitPullRequestReviewMutationData,
@@ -40,6 +46,8 @@ import type {
   UpdateIssueCommentMutationData,
   UpdatePullRequestReviewCommentInput,
   UpdatePullRequestReviewCommentMutationData,
+  UnresolveReviewThreadInput,
+  UnresolveReviewThreadMutationData,
   UserFragment,
 } from '../generated/graphql';
 
@@ -124,6 +132,26 @@ export default class RejectingGitHubClient implements GitHubClient {
   addPullRequestReviewThread(
     _input: AddPullRequestReviewThreadInput,
   ): Promise<AddPullRequestReviewThreadMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  addReaction(_input: AddReactionInput): Promise<AddReactionMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  removeReaction(_input: RemoveReactionInput): Promise<RemoveReactionMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  resolveReviewThread(
+    _input: ResolveReviewThreadInput,
+  ): Promise<ResolveReviewThreadMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  unresolveReviewThread(
+    _input: UnresolveReviewThreadInput,
+  ): Promise<UnresolveReviewThreadMutationData> {
     return Promise.reject('Method not implemented.');
   }
 

@@ -6,7 +6,7 @@
  */
 
 import GraphQLGitHubClient, {treesFromRecursiveResponse} from './GraphQLGitHubClient';
-import {DiffSide} from '../generated/graphql';
+import {DiffSide, ReactionContent} from '../generated/graphql';
 
 describe('recursive Git tree prefetch', () => {
   test('builds directly addressable trees while preserving sorted entries', () => {
@@ -106,6 +106,41 @@ describe('commit comparisons', () => {
 });
 
 describe('GraphQLGitHubClient comment mutations', () => {
+  test('updates reactions and review thread resolution', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({data: {}}),
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await client.addReaction({subjectId: 'comment-id', content: ReactionContent.ThumbsUp});
+    await client.removeReaction({subjectId: 'comment-id', content: ReactionContent.ThumbsUp});
+    await client.resolveReviewThread({threadId: 'thread-id'});
+    await client.unresolveReviewThread({threadId: 'thread-id'});
+
+    const requests = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(requests).toEqual([
+      expect.objectContaining({
+        query: expect.stringContaining('mutation AddReactionMutation'),
+        variables: {input: {subjectId: 'comment-id', content: 'THUMBS_UP'}},
+      }),
+      expect.objectContaining({
+        query: expect.stringContaining('mutation RemoveReactionMutation'),
+        variables: {input: {subjectId: 'comment-id', content: 'THUMBS_UP'}},
+      }),
+      expect.objectContaining({
+        query: expect.stringContaining('mutation ResolveReviewThreadMutation'),
+        variables: {input: {threadId: 'thread-id'}},
+      }),
+      expect.objectContaining({
+        query: expect.stringContaining('mutation UnresolveReviewThreadMutation'),
+        variables: {input: {threadId: 'thread-id'}},
+      }),
+    ]);
+
+    fetchMock.mockRestore();
+  });
+
   test('updates and deletes issue and review comments', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,

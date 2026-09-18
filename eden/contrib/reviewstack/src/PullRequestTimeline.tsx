@@ -24,6 +24,7 @@ import type {ID} from './github/types';
 import ActorHeading from './ActorHeading';
 import CenteredSpinner from './CenteredSpinner';
 import CommentLink from './CommentLink';
+import CommentReactions from './CommentReactions';
 import CommitLink from './CommitLink';
 import EditableComment from './EditableComment';
 import PendingLabel from './PendingLabel';
@@ -260,6 +261,14 @@ function IssueComment({item}: {item: IssueCommentItem}): React.ReactElement {
         kind="issue"
         className="PRT-bodyHTML PRT-review-comment-text"
         bodyHTML={item.bodyHTML}
+      />
+      <CommentReactions
+        commentID={item.id}
+        reactionGroups={(item.reactionGroups ?? []).map(group => ({
+          content: group.content,
+          count: group.reactors.totalCount,
+          viewerHasReacted: group.viewerHasReacted,
+        }))}
       />
       <PullRequestTimelineReply commentID={item.id} authorLogin={item.author?.login} />
     </TimelineCallout>

@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactionContent} from './generated/graphql';
 import type {ID, GitObject} from './github/types';
 
 import CommentLink from './CommentLink';
+import CommentReactions from './CommentReactions';
 import CommentReply from './CommentReply';
 import EditableComment from './EditableComment';
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
@@ -26,6 +28,12 @@ type Props = {
     author?: {login: string} | null;
     body: string;
     bodyHTML: string;
+    reactionGroups?: Array<{
+      content: ReactionContent;
+      count?: number;
+      reactors?: {totalCount: number};
+      viewerHasReacted: boolean;
+    }> | null | undefined;
   };
 };
 
@@ -60,6 +68,14 @@ export default function PullRequestReviewComment({comment}: Props): React.ReactE
             kind="review"
             className="PRT-review-comment-text"
             bodyHTML={comment.bodyHTML}
+          />
+          <CommentReactions
+            commentID={comment.id}
+            reactionGroups={(comment.reactionGroups ?? []).map(group => ({
+              content: group.content,
+              count: group.count ?? group.reactors?.totalCount ?? 0,
+              viewerHasReacted: group.viewerHasReacted,
+            }))}
           />
           {commit != null && (
             <CommentReply

@@ -12,6 +12,7 @@ import type {
   DiffSide,
   PullRequestQueryData,
   PullRequestReviewCommentState,
+  ReactionContent,
   PullRequestReviewCommentFragment,
   PullRequestReviewThreadFragment,
   PullRequestTimelineItemFragment,
@@ -46,12 +47,18 @@ export type PullRequest = NonNullable<Repository['pullRequest']> & {
 export type PullRequestReviewThread = PullRequestReviewThreadFragment;
 
 export type GitHubPullRequestReviewThread = {
+  id: ID;
   /**
    * In the timeline, we expect there to be a PullRequestReview object
    * (__typename is PULL_REQUEST_REVIEW) whose `comments.nodes[0].id` matches
    * this ID.
    */
   firstCommentID: ID;
+  isResolved: boolean;
+  viewerCanResolve: boolean;
+  viewerCanUnresolve: boolean;
+  sourceVersionIndex?: number;
+  isHistorical?: boolean;
   originalLine: number | null | undefined;
   diffSide: DiffSide;
   comments: GitHubPullRequestReviewThreadComment[];
@@ -65,6 +72,11 @@ export type GitHubPullRequestReviewThreadComment = {
   path: string;
   body: string;
   bodyHTML: string;
+  reactionGroups: Array<{
+    content: ReactionContent;
+    count: number;
+    viewerHasReacted: boolean;
+  }>;
   state: PullRequestReviewCommentState;
 };
 
