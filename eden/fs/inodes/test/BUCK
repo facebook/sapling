@@ -159,10 +159,13 @@ cpp_unittest(
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inodes",
+        "//eden/fs/store:store",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:fake_fuse",
+        "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:test_mount",
         "//folly:cancellation_token",
+        "//folly/futures:core",
     ],
 )
 

@@ -9,18 +9,22 @@
 
 #include <chrono>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include <folly/CancellationToken.h>
+#include <folly/futures/Future.h>
 #include <gtest/gtest.h>
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/StoredObject.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
@@ -172,6 +176,46 @@ TEST_F(FuseGcTest, withoutPinInformationOnlyFilesAreInvalidated) {
   };
   EXPECT_EQ(expected, invalidated);
   EXPECT_EQ(expected.size(), numInvalidated);
+}
+
+TEST_F(FuseGcTest, treeLoadFailureCancelsAndBacksOffWhilePendingLoadsDrain) {
+  testMount_->updateEdenConfig({{"mount:gc-max-tree-load-failures", "1"}});
+  const auto& mount = testMount_->getEdenMount();
+  auto* executor = testMount_->getServerExecutor().get();
+  auto root = mount->getRootInode();
+  ASSERT_GT(root->unloadChildrenNow(), 0u);
+  testMount_->getTreeCache()->clear();
+  builder_.getStoredTree("other"_relpath)->notReady();
+  builder_.getStoredTree("pinned"_relpath)->notReady();
+
+  auto lease = mount->tryStartInodeGC();
+  ASSERT_TRUE(lease);
+  folly::Promise<folly::Unit> cancelled;
+  folly::CancellationCallback onCancellation{
+      lease->getCancellationToken(), [&] { cancelled.setValue(); }};
+  auto gc = root->handleChildrenNotAccessedRecently(
+                    std::chrono::system_clock::time_point::max(),
+                    ObjectFetchContext::getNullContext(),
+                    /*pressureBased=*/true,
+                    lease->getCancellationToken())
+                .semi()
+                .via(executor);
+  testMount_->drainServerExecutor();
+  EXPECT_FALSE(gc.isReady());
+
+  builder_.triggerError("other", std::runtime_error("GC tree-load failure"));
+  cancelled.getFuture().via(executor).within(kTimeout).getVia(executor);
+  EXPECT_TRUE(lease->getCancellationToken().isCancellationRequested());
+  EXPECT_TRUE(mount->isPressureGcBackedOff());
+  EXPECT_FALSE(gc.isReady());
+  EXPECT_FALSE(mount->tryStartInodeGC());
+
+  builder_.setReady("pinned");
+  EXPECT_THROW(
+      std::move(gc).within(kTimeout).getVia(executor), std::runtime_error);
+  EXPECT_TRUE(mount->isPressureGcBackedOff());
+  lease.reset();
+  EXPECT_TRUE(mount->tryStartInodeGC());
 }
 
 #endif // __linux__

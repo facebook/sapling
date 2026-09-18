@@ -658,15 +658,25 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether to fall back to the regular garbage-collection-period cadence
-   * for a mount whose pressure-based GC runs are not reclaiming the inodes
-   * they invalidate (see EdenMount::isPressureGcStalled). This avoids
-   * re-invalidating a large set of stuck inodes at the pressure-derived
-   * rate when doing so has no effect.
+   * Pressure-based GC waits the regular garbage-collection-period before
+   * running again when a run reclaims no more than this percentage of the
+   * inodes it invalidated (see EdenMount::recordPressureGcOutcome). This
+   * avoids re-invalidating a large set of stuck inodes at the pressure-derived
+   * rate when doing so has no effect. Zero disables the check.
    */
-  ConfigSetting<bool> pressureBasedGcBackoff{
-      "mount:pressure-gc-backoff",
-      true,
+  ConfigSetting<uint64_t> pressureBasedGcMinReclaimPercent{
+      "mount:pressure-gc-min-reclaim-percent",
+      10,
+      this};
+
+  /**
+   * Cancel an inode GC run after this many tree-load failures, and have
+   * pressure-based GC wait the regular garbage-collection-period before
+   * running again. Zero disables the limit.
+   */
+  ConfigSetting<uint64_t> gcMaxTreeLoadFailures{
+      "mount:gc-max-tree-load-failures",
+      10,
       this};
 
   /**

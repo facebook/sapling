@@ -675,20 +675,22 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Record the outcome of a completed pressure-based GC run, updating
-   * isPressureGcStalled(). numUnloaded is what the run reclaimed: what its
+   * isPressureGcBackedOff(). numUnloaded is what the run reclaimed: what its
    * own sweep unloaded plus the remembered inodes forgotten while it ran.
    */
   void recordPressureGcOutcome(uint64_t numInvalidated, uint64_t numUnloaded);
 
   /**
-   * Whether the most recent pressure-based GC run failed to reclaim the
-   * inodes it invalidated. When EdenFS tracks FS refcounts the kernel no
-   * longer holds, GC invalidations fail (silently) with ENOENT and produce
-   * no FORGETs, so rerunning pressure GC just re-invalidates the same
-   * inodes to no effect.
+   * Whether pressure-based GC should wait the regular GC period before
+   * running again, because the most recent pressure-based run reclaimed too
+   * few of the inodes it invalidated or a run was cancelled for repeated
+   * tree-load failures. When EdenFS tracks FS refcounts the kernel no longer
+   * holds, GC invalidations fail (silently) with ENOENT and produce no
+   * FORGETs, so rerunning pressure GC just re-invalidates the same inodes to
+   * no effect. Cleared by the next pressure-based run that reclaims enough.
    */
-  bool isPressureGcStalled() const {
-    return pressureGcStalled_.load(std::memory_order_relaxed);
+  bool isPressureGcBackedOff() const {
+    return pressureGcBackoff_.load(std::memory_order_relaxed);
   }
 
   const CheckoutConfig* getCheckoutConfig() const {
@@ -1161,6 +1163,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::optional<InodeGCLease> tryStartInodeGC();
 
   /**
+   * Count a tree-load failure in the active GC run, cancelling it and backing
+   * off pressure-based GC when the configured failure limit is reached.
+   */
+  void recordInodeGCTreeLoadFailure();
+
+  /**
    * Cancel the active GC and supersede its lease. The returned lease prevents
    * new GCs from starting while the canceled GC finishes asynchronously.
    */
@@ -1527,6 +1535,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   struct InodeGCState {
     bool gcRunning{false};
     uint64_t inhibitorCount{0};
+    uint64_t treeLoadFailureLimit{0};
+    uint64_t remainingTreeLoadFailures{0};
     folly::CancellationSource cancellationSource;
   };
   folly::Synchronized<InodeGCState> inodeGCState_;
@@ -1564,10 +1574,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       cachedPressurePolicy_;
 
   /**
-   * Whether the most recent pressure-based GC run failed to reclaim the
-   * inodes it invalidated. See recordPressureGcOutcome().
+   * Whether pressure-based GC should wait the regular GC period before
+   * running again. See isPressureGcBackedOff().
    */
-  std::atomic<bool> pressureGcStalled_{false};
+  std::atomic<bool> pressureGcBackoff_{false};
 };
 
 /**

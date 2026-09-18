@@ -6811,8 +6811,12 @@ ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
       }
       auto name = std::move(child.name);
       res.push_back(self->getOrLoadChildTree(name, context)
-                        .thenValue([name](TreeInodePtr tree) {
-                          return std::make_pair(name, std::move(tree));
+                        .thenTry([name, mount = self->getMount()](
+                                     folly::Try<TreeInodePtr>&& tree) {
+                          if (tree.hasException()) {
+                            mount->recordInodeGCTreeLoadFailure();
+                          }
+                          return std::make_pair(name, std::move(tree).value());
                         }));
     }
   }

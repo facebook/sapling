@@ -148,30 +148,87 @@ TEST(EdenMount, initFailure) {
       "commit 1 not found");
 }
 
-TEST(EdenMount, pressureGcStallTracking) {
+TEST(EdenMount, pressureGcReclaimBackoff) {
   FakeTreeBuilder builder;
   builder.setFile("src/test.c", "testy tests");
   TestMount testMount{builder};
   const auto& edenMount = testMount.getEdenMount();
 
-  EXPECT_FALSE(edenMount->isPressureGcStalled());
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
-  // A large run whose sweep unloads nothing stalls the mount.
+  // A large run whose sweep unloads nothing backs off the mount.
   edenMount->recordPressureGcOutcome(100'000, 0);
-  EXPECT_TRUE(edenMount->isPressureGcStalled());
+  EXPECT_TRUE(edenMount->isPressureGcBackedOff());
 
   // A run whose sweep unloads more than 10% of what it invalidated clears
-  // the stall.
+  // the backoff.
   edenMount->recordPressureGcOutcome(100'000, 10'001);
-  EXPECT_FALSE(edenMount->isPressureGcStalled());
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
-  // Unloading 10% or less counts as stalled.
+  // Unloading 10% or less backs off.
   edenMount->recordPressureGcOutcome(100'000, 10'000);
-  EXPECT_TRUE(edenMount->isPressureGcStalled());
+  EXPECT_TRUE(edenMount->isPressureGcBackedOff());
 
-  // Small runs never count as stalled, and clear an existing stall.
+  // Small runs never back off, and clear an existing backoff.
   edenMount->recordPressureGcOutcome(5'000, 0);
-  EXPECT_FALSE(edenMount->isPressureGcStalled());
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
+
+  // The threshold follows the configured percentage.
+  testMount.updateEdenConfig({{"mount:pressure-gc-min-reclaim-percent", "50"}});
+  edenMount->recordPressureGcOutcome(100'000, 40'000);
+  EXPECT_TRUE(edenMount->isPressureGcBackedOff());
+  edenMount->recordPressureGcOutcome(100'000, 60'000);
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
+
+  // Zero disables the reclaim check.
+  testMount.updateEdenConfig({{"mount:pressure-gc-min-reclaim-percent", "0"}});
+  edenMount->recordPressureGcOutcome(100'000, 0);
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
+}
+
+TEST(EdenMount, gcTreeLoadFailureLimit) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.updateEdenConfig({{"mount:gc-max-tree-load-failures", "2"}});
+  const auto& mount = testMount.getEdenMount();
+
+  {
+    auto lease = mount->tryStartInodeGC();
+    ASSERT_TRUE(lease);
+    mount->recordInodeGCTreeLoadFailure();
+    EXPECT_FALSE(lease->getCancellationToken().isCancellationRequested());
+    EXPECT_FALSE(mount->isPressureGcBackedOff());
+  }
+
+  {
+    auto lease = mount->tryStartInodeGC();
+    ASSERT_TRUE(lease);
+    mount->recordInodeGCTreeLoadFailure();
+    EXPECT_FALSE(lease->getCancellationToken().isCancellationRequested());
+    mount->recordInodeGCTreeLoadFailure();
+    EXPECT_TRUE(lease->getCancellationToken().isCancellationRequested());
+    EXPECT_TRUE(mount->isPressureGcBackedOff());
+    EXPECT_FALSE(mount->tryStartInodeGC());
+  }
+
+  auto lease = mount->tryStartInodeGC();
+  ASSERT_TRUE(lease);
+  EXPECT_FALSE(lease->getCancellationToken().isCancellationRequested());
+  EXPECT_TRUE(mount->isPressureGcBackedOff());
+  mount->recordPressureGcOutcome(100'000, 50'000);
+  EXPECT_FALSE(mount->isPressureGcBackedOff());
+}
+
+TEST(EdenMount, gcTreeLoadFailureLimitDisabled) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.updateEdenConfig({{"mount:gc-max-tree-load-failures", "0"}});
+  const auto& mount = testMount.getEdenMount();
+  auto lease = mount->tryStartInodeGC();
+  ASSERT_TRUE(lease);
+  mount->recordInodeGCTreeLoadFailure();
+  EXPECT_FALSE(lease->getCancellationToken().isCancellationRequested());
+  EXPECT_FALSE(mount->isPressureGcBackedOff());
 }
 
 TEST(EdenMount, getTreeOrTreeEntry) {

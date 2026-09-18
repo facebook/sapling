@@ -3431,7 +3431,6 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
                 zeroFsRefTreesRetained,
                 cancelled};
           })
-      .ensure([lease = std::move(lease)] {})
       .thenTry([inodeGCRuntime,
                 edenFsEventsLogger = std::move(edenFsEventsLogger),
                 &mount,
@@ -3500,7 +3499,10 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         }
 
         return resultTry.value().numInvalidated;
-      });
+      })
+      // The lease outlives the outcome recording so a run that starts after
+      // this one cannot have its backoff cleared by this run's result.
+      .ensure([lease = std::move(lease)] {});
 }
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -3696,13 +3698,13 @@ void EdenServer::garbageCollectAllMounts() {
       auto policy = mount.getInodePressurePolicy();
       auto inodeCount = mount.getInodeMap()->getTotalInodeCountFast();
       auto gcPeriod = policy->getGcPeriod(inodeCount);
-      if (config->pressureBasedGcBackoff.getValue() &&
-          mount.isPressureGcStalled()) {
+      if (mount.isPressureGcBackedOff()) {
         // Pressure GC is not reclaiming the inodes it invalidates (e.g.
         // EdenFS is tracking FS refcounts the kernel no longer holds, so
-        // invalidations produce no FORGETs). Re-invalidating a large set of
-        // stuck inodes at the pressure-derived rate is wasted work, so fall
-        // back to the regular GC cadence until a run makes progress again.
+        // invalidations produce no FORGETs), or a run was cancelled for
+        // repeated tree-load failures. Rerunning at the pressure-derived rate
+        // is wasted work, so fall back to the regular GC cadence until a run
+        // makes progress again.
         gcPeriod = std::max(
             gcPeriod,
             std::chrono::duration_cast<std::chrono::seconds>(

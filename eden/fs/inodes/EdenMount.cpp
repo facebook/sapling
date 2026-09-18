@@ -1200,9 +1200,9 @@ void EdenMount::updateInodePressurePolicy() {
       gcPeriodMax.count());
 }
 
-// Below this many invalidations, rerunning GC is cheap enough that stall
+// Below this many invalidations, rerunning GC is cheap enough that reclaim
 // tracking isn't worthwhile.
-constexpr uint64_t kPressureGcStallMinInvalidated = 10'000;
+constexpr uint64_t kPressureGcReclaimMinInvalidated = 10'000;
 
 void EdenMount::recordPressureGcOutcome(
     uint64_t numInvalidated,
@@ -1210,17 +1210,20 @@ void EdenMount::recordPressureGcOutcome(
   // GC flushes the invalidation queue between invalidating entries and
   // sweeping, and the kernel FORGETs triggered by the invalidations arrive
   // quickly in practice, so most of a run's invalidations should be unloaded
-  // by the run's own sweep. A healthy run reclaims far more than 10%; should
-  // a run be misjudged anyway, the cost is one cycle at the regular GC
-  // cadence. The sweep's own count is used rather than the change in the
-  // mount's inode count, which concurrent lookups (a build, a crawl) can
-  // push the other way while GC runs.
-  bool stalled = numInvalidated >= kPressureGcStallMinInvalidated &&
-      numUnloaded <= numInvalidated / 10;
+  // by the run's own sweep. A healthy run reclaims far more than the default
+  // 10%; should a run be misjudged anyway, the cost is one cycle at the
+  // regular GC cadence. The sweep's own count is used rather than the change
+  // in the mount's inode count, which concurrent lookups (a build, a crawl)
+  // can push the other way while GC runs.
+  auto minReclaimPercent =
+      getEdenConfig()->pressureBasedGcMinReclaimPercent.getValue();
+  bool backOff = minReclaimPercent > 0 &&
+      numInvalidated >= kPressureGcReclaimMinInvalidated &&
+      numUnloaded * 100 <= numInvalidated * minReclaimPercent;
 
-  if (pressureGcStalled_.exchange(stalled, std::memory_order_relaxed) !=
-      stalled) {
-    if (stalled) {
+  if (pressureGcBackoff_.exchange(backOff, std::memory_order_relaxed) !=
+      backOff) {
+    if (backOff) {
       XLOGF(
           INFO,
           "Pressure-based GC for {} invalidated {} inodes but only reclaimed "
@@ -1232,8 +1235,8 @@ void EdenMount::recordPressureGcOutcome(
     } else {
       XLOGF(
           INFO,
-          "Pressure-based GC for {} is reclaiming inodes again, resuming "
-          "the pressure-based GC period",
+          "Pressure-based GC for {} completed, resuming the pressure-based GC "
+          "period",
           getPath());
     }
   }
@@ -3364,12 +3367,15 @@ std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
 
 std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC() {
   auto mount = shared_from_this();
+  auto failureLimit = getEdenConfig()->gcMaxTreeLoadFailures.getValue();
   auto state = inodeGCState_.wlock();
   if (state->gcRunning || state->inhibitorCount != 0) {
     return std::nullopt;
   }
 
   state->cancellationSource = folly::CancellationSource{};
+  state->treeLoadFailureLimit = failureLimit;
+  state->remainingTreeLoadFailures = failureLimit;
   auto cancellationToken = state->cancellationSource.getToken();
   state->gcRunning = true;
   return InodeGCLease{
@@ -3380,6 +3386,29 @@ std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC() {
 
 bool EdenMount::isInodeGCRunning() const {
   return inodeGCState_.rlock()->gcRunning;
+}
+
+void EdenMount::recordInodeGCTreeLoadFailure() {
+  auto cancellationSource = folly::CancellationSource::invalid();
+  uint64_t failureLimit;
+  {
+    auto state = inodeGCState_.wlock();
+    if (!state->gcRunning || state->remainingTreeLoadFailures == 0 ||
+        --state->remainingTreeLoadFailures != 0) {
+      return;
+    }
+    pressureGcBackoff_.store(true, std::memory_order_relaxed);
+    cancellationSource = state->cancellationSource;
+    failureLimit = state->treeLoadFailureLimit;
+  }
+  // Cancellation callbacks may run inline and acquire the GC state lock.
+  cancellationSource.requestCancellation();
+  XLOGF(
+      WARN,
+      "Cancelling inode GC for {} after {} tree-load failures; pressure-based "
+      "GC will wait the regular GC period before running again",
+      getPath(),
+      failureLimit);
 }
 
 EdenMount::InodeGCLease EdenMount::stealInodeGCLease() {
