@@ -456,7 +456,11 @@ impl TreeStore {
                 results,
                 fctx.clone(),
                 bar.clone(),
-                indexedlog_cache.clone(),
+                if cache_to_local_cache {
+                    indexedlog_cache.clone()
+                } else {
+                    None
+                },
                 aux_cache,
                 tree_aux_store.clone(),
                 max_fetch_count,
@@ -652,11 +656,6 @@ impl TreeStore {
                         state.fetch_edenapi(
                             edenapi,
                             attributes,
-                            if cache_to_local_cache {
-                                indexedlog_cache.as_deref()
-                            } else {
-                                None
-                            },
                             if fetch_parents {
                                 historystore_cache.as_deref()
                             } else {

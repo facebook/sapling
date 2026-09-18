@@ -11,6 +11,7 @@ use std::time::Instant;
 use anyhow::Result;
 use async_runtime::stream_to_iter;
 use edenapi::Response;
+use edenapi_types::TreeEntry;
 use progress_model::ProgressBar;
 use storemodel::FileAuxData;
 use storemodel::SerializationFormat;
@@ -109,7 +110,6 @@ impl<'a> FetchState<'a> {
         &mut self,
         edenapi: &SaplingRemoteApiTreeStore,
         attributes: edenapi_types::TreeAttributes,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
         historystore_cache: Option<&IndexedLogHgIdHistoryStore>,
         verify_hash: bool,
         format: SerializationFormat,
@@ -170,61 +170,7 @@ impl<'a> FetchState<'a> {
                     return Err(err.into());
                 }
             };
-            let key = entry.key.clone();
-            let entry = LazyTree::SaplingRemoteApi(entry, verify_hash, format);
-
-            self.cache_child_aux_data(&entry);
-            let aux_data = entry.aux_data()?;
-
-            if self.tree_aux_cache.is_some() {
-                if let Some(aux_data) = aux_data.clone() {
-                    tracing::trace!(
-                        hgid = %key.hgid,
-                        "writing self to tree aux store"
-                    );
-                    self.tree_aux_to_cache.push((key.hgid, aux_data));
-                    if self.tree_aux_to_cache.len() >= TREE_AUX_BATCH_THRESHOLD {
-                        self.flush_tree_aux();
-                    }
-                }
-            }
-
-            if indexedlog_cache.is_some() {
-                let cache_entry = match entry.indexedlog_cache_entry(key.hgid) {
-                    Ok(cache_entry) => cache_entry,
-                    Err(err) => {
-                        self.errors.keyed_error(key, err);
-                        continue;
-                    }
-                };
-                if let Some(cache_entry) = cache_entry {
-                    self.trees_to_cache.push((cache_entry.node(), cache_entry));
-                    if self.trees_to_cache.len() >= TREE_BATCH_THRESHOLD {
-                        self.flush_trees();
-                    }
-                }
-            }
-
-            if let Some(historystore_cache) = &historystore_cache {
-                if let Some(parents) = entry.parents() {
-                    historystore_cache.add(
-                        &key,
-                        &NodeInfo {
-                            parents: parents.to_keys(),
-                            linknode: NULL_ID,
-                        },
-                    )?;
-                }
-            }
-
-            self.common.found(
-                key,
-                StoreTree {
-                    parents: entry.parents(),
-                    content: Some(entry),
-                    aux_data,
-                },
-            );
+            self.accept_tree_entry(entry, historystore_cache, verify_hash, format)?;
         }
 
         match async_runtime::block_on(stats) {
@@ -241,6 +187,85 @@ impl<'a> FetchState<'a> {
             .time_from_duration(start_time.elapsed());
 
         Ok(())
+    }
+
+    fn accept_tree_entry(
+        &mut self,
+        entry: TreeEntry,
+        historystore_cache: Option<&IndexedLogHgIdHistoryStore>,
+        verify_hash: bool,
+        format: SerializationFormat,
+    ) -> Result<bool> {
+        let key = entry.key.clone();
+        let entry = LazyTree::SaplingRemoteApi(entry, verify_hash, format);
+        self.cache_child_aux_data(&entry);
+        let aux_data = entry.aux_data()?;
+
+        if self.tree_aux_cache.is_some()
+            && let Some(aux_data) = aux_data.as_ref()
+        {
+            tracing::trace!(
+                hgid = %key.hgid,
+                "writing self to tree aux store"
+            );
+            self.tree_aux_to_cache.push((key.hgid, aux_data.clone()));
+            if self.tree_aux_to_cache.len() >= TREE_AUX_BATCH_THRESHOLD {
+                self.flush_tree_aux();
+            }
+        }
+
+        if let Err(error) = self.cache_tree_content(key.hgid, &entry) {
+            self.errors.keyed_error(key, error);
+            return Ok(false);
+        }
+
+        self.accept_tree_for_key(key, entry, aux_data, historystore_cache)
+    }
+
+    fn cache_tree_content(&mut self, hgid: HgId, entry: &LazyTree) -> Result<()> {
+        if self.tree_cache.is_none() {
+            return Ok(());
+        }
+
+        let Some(cache_entry) = entry.indexedlog_cache_entry(hgid)? else {
+            return Ok(());
+        };
+        self.trees_to_cache.push((cache_entry.node(), cache_entry));
+        if self.trees_to_cache.len() >= TREE_BATCH_THRESHOLD {
+            self.flush_trees();
+        }
+
+        Ok(())
+    }
+
+    fn accept_tree_for_key(
+        &mut self,
+        key: Key,
+        entry: LazyTree,
+        aux_data: Option<TreeAuxData>,
+        historystore_cache: Option<&IndexedLogHgIdHistoryStore>,
+    ) -> Result<bool> {
+        if let Some(historystore_cache) = historystore_cache {
+            if let Some(parents) = entry.parents() {
+                historystore_cache.add(
+                    &key,
+                    &NodeInfo {
+                        parents: parents.to_keys(),
+                        linknode: NULL_ID,
+                    },
+                )?;
+            }
+        }
+
+        let parents = entry.parents();
+        Ok(self.common.found(
+            key,
+            StoreTree {
+                parents,
+                content: Some(entry),
+                aux_data,
+            },
+        ))
     }
 
     fn cache_child_aux_data(&mut self, tree: &LazyTree) {
