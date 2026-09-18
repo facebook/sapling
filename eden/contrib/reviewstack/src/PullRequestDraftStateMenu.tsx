@@ -10,6 +10,7 @@ import type {PullRequestReviewDecision, PullRequestState} from './generated/grap
 import PullRequestStateLabel from './PullRequestStateLabel';
 import {PullRequestState as PullRequestStateValue} from './generated/graphql';
 import {gitHubClientAtom, notificationMessageAtom} from './jotai';
+import pullRequestStatusAndLabel from './pullRequestStatusAndLabel';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {ActionList, ActionMenu, Button, StateLabel} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
@@ -65,8 +66,7 @@ export default function PullRequestDraftStateMenu({
     );
   }
 
-  const label = isDraft ? 'Draft Review' : 'Ready for review';
-  const color = isDraft ? 'fg.muted' : 'accent.fg';
+  const {label, color} = pullRequestStatusAndLabel(state, reviewDecision, isDraft);
   return (
     <ActionMenu>
       <ActionMenu.Anchor>
