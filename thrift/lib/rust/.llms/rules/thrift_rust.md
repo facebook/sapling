@@ -1,8 +1,11 @@
 ---
+name: thrift-rust
 description: Rules for working with the Rust Thrift runtime (fbthrift crate)
-apply_to_regex: "fbcode/thrift/lib/rust/.*|xplat/thrift/lib/rust/.*"
-oncalls:
-  - rust_thrift
+metadata:
+  oncalls:
+    - rust_thrift
+  strict: true
+  apply_to_path: "fbcode/thrift/lib/rust/.*|xplat/thrift/lib/rust/.*"
 ---
 
 # Rust Thrift Runtime (fbthrift) Rules
