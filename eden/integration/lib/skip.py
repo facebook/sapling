@@ -18,6 +18,12 @@ from typing import Dict, List, Union
 # should gradually remove tests from this list as we get them passing on Windows.
 #
 TEST_DISABLED: Dict[str, Union[List[str], bool]] = {}
+if sys.platform == "linux":
+    # These fsck cases never mount a checkout, so transport variants add no coverage.
+    TEST_DISABLED["fsck.basic_snapshot_tests.Basic20251104TestIoUring"] = [
+        "test_incorrect_next_inode_number",
+        "test_corrupt_next_inode_number",
+    ]
 if sys.platform == "win32":
     # Note that on Windows we also exclude some test source files entirely
     # in CMakeLists.txt, for tests that never make sense to run on Windows.
@@ -431,7 +437,7 @@ if "SANDCASTLE" in os.environ:
         TEST_DISABLED["changes_test.ChangesTestNix"] = [
             "test_modify_folder_chown",
         ]
-    class_name = "chown_test.ChownTestDefault"
+    class_name = "chown_test.ChownTest"
     method_name = "test_chown_with_bindmount"
     class_skipped = TEST_DISABLED.get(class_name)
     if class_skipped is None:

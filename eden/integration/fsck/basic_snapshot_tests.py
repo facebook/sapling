@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import abc
 import binascii
@@ -286,9 +286,14 @@ class SnapshotTestBase(
         raise NotImplementedError()
 
     def setUp(self) -> None:
+        if self.use_io_uring():
+            edenclient.require_io_uring_kernel()
         self.tmp_dir = Path(self.make_temporary_directory())
         snapshot = snapshot_mod.unpack_into(self.get_snapshot_path(), self.tmp_dir)
         self.snapshot = typing.cast(BasicSnapshot, snapshot)
+
+    def use_io_uring(self) -> bool:
+        return False
 
     def _checkout_state_dir(self) -> Path:
         return self.snapshot.eden_state_dir / "clients" / "checkout"
@@ -328,8 +333,13 @@ class SnapshotTestBase(
     def _verify_contents(self, expected_files: verify_mod.ExpectedFileSet) -> None:
         verifier = verify_mod.SnapshotVerifier()
         # pyrefly: ignore [bad-context-manager]
-        with self.snapshot.edenfs() as eden:
+        with self.snapshot.edenfs(use_io_uring=self.use_io_uring()) as eden:
             eden.start()
+            with eden.get_thrift_client() as client:
+                edenclient.assert_fuse_transports(
+                    client.listMounts(),
+                    "io_uring" if self.use_io_uring() else "devfuse",
+                )
             verifier.verify_directory(
                 self.snapshot.checkout_path,
                 expected_files,
@@ -361,7 +371,7 @@ class SnapshotTestBase(
         self.fail(error)
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class Basic20251104Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return snapshot_mod.get_snapshots_root() / "basic-20251104.tar.xz"

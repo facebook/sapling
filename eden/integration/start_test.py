@@ -23,7 +23,7 @@ from .lib.find_executables import FindExe
 from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class StartTest(testcase.EdenTestCase):
     def test_start_if_necessary(self) -> None:
         # Confirm there are no checkouts configured, then stop edenfs

@@ -302,3 +302,106 @@ class RepoTestVariantsTest(unittest.TestCase):
                 {"Hg", "IoUring", "Coroutines", "CoroutinesIoUring"},
                 set(self.variants()),
             )
+
+
+@mock.patch.object(eden.config, "HAVE_NFS", True)
+@mock.patch.object(testcase.sys, "platform", "linux")
+class CustomTestVariantsTest(unittest.TestCase):
+    def variants(
+        self, decorator: Any, **kwargs: Any
+    ) -> dict[str, type[testcase.EdenRepoTest]]:
+        class Scope:
+            @decorator(**kwargs)
+            class Example(testcase.EdenRepoTest):
+                repo_type = "custom"
+
+                def test_example(self) -> None:
+                    self.assertIsInstance(self, testcase.EdenRepoTest)
+
+        return {
+            name.removeprefix("Example"): cls
+            for name, cls in vars(Scope).items()
+            if isinstance(cls, type) and issubclass(cls, testcase.EdenRepoTest)
+        }
+
+    def test_custom_repository_setup_is_preserved(self) -> None:
+        variants = self.variants(testcase.eden_nfs_repo_test, run_coroutines=True)
+        self.assertEqual(
+            {"Default", "NFS", "Coroutines", "DefaultIoUring", "CoroutinesIoUring"},
+            set(variants),
+        )
+        for label, cls in variants.items():
+            with self.subTest(variant=label):
+                self.assertEqual("custom", cls().repo_type)
+                self.assertEqual(label.endswith("IoUring"), cls().use_io_uring())
+                self.assertEqual(label == "NFS", cls().use_nfs())
+
+    def test_wal_composes_with_io_uring(self) -> None:
+        variants = self.variants(testcase.eden_nfs_repo_test_with_wal_variant)
+        self.assertEqual(
+            {
+                "Default",
+                "NFS",
+                "DefaultIoUring",
+                "DefaultWal",
+                "NFSWal",
+                "DefaultIoUringWal",
+            },
+            set(variants),
+        )
+        case = variants["DefaultIoUringWal"]()
+        self.assertTrue(case.use_io_uring())
+        self.assertFalse(case.use_nfs())
+        self.assertIn("use-wal = true", (case.edenfs_extra_config() or {})["overlay"])
+
+    def test_opt_out_and_platform_gates(self) -> None:
+        for decorator in (
+            testcase.eden_nfs_repo_test,
+            testcase.eden_nfs_repo_test_with_wal_variant,
+        ):
+            with self.subTest(decorator=decorator):
+                baseline = self.variants(decorator, run_io_uring=False)
+                self.assertFalse(any("IoUring" in label for label in baseline))
+                for platform in ("darwin", "win32"):
+                    with mock.patch.object(testcase.sys, "platform", platform):
+                        baseline = self.variants(decorator, run_io_uring=False)
+                        self.assertEqual(set(baseline), set(self.variants(decorator)))
+
+    def test_plain_tests_require_explicit_opt_in(self) -> None:
+        self.assertEqual({"Default"}, set(self.variants(testcase.eden_test)))
+        self.assertEqual(
+            {"Default", "IoUring"},
+            set(self.variants(testcase.eden_test, run_io_uring=True)),
+        )
+
+    @parameterized.expand(
+        [
+            ("Default",),
+            ("DefaultIoUring",),
+            ("Coroutines",),
+            ("CoroutinesIoUring",),
+            ("",),
+        ]
+    )
+    def test_method_skips_are_independent(self, suffix: str) -> None:
+        with mock.patch.dict(
+            testcase.skip.TEST_DISABLED,
+            {f"testcase_test.Example{suffix}": ["test_example"]},
+        ):
+            variants = self.variants(testcase.eden_nfs_repo_test, run_coroutines=True)
+        for label, cls in variants.items():
+            with self.subTest(variant=label):
+                self.assertEqual(
+                    bool(suffix) and label != suffix,
+                    callable(getattr(cls, "test_example", None)),
+                )
+
+    def test_wal_preserves_transport_skip_isolation(self) -> None:
+        with mock.patch.dict(
+            testcase.skip.TEST_DISABLED,
+            {"testcase_test.ExampleDefault": ["test_example"]},
+        ):
+            variants = self.variants(testcase.eden_nfs_repo_test_with_wal_variant)
+        self.assertFalse(callable(getattr(variants["Default"], "test_example", None)))
+        for label in ("DefaultIoUring", "DefaultIoUringWal"):
+            self.assertTrue(callable(getattr(variants[label], "test_example", None)))

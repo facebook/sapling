@@ -49,6 +49,23 @@ EDENFS_START_TIMEOUT = 120
 EDENFS_STOP_TIMEOUT = 240
 
 
+def require_io_uring_kernel() -> None:
+    release = os.uname().release if sys.platform == "linux" else ""
+    # The FUSE io_uring ABI is kernel-specific; extend this allowlist
+    # when another fbk release is validated.
+    if "fbk" not in release or not release.startswith(("6.13.", "6.16.")):
+        raise unittest.SkipTest("requires an fbk 6.13 or 6.16 FUSE io_uring kernel")
+
+
+def fuse_transport_config(use_io_uring: bool) -> list[str]:
+    settings = [f"use-io-uring = {'true' if use_io_uring else 'false'}"]
+    if use_io_uring:
+        settings.append('io-uring-kernel-release-regex = ".*"')
+        # Allocate queues before replying to INIT to allow devfuse fallback.
+        settings.append("io-uring-pre-create-queues = true")
+    return settings
+
+
 def assert_fuse_transport(
     mount_point: bytes, expected: str, actual: str | None
 ) -> None:

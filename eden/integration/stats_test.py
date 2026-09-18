@@ -29,7 +29,7 @@ Counters = typing.Mapping[str, float]
 logger = logging.getLogger(__name__)
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class GenericStatsTest(testcase.EdenRepoTest):
     def protocol_type(self) -> str:
         if sys.platform == "linux" or sys.platform == "darwin":
@@ -173,7 +173,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 1)
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class ObjectCacheStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
@@ -220,7 +220,7 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
         self.assertTrue(final_count > initial_count)
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class FSChannelStatsTest(testcase.EdenRepoTest):
     def protocol_type(self) -> str:
         if sys.platform == "linux" or sys.platform == "darwin":

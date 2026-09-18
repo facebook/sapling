@@ -11,7 +11,7 @@ import os
 from .lib import hgrepo, repobase, testcase
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class ChownTest(testcase.EdenRepoTest):
     # pyre-fixme[13]: Attribute `nobody_uid` is never initialized.
     nobody_uid: int

@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import abc
 import contextlib
@@ -17,11 +17,13 @@ import socket
 import stat
 import subprocess
 import time
+import tomllib
 import types
 import typing
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
+import toml
 from eden.integration.lib import edenclient, hgrepo
 from eden.integration.lib.temporary_directory import create_tmp_dir
 from eden.test_support.temporary_directory import cleanup_tmp_dir
@@ -66,7 +68,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         exc_value: Optional[BaseException],
         tb: Optional[types.TracebackType],
     ) -> None:
-        pass
+        return None
 
     @property
     @abc.abstractmethod
@@ -129,34 +131,56 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # This is commonly the UID & GID for "nobody" on many systems.
         self._update_eden_state(Path("/tmp/dummy_snapshot_path"), uid=99, gid=99)
 
-    def verify(self, verifier: verify_mod.SnapshotVerifier) -> None:
+    def verify(
+        self, verifier: verify_mod.SnapshotVerifier, *, use_io_uring: bool | None = None
+    ) -> None:
         """Verify that the snapshot data looks correct.
 
         This is generally invoked by tests to confirm that an unpacked snapshot still
         works properly with the current version of EdenFS.
         """
         # pyrefly: ignore [bad-context-manager]
-        with self.edenfs() as eden:
+        with self.edenfs(use_io_uring=use_io_uring) as eden:
             eden.start()
+            if use_io_uring is not None:
+                with eden.get_thrift_client() as client:
+                    edenclient.assert_fuse_transports(
+                        client.listMounts(), "io_uring" if use_io_uring else "devfuse"
+                    )
             print("Verifying snapshot data:")
             print("=" * 60)
             self.verify_snapshot_data(verifier, eden)
             print("=" * 60)
 
-    def edenfs(self) -> edenclient.EdenFS:
+    def edenfs(self, *, use_io_uring: bool | None = None) -> edenclient.EdenFS:
         """Return an EdenFS object that can be used to run an edenfs daemon for this
         snapshot.
 
         The returned EdenFS object will not be started yet; the caller must explicitly
         call start() on it.
+
+        Tests select a transport explicitly; None preserves the snapshot tools' config.
         """
-        return edenclient.EdenFS(
+        if use_io_uring:
+            edenclient.require_io_uring_kernel()
+        eden = edenclient.EdenFS(
             base_dir=self.transient_dir,
             eden_dir=self.eden_state_dir,
             etc_eden_dir=self.etc_eden_dir,
             home_dir=self.home_dir,
             storage_engine="rocksdb",
         )
+        if use_io_uring is not None:
+            config = (
+                tomllib.loads(eden.system_rc_path.read_text())
+                if eden.system_rc_path.exists()
+                else {}
+            )
+            config.setdefault("fuse", {}).update(
+                tomllib.loads("\n".join(edenclient.fuse_transport_config(use_io_uring)))
+            )
+            eden.system_rc_path.write_text(toml.dumps(config))
+        return eden
 
     def resume(self) -> None:
         """Prepare a snapshot to be resumed after unpacking it.
@@ -334,7 +358,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
 
         Subclasses of BaseSnapshot can perform any work they want here.
         """
-        pass
+        return None
 
     def gen_eden_running(self, eden: edenclient.EdenFS) -> None:
         """gen_eden_running() will be called when generating a new snapshot once edenfs
@@ -342,7 +366,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
 
         Subclasses of BaseSnapshot can perform any work they want here.
         """
-        pass
+        return None
 
     def gen_after_eden_stopped(self) -> None:
         """gen_after_eden_stopped() will be called as the final step of generating a
@@ -350,7 +374,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
 
         Subclasses of BaseSnapshot can perform any work they want here.
         """
-        pass
+        return None
 
     def prep_resume(self) -> None:
         """prep_resume() will be when preparing to resume a snapshot, before edenfs has
@@ -359,7 +383,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         Subclasses of BaseSnapshot can perform any work they want here.
         here.
         """
-        pass
+        return None
 
     @abc.abstractmethod
     def verify_snapshot_data(

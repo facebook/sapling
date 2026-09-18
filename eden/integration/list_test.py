@@ -13,7 +13,7 @@ from parameterized import parameterized
 from .lib import testcase
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class ListTest(testcase.EdenTestCase):
     @parameterized.expand(
         [

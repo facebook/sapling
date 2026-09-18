@@ -413,7 +413,7 @@ class CloneAllowedUnderMaxClonesTest(testcase.EdenRepoTest):
         )
 
 
-@testcase.eden_test
+@testcase.eden_test(run_io_uring=True)
 class CloneWithStaleConfigTest(testcase.EdenTestCase):
     def test_python_clone_with_missing_configured_checkout_state_succeeds(self) -> None:
         repo = self.create_hg_repo("main")

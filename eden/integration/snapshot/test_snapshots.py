@@ -4,17 +4,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import os
 import stat
+import sys
+import tomllib
 import unittest
 from pathlib import Path
-from typing import Iterable, Tuple, Type
+from typing import Any, Iterable, Tuple, Type
+from unittest import mock
 
-from eden.integration.lib import edenclient, testcase
+from eden.integration.lib import edenclient, skip, testcase
+from parameterized import parameterized
 
 from . import snapshot as snapshot_mod, verify as verify_mod
+from .types.basic import BasicSnapshot
 
 
 def _replicate_snapshot_test(
@@ -26,13 +31,18 @@ def _replicate_snapshot_test(
     for snapshot_path in snapshot_dir.iterdir():
 
         class EdenSnapshot(test_class):
+            _snapshot_path = snapshot_path
+
             def _getSnapshotPath(self) -> Path:
-                return snapshot_path
+                return self._snapshot_path
 
         # We don't use Path.stem here since it only strips off the very last suffix,
         # so foo.tar.bz2 becomes foo.tar rather than foo.
         stem = snapshot_path.name.split(".", 1)[0]
-        variants += [(stem, EdenSnapshot)]
+        for suffix, variant in testcase._replicate_eden_test(
+            EdenSnapshot, run_io_uring=True
+        ):
+            variants.append((stem if suffix == "Default" else stem + suffix, variant))
 
     return variants
 
@@ -52,14 +62,19 @@ class Test(unittest.TestCase):
         # This is usually implemented by the @snapshot_tests decorator
         raise NotImplementedError("Subclass must implement getSnapshotPath()")
 
+    def use_io_uring(self) -> bool:
+        return False
+
     def test_snapshot(self) -> None:
+        if self.use_io_uring():
+            edenclient.require_io_uring_kernel()
         with snapshot_mod.create_tmp_dir() as tmp_dir:
             snapshot = snapshot_mod.unpack_into(self._getSnapshotPath(), tmp_dir)
             self._run_test(snapshot)
 
     def _run_test(self, snapshot: snapshot_mod.BaseSnapshot) -> None:
         verifier = verify_mod.SnapshotVerifier()
-        snapshot.verify(verifier)
+        snapshot.verify(verifier, use_io_uring=self.use_io_uring())
 
         # Fail the test if any errors were found.
         # The individual errors will have been printed out previously
@@ -71,6 +86,120 @@ class Test(unittest.TestCase):
 @testcase.eden_test
 class InfraTests(unittest.TestCase):
     """Tests for the snapshot generation/verification code itself."""
+
+    def _snapshot_variants(self) -> dict[str, Any]:
+        class Scope:
+            @snapshot_test
+            class Example(unittest.TestCase):
+                def use_io_uring(self) -> bool:
+                    return False
+
+                def test_example(self) -> None:
+                    pass
+
+        return {name: cls for name, cls in vars(Scope).items() if isinstance(cls, type)}
+
+    @parameterized.expand([("linux",), ("darwin",), ("win32",)])
+    def test_snapshot_variants_preserve_archive_and_transport(
+        self, platform: str
+    ) -> None:
+        paths = [Path("first.tar.bz2"), Path("second.tar.bz2")]
+        with (
+            mock.patch.object(sys, "platform", platform),
+            mock.patch.object(Path, "iterdir", return_value=iter(paths)),
+            mock.patch.dict(skip.TEST_DISABLED, {}, clear=True),
+        ):
+            variants = self._snapshot_variants()
+        expected = {
+            f"Example{path.name.split('.', 1)[0]}{suffix}": (path, suffix == "IoUring")
+            for path in paths
+            for suffix in (("", "IoUring") if platform == "linux" else ("",))
+        }
+        self.assertEqual(set(expected), set(variants))
+        self.assertEqual(len(variants), len(set(variants.values())))
+        for name, cls in variants.items():
+            with self.subTest(variant=name):
+                case = cls()
+                self.assertEqual(
+                    expected[name], (case._getSnapshotPath(), case.use_io_uring())
+                )
+
+    def test_snapshot_variant_skip_does_not_leak_to_io_uring(self) -> None:
+        with (
+            mock.patch.object(sys, "platform", "linux"),
+            mock.patch.object(
+                Path, "iterdir", return_value=iter([Path("first.tar.bz2")])
+            ),
+            mock.patch.dict(
+                skip.TEST_DISABLED,
+                {"snapshot.test_snapshots.Examplefirst": ["test_example"]},
+                clear=True,
+            ),
+        ):
+            variants = self._snapshot_variants()
+        self.assertFalse(
+            callable(getattr(variants["Examplefirst"], "test_example", None))
+        )
+        self.assertTrue(callable(variants["ExamplefirstIoUring"].test_example))
+
+    @parameterized.expand([("tools", None), ("devfuse", False), ("io_uring", True)])
+    def test_snapshot_transport_config(
+        self, name: str, use_io_uring: bool | None
+    ) -> None:
+        original = """\
+[other]
+MixedCase = "100%=value"
+values = [
+    "one",
+    "two",
+]
+[fuse]
+max-background-requests = 17
+"""
+        with snapshot_mod.create_tmp_dir() as tmp_dir:
+            snapshot = BasicSnapshot(tmp_dir)
+            snapshot.create_transient_dir()
+            config_path = snapshot.etc_eden_dir / "edenfs.rc"
+            config_path.write_text(original)
+            with mock.patch.object(edenclient, "require_io_uring_kernel"):
+                snapshot.edenfs(use_io_uring=use_io_uring)
+                first_contents = config_path.read_text()
+                snapshot.edenfs(use_io_uring=use_io_uring)
+            contents = config_path.read_text()
+        config = tomllib.loads(contents)
+        self.assertEqual(first_contents, contents)
+        self.assertEqual(tomllib.loads(original)["other"], config["other"])
+        self.assertEqual(17, config["fuse"]["max-background-requests"])
+        if use_io_uring is None:
+            self.assertEqual(original, contents)
+        else:
+            self.assertEqual(use_io_uring, config["fuse"]["use-io-uring"])
+            if use_io_uring:
+                self.assertTrue(config["fuse"]["io-uring-pre-create-queues"])
+                self.assertEqual(".*", config["fuse"]["io-uring-kernel-release-regex"])
+
+    @parameterized.expand([(False,), (True,)])
+    def test_snapshot_transport_config_without_existing_file(
+        self, use_io_uring: bool
+    ) -> None:
+        with snapshot_mod.create_tmp_dir() as tmp_dir:
+            snapshot = BasicSnapshot(tmp_dir)
+            snapshot.create_transient_dir()
+            with mock.patch.object(edenclient, "require_io_uring_kernel"):
+                eden = snapshot.edenfs(use_io_uring=use_io_uring)
+            config = tomllib.loads(eden.system_rc_path.read_text())
+        self.assertEqual(use_io_uring, config["fuse"]["use-io-uring"])
+
+    def test_snapshot_unsupported_kernel_skips_before_client_creation(self) -> None:
+        with (
+            mock.patch.object(
+                edenclient, "require_io_uring_kernel", side_effect=unittest.SkipTest
+            ),
+            mock.patch.object(edenclient, "EdenFS") as client,
+        ):
+            with self.assertRaises(unittest.SkipTest):
+                BasicSnapshot(Path("unused")).edenfs(use_io_uring=True)
+        client.assert_not_called()
 
     def test_verify_directory(self) -> None:
         expected = verify_mod.ExpectedFileSet()

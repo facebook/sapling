@@ -96,11 +96,7 @@ class EdenTestCase(EdenTestCaseBase):
 
     def setUp(self) -> None:
         if self.use_io_uring():
-            release = os.uname().release if sys.platform == "linux" else ""
-            # The FUSE io_uring ABI is kernel-specific; extend this allowlist
-            # when another fbk release is validated.
-            if "fbk" not in release or not release.startswith(("6.13.", "6.16.")):
-                self.skipTest("requires an fbk 6.13 or 6.16 FUSE io_uring kernel")
+            edenclient.require_io_uring_kernel()
 
         self.start = time.time()
         self.last_event = self.start
@@ -198,12 +194,7 @@ class EdenTestCase(EdenTestCaseBase):
         extra_config = dict(self.edenfs_extra_config() or {})
         fuse_config = list(extra_config.get("fuse", []))
         extra_config["fuse"] = fuse_config
-        enabled = "true" if self.use_io_uring() else "false"
-        fuse_config.append(f"use-io-uring = {enabled}")
-        if self.use_io_uring():
-            fuse_config.append('io-uring-kernel-release-regex = ".*"')
-            # Allocate queues before replying to INIT to allow devfuse fallback.
-            fuse_config.append("io-uring-pre-create-queues = true")
+        fuse_config.extend(edenclient.fuse_transport_config(self.use_io_uring()))
         self.write_configs(extra_config, self.eden.system_rc_path)
 
         # Default to using the Rust version of commands when running
@@ -859,6 +850,7 @@ def test_replicator(
 def _replicate_eden_nfs_repo_test(
     test_class: Type[EdenRepoTest],
     run_coroutines: bool = False,
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     class CoroRepoTest(CoroutinesTestMixin, test_class):
         pass
@@ -877,7 +869,28 @@ def _replicate_eden_nfs_repo_test(
     if run_coroutines:
         variants.append(("Coroutines", typing.cast(Type[EdenRepoTest], CoroRepoTest)))
 
-    return variants
+    result = []
+    for label, base in variants:
+
+        class CustomRepoTest(base):
+            pass
+
+        result.append((label, typing.cast(Type[EdenRepoTest], CustomRepoTest)))
+        # This helper also generates default FUSE variants, despite its NFS name.
+        if (
+            run_io_uring
+            and sys.platform == "linux"
+            and not issubclass(base, NFSTestMixin)
+        ):
+
+            class IoUringRepoTest(IoUringTestMixin, base):
+                pass
+
+            result.append(
+                (f"{label}IoUring", typing.cast(Type[EdenRepoTest], IoUringRepoTest))
+            )
+
+    return result
 
 
 # A decorator to duplicate the test to use NFS
@@ -907,6 +920,7 @@ class WalEnabledMixin:
 
 def _replicate_eden_nfs_repo_test_with_wal_variant(
     test_class: Type[EdenRepoTest],
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     """Variant generator: every `eden_nfs_repo_test` variant, plus a
     WAL flavor of each.
@@ -916,7 +930,9 @@ def _replicate_eden_nfs_repo_test_with_wal_variant(
     base variants automatically if `_replicate_eden_nfs_repo_test`
     grows them.
     """
-    base_variants = list(_replicate_eden_nfs_repo_test(test_class))
+    base_variants = list(
+        _replicate_eden_nfs_repo_test(test_class, run_io_uring=run_io_uring)
+    )
     # WAL is only implemented for the Legacy/LegacyDev FsInodeCatalog
     # (Linux/macOS). Windows uses the Sqlite catalog, so the WAL variants
     # would exercise the same code path as the base variants.

@@ -19,6 +19,7 @@ python_library(
         "types/*.py",
     ]),
     deps = [
+        "fbsource//third-party/pypi/toml:toml",
         "//eden/integration/lib:lib",
         "//eden/test_support:py",
     ],
@@ -50,6 +51,7 @@ python_unittest(
     network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
         ":snapshot",
         "//eden/integration/lib:lib",
     ],
