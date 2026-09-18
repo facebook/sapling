@@ -7,6 +7,7 @@
 
 import LazyLoginDialog from './LazyLoginDialog';
 import {setCustomLoginDialogComponent} from 'reviewstack/src/LoginDialog';
+import {setCustomLogout} from 'reviewstack/src/Username';
 
 export {
   App,
@@ -19,4 +20,7 @@ export {
 
 export function configureLoginDialog() {
   setCustomLoginDialogComponent(LazyLoginDialog);
+  setCustomLogout(() => {
+    window.location.assign('/github/oauth2/sign_out?rd=/');
+  });
 }
