@@ -73,11 +73,13 @@ export default function InlineCommentThread({thread}: Props): React.ReactElement
       }
       refreshPullRequest();
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const message = detail.includes('Resource not accessible by integration')
+        ? 'The Aionic ReviewStack GitHub App is not installed for this repository. Install it for the repository, or reconnect with a personal access token that has Pull requests write access.'
+        : detail;
       setNotification({
         type: 'error',
-        message: `Failed to ${thread.isResolved ? 'unresolve' : 'resolve'} comment: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        message: `Failed to ${thread.isResolved ? 'unresolve' : 'resolve'} comment: ${message}`,
       });
     } finally {
       setResolving(false);
