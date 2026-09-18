@@ -13,7 +13,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
-use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::batch::FileConflicts;
@@ -126,6 +125,12 @@ impl BonsaiDerivable for RootUnodeManifestId {
         STATS::new_parallel.add_value(1);
         let batch_len = bonsais.len();
         let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
+        // `stacks` only borrows `bonsais` by reference, so the changesets can still be
+        // consumed here and reused below instead of being reloaded from the blobstore.
+        let mut bonsais_by_id: HashMap<ChangesetId, BonsaiChangeset> = bonsais
+            .into_iter()
+            .map(|bonsai| (bonsai.get_changeset_id(), bonsai))
+            .collect();
 
         for stack in stacks {
             let derived_parents = try_join_all(
@@ -147,7 +152,9 @@ impl BonsaiDerivable for RootUnodeManifestId {
             if stack.stack_items.len() == 1 {
                 // derive a single commit without batching
                 for item in stack.stack_items {
-                    let bonsai = item.cs_id.load(ctx, derivation_ctx.blobstore()).await?;
+                    let bonsai = bonsais_by_id.remove(&item.cs_id).ok_or_else(|| {
+                        anyhow!("changeset {} missing from derive_batch input", item.cs_id)
+                    })?;
                     let parents = derivation_ctx
                         .fetch_unknown_parents(ctx, Some(&res), &bonsai)
                         .await?;
