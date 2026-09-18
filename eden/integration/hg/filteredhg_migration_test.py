@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import abc
 import json
@@ -18,7 +18,7 @@ from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
     FilteredHgTestCase,
 )
-from eden.integration.lib import hgrepo
+from eden.integration.lib import hgrepo, testcase
 from eden.integration.lib.hgrepo import HgError
 
 
@@ -254,6 +254,7 @@ adir
         self.assert_filter_not_applied(mount_path)
 
 
+@testcase.eden_test(run_io_uring=True)
 @apply_test_duplicates
 class FilteredFSMigrationFromUnfilteredTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
@@ -616,6 +617,7 @@ class FilteredFSMigrationFromUnfilteredTest(
 
 # This test suite is intended for test cases which try to run edensparse
 # migration on a repo which is already FilteredFS.
+@testcase.eden_test(run_io_uring=True)
 class FilteredFsMigrationFromFilteredTest(
     FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
@@ -647,6 +649,7 @@ class FilteredFsMigrationFromFilteredTest(
         )
 
 
+@testcase.eden_test(run_io_uring=True)
 class FilteredFsMigrationDisabledTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
@@ -658,6 +661,7 @@ class FilteredFsMigrationDisabledTest(
         self.migration_not_happen_common()
 
 
+@testcase.eden_test(run_io_uring=True)
 class FilteredFsMigrationWithSaplingConfigUnsetTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
@@ -665,6 +669,7 @@ class FilteredFsMigrationWithSaplingConfigUnsetTest(
         self.migration_not_happen_common()
 
 
+@testcase.eden_test(run_io_uring=True)
 class FilterSyncWithoutMigrationMarkerTest(
     FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):

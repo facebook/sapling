@@ -1128,11 +1128,19 @@ class CoroutinesTestMixin:
 
 def _replicate_eden_test(
     test_class: Type[unittest.TestCase],
+    run_io_uring: bool = False,
 ) -> Iterable[Tuple[str, Type[unittest.TestCase]]]:
     class EdenTest(test_class):
         pass
 
-    return [("Default", typing.cast(Type[unittest.TestCase], EdenTest))]
+    variants = [("Default", typing.cast(Type[unittest.TestCase], EdenTest))]
+    if run_io_uring and sys.platform == "linux":
+
+        class IoUringTest(IoUringTestMixin, test_class):
+            pass
+
+        variants.append(("IoUring", typing.cast(Type[unittest.TestCase], IoUringTest)))
+    return variants
 
 
 eden_test = test_replicator(_replicate_eden_test)

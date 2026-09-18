@@ -28,7 +28,9 @@ python_unittest(
     network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
         ":testutil",
+        "//eden/fs/py/eden:config",
         "//eden/integration/lib:lib",
     ],
 )

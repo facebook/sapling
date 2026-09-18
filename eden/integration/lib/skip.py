@@ -460,6 +460,18 @@ for class_name, value_name in TEST_DISABLED.items():
             VARIANT_PARITY[class_name + suffix] = value_name
 TEST_DISABLED.update(VARIANT_PARITY)
 
+# These platform limitations also apply to the independent io_uring siblings.
+if sys.platform == "linux":
+    for test_class in (
+        "hg.doctor_test.DoctorTest",
+        "hg.post_clone_test.SymlinkTest",
+        "hg.update_test.UpdateTest",
+    ):
+        for suffix in ("TreeOnly", "TreeOnlyFilteredHg"):
+            name = test_class + suffix
+            if name in TEST_DISABLED:
+                TEST_DISABLED[name + "IoUring"] = TEST_DISABLED[name]
+
 # Any future FilteredHg skips should be added here
 FILTEREDFS_TEST_DISABLED = {
     # These tests will behave the exact same on FilteredFS. Duplicating them can

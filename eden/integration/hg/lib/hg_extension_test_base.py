@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import abc
 import configparser
 import itertools
@@ -100,6 +98,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             allow_empty=True,
             backing_store=self.backing_store_type,
         )
+        self.assert_running_fuse_transports()
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(
@@ -585,9 +584,31 @@ class JournalEntry:
 MixinList = List[Tuple[str, List[Type[Any]]]]
 
 
+def _replicate_io_uring_variant(
+    label: str,
+    test_class: Type[Any],
+    run_io_uring: bool,
+) -> Iterable[Tuple[str, Type[Any]]]:
+    class DefaultHgRepoTest(test_class):
+        pass
+
+    yield label, DefaultHgRepoTest
+    if (
+        run_io_uring
+        and sys.platform == "linux"
+        and not issubclass(test_class, testcase.NFSTestMixin)
+    ):
+
+        class IoUringHgRepoTest(testcase.IoUringTestMixin, test_class):
+            pass
+
+        yield f"{label}IoUring", IoUringHgRepoTest
+
+
 def _replicate_hg_test(
     test_class: Type[EdenHgTestCase],
     run_coroutines: bool = True,
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[EdenHgTestCase]]]:
     tree_variants: MixinList = [("TreeOnly", [])]
     if eden.config.HAVE_NFS:
@@ -617,9 +638,10 @@ def _replicate_hg_test(
                 ):
                     pass
 
-                yield (
+                yield from _replicate_io_uring_variant(
                     f"{tree_label}{overlay_label}{scm_label}",
                     typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
+                    run_io_uring,
                 )
 
     if run_coroutines:
@@ -627,14 +649,16 @@ def _replicate_hg_test(
         class CoroutinesVariantHgRepoTest(testcase.CoroutinesTestMixin, test_class):
             pass
 
-        yield (
+        yield from _replicate_io_uring_variant(
             "Coroutines",
             typing.cast(Type[EdenHgTestCase], CoroutinesVariantHgRepoTest),
+            run_io_uring,
         )
 
 
 def _replicate_filteredhg_test(
     test_class: Type[FilteredHgTestCase],
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[FilteredHgTestCase]]]:
     tree_variants: MixinList = [("TreeOnly", [])]
     if eden.config.HAVE_NFS:
@@ -645,14 +669,16 @@ def _replicate_filteredhg_test(
         class VariantHgRepoTest(*tree_mixins, test_class):
             pass
 
-        yield (
-            f"{tree_label}",
+        yield from _replicate_io_uring_variant(
+            tree_label,
             typing.cast(Type[FilteredHgTestCase], VariantHgRepoTest),
+            run_io_uring,
         )
 
 
 def _replicate_status_cache_enabled_test(
     test_class: Type[FilteredHgTestCase],
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[FilteredHgTestCase]]]:
     """
     This takes whatever `_replicate_filteredhg_test` generates and adds
@@ -662,7 +688,9 @@ def _replicate_status_cache_enabled_test(
         ("WithStatusCacheDisabled", []),
         ("WithStatusCacheEnabled", [StatusCacheEnabledTestMixin]),
     ]
-    for hg_test_label, hg_test_class in _replicate_hg_test(test_class):
+    for hg_test_label, hg_test_class in _replicate_hg_test(
+        test_class, run_io_uring=run_io_uring
+    ):
         for cache_config_label, cache_config_mixins in cache_config_variants:
             # pyrefly: ignore [invalid-inheritance]
             class VariantHgRepoTest(*cache_config_mixins, hg_test_class):
