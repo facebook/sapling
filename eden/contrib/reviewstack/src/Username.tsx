@@ -13,6 +13,12 @@ import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useCallback, useMemo} from 'react';
 
+let customLogout: (() => void) | null = null;
+
+export function setCustomLogout(handler: () => void): void {
+  customLogout = handler;
+}
+
 /**
  * Get the token value from the token state.
  */
@@ -34,7 +40,10 @@ export default function Username(): React.ReactElement | null {
   const token = getTokenValue(tokenState);
 
   const setToken = useSetAtom(gitHubTokenPersistenceAtom);
-  const onLogout = useCallback(() => setToken(null), [setToken]);
+  const onLogout = useCallback(() => {
+    setToken(null);
+    customLogout?.();
+  }, [setToken]);
 
   // Show UI when we have a token (regardless of loading state)
   if (tokenState.state === 'hasValue' && token != null) {
