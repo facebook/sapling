@@ -18,11 +18,23 @@ pub use manager::CasFetchManager;
 pub use manager::CasFetchManagerBuilder;
 pub use manager::CasFetchOutcome;
 
-/// Per-digest results from one batch returned by [`CasClient::fetch`].
-///
-/// Each entry associates a digest with its blob, a CAS not-found result
-/// (`Ok(None)`), or an error specific to that digest.
-pub type CasBatch = Vec<(CasDigest, Result<Option<Blob>>)>;
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct CasBackendStats {
+    pub total_bytes_zdb: u64,
+    pub total_bytes_zgw: u64,
+    pub total_bytes_manifold: u64,
+    pub total_bytes_hedwig: u64,
+    pub queries_zdb: u64,
+    pub queries_zgw: u64,
+    pub queries_manifold: u64,
+    pub queries_hedwig: u64,
+}
+
+/// One result batch returned by [`CasClient::fetch`].
+pub struct CasBatch {
+    pub backend_stats: CasBackendStats,
+    pub results: Vec<(CasDigest, Result<Option<Blob>>)>,
+}
 
 /// Fetches content-addressed blobs in batches.
 pub trait CasClient: Send + Sync {

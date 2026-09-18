@@ -8,6 +8,7 @@
 use std::ops::AddAssign;
 
 use ::metrics::Counter;
+use cas_client::CasBackendStats;
 
 pub struct FetchMetrics {
     /// Number of requests / batches
@@ -65,6 +66,60 @@ macro_rules! static_fetch_metrics {
 }
 
 pub(crate) use static_fetch_metrics;
+
+pub struct CasBackendMetrics {
+    pub(crate) zdb_bytes: &'static Counter,
+    pub(crate) zdb_queries: &'static Counter,
+    pub(crate) zgw_bytes: &'static Counter,
+    pub(crate) zgw_queries: &'static Counter,
+    pub(crate) manifold_bytes: &'static Counter,
+    pub(crate) manifold_queries: &'static Counter,
+    pub(crate) hedwig_bytes: &'static Counter,
+    pub(crate) hedwig_queries: &'static Counter,
+}
+
+macro_rules! static_cas_backend_metrics {
+    ($name:ident, $prefix:tt) => {
+        paste::paste! {
+            mod [<cas_backend_metrics_ $name:lower>] {
+                pub static ZDB_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zdb.bytes"));
+                pub static ZDB_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zdb.queries"));
+                pub static ZGW_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zgw.bytes"));
+                pub static ZGW_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zgw.queries"));
+                pub static MANIFOLD_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".manifold.bytes"));
+                pub static MANIFOLD_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".manifold.queries"));
+                pub static HEDWIG_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.bytes"));
+                pub static HEDWIG_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.queries"));
+            }
+
+            static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
+                zdb_bytes: &[<cas_backend_metrics_ $name:lower>]::ZDB_BYTES,
+                zdb_queries: &[<cas_backend_metrics_ $name:lower>]::ZDB_QUERIES,
+                zgw_bytes: &[<cas_backend_metrics_ $name:lower>]::ZGW_BYTES,
+                zgw_queries: &[<cas_backend_metrics_ $name:lower>]::ZGW_QUERIES,
+                manifold_bytes: &[<cas_backend_metrics_ $name:lower>]::MANIFOLD_BYTES,
+                manifold_queries: &[<cas_backend_metrics_ $name:lower>]::MANIFOLD_QUERIES,
+                hedwig_bytes: &[<cas_backend_metrics_ $name:lower>]::HEDWIG_BYTES,
+                hedwig_queries: &[<cas_backend_metrics_ $name:lower>]::HEDWIG_QUERIES,
+            };
+        }
+    };
+}
+
+pub(crate) use static_cas_backend_metrics;
+
+impl CasBackendMetrics {
+    pub(crate) fn update(&self, stats: &CasBackendStats) {
+        self.zdb_bytes.add(stats.total_bytes_zdb as usize);
+        self.zdb_queries.add(stats.queries_zdb as usize);
+        self.zgw_bytes.add(stats.total_bytes_zgw as usize);
+        self.zgw_queries.add(stats.queries_zgw as usize);
+        self.manifold_bytes.add(stats.total_bytes_manifold as usize);
+        self.manifold_queries.add(stats.queries_manifold as usize);
+        self.hedwig_bytes.add(stats.total_bytes_hedwig as usize);
+        self.hedwig_queries.add(stats.queries_hedwig as usize);
+    }
+}
 
 /// Construct a static LocalAndCacheFetchMetrics instance.
 macro_rules! static_local_cache_fetch_metrics {

@@ -1479,7 +1479,7 @@ mod tests {
             assert!(matches!(digest_type, CasDigestType::Tree));
             self.fetch_count.fetch_add(1, Ordering::Relaxed);
             let content = Blob::Bytes(self.content.clone());
-            let batch = digests
+            let results = digests
                 .iter()
                 .copied()
                 .map(|digest| {
@@ -1491,6 +1491,10 @@ mod tests {
                     (digest, result)
                 })
                 .collect();
+            let batch = CasBatch {
+                backend_stats: Default::default(),
+                results,
+            };
             stream::once(async move { Ok(batch) }).boxed()
         }
     }

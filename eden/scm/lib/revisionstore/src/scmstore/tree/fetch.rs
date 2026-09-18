@@ -298,7 +298,9 @@ impl<'a> FetchState<'a> {
                     continue;
                 }
             };
-            for (digest, result) in batch {
+            self.metrics.cas_backend.update(&batch.backend_stats);
+
+            for (digest, result) in batch.results {
                 bar.increase_position(1);
                 let Some(keys) = pending.remove(&digest) else {
                     healthy = false;

@@ -834,7 +834,10 @@ impl<'a> FetchState<'a> {
                     continue;
                 }
             };
+            self.metrics.cas_backend.update(&batch.backend_stats);
+
             let files_to_process = batch
+                .results
                 .into_iter()
                 .filter_map(|(digest, result)| {
                     bar.increase_position(1);
