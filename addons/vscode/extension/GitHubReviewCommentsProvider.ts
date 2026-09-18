@@ -21,7 +21,8 @@ import * as vscode from 'vscode';
 import {decodeSaplingDiffUri, SAPLING_DIFF_PROVIDER_SCHEME} from './DiffContentProvider';
 
 const COMMENT_CONTROLLER_ID = 'sapling-review-comments';
-const REFRESH_INTERVAL_MS = 30_000;
+const REFRESH_INTERVAL_MS = 5 * 60_000;
+const COMMENT_CACHE_TTL_MS = 60_000;
 
 type ReviewContext = {
   uri: vscode.Uri;
@@ -32,6 +33,62 @@ type ReviewContext = {
   remoteThreads: Set<vscode.CommentThread>;
   refreshGeneration: number;
 };
+
+type CommentFetchEntry = {
+  promise: Promise<DiffComment[]>;
+  settledAt: number | null;
+};
+
+/**
+ * Shares one comments request between all open files for a pull request. VS Code may ask for
+ * commenting ranges many times while laying out an editor, so the cache also prevents those UI
+ * callbacks from turning into GitHub requests.
+ */
+export class ReviewCommentFetchCache {
+  private readonly entries = new Map<string, CommentFetchEntry>();
+
+  constructor(
+    private readonly ttlMs = COMMENT_CACHE_TTL_MS,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  get(key: string, fetchComments: () => Promise<DiffComment[]>): Promise<DiffComment[]> {
+    const existing = this.entries.get(key);
+    if (
+      existing != null &&
+      (existing.settledAt == null || this.now() - existing.settledAt < this.ttlMs)
+    ) {
+      return existing.promise;
+    }
+
+    const entry: CommentFetchEntry = {
+      promise: Promise.resolve().then(fetchComments),
+      settledAt: null,
+    };
+    this.entries.set(key, entry);
+    entry.promise.then(
+      () => {
+        if (this.entries.get(key) === entry) {
+          entry.settledAt = this.now();
+        }
+      },
+      () => {
+        if (this.entries.get(key) === entry) {
+          this.entries.delete(key);
+        }
+      },
+    );
+    return entry.promise;
+  }
+
+  invalidate(key: string): void {
+    this.entries.delete(key);
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+}
 
 class ReviewComment implements vscode.Comment {
   constructor(
@@ -54,6 +111,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
   );
   private readonly contexts = new Map<string, ReviewContext>();
   private readonly draftThreads = new Set<vscode.CommentThread>();
+  private readonly commentFetchCache = new ReviewCommentFetchCache();
   private readonly disposables: Array<vscode.Disposable> = [];
   private readonly refreshTimer: ReturnType<typeof setInterval>;
   private readonly activeRangeDecoration = vscode.window.createTextEditorDecorationType({
@@ -120,6 +178,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
         this.updateActiveRangeDecorations();
       }),
       vscode.window.onDidChangeTextEditorSelection(event => this.handleSelectionChange(event)),
+      vscode.workspace.onDidCloseTextDocument(document => this.untrack(document.uri)),
     );
     this.disposables.push({
       dispose: repositoryCache.onChangeActiveRepos(() => {
@@ -131,7 +190,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     for (const document of vscode.workspace.textDocuments) {
       this.trackEncodedUri(document.uri);
     }
-    this.refreshTimer = setInterval(() => this.refreshAll(), REFRESH_INTERVAL_MS);
+    this.refreshTimer = setInterval(() => this.refreshVisible(), REFRESH_INTERVAL_MS);
   }
 
   track(uri: vscode.Uri, fileUri: vscode.Uri, comparison: Comparison): void {
@@ -179,7 +238,6 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     const key = uri.toString();
     const existing = this.contexts.get(key);
     if (existing != null) {
-      void this.refresh(existing);
       return;
     }
 
@@ -201,7 +259,9 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
           return;
         }
         context.diffId = commit.diffId;
-        return this.refresh(context);
+        if (this.isVisible(context.uri)) {
+          return this.refresh(context);
+        }
       })
       .catch(error => this.ctx.logger.error('Failed to load review comments', error));
   }
@@ -213,9 +273,40 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     }
   }
 
-  private refreshAll(): void {
+  private refreshVisible(): void {
     for (const context of this.contexts.values()) {
-      void this.refresh(context);
+      if (this.isVisible(context.uri)) {
+        void this.refresh(context);
+      }
+    }
+  }
+
+  private isVisible(uri: vscode.Uri): boolean {
+    const key = uri.toString();
+    return vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === key);
+  }
+
+  private commentFetchKey(context: ReviewContext): string | null {
+    return context.diffId == null ? null : `${context.repo.info.repoRoot}\0${context.diffId}`;
+  }
+
+  private untrack(uri: vscode.Uri): void {
+    const key = uri.toString();
+    const context = this.contexts.get(key);
+    if (context == null) {
+      return;
+    }
+    for (const thread of context.remoteThreads) {
+      thread.dispose();
+    }
+    this.contexts.delete(key);
+
+    const fetchKey = this.commentFetchKey(context);
+    if (
+      fetchKey != null &&
+      ![...this.contexts.values()].some(other => this.commentFetchKey(other) === fetchKey)
+    ) {
+      this.commentFetchCache.invalidate(fetchKey);
     }
   }
 
@@ -228,9 +319,17 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     ) {
       return;
     }
+    const diffId = context.diffId;
+    const fetchComments = provider.fetchComments.bind(provider);
     const generation = ++context.refreshGeneration;
     try {
-      const comments = await provider.fetchComments(context.diffId);
+      const fetchKey = this.commentFetchKey(context);
+      if (fetchKey == null) {
+        return;
+      }
+      const comments = await this.commentFetchCache.get(fetchKey, () =>
+        fetchComments(diffId, {includeReactions: false}),
+      );
       if (generation !== context.refreshGeneration) {
         return;
       }
@@ -399,6 +498,10 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
         () => createInlineComment(diffId, input),
       );
       this.markCommentAsPosted(pending, created, body, context);
+      const fetchKey = this.commentFetchKey(context);
+      if (fetchKey != null) {
+        this.commentFetchCache.invalidate(fetchKey);
+      }
       this.draftThreads.delete(thread);
       thread.contextValue = undefined;
       thread.canReply = true;
@@ -535,6 +638,7 @@ class GitHubReviewCommentsProvider implements vscode.Disposable {
     this.disposables.forEach(disposable => disposable.dispose());
     this.activeRangeDecoration.dispose();
     this.controller.dispose();
+    this.commentFetchCache.clear();
     this.contexts.clear();
     this.draftThreads.clear();
   }

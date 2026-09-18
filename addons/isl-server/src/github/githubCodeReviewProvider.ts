@@ -244,13 +244,17 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     /* leading */ true,
   );
 
-  public async fetchComments(diffId: string): Promise<DiffComment[]> {
+  public async fetchComments(
+    diffId: string,
+    options?: {includeReactions?: boolean},
+  ): Promise<DiffComment[]> {
     const response = await this.query<
       PullRequestCommentsQueryData,
       PullRequestCommentsQueryVariables
     >(PullRequestCommentsQuery, {
       url: this.getPrUrl(diffId),
       numToFetch: 50,
+      includeReactions: options?.includeReactions ?? true,
     });
 
     if (response == null) {

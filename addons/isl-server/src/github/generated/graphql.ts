@@ -29550,6 +29550,7 @@ export type ReactionParts = ReactionParts_CommitComment_ | ReactionParts_Discuss
 export type PullRequestCommentsQueryVariables = Exact<{
   url: Scalars['URI'];
   numToFetch: Scalars['Int'];
+  includeReactions: Scalars['Boolean'];
 }>;
 
 
@@ -29703,7 +29704,7 @@ export const MergeQueueSupportQuery = `
 }
     `;
 export const PullRequestCommentsQuery = `
-    query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
+    query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!, $includeReactions: Boolean!) {
   resource(url: $url) {
     __typename
     ... on PullRequest {
@@ -29711,7 +29712,7 @@ export const PullRequestCommentsQuery = `
         totalCount
         nodes {
           ...CommentParts
-          ...ReactionParts
+          ...ReactionParts @include(if: $includeReactions)
         }
       }
       reviewThreads(first: $numToFetch) {
@@ -29727,7 +29728,7 @@ export const PullRequestCommentsQuery = `
           comments(first: 50) {
             nodes {
               ...CommentParts
-              ...ReactionParts
+              ...ReactionParts @include(if: $includeReactions)
               databaseId
               line
               startLine

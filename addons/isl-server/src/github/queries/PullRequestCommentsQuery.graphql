@@ -20,7 +20,7 @@ fragment ReactionParts on Reactable {
   }
 }
 
-query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
+query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!, $includeReactions: Boolean!) {
   resource(url: $url) {
     __typename
     ... on PullRequest {
@@ -28,7 +28,7 @@ query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
         totalCount
         nodes {
           ...CommentParts
-          ...ReactionParts
+          ...ReactionParts @include(if: $includeReactions)
         }
       }
       reviewThreads(first: $numToFetch) {
@@ -44,7 +44,7 @@ query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
           comments(first: 50) {
             nodes {
               ...CommentParts
-              ...ReactionParts
+              ...ReactionParts @include(if: $includeReactions)
               databaseId
               line
               startLine

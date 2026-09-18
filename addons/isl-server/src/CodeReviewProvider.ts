@@ -105,8 +105,11 @@ export interface CodeReviewProvider {
   /** Convert usernames/emails to avatar URIs */
   fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
 
-  /** Convert usernames/emails to avatar URIs */
-  fetchComments?(diffId: DiffId): Promise<Array<DiffComment>>;
+  /** Fetch comments, optionally omitting reaction details for lightweight background refreshes. */
+  fetchComments?(
+    diffId: DiffId,
+    options?: {includeReactions?: boolean},
+  ): Promise<Array<DiffComment>>;
 
   /** Add a line comment or reply to the remote code review. */
   createInlineComment?(

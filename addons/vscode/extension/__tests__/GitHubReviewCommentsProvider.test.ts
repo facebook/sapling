@@ -6,10 +6,44 @@
  */
 
 import {
+  ReviewCommentFetchCache,
   reviewCommentBody,
   reviewStackPullRequestUrl,
   suggestionBody,
 } from '../GitHubReviewCommentsProvider';
+
+describe('GitHub review comment fetching', () => {
+  it('shares concurrent and recent requests for the same pull request', async () => {
+    let now = 1_000;
+    const cache = new ReviewCommentFetchCache(60_000, () => now);
+    const fetchComments = jest.fn(() => Promise.resolve([]));
+
+    const first = cache.get('repo\0pr', fetchComments);
+    const second = cache.get('repo\0pr', fetchComments);
+    await expect(Promise.all([first, second])).resolves.toEqual([[], []]);
+    expect(fetchComments).toHaveBeenCalledTimes(1);
+
+    now += 30_000;
+    await cache.get('repo\0pr', fetchComments);
+    expect(fetchComments).toHaveBeenCalledTimes(1);
+
+    now += 60_000;
+    await cache.get('repo\0pr', fetchComments);
+    expect(fetchComments).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache failed requests', async () => {
+    const cache = new ReviewCommentFetchCache();
+    const fetchComments = jest
+      .fn<Promise<never>, []>()
+      .mockRejectedValueOnce(new Error('rate limited'))
+      .mockRejectedValueOnce(new Error('still rate limited'));
+
+    await expect(cache.get('repo\0pr', fetchComments)).rejects.toThrow('rate limited');
+    await expect(cache.get('repo\0pr', fetchComments)).rejects.toThrow('still rate limited');
+    expect(fetchComments).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe('GitHub review suggestions', () => {
   it('copies selected lines into a GitHub suggestion block', () => {

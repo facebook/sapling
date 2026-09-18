@@ -96,6 +96,10 @@ describe('GitHubCodeReviewProvider comments', () => {
         ],
       },
     ]);
+    expect(mockQueryGraphQL.mock.calls[0]?.[1]).toMatchObject({
+      includeReactions: true,
+      numToFetch: 50,
+    });
   });
 
   it('posts a multiline comment against the latest pull request head', async () => {
