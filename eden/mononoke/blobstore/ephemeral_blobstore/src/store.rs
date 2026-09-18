@@ -883,6 +883,7 @@ mod test {
     use anyhow::anyhow;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreEnumerableWithUnlink;
+    use blobstore::BlobstoreIsPresent;
     use blobstore::BlobstoreKeyParam;
     use blobstore::KeyedBlobstore;
     use context::CoreContext;
@@ -1652,6 +1653,15 @@ mod test {
         assert_eq!(res.len(), 1);
         let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
         assert_eq!(res_bubble_id, &bubble.bubble_id());
+        let reopened = eph
+            .inner()?
+            .open_bubble_raw(&ctx, bubble.bubble_id(), false)
+            .await?;
+        let error = reopened.get(&ctx, "test_key").await.unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<EphemeralBlobstoreError>(),
+            Some(EphemeralBlobstoreError::BubbleExpired(_))
+        ));
         Ok(())
     }
 
@@ -1814,15 +1824,73 @@ mod test {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
         let grace = Duration::from_secs(0);
-        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let (ctx, _, repo_blobstore, eph) =
+            bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble with labels that would expire immediately.
         let labels = vec!["workspace".to_string()];
         let bubble1 = eph.create_bubble(&ctx, None, labels).await?;
+        let blobstore = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
+        blobstore
+            .put(
+                &ctx,
+                "test_key".to_string(),
+                BlobstoreBytes::from_bytes("test data"),
+            )
+            .await?;
         let opened_bubble = eph.open_bubble(&ctx, bubble1.bubble_id()).await?;
         // Bubble should be reopened successfully since even though its expired by time
         // ,having labels associated with it should mark it as active.
         assert_eq!(opened_bubble.bubble_id(), bubble1.bubble_id());
         assert_eq!(opened_bubble.labels().await?, bubble1.labels().await?);
+        let blobstore = opened_bubble.wrap_repo_blobstore(repo_blobstore);
+        assert!(matches!(
+            blobstore.is_present(&ctx, "test_key").await?,
+            BlobstoreIsPresent::Present
+        ));
+        let data = blobstore.get(&ctx, "test_key").await?.unwrap().into_bytes();
+        assert_eq!(data.as_bytes().as_ref(), b"test data");
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn read_expired_bubble_without_labels_test(fb: FacebookInit) -> Result<()> {
+        let (ctx, _, _, eph) = bootstrap(
+            fb,
+            Duration::ZERO,
+            Duration::ZERO,
+            BubbleDeletionMode::MarkOnly,
+        )?;
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let error = bubble.get(&ctx, "test_key").await.unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<EphemeralBlobstoreError>(),
+            Some(EphemeralBlobstoreError::BubbleExpired(_))
+        ));
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn read_marked_expired_bubble_with_labels_test(fb: FacebookInit) -> Result<()> {
+        let (ctx, _, _, eph) = bootstrap(
+            fb,
+            Duration::from_hours(1),
+            Duration::ZERO,
+            BubbleDeletionMode::MarkOnly,
+        )?;
+        let bubble = eph
+            .create_bubble(&ctx, None, vec!["workspace".to_string()])
+            .await?;
+        eph.delete_bubble(&ctx, bubble.bubble_id()).await?;
+        let reopened = eph
+            .inner()?
+            .open_bubble_raw(&ctx, bubble.bubble_id(), false)
+            .await?;
+        assert_eq!(reopened.labels().await?, vec!["workspace".to_string()]);
+        let error = reopened.get(&ctx, "test_key").await.unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<EphemeralBlobstoreError>(),
+            Some(EphemeralBlobstoreError::BubbleExpired(_))
+        ));
         Ok(())
     }
 

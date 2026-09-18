@@ -259,7 +259,7 @@ pub struct Bubble {
     /// ID of the current bubble.
     bubble_id: BubbleId,
 
-    /// Expiration time.  After this time, the bubble no longer exists.
+    /// Expiration time for bubbles without labels.
     /// This includes the grace period from the ephemeral blobstore.
     expires_at: DateTime,
 
@@ -304,8 +304,10 @@ impl Bubble {
         }
     }
 
-    pub(crate) fn check_unexpired(&self) -> Result<()> {
-        if self.expires_at >= DateTime::now() && self.expired != ExpiryStatus::Expired {
+    pub(crate) async fn check_unexpired(&self) -> Result<()> {
+        if self.expired != ExpiryStatus::Expired
+            && (self.expires_at >= DateTime::now() || !self.labels().await?.is_empty())
+        {
             Ok(())
         } else {
             Err(EphemeralBlobstoreError::BubbleExpired(self.bubble_id).into())
@@ -540,7 +542,7 @@ impl Bubble {
         ctx: &CoreContext,
         key: &str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.check_unexpired()?;
+        self.check_unexpired().await?;
         self.blobstore.get(ctx, key).await
     }
 
@@ -551,7 +553,7 @@ impl Bubble {
         value: BlobstoreBytes,
         put_behaviour: blobstore::PutBehaviour,
     ) -> Result<blobstore::OverwriteStatus> {
-        self.check_unexpired()?;
+        self.check_unexpired().await?;
         self.blobstore
             .put_explicit(ctx, key, value, put_behaviour)
             .await
@@ -563,7 +565,7 @@ impl Bubble {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<blobstore::OverwriteStatus> {
-        self.check_unexpired()?;
+        self.check_unexpired().await?;
         self.blobstore.put_with_status(ctx, key, value).await
     }
 
@@ -572,7 +574,7 @@ impl Bubble {
         ctx: &CoreContext,
         key: &str,
     ) -> Result<BlobstoreIsPresent> {
-        self.check_unexpired()?;
+        self.check_unexpired().await?;
         self.blobstore.is_present(ctx, key).await
     }
 }

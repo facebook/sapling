@@ -60,7 +60,7 @@ impl Bubble {
         config: FilestoreConfig,
         id: FetchKey,
     ) -> Result<Option<ContentMetadataV2>> {
-        self.check_unexpired()?;
+        self.check_unexpired().await?;
         let blobstore = self.wrap_repo_blobstore(repo_blobstore);
         let data = match filestore::get_metadata(&blobstore, ctx, &id).await? {
             Some(data) => data,
