@@ -21,6 +21,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import time
 import traceback
 import typing
 from dataclasses import dataclass
@@ -1020,6 +1021,33 @@ class DoctorAICmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        # Not a `with` block: that would overwrite `duration` with the whole
+        # command's wall time, and the `claude` subprocess is the part worth
+        # timing when tuning --claude-timeout-secs.
+        sample = instance.get_telemetry_logger().new_sample("eden_doctor_ai")
+        # Seeded so an aborted run still emits a row with every field set:
+        # `finally` logs the sample even for KeyboardInterrupt, which `Exception`
+        # does not cover, and `exit_code` is unknown until doctor returns.
+        sample.add_string("reason", "unhandled_exception")
+        sample.add_int("exit_code", -1)
+        try:
+            return self._run(args, instance, sample)
+        except KeyboardInterrupt:
+            sample.add_string("reason", "interrupted")
+            sample.fail("interrupted")
+            raise
+        except BaseException as ex:
+            sample.fail(str(ex))
+            raise
+        finally:
+            sample.log()
+
+    def _run(
+        self,
+        args: argparse.Namespace,
+        instance: EdenInstance,
+        sample: TelemetrySample,
+    ) -> int:
         doctor_output = io.StringIO()
         doctor_returncode = doctor_mod.cure_what_ails_you(
             instance,
@@ -1032,11 +1060,13 @@ class DoctorAICmd(Subcmd):
         )
 
         doctor_text = doctor_output.getvalue()
+        sample.add_int("exit_code", doctor_returncode)
         if doctor_text:
             sys.stdout.write(doctor_text)
             if not doctor_text.endswith("\n"):
                 sys.stdout.write("\n")
         if doctor_returncode == 0:
+            sample.add_string("reason", "doctor_ok")
             return doctor_returncode
 
         print("\nAI diagnosis follows.\n", file=sys.stderr)
@@ -1046,6 +1076,7 @@ class DoctorAICmd(Subcmd):
 """
         claude_env = os.environ.copy()
         claude_env.pop("CLAUDECODE", None)
+        claude_start = time.monotonic()
         try:
             claude_result = subprocess.run(
                 ["claude", "--print"],
@@ -1057,12 +1088,28 @@ class DoctorAICmd(Subcmd):
                 check=False,
             )
         except FileNotFoundError:
+            sample.add_string("reason", "claude_not_on_path")
+            sample.add_bool("success", False)
             print(
                 "Local `claude` was not found on PATH; skipping AI diagnosis.",
                 file=sys.stderr,
             )
             return doctor_returncode
+        except OSError as ex:
+            # `claude` exists but could not be started, e.g. it is not
+            # executable. Must follow FileNotFoundError, which subclasses this.
+            sample.add_string("reason", "claude_failed")
+            sample.add_bool("success", False)
+            sample.add_double("duration", time.monotonic() - claude_start)
+            print(
+                f"Local `claude` could not be started: {ex}",
+                file=sys.stderr,
+            )
+            return doctor_returncode
         except subprocess.TimeoutExpired as ex:
+            sample.add_string("reason", "claude_timed_out")
+            sample.add_bool("success", False)
+            sample.add_double("duration", time.monotonic() - claude_start)
             stdout = (
                 ex.stdout.decode(errors="replace")
                 if isinstance(ex.stdout, bytes)
@@ -1083,6 +1130,11 @@ class DoctorAICmd(Subcmd):
                 sys.stderr.write(stderr)
             return doctor_returncode
 
+        sample.add_double("duration", time.monotonic() - claude_start)
+        sample.add_bool("success", claude_result.returncode == 0)
+        sample.add_string(
+            "reason", "claude_ok" if claude_result.returncode == 0 else "claude_failed"
+        )
         if claude_result.returncode != 0:
             print(
                 "Local `claude` failed while generating the diagnosis.",
