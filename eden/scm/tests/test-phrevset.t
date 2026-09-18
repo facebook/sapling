@@ -19,10 +19,29 @@
   $ HGPLAIN=1 sl commit -m "$(printf 'title\n\nDifferential Revision: http.ololo.com/D1234')"
   $ sl up -q 'desc(title)'
   $ sl up D1234
-  phrevset.callsign is not set - doing a linear search
-  This will be slow if the diff was not committed recently
-  abort: phrevset.graphqlonly is set and Phabricator cannot resolve D1234
+  Could not determine Phabricator callsign to resolve D1234.
+    To fix this configuration issue:
+      1. Edit repo root's .arcconfig (JSON) to include:
+        {"repository.callsign": "YOUR_PHABRICATOR_REPO_CALLSIGN"}
+      2. Commit the change.
+    To test callsign config temporarily, re-run with:
+      --config phrevset.callsign=CALLSIGN
+  abort: unknown revision 'D1234'!
   [255]
+
+  $ sl log -r D1234 --config phrevset.graphqlonly=False
+  Could not determine Phabricator callsign to resolve D1234.
+    To fix this configuration issue:
+      1. Edit repo root's .arcconfig (JSON) to include:
+        {"repository.callsign": "YOUR_PHABRICATOR_REPO_CALLSIGN"}
+      2. Commit the change.
+    To test callsign config temporarily, re-run with:
+      --config phrevset.callsign=CALLSIGN
+  Scanning D1234. This can diverage from Phabricator source of truth.
+  commit:      26c3df7062ea
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     title
 
   $ drawdag << 'EOS'
   > A  > EOS
