@@ -19,9 +19,11 @@ import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {stripStackInfoFromBodyHTML} from './ghstackUtils';
 import {
   gitHubOrgAndRepoAtom,
+  gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestForParamsAtom,
   gitHubPullRequestIDAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
   gitHubPullRequestVersionDiffAtom,
   gitHubPullRequestComparisonFilesAtom,
   pendingScrollRestoreAtom,
@@ -63,11 +65,18 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   const pullRequestLoadable = useAtomValue(loadablePRAtom);
   const currentPullRequest = useAtomValue(gitHubPullRequestAtom);
   const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
+  const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
   const paramsKey = `${params.orgAndRepo.org}\0${params.orgAndRepo.repo}\0${params.number}`;
   const loadedParamsKey = useRef<string | null>(null);
   const pullRequest = pullRequestLoadable.state === 'hasData' ? pullRequestLoadable.data : null;
   const isPullRequestNotFound = pullRequestLoadable.state === 'hasData' && pullRequest == null;
+
+  useEffect(() => {
+    setComparableVersions(null);
+    setSelectedVersionIndex(0);
+  }, [paramsKey, setComparableVersions, setSelectedVersionIndex]);
 
   useEffect(() => {
     if (pullRequest != null) {
