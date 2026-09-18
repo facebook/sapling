@@ -516,6 +516,8 @@ class TakeoverTest(TakeoverTestBase):
                 )
             mountProcess.wait()
 
+        self.eden.assert_running_fuse_transports()
+
 
 @testcase.eden_repo_test(run_on_nfs=False)
 class TakeoverTestNoNFSServer(TakeoverTestBase):

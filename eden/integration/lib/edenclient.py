@@ -129,6 +129,7 @@ class EdenFS:
         logging_settings: Optional[Dict[str, str]] = None,
         extra_args: Optional[List[str]] = None,
         storage_engine: str = "memory",
+        expected_fuse_transport: Optional[str] = None,
     ) -> None:
         """
         Construct a new EdenFS object.
@@ -170,6 +171,7 @@ class EdenFS:
         self._storage_engine = storage_engine
         self._logging_settings = logging_settings
         self._extra_args = extra_args
+        self.expected_fuse_transport = expected_fuse_transport
 
         self._process: Optional[subprocess.Popen] = None
 
@@ -342,6 +344,8 @@ class EdenFS:
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex) from None
+        if config_dir and command in ("clone", "mount", "restart"):
+            self.assert_running_fuse_transports()
         return completed_process.stdout
 
     def run_unchecked(
@@ -402,6 +406,7 @@ class EdenFS:
             get_client=self.get_thrift_client,
             timeout=timeout,
         )
+        self.assert_running_fuse_transports()
         return health.is_healthy()
 
     def start(
@@ -453,6 +458,9 @@ class EdenFS:
                 timeout=timeout,
                 exclude_pid=takeover_from,
             )
+            # Takeover verification happens outside graceful_restart's rollback.
+            if takeover_from is None:
+                self.assert_running_fuse_transports()
 
     def get_extra_daemon_args(self) -> List[str]:
         extra_daemon_args: List[str] = [
@@ -740,6 +748,8 @@ class EdenFS:
                 raise Exception(
                     "eden exited unsuccessfully with status {}".format(return_code)
                 )
+        if should_wait_for_new:
+            self.assert_running_fuse_transports()
         return old_process
 
     def run_takeover_tool(self, cmd: List[str]) -> None:
@@ -829,6 +839,20 @@ class EdenFS:
             results[path] = status_str
 
         return results
+
+    def assert_running_fuse_transports(self) -> None:
+        """Verify the configured transport expectation for every running FUSE mount.
+
+        Mounts that are still initializing, failed, or unmounted are not checked.
+        With no expectation configured, this does not contact the daemon.
+        Successful devfuse fallback skips io_uring tests; other mismatches fail.
+        A fallback on one mount does not hide a mismatch on another mount.
+        """
+        expected = self.expected_fuse_transport
+        if expected is None:
+            return
+        with self.get_thrift_client(timeout=EDENFS_START_TIMEOUT) as thrift_client:
+            assert_fuse_transports(thrift_client.listMounts(), expected)
 
     def get_mount_state(
         self, mount: pathlib.Path, client: Optional[EdenService.Sync] = None

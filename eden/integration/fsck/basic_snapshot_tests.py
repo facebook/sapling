@@ -335,11 +335,6 @@ class SnapshotTestBase(
         # pyrefly: ignore [bad-context-manager]
         with self.snapshot.edenfs(use_io_uring=self.use_io_uring()) as eden:
             eden.start()
-            with eden.get_thrift_client() as client:
-                edenclient.assert_fuse_transports(
-                    client.listMounts(),
-                    "io_uring" if self.use_io_uring() else "devfuse",
-                )
             verifier.verify_directory(
                 self.snapshot.checkout_path,
                 expected_files,

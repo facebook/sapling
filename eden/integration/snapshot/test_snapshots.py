@@ -162,7 +162,7 @@ max-background-requests = 17
             config_path = snapshot.etc_eden_dir / "edenfs.rc"
             config_path.write_text(original)
             with mock.patch.object(edenclient, "require_io_uring_kernel"):
-                snapshot.edenfs(use_io_uring=use_io_uring)
+                eden = snapshot.edenfs(use_io_uring=use_io_uring)
                 first_contents = config_path.read_text()
                 snapshot.edenfs(use_io_uring=use_io_uring)
             contents = config_path.read_text()
@@ -172,7 +172,9 @@ max-background-requests = 17
         self.assertEqual(17, config["fuse"]["max-background-requests"])
         if use_io_uring is None:
             self.assertEqual(original, contents)
+            self.assertIsNone(eden.expected_fuse_transport)
         else:
+            self.assertEqual(name, eden.expected_fuse_transport)
             self.assertEqual(use_io_uring, config["fuse"]["use-io-uring"])
             if use_io_uring:
                 self.assertTrue(config["fuse"]["io-uring-pre-create-queues"])

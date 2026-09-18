@@ -76,13 +76,13 @@ class StartTest(testcase.EdenTestCase):
                 *self.edenfs_args(),
                 capture_stderr=True,
             )
-        self.assertIn("Started EdenFS", output)
-        self.assertTrue(self.eden.is_healthy())
-
-        # Stop edenfs.  We didn't start it through self.eden.start()
-        # so the self.eden class doesn't really know it is running and that
-        # it needs to be shut down.
-        self.eden.run_cmd("stop")
+        try:
+            self.assertIn("Started EdenFS", output)
+            self.assertTrue(self.eden.is_healthy())
+            self.eden.assert_running_fuse_transports()
+        finally:
+            # Raw CLI startup leaves self.eden without a process to clean up.
+            self.eden.run_cmd("stop")
 
     def test_start_if_not_running(self) -> None:
         # EdenFS is already running when the test starts, so
@@ -176,6 +176,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
             home_dir=pathlib.Path(self.home_dir),
         ):
             self.assert_checkout_is_mounted()
+            self.eden.assert_running_fuse_transports()
 
     def assert_checkout_is_mounted(self) -> None:
         file = pathlib.Path(self.mount) / "hello"

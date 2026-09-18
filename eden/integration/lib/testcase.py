@@ -157,11 +157,6 @@ class EdenTestCase(EdenTestCaseBase):
 
         self.report_time("test setup done")
 
-    def assert_running_fuse_transports(self) -> None:
-        expected = "io_uring" if self.use_io_uring() else "devfuse"
-        with self.get_thrift_client() as client:
-            edenclient.assert_fuse_transports(client.listMounts(), expected)
-
     def tearDown(self) -> None:
         self.report_time("clean up started")
         super().tearDown()
@@ -202,10 +197,9 @@ class EdenTestCase(EdenTestCaseBase):
         # subcommands should use the Rust implementation if available.
         self.set_rust_rollout_config({})
 
-        self.eden.start()
-
         # Store a lambda in case self.eden is replaced during the test.
         self.addCleanup(lambda: self.eden.cleanup())
+        self.eden.start()
         self.report_time("eden daemon started")
 
         self.mount = os.path.join(self.mounts_dir, "main")
@@ -227,6 +221,7 @@ class EdenTestCase(EdenTestCaseBase):
             logging_settings=logging_settings,
             extra_args=extra_args,
             storage_engine=storage_engine,
+            expected_fuse_transport="io_uring" if self.use_io_uring() else "devfuse",
         )
 
     def write_configs(
@@ -699,7 +694,6 @@ class EdenRepoTest(EdenTestCase):
             case_sensitive=self.is_case_sensitive,
             backing_store=self.backing_store_type,
         )
-        self.assert_running_fuse_transports()
         self.eden_repo = self.create_eden_repo()
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)

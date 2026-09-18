@@ -134,7 +134,7 @@ class CloneTest(testcase.EdenRepoTest):
 
     def clone_rev(self, rev, repo, path) -> None:
         extra_args = []
-        if self.use_nfs:
+        if self.use_nfs():
             extra_args.append("--nfs")
         self.eden.run_cmd("clone", "--rev", rev, repo, path, *extra_args)
 

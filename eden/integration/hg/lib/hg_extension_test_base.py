@@ -98,7 +98,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             allow_empty=True,
             backing_store=self.backing_store_type,
         )
-        self.assert_running_fuse_transports()
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(
@@ -208,6 +207,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             cwd=self.mounts_dir,
             env=env,
         )
+        self.eden.assert_running_fuse_transports()
 
         # The use-eden-sparse config means that a FilteredFS repo was cloned
         is_filtered = False

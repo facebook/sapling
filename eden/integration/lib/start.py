@@ -56,10 +56,11 @@ def run_eden_start_with_real_daemon(
 
     subprocess.check_call(start_cmd, env=env)
 
-    yield
-
-    stop_cmd = eden_cli_args + ["stop"]
-    subprocess.check_call(stop_cmd, env=env)
+    try:
+        yield
+    finally:
+        stop_cmd = eden_cli_args + ["stop"]
+        subprocess.check_call(stop_cmd, env=env)
 
 
 def eden_start_needs_allow_root_option() -> bool:

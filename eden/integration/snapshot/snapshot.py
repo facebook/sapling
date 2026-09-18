@@ -142,11 +142,6 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # pyrefly: ignore [bad-context-manager]
         with self.edenfs(use_io_uring=use_io_uring) as eden:
             eden.start()
-            if use_io_uring is not None:
-                with eden.get_thrift_client() as client:
-                    edenclient.assert_fuse_transports(
-                        client.listMounts(), "io_uring" if use_io_uring else "devfuse"
-                    )
             print("Verifying snapshot data:")
             print("=" * 60)
             self.verify_snapshot_data(verifier, eden)
@@ -163,12 +158,16 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         """
         if use_io_uring:
             edenclient.require_io_uring_kernel()
+        expected_transport = None
+        if use_io_uring is not None:
+            expected_transport = "io_uring" if use_io_uring else "devfuse"
         eden = edenclient.EdenFS(
             base_dir=self.transient_dir,
             eden_dir=self.eden_state_dir,
             etc_eden_dir=self.etc_eden_dir,
             home_dir=self.home_dir,
             storage_engine="rocksdb",
+            expected_fuse_transport=expected_transport,
         )
         if use_io_uring is not None:
             config = (

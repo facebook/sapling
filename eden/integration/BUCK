@@ -159,6 +159,7 @@ python_integration_test(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
+        "//eden/fs/service:thrift-python-types",
         "//eden/integration/lib:lib",
     ],
 )

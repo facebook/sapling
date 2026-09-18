@@ -67,6 +67,24 @@ class FuseTransportPolicyTest(unittest.TestCase):
 
 
 class IoUringTestMixinTest(unittest.TestCase):
+    def test_start_skip_still_cleans_up(self) -> None:
+        case = testcase.EdenTestCase()
+        with (
+            mock.patch.object(case, "__unittest_skip__", False, create=True),
+            mock.patch.object(case, "init_eden_client") as init_client,
+            mock.patch.object(case, "report_time"),
+            mock.patch.object(case, "runTest", return_value=None, create=True) as body,
+            mock.patch.object(case, "set_rust_rollout_config"),
+            mock.patch.object(case, "write_configs"),
+        ):
+            init_client.return_value.start.side_effect = unittest.SkipTest("fallback")
+            result = unittest.TestResult()
+            case.run(result)
+            self.assertTrue(result.wasSuccessful(), (result.failures, result.errors))
+            self.assertEqual([(case, "fallback")], result.skipped)
+            body.assert_not_called()
+            init_client.return_value.cleanup.assert_called_once_with()
+
     @parameterized.expand(
         [("none", None), ("empty", {}), ("cached", {"fuse": ["existing = true"]})]
     )
