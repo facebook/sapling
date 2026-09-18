@@ -5,23 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubPullRequestAtom} from './jotai';
+import {gitHubPullRequestComparisonFilesAtom} from './jotai';
+import sumFileLineChanges from './sumFileLineChanges';
 import {CounterLabel} from '@primer/react';
 import {useAtomValue} from 'jotai';
 
 export default function PullRequestChangeCount(): React.ReactElement | null {
-  const pullRequest = useAtomValue(gitHubPullRequestAtom);
-
-  if (pullRequest == null) {
-    return null;
-  }
-
-  const {additions, deletions} = pullRequest;
+  const comparisonFiles = useAtomValue(gitHubPullRequestComparisonFilesAtom);
+  const {additions, deletions} = sumFileLineChanges(comparisonFiles);
 
   return (
     <>
-    <CounterLabel sx={{ backgroundColor: "success.muted" }}>+{additions}</CounterLabel>
-    <CounterLabel scheme="primary" sx={{ backgroundColor: "danger.muted", color: "black" }}>-{deletions}</CounterLabel>
+      <CounterLabel sx={{backgroundColor: 'success.muted'}}>+{additions}</CounterLabel>
+      <CounterLabel scheme="primary" sx={{backgroundColor: 'danger.muted', color: 'black'}}>
+        -{deletions}
+      </CounterLabel>
     </>
   );
 }
