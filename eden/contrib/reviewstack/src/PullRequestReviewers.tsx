@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UserFragment} from './generated/graphql';
+import type {PullRequestReviewState, UserFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
 import RepoAssignableUsersInput from './RepoAssignableUsersInput';
@@ -18,8 +18,13 @@ import {
   notificationMessageAtom,
 } from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {GearIcon} from '@primer/octicons-react';
-import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
+import {
+  CheckCircleFillIcon,
+  ClockIcon,
+  FileDiffIcon,
+  GearIcon,
+} from '@primer/octicons-react';
+import {ActionMenu, AvatarToken, Box, Button, StyledOcticon, Tooltip} from '@primer/react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
@@ -48,12 +53,12 @@ export default function PullRequestReviewers(): React.ReactElement {
       // > Once a requested reviewer submits a review, they are no longer
       // > considered a requested reviewer.
       //
-      // As such, both the `reviews` and `reviewRequests` fields must be
+      // As such, both the `latestReviews` and `reviewRequests` fields must be
       // consulted to get the full list of reviewers.
       const reviewers: Array<UserFragment> = [];
       const reviewerIDs: Set<string> = new Set();
-      for (const user of pullRequest.reviews?.nodes ?? []) {
-        const author = user?.author;
+      for (const review of pullRequest.latestReviews?.nodes ?? []) {
+        const author = review?.author;
         if (author?.__typename === 'User' && author.login !== username) {
           if (!reviewerIDs.has(author.id)) {
             reviewerIDs.add(author.id);
@@ -74,6 +79,16 @@ export default function PullRequestReviewers(): React.ReactElement {
       setPullRequestReviewers({reviewers, reviewerIDs});
     }
   }, [pullRequest, setPullRequestReviewers, username]);
+
+  const reviewStates = useMemo(() => {
+    const states = new Map<string, PullRequestReviewState>();
+    for (const review of pullRequest?.latestReviews?.nodes ?? []) {
+      if (review?.author?.__typename === 'User') {
+        states.set(review.author.id, review.state);
+      }
+    }
+    return states;
+  }, [pullRequest]);
 
   const updateReviewers = useCallback(
     async (user: UserFragment, isExisting: boolean) => {
@@ -141,18 +156,55 @@ export default function PullRequestReviewers(): React.ReactElement {
     <Box display="flex" alignItems="center" gridGap={2}>
       {label}
       <Box display="flex" flexWrap="wrap" gridGap={1}>
-        {pullRequestReviewers.reviewers.map(user => (
-          <AvatarToken
-            key={user.id}
-            avatarSrc={user.avatarUrl}
-            text={user.login}
-            size="large"
-            onRemove={!viewerCanUpdate ? undefined : () => updateReviewers(user, true)}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          />
-        ))}
+        {pullRequestReviewers.reviewers.map(user => {
+          const state = reviewStates.get(user.id);
+          return (
+            <Box key={user.id} display="flex" alignItems="center" gridGap={1}>
+              <AvatarToken
+                avatarSrc={user.avatarUrl}
+                text={user.login}
+                size="large"
+                onRemove={!viewerCanUpdate ? undefined : () => updateReviewers(user, true)}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
+              />
+              <ReviewerStatus state={state} />
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );
+}
+
+function ReviewerStatus({state}: {state: PullRequestReviewState | undefined}): React.ReactElement {
+  switch (state) {
+    case 'APPROVED':
+      return (
+        <Tooltip aria-label="Approved">
+          <StyledOcticon icon={CheckCircleFillIcon} color="success.fg" />
+        </Tooltip>
+      );
+    case 'CHANGES_REQUESTED':
+      return (
+        <Tooltip aria-label="Changes requested">
+          <StyledOcticon icon={FileDiffIcon} color="danger.fg" />
+        </Tooltip>
+      );
+    case 'COMMENTED':
+      return (
+        <Tooltip aria-label="Reviewed with comments">
+          <StyledOcticon icon={CheckCircleFillIcon} color="fg.muted" />
+        </Tooltip>
+      );
+    case 'DISMISSED':
+    case 'PENDING':
+    case undefined:
+    default:
+      return (
+        <Tooltip aria-label="Review pending">
+          <StyledOcticon icon={ClockIcon} color="attention.fg" />
+        </Tooltip>
+      );
+  }
 }

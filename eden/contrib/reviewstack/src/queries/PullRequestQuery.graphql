@@ -51,8 +51,9 @@ query PullRequestQuery(
           ...PullRequestTimelineItemFragment
         }
       }
-      reviews(first: 100) {
+      latestReviews(first: 100) {
         nodes {
+          state
           author {
             ...UserFragment
           }
