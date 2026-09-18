@@ -696,6 +696,7 @@ impl<'a> TreeStoreBuilder<'a> {
             indexedlog_cache,
             cache_to_local_cache: true,
             edenapi,
+            cas_manager: Default::default(),
             tree_aux_store,
             historystore_local,
             historystore_cache,

@@ -30,6 +30,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use blob::Blob;
+use cas_client::CasFetchManager;
 use edenapi_types::CheckManifestPermissionRequest;
 use edenapi_types::CheckPathPermissionRequest;
 use edenapi_types::FileAuxData;
@@ -196,6 +197,8 @@ pub struct TreeStore {
     /// used by TreeStore.
     pub edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
 
+    pub(crate) cas_manager: OnceLock<Arc<CasFetchManager>>,
+
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
 
@@ -273,6 +276,13 @@ fn get_local_aux_direct(
 }
 
 impl TreeStore {
+    /// Installs the shared CAS manager used for remote tree fetches.
+    pub fn set_cas_manager(&self, cas_manager: Arc<CasFetchManager>) -> Result<()> {
+        self.cas_manager
+            .set(cas_manager)
+            .map_err(|_| anyhow!("CAS manager is already configured"))
+    }
+
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
 
@@ -418,18 +428,21 @@ impl TreeStore {
 
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
+        let cas_manager = self.cas_manager.get().cloned();
 
         let historystore_cache = self.historystore_cache.clone();
         let historystore_local = self.historystore_local.clone();
 
         let cache_to_local_cache = self.cache_to_local_cache;
 
-        let fetch_children_metadata = match self.tree_metadata_mode {
-            TreeMetadataMode::Always => true,
-            TreeMetadataMode::Never => false,
-            TreeMetadataMode::OptIn => fctx.mode().contains(FetchMode::PREFETCH),
-        };
-        let fetch_tree_aux_data = self.fetch_tree_aux_data || attrs.aux_data;
+        let fetch_children_metadata = cas_manager.is_some()
+            || match self.tree_metadata_mode {
+                TreeMetadataMode::Always => true,
+                TreeMetadataMode::Never => false,
+                TreeMetadataMode::OptIn => fctx.mode().contains(FetchMode::PREFETCH),
+            };
+        let fetch_tree_aux_data =
+            cas_manager.is_some() || self.fetch_tree_aux_data || attrs.aux_data;
         let fetch_parents = attrs.parents || self.prefetch_tree_parents;
 
         let fetch_local = fctx.mode().contains(FetchMode::LOCAL);
@@ -511,38 +524,39 @@ impl TreeStore {
                         }
                     });
 
-                if fetch_local {
-                    if let Some(tree_aux_store) = &tree_aux_store {
-                        let (mut found, mut miss, mut errors) = (0, 0, 0);
-                        state
-                            .common
-                            .iter_pending(TreeAttributes::AUX_DATA, false, |key| {
-                                match tree_aux_store.get(&key.hgid) {
-                                    Ok(Some(entry)) => {
-                                        found += 1;
+                let fetch_from_cas = fetch_remote && cas_manager.is_some();
 
-                                        tracing::trace!(
-                                            ?key,
-                                            ?entry,
-                                            "found tree aux entry in cache"
-                                        );
-                                        Some(StoreTree {
-                                            content: None,
-                                            parents: None,
-                                            aux_data: Some(entry),
-                                        })
-                                    }
-                                    Ok(None) => {
-                                        miss += 1;
-                                        None
-                                    }
-                                    Err(err) => {
-                                        errors += 1;
-                                        state.errors.keyed_error(key.clone(), err);
-                                        None
-                                    }
+                if fetch_local || fetch_from_cas {
+                    if let Some(tree_aux_store) = &tree_aux_store {
+                        let wants_aux = if fetch_from_cas {
+                            TreeAttributes::AUX_DATA | TreeAttributes::CONTENT
+                        } else {
+                            TreeAttributes::AUX_DATA
+                        };
+                        let (mut found, mut miss, mut errors) = (0, 0, 0);
+                        state.common.iter_pending(wants_aux, false, |key| {
+                            match tree_aux_store.get(&key.hgid) {
+                                Ok(Some(entry)) => {
+                                    found += 1;
+
+                                    tracing::trace!(?key, ?entry, "found tree aux entry in cache");
+                                    Some(StoreTree {
+                                        content: None,
+                                        parents: None,
+                                        aux_data: Some(entry),
+                                    })
                                 }
-                            });
+                                Ok(None) => {
+                                    miss += 1;
+                                    None
+                                }
+                                Err(err) => {
+                                    errors += 1;
+                                    state.errors.keyed_error(key.clone(), err);
+                                    None
+                                }
+                            }
+                        });
                         state.metrics.aux.cache.hit(found);
                         state.metrics.aux.cache.miss(miss);
                         state.metrics.aux.cache.err(errors);
@@ -642,6 +656,19 @@ impl TreeStore {
                 }
 
                 if fetch_remote {
+                    if let Some(cas_manager) = &cas_manager {
+                        state.fetch_cas(
+                            cas_manager,
+                            if fetch_parents {
+                                historystore_cache.as_deref()
+                            } else {
+                                None
+                            },
+                            verify_hash,
+                            format,
+                        );
+                    }
+
                     if let Some(edenapi) = &edenapi {
                         let attributes = edenapi_types::TreeAttributes {
                             manifest_blob: true,
@@ -700,6 +727,7 @@ impl TreeStore {
             indexedlog_cache: None,
             cache_to_local_cache: true,
             edenapi: None,
+            cas_manager: OnceLock::new(),
             historystore_cache: None,
             historystore_local: None,
             filestore: None,
@@ -783,6 +811,7 @@ impl TreeStore {
             historystore_cache: None,
             cache_to_local_cache: false,
             edenapi: None,
+            cas_manager: OnceLock::new(),
             filestore: None,
             tree_aux_store: None,
             flush_on_drop: true,
@@ -1376,23 +1405,45 @@ impl storemodel::TreeStore for TreeStore {
 mod tests {
     use std::collections::BTreeMap;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
 
+    use anyhow::Result;
+    use anyhow::anyhow;
+    use async_runtime::block_on;
+    use blob::Blob;
+    use cas_client::CasBatch;
+    use cas_client::CasClient;
+    use cas_client::CasDigest;
+    use cas_client::CasDigestType;
+    use cas_client::CasFetchManager;
+    use futures::StreamExt;
+    use futures::stream;
+    use futures::stream::BoxStream;
+    use manifest_augmented_tree::AugmentedTree;
     use minibytes::Bytes;
     use storemodel::InsertOpts;
     use storemodel::KeyStore;
     use storemodel::Kind;
     use storemodel::SerializationFormat;
+    use storemodel::TreeAuxData;
     use storemodel::TreeStore as _;
     use tempfile::TempDir;
+    use types::FetchContext;
     use types::HgId;
+    use types::Key;
     use types::RepoPathBuf;
+    use types::fetch_mode::FetchMode;
 
     use crate::Metadata;
+    use crate::SaplingRemoteApiTreeStore;
     use crate::StoreType;
     use crate::ToKeys;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
+    use crate::indexedlogtreeauxstore::TreeAuxStore;
     use crate::scmstore::tree::TreeStore;
+    use crate::scmstore::tree::types::TreeAttributes;
 
     fn make_data_store(tempdir: &TempDir) -> Arc<IndexedLogHgIdDataStore> {
         let config = IndexedLogHgIdDataStoreConfig {
@@ -1411,6 +1462,37 @@ mod tests {
             )
             .unwrap(),
         )
+    }
+
+    struct FakeCasClient {
+        content: Bytes,
+        fetch_count: AtomicUsize,
+        failed_digest: Option<CasDigest>,
+    }
+
+    impl CasClient for FakeCasClient {
+        fn fetch<'a>(
+            &'a self,
+            digests: &'a [CasDigest],
+            digest_type: CasDigestType,
+        ) -> BoxStream<'a, Result<CasBatch>> {
+            assert!(matches!(digest_type, CasDigestType::Tree));
+            self.fetch_count.fetch_add(1, Ordering::Relaxed);
+            let content = Blob::Bytes(self.content.clone());
+            let batch = digests
+                .iter()
+                .copied()
+                .map(|digest| {
+                    let result = if self.failed_digest == Some(digest) {
+                        Err(anyhow!("injected CAS tree failure"))
+                    } else {
+                        Ok(Some(content.clone()))
+                    };
+                    (digest, result)
+                })
+                .collect();
+            stream::once(async move { Ok(batch) }).boxed()
+        }
     }
 
     #[test]
@@ -1455,6 +1537,287 @@ mod tests {
 
         assert_eq!(id1, id3);
         assert_eq!(indexedlog.to_keys().len(), 2);
+    }
+
+    #[test]
+    fn test_cas_tree_prefetch_fans_out_and_caches_once() -> Result<()> {
+        let child_id = HgId::from_hex(b"2222222222222222222222222222222222222222")?;
+        let child_digest = "3333333333333333333333333333333333333333333333333333333333333333";
+        let sapling_tree = Bytes::from(format!("child\0{child_id}t\n"));
+        let root_id = crate::trait_impls::sha1_digest(
+            &InsertOpts {
+                kind: Kind::Tree,
+                ..Default::default()
+            },
+            &sapling_tree,
+            SerializationFormat::Hg,
+        );
+        let serialized_tree = format!("v1 {root_id} - - -\nchild\0{child_id}t {child_digest} 10\n");
+        let content = Bytes::from(serialized_tree);
+        let augmented_tree = AugmentedTree::try_deserialize(content.as_ref())?;
+        let digest = augmented_tree.compute_content_addressed_digest()?;
+        let key = Key::new(RepoPathBuf::from_string("root".to_string())?, root_id);
+        let alias_key = Key::new(RepoPathBuf::from_string("alias".to_string())?, root_id);
+
+        let cache_dir = TempDir::new()?;
+        let tree_cache = make_data_store(&cache_dir);
+        let aux_dir = TempDir::new()?;
+        let tree_aux_store = Arc::new(TreeAuxStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            aux_dir.path(),
+            StoreType::Rotated,
+        )?);
+        tree_aux_store.put(
+            root_id,
+            &TreeAuxData {
+                augmented_manifest_id: digest.hash,
+                augmented_manifest_size: digest.size,
+            },
+        )?;
+
+        let cas_client = Arc::new(FakeCasClient {
+            content,
+            fetch_count: AtomicUsize::new(0),
+            failed_digest: None,
+        });
+        let mut store = TreeStore::empty();
+        store.indexedlog_cache = Some(tree_cache.clone());
+        store.tree_aux_store = Some(tree_aux_store.clone());
+        store.set_cas_manager(Arc::new(
+            CasFetchManager::builder(cas_client.clone()).build(),
+        ))?;
+
+        let first_context = FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT);
+        let first: Vec<_> = store
+            .fetch_batch(
+                first_context.clone(),
+                [key.clone(), alias_key.clone()].into_iter(),
+                TreeAttributes::CONTENT,
+            )
+            .into_iter()
+            .collect();
+        assert!(first.is_empty(), "prefetch should not return tree content");
+        assert!(first_context.fetch_from_cas_attempted());
+        assert_eq!(cas_client.fetch_count.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            tree_cache.to_keys().len(),
+            1,
+            "paths sharing an Hg ID should share one cached tree"
+        );
+        assert_eq!(
+            tree_aux_store.get(&child_id)?,
+            Some(TreeAuxData {
+                augmented_manifest_id: child_digest.parse()?,
+                augmented_manifest_size: 10,
+            })
+        );
+
+        let second_context = FetchContext::new(FetchMode::AllowRemote);
+        let second = store
+            .fetch_batch(
+                second_context.clone(),
+                [key, alias_key].into_iter(),
+                TreeAttributes::CONTENT,
+            )
+            .into_iter()
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        assert_eq!(second.len(), 2);
+        for (_, tree) in second {
+            assert_eq!(
+                tree.content
+                    .expect("tree content should be present")
+                    .hg_content()?,
+                sapling_tree
+            );
+        }
+        assert!(!second_context.fetch_from_cas_attempted());
+        assert_eq!(cas_client.fetch_count.load(Ordering::Relaxed), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_cas_tree_failure_falls_back_to_edenapi() -> Result<()> {
+        let child_id = HgId::from_hex(b"2222222222222222222222222222222222222222")?;
+        let child_digest = "3333333333333333333333333333333333333333333333333333333333333333";
+        let cas_content = Bytes::from(format!("child\0{child_id}t\n"));
+        let cas_hgid = crate::trait_impls::sha1_digest(
+            &InsertOpts {
+                kind: Kind::Tree,
+                ..Default::default()
+            },
+            &cas_content,
+            SerializationFormat::Hg,
+        );
+        let cas_serialized_tree = Bytes::from(format!(
+            "v1 {cas_hgid} - - -\nchild\0{child_id}t {child_digest} 10\n"
+        ));
+        let cas_augmented_tree = AugmentedTree::try_deserialize(cas_serialized_tree.as_ref())?;
+        let cas_digest = cas_augmented_tree.compute_content_addressed_digest()?;
+        let cas_key = Key::new(RepoPathBuf::from_string("cas".to_string())?, cas_hgid);
+
+        let remote_dir = TempDir::new()?;
+        let remote_repo = eagerepo::EagerRepo::open(remote_dir.path())?;
+        let fallback_content = Bytes::new();
+        let fallback_hg_blob = vec![0u8; HgId::len() * 2];
+        let fallback_hgid = remote_repo.add_sha1_blob(&fallback_hg_blob)?;
+        block_on(remote_repo.flush())?;
+        let fallback_key = Key::new(
+            RepoPathBuf::from_string("fallback".to_string())?,
+            fallback_hgid,
+        );
+        let fallback_serialized_tree = Bytes::from(format!("v1 {fallback_hgid} - - -\n"));
+        let fallback_augmented_tree =
+            AugmentedTree::try_deserialize(fallback_serialized_tree.as_ref())?;
+        let fallback_digest = fallback_augmented_tree.compute_content_addressed_digest()?;
+
+        let aux_dir = TempDir::new()?;
+        let tree_aux_store = Arc::new(TreeAuxStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            aux_dir.path(),
+            StoreType::Rotated,
+        )?);
+        tree_aux_store.put(
+            cas_hgid,
+            &TreeAuxData {
+                augmented_manifest_id: cas_digest.hash,
+                augmented_manifest_size: cas_digest.size,
+            },
+        )?;
+        tree_aux_store.put(
+            fallback_hgid,
+            &TreeAuxData {
+                augmented_manifest_id: fallback_digest.hash,
+                augmented_manifest_size: fallback_digest.size,
+            },
+        )?;
+
+        let cas_client = Arc::new(FakeCasClient {
+            content: cas_serialized_tree,
+            fetch_count: AtomicUsize::new(0),
+            failed_digest: Some(fallback_digest),
+        });
+        let mut store = TreeStore::empty();
+        store.tree_aux_store = Some(tree_aux_store);
+        store.edenapi = Some(SaplingRemoteApiTreeStore::new(Arc::new(remote_repo)));
+        store.set_cas_manager(Arc::new(
+            CasFetchManager::builder(cas_client.clone()).build(),
+        ))?;
+
+        let context = FetchContext::new(FetchMode::AllowRemote);
+        let fetched = store
+            .fetch_batch(
+                context.clone(),
+                [cas_key.clone(), fallback_key.clone()].into_iter(),
+                TreeAttributes::CONTENT,
+            )
+            .into_iter()
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        assert_eq!(fetched.len(), 2, "both trees should be fetched");
+        let cas_tree = fetched
+            .iter()
+            .find(|(key, _)| key == &cas_key)
+            .expect("CAS result should be present");
+        assert_eq!(
+            cas_tree
+                .1
+                .content
+                .as_ref()
+                .expect("CAS tree content should be present")
+                .hg_content()?,
+            cas_content
+        );
+        let fallback_tree = fetched
+            .iter()
+            .find(|(key, _)| key == &fallback_key)
+            .expect("EdenAPI fallback result should be present");
+        assert_eq!(
+            fallback_tree
+                .1
+                .content
+                .as_ref()
+                .expect("EdenAPI tree content should be present")
+                .hg_content()?,
+            fallback_content
+        );
+        assert!(context.fetch_from_cas_attempted());
+        assert_eq!(cas_client.fetch_count.load(Ordering::Relaxed), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_cas_tree_hash_mismatch_is_not_cached() -> Result<()> {
+        let content = Bytes::new();
+        let actual_id = crate::trait_impls::sha1_digest(
+            &InsertOpts {
+                kind: Kind::Tree,
+                ..Default::default()
+            },
+            &content,
+            SerializationFormat::Hg,
+        );
+        let claimed_id = HgId::from_hex(b"1111111111111111111111111111111111111111")?;
+        assert_ne!(
+            claimed_id, actual_id,
+            "test tree content must not match its claimed Hg ID"
+        );
+
+        let serialized_tree = Bytes::from(format!("v1 {claimed_id} - - -\n"));
+        let augmented_tree = AugmentedTree::try_deserialize(serialized_tree.as_ref())?;
+        let digest = augmented_tree.compute_content_addressed_digest()?;
+        let key = Key::new(RepoPathBuf::from_string("dir".to_string())?, claimed_id);
+
+        let cache_dir = TempDir::new()?;
+        let tree_cache = make_data_store(&cache_dir);
+        let aux_dir = TempDir::new()?;
+        let tree_aux_store = Arc::new(TreeAuxStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            aux_dir.path(),
+            StoreType::Rotated,
+        )?);
+        tree_aux_store.put(
+            claimed_id,
+            &TreeAuxData {
+                augmented_manifest_id: digest.hash,
+                augmented_manifest_size: digest.size,
+            },
+        )?;
+
+        let cas_client = Arc::new(FakeCasClient {
+            content: serialized_tree,
+            fetch_count: AtomicUsize::new(0),
+            failed_digest: None,
+        });
+        let mut store = TreeStore::empty();
+        store.indexedlog_cache = Some(tree_cache.clone());
+        store.tree_aux_store = Some(tree_aux_store);
+        store.set_cas_manager(Arc::new(CasFetchManager::builder(cas_client).build()))?;
+
+        let results: Vec<_> = store
+            .fetch_batch(
+                FetchContext::new(FetchMode::AllowRemote),
+                std::iter::once(key),
+                TreeAttributes::CONTENT,
+            )
+            .into_iter()
+            .collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "the requested key should produce a result"
+        );
+        assert!(
+            results[0].is_err(),
+            "the CAS tree with mismatched content should be rejected"
+        );
+        assert!(
+            tree_cache.to_keys().is_empty(),
+            "the invalid CAS tree should not be cached"
+        );
+
+        Ok(())
     }
 
     #[test]
