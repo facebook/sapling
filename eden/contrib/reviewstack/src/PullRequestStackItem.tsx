@@ -110,12 +110,12 @@ function StackGraphPrefix({
 export default React.memo(function PullRequestStackItem({
   graphPosition,
   isSelected,
-  comments,
   isDraft,
   number,
   reviewDecision,
   state,
   title,
+  totalCommentsCount,
   updatedAt,
 }: Props): React.ReactElement {
   const navigateToPullRequest = useNavigateToPullRequest();
@@ -143,7 +143,7 @@ export default React.memo(function PullRequestStackItem({
             />
             <Text>#{number}</Text>
             {formatISODate(updatedAt, false)}
-            <CommentCount count={comments.totalCount} />
+            <CommentCount count={totalCommentsCount ?? 0} />
           </BulletItems>
         </Box>
       </Box>
