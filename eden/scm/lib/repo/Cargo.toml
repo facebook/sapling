@@ -19,6 +19,7 @@ fs-err = { version = "3.3.1", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-agentdetect = { version = "0.1.0", path = "../agentdetect" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
+sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-commits-trait = { version = "0.1.0", path = "../commits/trait" }
 sapling-configloader = { version = "0.1.0", path = "../config/loader" }

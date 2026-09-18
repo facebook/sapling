@@ -11,7 +11,6 @@ mod types;
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use std::time::Instant;
 
 use ::metrics::Counter;
@@ -88,7 +87,7 @@ pub struct FileStore {
 
     // Remote stores
     pub(crate) edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
-    pub(crate) cas_manager: OnceLock<Arc<CasFetchManager>>,
+    pub(crate) cas_manager: Option<Arc<CasFetchManager>>,
 
     // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
@@ -128,13 +127,6 @@ impl Drop for FileStore {
 static FILESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.file.flush");
 
 impl FileStore {
-    /// Installs the shared CAS manager used for remote file fetches.
-    pub fn set_cas_manager(&self, cas_manager: Arc<CasFetchManager>) -> Result<()> {
-        self.cas_manager
-            .set(cas_manager)
-            .map_err(|_| anyhow!("CAS manager is already configured"))
-    }
-
     /// Get the "local content" without going through the heavyweight "fetch" API.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &FILE_STORE_FETCH_METRICS;
@@ -200,7 +192,7 @@ impl FileStore {
         let aux_cache = self.aux_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
-        let cas_manager = self.cas_manager.get().cloned();
+        let cas_manager = self.cas_manager.clone();
         let lfs_client = self.lfs_client.clone();
         let activity_logger = self.activity_logger.clone();
         let format = self.format();
@@ -529,7 +521,7 @@ impl FileStore {
             indexedlog_cache: None,
 
             edenapi: None,
-            cas_manager: OnceLock::new(),
+            cas_manager: None,
             lfs_client: None,
 
             metrics: FileStoreMetrics::new(),
@@ -578,7 +570,7 @@ impl FileStore {
             indexedlog_cache: None,
 
             edenapi: None,
-            cas_manager: OnceLock::new(),
+            cas_manager: None,
             lfs_client: self.lfs_client.as_ref().map(|c| c.with_shared_only()),
 
             metrics: self.metrics.clone(),
@@ -947,8 +939,9 @@ mod tests {
         let mut store = FileStore::empty();
         store.indexedlog_cache = Some(make_indexedlog(&cache_dir));
         store.aux_cache = Some(aux_cache);
-        let cas_manager = CasFetchManager::builder(cas_client.clone()).build();
-        store.set_cas_manager(Arc::new(cas_manager))?;
+        store.cas_manager = Some(Arc::new(
+            CasFetchManager::builder(cas_client.clone()).build(),
+        ));
 
         let first_context = FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT);
         let first: Vec<_> = store
@@ -1011,9 +1004,9 @@ mod tests {
         let mut store = FileStore::empty();
         store.aux_cache = Some(aux_cache);
         store.edenapi = Some(SaplingRemoteApiFileStore::new(Arc::new(remote_repo)));
-        store.set_cas_manager(Arc::new(
+        store.cas_manager = Some(Arc::new(
             CasFetchManager::builder(cas_client.clone()).build(),
-        ))?;
+        ));
 
         let context = FetchContext::new(FetchMode::AllowRemote);
         let fetched = store
@@ -1079,9 +1072,9 @@ mod tests {
         let mut store = FileStore::empty();
         store.aux_cache = Some(aux_cache);
         store.edenapi = Some(SaplingRemoteApiFileStore::new(Arc::new(remote_repo)));
-        store.set_cas_manager(Arc::new(
+        store.cas_manager = Some(Arc::new(
             CasFetchManager::builder(cas_client.clone()).build(),
-        ))?;
+        ));
 
         let context = FetchContext::new(FetchMode::AllowRemote);
         let fetched = store
@@ -1146,9 +1139,9 @@ mod tests {
         store.indexedlog_cache = Some(make_indexedlog(&cache_dir));
         store.aux_cache = Some(aux_cache);
         store.edenapi = Some(SaplingRemoteApiFileStore::new(Arc::new(remote_repo)));
-        store.set_cas_manager(Arc::new(
+        store.cas_manager = Some(Arc::new(
             CasFetchManager::builder(cas_client.clone()).build(),
-        ))?;
+        ));
 
         let context = FetchContext::new(FetchMode::AllowRemote);
         let fetched = store

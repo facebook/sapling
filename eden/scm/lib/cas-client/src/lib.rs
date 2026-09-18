@@ -5,8 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use blob::Blob;
+use configmodel::Config;
 use futures::stream::BoxStream;
 pub use types::CasDigest;
 pub use types::CasDigestType;
@@ -17,6 +20,18 @@ pub use manager::CasFetchGuard;
 pub use manager::CasFetchManager;
 pub use manager::CasFetchManagerBuilder;
 pub use manager::CasFetchOutcome;
+
+/// Creates the registered CAS client, if one is available in this process.
+pub fn new(config: Arc<dyn Config>) -> Result<Option<Arc<CasFetchManager>>> {
+    match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
+        Ok(client) => Ok(Some(Arc::new(CasFetchManager::from_config(
+            client,
+            config.as_ref(),
+        )?))),
+        Err(error) if factory::is_error_from_constructor(&error) => Err(error),
+        Err(_) => Ok(None),
+    }
+}
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct CasBackendStats {

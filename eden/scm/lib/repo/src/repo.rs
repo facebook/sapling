@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use cas_client::CasFetchManager;
 use commits_trait::DagCommits;
 use configloader::Config;
 use configloader::config::ConfigSet;
@@ -80,6 +81,7 @@ pub struct Repo {
     file_scm_store: OnceLock<Arc<scmstore::FileStore>>,
     tree_store: OnceLock<Arc<dyn TreeStore>>,
     tree_scm_store: OnceLock<Arc<scmstore::TreeStore>>,
+    cas_manager: OnceLock<Option<Arc<CasFetchManager>>>,
     #[cfg(feature = "wdir")]
     working_copy: OnceLock<Arc<RwLock<WorkingCopy>>>,
     eager_store: Option<EagerRepoStore>,
@@ -196,6 +198,7 @@ impl Repo {
             file_scm_store: Default::default(),
             tree_store: Default::default(),
             tree_scm_store: Default::default(),
+            cas_manager: Default::default(),
             #[cfg(feature = "wdir")]
             working_copy: Default::default(),
             eager_store: None,
@@ -382,7 +385,7 @@ impl Repo {
             return Ok(store);
         }
 
-        let fs = build_scm_file_store(self)?;
+        let fs = build_scm_file_store(self, self.cas_manager())?;
         let _ = self.file_scm_store.set(fs.clone());
 
         let fs = Arc::new(ArcFileStore(fs));
@@ -414,11 +417,28 @@ impl Repo {
             self,
             self.file_scm_store(),
             self.permission_denied_paths.clone(),
+            self.cas_manager(),
         )?;
         let _ = self.tree_scm_store.set(ts.clone());
         let _ = self.tree_store.set(ts.clone());
 
         Ok(ts)
+    }
+
+    fn cas_manager(&self) -> Option<Arc<CasFetchManager>> {
+        self.cas_manager
+            .get_or_init(|| match cas_client::new(self.config.clone()) {
+                Ok(cas_manager) => cas_manager,
+                Err(error) => {
+                    tracing::warn!(
+                        target: "cas_client",
+                        ?error,
+                        "failed to create CAS client; CAS fetching is disabled"
+                    );
+                    None
+                }
+            })
+            .clone()
     }
 
     pub fn set_permission_denied_paths(&mut self, paths: context::PermissionDeniedPaths) {

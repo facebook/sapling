@@ -105,7 +105,7 @@ impl SlapiRepo {
             return Ok(Arc::clone(fs));
         }
 
-        let fs = build_scm_file_store(self)?;
+        let fs = build_scm_file_store(self, None)?;
         let fs: Arc<dyn FileStore> = Arc::new(ArcFileStore(fs));
         let _ = self.file_store.set(fs.clone());
 
@@ -123,7 +123,7 @@ impl SlapiRepo {
                 .downcast_ref::<ArcFileStore>()
                 .map(|fs| fs.0.clone())
         });
-        let ts = build_scm_tree_store(self, fs, self.permission_denied_paths.clone())?;
+        let ts = build_scm_tree_store(self, fs, self.permission_denied_paths.clone(), None)?;
         let ts: Arc<dyn TreeStore> = ts;
         let _ = self.tree_store.set(ts.clone());
 

@@ -139,6 +139,9 @@ fn backingstore_global_init_impl() {
 
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
 
+        #[cfg(all(feature = "cas", fbcode_build))]
+        casd_client::register();
+
         // Put progress into "no-op" mode to avoid overhead in eden.
         progress_model::Registry::main().disable(true);
 

@@ -6,13 +6,21 @@
  */
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::Context;
 use anyhow::Result;
+use async_runtime::block_on;
+use configmodel::Config;
+use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
+use futures::StreamExt;
 use futures::stream::BoxStream;
 use metrics::Counter;
 use parking_lot::Mutex;
+use slex::Background;
 
 use crate::CasBatch;
 use crate::CasClient;
@@ -22,6 +30,9 @@ use crate::CasDigestType;
 const DEFAULT_MAX_BLOB_SIZE_BYTES: u64 = 1024 * 1024;
 const DEFAULT_FAILURE_THRESHOLD: u32 = 3;
 const DEFAULT_OPEN_DURATION: Duration = Duration::from_secs(30);
+
+const CAS_WARMUP_HASH: &str = "83276a160cfb6ca8983969c499ee6500dda6ed3a67bb49973fb34186f1e8c05d";
+const CAS_WARMUP_SIZE: u64 = 12;
 
 static BREAKER_OPENED: Counter = Counter::new_counter("scmstore.cas.breaker.opened");
 static BREAKER_CLOSED: Counter = Counter::new_counter("scmstore.cas.breaker.closed");
@@ -34,6 +45,7 @@ pub struct CasFetchManager {
     client: Arc<dyn CasClient>,
     max_blob_size_bytes: u64,
     breaker: Mutex<CircuitBreaker>,
+    warmup_task: OnceLock<Background<()>>,
 }
 
 /// Configures a [`CasFetchManager`].
@@ -53,6 +65,50 @@ impl CasFetchManager {
             failure_threshold: DEFAULT_FAILURE_THRESHOLD,
             open_duration: DEFAULT_OPEN_DURATION,
         }
+    }
+
+    pub(crate) fn from_config(client: Arc<dyn CasClient>, config: &dyn Config) -> Result<Self> {
+        let max_blob_size_bytes = config
+            .get_or("scmstore", "cas-max-blob-size", || {
+                ByteCount::from(DEFAULT_MAX_BLOB_SIZE_BYTES)
+            })?
+            .value();
+        let failure_threshold = config.get_or("scmstore", "cas-failure-threshold", || {
+            DEFAULT_FAILURE_THRESHOLD
+        })?;
+        let open_duration = config.get_or("scmstore", "cas-reenable-probe-interval", || {
+            DEFAULT_OPEN_DURATION
+        })?;
+        Ok(Self::builder(client)
+            .max_blob_size_bytes(max_blob_size_bytes)
+            .failure_threshold(failure_threshold)
+            .open_duration(open_duration)
+            .build())
+    }
+
+    /// Initializes the underlying client and starts a background warmup.
+    pub fn init(&self) -> Result<()> {
+        self.client.init()?;
+        self.warmup_task.get_or_init(|| {
+            let client = Arc::clone(&self.client);
+            slex::background("CAS client warmup", move || {
+                let start = Instant::now();
+                match block_on(warm_cas_client(client.as_ref())) {
+                    Ok(()) => tracing::info!(
+                        target: "cas_client",
+                        duration = ?start.elapsed(),
+                        "warmed CAS client"
+                    ),
+                    Err(error) => tracing::warn!(
+                        target: "cas_client",
+                        ?error,
+                        duration = ?start.elapsed(),
+                        "failed to warm CAS client; normal requests will continue"
+                    ),
+                }
+            })
+        });
+        Ok(())
     }
 
     /// Returns whether a blob is eligible for CAS fetching.
@@ -122,8 +178,28 @@ impl CasFetchManagerBuilder {
                 self.failure_threshold,
                 self.open_duration,
             )),
+            warmup_task: OnceLock::new(),
         }
     }
+}
+
+async fn warm_cas_client(client: &dyn CasClient) -> Result<()> {
+    let digest = CasDigest {
+        hash: CAS_WARMUP_HASH
+            .parse()
+            .context("parsing CAS warmup digest")?,
+        size: CAS_WARMUP_SIZE,
+    };
+    let digests = [digest];
+    let mut batches = client.fetch(&digests, CasDigestType::File);
+
+    while let Some(batch) = batches.next().await {
+        for (_, result) in batch.context("fetching CAS warmup blob")?.results {
+            let _ = result.context("fetching CAS warmup digest")?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Tracks a CAS fetch until its outcome is reported.
@@ -255,12 +331,44 @@ impl CircuitBreaker {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
     use types::Blake3;
 
     use super::*;
+    use crate::CasBatch;
+    use crate::CasDigest;
+    use crate::CasDigestType;
+
+    #[test]
+    fn fetch_policy_is_configurable() -> Result<()> {
+        let default_config = BTreeMap::<&str, &str>::new();
+        let manager =
+            CasFetchManager::from_config(Arc::new(CountingClient::default()), &default_config)?;
+        assert!(manager.can_fetch_blob(1024 * 1024));
+        assert!(!manager.can_fetch_blob(1024 * 1024 + 1));
+        assert_eq!(manager.breaker.lock().failure_threshold, 3);
+        assert_eq!(
+            manager.breaker.lock().open_duration,
+            Duration::from_secs(30)
+        );
+
+        let configured = BTreeMap::from([
+            ("scmstore.cas-max-blob-size", "2M"),
+            ("scmstore.cas-failure-threshold", "5"),
+            ("scmstore.cas-reenable-probe-interval", "9s"),
+        ]);
+        let manager =
+            CasFetchManager::from_config(Arc::new(CountingClient::default()), &configured)?;
+        assert!(manager.can_fetch_blob(2 * 1024 * 1024));
+        assert!(!manager.can_fetch_blob(2 * 1024 * 1024 + 1));
+        assert_eq!(manager.breaker.lock().failure_threshold, 5);
+        assert_eq!(manager.breaker.lock().open_duration, Duration::from_secs(9));
+
+        Ok(())
+    }
 
     #[derive(Default)]
     struct CountingClient {
@@ -305,6 +413,27 @@ mod tests {
         assert!(!manager.can_fetch_blob(8));
         assert_eq!(manager.breaker.lock().failure_threshold, 5);
         assert_eq!(manager.breaker.lock().open_duration, Duration::from_secs(9));
+    }
+
+    #[test]
+    fn init_starts_warmup_once() -> Result<()> {
+        let client = Arc::new(CountingClient::default());
+        let manager = CasFetchManager::builder(client.clone()).build();
+
+        manager.init()?;
+        manager.init()?;
+        manager
+            .warmup_task
+            .get()
+            .expect("init should create the warmup task")
+            .get();
+
+        assert_eq!(
+            client.fetches.load(Ordering::Relaxed),
+            1,
+            "the shared manager should warm the CAS client only once"
+        );
+        Ok(())
     }
 
     #[test]

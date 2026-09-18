@@ -52,4 +52,5 @@ rand_chacha = "0.10"
 url = "2.5.8"
 
 [features]
+cas = []
 fb = ["sapling-configloader/fb"]

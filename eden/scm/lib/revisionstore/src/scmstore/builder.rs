@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use cas_client::CasFetchManager;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
@@ -58,6 +59,7 @@ pub struct FileStoreBuilder<'a> {
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
+    cas_manager: Option<Arc<CasFetchManager>>,
     format: Option<SerializationFormat>,
 
     max_fetch_count: MaxFetchCount,
@@ -73,6 +75,7 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_local: None,
             indexedlog_cache: None,
             edenapi: None,
+            cas_manager: None,
             format: None,
             max_fetch_count: MaxFetchCount::default(),
         }
@@ -100,6 +103,11 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiFileStore>) -> Self {
         self.edenapi = Some(edenapi);
+        self
+    }
+
+    pub fn cas_manager(mut self, cas_manager: Option<Arc<CasFetchManager>>) -> Self {
+        self.cas_manager = cas_manager;
         self
     }
 
@@ -332,6 +340,7 @@ impl<'a> FileStoreBuilder<'a> {
             };
 
         let verify_hash = !self.config.get_or("unsafe", "skip-verify-hash", || false)?;
+        let cas_manager = configured_cas_manager(self.config, self.cas_manager, CasFetchKind::File);
 
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
@@ -346,7 +355,7 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_cache,
 
             edenapi,
-            cas_manager: Default::default(),
+            cas_manager,
             lfs_client,
 
             activity_logger,
@@ -378,6 +387,7 @@ pub struct TreeStoreBuilder<'a> {
     edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
+    cas_manager: Option<Arc<CasFetchManager>>,
     format: Option<SerializationFormat>,
     permission_denied_paths: Option<types::errors::PermissionDeniedPaths>,
     max_fetch_count: MaxFetchCount,
@@ -395,6 +405,7 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi: None,
             tree_aux_store: None,
             filestore: None,
+            cas_manager: None,
             format: None,
             permission_denied_paths: None,
             max_fetch_count: MaxFetchCount::default(),
@@ -448,6 +459,11 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn filestore(mut self, filestore: Arc<FileStore>) -> Self {
         self.filestore = Some(filestore);
+        self
+    }
+
+    pub fn cas_manager(mut self, cas_manager: Option<Arc<CasFetchManager>>) -> Self {
+        self.cas_manager = cas_manager;
         self
     }
 
@@ -689,6 +705,7 @@ impl<'a> TreeStoreBuilder<'a> {
         }
 
         let verify_hash = !self.config.get_or("unsafe", "skip-verify-hash", || false)?;
+        let cas_manager = configured_cas_manager(self.config, self.cas_manager, CasFetchKind::Tree);
 
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
@@ -696,7 +713,7 @@ impl<'a> TreeStoreBuilder<'a> {
             indexedlog_cache,
             cache_to_local_cache: true,
             edenapi,
-            cas_manager: Default::default(),
+            cas_manager,
             tree_aux_store,
             historystore_local,
             historystore_cache,
@@ -714,6 +731,69 @@ impl<'a> TreeStoreBuilder<'a> {
             max_fetch_count: self.max_fetch_count,
         })
     }
+}
+
+#[derive(Clone, Copy)]
+enum CasFetchKind {
+    File,
+    Tree,
+}
+
+impl CasFetchKind {
+    fn enabled(self, config: &dyn Config) -> bool {
+        match config.get("scmstore", "cas-mode").as_deref() {
+            Some("on") => true,
+            Some("files") => matches!(self, Self::File),
+            Some("trees") => matches!(self, Self::Tree),
+            None | Some("off") => false,
+            Some(mode) => {
+                tracing::warn!(
+                    target: "cas_client",
+                    mode,
+                    "unsupported scmstore.cas-mode; CAS fetching is disabled"
+                );
+                false
+            }
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::File => "file",
+            Self::Tree => "tree",
+        }
+    }
+}
+
+fn configured_cas_manager(
+    config: &dyn Config,
+    cas_manager: Option<Arc<CasFetchManager>>,
+    fetch_kind: CasFetchKind,
+) -> Option<Arc<CasFetchManager>> {
+    if !fetch_kind.enabled(config) {
+        return None;
+    }
+
+    let Some(cas_manager) = cas_manager else {
+        tracing::warn!(
+            target: "cas_client",
+            kind = fetch_kind.name(),
+            "CAS fetching was requested but no CAS client is registered"
+        );
+        return None;
+    };
+
+    if let Err(error) = cas_manager.init() {
+        tracing::warn!(
+            target: "cas_client",
+            ?error,
+            kind = fetch_kind.name(),
+            "failed to initialize CAS client; CAS fetching is disabled"
+        );
+        return None;
+    }
+
+    Some(cas_manager)
 }
 
 #[context("failed to get edenapi via config")]
@@ -767,4 +847,30 @@ fn delete_hgcache(store_path: &Path) -> Result<()> {
         })();
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+
+    #[test]
+    fn cas_mode_selects_file_and_tree_fetching() {
+        let cases = [
+            (None, false, false),
+            (Some("off"), false, false),
+            (Some("files"), true, false),
+            (Some("trees"), false, true),
+            (Some("on"), true, true),
+        ];
+
+        for (mode, files_enabled, trees_enabled) in cases {
+            let config = mode
+                .map(|mode| BTreeMap::from([("scmstore.cas-mode", mode)]))
+                .unwrap_or_default();
+            assert_eq!(CasFetchKind::File.enabled(&config), files_enabled);
+            assert_eq!(CasFetchKind::Tree.enabled(&config), trees_enabled);
+        }
+    }
 }

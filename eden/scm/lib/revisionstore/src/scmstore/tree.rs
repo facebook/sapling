@@ -197,7 +197,7 @@ pub struct TreeStore {
     /// used by TreeStore.
     pub edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
 
-    pub(crate) cas_manager: OnceLock<Arc<CasFetchManager>>,
+    pub(crate) cas_manager: Option<Arc<CasFetchManager>>,
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
@@ -276,13 +276,6 @@ fn get_local_aux_direct(
 }
 
 impl TreeStore {
-    /// Installs the shared CAS manager used for remote tree fetches.
-    pub fn set_cas_manager(&self, cas_manager: Arc<CasFetchManager>) -> Result<()> {
-        self.cas_manager
-            .set(cas_manager)
-            .map_err(|_| anyhow!("CAS manager is already configured"))
-    }
-
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
 
@@ -428,7 +421,7 @@ impl TreeStore {
 
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
-        let cas_manager = self.cas_manager.get().cloned();
+        let cas_manager = self.cas_manager.clone();
 
         let historystore_cache = self.historystore_cache.clone();
         let historystore_local = self.historystore_local.clone();
@@ -727,7 +720,7 @@ impl TreeStore {
             indexedlog_cache: None,
             cache_to_local_cache: true,
             edenapi: None,
-            cas_manager: OnceLock::new(),
+            cas_manager: None,
             historystore_cache: None,
             historystore_local: None,
             filestore: None,
@@ -811,7 +804,7 @@ impl TreeStore {
             historystore_cache: None,
             cache_to_local_cache: false,
             edenapi: None,
-            cas_manager: OnceLock::new(),
+            cas_manager: None,
             filestore: None,
             tree_aux_store: None,
             flush_on_drop: true,
@@ -1587,9 +1580,9 @@ mod tests {
         let mut store = TreeStore::empty();
         store.indexedlog_cache = Some(tree_cache.clone());
         store.tree_aux_store = Some(tree_aux_store.clone());
-        store.set_cas_manager(Arc::new(
+        store.cas_manager = Some(Arc::new(
             CasFetchManager::builder(cas_client.clone()).build(),
-        ))?;
+        ));
 
         let first_context = FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT);
         let first: Vec<_> = store
@@ -1704,9 +1697,9 @@ mod tests {
         let mut store = TreeStore::empty();
         store.tree_aux_store = Some(tree_aux_store);
         store.edenapi = Some(SaplingRemoteApiTreeStore::new(Arc::new(remote_repo)));
-        store.set_cas_manager(Arc::new(
+        store.cas_manager = Some(Arc::new(
             CasFetchManager::builder(cas_client.clone()).build(),
-        ))?;
+        ));
 
         let context = FetchContext::new(FetchMode::AllowRemote);
         let fetched = store
@@ -1797,7 +1790,7 @@ mod tests {
         let mut store = TreeStore::empty();
         store.indexedlog_cache = Some(tree_cache.clone());
         store.tree_aux_store = Some(tree_aux_store);
-        store.set_cas_manager(Arc::new(CasFetchManager::builder(cas_client).build()))?;
+        store.cas_manager = Some(Arc::new(CasFetchManager::builder(cas_client).build()));
 
         let results: Vec<_> = store
             .fetch_batch(

@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use cas_client::CasFetchManager;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use context;
@@ -60,9 +61,12 @@ fn agent_max_fetch_count(
     Ok(MaxFetchCount::new(limit, err_msg))
 }
 
-pub fn build_scm_file_store(info: &dyn StoreInfo) -> Result<Arc<scmstore::FileStore>> {
+pub fn build_scm_file_store(
+    info: &dyn StoreInfo,
+    cas_manager: Option<Arc<CasFetchManager>>,
+) -> Result<Arc<scmstore::FileStore>> {
     tracing::trace!(target: "repo::file_store", "building filestore");
-    let mut file_builder = FileStoreBuilder::new(info.config());
+    let mut file_builder = FileStoreBuilder::new(info.config()).cas_manager(cas_manager);
 
     if let Some(store_path) = info.store_path() {
         file_builder = file_builder.local_path(store_path);
@@ -98,9 +102,12 @@ pub fn build_scm_tree_store(
     info: &dyn StoreInfo,
     file_store: Option<Arc<scmstore::FileStore>>,
     permission_denied_paths: Option<context::PermissionDeniedPaths>,
+    cas_manager: Option<Arc<CasFetchManager>>,
 ) -> Result<Arc<scmstore::TreeStore>> {
     tracing::trace!(target: "repo::tree_store", "building treestore");
-    let mut tree_builder = TreeStoreBuilder::new(info.config()).suffix("manifests");
+    let mut tree_builder = TreeStoreBuilder::new(info.config())
+        .suffix("manifests")
+        .cas_manager(cas_manager);
 
     if let Some(paths) = permission_denied_paths {
         tree_builder = tree_builder.permission_denied_paths(paths);
