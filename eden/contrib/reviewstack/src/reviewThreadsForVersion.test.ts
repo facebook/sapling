@@ -37,3 +37,22 @@ test('shows current and earlier comments while excluding later versions and othe
     expect.objectContaining({id: 'v2-thread', sourceVersionIndex: 1, isHistorical: false}),
   ]);
 });
+
+test('maps a comment through the version head when it is absent from the commit list', () => {
+  const versions = [
+    {headCommit: 'v1-head', commits: [{commit: 'v1-rewritten'}]},
+    {headCommit: 'v2-head', commits: [{commit: 'v2-rewritten'}]},
+  ] as Version[];
+  const historical = thread('historical', 'v1-head');
+
+  const result = reviewThreadsForVersion(
+    [historical],
+    versions,
+    'v2-head',
+    'src/example.ts',
+  );
+
+  expect(result?.RIGHT).toEqual([
+    expect.objectContaining({id: 'historical', sourceVersionIndex: 0, isHistorical: true}),
+  ]);
+});

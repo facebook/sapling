@@ -16,7 +16,8 @@ export default function reviewThreadsForVersion(
   path: string,
 ): ThreadsBySide | null {
   const versionByCommit = new Map<GitObjectID, number>();
-  versions.forEach(({commits}, versionIndex) => {
+  versions.forEach(({headCommit, commits}, versionIndex) => {
+    versionByCommit.set(headCommit, versionIndex);
     commits.forEach(({commit}) => versionByCommit.set(commit, versionIndex));
   });
   const targetVersion = versionByCommit.get(commitID);
