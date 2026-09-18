@@ -10,7 +10,8 @@ import type {GitHubPullRequestReviewThreadComment} from './github/pullRequestTim
 import {ReactionContent} from './generated/graphql';
 import {gitHubClientAtom, notificationMessageAtom} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {ActionList, ActionMenu, Box, Button} from '@primer/react';
+import {SmileyIcon} from '@primer/octicons-react';
+import {ActionList, ActionMenu, Box, Button, IconButton} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useCallback, useState} from 'react';
 
@@ -92,18 +93,26 @@ export default function CommentReactions({
           );
         })}
       <ActionMenu>
-        <ActionMenu.Button aria-label="Add reaction" size="small">
-          🙂
-        </ActionMenu.Button>
-        <ActionMenu.Overlay>
-          <ActionList>
+        <ActionMenu.Anchor>
+          <IconButton
+            aria-label="Add reaction"
+            icon={SmileyIcon}
+            size="small"
+            variant="invisible"
+            sx={{color: 'fg.muted'}}
+          />
+        </ActionMenu.Anchor>
+        <ActionMenu.Overlay width="auto">
+          <ActionList sx={{display: 'grid', gridTemplateColumns: 'repeat(8, 32px)', padding: 1}}>
             {REACTIONS.map(({content, emoji, label}) => (
               <ActionList.Item
                 key={content}
+                aria-label={label}
                 disabled={busyReaction != null}
-                onSelect={() => toggleReaction(content)}>
-                <ActionList.LeadingVisual>{emoji}</ActionList.LeadingVisual>
-                {label}
+                onSelect={() => toggleReaction(content)}
+                title={label}
+                sx={{justifyContent: 'center', padding: 1}}>
+                {emoji}
               </ActionList.Item>
             ))}
           </ActionList>
