@@ -55,6 +55,7 @@ import type {
   UserFragment,
 } from '../generated/graphql';
 
+import {countPullRequestComments} from '../pullRequestCommentCount';
 import isFreshStackPullRequestCacheEntry from '../stackPullRequestCache';
 import {globalCacheStats} from './GitHubClientStats';
 import {DB_VERSION, DB_NAME} from './databaseInfo';
@@ -372,12 +373,20 @@ export default class CachingGitHubClient implements GitHubClient {
     const tx = new OpenTransaction(this.db, PR_FRAGMENT_STORE_NAME);
     await Promise.all(
       fetchedFragments.map(fragment => {
+        const fragmentWithCommentCount = {
+          ...fragment,
+          totalCommentsCount: countPullRequestComments(fragment),
+        };
         prs.forEach((pr, index) => {
           if (pr === fragment.number) {
-            cachedFragments[index] = fragment;
+            cachedFragments[index] = fragmentWithCommentCount;
           }
         });
-        const normalizedFragment = normalizePullRequestFragment(owner, name, fragment);
+        const normalizedFragment = normalizePullRequestFragment(
+          owner,
+          name,
+          fragmentWithCommentCount,
+        );
         // Stores a StackPullRequestFragment in IndexedDB, which uses
         // [owner, name, number] as the key. Of note:
         // - Unlike blobs and trees where the key is a content hash, the value of a
@@ -619,6 +628,9 @@ export default class CachingGitHubClient implements GitHubClient {
               reviewDecision,
               headRefOid,
               totalCommentsCount: numComments,
+              comments: {totalCount: numComments},
+              reviews: {nodes: []},
+              reviewThreads: {nodes: []},
             });
           };
           request.onerror = reject;
@@ -769,8 +781,7 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid, totalCommentsCount} =
-    fragment;
+  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid} = fragment;
   return {
     owner,
     name,
@@ -781,7 +792,7 @@ function normalizePullRequestFragment(
     isDraft,
     reviewDecision,
     headRefOid,
-    numComments: totalCommentsCount ?? 0,
+    numComments: countPullRequestComments(fragment),
     cachedAt: Date.now(),
   };
 }
