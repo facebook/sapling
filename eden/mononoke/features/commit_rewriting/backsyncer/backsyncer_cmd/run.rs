@@ -19,9 +19,11 @@ use anyhow::format_err;
 use backsyncer::BacksyncLimit;
 use backsyncer::Repo;
 use backsyncer::backsync_latest;
+use backsyncer::backsync_latest_by_prefix;
 use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
@@ -46,12 +48,16 @@ use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
 use stats::prelude::*;
 use tracing::debug;
+use tracing::error;
 use tracing::info;
 use wireproto_handler::TargetRepoDbs;
 
 use crate::cli::BacksyncerArgs;
 use crate::cli::BacksyncerCommand;
 use crate::cli::CommitsCommandArgs;
+
+const PREFIX_POLLING_JUST_KNOB: &str = "scm/mononoke:backsyncer_prefix_polling";
+const PREFIX_POLLING_BOOKMARK_CONCURRENCY: usize = 10;
 
 define_stats! {
     prefix = "mononoke.backsyncer";
@@ -61,6 +67,14 @@ define_stats! {
     ),
     delay_secs: dynamic_singleton_counter(
         "{}.{}.delay_secs",
+        (source_repo_name: String, target_repo_name: String)
+    ),
+    failed_bookmarks: dynamic_singleton_counter(
+        "{}.{}.failed_bookmarks",
+        (source_repo_name: String, target_repo_name: String)
+    ),
+    prefix_config_failure: dynamic_singleton_counter(
+        "{}.{}.prefix_config_failure",
         (source_repo_name: String, target_repo_name: String)
     ),
 }
@@ -241,6 +255,10 @@ async fn backsync_forever(
     let target_repo_id = commit_sync_data.get_target_repo_id();
     let mut commit_only_backsync_future: Box<dyn futures::Future<Output = ()> + Send + Unpin> =
         Box::new(future::ready(()));
+    let mut previous_prefix_polling_state = None;
+    let mut prefix_config_failures = PrefixPollingFailureState::default();
+    let mut prefix_polling_failures = PrefixPollingFailureState::default();
+    let mut previous_failed_bookmarks = 0;
 
     loop {
         // Before initiating loop, check if cancellation has been
@@ -263,6 +281,19 @@ async fn backsync_forever(
             );
 
             if paused {
+                STATS::failed_bookmarks.set_value(
+                    ctx.fb,
+                    0,
+                    (source_repo_name.clone(), target_repo_name.clone()),
+                );
+                STATS::prefix_config_failure.set_value(
+                    ctx.fb,
+                    0,
+                    (source_repo_name.clone(), target_repo_name.clone()),
+                );
+                prefix_config_failures.reset();
+                prefix_polling_failures.reset();
+                previous_failed_bookmarks = 0;
                 // Compute stats without doing any sync work
                 let large_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
                 let counter_name = format_counter(&large_repo_id);
@@ -298,29 +329,181 @@ async fn backsync_forever(
                 );
                 tokio::time::sleep(Duration::new(1, 0)).await;
             } else {
-                let (delay_info, new_future) = backsync_latest(
-                    ctx.clone(),
-                    commit_sync_data.clone(),
-                    target_repo_dbs.clone(),
-                    BacksyncLimit::NoLimit,
-                    Arc::clone(&cancellation_requested),
-                    CommitSyncContext::Backsyncer,
-                    false,
-                    commit_only_backsync_future,
-                )
-                .await?;
+                let prefix_polling_enabled = justknobs::eval(
+                    PREFIX_POLLING_JUST_KNOB,
+                    None,
+                    // The switch value is the small-repository name, allowing
+                    // the new path to be enabled independently per repo pair.
+                    Some(&target_repo_name),
+                );
+                if previous_prefix_polling_state != Some(prefix_polling_enabled) {
+                    info!(
+                        "Prefix-scoped backsync polling for {} is {}",
+                        target_repo_name,
+                        if prefix_polling_enabled {
+                            "enabled"
+                        } else {
+                            "disabled"
+                        }
+                    );
+                    previous_prefix_polling_state = Some(prefix_polling_enabled);
+                }
+                let prefix_config = if prefix_polling_enabled {
+                    let config = (|| {
+                        let common_config =
+                            live_commit_sync_config.get_common_config(target_repo_id)?;
+                        let small_repo_config = common_config
+                            .small_repos
+                            .get(&target_repo_id)
+                            .ok_or_else(|| {
+                                format_err!(
+                                    "small repo {target_repo_id} is missing from commit sync config"
+                                )
+                            })?;
+                        Ok::<_, Error>((
+                            BookmarkPrefix::new_ascii(small_repo_config.bookmark_prefix.clone()),
+                            common_config.common_pushrebase_bookmarks.clone(),
+                        ))
+                    })();
+                    match config {
+                        Ok(config) => {
+                            prefix_config_failures.record_recovery(&format!(
+                                "Prefix-polling config for {target_repo_name}"
+                            ));
+                            STATS::prefix_config_failure.set_value(
+                                ctx.fb,
+                                0,
+                                (source_repo_name.clone(), target_repo_name.clone()),
+                            );
+                            Some(config)
+                        }
+                        Err(error) => {
+                            STATS::prefix_config_failure.set_value(
+                                ctx.fb,
+                                1,
+                                (source_repo_name.clone(), target_repo_name.clone()),
+                            );
+                            prefix_config_failures.record_failure(
+                                ctx,
+                                &source_repo_name,
+                                &target_repo_name,
+                                &format!("Loading prefix-polling config for {target_repo_name}"),
+                                &error,
+                            );
+                            // Falling back to the legacy path after observing the
+                            // prefix-polling switch would mix two cursor models in
+                            // a partially rolled-out fleet. Keep retrying in the
+                            // selected mode; operators can disable the rollout JK
+                            // explicitly if they need the legacy path.
+                            tokio::time::sleep(Duration::new(1, 0)).await;
+                            continue;
+                        }
+                    }
+                } else {
+                    prefix_config_failures.reset();
+                    prefix_polling_failures.reset();
+                    STATS::prefix_config_failure.set_value(
+                        ctx.fb,
+                        0,
+                        (source_repo_name.clone(), target_repo_name.clone()),
+                    );
+                    None
+                };
+
+                let delay_info = if let Some((bookmark_prefix, common_bookmarks)) = prefix_config {
+                    // Finish any commit-only work started by the legacy loop
+                    // before changing execution models.
+                    std::mem::replace(
+                        &mut commit_only_backsync_future,
+                        Box::new(future::ready(())),
+                    )
+                    .await;
+
+                    match backsync_latest_by_prefix(
+                        ctx.clone(),
+                        commit_sync_data.clone(),
+                        target_repo_dbs.clone(),
+                        bookmark_prefix,
+                        &common_bookmarks,
+                        BacksyncLimit::NoLimit,
+                        PREFIX_POLLING_BOOKMARK_CONCURRENCY,
+                        Arc::clone(&cancellation_requested),
+                        CommitSyncContext::Backsyncer,
+                        false,
+                    )
+                    .await
+                    {
+                        Ok(delay_info) => {
+                            prefix_polling_failures
+                                .record_recovery(&format!("Prefix polling for {target_repo_name}"));
+                            delay_info
+                        }
+                        Err(error) => {
+                            prefix_polling_failures.record_failure(
+                                ctx,
+                                &source_repo_name,
+                                &target_repo_name,
+                                &format!("Prefix polling for {target_repo_name}"),
+                                &error,
+                            );
+                            tokio::time::sleep(Duration::new(1, 0)).await;
+                            continue;
+                        }
+                    }
+                } else {
+                    let (delay_info, new_future) = backsync_latest(
+                        ctx.clone(),
+                        commit_sync_data.clone(),
+                        target_repo_dbs.clone(),
+                        BacksyncLimit::NoLimit,
+                        Arc::clone(&cancellation_requested),
+                        CommitSyncContext::Backsyncer,
+                        false,
+                        commit_only_backsync_future,
+                    )
+                    .await?;
+                    commit_only_backsync_future = new_future;
+                    delay_info
+                };
+
+                STATS::failed_bookmarks.set_value(
+                    ctx.fb,
+                    delay_info.failed_bookmarks as i64,
+                    (source_repo_name.clone(), target_repo_name.clone()),
+                );
 
                 let delay = Delay {
                     delay_secs: delay_info.delay_secs,
                     remaining_entries: delay_info.remaining_entries,
                 };
                 log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
-                commit_only_backsync_future = new_future;
 
-                if delay.remaining_entries == 0 {
+                if delay_info.failed_bookmarks == 0 && previous_failed_bookmarks > 0 {
+                    info!(
+                        "Bookmark workers recovered for {} -> {}",
+                        source_repo_name, target_repo_name,
+                    );
+                }
+                if delay_info.failed_bookmarks > 0 {
+                    if previous_failed_bookmarks == 0 {
+                        error!(
+                            "{} bookmark workers failed for {} -> {}; retrying after a one-second delay",
+                            delay_info.failed_bookmarks, source_repo_name, target_repo_name,
+                        );
+                    } else {
+                        debug!(
+                            "{} bookmark workers still failing for {} -> {}",
+                            delay_info.failed_bookmarks, source_repo_name, target_repo_name,
+                        );
+                    }
+                    previous_failed_bookmarks = delay_info.failed_bookmarks;
+                    tokio::time::sleep(Duration::new(1, 0)).await;
+                } else if delay.remaining_entries == 0 {
+                    previous_failed_bookmarks = 0;
                     debug!("no entries remained");
                     tokio::time::sleep(Duration::new(1, 0)).await;
                 } else {
+                    previous_failed_bookmarks = 0;
                     debug!(
                         "backsyncing {} remaining entries (delay: {}s)",
                         delay.remaining_entries, delay.delay_secs
@@ -328,6 +511,19 @@ async fn backsync_forever(
                 }
             }
         } else {
+            STATS::failed_bookmarks.set_value(
+                ctx.fb,
+                0,
+                (source_repo_name.clone(), target_repo_name.clone()),
+            );
+            STATS::prefix_config_failure.set_value(
+                ctx.fb,
+                0,
+                (source_repo_name.clone(), target_repo_name.clone()),
+            );
+            prefix_config_failures.reset();
+            prefix_polling_failures.reset();
+            previous_failed_bookmarks = 0;
             debug!("push redirector is disabled");
             let delay = Delay::no_delay();
             log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
@@ -395,4 +591,64 @@ fn log_delay(ctx: &CoreContext, delay: &Delay, source_repo_name: &str, target_re
         delay.delay_secs,
         (source_repo_name.to_owned(), target_repo_name.to_owned()),
     );
+}
+
+fn record_prefix_polling_stall(ctx: &CoreContext, source_repo_name: &str, target_repo_name: &str) {
+    // The precise prefix-scoped backlog is unavailable on an error path.
+    // Mark the pair as failed and its backlog as non-empty, but retain the
+    // last measured delay rather than replacing it with a misleading zero.
+    STATS::failed_bookmarks.set_value(
+        ctx.fb,
+        1,
+        (source_repo_name.to_owned(), target_repo_name.to_owned()),
+    );
+    STATS::remaining_entries.set_value(
+        ctx.fb,
+        1,
+        (source_repo_name.to_owned(), target_repo_name.to_owned()),
+    );
+}
+
+#[derive(Default)]
+struct PrefixPollingFailureState {
+    consecutive_failures: u64,
+}
+
+impl PrefixPollingFailureState {
+    fn record_failure(
+        &mut self,
+        ctx: &CoreContext,
+        source_repo_name: &str,
+        target_repo_name: &str,
+        operation: &str,
+        error: &Error,
+    ) {
+        self.consecutive_failures = self.consecutive_failures.saturating_add(1);
+        record_prefix_polling_stall(ctx, source_repo_name, target_repo_name);
+        if self.consecutive_failures.is_power_of_two() {
+            error!(
+                "{} failed {} consecutive time(s); retrying after a one-second delay: {:#}",
+                operation, self.consecutive_failures, error
+            );
+        } else {
+            debug!(
+                "{} remains unavailable after {} consecutive failure(s): {:#}",
+                operation, self.consecutive_failures, error
+            );
+        }
+    }
+
+    fn record_recovery(&mut self, operation: &str) {
+        if self.consecutive_failures > 0 {
+            info!(
+                "{} recovered after {} consecutive failure(s)",
+                operation, self.consecutive_failures
+            );
+        }
+        self.reset();
+    }
+
+    fn reset(&mut self) {
+        self.consecutive_failures = 0;
+    }
 }
