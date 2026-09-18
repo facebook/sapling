@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import unittest
 import warnings
+from typing import Any
 from unittest import mock
 
+import eden.config
 from eden.fs.service.eden.thrift_types import MountInfo, MountState
 from parameterized import parameterized
 
@@ -178,3 +180,125 @@ class IoUringTestMixinTest(unittest.TestCase):
             with self.assertRaisesRegex(unittest.SkipTest, "requires an fbk"):
                 IoUringCase().setUp()
             setup.assert_not_called()
+
+
+@mock.patch.object(eden.config, "HAVE_NFS", True)
+@mock.patch.object(eden.config, "HAVE_GIT", True)
+@mock.patch.object(eden.config, "HAVE_FILTEREDHG", True)
+@mock.patch.object(testcase.sys, "platform", "linux")
+class RepoTestVariantsTest(unittest.TestCase):
+    def variants(self, **kwargs: Any) -> dict[str, type[testcase.EdenRepoTest]]:
+        class Scope:
+            @testcase.eden_repo_test(**kwargs)
+            class Example(testcase.EdenRepoTest):
+                def test_example(self) -> None:
+                    self.assertIsInstance(self, testcase.EdenRepoTest)
+
+        return {
+            name.removeprefix("Example"): cls
+            for name, cls in vars(Scope).items()
+            if isinstance(cls, type) and issubclass(cls, testcase.EdenRepoTest)
+        }
+
+    def test_repository_and_coroutine_variants(self) -> None:
+        variants = self.variants()
+        self.assertEqual(
+            {
+                "Hg",
+                "Git",
+                "FilteredHg",
+                "NFSHg",
+                "NFSGit",
+                "NFSFilteredHg",
+                "Coroutines",
+                "IoUring",
+                "GitIoUring",
+                "FilteredHgIoUring",
+                "CoroutinesIoUring",
+            },
+            set(variants),
+        )
+        for label, cls in variants.items():
+            with self.subTest(variant=label):
+                case = cls()
+                self.assertEqual(label.endswith("IoUring"), case.use_io_uring())
+                self.assertEqual(label.startswith("NFS"), case.use_nfs())
+                self.assertEqual("git" if "Git" in label else "hg", case.repo_type)
+                self.assertEqual(
+                    "FilteredHg" in label, case.backing_store_type == "filteredhg"
+                )
+                self.assertEqual(
+                    label.startswith("Coroutines"), bool(case.get_coroutines_configs())
+                )
+
+    def test_case_sensitivity_composes_with_io_uring(self) -> None:
+        variants = self.variants(case_sensitivity_dependent=True, run_coroutines=False)
+        self.assertEqual(27, len(variants))
+        for scm in ("Hg", "Git", "FilteredHg"):
+            for label, sensitive in (
+                ("SystemCaseSensitivity", None),
+                ("CaseSensitive", True),
+                ("CaseInsensitive", False),
+            ):
+                with self.subTest(scm=scm, sensitivity=label):
+                    case = variants[f"{scm}{label}IoUring"]()
+                    self.assertIs(sensitive, case.is_case_sensitive)
+                    self.assertTrue(case.use_io_uring())
+                    self.assertFalse(case.use_nfs())
+
+    def test_opt_out_preserves_baseline(self) -> None:
+        self.assertEqual(
+            {label for label in self.variants() if not label.endswith("IoUring")},
+            set(self.variants(run_io_uring=False)),
+        )
+
+    @parameterized.expand(
+        [
+            ("Hg",),
+            ("IoUring",),
+            ("FilteredHg",),
+            ("FilteredHgIoUring",),
+            ("Coroutines",),
+            ("CoroutinesIoUring",),
+            ("",),
+        ]
+    )
+    def test_method_skips_are_independent(self, suffix: str) -> None:
+        with mock.patch.dict(
+            testcase.skip.TEST_DISABLED,
+            {f"testcase_test.Example{suffix}": ["test_example"]},
+        ):
+            variants = self.variants()
+        for label, cls in variants.items():
+            with self.subTest(variant=label):
+                self.assertEqual(
+                    bool(suffix) and label != suffix,
+                    callable(getattr(cls, "test_example", None)),
+                )
+
+    @parameterized.expand([("Hg",), ("IoUring",), ("",)])
+    def test_class_skips_are_independent(self, suffix: str) -> None:
+        expected = set(self.variants()) - {suffix} if suffix else set()
+        with mock.patch.dict(
+            testcase.skip.TEST_DISABLED, {f"testcase_test.Example{suffix}": True}
+        ):
+            self.assertEqual(expected, set(self.variants()))
+
+    def test_platform_and_build_gates(self) -> None:
+        for platform in ("darwin", "win32"):
+            with (
+                self.subTest(platform=platform),
+                mock.patch.object(testcase.sys, "platform", platform),
+            ):
+                self.assertEqual(
+                    set(self.variants(run_io_uring=False)), set(self.variants())
+                )
+        with (
+            mock.patch.object(eden.config, "HAVE_GIT", False),
+            mock.patch.object(eden.config, "HAVE_FILTEREDHG", False),
+            mock.patch.object(eden.config, "HAVE_NFS", False),
+        ):
+            self.assertEqual(
+                {"Hg", "IoUring", "Coroutines", "CoroutinesIoUring"},
+                set(self.variants()),
+            )

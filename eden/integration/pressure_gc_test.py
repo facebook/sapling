@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import os
@@ -19,6 +21,7 @@ from eden.fs.service.eden.thrift_types import (
     STATS_MOUNTS_STATS,
     TimeSpec,
 )
+from parameterized import parameterized
 from thrift.python.exceptions import ApplicationError
 
 from .lib import testcase
@@ -300,6 +303,9 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
     async def test_active_invalidation_forgets_file_inode_after_takeover(self) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")
+        # TODO: Re-enable with the takeover suites once request handoff is safe.
+        if self.use_io_uring():
+            self.skipTest("io_uring takeover can strand in-flight requests")
 
         inode_number = self.load_file_inode()
         device = os.stat(self.mount).st_dev
@@ -432,9 +438,15 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
             self.assertEqual(f"cwd:{os.path.realpath(cwd_path)}", probe())
 
-    async def test_active_invalidation_preserves_bind_redirection(self) -> None:
+    @parameterized.expand([("without_takeover", False), ("after_takeover", True)])
+    async def test_active_invalidation_preserves_bind_redirection(
+        self, name: str, after_takeover: bool
+    ) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")
+        # TODO: Re-enable with the takeover suites once request handoff is safe.
+        if after_takeover and self.use_io_uring():
+            self.skipTest("io_uring takeover can strand in-flight requests")
 
         repo_path = "a/generated-output"
         self.eden.run_cmd("redirect", "add", "--mount", self.mount, repo_path, "bind")
@@ -467,8 +479,9 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
         assert_bind_mounted()
 
-        self.eden.graceful_restart()
-        assert_bind_mounted()
+        if after_takeover:
+            self.eden.graceful_restart()
+            assert_bind_mounted()
 
         load_gc_candidate()
         await invalidate_until_gc_runs()

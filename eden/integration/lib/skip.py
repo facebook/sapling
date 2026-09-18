@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import os
 import sys
 from typing import Dict, List, Union
@@ -480,10 +478,13 @@ FILTEREDFS_TEST_DISABLED = {
 for testModule, disabled in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
     other_mixins = ["", "NFS"] if sys.platform != "win32" else ["", "InMemory"]
-    for mixin in other_mixins:
+    filtered_variants = [f"{mixin}FilteredHg" for mixin in other_mixins]
+    if sys.platform == "linux":
+        filtered_variants.append("FilteredHgIoUring")
+    for variant in filtered_variants:
         # We need to be careful that we don't overwrite any pre-existing lists
         # or bulk disables that were disabled by other criteria.
-        new_class_name = testModule + mixin + "FilteredHg"
+        new_class_name = testModule + variant
         prev_disabled = TEST_DISABLED.get(new_class_name)
         if prev_disabled is None:
             # There are no previously disabled tests, we're free to bulk add

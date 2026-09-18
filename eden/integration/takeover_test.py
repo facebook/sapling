@@ -39,7 +39,16 @@ warnings.filterwarnings(
 )
 
 
-class TakeoverTestBase(testcase.EdenRepoTest):
+class TakeoverTestCase(testcase.EdenRepoTest):
+    def setUp(self) -> None:
+        # TODO: Remove once in-flight request handoff is safe and the io_uring
+        # takeover suites pass on both fbk 6.13 and 6.16.
+        if self.use_io_uring():
+            self.skipTest("io_uring takeover can strand in-flight requests")
+        super().setUp()
+
+
+class TakeoverTestBase(TakeoverTestCase):
     # pyre-fixme[13]: Attribute `pagesize` is never initialized.
     pagesize: int
     # pyre-fixme[13]: Attribute `page1` is never initialized.
@@ -518,7 +527,7 @@ class TakeoverTestNoNFSServer(TakeoverTestBase):
 
 
 @testcase.eden_repo_test
-class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
+class TakeoverRocksDBStressTest(TakeoverTestCase):
     enable_fault_injection: bool = True
 
     def populate_repo(self) -> None:

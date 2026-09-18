@@ -14,6 +14,7 @@ python_integration_test(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/parameterized:parameterized",
+        "//eden/fs/py/eden:config",
         "//eden/integration/lib:lib",
     ],
 )
@@ -277,6 +278,7 @@ python_integration_test(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
         "//eden/integration/lib:lib",
         "//thrift/lib/python:types",
     ],

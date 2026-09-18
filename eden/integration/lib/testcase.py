@@ -951,7 +951,7 @@ def _replicate_eden_repo_test(  # noqa: C901
     run_on_nfs: bool = True,
     case_sensitivity_dependent: bool = False,
     run_coroutines: bool = True,
-    run_io_uring: bool = False,
+    run_io_uring: bool = True,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     nfs_variants: MixinList = [("", [])]
     if run_on_nfs and eden.config.HAVE_NFS:
@@ -977,7 +977,7 @@ def _replicate_eden_repo_test(  # noqa: C901
         for scm_label, scm_mixins in scm_variants:
             for case_label, case_mixins in case_variants:
 
-                class VariantRepoTest(
+                class VariantRepoTestBase(
                     # pyrefly: ignore [invalid-inheritance]
                     *nfs_mixins,
                     # pyrefly: ignore [invalid-inheritance]
@@ -988,33 +988,51 @@ def _replicate_eden_repo_test(  # noqa: C901
                 ):
                     pass
 
+                class VariantRepoTest(VariantRepoTestBase):
+                    pass
+
                 variants.append(
                     (
                         f"{nfs_label}{scm_label}{case_label}",
                         typing.cast(Type[EdenRepoTest], VariantRepoTest),
                     )
                 )
+                if run_io_uring and sys.platform == "linux" and not nfs_mixins:
+
+                    class IoUringVariantRepoTest(IoUringTestMixin, VariantRepoTestBase):
+                        pass
+
+                    label = f"{scm_label}{case_label}IoUring"
+                    # Keep the original Hg io_uring variant's test names stable.
+                    if label == "HgIoUring":
+                        label = "IoUring"
+                    variants.append(
+                        (label, typing.cast(Type[EdenRepoTest], IoUringVariantRepoTest))
+                    )
 
     # Add a single Coroutines variant after all other combinations
     if run_coroutines:
 
-        class CoroutinesVariantRepoTest(
-            CoroutinesTestMixin, HgRepoTestMixin, test_class
-        ):
+        class CoroutinesRepoTestBase(CoroutinesTestMixin, HgRepoTestMixin, test_class):
+            pass
+
+        class CoroutinesVariantRepoTest(CoroutinesRepoTestBase):
             pass
 
         variants.append(
             ("Coroutines", typing.cast(Type[EdenRepoTest], CoroutinesVariantRepoTest))
         )
+        if run_io_uring and sys.platform == "linux":
 
-    if run_io_uring and sys.platform == "linux":
+            class IoUringCoroutinesRepoTest(IoUringTestMixin, CoroutinesRepoTestBase):
+                pass
 
-        class IoUringVariantRepoTest(IoUringTestMixin, HgRepoTestMixin, test_class):
-            pass
-
-        variants.append(
-            ("IoUring", typing.cast(Type[EdenRepoTest], IoUringVariantRepoTest))
-        )
+            variants.append(
+                (
+                    "CoroutinesIoUring",
+                    typing.cast(Type[EdenRepoTest], IoUringCoroutinesRepoTest),
+                )
+            )
 
     return variants
 
