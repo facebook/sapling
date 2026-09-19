@@ -141,6 +141,7 @@ def backgroundbackup(repo, reason=None):
         background_cmd += ["--reason", reason]
 
     else:
+        background_cmd = util.hgcmd() + ["cloud", "upload"]
         if maybeworkspacename:
             try:
                 serv = service.get(repo.ui, repo)
@@ -156,12 +157,8 @@ def backgroundbackup(repo, reason=None):
                     _(
                         "failed to join workspace '%s' due to error %s. Attempting cloud upload.\n"
                     )
-                    % maybeworkspacename,
-                    e,
+                    % (maybeworkspacename, e)
                 )
-                background_cmd = util.hgcmd() + ["cloud", "upload"]
-        else:
-            background_cmd = util.hgcmd() + ["cloud", "upload"]
 
     infinitepush_bgssh = ui.config("infinitepush", "bgssh")
     if infinitepush_bgssh:
