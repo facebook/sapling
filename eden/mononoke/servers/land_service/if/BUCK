@@ -16,7 +16,6 @@ thrift_library(
         "land_service.thrift": ["LandService"],
     },
     deps = [
-        "//fb303/thrift:fb303_core",
         "//thrift/annotation:rust",
         "//thrift/annotation:thrift",
     ],

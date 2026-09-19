@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
 include "thrift/annotation/rust.thrift"
 
@@ -150,7 +149,7 @@ safe permanent client exception AuthorizationError {
 }
 
 @rust.RequestContext
-service LandService extends fb303_core.BaseService {
+service LandService {
   /// Land a stack of commits via land_changesets.
   LandChangesetsResponse land_changesets(
     1: LandChangesetRequest land_changesets,
