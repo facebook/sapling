@@ -252,7 +252,16 @@ export default class GraphQLGitHubClient implements GitHubClient {
     )}/${encodeURIComponent(this.repositoryName)}/git/trees/${oid}?recursive=1`;
     const prefetch = fetch(url, {headers: this.requestHeaders, method: 'GET'})
       .then(async response => {
-        if (response.status === 403 || response.status === 404 || response.status === 409) {
+        // Recursive tree loading is only a performance optimization. GitHub
+        // can reject it with 422 for repository-specific validation failures;
+        // leave the cache empty so the diff falls back to GraphQL subtree
+        // requests instead of failing the entire comparison.
+        if (
+          response.status === 403 ||
+          response.status === 404 ||
+          response.status === 409 ||
+          response.status === 422
+        ) {
           return;
         }
         if (!response.ok) {

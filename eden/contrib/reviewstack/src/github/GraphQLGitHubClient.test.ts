@@ -63,6 +63,23 @@ describe('recursive Git tree prefetch', () => {
 
     fetchMock.mockRestore();
   });
+
+  test('falls back when GitHub rejects the recursive tree prefetch', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 422,
+      statusText: 'Unprocessable Entity',
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await expect(client.prefetchTree('root')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/owner/repo/git/trees/root?recursive=1',
+      expect.objectContaining({method: 'GET'}),
+    );
+
+    fetchMock.mockRestore();
+  });
 });
 
 describe('commit comparisons', () => {
