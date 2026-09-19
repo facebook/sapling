@@ -72,4 +72,23 @@ describe('PrSubmitOperation', () => {
       'alice',
     ]);
   });
+
+  it('keeps a selected commit at the top when including its draft ancestors', () => {
+    const commit = COMMIT('abc123', 'Selected commit', 'parent');
+    const operation = provider.submitOperation([commit], {
+      draft: true,
+      submitStack: true,
+    });
+
+    expect(operation.getArgs()).toEqual([
+      'pr',
+      'submit',
+      '--config',
+      'github.submit-to-upstream=false',
+      '--draft',
+      '--rev',
+      succeedableRevset('abc123'),
+      '--stack',
+    ]);
+  });
 });

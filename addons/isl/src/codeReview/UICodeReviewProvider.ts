@@ -44,7 +44,7 @@ export interface UICodeReviewProvider {
       updateFields?: boolean;
       /** Whether to automatically publish when all CI signals pass */
       publishWhenReady?: boolean;
-      /** Whether to submit the complete stack instead of only the selected commit(s). */
+      /** Whether to include draft ancestors when submitting the selected revision. */
       submitStack?: boolean;
       /** Usernames to request as reviewers after submitting. */
       reviewers?: Array<string>;

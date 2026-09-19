@@ -1047,7 +1047,7 @@ function SubmitButton({
         : null;
 
   const getApplicableOperations = async (
-    submitStack = false,
+    submitAll = false,
   ): Promise<Array<Operation> | undefined> => {
     const shouldContinue = await confirmUnsavedFiles();
     if (!shouldContinue) {
@@ -1127,12 +1127,12 @@ function SubmitButton({
           : answer === 'pr'
             ? new PrSubmitOperation({
                 draft: shouldSubmitAsDraft,
-                revision: submitStack
+                revision: submitAll
                   ? undefined
                   : commit.isDot
                     ? exactRevset('.')
                     : succeedableRevset(commit.hash),
-                submitStack,
+                submitStack: true,
                 reviewers: parseReviewers(readAtom(submitReviewersState(commit.hash))),
               })
             : null;
@@ -1150,13 +1150,15 @@ function SubmitButton({
     const submitOp = isBranchingPREnabled
       ? null // branching PRs will show a follow-up modal which controls submitting
       : nullthrows(provider).submitOperation(
-          submitStack || commit.isDot ? [] : [commit], // [] means to submit from the current head
+          submitAll ? [] : [commit], // [] means to submit from the current head
           {
             draft: shouldSubmitAsDraft,
             updateFields: shouldUpdateMessage,
             updateMessage: updateMessage || undefined,
             publishWhenReady: shouldPublishWhenReady,
-            submitStack,
+            // Include submitted ancestors so an individually submitted commit remains connected
+            // to its remote stack. Its explicit revision keeps this commit at the top.
+            submitStack: codeReviewProviderType === 'github',
             reviewers: parseReviewers(readAtom(submitReviewersState(commit.hash))),
           },
         );
