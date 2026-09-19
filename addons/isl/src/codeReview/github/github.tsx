@@ -114,11 +114,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     } else if (this.preferredSubmitCommand === 'pr') {
       return new PrSubmitOperation({
         ...options,
-        revision: options.submitStack
-          ? undefined
-          : commits.length === 1 && !commits[0].isDot
-            ? succeedableRevset(commits[0].hash)
-            : exactRevset('.'),
+        revision:
+          commits.length === 1
+            ? commits[0].isDot
+              ? exactRevset('.')
+              : succeedableRevset(commits[0].hash)
+            : options.submitStack
+              ? undefined
+              : exactRevset('.'),
       });
     } else {
       throw new Error('Not yet implemented');
