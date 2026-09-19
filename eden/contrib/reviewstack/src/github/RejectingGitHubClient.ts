@@ -93,6 +93,10 @@ export default class RejectingGitHubClient implements GitHubClient {
     return Promise.reject('Method not implemented.');
   }
 
+  getRepoMentionableUsers(_query: string | null): Promise<UserFragment[]> {
+    return Promise.reject('Method not implemented.');
+  }
+
   getRepoLabels(_query: string | null): Promise<LabelFragment[]> {
     return Promise.reject('Method not implemented.');
   }

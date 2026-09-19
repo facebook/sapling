@@ -74,6 +74,7 @@ export default interface GitHubClient {
   getPullRequest(pr: number): Promise<PullRequest | null>;
   getPullRequests(input: PullsQueryInput): Promise<PullsWithPageInfo | null>;
   getRepoAssignableUsers(query: string | null): Promise<UserFragment[]>;
+  getRepoMentionableUsers(query: string | null): Promise<UserFragment[]>;
   getRepoLabels(query: string | null): Promise<LabelFragment[]>;
   getStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]>;
   getFreshStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]>;

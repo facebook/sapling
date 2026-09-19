@@ -98,6 +98,10 @@ export default class TestGitHubClient implements GitHubClient {
     return Promise.resolve([]);
   }
 
+  getRepoMentionableUsers(_query: string | null): Promise<UserFragment[]> {
+    return Promise.resolve([]);
+  }
+
   getRepoLabels(_query: string | null): Promise<LabelFragment[]> {
     return Promise.resolve([]);
   }

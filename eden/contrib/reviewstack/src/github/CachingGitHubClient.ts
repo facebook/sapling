@@ -365,6 +365,10 @@ export default class CachingGitHubClient implements GitHubClient {
     return this.client.getRepoAssignableUsers(query);
   }
 
+  getRepoMentionableUsers(query: string | null): Promise<UserFragment[]> {
+    return this.client.getRepoMentionableUsers(query);
+  }
+
   getRepoLabels(query: string | null): Promise<LabelFragment[]> {
     return this.client.getRepoLabels(query);
   }

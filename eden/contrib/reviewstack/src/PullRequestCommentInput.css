@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.comment-input-editor {
+  position: relative;
+}
+
+.comment-mention-menu {
+  position: fixed;
+  z-index: 20;
+  width: min(320px, calc(100vw - 16px));
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  transform: translateY(calc(-100% - 6px));
+  background: var(--bgColor-overlay, var(--color-canvas-overlay));
+  border: 1px solid var(--borderColor-default, var(--color-border-default));
+  border-radius: 6px;
+  box-shadow: var(--shadow-floating-small, 0 3px 12px rgba(27, 31, 36, 0.15));
+}
+
+.comment-mention-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  color: var(--fgColor-default, var(--color-fg-default));
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.comment-mention-option:hover,
+.comment-mention-option[aria-selected='true'] {
+  color: var(--fgColor-onEmphasis, var(--color-fg-on-emphasis));
+  background: var(--bgColor-accent-emphasis, var(--color-accent-emphasis));
+}
+
+.comment-mention-status {
+  padding: 8px;
+  color: var(--fgColor-muted, var(--color-fg-muted));
+  font-size: 12px;
+}

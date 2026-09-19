@@ -5,13 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangeEvent, KeyboardEvent} from 'react';
+import type {UserFragment} from './generated/graphql';
+import type {ChangeEvent, KeyboardEvent, SyntheticEvent} from 'react';
 
-import {pendingScrollRestoreAtom} from './jotai';
+import './PullRequestCommentInput.css';
+
+import {getActiveMention, replaceActiveMention} from './commentMentions';
+import {gitHubRepoMentionableUsersAtom, pendingScrollRestoreAtom} from './jotai';
 import {capturePullRequestScrollPosition} from './pullRequestScroll';
-import {Box, Button, Flash, Textarea} from '@primer/react';
-import {useSetAtom} from 'jotai';
-import {useCallback, useRef, useState} from 'react';
+import {Avatar, Box, Button, Flash, Textarea} from '@primer/react';
+import {useAtomValue, useSetAtom} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 
 type Props = {
   /**
@@ -57,6 +63,58 @@ function formatErrorMessage(error: unknown): string {
   return `Failed to add comment: ${message}`;
 }
 
+const CARET_STYLE_PROPERTIES = [
+  'border-left-width',
+  'border-right-width',
+  'box-sizing',
+  'font-family',
+  'font-size',
+  'font-style',
+  'font-weight',
+  'letter-spacing',
+  'line-height',
+  'padding-left',
+  'padding-right',
+  'padding-top',
+  'tab-size',
+  'text-align',
+  'text-indent',
+  'text-transform',
+  'width',
+  'word-spacing',
+] as const;
+
+function getTextareaCaretPosition(textarea: HTMLTextAreaElement): {left: number; top: number} {
+  const computedStyle = window.getComputedStyle(textarea);
+  const mirror = document.createElement('div');
+  mirror.style.position = 'absolute';
+  mirror.style.top = '0';
+  mirror.style.left = '-9999px';
+  mirror.style.visibility = 'hidden';
+  mirror.style.whiteSpace = 'pre-wrap';
+  mirror.style.overflowWrap = 'break-word';
+  for (const property of CARET_STYLE_PROPERTIES) {
+    mirror.style.setProperty(property, computedStyle.getPropertyValue(property));
+  }
+
+  mirror.textContent = textarea.value.slice(0, textarea.selectionStart);
+  if (mirror.textContent.endsWith('\n')) {
+    mirror.textContent += '\u200b';
+  }
+  const marker = document.createElement('span');
+  marker.textContent = '\u200b';
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+
+  const position = {
+    left:
+      marker.offsetLeft + parseFloat(computedStyle.borderLeftWidth) - textarea.scrollLeft,
+    top: marker.offsetTop + parseFloat(computedStyle.borderTopWidth) - textarea.scrollTop,
+  };
+  mirror.remove();
+  return position;
+}
+
 export default function PullRequestCommentInput({
   addComment,
   resetInputAfterAddingComment,
@@ -73,17 +131,118 @@ export default function PullRequestCommentInput({
   const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
+  const [activeMention, setActiveMention] = useState<ReturnType<typeof getActiveMention>>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionMenuDismissed, setMentionMenuDismissed] = useState(false);
+  const [mentionMenuPosition, setMentionMenuPosition] = useState({left: 0, top: 0});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionMenuRef = useRef<HTMLDivElement>(null);
+  const mentionMenuID = useId();
+
+  useEffect(() => {
+    if (activeMention == null || mentionMenuDismissed) {
+      setMentionQuery(null);
+      return;
+    }
+    if (activeMention.query === '') {
+      setMentionQuery('');
+      return;
+    }
+    const timeout = window.setTimeout(() => setMentionQuery(activeMention.query), 150);
+    return () => window.clearTimeout(timeout);
+  }, [activeMention, mentionMenuDismissed]);
+
+  const mentionUsersLoadableAtom = useMemo(
+    () => loadable(gitHubRepoMentionableUsersAtom(mentionQuery)),
+    [mentionQuery],
+  );
+  const mentionUsersResult = useAtomValue(mentionUsersLoadableAtom);
+  const mentionUsers = useMemo(() => {
+    if (mentionUsersResult.state !== 'hasData' || activeMention == null) {
+      return [];
+    }
+    const query = activeMention.query.toLocaleLowerCase();
+    return mentionUsersResult.data
+      .filter(user => user.login.toLocaleLowerCase().startsWith(query))
+      .slice(0, 8);
+  }, [activeMention, mentionUsersResult]);
+  const mentionMenuOpen = activeMention != null && !mentionMenuDismissed;
+
+  const updateMentionMenuPosition = useCallback(() => {
+    const textarea = textareaRef.current;
+    const menu = mentionMenuRef.current;
+    if (textarea == null || menu == null) {
+      return;
+    }
+    const caret = getTextareaCaretPosition(textarea);
+    const textareaRect = textarea.getBoundingClientRect();
+    const unclampedLeft = textareaRect.left + caret.left;
+    const left = Math.max(8, Math.min(unclampedLeft, window.innerWidth - menu.offsetWidth - 8));
+    const top = textareaRect.top + caret.top;
+    setMentionMenuPosition(current =>
+      current.left === left && current.top === top ? current : {left, top},
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (mentionMenuOpen) {
+      updateMentionMenuPosition();
+    }
+  }, [comment, mentionMenuOpen, mentionUsers.length, mentionUsersResult.state, updateMentionMenuPosition]);
+
+  useEffect(() => {
+    if (!mentionMenuOpen) {
+      return;
+    }
+    window.addEventListener('resize', updateMentionMenuPosition);
+    window.addEventListener('scroll', updateMentionMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMentionMenuPosition);
+      window.removeEventListener('scroll', updateMentionMenuPosition, true);
+    };
+  }, [mentionMenuOpen, updateMentionMenuPosition]);
+
+  useEffect(() => {
+    setSelectedMentionIndex(0);
+  }, [activeMention?.query, mentionUsers.length]);
+
+  const updateActiveMention = useCallback((textarea: HTMLTextAreaElement) => {
+    setActiveMention(getActiveMention(textarea.value, textarea.selectionStart));
+  }, []);
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.currentTarget.value;
       setComment(value);
+      updateActiveMention(e.currentTarget);
+      setMentionMenuDismissed(false);
       // Clear error when user starts typing again
       if (error != null) {
         setError(null);
       }
     },
-    [setComment, error],
+    [setComment, error, updateActiveMention],
+  );
+
+  const onSelect = useCallback(
+    (e: SyntheticEvent<HTMLTextAreaElement>) => {
+      const nextMention = getActiveMention(
+        e.currentTarget.value,
+        e.currentTarget.selectionStart,
+      );
+      setActiveMention(current => {
+        if (
+          current?.start !== nextMention?.start ||
+          current?.end !== nextMention?.end ||
+          current?.query !== nextMention?.query
+        ) {
+          setMentionMenuDismissed(false);
+        }
+        return nextMention;
+      });
+    },
+    [setActiveMention],
   );
 
   const onAddComment = useCallback(async () => {
@@ -107,6 +266,8 @@ export default function PullRequestCommentInput({
 
     if (resetInputAfterAddingComment) {
       setComment(initialComment);
+      setActiveMention(null);
+      setMentionMenuDismissed(false);
       setDisabled(false);
     }
   }, [
@@ -125,6 +286,24 @@ export default function PullRequestCommentInput({
   const isAddCommentDisabledRef = useRef(isAddCommentDisabled);
   isAddCommentDisabledRef.current = isAddCommentDisabled;
 
+  const insertMention = useCallback(
+    (user: UserFragment) => {
+      if (activeMention == null) {
+        return;
+      }
+      const replacement = replaceActiveMention(comment, activeMention, user.login);
+      setComment(replacement.text);
+      setActiveMention(null);
+      setMentionMenuDismissed(false);
+      setError(null);
+      window.requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(replacement.cursor, replacement.cursor);
+      });
+    },
+    [activeMention, comment],
+  );
+
   const onKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       // Command+Enter (Mac) or Ctrl+Enter (Windows/Linux) to submit
@@ -133,9 +312,27 @@ export default function PullRequestCommentInput({
         if (!isAddCommentDisabledRef.current) {
           onAddComment();
         }
+        return;
+      }
+
+      if (!mentionMenuOpen) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMentionMenuDismissed(true);
+      } else if (mentionUsers.length > 0 && e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedMentionIndex(index => (index + 1) % mentionUsers.length);
+      } else if (mentionUsers.length > 0 && e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedMentionIndex(index => (index - 1 + mentionUsers.length) % mentionUsers.length);
+      } else if (mentionUsers.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
+        e.preventDefault();
+        insertMention(mentionUsers[selectedMentionIndex]);
       }
     },
-    [onAddComment],
+    [insertMention, mentionMenuOpen, mentionUsers, onAddComment, selectedMentionIndex],
   );
 
   const onInsertSuggestedChange = useCallback(() => {
@@ -146,6 +343,8 @@ export default function PullRequestCommentInput({
       const replacement = current.trimEnd() || suggestedChangeText || '';
       return `\`\`\`suggestion\n${replacement}\n\`\`\``;
     });
+    setActiveMention(null);
+    setMentionMenuDismissed(false);
     setError(null);
   }, [suggestedChangeText]);
 
@@ -155,6 +354,46 @@ export default function PullRequestCommentInput({
         Cancel
       </Button>
     ) : null;
+
+  const mentionMenu =
+    mentionMenuOpen && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="comment-mention-menu"
+            id={mentionMenuID}
+            ref={mentionMenuRef}
+            role="listbox"
+            style={mentionMenuPosition}>
+            {mentionUsersResult.state === 'loading' && (
+              <div className="comment-mention-status">Loading people...</div>
+            )}
+            {mentionUsersResult.state === 'hasError' && (
+              <div className="comment-mention-status">Could not load people.</div>
+            )}
+            {mentionUsersResult.state === 'hasData' && mentionUsers.length === 0 && (
+              <div className="comment-mention-status">No matching people.</div>
+            )}
+            {mentionUsers.map((user, index) => (
+              <button
+                className="comment-mention-option"
+                id={`${mentionMenuID}-${index}`}
+                key={user.id}
+                type="button"
+                role="option"
+                aria-selected={index === selectedMentionIndex}
+                onMouseEnter={() => setSelectedMentionIndex(index)}
+                onMouseDown={event => {
+                  event.preventDefault();
+                  insertMention(user);
+                }}>
+                <Avatar src={user.avatarUrl} size={20} />
+                <span>@{user.login}</span>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <Box
@@ -168,16 +407,29 @@ export default function PullRequestCommentInput({
           {error}
         </Flash>
       )}
-      <Textarea
-        value={comment}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        placeholder="Write a comment..."
-        block={true}
-        autoFocus={autoFocus}
-        resize="none"
-        sx={{height: '80px', marginBottom: 1}}
-      />
+      <Box className="comment-input-editor" marginBottom={1}>
+        <Textarea
+          ref={textareaRef}
+          value={comment}
+          onChange={onChange}
+          onSelect={onSelect}
+          onKeyDown={onKeyDown}
+          placeholder="Write a comment..."
+          block={true}
+          autoFocus={autoFocus}
+          resize="none"
+          aria-autocomplete="list"
+          aria-controls={mentionMenuOpen ? mentionMenuID : undefined}
+          aria-expanded={mentionMenuOpen}
+          aria-activedescendant={
+            mentionMenuOpen && mentionUsers.length > 0
+              ? `${mentionMenuID}-${selectedMentionIndex}`
+              : undefined
+          }
+          sx={{height: '80px'}}
+        />
+      </Box>
+      {mentionMenu}
       <Box display="flex" justifyContent="flex-end" gridGap={1}>
         {actionSelector}
         {enableSuggestedChange && (

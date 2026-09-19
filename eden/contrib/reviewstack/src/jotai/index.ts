@@ -29,6 +29,7 @@ export {
   gitHubRepoLabels,
   gitHubRepoAssignableUsersQuery,
   gitHubRepoAssignableUsers,
+  gitHubRepoMentionableUsersAtom,
   gitHubPullRequestJumpToCommentIDAtom,
   gitHubPullRequestLabelsAtom,
   gitHubPullRequestReviewersAtom,

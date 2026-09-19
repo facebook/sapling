@@ -1,0 +1,9 @@
+query RepoMentionableUsersQuery($name: String!, $owner: String!, $query: String) {
+  repository(name: $name, owner: $owner) {
+    mentionableUsers(first: 20, query: $query) {
+      nodes {
+        ...UserFragment
+      }
+    }
+  }
+}

@@ -407,7 +407,7 @@ export const gitHubPullRequestForParamsAtom = atomFamily(
       const token = localStorage.getItem('github.token');
       if (token == null) {
         // Return a never-settling promise to indicate we're waiting for auth
-         
+
         return new Promise<PullRequest | null>(() => {});
       }
 
@@ -473,6 +473,33 @@ export const gitHubRepoAssignableUsers = atom<Promise<UserFragment[]>>(async get
   const users = await client.getRepoAssignableUsers(query);
   return users.filter(user => user.login !== username);
 });
+
+/**
+ * Fetches users GitHub allows mentioning in the current repository. The
+ * server query is supplemented with a login-prefix filter so typing `@ti`
+ * behaves predictably even when GitHub also matches display names.
+ */
+export const gitHubRepoMentionableUsersAtom = atomFamily(
+  (query: string | null) =>
+    atom<Promise<UserFragment[]>>(async get => {
+      if (query == null) {
+        return [];
+      }
+      const client = await get(gitHubClientAtom);
+      if (client == null) {
+        return [];
+      }
+      const token = localStorage.getItem('github.token');
+      const username = token != null ? localStorage.getItem(`username.${token}`) : null;
+      const normalizedQuery = query.toLocaleLowerCase();
+      const users = await client.getRepoMentionableUsers(query === '' ? null : query);
+      return users
+        .filter(user => user.login !== username)
+        .filter(user => user.login.toLocaleLowerCase().startsWith(normalizedQuery))
+        .slice(0, 8);
+    }),
+  (left, right) => left === right,
+);
 
 // =============================================================================
 // Comment Thread Navigation

@@ -122,6 +122,36 @@ describe('commit comparisons', () => {
   });
 });
 
+describe('repository mentionable users', () => {
+  test('searches people who can be mentioned in the repository', async () => {
+    const user = {
+      __typename: 'User' as const,
+      avatarUrl: 'https://avatars.example/tina',
+      id: 'user-id',
+      login: 'tina',
+    };
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {repository: {mentionableUsers: {nodes: [user]}}},
+        }),
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await expect(client.getRepoMentionableUsers('ti')).resolves.toEqual([user]);
+    const request = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(request).toEqual(
+      expect.objectContaining({
+        query: expect.stringContaining('mentionableUsers'),
+        variables: {name: 'repo', owner: 'owner', query: 'ti'},
+      }),
+    );
+
+    fetchMock.mockRestore();
+  });
+});
+
 describe('GraphQLGitHubClient comment mutations', () => {
   test('updates reactions and review thread resolution', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
