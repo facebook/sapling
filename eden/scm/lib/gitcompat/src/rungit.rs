@@ -21,6 +21,8 @@ use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
 use spawn_ext::CommandExt;
 
+use crate::refs::ReftableRefCache;
+
 /// Run `git` outside a repo.
 #[derive(Default, Clone)]
 pub struct GlobalGit {
@@ -41,6 +43,7 @@ pub struct BareGit {
     /// worktree exists on disk (ex. before `git worktree add`) will not pick it up.
     pub(crate) common_dir: PathBuf,
     pub(crate) parent: GlobalGit,
+    pub(crate) reftable_ref_cache: RwLock<Option<ReftableRefCache>>,
 }
 
 /// Run `git` in a "regular" repo with a working copy.
@@ -147,6 +150,7 @@ impl BareGit {
             git_dir,
             common_dir,
             parent,
+            reftable_ref_cache: RwLock::new(None),
         }
     }
 
