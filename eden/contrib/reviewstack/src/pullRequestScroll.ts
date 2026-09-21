@@ -8,22 +8,30 @@
 export type PullRequestScrollPosition = {
   scrollLeft: number;
   scrollTop: number;
+  timelineScrollTop: number;
 };
 
 const DIFF_SCROLL_SELECTOR = '[data-reviewstack-diff-scroll="true"]';
+const TIMELINE_SCROLL_SELECTOR = '[data-reviewstack-timeline-scroll="true"]';
 
 export function capturePullRequestScrollPosition(): PullRequestScrollPosition {
-  const container = document.querySelector<HTMLElement>(DIFF_SCROLL_SELECTOR);
+  const diffContainer = document.querySelector<HTMLElement>(DIFF_SCROLL_SELECTOR);
+  const timelineContainer = document.querySelector<HTMLElement>(TIMELINE_SCROLL_SELECTOR);
   return {
-    scrollLeft: container?.scrollLeft ?? 0,
-    scrollTop: container?.scrollTop ?? 0,
+    scrollLeft: diffContainer?.scrollLeft ?? 0,
+    scrollTop: diffContainer?.scrollTop ?? 0,
+    timelineScrollTop: timelineContainer?.scrollTop ?? 0,
   };
 }
 
 export function restorePullRequestScrollPosition(position: PullRequestScrollPosition): void {
-  const container = document.querySelector<HTMLElement>(DIFF_SCROLL_SELECTOR);
-  if (container != null) {
-    container.scrollLeft = position.scrollLeft;
-    container.scrollTop = position.scrollTop;
+  const diffContainer = document.querySelector<HTMLElement>(DIFF_SCROLL_SELECTOR);
+  if (diffContainer != null) {
+    diffContainer.scrollLeft = position.scrollLeft;
+    diffContainer.scrollTop = position.scrollTop;
+  }
+  const timelineContainer = document.querySelector<HTMLElement>(TIMELINE_SCROLL_SELECTOR);
+  if (timelineContainer != null) {
+    timelineContainer.scrollTop = position.timelineScrollTop;
   }
 }

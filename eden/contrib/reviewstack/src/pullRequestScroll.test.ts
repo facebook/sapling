@@ -10,19 +10,26 @@ import {
   restorePullRequestScrollPosition,
 } from './pullRequestScroll';
 
-test('restores the scroll position of the diff container', () => {
-  const container = document.createElement('div');
-  container.dataset.reviewstackDiffScroll = 'true';
-  container.scrollLeft = 23;
-  container.scrollTop = 1450;
-  document.body.appendChild(container);
+test('restores the diff and timeline positions after a comment refresh', () => {
+  const diffContainer = document.createElement('div');
+  diffContainer.dataset.reviewstackDiffScroll = 'true';
+  diffContainer.scrollLeft = 23;
+  diffContainer.scrollTop = 1450;
+  document.body.appendChild(diffContainer);
+  const timelineContainer = document.createElement('div');
+  timelineContainer.dataset.reviewstackTimelineScroll = 'true';
+  timelineContainer.scrollTop = 820;
+  document.body.appendChild(timelineContainer);
 
   const position = capturePullRequestScrollPosition();
-  container.scrollLeft = 0;
-  container.scrollTop = 0;
+  diffContainer.scrollLeft = 0;
+  diffContainer.scrollTop = 0;
+  timelineContainer.scrollTop = 0;
   restorePullRequestScrollPosition(position);
 
-  expect(container.scrollLeft).toBe(23);
-  expect(container.scrollTop).toBe(1450);
-  container.remove();
+  expect(diffContainer.scrollLeft).toBe(23);
+  expect(diffContainer.scrollTop).toBe(1450);
+  expect(timelineContainer.scrollTop).toBe(820);
+  diffContainer.remove();
+  timelineContainer.remove();
 });

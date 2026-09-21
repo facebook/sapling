@@ -98,7 +98,10 @@ function FilesDrawer() {
 function TimelineDrawer() {
   return (
     <Box display="flex" flexDirection="column" height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`}>
-      <Box height={`calc(100% - ${COMMENT_INPUT_HEIGHT}px)`} overflow="auto">
+      <Box
+        data-reviewstack-timeline-scroll="true"
+        height={`calc(100% - ${COMMENT_INPUT_HEIGHT}px)`}
+        overflow="auto">
         <PullRequestTimeline />
       </Box>
       <Box display="flex" height={COMMENT_INPUT_HEIGHT}>
