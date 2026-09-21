@@ -6234,7 +6234,7 @@ def update(
         )
 
     if not opts.get("continue"):
-        bookmarks.checkagentpreferredtarget(repo, rev)
+        bookmarks.checkagentpreferredtarget(repo, rev, "goto")
 
     # Suggest `hg prev` as an alternative to 'hg update .^'.
     # internal config: ui.suggesthgprev

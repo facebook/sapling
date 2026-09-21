@@ -1399,7 +1399,7 @@ def rebase(ui, repo, templ=None, **opts):
         if not isinstance(dests, list):
             dests = [dests]
         for dest in dests:
-            bookmarks.checkagentpreferredtarget(repo, dest)
+            bookmarks.checkagentpreferredtarget(repo, dest, "rebase -d")
 
         # 'hg rebase' can fast-forward bookmark
         prev = repo["."]

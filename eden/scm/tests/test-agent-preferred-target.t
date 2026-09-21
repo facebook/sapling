@@ -66,16 +66,18 @@ Date-only updates have no explicit target to check.
   tip
   $ sl goto -q "$BASE"
 
-Agents are directed to the preferred target for update.
+Agents are nudged toward the preferred target without blocking the update.
 
   $ CODING_AGENT_METADATA=id=test_agent sl goto -q master
-  abort: use 'all_orchestrators_fast' for faster builds, or retry with '--config experimental.preferred-target=' to allow 'master'
-  ('all_orchestrators_fast' follows 'master' closely, so is normally a safe substitute)
-  [255]
+  hint[preferred-target]: continuing with 'master'. Do not ask the user which target to use. 'all_orchestrators_fast' follows 'master' closely, so it is normally a safe substitute when exact 'master' is unnecessary. If you know this workflow does not require 'master', use 'sl goto all_orchestrators_fast' for faster builds. Otherwise stay on 'master' and continue.
+  $ sl log -r . -T '{desc}\n'
+  tip
+  $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl goto -q remote/master
-  abort: use 'all_orchestrators_fast' for faster builds, or retry with '--config experimental.preferred-target=' to allow 'remote/master'
-  ('all_orchestrators_fast' follows 'master' closely, so is normally a safe substitute)
-  [255]
+  hint[preferred-target]: continuing with 'remote/master'. Do not ask the user which target to use. 'all_orchestrators_fast' follows 'master' closely, so it is normally a safe substitute when exact 'master' is unnecessary. If you know this workflow does not require 'master', use 'sl goto all_orchestrators_fast' for faster builds. Otherwise stay on 'master' and continue.
+  $ sl log -r . -T '{desc}\n'
+  tip
+  $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl goto -q all_orchestrators_fast
   $ sl log -r . -T '{desc}\n'
   tip
@@ -87,15 +89,14 @@ Unsetting the preferred target allows the update.
   $ sl log -r . -T '{desc}\n'
   tip
 
-Agents are also directed to the preferred target before rebase fast-forwards.
+Agents are also nudged before rebase fast-forwards.
 
   $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl rebase -q -d master
-  abort: use 'all_orchestrators_fast' for faster builds, or retry with '--config experimental.preferred-target=' to allow 'master'
-  ('all_orchestrators_fast' follows 'master' closely, so is normally a safe substitute)
-  [255]
+  hint[preferred-target]: continuing with 'master'. Do not ask the user which target to use. 'all_orchestrators_fast' follows 'master' closely, so it is normally a safe substitute when exact 'master' is unnecessary. If you know this workflow does not require 'master', use 'sl rebase -d all_orchestrators_fast' for faster builds. Otherwise stay on 'master' and continue.
   $ sl log -r . -T '{desc}\n'
-  base
+  tip
+  $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl rebase -q -d all_orchestrators_fast
   $ sl log -r . -T '{desc}\n'
   tip
@@ -111,10 +112,7 @@ Multi-segment main bookmark names are preserved when removing a remote prefix.
 
   $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl --config remotenames.selectivepulldefault=release/main goto -q release/main
-  abort: use 'all_orchestrators_fast' for faster builds, or retry with '--config experimental.preferred-target=' to allow 'release/main'
-  ('all_orchestrators_fast' follows 'release/main' closely, so is normally a safe substitute)
-  [255]
+  hint[preferred-target]: continuing with 'release/main'. Do not ask the user which target to use. 'all_orchestrators_fast' follows 'release/main' closely, so it is normally a safe substitute when exact 'release/main' is unnecessary. If you know this workflow does not require 'release/main', use 'sl goto all_orchestrators_fast' for faster builds. Otherwise stay on 'release/main' and continue.
+  $ sl goto -q "$BASE"
   $ CODING_AGENT_METADATA=id=test_agent sl --config remotenames.selectivepulldefault=release/main goto -q remote/release/main
-  abort: use 'all_orchestrators_fast' for faster builds, or retry with '--config experimental.preferred-target=' to allow 'remote/release/main'
-  ('all_orchestrators_fast' follows 'release/main' closely, so is normally a safe substitute)
-  [255]
+  hint[preferred-target]: continuing with 'remote/release/main'. Do not ask the user which target to use. 'all_orchestrators_fast' follows 'release/main' closely, so it is normally a safe substitute when exact 'release/main' is unnecessary. If you know this workflow does not require 'release/main', use 'sl goto all_orchestrators_fast' for faster builds. Otherwise stay on 'release/main' and continue.

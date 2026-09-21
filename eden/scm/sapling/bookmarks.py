@@ -24,6 +24,7 @@ from . import (
     encoding,
     error,
     git,
+    hintutil,
     identity,
     lock as lockmod,
     mutation,
@@ -1283,7 +1284,7 @@ def mainbookmark(repo):
         return names[0]
 
 
-def checkagentpreferredtarget(repo, target):
+def checkagentpreferredtarget(repo, target, command):
     preferred = repo.ui.config("experimental", "preferred-target")
     if not target or not preferred or not repo.ui.agent() or repo.ui.plain():
         return
@@ -1300,15 +1301,16 @@ def checkagentpreferredtarget(repo, target):
         "preferred_target",
         preferred_target=preferred,
         requested_bookmark=target,
+        suggested_command=command,
+        blocking=False,
     )
-    raise error.Abort(
-        _(
-            "use '%s' for faster builds, or retry with "
-            "'--config experimental.preferred-target=' to allow '%s'"
-        )
-        % (preferred, target),
-        hint=_("'%s' follows '%s' closely, so is normally a safe substitute")
-        % (preferred, main),
+    hintutil.triggershow(
+        repo.ui,
+        "preferred-target",
+        target,
+        main,
+        command,
+        preferred,
     )
 
 

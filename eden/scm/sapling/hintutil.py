@@ -50,6 +50,13 @@ hinttable = {
         " (if you want to disable title matching, run '@prog@ config --edit experimental.titles-namespace=false')"
     )
     % name,
+    "preferred-target": lambda target, main, command, preferred: _(
+        "continuing with '%s'. Do not ask the user which target to use. '%s' "
+        "follows '%s' closely, so it is normally a safe substitute when exact '%s' "
+        "is unnecessary. If you know this workflow does not require '%s', use "
+        "'@prog@ %s %s' for faster builds. Otherwise stay on '%s' and continue."
+    )
+    % (target, preferred, main, main, main, command, preferred, main),
     "rel-path-typo": lambda path: _(
         "path '%s' does not exist relative to the current directory\n"
         " (use 'path:%s' to specify the matching repo-root-relative path)"
