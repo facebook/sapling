@@ -54,6 +54,9 @@ pub mod init;
 /// Run git commands.
 pub mod rungit;
 
+/// Work with Git worktrees.
+pub mod worktree;
+
 /// Work with git references.
 mod refs;
 
@@ -69,3 +72,4 @@ pub use crate::rungit::BareGit;
 pub use crate::rungit::GitCmd;
 pub use crate::rungit::GlobalGit;
 pub use crate::rungit::RepoGit;
+pub use crate::worktree::GitWorktree;
