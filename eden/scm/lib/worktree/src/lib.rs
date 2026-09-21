@@ -13,6 +13,8 @@
 //! other crates (e.g., `clone`, Python bindings for smartlog) can access
 //! worktree group information without pulling in command-layer dependencies.
 
+mod backend;
+
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -35,6 +37,9 @@ use fs_err as fs;
 use serde::Deserialize;
 use serde::Serialize;
 use util::lock::PathLock;
+
+pub use crate::backend::ListedWorktree;
+pub use crate::backend::Worktrees;
 
 // --- Data Model ---
 

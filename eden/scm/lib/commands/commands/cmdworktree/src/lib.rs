@@ -22,6 +22,7 @@ use cmdutil::define_flags;
 use fs_err as fs;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
+use worktree::Worktrees;
 
 define_flags! {
     pub struct WorktreeOpts {
@@ -56,7 +57,10 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
         abort!("--rev can only be used with 'worktree add'");
     }
     let runner: fn(&ReqCtx<WorktreeOpts>, &Repo, &WorkingCopy) -> Result<u8> = match subcmd {
-        "list" | "ls" => list::run,
+        "list" | "ls" => {
+            let worktrees = Worktrees::open(repo)?;
+            return list::run(&ctx, repo, &worktrees);
+        }
         "add" => add::run,
         "remove" | "rm" => remove::run,
         "label" => label::run,
