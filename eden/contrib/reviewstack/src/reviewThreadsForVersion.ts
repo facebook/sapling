@@ -37,6 +37,8 @@ export default function reviewThreadsForVersion(
     const annotatedThread = {
       ...thread,
       sourceVersionIndex: sourceVersion,
+      targetVersionIndex: targetVersion,
+      sourceVersionHeadCommit: versions[sourceVersion].headCommit,
       isHistorical: sourceVersion < targetVersion,
     };
     if (sourceVersion < targetVersion) {

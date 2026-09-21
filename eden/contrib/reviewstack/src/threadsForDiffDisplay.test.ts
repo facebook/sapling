@@ -27,3 +27,26 @@ test('keeps historical threads visible without attaching them to obsolete lines'
   expect(result.after.get(17)).toBeUndefined();
   expect(result.after.get(23)).toEqual([current]);
 });
+
+test('anchors a previous-version comment to its line when that line is in the new diff', () => {
+  const previous = {
+    ...thread('previous', 17, true),
+    sourceVersionIndex: 4,
+    targetVersionIndex: 5,
+    sourceVersionHeadCommit: 'v5',
+  };
+  const older = {
+    ...thread('older', 18, true),
+    sourceVersionIndex: 2,
+    targetVersionIndex: 5,
+  };
+  const result = threadsForDiffDisplay(
+    {[DiffSide.Left]: [], [DiffSide.Right]: [previous, older]},
+    new Set([17, 18]),
+    'v5',
+  );
+
+  expect(result.before.get(17)).toEqual([previous]);
+  expect(result.before.get(18)).toBeUndefined();
+  expect(result.historical).toEqual([older]);
+});

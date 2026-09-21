@@ -58,6 +58,8 @@ export type GitHubPullRequestReviewThread = {
   viewerCanResolve: boolean;
   viewerCanUnresolve: boolean;
   sourceVersionIndex?: number;
+  targetVersionIndex?: number;
+  sourceVersionHeadCommit?: string;
   isHistorical?: boolean;
   originalLine: number | null | undefined;
   diffSide: DiffSide;
