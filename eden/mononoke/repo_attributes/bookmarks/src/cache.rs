@@ -376,17 +376,6 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.create(bookmark, new_cs, reason)
     }
 
-    fn creates_or_updates(
-        &mut self,
-        bookmark: &BookmarkKey,
-        new_cs: ChangesetId,
-        reason: BookmarkUpdateReason,
-    ) -> Result<()> {
-        self.dirty = true;
-        self.transaction
-            .creates_or_updates(bookmark, new_cs, reason)
-    }
-
     fn force_set(
         &mut self,
         bookmark: &BookmarkKey,
@@ -634,15 +623,6 @@ mod tests {
         }
 
         fn create(
-            &mut self,
-            _bookmark: &BookmarkKey,
-            _new_cs: ChangesetId,
-            _reason: BookmarkUpdateReason,
-        ) -> Result<()> {
-            Ok(())
-        }
-
-        fn creates_or_updates(
             &mut self,
             _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,

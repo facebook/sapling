@@ -66,14 +66,6 @@ mononoke_queries! {
         "{insert_or_ignore} INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values}"
     }
 
-    write InsertOrUpdateBookmarks(
-        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId, kind: BookmarkKind)
-    ) {
-         none,
-        mysql("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values} ON DUPLICATE KEY UPDATE changeset_id = VALUES(changeset_id), hg_kind = VALUES(hg_kind)")
-        sqlite("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values} ON CONFLICT (repo_id, name, category) DO UPDATE SET changeset_id = EXCLUDED.changeset_id, hg_kind = EXCLUDED.hg_kind")
-    }
-
     pub write UpdateBookmark(
         repo_id: RepositoryId,
         log_id: Option<u64>,
@@ -234,14 +226,6 @@ struct SqlBookmarksTransactionPayload {
         Option<NewUpdateLogEntry>,
     )>,
 
-    /// Operations to create or update a bookmark.
-    creates_or_updates: Vec<(
-        BookmarkKey,
-        ChangesetId,
-        BookmarkKind,
-        Option<NewUpdateLogEntry>,
-    )>,
-
     /// Operations to update a bookmark from an old id to a new id, provided
     /// it has a matching kind.
     updates: Vec<(
@@ -332,7 +316,6 @@ impl SqlBookmarksTransactionPayload {
             repo_id,
             force_sets: Vec::new(),
             creates: Vec::new(),
-            creates_or_updates: Vec::new(),
             updates: Vec::new(),
             force_deletes: Vec::new(),
             deletes: Vec::new(),
@@ -366,9 +349,6 @@ impl SqlBookmarksTransactionPayload {
             bookmark_names.push(bk.name());
         }
         for (bk, _, _, _) in &self.creates {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _, _, _) in &self.creates_or_updates {
             bookmark_names.push(bk.name());
         }
         for (bk, _, _, _, _) in &self.updates {
@@ -410,11 +390,6 @@ impl SqlBookmarksTransactionPayload {
         self.force_sets.len()
             + self
                 .creates
-                .iter()
-                .filter(|(_, _, _, log)| log.is_some())
-                .count()
-            + self
-                .creates_or_updates
                 .iter()
                 .filter(|(_, _, _, log)| log.is_some())
                 .count()
@@ -537,43 +512,6 @@ impl SqlBookmarksTransactionPayload {
         let rows_to_insert = data.len() as u64;
         let (txn, result) = InsertBookmarks::query_with_transaction(txn, data.as_slice()).await?;
         if result.affected_rows() != rows_to_insert {
-            return Err(BookmarkTransactionError::LogicError);
-        }
-        Ok(txn)
-    }
-
-    async fn store_creates_or_updates<'op, 'log: 'op>(
-        &'log self,
-        _ctx: &CoreContext,
-        txn: SqlTransaction,
-        log: &'op mut TransactionLogUpdates<'log>,
-    ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        let mut data = Vec::new();
-        for (bookmark, cs_id, kind, maybe_log_entry) in self.creates_or_updates.iter() {
-            let log_id = maybe_log_entry
-                .as_ref()
-                .map(|log_entry| log.push_log_entry(bookmark, log_entry))
-                .transpose()
-                .map_err(BookmarkTransactionError::RetryableError)?;
-            data.push((self.repo_id, log_id, bookmark, cs_id, kind))
-        }
-        let data = data
-            .iter()
-            .map(|(repo_id, log_id, bookmark, cs_id, kind)| {
-                (
-                    repo_id,
-                    log_id,
-                    bookmark.name(),
-                    bookmark.category(),
-                    *cs_id,
-                    *kind,
-                )
-            })
-            .collect::<Vec<_>>();
-        let rows_to_insert = data.len() as u64;
-        let (txn, result) =
-            InsertOrUpdateBookmarks::query_with_transaction(txn, data.as_slice()).await?;
-        if result.affected_rows() < rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
         Ok(txn)
@@ -736,7 +674,6 @@ impl SqlBookmarksTransactionPayload {
             self.mirror_batches.is_empty()
                 || (self.force_sets.is_empty()
                     && self.creates.is_empty()
-                    && self.creates_or_updates.is_empty()
                     && self.updates.is_empty()
                     && self.force_deletes.is_empty()
                     && self.deletes.is_empty()),
@@ -868,11 +805,6 @@ impl SqlBookmarksTransactionPayload {
                 .iter()
                 .map(|(bk, _, _)| bk.name())
                 .chain(self.creates.iter().map(|(bk, _, _, _)| bk.name()))
-                .chain(
-                    self.creates_or_updates
-                        .iter()
-                        .map(|(bk, _, _, _)| bk.name()),
-                )
                 .chain(self.updates.iter().map(|(bk, _, _, _, _)| bk.name()))
                 .chain(self.force_deletes.iter().map(|(bk, _)| bk.name()))
                 .chain(self.deletes.iter().map(|(bk, _, _)| bk.name()))
@@ -927,7 +859,6 @@ impl SqlBookmarksTransactionPayload {
 
         txn = self.store_force_sets(ctx, txn, &mut log).await?;
         txn = self.store_creates(ctx, txn, &mut log).await?;
-        txn = self.store_creates_or_updates(ctx, txn, &mut log).await?;
         txn = self.store_updates(ctx, txn, &mut log).await?;
         txn = self.store_force_deletes(ctx, txn, &mut log).await?;
         txn = self.store_deletes(ctx, txn, &mut log).await?;
@@ -1045,25 +976,6 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         let log = NewUpdateLogEntry::new(None, Some(new_cs), reason)?;
 
         self.payload.creates.push((
-            bookmark.clone(),
-            new_cs,
-            BookmarkKind::PullDefaultPublishing,
-            Some(log),
-        ));
-
-        Ok(())
-    }
-
-    fn creates_or_updates(
-        &mut self,
-        bookmark: &BookmarkKey,
-        new_cs: ChangesetId,
-        reason: BookmarkUpdateReason,
-    ) -> Result<()> {
-        self.check_not_seen(bookmark)?;
-        let log = NewUpdateLogEntry::new(None, Some(new_cs), reason)?;
-
-        self.payload.creates_or_updates.push((
             bookmark.clone(),
             new_cs,
             BookmarkKind::PullDefaultPublishing,

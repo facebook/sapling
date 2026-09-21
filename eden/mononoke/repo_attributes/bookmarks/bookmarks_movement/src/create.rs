@@ -296,11 +296,7 @@ impl<'op> CreateBookmarkOp<'op> {
                         txn.mirror_batch(&self.bookmark, kind, moves)?;
                     }
                     None => {
-                        if is_mirror_upload {
-                            txn.creates_or_updates(&self.bookmark, self.target, self.reason)?;
-                        } else {
-                            txn.create(&self.bookmark, self.target, self.reason)?;
-                        }
+                        txn.create(&self.bookmark, self.target, self.reason)?;
                     }
                 }
 
