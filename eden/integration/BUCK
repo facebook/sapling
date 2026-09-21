@@ -795,3 +795,19 @@ python_integration_test(
         "//eden/integration/lib:lib",
     ],
 )
+
+python_integration_test(
+    name = "readdir_cookies_break_across_checkout",
+    srcs = ["readdir_cookies_break_across_checkout_test.py"],
+    # The cookie collision is a POSIX readdir/NFS behavior; Windows PrjFS
+    # enumeration does not reproduce it, so the bug-asserting test fails there.
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
