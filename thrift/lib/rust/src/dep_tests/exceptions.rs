@@ -82,7 +82,7 @@ fn test_should_use_message_field_override_optional() -> Result<()> {
         ..Default::default()
     };
     assert_eq!(
-        format!("TestExceptionMsgOverrideOptional: None"),
+        "TestExceptionMsgOverrideOptional: None".to_string(),
         format!("{}", err)
     );
 
