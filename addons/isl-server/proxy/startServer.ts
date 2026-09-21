@@ -303,6 +303,7 @@ const validPlatforms: Array<PlatformName> = [
   'obsidian',
   'vscode-agents',
   'agentHome',
+  'agentCloud',
 ];
 function isValidCustomPlatform(name: string): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);

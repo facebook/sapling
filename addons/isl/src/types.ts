@@ -37,6 +37,7 @@ export type PlatformName =
   | 'obsidian'
   | 'vscode-agents'
   | 'agentHome'
+  | 'agentCloud'
   | 'tui';
 
 export type AbsolutePath = string;

@@ -232,6 +232,9 @@ export function startServer({
         case 'agentHome':
           // @fb-only: platformImpl = (await import('../src/facebook/agentHomeServerPlatform')).platform;
           break;
+        case 'agentCloud':
+          // @fb-only: platformImpl = (await import('../src/facebook/agentCloudServerPlatform')).platform;
+          break;
         default:
         case undefined:
           platformImpl = makeBrowserServerPlatform(extraCwds);

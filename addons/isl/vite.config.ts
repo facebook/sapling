@@ -32,6 +32,7 @@ const platforms = {
   obsidian: normalizeInputPath('obsidian.html'),
   // @fb-only: vscodeAgents: normalizeInputPath('vscode-agents.html'),
   // @fb-only: agentHome: normalizeInputPath('agentHome.html'),
+  // @fb-only: agentCloud: normalizeInputPath('agentCloud.html'),
 };
 
 export default defineConfig({

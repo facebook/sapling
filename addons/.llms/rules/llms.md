@@ -72,6 +72,7 @@ ISL supports multiple host environments via the `Platform` interface (`isl/src/p
 | Visual Studio  | Entry via `visualStudio.html`              | `visualStudioServerPlatform.ts`  |
 | Obsidian       | Entry via `obsidian.html`                  | `obsidianServerPlatform.ts`      |
 | Agent Home     | Entry via `agentHome.html`                 | `agentHomeServerPlatform.ts`     |
+| Agent Cloud    | Entry via `agentCloud.html`                | `agentCloudServerPlatform.ts`    |
 
 Platform-specific code must go through the `Platform` interface. Do not import platform implementations directly—use `import platform from './platform'`.
 
