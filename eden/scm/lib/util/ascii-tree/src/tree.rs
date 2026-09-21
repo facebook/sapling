@@ -207,7 +207,7 @@ impl<T> Tree<T> {
                             String::new(),
                             String::new(),
                             format!("{}| {}", " ".repeat(indent), line),
-                            format!(":"),
+                            ":".to_string(),
                         ],
                     };
                     out.rows.push(row);
