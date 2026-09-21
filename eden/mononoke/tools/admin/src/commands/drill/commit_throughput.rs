@@ -74,7 +74,7 @@ enum LandBackend {
     LocalBatched,
 }
 
-/// Land many file-disjoint stacks in parallel onto a single test bookmark and measure commit throughput
+/// Land file-disjoint stacks onto mononoke_commit_throughput_test and measure commit throughput
 #[derive(Parser)]
 pub struct CommitThroughputArgs {
     /// Number of stacks to land.
@@ -88,10 +88,6 @@ pub struct CommitThroughputArgs {
     /// Master commits to scan while assembling the requested shape.
     #[clap(long, default_value_t = 1000)]
     max_scan: usize,
-
-    /// Target bookmark.
-    #[clap(long, default_value = "mononoke_commit_throughput_test")]
-    bookmark: String,
 
     /// Bookmark whose history is replayed.
     #[clap(long, default_value = "master")]
@@ -139,8 +135,8 @@ pub async fn commit_throughput(
     repo: &Repo,
     args: CommitThroughputArgs,
 ) -> Result<()> {
-    let bookmark = BookmarkKey::new(&args.bookmark)?;
-    if args.bookmark == args.source_bookmark {
+    let bookmark = BookmarkKey::new("mononoke_commit_throughput_test")?;
+    if bookmark.as_str() == args.source_bookmark {
         bail!("refusing to land onto {bookmark}, the bookmark being replayed");
     }
 
