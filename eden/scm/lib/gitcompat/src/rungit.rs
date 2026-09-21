@@ -17,6 +17,7 @@ use std::sync::RwLock;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
 use spawn_ext::CommandExt;
 
@@ -35,6 +36,10 @@ pub struct BareGit {
     /// This is usually `root/.git`. When `.git` is a "symlink" ("gitdir: ..."),
     /// this is the "symlink" destination.
     pub(crate) git_dir: PathBuf,
+    /// The directory containing repository-wide Git state. Same as `git_dir` unless this is
+    /// a linked worktree. Resolved once at construction time, so constructing before the
+    /// worktree exists on disk (ex. before `git worktree add`) will not pick it up.
+    pub(crate) common_dir: PathBuf,
     pub(crate) parent: GlobalGit,
 }
 
@@ -107,10 +112,7 @@ impl GlobalGit {
 
     /// Associate with a bare repo.
     pub fn with_bare(self, git_dir: PathBuf) -> BareGit {
-        BareGit {
-            git_dir: follow_dotgit_path(git_dir),
-            parent: self,
-        }
+        BareGit::new(git_dir, self)
     }
 
     /// Associate with a regular repo.
@@ -126,20 +128,36 @@ impl GlobalGit {
 }
 
 impl BareGit {
+    fn new(git_dir: PathBuf, parent: GlobalGit) -> Self {
+        let git_dir = follow_dotgit_path(git_dir);
+        let commondir_path = git_dir.join("commondir");
+        let common_dir = match fs::read_to_string(&commondir_path) {
+            Ok(path) => git_dir.join(path.trim_end()),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => git_dir.clone(),
+            Err(err) => {
+                tracing::warn!(
+                    path = %commondir_path.display(),
+                    error = %err,
+                    "failed to read Git commondir; falling back to git dir"
+                );
+                git_dir.clone()
+            }
+        };
+        Self {
+            git_dir,
+            common_dir,
+            parent,
+        }
+    }
+
     /// Construct from git_dir (".git" path) and config.
     pub fn from_git_dir_and_config(git_dir: PathBuf, config: &dyn Config) -> Self {
-        Self {
-            git_dir: follow_dotgit_path(git_dir),
-            parent: GlobalGit::from_config(config),
-        }
+        Self::new(git_dir, GlobalGit::from_config(config))
     }
 
     /// Construct from git_dir (".git" path) and default config.
     pub fn from_git_dir(git_dir: PathBuf) -> Self {
-        Self {
-            git_dir: follow_dotgit_path(git_dir),
-            parent: GlobalGit::default(),
-        }
+        Self::new(git_dir, GlobalGit::default())
     }
 
     /// Associate with a working copy.
@@ -154,6 +172,11 @@ impl BareGit {
     /// The bare repo root, usually ".git" or "<name>.git".
     pub fn git_dir(&self) -> &Path {
         &self.git_dir
+    }
+
+    /// The directory containing repository-wide Git state.
+    pub fn common_dir(&self) -> &Path {
+        &self.common_dir
     }
 }
 
