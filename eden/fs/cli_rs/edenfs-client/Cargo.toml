@@ -25,7 +25,7 @@ hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/li
 libc = "0.2.186"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 pathdiff = "0.2"
-rand = "0.10.2"
+rand = "0.10.3"
 rayon = "1.11.0"
 regex = "1.13.1"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
