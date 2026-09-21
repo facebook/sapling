@@ -962,6 +962,7 @@ export const allConfigNames = [
   'fbcodereview.code-browser-url',
   'extensions.commitcloud',
   'isl.show-authored-diffs',
+  'isl.show-ai-reviewing-badge',
   'isl.auto-detect-commit-schema',
   'isl.focus-dot-on-repo-change',
   'isl.keyboard-shortcut-overrides',
@@ -998,6 +999,7 @@ export const settableConfigNames = [
   'ui.merge',
   'amend.autorestack',
   'isl.show-authored-diffs',
+  'isl.show-ai-reviewing-badge',
   'worktree.enabled',
   // Pure data (a map of command name -> [modifiers, keyCode]); no code-execution risk.
   'isl.keyboard-shortcut-overrides',

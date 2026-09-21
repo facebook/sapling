@@ -43,6 +43,7 @@ import {
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {showAiReviewingBadge} from './codeReview/aiReviewBadgeState';
 import {
   branchPRsSupported,
   experimentalBranchPRsEnabled,
@@ -229,6 +230,7 @@ function SettingsDropdown({
               </Checkbox>
             </Tooltip>
           )}
+          {Internal.showAiReviewingBadgeOption && <ShowAiReviewingBadgeSetting />}
         </div>
       </Setting>
       {platform.canCustomizeFileOpener && (
@@ -394,6 +396,23 @@ function ShowWorktreeLabelsSetting() {
           setValue(checked);
         }}>
         <T>Show Worktree Labels</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function ShowAiReviewingBadgeSetting() {
+  const [value, setValue] = useAtom(showAiReviewingBadge);
+  return (
+    <Tooltip
+      title={t('Show an "AI Reviewing" badge while an AI code review is running on a diff.')}>
+      <Checkbox
+        data-testid="show-ai-reviewing-badge"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show AI Reviewing badge</T>
       </Checkbox>
     </Tooltip>
   );
