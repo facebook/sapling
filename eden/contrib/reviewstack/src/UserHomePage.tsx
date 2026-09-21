@@ -27,6 +27,7 @@ type PullRequest = HomePagePullRequestFragment;
 type QueueView = 'reviews' | 'authored' | null;
 type Filters = {
   search: string;
+  organization: string;
   repo: string;
   author: string;
   status: string;
@@ -36,6 +37,7 @@ type Filters = {
 
 const DEFAULT_FILTERS: Filters = {
   search: '',
+  organization: 'all',
   repo: 'all',
   author: 'all',
   status: 'active',
@@ -103,6 +105,7 @@ function UserHomePageRoot({data}: {data: GitHubUserHomePageData | null}): React.
       pullRequest => pullRequest.repository.nameWithOwner,
     ),
   );
+  const organizations = uniqueValues(repositories.map(repositoryOrganization));
   const authors = uniqueValues(
     [...reviewRequests, ...authoredPullRequests]
       .map(pullRequest => pullRequest.author?.login)
@@ -178,6 +181,7 @@ function UserHomePageRoot({data}: {data: GitHubUserHomePageData | null}): React.
 
       <FilterBar
         filters={filters}
+        organizations={organizations}
         repositories={repositories}
         authors={authors}
         onChange={setFilters}
@@ -209,16 +213,25 @@ function UserHomePageRoot({data}: {data: GitHubUserHomePageData | null}): React.
 
 function FilterBar({
   filters,
+  organizations,
   repositories,
   authors,
   onChange,
 }: {
   filters: Filters;
+  organizations: string[];
   repositories: string[];
   authors: string[];
   onChange: (filters: Filters) => void;
 }): React.ReactElement {
   const update = (field: keyof Filters, value: string) => onChange({...filters, [field]: value});
+  const updateOrganization = (organization: string) =>
+    onChange({...filters, organization, repo: 'all'});
+  const visibleRepositories = repositories.filter(
+    repository =>
+      filters.organization === 'all' ||
+      repositoryOrganization(repository) === filters.organization,
+  );
   return (
     <section className="review-queue-filters" aria-label="Pull request filters">
       <label className="review-queue-search">
@@ -232,11 +245,22 @@ function FilterBar({
         />
       </label>
       <FilterSelect
+        label="Organization"
+        value={filters.organization}
+        onChange={updateOrganization}>
+        <option value="all">All organizations</option>
+        {organizations.map(organization => (
+          <option value={organization} key={organization}>
+            {organization}
+          </option>
+        ))}
+      </FilterSelect>
+      <FilterSelect
         label="Repository"
         value={filters.repo}
         onChange={value => update('repo', value)}>
         <option value="all">All repositories</option>
-        {repositories.map(repository => (
+        {visibleRepositories.map(repository => (
           <option value={repository} key={repository}>
             {shortRepository(repository)}
           </option>
@@ -454,6 +478,8 @@ function matchesFilters(pullRequest: PullRequest, filters: Filters): boolean {
   const updatedDate = pullRequest.updatedAt.slice(0, 10);
   return (
     (query === '' || searchable.includes(query)) &&
+    (filters.organization === 'all' ||
+      filters.organization === repositoryOrganization(pullRequest.repository.nameWithOwner)) &&
     (filters.repo === 'all' || filters.repo === pullRequest.repository.nameWithOwner) &&
     (filters.author === 'all' || filters.author === pullRequest.author?.login) &&
     (filters.status === 'all' ||
@@ -523,6 +549,10 @@ function relativeDate(isoDate: string): string {
 
 function shortRepository(repository: string): string {
   return repository.split('/').at(-1) ?? repository;
+}
+
+function repositoryOrganization(repository: string): string {
+  return repository.split('/')[0] ?? repository;
 }
 
 function uniqueValues(values: string[]): string[] {

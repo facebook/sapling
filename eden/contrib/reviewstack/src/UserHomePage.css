@@ -119,8 +119,8 @@
   display: grid;
   gap: 10px;
   grid-template-columns:
-    minmax(200px, 1.35fr) repeat(3, minmax(130px, 0.62fr))
-    minmax(230px, 0.9fr) auto;
+    minmax(180px, 1.25fr) repeat(4, minmax(115px, 0.58fr))
+    minmax(210px, 0.85fr) auto;
   margin-bottom: 34px;
   padding: 14px;
 }
@@ -568,7 +568,7 @@
 
 @media (max-width: 1100px) {
   .review-queue-filters {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .review-queue-search {
@@ -576,7 +576,7 @@
   }
 
   .review-queue-date-filter {
-    grid-column: span 2;
+    grid-column: auto;
   }
 
   .review-queue-changes-column {

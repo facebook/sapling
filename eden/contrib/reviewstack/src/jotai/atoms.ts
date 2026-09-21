@@ -61,6 +61,10 @@ import {diffVersions} from '../github/diffVersions';
 import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
 import {broadcastLogoutMessage, subscribeToLogout} from '../github/logoutBroadcastChannel';
 import queryGraphQL from '../github/queryGraphQL';
+import {
+  recoverReviewRequestsData,
+  recoverUserHomePageData,
+} from '../github/recoverHomePageData';
 import reviewThreadsForVersion from '../reviewThreadsForVersion';
 import {parseSaplingStackBody} from '../saplingStack';
 import {getPathForChange, getTreeEntriesForChange} from '../utils';
@@ -1636,13 +1640,25 @@ export const gitHubUserHomePageDataAtom = atom<Promise<GitHubUserHomePageData | 
       {},
       requestHeaders,
       graphQLEndpoint,
-    ),
+    ).catch(error => {
+      const partialData = recoverUserHomePageData(error);
+      if (partialData != null) {
+        return partialData;
+      }
+      throw error;
+    }),
     queryGraphQL<UserReviewRequestsQueryData, UserReviewRequestsQueryVariables>(
       UserReviewRequestsQuery,
       {reviewRequestedQuery},
       requestHeaders,
       graphQLEndpoint,
-    ),
+    ).catch(error => {
+      const partialData = recoverReviewRequestsData(error);
+      if (partialData != null) {
+        return partialData;
+      }
+      throw error;
+    }),
   ]);
   return {
     pullRequests: homePageData.viewer.pullRequests.nodes ?? [],
