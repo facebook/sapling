@@ -10,7 +10,13 @@ import type {StableLocationData} from './types';
 import {atom} from 'jotai';
 import {tracker} from './analytics';
 import serverAPI from './ClientToServerAPI';
-import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {
+  localStorageBackedAtom,
+  localStorageBackedAtomFamily,
+  readAtom,
+  writeAtom,
+} from './jotaiUtils';
+import {repoRootAtom} from './repositoryData';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 
@@ -92,7 +98,7 @@ fetchStableLocations(); // fetch on startup
 registerDisposable(
   serverAPI,
   serverAPI.onMessageOfType('fetchedRecommendedBookmarks', data => {
-    writeAtom(recommendedBookmarksAtom, new Set(data.bookmarks));
+    writeAtom(recommendedBookmarksByRepoRoot(data.repoRoot), data.bookmarks);
 
     const bookmarksData = readAtom(bookmarksDataStorage);
     tracker.track('RecommendedBookmarksStatus', {
@@ -119,7 +125,14 @@ export const remoteBookmarks = atom(get => {
   return commits.flatMap(commit => commit.remoteBookmarks);
 });
 
-export const recommendedBookmarksAtom = atom<Set<string>>(new Set<string>());
+const recommendedBookmarksByRepoRoot = localStorageBackedAtomFamily<string, Array<string>>(
+  'isl.recommended-bookmarks:',
+  () => [],
+);
+
+export const recommendedBookmarksAtom = atom(
+  get => new Set(get(recommendedBookmarksByRepoRoot(get(repoRootAtom)))),
+);
 
 /** Checks if recommended bookmarks are available in remoteBookmarks */
 export const recommendedBookmarksAvailableAtom = atom(get => {

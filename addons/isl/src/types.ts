@@ -1046,6 +1046,7 @@ export type LocalStorageName =
   | 'isl.disable-unsaved-files-warning'
   | 'isl.show-worktree-labels'
   // The keys below are prefixes, with further dynamic keys appended afterwards
+  | 'isl.recommended-bookmarks:'
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:';
 
@@ -1263,7 +1264,11 @@ export type ServerToClientMessage =
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'fetchedStables'; stables: StableLocationData}
-  | {type: 'fetchedRecommendedBookmarks'; bookmarks: Array<string>}
+  | {
+      type: 'fetchedRecommendedBookmarks';
+      repoRoot: AbsolutePath;
+      bookmarks: Array<string>;
+    }
   | {
       type: 'fetchedHiddenMasterBranchConfig';
       config: Record<string, Array<string>> | null;

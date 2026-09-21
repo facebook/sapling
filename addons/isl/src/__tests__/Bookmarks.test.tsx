@@ -8,12 +8,17 @@
 import {act, fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import {recommendedBookmarksAtom} from '../BookmarksData';
+import {readAtom} from '../jotaiUtils';
+import platform from '../platform';
 import {
   closeCommitInfoSidebar,
   COMMIT,
   expectMessageSentToServer,
   resetTestMessages,
   simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
   TEST_COMMIT_HISTORY,
 } from '../testUtils';
 
@@ -86,5 +91,50 @@ describe('bookmarks', () => {
         args: ['bookmark', '--delete', 'myBookmark'],
       }),
     });
+  });
+
+  it('loads and updates cached recommended bookmarks for the current repository', () => {
+    const repoRoot = '/repo/with-cached-recommendations';
+    const storageKey = `isl.recommended-bookmarks:${repoRoot}`;
+    platform.setPersistedState(storageKey, {
+      data: ['remote/cached'],
+      date: Date.now(),
+    });
+
+    act(() => simulateRepoConnected(repoRoot));
+    expect(readAtom(recommendedBookmarksAtom)).toEqual(new Set(['remote/cached']));
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedRecommendedBookmarks',
+        repoRoot,
+        bookmarks: ['remote/fetched'],
+      });
+    });
+    expect(readAtom(recommendedBookmarksAtom)).toEqual(new Set(['remote/fetched']));
+    expect(platform.getPersistedState(storageKey)).toEqual({
+      data: ['remote/fetched'],
+      date: expect.any(Number),
+    });
+
+    act(() => simulateRepoConnected('/different/repo'));
+    expect(readAtom(recommendedBookmarksAtom)).toEqual(new Set());
+
+    const earlyRepoRoot = '/repo/response-before-info';
+    const earlyStorageKey = `isl.recommended-bookmarks:${earlyRepoRoot}`;
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedRecommendedBookmarks',
+        repoRoot: earlyRepoRoot,
+        bookmarks: ['remote/early-response'],
+      });
+    });
+    expect(readAtom(recommendedBookmarksAtom)).toEqual(new Set());
+
+    act(() => simulateRepoConnected(earlyRepoRoot));
+    expect(readAtom(recommendedBookmarksAtom)).toEqual(new Set(['remote/early-response']));
+
+    platform.setPersistedState(storageKey, undefined);
+    platform.setPersistedState(earlyStorageKey, undefined);
   });
 });

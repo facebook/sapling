@@ -146,7 +146,11 @@ export default class ServerToClientAPI {
 
     repo.fetchAndSetRecommendedBookmarks(async bookmarks => {
       await this.connection.readySignal?.promise;
-      this.postMessage({type: 'fetchedRecommendedBookmarks', bookmarks});
+      this.postMessage({
+        type: 'fetchedRecommendedBookmarks',
+        repoRoot: repo.info.repoRoot,
+        bookmarks,
+      });
     });
 
     repo.pullFetchedDiffs().catch((err: unknown) => {
@@ -660,7 +664,11 @@ export default class ServerToClientAPI {
       case 'refresh': {
         logger?.log('refresh requested');
         repo.fetchAndSetRecommendedBookmarks(bookmarks => {
-          this.postMessage({type: 'fetchedRecommendedBookmarks', bookmarks});
+          this.postMessage({
+            type: 'fetchedRecommendedBookmarks',
+            repoRoot: repo.info.repoRoot,
+            bookmarks,
+          });
         });
         repo.pullFetchedDiffs().catch((err: unknown) => {
           this.logger.error('error pulling authored diff commit hashes:', err);
