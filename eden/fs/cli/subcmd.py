@@ -169,6 +169,7 @@ def add_subcommands(
     # single line with a single COMMAND placeholder.  We still render the nicer
     # list below where we would have shown the nasty one.
     subparsers = parser.add_subparsers(metavar="COMMAND")
+    # pyrefly: ignore [no-matching-overload]
     for cmd_class in sorted(cmds, key=lambda c: c.NAME):
         # pyre-fixme[45]: Cannot instantiate abstract class `Subcmd`.
         cmd_instance = cmd_class(parser)
