@@ -28,6 +28,8 @@ sl_rust_library(
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/gitcompat:gitcompat",
         "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/util:util",
     ],

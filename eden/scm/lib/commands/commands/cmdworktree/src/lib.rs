@@ -58,7 +58,7 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
     }
     let runner: fn(&ReqCtx<WorktreeOpts>, &Repo, &WorkingCopy) -> Result<u8> = match subcmd {
         "list" | "ls" => {
-            let worktrees = Worktrees::open(repo)?;
+            let worktrees = Worktrees::open(repo, repo.config().as_ref())?;
             return list::run(&ctx, repo, &worktrees);
         }
         "add" => add::run,
@@ -133,8 +133,10 @@ pub fn doc() -> &'static str {
       worktree.require-generated-path=true     Require path generator, disallow manual PATH
       worktree.path-generator=CMD              Shell command to generate PATH when omitted
       worktree.snapshot-direct-copy=true       Use direct copy for --snapshot
+      worktree.git-enabled=true                Enable worktree listing in native Git repositories
 
-    Currently only EdenFS-backed repositories are supported."#
+    Git repositories currently support the `list` subcommand. Other subcommands
+    require an EdenFS-backed repository."#
 }
 
 pub fn synopsis() -> Option<&'static str> {
