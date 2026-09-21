@@ -50,6 +50,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
@@ -353,6 +354,11 @@ pub async fn commit_throughput(
                 }
                 let file_changes: Vec<_> = stream::iter(files.iter())
                     .map(async |(path, content_id, file_type, size)| {
+                        if *file_type == FileType::GitSubmodule {
+                            bail!(
+                                "cannot replay {cs_id}: Git submodule at {path} cannot carry a drill nonce"
+                            );
+                        }
                         let _permit = file_operations.acquire().await?;
                         let data = filestore::fetch_concat_exact(
                             repo.repo_blobstore(),
