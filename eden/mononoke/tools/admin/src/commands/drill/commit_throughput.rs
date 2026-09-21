@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -36,6 +37,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use hook_manager::manager::HookManagerRef;
+use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 #[cfg(fbcode_build)]
@@ -281,18 +283,25 @@ pub async fn commit_throughput(
         .derive::<RootSkeletonManifestId>(ctx, base, DerivationPriority::LOW)
         .await?
         .into_skeleton_manifest_id();
-    let present_at_base: HashSet<MPath> = base_skeleton
+    let base_files: HashSet<MPath> = base_skeleton
         .find_entries(
             ctx.clone(),
             repo.repo_blobstore().clone(),
             shaped
                 .iter()
                 .flatten()
-                .flat_map(|cs_id| changes[cs_id].1.iter())
-                .map(|path| PathOrPrefix::Path(path.clone().into()))
+                .flat_map(|cs_id| {
+                    let (files, deletions, _) = &changes[cs_id];
+                    files.iter().map(|(path, ..)| path).chain(deletions)
+                })
+                .flat_map(|path| path.clone().into_non_root_ancestors())
+                .map(MPath::from)
+                .collect::<HashSet<_>>()
+                .into_iter()
+                .map(PathOrPrefix::Path)
                 .collect::<Vec<_>>(),
         )
-        .map_ok(|(path, _)| path)
+        .try_filter_map(async |(path, entry)| Ok(matches!(entry, Entry::Leaf(_)).then_some(path)))
         .try_collect()
         .await?;
 
@@ -304,15 +313,45 @@ pub async fn commit_throughput(
         .map(async |(index, stack)| {
             let mut parents = vec![base];
             let mut changesets = Vec::new();
-            let mut live: HashSet<NonRootMPath> = stack
+            let mut live: BTreeSet<NonRootMPath> = stack
                 .iter()
-                .flat_map(|cs_id| changes[cs_id].1.iter())
-                .filter(|path| present_at_base.contains(&MPath::from((*path).clone())))
-                .cloned()
+                .flat_map(|cs_id| {
+                    let (files, deletions, _) = &changes[cs_id];
+                    files.iter().map(|(path, ..)| path).chain(deletions)
+                })
+                .flat_map(|path| path.clone().into_non_root_ancestors())
+                .filter(|path| base_files.contains(path.as_mpath()))
                 .collect();
             for cs_id in stack {
                 let (files, deletions, author_date) = &changes[cs_id];
-                let mut file_changes: Vec<_> = stream::iter(files.iter())
+                let deletions: Vec<_> = deletions
+                    .iter()
+                    .filter(|path| live.remove(*path))
+                    .cloned()
+                    .collect();
+                for (path, ..) in files {
+                    if let Some(prefix) = path
+                        .clone()
+                        .into_non_root_ancestors()
+                        .skip(1)
+                        .find(|prefix| live.contains(prefix))
+                    {
+                        bail!(
+                            "cannot replay {cs_id}: creating {path} requires deleting the file at {prefix}"
+                        );
+                    }
+                    // A file replacing a directory implicitly deletes its descendants.
+                    let replaced: Vec<_> = live
+                        .range(path.clone()..)
+                        .take_while(|other| path.is_prefix_of(*other))
+                        .cloned()
+                        .collect();
+                    for other in replaced {
+                        live.remove(&other);
+                    }
+                    live.insert(path.clone());
+                }
+                let file_changes: Vec<_> = stream::iter(files.iter())
                     .map(async |(path, content_id, file_type, size)| {
                         let _permit = file_operations.acquire().await?;
                         let data = filestore::fetch_concat_exact(
@@ -348,21 +387,15 @@ pub async fn commit_throughput(
                     .buffer_unordered(64)
                     .try_collect()
                     .await?;
-                for (path, _) in &file_changes {
-                    live.insert(path.clone());
-                }
-                for path in deletions {
-                    if live.remove(path) {
-                        file_changes.push((path.clone(), FileChange::Deletion));
-                    }
-                }
-
                 let changeset = BonsaiChangesetMut {
                     parents: parents.clone(),
                     author: args.author.clone(),
                     author_date: *author_date,
                     message: format!("[drill] synthetic replay of {cs_id}"),
-                    file_changes: file_changes.into_iter().collect(),
+                    file_changes: file_changes
+                        .into_iter()
+                        .chain(deletions.into_iter().map(|path| (path, FileChange::Deletion)))
+                        .collect(),
                     ..Default::default()
                 }
                 .freeze()?;
