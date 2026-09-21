@@ -1,5 +1,9 @@
-query UserReviewRequestsQuery($reviewRequestedQuery: String!) {
-  search(first: 50, query: $reviewRequestedQuery, type: ISSUE) {
+query UserReviewRequestsQuery($reviewRequestedQuery: String!, $after: String) {
+  search(first: 100, after: $after, query: $reviewRequestedQuery, type: ISSUE) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     nodes {
       ...HomePagePullRequestFragment
     }

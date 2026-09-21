@@ -1634,35 +1634,72 @@ export const gitHubUserHomePageDataAtom = atom<Promise<GitHubUserHomePageData | 
   const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
   const graphQLEndpoint = createGraphQLEndpointForHostname(hostname);
   const requestHeaders = createRequestHeaders(token);
-  const [homePageData, reviewRequestsData] = await Promise.all([
-    queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
-      UserHomePageQuery,
-      {},
-      requestHeaders,
-      graphQLEndpoint,
-    ).catch(error => {
-      const partialData = recoverUserHomePageData(error);
-      if (partialData != null) {
-        return partialData;
+  const fetchAuthored = async () => {
+    const pullRequests: GitHubUserHomePageData['pullRequests'] = [];
+    let after: string | null = null;
+    do {
+      // Each page depends on the cursor returned by the previous page.
+      // eslint-disable-next-line no-await-in-loop
+      const data: UserHomePageQueryData = await queryGraphQL<
+        UserHomePageQueryData,
+        UserHomePageQueryVariables
+      >(UserHomePageQuery, {after}, requestHeaders, graphQLEndpoint).catch(error => {
+        const partialData = recoverUserHomePageData(error);
+        if (partialData != null) {
+          return partialData;
+        }
+        throw error;
+      });
+      const connection = data.viewer.pullRequests;
+      pullRequests.push(...(connection.nodes ?? []));
+      if (!connection.pageInfo.hasNextPage) {
+        return pullRequests;
       }
-      throw error;
-    }),
-    queryGraphQL<UserReviewRequestsQueryData, UserReviewRequestsQueryVariables>(
-      UserReviewRequestsQuery,
-      {reviewRequestedQuery},
-      requestHeaders,
-      graphQLEndpoint,
-    ).catch(error => {
-      const partialData = recoverReviewRequestsData(error);
-      if (partialData != null) {
-        return partialData;
+      after = connection.pageInfo.endCursor ?? null;
+      if (after == null) {
+        throw new Error('GitHub did not provide a cursor for the next authored PR page');
       }
-      throw error;
-    }),
+    } while (true);
+  };
+  const fetchReviewRequests = async () => {
+    const reviewRequests: GitHubUserHomePageData['reviewRequests'] = [];
+    let after: string | null = null;
+    do {
+      // Each page depends on the cursor returned by the previous page.
+      // eslint-disable-next-line no-await-in-loop
+      const data: UserReviewRequestsQueryData = await queryGraphQL<
+        UserReviewRequestsQueryData,
+        UserReviewRequestsQueryVariables
+      >(
+        UserReviewRequestsQuery,
+        {reviewRequestedQuery, after},
+        requestHeaders,
+        graphQLEndpoint,
+      ).catch(error => {
+        const partialData = recoverReviewRequestsData(error);
+        if (partialData != null) {
+          return partialData;
+        }
+        throw error;
+      });
+      const connection = data.search;
+      reviewRequests.push(...(connection.nodes ?? []));
+      if (!connection.pageInfo.hasNextPage) {
+        return reviewRequests;
+      }
+      after = connection.pageInfo.endCursor ?? null;
+      if (after == null) {
+        throw new Error('GitHub did not provide a cursor for the next review-request page');
+      }
+    } while (true);
+  };
+  const [pullRequests, reviewRequests] = await Promise.all([
+    fetchAuthored(),
+    fetchReviewRequests(),
   ]);
   return {
-    pullRequests: homePageData.viewer.pullRequests.nodes ?? [],
-    reviewRequests: reviewRequestsData.search.nodes ?? [],
+    pullRequests,
+    reviewRequests,
   };
 });
 
