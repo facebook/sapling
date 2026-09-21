@@ -148,6 +148,9 @@ impl BareGit {
         };
         self.populate_packed_references(matcher, insert)?;
         self.populate_loose_directory_references(matcher, "refs", insert)?;
+        for prefix in ["refs/bisect", "refs/rewritten", "refs/worktree"] {
+            self.populate_loose_directory_references(matcher, prefix, insert)?;
+        }
         self.populate_loose_file_reference(matcher, Cow::Borrowed("HEAD"), insert)?;
         Ok(result)
     }
@@ -362,7 +365,12 @@ impl BareGit {
         if !matcher.matches_file(RepoPath::from_str(name.as_ref())?)? {
             return Ok(());
         }
-        let path = self.git_dir().join(name.as_ref());
+        let dir = if !name.starts_with("refs/") || is_per_worktree_ref(&name) {
+            self.git_dir()
+        } else {
+            self.common_dir()
+        };
+        let path = dir.join(name.as_ref());
         let content = return_ok_if_not_found!(fs::read_to_string(path))?;
         let value = ReferenceValue::from_content(&content)
             .with_context(|| format!("Resolving loose reference {name:?}"))?;
@@ -379,7 +387,12 @@ impl BareGit {
         if let DirectoryMatch::Nothing = matcher.matches_directory(RepoPath::from_str(prefix)?)? {
             return Ok(());
         }
-        let dir = return_ok_if_not_found!(fs::read_dir(self.git_dir().join(prefix)))?;
+        let base_dir = if is_per_worktree_ref(prefix) {
+            self.git_dir()
+        } else {
+            self.common_dir()
+        };
+        let dir = return_ok_if_not_found!(fs::read_dir(base_dir.join(prefix)))?;
         for entry in dir {
             let entry = entry?;
             let file_name = match entry.file_name().into_string() {
@@ -388,6 +401,9 @@ impl BareGit {
                 _ => continue,
             };
             let name = format!("{prefix}/{file_name}");
+            if prefix == "refs" && is_per_worktree_ref(&name) {
+                continue;
+            }
             let file_type = entry.file_type()?;
             if file_type.is_dir() {
                 self.populate_loose_directory_references(matcher, &name, insert)?;
@@ -405,7 +421,7 @@ impl BareGit {
         insert: &mut dyn FnMut(String, ReferenceValue),
     ) -> Result<()> {
         let content =
-            return_ok_if_not_found!(fs::read_to_string(self.git_dir().join("packed-refs")))?;
+            return_ok_if_not_found!(fs::read_to_string(self.common_dir().join("packed-refs")))?;
 
         // To support "peeled" refs.
         let mut last_inserted_name: Option<&str> = None;
@@ -441,6 +457,17 @@ impl BareGit {
 
         Ok(())
     }
+}
+
+fn is_per_worktree_ref(name: &str) -> bool {
+    ["refs/bisect", "refs/rewritten", "refs/worktree"]
+        .iter()
+        .any(|prefix| {
+            name == *prefix
+                || name
+                    .strip_prefix(prefix)
+                    .is_some_and(|suffix| suffix.starts_with('/'))
+        })
 }
 
 fn append_reftable_generation(dir: &Path, generation: &mut Vec<u8>) -> Result<bool> {
@@ -631,6 +658,59 @@ mod tests {
         assert_eq!(
             git.debug_lookup_reference("refs/not-found/not-found"),
             "None"
+        );
+    }
+
+    #[test]
+    fn test_linked_worktree_references() {
+        let dir = tempfile::tempdir().unwrap();
+        let common_dir = dir.path().join("common");
+        let git_dir = common_dir.join("worktrees/w1");
+        fs::create_dir_all(common_dir.join("refs/heads")).unwrap();
+        fs::create_dir_all(common_dir.join("refs/bisect")).unwrap();
+        fs::create_dir_all(git_dir.join("refs/bisect")).unwrap();
+        fs::write(git_dir.join("commondir"), "../..").unwrap();
+        fs::write(git_dir.join("HEAD"), "ref: refs/heads/main").unwrap();
+        fs::write(
+            common_dir.join("refs/heads/main"),
+            "1111111111111111111111111111111111111111",
+        )
+        .unwrap();
+        fs::write(
+            common_dir.join("refs/bisect/main-worktree"),
+            "2222222222222222222222222222222222222222",
+        )
+        .unwrap();
+        fs::write(
+            git_dir.join("refs/bisect/current-worktree"),
+            "3333333333333333333333333333333333333333",
+        )
+        .unwrap();
+        fs::write(
+            common_dir.join("packed-refs"),
+            "4444444444444444444444444444444444444444 refs/remotes/origin/main\n",
+        )
+        .unwrap();
+
+        let config: BTreeMap<&str, &str> = BTreeMap::new();
+        let git = BareGit::from_git_dir_and_config(git_dir, &config);
+
+        assert_eq!(
+            git.debug_list_references(None),
+            [
+                "HEAD => refs/heads/main",
+                "refs/bisect/current-worktree 3333333333333333333333333333333333333333",
+                "refs/heads/main 1111111111111111111111111111111111111111",
+                "refs/remotes/origin/main 4444444444444444444444444444444444444444",
+            ]
+        );
+        assert_eq!(
+            git.debug_lookup_reference("refs/heads/main"),
+            "1111111111111111111111111111111111111111"
+        );
+        assert_eq!(
+            git.debug_lookup_reference("refs/remotes/origin/main"),
+            "4444444444444444444444444444444444444444"
         );
     }
 
