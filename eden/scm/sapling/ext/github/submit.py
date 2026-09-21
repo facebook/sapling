@@ -265,7 +265,11 @@ async def update_commits_in_stack(
 
     if not refs_to_update:
         updated_draft_state = await update_pull_request_draft_states(
-            partitions, is_draft, github_repo.hostname, ui
+            partitions,
+            is_draft,
+            github_repo.hostname,
+            ui,
+            preserve_ancestor_states=rev is not None and include_stack,
         )
         if reviewers:
             repository = await get_submit_repository(
@@ -375,7 +379,11 @@ async def update_commits_in_stack(
     await asyncio.gather(*rewrite_and_archive_requests)
 
     await update_pull_request_draft_states(
-        partitions, is_draft, repository.hostname, ui
+        partitions,
+        is_draft,
+        repository.hostname,
+        ui,
+        preserve_ancestor_states=rev is not None and include_stack,
     )
 
     if reviewers:
@@ -392,10 +400,21 @@ async def update_commits_in_stack(
 
 
 async def update_pull_request_draft_states(
-    partitions: List[List[CommitData]], is_draft: bool, hostname: str, ui
+    partitions: List[List[CommitData]],
+    is_draft: bool,
+    hostname: str,
+    ui,
+    preserve_ancestor_states: bool = False,
 ) -> bool:
     pull_requests = []
-    for partition in partitions:
+    # `--rev REV --stack` includes existing ancestors only to keep the selected
+    # revision connected to its stack. The requested draft state belongs to the
+    # selected revision at partitions[0]; resubmitting it must not overwrite a
+    # ready ancestor's state.
+    draft_state_partitions = (
+        partitions[:1] if preserve_ancestor_states else partitions
+    )
+    for partition in draft_state_partitions:
         pr = none_throws(partition[0].pr)
         if pr.state == PullRequestState.OPEN and pr.is_draft != is_draft:
             pull_requests.append(pr)
