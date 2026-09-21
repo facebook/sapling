@@ -68,7 +68,10 @@ const mockTracker = makeServerSideTracker(
 
 type MessageHandler = (event: Buffer, isBinary: boolean) => void | Promise<void>;
 
-function createMockConnection(cwd = '/path/to/repo/cwd'): ClientConnection & {
+function createMockConnection(
+  cwd = '/path/to/repo/cwd',
+  logFileLocation?: string,
+): ClientConnection & {
   triggerMessage: (msg: Record<string, unknown>) => void;
 } {
   let handler: MessageHandler | undefined;
@@ -81,12 +84,63 @@ function createMockConnection(cwd = '/path/to/repo/cwd'): ClientConnection & {
     command: 'sl',
     version: '0.1',
     cwd,
+    logFileLocation,
     appMode: {mode: 'isl'},
     triggerMessage(msg: Record<string, unknown>) {
       handler?.(Buffer.from(serializeToString(msg as never)), false);
     },
   };
 }
+
+describe('ServerToClientAPI application info', () => {
+  const platform: ServerPlatform = {
+    platformName: 'test',
+    handleMessageFromClient: jest.fn(),
+  };
+  let api: ServerToClientAPI;
+
+  afterEach(() => {
+    api.dispose();
+    jest.clearAllMocks();
+  });
+
+  async function requestApplicationInfo(logFileLocation?: string) {
+    const connection = createMockConnection('/path/to/repo/cwd', logFileLocation);
+    api = new ServerToClientAPI(platform, connection, mockTracker, mockLogger);
+    api.setActiveRepoForCwd('/path/to/repo/cwd');
+    await nextTick();
+
+    connection.triggerMessage({type: 'requestApplicationInfo'});
+    await nextTick();
+
+    return (connection.postMessage as jest.Mock).mock.calls
+      .map(([str]) => deserializeFromString(str as string) as Record<string, unknown>)
+      .find(message => message.type === 'applicationInfo');
+  }
+
+  it('includes the available debug log file path', async () => {
+    expect(await requestApplicationInfo('/tmp/isl/debug.log')).toEqual({
+      type: 'applicationInfo',
+      info: {
+        platformName: 'test',
+        version: '0.1',
+        logFilePath: '/tmp/isl/debug.log',
+        isBasecamp: false,
+      },
+    });
+  });
+
+  it('omits the debug log file path when unavailable', async () => {
+    expect(await requestApplicationInfo()).toEqual({
+      type: 'applicationInfo',
+      info: {
+        platformName: 'test',
+        version: '0.1',
+        isBasecamp: false,
+      },
+    });
+  });
+});
 
 describe('ServerToClientAPI disposable scoping', () => {
   let repoDispose: jest.Mock;

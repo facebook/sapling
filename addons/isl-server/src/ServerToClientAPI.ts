@@ -313,7 +313,7 @@ export default class ServerToClientAPI {
           info: {
             platformName: this.platform.platformName,
             version: this.connection.version,
-            logFilePath: this.connection.logFileLocation ?? '(no log file, logging to stdout)',
+            logFilePath: this.connection.logFileLocation,
             isBasecamp: this.platform.isBasecamp ?? false,
           },
         });

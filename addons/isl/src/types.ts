@@ -309,7 +309,7 @@ export type WorktreeEntry = {
 export type ApplicationInfo = {
   platformName: string;
   version: string;
-  logFilePath: string;
+  logFilePath?: string;
   isBasecamp?: boolean;
 };
 

@@ -8,7 +8,7 @@
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useEffect, useState} from 'react';
-import {T} from './i18n';
+import {t, T} from './i18n';
 import platform from './platform';
 
 import './Copyable.css';
@@ -24,6 +24,10 @@ export function Copyable({
   iconOnly?: boolean;
 }) {
   const [showingSuccess, setShowingSuccess] = useState(false);
+  const copy = () => {
+    platform.clipboardCopy(children);
+    setShowingSuccess(true);
+  };
   useEffect(() => {
     if (showingSuccess) {
       const timeout = setTimeout(() => setShowingSuccess(false), 1500);
@@ -37,13 +41,21 @@ export function Copyable({
       shouldShow={showingSuccess}
       component={CopiedSuccessTooltipContent(children)}>
       <div
+        role="button"
         className={
           'copyable' + (className ? ` ${className}` : '') + (iconOnly === true ? ' icon-only' : '')
         }
         tabIndex={0}
+        aria-label={iconOnly === true ? t('Copy $value', {replace: {$value: children}}) : undefined}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            copy();
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         onClick={e => {
-          platform.clipboardCopy(children);
-          setShowingSuccess(true);
+          copy();
           e.preventDefault();
           e.stopPropagation();
         }}>

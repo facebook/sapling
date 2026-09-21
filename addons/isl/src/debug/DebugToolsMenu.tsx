@@ -22,6 +22,7 @@ import {useCallback, useEffect, useState} from 'react';
 import {nextTick} from 'shared/utils';
 import serverApi, {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
+import {Copyable} from '../Copyable';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
@@ -35,6 +36,7 @@ import platform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
+  applicationinfo,
   latestCommitsData,
   latestUncommittedChangesData,
   mainCommandName,
@@ -51,6 +53,7 @@ import './DebugToolsMenu.css';
 /* eslint-disable no-console */
 
 export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
+  const appInfo = useAtomValue(applicationinfo);
   return (
     <DropdownFields
       title={<T>Internal Debugging Tools</T>}
@@ -63,6 +66,17 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
           issues.
         </T>
       </Subtle>
+      <DropdownField title={<T>Debug log</T>}>
+        {appInfo?.logFilePath ? (
+          <code>
+            <Copyable>{appInfo.logFilePath}</Copyable>
+          </code>
+        ) : (
+          <Subtle>
+            <T>Not available</T>
+          </Subtle>
+        )}
+      </DropdownField>
       <DropdownField title={<T>Performance</T>}>
         <DebugPerfInfo />
       </DropdownField>

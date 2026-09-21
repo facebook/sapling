@@ -77,7 +77,7 @@ function HeartbeatWarning({heartbeat}: {heartbeat: Heartbeat}) {
           error={new Error(t(`Heartbeat timed out after ${DEFAULT_HEARTBEAT_TIMEOUT_MS}ms`))}
           title={t("Can't reach server — most features won't work")}
           description={t('The ISL server needs to be restarted')}></ErrorNotice>
-        {appInfo && (
+        {appInfo?.logFilePath && (
           <div>
             <T
               replace={{
