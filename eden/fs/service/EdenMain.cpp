@@ -67,7 +67,7 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/WinStackTrace.h"
 
-#ifdef EDEN_HAVE_GIT
+#if EDEN_HAVE_GIT
 #include "eden/fs/store/git/GitBackingStore.h" // @manual
 #endif
 
@@ -290,7 +290,7 @@ void EdenMain::registerStandardBackingStores() {
   registerBackingStore(
       BackingStoreType::GIT,
       [](const CreateParams& params) -> std::shared_ptr<BackingStore> {
-#ifdef EDEN_HAVE_GIT
+#if EDEN_HAVE_GIT
         const auto repoPath = realpath(params.name);
         return std::make_shared<GitBackingStore>(repoPath);
 #else // EDEN_HAVE_GIT
