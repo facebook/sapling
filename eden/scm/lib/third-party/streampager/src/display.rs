@@ -227,10 +227,17 @@ pub(crate) fn start(
         // Clean up when exiting.  Most of this should be achieved by exiting
         // the alternate screen, but just in case it isn't, move to the
         // bottom of the screen and reset all attributes.
-        let size = term.get_screen_size().unwrap();
+        //
+        // Errors are ignored: the terminal may already be gone (for example
+        // after a hangup), and a panic here aborts the process because the
+        // terminal's own Drop panics on the same dead terminal while
+        // unwinding.
+        let Ok(size) = term.get_screen_size() else {
+            return;
+        };
         let overlay_height = overlay_height.load(Ordering::SeqCst);
         let scroll_count = 1usize.saturating_sub(overlay_height);
-        term.render(&[
+        let _ = term.render(&[
             Change::CursorVisibility(CursorVisibility::Visible),
             Change::AllAttributes(CellAttributes::default()),
             Change::ScrollRegionUp {
@@ -243,8 +250,7 @@ pub(crate) fn start(
                 y: Position::Absolute(size.rows.saturating_sub(overlay_height + scroll_count)),
             },
             Change::ClearToEndOfScreen(ColorAttribute::default()),
-        ])
-        .unwrap();
+        ]);
     });
     let config = Arc::new(config);
     let caps = Capabilities::new(term_caps);
