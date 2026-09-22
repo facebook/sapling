@@ -23,4 +23,5 @@ sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-types = { version = "0.1.0", path = "../types" }
 slex = { version = "0.1.0", path = "../slex" }
+thiserror = "2.0.20"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

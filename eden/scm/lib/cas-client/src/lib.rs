@@ -6,11 +6,13 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use blob::Blob;
 use configmodel::Config;
 use futures::stream::BoxStream;
+use thiserror::Error;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 
@@ -20,6 +22,20 @@ pub use manager::CasFetchGuard;
 pub use manager::CasFetchManager;
 pub use manager::CasFetchManagerBuilder;
 pub use manager::CasFetchOutcome;
+
+/// Indicates that a CAS request exceeded its configured deadline.
+#[derive(Debug, Error)]
+#[error("CAS request timed out after {timeout:?}")]
+pub struct CasRequestTimeout {
+    timeout: Duration,
+}
+
+impl CasRequestTimeout {
+    /// Creates a timeout error for `timeout`.
+    pub fn new(timeout: Duration) -> Self {
+        Self { timeout }
+    }
+}
 
 /// Creates the registered CAS client, if one is available in this process.
 pub fn new(config: Arc<dyn Config>) -> Result<Option<Arc<CasFetchManager>>> {

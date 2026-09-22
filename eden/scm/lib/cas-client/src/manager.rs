@@ -26,6 +26,7 @@ use crate::CasBatch;
 use crate::CasClient;
 use crate::CasDigest;
 use crate::CasDigestType;
+use crate::CasRequestTimeout;
 
 const DEFAULT_MAX_BLOB_SIZE_BYTES: u64 = 1024 * 1024;
 const DEFAULT_FAILURE_THRESHOLD: u32 = 3;
@@ -39,6 +40,7 @@ static BREAKER_CLOSED: Counter = Counter::new_counter("scmstore.cas.breaker.clos
 static BREAKER_SKIPPED: Counter = Counter::new_counter("scmstore.cas.breaker.skipped");
 static FETCH_REJECTED_OVERSIZED: Counter =
     Counter::new_counter("scmstore.cas.fetch.rejected_oversized");
+static FETCH_TIMEOUTS: Counter = Counter::new_counter("scmstore.cas.fetch.timeouts");
 
 /// A shared CAS client with a circuit breaker protecting remote fetches.
 pub struct CasFetchManager {
@@ -145,8 +147,21 @@ impl CasFetchManager {
             manager: self,
             generation: Some(generation),
         };
-        let batches = self.client.fetch(digests, digest_type);
+        let batches = self
+            .client
+            .fetch(digests, digest_type)
+            .inspect(record_timeout)
+            .boxed();
         Some((guard, batches))
+    }
+}
+
+fn record_timeout(result: &Result<CasBatch>) {
+    if result
+        .as_ref()
+        .is_err_and(|error| error.is::<CasRequestTimeout>())
+    {
+        FETCH_TIMEOUTS.increment();
     }
 }
 
@@ -509,6 +524,23 @@ mod tests {
             client.fetches.load(Ordering::Relaxed),
             0,
             "empty fetch should not reach the client"
+        );
+    }
+
+    #[test]
+    fn counts_timeout_errors() {
+        let timeout_count = FETCH_TIMEOUTS.value();
+        let result = Err(
+            anyhow::Error::new(CasRequestTimeout::new(Duration::from_secs(1)))
+                .context("downloading CAS batch"),
+        );
+
+        record_timeout(&result);
+
+        assert_eq!(
+            FETCH_TIMEOUTS.value(),
+            timeout_count + 1,
+            "manager should count timeout errors"
         );
     }
 
