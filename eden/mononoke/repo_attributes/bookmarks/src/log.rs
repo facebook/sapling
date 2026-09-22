@@ -12,6 +12,7 @@ use std::num::TryFromIntError;
 
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkPrefix;
 use bookmarks_types::Freshness;
 use clap::ValueEnum;
 use context::CoreContext;
@@ -97,6 +98,19 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         ctx: CoreContext,
         bookmark: BookmarkKey,
         id: BookmarkUpdateLogId,
+        limit: u64,
+        freshness: Freshness,
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
+
+    /// Read the next up to `limit` bookmark deletion entries across all
+    /// bookmark categories whose names start with `prefix`, with an id in
+    /// `(id, max_id]`, ordered by log id.
+    fn read_next_deleted_bookmark_log_entries_by_prefix(
+        &self,
+        ctx: CoreContext,
+        prefix: BookmarkPrefix,
+        id: BookmarkUpdateLogId,
+        max_id: BookmarkUpdateLogId,
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;

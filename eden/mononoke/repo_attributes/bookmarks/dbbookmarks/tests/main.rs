@@ -1293,6 +1293,102 @@ async fn test_log_correct_order(fb: FacebookInit) {
 }
 
 #[mononoke::fbinit_test]
+async fn test_read_deleted_log_entries_by_prefix(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let prefixed_1 = create_bookmark_name("small/one");
+    let prefixed_2 = create_bookmark_name("small/two");
+    let escaped_prefix = create_bookmark_name("small_/escaped");
+    let unrelated = create_bookmark_name("other/one");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.force_set(&prefixed_1, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
+    txn.force_set(&prefixed_2, TWOS_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
+    txn.force_set(&escaped_prefix, THREES_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
+    txn.force_set(&unrelated, FOURS_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
+    txn.commit().await.unwrap();
+
+    for bookmark in [&prefixed_1, &unrelated, &prefixed_2, &escaped_prefix] {
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.force_delete(bookmark, BookmarkUpdateReason::TestMove)
+            .unwrap();
+        txn.commit().await.unwrap();
+    }
+
+    let entries = bookmarks
+        .read_next_deleted_bookmark_log_entries_by_prefix(
+            ctx.clone(),
+            create_prefix("small/"),
+            BookmarkUpdateLogId(0),
+            BookmarkUpdateLogId(100),
+            10,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        entries
+            .iter()
+            .map(|entry| entry.bookmark_name.clone())
+            .collect::<Vec<_>>(),
+        vec![prefixed_1.clone(), prefixed_2.clone()]
+    );
+    assert!(entries.iter().all(|entry| entry.to_changeset_id.is_none()));
+
+    let bounded_entries = bookmarks
+        .read_next_deleted_bookmark_log_entries_by_prefix(
+            ctx.clone(),
+            create_prefix("small/"),
+            BookmarkUpdateLogId(0),
+            entries[0].id,
+            10,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(bounded_entries.len(), 1);
+    assert_eq!(bounded_entries[0].bookmark_name, prefixed_1);
+
+    let entries = bookmarks
+        .read_next_deleted_bookmark_log_entries_by_prefix(
+            ctx.clone(),
+            create_prefix("small/"),
+            entries[0].id,
+            BookmarkUpdateLogId(100),
+            1,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].bookmark_name, prefixed_2);
+
+    let entries = bookmarks
+        .read_next_deleted_bookmark_log_entries_by_prefix(
+            ctx,
+            create_prefix("small_/"),
+            BookmarkUpdateLogId(0),
+            BookmarkUpdateLogId(100),
+            10,
+            Freshness::MostRecent,
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].bookmark_name, escaped_prefix);
+}
+
+#[mononoke::fbinit_test]
 async fn test_read_log_entry_many_repos(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let builder = SqlBookmarksBuilder::with_sqlite_in_memory().unwrap();
