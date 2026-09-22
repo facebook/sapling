@@ -9,6 +9,7 @@ import PullRequestDraftStateMenu from './PullRequestDraftStateMenu';
 import PullRequestStack from './PullRequestStack';
 import PullRequestVersions from './PullRequestVersions';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
+import effectivePullRequestReviewDecision from './effectivePullRequestReviewDecision';
 import {gitHubPullRequestAtom} from './jotai';
 import {Box, Link, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
@@ -26,6 +27,10 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
   }
 
   const {id, isDraft, number, reviewDecision, state, titleHTML, url, viewerCanUpdate} = pullRequest;
+  const effectiveReviewDecision = effectivePullRequestReviewDecision(
+    reviewDecision,
+    pullRequest.latestReviews?.nodes ?? [],
+  );
 
   return (
     <Box
@@ -49,7 +54,7 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
         <PullRequestDraftStateMenu
           id={id}
           isDraft={isDraft}
-          reviewDecision={reviewDecision ?? null}
+          reviewDecision={effectiveReviewDecision}
           state={state}
           viewerCanUpdate={viewerCanUpdate}
         />
