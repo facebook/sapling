@@ -144,7 +144,7 @@ impl TestHistory {
 
     /// Obtain the access log.
     pub fn take_access_log(&self) -> Vec<String> {
-        self.inner.lock().unwrap().access_log.drain(..).collect()
+        std::mem::take(&mut self.inner.lock().unwrap().access_log)
     }
 
     fn commit_to_tree(&self, commit_id: HgId) -> HgId {
