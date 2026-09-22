@@ -147,6 +147,8 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
          @prog@ metaedit --user 'New User <new-email@example.com>'
 
     """
+    cmdutil.checkunfinished(repo, op="amend")
+
     revs = list(revs)
     revs.extend(opts["rev"])
     if not revs:

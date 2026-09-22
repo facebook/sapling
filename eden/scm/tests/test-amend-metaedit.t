@@ -618,3 +618,34 @@ Test commit template.
   SL: ParentCount=1
   abort: empty commit message
   [255]
+
+Metaedit must not rewrite the working-copy parent while a rebase is unfinished.
+
+  $ newrepo metaedit-unfinished-rebase
+  $ echo base > conflicting
+  $ sl add conflicting
+  $ sl commit -m base
+  $ echo destination > conflicting
+  $ sl commit -m destination
+  $ sl bookmark destination
+  $ sl goto -q '.^'
+  $ echo source > conflicting
+  $ sl commit -m source
+  $ sl rebase -s . -d destination
+  rebasing * "source" (glob)
+  merging conflicting
+  warning: 1 conflicts while merging conflicting! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  [1]
+
+  $ sl log -r . -T '{node}\n' > $TESTTMP/parent-before
+  $ sl metaedit -m changed
+  abort: rebase in progress
+  (use 'sl rebase --continue' to continue or
+       'sl rebase --abort' to abort)
+  [255]
+  $ sl log -r . -T '{node}\n' > $TESTTMP/parent-after
+  $ cmp $TESTTMP/parent-before $TESTTMP/parent-after
+  $ sl log -r 'desc(changed)' -T '{desc}\n'
+  $ sl rebase --abort
+  rebase aborted
