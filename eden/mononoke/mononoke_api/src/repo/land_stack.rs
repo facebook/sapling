@@ -66,7 +66,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         &self,
         redirector: &PushRedirector<R>,
         outcome: Large<PushrebaseOutcome>,
-        _bookmark: BookmarkKey,
+        bookmark: BookmarkKey,
     ) -> Result<Small<PushrebaseOutcome>, MononokeError> {
         let ctx = self.ctx();
         let Large(PushrebaseOutcome {
@@ -79,7 +79,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             merge_resolved_paths,
             merge_summary,
         }) = outcome;
-        redirector.ensure_backsynced(ctx, log_id).await?;
+        redirector.ensure_backsynced(ctx, &bookmark, log_id).await?;
 
         // Convert all fields from large to small repo
         let (Small(old_bookmark_value), head, rebased_changesets) = futures::try_join!(

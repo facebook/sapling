@@ -169,6 +169,8 @@ pub struct BacksyncDelayInfo {
     pub failed_bookmarks: u64,
 }
 
+pub const PREFIX_POLLING_JUST_KNOB: &str = "scm/mononoke:backsyncer_prefix_polling";
+
 /// Block until a specific bookmark transaction (identified by its log id) is confirmed to be
 /// backsynced.
 ///
@@ -186,6 +188,7 @@ pub async fn ensure_backsynced<R>(
     ctx: CoreContext,
     commit_sync_data: CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark: &BookmarkKey,
     log_id: BookmarkUpdateLogId,
 ) -> Result<(), Error>
 where
@@ -197,7 +200,18 @@ where
     ));
 
     let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-    let counter_name = format_counter(&source_repo_id);
+    let global_counter_name = format_counter(&source_repo_id);
+    let bookmark_counter_name = format_bookmark_counter(&source_repo_id, bookmark)?;
+    let prefix_polling_enabled = justknobs::eval(
+        PREFIX_POLLING_JUST_KNOB,
+        None,
+        Some(commit_sync_data.get_target_repo().repo_identity().name()),
+    );
+    let (primary_counter_name, fallback_counter_name) = if prefix_polling_enabled {
+        (&bookmark_counter_name, &global_counter_name)
+    } else {
+        (&global_counter_name, &bookmark_counter_name)
+    };
     let start_instant = Instant::now();
 
     let mut sleep_times = once(1)
@@ -206,13 +220,29 @@ where
         .chain(repeat(10))
         .map(Duration::from_secs);
     while start_instant.elapsed() < timeout {
-        let counter: BookmarkUpdateLogId = target_repo_dbs
+        let primary_counter: BookmarkUpdateLogId = target_repo_dbs
             .counters
-            .get_counter(&ctx, &counter_name)
+            .get_counter(&ctx, primary_counter_name)
             .await?
             .unwrap_or(0)
             .try_into()?;
-        if counter >= log_id {
+        if primary_counter >= log_id {
+            return Ok(());
+        }
+        // Reading both counters is intentional while the two execution models
+        // can coexist during rollout: either cursor can prove this bookmark
+        // update was processed. Once rollback to the global model is no longer
+        // supported, the fallback read can be removed.
+        let fallback_counter: BookmarkUpdateLogId = target_repo_dbs
+            .counters
+            .get_counter(&ctx, fallback_counter_name)
+            .await?
+            .unwrap_or(0)
+            .try_into()?;
+        // Either execution model can prove completion during rollout. The
+        // legacy cursor covers every source-log row through its value; the
+        // bookmark cursor covers every row for this exact bookmark.
+        if fallback_counter >= log_id {
             return Ok(());
         }
         tokio::time::sleep(

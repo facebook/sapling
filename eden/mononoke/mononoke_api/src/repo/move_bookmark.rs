@@ -171,7 +171,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 )
                 .await?;
             // Wait for bookmark to catch up on small repo
-            redirector.ensure_backsynced(ctx, log_id).await?;
+            redirector.ensure_backsynced(ctx, bookmark, log_id).await?;
         } else {
             update_op
                 .run(

@@ -19,8 +19,6 @@ use backsyncer::ensure_backsynced;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
-use bookmarks::BookmarkUpdateLogRef;
-use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
@@ -63,8 +61,8 @@ use crate::UnbundlePushResponse;
 use crate::UnbundleResponse;
 use crate::UploadedBonsais;
 use crate::hook_running::HookRejectionRemapper;
+use crate::processing::run_post_resolve_action_with_bookmark_log_ids;
 use crate::resolver::HgHookRejection;
-use crate::run_post_resolve_action;
 
 pub trait Repo =
     crate::processing::Repo + backsyncer::RepoLike + HookManagerRef + Clone + Send + Sync + 'static;
@@ -185,7 +183,12 @@ impl<R: Repo> PushRedirector<R> {
             .await
             .map_err(BundleResolverError::from)?;
 
-        let large_repo_response = run_post_resolve_action(
+        let legacy_wait_required =
+            !matches!(&large_repo_action, PostResolveAction::InfinitePush(_));
+        let defer_to_backsyncer_for_backsync =
+            justknobs::eval("scm/mononoke:defer_to_backsyncer_for_backsync", None, None);
+
+        let result = run_post_resolve_action_with_bookmark_log_ids(
             ctx,
             self.repo.as_ref(),
             self.repo.hook_manager(),
@@ -193,7 +196,15 @@ impl<R: Repo> PushRedirector<R> {
             CrossRepoPushSource::PushRedirected,
         )
         .await?;
-        self.convert_unbundle_response(ctx, large_repo_response)
+        self.await_backsync_for_bookmark_updates(
+            ctx,
+            result.bookmark_log_updates,
+            defer_to_backsyncer_for_backsync,
+            legacy_wait_required,
+        )
+        .await
+        .map_err(BundleResolverError::from)?;
+        self.convert_unbundle_response(ctx, result.response)
             .await
             .map_err(BundleResolverError::from)
     }
@@ -484,35 +495,67 @@ impl<R: Repo> PushRedirector<R> {
         }
     }
 
-    pub async fn await_next_backsync(&self, ctx: &CoreContext) -> Result<(), Error> {
-        let source_repo = self.large_to_small_commit_syncer.get_source_repo();
-        let max_log_id = source_repo
-            .bookmark_update_log()
-            .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
-            .await?
-            .expect("Didn't find any bookmark update log entry for this repo")
-            .into();
-        self.ensure_backsynced(ctx, max_log_id).await
+    async fn await_backsync_for_bookmark_updates(
+        &self,
+        ctx: &CoreContext,
+        bookmark_log_updates: Vec<(BookmarkKey, BookmarkUpdateLogId)>,
+        defer_to_backsyncer_for_backsync: bool,
+        legacy_wait_required: bool,
+    ) -> Result<(), Error> {
+        if !defer_to_backsyncer_for_backsync {
+            return if legacy_wait_required {
+                self.backsync_latest(ctx).await
+            } else {
+                Ok(())
+            };
+        }
+        if bookmark_log_updates.is_empty() {
+            return Ok(());
+        }
+
+        try_join_all(
+            bookmark_log_updates
+                .into_iter()
+                .map(|(bookmark, log_id)| async move {
+                    self.ensure_source_bookmark_backsynced(ctx, &bookmark, log_id)
+                        .await
+                }),
+        )
+        .await?;
+        Ok(())
     }
 
     pub async fn ensure_backsynced(
         &self,
         ctx: &CoreContext,
+        bookmark: &BookmarkKey,
         log_id: BookmarkUpdateLogId,
     ) -> Result<(), Error> {
         let defer_to_backsyncer_for_backsync =
             justknobs::eval("scm/mononoke:defer_to_backsyncer_for_backsync", None, None);
         if defer_to_backsyncer_for_backsync {
-            ensure_backsynced(
-                ctx.clone(),
-                self.large_to_small_commit_syncer.clone(),
-                self.target_repo_dbs.clone(),
-                log_id,
-            )
-            .await
+            let source_bookmark = self.small_to_large_bookmark(bookmark).await?;
+            self.ensure_source_bookmark_backsynced(ctx, &source_bookmark, log_id)
+                .await
         } else {
             self.backsync_latest(ctx).await
         }
+    }
+
+    async fn ensure_source_bookmark_backsynced(
+        &self,
+        ctx: &CoreContext,
+        source_bookmark: &BookmarkKey,
+        log_id: BookmarkUpdateLogId,
+    ) -> Result<(), Error> {
+        ensure_backsynced(
+            ctx.clone(),
+            self.large_to_small_commit_syncer.clone(),
+            self.target_repo_dbs.clone(),
+            source_bookmark,
+            log_id,
+        )
+        .await
     }
 
     async fn backsync_latest(&self, ctx: &CoreContext) -> Result<(), Error> {
@@ -566,11 +609,6 @@ impl<R: Repo> PushRedirector<R> {
             bookmark_push_part_id,
         } = orig;
 
-        // Let's make sure all the public pushes to the large repo
-        // are backsynced to the small repo, by tailing the `bookmarks_update_log`
-        // of the large repo
-        self.await_next_backsync(ctx).await?;
-
         let (pushrebased_rev, pushrebased_changesets) = try_join!(
             async {
                 self.get_large_to_small_commit_equivalent(ctx, pushrebased_rev)
@@ -609,15 +647,11 @@ impl<R: Repo> PushRedirector<R> {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_bookmark_only_pushrebase_response(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         orig: UnbundleBookmarkOnlyPushRebaseResponse,
     ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, Error> {
         // `UnbundleBookmarkOnlyPushRebaseResponse` consists of only one field:
-        // `bookmark_push_part_id`, which does not need to be converted
-        // We do, however, need to wait until the backsyncer catches up with
-        // with the `bookmarks_update_log` tailing
-        self.await_next_backsync(ctx).await?;
-
+        // `bookmark_push_part_id`, which does not need to be converted.
         Ok(orig)
     }
 
@@ -625,15 +659,11 @@ impl<R: Repo> PushRedirector<R> {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_push_response(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         orig: UnbundlePushResponse,
     ) -> Result<UnbundlePushResponse, Error> {
         // `UnbundlePushResponse` consists of only two fields:
-        // `changegroup_id` and `bookmark_ids`, which do not need to be converted
-        // We do, however, need to wait until the backsyncer catches up with
-        // with the `bookmarks_update_log` tailing
-        self.await_next_backsync(ctx).await?;
-
+        // `changegroup_id` and `bookmark_ids`, which do not need to be converted.
         Ok(orig)
     }
 

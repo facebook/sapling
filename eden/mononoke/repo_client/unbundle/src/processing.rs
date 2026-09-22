@@ -11,7 +11,9 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
@@ -62,6 +64,11 @@ define_stats! {
 
 pub trait Repo = bookmarks_movement::Repo + HgMutationStoreRef;
 
+pub(crate) struct PostResolveActionResult {
+    pub(crate) response: UnbundleResponse,
+    pub(crate) bookmark_log_updates: Vec<(BookmarkKey, BookmarkUpdateLogId)>,
+}
+
 pub async fn run_post_resolve_action(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -69,35 +76,68 @@ pub async fn run_post_resolve_action(
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleResponse, BundleResolverError> {
+    Ok(run_post_resolve_action_with_bookmark_log_ids(
+        ctx,
+        repo,
+        hook_manager,
+        action,
+        cross_repo_push_source,
+    )
+    .await?
+    .response)
+}
+
+pub(crate) async fn run_post_resolve_action_with_bookmark_log_ids(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    hook_manager: &HookManager,
+    action: PostResolveAction,
+    cross_repo_push_source: CrossRepoPushSource,
+) -> Result<PostResolveActionResult, BundleResolverError> {
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
-    let unbundle_response = match action {
+    let (response, bookmark_log_updates) = match action {
         PostResolveAction::Push(action) => {
-            run_push(ctx, repo, hook_manager, action, cross_repo_push_source)
-                .await
-                .context("While doing a push")
-                .map(UnbundleResponse::Push)?
+            let (response, bookmark_log_updates) =
+                run_push(ctx, repo, hook_manager, action, cross_repo_push_source)
+                    .await
+                    .context("While doing a push")?;
+            (UnbundleResponse::Push(response), bookmark_log_updates)
         }
-        PostResolveAction::InfinitePush(action) => {
-            run_infinitepush(ctx, repo, hook_manager, action, cross_repo_push_source)
-                .await
-                .context("While doing an infinitepush")
-                .map(UnbundleResponse::InfinitePush)?
-        }
+        PostResolveAction::InfinitePush(action) => (
+            UnbundleResponse::InfinitePush(
+                run_infinitepush(ctx, repo, hook_manager, action, cross_repo_push_source)
+                    .await
+                    .context("While doing an infinitepush")?,
+            ),
+            Vec::new(),
+        ),
         PostResolveAction::PushRebase(action) => {
-            run_pushrebase(ctx, repo, hook_manager, action, cross_repo_push_source)
-                .await
-                .map(UnbundleResponse::PushRebase)?
+            let (response, bookmark_log_updates) =
+                run_pushrebase(ctx, repo, hook_manager, action, cross_repo_push_source).await?;
+            (UnbundleResponse::PushRebase(response), bookmark_log_updates)
         }
         PostResolveAction::BookmarkOnlyPushRebase(action) => {
-            run_bookmark_only_pushrebase(ctx, repo, hook_manager, action, cross_repo_push_source)
-                .await
-                .context("While doing a bookmark-only pushrebase")
-                .map(UnbundleResponse::BookmarkOnlyPushRebase)?
+            let (response, bookmark_log_updates) = run_bookmark_only_pushrebase(
+                ctx,
+                repo,
+                hook_manager,
+                action,
+                cross_repo_push_source,
+            )
+            .await
+            .context("While doing a bookmark-only pushrebase")?;
+            (
+                UnbundleResponse::BookmarkOnlyPushRebase(response),
+                bookmark_log_updates,
+            )
         }
     };
-    report_unbundle_type(repo, &unbundle_response);
-    Ok(unbundle_response)
+    report_unbundle_type(repo, &response);
+    Ok(PostResolveActionResult {
+        response,
+        bookmark_log_updates,
+    })
 }
 
 fn report_unbundle_type(repo: &impl RepoIdentityRef, unbundle_response: &UnbundleResponse) {
@@ -118,7 +158,13 @@ async fn run_push(
     hook_manager: &HookManager,
     action: PostResolvePush,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<UnbundlePushResponse, BundleResolverError> {
+) -> Result<
+    (
+        UnbundlePushResponse,
+        Vec<(BookmarkKey, BookmarkUpdateLogId)>,
+    ),
+    BundleResolverError,
+> {
     debug!("unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
@@ -153,10 +199,11 @@ async fn run_push(
 
     let mut bookmark_ids = Vec::new();
     let mut maybe_bookmark = None;
+    let mut bookmark_log_updates = Vec::new();
     if let Some(bookmark_push) = bookmark_pushes.pop() {
         bookmark_ids.push(bookmark_push.part_id);
 
-        plain_push_bookmark(
+        let log_id = plain_push_bookmark(
             ctx,
             repo,
             hook_manager,
@@ -170,7 +217,10 @@ async fn run_push(
         )
         .await?;
 
-        maybe_bookmark = Some(bookmark_push.name);
+        maybe_bookmark = Some(bookmark_push.name.clone());
+        if let Some(log_id) = log_id {
+            bookmark_log_updates.push((bookmark_push.name, log_id));
+        }
     }
 
     // Since this is a normal push, any bookmark must be public.
@@ -184,10 +234,13 @@ async fn run_push(
     )
     .await;
 
-    Ok(UnbundlePushResponse {
-        changegroup_id,
-        bookmark_ids,
-    })
+    Ok((
+        UnbundlePushResponse {
+            changegroup_id,
+            bookmark_ids,
+        },
+        bookmark_log_updates,
+    ))
 }
 
 async fn run_infinitepush(
@@ -249,7 +302,13 @@ async fn run_pushrebase(
     hook_manager: &HookManager,
     action: PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
+) -> Result<
+    (
+        UnbundlePushRebaseResponse,
+        Vec<(BookmarkKey, BookmarkUpdateLogId)>,
+    ),
+    BundleResolverError,
+> {
     debug!("unbundle processing: running pushrebase.");
     let PostResolvePushRebase {
         bookmark_push_part_id,
@@ -260,7 +319,7 @@ async fn run_pushrebase(
         hook_rejection_remapper,
     } = action;
 
-    let (bookmark, pushrebased_rev, pushrebased_changesets) = match bookmark_spec {
+    let (bookmark, pushrebased_rev, pushrebased_changesets, log_id) = match bookmark_spec {
         // There's no `.context()` after `normal_pushrebase`, as it has
         // `Error=BundleResolverError` and doing `.context("bla").from_err()`
         // would turn some useful variant of `BundleResolverError` into generic
@@ -293,8 +352,8 @@ async fn run_pushrebase(
                 force_local_pushrebase,
             )
             .await;
-            let (pushrebased_rev, pushrebased_changesets) = match outcome {
-                Ok(outcome) => (outcome.head, outcome.rebased_changesets),
+            let (pushrebased_rev, pushrebased_changesets, log_id) = match outcome {
+                Ok(outcome) => (outcome.head, outcome.rebased_changesets, outcome.log_id),
                 Err(err) => {
                     return Err(convert_bookmark_movement_err(
                         err,
@@ -319,7 +378,12 @@ async fn run_pushrebase(
                 changesets_to_log.into_values().collect(),
             )
             .await;
-            (onto_bookmark, pushrebased_rev, pushrebased_changesets)
+            (
+                onto_bookmark,
+                pushrebased_rev,
+                pushrebased_changesets,
+                log_id,
+            )
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             let changesets_to_log = uploaded_bonsais
@@ -327,7 +391,7 @@ async fn run_pushrebase(
                 .map(|bcs| CommitInfo::new(bcs, None))
                 .collect();
 
-            let pushrebased_rev = force_pushrebase(
+            let (pushrebased_rev, log_id) = force_pushrebase(
                 ctx,
                 repo,
                 hook_manager,
@@ -348,7 +412,7 @@ async fn run_pushrebase(
             )
             .await;
             // Force pushrebase merely force-moves the bookmark, it does not rebase any commits.
-            (plain_push.name, pushrebased_rev, Vec::new())
+            (plain_push.name, pushrebased_rev, Vec::new(), log_id)
         }
     };
 
@@ -357,13 +421,17 @@ async fn run_pushrebase(
         .await
         .context("While marking pushrebased changeset as public")?;
 
-    Ok(UnbundlePushRebaseResponse {
-        commonheads,
-        pushrebased_rev,
-        pushrebased_changesets,
-        onto: bookmark,
-        bookmark_push_part_id,
-    })
+    let bookmark_log_updates = vec![(bookmark.clone(), log_id)];
+    Ok((
+        UnbundlePushRebaseResponse {
+            commonheads,
+            pushrebased_rev,
+            pushrebased_changesets,
+            onto: bookmark,
+            bookmark_push_part_id,
+        },
+        bookmark_log_updates,
+    ))
 }
 
 async fn run_bookmark_only_pushrebase(
@@ -372,7 +440,13 @@ async fn run_bookmark_only_pushrebase(
     hook_manager: &HookManager,
     action: PostResolveBookmarkOnlyPushRebase,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
+) -> Result<
+    (
+        UnbundleBookmarkOnlyPushRebaseResponse,
+        Vec<(BookmarkKey, BookmarkUpdateLogId)>,
+    ),
+    BundleResolverError,
+> {
     debug!("unbundle processing: running bookmark-only pushrebase.");
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
@@ -385,15 +459,18 @@ async fn run_bookmark_only_pushrebase(
 
     if bookmark_push.old == bookmark_push.new {
         debug!("pushrebase is a noop, returning success early.");
-        return Ok(UnbundleBookmarkOnlyPushRebaseResponse {
-            bookmark_push_part_id: part_id,
-        });
+        return Ok((
+            UnbundleBookmarkOnlyPushRebaseResponse {
+                bookmark_push_part_id: part_id,
+            },
+            Vec::new(),
+        ));
     }
 
     // This is a bookmark-only push, so there are no new changesets.
     let new_changesets = HashMap::new();
 
-    plain_push_bookmark(
+    let log_id = plain_push_bookmark(
         ctx,
         repo,
         hook_manager,
@@ -407,9 +484,15 @@ async fn run_bookmark_only_pushrebase(
     )
     .await?;
 
-    Ok(UnbundleBookmarkOnlyPushRebaseResponse {
-        bookmark_push_part_id: part_id,
-    })
+    let bookmark_log_updates = log_id
+        .map(|log_id| vec![(bookmark_push.name, log_id)])
+        .unwrap_or_default();
+    Ok((
+        UnbundleBookmarkOnlyPushRebaseResponse {
+            bookmark_push_part_id: part_id,
+        },
+        bookmark_log_updates,
+    ))
 }
 
 async fn convert_bookmark_movement_err(
@@ -437,7 +520,7 @@ async fn force_pushrebase(
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<ChangesetId, BundleResolverError> {
+) -> Result<(ChangesetId, BookmarkUpdateLogId), BundleResolverError> {
     let new_target = bookmark_push
         .new
         .ok_or_else(|| anyhow!("new changeset is required for force pushrebase"))?;
@@ -448,7 +531,7 @@ async fn force_pushrebase(
         new_changesets.insert(cs_id, bcs.clone());
     }
 
-    plain_push_bookmark(
+    let log_id = plain_push_bookmark(
         ctx,
         repo,
         hook_manager,
@@ -460,9 +543,10 @@ async fn force_pushrebase(
         hook_rejection_remapper,
         cross_repo_push_source,
     )
-    .await?;
+    .await?
+    .ok_or_else(|| anyhow!("force pushrebase did not write a bookmark log entry"))?;
 
-    Ok(new_target)
+    Ok((new_target, log_id))
 }
 
 async fn plain_push_bookmark(
@@ -476,13 +560,13 @@ async fn plain_push_bookmark(
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<(), BundleResolverError> {
+) -> Result<Option<BookmarkUpdateLogId>, BundleResolverError> {
     let authz = AuthorizationContext::new(ctx);
     let only_log_acl_checks = !matches!(
         authz,
         AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
     );
-    match (bookmark_push.old, bookmark_push.new) {
+    let log_id = match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             let res = bookmarks_movement::CreateBookmarkOp::new(
                 bookmark_push.name.clone(),
@@ -497,7 +581,7 @@ async fn plain_push_bookmark(
             .run(ctx, &authz, repo, hook_manager)
             .await;
             match res {
-                Ok(_log_id) => {}
+                Ok(log_id) => Some(log_id),
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
@@ -535,7 +619,7 @@ async fn plain_push_bookmark(
             .run(ctx, &authz, repo, hook_manager)
             .await;
             match res {
-                Ok(_log_id) => {}
+                Ok(log_id) => Some(log_id),
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
@@ -559,7 +643,7 @@ async fn plain_push_bookmark(
         }
 
         (Some(old_target), None) => {
-            bookmarks_movement::DeleteBookmarkOp::new(
+            let log_id = bookmarks_movement::DeleteBookmarkOp::new(
                 bookmark_push.name.clone(),
                 old_target,
                 reason,
@@ -570,11 +654,12 @@ async fn plain_push_bookmark(
             .run(ctx, &authz, repo)
             .await
             .context("Failed to delete bookmark")?;
+            Some(log_id)
         }
 
-        (None, None) => {}
-    }
-    Ok(())
+        (None, None) => None,
+    };
+    Ok(log_id)
 }
 
 async fn infinitepush_scratch_bookmark(

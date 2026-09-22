@@ -98,7 +98,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .run(self.ctx(), self.authorization_context(), &redirector.repo)
                 .await?;
             // Wait for bookmark to catch up on small repo
-            redirector.ensure_backsynced(ctx, log_id).await?;
+            redirector.ensure_backsynced(ctx, bookmark, log_id).await?;
         } else {
             delete_op
                 .run(self.ctx(), self.authorization_context(), self.repo())
