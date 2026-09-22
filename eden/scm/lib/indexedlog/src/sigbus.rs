@@ -137,6 +137,9 @@ mod tests {
 
     use tempfile::tempdir;
 
+    use crate::change_detect::SharedChangeDetector;
+    use crate::lock::DirLockOptions;
+    use crate::lock::ScopedDirLock;
     use crate::log::Log;
     use crate::log::PRIMARY_FILE;
 
@@ -264,6 +267,30 @@ mod tests {
                 assert!(error_count > 0);
             }
         }
+    }
+
+    #[test]
+    fn test_sigbus_truncate_rlock_before_first_read() {
+        super::register_sigbus_handler();
+
+        let dir = tempdir().unwrap();
+        let opts = DirLockOptions {
+            exclusive: false,
+            non_blocking: false,
+            file_name: "rlock",
+        };
+        let lock = ScopedDirLock::new_with_options(dir.path(), &opts).unwrap();
+        let mmap = lock.shared_mmap_mut(std::mem::size_of::<u64>()).unwrap();
+        OpenOptions::new()
+            .write(true)
+            .open(dir.path().join("rlock"))
+            .unwrap()
+            .set_len(0)
+            .unwrap();
+
+        // The first read faults. The handler must already know the buffer.
+        let detector = SharedChangeDetector::new(mmap);
+        assert!(!detector.is_changed());
     }
 
     #[test]

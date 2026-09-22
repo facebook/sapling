@@ -45,17 +45,25 @@ impl SharedChangeDetector {
     /// Panics if the buffer is less than 8 bytes.
     pub fn new(mmap: MmapMut) -> Self {
         assert!(mmap.len() >= std::mem::size_of::<AtomicU64>());
-        let last_read = AtomicU64::new(mmap_as_atomic_u64(&mmap).load(Ordering::Acquire));
         let mmap = Arc::new(mmap);
+        // Track before the first read so the SIGBUS handler can find the
+        // buffer if that read faults.
         #[cfg(unix)]
         BUFFERS.lock().unwrap().track(Arc::downgrade(&mmap));
+        let last_read = AtomicU64::new(mmap_as_atomic_u64(&mmap).load(Ordering::Acquire));
         Self { mmap, last_read }
     }
 
     /// Set the shared value and clear this detector.
     /// If the value is changed, other detectors' `is_changed` would return true.
     pub fn set(&self, value: u64) {
-        mmap_as_atomic_u64(&self.mmap).store(value, Ordering::Release);
+        let shared = mmap_as_atomic_u64(&self.mmap);
+        // Only dirty the shared page when the value changes. A store to a
+        // MAP_SHARED page can need new disk space, and on btrfs the only way
+        // that fails is SIGBUS.
+        if shared.load(Ordering::Acquire) != value {
+            shared.store(value, Ordering::Release);
+        }
         self.last_read.store(value, Ordering::Release);
     }
 
