@@ -18,9 +18,17 @@
 #include <filesystem>
 #include <fstream>
 #include <set>
+#include <utility>
 
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+
+#ifdef __APPLE__
+#include <libproc.h> // @manual
+#include <sys/mman.h>
+#include <sys/proc_info.h> // @manual
+#include <sys/wait.h>
+#endif
 
 using namespace facebook::eden;
 
@@ -96,12 +104,25 @@ TEST(PinScanTest, scanProcessPins) {
 
 #ifdef __APPLE__
 
-#include <sys/mman.h>
-#include <sys/wait.h>
-
 extern "C" int pthread_chdir_np(const char*);
 
-TEST(PinScanTest, scanProcessPinsFindsCwdOpenAndMappedFiles) {
+namespace {
+
+enum class PinQuery { None, Directories, ThreadDirectory, File };
+
+struct PinQueryFailure {
+  const char* name;
+  PinQuery query;
+  int error;
+  // Whether the error fails the scan rather than skipping the reference.
+  bool failsScan;
+};
+
+class ProcessPinScanTest : public ::testing::TestWithParam<PinQueryFailure> {};
+
+} // namespace
+
+TEST_P(ProcessPinScanTest, scanProcessPins) {
   folly::test::TemporaryDirectory tmpDir;
   auto root = std::filesystem::path{tmpDir.path().string()};
   auto cwd = root / "cwd";
@@ -153,8 +174,31 @@ TEST(PinScanTest, scanProcessPinsFindsCwdOpenAndMappedFiles) {
   // Widened the way the scanner widens what libproc reports.
   auto dev =
       static_cast<uint64_t>(static_cast<uint32_t>(statPath(root).st_dev));
-  auto pins = scanProcessPins({dev});
-  auto nothing = scanProcessPins({dev + 12345});
+  auto openFileIno = statPath(openFile).st_ino;
+  auto failure = GetParam();
+  auto pidInfo = [&](int pid, int flavor, uint64_t arg, void* data, int size) {
+    if (pid == child &&
+        ((failure.query == PinQuery::Directories &&
+          flavor == PROC_PIDVNODEPATHINFO) ||
+         (failure.query == PinQuery::ThreadDirectory &&
+          flavor == PROC_PIDTHREADPATHINFO))) {
+      errno = failure.error;
+      return 0;
+    }
+    return proc_pidinfo(pid, flavor, arg, data, size);
+  };
+  auto pidFdInfo = [&](int pid, int fd, int flavor, void* data, int size) {
+    auto result = proc_pidfdinfo(pid, fd, flavor, data, size);
+    if (pid == child && failure.query == PinQuery::File &&
+        flavor == PROC_PIDFDVNODEPATHINFO && result == size &&
+        static_cast<vnode_fdinfowithpath*>(data)->pvip.vip_vi.vi_stat.vst_ino ==
+            openFileIno) {
+      errno = failure.error;
+      return 0;
+    }
+    return result;
+  };
+  auto pins = scanProcessPins({dev}, pidInfo, pidFdInfo);
 
   byte = 0;
   (void)write(done[1], &byte, 1);
@@ -163,16 +207,47 @@ TEST(PinScanTest, scanProcessPinsFindsCwdOpenAndMappedFiles) {
   ASSERT_EQ(child, waitpid(child, &status, 0));
   EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 
+  if (failure.failsScan) {
+    ASSERT_TRUE(pins.hasError());
+    EXPECT_EQ(failure.error, pins.error());
+    return;
+  }
   ASSERT_TRUE(pins.hasValue());
   std::set<PinnedInode> found{pins->begin(), pins->end()};
-  for (const auto& path : {cwd, threadCwd, openFile, mappedFile}) {
-    EXPECT_EQ(
-        1u,
-        found.count(
-            PinnedInode{dev, static_cast<uint64_t>(statPath(path).st_ino)}))
+  auto pinOf = [&](const std::filesystem::path& path) {
+    return PinnedInode{dev, static_cast<uint64_t>(statPath(path).st_ino)};
+  };
+  EXPECT_EQ(1u, found.count(pinOf(mappedFile)));
+  // The reference whose query failed is skipped and the rest are still found.
+  const std::pair<PinQuery, std::filesystem::path> pathsByQuery[] = {
+      {PinQuery::Directories, cwd},
+      {PinQuery::ThreadDirectory, threadCwd},
+      {PinQuery::File, openFile},
+  };
+  for (const auto& [query, path] : pathsByQuery) {
+    EXPECT_EQ(query == failure.query ? 0u : 1u, found.count(pinOf(path)))
         << path;
   }
-  // A device filter matching nothing returns no pins.
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    VnodeQueries,
+    ProcessPinScanTest,
+    ::testing::Values(
+        PinQueryFailure{"Success", PinQuery::None, 0, false},
+        PinQueryFailure{"MissingCwd", PinQuery::Directories, ENOENT, false},
+        PinQueryFailure{
+            "StaleThreadCwd",
+            PinQuery::ThreadDirectory,
+            ESTALE,
+            false},
+        PinQueryFailure{"MissingFile", PinQuery::File, ENOENT, false},
+        PinQueryFailure{"IoError", PinQuery::Directories, EIO, true}),
+    [](const auto& info) { return info.param.name; });
+
+TEST(PinScanTest, scanProcessPinsWithoutMatchingDevices) {
+  // Devices are widened from 32 bits, so this one matches no vnode.
+  auto nothing = scanProcessPins({uint64_t{1} << 40});
   ASSERT_TRUE(nothing.hasValue());
   EXPECT_TRUE(nothing->empty());
   EXPECT_TRUE(scanProcessPins({}).value().empty());

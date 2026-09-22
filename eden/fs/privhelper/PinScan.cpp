@@ -159,36 +159,74 @@ namespace {
  */
 constexpr int kProcPidRegionPathInfo2 = 22;
 
-void recordIfOnDevice(
-    const vnode_info_path& vip,
-    const std::vector<uint64_t>& devices,
-    std::set<PinnedInode>& pins) {
+/**
+ * What one scanProcessPins call looks for, how it asks libproc, and what it
+ * has found. The buffers are reused across processes.
+ */
+struct ProcessScan {
+  ProcessScan(
+      const std::vector<uint64_t>& devices,
+      LibprocPidInfo pidInfo,
+      LibprocPidFdInfo pidFdInfo)
+      : devices{devices}, pidInfo{pidInfo}, pidFdInfo{pidFdInfo} {}
+
+  const std::vector<uint64_t>& devices;
+  LibprocPidInfo pidInfo;
+  LibprocPidFdInfo pidFdInfo;
+  std::set<PinnedInode> pins;
+  std::vector<proc_fdinfo> fds;
+  std::vector<uint64_t> threads = std::vector<uint64_t>(64);
+  size_t skippedReferences = 0;
+};
+
+void recordIfOnDevice(const vnode_info_path& vip, ProcessScan& scan) {
   // Compared with the 32-bit device numbers callerMountDevices() collects.
   const uint64_t dev =
       static_cast<uint64_t>(static_cast<uint32_t>(vip.vip_vi.vi_stat.vst_dev));
-  if (std::find(devices.begin(), devices.end(), dev) != devices.end()) {
-    pins.insert(PinnedInode{dev, vip.vip_vi.vi_stat.vst_ino});
+  if (std::find(scan.devices.begin(), scan.devices.end(), dev) !=
+      scan.devices.end()) {
+    scan.pins.insert(PinnedInode{dev, vip.vip_vi.vi_stat.vst_ino});
   }
 }
 
 /**
- * Returns 0, or an errno when the process's directories could not be seen
- * for a reason other than it being off limits or gone.
+ * Returns 0 when the error means the process is off limits to the caller or
+ * exited mid-scan, else the errno.
  */
-int scanWorkingAndRootDirectories(
-    pid_t pid,
-    const std::vector<uint64_t>& devices,
-    std::set<PinnedInode>& pins) {
+int processQueryError(int error) {
+  return error == 0 || error == EPERM || error == ESRCH ? 0 : error;
+}
+
+/**
+ * As processQueryError, but also skips a vnode that no longer resolves. A
+ * non-graceful NFS remount leaves processes holding such references, and
+ * they cannot pin an inode on the new mount.
+ */
+int vnodeQueryError(int error, ProcessScan& scan) {
+  if (error == ENOENT || error == ESTALE) {
+    ++scan.skippedReferences;
+    return 0;
+  }
+  return processQueryError(error);
+}
+
+/**
+ * Returns 0, or an errno when the process's directories could not be seen
+ * for a reason other than the process or its vnodes being unavailable.
+ */
+int scanWorkingAndRootDirectories(pid_t pid, ProcessScan& scan) {
   proc_vnodepathinfo info{};
   errno = 0;
-  if (proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &info, sizeof(info)) !=
+  if (scan.pidInfo(pid, PROC_PIDVNODEPATHINFO, 0, &info, sizeof(info)) !=
       static_cast<int>(sizeof(info))) {
-    return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+    // libproc returns cwd and root together, so either being stale loses
+    // both. Other references held by this process must still be scanned.
+    return vnodeQueryError(errno, scan);
   }
-  recordIfOnDevice(info.pvi_cdir, devices, pins);
+  recordIfOnDevice(info.pvi_cdir, scan);
   // A process that has not chroot'ed reports an empty root.
   if (info.pvi_rdir.vip_vi.vi_stat.vst_dev != 0) {
-    recordIfOnDevice(info.pvi_rdir, devices, pins);
+    recordIfOnDevice(info.pvi_rdir, scan);
   }
   return 0;
 }
@@ -197,16 +235,13 @@ int scanWorkingAndRootDirectories(
  * Returns 0, or an errno when the process's descriptors could not all be
  * seen: a missed pin is worse than a failed scan, which leaves GC to files.
  */
-int scanOpenFiles(
-    pid_t pid,
-    const std::vector<uint64_t>& devices,
-    std::vector<proc_fdinfo>& fds,
-    std::set<PinnedInode>& pins) {
+int scanOpenFiles(pid_t pid, ProcessScan& scan) {
+  auto& fds = scan.fds;
   errno = 0;
-  int bytes = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nullptr, 0);
+  int bytes = scan.pidInfo(pid, PROC_PIDLISTFDS, 0, nullptr, 0);
   if (bytes <= 0) {
     // No descriptors, or a process the caller may not inspect or that exited.
-    return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+    return processQueryError(errno);
   }
   // LISTFDS silently truncates a full buffer, so a buffer that came back
   // full is grown and the list fetched again, up to a bound.
@@ -214,10 +249,10 @@ int scanOpenFiles(
   fds.resize(bytes / sizeof(proc_fdinfo) + 16);
   while (true) {
     errno = 0;
-    bytes = proc_pidinfo(
+    bytes = scan.pidInfo(
         pid, PROC_PIDLISTFDS, 0, fds.data(), fds.size() * sizeof(proc_fdinfo));
     if (bytes <= 0) {
-      return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+      return processQueryError(errno);
     }
     if (static_cast<size_t>(bytes) < fds.size() * sizeof(proc_fdinfo)) {
       break;
@@ -234,30 +269,28 @@ int scanOpenFiles(
     }
     vnode_fdinfowithpath info{};
     errno = 0;
-    if (proc_pidfdinfo(
+    if (scan.pidFdInfo(
             pid,
             fds[i].proc_fd,
             PROC_PIDFDVNODEPATHINFO,
             &info,
             sizeof(info)) != static_cast<int>(sizeof(info))) {
       // EBADF: the descriptor was closed after the list was taken.
-      if (errno == 0 || errno == EPERM || errno == ESRCH || errno == EBADF) {
-        continue;
+      if (errno != EBADF) {
+        if (auto error = vnodeQueryError(errno, scan)) {
+          return error;
+        }
       }
-      return errno;
+      continue;
     }
-    recordIfOnDevice(info.pvip, devices, pins);
+    recordIfOnDevice(info.pvip, scan);
   }
   return 0;
 }
 
-int scanThreadWorkingDirectories(
-    pid_t pid,
-    const std::vector<uint64_t>& devices,
-    std::vector<uint64_t>& threads,
-    std::set<PinnedInode>& pins) {
+int scanThreadWorkingDirectories(pid_t pid, ProcessScan& scan) {
   proc_bsdshortinfo process{};
-  if (proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, &process, sizeof(process)) ==
+  if (scan.pidInfo(pid, PROC_PIDT_SHORTBSDINFO, 0, &process, sizeof(process)) ==
           static_cast<int>(sizeof(process)) &&
       !(process.pbsi_flags & PROC_FLAG_THCWD)) {
     return 0;
@@ -266,10 +299,11 @@ int scanThreadWorkingDirectories(
   // LISTTHREADS cannot size a buffer with a null query, and silently truncates
   // a full buffer. Bound retries and reject an incomplete snapshot.
   constexpr size_t kMaxThreads = 65536;
+  auto& threads = scan.threads;
   int bytes;
   while (true) {
     errno = 0;
-    bytes = proc_pidinfo(
+    bytes = scan.pidInfo(
         pid,
         PROC_PIDLISTTHREADS,
         0,
@@ -278,7 +312,7 @@ int scanThreadWorkingDirectories(
     if (bytes <= 0) {
       // No threads to report (a zombie, or one that exited mid-scan) is
       // not a reason to distrust the scan; a real error is.
-      return errno == 0 || errno == EPERM || errno == ESRCH ? 0 : errno;
+      return processQueryError(errno);
     }
     if (bytes % sizeof(uint64_t) != 0) {
       return EIO;
@@ -294,15 +328,15 @@ int scanThreadWorkingDirectories(
   for (size_t i = 0; i < bytes / sizeof(uint64_t); ++i) {
     proc_threadwithpathinfo info{};
     errno = 0;
-    if (proc_pidinfo(
+    if (scan.pidInfo(
             pid, PROC_PIDTHREADPATHINFO, threads[i], &info, sizeof(info)) !=
         static_cast<int>(sizeof(info))) {
-      if (errno == 0 || errno == EPERM || errno == ESRCH) {
-        continue;
+      if (auto error = vnodeQueryError(errno, scan)) {
+        return error;
       }
-      return errno;
+      continue;
     }
-    recordIfOnDevice(info.pvip, devices, pins);
+    recordIfOnDevice(info.pvip, scan);
   }
   return 0;
 }
@@ -313,24 +347,21 @@ int scanThreadWorkingDirectories(
  * rejects the flavor outright is told apart by every process reporting no
  * region, which scanProcessPins checks.
  */
-bool scanMappedFiles(
-    pid_t pid,
-    const std::vector<uint64_t>& devices,
-    std::set<PinnedInode>& pins) {
+bool scanMappedFiles(pid_t pid, ProcessScan& scan) {
   bool sawRegion = false;
   uint64_t address = 0;
   while (true) {
     // A kernel whose layout of the private flavor differs would fill less
     // than the struct; the walk then ends rather than read a partial fill.
     proc_regionwithpathinfo info{};
-    if (proc_pidinfo(
+    if (scan.pidInfo(
             pid, kProcPidRegionPathInfo2, address, &info, sizeof(info)) !=
         static_cast<int>(sizeof(info))) {
       return sawRegion;
     }
     sawRegion = true;
     if (info.prp_vip.vip_vi.vi_stat.vst_dev != 0) {
-      recordIfOnDevice(info.prp_vip, devices, pins);
+      recordIfOnDevice(info.prp_vip, scan);
     }
     // Always move forward, even past a region reported with no size.
     const uint64_t next =
@@ -343,7 +374,13 @@ bool scanMappedFiles(
 
 folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
     const std::vector<uint64_t>& devices) {
-  std::set<PinnedInode> pins;
+  return scanProcessPins(devices, proc_pidinfo, proc_pidfdinfo);
+}
+
+folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
+    const std::vector<uint64_t>& devices,
+    LibprocPidInfo pidInfo,
+    LibprocPidFdInfo pidFdInfo) {
   if (devices.empty()) {
     return std::vector<PinnedInode>{};
   }
@@ -370,35 +407,37 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
   }
   pids.resize(count);
 
-  std::vector<proc_fdinfo> fds;
-  std::vector<uint64_t> threads(64);
+  ProcessScan scan{devices, pidInfo, pidFdInfo};
   bool sawRegion = false;
   for (pid_t pid : pids) {
     if (pid <= 0) {
       continue;
     }
-    // Each call fails with EPERM for processes the caller may not inspect
-    // and ESRCH for ones that exited mid-scan; both are skipped. Any other
-    // failure fails the scan: a missed pin is worse than no pin set, which
-    // leaves GC to files.
-    if (auto error = scanWorkingAndRootDirectories(pid, devices, pins)) {
+    // Skip unavailable references, not the whole process: a stale cwd can
+    // coexist with live files or thread cwds on the current mount.
+    if (auto error = scanWorkingAndRootDirectories(pid, scan)) {
       return folly::makeUnexpected(error);
     }
-    if (auto error =
-            scanThreadWorkingDirectories(pid, devices, threads, pins)) {
+    if (auto error = scanThreadWorkingDirectories(pid, scan)) {
       return folly::makeUnexpected(error);
     }
-    if (auto error = scanOpenFiles(pid, devices, fds, pins)) {
+    if (auto error = scanOpenFiles(pid, scan)) {
       return folly::makeUnexpected(error);
     }
-    sawRegion |= scanMappedFiles(pid, devices, pins);
+    sawRegion |= scanMappedFiles(pid, scan);
   }
   if (!sawRegion) {
     // Every process maps at least its executable: none reporting a region
     // means the kernel rejected the private flavor.
     return folly::makeUnexpected(ENOTSUP);
   }
-  return std::vector<PinnedInode>{pins.begin(), pins.end()};
+  if (scan.skippedReferences != 0) {
+    fprintf(
+        stderr,
+        "scan-pins: skipped %zu references to vnodes that no longer resolve\n",
+        scan.skippedReferences);
+  }
+  return std::vector<PinnedInode>{scan.pins.begin(), scan.pins.end()};
 }
 
 folly::Expected<std::vector<PinScanMount>, int> listMountsForPinScan() {

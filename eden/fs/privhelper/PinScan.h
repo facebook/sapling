@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <folly/Expected.h>
+#include <folly/Function.h>
 #include <folly/container/F14Map.h>
 #include <folly/container/F14Set.h>
 
@@ -74,11 +75,28 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
  * Scan every process libproc lets the caller inspect for pins on the given
  * devices: the working directory, the root directory, open files, and
  * memory-mapped files. Processes that cannot be read (other users' when not
- * running as root, or exited mid-scan) are skipped; failure to list
- * processes at all is returned as an errno.
+ * running as root, or exited mid-scan) and missing/stale vnodes are skipped;
+ * other query failures are returned as an errno. libproc queries cwd and
+ * chroot root together: if either is stale, neither directory pin is available.
  */
 folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
     const std::vector<uint64_t>& devices);
+
+/**
+ * The libproc entry points the scan queries, with the signatures of
+ * proc_pidinfo() and proc_pidfdinfo().
+ */
+using LibprocPidInfo = folly::FunctionRef<int(int, int, uint64_t, void*, int)>;
+using LibprocPidFdInfo = folly::FunctionRef<int(int, int, int, void*, int)>;
+
+/**
+ * Scan with injectable libproc queries, for testing failures while a process
+ * continues to hold other pins.
+ */
+folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
+    const std::vector<uint64_t>& devices,
+    LibprocPidInfo pidInfo,
+    LibprocPidFdInfo pidFdInfo);
 
 /**
  * A mounted filesystem as reported by getfsstat(2), reduced to what the pin

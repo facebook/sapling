@@ -185,6 +185,7 @@ cpp_library(
     ],
     exported_deps = [
         "//folly:expected",
+        "//folly:function",
         "//folly/container:f14_hash",
     ],
 )
