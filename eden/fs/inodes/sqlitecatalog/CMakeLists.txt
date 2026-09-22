@@ -28,6 +28,10 @@ target_link_libraries(
     edencommon::edencommon_utils
 )
 
+if (WIN32)
+  target_link_libraries(eden_sqlite_catalog PRIVATE eden_windows_fsck)
+endif()
+
 add_executable(
   eden_scanner
     WindowsOverlayScanner.cpp

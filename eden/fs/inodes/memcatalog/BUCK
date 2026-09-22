@@ -10,9 +10,12 @@ cpp_library(
     headers = [
         "MemInodeCatalog.h",
     ],
-    deps = [
-        "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
-    ],
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "//eden/fs/inodes/overlay:windows_fsck",
+        ],
+    }),
     exported_deps = [
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",

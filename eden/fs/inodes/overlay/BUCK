@@ -3,6 +3,35 @@ load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 
 oncall("scm_client_infra")
 
+cpp_library(
+    name = "windows_fsck",
+    srcs = ["WindowsFsck.cpp"],
+    headers = ["WindowsFsck.h"],
+    compatible_with = ["ovr_config//os:windows"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":serialization-cpp2-types",
+        "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:utils",
+        "//eden/common/utils/windows:win_error",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/model:model",
+        "//eden/fs/prjfs:disk_state",
+        "//eden/fs/utils:projfs_util",
+        "//folly/executors:global_executor",
+        "//folly/executors:serial_executor",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/portability:windows",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_catalog",
+    ],
+)
+
 thrift_library(
     name = "serialization",
     languages = [

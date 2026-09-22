@@ -12,7 +12,9 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
+#ifdef _WIN32
+#include "eden/fs/inodes/overlay/WindowsFsck.h"
+#endif
 
 namespace facebook::eden {
 

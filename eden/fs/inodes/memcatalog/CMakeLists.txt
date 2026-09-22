@@ -13,3 +13,7 @@ target_link_libraries(
   PUBLIC
     eden_utils
 )
+
+if (WIN32)
+  target_link_libraries(eden_mem_catalog PRIVATE eden_windows_fsck)
+endif()

@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
+#include "eden/fs/inodes/overlay/WindowsFsck.h"
 
 #ifdef _WIN32
+#include <fmt/format.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/executors/SerialExecutor.h>
+#include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 #include <folly/portability/Windows.h>
 
 #include <winioctl.h> // @manual
@@ -21,7 +25,6 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/prjfs/PrjfsDiskState.h"
 #include "eden/fs/utils/ProjfsUtil.h"

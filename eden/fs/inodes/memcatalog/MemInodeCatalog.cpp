@@ -9,7 +9,9 @@
 #include <algorithm>
 #include <utility>
 
-#include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
+#ifdef _WIN32
+#include "eden/fs/inodes/overlay/WindowsFsck.h"
+#endif
 
 namespace facebook::eden {
 

@@ -20,7 +20,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest_prod_headers",
         "//eden/common/utils:path",
         "//eden/fs/sqlite:sqlite",
     ],
@@ -30,31 +30,25 @@ cpp_library(
     name = "sqliteinodecatalog",
     srcs = [
         "SqliteInodeCatalog.cpp",
-        "WindowsFsck.cpp",
     ],
     headers = [
         "SqliteInodeCatalog.h",
-        "WindowsFsck.h",
     ],
     deps = [
         "//eden/common/utils:bug",
-        "//eden/common/utils:case_sensitivity",
-        "//eden/common/utils:file_utils",
         "//eden/common/utils:utils",
-        "//eden/common/utils/windows:win_error",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//eden/fs/model:model",
-        "//eden/fs/prjfs:disk_state",
-        "//eden/fs/utils:projfs_util",
         "//folly:file",
-        "//folly/executors:serial_executor",
-        "//folly/portability:windows",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "//eden/fs/inodes/overlay:windows_fsck",
+        ],
+    }),
     exported_deps = [
         ":sqlitetreestore",
         "//eden/common/utils:path",
-        "//eden/fs/config:config",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//folly:range",
@@ -78,7 +72,7 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
+        "fbsource//third-party/googletest:gtest_prod_headers",
         ":sqliteinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//folly:function",
