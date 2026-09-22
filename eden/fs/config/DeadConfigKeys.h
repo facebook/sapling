@@ -50,6 +50,7 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "telemetry:enable-xplatlogger-events",
     "telemetry:error-scribe-category",
     "telemetry:file-access-scribe-category",
+    "telemetry:enable-xplatlogger-rollouts",
 };
 
 inline bool isDeadConfigKey(std::string_view section, std::string_view key) {

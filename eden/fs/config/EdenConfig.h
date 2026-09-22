@@ -1929,14 +1929,6 @@ class EdenConfig : private ConfigSettingManager {
                         : std::chrono::seconds{45},
       this};
 
-  /**
-   * Whether to enable XplatLogger for edenfs_rollouts telemetry.
-   */
-  ConfigSetting<bool> enableXplatLoggerRollouts{
-      "telemetry:enable-xplatlogger-rollouts",
-      false,
-      this};
-
   // [experimental]
 
   /**
