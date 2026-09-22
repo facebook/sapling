@@ -709,7 +709,7 @@ where
         }
 
         let work = if retain_buffer && self.backend.retain_scope_buffers() {
-            self.pending_work.drain(..).collect()
+            std::mem::take(&mut self.pending_work)
         } else {
             std::mem::take(&mut self.pending_work)
         };
@@ -734,7 +734,7 @@ where
         }
 
         let results = if retain_buffer && self.backend.retain_scope_buffers() {
-            self.result_buffer.drain(..).collect()
+            std::mem::take(&mut self.result_buffer)
         } else {
             std::mem::take(&mut self.result_buffer)
         };
