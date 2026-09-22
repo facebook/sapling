@@ -34,6 +34,7 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -41,16 +42,18 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
+#if EDEN_HAVE_SQLITE3
 #include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
+#endif
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
-#ifndef _WIN32
+#if !defined(_WIN32) && EDEN_HAVE_LMDB
 #include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual
 #include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
 #include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
@@ -125,7 +128,16 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     const EdenConfig& config,
     FileContentStore* fileContentStore,
     const std::shared_ptr<EdenFsEventsLogger>& logger) {
+#if !EDEN_HAVE_SQLITE3
+  (void)localDir;
+  (void)logger;
+#endif
+#if !EDEN_HAVE_SQLITE3 && !EDEN_HAVE_LMDB
+  (void)inodeCatalogOptions;
+  (void)config;
+#endif
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
+#if EDEN_HAVE_SQLITE3
     // Controlled via EdenConfig::unsafeInMemoryOverlay
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_UNSAFE_IN_MEMORY)) {
       // Controlled via EdenConfig::overlayBuffered
@@ -166,6 +178,10 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     }
     XLOG(DBG4, "Sqlite overlay being used.");
     return std::make_unique<SqliteInodeCatalog>(localDir, logger);
+#else
+    throw std::runtime_error(
+        "Sqlite overlay type is not supported. Please reclone.");
+#endif
   } else if (inodeCatalogType == InodeCatalogType::InMemory) {
     XLOG(DBG4, "In-memory overlay being used.");
     return std::make_unique<MemInodeCatalog>();
@@ -181,10 +197,16 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     throw std::runtime_error(
         "LMDB overlay type is not supported. Please reclone.");
   }
+#if EDEN_HAVE_SQLITE3
   XLOG(DBG4, "Sqlite overlay being used.");
   return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
+  throw std::runtime_error(
+      "Sqlite overlay type is not supported. Please reclone.");
+#endif
+#else
   if (inodeCatalogType == InodeCatalogType::LMDB) {
+#if EDEN_HAVE_LMDB
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
       XLOG(DBG4, "Buffered LMDB overlay being used");
       return std::make_unique<BufferedLMDBInodeCatalog>(
@@ -193,6 +215,10 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     XLOG(DBG4, "LMDB overlay being used");
     return std::make_unique<LMDBInodeCatalog>(
         static_cast<LMDBFileContentStore*>(fileContentStore));
+#else
+    throw std::runtime_error(
+        "LMDB overlay type is not supported. Please reclone.");
+#endif
   }
   if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     XLOG(DBG4, "LegacyDev overlay being used.");
@@ -234,7 +260,13 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
   } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     return std::make_unique<FsFileContentStoreDev>(localDir);
   } else {
+#if EDEN_HAVE_LMDB
     return std::make_unique<LMDBFileContentStore>(localDir, logger);
+#else
+    (void)localDir;
+    (void)logger;
+    return nullptr;
+#endif
   }
 #endif
 }

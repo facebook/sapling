@@ -11,8 +11,11 @@
 
 #include <folly/FileUtil.h>
 
+#include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/Overlay.h"
+#if EDEN_HAVE_LMDB
 #include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
+#endif
 #include "eden/fs/utils/NotImplemented.h"
 
 namespace facebook::eden {
@@ -43,6 +46,7 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
     }
     return st;
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
@@ -56,6 +60,9 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
     }
     st.st_size = fileSize;
     return st;
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 }
 
@@ -75,6 +82,7 @@ OverlayFile::preadNoInt(void* buf, size_t n, FileOffset offset) const {
     }
     return ret;
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
@@ -84,6 +92,9 @@ OverlayFile::preadNoInt(void* buf, size_t n, FileOffset offset) const {
       return folly::makeUnexpected(errno);
     }
     return ret;
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 }
 
@@ -128,6 +139,7 @@ OverlayFile::pwritev(const iovec* iov, int iovcnt, FileOffset offset) const {
     }
     return ret;
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
@@ -138,6 +150,9 @@ OverlayFile::pwritev(const iovec* iov, int iovcnt, FileOffset offset) const {
       return folly::makeUnexpected(errno);
     }
     return ret;
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 }
 
@@ -156,6 +171,7 @@ folly::Expected<int, int> OverlayFile::ftruncate(FileOffset length) const {
     }
     return folly::makeExpected<int>(ret);
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
@@ -166,6 +182,9 @@ folly::Expected<int, int> OverlayFile::ftruncate(FileOffset length) const {
       return folly::makeUnexpected(errno);
     }
     return folly::makeExpected<int>(ret);
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 }
 
@@ -211,6 +230,7 @@ folly::Expected<int, int> OverlayFile::fallocate(
     }
     return folly::makeExpected<int>(ret);
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
@@ -220,6 +240,9 @@ folly::Expected<int, int> OverlayFile::fallocate(
       return folly::makeUnexpected(errno);
     }
     return folly::makeExpected<int>(ret);
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 #else
   (void)offset;
@@ -269,11 +292,15 @@ folly::Expected<std::string, int> OverlayFile::readFile() const {
     }
     return folly::makeExpected<int>(std::move(out));
   } else {
+#if EDEN_HAVE_LMDB
     auto& ino = std::get<InodeNumber>(data_);
     auto fsc = reinterpret_cast<LMDBFileContentStore*>(
         overlay->getRawFileContentStore());
     std::string out = fsc->readOverlayFile(ino);
     return folly::makeExpected<int>(std::move(out));
+#else
+    return folly::makeUnexpected(EOPNOTSUPP);
+#endif
   }
 }
 

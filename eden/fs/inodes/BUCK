@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_client_infra")
 
@@ -154,10 +155,9 @@ cpp_library(
         "//eden/common/utils:process",
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",
+        "//eden/fs:config",
         "//eden/fs/digest:blake3_hash",
         "//eden/fs/inodes/memcatalog:meminodecatalog",
-        "//eden/fs/inodes/sqlitecatalog:bufferedsqliteinodecatalog",
-        "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
         "//eden/fs/nfs:dirlist",
         "//eden/fs/nfs:nfs_server",
         "//eden/fs/nfs:nfs_utils",
@@ -165,7 +165,6 @@ cpp_library(
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/service:pretty_printers",
         "//eden/fs/service:thrift_util",
-        "//eden/fs/sqlite:sqlite",
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/telemetry:error_info",
         "//eden/fs/telemetry:error_logger",
@@ -199,21 +198,43 @@ cpp_library(
         "//folly/system:pid",
         "//folly/system:thread_name",
         "//thrift/lib/cpp2/protocol:protocol",
-    ] + select({
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/fs/inodes/sqlitecatalog:bufferedsqliteinodecatalog",
+            "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
+            "//eden/fs/sqlite:sqlite",
+        ]
+    )
+    + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
             "//eden/fs/inodes/fscatalog:fsinodecatalog",
-            "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
-            "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-            "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
             "//eden/fs/utils:mount_info_table",
-        ],
+        ]
+        + (
+            []
+            if rust_oss.is_oss_build()
+            else [
+                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+            ]
+        ),
         "ovr_config//os:macos": [
             "//eden/fs/inodes/fscatalog:fsinodecatalog",
-            "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
-            "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-            "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
-        ],
+        ]
+        + (
+            []
+            if rust_oss.is_oss_build()
+            else [
+                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+            ]
+        ),
     }),
     exported_deps = [
         ":fs_channel",
