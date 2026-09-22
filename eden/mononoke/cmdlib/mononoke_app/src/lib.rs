@@ -12,6 +12,7 @@ pub mod args;
 mod builder;
 mod extension;
 pub mod monitoring;
+mod pager;
 mod repos_manager;
 
 pub use app::MononokeApp;

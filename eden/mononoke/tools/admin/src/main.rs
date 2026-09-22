@@ -63,6 +63,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_arg_defaults(AdminArgDefaults)
         .with_app_extension(ScrubAppExtension::new())
         .with_app_extension(MonitoringAppExtension {})
+        .with_paged_help(true)
         .build_with_subcommands::<AdminArgs>(subcommands)?;
 
     let args: AdminArgs = app.args()?;
