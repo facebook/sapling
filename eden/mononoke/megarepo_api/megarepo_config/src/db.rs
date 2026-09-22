@@ -24,6 +24,13 @@ pub use crate::db::types::RowId;
 #[facet::facet]
 #[async_trait]
 pub trait MegarepoSyncConfig: Send + Sync {
+    /// Insert a config for `(repo_id, bookmark, version)`.
+    ///
+    /// Inserts are idempotent: re-inserting byte-identical content returns
+    /// the existing row instead of creating a duplicate. Re-inserting
+    /// *different* content for an existing key is rejected once the
+    /// `scm/mononoke:megarepo_reject_divergent_config_reinsert` JustKnob is enabled
+    /// (before that it succeeds but keeps the pre-existing row).
     async fn add_repo_config(
         &self,
         ctx: &CoreContext,

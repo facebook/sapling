@@ -62,6 +62,7 @@
     "scm/mononoke:restricted_paths_use_schematized_logger": false,
     "scm/mononoke:enable_server_side_path_acls": false,
     "scm/mononoke:megarepo_derive_remotely": false,
+    "scm/mononoke:megarepo_reject_divergent_config_reinsert": false,
     "scm/mononoke:xrepo_sync_disable_all_syncs": false,
     "scm/mononoke:enable_bonsai_tag_mapping_caching": false,
     "scm/mononoke:pushrebase_enable_merge_resolution": false,
