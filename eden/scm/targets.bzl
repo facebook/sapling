@@ -288,6 +288,7 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
             "DEFAULT": [],
             "ovr_config//os:linux": [
                 "fbsource//third-party/rust:libc",
+                "//eden/scm/lib/hg-http:hg-http",
             ],
             "ovr_config//os:macos": [
                 "fbsource//third-party/rust:libc",

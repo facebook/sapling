@@ -19,6 +19,7 @@ sapling-python-sysconfig = { version = "0.1.0", path = "../../lib/util/python-sy
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.186"
+sapling-hg-http = { version = "0.1.0", path = "../../lib/hg-http" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2.186"

@@ -99,7 +99,7 @@ pub fn shutdown() {
     SHUTTING_DOWN.store(true, Ordering::Release);
 }
 
-pub(crate) fn init_openssl() {
+pub fn init_openssl() {
     // Force openssl to initialize to to work around openssl bug
     // https://github.com/openssl/openssl/issues/6214. Initializing openssl explicitly
     // causes openssl to use OPENSSL_INIT_NO_ATEXIT which avoids shutdown race conditions

@@ -156,6 +156,13 @@ pub fn shutdown() {
     http_client::shutdown();
 }
 
+/// Initialize OpenSSL without registering its atexit cleanup. Must run before
+/// anything else in the process touches OpenSSL, including Python's ssl and
+/// hashlib modules, which share libcrypto with the HTTP client.
+pub fn init_openssl() {
+    http_client::init_openssl();
+}
+
 /// Setup progress reporting to the main progress registry for the lifetime of
 /// this process.
 pub fn enable_progress_reporting() {
