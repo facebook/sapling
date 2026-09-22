@@ -1653,14 +1653,14 @@ TEST(WalCompactionTest, nonWalCatalogDoesNotInvokeRng) {
   auto overlay = Overlay::create(
       path,
       kPathMapDefaultCaseSensitive,
-      InodeCatalogType::InMemory,
+      InodeCatalogType::LegacyEphemeral,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
       /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *config);
   // RNG that would always compact — but canHaveWalFiles() is false for
-  // InMemory, so the RNG must never be called and no compaction may run.
+  // LegacyEphemeral, so the RNG must never be called and no compaction may run.
   size_t rngCalls = 0;
   OverlayTestHelper::setWalCompactionRng(*overlay, [&] {
     ++rngCalls;
