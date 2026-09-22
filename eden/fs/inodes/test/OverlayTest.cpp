@@ -1676,6 +1676,23 @@ TEST(WalCompactionTest, nonWalCatalogDoesNotInvokeRng) {
   EXPECT_EQ(0u, rngCalls);
 }
 
+TEST(PlainOverlayTest, inMemoryRequiresWindows) {
+  folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
+  EXPECT_THROW_RE(
+      Overlay::create(
+          canonicalPath(testDir.path().string()),
+          kPathMapDefaultCaseSensitive,
+          InodeCatalogType::InMemory,
+          kInodeCatalogOptions,
+          makeTestEdenFsEventsLogger(),
+          /*errorLogger=*/noopErrorLogger,
+          makeRefPtr<EdenStats>(),
+          *EdenConfig::createTestEdenConfig()),
+      std::runtime_error,
+      "InMemory overlay type is only supported on Windows");
+}
+
 TEST(WalCompactionTest, hardCapForcesCompactionEvenWhenRngMisses) {
   // The on-disk WAL byte size is the hard upper bound. Even with an RNG
   // that never triggers the probabilistic roll, passing `walFileSizeBytes

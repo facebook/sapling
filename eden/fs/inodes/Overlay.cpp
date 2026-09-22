@@ -252,6 +252,10 @@ std::shared_ptr<Overlay> Overlay::create(
     ErrorLogger& errorLogger,
     EdenStatsPtr stats,
     const EdenConfig& config) {
+  if (!folly::kIsWindows && inodeCatalogType == InodeCatalogType::InMemory) {
+    throw std::runtime_error(
+        "InMemory overlay type is only supported on Windows.");
+  }
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
     explicit MakeSharedEnabler(
