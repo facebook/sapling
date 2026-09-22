@@ -309,6 +309,7 @@ members = [
   "features/commit_rewriting/synced_commit_mapping/if/clients",
   "features/commit_rewriting/synced_commit_mapping/if/mocks",
   "features/commit_rewriting/synced_commit_mapping/if/services",
+  "features/commit_stack_rewriting",
   "features/commit_transformation/commit_transformation",
   "features/cross_repo_sync",
   "features/diff",

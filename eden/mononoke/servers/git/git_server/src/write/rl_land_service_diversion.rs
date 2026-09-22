@@ -263,6 +263,7 @@ fn plan_mrl_submit(
                 old_target: (!ref_update.from.is_null()).then(|| git_id(&ref_update.from)),
                 allow_non_fast_forward_move: allow_non_ffwd,
                 pushvars: thrift_pushvars.clone(),
+                commit_message_overrides: None,
             });
             submitted.push(ref_update);
         }
