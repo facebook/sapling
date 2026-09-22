@@ -145,31 +145,47 @@ pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
 #[cfg(not(unix))]
 pub(crate) fn track_mmap_buffer(_bytes: &Bytes) {}
 
+/// A buffer registry lock was held by another thread.
+#[cfg(unix)]
+#[derive(Debug, PartialEq)]
+pub(crate) struct RegistryBusy;
+
 /// Find the mmap region that contains the given pointer. Best effort.
 /// Returns `(start, end, should_be_writable)`.
-/// Does not block. Returns `None` when unable to take the lock.
+/// Does not block. Returns `Err(RegistryBusy)` when a registry lock could not
+/// be taken and the other registry did not have the region, so the caller can
+/// retry.
 #[cfg(unix)]
-pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
-    if let Some((start, end)) = find_log_region(&BUFFERS, addr) {
-        return Some((start, end, false));
+pub(crate) fn find_region(addr: usize) -> Result<Option<(usize, usize, bool)>, RegistryBusy> {
+    let log_region = find_log_region(&BUFFERS, addr);
+    if let Ok(Some((start, end))) = log_region {
+        return Ok(Some((start, end, false)));
     }
 
     // Also check the change_detect mmap buffers.
-    if let Ok(locked) = crate::change_detect::BUFFERS.try_lock() {
-        if let Some((start, end)) = locked.find_region(addr) {
-            return Some((start, end, true));
-        }
+    let detector_region = crate::change_detect::BUFFERS
+        .try_lock()
+        .map(|buffers| buffers.find_region(addr))
+        .map_err(|_| RegistryBusy);
+    if let Ok(Some((start, end))) = detector_region {
+        return Ok(Some((start, end, true)));
     }
 
-    None
+    match (log_region, detector_region) {
+        (Ok(None), Ok(None)) => Ok(None),
+        _ => Err(RegistryBusy),
+    }
 }
 
 #[cfg(unix)]
 fn find_log_region(
     buffers: &RwLock<WeakBuffers<WeakBytes>>,
     addr: usize,
-) -> Option<(usize, usize)> {
-    buffers.try_read().ok()?.find_region(addr)
+) -> Result<Option<(usize, usize)>, RegistryBusy> {
+    buffers
+        .try_read()
+        .map(|buffers| buffers.find_region(addr))
+        .map_err(|_| RegistryBusy)
 }
 
 impl<W: WeakSlice> WeakBuffers<W> {
@@ -276,7 +292,7 @@ mod tests {
         buffers.write().unwrap().track(bytes.downgrade().unwrap());
 
         let _snapshot = buffers.read().unwrap();
-        assert_eq!(super::find_log_region(&buffers, addr), Some((addr, 3)));
+        assert_eq!(super::find_log_region(&buffers, addr), Ok(Some((addr, 3))));
     }
 
     #[cfg(unix)]
@@ -302,8 +318,8 @@ mod tests {
         // Holding BUFFERS must not prevent the SIGBUS handler from finding
         // rlock mmaps tracked by change_detect::BUFFERS.
         assert_eq!(
-            super::find_region(addr).map(|(_start, _end, writable)| writable),
-            Some(true)
+            super::find_region(addr).map(|region| region.map(|(_start, _end, writable)| writable)),
+            Ok(Some(true))
         );
     }
 }
