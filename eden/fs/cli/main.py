@@ -24,6 +24,7 @@ import sys
 import time
 import traceback
 import typing
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -1076,10 +1077,15 @@ class DoctorAICmd(Subcmd):
 """
         claude_env = os.environ.copy()
         claude_env.pop("CLAUDECODE", None)
+        # Choosing the session id rather than parsing it back out of `claude`
+        # keeps its output untouched, and lets a row be traced to the
+        # conversation that produced the diagnosis.
+        claude_session_id = str(uuid.uuid4())
+        sample.add_string("claude_session_id", claude_session_id)
         claude_start = time.monotonic()
         try:
             claude_result = subprocess.run(
-                ["claude", "--print"],
+                ["claude", "--print", "--session-id", claude_session_id],
                 input=prompt,
                 capture_output=True,
                 text=True,

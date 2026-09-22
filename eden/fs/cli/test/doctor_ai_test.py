@@ -9,6 +9,7 @@
 import argparse
 import subprocess
 import unittest
+import uuid
 from typing import Any, Optional
 from unittest.mock import MagicMock, patch
 
@@ -88,6 +89,15 @@ class DoctorAITest(unittest.TestCase):
         self.assertEqual(1, sample.ints["success"])
         self.assertEqual(1, sample.ints["exit_code"])
         self.assertIn("duration", sample.doubles)
+
+        # The logged id is the one handed to claude, so a row can be traced to
+        # the conversation.
+        session_id = sample.strings["claude_session_id"]
+        uuid.UUID(session_id)
+        self.assertEqual(
+            ["claude", "--print", "--session-id", session_id],
+            self.mock_run.call_args.args[0],
+        )
 
     def test_failed_diagnosis(self) -> None:
         claude_result = subprocess.CompletedProcess(
