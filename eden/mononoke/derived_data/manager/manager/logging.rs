@@ -44,6 +44,8 @@ impl DerivedDataManager {
     {
         let mut scuba = self.inner.scuba.clone();
         scuba.add("derived_data", Derivable::NAME);
+        // Same type in the queue's format; both columns stay populated.
+        scuba.add("derived_data_type", Derivable::VARIANT.as_ref());
         // Attach request metadata (session id, client identities, client_correlator, ...)
         // up front so every row this builder emits carries it.
         scuba.add_metadata(ctx.metadata());
