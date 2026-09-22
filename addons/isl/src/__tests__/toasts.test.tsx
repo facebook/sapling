@@ -34,15 +34,28 @@ describe('toasts', () => {
     });
   });
 
-  it('shows toast when copying commit hash', () => {
-    const copySpy = jest.spyOn(platform, 'clipboardCopy').mockImplementation(() => {});
+  it('shows toast when copying commit hash', async () => {
+    const copySpy = jest
+      .spyOn(platform, 'clipboardCopy')
+      .mockImplementation(() => Promise.resolve());
     fireEvent.contextMenu(screen.getByTestId('commit-e'));
     fireEvent.click(screen.getByText('Copy Commit Hash "e"'));
-    expect(screen.getByText('Copied e')).toBeInTheDocument();
+    expect(await screen.findByText('Copied e')).toBeInTheDocument();
     expect(copySpy).toHaveBeenCalledWith('e', undefined);
   });
 
-  it('copies short hash when setting is configured', () => {
+  it('shows an error when copying fails', async () => {
+    const copySpy = jest
+      .spyOn(platform, 'clipboardCopy')
+      .mockImplementation(() => Promise.reject(new DOMException('denied', 'NotAllowedError')));
+    fireEvent.contextMenu(screen.getByTestId('commit-e'));
+    fireEvent.click(screen.getByText('Copy Commit Hash "e"'));
+    expect(await screen.findByText('Could not copy e')).toBeInTheDocument();
+    expect(screen.queryByText('Copied e')).not.toBeInTheDocument();
+    expect(copySpy).toHaveBeenCalledWith('e', undefined);
+  });
+
+  it('copies short hash when setting is configured', async () => {
     const longHash = 'abcdef1234567890abcdef';
     const shortHash = longHash.slice(0, 12);
     act(() => {
@@ -51,10 +64,12 @@ describe('toasts', () => {
       });
       writeAtom(copyCommitHashFormatAtom, 'short');
     });
-    const copySpy = jest.spyOn(platform, 'clipboardCopy').mockImplementation(() => {});
+    const copySpy = jest
+      .spyOn(platform, 'clipboardCopy')
+      .mockImplementation(() => Promise.resolve());
     fireEvent.contextMenu(screen.getByTestId(`commit-${longHash}`));
     fireEvent.click(screen.getByText(`Copy Commit Hash "${shortHash}"`));
-    expect(screen.getByText(`Copied ${shortHash}`)).toBeInTheDocument();
+    expect(await screen.findByText(`Copied ${shortHash}`)).toBeInTheDocument();
     expect(copySpy).toHaveBeenCalledWith(shortHash, undefined);
   });
 });

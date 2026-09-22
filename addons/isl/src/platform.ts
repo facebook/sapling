@@ -48,7 +48,7 @@ export interface Platform {
   openFileAtRevset?(path: RepoRelativePath, revset: string): void;
   openPreview?(path: RepoRelativePath): void;
   openExternalLink(url: string): void;
-  clipboardCopy(text: string, html?: string): void;
+  clipboardCopy(text: string, html?: string): void | Promise<void>;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
   /** Whether to ask to configure an external merge tool. Useful for standalone platforms, but not embedded ones like vscode. */
   upsellExternalMergeTool: boolean;

@@ -15,7 +15,7 @@ import {computeInitialParams} from '../urlParams';
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
 
-export function browserClipboardCopy(text: string, html?: string) {
+export function browserClipboardCopy(text: string, html?: string): Promise<void> {
   if (html) {
     const htmlBlob = new Blob([html], {type: 'text/html'});
     const textBlob = new Blob([text], {type: 'text/plain'});
@@ -23,9 +23,9 @@ export function browserClipboardCopy(text: string, html?: string) {
       'text/html': htmlBlob,
       'text/plain': textBlob,
     });
-    navigator.clipboard.write([clipboardItem]);
+    return navigator.clipboard.write([clipboardItem]);
   } else {
-    navigator.clipboard.writeText(text);
+    return navigator.clipboard.writeText(text);
   }
 }
 

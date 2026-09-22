@@ -37,9 +37,13 @@ export function showToast(message: ReactNode, props?: {durationMs?: number; key?
 }
 
 /** Show "Copied <text>" toast. Existing "copied' toast will be replaced. */
-export function copyAndShowToast(text: string, html?: string) {
-  platform.clipboardCopy(text, html);
-  showToast(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
+export async function copyAndShowToast(text: string, html?: string) {
+  try {
+    await platform.clipboardCopy(text, html);
+    showToast(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
+  } catch {
+    showToast(t('Could not copy $text', {replace: {$text: text}}), {key: 'copied'});
+  }
 }
 
 /** Hide toasts with the given key. */
