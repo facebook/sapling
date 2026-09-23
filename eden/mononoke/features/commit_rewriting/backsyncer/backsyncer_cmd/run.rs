@@ -18,11 +18,13 @@ use anyhow::Error;
 use anyhow::format_err;
 use backsyncer::BacksyncLimit;
 use backsyncer::Repo;
+use backsyncer::backsync_deleted_by_prefix;
 use backsyncer::backsync_latest;
 use backsyncer::backsync_latest_by_prefix;
 use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
@@ -45,6 +47,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentityRef;
 use stats::prelude::*;
 use tracing::debug;
@@ -130,7 +133,17 @@ pub(crate) async fn run_backsyncer(
                     .await?,
             );
 
-            let f = backsync_forever(
+            let sync_future = backsync_forever(
+                ctx.as_ref(),
+                commit_sync_data.clone(),
+                target_repo_dbs.clone(),
+                large_repo.repo_identity().name().to_string(),
+                small_repo.repo_identity().name().to_string(),
+                Arc::clone(&live_commit_sync_config),
+                Arc::clone(&cancellation_requested),
+            )
+            .boxed();
+            let deletion_future = backsync_deletions_forever(
                 ctx.as_ref(),
                 commit_sync_data,
                 target_repo_dbs,
@@ -139,8 +152,9 @@ pub(crate) async fn run_backsyncer(
                 live_commit_sync_config,
                 cancellation_requested,
             )
+            .map(Ok::<(), Error>)
             .boxed();
-            f.await?;
+            future::try_join(sync_future, deletion_future).await?;
         }
         BacksyncerCommand::Commits(CommitsCommandArgs {
             input_file,
@@ -241,6 +255,23 @@ pub(crate) async fn run_backsyncer(
     }
 
     Ok(())
+}
+
+fn prefix_polling_config(
+    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
+    target_repo_id: RepositoryId,
+) -> Result<(BookmarkPrefix, Vec<BookmarkKey>), Error> {
+    let common_config = live_commit_sync_config.get_common_config(target_repo_id)?;
+    let small_repo_config = common_config
+        .small_repos
+        .get(&target_repo_id)
+        .ok_or_else(|| {
+            format_err!("small repo {target_repo_id} is missing from commit sync config")
+        })?;
+    Ok((
+        BookmarkPrefix::new_ascii(small_repo_config.bookmark_prefix.clone()),
+        common_config.common_pushrebase_bookmarks.clone(),
+    ))
 }
 
 async fn backsync_forever(
@@ -349,22 +380,7 @@ async fn backsync_forever(
                     previous_prefix_polling_state = Some(prefix_polling_enabled);
                 }
                 let prefix_config = if prefix_polling_enabled {
-                    let config = (|| {
-                        let common_config =
-                            live_commit_sync_config.get_common_config(target_repo_id)?;
-                        let small_repo_config = common_config
-                            .small_repos
-                            .get(&target_repo_id)
-                            .ok_or_else(|| {
-                                format_err!(
-                                    "small repo {target_repo_id} is missing from commit sync config"
-                                )
-                            })?;
-                        Ok::<_, Error>((
-                            BookmarkPrefix::new_ascii(small_repo_config.bookmark_prefix.clone()),
-                            common_config.common_pushrebase_bookmarks.clone(),
-                        ))
-                    })();
+                    let config = prefix_polling_config(&live_commit_sync_config, target_repo_id);
                     match config {
                         Ok(config) => {
                             prefix_config_failures.record_recovery(&format!(
@@ -528,6 +544,127 @@ async fn backsync_forever(
             let delay = Delay::no_delay();
             log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
             tokio::time::sleep(Duration::new(1, 0)).await;
+        }
+    }
+}
+
+async fn backsync_deletions_forever(
+    ctx: &CoreContext,
+    commit_sync_data: CommitSyncData<Repo>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    source_repo_name: String,
+    target_repo_name: String,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    cancellation_requested: Arc<AtomicBool>,
+) {
+    let target_repo_id = commit_sync_data.get_target_repo_id();
+    let mut failures = PrefixPollingFailureState::default();
+    let mut previous_failed_bookmarks = 0;
+
+    loop {
+        if cancellation_requested.load(Ordering::Relaxed) {
+            info!("deleted-bookmark sync stopping due to cancellation request");
+            return;
+        }
+
+        let enabled = match live_commit_sync_config
+            .push_redirector_enabled_for_public(ctx, target_repo_id)
+            .await
+        {
+            Ok(enabled) => enabled,
+            Err(error) => {
+                failures.record_failure(
+                    ctx,
+                    &source_repo_name,
+                    &target_repo_name,
+                    &format!("Checking push-redirection state for {target_repo_name}"),
+                    &error,
+                );
+                tokio::time::sleep(Duration::new(1, 0)).await;
+                continue;
+            }
+        };
+        let paused = justknobs::eval(
+            "scm/mononoke:cross_repo_pause_backsyncer",
+            None,
+            Some(&target_repo_name),
+        );
+        let prefix_polling_enabled =
+            justknobs::eval(PREFIX_POLLING_JUST_KNOB, None, Some(&target_repo_name));
+        if !enabled || paused || !prefix_polling_enabled {
+            failures.reset();
+            previous_failed_bookmarks = 0;
+            tokio::time::sleep(Duration::new(1, 0)).await;
+            continue;
+        }
+
+        let (bookmark_prefix, common_bookmarks) =
+            match prefix_polling_config(&live_commit_sync_config, target_repo_id) {
+                Ok(config) => config,
+                Err(error) => {
+                    failures.record_failure(
+                        ctx,
+                        &source_repo_name,
+                        &target_repo_name,
+                        &format!("Loading deletion-polling config for {target_repo_name}"),
+                        &error,
+                    );
+                    tokio::time::sleep(Duration::new(1, 0)).await;
+                    continue;
+                }
+            };
+
+        let delay_info = match backsync_deleted_by_prefix(
+            ctx.clone(),
+            commit_sync_data.clone(),
+            target_repo_dbs.clone(),
+            bookmark_prefix,
+            &common_bookmarks,
+            BacksyncLimit::NoLimit,
+            PREFIX_POLLING_BOOKMARK_CONCURRENCY,
+            Arc::clone(&cancellation_requested),
+            CommitSyncContext::Backsyncer,
+            false,
+        )
+        .await
+        {
+            Ok(delay_info) => {
+                failures.record_recovery(&format!("Deletion polling for {target_repo_name}"));
+                delay_info
+            }
+            Err(error) => {
+                failures.record_failure(
+                    ctx,
+                    &source_repo_name,
+                    &target_repo_name,
+                    &format!("Deletion polling for {target_repo_name}"),
+                    &error,
+                );
+                tokio::time::sleep(Duration::new(1, 0)).await;
+                continue;
+            }
+        };
+
+        if delay_info.failed_bookmarks == 0 && previous_failed_bookmarks > 0 {
+            info!(
+                "Deleted-bookmark workers recovered for {} -> {}",
+                source_repo_name, target_repo_name,
+            );
+        }
+        if delay_info.failed_bookmarks > 0 {
+            if previous_failed_bookmarks == 0 {
+                error!(
+                    "{} deleted-bookmark workers failed for {} -> {}; retrying after a one-second delay",
+                    delay_info.failed_bookmarks, source_repo_name, target_repo_name,
+                );
+            }
+            previous_failed_bookmarks = delay_info.failed_bookmarks;
+            tokio::time::sleep(Duration::new(1, 0)).await;
+        } else if delay_info.remaining_entries == 0 {
+            previous_failed_bookmarks = 0;
+            tokio::time::sleep(Duration::new(1, 0)).await;
+        } else {
+            previous_failed_bookmarks = 0;
         }
     }
 }

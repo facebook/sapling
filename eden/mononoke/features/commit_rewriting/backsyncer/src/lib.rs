@@ -66,6 +66,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncData;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::get_bookmark_renamer;
 use cross_repo_sync::sync_commit;
 use dbbookmarks::SqlBookmarks;
 use filenodes::Filenodes;
@@ -505,16 +506,10 @@ where
     Ok(delay_info)
 }
 
-/// Discover source bookmark keys whose exact update-log streams can affect the
-/// target repository.
-///
-/// Current source bookmarks find creates and moves. Configured common bookmarks
-/// are always included because they live outside the prefix.
-async fn discover_backsync_bookmarks<R>(
+async fn list_publishing_bookmarks<R>(
     ctx: &CoreContext,
-    commit_sync_data: &CommitSyncData<R>,
+    repo: &R,
     bookmark_prefix: &BookmarkPrefix,
-    common_bookmarks: &[BookmarkKey],
 ) -> Result<HashSet<BookmarkKey>, Error>
 where
     R: RepoLike + Send + Sync + Clone + 'static,
@@ -529,8 +524,7 @@ where
         bail!("{MAX_DISCOVERED_BOOKMARKS_JUST_KNOB} must be positive");
     }
     let max_discovered_bookmarks = max_discovered_bookmarks.try_into()?;
-
-    let mut bookmarks = common_bookmarks.iter().cloned().collect::<HashSet<_>>();
+    let mut bookmarks = HashSet::new();
     let mut discovered_bookmarks = 0;
 
     // Pagination is name-only, so list each category separately. This avoids
@@ -538,8 +532,7 @@ where
     for category in BookmarkCategory::ALL {
         let mut pagination = BookmarkPagination::FromStart;
         loop {
-            let source_bookmarks = commit_sync_data
-                .get_source_repo()
+            let bookmark_page = repo
                 .bookmarks()
                 .list(
                     ctx.clone(),
@@ -552,25 +545,27 @@ where
                 )
                 .try_collect::<Vec<_>>()
                 .await?;
-            let page_len = source_bookmarks.len();
+            let page_len = bookmark_page.len();
             discovered_bookmarks += page_len;
             if discovered_bookmarks > max_discovered_bookmarks {
                 warn!(
-                    "bookmark prefix {:?} matched {} publishing bookmarks, exceeding {} configured by {}",
+                    "bookmark prefix {:?} in repo {} matched {} publishing bookmarks, exceeding {} configured by {}",
                     bookmark_prefix,
+                    repo.repo_identity().name(),
                     discovered_bookmarks,
                     max_discovered_bookmarks,
                     MAX_DISCOVERED_BOOKMARKS_JUST_KNOB,
                 );
                 bail!(
-                    "bookmark prefix {bookmark_prefix:?} matched more than {max_discovered_bookmarks} publishing bookmarks",
+                    "bookmark prefix {bookmark_prefix:?} in repo {} matched more than {max_discovered_bookmarks} publishing bookmarks",
+                    repo.repo_identity().name(),
                 );
             }
-            let next_page = source_bookmarks
+            let next_page = bookmark_page
                 .last()
                 .map(|(bookmark, _)| BookmarkPagination::After(bookmark.name().clone()));
             bookmarks.extend(
-                source_bookmarks
+                bookmark_page
                     .into_iter()
                     .map(|(bookmark, _)| bookmark.into_key()),
             );
@@ -587,19 +582,11 @@ where
     Ok(bookmarks)
 }
 
-/// Backsync the source bookmark-log entries relevant to one small repository.
-///
-/// The configured prefix and common bookmarks form a single logical source-log
-/// selector. Current source bookmarks and configured common bookmarks are
-/// unioned in memory, then each candidate reads forward from its own durable
-/// cursor. The legacy global cursor is only an initialization and fallback
-/// boundary; this path does not advance it.
-pub async fn backsync_latest_by_prefix<R>(
+async fn backsync_bookmarks<R>(
     ctx: CoreContext,
     commit_sync_data: CommitSyncData<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
-    bookmark_prefix: BookmarkPrefix,
-    common_bookmarks: &[BookmarkKey],
+    bookmarks: HashSet<BookmarkKey>,
     limit: BacksyncLimit,
     bookmark_concurrency: usize,
     cancellation_requested: Arc<AtomicBool>,
@@ -617,10 +604,6 @@ where
         .await?
         .unwrap_or(0)
         .try_into()?;
-
-    let bookmarks =
-        discover_backsync_bookmarks(&ctx, &commit_sync_data, &bookmark_prefix, common_bookmarks)
-            .await?;
 
     let progress = stream::iter(bookmarks)
         .map(|bookmark| {
@@ -674,6 +657,138 @@ where
     }
 
     Ok(delay_info)
+}
+
+/// Backsync the current source bookmarks relevant to one small repository.
+///
+/// The configured prefix and common bookmarks form a single logical source-log
+/// selector. Each candidate reads forward from its own durable cursor. The
+/// legacy global cursor is only an initialization and fallback boundary; this
+/// path does not advance it.
+pub async fn backsync_latest_by_prefix<R>(
+    ctx: CoreContext,
+    commit_sync_data: CommitSyncData<R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark_prefix: BookmarkPrefix,
+    common_bookmarks: &[BookmarkKey],
+    limit: BacksyncLimit,
+    bookmark_concurrency: usize,
+    cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
+    disable_lease: bool,
+) -> Result<BacksyncDelayInfo, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let mut bookmarks =
+        list_publishing_bookmarks(&ctx, commit_sync_data.get_source_repo(), &bookmark_prefix)
+            .await?;
+    bookmarks.extend(common_bookmarks.iter().cloned());
+    backsync_bookmarks(
+        ctx,
+        commit_sync_data,
+        target_repo_dbs,
+        bookmarks,
+        limit,
+        bookmark_concurrency,
+        cancellation_requested,
+        sync_context,
+        disable_lease,
+    )
+    .await
+}
+
+/// Backsync source bookmarks that are absent from the source bookmark table but
+/// still present in the target bookmark table.
+pub async fn backsync_deleted_by_prefix<R>(
+    ctx: CoreContext,
+    commit_sync_data: CommitSyncData<R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    bookmark_prefix: BookmarkPrefix,
+    common_bookmarks: &[BookmarkKey],
+    limit: BacksyncLimit,
+    bookmark_concurrency: usize,
+    cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
+    disable_lease: bool,
+) -> Result<BacksyncDelayInfo, Error>
+where
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let mut source_bookmarks =
+        list_publishing_bookmarks(&ctx, commit_sync_data.get_source_repo(), &bookmark_prefix)
+            .await?;
+    source_bookmarks.extend(common_bookmarks.iter().cloned());
+
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
+    let source_to_target = get_bookmark_renamer(
+        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
+        source_repo_id,
+        target_repo_id,
+    )
+    .await?;
+    let target_to_source = get_bookmark_renamer(
+        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
+        target_repo_id,
+        source_repo_id,
+    )
+    .await?;
+    let projected_source_bookmarks = source_bookmarks
+        .iter()
+        .map(|bookmark| {
+            let renamed = source_to_target(bookmark).ok_or_else(|| {
+                format_err!(
+                    "source bookmark {bookmark:?} did not map to target repo {target_repo_id}"
+                )
+            })?;
+            Ok(BookmarkKey::with_name_and_category(
+                renamed.into_name(),
+                *bookmark.category(),
+            ))
+        })
+        .collect::<Result<HashSet<_>, Error>>()?;
+    // The configured large-repo prefix is stripped in the small repo, so
+    // there is no narrower target-side prefix to query. The shared discovery
+    // maximum remains a fail-closed bound for whole-target enumeration and
+    // must be sized for an enabled small repo before rollout.
+    let target_bookmarks = list_publishing_bookmarks(
+        &ctx,
+        commit_sync_data.get_target_repo(),
+        &BookmarkPrefix::empty(),
+    )
+    .await?;
+    // This difference only schedules exact per-bookmark log streams; it does
+    // not directly delete target bookmarks. Each worker still reads and
+    // applies every source-log entry after its durable bookmark cursor, so an
+    // incomplete candidate snapshot cannot invent a deletion, and a delete
+    // followed by recreation is replayed in order.
+    let bookmarks = target_bookmarks
+        .difference(&projected_source_bookmarks)
+        .map(|target_bookmark| {
+            let source_bookmark = target_to_source(target_bookmark).ok_or_else(|| {
+                format_err!(
+                    "target bookmark {target_bookmark:?} did not map to source repo {source_repo_id}"
+                )
+            })?;
+            Ok(BookmarkKey::with_name_and_category(
+                source_bookmark.into_name(),
+                *target_bookmark.category(),
+            ))
+        })
+        .collect::<Result<HashSet<_>, Error>>()?;
+    backsync_bookmarks(
+        ctx,
+        commit_sync_data,
+        target_repo_dbs,
+        bookmarks,
+        limit,
+        bookmark_concurrency,
+        cancellation_requested,
+        sync_context,
+        disable_lease,
+    )
+    .await
 }
 
 async fn sync_entries<R>(

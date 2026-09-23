@@ -105,6 +105,7 @@ use crate::BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB;
 use crate::BacksyncLimit;
 use crate::MAX_DISCOVERED_BOOKMARKS_JUST_KNOB;
 use crate::advance_global_counter_for_completed_bookmark;
+use crate::backsync_deleted_by_prefix;
 use crate::backsync_latest;
 use crate::backsync_latest_by_prefix;
 use crate::backsync_latest_for_bookmark;
@@ -438,7 +439,7 @@ async fn global_cursor_catches_up_when_bookmark_worker_applied_move(
 
     let (_, commit_only_future) = backsync_latest(
         ctx.clone(),
-        commit_sync_data,
+        commit_sync_data.clone(),
         small_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
@@ -591,6 +592,84 @@ async fn prefix_backsync_enforces_discovery_limit(fb: FacebookInit) -> Result<()
     assert_matches!(
         result,
         Err(error) if error.to_string().contains("matched more than 1 publishing bookmarks")
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn prefix_backsync_processes_target_only_bookmark_deletion(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let common_bookmark = BookmarkKey::new("master")?;
+    let bookmark_prefix = BookmarkPrefix::new("small/")?;
+    let source_bookmark = BookmarkKey::new("small/to-delete")?;
+    let target_bookmark = BookmarkKey::new("to-delete")?;
+    let (commit_sync_data, small_repo_dbs) = init_repos(
+        fb,
+        MoverType::Noop,
+        BookmarkRenamerType::CommonAndPrefix(common_bookmark.clone(), "small/".to_string()),
+    )
+    .await?;
+    let ctx = CoreContext::test_mock(fb);
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
+    let source_target = source_repo
+        .bookmarks()
+        .get(ctx.clone(), &common_bookmark, Freshness::MostRecent)
+        .await?
+        .expect("fixture has master");
+    move_bookmark(
+        ctx.clone(),
+        source_repo.clone(),
+        &source_bookmark,
+        source_target,
+    )
+    .await?;
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+
+    backsync_latest_by_prefix(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        bookmark_prefix.clone(),
+        std::slice::from_ref(&common_bookmark),
+        BacksyncLimit::NoLimit,
+        2,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+    assert!(
+        target_repo
+            .bookmarks()
+            .get(ctx.clone(), &target_bookmark, Freshness::MostRecent)
+            .await?
+            .is_some()
+    );
+
+    delete_bookmark(ctx.clone(), source_repo.clone(), &source_bookmark).await?;
+    let delay = backsync_deleted_by_prefix(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs,
+        bookmark_prefix,
+        std::slice::from_ref(&common_bookmark),
+        BacksyncLimit::NoLimit,
+        2,
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+    )
+    .await?;
+
+    assert_eq!(delay.failed_bookmarks, 0);
+    assert_eq!(
+        target_repo
+            .bookmarks()
+            .get(ctx, &target_bookmark, Freshness::MostRecent)
+            .await?,
+        None
     );
     Ok(())
 }
@@ -2550,6 +2629,24 @@ async fn move_bookmark(
         }
     }
 
+    assert!(txn.commit().await?.is_some());
+    Ok(())
+}
+
+async fn delete_bookmark(
+    ctx: CoreContext,
+    repo: TestRepo,
+    bookmark: &BookmarkKey,
+) -> Result<(), Error> {
+    let previous = repo
+        .bookmarks()
+        .get(ctx.clone(), bookmark, Freshness::MostRecent)
+        .await?
+        .ok_or_else(|| anyhow!("bookmark {bookmark} does not exist"))?;
+    let mut txn = repo.bookmarks().create_transaction(ctx);
+    // TestMove is the only test-specific update reason; reasons identify the
+    // writer, while the transaction operation records that this is a delete.
+    txn.delete(bookmark, previous, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?.is_some());
     Ok(())
 }
