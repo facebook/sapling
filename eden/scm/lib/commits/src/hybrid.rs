@@ -388,6 +388,18 @@ struct HybridCommitTextReader {
 
 #[async_trait::async_trait]
 impl ReadCommitText for HybridCommits {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        // The streaming path is built for batches that may need the server,
+        // and it flushes the commit store when it finishes. Skip it when the
+        // text is already local.
+        if let Some(text) = self.commits.get_commit_raw_text(vertex).await? {
+            return Ok(Some(text));
+        }
+        self.to_hybrid_commit_text()
+            .get_commit_raw_text(vertex)
+            .await
+    }
+
     async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
         self.to_hybrid_commit_text()
             .get_commit_raw_text_list(vertexes)
