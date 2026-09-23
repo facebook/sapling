@@ -289,6 +289,11 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 #endif
 
  protected:
+  // Virtual so tests can replace a pathname after its descriptor is checked.
+  virtual void sanityCheckOpenedMountPoint(
+      const std::string& mountPoint,
+      int mountPointFd);
+
   folly::File openBindMountTarget(
       folly::StringPiece mountRoot,
       folly::StringPiece mountPath);

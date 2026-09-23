@@ -1135,10 +1135,18 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
   // Skip the stale mount check too: the daemon is already serving this mount
   // when it sends the takeover startup request, so there is nothing stale to
   // detect.
+#ifndef __APPLE__
+  auto checkedMount = openAndSanityCheckMountPoint(
+      mountPath, SanityCheckOptions::forTakeover());
+  auto sanityResult = checkedMount.sanityResult;
+  // Ancestors can change after validation, so retain the checked directory.
+  registerMountPoint(
+      mountPath, RegisteredMount{std::move(checkedMount.targetFd)});
+#else
   auto sanityResult =
       sanityCheckMountPoint(mountPath, SanityCheckOptions::forTakeover());
-
   registerMountPoint(mountPath);
+#endif
   auto response = makeResponse();
   response.data.unshare();
   folly::io::Appender appender(&response.data, 0);

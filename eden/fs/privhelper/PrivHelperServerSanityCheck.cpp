@@ -202,10 +202,11 @@ void checkMountPointWriteAccess(
 }
 #endif
 
-void sanityCheckOpenedMountPoint(
+} // namespace
+
+void PrivHelperServer::sanityCheckOpenedMountPoint(
     const std::string& mountPoint,
-    int mountPointFd,
-    uid_t uid) {
+    int mountPointFd) {
   struct stat st{};
   if (fstat(mountPointFd, &st) < 0) {
     auto err = errno;
@@ -220,9 +221,9 @@ void sanityCheckOpenedMountPoint(
     throwf<std::domain_error>("{} isn't a directory", mountPoint);
   }
 
-  if (st.st_uid != uid) {
+  if (st.st_uid != uid_) {
     throwf<std::domain_error>(
-        "User:{} isn't the owner of: {}", uid, mountPoint);
+        "User:{} isn't the owner of: {}", uid_, mountPoint);
   }
 
 #ifdef __linux__
@@ -230,7 +231,6 @@ void sanityCheckOpenedMountPoint(
 #endif
   sanityCheckFs(mountPoint, mountPointFd);
 }
-} // namespace
 
 SanityCheckResult PrivHelperServer::cleanupStaleBindMounts(
     const std::string& checkoutPath) {
@@ -429,7 +429,7 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
         mountPoint,
         folly::errnoStr(e.code().value()));
   }
-  sanityCheckOpenedMountPoint(mountPoint, file.fd(), uid_);
+  sanityCheckOpenedMountPoint(mountPoint, file.fd());
   if (options.performBindMountCleanup()) {
     // Only clean up mounts under a checkout after the checkout path itself has
     // passed the ownership and access checks.
@@ -463,7 +463,7 @@ PrivHelperServer::openAndSanityCheckMountPoint(
   }
 
   auto targetFd = openCheckedMountTarget(mountPoint);
-  sanityCheckOpenedMountPoint(mountPoint, targetFd.fd(), uid_);
+  sanityCheckOpenedMountPoint(mountPoint, targetFd.fd());
   if (options.performBindMountCleanup()) {
     // Only clean up mounts under a checkout after the checkout path itself has
     // passed the ownership and access checks.

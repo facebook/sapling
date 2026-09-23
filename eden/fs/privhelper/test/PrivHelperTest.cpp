@@ -30,6 +30,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <system_error>
@@ -155,6 +156,10 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return std::move(data->requestedVfsTypes);
   }
 
+  void setAfterSanityCheck(std::function<void()> callback) {
+    data_.wlock()->afterSanityCheck = std::move(callback);
+  }
+
  private:
   struct Data {
     std::unordered_map<string, std::list<Future<File>>> fuseMountResults;
@@ -163,7 +168,18 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     std::unordered_map<string, std::list<Future<Unit>>> bindMountResults;
     std::unordered_map<string, std::list<Future<Unit>>> bindUnmountResults;
     std::vector<File> logFiles;
+    std::function<void()> afterSanityCheck;
   };
+
+  void sanityCheckOpenedMountPoint(
+      const std::string& mountPoint,
+      int mountPointFd) override {
+    PrivHelperServer::sanityCheckOpenedMountPoint(mountPoint, mountPointFd);
+    auto callback = std::move(data_.wlock()->afterSanityCheck);
+    if (callback) {
+      callback();
+    }
+  }
 
   template <typename T>
   folly::Future<T> getResultFuture(
@@ -1382,6 +1398,45 @@ TEST_F(
   server_.setBindMountResult(bindPath).setValue();
   EXPECT_THROW_RE(
       client_->bindMount(source.path().string(), bindPath).get(1s),
+      std::exception,
+      "No such file or directory");
+#endif
+}
+
+TEST_F(PrivHelperTest, takeoverKeepsValidatedRootWhenAncestorIsReplaced) {
+#ifdef __APPLE__
+  GTEST_SKIP() << "Linux-specific registered mount descriptors";
+#else
+  if (getuid() == 0) {
+    GTEST_SKIP() << "root bypasses mount ownership validation";
+  }
+  auto root = makeTempDir("takeover-root");
+  auto source = makeTempDir("source");
+  const auto ancestor = root.path() / "ancestor";
+  const auto moved = root.path() / "moved";
+  const auto replacement = root.path() / "replacement";
+  boost::filesystem::create_directories(
+      ancestor / "registered" / "original-only");
+  boost::filesystem::create_directories(
+      replacement / "registered" / "replacement-only");
+
+  const auto registeredPath = (ancestor / "registered").string();
+  server_.setAfterSanityCheck([ancestor, moved, replacement] {
+    boost::filesystem::rename(ancestor, moved);
+    boost::filesystem::create_directory_symlink(replacement, ancestor);
+  });
+  client_->takeoverStartup(registeredPath, {}).get(1s);
+  server_.setFuseUnmountResult(registeredPath).setValue();
+
+  const auto originalPath = registeredPath + "/original-only";
+  server_.setBindMountResult(originalPath).setValue();
+  EXPECT_NO_THROW(
+      client_->bindMount(source.path().string(), originalPath).get(1s));
+
+  const auto replacementPath = registeredPath + "/replacement-only";
+  server_.setBindMountResult(replacementPath).setValue();
+  EXPECT_THROW_RE(
+      client_->bindMount(source.path().string(), replacementPath).get(1s),
       std::exception,
       "No such file or directory");
 #endif
