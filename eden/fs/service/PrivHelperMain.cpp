@@ -9,6 +9,7 @@
 #include <string>
 
 #ifdef __linux__
+#include <grp.h>
 #include <sys/prctl.h>
 
 #include <cerrno>
@@ -110,17 +111,6 @@ int main(int argc, char** argv) {
       "WARN:default, eden=DBG2; default:stream=stderr,async=false");
   folly::LoggerDB::get().updateConfig(loggingConfig);
 
-#ifdef __linux__
-  // The kernel clears the dumpable flag for setuid executions, so without
-  // this privhelper crashes produce no core and never reach coredumper.
-  if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) != 0) {
-    XLOGF(
-        WARNING,
-        "failed to mark privhelper dumpable: {}",
-        folly::errnoStr(errno));
-  }
-#endif // __linux__
-
   // Escape the process group of whatever launched EdenFS, so that
   // process-group-wide cleanup (e.g. by agent command runners that
   // launched `eden restart`) cannot SIGKILL the privhelper out from under
@@ -141,6 +131,37 @@ int main(int argc, char** argv) {
     const auto cliUid = static_cast<uid_t>(FLAGS_privhelper_uid);
     const auto cliGid = static_cast<gid_t>(FLAGS_privhelper_gid);
     const auto owner = resolvePrivHelperOwner(realUid, realGid, cliUid, cliGid);
+
+#ifdef __linux__
+    // access() and faccessat2() use real IDs and supplementary groups.
+    // Retain effective root for mount operations while checking the owner's
+    // authority, including when launched through sudo.
+    const auto hardeningDisabled = disablePrivHelperHardening();
+    if (hardeningDisabled) {
+      XLOG(WARN, "Privhelper hardening disabled; retaining launch credentials");
+    }
+    if (realUid == 0 && owner.uid != 0 && !hardeningDisabled) {
+      const auto passwd = UserInfo::getPasswdUid(owner.uid);
+      folly::checkUnixError(
+          initgroups(passwd.pwd.pw_name, owner.gid),
+          "failed to initialize privhelper owner groups");
+      folly::checkUnixError(
+          setregid(owner.gid, static_cast<gid_t>(-1)),
+          "failed to set privhelper real gid");
+      folly::checkUnixError(
+          setreuid(owner.uid, static_cast<uid_t>(-1)),
+          "failed to set privhelper real uid");
+    }
+
+    // Credential changes clear dumpability. Enable core dumps after setting
+    // the owner so privhelper crashes can reach coredumper.
+    if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) != 0) {
+      XLOGF(
+          WARNING,
+          "failed to mark privhelper dumpable: {}",
+          folly::errnoStr(errno));
+    }
+#endif
 
     server.init(std::move(serverConn), owner.uid, owner.gid);
     server.run();

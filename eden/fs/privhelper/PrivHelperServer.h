@@ -179,6 +179,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       bool isNFS,
       bool isHardMount);
 
+ protected:
   /**
    * How detectAndUnmountStaleMount probes the mount point.
    */
@@ -262,6 +263,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       const SanityCheckOptions& options);
 #endif
 
+ private:
   // These methods are virtual so we can override them during unit tests
   virtual folly::File
   fuseMount(const char* mountPath, bool readOnly, const char* vfsType);

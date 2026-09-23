@@ -10,6 +10,7 @@
 
 #ifndef _WIN32
 
+#include "eden/fs/privhelper/PrivHelperRollback.h"
 #include "eden/fs/privhelper/PrivHelperServer.h"
 
 #include <fcntl.h>
@@ -399,7 +400,7 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
     const std::string& mountPoint,
     const SanityCheckOptions& options) {
   XLOGF(INFO, "Sanity checking mount {}", mountPoint);
-  if (getuid() == 0) {
+  if ((disablePrivHelperHardening() ? getuid() : uid_) == 0) {
     XLOG(INFO, "Skipping sanity check for root user.");
     return SanityCheckResult{};
   }
@@ -450,7 +451,7 @@ PrivHelperServer::openAndSanityCheckMountPoint(
     const std::string& mountPoint,
     const SanityCheckOptions& options) {
   XLOGF(INFO, "Sanity checking mount {}", mountPoint);
-  if (getuid() == 0) {
+  if ((disablePrivHelperHardening() ? getuid() : uid_) == 0) {
     XLOG(INFO, "Skipping sanity check for root user.");
     auto targetFd = openCheckedMountTarget(mountPoint);
     return CheckedMountPoint{std::move(targetFd), SanityCheckResult{}};

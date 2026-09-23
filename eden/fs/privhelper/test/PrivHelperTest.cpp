@@ -37,6 +37,11 @@
 #include <thread>
 #include <unordered_map>
 
+#ifdef __linux__
+#include <sched.h>
+#include <sys/mount.h>
+#endif
+
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/UserInfo.h"
@@ -44,6 +49,7 @@
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
+#include "eden/fs/privhelper/PrivHelperRollback.h"
 #include "eden/fs/privhelper/RestartSentinel.h"
 #include "eden/fs/privhelper/test/PrivHelperTestServer.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -65,6 +71,59 @@ using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
 using std::string;
 using testing::UnorderedElementsAre;
+
+#ifdef __linux__
+namespace {
+void runInMountNamespace(const std::function<void()>& test) {
+  const auto uid = getuid();
+  const auto gid = getgid();
+  const auto pid = fork();
+  if (pid < 0) {
+    FAIL() << "fork failed: " << folly::errnoStr(errno);
+  }
+  if (pid == 0) {
+    if (unshare(CLONE_NEWUSER | CLONE_NEWNS) != 0) {
+      _exit(77);
+    }
+    try {
+      checkUnixError(
+          folly::writeFile(fmt::format("0 {} 1\n", uid), "/proc/self/uid_map")
+              ? 0
+              : -1);
+      checkUnixError(
+          folly::writeFile(StringPiece{"deny\n"}, "/proc/self/setgroups") ? 0
+                                                                          : -1);
+      checkUnixError(
+          folly::writeFile(fmt::format("0 {} 1\n", gid), "/proc/self/gid_map")
+              ? 0
+              : -1);
+      checkUnixError(
+          mount(nullptr, "/", nullptr, MS_REC | MS_PRIVATE, nullptr));
+      test();
+    } catch (const std::exception& ex) {
+      ADD_FAILURE() << ex.what();
+    }
+    _exit(::testing::Test::HasFailure() ? 1 : 0);
+  }
+  int status;
+  ASSERT_EQ(pid, waitpid(pid, &status, 0));
+  if (WIFEXITED(status) && WEXITSTATUS(status) == 77) {
+    GTEST_SKIP() << "user/mount namespaces are unavailable";
+  }
+  ASSERT_TRUE(WIFEXITED(status));
+  EXPECT_EQ(0, WEXITSTATUS(status));
+}
+void installPrivHelperRollbackMarker() {
+  checkUnixError(mount("tmpfs", "/etc", "tmpfs", 0, "size=1m"));
+  boost::filesystem::create_directory("/etc/eden");
+  File marker(
+      kDisablePrivHelperHardeningPath,
+      O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
+      0600);
+  ASSERT_TRUE(disablePrivHelperHardening());
+}
+} // namespace
+#endif
 
 TEST(TccDisclaimKillswitch, presentWhenFileExists) {
   TemporaryFile killswitch;
@@ -993,6 +1052,39 @@ TEST(PrivHelperFamTest, rejectsMissingOutputDescriptor) {
   EXPECT_EQ(-1, access(outputPath.c_str(), F_OK));
   EXPECT_EQ(ENOENT, errno);
 }
+
+#ifdef __linux__
+
+class PrivHelperSanityTestServer : public PrivHelperServer {
+ public:
+  explicit PrivHelperSanityTestServer(uid_t owner) {
+    uid_ = owner;
+    gid_ = getgid();
+  }
+
+  void checkMount(const std::string& path, bool byFd) {
+    if (byFd) {
+      openAndSanityCheckMountPoint(path, SanityCheckOptions::forTakeover());
+    } else {
+      sanityCheckMountPoint(path, SanityCheckOptions::forTakeover());
+    }
+  }
+};
+
+TEST(PrivHelperSanityTest, rootProcessChecksTheServedOwnersMount) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    ASSERT_EQ(0, getuid());
+    PrivHelperSanityTestServer server(1);
+    EXPECT_THROW(server.checkMount(dir.path().string(), false), std::exception);
+    EXPECT_THROW(server.checkMount(dir.path().string(), true), std::exception);
+
+    installPrivHelperRollbackMarker();
+    EXPECT_NO_THROW(server.checkMount(dir.path().string(), false));
+    EXPECT_NO_THROW(server.checkMount(dir.path().string(), true));
+  });
+}
+#endif
 
 TEST_F(PrivHelperRawProtocolTest, cleanShutdownNotificationIsNotAnswered) {
   client_->send(

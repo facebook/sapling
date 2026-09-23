@@ -27,6 +27,7 @@ cpp_unittest(
         "//eden/fs/privhelper:conn",
         "//eden/fs/privhelper:interface",
         "//eden/fs/privhelper:privhelper",
+        "//eden/fs/privhelper:rollback",
         "//eden/fs/privhelper:server",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:xplat_keys",
