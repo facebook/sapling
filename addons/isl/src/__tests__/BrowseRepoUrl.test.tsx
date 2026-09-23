@@ -138,10 +138,7 @@ describe('Browse repo url', () => {
 
       await waitFor(() => {
         const copySpy = jest.spyOn(platform, 'clipboardCopy').mockImplementation(() => {});
-        expect(copySpy).toHaveBeenCalledWith(
-          'https://www.example.com/repo/browse/a/file1.txt',
-          undefined,
-        );
+        expect(copySpy).toHaveBeenCalledWith('https://www.example.com/repo/browse/a/file1.txt');
         expect(
           screen.getByText('Copied https://www.example.com/repo/browse/a/file1.txt'),
         ).toBeInTheDocument();

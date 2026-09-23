@@ -37,6 +37,7 @@ import platform from '../platform';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {latestHeadCommit, latestUncommittedChangesData} from '../serverAPIState';
 import {themeState} from '../theme';
+import {copyAndShowToast} from '../toast';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
@@ -487,7 +488,7 @@ function ComparisonViewFile({
   const comparisonTargetIsCurrent = useAtomValue(comparisonTargetIsCurrentAtom(comparison));
   const context: Context = {
     id: {path, comparison},
-    copy: platform.clipboardCopy,
+    copy: copyAndShowToast,
     openFile: () => platform.openFile(path),
     // only offer clickable line numbers when the right side line numbers match the file on disk
     openFileToLine: comparisonTargetIsCurrent

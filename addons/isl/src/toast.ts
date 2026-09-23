@@ -9,6 +9,7 @@ import type {ReactNode} from 'react';
 
 import {List} from 'immutable';
 import {atom} from 'jotai';
+import {tracker} from './analytics';
 import {t} from './i18n';
 import {atomWithOnChange, writeAtom} from './jotaiUtils';
 import platform from './platform';
@@ -38,10 +39,52 @@ export function showToast(message: ReactNode, props?: {durationMs?: number; key?
 
 /** Show "Copied <text>" toast. Existing "copied' toast will be replaced. */
 export async function copyAndShowToast(text: string, html?: string) {
+  const userActivation = navigator.userActivation;
+  const permissionsPolicy = (
+    document as Document & {
+      permissionsPolicy?: {allowsFeature: (feature: string) => boolean};
+    }
+  ).permissionsPolicy;
+  let permissionsPolicyAllowsClipboardWrite: boolean | undefined;
   try {
-    await platform.clipboardCopy(text, html);
+    permissionsPolicyAllowsClipboardWrite = permissionsPolicy?.allowsFeature('clipboard-write');
+  } catch {}
+  const context = {
+    documentHasFocus: document.hasFocus(),
+    isRich: html != null && html !== '',
+    permissionsPolicyAllowsClipboardWrite,
+    userActivationHasBeenActive: userActivation?.hasBeenActive,
+    userActivationIsActive: userActivation?.isActive,
+    visibilityState: document.visibilityState,
+  };
+  try {
+    if (html == null) {
+      await platform.clipboardCopy(text);
+    } else {
+      await platform.clipboardCopy(text, html);
+    }
+    tracker.track('ClipboardCopy', {
+      extras: {...context, outcome: 'success'},
+    });
     showToast(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
-  } catch {
+  } catch (error) {
+    const errorClass =
+      error instanceof Error ||
+      (typeof DOMException !== 'undefined' && error instanceof DOMException)
+        ? error.name
+        : 'UnknownError';
+    tracker.track('ClipboardCopy', {
+      extras: {
+        ...context,
+        errorClass,
+        outcome:
+          errorClass === 'InactiveClipboardUserActivationError'
+            ? 'inactive_activation'
+            : typeof DOMException !== 'undefined' && error instanceof DOMException
+              ? 'native_dom_exception'
+              : 'error',
+      },
+    });
     showToast(t('Could not copy $text', {replace: {$text: text}}), {key: 'copied'});
   }
 }

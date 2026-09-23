@@ -16,7 +16,7 @@ import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import React from 'react';
 import {t} from '../../i18n';
-import platform from '../../platform';
+import {copyAndShowToast} from '../../toast';
 
 import './SplitDiffHunk.css';
 
@@ -114,7 +114,7 @@ export function FileHeader({
             )}
             delayMs={100}
             placement="bottom">
-            <span onClick={() => platform.clipboardCopy(pathSoFar)}>
+            <span onClick={() => void copyAndShowToast(pathSoFar)}>
               {part}
               {idx < pathParts.length - 1 ? pathSeparator : ''}
             </span>

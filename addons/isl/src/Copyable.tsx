@@ -6,14 +6,12 @@
  */
 
 import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useEffect, useState} from 'react';
-import {t, T} from './i18n';
-import platform from './platform';
+import {t} from './i18n';
+import {copyAndShowToast} from './toast';
 
 import './Copyable.css';
 
-/** Click to copy text and show a confirmation tooltip. If content is provided, use that instead of  */
+/** Click to copy text and show the result in a toast. */
 export function Copyable({
   children,
   className,
@@ -23,55 +21,32 @@ export function Copyable({
   className?: string;
   iconOnly?: boolean;
 }) {
-  const [showingSuccess, setShowingSuccess] = useState(false);
   const copy = () => {
-    platform.clipboardCopy(children);
-    setShowingSuccess(true);
+    void copyAndShowToast(children);
   };
-  useEffect(() => {
-    if (showingSuccess) {
-      const timeout = setTimeout(() => setShowingSuccess(false), 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [showingSuccess, setShowingSuccess]);
 
   return (
-    <Tooltip
-      trigger="manual"
-      shouldShow={showingSuccess}
-      component={CopiedSuccessTooltipContent(children)}>
-      <div
-        role="button"
-        className={
-          'copyable' + (className ? ` ${className}` : '') + (iconOnly === true ? ' icon-only' : '')
-        }
-        tabIndex={0}
-        aria-label={iconOnly === true ? t('Copy $value', {replace: {$value: children}}) : undefined}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            copy();
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
-        onClick={e => {
+    <div
+      role="button"
+      className={
+        'copyable' + (className ? ` ${className}` : '') + (iconOnly === true ? ' icon-only' : '')
+      }
+      tabIndex={0}
+      aria-label={iconOnly === true ? t('Copy $value', {replace: {$value: children}}) : undefined}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
           copy();
           e.preventDefault();
           e.stopPropagation();
-        }}>
-        {iconOnly !== true && children}
-        <Icon icon="copy" />
-      </div>
-    </Tooltip>
-  );
-}
-
-function CopiedSuccessTooltipContent(text: string) {
-  return () => (
-    <span className="copyable-success-tooltip">
-      <T replace={{$copiedText: <span className="copyable-success-overflow">{text}</span>}}>
-        Copied '$copiedText'.
-      </T>
-    </span>
+        }
+      }}
+      onClick={e => {
+        copy();
+        e.preventDefault();
+        e.stopPropagation();
+      }}>
+      {iconOnly !== true && children}
+      <Icon icon="copy" />
+    </div>
   );
 }

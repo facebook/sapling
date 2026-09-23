@@ -13,11 +13,11 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Component, lazy, Suspense, useRef, useState} from 'react';
+import {Component, lazy, Suspense, useRef} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
-import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
+import {clipboardLinkHtml} from '../clipboard';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
@@ -26,6 +26,7 @@ import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} f
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import {inMergeConflicts, repositoryInfo} from '../serverAPIState';
+import {copyAndShowToast} from '../toast';
 import {exactRevset} from '../types';
 import {showConfirmation} from '../useModal';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
@@ -297,26 +298,21 @@ function DiffNumber({
   url?: string;
   versionLabel?: string;
 }) {
-  const [showing, setShowing] = useState(false);
   const showDiffNumber = useAtomValue(showDiffNumberConfig);
   if (!children || !showDiffNumber) {
     return null;
   }
 
   return (
-    <Tooltip trigger="manual" shouldShow={showing} title={t(`Copied ${children} to the clipboard`)}>
-      <span
-        className="diff-number"
-        onClick={e => {
-          url == null ? clipboardCopyText(children) : clipboardCopyLink(children, url);
-          setShowing(true);
-          setTimeout(() => setShowing(false), 2000);
-          e.stopPropagation();
-        }}>
-        {children}
-        {versionLabel != null && <span className="diff-version-label"> {versionLabel}</span>}
-      </span>
-    </Tooltip>
+    <span
+      className="diff-number"
+      onClick={e => {
+        void copyAndShowToast(children, url == null ? undefined : clipboardLinkHtml(children, url));
+        e.stopPropagation();
+      }}>
+      {children}
+      {versionLabel != null && <span className="diff-version-label"> {versionLabel}</span>}
+    </span>
   );
 }
 

@@ -9,6 +9,7 @@ export type TrackEventName =
   | 'CommitContextMenuItemClick'
   | 'ClickedRefresh'
   | 'ClientConnection'
+  | 'ClipboardCopy'
   | 'LoadMoreCommits'
   | 'RunOperation'
   | 'TopLevelErrorShown'

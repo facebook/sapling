@@ -37,14 +37,3 @@
 .copyable:active {
   animation: beat 0.1s linear backwards;
 }
-
-.copyable-success-tooltip {
-  max-width: 300px;
-  display: flex;
-  white-space: nowrap;
-}
-
-.copyable-success-overflow {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
