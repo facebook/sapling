@@ -96,6 +96,11 @@ pub struct CommitThroughputArgs {
     #[clap(long, default_value = "master")]
     source_bookmark: String,
 
+    /// Only replay commits whose changed paths all match one of these prefixes.
+    /// Repeat to allow multiple prefixes; unset allows any path.
+    #[clap(long, value_parser = |s: &str| NonRootMPath::new(s.as_bytes()))]
+    path_prefix: Vec<NonRootMPath>,
+
     /// Commit author.
     #[clap(
         long,
@@ -169,6 +174,7 @@ pub async fn commit_throughput(
     }
     let nodes: Vec<_> = walked.into_iter().rev().collect();
 
+    let path_prefixes = &args.path_prefix;
     let changes: HashMap<_, (Vec<_>, Vec<_>, DateTime)> = stream::iter(nodes.iter().copied())
         .map(|cs_id| async move {
             let bonsai = cs_id.load(ctx, repo.repo_blobstore()).await?;
@@ -176,6 +182,11 @@ pub async fn commit_throughput(
             let mut files = Vec::new();
             let mut deletions = Vec::new();
             for (path, change) in bonsai.file_changes() {
+                if !path_prefixes.is_empty()
+                    && !path_prefixes.iter().any(|prefix| prefix.is_prefix_of(path))
+                {
+                    return anyhow::Ok(None);
+                }
                 changed.push(path.clone());
                 let Some(basic) = change.simplify() else {
                     deletions.push(path.clone());
