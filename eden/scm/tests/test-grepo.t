@@ -10,11 +10,16 @@ vendor/a/sub/c. In real-world .repo workspaces, vendor/a/.git does not
 manage vendor/a/sub/c because a .gitignore at vendor/a/sub/.gitignore
 excludes its subdirectories.
 
+Each project gets a second commit so the manifest history below can bump it.
+
   $ git init -q -b main project-a
   $ cd project-a
   $ echo "project-a content" > README
   $ git add README && git commit -qm 'init a'
   $ A_REV=$(git rev-parse HEAD)
+  $ echo "project-a content v2" > README
+  $ git add README && git commit -qm 'update a'
+  $ A2_REV=$(git rev-parse HEAD)
   $ cd ..
 
   $ git init -q -b main project-b
@@ -22,6 +27,9 @@ excludes its subdirectories.
   $ echo "project-b content" > README
   $ git add README && git commit -qm 'init b'
   $ B_REV=$(git rev-parse HEAD)
+  $ echo "project-b content v2" > README
+  $ git add README && git commit -qm 'update b'
+  $ B2_REV=$(git rev-parse HEAD)
   $ cd ..
 
   $ git init -q -b main project-c
@@ -29,6 +37,9 @@ excludes its subdirectories.
   $ echo "project-c content" > README
   $ git add README && git commit -qm 'init c'
   $ C_REV=$(git rev-parse HEAD)
+  $ echo "project-c content v2" > README
+  $ git add README && git commit -qm 'update c'
+  $ C2_REV=$(git rev-parse HEAD)
   $ cd ..
 
   $ mkdir repodir && cd repodir
@@ -50,6 +61,28 @@ Set up .repo/manifests as its own git repo with .git symlinked to manifests.git:
   > </manifest>
   > EOF
   $ cd .repo/manifests && git add static/static.xml && git commit -qm 'add manifest' && cd ../..
+
+Three more manifest commits, each bumping a different project. The last one
+bumps only the nested project vendor/a/sub/c. The sapling commit graph in a
+grepo workspace is the .repo/manifests git history, so commits are made there:
+
+  $ writemanifest() {
+  >   cat > .repo/manifests/static/static.xml << EOF
+  > <?xml version="1.0" encoding="UTF-8"?>
+  > <manifest>
+  >   <remote name="origin" fetch="file://$TESTTMP"/>
+  >   <default revision="main" remote="origin"/>
+  >   <project name="project-a" path="vendor/a" revision="$1"/>
+  >   <project name="project-b" path="frameworks/b" revision="$2"/>
+  >   <project name="project-c" path="vendor/a/sub/c" revision="$3"/>
+  > </manifest>
+  > EOF
+  >   cd .repo/manifests && git add static/static.xml && git commit -qm "$4" && cd ../..
+  > }
+
+  $ writemanifest $A2_REV $B_REV $C_REV 'bump vendor/a'
+  $ writemanifest $A2_REV $B2_REV $C_REV 'bump frameworks/b'
+  $ writemanifest $A2_REV $B2_REV $C2_REV 'bump vendor/a/sub/c'
 
 Set up projects with .git symlinks back to .repo/projects/:
 
@@ -88,17 +121,21 @@ Sapling recognizes .repo identity
   $TESTTMP/repodir
 
   $ sl smartlog -T '{desc}'
-  @  add manifest
+  @  bump vendor/a/sub/c
+  │
+  o  bump frameworks/b
+  │
+  o  bump vendor/a
+  │
+  o  add manifest
 
 clean status
   $ sl status
 
   $ sl log -r . -T "desc:\n  {desc}\nfiles:\n{files % '  {file}\n'}"
   desc:
-    add manifest
+    bump vendor/a/sub/c
   files:
-    frameworks/b
-    vendor/a
     vendor/a/sub/c
 
 modified outer project is reported by status
@@ -116,8 +153,8 @@ Diff shows subproject commit change for the outer project:
   --- a/vendor/a	* (glob)
   +++ b/vendor/a	* (glob)
   @@ -1,1 +1,1 @@
-  -Subproject commit ac4ea71567e4779db728eebfc962382b53064bdb
-  +Subproject commit 8b78e5ec15214e009eb98624ee4dda34520d9720
+  -Subproject commit 7d040f902e73e68e8ead5bd185e0efcb1adbeb55
+  +Subproject commit 1f165e588b86d366379b684dedb0892249bebb89
 
 Modified nested (overlapping) project is reported by status:
 
@@ -136,8 +173,8 @@ Exact-path diff also works for the nested overlapping project:
   --- a/vendor/a/sub/c	* (glob)
   +++ b/vendor/a/sub/c	* (glob)
   @@ -1,1 +1,1 @@
-  -Subproject commit 30c3ba4e8b4dced473cce4f5d10ced2eecbd2515
-  +Subproject commit 9f2c189e3840b5857f220136620130d40f5e71ce
+  -Subproject commit 0b678834be64557c4e8710c49ef2fc96886a15a0
+  +Subproject commit c55758fb8d7a24213ba3288ab808a839b6049513
 
 Modified non-overlapping project is reported by status:
 
@@ -157,8 +194,8 @@ Exact-path diff also works for the non-overlapping project:
   --- a/frameworks/b	* (glob)
   +++ b/frameworks/b	* (glob)
   @@ -1,1 +1,1 @@
-  -Subproject commit 6a9d13442cc0deb7f2b531a00ac679f62d09edf3
-  +Subproject commit 96287d65976c48a2d3046495e3089baeb388a671
+  -Subproject commit 434524b4d4743bcdf1e15d26adca081cfe8fd7d5
+  +Subproject commit ab01d5a104b4500852675c2b96bd84773899b371
 
 sl debuggitmodules lists grepo projects as Submodule entries.
 Mainly used for ISL integration.
