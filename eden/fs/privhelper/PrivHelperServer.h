@@ -9,6 +9,7 @@
 
 #include <eden/common/utils/SpawnedProcess.h>
 #include <folly/File.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <functional>
 #include <limits>
@@ -171,6 +172,9 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // behind when EdenFS crashed without properly unmounting.
   SanityCheckResult cleanupStaleBindMounts(const std::string& checkoutPath);
 
+ protected:
+  virtual int statMountPoint(const char* path, struct stat* st) const;
+
   // Uses stat to determine if there's a stale mount point at the given path. If
   // there is, force unmounts it. Returns true if a stale mount was found and
   // unmounted.
@@ -179,7 +183,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       bool isNFS,
       bool isHardMount);
 
- protected:
   /**
    * How detectAndUnmountStaleMount probes the mount point.
    */

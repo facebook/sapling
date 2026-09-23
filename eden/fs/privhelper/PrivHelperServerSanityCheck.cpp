@@ -50,26 +50,62 @@ namespace {
 #endif
 #endif
 
+#ifdef __linux__
+bool isOldEdenMountFd(int fd) {
+  std::string fdInfo;
+  folly::checkUnixError(
+      folly::readFile(fmt::format("/proc/self/fdinfo/{}", fd).c_str(), fdInfo)
+          ? 0
+          : -1,
+      "cannot read mount fdinfo");
+  std::vector<folly::StringPiece> lines;
+  folly::split('\n', fdInfo, lines);
+  std::string mountIdPrefix;
+  for (auto line : lines) {
+    if (line.startsWith("mnt_id:")) {
+      mountIdPrefix = fmt::format(
+          "{} ", folly::to<uint64_t>(folly::trimWhitespace(line.subpiece(7))));
+      break;
+    }
+  }
+  if (mountIdPrefix.empty()) {
+    throw std::runtime_error("mount ID missing from fdinfo");
+  }
+
+  std::string mountInfo;
+  folly::checkUnixError(
+      folly::readFile("/proc/self/mountinfo", mountInfo) ? 0 : -1,
+      "cannot read mountinfo");
+  lines.clear();
+  folly::split('\n', mountInfo, lines);
+  for (auto line : lines) {
+    if (!line.startsWith(mountIdPrefix)) {
+      continue;
+    }
+    const auto separator = line.find(" - ");
+    if (separator == folly::StringPiece::npos) {
+      throw std::runtime_error("mountinfo entry has no field separator");
+    }
+    std::vector<folly::StringPiece> fields;
+    folly::split(' ', line.subpiece(separator + 3), fields);
+    return fields.size() >= 3 && is_edenfs_fs_type(fields.at(1));
+  }
+  return false;
+}
+#endif
+
 /**
  * Determines whether the given mountPoint is contained in the mount table
  * and looks like it was previously mounted by EdenFS.
  */
 bool isOldEdenMount(const std::string& mountPoint) {
 #ifdef __linux__
-  MountInfoOptions options;
-  options.includeMountSource = true;
-  auto result = getMountInfoForPath(mountPoint.c_str(), options);
-  if (result.hasError()) {
-    XLOGF(
-        WARN,
-        "Failed to get mount info for {}: {}",
-        mountPoint,
-        folly::errnoStr(result.error()));
+  try {
+    folly::File fd(mountPoint.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+    return isOldEdenMountFd(fd.fd());
+  } catch (const std::exception& ex) {
+    XLOGF(WARN, "Cannot identify mount {}: {}", mountPoint, ex.what());
     return false;
-  }
-  if (result.value().has_value() &&
-      is_edenfs_fs_type(result.value()->mountSource)) {
-    return true;
   }
 #else
   struct statfs* buf;
@@ -302,6 +338,12 @@ void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
   XLOGF(INFO, "Successfully unmounted stale mount {}", mountPoint);
 }
 
+int PrivHelperServer::statMountPoint(const char* path, struct stat* st) const {
+  // This probes mount health; it does not authorize any path-based operation.
+  // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
+  return stat(path, st);
+}
+
 bool PrivHelperServer::detectAndUnmountStaleMount(
     const std::string& mountPoint,
     bool isNFS,
@@ -313,11 +355,7 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
   // performing further sanity checks. On any other error, we throw.
   bool is_hanging = false;
 
-  // Stat is only being used to check if the mount is hanging, not to perform
-  // any sanity checks. Therefore, it should be safe to ignore this lint.
-  //
-  // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
-  if (stat(mountPoint.c_str(), &st) < 0) {
+  if (statMountPoint(mountPoint.c_str(), &st) < 0) {
     auto err = errno;
     XLOGF(
         WARN,
@@ -355,12 +393,12 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
         mountPoint + "/this-folder-does-not-exist/this-file-does-not-exist";
     struct stat test_st;
 
-    // As mentioned above, using path-based stat is fine for our usescase.
-    //
-    // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
-    if (stat(test_path.c_str(), &test_st) < 0) {
+    if (statMountPoint(test_path.c_str(), &test_st) < 0) {
       auto err = errno;
-      if (isErrnoFromHangingMount(err, isNFS)) {
+      const auto safeToIgnore = disablePrivHelperHardening()
+          ? isErrnoFromHangingMount(err, isNFS)
+          : isErrorSafeToIgnore(err, isNFS, mountPoint);
+      if (safeToIgnore) {
         XLOGF(
             INFO,
             "Found a stale mount {}: {}. Attempting to unmount it",

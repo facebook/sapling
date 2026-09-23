@@ -38,8 +38,12 @@
 #include <unordered_map>
 
 #ifdef __linux__
+#include <linux/filter.h>
+#include <linux/seccomp.h>
 #include <sched.h>
 #include <sys/mount.h>
+#include <sys/prctl.h>
+#include "eden/fs/utils/Statmount.h"
 #endif
 
 #include "eden/common/telemetry/DynamicEvent.h"
@@ -1082,6 +1086,68 @@ TEST(PrivHelperSanityTest, rootProcessChecksTheServedOwnersMount) {
     installPrivHelperRollbackMarker();
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), false));
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), true));
+  });
+}
+#endif
+
+class PrivHelperStaleMountTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::detectAndUnmountStaleMount;
+  bool unmounted{false};
+
+ private:
+  int statMountPoint(const char* path, struct stat* st) const override {
+    if (StringPiece{path}.endsWith("/this-file-does-not-exist")) {
+      errno = ENOTCONN;
+      return -1;
+    }
+    return ::stat(path, st);
+  }
+
+  void unmount(const char*, UnmountOptions) override {
+    unmounted = true;
+  }
+};
+
+TEST(PrivHelperStaleMountTest, childProbeErrorDoesNotUnmountAnUnrelatedPath) {
+  TemporaryDirectory dir;
+  PrivHelperStaleMountTestServer server;
+  EXPECT_FALSE(
+      server.detectAndUnmountStaleMount(dir.path().string(), false, false));
+  EXPECT_FALSE(server.unmounted);
+}
+
+#ifdef __linux__
+TEST(PrivHelperStaleMountTest, identifiesMountWithoutStatmountSyscalls) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    sock_filter filter[] = {
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(seccomp_data, nr)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_statmount, 1, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_listmount, 0, 1),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | ENOSYS),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+    };
+    sock_fprog program{static_cast<unsigned short>(std::size(filter)), filter};
+    checkUnixError(prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0));
+    checkUnixError(prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &program));
+    checkUnixError(mount("edenfs:", dir.path().c_str(), "tmpfs", 0, "size=1m"));
+
+    PrivHelperStaleMountTestServer server;
+    EXPECT_TRUE(
+        server.detectAndUnmountStaleMount(dir.path().string(), false, false));
+    EXPECT_TRUE(server.unmounted);
+  });
+}
+
+TEST(PrivHelperStaleMountTest, rollbackAllowsLegacyChildProbeUnmount) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    installPrivHelperRollbackMarker();
+    PrivHelperStaleMountTestServer server;
+    EXPECT_TRUE(
+        server.detectAndUnmountStaleMount(dir.path().string(), false, false));
+    EXPECT_TRUE(server.unmounted);
   });
 }
 #endif

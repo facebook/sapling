@@ -32,6 +32,7 @@ cpp_unittest(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:xplat_keys",
         "//eden/fs/telemetry:xplat_logger",
+        "//eden/fs/utils:statmount",
         "//folly:conv",
         "//folly:exception",
         "//folly:file",
