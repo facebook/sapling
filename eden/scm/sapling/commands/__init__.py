@@ -2991,6 +2991,10 @@ def help_(ui, *names, **opts):
     if names and names[0] == "agent":
         agent_instructions = agent.get_agent_instructions(ui, names)
         ui.write(agent_instructions)
+        # Static config values have trailing whitespace trimmed, so instructions
+        # coming from builtin_static lose their final newline.
+        if not agent_instructions.endswith("\n"):
+            ui.write("\n")
         return 0
 
     name = " ".join(names) if names and names != (None,) else None

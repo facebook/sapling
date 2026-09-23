@@ -39,7 +39,7 @@ Test custom agent message
 With CODING_AGENT_METADATA set, help command should succeed
 
   $ CODING_AGENT_METADATA=id=test_agent sl help agent --config help.agent="Instructions for code agents using Sapling"
-  Instructions for code agents using Sapling (no-eol)
+  Instructions for code agents using Sapling
 
 With CODING_AGENT_METADATA and SAPLING_AGENT_ACKNOWLEDGED set, status command should succeed
 
