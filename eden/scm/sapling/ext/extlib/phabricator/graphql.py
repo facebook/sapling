@@ -360,7 +360,7 @@ class Client:
                                         }
                                     }
                                 }
-                                phabricator_diff_commit(first: 20) {
+                                phabricator_diff_commit(first: 20, from_commit_message_only: true) {
                                     nodes {
                                         commit_identifier
                                     }
