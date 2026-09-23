@@ -344,15 +344,24 @@ Check spacemovesdown
 
 Check ui.interface logic for the chunkselector
 
-The default interface is text
+Without an explicit default, use text for a missing or dumb TERM, curses for a
+normal terminal, and agent when running under a coding agent.
   $ cp $HGRCPATH.pretest $HGRCPATH
   $ chunkselectorinterface() {
   > sl debugshell -- <<'EOF'
   > print(repo.ui.interface("chunkselector"))
   > EOF
   > }
+  $ unset CODING_AGENT_METADATA
+  $ unset TERM
   $ chunkselectorinterface
   text
+  $ TERM=dumb chunkselectorinterface
+  text
+  $ TERM=xterm chunkselectorinterface
+  curses
+  $ TERM=dumb CODING_AGENT_METADATA=id=test chunkselectorinterface
+  repl
 
 If only the default is set, we'll use that for the feature, too
   $ cp $HGRCPATH.pretest $HGRCPATH
@@ -362,6 +371,15 @@ If only the default is set, we'll use that for the feature, too
   > EOF
   $ chunkselectorinterface
   curses
+
+The explicit default can select the REPL interface, too
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = repl
+  > EOF
+  $ chunkselectorinterface
+  repl
 
 It is possible to override the default interface with a feature specific
 interface

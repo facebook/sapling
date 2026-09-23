@@ -503,7 +503,7 @@ Agent: split copying one Differential Revision to every successor should abort:
   $ echo first > first
   $ echo second > second
   $ HGPLAIN=1 sl commit -Aqm "$(printf 'to split\n\nDifferential Revision: https://phabricator.intern.facebook.com/D12345')"
-  $ CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  $ CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true --config ui.interface=text <<EOF >/dev/null
   > y
   > y
   > n
@@ -539,7 +539,7 @@ A split may retain the Differential Revision on exactly one successor:
   >     )
   > state.touch()
   > EOF
-  $ HGEDITOR="$PYTHON edit-second-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  $ HGEDITOR="$PYTHON edit-second-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true --config ui.interface=text <<EOF >/dev/null
   > y
   > y
   > n
@@ -569,7 +569,7 @@ Agent: single-successor split dropping the Differential Revision should abort:
   >     + "\n"
   > )
   > EOF
-  $ HGEDITOR="$PYTHON drop-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true <<EOF >/dev/null
+  $ HGEDITOR="$PYTHON drop-split-message.py" CODING_AGENT_METADATA=id=test_agent sl split --config ui.interactive=true --config ui.interface=text <<EOF >/dev/null
   > y
   > y
   > y

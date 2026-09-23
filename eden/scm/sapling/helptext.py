@@ -2365,8 +2365,10 @@ User interface controls.
     Allow to prompt the user. (default: True)
 
 ``interface``
-    Select the default interface for interactive features (default: text).
-    Possible values are 'text' and 'curses'.
+    Select the default interface for interactive features.
+    Possible values are 'text', 'curses', and 'repl'. If unset, the default
+    is 'repl' when Sapling is run by a coding agent, 'text' when TERM is unset
+    or set to 'dumb', and 'curses' otherwise.
 
 ``interface.chunkselector``
     Select the interface for change recording (e.g. :prog:`commit -i`).

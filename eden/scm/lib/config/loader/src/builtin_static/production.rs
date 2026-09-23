@@ -493,7 +493,6 @@ singlecolonwarn=True
 [ui]
 enableincomingoutgoing=False
 hyperlink=True
-interface=curses
 logmeasuredtimes=True
 merge:interactive=editmerge
 mergemarkers=detailed

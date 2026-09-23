@@ -905,8 +905,11 @@ class ui:
 
         Then histedit will use the text interface and chunkselector will use
         the default curses interface (crecord at the moment).
+
+        If ui.interface is unset, infer the default from agent detection and
+        TERM. Feature-specific configuration still takes precedence.
         """
-        alldefaults = frozenset(["text", "curses"])
+        alldefaults = frozenset(["text", "curses", "repl"])
 
         featureinterfaces = {"chunkselector": ["text", "curses", "repl"]}
 
@@ -927,7 +930,16 @@ class ui:
             return "text"
 
         # Default interface for all the features
-        defaultinterface = "text"
+        term = self.environ.get("TERM")
+        if self.agent():
+            defaultinterface = "repl"
+        elif (not term and sys.platform != "win32") or term in (
+            "dumb",
+            "fake-term",  # internally used by tests
+        ):
+            defaultinterface = "text"
+        else:
+            defaultinterface = "curses"
         i = self.config("ui", "interface")
         if i in alldefaults:
             defaultinterface = i
