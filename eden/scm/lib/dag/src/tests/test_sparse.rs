@@ -568,6 +568,31 @@ async fn test_flush_no_over_fetch() {
 }
 
 #[tokio::test]
+async fn test_idmap_cache_flush_limit() {
+    let server = TestDag::draw("A..E # master: E");
+    let mut client = server.client_cloned_data().await;
+
+    // Resolving B, C, D remotely records them for the on-disk IdMap.
+    client
+        .dag
+        .vertex_id_batch(&["B".into(), "C".into(), "D".into()])
+        .await
+        .unwrap();
+
+    // A flush persists at most the configured number of them. The rest are
+    // resolved remotely again when needed.
+    client.dag.set_idmap_cache_flush_limit(2);
+    client.flush("E").await;
+    client.reopen();
+    let local = client
+        .dag
+        .contains_vertex_name_locally(&["B".into(), "C".into(), "D".into()])
+        .await
+        .unwrap();
+    assert_eq!(local.iter().filter(|&&local| local).count(), 2);
+}
+
+#[tokio::test]
 async fn test_offline_commit() {
     // Test that in A-B-C-D-E, inserting Z with parent B does not trigger
     // remote lookup if "C" is known (so "Z" and "C" are different vertexes).

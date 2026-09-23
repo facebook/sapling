@@ -37,6 +37,9 @@ impl Dispatcher {
     pub(crate) fn configure_libraries(&self, io: &IO) -> Result<()> {
         let config = self.config();
         indexedlog::config::configure(config)?;
+        if let Some(limit) = config.get_opt::<usize>("dag", "idmap-cache-flush-limit")? {
+            dag::config::set_idmap_cache_flush_limit(limit);
+        }
         gitcompat::GlobalGit::set_default_config(config);
         initialize_hgtime(config)?;
         initialize_blackbox(&self.optional_repo)?;

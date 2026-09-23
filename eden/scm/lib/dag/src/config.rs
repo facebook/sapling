@@ -17,3 +17,12 @@ pub(crate) static BATCH_SIZE: AtomicUsize = AtomicUsize::new(1024);
 pub fn set_batch_size(value: usize) {
     BATCH_SIZE.store(value.max(1), Ordering::Release);
 }
+
+/// Default for `AbstractDag::set_idmap_cache_flush_limit`: how many remotely
+/// resolved vertexes one flush may persist to the on-disk IdMap. 0 means no
+/// limit.
+pub(crate) static IDMAP_CACHE_FLUSH_LIMIT: AtomicUsize = AtomicUsize::new(10_000);
+
+pub fn set_idmap_cache_flush_limit(value: usize) {
+    IDMAP_CACHE_FLUSH_LIMIT.store(value, Ordering::Release);
+}

@@ -96,6 +96,8 @@ where
             overlay_map: Default::default(),
             overlay_map_id_set,
             overlay_map_paths: Default::default(),
+            idmap_cache_flush_limit: crate::config::IDMAP_CACHE_FLUSH_LIMIT
+                .load(std::sync::atomic::Ordering::Acquire),
             remote_protocol: Arc::new(()),
             managed_virtual_group: None,
 
