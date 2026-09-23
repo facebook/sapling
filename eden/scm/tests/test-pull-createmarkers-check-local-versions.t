@@ -83,7 +83,11 @@ Setup phabricator response
   >                     {
   >                       "commit_identifier": "23bffadc9066efde1d8e9f53ee3d5ea9da04ff1b"
   >                     }
-  >                   ]
+  >                   ],
+  >                   "page_info": {
+  >                     "has_next_page": true,
+  >                     "end_cursor": "cursor"
+  >                   }
   >                 }
   >               },
   >               {
