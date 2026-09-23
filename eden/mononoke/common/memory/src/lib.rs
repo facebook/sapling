@@ -8,6 +8,7 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+#[cfg(not(target_os = "linux"))]
 use memory_stats::memory_stats;
 
 static MAX_MEMORY: AtomicUsize = AtomicUsize::new(0);
@@ -23,6 +24,9 @@ pub struct MemoryStats {
 
     /// RSS memory free in pct.
     pub rss_free_pct: f32,
+
+    /// Linux VmSwap in bytes, excluding shared-memory swap; zero if unavailable.
+    pub swap_bytes: usize,
 }
 
 pub fn set_max_memory(max_memory: usize) {
@@ -32,20 +36,42 @@ pub fn set_max_memory(max_memory: usize) {
 pub fn get_stats() -> Result<MemoryStats, String> {
     let max_memory = MAX_MEMORY.load(Ordering::Relaxed);
     if max_memory == 0 {
-        Err("max_memory is not set".to_string())
-    } else if let Some(usage) = memory_stats() {
-        Ok(populate_stats(max_memory, usage.physical_mem))
-    } else {
-        Err("failed to get memory stats".to_string())
+        return Err("max_memory is not set".to_string());
     }
+
+    #[cfg(target_os = "linux")]
+    let (rss_bytes, swap_bytes) = {
+        use procfs::FromRead;
+        use procfs::process::Status;
+
+        let status = Status::from_file("/proc/self/status")
+            .map_err(|err| format!("failed to read process memory: {err}"))?;
+        memory_bytes_from_status(status.vmrss, status.vmswap).ok_or_else(|| {
+            "missing VmRSS or invalid memory size in /proc/self/status".to_string()
+        })?
+    };
+    #[cfg(not(target_os = "linux"))]
+    let (rss_bytes, swap_bytes) = memory_stats()
+        .map(|usage| (usage.physical_mem, 0))
+        .ok_or_else(|| "failed to get memory stats".to_string())?;
+
+    Ok(populate_stats(max_memory, rss_bytes, swap_bytes))
 }
 
-fn populate_stats(max_memory: usize, used_mem: usize) -> MemoryStats {
+#[cfg(target_os = "linux")]
+fn memory_bytes_from_status(rss_kib: Option<u64>, swap_kib: Option<u64>) -> Option<(usize, usize)> {
+    let rss_bytes = usize::try_from(rss_kib?.checked_mul(1024)?).ok()?;
+    let swap_bytes = usize::try_from(swap_kib.unwrap_or(0).checked_mul(1024)?).ok()?;
+    Some((rss_bytes, swap_bytes))
+}
+
+fn populate_stats(max_memory: usize, used_mem: usize, swap_bytes: usize) -> MemoryStats {
     let free_mem = max_memory.saturating_sub(used_mem);
     MemoryStats {
         total_rss_bytes: max_memory,
         rss_free_bytes: free_mem,
         rss_free_pct: (free_mem as f64 / max_memory as f64) as f32 * 100.0,
+        swap_bytes,
     }
 }
 
@@ -72,6 +98,22 @@ mod test {
         MAX_MEMORY.store(old, Ordering::Relaxed);
     }
 
+    #[cfg(target_os = "linux")]
+    #[mononoke::test]
+    fn missing_swap_preserves_rss_measurement() {
+        assert_eq!(
+            memory_bytes_from_status(Some(123), None),
+            Some((123 * 1024, 0))
+        );
+        assert_eq!(
+            memory_bytes_from_status(Some(123), Some(5)),
+            Some((123 * 1024, 5 * 1024))
+        );
+        assert_eq!(memory_bytes_from_status(None, Some(5)), None);
+        assert_eq!(memory_bytes_from_status(Some(u64::MAX), None), None);
+        assert_eq!(memory_bytes_from_status(Some(123), Some(u64::MAX)), None);
+    }
+
     #[mononoke::test]
     fn test_populate_stats() {
         let cases = [
@@ -95,7 +137,7 @@ mod test {
             expected_rss_free_pct,
         ) in cases
         {
-            let stats = populate_stats(max_memory, used_mem);
+            let stats = populate_stats(max_memory, used_mem, 0);
             assert_eq!(
                 stats.total_rss_bytes, expected_total_rss_bytes,
                 "when max_memory={max_memory} and used_mem={used_mem}"

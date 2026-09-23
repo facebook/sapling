@@ -7,7 +7,8 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     test_labels = ["serialize_test_cases"],
-    deps = [
-        "fbsource//third-party/rust:memory-stats",
-    ],
+    deps = select({
+        "DEFAULT": ["fbsource//third-party/rust:memory-stats"],
+        "ovr_config//os:linux": ["fbsource//third-party/rust:procfs"],
+    }),
 )
