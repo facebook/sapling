@@ -271,6 +271,10 @@ class obsoletecache:
         """Returns true if the node is obsolete in the repository."""
         if node is None:
             return False
+        if self.complete[None]:
+            # The full set covers every non-public node in the repo, so
+            # membership alone answers the question.
+            return node in self.obsolete[None]
         if node not in repo:
             return False
         ispublic = getispublicfunc(repo)
@@ -279,7 +283,7 @@ class obsoletecache:
         obsolete = self.obsolete[None]
         if node in obsolete:
             return True
-        if self.complete[None] or node in self.notobsolete[None]:
+        if node in self.notobsolete[None]:
             return False
         clhasnode = getisvisiblefunc(repo)
 
