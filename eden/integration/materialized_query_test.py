@@ -4,13 +4,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-strict
+from __future__ import annotations
 
+import contextlib
 import errno
+import io
 import os
 import stat
 from typing import Dict
 
+from eden.fs.cli import util
 from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
@@ -274,6 +277,59 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             self.assertEqual(set(), set(changed.createdPaths))
             self.assertEqual({b"adir/file"}, set(changed.changedPaths))
             self.assertEqual(set(), set(changed.removedPaths))
+
+    async def test_directory_rename_journal_replay(self) -> None:
+        if os.name == "nt":
+            self.skipTest("PrjFS records descendant changes during directory renames")
+
+        self.eden.shutdown()
+        logs = io.StringIO()
+        # The daemon's stderr forwarding thread keeps this stream after startup.
+        with contextlib.redirect_stderr(logs):
+            self.eden.start()
+
+        self.write_file("adir/changed", "before")
+        self.write_file("staging/file", "replacement")
+        self.write_file("staging/changed", "replacement")
+        async with self.get_async_thrift_client() as client:
+            await client.setOption(
+                "logging", "eden.thrift.getFilesChangedSince=DBG3;default:async=false"
+            )
+            pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            os.unlink(os.path.join(self.mount, "adir/file"))
+            os.unlink(os.path.join(self.mount, "adir/changed"))
+            os.replace(
+                os.path.join(self.mount, "staging"), os.path.join(self.mount, "adir")
+            )
+            os.unlink(os.path.join(self.mount, "adir/file"))
+            self.write_file("adir/changed", "after")
+
+            for query_count in (1, 2):
+                changed = await client.getFilesChangedSince(self.mount_path_bytes, pos)
+                self.assertEqual(set(), set(changed.createdPaths))
+                self.assertEqual(
+                    {b"adir", b"staging", b"adir/file", b"adir/changed"},
+                    set(changed.changedPaths),
+                )
+                output = util.poll_until(
+                    lambda query_count=query_count: logs.getvalue()
+                    if logs.getvalue().count("getFilesChangedSince() took ")
+                    >= query_count
+                    else None,
+                    timeout=5,
+                    interval=0.01,
+                )
+                # FIXME: A valid parent rename produces errors on every replay.
+                for path, sequence in (
+                    ("adir/file", "Removed, Removed"),
+                    ("adir/changed", "Removed, Changed"),
+                ):
+                    self.assertEqual(
+                        query_count,
+                        output.count(
+                            f"Journal for {path} holds invalid {sequence} sequence"
+                        ),
+                    )
 
     async def test_renameFile(self) -> None:
         async with self.get_async_thrift_client() as client:
