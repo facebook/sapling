@@ -2370,7 +2370,7 @@ User interface controls.
 
 ``interface.chunkselector``
     Select the interface for change recording (e.g. :prog:`commit -i`).
-    Possible values are 'text' and 'curses'.
+    Possible values are 'text', 'curses', and 'repl'.
     This config overrides the interface specified by ui.interface.
 
 ``logtemplate``

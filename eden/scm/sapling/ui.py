@@ -908,7 +908,7 @@ class ui:
         """
         alldefaults = frozenset(["text", "curses"])
 
-        featureinterfaces = {"chunkselector": ["text", "curses"]}
+        featureinterfaces = {"chunkselector": ["text", "curses", "repl"]}
 
         # Feature-specific interface
         if feature not in featureinterfaces.keys():

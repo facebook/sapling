@@ -337,17 +337,21 @@ def setupwrapcolorwrite(ui):
     return oldwrite
 
 
-def filterchunks(ui, originalhunks, usecurses, testfile, operation=None):
-    if usecurses:
+def filterchunks(ui, originalhunks, interface, testfile, operation=None):
+    if interface == "curses":
         if testfile:
             recordfn = crecordmod.testdecorator(testfile, crecordmod.testchunkselector)
         else:
             recordfn = crecordmod.chunkselector
 
         return crecordmod.filterpatch(ui, originalhunks, recordfn, operation)
+    if interface == "repl":
+        from . import repl_record
 
-    else:
-        return patch.filterpatch(ui, originalhunks, operation)
+        return crecordmod.filterpatch(
+            ui, originalhunks, repl_record.chunkselector, operation
+        )
+    return patch.filterpatch(ui, originalhunks, operation)
 
 
 def recordfilter(ui, originalhunks, operation=None):
@@ -357,15 +361,20 @@ def recordfilter(ui, originalhunks, operation=None):
     kind of filtering they are doing: reverting, committing, shelving, etc.
     (see patch.filterpatch).
     """
-    usecurses = crecordmod.checkcurses(ui)
+    interface = ui.interface("chunkselector")
+    if interface == "curses" and not crecordmod.checkcurses(ui):
+        interface = "text"
     testfile = ui.config("experimental", "crecordtest")
-    oldwrite = setupwrapcolorwrite(ui)
+    oldwrite = None
+    if interface != "repl":
+        oldwrite = setupwrapcolorwrite(ui)
     try:
         newchunks, newopts = filterchunks(
-            ui, originalhunks, usecurses, testfile, operation
+            ui, originalhunks, interface, testfile, operation
         )
     finally:
-        ui.writebytes = oldwrite
+        if oldwrite is not None:
+            ui.writebytes = oldwrite
     return newchunks, newopts
 
 
