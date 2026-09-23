@@ -1597,7 +1597,7 @@ UnixSocket::Message PrivHelperServer::processSetFuseReadAhead(
 }
 
 void PrivHelperServer::setMemoryPriorityForProcess(pid_t pid, int priority) {
-  auto processPriority = ProcessPriority{priority};
+  auto processPriority = ProcessPriority{priority, uid_};
 
   if (processPriority.setPrioritiesForProcess(pid)) {
     throwf<std::runtime_error>(

@@ -46,6 +46,7 @@
 #include <sys/mount.h>
 #include <sys/prctl.h>
 #include <sys/statvfs.h>
+#include "eden/fs/privhelper/priority/LinuxMemoryPriority.h"
 #include "eden/fs/utils/Statmount.h"
 #endif
 
@@ -982,6 +983,62 @@ TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
 }
 
 #ifdef __linux__
+TEST(PrivHelperMemoryPriorityTest, checksOwnershipBeforeWriting) {
+  runInMountNamespace([&] {
+    int pipeFds[2];
+    checkUnixError(pipe(pipeFds));
+    File reader(pipeFds[0], true);
+    File writer(pipeFds[1], true);
+    const auto pid = fork();
+    if (pid < 0) {
+      FAIL() << "fork failed: " << folly::errnoStr(errno);
+    }
+    if (pid == 0) {
+      writer.close();
+      char byte;
+      _exit(folly::readNoInt(reader.fd(), &byte, 1) == 0 ? 0 : 1);
+    }
+    reader.close();
+    SCOPE_EXIT {
+      writer.close();
+      int status;
+      EXPECT_EQ(pid, waitpid(pid, &status, 0));
+      EXPECT_TRUE(WIFEXITED(status));
+      EXPECT_EQ(0, WEXITSTATUS(status));
+    };
+
+    LinuxMemoryPriority owned(1000, getuid());
+    const auto original = owned.getPriorityForProcess(pid);
+    ASSERT_TRUE(original.has_value());
+    LinuxMemoryPriority otherOwner(1000, getuid() + 1);
+    EXPECT_THROW_RE(
+        otherOwner.setPriorityForProcess(pid),
+        std::system_error,
+        "is not owned by user");
+    EXPECT_EQ(original, owned.getPriorityForProcess(pid));
+    EXPECT_EQ(0, owned.setPriorityForProcess(pid));
+    EXPECT_EQ(1000, owned.getPriorityForProcess(pid));
+
+    installPrivHelperRollbackMarker();
+    EXPECT_EQ(0, otherOwner.setPriorityForProcess(pid));
+    EXPECT_EQ(1000, owned.getPriorityForProcess(pid));
+  });
+}
+
+TEST(PrivHelperMemoryPriorityTest, allowsSettingItsOwnPriority) {
+  EXPECT_EXIT(
+      {
+        LinuxMemoryPriority priority(1000, getuid() + 1);
+        const auto result = priority.setPriorityForProcess(getpid());
+        _exit(
+            result == 0 && priority.getPriorityForProcess(getpid()) == 1000
+                ? 0
+                : 1);
+      },
+      ::testing::ExitedWithCode(0),
+      "");
+}
+
 TEST_F(PrivHelperRawProtocolTest, famRequestsCannotCreateFilesOnLinux) {
   TemporaryDirectory dir;
   const auto outputPath = (dir.path() / "victim.txt").string();

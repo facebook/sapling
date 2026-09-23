@@ -15,6 +15,10 @@ cpp_library(
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",
+        "//eden/fs/privhelper:rollback",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
         "//folly/logging:logging",
     ],
     exported_deps = [

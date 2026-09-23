@@ -17,11 +17,13 @@
 
 namespace facebook::eden {
 
-ProcessPriority::ProcessPriority(std::optional<int32_t> memoryPriority) {
+ProcessPriority::ProcessPriority(
+    std::optional<int32_t> memoryPriority,
+    [[maybe_unused]] uid_t expectedUid) {
   if (memoryPriority.has_value()) {
 #ifdef __linux__
     memoryPriority_ = std::make_shared<LinuxMemoryPriority>(
-        /*oomScoreAdj=*/memoryPriority.value());
+        /*oomScoreAdj=*/memoryPriority.value(), expectedUid);
 #elif defined(__APPLE__) // __linux__
     memoryPriority_ = std::make_shared<DarwinMemoryPriority>(
         /*jetsamPriority=*/memoryPriority.value());
