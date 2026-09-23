@@ -36,7 +36,7 @@ export default function useRefreshPullRequest(): () => void {
 
     // Save scroll position before refresh. This will be restored by
     // PullRequestWithParams after the pull request data updates.
-    setPendingScrollRestore(capturePullRequestScrollPosition());
+    setPendingScrollRestore(position => position ?? capturePullRequestScrollPosition());
 
     const params = {number, orgAndRepo};
     // Increment the refresh trigger to cause the PR atom to re-fetch
