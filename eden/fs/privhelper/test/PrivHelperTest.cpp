@@ -912,6 +912,29 @@ TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
       PrivHelperConn::REQ_SET_USE_EDENFS, useEdenFsResponse);
 }
 
+#ifdef __linux__
+TEST_F(PrivHelperRawProtocolTest, famRequestsCannotCreateFilesOnLinux) {
+  TemporaryDirectory dir;
+  const auto outputPath = (dir.path() / "victim.txt").string();
+  auto response = client_->sendAndRecv(
+      PrivHelperConn::serializeStartFamRequest(
+          1, {dir.path().string()}, outputPath, outputPath, false));
+  EXPECT_THROW_RE(
+      PrivHelperConn::parseStartFamResponse(response),
+      std::exception,
+      "unexpected privhelper message type");
+  EXPECT_EQ(-1, access(outputPath.c_str(), F_OK));
+  EXPECT_EQ(ENOENT, errno);
+
+  response = client_->sendAndRecv(PrivHelperConn::serializeStopFamRequest(2));
+  EXPECT_THROW_RE(
+      PrivHelperConn::parseEmptyResponse(
+          PrivHelperConn::REQ_STOP_FAM, response),
+      std::exception,
+      "unexpected privhelper message type");
+}
+#endif
+
 TEST_F(PrivHelperRawProtocolTest, cleanShutdownNotificationIsNotAnswered) {
   client_->send(
       PrivHelperConn::serializeNotifyCleanShutdownRequest(/*xid=*/1, "stop"));

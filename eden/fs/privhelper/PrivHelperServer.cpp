@@ -2021,10 +2021,16 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processGetPid();
     case PrivHelperConn::REQ_GET_NAMESPACE_INFO:
       return processGetNamespaceInfo(cursor);
+#ifdef __APPLE__
     case PrivHelperConn::REQ_START_FAM:
       return processStartFam(cursor);
     case PrivHelperConn::REQ_STOP_FAM:
       return processStopFam();
+#else
+    case PrivHelperConn::REQ_START_FAM:
+    case PrivHelperConn::REQ_STOP_FAM:
+      break;
+#endif
     case PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS:
       return processSetMemoryPriorityForProcess(cursor);
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
