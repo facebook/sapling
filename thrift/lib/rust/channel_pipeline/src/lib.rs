@@ -152,6 +152,9 @@
 //! | [`BytesPtr`] | Zero-copy `unique_ptr<folly::IOBuf>` adapter |
 //! | [`PipelineError`] | Owned Rust error converted to `folly::exception_wrapper` |
 //! | [`HandlerResult`] | FFI-stable return value (`Success`, `Backpressure`, `Error`) |
+//! | [`TailReadOutcome`] | Tail read result with optional post-borrow write and feedback token |
+//! | [`TailWriteOutcome`] | Tail write-ready output with optional feedback token |
+//! | [`TailWriteFeedbackToken`] | Allocation-free identity returned with the actual write result |
 //! | [`RustMessageAdapter`] | Trait describing how a message type crosses the FFI boundary |
 //! | [`BorrowedMessageAdapter`] | Callback-scoped view of an opaque inline C++ message without taking it from the box |
 //! | [`OwnedMessageAdapter`] | Move owned state out of an inline C++ message and restore it later |
@@ -290,4 +293,8 @@ pub use handler::NoopHandler;
 pub use handler::RustHandler;
 pub use tail::RustTailEndpoint;
 pub use tail::RustTailEndpointOpaque;
+pub use tail::TailReadOutcome;
+pub use tail::TailWrite;
+pub use tail::TailWriteFeedbackToken;
+pub use tail::TailWriteOutcome;
 pub use tail::box_tail_endpoint;

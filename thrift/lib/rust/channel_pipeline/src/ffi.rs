@@ -31,6 +31,23 @@ static TAIL_LIFECYCLE_CALLBACK_PANICS: AtomicU64 = AtomicU64::new(0);
 
 #[cxx::bridge(namespace = "channel_pipeline_rust")]
 pub(crate) mod ffi {
+    struct FfiTailOutcome {
+        result: i32,
+        message: UniquePtr<IOBuf>,
+        feedback_token: u64,
+    }
+
+    struct TailOutcomeTestConfig {
+        result: i32,
+        read_message: UniquePtr<IOBuf>,
+        read_token: u64,
+        ready_message: UniquePtr<IOBuf>,
+        ready_token: u64,
+        second_ready_message: UniquePtr<IOBuf>,
+        second_ready_token: u64,
+        close_on_feedback: bool,
+    }
+
     extern "Rust" {
         type LocalTaskHandle;
         type RustHandlerOpaque;
@@ -103,22 +120,34 @@ pub(crate) mod ffi {
         fn rust_tail_endpoint_new_panicking_lifecycle_write_test(
             on_activation: bool,
         ) -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_read_outcome_test(
+            config: TailOutcomeTestConfig,
+        ) -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_legacy_write_bench() -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_returned_write_bench() -> Box<RustTailEndpointOpaque>;
         fn rust_tail_endpoint_reset_test_counts();
         fn rust_tail_endpoint_reset_lifecycle_write_test_counts();
         fn rust_tail_endpoint_reset_lifecycle_callback_panic_count();
+        fn rust_tail_endpoint_reset_read_outcome_test_counts();
         fn rust_tail_endpoint_test_counts() -> Vec<u32>;
         fn rust_tail_endpoint_lifecycle_write_test_counts() -> Vec<u32>;
         fn rust_tail_endpoint_lifecycle_callback_panic_count() -> u64;
+        fn rust_tail_endpoint_read_outcome_test_counts() -> Vec<u64>;
         fn rust_tail_endpoint_queued_test_completions() -> u32;
         fn rust_tail_endpoint_on_read(
             endpoint: &mut RustTailEndpointOpaque,
             context: Pin<&mut FfiCallbackContext>,
             msg: Pin<&mut TypeErasedBox>,
-        ) -> i32;
+        ) -> FfiTailOutcome;
         fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque);
         fn rust_tail_endpoint_on_write_ready(
             endpoint: &mut RustTailEndpointOpaque,
-        ) -> UniquePtr<IOBuf>;
+        ) -> FfiTailOutcome;
+        fn rust_tail_endpoint_on_write_result(
+            endpoint: &mut RustTailEndpointOpaque,
+            feedback_token: u64,
+            result: i32,
+        );
         fn rust_tail_endpoint_on_pipeline_active(
             endpoint: &mut RustTailEndpointOpaque,
         ) -> UniquePtr<IOBuf>;
@@ -349,10 +378,16 @@ use crate::handler::PanickingTestHandler;
 use crate::handler::ReadinessProbeHandler;
 use crate::handler::RustHandler;
 use crate::tail::EchoTestTail;
+use crate::tail::LegacyWriteBenchTail;
 use crate::tail::QueuedTestTail;
+use crate::tail::ReadOutcomeTestTail;
+use crate::tail::ReturnedWriteBenchTail;
 use crate::tail::RustTailEndpoint;
 use crate::tail::RustTailEndpointOpaque;
+pub use crate::tail::TailReadOutcome;
 pub use crate::tail::TailWrite;
+pub use crate::tail::TailWriteFeedbackToken;
+pub use crate::tail::TailWriteOutcome;
 
 pub fn local_task_handle_cancel(task: Box<LocalTaskHandle>) {
     drop(task);
@@ -585,6 +620,101 @@ pub fn rust_tail_endpoint_new_panicking_lifecycle_write_test(
     ))
 }
 
+fn test_tail_write(
+    message: cxx::UniquePtr<ffi::IOBuf>,
+    token: u64,
+) -> (Option<TailWrite>, Option<TailWriteFeedbackToken>) {
+    let write = TailWrite::try_new(BytesPtr::new(message)).ok();
+    let feedback = TailWriteFeedbackToken::try_new(token).ok();
+    (write, feedback)
+}
+
+pub fn rust_tail_endpoint_new_read_outcome_test(
+    config: ffi::TailOutcomeTestConfig,
+) -> Box<RustTailEndpointOpaque> {
+    const CLOSE_ON_READ_TOKEN: u64 = u64::MAX;
+    const CLOSE_ON_READY_TOKEN: u64 = u64::MAX - 1;
+    const FEEDBACK_WRITE_TOKEN: u64 = u64::MAX - 2;
+    const ACTIVATION_WRITE_TOKEN: u64 = u64::MAX - 3;
+    let (read_write, read_feedback, read_activation_write) =
+        if config.read_token == ACTIVATION_WRITE_TOKEN {
+            (
+                None,
+                None,
+                TailWrite::try_new(BytesPtr::new(config.read_message)).ok(),
+            )
+        } else {
+            let (write, feedback) = test_tail_write(config.read_message, config.read_token);
+            (write, feedback, None)
+        };
+    let (ready_write, ready_feedback, activation_write) =
+        if config.ready_token == ACTIVATION_WRITE_TOKEN {
+            (
+                None,
+                None,
+                TailWrite::try_new(BytesPtr::new(config.ready_message)).ok(),
+            )
+        } else {
+            let (write, feedback) = test_tail_write(config.ready_message, config.ready_token);
+            (write, feedback, None)
+        };
+    let (second_ready_write, second_ready_feedback, feedback_write, second_activation_write) =
+        if config.second_ready_token == FEEDBACK_WRITE_TOKEN {
+            (
+                None,
+                None,
+                TailWrite::try_new(BytesPtr::new(config.second_ready_message))
+                    .ok()
+                    .map(TailWrite::into_bytes),
+                None,
+            )
+        } else if config.second_ready_token == ACTIVATION_WRITE_TOKEN {
+            (
+                None,
+                None,
+                None,
+                TailWrite::try_new(BytesPtr::new(config.second_ready_message)).ok(),
+            )
+        } else {
+            let (write, feedback) =
+                test_tail_write(config.second_ready_message, config.second_ready_token);
+            (write, feedback, None, None)
+        };
+    let ready_outcomes = [
+        TailWriteOutcome::new(ready_write),
+        TailWriteOutcome::new(second_ready_write),
+    ]
+    .into_iter()
+    .zip([ready_feedback, second_ready_feedback])
+    .map(|(outcome, feedback)| match feedback {
+        Some(token) => outcome.with_feedback(token),
+        None => outcome,
+    })
+    .collect();
+
+    crate::tail::box_tail_endpoint(ReadOutcomeTestTail::new(
+        HandlerResult::from_ffi(config.result),
+        read_write,
+        read_feedback,
+        ready_outcomes,
+        feedback_write,
+        read_activation_write
+            .or(activation_write)
+            .or(second_activation_write),
+        config.read_token == CLOSE_ON_READ_TOKEN,
+        config.ready_token == CLOSE_ON_READY_TOKEN,
+        config.close_on_feedback,
+    ))
+}
+
+pub fn rust_tail_endpoint_new_returned_write_bench() -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(ReturnedWriteBenchTail)
+}
+
+pub fn rust_tail_endpoint_new_legacy_write_bench() -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(LegacyWriteBenchTail)
+}
+
 pub fn rust_tail_endpoint_reset_test_counts() {
     crate::tail::reset_test_counts();
 }
@@ -595,6 +725,10 @@ pub fn rust_tail_endpoint_reset_lifecycle_write_test_counts() {
 
 pub fn rust_tail_endpoint_reset_lifecycle_callback_panic_count() {
     TAIL_LIFECYCLE_CALLBACK_PANICS.store(0, Ordering::Relaxed);
+}
+
+pub fn rust_tail_endpoint_reset_read_outcome_test_counts() {
+    crate::tail::reset_read_outcome_test_counts();
 }
 
 pub fn rust_tail_endpoint_test_counts() -> Vec<u32> {
@@ -609,6 +743,10 @@ pub fn rust_tail_endpoint_lifecycle_callback_panic_count() -> u64 {
     TAIL_LIFECYCLE_CALLBACK_PANICS.load(Ordering::Relaxed)
 }
 
+pub fn rust_tail_endpoint_read_outcome_test_counts() -> Vec<u64> {
+    crate::tail::read_outcome_test_counts().to_vec()
+}
+
 pub fn rust_tail_endpoint_queued_test_completions() -> u32 {
     crate::tail::queued_test_completions()
 }
@@ -617,17 +755,34 @@ pub fn rust_tail_endpoint_on_read(
     endpoint: &mut RustTailEndpointOpaque,
     context: std::pin::Pin<&mut ffi::FfiCallbackContext>,
     msg: std::pin::Pin<&mut TypeErasedBox>,
-) -> i32 {
+) -> ffi::FfiTailOutcome {
     if ffi::rust_teb_is_empty(msg.as_ref().get_ref()) {
-        return HandlerResult::Error as i32;
+        return ffi_tail_outcome(HandlerResult::Error, None, None);
     }
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        endpoint.inner.on_read(
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        endpoint.inner.on_read_outcome(
             &mut CallbackContext::new(context),
             RustTypeErasedBox::new(msg),
-        ) as i32
+        )
     }))
-    .unwrap_or(HandlerResult::Error as i32)
+    .unwrap_or_else(|_| TailReadOutcome::new(HandlerResult::Error));
+    let (result, write, feedback) = outcome.into_parts();
+    ffi_tail_outcome(result, write, feedback)
+}
+
+fn ffi_tail_outcome(
+    result: HandlerResult,
+    write: Option<TailWrite>,
+    feedback: Option<TailWriteFeedbackToken>,
+) -> ffi::FfiTailOutcome {
+    ffi::FfiTailOutcome {
+        result: result as i32,
+        message: write
+            .map(TailWrite::into_bytes)
+            .map(BytesPtr::into_inner)
+            .unwrap_or_else(cxx::UniquePtr::null),
+        feedback_token: feedback.map(TailWriteFeedbackToken::get).unwrap_or(0),
+    }
 }
 
 fn contain_tail(
@@ -640,7 +795,9 @@ fn contain_tail(
 }
 
 fn record_tail_lifecycle_callback_panic(callback: &'static str) {
-    let panic_count = TAIL_LIFECYCLE_CALLBACK_PANICS.fetch_add(1, Ordering::Relaxed) + 1;
+    let panic_count = TAIL_LIFECYCLE_CALLBACK_PANICS
+        .fetch_add(1, Ordering::Relaxed)
+        .wrapping_add(1);
     tracing::error!(
         callback,
         panic_count,
@@ -673,10 +830,31 @@ pub fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque) {
 
 pub fn rust_tail_endpoint_on_write_ready(
     endpoint: &mut RustTailEndpointOpaque,
-) -> cxx::UniquePtr<ffi::IOBuf> {
-    contain_tail_write(endpoint, "on_write_ready_write", |endpoint| {
-        endpoint.on_write_ready_write()
-    })
+) -> ffi::FfiTailOutcome {
+    let outcome = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        endpoint.inner.on_write_ready_outcome()
+    })) {
+        Ok(outcome) => outcome,
+        Err(_) => {
+            record_tail_lifecycle_callback_panic("on_write_ready_outcome");
+            TailWriteOutcome::new(None)
+        }
+    };
+    let (write, feedback) = outcome.into_parts();
+    ffi_tail_outcome(HandlerResult::Success, write, feedback)
+}
+
+pub fn rust_tail_endpoint_on_write_result(
+    endpoint: &mut RustTailEndpointOpaque,
+    feedback_token: u64,
+    result: i32,
+) {
+    let Ok(token) = TailWriteFeedbackToken::try_new(feedback_token) else {
+        return;
+    };
+    contain_tail(endpoint, |endpoint| {
+        endpoint.on_write_result(token, HandlerResult::from_ffi(result));
+    });
 }
 
 pub fn rust_tail_endpoint_on_pipeline_active(
