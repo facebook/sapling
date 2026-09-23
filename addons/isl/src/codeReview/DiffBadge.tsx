@@ -115,6 +115,9 @@ function DiffSpinner({diffId, provider}: {diffId: DiffId; provider: UICodeReview
   );
 }
 
+/** Mirrors the fb-only `RunningAgentAssignment` on `PhabricatorDiffSummary`, which OSS builds cannot import. */
+type RunningAgentAssignmentShape = {actionType?: string; agentName?: string};
+
 function DiffInfoInner({
   diffId,
   commit,
@@ -155,6 +158,11 @@ function DiffInfoInner({
       : undefined;
   // Use version-level isDeferred from deferredTestingInfo for accurate detection
   const isDeferred = deferredTestingInfo?.isDeferred === true || info.signalSummary === 'deferred';
+  // runningAgentAssignment is fb-only (phabricator). Use 'in' check to avoid OSS type errors.
+  const runningAgentAssignment: RunningAgentAssignmentShape | undefined =
+    'runningAgentAssignment' in info
+      ? (info.runningAgentAssignment as RunningAgentAssignmentShape)
+      : undefined;
 
   return (
     <div
@@ -162,6 +170,9 @@ function DiffInfoInner({
       data-testid={`${provider.name}-diff-info`}>
       <DiffSignalSummary commit={commit} diff={info} diffId={diffId} />
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
+      {runningAgentAssignment != null && Internal.AgentStatusIndicator != null && (
+        <Internal.AgentStatusIndicator assignment={runningAgentAssignment} />
+      )}
       {provider.DiffLandButtonContent && !isInMergeConflicts && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
