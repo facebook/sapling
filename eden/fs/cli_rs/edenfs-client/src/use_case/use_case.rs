@@ -34,6 +34,8 @@ pub enum UseCaseId {
     #[strum(serialize = "buck2")]
     Buck2,
     Debugging,
+    #[strum(serialize = "edensearch")]
+    EdenSearch,
     #[strum(serialize = "edenfsctl")]
     EdenFsCtl,
     EdenFsTests,
@@ -208,5 +210,21 @@ impl UseCase {
             }));
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn edensearch_round_trips_through_its_string() {
+        assert_eq!(
+            UseCaseId::from_str("edensearch").unwrap(),
+            UseCaseId::EdenSearch
+        );
+        assert_eq!(<&'static str>::from(UseCaseId::EdenSearch), "edensearch");
     }
 }
