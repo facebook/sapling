@@ -107,6 +107,15 @@ impl LocalPipelineContext {
         self.inner.pin_mut().local_cancel_write_ready();
     }
 
+    /// Close the pipeline and consume this connection-scoped handle.
+    ///
+    /// Native code detaches the pipeline context before teardown can invoke
+    /// `handler_removed`, so reentrant removal cannot observe this handle in
+    /// its owner's state or leave it able to access the removed context.
+    pub fn close(mut self) {
+        self.inner.pin_mut().local_close();
+    }
+
     pub fn is_closed(&self) -> bool {
         self.inner.local_is_closed()
     }

@@ -179,6 +179,8 @@ pub(crate) mod ffi {
             self: Pin<&mut FfiCallbackContext>,
         ) -> UniquePtr<FfiLocalPipelineContext>;
 
+        #[cxx_name = "close"]
+        fn local_close(self: Pin<&mut FfiLocalPipelineContext>);
         #[cxx_name = "awaitWriteReady"]
         fn local_await_write_ready(self: Pin<&mut FfiLocalPipelineContext>);
         #[cxx_name = "cancelWriteReady"]
