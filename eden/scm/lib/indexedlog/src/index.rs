@@ -54,6 +54,8 @@
 //   long.
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
+// - A "<index>.verified" file next to the index caches which checksum chunks were verified
+//   on the current OS boot. It is not part of the index. See VERIFIED_CACHE_MAGIC.
 
 use std::borrow::Cow;
 use std::cmp::Ordering::Equal;
@@ -80,10 +82,13 @@ use std::ops::RangeBounds;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::Ordering::Release;
 use std::time::Instant;
 
 use byteorder::ByteOrder;
@@ -110,6 +115,29 @@ use crate::utils::xxhash;
 use crate::utils::xxhash32;
 
 static INDEX_WRITE_MS: Counter = Counter::new_counter("indexedlog.index.write_ms");
+static INDEX_CHECKSUM_CHUNKS_HASHED: Counter =
+    Counter::new_counter("indexedlog.index.checksum_chunks_hashed");
+static INDEX_VERIFIED_CACHE_CHUNKS_LOADED: Counter =
+    Counter::new_counter("indexedlog.index.verified_cache_chunks_loaded");
+static INDEX_VERIFIED_CACHE_SAVES: Counter =
+    Counter::new_counter("indexedlog.index.verified_cache_saves");
+
+/// Verified-chunk cache file, stored next to the index as `<index>.verified`.
+/// It records which checksum chunks were already verified on the current OS
+/// boot so later processes can skip re-hashing them. See
+/// `Index::load_verified_cache` for why this is sound.
+///
+/// ```plain,ignore
+/// MAGIC (8 bytes) + BOOT_ID (LE64) + CHUNK_SIZE_LOGARITHM (LE32) +
+/// COMPLETE_CHUNK_COUNT (LE64) + XXHASH64(XXHASH_LIST[..COUNT]) (LE64) +
+/// BITMAP (LE64 words, one bit per complete chunk) + XXHASH32 of the above (LE32)
+/// ```
+const VERIFIED_CACHE_MAGIC: &[u8; 8] = b"ilogvrf1";
+const VERIFIED_CACHE_HEADER_LEN: usize = 8 + 8 + 4 + 8 + 8;
+const VERIFIED_CACHE_SUFFIX: &str = ".verified";
+/// Write the cache after this many newly verified chunks so an abrupt exit
+/// loses little work.
+const VERIFIED_CACHE_SAVE_THRESHOLD: usize = 16;
 
 /// Structures and serialization
 
@@ -200,6 +228,14 @@ struct MemChecksum {
     /// Stored in a bit vector. `checked.len() * 64` should be >=
     /// `xxhash_list.len()`.
     checked: Vec<AtomicU64>,
+
+    /// Complete chunks verified by this instance and not yet written to the
+    /// verified-chunk cache file.
+    cache_dirty: AtomicUsize,
+
+    /// Set once writing the cache file failed, so it is not retried on every
+    /// verification.
+    cache_save_failed: AtomicBool,
 }
 
 /// Read reversed vlq at the given end offset (exclusive).
@@ -1778,8 +1814,12 @@ impl MemChecksum {
                 return true;
             }
             let hash = xxhash(&buf[start..end]);
+            INDEX_CHECKSUM_CHUNKS_HASHED.add(1);
             if hash == self.xxhash_list[index] {
-                checked.fetch_or(bit, AcqRel);
+                let first_time = checked.fetch_or(bit, AcqRel) & bit == 0;
+                if first_time && index < self.complete_chunk_count() {
+                    self.cache_dirty.fetch_add(1, Relaxed);
+                }
                 true
             } else {
                 false
@@ -1790,6 +1830,124 @@ impl MemChecksum {
     #[inline]
     fn is_enabled(&self) -> bool {
         self.end > 0
+    }
+
+    #[inline]
+    fn is_chunk_checked(&self, index: usize) -> bool {
+        self.checked[index / 64].load(Acquire) & (1 << (index % 64)) != 0
+    }
+
+    /// Chunks whose content can no longer change. The last chunk is excluded
+    /// unless it is full, because appends extend it and change its hash.
+    fn complete_chunk_count(&self) -> usize {
+        (self.end >> self.chunk_size_logarithm) as usize
+    }
+
+    /// Identity of the first `count` complete chunks. Ties a cache file to the
+    /// exact content it was verified against, so an index rebuilt at the same
+    /// path does not inherit stale verification.
+    fn verified_cache_key(&self, count: usize) -> u64 {
+        let mut xx = XxHash64::default();
+        for hash in &self.xxhash_list[..count] {
+            xx.write(&hash.to_le_bytes());
+        }
+        xx.finish()
+    }
+
+    fn serialize_verified_cache(&self, boot_id: u64) -> Vec<u8> {
+        let count = self.complete_chunk_count();
+        let words = count.div_ceil(64);
+        let mut buf = Vec::with_capacity(VERIFIED_CACHE_HEADER_LEN + words * 8 + 4);
+        buf.extend_from_slice(VERIFIED_CACHE_MAGIC);
+        buf.write_u64::<LittleEndian>(boot_id).unwrap();
+        buf.write_u32::<LittleEndian>(self.chunk_size_logarithm)
+            .unwrap();
+        buf.write_u64::<LittleEndian>(count as u64).unwrap();
+        buf.write_u64::<LittleEndian>(self.verified_cache_key(count))
+            .unwrap();
+        for (i, word) in self.checked.iter().take(words).enumerate() {
+            let bits = word.load(Acquire) & complete_chunk_mask(count, i);
+            buf.write_u64::<LittleEndian>(bits).unwrap();
+        }
+        let xx32 = xxhash32(&buf);
+        buf.write_u32::<LittleEndian>(xx32).unwrap();
+        buf
+    }
+
+    /// Merge verified chunks from a cache file. Return how many chunks became
+    /// verified, or `None` if the file does not describe this index on this
+    /// boot.
+    fn apply_verified_cache(&self, data: &[u8], boot_id: u64) -> Option<usize> {
+        if data.len() < VERIFIED_CACHE_HEADER_LEN + 4 || !data.starts_with(VERIFIED_CACHE_MAGIC) {
+            return None;
+        }
+        let (body, xx32) = data.split_at(data.len() - 4);
+        if LittleEndian::read_u32(xx32) != xxhash32(body) {
+            return None;
+        }
+        let mut cur = &body[VERIFIED_CACHE_MAGIC.len()..];
+        let cached_boot_id = cur.read_u64::<LittleEndian>().ok()?;
+        let chunk_size_logarithm = cur.read_u32::<LittleEndian>().ok()?;
+        let count = cur.read_u64::<LittleEndian>().ok()? as usize;
+        let key = cur.read_u64::<LittleEndian>().ok()?;
+        let words = count.div_ceil(64);
+        if cached_boot_id != boot_id
+            || chunk_size_logarithm != self.chunk_size_logarithm
+            || count > self.complete_chunk_count()
+            || cur.len() != words * 8
+            || key != self.verified_cache_key(count)
+        {
+            return None;
+        }
+        let mut loaded = 0;
+        for (i, word) in self.checked.iter().take(words).enumerate() {
+            let bits = cur.read_u64::<LittleEndian>().ok()? & complete_chunk_mask(count, i);
+            let old = word.fetch_or(bits, AcqRel);
+            loaded += (bits & !old).count_ones() as usize;
+        }
+        Some(loaded)
+    }
+
+    /// Carry verified state over from the previous in-memory checksum of the
+    /// same file. The file is append-only, so the complete chunks either match
+    /// exactly or the index was rebuilt.
+    fn inherit_verified(&self, old: &MemChecksum) {
+        let count = self.complete_chunk_count().min(old.complete_chunk_count());
+        if self.chunk_size_logarithm != old.chunk_size_logarithm
+            || self.xxhash_list[..count] != old.xxhash_list[..count]
+        {
+            return;
+        }
+        for (i, (word, old_word)) in self.checked.iter().zip(&old.checked).enumerate() {
+            let bits = old_word.load(Acquire) & complete_chunk_mask(count, i);
+            if bits != 0 {
+                word.fetch_or(bits, AcqRel);
+            }
+        }
+        self.cache_dirty
+            .fetch_add(old.cache_dirty.load(Relaxed), Relaxed);
+        if old.cache_save_failed.load(Acquire) {
+            self.cache_save_failed.store(true, Release);
+        }
+    }
+
+    #[cfg(test)]
+    fn verified_chunk_count(&self) -> usize {
+        (0..self.complete_chunk_count())
+            .filter(|&i| self.is_chunk_checked(i))
+            .count()
+    }
+}
+
+/// Bits of the `i`-th bitmap word that belong to the first `count` chunks.
+fn complete_chunk_mask(count: usize, i: usize) -> u64 {
+    let start = i * 64;
+    if count >= start + 64 {
+        u64::MAX
+    } else if count <= start {
+        0
+    } else {
+        (1u64 << (count - start)) - 1
     }
 }
 
@@ -1815,6 +1973,10 @@ impl Clone for MemChecksum {
                 .map(|c| c.load(Relaxed))
                 .map(AtomicU64::new)
                 .collect(),
+            // The instance being cloned persists what it verified; a clone
+            // only owes what it verifies itself.
+            cache_dirty: AtomicUsize::new(0),
+            cache_save_failed: AtomicBool::new(self.cache_save_failed.load(Relaxed)),
         }
     }
 }
@@ -1828,6 +1990,8 @@ impl Default for MemChecksum {
             chunk_size_logarithm: 20, // chunk_size: 1MB.
             xxhash_list: Vec::new(),
             checked: Vec::new(),
+            cache_dirty: AtomicUsize::new(0),
+            cache_save_failed: AtomicBool::new(false),
         }
     }
 }
@@ -1989,6 +2153,7 @@ pub struct Index {
     // Options
     checksum_enabled: bool,
     checksum_max_chain_len: u32,
+    verified_cache: bool,
     fsync: bool,
     write: Option<bool>,
 
@@ -2049,6 +2214,7 @@ pub struct OpenOptions {
     checksum_max_chain_len: u32,
     checksum_chunk_size_logarithm: u32,
     checksum_enabled: bool,
+    verified_cache: bool,
     fsync: bool,
     len: Option<u64>,
     write: Option<bool>,
@@ -2060,6 +2226,7 @@ impl OpenOptions {
     /// Create [`OpenOptions`] with default configuration:
     /// - checksum enabled, with 1MB chunk size
     /// - checksum max chain length is `config::INDEX_CHECKSUM_MAX_CHAIN_LEN` (default: 10)
+    /// - verified-chunk cache per `config::INDEX_VERIFIED_CACHE` (default: enabled)
     /// - no external key buffer
     /// - no fsync
     /// - read root entry from the end of the file
@@ -2069,6 +2236,7 @@ impl OpenOptions {
             checksum_max_chain_len: config::INDEX_CHECKSUM_MAX_CHAIN_LEN.load(Acquire),
             checksum_chunk_size_logarithm: 20,
             checksum_enabled: true,
+            verified_cache: config::INDEX_VERIFIED_CACHE.load(Acquire),
             fsync: false,
             len: None,
             write: None,
@@ -2099,6 +2267,13 @@ impl OpenOptions {
     /// Set whether to write checksum entries on `flush`.
     pub fn checksum_enabled(&mut self, checksum_enabled: bool) -> &mut Self {
         self.checksum_enabled = checksum_enabled;
+        self
+    }
+
+    /// Set whether to remember verified checksum chunks across processes on
+    /// the same OS boot, in a `<index>.verified` file next to the index.
+    pub fn verified_cache(&mut self, enabled: bool) -> &mut Self {
+        self.verified_cache = enabled;
         self
     }
 
@@ -2237,6 +2412,7 @@ impl OpenOptions {
                 // permanent reference to the original key_buf mmap.
                 checksum_enabled: open_options.checksum_enabled,
                 checksum_max_chain_len: open_options.checksum_max_chain_len,
+                verified_cache: open_options.verified_cache,
                 fsync: open_options.fsync,
                 write: open_options.write,
                 clean_root,
@@ -2251,6 +2427,7 @@ impl OpenOptions {
                 #[cfg(test)]
                 fail_on_flush: 0,
             };
+            index.load_verified_cache();
 
             Ok(index)
         })();
@@ -2279,6 +2456,7 @@ impl OpenOptions {
                 path: PathBuf::new(),
                 checksum_enabled: self.checksum_enabled,
                 checksum_max_chain_len: self.checksum_max_chain_len,
+                verified_cache: self.verified_cache,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root,
@@ -2412,6 +2590,14 @@ impl<T: IndexBuf> IndexBuf for &T {
     }
 }
 
+impl Drop for Index {
+    fn drop(&mut self) {
+        if self.checksum.cache_dirty.load(Relaxed) > 0 {
+            self.save_verified_cache();
+        }
+    }
+}
+
 impl IndexBuf for Index {
     fn buf(&self) -> &[u8] {
         &self.buf
@@ -2419,7 +2605,11 @@ impl IndexBuf for Index {
     fn verify_checksum(&self, offset: u64, length: u64) -> crate::Result<()> {
         self.checksum
             .check_range(&self.buf, offset, length)
-            .context(&self.path, || format!("Index path = {:?}", self.path))
+            .context(&self.path, || format!("Index path = {:?}", self.path))?;
+        if self.checksum.cache_dirty.load(Relaxed) >= VERIFIED_CACHE_SAVE_THRESHOLD {
+            self.save_verified_cache();
+        }
+        Ok(())
     }
     fn path(&self) -> &Path {
         &self.path
@@ -2474,6 +2664,7 @@ impl Index {
                 path: self.path.clone(),
                 checksum_enabled: self.checksum_enabled,
                 checksum_max_chain_len: self.checksum_max_chain_len,
+                verified_cache: self.verified_cache,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root: self.clean_root.clone(),
@@ -2495,6 +2686,7 @@ impl Index {
                 path: self.path.clone(),
                 checksum_enabled: self.checksum_enabled,
                 checksum_max_chain_len: self.checksum_max_chain_len,
+                verified_cache: self.verified_cache,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root: self.clean_root.clone(),
@@ -2786,6 +2978,7 @@ impl Index {
                 // `self` state.
                 debug_assert_eq!(checksum.end, new_checksum.end);
                 debug_assert_eq!(&checksum.xxhash_list, &new_checksum.xxhash_list);
+                checksum.inherit_verified(&self.checksum);
                 self.checksum = checksum;
                 self.clean_root = root;
                 self.buf = bytes;
@@ -3170,6 +3363,63 @@ impl Index {
     /// Verify checksum for the entire on-disk buffer.
     pub fn verify(&self) -> crate::Result<()> {
         self.verify_checksum(0, self.checksum.end)
+    }
+
+    /// Path of the verified-chunk cache file, if this index uses one.
+    fn verified_cache_path(&self) -> Option<PathBuf> {
+        if !self.verified_cache || self.file.is_none() || !self.checksum.is_enabled() {
+            return None;
+        }
+        let mut name = self.path.file_name()?.to_os_string();
+        name.push(VERIFIED_CACHE_SUFFIX);
+        Some(self.path.with_file_name(name))
+    }
+
+    /// Mark chunks that earlier processes on this boot already verified.
+    ///
+    /// Checksums guard against bytes changing underneath us: torn writes from a
+    /// crash or power loss, or corruption at rest. Within one boot, verified
+    /// bytes stay in the page cache every process maps and the file is only
+    /// appended to, so re-hashing them in each process finds nothing new. A
+    /// reboot, the one event that can leave unverified bytes behind, changes
+    /// the boot id and invalidates the cache. The accepted residual risk is a
+    /// sector going bad after its page was evicted and before it is re-read.
+    fn load_verified_cache(&self) {
+        let (Some(path), Some(boot_id)) = (self.verified_cache_path(), utils::boot_id()) else {
+            return;
+        };
+        let Ok(data) = utils::atomic_read(&path) else {
+            return;
+        };
+        if let Some(loaded) = self.checksum.apply_verified_cache(&data, boot_id) {
+            INDEX_VERIFIED_CACHE_CHUNKS_LOADED.add(loaded);
+        }
+    }
+
+    /// Write verified chunks to the cache file, merged with what other
+    /// processes wrote meanwhile. Best effort: a failure disables further
+    /// attempts by this instance.
+    fn save_verified_cache(&self) {
+        let (Some(path), Some(boot_id)) = (self.verified_cache_path(), utils::boot_id()) else {
+            return;
+        };
+        if self.checksum.cache_save_failed.load(Acquire) {
+            return;
+        }
+        // Reset before serializing so chunks verified concurrently from here
+        // on count towards the next save.
+        self.checksum.cache_dirty.store(0, Relaxed);
+        if let Ok(data) = utils::atomic_read(&path) {
+            let _ = self.checksum.apply_verified_cache(&data, boot_id);
+        }
+        let data = self.checksum.serialize_verified_cache(boot_id);
+        match utils::atomic_write(&path, data, false) {
+            Ok(()) => INDEX_VERIFIED_CACHE_SAVES.add(1),
+            Err(err) => {
+                tracing::debug!(?path, ?err, "cannot write verified-chunk cache");
+                self.checksum.cache_save_failed.store(true, Release);
+            }
+        }
     }
 
     // Internal function used by [`Index::range`].
@@ -4325,8 +4575,11 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
             ]
         };
 
+        // Each iteration corrupts bytes that a previous iteration verified,
+        // so the cross-process verification cache must be off.
         let opts = open_opts()
             .checksum_chunk_size_logarithm(checksum_log_size)
+            .verified_cache(false)
             .clone();
 
         let bytes = {
@@ -4466,6 +4719,111 @@ Disk[402]: Radix { link: None, 6: Disk[374] }
 Disk[410]: Root { radix: Disk[402] }
 "#
         );
+    }
+
+    /// Rewrite the boot id in a verified-chunk cache file, simulating a reboot.
+    fn set_verified_cache_boot_id(path: &Path, boot_id: u64) {
+        let mut data = utils::atomic_read(path).unwrap();
+        let len = data.len();
+        LittleEndian::write_u64(&mut data[8..16], boot_id);
+        let xx32 = xxhash32(&data[..len - 4]);
+        LittleEndian::write_u32(&mut data[len - 4..], xx32);
+        utils::atomic_write(path, data, false).unwrap();
+    }
+
+    fn flip_bit(path: &Path, offset: u64) {
+        let mut file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .unwrap();
+        let mut byte = [0u8; 1];
+        file.seek(SeekFrom::Start(offset)).unwrap();
+        file.read_exact(&mut byte).unwrap();
+        byte[0] ^= 1;
+        file.seek(SeekFrom::Start(offset)).unwrap();
+        file.write_all(&byte).unwrap();
+    }
+
+    #[test]
+    fn test_verified_cache() {
+        if utils::boot_id().is_none() {
+            // No boot id on this platform, so the cache is disabled.
+            return;
+        }
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("i");
+        let cache_path = dir.path().join("i.verified");
+        let open = || open_opts().verified_cache(true).open(&path).unwrap();
+        let fill = |index: &mut Index, seed: u8| {
+            for i in 0..40u8 {
+                index.insert(&[i ^ seed; 8], i as u64).unwrap();
+            }
+            index.flush().unwrap();
+        };
+
+        let mut index = open();
+        fill(&mut index, 0);
+        let complete = index.checksum.complete_chunk_count();
+        assert!(complete > VERIFIED_CACHE_SAVE_THRESHOLD);
+        // The checks below need the data to end in an incomplete chunk.
+        assert!(((complete as u64) << 4) < index.checksum.end);
+        index.verify().unwrap();
+        drop(index);
+        let cache = utils::atomic_read(&cache_path).unwrap();
+
+        // The cache covers only complete chunks; appends change the last one.
+        assert_eq!(LittleEndian::read_u64(&cache[20..28]), complete as u64);
+
+        // A fresh open trusts chunks this boot already verified.
+        let index = open();
+        assert_eq!(index.checksum.verified_chunk_count(), complete);
+        drop(index);
+
+        // Appending keeps the verified state: the new checksum inherits the
+        // bits for unchanged chunks. Two instances that each verify half of
+        // the file merge into one cache rather than overwrite each other.
+        let first_complete = complete;
+        let mut index = open();
+        fill(&mut index, 1);
+        assert!(index.checksum.verified_chunk_count() >= complete);
+        let end = index.checksum.end;
+        let complete = index.checksum.complete_chunk_count();
+        drop(index);
+        let a = open();
+        let b = open();
+        let half = end / 2;
+        a.verify_checksum(0, half).unwrap();
+        b.verify_checksum(half, end - half).unwrap();
+        drop(a);
+        drop(b);
+        let index = open();
+        assert_eq!(index.checksum.verified_chunk_count(), complete);
+        drop(index);
+
+        // Within the same boot the cache hides a bit flip in a complete chunk.
+        // After a reboot the flip is detected.
+        flip_bit(&path, 2);
+        let index = open();
+        index.verify().unwrap();
+        drop(index);
+        // Opening verifies the root entry's chunk, so "nothing loaded" shows
+        // as a count far below `complete` rather than exactly zero.
+        set_verified_cache_boot_id(&cache_path, 42);
+        let index = open();
+        assert!(index.checksum.verified_chunk_count() < complete);
+        assert!(index.verify().is_err());
+        drop(index);
+
+        // A cache written for different content at the same path is ignored.
+        fs::remove_file(&path).unwrap();
+        let mut index = open();
+        fill(&mut index, 0x80);
+        drop(index);
+        utils::atomic_write(&cache_path, cache, false).unwrap();
+        let index = open();
+        assert!(index.checksum.verified_chunk_count() < first_complete);
+        index.verify().unwrap();
     }
 
     fn show_checksums(index: &Index) -> String {

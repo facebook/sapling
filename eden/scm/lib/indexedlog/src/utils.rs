@@ -13,6 +13,7 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
+use std::sync::LazyLock;
 use std::sync::atomic;
 
 use memmap2::MmapOptions;
@@ -115,6 +116,52 @@ pub fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
     let mut xx = XxHash64::default();
     xx.write(buf.as_ref());
     xx.finish()
+}
+
+/// Identify the current OS boot, or `None` if it cannot be determined.
+///
+/// Used to scope caches that must not outlive a reboot.
+pub(crate) fn boot_id() -> Option<u64> {
+    static BOOT_ID: LazyLock<Option<u64>> = LazyLock::new(read_boot_id);
+    *BOOT_ID
+}
+
+fn read_boot_id() -> Option<u64> {
+    #[cfg(target_os = "linux")]
+    {
+        let id = fs::read("/proc/sys/kernel/random/boot_id").ok()?;
+        Some(xxhash(id.trim_ascii()))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // A UUID minted at boot. `kern.boottime` is not suitable: it is
+        // recomputed whenever the wall clock is stepped, so it can differ
+        // between processes on the same boot.
+        let name = c"kern.bootsessionuuid";
+        let mut buf = [0u8; 64];
+        let mut len = buf.len();
+        // SAFETY: `name` is NUL-terminated; `buf` is writable for `len` bytes
+        // and outlives the call, which updates `len` to the bytes written; no
+        // new value is passed (null pointer, length 0).
+        let ret = unsafe {
+            libc::sysctlbyname(
+                name.as_ptr(),
+                buf.as_mut_ptr() as *mut libc::c_void,
+                &mut len,
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        if ret != 0 || len == 0 {
+            return None;
+        }
+        let uuid = &buf[..len];
+        Some(xxhash(uuid.strip_suffix(b"\0").unwrap_or(uuid)))
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        None
+    }
 }
 
 #[inline]

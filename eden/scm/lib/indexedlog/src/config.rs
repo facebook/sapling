@@ -54,6 +54,10 @@ pub static CHMOD_FILE: LazyLock<AtomicI64> =
 /// Default maximum chain length for index. See `index::OpenOptions::checksum_max_chain_len`.
 pub static INDEX_CHECKSUM_MAX_CHAIN_LEN: AtomicU32 = AtomicU32::new(10);
 
+/// Whether indexes remember verified checksum chunks across processes on the
+/// same OS boot. See `index::OpenOptions::verified_cache`.
+pub static INDEX_VERIFIED_CACHE: atomic::AtomicBool = atomic::AtomicBool::new(true);
+
 /// How many `WeakBuffers.track` calls triggers cleaning up dropped weak buffers.
 pub static WEAK_BUFFER_GC_THRESHOLD: atomic::AtomicUsize = atomic::AtomicUsize::new(16);
 
@@ -143,6 +147,10 @@ pub fn configure(config: &dyn configmodel::Config) -> configmodel::Result<()> {
         config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
     {
         INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, atomic::Ordering::Release);
+    }
+
+    if let Some(enabled) = config.get_opt::<bool>("storage", "indexedlog-index-verified-cache")? {
+        INDEX_VERIFIED_CACHE.store(enabled, atomic::Ordering::Release);
     }
 
     if let Some(value) =
