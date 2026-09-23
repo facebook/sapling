@@ -725,8 +725,10 @@ UnixSocket::Message PrivHelperConn::serializeStartFamRequest(
     const std::vector<std::string>& paths,
     const std::string& tmpOutputPath,
     const std::string& specifiedOutputPath,
-    const bool shouldUpload) {
+    const bool shouldUpload,
+    folly::File outputFile) {
   auto msg = serializeRequestPacket(xid, REQ_START_FAM);
+  msg.files.push_back(std::move(outputFile));
   Appender appender(&msg.data, kDefaultBufferSize);
 
   appender.write<uint32_t>(static_cast<uint32_t>(paths.size()));

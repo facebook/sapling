@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -21,6 +22,8 @@
 #include <fb303/ServiceData.h>
 #include <fmt/format.h>
 #include <folly/Conv.h>
+#include <folly/Exception.h>
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
 #include <folly/String.h>
@@ -35,6 +38,7 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Fcntl.h>
 #include <folly/stop_watch.h>
 #include <re2/re2.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
@@ -3323,28 +3327,20 @@ EdenServiceHandler::semifuture_startFileAccessMonitor(
 
   constexpr std::string_view FAM_TMP_OUTPUT_DIR = "/tmp/edenfs/fam/";
 
-  // Get the current time
-  std::time_t nowTime =
-      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-  // Create a character string to format the date and time
-  char datetimeString[20];
-  std::strftime(
-      datetimeString,
-      sizeof(datetimeString),
-      "%Y%m%d_%H%M%S",
-      std::localtime(&nowTime));
-
-  // form the path to tmp file
-  std::string tmpPath =
-      fmt::format("{}fam_{}.out", FAM_TMP_OUTPUT_DIR, datetimeString);
+  std::string tmpPath = fmt::format("{}fam_XXXXXX", FAM_TMP_OUTPUT_DIR);
+  const auto outputFd = mkstemp(tmpPath.data());
+  folly::checkUnixError(outputFd, "failed to create FAM output file");
+  folly::File outputFile(outputFd, /*ownsFd=*/true);
+  folly::checkUnixError(
+      fcntl(outputFd, F_SETFD, FD_CLOEXEC), "setting FAM output close-on-exec");
 
   auto fut = ImmediateFuture<pid_t>(
       server_->getServerState()->getPrivHelper()->startFam(
           *params->paths(),
           tmpPath,
           params->specifiedOutputPath().value_or(tmpPath),
-          *params->shouldUpload_ref()));
+          *params->shouldUpload_ref(),
+          std::move(outputFile)));
   return wrapImmediateFuture(
              std::move(helper),
              std::move(fut).thenValue(

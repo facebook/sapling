@@ -88,7 +88,8 @@ class FakePrivHelper final : public PrivHelper {
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
-      const bool shouldUpload) override;
+      const bool shouldUpload,
+      folly::File outputFile) override;
   folly::Future<StopFileAccessMonitorResponse> stopFam() override;
   folly::Future<folly::Unit> setMemoryPriorityForProcess(
       pid_t pid,

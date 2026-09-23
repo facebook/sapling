@@ -190,7 +190,8 @@ class PrivHelperConn {
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
-      const bool shouldUpload);
+      const bool shouldUpload,
+      folly::File outputFile);
 
   static void parseStartFamRequest(
       folly::io::Cursor& cursor,

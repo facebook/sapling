@@ -198,7 +198,8 @@ folly::Future<pid_t> FakePrivHelper::startFam(
     const std::vector<std::string>& /* paths */,
     const std::string& /* tmpOutputPath */,
     const std::string& /* specifiedOutputPath */,
-    const bool /* shouldUpload */) {
+    const bool /* shouldUpload */,
+    folly::File /* outputFile */) {
   return makeFuture<pid_t>(
       runtime_error("FakePrivHelper::startFam() not implemented"));
 }

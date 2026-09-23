@@ -118,7 +118,8 @@ class RecordingPrivHelper final : public PrivHelper {
       const std::vector<std::string>&,
       const std::string&,
       const std::string&,
-      const bool) override {
+      const bool,
+      folly::File) override {
     notImplemented();
   }
   folly::Future<StopFileAccessMonitorResponse> stopFam() override {

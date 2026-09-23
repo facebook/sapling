@@ -271,14 +271,16 @@ class PrivHelper {
    * Start File Access Monitor(FAM).
    *
    * @param paths A list of paths to be monitored by FAM.
-   * @param outputPath The path to the output file.
+   * @param outputFile File opened by the daemon for FAM's stdout.
+   * Output paths are metadata returned when monitoring stops.
    * @return pid of the started FAM process
    */
   [[nodiscard]] virtual folly::Future<pid_t> startFam(
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
-      const bool shouldUpload) = 0;
+      const bool shouldUpload,
+      folly::File outputFile) = 0;
 
   /**
    * Stop File Access Monitor(FAM).

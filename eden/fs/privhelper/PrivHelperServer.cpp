@@ -1436,8 +1436,13 @@ UnixSocket::Message PrivHelperServer::processGetNamespaceInfo(
   return response;
 }
 
+AbsolutePath PrivHelperServer::getFamBinaryPath() const {
+  return canonicalPath(kFamBinaryPath);
+}
+
 UnixSocket::Message PrivHelperServer::processStartFam(
-    folly::io::Cursor& cursor) {
+    folly::io::Cursor& cursor,
+    UnixSocket::Message& request) {
   std::vector<std::string> paths;
   string tmpOutputPath;
   string specifiedOutputPath;
@@ -1445,6 +1450,11 @@ UnixSocket::Message PrivHelperServer::processStartFam(
 
   PrivHelperConn::parseStartFamRequest(
       cursor, paths, tmpOutputPath, specifiedOutputPath, shouldUpload);
+  if (request.files.size() != 1) {
+    throwf<std::runtime_error>(
+        "expected 1 output file descriptor with startFam() request; received {}",
+        request.files.size());
+  }
 
   // sanity check to make sure we have at least one path
   if (paths.empty()) {
@@ -1461,12 +1471,11 @@ UnixSocket::Message PrivHelperServer::processStartFam(
   XLOGF(DBG3, "FAM output file will be moved to \"{}\"", specifiedOutputPath);
 
   auto opts = SpawnedProcess::Options();
-  opts.open(
-      STDOUT_FILENO,
-      canonicalPath(tmpOutputPath),
-      OpenFileHandleOptions::writeFile()); // TODO[lxw]: This can fail if the
-                                           // folder doesn't exist
-  opts.executablePath(canonicalPath(kFamBinaryPath));
+  opts.dup2(
+      FileDescriptor(
+          request.files[0].release(), FileDescriptor::FDType::Generic),
+      STDOUT_FILENO);
+  opts.executablePath(getFamBinaryPath());
   std::vector<std::string> argv = {
       "SCMFileAccessMonitor",
       "--path-prefix",
@@ -2023,7 +2032,7 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processGetNamespaceInfo(cursor);
 #ifdef __APPLE__
     case PrivHelperConn::REQ_START_FAM:
-      return processStartFam(cursor);
+      return processStartFam(cursor, request);
     case PrivHelperConn::REQ_STOP_FAM:
       return processStopFam();
 #else

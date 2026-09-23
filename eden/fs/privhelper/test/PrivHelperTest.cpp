@@ -918,7 +918,12 @@ TEST_F(PrivHelperRawProtocolTest, famRequestsCannotCreateFilesOnLinux) {
   const auto outputPath = (dir.path() / "victim.txt").string();
   auto response = client_->sendAndRecv(
       PrivHelperConn::serializeStartFamRequest(
-          1, {dir.path().string()}, outputPath, outputPath, false));
+          1,
+          {dir.path().string()},
+          outputPath,
+          outputPath,
+          false,
+          File("/dev/null", O_WRONLY)));
   EXPECT_THROW_RE(
       PrivHelperConn::parseStartFamResponse(response),
       std::exception,
@@ -934,6 +939,60 @@ TEST_F(PrivHelperRawProtocolTest, famRequestsCannotCreateFilesOnLinux) {
       "unexpected privhelper message type");
 }
 #endif
+
+class PrivHelperFamTestServer : public PrivHelperServer {
+ public:
+  using PrivHelperServer::processStartFam;
+  using PrivHelperServer::processStopFam;
+
+ private:
+  AbsolutePath getFamBinaryPath() const override {
+    return canonicalPath("/bin/echo");
+  }
+};
+
+TEST(PrivHelperFamTest, writesToPassedDescriptorWithoutOpeningMetadataPath) {
+  TemporaryDirectory dir;
+  const auto outputPath = (dir.path() / "absent.txt").string();
+  int pipeFds[2];
+  checkUnixError(pipe(pipeFds));
+  File reader(pipeFds[0], true);
+  File writer(pipeFds[1], true);
+  auto request = PrivHelperConn::serializeStartFamRequest(
+      1, {"/monitored"}, outputPath, outputPath, false, std::move(writer));
+  folly::io::Cursor cursor{&request.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  PrivHelperFamTestServer server;
+  server.processStartFam(cursor, request);
+  std::string output;
+  const auto readOk = folly::readFile(reader.fd(), output);
+  server.processStopFam();
+
+  ASSERT_TRUE(readOk);
+  EXPECT_EQ(
+      "--path-prefix /monitored --events NOTIFY_OPEN NOTIFY_CLOSE\n", output);
+  EXPECT_EQ(-1, access(outputPath.c_str(), F_OK));
+  EXPECT_EQ(ENOENT, errno);
+}
+
+TEST(PrivHelperFamTest, rejectsMissingOutputDescriptor) {
+  TemporaryDirectory dir;
+  const auto outputPath = (dir.path() / "absent.txt").string();
+  auto request = PrivHelperConn::serializeStartFamRequest(
+      1, {"/monitored"}, outputPath, outputPath, false, File{});
+  request.files.clear();
+  folly::io::Cursor cursor{&request.data};
+  PrivHelperConn::parsePacket(cursor);
+
+  PrivHelperFamTestServer server;
+  EXPECT_THROW_RE(
+      server.processStartFam(cursor, request),
+      std::runtime_error,
+      "expected 1 output file descriptor");
+  EXPECT_EQ(-1, access(outputPath.c_str(), F_OK));
+  EXPECT_EQ(ENOENT, errno);
+}
 
 TEST_F(PrivHelperRawProtocolTest, cleanShutdownNotificationIsNotAnswered) {
   client_->send(

@@ -613,7 +613,8 @@ class PrivHelperClientImpl : public PrivHelper {
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
-      const bool shouldUpload) override;
+      const bool shouldUpload,
+      folly::File outputFile) override;
   Future<StopFileAccessMonitorResponse> stopFam() override;
   Future<folly::Unit> setMemoryPriorityForProcess(pid_t pid, int priority)
       override;
@@ -873,10 +874,16 @@ Future<pid_t> PrivHelperClientImpl::startFam(
     const std::vector<std::string>& paths,
     const std::string& tmpOutputPath,
     const std::string& specifiedOutputPath,
-    const bool shouldUpload) {
+    const bool shouldUpload,
+    folly::File outputFile) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeStartFamRequest(
-      xid, paths, tmpOutputPath, specifiedOutputPath, shouldUpload);
+      xid,
+      paths,
+      tmpOutputPath,
+      specifiedOutputPath,
+      shouldUpload,
+      std::move(outputFile));
 
   return sendAndRecv(xid, "start_fam", std::move(request))
       .thenValue([](UnixSocket::Message&& response) {
@@ -1333,11 +1340,13 @@ class StubPrivHelper final : public PrivHelper {
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
-      const bool shouldUpload) override {
+      const bool shouldUpload,
+      folly::File outputFile) override {
     (void)paths;
     (void)tmpOutputPath;
     (void)specifiedOutputPath;
     (void)shouldUpload;
+    (void)outputFile;
     NOT_IMPLEMENTED();
   }
 
