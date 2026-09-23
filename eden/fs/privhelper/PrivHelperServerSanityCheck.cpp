@@ -385,16 +385,6 @@ SanityCheckResult PrivHelperServer::cleanupStaleBindMounts(
   return result;
 }
 
-void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
-  // Attempt to unmount the stale mount.
-  // Error logging is done inside unmount.
-  // Always remove the mount point from mountPoints_ since it represents
-  // valid mounts only.
-  unmount(mountPoint.c_str(), {});
-  mountPoints_.erase(mountPoint);
-  XLOGF(INFO, "Successfully unmounted stale mount {}", mountPoint);
-}
-
 int PrivHelperServer::statMountPoint(const char* path, struct stat* st) const {
   // This probes mount health; it does not authorize any path-based operation.
   // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
@@ -405,14 +395,31 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
     const std::string& mountPoint,
     bool isNFS,
     bool isHardMount) {
-  bool didUnmount = false;
+  const auto hardeningDisabled = disablePrivHelperHardening();
+  folly::File mountFd;
+  std::string probePath = mountPoint;
+#ifdef __linux__
+  if (!hardeningDisabled) {
+    const auto fd = open(mountPoint.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+    if (fd < 0) {
+      throwf<std::domain_error>(
+          "User:{} cannot open {}: {}",
+          uid_,
+          mountPoint,
+          folly::errnoStr(errno));
+    }
+    mountFd = folly::File(fd, true);
+    // Probes, identity lookup, and unmount must refer to this same mount even
+    // when a caller replaces an ancestor of mountPoint.
+    probePath = fmt::format("/proc/self/fd/{}", fd);
+  }
+#endif
   struct stat st;
   // Stat the mount point to determine its status. If the errno matches certain
   // values, then the mount is likely hanging. We'll try to unmount it before
   // performing further sanity checks. On any other error, we throw.
-  bool is_hanging = false;
 
-  if (statMountPoint(mountPoint.c_str(), &st) < 0) {
+  if (statMountPoint(probePath.c_str(), &st) < 0) {
     auto err = errno;
     XLOGF(
         WARN,
@@ -422,15 +429,14 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
 
     // Avoids running on hard NFS mounts since IO into hard mounts can hang
     // forever instead of returning an error.
-    if (!isHardMount && isErrorSafeToIgnore(err, isNFS, mountPoint)) {
+    if (!isHardMount && isErrorSafeToIgnore(err, isNFS, probePath)) {
       XLOGF(
           INFO,
           "Found a stale mount {}: {}. Attempting to unmount it",
           mountPoint,
           folly::errnoStr(err));
-      unmountStaleMount(mountPoint);
-      didUnmount = true;
-      is_hanging = true;
+      unmountStaleMount(mountPoint, mountFd.fd());
+      return true;
     } else {
       throwf<std::domain_error>(
           "User:{} cannot stat {}: {}",
@@ -443,26 +449,26 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
   // Sometimes stat will not return this error even if the mount is
   // hanging because the stat'd path is cached by the kernel. We check for this
   // by attempting to stat a non-existent file under a non-existent folder.
-  if (!isHardMount && !is_hanging) {
+  if (!isHardMount) {
     // Check in case the mount point is cached in the kernel.
     XLOG(DBG4, "Double checking whether a stale mount is present.");
     std::string test_path =
-        mountPoint + "/this-folder-does-not-exist/this-file-does-not-exist";
+        probePath + "/this-folder-does-not-exist/this-file-does-not-exist";
     struct stat test_st;
 
     if (statMountPoint(test_path.c_str(), &test_st) < 0) {
       auto err = errno;
-      const auto safeToIgnore = disablePrivHelperHardening()
+      const auto safeToIgnore = hardeningDisabled
           ? isErrnoFromHangingMount(err, isNFS)
-          : isErrorSafeToIgnore(err, isNFS, mountPoint);
+          : isErrorSafeToIgnore(err, isNFS, probePath);
       if (safeToIgnore) {
         XLOGF(
             INFO,
             "Found a stale mount {}: {}. Attempting to unmount it",
             mountPoint,
             folly::errnoStr(err));
-        unmountStaleMount(mountPoint);
-        didUnmount = true;
+        unmountStaleMount(mountPoint, mountFd.fd());
+        return true;
       }
     }
     XLOGF(DBG4, "Mount {} is not stale.", mountPoint);
@@ -472,23 +478,23 @@ bool PrivHelperServer::detectAndUnmountStaleMount(
   // is stale, but stat won't. Try statfs as well to catch this case.
 #ifdef __linux__
   struct statfs fsBuf;
-  if (!isNFS && statfs(mountPoint.c_str(), &fsBuf) < 0) {
+  if (!isNFS && statfs(probePath.c_str(), &fsBuf) < 0) {
     auto err = errno;
-    if (isErrorSafeToIgnore(err, isNFS, mountPoint)) {
+    if (isErrorSafeToIgnore(err, isNFS, probePath)) {
       XLOGF(
           INFO,
           "Found a stale mount {}: {}. Attempting to unmount it",
           mountPoint,
           folly::errnoStr(err));
-      unmountStaleMount(mountPoint);
-      didUnmount = true;
+      unmountStaleMount(mountPoint, mountFd.fd());
+      return true;
     } else {
       throwf<std::domain_error>(
           "statfs failed for: {}: {}", mountPoint, folly::errnoStr(err));
     }
   }
 #endif
-  return didUnmount;
+  return false;
 }
 
 SanityCheckResult PrivHelperServer::sanityCheckMountPoint(

@@ -1325,14 +1325,20 @@ class PrivHelperStaleMountTestServer : public PrivHelperServer {
  public:
   using PrivHelperServer::detectAndUnmountStaleMount;
   bool unmounted{false};
+  bool simulateCachedStat{false};
+  bool simulateChildError{true};
+  std::function<void()> beforeChildProbe;
 
  private:
   int statMountPoint(const char* path, struct stat* st) const override {
     if (StringPiece{path}.endsWith("/this-file-does-not-exist")) {
-      errno = ENOTCONN;
+      if (beforeChildProbe) {
+        beforeChildProbe();
+      }
+      errno = simulateChildError ? ENOTCONN : ENOENT;
       return -1;
     }
-    return ::stat(path, st);
+    return simulateCachedStat ? 0 : ::stat(path, st);
   }
 
   void unmount(const char*, UnmountOptions) override {
@@ -1367,7 +1373,75 @@ TEST(PrivHelperStaleMountTest, identifiesMountWithoutStatmountSyscalls) {
     PrivHelperStaleMountTestServer server;
     EXPECT_TRUE(
         server.detectAndUnmountStaleMount(dir.path().string(), false, false));
-    EXPECT_TRUE(server.unmounted);
+    EXPECT_FALSE(server.unmounted);
+  });
+}
+
+TEST(PrivHelperStaleMountTest, ancestorReplacementCannotRedirectUnmount) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    checkUnixError(mount("tmpfs", dir.path().c_str(), "tmpfs", 0, "size=1m"));
+    const auto original = dir.path() / "original";
+    const auto moved = dir.path() / "moved";
+    const auto victim = dir.path() / "victim";
+    boost::filesystem::create_directories(original / "mount");
+    boost::filesystem::create_directories(victim / "mount");
+    checkUnixError(
+        mount("edenfs:", (original / "mount").c_str(), "tmpfs", 0, "size=1m"));
+    checkUnixError(
+        mount("victim", (victim / "mount").c_str(), "tmpfs", 0, "size=1m"));
+    ASSERT_TRUE(
+        folly::writeFile(
+            StringPiece{"eden"}, (original / "mount" / "marker").c_str()));
+    ASSERT_TRUE(
+        folly::writeFile(
+            StringPiece{"victim"}, (victim / "mount" / "marker").c_str()));
+
+    PrivHelperStaleMountTestServer server;
+    server.beforeChildProbe = [&] {
+      boost::filesystem::rename(original, moved);
+      boost::filesystem::create_directory_symlink(victim, original);
+    };
+    EXPECT_TRUE(server.detectAndUnmountStaleMount(
+        (original / "mount").string(), false, false));
+    EXPECT_FALSE(server.unmounted);
+    EXPECT_FALSE(boost::filesystem::exists(moved / "mount" / "marker"));
+    EXPECT_TRUE(boost::filesystem::exists(victim / "mount" / "marker"));
+  });
+}
+
+TEST(PrivHelperStaleMountTest, unmountsDisconnectedFuseThroughDescriptor) {
+  if (access("/dev/fuse", R_OK | W_OK) != 0) {
+    GTEST_SKIP() << "/dev/fuse is unavailable";
+  }
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    for (bool cachedStat : {false, true}) {
+      File connection("/dev/fuse", O_RDWR | O_CLOEXEC);
+      const auto options = fmt::format(
+          "fd={},rootmode=40755,user_id={},group_id={}",
+          connection.fd(),
+          getuid(),
+          getgid());
+      checkUnixError(mount(
+          "edenfs:",
+          dir.path().c_str(),
+          "fuse",
+          MS_NOSUID | MS_NODEV,
+          options.c_str()));
+      connection.close();
+      struct stat st{};
+      ASSERT_EQ(-1, stat(dir.path().c_str(), &st));
+      ASSERT_EQ(ENOTCONN, errno);
+
+      PrivHelperStaleMountTestServer server;
+      server.simulateCachedStat = cachedStat;
+      server.simulateChildError = false;
+      EXPECT_TRUE(
+          server.detectAndUnmountStaleMount(dir.path().string(), false, false));
+      EXPECT_FALSE(server.unmounted);
+      EXPECT_EQ(0, stat(dir.path().c_str(), &st));
+    }
   });
 }
 
@@ -1534,7 +1608,7 @@ TEST_F(PrivHelperTest, fuseMountPermissions) {
         folly::to<std::string>(
             "std::domain_error: User:",
             getuid(),
-            " cannot stat ",
+            " cannot open ",
             path,
             ": Permission denied"));
   }

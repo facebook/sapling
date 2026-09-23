@@ -164,7 +164,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processSetMemoryPriorityForProcess(
       folly::io::Cursor& cursor);
 
-  void unmountStaleMount(const std::string& mountPoint);
+  void unmountStaleMount(const std::string& mountPoint, int mountFd);
 
   // Clean up stale redirection mounts under a checkout path that were left
   // behind when EdenFS crashed without properly unmounting.

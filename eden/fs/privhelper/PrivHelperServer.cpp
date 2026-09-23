@@ -1133,6 +1133,27 @@ bool PrivHelperServer::useModernMountApi() const {
 #endif
 }
 
+void PrivHelperServer::unmountStaleMount(
+    const std::string& mountPoint,
+    [[maybe_unused]] int mountFd) {
+#ifdef __linux__
+  if (mountFd >= 0) {
+    const auto procFdPath = fmt::format("/proc/self/fd/{}", mountFd);
+    // A disconnected filesystem can reject stat(), but its pinned mount can
+    // still be unmounted. Never fall back to the caller's mutable pathname.
+    checkUnixError(
+        umount2(procFdPath.c_str(), linuxUnmountFlags({}, false)),
+        "failed to unmount stale mount ",
+        mountPoint);
+  } else
+#endif
+  {
+    unmount(mountPoint.c_str(), {});
+  }
+  mountPoints_.erase(mountPoint);
+  XLOGF(INFO, "Successfully unmounted stale mount {}", mountPoint);
+}
+
 void PrivHelperServer::unmount(
     const char* mountPath,
     [[maybe_unused]] UnmountOptions options) {
