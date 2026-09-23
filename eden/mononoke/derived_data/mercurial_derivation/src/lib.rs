@@ -16,6 +16,7 @@ pub mod derive_hg_manifest;
 mod indexed_augmented_manifest;
 mod mapping;
 pub mod pipeline;
+pub mod upload_augmented_manifest;
 
 pub use augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 pub use derive_hg_changeset::DeriveHgChangeset;

@@ -47,6 +47,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
@@ -2236,6 +2237,114 @@ fn assert_root_acl_pointer_invariant(pointer: &Option<AclManifestId>) -> Result<
         );
     }
     Ok(())
+}
+
+/// Build and store the augmented manifest for a tree the client has just
+/// uploaded, before any changeset references it.
+///
+/// `children` must hold every directory named in `uploaded`: a child's
+/// augmented id and size are not recoverable from the uploaded bytes, so a
+/// missing one is an error rather than a partially built tree.
+///
+/// Subentries are built from the uploaded manifest alone, so no `HgManifest`
+/// blob is read and no parent is consulted. The per-changeset derivation
+/// instead splices unchanged runs out of the parent's sharded map; that is a
+/// read optimisation, and it can serialise a large directory's map differently
+/// from the same entries built directly.
+pub async fn derive_augmented_manifest_for_uploaded_tree(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    uploaded: &HgBlobManifest,
+    children: &HashMap<MPathElement, HgAugmentedDirectoryNode>,
+    acl_overlay: Option<AclManifestId>,
+) -> Result<HgAugmentedDirectoryNode> {
+    let files = &uploaded.content().files;
+    let content_metadata_cache = HashMap::new();
+
+    // The leaf futures are materialised before the stream: a closure that
+    // borrows `ctx` and `blobstore` inlined into `stream::iter` cannot be
+    // inferred as higher-ranked, and callers then fail to prove `Send`.
+    let leaf_inputs: Vec<(MPathElement, FileType, HgFileNodeId)> = files
+        .iter()
+        .filter_map(|(name, entry)| match entry {
+            Entry::Leaf((file_type, filenode_id)) => Some((name.clone(), *file_type, *filenode_id)),
+            Entry::Tree(_) => None,
+        })
+        .collect();
+    let leaf_futures: Vec<_> = leaf_inputs
+        .into_iter()
+        .map(|(name, file_type, filenode_id)| {
+            let content_metadata_cache = &content_metadata_cache;
+            async move {
+                let leaf = build_augmented_file_leaf(
+                    ctx,
+                    blobstore,
+                    content_metadata_cache,
+                    file_type,
+                    filenode_id,
+                )
+                .await?;
+                anyhow::Ok((name, HgAugmentedManifestEntry::FileNode(leaf)))
+            }
+        })
+        .collect();
+    let leaves = stream::iter(leaf_futures)
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let mut subentries = TrieMap::default();
+    for (name, entry) in leaves {
+        validate_augmented_manifest_element(name.as_ref())?;
+        subentries.insert(name, Either::Left(entry));
+    }
+    for (name, entry) in files.iter() {
+        let Entry::Tree(id) = entry else { continue };
+        let child = children.get(name).ok_or_else(|| {
+            anyhow!(
+                "uploaded tree {} names child directory {name} ({}) with no augmented manifest",
+                uploaded.node_id(),
+                id.into_nodehash(),
+            )
+        })?;
+        validate_augmented_manifest_element(name.as_ref())?;
+        subentries.insert(
+            name.clone(),
+            Either::Left(HgAugmentedManifestEntry::DirectoryNode(child.clone())),
+        );
+    }
+
+    // The header is the client's and must not be recomputed: a mirror upload
+    // supplies a `node_id` that is not the content hash, and that id is the key
+    // this envelope is stored under and the serve path looks it up by.
+    let augmented_manifest = ShardedHgAugmentedManifest {
+        hg_node_id: uploaded.node_id(),
+        p1: uploaded.p1(),
+        p2: uploaded.p2(),
+        computed_node_id: uploaded.computed_node_id(),
+        subentries: ShardedMapV2Node::from_entries_and_partial_maps(ctx, blobstore, subentries)
+            .await?,
+        acl_manifest_directory_id: acl_overlay,
+    };
+    let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
+        .clone()
+        .compute_content_addressed_digest(ctx, blobstore)
+        .await?;
+    let treenode = HgAugmentedManifestEnvelope {
+        augmented_manifest_id,
+        augmented_manifest_size,
+        augmented_manifest,
+    }
+    .store(ctx, blobstore)
+    .await?
+    .into_nodehash();
+
+    Ok(HgAugmentedDirectoryNode {
+        treenode,
+        augmented_manifest_id,
+        augmented_manifest_size,
+        acl_manifest_directory_id: acl_overlay,
+    })
 }
 
 #[cfg(test)]
