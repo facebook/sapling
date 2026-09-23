@@ -38,6 +38,10 @@ use scs_client_raw::thrift;
 use source_control::FileChunk;
 use source_control::FileIdSpecifier;
 use source_control::FileInfoParams;
+use source_control::RequestErrorKind;
+use source_control_clients::errors::FileContentChunkError;
+use source_control_clients::errors::FileInfoError;
+use source_control_clients::errors::TreeListError;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufWriter;
@@ -1065,7 +1069,29 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     downloader.await?
 }
 
-async fn request_with_retries<V, E: std::fmt::Debug, S, P>(
+trait ScsRequestErrorExt {
+    fn is_authorization_error(&self) -> bool;
+}
+
+macro_rules! impl_scs_request_error_ext {
+    ($error:ty) => {
+        impl ScsRequestErrorExt for $error {
+            fn is_authorization_error(&self) -> bool {
+                match self {
+                    Self::restricted_paths_authorization_error(_) => true,
+                    Self::request_error(error) => error.kind == RequestErrorKind::PERMISSION_DENIED,
+                    _ => false,
+                }
+            }
+        }
+    };
+}
+
+impl_scs_request_error_ext!(TreeListError);
+impl_scs_request_error_ext!(FileInfoError);
+impl_scs_request_error_ext!(FileContentChunkError);
+
+async fn request_with_retries<V, E: std::fmt::Debug + ScsRequestErrorExt, S, P>(
     client: ScsClient,
     specifier: S,
     params: P,
@@ -1082,6 +1108,7 @@ async fn request_with_retries<V, E: std::fmt::Debug, S, P>(
     loop {
         match do_query(&client, &specifier, &params).await {
             Ok(v) => return Ok(v),
+            Err(e) if e.is_authorization_error() => return Err(e),
             Err(e) => {
                 eprintln!("SCS error (retries={retries}, backoff={backoff:?}): {e:?}");
                 if retries == 0 {
@@ -1093,5 +1120,78 @@ async fn request_with_retries<V, E: std::fmt::Debug, S, P>(
                 backoff = backoff.min(MAX_BACKOFF);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+    use source_control::RequestError;
+    use source_control::RestrictedPathAccess;
+    use source_control::RestrictedPathsAuthorizationError;
+
+    use super::*;
+
+    fn restricted_paths_authorization_error() -> RestrictedPathsAuthorizationError {
+        RestrictedPathsAuthorizationError {
+            reason: "access denied".to_string(),
+            access: RestrictedPathAccess::path("restricted/path".to_string()),
+            permission_request_group: "restricted_group".to_string(),
+            denial_message: None,
+            ..Default::default()
+        }
+    }
+
+    fn request_error(kind: RequestErrorKind) -> RequestError {
+        RequestError {
+            kind,
+            reason: "request failed".to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[mononoke::test]
+    fn authorization_errors_are_not_retried() {
+        assert!(
+            TreeListError::restricted_paths_authorization_error(
+                restricted_paths_authorization_error()
+            )
+            .is_authorization_error()
+        );
+        assert!(
+            FileInfoError::restricted_paths_authorization_error(
+                restricted_paths_authorization_error()
+            )
+            .is_authorization_error()
+        );
+        assert!(
+            FileContentChunkError::restricted_paths_authorization_error(
+                restricted_paths_authorization_error()
+            )
+            .is_authorization_error()
+        );
+
+        assert!(
+            TreeListError::request_error(request_error(RequestErrorKind::PERMISSION_DENIED))
+                .is_authorization_error()
+        );
+        assert!(
+            FileInfoError::request_error(request_error(RequestErrorKind::PERMISSION_DENIED))
+                .is_authorization_error()
+        );
+        assert!(
+            FileContentChunkError::request_error(request_error(
+                RequestErrorKind::PERMISSION_DENIED
+            ))
+            .is_authorization_error()
+        );
+    }
+
+    #[mononoke::test]
+    fn non_authorization_request_errors_are_retried() {
+        assert!(
+            !TreeListError::request_error(request_error(RequestErrorKind::TREE_NOT_FOUND))
+                .is_authorization_error()
+        );
     }
 }
