@@ -45,6 +45,7 @@
 #include <sched.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>
+#include <sys/statvfs.h>
 #include "eden/fs/utils/Statmount.h"
 #endif
 
@@ -1156,7 +1157,7 @@ TEST(PrivHelperSanityTest, userPathResolutionRejectsAnInaccessibleAncestor) {
   EXPECT_EQ(getuid(), geteuid());
 }
 
-TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceDescriptor) {
+TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceWithSafeFlags) {
   TemporaryDirectory dir;
   runInMountNamespace([&] {
     checkUnixError(mount("tmpfs", dir.path().c_str(), "tmpfs", 0, "size=1m"));
@@ -1169,6 +1170,9 @@ TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceDescriptor) {
         folly::writeFile(StringPiece{"content"}, (source / "file").c_str()));
 
     PrivHelperSanityTestServer server(getuid());
+    struct statvfs before{};
+    checkUnixError(statvfs(source.c_str(), &before));
+    ASSERT_EQ(0, before.f_flag & (ST_NOSUID | ST_NODEV));
     server.registerMount(root.string());
     server.bindMount(source.c_str(), target.c_str(), root.string());
 
@@ -1180,6 +1184,12 @@ TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceDescriptor) {
     checkUnixError(stat(target.c_str(), &targetStat));
     EXPECT_EQ(sourceStat.st_ino, targetStat.st_ino);
     EXPECT_EQ(sourceStat.st_dev, targetStat.st_dev);
+    struct statvfs sourceFlags{}, targetFlags{};
+    checkUnixError(statvfs(source.c_str(), &sourceFlags));
+    checkUnixError(statvfs(target.c_str(), &targetFlags));
+    EXPECT_EQ(before.f_flag, sourceFlags.f_flag);
+    EXPECT_EQ(
+        ST_NOSUID | ST_NODEV, targetFlags.f_flag & (ST_NOSUID | ST_NODEV));
   });
 }
 

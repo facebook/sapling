@@ -111,6 +111,18 @@ constexpr int kRegisteredMountRootOpenFlags = O_PATH | O_DIRECTORY | O_CLOEXEC;
 #ifndef MOUNT_ATTR_NOSUID
 #define MOUNT_ATTR_NOSUID 0x00000002
 #endif
+#ifndef MOUNT_ATTR_NODEV
+#define MOUNT_ATTR_NODEV 0x00000004
+#endif
+#ifndef SYS_mount_setattr
+#ifdef __NR_mount_setattr
+#define SYS_mount_setattr __NR_mount_setattr
+#elif defined(__x86_64__) || defined(__aarch64__)
+#define SYS_mount_setattr 442
+#else
+#error "mount_setattr syscall number is required"
+#endif
+#endif
 
 std::string bindMountTargetSuffix(
     folly::StringPiece mountRoot,
@@ -1055,6 +1067,25 @@ void PrivHelperServer::bindMount(
   checkUnixError(
       treeFdNum, "failed to clone bind mount source `", clientPath, "`");
   folly::File treeFd{treeFdNum, /*ownsFd=*/true};
+
+  // The build's kernel headers can predate the mount_setattr ABI.
+  struct {
+    uint64_t attr_set;
+    uint64_t attr_clr;
+    uint64_t propagation;
+    uint64_t userns_fd;
+  } attrs{MOUNT_ATTR_NOSUID | MOUNT_ATTR_NODEV, 0, 0, 0};
+  checkUnixError(
+      syscall(
+          SYS_mount_setattr,
+          treeFd.fd(),
+          "",
+          AT_EMPTY_PATH,
+          &attrs,
+          sizeof(attrs)),
+      "failed to restrict detached bind mount `",
+      clientPath,
+      "`");
 
   const auto rc = static_cast<int>(syscall(
       SYS_move_mount,

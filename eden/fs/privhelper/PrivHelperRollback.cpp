@@ -30,7 +30,7 @@ namespace {
 
 constexpr const char* kEdenSystemConfigDir{"/etc/eden"};
 #ifdef __linux__
-constexpr LinuxKernelVersion kMinPrivHelperHardeningKernelVersion{5, 8};
+constexpr LinuxKernelVersion kMinPrivHelperHardeningKernelVersion{5, 12};
 #endif
 
 bool isRootControlledPath(const char* path, mode_t fileType) {
@@ -93,8 +93,7 @@ bool isLinuxKernelTooOldForPrivHelperHardening() {
 
 bool disablePrivHelperHardening() {
 #ifdef __linux__
-  // The hardened mount flow uses Linux syscalls through faccessat2, which was
-  // added in 5.8. Older kernels must use the legacy path-based flow.
+  // The hardened mount flow requires mount_setattr, added in Linux 5.12.
   if (isLinuxKernelTooOldForPrivHelperHardening()) {
     return true;
   }
