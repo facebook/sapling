@@ -293,50 +293,67 @@ struct SymrefStoreFactory {
     builder: Arc<OnceCell<SqlGitSymbolicRefsBuilder>>,
 }
 
-impl SymrefStoreFactory {
-    fn default_git_storage_name(&self) -> Result<String, scs_errors::ServiceError> {
-        let config_store = self.configs.config_store().ok_or_else(|| {
-            scs_errors::internal_error(
-                "No config store available for resolving the default git repo storage",
-            )
-        })?;
-        let template = configerator_repo_config_handle(DEFAULT_GIT_REPO_CONFIG_PATH, config_store)
-            .map_err(|e| {
-                scs_errors::internal_error(format!("Failed to load default git repo config: {e:#}"))
-            })?
-            .get();
-        template.storage_config.clone().ok_or_else(|| {
-            scs_errors::internal_error(format!(
-                "{DEFAULT_GIT_REPO_CONFIG_PATH} does not name a storage config"
-            ))
-            .into()
-        })
-    }
+/// The storage config a repo id will get once it has one. Every store
+/// `create_repos` opens is keyed by an id that is reserved but not yet landed,
+/// so it is absent from `repo_configs` by definition and the default git
+/// template is the only thing that can name its database.
+fn default_git_storage_name(configs: &MononokeConfigs) -> Result<String, scs_errors::ServiceError> {
+    let config_store = configs.config_store().ok_or_else(|| {
+        scs_errors::internal_error(
+            "No config store available for resolving the default git repo storage",
+        )
+    })?;
+    let template = configerator_repo_config_handle(DEFAULT_GIT_REPO_CONFIG_PATH, config_store)
+        .map_err(|e| {
+            scs_errors::internal_error(format!("Failed to load default git repo config: {e:#}"))
+        })?
+        .get();
+    template.storage_config.clone().ok_or_else(|| {
+        scs_errors::internal_error(format!(
+            "{DEFAULT_GIT_REPO_CONFIG_PATH} does not name a storage config"
+        ))
+        .into()
+    })
+}
 
+/// Open a metadata store against that storage config. `store_name` names the
+/// store in the error text; without it two callers opening different stores
+/// against the same config produce the same message.
+async fn open_default_git_metadata_store<T>(
+    fb: FacebookInit,
+    configs: &MononokeConfigs,
+    mysql_options: &MysqlOptions,
+    store_name: &str,
+) -> Result<T, scs_errors::ServiceError>
+where
+    T: SqlConstructFromMetadataDatabaseConfig,
+{
+    let storage_name = default_git_storage_name(configs)?;
+    let storage_configs = configs.storage_configs();
+    let storage_config = storage_configs.storage.get(&storage_name).ok_or_else(|| {
+        scs_errors::ServiceError::from(scs_errors::internal_error(format!(
+            "Storage config '{storage_name}' not found while building the {store_name} store"
+        )))
+    })?;
+    T::with_metadata_database_config(fb, &storage_config.metadata, mysql_options, false)
+        .await
+        .map_err(|e| {
+            scs_errors::ServiceError::from(scs_errors::internal_error(format!(
+                "Failed to open the {store_name} store: {e:#}"
+            )))
+        })
+}
+
+impl SymrefStoreFactory {
     async fn shared_builder(&self) -> Result<&SqlGitSymbolicRefsBuilder, scs_errors::ServiceError> {
         self.builder
-            .get_or_try_init(|| async {
-                let storage_name = self.default_git_storage_name()?;
-                let storage_configs = self.configs.storage_configs();
-                let storage_config =
-                    storage_configs.storage.get(&storage_name).ok_or_else(|| {
-                        scs_errors::ServiceError::from(scs_errors::internal_error(format!(
-                            "Storage config '{storage_name}' not found while building the symref \
-                             store"
-                        )))
-                    })?;
-                SqlGitSymbolicRefsBuilder::with_metadata_database_config(
+            .get_or_try_init(|| {
+                open_default_git_metadata_store(
                     self.fb,
-                    &storage_config.metadata,
+                    &self.configs,
                     &self.mysql_options,
-                    false,
+                    "symref",
                 )
-                .await
-                .map_err(|e| {
-                    scs_errors::ServiceError::from(scs_errors::internal_error(format!(
-                        "Failed to open the symref store: {e:#}"
-                    )))
-                })
             })
             .await
     }
