@@ -1,7 +1,9 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps", "get_oss_suffix", "get_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbcode_macros//build_defs:sanitizers.bzl", "sanitizers")
 load("@fbsource//tools/build_defs:selects.bzl", "selects")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -19,10 +21,15 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "basic" + get_oss_suffix(),
     srcs = ["basic_test.py"],
     env = artifacts["env"],
+    # The test drives a real EdenFS daemon over its Thrift socket. That is
+    # loopback rather than the wider network, but the local forkserver brings
+    # loopback down for every restricted mode, so none()/strict()/loopback are
+    # all equally unusable here and only all() works both locally and on RE.
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/parameterized:parameterized",
