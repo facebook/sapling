@@ -2281,8 +2281,13 @@ Future<Unit> EdenServer::performTakeoverStart(
         // Daemon-managed bind mounts are vestigial, but left in the privhelper
         // protocol in case we change our mind.
         std::vector<std::string> bindMounts;
-        return serverState_->getPrivHelper()->takeoverStartup(
-            mountPath.view(), bindMounts);
+        return serverState_->getPrivHelper()
+            ->takeoverStartup(mountPath.view(), bindMounts)
+            .thenValue([edenMount = std::move(edenMount)](auto&&) {
+              if (auto* channel = edenMount->getFuseChannel()) {
+                channel->maybeSetFuseReadAhead();
+              }
+            });
       });
 #else
   NOT_IMPLEMENTED();

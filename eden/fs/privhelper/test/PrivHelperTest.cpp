@@ -983,6 +983,26 @@ TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
 }
 
 #ifdef __linux__
+TEST_F(PrivHelperTest, fuseReadAheadRequiresARegisteredMount) {
+  auto dir = makeTempDir();
+  const auto path = dir.path().string();
+  EXPECT_THROW_RE(
+      client_->setFuseReadAhead(path, 1024).get(1s),
+      std::exception,
+      "No FUSE mount found");
+
+  client_->takeoverStartup(path, {}).get(1s);
+  server_.setFuseUnmountResult(path).setValue();
+  // An ordinary registered directory has no BDI configuration to update.
+  EXPECT_NO_THROW(client_->setFuseReadAhead(path, 1024).get(1s));
+
+  client_->takeoverShutdown(path).get(1s);
+  EXPECT_THROW_RE(
+      client_->setFuseReadAhead(path, 1024).get(1s),
+      std::exception,
+      "No FUSE mount found");
+}
+
 TEST(PrivHelperMemoryPriorityTest, checksOwnershipBeforeWriting) {
   runInMountNamespace([&] {
     int pipeFds[2];
@@ -1126,6 +1146,7 @@ class PrivHelperSanityTestServer : public PrivHelperServer {
  public:
   using PrivHelperServer::bindMount;
   using PrivHelperServer::openPathAsUser;
+  using PrivHelperServer::processSetFuseReadAhead;
   void registerMount(const std::string& path) {
     registerMountPoint(path);
   }
@@ -1174,6 +1195,27 @@ TEST(PrivHelperSanityTest, takeoverRollbackUsesLegacyPathResolution) {
 
     installPrivHelperRollbackMarker();
     EXPECT_NO_THROW(server.checkMount(path, true));
+  });
+}
+
+TEST(PrivHelperSanityTest, readAheadRollbackBypassesRegistration) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    PrivHelperSanityTestServer server(getuid());
+    const auto configure = [&] {
+      auto request = PrivHelperConn::serializeSetFuseReadAheadRequest(
+          1, dir.path().string(), 1024);
+      folly::io::Cursor cursor{&request.data};
+      PrivHelperConn::parsePacket(cursor);
+      server.processSetFuseReadAhead(cursor);
+    };
+    EXPECT_THROW_RE(configure(), std::domain_error, "No FUSE mount found");
+
+    installPrivHelperRollbackMarker();
+    EXPECT_NO_THROW(configure());
+
+    checkUnixError(unlink(kDisablePrivHelperHardeningPath));
+    EXPECT_THROW_RE(configure(), std::domain_error, "No FUSE mount found");
   });
 }
 

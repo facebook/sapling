@@ -100,7 +100,7 @@ bool disablePrivHelperHardening() {
 #endif
 
   // This is an emergency host-local rollback knob, so only root-controlled
-  // filesystem state may disable the fd-based target checks.
+  // filesystem state may disable the hardened request checks.
   return isRootControlledPath(kEdenSystemConfigDir, S_IFDIR) &&
       isRootControlledPath(kDisablePrivHelperHardeningPath, S_IFREG);
 }

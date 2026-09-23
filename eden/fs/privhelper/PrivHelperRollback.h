@@ -12,6 +12,10 @@ namespace facebook::eden {
 constexpr const char* kDisablePrivHelperHardeningPath{
     "/etc/eden/disable_privhelper_hardening"};
 
+/**
+ * Check the root-controlled rollback marker and minimum supported kernel.
+ * Restart the helper when changing the marker to apply startup credentials.
+ */
 bool disablePrivHelperHardening();
 
 } // namespace facebook::eden

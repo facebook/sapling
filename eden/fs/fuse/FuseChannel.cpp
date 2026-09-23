@@ -1292,7 +1292,6 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   }
   updateEffectiveWorkerThreadCount();
   dispatcher_->initConnection(connInfo);
-  maybeSetFuseReadAhead();
 
   XLOGF(
       DBG1,

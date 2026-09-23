@@ -410,6 +410,10 @@ class FuseChannel final : public FsChannel {
   void notifyTransportWorkerReady(size_t queueId, size_t expectedWorkerCount);
   void logUnmountEventAndExit();
 
+  /** Apply configured read-ahead after the mount is registered with the helper.
+   */
+  void maybeSetFuseReadAhead();
+
   /**
    * Initialize the FuseChannel; until this completes successfully,
    * FUSE requests will not be serviced.
@@ -949,7 +953,6 @@ class FuseChannel final : public FsChannel {
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
   void readInitPacket();
-  void maybeSetFuseReadAhead();
   void startWorkerThreads();
 
   /**

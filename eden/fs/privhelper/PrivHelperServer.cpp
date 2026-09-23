@@ -560,7 +560,10 @@ std::string makeLinuxNfsMountOptions(const NFSMountOptions& options) {
  * Configure FUSE read-ahead by writing to
  * /sys/class/bdi/{major}:{minor}/read_ahead_kb
  */
-void configureFuseReadAhead(const char* mountPath, uint32_t readAheadKb) {
+void configureFuseReadAhead(
+    const char* mountPath,
+    std::optional<int> mountFd,
+    uint32_t readAheadKb) {
   auto result = getMountInfoForPath(mountPath);
   if (result.hasError()) {
     XLOGF(
@@ -575,6 +578,24 @@ void configureFuseReadAhead(const char* mountPath, uint32_t readAheadKb) {
     return;
   }
   const auto& info = result.value().value();
+  if (mountFd) {
+    if (info.fsType != "fuse" &&
+        !folly::StringPiece(info.fsType).startsWith("fuse.")) {
+      throwf<std::domain_error>("{} is not a FUSE mount", mountPath);
+    }
+
+    // Cached metadata avoids requiring a response from the FUSE daemon.
+    struct statx st{};
+    checkUnixError(
+        statx(*mountFd, "", AT_EMPTY_PATH | AT_STATX_DONT_SYNC, STATX_INO, &st),
+        "stat registered mount ",
+        mountPath);
+    if (st.stx_dev_major != info.devMajor ||
+        st.stx_dev_minor != info.devMinor) {
+      throwf<std::domain_error>(
+          "{} no longer matches the registered mount", mountPath);
+    }
+  }
 
   auto bdiPath = fmt::format(
       "/sys/class/bdi/{}:{}/read_ahead_kb", info.devMajor, info.devMinor);
@@ -1587,7 +1608,21 @@ UnixSocket::Message PrivHelperServer::processSetFuseReadAhead(
   uint32_t readAheadKb;
   PrivHelperConn::parseSetFuseReadAheadRequest(cursor, mountPath, readAheadKb);
 #ifndef __APPLE__
-  configureFuseReadAhead(mountPath.c_str(), readAheadKb);
+  if (disablePrivHelperHardening()) {
+    XLOGF(
+        WARN,
+        "Using legacy read-ahead configuration for `{}` because privhelper hardening is disabled",
+        mountPath);
+    configureFuseReadAhead(mountPath.c_str(), std::nullopt, readAheadKb);
+    return makeResponse();
+  }
+
+  const auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    throwf<std::domain_error>("No FUSE mount found for {}", mountPath);
+  }
+  configureFuseReadAhead(
+      mountPath.c_str(), it->second.rootFd.fd(), readAheadKb);
 #else
   (void)mountPath;
   (void)readAheadKb;

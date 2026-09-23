@@ -163,7 +163,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processGetNamespaceInfo(folly::io::Cursor& cursor);
   UnixSocket::Message processSetMemoryPriorityForProcess(
       folly::io::Cursor& cursor);
-  UnixSocket::Message processSetFuseReadAhead(folly::io::Cursor& cursor);
 
   void unmountStaleMount(const std::string& mountPoint);
 
@@ -303,6 +302,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   UnixSocket::Message processStopFam();
+  UnixSocket::Message processSetFuseReadAhead(folly::io::Cursor& cursor);
   virtual AbsolutePath getFamBinaryPath() const;
 
   // Virtual so tests can replace a pathname after its descriptor is checked.
