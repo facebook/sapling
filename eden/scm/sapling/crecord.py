@@ -378,15 +378,19 @@ class uihunk(patchnode):
         )
         return add, rem
 
-    def getfromtoline(self):
+    def getfromtoline(self, added=None, removed=None):
+        if added is None:
+            added = self._hunk.added
+        if removed is None:
+            removed = self._hunk.removed
         # calculate the number of removed lines converted to context lines
-        removedconvertedtocontext = self.originalremoved - self.removed
+        removedconvertedtocontext = self.originalremoved - removed
 
         contextlen = len(self.before) + len(self.after) + removedconvertedtocontext
         if self.after and self.after[-1] == b"\\ No newline at end of file\n":
             contextlen -= 1
-        fromlen = contextlen + self.removed
-        to_len = contextlen + self.added
+        fromlen = contextlen + removed
+        to_len = contextlen + added
 
         # diffutils manual, section "2.2.2.2 detailed description of unified
         # format": "an empty hunk is considered to end at the line that
@@ -411,9 +415,8 @@ class uihunk(patchnode):
         return fromtoline
 
     def write(self, fp):
-        # updated self.added/removed, which are used by getfromtoline()
-        self.added, self.removed = self.countchanges()
-        fp.write(self.getfromtoline())
+        added, removed = self.countchanges()
+        fp.write(self.getfromtoline(added, removed))
 
         hunklinelist = []
         # add the following to the list: (1) all applied lines, and
@@ -433,6 +436,12 @@ class uihunk(patchnode):
         x = io.BytesIO()
         self.pretty(x)
         return x.getvalue()
+
+    def withtolineoffset(self, offset):
+        hunk = object.__new__(type(self))
+        hunk.__dict__ = self.__dict__.copy()
+        hunk.toline = self.toline + offset
+        return hunk
 
     def reversehunk(self):
         """return a recordhunk which is the reverse of the hunk
@@ -499,6 +508,27 @@ class uihunk(patchnode):
         return "<hunk %r@%d>" % (self.filename(), self.fromline)
 
 
+def selectedchunks(uiheaders):
+    """Return patch chunks for the current UI-node selection."""
+    appliedhunklist = []
+    for hdr in uiheaders:
+        if hdr.applied and (
+            hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0
+        ):
+            appliedhunklist.append(hdr)
+            fixoffset = 0
+            for hnk in hdr.hunks:
+                if hnk.applied:
+                    # adjust the 'to'-line offset of the hunk to be correct
+                    # after de-activating some of the other hunks for this file
+                    if fixoffset:
+                        hnk = hnk.withtolineoffset(fixoffset)
+                    appliedhunklist.append(hnk)
+                else:
+                    fixoffset += hnk.removed - hnk.added
+    return appliedhunklist
+
+
 def filterpatch(ui, chunks, chunkselector, operation=None):
     """interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
@@ -513,25 +543,8 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
     ret = chunkselector(ui, uiheaders, operation=operation)
-    appliedhunklist = []
-    for hdr in uiheaders:
-        if hdr.applied and (
-            hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0
-        ):
-            appliedhunklist.append(hdr)
-            fixoffset = 0
-            for hnk in hdr.hunks:
-                if hnk.applied:
-                    appliedhunklist.append(hnk)
-                    # adjust the 'to'-line offset of the hunk to be correct
-                    # after de-activating some of the other hunks for this file
-                    if fixoffset:
-                        # hnk = copy.copy(hnk) # necessary??
-                        hnk.toline += fixoffset
-                else:
-                    fixoffset += hnk.removed - hnk.added
 
-    return (appliedhunklist, ret)
+    return (selectedchunks(uiheaders), ret)
 
 
 def chunkselector(ui, headerlist, operation=None):
@@ -587,6 +600,70 @@ _headermessages: Dict[Optional[str], str] = {  # {operation: text}
     "discard": _("Select hunks to discard"),
     None: _("Select hunks to record"),
 }
+
+
+def _updateheaderstate(header):
+    hunksapplied = [hunk.applied for hunk in header.hunks]
+    if not any(hunksapplied):
+        if not header.special():
+            header.applied = False
+            header.partial = False
+        return
+
+    header.applied = True
+    header.partial = any(hunk.partial for hunk in header.hunks) or not all(hunksapplied)
+
+
+def _updatehunkstate(hunk):
+    linesapplied = [line.applied for line in hunk.changedlines]
+    if not any(linesapplied):
+        hunk.applied = False
+        hunk.partial = False
+    elif all(linesapplied):
+        hunk.applied = True
+        hunk.partial = False
+    else:
+        hunk.applied = True
+        hunk.partial = True
+
+
+def _setappliedwithoutparents(item, applied, affectedhunks, affectedheaders):
+    item.applied = applied
+    if isinstance(item, uiheader):
+        affectedheaders.add(item)
+        item.partial = False
+        for hunk in item.hunks:
+            affectedhunks.add(hunk)
+            hunk.applied = applied
+            hunk.partial = False
+            for line in hunk.changedlines:
+                line.applied = applied
+    elif isinstance(item, uihunk):
+        affectedheaders.add(item.header)
+        affectedhunks.add(item)
+        item.partial = False
+        for line in item.changedlines:
+            line.applied = applied
+    elif isinstance(item, uihunkline):
+        affectedheaders.add(item.hunk.header)
+        affectedhunks.add(item.hunk)
+
+
+def setappliednodes(items, applied):
+    """Set patch nodes and update each affected ancestor once."""
+    affectedhunks = set()
+    affectedheaders = set()
+    for item in items:
+        _setappliedwithoutparents(item, applied, affectedhunks, affectedheaders)
+    for hunk in affectedhunks:
+        _updatehunkstate(hunk)
+    for header in affectedheaders:
+        _updateheaderstate(header)
+
+
+def setapplied(item, applied):
+    """Set a patch node's state and propagate it through the patch tree."""
+    setappliednodes([item], applied)
 
 
 class curseschunkselector:
@@ -822,84 +899,7 @@ class curseschunkselector:
         """
         if item is None:
             item = self.currentselecteditem
-
-        item.applied = not item.applied
-
-        if isinstance(item, uiheader):
-            item.partial = False
-            if item.applied:
-                # apply all its hunks
-                for hnk in item.hunks:
-                    hnk.applied = True
-                    # apply all their hunklines
-                    for hunkline in hnk.changedlines:
-                        hunkline.applied = True
-            else:
-                # un-apply all its hunks
-                for hnk in item.hunks:
-                    hnk.applied = False
-                    hnk.partial = False
-                    # un-apply all their hunklines
-                    for hunkline in hnk.changedlines:
-                        hunkline.applied = False
-        elif isinstance(item, uihunk):
-            item.partial = False
-            # apply all it's hunklines
-            for hunkline in item.changedlines:
-                hunkline.applied = item.applied
-
-            siblingappliedstatus = [hnk.applied for hnk in item.header.hunks]
-            allsiblingsapplied = not (False in siblingappliedstatus)
-            nosiblingsapplied = not (True in siblingappliedstatus)
-
-            siblingspartialstatus = [hnk.partial for hnk in item.header.hunks]
-            somesiblingspartial = True in siblingspartialstatus
-
-            # cases where applied or partial should be removed from header
-
-            # if no 'sibling' hunks are applied (including this hunk)
-            if nosiblingsapplied:
-                if not item.header.special():
-                    item.header.applied = False
-                    item.header.partial = False
-            else:  # some/all parent siblings are applied
-                item.header.applied = True
-                item.header.partial = somesiblingspartial or not allsiblingsapplied
-
-        elif isinstance(item, uihunkline):
-            siblingappliedstatus = [ln.applied for ln in item.hunk.changedlines]
-            allsiblingsapplied = not (False in siblingappliedstatus)
-            nosiblingsapplied = not (True in siblingappliedstatus)
-
-            # if no 'sibling' lines are applied
-            if nosiblingsapplied:
-                item.hunk.applied = False
-                item.hunk.partial = False
-            elif allsiblingsapplied:
-                item.hunk.applied = True
-                item.hunk.partial = False
-            else:  # some siblings applied
-                item.hunk.applied = True
-                item.hunk.partial = True
-
-            parentsiblingsapplied = [hnk.applied for hnk in item.hunk.header.hunks]
-            noparentsiblingsapplied = not (True in parentsiblingsapplied)
-            allparentsiblingsapplied = not (False in parentsiblingsapplied)
-
-            parentsiblingspartial = [hnk.partial for hnk in item.hunk.header.hunks]
-            someparentsiblingspartial = True in parentsiblingspartial
-
-            # if all parent hunks are not applied, un-apply header
-            if noparentsiblingsapplied:
-                if not item.hunk.header.special():
-                    item.hunk.header.applied = False
-                    item.hunk.header.partial = False
-            # set the applied and partial status of the header if needed
-            else:  # some/all parent siblings are applied
-                item.hunk.header.applied = True
-                item.hunk.header.partial = (
-                    someparentsiblingspartial or not allparentsiblingsapplied
-                )
+        setapplied(item, not item.applied)
 
     def toggleall(self):
         "toggle the applied flag of all items."
