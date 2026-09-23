@@ -245,8 +245,13 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 mutation_dag.insert(mutation.successor.clone(), mutation.predecessors.clone());
                 mutations.insert(mutation.successor.clone(), mutation);
             }
+            // Pin T and V explicitly: on Apple targets, leaving V to be inferred
+            // makes the solver probe `&V: IntoIterator` while V is still a
+            // variable, recursing into objc2's `impl IntoIterator for
+            // &Retained<T>` until overflow (E0275).
             let mutation_order =
-                topo_sort::sort_topological(&mutation_dag).context("No topological order found")?;
+                topo_sort::sort_topological::<String, _, Vec<String>>(&mutation_dag)
+                    .context("No topological order found")?;
             let mutations = mutation_order
                 .iter()
                 .flat_map(|id| mutations.remove(id.as_str()))
