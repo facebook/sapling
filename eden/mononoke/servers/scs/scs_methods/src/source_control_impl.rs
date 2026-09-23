@@ -642,6 +642,7 @@ impl SourceControlServiceImpl {
                 (repo, path.tree().await?)
             }
             thrift::TreeSpecifier::by_id(tree_id) => {
+                ensure_tree_id_requests_allowed(&tree_id.repo.name)?;
                 let repo = self.repo(ctx, &tree_id.repo).await?;
                 let tree_id = compat::ContentManifestId::from_request(tree_id)?;
                 let tree = repo
@@ -723,6 +724,21 @@ impl SourceControlServiceImpl {
             remote_diff_config,
         }
     }
+}
+
+fn ensure_tree_id_requests_allowed(repo_name: &str) -> Result<(), scs_errors::ServiceError> {
+    if justknobs::eval(
+        "scm/mononoke:scs_reject_tree_id_requests",
+        None,
+        Some(repo_name),
+    ) {
+        return Err(scs_errors::invalid_request(
+            "tree ID access is disabled; specify the tree by commit and path",
+        )
+        .into());
+    }
+
+    Ok(())
 }
 
 fn ensure_repo_requests_allowed(repo_name: &str) -> Result<(), scs_errors::ServiceError> {
@@ -2145,6 +2161,37 @@ mod tests {
                     &["SERVICE_IDENTITY".to_string()]
                 ));
                 assert!(!ctx.nocache_thriftcache());
+            },
+        );
+    }
+
+    #[mononoke::test]
+    fn test_tree_id_requests_allowed_when_jk_disabled() {
+        with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_reject_tree_id_requests".to_string() => KnobVal::Bool(false)
+            ]),
+            || {
+                assert!(ensure_tree_id_requests_allowed("test_repo").is_ok());
+            },
+        );
+    }
+
+    #[mononoke::test]
+    fn test_tree_id_requests_rejected_when_jk_enabled() {
+        with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_reject_tree_id_requests".to_string() => KnobVal::Bool(true)
+            ]),
+            || match ensure_tree_id_requests_allowed("test_repo") {
+                Err(scs_errors::ServiceError::Request(error)) => {
+                    assert_eq!(error.kind, thrift::RequestErrorKind::INVALID_REQUEST);
+                    assert_eq!(
+                        error.reason,
+                        "tree ID access is disabled; specify the tree by commit and path"
+                    );
+                }
+                result => panic!("expected INVALID_REQUEST error, got {result:?}"),
             },
         );
     }

@@ -157,7 +157,7 @@ union TreeSpecifier {
   /// Specify a tree by its path in a commit.
   1: CommitPathSpecifier by_commit_path;
 
-  /// Specify a tree by its id.
+  /// Deprecated: use `by_commit_path` instead.
   2: TreeIdSpecifier by_id;
 }
 
