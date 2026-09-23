@@ -1094,9 +1094,28 @@ TEST(PrivHelperSanityTest, rootProcessChecksTheServedOwnersMount) {
     EXPECT_THROW(server.checkMount(dir.path().string(), false), std::exception);
     EXPECT_THROW(server.checkMount(dir.path().string(), true), std::exception);
 
+    checkUnixError(
+        mount("tmpfs", dir.path().c_str(), "tmpfs", MS_RDONLY, "size=1m"));
+    PrivHelperSanityTestServer rootServer(0);
+    EXPECT_NO_THROW(rootServer.checkMount(dir.path().string(), false));
+    EXPECT_NO_THROW(rootServer.checkMount(dir.path().string(), true));
+
     installPrivHelperRollbackMarker();
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), false));
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), true));
+  });
+}
+
+TEST(PrivHelperSanityTest, takeoverRollbackUsesLegacyPathResolution) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    File directory(dir.path().c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+    const auto path = fmt::format("/proc/self/fd/{}", directory.fd());
+    PrivHelperSanityTestServer server(getuid());
+    EXPECT_THROW(server.checkMount(path, true), std::system_error);
+
+    installPrivHelperRollbackMarker();
+    EXPECT_NO_THROW(server.checkMount(path, true));
   });
 }
 
@@ -1185,6 +1204,7 @@ TEST(PrivHelperSanityTest, userPathResolutionDisablesDacOverrides) {
         EXPECT_THROW(
             server.openPathAsUser(blocked.string(), R_OK | X_OK),
             std::system_error);
+        EXPECT_THROW(server.checkMount(leaf.string(), true), std::system_error);
 
         EXPECT_NO_THROW(File(leaf.c_str(), O_PATH | O_DIRECTORY));
       },

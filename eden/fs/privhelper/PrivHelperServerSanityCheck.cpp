@@ -215,19 +215,6 @@ void sanityCheckFs(const std::string& mountPoint, int mountPointFd = -1) {
 }
 
 #ifdef __linux__
-folly::File openCheckedMountTarget(const std::string& mountPoint) {
-  const auto fd = open(mountPoint.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
-  if (fd < 0) {
-    auto err = errno;
-    throwf<std::domain_error>(
-        "User:{} cannot open {}: {}",
-        getuid(),
-        mountPoint,
-        folly::errnoStr(err));
-  }
-  return folly::File{fd, /*ownsFd=*/true};
-}
-
 void checkMountPointWriteAccess(
     const std::string& mountPoint,
     int mountPointFd) {
@@ -332,7 +319,9 @@ void PrivHelperServer::sanityCheckOpenedMountPoint(
   }
 
 #ifdef __linux__
-  checkMountPointWriteAccess(mountPoint, mountPointFd);
+  if (!disablePrivHelperHardening()) {
+    checkMountPointWriteAccess(mountPoint, mountPointFd);
+  }
 #endif
   sanityCheckFs(mountPoint, mountPointFd);
 }
@@ -556,10 +545,21 @@ PrivHelperServer::CheckedMountPoint
 PrivHelperServer::openAndSanityCheckMountPoint(
     const std::string& mountPoint,
     const SanityCheckOptions& options) {
+  if (disablePrivHelperHardening()) {
+    XLOGF(
+        WARN,
+        "Using legacy mount target validation for `{}` because privhelper hardening is disabled",
+        mountPoint);
+    auto sanityResult = sanityCheckMountPoint(mountPoint, options);
+    return CheckedMountPoint{
+        folly::File(mountPoint.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC),
+        sanityResult};
+  }
+
   XLOGF(INFO, "Sanity checking mount {}", mountPoint);
-  if ((disablePrivHelperHardening() ? getuid() : uid_) == 0) {
+  if (uid_ == 0) {
     XLOG(INFO, "Skipping sanity check for root user.");
-    auto targetFd = openCheckedMountTarget(mountPoint);
+    auto targetFd = openPathAsUser(mountPoint, F_OK);
     return CheckedMountPoint{std::move(targetFd), SanityCheckResult{}};
   }
 
@@ -569,7 +569,7 @@ PrivHelperServer::openAndSanityCheckMountPoint(
         mountPoint, staleMountCheck->isNFS, staleMountCheck->isHardMount);
   }
 
-  auto targetFd = openCheckedMountTarget(mountPoint);
+  auto targetFd = openPathAsUser(mountPoint, R_OK | W_OK | X_OK);
   sanityCheckOpenedMountPoint(mountPoint, targetFd.fd());
   if (options.performBindMountCleanup()) {
     // Only clean up mounts under a checkout after the checkout path itself has
