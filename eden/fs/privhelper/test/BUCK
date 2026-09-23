@@ -39,6 +39,7 @@ cpp_unittest(
         "//folly:file_util",
         "//folly:portability",
         "//folly:range",
+        "//folly:scope_guard",
         "//folly:synchronized",
         "//folly/futures:core",
         "//folly/io:iobuf",

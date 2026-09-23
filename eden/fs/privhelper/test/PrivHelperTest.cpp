@@ -11,6 +11,7 @@
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/ScopeGuard.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -40,6 +41,7 @@
 #ifdef __linux__
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+#include <linux/securebits.h>
 #include <sched.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>
@@ -78,7 +80,9 @@ using testing::UnorderedElementsAre;
 
 #ifdef __linux__
 namespace {
-void runInMountNamespace(const std::function<void()>& test) {
+void runInMountNamespace(
+    const std::function<void()>& test,
+    uid_t mappedUid = 0) {
   const auto uid = getuid();
   const auto gid = getgid();
   const auto pid = fork();
@@ -91,7 +95,8 @@ void runInMountNamespace(const std::function<void()>& test) {
     }
     try {
       checkUnixError(
-          folly::writeFile(fmt::format("0 {} 1\n", uid), "/proc/self/uid_map")
+          folly::writeFile(
+              fmt::format("{} {} 1\n", mappedUid, uid), "/proc/self/uid_map")
               ? 0
               : -1);
       checkUnixError(
@@ -1061,6 +1066,12 @@ TEST(PrivHelperFamTest, rejectsMissingOutputDescriptor) {
 
 class PrivHelperSanityTestServer : public PrivHelperServer {
  public:
+  using PrivHelperServer::bindMount;
+  using PrivHelperServer::openPathAsUser;
+  void registerMount(const std::string& path) {
+    registerMountPoint(path);
+  }
+
   explicit PrivHelperSanityTestServer(uid_t owner) {
     uid_ = owner;
     gid_ = getgid();
@@ -1087,6 +1098,97 @@ TEST(PrivHelperSanityTest, rootProcessChecksTheServedOwnersMount) {
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), false));
     EXPECT_NO_THROW(server.checkMount(dir.path().string(), true));
   });
+}
+
+TEST(PrivHelperSanityTest, userPathResolutionFollowsOrdinarySymlinks) {
+  TemporaryDirectory dir;
+  const auto real = dir.path() / "real";
+  boost::filesystem::create_directory(real);
+  boost::filesystem::create_directory(real / "leaf");
+  checkUnixError(symlink("real", (dir.path() / "link").c_str()));
+  PrivHelperSanityTestServer server(getuid());
+  auto fd = server.openPathAsUser(
+      (dir.path() / "link" / "leaf").string(), R_OK | X_OK);
+  struct stat actual{}, expected{};
+  checkUnixError(fstat(fd.fd(), &actual));
+  checkUnixError(stat((real / "leaf").c_str(), &expected));
+  EXPECT_EQ(expected.st_ino, actual.st_ino);
+  EXPECT_EQ(expected.st_dev, actual.st_dev);
+  EXPECT_NE(0, fcntl(fd.fd(), F_GETFL) & O_PATH);
+  EXPECT_NO_THROW(server.openPathAsUser("/", R_OK | X_OK));
+}
+
+TEST(PrivHelperSanityTest, userPathResolutionRejectsAnInaccessibleAncestor) {
+  if (getuid() == 0) {
+    GTEST_SKIP() << "requires a non-root user";
+  }
+  TemporaryDirectory dir;
+  const auto blocked = dir.path() / "blocked";
+  boost::filesystem::create_directory(blocked);
+  boost::filesystem::create_directory(blocked / "leaf");
+  checkUnixError(chmod(blocked.c_str(), 0000));
+  SCOPE_EXIT {
+    checkUnixError(chmod(blocked.c_str(), 0700));
+  };
+  PrivHelperSanityTestServer server(getuid());
+  EXPECT_THROW(
+      server.openPathAsUser((blocked / "leaf").string(), R_OK | X_OK),
+      std::system_error);
+  EXPECT_EQ(getuid(), geteuid());
+}
+
+TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceDescriptor) {
+  TemporaryDirectory dir;
+  runInMountNamespace([&] {
+    checkUnixError(mount("tmpfs", dir.path().c_str(), "tmpfs", 0, "size=1m"));
+    const auto source = dir.path() / "source";
+    const auto root = dir.path() / "checkout";
+    const auto target = root / "redirect";
+    boost::filesystem::create_directory(source);
+    boost::filesystem::create_directories(target);
+    ASSERT_TRUE(
+        folly::writeFile(StringPiece{"content"}, (source / "file").c_str()));
+
+    PrivHelperSanityTestServer server(getuid());
+    server.registerMount(root.string());
+    server.bindMount(source.c_str(), target.c_str(), root.string());
+
+    std::string contents;
+    ASSERT_TRUE(folly::readFile((target / "file").c_str(), contents));
+    EXPECT_EQ("content", contents);
+    struct stat sourceStat{}, targetStat{};
+    checkUnixError(stat(source.c_str(), &sourceStat));
+    checkUnixError(stat(target.c_str(), &targetStat));
+    EXPECT_EQ(sourceStat.st_ino, targetStat.st_ino);
+    EXPECT_EQ(sourceStat.st_dev, targetStat.st_dev);
+  });
+}
+
+TEST(PrivHelperSanityTest, userPathResolutionDisablesDacOverrides) {
+  TemporaryDirectory dir;
+  runInMountNamespace(
+      [&] {
+        ASSERT_EQ(1, getuid());
+        checkUnixError(
+            mount("tmpfs", dir.path().c_str(), "tmpfs", 0, "size=1m"));
+        checkUnixError(prctl(PR_SET_SECUREBITS, SECBIT_NO_SETUID_FIXUP));
+        const auto blocked = dir.path() / "blocked";
+        const auto leaf = blocked / "leaf";
+        boost::filesystem::create_directories(leaf);
+        checkUnixError(chmod(blocked.c_str(), 0000));
+        EXPECT_NO_THROW(File(leaf.c_str(), O_PATH | O_DIRECTORY));
+
+        PrivHelperSanityTestServer server(getuid());
+        EXPECT_THROW(
+            server.openPathAsUser(leaf.string(), R_OK | X_OK),
+            std::system_error);
+        EXPECT_THROW(
+            server.openPathAsUser(blocked.string(), R_OK | X_OK),
+            std::system_error);
+
+        EXPECT_NO_THROW(File(leaf.c_str(), O_PATH | O_DIRECTORY));
+      },
+      1);
 }
 #endif
 

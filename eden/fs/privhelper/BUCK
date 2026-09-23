@@ -93,6 +93,7 @@ cpp_library(
         "//folly:expected",
         "//folly:file_util",
         "//folly:network_address",
+        "//folly:scope_guard",
         "//folly:string",
         "//folly:unit",
         "//folly:utility",

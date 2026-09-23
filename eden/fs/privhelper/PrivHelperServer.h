@@ -151,7 +151,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   };
 #endif
   RegisteredMount openRegisteredMount(const std::string& mountPath);
-  void registerMountPoint(const std::string& mountPath);
   void registerMountPoint(
       const std::string& mountPath,
       RegisteredMount registeredMount);
@@ -274,10 +273,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void unmount(const char* mountPath, UnmountOptions options);
   // Both clientPath and mountPath must be existing directories.
   virtual void insecureBindMount(const char* clientPath, const char* mountPath);
-  virtual void bindMount(
-      const char* clientPath,
-      const char* mountPath,
-      folly::StringPiece mountRoot);
   virtual bool useModernMountApi() const;
 #ifndef __APPLE__
   FuseMountResult fuseMountByFd(
@@ -292,6 +287,18 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 #endif
 
  protected:
+  void registerMountPoint(const std::string& mountPath);
+  virtual void bindMount(
+      const char* clientPath,
+      const char* mountPath,
+      folly::StringPiece mountRoot);
+#ifdef __linux__
+  // Supplementary groups must already belong to the served user: setuid
+  // launches inherit them, and PrivHelperMain initializes them for root
+  // launches.
+  folly::File openPathAsUser(const std::string& path, int accessMode) const;
+#endif
+
   UnixSocket::Message processStartFam(
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);

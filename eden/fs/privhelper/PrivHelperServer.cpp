@@ -1038,6 +1038,7 @@ void PrivHelperServer::bindMount(
   throw std::runtime_error("this system does not support bind mounts");
 #else
   auto targetFd = openBindMountTarget(mountRoot, mountPath);
+  auto sourceFd = openPathAsUser(clientPath, R_OK | X_OK);
   XLOGF(
       DBG2,
       "Moving detached bind mount from `{}` to `{}` by fd",
@@ -1048,9 +1049,9 @@ void PrivHelperServer::bindMount(
   // fd. The target path is not re-resolved by string during the attach.
   auto treeFdNum = static_cast<int>(syscall(
       SYS_open_tree,
-      AT_FDCWD,
-      clientPath,
-      OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC));
+      sourceFd.fd(),
+      "",
+      AT_EMPTY_PATH | OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC));
   checkUnixError(
       treeFdNum, "failed to clone bind mount source `", clientPath, "`");
   folly::File treeFd{treeFdNum, /*ownsFd=*/true};

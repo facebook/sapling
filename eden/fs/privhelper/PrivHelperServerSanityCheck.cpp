@@ -17,6 +17,7 @@
 #include <folly/Conv.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/ScopeGuard.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <sys/mount.h>
@@ -30,7 +31,13 @@
 
 #ifdef __linux__
 
+#include <linux/capability.h>
+#include <linux/openat2.h>
+#include <sys/fsuid.h>
+#include <sys/prctl.h>
 #include <sys/statfs.h>
+#include <sys/syscall.h>
+#include <array>
 
 #endif
 
@@ -240,6 +247,67 @@ void checkMountPointWriteAccess(
 #endif
 
 } // namespace
+
+#ifdef __linux__
+folly::File PrivHelperServer::openPathAsUser(
+    const std::string& path,
+    int accessMode) const {
+  const auto savedUid = static_cast<uid_t>(setfsuid(static_cast<uid_t>(-1)));
+  const auto savedGid = static_cast<gid_t>(setfsgid(static_cast<gid_t>(-1)));
+  const auto dumpable = prctl(PR_GET_DUMPABLE);
+  folly::checkUnixError(dumpable, "cannot read privhelper dumpability");
+  __user_cap_header_struct header{_LINUX_CAPABILITY_VERSION_3, 0};
+  std::array<__user_cap_data_struct, _LINUX_CAPABILITY_U32S_3> savedCaps{};
+  folly::checkUnixError(
+      syscall(SYS_capget, &header, savedCaps.data()),
+      "cannot read privhelper capabilities");
+  SCOPE_EXIT {
+    setfsuid(savedUid);
+    setfsgid(savedGid);
+    XCHECK_EQ(savedUid, static_cast<uid_t>(setfsuid(static_cast<uid_t>(-1))));
+    XCHECK_EQ(savedGid, static_cast<gid_t>(setfsgid(static_cast<gid_t>(-1))));
+    XCHECK_EQ(0, syscall(SYS_capset, &header, savedCaps.data()));
+    // PR_SET_DUMPABLE only accepts 0 and 1; keep a kernel-only value of 2
+    // non-dumpable rather than allowing user-readable core dumps.
+    XCHECK_EQ(0, prctl(PR_SET_DUMPABLE, dumpable == 1 ? 1 : 0));
+  };
+
+  setfsgid(gid_);
+  setfsuid(uid_);
+  if (static_cast<uid_t>(setfsuid(static_cast<uid_t>(-1))) != uid_ ||
+      static_cast<gid_t>(setfsgid(static_cast<gid_t>(-1))) != gid_) {
+    folly::throwSystemErrorExplicit(
+        EPERM, "cannot select filesystem credentials for user ", uid_);
+  }
+  if (uid_ != 0) {
+    auto caps = savedCaps;
+    folly::checkUnixError(syscall(SYS_capget, &header, caps.data()));
+    // Securebits can disable setfsuid's automatic capability drop.
+    caps[0].effective &=
+        ~((1U << CAP_DAC_OVERRIDE) | (1U << CAP_DAC_READ_SEARCH));
+    folly::checkUnixError(
+        syscall(SYS_capset, &header, caps.data()),
+        "cannot drop filesystem access overrides");
+  }
+
+  open_how how{};
+  how.flags = O_PATH | O_DIRECTORY | O_CLOEXEC;
+  how.resolve = RESOLVE_NO_MAGICLINKS;
+  const auto fd = static_cast<int>(
+      syscall(SYS_openat2, AT_FDCWD, path.c_str(), &how, sizeof(how)));
+  folly::checkUnixError(fd, "user ", uid_, " cannot open ", path);
+  folly::File file{fd, true};
+  // AT_EACCESS preserves the scoped filesystem credentials and capabilities.
+  // O_PATH checks ancestor traversal but does not check access to the leaf.
+  folly::checkUnixError(
+      syscall(SYS_faccessat2, fd, "", accessMode, AT_EMPTY_PATH | AT_EACCESS),
+      "user ",
+      uid_,
+      " cannot access ",
+      path);
+  return file;
+}
+#endif
 
 void PrivHelperServer::sanityCheckOpenedMountPoint(
     const std::string& mountPoint,
