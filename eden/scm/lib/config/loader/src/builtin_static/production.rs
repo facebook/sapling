@@ -635,4 +635,90 @@ use-rust=true
 
 [commitcloud]
 supported-url-regex = ^.*\.(facebook|tfbnw|mononoke)\..*$
+
+[help]
+agent-interactive=## Interactive Chunk Selection
+ 
+ `sl commit -i`, `sl amend -i` and `sl revert -i` select individual files, hunks
+ or changed lines instead of operating on the whole working copy. Sapling gives
+ agents a line-oriented REPL instead of the full-screen curses UI.
+ 
+ ## What the Selection Means
+ 
+ Selection means something different per command. Getting this backwards loses work:
+ 
+ | Command | Selected chunks are | Unselected chunks are |
+ |---|---|---|
+ | `sl commit -i -m MSG` | committed | left in the working copy |
+ | `sl amend -i` | folded into the current commit | left in the working copy |
+ | `sl revert -i` | discarded, restoring the working-copy parent | left untouched |
+ | `sl revert -i -r REV` | changed to match `REV` | left untouched |
+ 
+ ALWAYS pass `-m MSG`, or `-l FILE` for a long commit message, to `sl commit -i`.
+ Without either, Sapling opens an editor once selection finishes and the command
+ hangs.
+ 
+ `sl revert -i` is destructive. ALWAYS run `preview` before `confirm`.
+ 
+ If you see a full-screen UI instead of the `chunk-select> ` prompt, stop and
+ report it. Do not try to send arrow keys.
+ 
+ ## `revert -i` Whole-File Actions
+ 
+ Unlike `commit -i` and `amend -i`, the `revert -i` selector does not control
+ every whole-file addition or removal. In particular, these prompts happen
+ before the selector:
+ 
+ - `forget added file X (Yn)?`: Yes untracks a locally added file but keeps its
+ contents on disk.
+ - `remove added file X (Yn)?`: Yes deletes a file that exists now but not in
+ the target revision.
+ 
+ With a tty, answer these prompts before waiting for `chunk-select> `.
+ 
+ Without a tty, they take the default Yes and are only echoed. These actions
+ happen before the selector, so `abort` does not undo them. Before using non-tty
+ `revert -i`, inspect the same paths with `sl status`; with `-r REV`, also use
+ `sl status --rev REV`. Do not proceed when whole-file additions or removals are
+ in scope unless the default actions are intended.
+ 
+ ## Driving the REPL
+ 
+ Sapling holds the working copy lock until you `confirm` or `abort`. Other `sl`
+ commands block until then.
+ 
+ The REPL is ready for the next command when the last line of its output is
+ exactly `chunk-select> ` with no trailing newline. Wait for that rather than
+ sleeping a fixed time, and bound the wait so a crashed process fails fast
+ instead of hanging.
+ 
+ ### Codex
+ 
+ Call `exec_command` with `tty: true`. Use the returned session ID with
+ `write_stdin`, including a trailing newline.
+ 
+ ### Claude Code
+ 
+ The Bash tool has no tty option. Feed stdin from a file that `tail -f` follows,
+ and run the pipeline with `run_in_background: true`:
+ 
+ ```
+ dir=$(mktemp -d)
+ echo "REPL directory: $dir" >&2
+ : > "$dir/in"
+ tail -n +1 -f "$dir/in" | sl commit -i -l MSG_FILE > "$dir/out" 2>&1
+ ```
+ 
+ Use the printed directory in later Bash calls. To read only the response to your
+ last command, record the output line count before sending:
+ 
+ ```
+ n=$(wc -l < /tmp/.../out)
+ printf '%s\n' 'select F1.H2' >> /tmp/.../in
+ tail -n +$((n+1)) /tmp/.../out
+ ```
+ 
+ After `confirm` or `abort`, wait for the background task and remove the temporary
+ directory.
+
 "###);
