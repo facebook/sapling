@@ -347,20 +347,6 @@ std::optional<InternalJournalStats> Journal::getStats() {
   return stats;
 }
 
-namespace {
-folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
-  if (ci.existedBefore && !ci.existedAfter) {
-    return "Removed";
-  } else if (!ci.existedBefore && ci.existedAfter) {
-    return "Created";
-  } else if (ci.existedBefore && ci.existedAfter) {
-    return "Changed";
-  } else {
-    return "Ghost";
-  }
-}
-} // namespace
-
 void Journal::setMemoryLimit(size_t limit) {
   auto deltaState = deltaState_.wlock();
   deltaState->memoryLimit = limit;
@@ -464,17 +450,8 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             if (!resultInfo) {
               result->changedFilesInOverlay.emplace(name, currentInfo);
             } else {
-              if (resultInfo->existedBefore != currentInfo.existedAfter) {
-                auto event1 = eventCharacterizationFor(currentInfo);
-                auto event2 = eventCharacterizationFor(*resultInfo);
-                XLOGF(
-                    ERR,
-                    "Journal for {} holds invalid {}, {} sequence",
-                    name,
-                    event1,
-                    event2);
-              }
-
+              // Directory renames can change a child's existence without
+              // recording a delta for that child.
               resultInfo->existedBefore = currentInfo.existedBefore;
             }
           }

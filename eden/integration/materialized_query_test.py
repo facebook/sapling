@@ -319,13 +319,12 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
                     timeout=5,
                     interval=0.01,
                 )
-                # FIXME: A valid parent rename produces errors on every replay.
                 for path, sequence in (
                     ("adir/file", "Removed, Removed"),
                     ("adir/changed", "Removed, Changed"),
                 ):
                     self.assertEqual(
-                        query_count,
+                        0,
                         output.count(
                             f"Journal for {path} holds invalid {sequence} sequence"
                         ),
