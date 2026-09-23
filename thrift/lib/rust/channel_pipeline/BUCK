@@ -27,6 +27,7 @@ rust_library(
     deps = [
         "fbcode//common/rust/folly:iobuf",
         "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:tracing",
     ],
 )
 

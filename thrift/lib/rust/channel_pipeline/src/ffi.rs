@@ -24,6 +24,11 @@
 //! public because CXX requires Rust-exported functions to be reachable from
 //! the generated C++ header. They are not part of the public user-facing API.
 
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+
+static TAIL_LIFECYCLE_CALLBACK_PANICS: AtomicU64 = AtomicU64::new(0);
+
 #[cxx::bridge(namespace = "channel_pipeline_rust")]
 pub(crate) mod ffi {
     extern "Rust" {
@@ -91,8 +96,19 @@ pub(crate) mod ffi {
 
         fn rust_tail_endpoint_new_echo_test() -> Box<RustTailEndpointOpaque>;
         fn rust_tail_endpoint_new_queued_test() -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_lifecycle_write_test(
+            message: UniquePtr<IOBuf>,
+            on_activation: bool,
+        ) -> Box<RustTailEndpointOpaque>;
+        fn rust_tail_endpoint_new_panicking_lifecycle_write_test(
+            on_activation: bool,
+        ) -> Box<RustTailEndpointOpaque>;
         fn rust_tail_endpoint_reset_test_counts();
+        fn rust_tail_endpoint_reset_lifecycle_write_test_counts();
+        fn rust_tail_endpoint_reset_lifecycle_callback_panic_count();
         fn rust_tail_endpoint_test_counts() -> Vec<u32>;
+        fn rust_tail_endpoint_lifecycle_write_test_counts() -> Vec<u32>;
+        fn rust_tail_endpoint_lifecycle_callback_panic_count() -> u64;
         fn rust_tail_endpoint_queued_test_completions() -> u32;
         fn rust_tail_endpoint_on_read(
             endpoint: &mut RustTailEndpointOpaque,
@@ -100,8 +116,12 @@ pub(crate) mod ffi {
             msg: Pin<&mut TypeErasedBox>,
         ) -> i32;
         fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque);
-        fn rust_tail_endpoint_on_write_ready(endpoint: &mut RustTailEndpointOpaque);
-        fn rust_tail_endpoint_on_pipeline_active(endpoint: &mut RustTailEndpointOpaque);
+        fn rust_tail_endpoint_on_write_ready(
+            endpoint: &mut RustTailEndpointOpaque,
+        ) -> UniquePtr<IOBuf>;
+        fn rust_tail_endpoint_on_pipeline_active(
+            endpoint: &mut RustTailEndpointOpaque,
+        ) -> UniquePtr<IOBuf>;
         fn rust_tail_endpoint_on_pipeline_inactive(endpoint: &mut RustTailEndpointOpaque);
         fn rust_tail_endpoint_handler_added(endpoint: &mut RustTailEndpointOpaque);
         fn rust_tail_endpoint_handler_removed(endpoint: &mut RustTailEndpointOpaque);
@@ -310,6 +330,7 @@ pub use ffi::FfiCallbackContext;
 pub use ffi::FfiLocalPipelineContext;
 pub use ffi::TypeErasedBox as FfiTypeErasedBox;
 
+use crate::BytesPtr;
 use crate::LocalTaskHandle;
 use crate::context::CallbackContext;
 use crate::erased::RustTypeErasedBox;
@@ -329,6 +350,7 @@ use crate::tail::EchoTestTail;
 use crate::tail::QueuedTestTail;
 use crate::tail::RustTailEndpoint;
 use crate::tail::RustTailEndpointOpaque;
+pub use crate::tail::TailWrite;
 
 pub fn local_task_handle_cancel(task: Box<LocalTaskHandle>) {
     drop(task);
@@ -543,12 +565,46 @@ pub fn rust_tail_endpoint_new_queued_test() -> Box<RustTailEndpointOpaque> {
     crate::tail::box_tail_endpoint(QueuedTestTail::default())
 }
 
+pub fn rust_tail_endpoint_new_lifecycle_write_test(
+    message: cxx::UniquePtr<ffi::IOBuf>,
+    on_activation: bool,
+) -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(crate::tail::LifecycleWriteTestTail::new(
+        BytesPtr::new(message),
+        on_activation,
+    ))
+}
+
+pub fn rust_tail_endpoint_new_panicking_lifecycle_write_test(
+    on_activation: bool,
+) -> Box<RustTailEndpointOpaque> {
+    crate::tail::box_tail_endpoint(crate::tail::PanickingLifecycleWriteTestTail::new(
+        on_activation,
+    ))
+}
+
 pub fn rust_tail_endpoint_reset_test_counts() {
     crate::tail::reset_test_counts();
 }
 
+pub fn rust_tail_endpoint_reset_lifecycle_write_test_counts() {
+    crate::tail::reset_lifecycle_write_test_counts();
+}
+
+pub fn rust_tail_endpoint_reset_lifecycle_callback_panic_count() {
+    TAIL_LIFECYCLE_CALLBACK_PANICS.store(0, Ordering::Relaxed);
+}
+
 pub fn rust_tail_endpoint_test_counts() -> Vec<u32> {
     crate::tail::test_counts().to_vec()
+}
+
+pub fn rust_tail_endpoint_lifecycle_write_test_counts() -> Vec<u32> {
+    crate::tail::lifecycle_write_test_counts().to_vec()
+}
+
+pub fn rust_tail_endpoint_lifecycle_callback_panic_count() -> u64 {
+    TAIL_LIFECYCLE_CALLBACK_PANICS.load(Ordering::Relaxed)
 }
 
 pub fn rust_tail_endpoint_queued_test_completions() -> u32 {
@@ -581,16 +637,52 @@ fn contain_tail(
     }));
 }
 
+fn record_tail_lifecycle_callback_panic(callback: &'static str) {
+    let panic_count = TAIL_LIFECYCLE_CALLBACK_PANICS.fetch_add(1, Ordering::Relaxed) + 1;
+    tracing::error!(
+        callback,
+        panic_count,
+        "Rust tail endpoint lifecycle callback panicked"
+    );
+}
+
+fn contain_tail_write(
+    endpoint: &mut RustTailEndpointOpaque,
+    callback_name: &'static str,
+    callback: impl FnOnce(&mut dyn RustTailEndpoint) -> Option<TailWrite>,
+) -> cxx::UniquePtr<ffi::IOBuf> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        callback(endpoint.inner.as_mut())
+    })) {
+        Ok(write) => write
+            .map(TailWrite::into_bytes)
+            .map(BytesPtr::into_inner)
+            .unwrap_or_else(cxx::UniquePtr::null),
+        Err(_) => {
+            record_tail_lifecycle_callback_panic(callback_name);
+            cxx::UniquePtr::null()
+        }
+    }
+}
+
 pub fn rust_tail_endpoint_on_exception(endpoint: &mut RustTailEndpointOpaque) {
     contain_tail(endpoint, RustTailEndpoint::on_exception);
 }
 
-pub fn rust_tail_endpoint_on_write_ready(endpoint: &mut RustTailEndpointOpaque) {
-    contain_tail(endpoint, RustTailEndpoint::on_write_ready);
+pub fn rust_tail_endpoint_on_write_ready(
+    endpoint: &mut RustTailEndpointOpaque,
+) -> cxx::UniquePtr<ffi::IOBuf> {
+    contain_tail_write(endpoint, "on_write_ready_write", |endpoint| {
+        endpoint.on_write_ready_write()
+    })
 }
 
-pub fn rust_tail_endpoint_on_pipeline_active(endpoint: &mut RustTailEndpointOpaque) {
-    contain_tail(endpoint, RustTailEndpoint::on_pipeline_active);
+pub fn rust_tail_endpoint_on_pipeline_active(
+    endpoint: &mut RustTailEndpointOpaque,
+) -> cxx::UniquePtr<ffi::IOBuf> {
+    contain_tail_write(endpoint, "on_pipeline_active_write", |endpoint| {
+        endpoint.on_pipeline_active_write()
+    })
 }
 
 pub fn rust_tail_endpoint_on_pipeline_inactive(endpoint: &mut RustTailEndpointOpaque) {

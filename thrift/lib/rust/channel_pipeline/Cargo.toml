@@ -23,6 +23,7 @@ path = "src/integration_test.rs"
 
 [dependencies]
 cxx = "1.0.194"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
