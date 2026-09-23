@@ -1068,6 +1068,13 @@ class ui:
             line = line[:-1]
         return line
 
+    def promptecho(self):
+        """whether responses read from stdin should be echoed to output"""
+        configured = self.configbool("ui", "promptecho", None)
+        if configured is not None:
+            return configured
+        return not self._isatty(self.fin)
+
     def prompt(self, msg, default="y"):
         """Prompt user with msg, read response.
         If ui is not interactive, the default is returned.
@@ -1080,7 +1087,7 @@ class ui:
                 r = self._readline(self.label(msg, "ui.prompt"))
                 if not r:
                     r = default
-                if self.configbool("ui", "promptecho"):
+                if self.promptecho():
                     self.write(r, "\n")
                 return r
         except EOFError:

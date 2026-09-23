@@ -371,7 +371,7 @@ class _ReplSelector:
                 command = self.ui._readline("chunk-select>")
             except EOFError:
                 raise error.Abort("chunk selection aborted")
-            if self.ui.configbool("ui", "promptecho"):
+            if self.ui.promptecho():
                 self.ui.write(command, "\n")
             if self._handle(command.strip()):
                 return {}
