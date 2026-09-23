@@ -870,6 +870,28 @@ enum ReserveOutcome {
     AttachedToInflight { mutation_id: i64 },
 }
 
+/// Give each repo in the batch the next id above the ceiling.
+///
+/// A cursor rather than an iterator chain because the cursor is about to stop
+/// advancing by exactly one: the next change has `allocate_repo_ids` consult a
+/// store before accepting a candidate, and how far it travels for one repo
+/// depends on how many ids were rejected for the repos before it.
+#[cfg(fbcode_build)]
+fn allocate_repo_ids(
+    params: &thrift::CreateReposParams,
+    ceiling: i32,
+) -> Vec<(RepositoryId, thrift::RepoCreationRequest)> {
+    let mut next = ceiling;
+    let mut allocated = Vec::with_capacity(params.repos.len());
+
+    for request in &params.repos {
+        next += 1;
+        allocated.push((RepositoryId::new(next), request.clone()));
+    }
+
+    allocated
+}
+
 #[cfg(fbcode_build)]
 async fn reserve_repos_ids(
     ctx: CoreContext,
@@ -881,15 +903,7 @@ async fn reserve_repos_ids(
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     if let Some(max_id) = max_id {
-        let mut repo_id = max_id.id();
-        let repo_ids_and_requests = params
-            .repos
-            .iter()
-            .map(|request| {
-                repo_id += 1;
-                (RepositoryId::new(repo_id), request.clone())
-            })
-            .collect::<Vec<_>>();
+        let repo_ids_and_requests = allocate_repo_ids(params, max_id.id());
         let result = git_source_of_truth_config
             .insert_repos(
                 &ctx,
