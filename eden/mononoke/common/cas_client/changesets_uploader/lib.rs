@@ -281,36 +281,6 @@ where
 
         let hg_root_manifest_id = HgAugmentedManifestId::new(hg_cs.manifestid().into_nodehash());
 
-        let restricted_path_roots: Vec<NonRootMPath> =
-            if repo.restricted_paths().may_have_restricted_paths() {
-                let bonsai = changeset_id
-                    .load(ctx, &blobstore)
-                    .await
-                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
-                let changed_paths: Vec<NonRootMPath> = bonsai
-                    .file_changes()
-                    .map(|(path, _)| path.clone())
-                    .collect();
-                let roots: Vec<_> = repo
-                    .restricted_paths()
-                    .get_path_restriction_info(ctx, Some(*changeset_id), &changed_paths)
-                    .await?
-                    .into_iter()
-                    .map(|info| info.restriction_root)
-                    .collect();
-                if !roots.is_empty() {
-                    info!(
-                        "Found {} restricted path roots for changeset {}: {:?}",
-                        roots.len(),
-                        changeset_id,
-                        roots,
-                    );
-                }
-                roots
-            } else {
-                Vec::new()
-            };
-
         // Diff hg manifest with parents
         let diff_stream = match (
             hg_cs.p1().map(HgChangesetId::new),
@@ -354,6 +324,37 @@ where
         .try_collect::<Vec<_>>()
         .watched()
         .await?;
+
+        // A merge can bring in trees identical to p2, which are therefore absent from
+        // `file_changes` while the p1 diff above still carries them. Classify the paths
+        // actually being uploaded so the two sets cannot diverge.
+        let tree_paths: Vec<NonRootMPath> = diff_stream
+            .iter()
+            .filter(|(_, entry)| matches!(entry, Entry::Tree(_)))
+            .filter_map(|(path, _)| path.clone().into_optional_non_root_path())
+            .collect();
+
+        let restricted_path_roots: Vec<NonRootMPath> =
+            if tree_paths.is_empty() || !repo.restricted_paths().may_have_restricted_paths() {
+                Vec::new()
+            } else {
+                let roots: Vec<_> = repo
+                    .restricted_paths()
+                    .get_path_restriction_info(ctx, Some(*changeset_id), &tree_paths)
+                    .await?
+                    .into_iter()
+                    .map(|info| info.restriction_root)
+                    .collect();
+                if !roots.is_empty() {
+                    info!(
+                        "Found {} restricted path roots for changeset {}: {:?}",
+                        roots.len(),
+                        changeset_id,
+                        roots,
+                    );
+                }
+                roots
+            };
 
         let total_before_filter = diff_stream.len();
         let diff_stream: Vec<_> = if restricted_path_roots.is_empty() {
