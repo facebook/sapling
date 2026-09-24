@@ -94,6 +94,18 @@ pub async fn prepare_pushrebase(
 
     check_bookmark_sync_config(ctx, repo, bookmark, kind).await?;
 
+    let max_commits = justknobs::get_as::<usize>(
+        "scm/mononoke:pushrebase_max_commits_per_request",
+        Some(repo.repo_identity().name()),
+    );
+    if changesets.len() > max_commits {
+        return Err(anyhow!(
+            "Land requests are limited to {max_commits} commits; received {}. Split the stack into smaller land requests.",
+            changesets.len(),
+        )
+        .into());
+    }
+
     if repo.repo_config().pushrebase.block_merges {
         let any_merges = changesets.iter().any(BonsaiChangeset::is_merge);
         if any_merges {
