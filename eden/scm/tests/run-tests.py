@@ -1151,6 +1151,7 @@ class Test(unittest.TestCase):
         self._out = None
         self._skipped = None
         self._testtmp = None
+        self._edenfsmanager = None
 
         self._refout = self.readrefout()
 
@@ -1394,14 +1395,16 @@ class Test(unittest.TestCase):
             except Exception:
                 pass
 
-        if use_edenfs:
+        edenfsmanager = self._edenfsmanager
+        eden = edenfsmanager.eden if edenfsmanager is not None else None
+        if eden is not None:
             try:
-                self._edenfsmanager.eden.kill()
+                eden.kill()
                 if self._keeptmpdir:
-                    log(f"Keeping edenfs dir: {self._edenfsmanager.test_dir}\n")
+                    log(f"Keeping edenfs dir: {edenfsmanager.test_dir}\n")
                 else:
-                    self._edenfsmanager.eden.cleanup()
-                    shutil.rmtree(self._edenfsmanager.test_dir, ignore_errors=True)
+                    eden.cleanup()
+                    shutil.rmtree(edenfsmanager.test_dir, ignore_errors=True)
             except Exception:
                 pass
 
