@@ -15,6 +15,7 @@ use std::sync::LazyLock;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::format_err;
@@ -54,7 +55,6 @@ use crate::Repo;
 use crate::changegroup::convert_to_revlog_changesets;
 use crate::changegroup::convert_to_revlog_filelog;
 use crate::changegroup::split_changegroup;
-use crate::errors::*;
 use crate::hook_running::HookRejectionRemapper;
 use crate::hook_running::make_hook_rejection_remapper;
 use crate::stats::*;
@@ -1150,7 +1150,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
 
         let err_context = || {
             let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
-            ErrorKind::WhileUploadingData(changesets_hashes)
+            anyhow!("Error while uploading data for changesets, hashes: {changesets_hashes:?}")
         };
 
         trace!("changesets: {:?}", changesets);

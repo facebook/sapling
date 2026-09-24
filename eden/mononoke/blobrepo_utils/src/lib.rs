@@ -11,7 +11,6 @@
 
 mod bonsai;
 mod changeset;
-mod errors;
 
 use std::sync::Arc;
 
@@ -36,7 +35,6 @@ pub use crate::bonsai::BonsaiMFVerify;
 pub use crate::bonsai::BonsaiMFVerifyDifference;
 pub use crate::bonsai::BonsaiMFVerifyResult;
 pub use crate::changeset::visit_changesets;
-pub use crate::errors::ErrorKind;
 
 pub trait Repo = BonsaiHgMappingRef
     + CommitGraphRef

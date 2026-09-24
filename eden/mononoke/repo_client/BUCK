@@ -177,7 +177,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:pin-project",
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         ":getbundle_response",
         ":obsolete",

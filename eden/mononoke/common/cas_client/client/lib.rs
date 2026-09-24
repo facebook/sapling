@@ -6,7 +6,6 @@
  */
 
 mod dummy;
-mod errors;
 #[cfg(fbcode_build)]
 mod facebook;
 
@@ -14,7 +13,6 @@ use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
 pub use dummy::DummyCasClient;
-pub use errors::ErrorKind;
 #[cfg(fbcode_build)]
 pub use facebook::casd_client::RemoteExecutionCasdClient;
 use fbinit::FacebookInit;

@@ -9,7 +9,6 @@
 #![feature(trait_alias)]
 
 mod changegroup;
-mod errors;
 mod hook_running;
 mod processing;
 mod push_redirector;
