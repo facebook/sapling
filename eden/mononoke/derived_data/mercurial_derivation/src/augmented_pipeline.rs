@@ -84,7 +84,11 @@ fn stage_blobstore_key(
     )
 }
 
-fn use_normal_mapping(pipeline_kind: AugmentedManifestPipelineKind, stage_path: &MPath) -> bool {
+fn use_normal_mapping(
+    pipeline_kind: AugmentedManifestPipelineKind,
+    stage_path: &MPath,
+    repo_name: &str,
+) -> bool {
     stage_path.is_root()
         && match pipeline_kind {
             AugmentedManifestPipelineKind::V1 => justknobs::eval(
@@ -92,7 +96,7 @@ fn use_normal_mapping(pipeline_kind: AugmentedManifestPipelineKind, stage_path: 
                 None,
                 Some(RootHgAugmentedManifestId::NAME),
             ),
-            AugmentedManifestPipelineKind::V2 => should_publish_shared_mapping(),
+            AugmentedManifestPipelineKind::V2 => should_publish_shared_mapping(repo_name),
         }
 }
 
@@ -413,7 +417,8 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
             anyhow::bail!("{} has no finalize stage", Self::NAME);
         };
         let pipeline_kind = AugmentedManifestPipelineKind::V1;
-        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let use_normal_mapping =
+            use_normal_mapping(pipeline_kind, stage_path, derivation.repo_name());
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestId>();
 
         stream::iter(outputs.into_iter().map(|(cs_id, output)| async move {
@@ -462,7 +467,8 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
             anyhow::bail!("{} has no finalize stage", Self::NAME);
         };
         let pipeline_kind = AugmentedManifestPipelineKind::V1;
-        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let use_normal_mapping =
+            use_normal_mapping(pipeline_kind, stage_path, derivation.repo_name());
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestId>();
 
         let results = stream::iter(cs_ids.into_iter().map(|cs_id| async move {
@@ -671,7 +677,8 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
             anyhow::bail!("{} has no finalize stage", Self::NAME);
         };
         let pipeline_kind = AugmentedManifestPipelineKind::V2;
-        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let use_normal_mapping =
+            use_normal_mapping(pipeline_kind, stage_path, derivation.repo_name());
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestV2Id>();
 
         stream::iter(outputs.into_iter().map(|(cs_id, output)| async move {
@@ -713,7 +720,8 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
             anyhow::bail!("{} has no finalize stage", Self::NAME);
         };
         let pipeline_kind = AugmentedManifestPipelineKind::V2;
-        let use_normal_mapping = use_normal_mapping(pipeline_kind, stage_path);
+        let use_normal_mapping =
+            use_normal_mapping(pipeline_kind, stage_path, derivation.repo_name());
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestV2Id>();
 
         stream::iter(cs_ids.into_iter().map(|cs_id| async move {

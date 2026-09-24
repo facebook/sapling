@@ -14,6 +14,7 @@
     "scm/mononoke:enable_sharding_aware_manifest_diff": true,
     "scm/mononoke:derived_data_use_store_mapping_batch": false,
     "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping": false,
+    "scm/mononoke:hg_augmented_manifests_v2_publish_shared_mapping": true,
     "scm/mononoke:derived_data_tailer_skip_pipeline_types": true,
     "scm/mononoke:derivation_queue_evict_sync_after_dep_delete": false,
     "scm/mononoke:derivation_queue_read_priority_queue": false,

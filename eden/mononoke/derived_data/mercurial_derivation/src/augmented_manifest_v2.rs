@@ -148,11 +148,15 @@ fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> 
     format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
-pub(crate) fn should_publish_shared_mapping() -> bool {
+pub(crate) fn should_publish_shared_mapping(repo_name: &str) -> bool {
     justknobs::eval(
         "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
         None,
         Some(RootHgAugmentedManifestV2Id::NAME),
+    ) && justknobs::eval(
+        "scm/mononoke:hg_augmented_manifests_v2_publish_shared_mapping",
+        None,
+        Some(repo_name),
     )
 }
 
@@ -402,7 +406,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let publish_shared = should_publish_shared_mapping();
+        let publish_shared = should_publish_shared_mapping(derivation_ctx.repo_name());
         self.store_mapping_with_publication(ctx, derivation_ctx, changeset_id, publish_shared)
             .await
     }
@@ -412,7 +416,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        if should_publish_shared_mapping() {
+        if should_publish_shared_mapping(derivation_ctx.repo_name()) {
             Ok(
                 RootHgAugmentedManifestId::fetch(ctx, derivation_ctx, changeset_id)
                     .await?

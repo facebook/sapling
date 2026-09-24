@@ -1169,6 +1169,67 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
+    async fn test_augmented_manifest_v2_store_mapping_for_unselected_repo_is_private(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Given: a v2 result, V2 type publication enabled, and the repo not selected.
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a.txt", "initial")
+            .commit()
+            .await?;
+
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([
+                (
+                    "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+                    KnobVal::Bool(true),
+                ),
+                (
+                    "scm/mononoke:hg_augmented_manifests_v2_publish_shared_mapping".to_string(),
+                    KnobVal::Bool(false),
+                ),
+            ])),
+            async move {
+                let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+                let stored_aug: RootHgAugmentedManifestV2Id =
+                    BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&[0x48; 20])).try_into()?;
+
+                // When: storing a canonical v2 result.
+                stored_aug
+                    .clone()
+                    .store_mapping(&ctx, &derivation_ctx, root)
+                    .await?;
+
+                // Then: v2 completion stays private and the shared root is not published.
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch_private_mapping(
+                        &ctx,
+                        &derivation_ctx,
+                        root,
+                    )
+                    .await?,
+                    Some(stored_aug.clone()),
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestId::fetch(&ctx, &derivation_ctx, root).await?,
+                    None,
+                );
+                assert_eq!(
+                    RootHgAugmentedManifestV2Id::fetch(&ctx, &derivation_ctx, root).await?,
+                    Some(stored_aug),
+                );
+
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
     async fn test_augmented_manifest_v2_shared_parent_bounds_canonical_derivation(
         fb: FacebookInit,
     ) -> Result<()> {
