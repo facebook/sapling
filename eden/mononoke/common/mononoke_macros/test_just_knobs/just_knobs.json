@@ -93,6 +93,7 @@
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:lfs_server_compression_sniff_enabled": false,
     "scm/mononoke:backsyncer_prefix_polling": false,
+    "scm/mononoke:forward_syncer_bookmark_polling": false,
     "scm/mononoke:lfs_server_skip_upstream_for_downloads": false,
     "scm/mononoke:cross_repo_pause_backsyncer": false,
     "scm/mononoke:common_from_manifest": false,
