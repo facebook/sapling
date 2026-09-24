@@ -20,7 +20,6 @@ use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
-use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::BookmarkCacheDerivedData;
@@ -29,7 +28,6 @@ use environment::BookmarkCacheOptions;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use executor_lib::args::ShardedExecutorArgs;
-use fb303_core_services::make_BaseService_server;
 use fbinit::FacebookInit;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
@@ -68,7 +66,6 @@ use thrift_factory::ThriftFactoryBuilder;
 use tokio::task;
 use tracing::info;
 
-mod facebook;
 mod metadata;
 mod monitoring;
 
@@ -318,7 +315,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .await
             .expect("Failed to build thrift factory")
     });
-    let thrift = setup_thrift_server(fb, &args, &will_exit, source_control_server, factory)
+    let thrift = setup_thrift_server(fb, &args, source_control_server, factory)
         .context("Failed to set up Thrift server")?;
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
@@ -397,25 +394,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 fn setup_thrift_server(
     fb: FacebookInit,
     args: &ScsServerArgs,
-    will_exit: &Arc<AtomicBool>,
     source_control_server: SourceControlServiceImpl,
     exec: thrift_factory::ThriftFactory,
 ) -> anyhow::Result<ThriftServer> {
-    let fb303_base = {
-        cloned!(will_exit);
-        move |proto| {
-            make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
-        }
-    };
-
     let service = {
-        move |proto| {
-            make_SourceControlService_server(
-                proto,
-                source_control_server.thrift_server(),
-                fb303_base.clone(),
-            )
-        }
+        move |proto| make_SourceControlService_server(proto, source_control_server.thrift_server())
     };
 
     // BetterOverloadHandler: memory-based overload protection at the Thrift

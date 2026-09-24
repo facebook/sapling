@@ -26,7 +26,6 @@ rust_binary(
         "fbsource//third-party/rust:tracing",
         "//common/rust/base_controller:thrift_factory",
         "//common/rust/mysql:mysql_client",
-        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/panichandler:panichandler",
         "//common/rust/srserver:load_monitor_module",
@@ -49,8 +48,6 @@ rust_binary(
         "//eden/mononoke/scs/if:source_control-rust-services",
         "//eden/mononoke/servers/scs/scs_methods:scs_methods",
         "//eden/scm/lib/clientinfo:clientinfo",
-        "//fb303/thrift:fb303_core-rust",
-        "//fb303/thrift:fb303_core-rust-services",
     ],
 )
 

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
 include "eden/mononoke/megarepo_api/if/megarepo_configs.thrift"
 include "eden/mononoke/derived_data/if/derived_data_type.thrift"
@@ -3440,7 +3439,7 @@ stateful client exception RestrictedPathsAuthorizationError {
 @thrift.DeprecatedUnvalidatedAnnotations{
   items = {"sr.service_name": "mononoke-scs-server"},
 }
-service SourceControlService extends fb303_core.BaseService {
+service SourceControlService {
   /// Global methods
   /// ==============
 

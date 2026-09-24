@@ -9,8 +9,6 @@ const CRATEMAP: &str = "\
 eden/mononoke/derived_data/if/derived_data_type.thrift derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift megarepo_configs //eden/mononoke/megarepo_api/if:megarepo_configs-rust
 eden/mononoke/scs/if/source_control.thrift crate //eden/mononoke/scs/if:source_control-rust
-fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
-thrift/annotation/cpp.thrift fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/hack.thrift hack //thrift/annotation:hack-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift hack->scope //thrift/annotation:scope-rust
