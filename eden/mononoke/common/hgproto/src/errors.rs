@@ -8,7 +8,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum HgProtoError {
     #[error("Unimplemented operation '{0}'")]
     Unimplemented(String),
     #[error("command parse failed for '{0}'")]

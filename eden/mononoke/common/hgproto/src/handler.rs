@@ -30,7 +30,7 @@ use crate::HgCommands;
 use crate::Request;
 use crate::Response;
 use crate::commands::HgCommandHandler;
-use crate::errors::ErrorKind;
+use crate::errors::HgProtoError;
 
 pub type OutputStream = BoxStream<'static, Result<Bytes, Error>>;
 
@@ -63,7 +63,7 @@ impl HgProtoHandler {
         In: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
         H: HgCommands + Send + Sync + 'static,
         Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
-        Dec::Error: From<io::Error> + From<Error> + From<ErrorKind> + Send + 'static,
+        Dec::Error: From<io::Error> + From<Error> + From<HgProtoError> + Send + 'static,
         Enc: ResponseEncoder + Clone + Send + Sync + 'static,
         Error: From<Dec::Error>,
     {
@@ -92,7 +92,7 @@ where
     In: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
     H: HgCommands + Send + Sync + 'static,
     Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
-    Dec::Error: From<io::Error> + From<Error> + From<ErrorKind> + Send + 'static,
+    Dec::Error: From<io::Error> + From<Error> + From<HgProtoError> + Send + 'static,
     Enc: ResponseEncoder + Clone + Send + Sync + 'static,
     Error: From<Dec::Error>,
 {
@@ -111,7 +111,7 @@ where
 
         let remainder = input.read_buffer();
         if !remainder.is_empty() {
-            Err(ErrorKind::UnconsumedData(String::from_utf8_lossy(remainder).into_owned()))?;
+            Err(HgProtoError::UnconsumedData(String::from_utf8_lossy(remainder).into_owned()))?;
         }
     }
     .try_flatten()

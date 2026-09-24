@@ -439,7 +439,7 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
         Err(Err::Incomplete(_)) => Ok(None),
         Err(Err::Error(err) | Err::Failure(err)) => {
             println!("parse_request parsing error: {err:?}");
-            bail!(errors::ErrorKind::CommandParse(
+            bail!(errors::HgProtoError::CommandParse(
                 String::from_utf8_lossy(buf.as_ref()).into_owned(),
             ));
         }

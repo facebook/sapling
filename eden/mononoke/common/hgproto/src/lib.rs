@@ -135,5 +135,5 @@ impl SingleResponse {
 
 pub use commands::HgCommandRes;
 pub use commands::HgCommands;
-pub use errors::ErrorKind;
+pub use errors::HgProtoError;
 pub use handler::HgProtoHandler;

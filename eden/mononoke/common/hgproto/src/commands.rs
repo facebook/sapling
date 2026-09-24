@@ -44,7 +44,7 @@ use tokio_util::io::StreamReader;
 use crate::SingleRequest;
 use crate::SingleResponse;
 use crate::dechunker::Dechunker;
-use crate::errors::*;
+use crate::errors::HgProtoError;
 
 pub struct HgCommandHandler<H> {
     commands: H,
@@ -195,16 +195,17 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
         let remainder = async move {
             let (bytes, mut remainder) = remainder.await?;
             if !bytes.is_empty() {
-                return Err(ErrorKind::UnconsumedData(
+                return Err(HgProtoError::UnconsumedData(
                     String::from_utf8_lossy(bytes.as_ref()).into_owned(),
                 )
                 .into());
             }
             let buf = remainder.fill_buf().await?;
             if !buf.is_empty() {
-                return Err(
-                    ErrorKind::UnconsumedData(String::from_utf8_lossy(buf).into_owned()).into(),
-                );
+                return Err(HgProtoError::UnconsumedData(
+                    String::from_utf8_lossy(buf).into_owned(),
+                )
+                .into());
             }
             Ok(remainder.into_inner())
         }
@@ -268,7 +269,7 @@ where
                 StreamEvent::Done(remainder) => {
                     match send.take() {
                         None => future::err(
-                            ErrorKind::Bundle2Invalid("stream remainder was sent twice".into())
+                            HgProtoError::Bundle2Invalid("stream remainder was sent twice".into())
                                 .into(),
                         ),
                         Some(send) => {
@@ -303,7 +304,7 @@ where
     T: Send + 'static,
 {
     let msg = op.into();
-    async move { Err(ErrorKind::Unimplemented(msg).into()) }.boxed()
+    async move { Err(HgProtoError::Unimplemented(msg).into()) }.boxed()
 }
 
 // Async response from an Hg command
