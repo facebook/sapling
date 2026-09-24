@@ -64,6 +64,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use maplit::hashmap;
+use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitSyncConfig;
@@ -109,6 +110,7 @@ use crate::backsync_deleted_by_prefix;
 use crate::backsync_latest;
 use crate::backsync_latest_by_prefix;
 use crate::backsync_latest_for_bookmark;
+use crate::discover_deleted_bookmarks;
 use crate::ensure_backsynced;
 use crate::format_bookmark_counter;
 use crate::format_counter;
@@ -593,6 +595,73 @@ async fn prefix_backsync_enforces_discovery_limit(fb: FacebookInit) -> Result<()
         result,
         Err(error) if error.to_string().contains("matched more than 1 publishing bookmarks")
     );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn deleted_bookmark_discovery_filters_and_rewrites_names(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let (commit_sync_data, _) = init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
+    let source_repo_id = source_repo.repo_identity().id();
+    let target_repo_id = target_repo.repo_identity().id();
+    let source_value = source_repo
+        .bookmarks()
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new("master")?,
+            Freshness::MostRecent,
+        )
+        .await?
+        .expect("source fixture has master");
+    let target_value = CreateCommitContext::new_root(&ctx, target_repo)
+        .commit()
+        .await?;
+
+    for name in ["source/present", "source/source-only"] {
+        move_bookmark(
+            ctx.clone(),
+            source_repo.clone(),
+            &BookmarkKey::new(name)?,
+            source_value,
+        )
+        .await?;
+    }
+    for name in ["target/present", "target/deleted", "target/filtered"] {
+        move_bookmark(
+            ctx.clone(),
+            target_repo.clone(),
+            &BookmarkKey::new(name)?,
+            target_value,
+        )
+        .await?;
+    }
+
+    let deleted = discover_deleted_bookmarks(
+        &ctx,
+        &commit_sync_data,
+        (source_repo_id, BookmarkPrefix::new("source/")?),
+        (target_repo_id, BookmarkPrefix::new("target/")?),
+        |_, bookmark| bookmark.as_str() != "target/filtered",
+        move |repo_id, bookmark| {
+            let prefix = if repo_id == source_repo_id {
+                "source/"
+            } else {
+                "target/"
+            };
+            let name = bookmark
+                .as_str()
+                .strip_prefix(prefix)
+                .ok_or_else(|| anyhow!("bookmark {bookmark} does not start with {prefix}"))?;
+            Ok(Some(BookmarkKey::new(name)?))
+        },
+    )
+    .await?;
+
+    assert_eq!(deleted, hashset! { BookmarkKey::new("deleted")? });
     Ok(())
 }
 

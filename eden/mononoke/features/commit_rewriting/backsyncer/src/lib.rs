@@ -621,6 +621,63 @@ where
     Ok(bookmarks)
 }
 
+/// Discover source-side bookmark keys whose mapped target bookmark still
+/// exists even though the source bookmark is absent.
+///
+/// Each repository is queried using its supplied prefix. `filter` is applied
+/// to the queried keys, then `filter_map` normalizes the names
+/// into the source repository's namespace before calculating the difference.
+///
+/// This only discovers candidates. Callers must process each candidate's
+/// ordered bookmark-update stream before deleting anything in the target.
+pub async fn discover_deleted_bookmarks<R, F, M>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    source: (RepositoryId, BookmarkPrefix),
+    target: (RepositoryId, BookmarkPrefix),
+    filter: F,
+    filter_map: M,
+) -> Result<HashSet<BookmarkKey>, Error>
+where
+    R: cross_repo_sync::Repo,
+    F: Fn(RepositoryId, &BookmarkKey) -> bool,
+    M: Fn(RepositoryId, BookmarkKey) -> Result<Option<BookmarkKey>, Error>,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
+    let (configured_source_repo_id, source_prefix) = source;
+    let (configured_target_repo_id, target_prefix) = target;
+    if configured_source_repo_id != source_repo_id || configured_target_repo_id != target_repo_id {
+        bail!(
+            "bookmark discovery repo pair {configured_source_repo_id} -> {configured_target_repo_id} does not match commit sync direction {source_repo_id} -> {target_repo_id}"
+        );
+    }
+
+    let source_bookmarks =
+        list_publishing_bookmarks(ctx, commit_sync_data.get_source_repo(), &source_prefix).await?;
+    let target_bookmarks =
+        list_publishing_bookmarks(ctx, commit_sync_data.get_target_repo(), &target_prefix).await?;
+
+    let select_and_rewrite = |repo_id, bookmarks: HashSet<BookmarkKey>| {
+        let mut rewritten = HashSet::new();
+        for bookmark in bookmarks {
+            if filter(repo_id, &bookmark) {
+                if let Some(bookmark) = filter_map(repo_id, bookmark)? {
+                    rewritten.insert(bookmark);
+                }
+            }
+        }
+        Ok::<_, Error>(rewritten)
+    };
+    let source_bookmarks = select_and_rewrite(source_repo_id, source_bookmarks)?;
+    let target_bookmarks = select_and_rewrite(target_repo_id, target_bookmarks)?;
+
+    Ok(target_bookmarks
+        .difference(&source_bookmarks)
+        .cloned()
+        .collect())
+}
+
 async fn backsync_bookmarks<R>(
     ctx: CoreContext,
     commit_sync_data: CommitSyncData<R>,
@@ -754,47 +811,41 @@ pub async fn backsync_deleted_by_prefix<R>(
 where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
-    let mut source_bookmarks =
-        list_publishing_bookmarks(&ctx, commit_sync_data.get_source_repo(), &bookmark_prefix)
-            .await?;
-    source_bookmarks.extend(common_bookmarks.iter().cloned());
-
-    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-    let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
-    let source_to_target = get_bookmark_renamer(
-        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
-        source_repo_id,
-        target_repo_id,
-    )
-    .await?;
+    // The configured large-repo prefix is stripped in the small repo, so
+    // there is no narrower target-side prefix to query. The shared discovery
+    // maximum remains a fail-closed bound for whole-target enumeration and
+    // must be sized for an enabled small repo before rollout.
+    let source_repo_id = commit_sync_data.get_source_repo_id();
+    let target_repo_id = commit_sync_data.get_target_repo_id();
+    let common_bookmarks = common_bookmarks.iter().cloned().collect::<HashSet<_>>();
     let target_to_source = get_bookmark_renamer(
         Arc::clone(commit_sync_data.get_live_commit_sync_config()),
         target_repo_id,
         source_repo_id,
     )
     .await?;
-    let projected_source_bookmarks = source_bookmarks
-        .iter()
-        .map(|bookmark| {
-            let renamed = source_to_target(bookmark).ok_or_else(|| {
+    // Common source bookmarks are always scheduled by the ordinary backsync
+    // loop, including after deletion, so exclude them here.
+    let bookmarks = discover_deleted_bookmarks(
+        &ctx,
+        &commit_sync_data,
+        (source_repo_id, bookmark_prefix),
+        (target_repo_id, BookmarkPrefix::empty()),
+        |_, _| true,
+        move |repo_id, bookmark| {
+            if repo_id == source_repo_id {
+                return Ok(Some(bookmark));
+            }
+            let category = *bookmark.category();
+            let source_bookmark = target_to_source(&bookmark).ok_or_else(|| {
                 format_err!(
-                    "source bookmark {bookmark:?} did not map to target repo {target_repo_id}"
+                    "target bookmark {bookmark:?} did not map to source repo {source_repo_id}"
                 )
             })?;
-            Ok(BookmarkKey::with_name_and_category(
-                renamed.into_name(),
-                *bookmark.category(),
-            ))
-        })
-        .collect::<Result<HashSet<_>, Error>>()?;
-    // The configured large-repo prefix is stripped in the small repo, so
-    // there is no narrower target-side prefix to query. The shared discovery
-    // maximum remains a fail-closed bound for whole-target enumeration and
-    // must be sized for an enabled small repo before rollout.
-    let target_bookmarks = list_publishing_bookmarks(
-        &ctx,
-        commit_sync_data.get_target_repo(),
-        &BookmarkPrefix::empty(),
+            let source_bookmark =
+                BookmarkKey::with_name_and_category(source_bookmark.into_name(), category);
+            Ok((!common_bookmarks.contains(&source_bookmark)).then_some(source_bookmark))
+        },
     )
     .await?;
     // This difference only schedules exact per-bookmark log streams; it does
@@ -802,20 +853,6 @@ where
     // applies every source-log entry after its durable bookmark cursor, so an
     // incomplete candidate snapshot cannot invent a deletion, and a delete
     // followed by recreation is replayed in order.
-    let bookmarks = target_bookmarks
-        .difference(&projected_source_bookmarks)
-        .map(|target_bookmark| {
-            let source_bookmark = target_to_source(target_bookmark).ok_or_else(|| {
-                format_err!(
-                    "target bookmark {target_bookmark:?} did not map to source repo {source_repo_id}"
-                )
-            })?;
-            Ok(BookmarkKey::with_name_and_category(
-                source_bookmark.into_name(),
-                *target_bookmark.category(),
-            ))
-        })
-        .collect::<Result<HashSet<_>, Error>>()?;
     backsync_bookmarks(
         ctx,
         commit_sync_data,
