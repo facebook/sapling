@@ -7,6 +7,8 @@
 
 use anyhow::Result;
 use manifest_tree::PathTranslator;
+use types::PathComponent;
+use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -32,6 +34,20 @@ impl PathTranslator for GrepoPathTranslator {
         let s = path.as_str();
         let decoded = s.strip_suffix(SUFFIX).unwrap_or(s);
         Ok(RepoPathBuf::from_string(decoded.to_string())?)
+    }
+
+    fn encode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf> {
+        Ok(PathComponentBuf::from_string(format!(
+            "{}{}",
+            name.as_str(),
+            SUFFIX
+        ))?)
+    }
+
+    fn decode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf> {
+        let s = name.as_str();
+        let decoded = s.strip_suffix(SUFFIX).unwrap_or(s);
+        Ok(PathComponentBuf::from_string(decoded.to_string())?)
     }
 }
 
@@ -62,5 +78,14 @@ mod tests {
         let encoded = translator.encode_file(path).unwrap();
         let decoded = translator.decode_file(&encoded).unwrap();
         assert_eq!(decoded.as_str(), path.as_str());
+    }
+
+    #[test]
+    fn test_file_name_roundtrip() {
+        let translator = GrepoPathTranslator;
+        let name: &PathComponent = "project".try_into().unwrap();
+        let encoded = translator.encode_file_name(name).unwrap();
+        let decoded = translator.decode_file_name(&encoded).unwrap();
+        assert_eq!(decoded.as_str(), name.as_str());
     }
 }

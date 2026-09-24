@@ -1016,6 +1016,10 @@ pub trait PathTranslator: Send + Sync + fmt::Debug {
     fn encode_file(&self, path: &RepoPath) -> Result<RepoPathBuf>;
     /// Decode a storage file path to the user-facing path.
     fn decode_file(&self, path: &RepoPath) -> Result<RepoPathBuf>;
+    /// Encode a user-facing file name to the storage name.
+    fn encode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf>;
+    /// Decode a storage file name to the user-facing name.
+    fn decode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf>;
 }
 
 /// Matcher adapter that decodes encoded file paths before matching
@@ -2392,10 +2396,23 @@ mod tests {
         fn encode_file(&self, path: &RepoPath) -> anyhow::Result<RepoPathBuf> {
             Ok(RepoPathBuf::from_string(format!("{}?", path.as_str()))?)
         }
+
         fn decode_file(&self, path: &RepoPath) -> anyhow::Result<RepoPathBuf> {
             let s = path.as_str();
             let decoded = s.strip_suffix('?').unwrap_or(s);
             Ok(RepoPathBuf::from_string(decoded.to_string())?)
+        }
+
+        fn encode_file_name(&self, name: &PathComponent) -> anyhow::Result<PathComponentBuf> {
+            Ok(PathComponentBuf::from_string(format!(
+                "{}?",
+                name.as_str()
+            ))?)
+        }
+        fn decode_file_name(&self, name: &PathComponent) -> anyhow::Result<PathComponentBuf> {
+            let s = name.as_str();
+            let decoded = s.strip_suffix('?').unwrap_or(s);
+            Ok(PathComponentBuf::from_string(decoded.to_string())?)
         }
     }
 
