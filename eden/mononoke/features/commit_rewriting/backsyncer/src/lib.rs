@@ -85,6 +85,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
+use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
@@ -346,35 +347,72 @@ where
     }
 }
 
-async fn get_bookmark_counter_or_initialize<R>(
+/// Read a bookmark cursor, or initialize it atomically from a legacy cursor.
+///
+/// The initial value is used only when the counter is absent. Once present,
+/// the per-bookmark cursor is authoritative and is never fast-forwarded from
+/// a newer legacy cursor.
+///
+/// A caller that loses the initialization race receives `None` and should
+/// retry from the durable value on its next polling iteration.
+pub async fn get_bookmark_counter_or_initialize(
     ctx: &CoreContext,
-    commit_sync_data: &CommitSyncData<R>,
-    target_repo_dbs: &TargetRepoDbs,
-    bookmark: &BookmarkKey,
+    counters: &ArcMutableCounters,
+    counter_name: &str,
     initial_counter: BookmarkUpdateLogId,
-) -> Result<Option<(String, BookmarkUpdateLogId)>, Error>
-where
-    R: RepoLike + Send + Sync + Clone + 'static,
-{
-    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-    let initial_counter_value: i64 = initial_counter.try_into()?;
-    let counter_name = format_bookmark_counter(&source_repo_id, bookmark)?;
-    let Some(counter) = target_repo_dbs
-        .counters
-        .get_counter(ctx, &counter_name)
-        .await?
-    else {
-        let inserted = target_repo_dbs
-            .counters
-            .set_counter_if_absent(ctx, &counter_name, initial_counter_value)
+) -> Result<Option<BookmarkUpdateLogId>, Error> {
+    let Some(counter) = counters.get_counter(ctx, counter_name).await? else {
+        let inserted = counters
+            .set_counter_if_absent(ctx, counter_name, initial_counter.try_into()?)
             .await?;
-        return Ok(inserted.then_some((counter_name, initial_counter)));
+        return Ok(inserted.then_some(initial_counter));
     };
+    Ok(Some(counter.try_into()?))
+}
 
-    // Once present, the per-bookmark cursor is authoritative. If prefix
-    // polling is re-enabled after a JustKnob rollback, this cursor can lag the
-    // global cursor and must catch up its bookmark rows one by one.
-    Ok(Some((counter_name, counter.try_into()?)))
+/// Advance a bookmark cursor with compare-and-set semantics.
+///
+/// If another worker wins the race, update the caller's in-memory cursor to
+/// the newly observed durable value. The caller can then skip any remaining
+/// entries in its batch that are already covered.
+pub async fn advance_bookmark_counter(
+    ctx: &CoreContext,
+    counters: &ArcMutableCounters,
+    counter_name: &str,
+    counter: &mut BookmarkUpdateLogId,
+    target: BookmarkUpdateLogId,
+) -> Result<(), Error> {
+    while *counter < target {
+        if counters
+            .set_counter(
+                ctx,
+                counter_name,
+                target.try_into()?,
+                Some((*counter).try_into()?),
+            )
+            .await?
+        {
+            *counter = target;
+            return Ok(());
+        }
+
+        let observed: BookmarkUpdateLogId = counters
+            .get_counter(ctx, counter_name)
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "bookmark counter {counter_name} disappeared after a failed compare-and-set"
+                )
+            })?
+            .try_into()?;
+        if observed <= *counter {
+            bail!(
+                "failed to advance bookmark cursor {counter_name} to {target}; observed {observed}"
+            );
+        }
+        *counter = observed;
+    }
+    Ok(())
 }
 
 /// Backsync all outstanding log entries for one bookmark.
@@ -436,11 +474,12 @@ async fn backsync_bookmark_through<R>(
 where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
-    let Some((counter_name, counter)) = get_bookmark_counter_or_initialize(
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    let counter_name = format_bookmark_counter(&source_repo_id, &bookmark)?;
+    let Some(counter) = get_bookmark_counter_or_initialize(
         &ctx,
-        &commit_sync_data,
-        target_repo_dbs.as_ref(),
-        &bookmark,
+        &target_repo_dbs.counters,
+        &counter_name,
         global_counter_snapshot,
     )
     .await?
@@ -506,13 +545,13 @@ where
     Ok(delay_info)
 }
 
-async fn list_publishing_bookmarks<R>(
+pub async fn list_publishing_bookmarks<R>(
     ctx: &CoreContext,
     repo: &R,
     bookmark_prefix: &BookmarkPrefix,
 ) -> Result<HashSet<BookmarkKey>, Error>
 where
-    R: RepoLike + Send + Sync + Clone + 'static,
+    R: BookmarksRef + RepoIdentityRef,
 {
     let bookmark_discovery_page_size = justknobs::get(BOOKMARK_DISCOVERY_PAGE_SIZE_JUST_KNOB, None);
     if bookmark_discovery_page_size <= 0 {
@@ -825,16 +864,22 @@ where
         // transaction. This keeps transaction-conflict handling independent:
         // a genuine conflict below still returns an error rather than being
         // reclassified after the fact.
-        if advance_bookmark_counter_for_completed_global(
-            &ctx,
-            target_repo_dbs.as_ref(),
-            &entry,
-            &mut counter,
-            counter_name,
-            global_counter_snapshot,
-        )
-        .await?
+        if global_counter_snapshot
+            .as_ref()
+            .is_some_and(|global_counter| *global_counter >= entry.id)
         {
+            advance_bookmark_counter(
+                &ctx,
+                &target_repo_dbs.counters,
+                counter_name,
+                &mut counter,
+                entry.id,
+            )
+            .await?;
+            debug!(
+                "legacy global cursor already covered {}; advanced bookmark cursor without replaying",
+                entry.id
+            );
             continue;
         }
         if advance_global_counter_for_completed_bookmark(
@@ -874,65 +919,6 @@ where
             .log_with_msg(&scuba_log_tag, None);
     }
     Ok(commit_only_backsync_future)
-}
-
-/// Let a per-bookmark worker acknowledge an entry already completed by the
-/// legacy globally ordered worker after a JustKnob rollback and re-enablement.
-///
-/// The global cursor proves every source-log row through its value completed.
-/// We still advance the bookmark cursor one exact row at a time so no bookmark
-/// update is skipped when returning to per-bookmark polling.
-async fn advance_bookmark_counter_for_completed_global(
-    ctx: &CoreContext,
-    target_repo_dbs: &TargetRepoDbs,
-    entry: &BookmarkUpdateLogEntry,
-    counter: &mut BookmarkUpdateLogId,
-    counter_name: &str,
-    global_counter_snapshot: Option<BookmarkUpdateLogId>,
-) -> Result<bool, Error> {
-    let Some(global_counter) = global_counter_snapshot else {
-        return Ok(false);
-    };
-    if global_counter < entry.id {
-        return Ok(false);
-    }
-
-    while *counter < entry.id {
-        if target_repo_dbs
-            .counters
-            .set_counter(
-                ctx,
-                counter_name,
-                entry.id.try_into()?,
-                Some((*counter).try_into()?),
-            )
-            .await?
-        {
-            *counter = entry.id;
-            break;
-        }
-
-        let observed: BookmarkUpdateLogId = target_repo_dbs
-            .counters
-            .get_counter(ctx, counter_name)
-            .await?
-            .unwrap_or(0)
-            .try_into()?;
-        if observed <= *counter {
-            return Err(format_err!(
-                "failed to reconcile bookmark cursor through globally completed entry {}; observed {}",
-                entry.id,
-                observed,
-            ));
-        }
-        *counter = observed;
-    }
-
-    debug!(
-        "legacy global cursor {} already covered {}; advanced bookmark cursor without replaying",
-        global_counter, entry.id
-    );
-    Ok(true)
 }
 
 /// Let the legacy global loop acknowledge an entry already committed by the
