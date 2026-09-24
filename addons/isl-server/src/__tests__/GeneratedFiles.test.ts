@@ -15,6 +15,7 @@ import {GeneratedStatus} from 'isl/src/types';
 import {promises} from 'node:fs';
 import {mockLogger} from 'shared/testUtils';
 import {GeneratedFilesDetector} from '../GeneratedFiles';
+import {Internal} from '../Internal';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 
 /* eslint-disable require-await */
@@ -76,6 +77,34 @@ describe('GeneratedFiles', () => {
         'subproject/yarn.lock': GeneratedStatus.Generated,
       });
     });
+
+    // The dsp.zip pattern is only in the internal list.
+    (Internal.generatedFilesRegex == null ? it.skip : it)(
+      'detects omnigenerator dsp.zip under xplat as generated',
+      async () => {
+        jest.spyOn(promises, 'open').mockImplementation(async () => {
+          throw new Error('skipping in tests');
+        });
+
+        const mockRepo = {
+          getConfig: async () => Promise.resolve(undefined),
+          logger: mockLogger,
+        } as unknown as Repository;
+        const detector = new GeneratedFilesDetector();
+        const result = await detector.queryFilesGenerated(mockRepo, mockCtx, '/', [
+          'xplat/orca/msys/feature_aggregation/dasm/msys_sps/dsp.zip',
+          'xplat/bizapp_android/msys/dasm/msys_sps/dsp.zip',
+          'xplat/orca/msys/feature_aggregation/dasm/unbound_sp_list.txt',
+          'fbcode/foo/dasm/msys_sps/dsp.zip',
+        ]);
+        expect(result).toEqual({
+          'xplat/orca/msys/feature_aggregation/dasm/msys_sps/dsp.zip': GeneratedStatus.Generated,
+          'xplat/bizapp_android/msys/dasm/msys_sps/dsp.zip': GeneratedStatus.Generated,
+          'xplat/orca/msys/feature_aggregation/dasm/unbound_sp_list.txt': GeneratedStatus.Manual,
+          'fbcode/foo/dasm/msys_sps/dsp.zip': GeneratedStatus.Manual,
+        });
+      },
+    );
   });
 
   describe('readFilesLookingForGeneratedTag', () => {
