@@ -379,11 +379,44 @@ mod macos {
         }
     }
 
+    /// EdenFS NFS mounts report "nfs" but keep the "edenfs:" mount source. Keep
+    /// in sync with `is_edenfs_nfs_mount()` in eden/common/utils/FSDetect.h.
+    fn is_edenfs_nfs_mount(fstype: &str, source: &[u8]) -> bool {
+        fstype == "nfs" && (source == b"edenfs" || source.starts_with(b"edenfs:"))
+    }
+
     pub fn fstype(path: &Path) -> Result<FsType> {
         let fs_stat = super::unix::get_statfs(path)?;
-        let fs = unsafe { CStr::from_ptr(fs_stat.f_fstypename.as_ptr()) };
+        let fs = unsafe { CStr::from_ptr(fs_stat.f_fstypename.as_ptr()) }.to_str()?;
+        // SAFETY: statfs returns a NUL-terminated f_mntfromname, and fs_stat
+        // remains alive while source is used.
+        let source = unsafe { CStr::from_ptr(fs_stat.f_mntfromname.as_ptr()) };
+        if is_edenfs_nfs_mount(fs, source.to_bytes()) {
+            return Ok(FsType::EDENFS);
+        }
 
-        Ok(fs.to_str()?.into())
+        Ok(fs.into())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_is_edenfs_nfs_mount() {
+            assert!(
+                is_edenfs_nfs_mount("nfs", b"edenfs:"),
+                "EdenFS NFS mounts keep the edenfs: source"
+            );
+            assert!(
+                !is_edenfs_nfs_mount("nfs", b"server:/export"),
+                "other NFS mounts are not EdenFS"
+            );
+            assert!(
+                !is_edenfs_nfs_mount("apfs", b"edenfs:"),
+                "only NFS mounts are checked"
+            );
+        }
     }
 }
 
