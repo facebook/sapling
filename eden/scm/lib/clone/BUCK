@@ -43,6 +43,7 @@ sl_rust_library(
         "//eden/scm/lib/checkout:checkout",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
+        "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/edenfs-client:edenfs-client",

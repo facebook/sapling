@@ -22,6 +22,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::Text;
 use context::CoreContext;
+use dag::Vertex;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::legacy::StreamingChangelogData;
 use fs_err as fs;
@@ -170,9 +171,16 @@ pub fn eden_clone(
 
     if let Some(rev) = target {
         clone_command.args(["-r", &rev.to_hex()]);
+        // `--skip-commit-resolve` requires the commit in the local changelog. Without
+        // it, `eden clone` resolves the commit via `sl`, which pulls it if needed.
         if config
             .get_or_default::<bool>("clone", "use-skip-commit-resolve")
             .unwrap_or(false)
+            && block_on(
+                repo.dag_commits()?
+                    .read()
+                    .contains_vertex_name(&Vertex::copy_from(rev.as_ref())),
+            )?
         {
             clone_command.arg("--skip-commit-resolve");
         }
