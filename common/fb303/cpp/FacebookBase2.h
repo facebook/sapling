@@ -12,6 +12,8 @@
 #include <time.h>
 
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <common/fb303/if/gen-cpp2/FacebookService.h>
@@ -62,6 +64,22 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
       std::unique_ptr<std::string> regex) override {
     if (regex) {
       fbData->getRegexCounters(_return, *regex);
+    }
+  }
+
+  void getOption(std::string& _return, std::unique_ptr<std::string> key)
+      override {
+    _return.clear();
+    if (key) {
+      getOption(_return, *key);
+    }
+  }
+
+  void getOption(std::string& _return, const std::string& key) {
+    try {
+      _return = fbData->getOption(key);
+    } catch (const std::invalid_argument&) {
+      _return.clear();
     }
   }
 

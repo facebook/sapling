@@ -61,6 +61,11 @@ service FacebookService {
   map<string, i64> getSelectedCounters(1: list<string> keys);
 
   /**
+   * Gets an option
+   */
+  string getOption(1: string key);
+
+  /**
    * Suggest a shutdown to the server
    */
   oneway void shutdown();
