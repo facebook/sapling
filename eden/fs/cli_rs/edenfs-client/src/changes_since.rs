@@ -10,8 +10,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
+use edenfs_error::ConnectAndRequestError;
+use edenfs_error::EdenFsError;
 use edenfs_error::Result;
-use edenfs_error::ResultExt;
 use edenfs_telemetry::EdenSample;
 use edenfs_telemetry::SampleLogger;
 use edenfs_utils::bytes_from_path;
@@ -22,6 +23,7 @@ use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use serde::Serialize;
+use thrift_thriftclients::thrift::errors::ChangesSinceV2Error;
 use tokio::time;
 
 use crate::client::Client;
@@ -688,6 +690,17 @@ impl From<ChangesSinceV2Result> for thrift_types::edenfs::ChangesSinceV2Result {
     }
 }
 
+fn translate_changes_since_error(
+    error: ConnectAndRequestError<ChangesSinceV2Error>,
+) -> EdenFsError {
+    match error {
+        ConnectAndRequestError::RequestError(ChangesSinceV2Error::ex(error)) => {
+            EdenFsError::ThriftRequestError(error.into())
+        }
+        error => EdenFsError::Other(error.into()),
+    }
+}
+
 impl EdenFsClient {
     /// Returns the session id from the inner ThriftClient, if available.
     pub fn get_session_id(&self) -> String {
@@ -804,7 +817,7 @@ impl EdenFsClient {
             })
             .await
             .map(|r| r.into())
-            .from_err()?;
+            .map_err(translate_changes_since_error)?;
         // Temporary code to strip prefix from paths - will be removed when implemented in daemon
         if root.is_some() {
             result.changes.iter_mut().for_each(|c| match c {
@@ -1136,6 +1149,47 @@ mod tests {
             .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), changes_since_result);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_get_changes_since_preserves_eden_error(fb: FacebookInit) -> Result<()> {
+        let config_dir = get_config_dir(&None, &None)?;
+        let use_case = Arc::new(UseCase::new(&config_dir, UseCaseId::EdenFsTests));
+        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
+        let mock_client = &mut *client;
+        let mut mock_service = MockEdenFsService::new();
+
+        mock_service.expect_changesSinceV2().returning(|_| {
+            make_boxed_future_result(Err(ChangesSinceV2Error::ex(
+                thrift_types::edenfs::EdenError {
+                    message: "test".to_string(),
+                    errorCode: Some(1),
+                    errorType: thrift_types::edenfs::EdenErrorType::POSIX_ERROR,
+                    ..Default::default()
+                },
+            )))
+        });
+        mock_client.set_thrift_service(Arc::new(mock_service));
+
+        let position = make_changes_since_result().to_position;
+        let result = client
+            .get_changes_since(
+                &None, &position, &None, &None, &None, &None, &None, false, false,
+            )
+            .await;
+        match result {
+            Err(EdenFsError::ThriftRequestError(error)) => {
+                assert_eq!(error.message, "test");
+                assert_eq!(error.error_code, Some(1));
+                assert_eq!(
+                    error.error_type,
+                    edenfs_error::EdenThriftErrorType::PosixError
+                );
+            }
+            _ => panic!("Expected EdenFsError::ThriftRequestError"),
+        }
 
         Ok(())
     }
