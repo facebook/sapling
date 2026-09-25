@@ -14,6 +14,9 @@ import type {LocalWebSocketEventBus as LocalWebSocketEventBusType} from '../Loca
 import type {PlatformName} from '../types';
 
 import {logger} from '../logger';
+import {serializeToString} from '../serialize';
+
+const HEARTBEAT = serializeToString({type: 'heartbeat', id: 'isl-connection'});
 
 const LocalWebSocketEventBus =
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -51,7 +54,9 @@ class MockWebSocketImpl extends EventTarget implements WebSocket {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close(_code?: number, _reason?: string): void {}
+  close(code = 1000, reason = ''): void {
+    this.simulateServerDisconnected(code, reason);
+  }
 
   // -------- Additional APIs for testing --------
 
@@ -60,11 +65,15 @@ class MockWebSocketImpl extends EventTarget implements WebSocket {
     (e as Writable<MessageEvent<string>>).data = message;
     this.dispatchEvent(e);
   }
-  simulateServerConnected() {
+  simulateTransportConnected() {
     this.dispatchEvent(new Event('open'));
   }
-  simulateServerDisconnected() {
-    this.dispatchEvent(new Event('close'));
+  simulateServerConnected() {
+    this.simulateTransportConnected();
+    this.simulateIncomingMessage(HEARTBEAT);
+  }
+  simulateServerDisconnected(code = 1006, reason = '') {
+    this.dispatchEvent(new CloseEvent('close', {code, reason}));
   }
 
   public sentMessages: Array<string> = [];
@@ -94,7 +103,7 @@ describe('LocalWebsocketEventBus', () => {
     const bus = createMessageBus();
     globalMockWs.simulateServerConnected();
     bus.postMessage('my message');
-    expect(globalMockWs.sentMessages).toEqual(['my message']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, 'my message']);
   });
 
   it('queues messages while connecting', () => {
@@ -104,7 +113,7 @@ describe('LocalWebsocketEventBus', () => {
     expect(globalMockWs.sentMessages).toEqual([]);
     globalMockWs.simulateServerConnected();
     bus.postMessage('third');
-    expect(globalMockWs.sentMessages).toEqual(['first', 'second', 'third']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, 'first', 'second', 'third']);
   });
 
   it('handles incoming messages', () => {
@@ -170,14 +179,14 @@ describe('LocalWebsocketEventBus', () => {
     const bus = createMessageBus();
     globalMockWs.simulateServerConnected();
 
-    expect(globalMockWs.sentMessages).toEqual([]);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT]);
 
     globalMockWs.simulateServerDisconnected();
 
     bus.postMessage('hi');
-    expect(globalMockWs.sentMessages).toEqual([]);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT]);
     globalMockWs.simulateServerConnected();
-    expect(globalMockWs.sentMessages).toEqual(['hi']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, HEARTBEAT, 'hi']);
   });
 
   it('previous onMessage handlers exist after reconnection', () => {
@@ -202,19 +211,19 @@ describe('LocalWebsocketEventBus', () => {
     const bus = createMessageBus();
     globalMockWs.simulateServerConnected();
 
-    expect(globalMockWs.sentMessages).toEqual([]);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT]);
 
     globalMockWs.simulateServerDisconnected();
 
     bus.postMessage('hi');
-    expect(globalMockWs.sentMessages).toEqual([]);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT]);
     globalMockWs.simulateServerConnected();
-    expect(globalMockWs.sentMessages).toEqual(['hi']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, HEARTBEAT, 'hi']);
 
     globalMockWs.simulateServerDisconnected();
     globalMockWs.simulateServerConnected();
 
-    expect(globalMockWs.sentMessages).toEqual(['hi']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, HEARTBEAT, 'hi', HEARTBEAT]);
   });
 
   it('disposes handlers properly', () => {
@@ -279,7 +288,7 @@ describe('LocalWebsocketEventBus', () => {
     });
     globalMockWs.simulateServerConnected();
 
-    expect(globalMockWs.sentMessages).toEqual(['message once connected']);
+    expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, 'message once connected']);
   });
 
   it('includes token from initialState', () => {
@@ -295,6 +304,171 @@ describe('LocalWebsocketEventBus', () => {
       jest.useRealTimers();
     });
 
+    it('waits for an application response before opening and flushing queued messages', () => {
+      const bus = createMessageBus();
+      const status = jest.fn();
+      bus.onChangeStatus(status);
+      bus.postMessage('queued operation');
+      globalMockWs.simulateTransportConnected();
+      expect(globalMockWs.sentMessages).toEqual([HEARTBEAT]);
+      expect(status).toHaveBeenLastCalledWith({type: 'initializing'});
+      globalMockWs.simulateIncomingMessage('not an ISL message');
+      expect(status).toHaveBeenCalledTimes(1);
+      globalMockWs.simulateIncomingMessage(HEARTBEAT);
+      expect(status).toHaveBeenLastCalledWith({type: 'open'});
+      expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, 'queued operation']);
+      bus.dispose();
+    });
+
+    it('retries promptly when sending the readiness heartbeat fails', () => {
+      const bus = createMessageBus();
+      const status = jest.fn();
+      bus.onChangeStatus(status);
+      bus.postMessage('queued operation');
+      const failed = globalMockWs;
+      jest.spyOn(failed, 'send').mockImplementation(() => {
+        throw new Error('injected heartbeat send failure');
+      });
+      const close = jest.spyOn(failed, 'close');
+      failed.simulateTransportConnected();
+
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(status).toHaveBeenLastCalledWith({type: 'reconnecting'});
+      expect(status).not.toHaveBeenCalledWith({type: 'open'});
+      jest.advanceTimersByTime(99);
+      expect(globalMockWs).toBe(failed);
+      jest.advanceTimersByTime(1);
+      expect(globalMockWs).not.toBe(failed);
+      globalMockWs.simulateServerConnected();
+      expect(globalMockWs.sentMessages).toEqual([HEARTBEAT, 'queued operation']);
+      expect(status).toHaveBeenLastCalledWith({type: 'open'});
+      bus.dispose();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('keeps the pending retry when forceDisconnect is called on an already-closed socket', () => {
+      const bus = createMessageBus();
+      globalMockWs.simulateServerConnected();
+      globalMockWs.simulateServerDisconnected();
+      const closed = globalMockWs;
+      closed.readyState = closed.CLOSED;
+      // Native close() does not emit another event once the socket is closed.
+      jest.spyOn(closed, 'close').mockImplementation(() => {});
+      bus.forceDisconnect();
+
+      jest.advanceTimersByTime(100);
+      expect(globalMockWs).not.toBe(closed);
+      globalMockWs.simulateServerConnected();
+      bus.dispose();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it.each([0, 1])('retries unsent queued messages after send %i fails', failureIndex => {
+      const bus = createMessageBus();
+      const status = jest.fn();
+      bus.onChangeStatus(status);
+      bus.onChangeStatus(next => {
+        if (next.type === 'open') {
+          bus.postMessage('setup');
+        }
+      });
+      globalMockWs.simulateServerConnected();
+      globalMockWs.simulateServerDisconnected();
+      status.mockClear();
+      const queued = ['first', 'second', 'third'];
+      queued.forEach(message => bus.postMessage(message));
+      jest.advanceTimersByTime(100);
+
+      const failed = globalMockWs;
+      failed.simulateTransportConnected();
+      const send = failed.send.bind(failed);
+      jest.spyOn(failed, 'send').mockImplementation(message => {
+        if (message === queued[failureIndex]) {
+          throw new Error('injected send failure');
+        }
+        send(message);
+      });
+      const close = jest.spyOn(failed, 'close');
+      failed.simulateIncomingMessage(HEARTBEAT);
+
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(failed.sentMessages).toEqual([HEARTBEAT, ...queued.slice(0, failureIndex)]);
+      expect(status).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(199);
+      expect(globalMockWs).toBe(failed);
+      jest.advanceTimersByTime(1);
+      expect(globalMockWs).not.toBe(failed);
+      globalMockWs.simulateServerConnected();
+      expect(globalMockWs.sentMessages).toEqual([
+        HEARTBEAT,
+        ...queued.slice(failureIndex),
+        'setup',
+      ]);
+      expect(status.mock.calls).toEqual([[{type: 'open'}]]);
+      bus.dispose();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('delivers the first application message after notifying setup listeners', () => {
+      const bus = createMessageBus();
+      const events: string[] = [];
+      bus.onChangeStatus(status => {
+        events.push(status.type);
+      });
+      bus.onMessage(() => {
+        events.push('message');
+      });
+      globalMockWs.simulateTransportConnected();
+      globalMockWs.simulateIncomingMessage(serializeToString({type: 'repoInfo'}));
+      expect(events).toEqual(['initializing', 'open', 'message']);
+      bus.dispose();
+    });
+
+    it('keeps reconnecting and backs off when a proxy opens then closes without a response', () => {
+      const bus = createMessageBus();
+      globalMockWs.simulateServerConnected();
+      const status = jest.fn();
+      bus.onChangeStatus(status);
+      globalMockWs.simulateServerDisconnected();
+      jest.advanceTimersByTime(100);
+      globalMockWs.simulateTransportConnected();
+      globalMockWs.simulateServerDisconnected(1011, 'upstream unavailable');
+      const failed = globalMockWs;
+      jest.advanceTimersByTime(100);
+      expect(globalMockWs).toBe(failed);
+      expect(status.mock.calls).toEqual([[{type: 'open'}], [{type: 'reconnecting'}]]);
+      jest.advanceTimersByTime(100);
+      expect(globalMockWs).not.toBe(failed);
+      globalMockWs.simulateServerConnected();
+      expect(status).toHaveBeenLastCalledWith({type: 'open'});
+      bus.dispose();
+    });
+
+    it('retries a socket that opens but never answers the probe', () => {
+      const bus = createMessageBus();
+      globalMockWs.simulateTransportConnected();
+      const silent = globalMockWs;
+      jest.advanceTimersByTime(LocalWebSocketEventBus.CONNECTION_TIMEOUT_MS);
+      jest.advanceTimersByTime(100);
+      expect(globalMockWs).not.toBe(silent);
+      bus.dispose();
+    });
+
+    it('stops retrying permanent errors and ignores events after disposal', () => {
+      const bus = createMessageBus();
+      const status = jest.fn();
+      bus.onChangeStatus(status);
+      globalMockWs.simulateTransportConnected();
+      globalMockWs.simulateServerDisconnected(4100, 'Invalid token');
+      const failed = globalMockWs;
+      expect(status).toHaveBeenLastCalledWith({type: 'error', error: 'Invalid token'});
+      jest.advanceTimersByTime(2 * LocalWebSocketEventBus.CONNECTION_TIMEOUT_MS);
+      expect(globalMockWs).toBe(failed);
+      bus.dispose();
+      globalMockWs.simulateServerConnected();
+      expect(status).toHaveBeenLastCalledWith({type: 'error', error: 'Invalid token'});
+    });
+
     it('reconnects after a delay', () => {
       createMessageBus();
 
@@ -303,7 +477,7 @@ describe('LocalWebsocketEventBus', () => {
       globalMockWs.simulateServerConnected();
       globalMockWs.simulateServerDisconnected();
       expect(initialWs).toBe(globalMockWs);
-      jest.runAllTimers();
+      jest.advanceTimersByTime(LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS);
       // we have a new WebSocket instance which will re-try to connect
       expect(initialWs).not.toBe(globalMockWs);
     });
@@ -316,7 +490,7 @@ describe('LocalWebsocketEventBus', () => {
       bus.dispose();
       globalMockWs.simulateServerDisconnected();
       expect(previousWs).toBe(globalMockWs);
-      jest.runAllTimers();
+      jest.advanceTimersByTime(LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS);
       expect(previousWs).toBe(globalMockWs); // we haven't made a new WebSocket, because we didn't try to reconnect
     });
 

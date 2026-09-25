@@ -34,7 +34,10 @@ export type ChildProcessResponse =
     };
 
 function sendMessageToParentProcess(msg: ChildProcessResponse): void {
-  process.send?.(msg, undefined, {swallowErrors: true});
+  if (process.connected) {
+    // The background launcher can exit between the check and the send.
+    process.send?.(msg, undefined, {swallowErrors: true}, () => {});
+  }
 }
 
 function info(...args: Parameters<typeof console.log>): void {

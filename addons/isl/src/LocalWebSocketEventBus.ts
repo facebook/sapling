@@ -9,15 +9,21 @@ import type {Disposable, MessageBusStatus, PlatformName} from './types';
 
 import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from 'isl-server/src/constants';
 import {logger} from './logger';
+import {deserializeFromString, serializeToString} from './serialize';
+
+const CONNECTION_HEARTBEAT_ID = 'isl-connection';
 
 export class LocalWebSocketEventBus {
   static MAX_RECONNECT_CHECK_TIME_MS = 60000;
   static DEFAULT_RECONNECT_CHECK_TIME_MS = 100;
+  static CONNECTION_TIMEOUT_MS = 60_000;
 
   private websocket: WebSocket;
   private status: MessageBusStatus = {type: 'initializing'};
   private exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
   private queuedMessages: Array<string | ArrayBuffer> = [];
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private connectionTimer: ReturnType<typeof setTimeout> | undefined;
 
   // A sub-state of "status", used by `startConnection` to avoid creating multiple
   // websockets while connecting.
@@ -56,6 +62,8 @@ export class LocalWebSocketEventBus {
       return;
     }
     this.disposed = true;
+    clearTimeout(this.reconnectTimer);
+    clearTimeout(this.connectionTimer);
     this.websocket.close();
   }
 
@@ -86,48 +94,101 @@ export class LocalWebSocketEventBus {
     if (platformName) {
       wsUrl.searchParams.append('platform', platformName);
     }
-    this.websocket = new this.WebSocketType(wsUrl.href);
+    const socket = new this.WebSocketType(wsUrl.href);
+    this.websocket = socket;
     this.opening = true;
-    this.websocket.addEventListener('open', () => {
-      logger.info('websocket open');
-      this.opening = false;
-      this.exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
-
-      this.websocket.addEventListener('message', e => {
-        for (const handler of this.handlers) {
-          handler(e);
-        }
-      });
-
-      // if any messages were sent while reconnecting, they were queued up.
-      // Send them all now that we've reconnected
-      while (this.queuedMessages.length > 0) {
-        const queuedMessage = this.queuedMessages[0];
-        this.websocket.send(queuedMessage);
-        // only dequeue after successfully sending the message
-        this.queuedMessages.shift();
+    this.connectionTimer = setTimeout(() => {
+      socket.close();
+    }, LocalWebSocketEventBus.CONNECTION_TIMEOUT_MS);
+    socket.addEventListener('open', () => {
+      if (this.disposed || socket !== this.websocket) {
+        return;
       }
+      logger.info('websocket open');
+      this.opening = true;
+      // A proxy can accept the websocket before reaching ISL. Setup callbacks
+      // wait for 'open', so probe the application before running them.
+      try {
+        socket.send(serializeToString({type: 'heartbeat', id: CONNECTION_HEARTBEAT_ID}));
+      } catch {
+        logger.warn('websocket failed to send readiness heartbeat');
+        socket.close();
+      }
+    });
+    socket.addEventListener('message', event => {
+      if (this.disposed || socket !== this.websocket) {
+        return;
+      }
+      if (this.opening) {
+        let message;
+        try {
+          message = deserializeFromString(event.data);
+        } catch {
+          return;
+        }
+        if (
+          message == null ||
+          typeof message !== 'object' ||
+          !('type' in message) ||
+          typeof message.type !== 'string'
+        ) {
+          return;
+        }
+        // if any messages were sent while reconnecting, they were queued up.
+        // Send them all now that we've reconnected
+        try {
+          while (this.queuedMessages.length > 0) {
+            const queuedMessage = this.queuedMessages[0];
+            socket.send(queuedMessage);
+            // only dequeue after successfully sending the message
+            this.queuedMessages.shift();
+          }
+        } catch {
+          logger.warn('websocket failed to send queued messages');
+          socket.close();
+          return;
+        }
 
-      this.setStatus({type: 'open'});
+        clearTimeout(this.connectionTimer);
+        this.opening = false;
+        this.exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
+        this.setStatus({type: 'open'});
+        if (
+          message.type === 'heartbeat' &&
+          'id' in message &&
+          message.id === CONNECTION_HEARTBEAT_ID
+        ) {
+          return;
+        }
+      }
+      for (const handler of this.handlers) {
+        handler(event);
+      }
     });
 
-    this.websocket.addEventListener('close', event => {
+    socket.addEventListener('close', event => {
+      if (this.disposed || socket !== this.websocket) {
+        return;
+      }
+      clearTimeout(this.connectionTimer);
       this.opening = false;
+      logger.info('websocket closed', event.code, event.reason);
       if (event.code === CLOSED_AND_SHOULD_NOT_RECONNECT_CODE) {
         // Don't schedule reconnect if the server told us this is a permanent failure,
         // e.g. invalid token
         this.setStatus({type: 'error', error: event.reason});
         return;
       }
-      if (!this.disposed) {
-        this.scheduleReconnect();
-      }
+      this.scheduleReconnect();
     });
 
     return this.websocket;
   }
 
   private setStatus(status: MessageBusStatus) {
+    if (this.status.type === status.type && status.type !== 'error') {
+      return;
+    }
     this.status = status;
     this.statusChangeHandlers.forEach(handler => handler(status));
   }
@@ -135,7 +196,8 @@ export class LocalWebSocketEventBus {
   private scheduleReconnect() {
     this.setStatus({type: 'reconnecting'});
     logger.info(`websocket connection closed. Retrying in ${this.exponentialReconnectDelay}ms`);
-    setTimeout(() => {
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = setTimeout(() => {
       this.startConnection();
     }, this.exponentialReconnectDelay);
 
@@ -179,8 +241,7 @@ export class LocalWebSocketEventBus {
   }
 
   forceDisconnect(durationMs = 1000) {
-    this.websocket.close();
     this.exponentialReconnectDelay = durationMs;
-    this.scheduleReconnect();
+    this.websocket.close();
   }
 }
