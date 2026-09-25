@@ -43,10 +43,12 @@ use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::upload_augmented_manifest::BuiltTree;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifest_for_uploaded_tree;
+use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
 use mercurial_types::blobs::fetch_manifest_envelope;
@@ -75,7 +77,7 @@ use crate::Repo;
 
 #[derive(Clone, Debug)]
 enum DeniedGet {
-    Key(String),
+    Keys(HashSet<String>),
     /// Denies a whole blobstore namespace, e.g. every `hgmanifest.sha1.*` key.
     Prefix(String),
 }
@@ -83,23 +85,33 @@ enum DeniedGet {
 impl DeniedGet {
     fn matches(&self, key: &str) -> bool {
         match self {
-            Self::Key(denied) => key == denied,
+            Self::Keys(denied) => denied.contains(key),
             Self::Prefix(prefix) => key.starts_with(prefix.as_str()),
         }
     }
+}
+
+/// Whether a denied key is an assertion failure or a stand-in for a blob that
+/// has not been written yet.
+#[derive(Clone, Copy, Debug)]
+enum DeniedGetResult {
+    Error,
+    Missing,
 }
 
 #[derive(Clone, Debug)]
 struct DenyGetKeyedBlobstore<B> {
     inner: B,
     denied: DeniedGet,
+    result: DeniedGetResult,
 }
 
 impl<B> DenyGetKeyedBlobstore<B> {
     fn new(inner: B, denied_key: String) -> Self {
         Self {
             inner,
-            denied: DeniedGet::Key(denied_key),
+            denied: DeniedGet::Keys(HashSet::from([denied_key])),
+            result: DeniedGetResult::Error,
         }
     }
 
@@ -107,6 +119,15 @@ impl<B> DenyGetKeyedBlobstore<B> {
         Self {
             inner,
             denied: DeniedGet::Prefix(denied_prefix.to_string()),
+            result: DeniedGetResult::Error,
+        }
+    }
+
+    fn missing(inner: B, denied_keys: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            inner,
+            denied: DeniedGet::Keys(denied_keys.into_iter().collect()),
+            result: DeniedGetResult::Missing,
         }
     }
 }
@@ -125,7 +146,12 @@ impl<B: KeyedBlobstore + Clone> KeyedBlobstore for DenyGetKeyedBlobstore<B> {
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         if self.denied.matches(key) {
-            return Err(anyhow!("unexpected load of denied blobstore key {key}"));
+            return match self.result {
+                DeniedGetResult::Error => {
+                    Err(anyhow!("unexpected load of denied blobstore key {key}"))
+                }
+                DeniedGetResult::Missing => Ok(None),
+            };
         }
         self.inner.get(ctx, key).await
     }
@@ -5635,6 +5661,219 @@ async fn test_upload_path_augmented_manifests_are_byte_identical_with_slacl(
             .await
         }
         .boxed(),
+    )
+    .await
+}
+
+/// Rebuild the client-side view of a set of uploaded trees from the stored
+/// Mercurial manifest blobs.
+async fn uploaded_trees_for(
+    ctx: &CoreContext,
+    repo: &Repo,
+    ids: &[HgManifestId],
+) -> Result<Vec<HgManifestEnvelope>> {
+    let mut trees = Vec::with_capacity(ids.len());
+    for id in ids {
+        trees.push(fetch_manifest_envelope(ctx, repo.repo_blobstore(), *id).await?);
+    }
+    Ok(trees)
+}
+
+/// What it tests: handed every directory at once in hash order, the batch
+/// entry point orders them itself and produces the same bytes as the
+/// per-changeset derivation.
+///
+/// Why it matters: the single-tree builder requires its children to exist
+/// already, so ordering is the batch layer's whole job. Feeding it hash order
+/// means the fixture cannot accidentally be in dependency order.
+async fn assert_batch_upload_matches_derivation(
+    ctx: &CoreContext,
+    repo: &Repo,
+    parent: ChangesetId,
+    child: ChangesetId,
+    paths: &[&str],
+) -> Result<()> {
+    let parent_manifest = hg_manifest_id_of(ctx, repo, parent).await?;
+    let child_manifest = hg_manifest_id_of(ctx, repo, child).await?;
+    let restricted_paths_config = repo.restricted_paths().config_based();
+
+    let parent_root = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        ctx,
+        repo.repo_blobstore(),
+        parent_manifest,
+        vec![],
+        &Default::default(),
+        restricted_paths_config,
+        derive_acl_overlay(ctx, repo, parent).await?,
+    )
+    .await?;
+
+    let mut uploaded = Vec::with_capacity(paths.len());
+    for path in paths {
+        uploaded.push(tree_id_at_path(ctx, repo, child_manifest, path).await?);
+    }
+    uploaded.sort_by_key(|id| id.into_nodehash());
+
+    let overlay: Arc<dyn KeyedBlobstore> =
+        Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let outcomes = build_augmented_manifests_for_uploaded_trees(
+        ctx,
+        &overlay,
+        restricted_paths_config,
+        uploaded_trees_for(ctx, repo, &uploaded).await?,
+    )
+    .await?;
+    assert_eq!(
+        outcomes.len(),
+        uploaded.len(),
+        "every tree in the batch should have been built"
+    );
+
+    let mut via_upload = HashMap::new();
+    for id in &uploaded {
+        let key = HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key();
+        let bytes = overlay
+            .get(ctx, &key)
+            .await?
+            .with_context(|| format!("upload path stored no envelope for {id}"))?
+            .into_raw_bytes();
+        via_upload.insert(*id, bytes);
+    }
+
+    let child_root = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        ctx,
+        repo.repo_blobstore(),
+        child_manifest,
+        vec![parent_root],
+        &Default::default(),
+        restricted_paths_config,
+        derive_acl_overlay(ctx, repo, child).await?,
+    )
+    .await?;
+    assert_eq!(child_root.into_nodehash(), child_manifest.into_nodehash());
+
+    for id in &uploaded {
+        let key = HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key();
+        let via_derivation = repo
+            .repo_blobstore()
+            .get(ctx, &key)
+            .await?
+            .with_context(|| format!("derivation stored no envelope for {id}"))?
+            .into_raw_bytes();
+        assert_eq!(
+            via_upload[id], via_derivation,
+            "the batch envelope for {id} must be byte-identical to the derived one",
+        );
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_batch_upload_augmented_manifests_are_byte_identical(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("README.md", "hello")
+        .add_file("src/lib.rs", "one")
+        .add_file("src/deep/nested.rs", "deep")
+        .add_file("untouched/file.txt", "untouched")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("src/lib.rs", "two")
+        .add_file("src/deep/nested.rs", "deeper")
+        .add_file("src/deep/added.rs", "added")
+        .add_file("top.txt", "top")
+        .commit()
+        .await?;
+
+    assert_batch_upload_matches_derivation(&ctx, &repo, parent, child, &["src/deep", "src", ""])
+        .await
+}
+
+/// A batch whose trees cannot all be built fails outright, and stores nothing.
+///
+/// A child that is neither in the batch nor already derived means the client
+/// broke the children-before-parents contract, and nothing about the rest of
+/// the batch is trustworthy once that is true.
+async fn assert_upload_fails_with_missing_children(
+    ctx: &CoreContext,
+    repo: &Repo,
+    uploaded: &[HgManifestId],
+    missing: &[HgManifestId],
+    failing_tree: HgManifestId,
+) -> Result<()> {
+    let hidden_inner = DenyGetKeyedBlobstore::missing(
+        repo.repo_blobstore().clone(),
+        uploaded
+            .iter()
+            .chain(missing)
+            .map(|id| HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key()),
+    );
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(MemWritesKeyedBlobstore::new(hidden_inner));
+    let err = build_augmented_manifests_for_uploaded_trees(
+        ctx,
+        &blobstore,
+        repo.restricted_paths().config_based(),
+        uploaded_trees_for(ctx, repo, uploaded).await?,
+    )
+    .await
+    .expect_err("a missing child should fail the uploaded tree batch");
+
+    assert!(
+        format!("{err:#}").contains(&failing_tree.to_string()),
+        "the error should identify the first tree whose child is missing",
+    );
+    for id in uploaded {
+        assert!(
+            HgAugmentedManifestEnvelope::load(
+                ctx,
+                &blobstore,
+                HgAugmentedManifestId::new(id.into_nodehash()),
+            )
+            .await?
+            .is_none(),
+            "a failed batch should not store an envelope for {id}",
+        );
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_upload_fails_when_direct_child_is_missing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("child/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+    let root = hg_manifest_id_of(&ctx, &repo, cs_id).await?;
+    let child = tree_id_at_path(&ctx, &repo, root, "child").await?;
+
+    assert_upload_fails_with_missing_children(&ctx, &repo, &[root], &[child], root).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_upload_fails_when_transitive_child_is_missing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("child/grandchild/file.rs", "fn main() {}")
+        .commit()
+        .await?;
+    let root = hg_manifest_id_of(&ctx, &repo, cs_id).await?;
+    let child = tree_id_at_path(&ctx, &repo, root, "child").await?;
+    let grandchild = tree_id_at_path(&ctx, &repo, root, "child/grandchild").await?;
+
+    assert_upload_fails_with_missing_children(
+        &ctx,
+        &repo,
+        &[root, child],
+        &[child, grandchild],
+        child,
     )
     .await
 }
