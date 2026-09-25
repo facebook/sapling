@@ -94,6 +94,9 @@ const ATTACH_JK: &str = "scm/mononoke:create_repos_attach_to_inflight_mutation";
 const ENFORCE_BATCH_SIZE_JK: &str = "scm/mononoke:create_repos_enforce_max_batch_size";
 const WRITE_DEFAULT_BRANCH_SYMREF_JK: &str =
     "scm/mononoke:create_repos_write_default_branch_symref";
+/// Sequence vs the old `MAX(repo_id) + 1` ceiling. Turning this off reinstates
+/// the reuse behind S709055, so it buys diagnosis time, not a resting state.
+const ALLOCATE_FROM_SEQUENCE_JK: &str = "scm/mononoke:create_repos_allocate_from_id_sequence";
 const DEFAULT_GIT_REPO_CONFIG_PATH: &str = "scm/mononoke/repos/common/default_git_repo_config";
 
 /// Group granting the elevated batch tier, one step below Source Control's own.
@@ -2372,6 +2375,8 @@ mod attach_tests {
     async fn stamp_count_mismatch_fails_creation(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2417,6 +2422,8 @@ mod attach_tests {
     async fn lost_ack_restamp_confirm_read(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2502,6 +2509,8 @@ mod attach_tests {
     async fn attach_happy_path(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2522,10 +2531,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let outcome = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2550,6 +2559,8 @@ mod attach_tests {
     async fn null_mutation_window(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2563,10 +2574,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let err = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2592,6 +2603,8 @@ mod attach_tests {
     async fn split_brain_guard(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         // Insert reserved, stamp a mutation id, then flip it to Mononoke.
         config
             .insert_repos(
@@ -2616,10 +2629,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let err = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2645,6 +2658,8 @@ mod attach_tests {
     async fn mixed_batch(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2680,10 +2695,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a", "repo/b"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let err = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2709,6 +2724,8 @@ mod attach_tests {
     async fn jk_off(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         config
             .insert_repos(
                 &ctx,
@@ -2729,10 +2746,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(false),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(false)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let err = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2753,6 +2770,8 @@ mod attach_tests {
     async fn attach_happy_path_multi_repo(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         // Two reserved repos both stamped with the SAME mutation id: a
         // duplicate multi-repo request should dedup to one mutation and attach.
         config
@@ -2785,10 +2804,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a", "repo/b"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let outcome = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -2813,6 +2832,8 @@ mod attach_tests {
     async fn attach_lookup_none(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        config.seed_repo_id_sequence(&ctx, 100_902).await?;
         // Only one of the two requested repos has a seeded (reserved+stamped)
         // row; the other has NO row at all. The absent repo makes the batch
         // non-attachable (lookup returns None => `any_non_reserved`), so the
@@ -2838,10 +2859,10 @@ mod attach_tests {
 
         let params = params_for(&["repo/a", "repo/absent"]);
         with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([(
-                ATTACH_JK.to_string(),
-                KnobVal::Bool(true),
-            )])),
+            JustKnobsInMemory::new(HashMap::from([
+                (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+                (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+            ])),
             async {
                 let err = reserve_repos_ids(ctx.clone(), &config, &params)
                     .await
@@ -3264,6 +3285,8 @@ mod symref_tests {
     async fn poll_cleanup_deletes_symrefs_and_sot_rows(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        sot.seed_repo_id_sequence(&ctx, 100_902).await?;
         sot.insert_repos(
             &ctx,
             &[
@@ -3338,6 +3361,8 @@ mod symref_tests {
     async fn poll_cleanup_with_unseeded_symref_store_succeeds(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        sot.seed_repo_id_sequence(&ctx, 100_902).await?;
         sot.insert_repos(
             &ctx,
             &[(
@@ -3385,6 +3410,8 @@ mod symref_tests {
     async fn prepare_failure_cleanup_deletes_symrefs_and_sot_rows(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        sot.seed_repo_id_sequence(&ctx, 100_902).await?;
         sot.insert_repos(
             &ctx,
             &[(
@@ -3433,6 +3460,8 @@ mod symref_tests {
     async fn poll_cleanup_failed_symref_delete_keeps_sot_rows(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        sot.seed_repo_id_sequence(&ctx, 100_902).await?;
         sot.insert_repos(
             &ctx,
             &[(
@@ -3484,6 +3513,8 @@ mod symref_tests {
     ) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        // An unseeded sequence refuses to allocate.
+        sot.seed_repo_id_sequence(&ctx, 100_902).await?;
         sot.insert_repos(
             &ctx,
             &[(
