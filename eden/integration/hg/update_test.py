@@ -1121,6 +1121,35 @@ class UpdateTest(EdenHgTestCase):
         self.hg("config", "--local", "experimental.repair-eden-dirstate", "True")
         self.repo.status()
 
+    async def test_update_reports_checkout_error(self) -> None:
+        self.write_configs(
+            {"experimental": ["propagate-checkout-errors = false"]},
+            self.eden.user_rc_path,
+        )
+        async with self.eden.get_async_thrift_client() as client:
+            await client.reloadConfig()
+            for clean in (False, True):
+                with self.subTest(clean=clean):
+                    self.repo.update(self.commit3, clean=True)
+                    # Materialized files are applied after the fault point.
+                    self.write_file("foo/bar.txt", "updated in commit 3\n")
+                    await client.injectFault(
+                        FaultDefinition(
+                            keyClass="TreeInode::checkout",
+                            keyValueRegex="foo, false",
+                            errorType="runtime_error",
+                            errorMessage="intentional checkout error",
+                            count=1,
+                        )
+                    )
+                    # FIXME: Fail when Eden reports a checkout error.
+                    output = self.repo.update(self.commit2, clean=clean)
+                    self.assertEqual("update complete\n", output)
+                    self.assertEqual(self.commit2, self.repo.get_head_hash())
+                    self.assertEqual(
+                        "updated in commit 3\n", self.read_file("foo/bar.txt")
+                    )
+
 
 class PrjFsState(Enum):
     UNKNOWN = 0
