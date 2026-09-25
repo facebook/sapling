@@ -31,6 +31,9 @@
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #endif
+#ifdef __linux__
+#include <sigbus_memops.h>
+#endif
 #include <sys/stat.h>
 #if defined(__linux__) && __has_include(<systemd/sd-daemon.h>)
 #include <systemd/sd-daemon.h> // @manual, autodeps cannot do linux-only dep
@@ -606,6 +609,20 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         ", session_id ",
         getSessionId());
 
+#ifdef __linux__
+    const auto sigbusRetryBudget = edenConfig->sigbusRetryBudget.getValue();
+    if (sigbusRetryBudget != 0) {
+      if (const auto error = sigbus_install_handler()) {
+        startupLogger->warn(
+            "Failed to install SIGBUS retry handler: ", folly::errnoStr(error));
+      } else {
+        sigbus_set_retry_budget(sigbusRetryBudget);
+        startupLogger->log(
+            "Installed SIGBUS retry handler with a process-wide budget of ",
+            sigbusRetryBudget);
+      }
+    }
+#endif
 #ifdef __APPLE__
     // Exported even when zero, so that a normal start is distinguishable from
     // a daemon too old to export the key. Platforms without privhelper-driven

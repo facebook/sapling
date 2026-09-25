@@ -300,6 +300,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Process-wide budget for retrying unhandled synchronous BUS_ADRERR faults
+   * on Linux. Zero disables retries. This setting is ignored on other
+   * platforms.
+   */
+  ConfigSetting<uint32_t> sigbusRetryBudget{
+      "core:sigbus-retry-budget",
+      0,
+      this};
+  /**
    * Similar to the above config, but sets the PrivHelper's priority instead.
    * Leave unset to avoid changing the PrivHelper's priority.
    */

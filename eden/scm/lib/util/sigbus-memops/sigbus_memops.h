@@ -30,17 +30,23 @@ bool sigbus_is_protected(void);
  */
 int sigbus_install_handler(void);
 
+/*
+ * Set a process-wide budget for retrying unhandled synchronous BUS_ADRERR
+ * faults. Each retry consumes one from the budget. The default is zero.
+ */
+void sigbus_set_retry_budget(unsigned int retry_budget);
+
 #ifndef _WIN32
 /*
- * Try to redirect a synchronous SIGBUS raised by `sigbus_try_memcpy` or
- * `sigbus_try_read`.
+ * Try to handle a synchronous SIGBUS raised by `sigbus_try_memcpy` or
+ * `sigbus_try_read`, or an unhandled BUS_ADRERR when retry budget remains.
  *
  * Intended to be called from an SA_SIGINFO signal handler.
  *
- * If a supported platform-specific SIGBUS code occurs at a protected
- * load/store instruction, redirects the saved execution context (`ucontext`)
- * to the corresponding error path. Other SIGBUS causes, including asynchronous
- * BUS_MCEERR_AO notifications, are not handled.
+ * A protected load/store redirects the saved execution context (`ucontext`)
+ * to its error path. An unhandled BUS_ADRERR leaves the context unchanged, so
+ * returning from the handler retries the fault. Other causes, including
+ * asynchronous BUS_MCEERR_AO notifications, are not handled.
  *
  * Returns:
  * - true: SIGBUS handled; the signal handler must return immediately.

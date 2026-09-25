@@ -6,6 +6,7 @@
  */
 
 use std::ffi::c_int;
+use std::ffi::c_uint;
 use std::ffi::c_void;
 
 unsafe extern "C" {
@@ -14,6 +15,9 @@ unsafe extern "C" {
 
     #[link_name = "sigbus_install_handler"]
     fn ffi_install_handler() -> c_int;
+
+    #[link_name = "sigbus_set_retry_budget"]
+    fn ffi_set_retry_budget(retry_budget: c_uint);
 
     #[link_name = "sigbus_try_memcpy"]
     fn ffi_try_memcpy(dst: *mut c_void, src: *const c_void, len: usize) -> bool;
@@ -44,6 +48,13 @@ pub fn install_handler() -> std::io::Result<()> {
     } else {
         Err(std::io::Error::from_raw_os_error(error))
     }
+}
+
+/// Sets the process-wide budget for retrying unhandled synchronous BUS_ADRERR
+/// faults. The default budget is zero.
+pub fn set_retry_budget(retry_budget: u32) {
+    // SAFETY: This FFI function accepts any unsigned retry count.
+    unsafe { ffi_set_retry_budget(retry_budget) }
 }
 
 /// Tries to copy `len` bytes from `src` to `dst`.
@@ -79,8 +90,8 @@ pub unsafe fn try_read(src: *const u8, len: usize) -> bool {
     unsafe { ffi_try_read(src.cast(), len) }
 }
 
-/// Tries to redirect a synchronous SIGBUS raised by [`try_memcpy`] or
-/// [`try_read`] to its recovery path.
+/// Tries to handle a synchronous SIGBUS raised by [`try_memcpy`] or
+/// [`try_read`], or an unhandled BUS_ADRERR when retry budget remains.
 ///
 /// # Safety
 ///

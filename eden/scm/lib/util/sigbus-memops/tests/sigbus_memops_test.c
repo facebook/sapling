@@ -135,6 +135,26 @@ int main(int argc, char** argv) {
   CHECK(!sigbus_try_handle(SIGBUS, &asynchronous_mce, &synthetic_context));
 #endif
 
+#ifdef BUS_ADRERR
+  siginfo_t address_error = {.si_code = BUS_ADRERR};
+  ucontext_t address_error_context = {0};
+#if defined(__APPLE__) && defined(__MACH__)
+  _STRUCT_MCONTEXT address_error_machine_context = {0};
+  address_error_context.uc_mcontext = &address_error_machine_context;
+#endif
+  sigbus_set_retry_budget(3);
+  CHECK(!sigbus_try_handle(SIGSEGV, &address_error, &address_error_context));
+#ifdef BUS_ADRALN
+  address_error.si_code = BUS_ADRALN;
+  CHECK(!sigbus_try_handle(SIGBUS, &address_error, &address_error_context));
+  address_error.si_code = BUS_ADRERR;
+#endif
+  CHECK(sigbus_try_handle(SIGBUS, &address_error, &address_error_context));
+  CHECK(sigbus_try_handle(SIGBUS, &address_error, &address_error_context));
+  CHECK(sigbus_try_handle(SIGBUS, &address_error, &address_error_context));
+  CHECK(!sigbus_try_handle(SIGBUS, &address_error, &address_error_context));
+#endif
+
   signal_state.expect_unhandled = 1;
   CHECK(raise(SIGBUS) == 0);
   CHECK(signal_state.saw_unhandled == 1);

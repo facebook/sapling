@@ -13,6 +13,7 @@
 #include "sigbus_memops_config.h"
 
 #include <errno.h>
+#include <stdatomic.h>
 #include <string.h>
 
 bool sigbus_is_protected(void) {
@@ -27,6 +28,10 @@ bool sigbus_is_protected(void) {
 
 int sigbus_install_handler(void) {
   return 0;
+}
+
+void sigbus_set_retry_budget(unsigned int retry_budget) {
+  (void)retry_budget;
 }
 
 static int sigbus_memops_filter(unsigned long code) {
@@ -94,6 +99,13 @@ extern void sigbus_try_memcpy_store_fault_pc(void);
 static struct sigaction sigbus_memops_previous_action;
 static pthread_once_t sigbus_memops_install_once = PTHREAD_ONCE_INIT;
 static int sigbus_memops_install_error;
+// Shared between normal code and the SIGBUS handler.
+// NOLINTNEXTLINE(facebook-avoid-non-const-global-variables)
+static _Atomic unsigned int sigbus_retry_budget;
+
+_Static_assert(
+    ATOMIC_INT_LOCK_FREE == 2,
+    "SIGBUS retry budget must be lock-free");
 
 static void
 sigbus_memops_signal_handler(int signo, siginfo_t* info, void* ucontext) {
@@ -133,6 +145,27 @@ int sigbus_install_handler(void) {
   int error = pthread_once(
       &sigbus_memops_install_once, sigbus_memops_install_handler_once);
   return error != 0 ? error : sigbus_memops_install_error;
+}
+
+void sigbus_set_retry_budget(unsigned int retry_budget) {
+  atomic_store_explicit(
+      &sigbus_retry_budget, retry_budget, memory_order_relaxed);
+}
+
+static bool sigbus_try_consume_retry(void) {
+  unsigned int budget =
+      atomic_load_explicit(&sigbus_retry_budget, memory_order_relaxed);
+  while (budget != 0) {
+    if (atomic_compare_exchange_weak_explicit(
+            &sigbus_retry_budget,
+            &budget,
+            budget - 1,
+            memory_order_relaxed,
+            memory_order_relaxed)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
@@ -191,6 +224,16 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
 #endif
 #endif
 
+#ifdef BUS_ADRERR
+  if (info->si_code == BUS_ADRERR && sigbus_try_consume_retry()) {
+    const int saved_errno = errno;
+    static const char message[] = "sigbus-memops: retrying unhandled SIGBUS\n";
+    (void)write(STDERR_FILENO, message, sizeof(message) - 1);
+    errno = saved_errno;
+    return true;
+  }
+#endif
+
   return false;
 }
 
@@ -198,6 +241,10 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
 
 int sigbus_install_handler(void) {
   return 0;
+}
+
+void sigbus_set_retry_budget(unsigned int retry_budget) {
+  (void)retry_budget;
 }
 
 #ifndef _WIN32

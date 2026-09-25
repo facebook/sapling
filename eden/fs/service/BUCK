@@ -52,6 +52,7 @@ cpp_library(
         "ovr_config//os:linux": [
             "third-party//systemd:systemd",
             "//eden/fs/store/git:git",
+            "//eden/scm/lib/util/sigbus-memops:sigbus_memops",
         ],
     }),
     exported_deps = [
