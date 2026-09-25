@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-from typing import List
+from typing import Iterable, List
 
 print_err = functools.partial(print, file=sys.stderr)
 glob_r = functools.partial(glob.glob, recursive=True)
@@ -29,12 +29,16 @@ def rm_rf(path: str) -> None:
 
 
 # used to detect if files are changed.
-def hash_path_contents(paths: List[str]):
-    h = hashlib.sha1()
-    sorted_paths = sorted(paths)
-    for path in sorted_paths:
+def hash_path_contents(root: str, paths: Iterable[str]) -> str:
+    h = hashlib.sha256()
+    # Hash paths relative to root (root is a fresh temp dir per build), so
+    # renames change the hash but the build location does not.
+    rel_paths = sorted(os.path.relpath(path, root) for path in paths)
+    for rel_path in rel_paths:
         try:
-            with open(path, "rb") as f:
+            with open(os.path.join(root, rel_path), "rb") as f:
+                h.update(rel_path.replace(os.sep, "/").encode())
+                h.update(b"\0")
                 h.update(f.read())
                 h.update(b"\0")
         except IsADirectoryError:
@@ -43,7 +47,7 @@ def hash_path_contents(paths: List[str]):
 
 
 WALK_EXCLUDE_DIRS = ["node_modules", "build", "dist", "vscode-build", "coverage"]
-WALK_EXCLUDE_EXTS = ".xz"
+WALK_EXCLUDE_EXTS = (".xz",)
 
 
 # find source code files (to hash_path_contents), excluding build results and node_modules
@@ -53,7 +57,7 @@ def walk_src_files(top: str):
             if exclude in dirs:
                 dirs.remove(exclude)
         for name in files:
-            if any(name.endswith(ext) for ext in WALK_EXCLUDE_EXTS):
+            if name.endswith(WALK_EXCLUDE_EXTS):
                 continue
             yield os.path.join(root, name)
 
@@ -179,7 +183,7 @@ def main():
 
     src_join = functools.partial(os.path.join, src)
 
-    source_hash = hash_path_contents(walk_src_files(src))
+    source_hash = hash_path_contents(src, walk_src_files(src))
     try:
         with tarfile.open(out, "r") as tar:
             old_source_hash = tar.pax_headers.get("source_hash")
@@ -215,7 +219,7 @@ def main():
     else:
         run(yarn + ["--cwd", src_join(), "install", "--prefer-offline"])
 
-    rm_rf(src_join("server/dist"))
+    rm_rf(src_join("isl-server/dist"))
     run(yarn + ["--cwd", src_join("isl-server"), "run", "build"], env={"CI": "false"})
 
     rm_rf(src_join("isl/build"))
