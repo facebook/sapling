@@ -88,8 +88,8 @@ export class LocalWebSocketEventBus {
     }
     this.websocket = new this.WebSocketType(wsUrl.href);
     this.opening = true;
-    this.websocket.addEventListener('open', event => {
-      logger.info('websocket open', event);
+    this.websocket.addEventListener('open', () => {
+      logger.info('websocket open');
       this.opening = false;
       this.exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
 

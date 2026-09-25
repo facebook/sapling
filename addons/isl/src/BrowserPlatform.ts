@@ -18,4 +18,8 @@ declare global {
   }
 }
 
-export const browserPlatform: Platform = makeBrowserLikePlatformImpl('browser');
+let browserPlatform: Platform | undefined;
+
+export function getBrowserPlatform(): Platform {
+  return window.islPlatform ?? (browserPlatform ??= makeBrowserLikePlatformImpl('browser'));
+}

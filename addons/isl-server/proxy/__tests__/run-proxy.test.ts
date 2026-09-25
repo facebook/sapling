@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import childProcess from 'node:child_process';
+import {EventEmitter} from 'node:events';
 import os from 'node:os';
 import * as util from 'node:util';
 import {readExistingServerFile} from '../existingServerStateFiles';
@@ -128,6 +130,32 @@ describe('run-proxy', () => {
         wasServerReused: false,
       }),
     );
+  });
+
+  it('keeps launch credentials out of browser-opening error diagnostics', async () => {
+    jest
+      .spyOn(startServer, 'startServer')
+      .mockImplementation(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}));
+    const child = new EventEmitter();
+    const spawn = jest
+      .spyOn(childProcess, 'spawn')
+      .mockReturnValue(child as childProcess.ChildProcess);
+    try {
+      await runProxyMain({...defaultArgs, json: true, openUrl: true});
+      const {url, token} = JSON.parse(allConsoleStdout());
+      expect(spawn).toHaveBeenCalledWith(expect.any(String), [url], expect.any(Object));
+
+      child.emit(
+        'error',
+        Object.assign(new Error(`spawn ${url}`), {code: 'EACCES', spawnargs: [url]}),
+      );
+
+      expect(stderr.join('\n')).toContain('EACCES');
+      expect(stderr.join('\n')).not.toContain(token);
+      expect(stderr.join('\n')).not.toContain(url);
+    } finally {
+      spawn.mockRestore();
+    }
   });
 
   it('can set current working directory manually', async () => {

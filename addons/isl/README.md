@@ -220,6 +220,14 @@ which is written to a permission-restricted file.
 Detail: we have a second token we use to verify that a server running on a port
 is actually an ISL server, to prevent misleading/phishing "reuses" of a server.
 
+Launch URLs and the CLI's JSON output contain credentials, not diagnostics.
+Embedding hosts must keep them out of logs. Client diagnostics omit parameter
+values, WebSocket events and parsing errors that can expose these credentials.
+Browser launches retain their parameters locally to support reload; embeddings
+retain their launch URL for reload and do not initialize the unused browser
+fallback or copy credentials into localStorage. Only the standalone browser
+removes the initial query string after storing its reload parameters.
+
 ## Embedding
 
 ISL is designed to be embedded in multiple contexts. `sl web` is the default,

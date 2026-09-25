@@ -13,6 +13,8 @@ import type {Writable} from 'shared/typeUtils';
 import type {LocalWebSocketEventBus as LocalWebSocketEventBusType} from '../LocalWebSocketEventBus';
 import type {PlatformName} from '../types';
 
+import {logger} from '../logger';
+
 const LocalWebSocketEventBus =
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   (jest.requireActual('../LocalWebSocketEventBus') as typeof import('../LocalWebSocketEventBus'))
@@ -79,6 +81,15 @@ function createMessageBus(): LocalWebSocketEventBusType {
 }
 
 describe('LocalWebsocketEventBus', () => {
+  it('does not log the open event containing the credentialed socket URL', () => {
+    const bus = createMessageBus();
+    globalMockWs.simulateServerConnected();
+
+    expect(new URL(globalMockWs.url).searchParams.get('token')).toBe('1234');
+    expect(logger.info).toHaveBeenCalledWith('websocket open');
+    bus.dispose();
+  });
+
   it('opens and sends messages', () => {
     const bus = createMessageBus();
     globalMockWs.simulateServerConnected();

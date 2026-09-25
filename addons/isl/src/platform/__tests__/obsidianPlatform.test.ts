@@ -22,18 +22,22 @@ describe('Obsidian platform theme', () => {
     ['?theme=light', 'light'],
     ['?theme=dark', 'dark'],
     ['', 'dark'],
-  ])('preserves the initial theme from %s after URL cleanup', async (query, expected) => {
-    window.history.replaceState({}, '', `/obsidian.html${query}`);
-    await jest.isolateModulesAsync(async () => {
-      await import('../obsidianPlatform');
+  ])(
+    'preserves theme and reload URL from %s without a browser fallback',
+    async (query, expected) => {
+      window.history.replaceState({}, '', `/obsidian.html${query}`);
+      await jest.isolateModulesAsync(async () => {
+        await import('../obsidianPlatform');
 
-      // The app imports this fallback even when window.islPlatform is already set.
-      await import('../../BrowserPlatform');
+        const {getBrowserPlatform} = await import('../../BrowserPlatform');
 
-      expect({
-        query: window.location.search,
-        theme: window.islPlatform?.theme?.getTheme(),
-      }).toEqual({query: '', theme: expected});
-    });
-  });
+        expect(getBrowserPlatform()).toBe(window.islPlatform);
+        expect(localStorage.getItem('ISLInitialParams')).toBeNull();
+        expect({
+          query: window.location.search,
+          theme: window.islPlatform?.theme?.getTheme(),
+        }).toEqual({query, theme: expected});
+      });
+    },
+  );
 });

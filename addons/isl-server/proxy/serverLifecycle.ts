@@ -67,9 +67,9 @@ export async function checkIfServerIsAliveAndIsISL(
     ]);
 
     response = JSON.parse(result);
-  } catch (error) {
+  } catch {
     if (!silent) {
-      info(`error checking if existing Sapling Web server on port ${port} is authentic: `, error);
+      info(`error checking if existing Sapling Web server on port ${port} is authentic`);
     }
     // if the request fails for any reason, we don't think it's an ISL server.
     return null;
@@ -95,7 +95,7 @@ export async function readExistingServerFileWithRetries(
     try {
       // eslint-disable-next-line no-await-in-loop
       return await readExistingServerFile(port);
-    } catch (error) {
+    } catch {
       // eslint-disable-next-line no-await-in-loop
       await sleep(500);
     }

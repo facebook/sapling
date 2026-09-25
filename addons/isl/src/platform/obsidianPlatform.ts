@@ -58,8 +58,6 @@ const obsidianPlatform: Platform = {
   // Theme integration
   theme: {
     getTheme(): ThemeColor {
-      // The app's browser-platform fallback can clear the URL during initialization.
-      // Use the parameters captured before loading the app.
       return obsidianPlatform.initialUrlParams?.get('theme') === 'light' ? 'light' : 'dark';
     },
 

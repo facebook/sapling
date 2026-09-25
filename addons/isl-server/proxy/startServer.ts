@@ -728,7 +728,7 @@ export async function killServerIfItExists(
   }
   try {
     process.kill(pid);
-  } catch (err) {
+  } catch {
     throw new Error(
       `could not kill previous Sapling Web server process with PID ${pid}. This instance may no longer be running.`,
     );
@@ -818,8 +818,7 @@ function maybeOpenURL(url: URL): void {
     } else {
       // eslint-disable-next-line no-console
       console.error(
-        `unexpected error running command \`${openCommand} ${args.join(' ')}\`:`,
-        error,
+        `unexpected error running command \`${openCommand}\`: ${error.code ?? 'unknown error'}`,
       );
     }
   });
