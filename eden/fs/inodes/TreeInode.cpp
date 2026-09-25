@@ -4430,7 +4430,8 @@ TreeInode::CheckoutSetup TreeInode::beginCheckout(
     CheckoutContext* ctx,
     const std::shared_ptr<const Tree>& fromTree,
     const std::shared_ptr<const Tree>& toTree,
-    bool reportLocalOnlyAsConflicts) {
+    bool reportLocalOnlyAsConflicts,
+    bool removeLocalOnly) {
   XLOGF(
       DBG4,
       "checkout: starting update of {}: {} --> {}",
@@ -4463,7 +4464,8 @@ TreeInode::CheckoutSetup TreeInode::beginCheckout(
       pendingLoads,
       setup.shouldInvalidateDirectory,
       setup.hadConflicts,
-      reportLocalOnlyAsConflicts);
+      reportLocalOnlyAsConflicts,
+      removeLocalOnly);
 
   // Wire up the callbacks for any pending inode loads we started
   for (auto& load : pendingLoads) {
@@ -4517,8 +4519,10 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree,
-    bool reportLocalOnlyAsConflicts) {
-  auto setup = beginCheckout(ctx, fromTree, toTree, reportLocalOnlyAsConflicts);
+    bool reportLocalOnlyAsConflicts,
+    bool removeLocalOnly) {
+  auto setup = beginCheckout(
+      ctx, fromTree, toTree, reportLocalOnlyAsConflicts, removeLocalOnly);
 
   auto faultFuture =
       getMount()->getServerState()->getFaultInjector().checkAsync(
@@ -4611,14 +4615,16 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree,
-    bool reportLocalOnlyAsConflicts) {
+    bool reportLocalOnlyAsConflicts,
+    bool removeLocalOnly) {
   XDCHECK(ctx->renameLock().owns_lock())
       << "TreeInode::co_checkout invoked without rename lock held";
 
   co_await folly::coro::co_reschedule_on_current_executor;
 
   auto self = inodePtrFromThis();
-  auto setup = beginCheckout(ctx, fromTree, toTree, reportLocalOnlyAsConflicts);
+  auto setup = beginCheckout(
+      ctx, fromTree, toTree, reportLocalOnlyAsConflicts, removeLocalOnly);
 
   SCOPE_EXIT {
     ctx->increaseCheckoutCounter(1);
@@ -4749,8 +4755,10 @@ void TreeInode::computeCheckoutActions(
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified,
     bool& hadConflicts,
-    bool reportLocalOnlyAsConflicts) {
+    bool reportLocalOnlyAsConflicts,
+    bool removeLocalOnly) {
   auto computeActionsSpan = ctx->createSpan("computeCheckoutActions");
+  XDCHECK(!removeLocalOnly || (!toTree && !ctx->isDryRun()));
 
   // Grab the contents_ lock for the duration of this function. Checkout is an
   // internal operation and may need to populate a restricted placeholder.
@@ -4871,13 +4879,18 @@ void TreeInode::computeCheckoutActions(
       }
 
       if (action) {
+        if (removeLocalOnly) {
+          // Tracked subdirectories must empty themselves the same way before
+          // they can be removed.
+          action->setRemoveLocalOnly();
+        }
         actions.push_back(std::move(action));
       }
     }
   };
 
   diffLoop(contents->entries);
-  if (reportLocalOnlyAsConflicts) {
+  if (reportLocalOnlyAsConflicts || removeLocalOnly) {
     auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
       return tree && tree->find(name) != tree->cend();
     };
@@ -5753,8 +5766,9 @@ TreeInode::DirectoryRemovalResult TreeInode::finalizeDirectoryRemoval(
       0) {
     ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
     result.hadConflicts = true;
-    // Since we've invalidated the entry, even if this fails we need
-    // to make sure the directory is also invalidated, fallthrough.
+    result.actionResult =
+        CheckoutActionResult{InvalidationRequired::Yes, result.hadConflicts};
+    return result;
   }
 
   // If the entry does not exist at the new commit we can stop here.
@@ -5813,7 +5827,8 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
     InodePtr inode,
     std::shared_ptr<const Tree> oldTree,
     std::shared_ptr<const Tree> newTree,
-    const std::optional<Tree::value_type>& newScmEntry) {
+    const std::optional<Tree::value_type>& newScmEntry,
+    bool removeLocalOnly) {
   auto treeInode = inode.asTreePtrOrNull();
   if (!treeInode) {
     // Regardless of what we'll do with the inode, we can consider it as "done"
@@ -5937,7 +5952,18 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
   // First we have to recursively unlink everything inside the directory.
   // Fortunately, calling checkout() with an empty destination tree does
   // exactly what we want.
-  return treeInode->checkout(ctx, std::move(oldTree), nullptr)
+  if (ctx->forceUpdate() && newScmEntry && !newScmEntry->second.isTree() &&
+      getMount()->getEdenConfig()->forceCheckoutRemovesLocalOnly.getValue()) {
+    // Local-only contents would otherwise block the replacement.
+    removeLocalOnly = true;
+  }
+  return treeInode
+      ->checkout(
+          ctx,
+          std::move(oldTree),
+          nullptr,
+          /*reportLocalOnlyAsConflicts=*/false,
+          removeLocalOnly)
       .thenValue(
           [ctx,
            newTree = std::move(newTree),
@@ -5985,7 +6011,8 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
     InodePtr inode,
     std::shared_ptr<const Tree> oldTree,
     std::shared_ptr<const Tree> newTree,
-    const std::optional<Tree::value_type>& newScmEntry) {
+    const std::optional<Tree::value_type>& newScmEntry,
+    bool removeLocalOnly) {
   // Invariant: caller holds the exclusive rename lock via `ctx`. Recursive
   // `treeInode->co_checkout(...)` calls below must inherit it from `ctx`.
   XDCHECK(ctx->renameLock().owns_lock())
@@ -6091,8 +6118,17 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
 
   // Need to remove this directory (and possibly replace with a file or a
   // case-renamed directory). First recursively unlink everything in it.
-  auto checkoutResult =
-      co_await treeInode->co_checkout(ctx, std::move(oldTree), nullptr);
+  if (ctx->forceUpdate() && newScmEntry && !newScmEntry->second.isTree() &&
+      getMount()->getEdenConfig()->forceCheckoutRemovesLocalOnly.getValue()) {
+    // Local-only contents would otherwise block the replacement.
+    removeLocalOnly = true;
+  }
+  auto checkoutResult = co_await treeInode->co_checkout(
+      ctx,
+      std::move(oldTree),
+      nullptr,
+      /*reportLocalOnlyAsConflicts=*/false,
+      removeLocalOnly);
   auto hadConflicts = checkoutResult.hadConflicts;
 
   if (ctx->isDryRun()) {

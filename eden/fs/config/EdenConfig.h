@@ -2144,6 +2144,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * When true, a forced checkout that replaces a directory with a file removes
+   * the local-only files inside it so the replacement can succeed. When false,
+   * the directory is left in place and reported as DIRECTORY_NOT_EMPTY.
+   */
+  ConfigSetting<bool> forceCheckoutRemovesLocalOnly{
+      "experimental:force-checkout-removes-local-only",
+      true,
+      this};
+
+  /**
    * Master gate for pressure-based inode GC on FUSE.
    * When enabled, FUSE TTLs and GC cutoffs are dynamically computed based
    * on total inode count.

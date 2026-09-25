@@ -435,7 +435,8 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                     std::move(self->inode_),
                     nullptr,
                     nullptr,
-                    std::nullopt)
+                    std::nullopt,
+                    /*removeLocalOnly=*/false)
                 .thenValue(
                     [conflictWasAddedToCtx](CheckoutActionResult result) {
                       result.hadConflicts |= conflictWasAddedToCtx;
@@ -466,7 +467,8 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                               std::move(self->inode_),
                               nullptr,
                               nullptr,
-                              std::nullopt)
+                              std::nullopt,
+                              /*removeLocalOnly=*/false)
                           .thenValue([hadConflicts = result.hadConflicts](
                                          CheckoutActionResult actionResult) {
                             actionResult.hadConflicts |= hadConflicts;
@@ -494,7 +496,8 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                 std::move(self->inode_),
                 std::move(self->oldTree_),
                 std::move(self->newTree_),
-                self->newScmEntry_)
+                self->newScmEntry_,
+                self->removeLocalOnly_)
             .thenValue([conflictWasAddedToCtx](CheckoutActionResult result) {
               result.hadConflicts |= conflictWasAddedToCtx;
               return result;
@@ -535,7 +538,8 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
                             std::move(inode_),
                             nullptr,
                             nullptr,
-                            std::nullopt)
+                            std::nullopt,
+                            /*removeLocalOnly=*/false)
                         .semi();
       result.hadConflicts |= conflictWasAddedToCtx;
       co_return result;
@@ -556,7 +560,8 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
                                   std::move(inode_),
                                   nullptr,
                                   nullptr,
-                                  std::nullopt)
+                                  std::nullopt,
+                                  /*removeLocalOnly=*/false)
                               .semi();
       actionResult.hadConflicts |= hadConflicts;
       co_return actionResult;
@@ -579,7 +584,8 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
       std::move(inode_),
       std::move(oldTree_),
       std::move(newTree_),
-      newScmEntry_);
+      newScmEntry_,
+      removeLocalOnly_);
   result.hadConflicts |= conflictWasAddedToCtx;
   co_return result;
 }

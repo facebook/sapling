@@ -566,6 +566,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     This argument may be null if this path no longer exists in the
    *     destination commit.  This tree inode will not be unlinked even if
    *     toTree is null. The caller is responsible for unlinking if necessary.
+   * @param removeLocalOnly Also remove entries that exist in neither tree,
+   *     recursively. Only valid when toTree is null and the checkout is not a
+   *     dry run. Used when a forced checkout replaces this directory with a
+   *     file, which requires the directory to be empty.
    *
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
@@ -574,13 +578,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree,
-      bool reportLocalOnlyAsConflicts = false);
+      bool reportLocalOnlyAsConflicts = false,
+      bool removeLocalOnly = false);
 
   [[nodiscard]] folly::coro::now_task<CheckoutSubtreeResult> co_checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree,
-      bool reportLocalOnlyAsConflicts = false);
+      bool reportLocalOnlyAsConflicts = false,
+      bool removeLocalOnly = false);
 
   /**
    * Update this directory when a child entry is materialized.
@@ -762,6 +768,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     or std::nullopt if the entry does not exist in the destination commit.
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
+   * @param removeLocalOnly If the entry is a directory being removed, also
+   *     remove its local-only contents. See checkout().
    */
   [[nodiscard]] ImmediateFuture<CheckoutActionResult> checkoutUpdateEntry(
       CheckoutContext* ctx,
@@ -769,7 +777,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr inode,
       std::shared_ptr<const Tree> oldTree,
       std::shared_ptr<const Tree> newTree,
-      const std::optional<Tree::value_type>& newScmEntry);
+      const std::optional<Tree::value_type>& newScmEntry,
+      bool removeLocalOnly);
 
   [[nodiscard]] folly::coro::now_task<CheckoutActionResult>
   co_checkoutUpdateEntry(
@@ -778,7 +787,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr inode,
       std::shared_ptr<const Tree> oldTree,
       std::shared_ptr<const Tree> newTree,
-      const std::optional<Tree::value_type>& newScmEntry);
+      const std::optional<Tree::value_type>& newScmEntry,
+      bool removeLocalOnly);
 
   /**
    * Returns a copy of this inode's metadata.
@@ -822,7 +832,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       CheckoutContext* ctx,
       const std::shared_ptr<const Tree>& fromTree,
       const std::shared_ptr<const Tree>& toTree,
-      bool reportLocalOnlyAsConflicts);
+      bool reportLocalOnlyAsConflicts,
+      bool removeLocalOnly);
 
   folly::Try<CheckoutFinalizeState> processCheckoutActionResults(
       CheckoutContext* ctx,
@@ -1308,7 +1319,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified,
       bool& hadConflicts,
-      bool reportLocalOnlyAsConflicts);
+      bool reportLocalOnlyAsConflicts,
+      bool removeLocalOnly);
 
   /**
    * Sets wasDirectoryListModified true if this checkout entry operation has

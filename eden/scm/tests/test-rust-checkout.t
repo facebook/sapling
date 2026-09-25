@@ -459,11 +459,8 @@ Deleted file replaced by untracked directory:
    foo
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
-TODO(sggutier): This is yet another case of differing behavior between Eden and non-Eden
   $ sl go -qC $B
   $ sl st
-  ! foo (eden !)
-  ? foo/bar (eden !)
 
 #if no-eden
 Don't output too many conflicts. This behavior only occurs on non-EdenFS (no need to fix):

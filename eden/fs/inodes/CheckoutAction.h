@@ -64,8 +64,8 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
 
   /**
    * Create a CheckoutAction for an entry that exists only in the local
-   * filesystem. Used when a restricted checkout makes local-only contents
-   * conflict with the destination placeholder.
+   * filesystem. Used for restriction conflicts and forced removal of
+   * directories that must be replaced with files.
    */
   CheckoutAction(
       CheckoutContext* ctx,
@@ -113,6 +113,15 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   ~CheckoutAction();
 
   PathComponentPiece getEntryName() const;
+
+  /**
+   * Remove local-only contents when this action removes a directory. Set by
+   * a parent checkout that is emptying itself for a forced replacement with a
+   * file, so that tracked subdirectories do the same.
+   */
+  void setRemoveLocalOnly() {
+    removeLocalOnly_ = true;
+  }
 
   /**
    * Run the CheckoutAction.
@@ -256,6 +265,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   std::optional<Hash20> oldBlobSha1_;
   std::shared_ptr<const Tree> newTree_;
   bool newBlobMarker_ = false;
+  bool removeLocalOnly_ = false;
 
   /**
    * The errors vector keeps track of any errors that occurred while trying to
