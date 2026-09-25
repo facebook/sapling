@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::OssRemoteDatabaseConfig;
@@ -63,6 +65,31 @@ mononoke_queries! {
         RepositoryId,
     ) {
         "SELECT COALESCE(MAX(repo_id), 0) FROM git_repositories_source_of_truth"
+    }
+
+    // One statement, not a loop: auto-increment is contiguous within an INSERT
+    // but not across two, and batches reach 1000 on the SourceControl tier.
+    write AllocateRepoIds(values: (repo_id: Option<i64>)) {
+        none,
+        "INSERT INTO repo_id_sequence (repo_id) VALUES {values}"
+    }
+
+    // MySQL reports the first id of a multi-row insert, SQLite the last;
+    // `ROW_COUNT()` puts both on the last so callers need no dialect branch.
+    // Per-connection, so it must share the INSERT's transaction.
+    read ReadLastAllocatedRepoId() -> (i64) {
+        mysql("SELECT LAST_INSERT_ID() + ROW_COUNT() - 1")
+        sqlite("SELECT last_insert_rowid()")
+    }
+
+    // Insert-or-ignore, so re-seeding is a no-op.
+    write SeedRepoIdSequence(repo_id: i64) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO repo_id_sequence (repo_id) VALUES ({repo_id})"
+    }
+
+    read ReadMaxRepoIdInSequence() -> (Option<i64>) {
+        "SELECT MAX(repo_id) FROM repo_id_sequence"
     }
 
     read GetByGitSourceOfTruth(source_of_truth: GitSourceOfTruth) -> (
@@ -233,6 +260,18 @@ impl SqlGitSourceOfTruthConfig {
             Staleness::MostRecent => &self.connections.read_master_connection,
             Staleness::MaybeStale => &self.connections.read_connection,
         }
+    }
+
+    /// Plant `repo_id` so the next allocation lands above it. Production seeds
+    /// once via the MySQL schema; this is for tests and admin tooling.
+    pub async fn seed_repo_id_sequence(&self, ctx: &CoreContext, repo_id: i64) -> Result<()> {
+        SeedRepoIdSequence::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+        )
+        .await?;
+        Ok(())
     }
 }
 
@@ -532,6 +571,57 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         } else {
             Ok(from_db)
         }
+    }
+
+    async fn allocate_repo_ids(
+        &self,
+        ctx: &CoreContext,
+        count: usize,
+    ) -> Result<Vec<RepositoryId>> {
+        if count == 0 {
+            return Ok(vec![]);
+        }
+
+        // The transaction pins INSERT and read to one connection; from the pool
+        // they could land apart and read another allocation's id.
+        let txn = self
+            .connections
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await?;
+
+        // The seed is a schema change landing separately. Unseeded, this starts
+        // at 1 and collides with every live repo, so refuse instead.
+        let (txn, seeded) = ReadMaxRepoIdInSequence::query_with_transaction(txn).await?;
+        if seeded.first().and_then(|(max,)| *max).is_none() {
+            return Err(anyhow!(
+                "repo_id_sequence is empty; it must be seeded above every repo id \
+                 that has ever existed before repo creation can allocate from it"
+            ));
+        }
+
+        let placeholder: Option<i64> = None;
+        let new_rows = vec![(&placeholder,); count];
+        let (txn, _) = AllocateRepoIds::query_with_transaction(txn, &new_rows).await?;
+
+        let count = i64::try_from(count).context("repo id batch size does not fit in i64")?;
+        let (txn, rows) = ReadLastAllocatedRepoId::query_with_transaction(txn).await?;
+        txn.commit().await?;
+
+        let last = rows
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("ReadLastAllocatedRepoId returned no rows"))?
+            .0;
+        let first = last - count + 1;
+
+        (first..=last)
+            .map(|id| {
+                let id = i32::try_from(id)
+                    .with_context(|| format!("allocated repo id {id} does not fit in i32"))?;
+                Ok(RepositoryId::new(id))
+            })
+            .collect()
     }
 }
 
@@ -1255,6 +1345,92 @@ mod test {
         assert_eq!(
             push.delete_reserved_row(&ctx, stamped_id, Some(7)).await?,
             0
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_allocate_repo_ids_never_reissues_after_delete(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+        push.seed_repo_id_sequence(&ctx, 100_902).await?;
+
+        let first_batch = push.allocate_repo_ids(&ctx, 3).await?;
+        assert_eq!(first_batch.len(), 3, "asked for 3 ids, got a short batch");
+
+        // Reserve and then delete them, the way a failed creation does. This is
+        // what made `MAX(repo_id) + 1` rewind and hand out live ids again.
+        let repos = first_batch
+            .iter()
+            .enumerate()
+            .map(|(i, id)| {
+                (
+                    *id,
+                    RepositoryName(format!("doomed{i}")),
+                    GitSourceOfTruth::Reserved,
+                )
+            })
+            .collect::<Vec<_>>();
+        push.insert_repos(&ctx, &repos).await?;
+        push.delete_source_of_truth_by_repo_names_for_reserved_repos(
+            &ctx,
+            &repos
+                .iter()
+                .map(|(_, name, _)| name.clone())
+                .collect::<Vec<_>>(),
+        )
+        .await?;
+
+        // The table is empty again, so the old allocator would restart at 1.
+        assert_eq!(push.get_max_id(&ctx).await?, None);
+
+        let second_batch = push.allocate_repo_ids(&ctx, 3).await?;
+        for id in &second_batch {
+            assert!(
+                !first_batch.contains(id),
+                "repo id {id} was reissued after its row was deleted"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_allocate_repo_ids_starts_above_the_seed(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        // Production seeds above every id that has ever existed, including the
+        // hand-assigned ids in `repo_index.cinc` that the allocator never issued.
+        push.seed_repo_id_sequence(&ctx, 100_902).await?;
+
+        let ids = push.allocate_repo_ids(&ctx, 2).await?;
+        assert_eq!(
+            ids,
+            vec![RepositoryId::new(100_903), RepositoryId::new(100_904)]
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_allocate_repo_ids_refuses_an_unseeded_sequence(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        // Without this guard an unseeded sequence starts at 1 and quietly hands
+        // out ids that thousands of live repos already hold.
+        let err = push
+            .allocate_repo_ids(&ctx, 1)
+            .await
+            .expect_err("allocating from an unseeded sequence should fail");
+        assert!(
+            format!("{err:#}").contains("must be seeded"),
+            "unexpected error: {err:#}"
         );
 
         Ok(())

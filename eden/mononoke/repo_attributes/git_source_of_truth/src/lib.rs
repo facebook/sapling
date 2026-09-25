@@ -12,7 +12,9 @@ use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
 use futures_retry::retry;
@@ -90,6 +92,12 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
     ) -> Result<()>;
 
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>>;
+
+    /// Take `count` ids off the monotonic sequence. Nothing deletes from it, so
+    /// an id is issued at most once, unlike `get_max_id` + 1 (S709055). Ids are
+    /// not guaranteed contiguous.
+    async fn allocate_repo_ids(&self, ctx: &CoreContext, count: usize)
+    -> Result<Vec<RepositoryId>>;
 
     async fn get_by_repo_name(
         &self,
@@ -240,6 +248,18 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         Ok(None)
     }
 
+    async fn allocate_repo_ids(
+        &self,
+        _ctx: &CoreContext,
+        _count: usize,
+    ) -> Result<Vec<RepositoryId>> {
+        // An empty batch would let a caller create repos under ids it never
+        // reserved, so this refuses where the other no-op methods return Ok.
+        Err(anyhow!(
+            "NoopGitSourceOfTruthConfig cannot allocate repo ids"
+        ))
+    }
+
     async fn get_by_repo_name(
         &self,
         _ctx: &CoreContext,
@@ -307,6 +327,8 @@ pub struct TestGitSourceOfTruthConfig {
     // Distinct per-entry row ids, so id-keyed operations (delete_reserved_row)
     // match exactly one row like the SQL impls do.
     next_id: Arc<AtomicU64>,
+    // Stands in for `repo_id_sequence`; never rewinds on removal.
+    next_repo_id: Arc<AtomicU64>,
 }
 
 impl TestGitSourceOfTruthConfig {
@@ -314,6 +336,7 @@ impl TestGitSourceOfTruthConfig {
         Self {
             entries: Arc::new(Mutex::new(HashMap::new())),
             next_id: Arc::new(AtomicU64::new(1)),
+            next_repo_id: Arc::new(AtomicU64::new(1)),
         }
     }
 
@@ -460,6 +483,22 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
             .values()
             .map(|entry| entry.repo_id)
             .max())
+    }
+
+    async fn allocate_repo_ids(
+        &self,
+        _ctx: &CoreContext,
+        count: usize,
+    ) -> Result<Vec<RepositoryId>> {
+        let count = u64::try_from(count).context("repo id batch size does not fit in u64")?;
+        let first = self.next_repo_id.fetch_add(count, Ordering::Relaxed);
+        (first..first + count)
+            .map(|id| {
+                let id = i32::try_from(id)
+                    .with_context(|| format!("allocated repo id {id} does not fit in i32"))?;
+                Ok(RepositoryId::new(id))
+            })
+            .collect()
     }
 
     async fn get_by_repo_name(

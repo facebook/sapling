@@ -20,6 +20,14 @@ CREATE TABLE IF NOT EXISTS `git_repositories_source_of_truth` (
   `mutation_id` INTEGER DEFAULT NULL
 );
 
+-- Allocates repo ids. Nothing ever deletes from this table, so the counter only
+-- goes up -- unlike `MAX(repo_id) + 1` over `git_repositories_source_of_truth`,
+-- whose ceiling falls back when `cleanup_repos` removes rows and hands live ids
+-- out a second time (S709055). Seeded once above every id that has ever existed.
+CREATE TABLE IF NOT EXISTS `repo_id_sequence` (
+  `repo_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS `repo_id_idx` ON `git_repositories_source_of_truth` (`repo_id`);
 CREATE UNIQUE INDEX IF NOT EXISTS `repo_name_idx` ON `git_repositories_source_of_truth` (`repo_name`);
 CREATE INDEX IF NOT EXISTS `source_of_truth_idx` ON `git_repositories_source_of_truth` (`source_of_truth`);
