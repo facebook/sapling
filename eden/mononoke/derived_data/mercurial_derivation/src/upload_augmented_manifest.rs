@@ -51,6 +51,135 @@ struct ChildNode {
     acl: Option<AclChildNode>,
 }
 
+struct ParsedTree {
+    node_id: HgNodeHash,
+    manifest: HgBlobManifest,
+}
+
+fn child_directories(
+    manifest: &HgBlobManifest,
+) -> impl Iterator<Item = (&MPathElement, HgNodeHash)> {
+    manifest
+        .content()
+        .files
+        .iter()
+        .filter_map(|(name, entry)| match entry {
+            Entry::Tree(id) => Some((name, id.into_nodehash())),
+            Entry::Leaf(_) => None,
+        })
+}
+
+/// One tree's child directories, split by where each has to be resolved from.
+#[derive(Default)]
+pub struct TreeChildren {
+    /// Children that arrived in the same batch.
+    pub in_batch: Vec<(MPathElement, HgNodeHash)>,
+    /// Children that did not, so they must already be derived.
+    pub external: Vec<(MPathElement, HgNodeHash)>,
+}
+
+/// A batch of uploaded trees, parsed and ordered by containment. Built from the
+/// uploaded bytes alone, so its shape is known before the blobstore is touched.
+pub struct UploadedTreeBatch {
+    trees: Vec<ParsedTree>,
+    /// Per tree, the positions of the batch trees it directly contains. Names
+    /// are irrelevant to ordering, hence separate from `children`.
+    contains: Vec<Vec<usize>>,
+    /// Per tree, its children split by where they resolve from.
+    children: Vec<TreeChildren>,
+}
+
+/// One tree of a batch, reached in build order.
+pub struct OrderedTree<'a> {
+    pub node_id: HgNodeHash,
+    pub manifest: &'a HgBlobManifest,
+    pub children: &'a TreeChildren,
+}
+
+impl UploadedTreeBatch {
+    /// Edges are hg node ids, not paths: identical subtrees at different paths
+    /// are one node, and the same node can arrive twice in one batch.
+    pub fn parse(envelopes: Vec<HgManifestEnvelope>) -> Result<Self> {
+        let trees = envelopes
+            .into_iter()
+            .map(|envelope| {
+                let node_id = envelope.node_id();
+                let manifest = HgBlobManifest::parse(envelope).with_context(|| {
+                    format!("parsing uploaded Mercurial manifest for tree {node_id}")
+                })?;
+                anyhow::Ok(ParsedTree { node_id, manifest })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let index_by_node: HashMap<HgNodeHash, usize> = trees
+            .iter()
+            .enumerate()
+            .map(|(index, tree)| (tree.node_id, index))
+            .collect();
+
+        let (contains, children) = trees
+            .iter()
+            .map(|tree| {
+                child_directories(&tree.manifest).fold(
+                    (Vec::new(), TreeChildren::default()),
+                    |(mut contains, mut children), (name, node_id)| {
+                        match index_by_node.get(&node_id) {
+                            Some(&index) => {
+                                contains.push(index);
+                                children.in_batch.push((name.clone(), node_id));
+                            }
+                            None => children.external.push((name.clone(), node_id)),
+                        }
+                        (contains, children)
+                    },
+                )
+            })
+            .unzip();
+
+        Ok(Self {
+            trees,
+            contains,
+            children,
+        })
+    }
+
+    /// The batch ordered so that every tree comes after the trees it contains.
+    pub fn in_build_order(&self) -> impl ExactSizeIterator<Item = OrderedTree<'_>> {
+        bottom_up_order(&self.contains)
+            .into_iter()
+            .map(|index| OrderedTree {
+                node_id: self.trees[index].node_id,
+                manifest: &self.trees[index].manifest,
+                children: &self.children[index],
+            })
+    }
+}
+
+/// Order the batch so that every tree comes after the trees it contains. A node
+/// is marked seen when pushed, not when finished, so a cyclic input terminates.
+fn bottom_up_order(child_indices: &[Vec<usize>]) -> Vec<usize> {
+    let mut seen = vec![false; child_indices.len()];
+    let mut order = Vec::with_capacity(child_indices.len());
+    for root in 0..child_indices.len() {
+        if std::mem::replace(&mut seen[root], true) {
+            continue;
+        }
+        let mut stack = vec![(root, 0usize)];
+        while let Some((node, child_position)) = stack.pop() {
+            match child_indices[node].get(child_position) {
+                Some(&child) => {
+                    stack.push((node, child_position + 1));
+                    if !std::mem::replace(&mut seen[child], true) {
+                        stack.push((child, 0));
+                    }
+                }
+                None => order.push(node),
+            }
+        }
+    }
+    order
+}
+
 /// Build and store the augmented manifest for one uploaded tree.
 ///
 /// Every directory inside the tree must already be derived; a missing one is an
@@ -179,4 +308,92 @@ async fn build_acl_node(
         },
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use bytes::Bytes;
+    use mercurial_types::HgManifestEnvelopeMut;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn node(byte: u8) -> HgNodeHash {
+        HgNodeHash::from_bytes(&[byte; 20]).expect("twenty bytes is a node hash")
+    }
+
+    /// A manifest listing `children` as subdirectories, plus one file so the
+    /// leaf branch of `child_directories` is exercised rather than assumed.
+    fn tree(node_id: HgNodeHash, children: &[(&str, HgNodeHash)]) -> HgManifestEnvelope {
+        let mut lines: Vec<String> = children
+            .iter()
+            .map(|(name, child)| format!("{name}\0{child}t\n"))
+            .collect();
+        lines.push(format!("file\0{node_id}\n"));
+        lines.sort();
+
+        HgManifestEnvelopeMut {
+            node_id,
+            p1: None,
+            p2: None,
+            computed_node_id: node_id,
+            contents: Bytes::from(lines.concat()),
+        }
+        .freeze()
+    }
+
+    fn node_ids(children: &[(MPathElement, HgNodeHash)]) -> Vec<HgNodeHash> {
+        children.iter().map(|(_, node_id)| *node_id).collect()
+    }
+
+    #[mononoke::test]
+    fn test_parse_splits_children_by_whether_they_arrived() {
+        // foo contains bar, bar contains baz, and only foo and bar were
+        // uploaded.
+        let (foo, bar, baz) = (node(1), node(2), node(3));
+        let batch =
+            UploadedTreeBatch::parse(vec![tree(foo, &[("bar", bar)]), tree(bar, &[("baz", baz)])])
+                .expect("the fixture batch parses");
+
+        let ordered: Vec<_> = batch.in_build_order().collect();
+        assert_eq!(
+            ordered.iter().map(|tree| tree.node_id).collect::<Vec<_>>(),
+            vec![bar, foo],
+            "bar is built before the foo that contains it"
+        );
+
+        assert_eq!(
+            node_ids(&ordered[0].children.external),
+            vec![baz],
+            "baz did not arrive, so it has to come from storage"
+        );
+        assert_eq!(
+            node_ids(&ordered[1].children.in_batch),
+            vec![bar],
+            "bar arrived with the batch, so foo needs nothing from storage"
+        );
+        assert!(
+            ordered[1].children.external.is_empty(),
+            "foo's only child directory arrived with it"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_bottom_up_order_puts_children_first() {
+        // 0 contains 1 and 2; 1 contains 3.
+        let contains = vec![vec![1, 2], vec![3], vec![], vec![]];
+        let order = bottom_up_order(&contains);
+        let position = |node: usize| order.iter().position(|n| *n == node).expect("visited");
+        assert_eq!(order.len(), 4, "every tree is visited exactly once");
+        assert!(position(3) < position(1), "3 is inside 1");
+        assert!(position(1) < position(0), "1 is inside 0");
+        assert!(position(2) < position(0), "2 is inside 0");
+    }
+
+    #[mononoke::test]
+    fn test_bottom_up_order_terminates_on_a_cycle() {
+        // Not reachable from a content-addressed manifest, but must not hang.
+        let contains = vec![vec![1], vec![0]];
+        assert_eq!(bottom_up_order(&contains).len(), 2);
+    }
 }
