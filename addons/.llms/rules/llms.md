@@ -245,3 +245,4 @@ When reviewing ISL changes, flag these issues:
 ## Diff Conventions
 
 - **Diff titles** for ISL changes must start with the `[isl]` prefix. For example: `[isl] Fix optimistic state for rebase operations`.
+- **Commit messages are exported to GitHub.** Keep the title and summary about the ISL codebase only. Put anything about internal-only embeddings, features, or tools in an `Internal:` section at the end of the summary, which is not exported.
