@@ -140,6 +140,9 @@ if sys.platform == "win32":
             "test_file_locked_removal",
         ],
         "hg.update_test.UpdateTest": [
+            # Windows keeps abort-on-eden-conflict-error off, so the abort
+            # this test expects never happens.
+            "test_update_reports_checkout_error",
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
             # Windows doesn't support executable files; mode changes are no-op
