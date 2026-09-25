@@ -200,14 +200,18 @@ class SymlinkTest(EdenHgTestCase):
         )
         self.assertEqual("local\n", self.read_file("symlink/tracked"))
 
-    def test_update_symlink_over_untracked_descendant_clean(self) -> None:
+    async def test_update_symlink_over_untracked_descendant_clean(self) -> None:
         self.backing_repo.write_file("symlink/subdir/tracked", "tracked\n")
         directory_commit = self.backing_repo.commit("Add directory")
         self.repo.update(directory_commit)
         self.write_file("symlink/subdir/untracked", "local\n")
-        self.repo.update(self.symlink_commit, clean=True)
+        async with self.eden.get_async_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            self.repo.update(self.symlink_commit, clean=True)
+            changes = await client.getFilesChangedSince(self.mount_path_bytes, position)
         self.assertTrue(os.path.islink(self.get_path("symlink")))
         self.assertEqual("hola", self.read_file("symlink"))
+        self.assertIn(b"symlink/subdir/untracked", changes.changedPaths)
 
     async def test_update_symlink_over_untracked_descendant_clean_disabled(
         self,

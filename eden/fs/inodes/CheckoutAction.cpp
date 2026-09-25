@@ -14,10 +14,12 @@
 #include <cerrno>
 
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -27,6 +29,23 @@
 using folly::exception_wrapper;
 
 namespace facebook::eden {
+
+namespace {
+/**
+ * The commit transition journaled at the end of a checkout only covers tracked
+ * paths, so removing an untracked file has to be recorded on its own.
+ * replaceFileEntry() requests invalidation only after unlinking the entry.
+ */
+void journalRemovedFile(
+    EdenMount* mount,
+    const std::optional<RelativePath>& path,
+    dtype_t dtype,
+    const CheckoutActionResult& result) {
+  if (path && result.invalidationRequired == InvalidationRequired::Yes) {
+    mount->getJournal().recordRemoved(*path, dtype);
+  }
+}
+} // namespace
 
 CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
@@ -422,6 +441,12 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
           if (!self->ctx_->isDryRun() &&
               (!treeInode || treeInode->isRestricted())) {
             auto parent = self->inode_->getParent(self->ctx_->renameLock());
+            std::optional<RelativePath> removedPath;
+            if (!treeInode) {
+              removedPath = self->inode_->getPath();
+            }
+            auto dtype = self->inode_->getType();
+            auto* mount = self->inode_->getMount();
             return parent
                 ->checkoutUpdateEntry(
                     self->ctx_,
@@ -431,11 +456,14 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                     nullptr,
                     std::nullopt,
                     /*removeLocalOnly=*/false)
-                .thenValue(
-                    [conflictWasAddedToCtx](CheckoutActionResult result) {
-                      result.hadConflicts |= conflictWasAddedToCtx;
-                      return result;
-                    });
+                .thenValue([conflictWasAddedToCtx,
+                            removedPath = std::move(removedPath),
+                            dtype,
+                            mount](CheckoutActionResult result) {
+                  journalRemovedFile(mount, removedPath, dtype, result);
+                  result.hadConflicts |= conflictWasAddedToCtx;
+                  return result;
+                });
           }
           if (!treeInode) {
             return CheckoutActionResult{
@@ -519,6 +547,12 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!ctx_->isDryRun() && (!treeInode || treeInode->isRestricted())) {
       auto parent = inode_->getParent(ctx_->renameLock());
+      std::optional<RelativePath> removedPath;
+      if (!treeInode) {
+        removedPath = inode_->getPath();
+      }
+      auto dtype = inode_->getType();
+      auto* mount = inode_->getMount();
       auto result = co_await parent
                         ->checkoutUpdateEntry(
                             ctx_,
@@ -529,6 +563,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
                             std::nullopt,
                             /*removeLocalOnly=*/false)
                         .semi();
+      journalRemovedFile(mount, removedPath, dtype, result);
       result.hadConflicts |= conflictWasAddedToCtx;
       co_return result;
     }
