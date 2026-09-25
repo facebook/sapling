@@ -413,12 +413,6 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
           auto treeInode = self->inode_.asTreeOrNull();
           auto increase = treeInode ? treeInode->getInMemoryDescendants() : 0;
           self->ctx_->increaseCheckoutCounter(1 + increase);
-          // We only report conflicts for files, not directories. The only
-          // possible conflict that can occur here if this inode is a TreeInode
-          // is that the old source control state was for a file. There aren't
-          // really any other conflicts than this to report, even if we recurse.
-          // Anything inside this directory is basically just untracked (or
-          // possibly ignored) files.
           return CheckoutActionResult{
               InvalidationRequired::No, /*hadConflicts=*/true};
         }
@@ -517,12 +511,6 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
     auto treeInode = inode_.asTreeOrNull();
     auto increase = treeInode ? treeInode->getInMemoryDescendants() : 0;
     ctx_->increaseCheckoutCounter(1 + increase);
-    // We only report conflicts for files, not directories. The only
-    // possible conflict that can occur here if this inode is a TreeInode
-    // is that the old source control state was for a file. There aren't
-    // really any other conflicts than this to report, even if we recurse.
-    // Anything inside this directory is basically just untracked (or
-    // possibly ignored) files.
     co_return CheckoutActionResult{
         InvalidationRequired::No, /*hadConflicts=*/true};
   }
@@ -644,9 +632,8 @@ std::optional<bool> CheckoutAction::checkSyncConflict() {
   } else if (oldBlobSha1_) {
     auto fileInode = inode_.asFilePtrOrNull();
     if (!fileInode) {
-      // This was a file, but has been replaced with a directory on disk
-      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
-      return true;
+      // The local directory's children must be compared with the destination.
+      return false;
     }
 
     // Caller must perform the async FileInode::isSameAs check.

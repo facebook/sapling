@@ -250,23 +250,71 @@ class SymlinkTest(EdenHgTestCase):
         os.unlink(self.get_path("symlink"))
         self.write_file("symlink/untracked", "local\n")
         async with self.eden.get_async_thrift_client() as client:
+            file_conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=self.quasi_symlink_commit.encode(),
+                checkoutMode=CheckoutMode.DRY_RUN,
+                params=CheckOutRevisionParams(),
+            )
+            self.assertEqual(
+                [(b"symlink", ConflictType.DIRECTORY_NOT_EMPTY)],
+                [(conflict.path, conflict.type) for conflict in file_conflicts],
+            )
             conflicts = await client.checkOutRevision(
                 mountPoint=self.mount_path_bytes,
                 snapshotHash=directory_commit.encode(),
                 checkoutMode=CheckoutMode.DRY_RUN,
                 params=CheckOutRevisionParams(),
             )
-        # FIXME: Recurse into the local directory instead of treating it as a file.
+        self.assertEqual([], conflicts)
+        self.repo.update(directory_commit)
+        self.assertEqual(directory_commit, self.repo.get_head_hash())
+        self.assertEqual("tracked\n", self.read_file("symlink/tracked"))
+        self.assertEqual("local\n", self.read_file("symlink/untracked"))
+
+    async def test_update_locally_replaced_symlink_to_deleted_file(self) -> None:
+        for use_rust in (False, True):
+            with self.subTest(use_rust=use_rust):
+                self.hg("config", "--local", "checkout.use-rust", str(use_rust))
+                self.repo.update(self.symlink_commit, clean=True)
+                os.unlink(self.get_path("symlink"))
+                self.write_file("symlink/untracked", "local\n")
+                async with self.eden.get_async_thrift_client() as client:
+                    conflicts = await client.checkOutRevision(
+                        mountPoint=self.mount_path_bytes,
+                        snapshotHash=self.simple_commit.encode(),
+                        checkoutMode=CheckoutMode.DRY_RUN,
+                        params=CheckOutRevisionParams(),
+                    )
+                self.assertEqual([], conflicts)
+                # The real checkout reports DIRECTORY_NOT_EMPTY for the
+                # surviving directory, which Sapling ignores because the
+                # destination has no file at that path.
+                self.repo.update(self.simple_commit)
+                self.assertEqual(self.simple_commit, self.repo.get_head_hash())
+                self.assertEqual({"symlink/untracked": "?"}, self.repo.status())
+
+    async def test_update_locally_replaced_symlink_with_conflicting_child(self) -> None:
+        self.backing_repo.write_file("symlink/tracked", "tracked\n")
+        directory_commit = self.backing_repo.commit("Add directory")
+        self.repo.update(self.symlink_commit)
+        os.unlink(self.get_path("symlink"))
+        self.write_file("symlink/tracked", "local\n")
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=directory_commit.encode(),
+                checkoutMode=CheckoutMode.DRY_RUN,
+                params=CheckOutRevisionParams(),
+            )
         self.assertEqual(
-            [(b"symlink", ConflictType.MODIFIED_MODIFIED)],
+            [(b"symlink/tracked", ConflictType.UNTRACKED_ADDED)],
             [(conflict.path, conflict.type) for conflict in conflicts],
         )
-        with self.assertRaisesRegex(
-            hgrepo.HgError, "file metadata for symlink not found at target commit"
-        ):
+        with self.assertRaisesRegex(hgrepo.HgError, "conflicting file changes"):
             self.repo.update(directory_commit)
         self.assertEqual(self.symlink_commit, self.repo.get_head_hash())
-        self.assertEqual("local\n", self.read_file("symlink/untracked"))
+        self.assertEqual("local\n", self.read_file("symlink/tracked"))
 
     def test_show_symlink_commit(self) -> None:
         self.repo.update(self.symlink_commit)

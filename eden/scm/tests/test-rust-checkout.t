@@ -448,9 +448,11 @@ Deleted file replaced by untracked directory:
   ! foo
   ? foo/bar
   $ sl go $B
-  abort: 1 conflicting file changes:
+  abort: 1 conflicting file changes: (no-eden !)
+  abort: nonempty directories conflict with files in the destination commit: (eden !)
    foo
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  (remove the local files or goto --clean to discard them) (eden !)
   [255]
   $ sl rm foo --mark
   $ sl add foo/bar
@@ -458,9 +460,11 @@ Deleted file replaced by untracked directory:
   A foo/bar
   R foo
   $ sl go $B
-  abort: 1 conflicting file changes:
+  abort: 1 conflicting file changes: (no-eden !)
+  abort: nonempty directories conflict with files in the destination commit: (eden !)
    foo
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  (remove the local files or goto --clean to discard them) (eden !)
   [255]
   $ sl go -qC $B
   $ sl st
