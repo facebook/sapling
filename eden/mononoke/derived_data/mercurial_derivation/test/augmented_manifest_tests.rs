@@ -5563,6 +5563,81 @@ async fn test_upload_path_matches_derivation_above_the_shard_weight_limit(
     Ok(())
 }
 
+/// What it tests: a directory whose own files are all unchanged is still built
+/// by reading a file blob for every one of them.
+///
+/// Why it matters: an uploaded manifest lists every file in the directory, not
+/// just the changed ones, so this is one filenode load plus one
+/// content-metadata lookup per file for a change that touched none of them. On
+/// a directory of a thousand files that is a thousand reads where canonical
+/// derivation does none. Pinned here so the fix has something to flip.
+#[mononoke::fbinit_test]
+async fn test_upload_path_rebuilds_unchanged_file_leaves(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let mut files = vec![(NonRootMPath::new("wide/sub/x")?, "one".to_string())];
+    for i in 0..8 {
+        files.push((NonRootMPath::new(format!("wide/f{i:03}"))?, format!("v{i}")));
+    }
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_files(files)
+        .commit()
+        .await?;
+    // Only the subdirectory changes, so every file wide/ lists is unchanged
+    // and none of them need rebuilding.
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("wide/sub/x", "two")
+        .commit()
+        .await?;
+
+    let restricted_paths_config = repo.restricted_paths().config_based();
+    derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        &ctx,
+        repo.repo_blobstore(),
+        hg_manifest_id_of(&ctx, &repo, parent).await?,
+        vec![],
+        &Default::default(),
+        restricted_paths_config,
+        derive_acl_overlay(&ctx, &repo, parent).await?,
+    )
+    .await?;
+
+    let child_manifest = hg_manifest_id_of(&ctx, &repo, child).await?;
+    let overlay: Arc<dyn KeyedBlobstore> =
+        Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    build_one_uploaded_tree(
+        &ctx,
+        &repo,
+        &overlay,
+        tree_id_at_path(&ctx, &repo, child_manifest, "wide/sub").await?,
+    )
+    .await?;
+
+    let no_file_reads: Arc<dyn KeyedBlobstore> = Arc::new(
+        DenyGetKeyedBlobstore::new_denying_prefix(overlay.clone(), "hgfilenode.sha1."),
+    );
+    let wide = tree_id_at_path(&ctx, &repo, child_manifest, "wide").await?;
+    let envelope = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), wide).await?;
+    // FIXME: every leaf is rebuilt from the file blobs, so denying them is
+    // enough to stop the build. Reusing the parent's entry for a file whose
+    // filenode is unchanged should make this succeed with no file read at all.
+    let err = build_augmented_manifest_for_uploaded_tree(
+        &ctx,
+        &no_file_reads,
+        restricted_paths_config,
+        &envelope,
+    )
+    .await
+    .expect_err("every leaf is rebuilt today, so a denied file read stops the build");
+    assert!(
+        format!("{err:#}").contains("hgfilenode.sha1."),
+        "the build must stop on a denied file read, not on something else: {err:#}",
+    );
+
+    Ok(())
+}
+
 /// What it tests: a directory whose children are all files is built from the
 /// uploaded bytes alone, with no dependency on anything else being uploaded.
 ///
