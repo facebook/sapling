@@ -13,7 +13,8 @@ After landing the hook implementation in fbsource, you need a separate configera
 
 ## Hook entry format
 
-Add a `RawHookConfig` to the list returned by `get_default_hooks()` in `hooks.cinc` (Hg) or `get_default_hook_set()` in `git_hooks.cinc` (Git):
+Add a `RawHookConfig` to the list returned by `get_default_hooks()` in `hooks.cinc` (Hg) or
+`get_default_hook_set()` in `git_hooks.cinc` (Git):
 
 ```python
 RawHookConfig(
@@ -27,13 +28,18 @@ RawHookConfig(
 
 Key fields:
 - `name`: display name shown in rejection messages
-- `implementation`: must exactly match the string in `make_changeset_hook`/`make_file_hook`/`make_bookmark_hook` in `implementations.rs`. Defaults to `name` if omitted.
+- `implementation`: must exactly match the string in `make_changeset_hook`/`make_file_hook`/`make_bookmark_hook`
+  in `implementations.rs`. Defaults to `name` if omitted.
 - `config_json`: JSON string parsed by your hook's config struct via serde
-- `log_only`: when `True`, the hook logs rejections but doesn't block pushes. **Always start with `True`** to validate impact without blocking engineers. Review the logs to confirm the hook isn't rejecting legitimate pushes before switching to `False`.
+- `log_only`: when `True`, the hook logs rejections but doesn't block pushes. **Always start with `True`** to
+  validate impact without blocking engineers. Review the logs to confirm the hook isn't rejecting legitimate
+  pushes before switching to `False`.
 
 ## Bypass control
 
-Most hooks allow bypass via `bypass_pushvar` (anyone can set it) or `bypass_commit_string` (a magic string in the commit message). For hooks that should **not** be freely bypassable, use `bypass_permission_group` instead:
+Most hooks allow bypass via `bypass_pushvar` (anyone can set it) or `bypass_commit_string` (a magic string in the
+commit message). For hooks that should **not** be freely bypassable, add `bypass_permission_group` alongside the
+existing `bypass_pushvar` or `bypass_commit_string` trigger:
 
 1. Create an AMP (Access Management Platform) group for the hook
 2. Set `bypass_permission_group` to that group's name in the `RawHookConfig`
@@ -43,7 +49,8 @@ Use this for security-critical or compliance hooks where an unrestricted bypass 
 
 ## Bookmark wiring
 
-The `repo.cinc` builder automatically wires all hooks from `get_default_hooks()` into bookmark configs. Adding your hook to `hooks.cinc` is usually sufficient -- you don't need to manually edit bookmark associations.
+The `repo.cinc` builder automatically wires all hooks from `get_default_hooks()` into bookmark configs. Adding
+your hook to `hooks.cinc` is usually sufficient -- you don't need to manually edit bookmark associations.
 
 ## Landing order
 
@@ -56,7 +63,8 @@ The fbsource diff (hook implementation) must land and propagate to at minimum:
 
 This propagation can take **a week or more**. Do not land the configerator diff until propagation is confirmed.
 
-**Seek support from the Source Control team before landing configerator changes.** Don't land the config unilaterally -- coordinate with the team to verify propagation and review the rollout plan.
+**Seek support from the Source Control team before landing configerator changes.** Don't land the config
+unilaterally -- coordinate with the team to verify propagation and review the rollout plan.
 
 ## Diff summary guidance
 
