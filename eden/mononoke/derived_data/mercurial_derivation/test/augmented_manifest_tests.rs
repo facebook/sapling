@@ -62,6 +62,7 @@ use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SubtreeChange;
+use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::AclManifestId;
 use mononoke_types::typed_hash::BlobstoreKey;
 use permission_checker::MononokeIdentity;
@@ -5497,6 +5498,69 @@ async fn test_upload_path_augmented_manifests_are_byte_identical(fb: FacebookIni
     // is resolved from its stored envelope and spliced in.
     assert_upload_path_matches_derivation(&ctx, &repo, parent, child, &["src/deep", "src", ""])
         .await
+}
+
+/// One file past the point where the entry map stops inlining, read off the
+/// limit so that raising it cannot silently shrink this fixture below it.
+const WIDE_DIRECTORY_FILES: usize = HgAugmentedManifestEntry::WEIGHT_LIMIT + 1;
+
+/// What it tests: a directory too wide for its entry map to inline still builds
+/// byte-identically through the tree-upload path.
+///
+/// Why it matters: canonical derivation splices unchanged runs out of the
+/// parent's map while the upload path rebuilds every entry from scratch, and
+/// the two are only known to agree while the map inlines into a single node.
+/// Every other byte-identity fixture here is small enough that it does, so
+/// nothing covers the case where how the map was assembled can change the
+/// bytes -- and `PutBehaviour::IfAbsent` makes the first envelope written
+/// permanent.
+#[mononoke::fbinit_test]
+async fn test_upload_path_matches_derivation_above_the_shard_weight_limit(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let wide_files = (0..WIDE_DIRECTORY_FILES)
+        .map(|i| Ok((NonRootMPath::new(format!("wide/f{i:05}"))?, format!("v{i}"))))
+        .collect::<Result<Vec<_>>>()?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_files(wide_files)
+        .commit()
+        .await?;
+    // One changed file out of thousands is what gives canonical derivation a
+    // long unchanged run to splice and the upload path nothing to reuse.
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("wide/f00000", "changed")
+        .commit()
+        .await?;
+
+    assert_upload_path_matches_derivation(&ctx, &repo, parent, child, &["wide", ""]).await?;
+
+    // A fully inlined map weighs exactly its entry count, and a sharded one
+    // counts each stored child as one, so a lower weight is proof it sharded.
+    let wide = tree_id_at_path(
+        &ctx,
+        &repo,
+        hg_manifest_id_of(&ctx, &repo, child).await?,
+        "wide",
+    )
+    .await?;
+    let envelope = HgAugmentedManifestEnvelope::load(
+        &ctx,
+        repo.repo_blobstore(),
+        HgAugmentedManifestId::new(wide.into_nodehash()),
+    )
+    .await?
+    .context("no augmented envelope for the wide directory")?;
+    let subentries = &envelope.augmented_manifest.subentries;
+    assert!(
+        subentries.weight() < subentries.size(),
+        "the fixture must exceed the shard weight limit, but its map inlined at weight {}",
+        subentries.weight(),
+    );
+
+    Ok(())
 }
 
 /// What it tests: a directory whose children are all files is built from the
