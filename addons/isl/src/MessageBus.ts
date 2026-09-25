@@ -13,7 +13,7 @@ export type {MessageBusStatus};
  * Abstraction for the bidirectional communication channel between the
  * ISL UI and the "business logic" that talks to Sapling, Watchman, etc.
  *
- * Every platform (BrowserPlatform VSCodeWebviewPlatform, etc) will have a single MessageBus instance.
+ * Every platform (browser platform, VSCodeWebviewPlatform, etc) will have a single MessageBus instance.
  */
 export interface MessageBus {
   onMessage(handler: (event: MessageEvent) => void | Promise<void>): Disposable;

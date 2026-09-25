@@ -20,8 +20,8 @@ import type {
   ServerToClientMessage,
 } from './types';
 
-import {getBrowserPlatform} from './BrowserPlatform';
 import type {CodeReviewIssue} from './firstPassCodeReview/types';
+import {makeBrowserLikePlatformImpl} from './platform/browserPlatformImpl';
 
 export type InitialParamKeys = 'token' | string;
 
@@ -125,8 +125,8 @@ declare global {
 // However, non-vscode but non-browser platforms are defined by setting window.islPlatform
 // before the main ISL script loads.
 
-/** The ISL client Platform. This may be BrowserPlatform, VSCodeWebviewPlatform, or another platforms, determined at runtime.  */
-const platform = getBrowserPlatform();
+/** The ISL client Platform. This may be the browser platform, VSCodeWebviewPlatform, or another platforms, determined at runtime.  */
+const platform = window.islPlatform ?? makeBrowserLikePlatformImpl('browser');
 window.islPlatform = platform;
 
 export default platform;

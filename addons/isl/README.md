@@ -249,7 +249,7 @@ Each platform can implement this to match their UX best.
 The Client's platform is where platform-specific code first runs. Some embeddings
 have their client platform send platform-specific messages to the server platform.
 
-The "default" platform is the BrowserPlatform, used by `sl web`.
+The "default" platform is the browser platform, used by `sl web`.
 
 Custom platforms can be implemented either by:
 

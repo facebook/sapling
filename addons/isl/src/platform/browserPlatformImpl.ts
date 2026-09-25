@@ -29,13 +29,17 @@ export function browserClipboardCopy(text: string, html?: string): Promise<void>
   }
 }
 
-export const makeBrowserLikePlatformImpl = (platformName: PlatformName): Platform => {
+export const makeBrowserLikePlatformImpl = (
+  platformName: PlatformName,
+  sourceUrl?: URL,
+): Platform => {
   // Extract extra cwds before computeInitialParams clears the URL
-  const extraCwds =
-    typeof window !== 'undefined' && window.location.search
-      ? new URLSearchParams(window.location.search).getAll('extraCwd')
-      : [];
-  const initialUrlParams = computeInitialParams(platformName === 'browser');
+  const search = sourceUrl?.search ?? (typeof window !== 'undefined' ? window.location.search : '');
+  const extraCwds = search.length > 0 ? new URLSearchParams(search).getAll('extraCwd') : [];
+  const initialUrlParams =
+    sourceUrl == null
+      ? computeInitialParams(platformName === 'browser')
+      : new Map(sourceUrl.searchParams.entries());
   return {
     platformName,
     confirm: (message: string, details?: string) => {

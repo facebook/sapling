@@ -92,34 +92,34 @@ describe('initial URL credentials', () => {
     expect(jest.mocked(logger.log).mock.calls.every(args => args.length === 1)).toBe(true);
   });
 
-  it('can import the browser helper before installing an embedding without side effects', async () => {
+  it('does not construct the browser fallback when an embedding is installed', async () => {
     window.history.replaceState({}, '', `/?token=${token}`);
     await jest.isolateModulesAsync(async () => {
-      const {getBrowserPlatform} = await import('../BrowserPlatform');
+      const {makeBrowserLikePlatformImpl} = await import('../platform/browserPlatformImpl');
 
       expect(window.location.search).toBe(`?token=${token}`);
       expect(localStorage.getItem(storageKey)).toBeNull();
 
-      const {makeBrowserLikePlatformImpl} = await import('../platform/browserPlatformImpl');
       const embedded = makeBrowserLikePlatformImpl('agentHome');
       window.islPlatform = embedded;
 
-      expect(getBrowserPlatform()).toBe(embedded);
+      const {default: platform} = await import('../platform');
+
+      expect(platform).toBe(embedded);
       expect(embedded.initialUrlParams?.get('token')).toBe(token);
+      expect(window.location.search).toBe(`?token=${token}`);
       expect(localStorage.getItem(storageKey)).toBeNull();
     });
   });
 
-  it('constructs a standalone browser platform only on first use', async () => {
+  it('constructs a standalone browser platform when no embedding is installed', async () => {
     window.history.replaceState({}, '', `/?token=${token}`);
     await jest.isolateModulesAsync(async () => {
-      const {getBrowserPlatform} = await import('../BrowserPlatform');
+      const {default: platform} = await import('../platform');
 
-      expect(localStorage.getItem(storageKey)).toBeNull();
-      const first = getBrowserPlatform();
-      expect(first.platformName).toBe('browser');
-      expect(first.initialUrlParams?.get('token')).toBe(token);
-      expect(getBrowserPlatform()).toBe(first);
+      expect(platform.platformName).toBe('browser');
+      expect(platform.initialUrlParams?.get('token')).toBe(token);
+      expect(window.islPlatform).toBe(platform);
       expect(window.location.search).toBe('');
     });
   });

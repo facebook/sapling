@@ -29,9 +29,9 @@ describe('Obsidian platform theme', () => {
       await jest.isolateModulesAsync(async () => {
         await import('../obsidianPlatform');
 
-        const {getBrowserPlatform} = await import('../../BrowserPlatform');
+        const {default: platform} = await import('../../platform');
 
-        expect(getBrowserPlatform()).toBe(window.islPlatform);
+        expect(platform).toBe(window.islPlatform);
         expect(localStorage.getItem('ISLInitialParams')).toBeNull();
         expect({
           query: window.location.search,
