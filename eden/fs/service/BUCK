@@ -240,6 +240,17 @@ cpp_library(
 )
 
 cpp_library(
+    name = "cgroup_file_cache_reclaimer",
+    srcs = ["CgroupFileCacheReclaimer.cpp"],
+    headers = ["CgroupFileCacheReclaimer.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//folly:file",
+        "//folly:file_util",
+    ],
+)
+
+cpp_library(
     name = "pin_scan_runner",
     srcs = ["PinScanRunner.cpp"],
     headers = ["PinScanRunner.h"],

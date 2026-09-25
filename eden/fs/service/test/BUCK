@@ -139,6 +139,22 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "cgroup_file_cache_reclaimer_test",
+    srcs = ["CgroupFileCacheReclaimerTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/service:cgroup_file_cache_reclaimer",
+        "//folly:file_util",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_unittest(
     name = "pin_scan_runner_test",
     srcs = ["PinScanRunnerTest.cpp"],
     compatible_with = [
