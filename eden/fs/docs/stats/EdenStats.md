@@ -44,6 +44,16 @@ The list of all the EdenStats Counter/Duration are as follows:
      Number of cached indexes freed by inode garbage collection, which is what
      reclaims the index of a listing that stopped before its end.
 
+- CgroupFileCacheStats (host-local only; the `local.` prefix keeps them out
+  of ODS)
+  1. `Counter reclaimedBytes{"local.memory.cgroup_file_cache.reclaimed_bytes"}`
+     : Bytes of file cache the kernel dropped from the EdenFS cgroup in
+     response to periodic `memory.reclaim` requests.
+
+  2. `Counter reclaimFailures{"local.memory.cgroup_file_cache.reclaim_failures"}`
+     : Number of reclaim passes that could not find, validate, read, or write
+     the cgroup.
+
 - JournalStats
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a
      truncated read happens in Journal.

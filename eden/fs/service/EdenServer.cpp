@@ -43,6 +43,7 @@
 #include <folly/container/F14Map.h>
 #include <sys/sysmacros.h>
 #include "eden/common/utils/SpawnedProcess.h"
+#include "eden/fs/service/CgroupFileCacheReclaimer.h"
 #include "eden/fs/utils/MountInfoTable.h"
 #endif
 #include <folly/chrono/Conv.h>
@@ -278,6 +279,15 @@ folly::CPUThreadPoolExecutor* getMountHealthCheckThreadPool() {
       2, std::make_shared<folly::NamedThreadFactory>("MountHealthCheck"));
   return executor.get();
 }
+
+#ifdef __linux__
+folly::CPUThreadPoolExecutor* getCgroupFileCacheReclaimThreadPool() {
+  // memory.reclaim is synchronous, so keep it off Eden's request executors.
+  static folly::Indestructible<folly::CPUThreadPoolExecutor> executor(
+      1, std::make_shared<folly::NamedThreadFactory>("CgroupReclaim"));
+  return executor.get();
+}
+#endif
 
 void logMountHealthCheckTimeout(
     const MountHealthIssueLogContext& logContext,
@@ -522,6 +532,18 @@ ProcessInfoCache::ReadFuncConfig makeProcessInfoReadConfig(
 }
 
 } // namespace
+
+#ifdef __linux__
+class CgroupFileCacheReclaimState {
+ public:
+  CgroupFileCacheReclaimer reclaimer;
+  std::atomic_bool enabled{false};
+  std::atomic_bool inFlight{false};
+  // Latched once the kernel has shown it lacks the memory.reclaim interface
+  // this needs; that cannot change until the next boot.
+  std::atomic_bool kernelUnsupported{false};
+};
+#endif
 
 class EdenServer::ThriftServerEventHandler
     : public apache::thrift::server::TServerEventHandler,
@@ -773,6 +795,10 @@ EdenServer::EdenServer(
 #endif
               )},
       restartArmer_{serverState_->getPrivHelper(), config_, edenDir_},
+#ifdef __linux__
+      cgroupFileCacheReclaimState_{
+          std::make_shared<CgroupFileCacheReclaimState>()},
+#endif
       heartbeatManager_{std::make_shared<HeartbeatManager>(
           edenDir_,
           serverState_->getEdenFsEventsLogger())},
@@ -953,6 +979,10 @@ void EdenServer::registerXplatTransforms() {
 #endif
 
 EdenServer::~EdenServer() {
+#ifdef __linux__
+  cgroupFileCacheReclaimState_->enabled.store(false, std::memory_order_release);
+#endif
+
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
 
   unregisterInodePopulationReportsCallback();
@@ -1436,6 +1466,20 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   } else {
     detectNfsCrawlTask_.updateInterval(0s);
   }
+
+#ifdef __linux__
+  const auto enableCgroupFileCacheReclaim =
+      config.enableCgroupFileCacheReclaim.getValue();
+  cgroupFileCacheReclaimState_->enabled.store(
+      enableCgroupFileCacheReclaim, std::memory_order_release);
+  if (enableCgroupFileCacheReclaim) {
+    cgroupFileCacheReclaimTask_.updateInterval(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            config.cgroupFileCacheReclaimInterval.getValue()));
+  } else {
+    cgroupFileCacheReclaimTask_.updateInterval(0s);
+  }
+#endif
 
   accidentalUnmountRecoveryTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -3319,6 +3363,101 @@ void EdenServer::reportMemoryStats() {
   }
 #endif
 }
+
+#ifdef __linux__
+void EdenServer::scheduleCgroupFileCacheReclaim() {
+  auto state = cgroupFileCacheReclaimState_;
+  if (state->kernelUnsupported.load(std::memory_order_acquire)) {
+    return;
+  }
+  // memory.reclaim is synchronous, and a pass that outlasts the interval must
+  // not pile further passes up behind it.
+  if (state->inFlight.exchange(true, std::memory_order_acq_rel)) {
+    return;
+  }
+  // Cleared by the pass once it has run; released here only if it is never
+  // handed to the pass.
+  auto releaseInFlight = folly::makeGuard(
+      [state] { state->inFlight.store(false, std::memory_order_release); });
+
+  const auto config = serverState_->getEdenConfig();
+  const CgroupFileCacheReclaimOptions options{
+      .targetBytes = config->cgroupFileCacheTargetBytes.getValue(),
+      .maxReclaimBytes = config->cgroupFileCacheMaxReclaimBytes.getValue(),
+  };
+  // Either systemd mode places the daemon in a cgroup named edenfs*, so not
+  // being in one while a mode is configured means the daemon was started
+  // some other way and is worth noticing.
+  const bool isolationConfigured = config->systemdCgroupIsolation.getValue() ||
+      config->systemdManagedLifecycle.getValue();
+
+  getCgroupFileCacheReclaimThreadPool()->add(
+      [state,
+       stats = serverState_->getStats().copy(),
+       options,
+       isolationConfigured,
+       releaseInFlight = std::move(releaseInFlight)] {
+        if (!state->enabled.load(std::memory_order_acquire)) {
+          return;
+        }
+        try {
+          folly::stop_watch<std::chrono::milliseconds> watch;
+          const auto result = state->reclaimer.reclaim(options);
+          if (result.requestedBytes == 0) {
+            return;
+          }
+          const auto reclaimed =
+              result.fileCacheBytesBefore > result.fileCacheBytesAfter
+              ? result.fileCacheBytesBefore - result.fileCacheBytesAfter
+              : 0;
+          stats->increment(&CgroupFileCacheStats::reclaimedBytes, reclaimed);
+          // Passes that drop a lot are rare enough to be worth seeing in the
+          // default log; the steady-state trickle is not.
+          constexpr uint64_t kNotableReclaimBytes = 1ULL << 30;
+          const auto message = fmt::format(
+              "Reclaimed {} of {} requested bytes of cgroup file cache in "
+              "{} ms; active_file + inactive_file went from {} to {} bytes",
+              reclaimed,
+              result.requestedBytes,
+              watch.elapsed().count(),
+              result.fileCacheBytesBefore,
+              result.fileCacheBytesAfter);
+          if (reclaimed >= kNotableReclaimBytes) {
+            XLOG(INFO, message);
+          } else {
+            XLOG(DBG2, message);
+          }
+        } catch (const NotEdenFsCgroupError& ex) {
+          if (isolationConfigured) {
+            stats->increment(&CgroupFileCacheStats::reclaimFailures);
+            XLOGF_EVERY_MS(
+                ERR,
+                60'000,
+                "systemd cgroup isolation is configured but EdenFS is not "
+                "running in an EdenFS cgroup; not reclaiming file cache: {}",
+                ex.what());
+          } else {
+            XLOGF_EVERY_MS(
+                DBG2, 60'000, "Not reclaiming file cache: {}", ex.what());
+          }
+        } catch (const UnsupportedKernelError& ex) {
+          state->kernelUnsupported.store(true, std::memory_order_release);
+          stats->increment(&CgroupFileCacheStats::reclaimFailures);
+          XLOGF(
+              ERR,
+              "Disabling cgroup file-cache reclaim until the next restart: {}",
+              ex.what());
+        } catch (const std::exception& ex) {
+          stats->increment(&CgroupFileCacheStats::reclaimFailures);
+          XLOGF_EVERY_MS(
+              ERR,
+              60'000,
+              "Unable to reclaim the EdenFS cgroup file cache: {}",
+              folly::exceptionStr(ex));
+        }
+      });
+}
+#endif
 
 void EdenServer::refreshBackingStore() {
   std::vector<shared_ptr<BackingStore>> backingStores;

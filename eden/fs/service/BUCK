@@ -374,6 +374,7 @@ cpp_library(
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/re2:re2",
+        ":cgroup_file_cache_reclaimer",
         ":pin_scan_runner",
         ":startup_logger",
         ":startup_status_subscriber",

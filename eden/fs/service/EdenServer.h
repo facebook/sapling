@@ -72,6 +72,9 @@ namespace facebook::eden {
 class BackingStore;
 class BlobCache;
 class CheckoutConfig;
+#ifdef __linux__
+class CgroupFileCacheReclaimState;
+#endif
 class Dirstate;
 class EdenConfig;
 class EdenFsEventsLogger;
@@ -728,6 +731,10 @@ class EdenServer : private TakeoverHandler {
   // Report memory usage statistics to ServiceData.
   void reportMemoryStats();
 
+#ifdef __linux__
+  void scheduleCgroupFileCacheReclaim();
+#endif
+
   // some backing store may require periodic maintenance, specifically rust
   // datapack store needs to release file descriptor it holds every once in a
   // while.
@@ -919,6 +926,10 @@ class EdenServer : private TakeoverHandler {
    */
   RestartArmer restartArmer_;
 
+#ifdef __linux__
+  std::shared_ptr<CgroupFileCacheReclaimState> cgroupFileCacheReclaimState_;
+#endif
+
   /**
    * HeartbeatManager to handle all heartbeat-related operations.
    * Declared after serverState_ so it can receive the EdenFsEventsLogger.
@@ -1070,6 +1081,10 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
       this,
       "detect_nfs_crawl"};
+#ifdef __linux__
+  PeriodicFnTask<&EdenServer::scheduleCgroupFileCacheReclaim>
+      cgroupFileCacheReclaimTask_{this, "cgroup_file_cache_reclaim"};
+#endif
   PeriodicFnTask<&EdenServer::accidentalUnmountRecovery>
       accidentalUnmountRecoveryTask_{this, "accidental_unmount_recovery"};
   PeriodicFnTask<&EdenServer::checkMountHealth> mountHealthCheckTask_{

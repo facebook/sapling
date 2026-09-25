@@ -44,6 +44,7 @@ struct ScmStatusCacheStats;
 struct TakeoverStats;
 struct CheckoutStats;
 struct TreeInodeStats;
+struct CgroupFileCacheStats;
 struct FakeStats;
 
 class EdenStats : public RefCounted {
@@ -103,6 +104,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<TakeoverStats> takeoverStats_;
   ThreadLocal<CheckoutStats> checkoutStats_;
   ThreadLocal<TreeInodeStats> treeInodeStats_;
+  ThreadLocal<CgroupFileCacheStats> cgroupFileCacheStats_;
   ThreadLocal<FakeStats> fakeStats_;
 };
 
@@ -200,6 +202,12 @@ inline CheckoutStats& EdenStats::getStatsForCurrentThread<CheckoutStats>() {
 template <>
 inline TreeInodeStats& EdenStats::getStatsForCurrentThread<TreeInodeStats>() {
   return *treeInodeStats_.get();
+}
+
+template <>
+inline CgroupFileCacheStats&
+EdenStats::getStatsForCurrentThread<CgroupFileCacheStats>() {
+  return *cgroupFileCacheStats_.get();
 }
 
 template <>
@@ -826,6 +834,16 @@ struct TreeInodeStats : StatsGroup<TreeInodeStats> {
   Counter readdirIndexHit{"inodes.readdir_index_hit"};
   Counter readdirIndexCached{"inodes.readdir_index_cached"};
   Counter readdirIndexDroppedByGc{"inodes.readdir_index_dropped_by_gc"};
+};
+
+/**
+ * The `local.` prefix keeps these out of the ODS export regexes; they are for
+ * inspection on the host. Fleet-wide efficacy shows up as the cgroup's memory
+ * usage itself.
+ */
+struct CgroupFileCacheStats : StatsGroup<CgroupFileCacheStats> {
+  Counter reclaimedBytes{"local.memory.cgroup_file_cache.reclaimed_bytes"};
+  Counter reclaimFailures{"local.memory.cgroup_file_cache.reclaim_failures"};
 };
 
 /*

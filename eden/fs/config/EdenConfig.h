@@ -318,6 +318,38 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Keep the Linux cgroup's file-backed LRU below a target by periodically
+   * writing to cgroup v2 memory.reclaim. Only acts when the daemon runs in a
+   * cgroup named edenfs*, which is how systemd cgroup isolation and systemd
+   * lifecycle management place it. It has no effect on macOS or Windows.
+   */
+  ConfigSetting<bool> enableCgroupFileCacheReclaim{
+      "core:enable-cgroup-file-cache-reclaim",
+      false,
+      this};
+
+  /** Target size for active_file plus inactive_file in bytes. */
+  ConfigSetting<uint64_t> cgroupFileCacheTargetBytes{
+      "core:cgroup-file-cache-target-bytes",
+      10ULL * 1024 * 1024 * 1024,
+      this};
+
+  /**
+   * Maximum bytes to request from memory.reclaim in one pass. Zero disables
+   * the cap.
+   */
+  ConfigSetting<uint64_t> cgroupFileCacheMaxReclaimBytes{
+      "core:cgroup-file-cache-max-reclaim-bytes",
+      10ULL * 1024 * 1024 * 1024,
+      this};
+
+  /** How often to check the cgroup's file-backed LRU. */
+  ConfigSetting<std::chrono::nanoseconds> cgroupFileCacheReclaimInterval{
+      "core:cgroup-file-cache-reclaim-interval",
+      std::chrono::seconds{10},
+      this};
+
+  /**
    * If true, EdenFS refuses to start when running in a non-root mount
    * namespace.
    */
@@ -2137,8 +2169,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Whether to use systemd for EdenFS lifecycle management
-   * (start/stop/restart). Only used in the CLI, including here to get rid of
-   * warnings.
+   * (start/stop/restart).
    */
   ConfigSetting<bool> systemdManagedLifecycle{
       "experimental:systemd-managed-lifecycle",
@@ -2156,7 +2187,6 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Whether to place EdenFS in a dedicated systemd cgroup via systemd-run.
-   * Only used in the CLI, including here to get rid of warnings.
    */
   ConfigSetting<bool> systemdCgroupIsolation{
       "experimental:systemd-cgroup-isolation",
