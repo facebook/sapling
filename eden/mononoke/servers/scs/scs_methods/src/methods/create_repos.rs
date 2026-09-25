@@ -873,26 +873,74 @@ enum ReserveOutcome {
     AttachedToInflight { mutation_id: i64 },
 }
 
-/// Give each repo in the batch the next id above the ceiling.
-///
-/// A cursor rather than an iterator chain because the cursor is about to stop
-/// advancing by exactly one: the next change has `allocate_repo_ids` consult a
-/// store before accepting a candidate, and how far it travels for one repo
-/// depends on how many ids were rejected for the repos before it.
+/// Pair each requested repo with an id off the sequence. The old
+/// `MAX(repo_id) + 1` ceiling rewound whenever `cleanup_repos` deleted rows,
+/// reissuing ids that still carried a previous occupant's data (S709055).
 #[cfg(fbcode_build)]
-fn allocate_repo_ids(
-    params: &thrift::CreateReposParams,
-    ceiling: i32,
-) -> Vec<(RepositoryId, thrift::RepoCreationRequest)> {
-    let mut next = ceiling;
-    let mut allocated = Vec::with_capacity(params.repos.len());
+/// The pre-sequence allocator, kept verbatim so the kill switch restores the
+/// old behaviour exactly, id reuse included.
+#[cfg(fbcode_build)]
+async fn allocate_repo_ids_from_ceiling(
+    ctx: &CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    count: usize,
+) -> Result<Vec<RepositoryId>, scs_errors::ServiceError> {
+    let max_id = git_source_of_truth_config
+        .get_max_id(ctx)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        .ok_or_else(|| {
+            scs_errors::internal_error(
+                "No rows in git_repositories_source_of_truth. That's unexpected",
+            )
+        })?;
 
-    for request in &params.repos {
-        next += 1;
-        allocated.push((RepositoryId::new(next), request.clone()));
+    let ceiling = max_id.id();
+    Ok((1..=count)
+        .map(|offset| RepositoryId::new(ceiling + offset as i32))
+        .collect())
+}
+
+#[cfg(fbcode_build)]
+async fn allocate_repo_ids(
+    ctx: &CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
+) -> Result<Vec<(RepositoryId, thrift::RepoCreationRequest)>, scs_errors::ServiceError> {
+    let repo_ids = if justknobs::eval(ALLOCATE_FROM_SEQUENCE_JK, None, None) {
+        git_source_of_truth_config
+            .allocate_repo_ids(ctx, params.repos.len())
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+    } else {
+        allocate_repo_ids_from_ceiling(ctx, git_source_of_truth_config, params.repos.len()).await?
+    };
+
+    // `zip` would silently drop repos on a short batch and report success.
+    if repo_ids.len() != params.repos.len() {
+        return Err(scs_errors::internal_error(format!(
+            "Allocated {} repo ids for a batch of {} repos",
+            repo_ids.len(),
+            params.repos.len()
+        ))
+        .into());
     }
 
-    allocated
+    Ok(repo_ids
+        .into_iter()
+        .zip(params.repos.iter().cloned())
+        .collect())
+}
+
+/// Whether `error_trace` is a uniqueness violation on `column` of
+/// `git_repositories_source_of_truth`. SQLite names the column and MySQL names
+/// the index, which the schema defines as `<column>_idx` for both constraints.
+#[cfg(fbcode_build)]
+fn violates_unique(error_trace: &str, column: &str) -> bool {
+    (error_trace.contains("UNIQUE constraint failed")
+        && error_trace.contains(&format!("git_repositories_source_of_truth.{column}")))
+        || (error_trace.contains("Duplicate entry")
+            && error_trace.contains(&format!("{column}_idx")))
 }
 
 #[cfg(fbcode_build)]
@@ -901,215 +949,213 @@ async fn reserve_repos_ids(
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
 ) -> Result<ReserveOutcome, scs_errors::ServiceError> {
-    let max_id = git_source_of_truth_config
-        .get_max_id(&ctx)
-        .await
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-    if let Some(max_id) = max_id {
-        let repo_ids_and_requests = allocate_repo_ids(params, max_id.id());
-        let result = git_source_of_truth_config
-            .insert_repos(
-                &ctx,
-                &repo_ids_and_requests
+    let repo_ids_and_requests = allocate_repo_ids(&ctx, git_source_of_truth_config, params).await?;
+    let result = git_source_of_truth_config
+        .insert_repos(
+            &ctx,
+            &repo_ids_and_requests
+                .iter()
+                .map(|(id, request)| {
+                    (
+                        id.clone(),
+                        RepositoryName(request.repo_name.clone()),
+                        GitSourceOfTruth::Reserved,
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await;
+    match result {
+        Ok(_) => Ok(ReserveOutcome::Reserved(repo_ids_and_requests)),
+        Err(e) => {
+            let error_trace = format!("{e:#}");
+
+            // Not the split-brain case below: the sequence hit an id held by a
+            // repo outside its bookkeeping, like the hand-assigned ids in the
+            // configerator index. Internal, so the retry loop re-allocates; the
+            // sequence only moves forward, so a retry clears it.
+            if violates_unique(&error_trace, "repo_id") {
+                let allocated = repo_ids_and_requests
                     .iter()
-                    .map(|(id, request)| {
-                        (
-                            id.clone(),
-                            RepositoryName(request.repo_name.clone()),
-                            GitSourceOfTruth::Reserved,
-                        )
-                    })
-                    .collect::<Vec<_>>(),
-            )
-            .await;
-        match result {
-            Ok(_) => Ok(ReserveOutcome::Reserved(repo_ids_and_requests)),
-            Err(e) => {
-                let error_trace = format!("{e:#}");
-                // Match both SQLite ("UNIQUE constraint failed") and MySQL
-                // ("Duplicate entry '...' for key 'repo_name_idx'") errors.
-                let is_duplicate = (error_trace.contains("UNIQUE constraint failed")
-                    && error_trace.contains("git_repositories_source_of_truth.repo_name"))
-                    || (error_trace.contains("Duplicate entry")
-                        && error_trace.contains("repo_name_idx"));
-                if is_duplicate {
-                    // Look up every requested repo's current row so we can both
-                    // build human-readable `details` (today's behavior) and, when
-                    // the attach knob is enabled, classify whether this is a
-                    // duplicate request for a single in-flight mutation we can
-                    // safely attach to.
-                    let mut details = Vec::new();
-                    let mut lookups = Vec::with_capacity(repo_ids_and_requests.len());
-                    for (_id, request) in &repo_ids_and_requests {
-                        let repo_name = RepositoryName(request.repo_name.clone());
-                        let lookup = git_source_of_truth_config
-                            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
-                            .await;
-                        match &lookup {
-                            Ok(Some(entry)) => match entry.source_of_truth {
-                                GitSourceOfTruth::Reserved => {
-                                    details.push(format!(
-                                        "Repo '{}' (id={}) has a stale 'Reserved' entry from a prior failed creation attempt. \
-                                         It is safe to delete this row and retry.",
-                                        request.repo_name, entry.repo_id
-                                    ));
-                                }
-                                ref sot => {
-                                    details.push(format!(
-                                        "DANGER: Repo '{}' (id={}) already exists with source_of_truth={}. \
-                                         Do NOT force-create — this will cause split-brain! \
-                                         See SEV S617275 for context.",
-                                        request.repo_name, entry.repo_id, sot
-                                    ));
-                                }
-                            },
-                            Ok(None) => {
+                    .map(|(id, _)| id.id().to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                return Err(scs_errors::internal_error(format!(
+                    "Repo id sequence issued an id that is already in use (allocated: {allocated}). \
+                     Retrying allocates fresh ids. Details: {error_trace}"
+                ))
+                .into());
+            }
+
+            if violates_unique(&error_trace, "repo_name") {
+                // Look up every requested repo's current row so we can both
+                // build human-readable `details` (today's behavior) and, when
+                // the attach knob is enabled, classify whether this is a
+                // duplicate request for a single in-flight mutation we can
+                // safely attach to.
+                let mut details = Vec::new();
+                let mut lookups = Vec::with_capacity(repo_ids_and_requests.len());
+                for (_id, request) in &repo_ids_and_requests {
+                    let repo_name = RepositoryName(request.repo_name.clone());
+                    let lookup = git_source_of_truth_config
+                        .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
+                        .await;
+                    match &lookup {
+                        Ok(Some(entry)) => match entry.source_of_truth {
+                            GitSourceOfTruth::Reserved => {
                                 details.push(format!(
-                                    "Repo '{}': UNIQUE constraint violated but no row found on lookup. \
-                                     Original error: {error_trace}",
-                                    request.repo_name
+                                    "Repo '{}' (id={}) has a stale 'Reserved' entry from a prior failed creation attempt. \
+                                     It is safe to delete this row and retry.",
+                                    request.repo_name, entry.repo_id
                                 ));
                             }
-                            Err(lookup_err) => {
+                            ref sot => {
                                 details.push(format!(
-                                    "Repo '{}': UNIQUE constraint violated but lookup failed: {:#}. \
-                                     Original error: {error_trace}",
-                                    request.repo_name, lookup_err
+                                    "DANGER: Repo '{}' (id={}) already exists with source_of_truth={}. \
+                                     Do NOT force-create — this will cause split-brain! \
+                                     See SEV S617275 for context.",
+                                    request.repo_name, entry.repo_id, sot
                                 ));
                             }
+                        },
+                        Ok(None) => {
+                            details.push(format!(
+                                "Repo '{}': UNIQUE constraint violated but no row found on lookup. \
+                                 Original error: {error_trace}",
+                                request.repo_name
+                            ));
                         }
-                        lookups.push(lookup);
+                        Err(lookup_err) => {
+                            details.push(format!(
+                                "Repo '{}': UNIQUE constraint violated but lookup failed: {:#}. \
+                                 Original error: {error_trace}",
+                                request.repo_name, lookup_err
+                            ));
+                        }
+                    }
+                    lookups.push(lookup);
+                }
+
+                let attach_enabled = justknobs::eval(ATTACH_JK, None, None);
+
+                if attach_enabled {
+                    // A lookup `Err` is a transient DB/query failure, NOT a
+                    // client-side invalid request. Surface it as an internal
+                    // error (mapped to `ServiceError::Internal`) so the retry
+                    // loop in `create_repos_in_mononoke` retries it, instead
+                    // of masking a retryable failure as `invalid_request`.
+                    let lookup_errors = lookups
+                        .iter()
+                        .filter_map(|lookup| lookup.as_ref().err())
+                        .map(|e| format!("{e:#}"))
+                        .collect::<Vec<_>>();
+                    if !lookup_errors.is_empty() {
+                        return Err(scs_errors::internal_error(format!(
+                            "Failed to look up reserved repos while classifying a duplicate \
+                             creation request: {}",
+                            lookup_errors.join("; ")
+                        ))
+                        .into());
                     }
 
-                    let attach_enabled = justknobs::eval(ATTACH_JK, None, None);
+                    // Only attach when every requested repo resolved to a
+                    // `Reserved` row stamped with the SAME mutation_id.
+                    let all_reserved_entries = lookups
+                        .iter()
+                        .map(|lookup| match lookup {
+                            Ok(Some(entry))
+                                if entry.source_of_truth == GitSourceOfTruth::Reserved =>
+                            {
+                                entry.mutation_id
+                            }
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>();
 
-                    if attach_enabled {
-                        // A lookup `Err` is a transient DB/query failure, NOT a
-                        // client-side invalid request. Surface it as an internal
-                        // error (mapped to `ServiceError::Internal`) so the retry
-                        // loop in `create_repos_in_mononoke` retries it, instead
-                        // of masking a retryable failure as `invalid_request`.
-                        let lookup_errors = lookups
-                            .iter()
-                            .filter_map(|lookup| lookup.as_ref().err())
-                            .map(|e| format!("{e:#}"))
-                            .collect::<Vec<_>>();
-                        if !lookup_errors.is_empty() {
-                            return Err(scs_errors::internal_error(format!(
-                                "Failed to look up reserved repos while classifying a duplicate \
-                                 creation request: {}",
-                                lookup_errors.join("; ")
-                            ))
-                            .into());
+                    // All lookups are `Ok` here (errors returned above), so a
+                    // non-reserved entry is a genuine split-brain / missing-row
+                    // case, not a transient failure.
+                    let any_non_reserved = lookups.iter().any(|lookup| {
+                        !matches!(
+                            lookup,
+                            Ok(Some(entry)) if entry.source_of_truth == GitSourceOfTruth::Reserved
+                        )
+                    });
+
+                    if any_non_reserved {
+                        // At least one row is not `Reserved` (or lookup
+                        // failed / returned None). If any row is present but
+                        // in a non-reserved state, this is the split-brain
+                        // case and `details` already carries the DANGER
+                        // message. Fall through to the shared error below.
+                        return Err(scs_errors::invalid_request(details.join("\n")).into());
+                    }
+
+                    // Every row is `Reserved`. Decide based on stamping.
+                    if all_reserved_entries.iter().any(Option::is_none) {
+                        return Err(scs_errors::invalid_request(format!(
+                            "Repo creation is already in progress but not yet trackable \
+                             (a reserved row has no mutation_id stamped yet); retry shortly, \
+                             or delete the stale reserved row if the original attempt died.\n{}",
+                            details.join("\n")
+                        ))
+                        .into());
+                    }
+
+                    let mutation_ids = all_reserved_entries
+                        .iter()
+                        .filter_map(|id| *id)
+                        .collect::<std::collections::BTreeSet<_>>();
+                    let mut ids = mutation_ids.iter();
+                    match (ids.next(), ids.next()) {
+                        (Some(mutation_id), None) => {
+                            // Exactly one distinct in-flight mutation: attach.
+                            let repo_names = repo_ids_and_requests
+                                .iter()
+                                .map(|(_id, request)| request.repo_name.as_str())
+                                .collect::<Vec<_>>()
+                                .join(",");
+                            let mut scuba = ctx.scuba().clone();
+                            scuba.add("action", "create_repos_attach");
+                            scuba.add("attached_mutation_id", *mutation_id);
+                            scuba.add("repo_names", repo_names);
+                            scuba.log_with_msg("create_repos attached to in-flight mutation", None);
+                            return Ok(ReserveOutcome::AttachedToInflight {
+                                mutation_id: *mutation_id,
+                            });
                         }
-
-                        // Only attach when every requested repo resolved to a
-                        // `Reserved` row stamped with the SAME mutation_id.
-                        let all_reserved_entries = lookups
-                            .iter()
-                            .map(|lookup| match lookup {
-                                Ok(Some(entry))
-                                    if entry.source_of_truth == GitSourceOfTruth::Reserved =>
-                                {
-                                    entry.mutation_id
-                                }
-                                _ => None,
-                            })
-                            .collect::<Vec<_>>();
-
-                        // All lookups are `Ok` here (errors returned above), so a
-                        // non-reserved entry is a genuine split-brain / missing-row
-                        // case, not a transient failure.
-                        let any_non_reserved = lookups.iter().any(|lookup| {
-                            !matches!(
-                                lookup,
-                                Ok(Some(entry)) if entry.source_of_truth == GitSourceOfTruth::Reserved
-                            )
-                        });
-
-                        if any_non_reserved {
-                            // At least one row is not `Reserved` (or lookup
-                            // failed / returned None). If any row is present but
-                            // in a non-reserved state, this is the split-brain
-                            // case and `details` already carries the DANGER
-                            // message. Fall through to the shared error below.
-                            return Err(scs_errors::invalid_request(details.join("\n")).into());
-                        }
-
-                        // Every row is `Reserved`. Decide based on stamping.
-                        if all_reserved_entries.iter().any(Option::is_none) {
+                        (None, _) => {
+                            // Defensive: no mutation ids collected. Unreachable
+                            // in practice — the all-Some guard above ensures
+                            // every reserved repo has a stamped id; reachable
+                            // only for an empty batch, which cannot hit the
+                            // duplicate path.
                             return Err(scs_errors::invalid_request(format!(
-                                "Repo creation is already in progress but not yet trackable \
-                                 (a reserved row has no mutation_id stamped yet); retry shortly, \
-                                 or delete the stale reserved row if the original attempt died.\n{}",
+                                "No reserved repos to attach to.\n{}",
                                 details.join("\n")
                             ))
                             .into());
                         }
-
-                        let mutation_ids = all_reserved_entries
-                            .iter()
-                            .filter_map(|id| *id)
-                            .collect::<std::collections::BTreeSet<_>>();
-                        let mut ids = mutation_ids.iter();
-                        match (ids.next(), ids.next()) {
-                            (Some(mutation_id), None) => {
-                                // Exactly one distinct in-flight mutation: attach.
-                                let repo_names = repo_ids_and_requests
-                                    .iter()
-                                    .map(|(_id, request)| request.repo_name.as_str())
-                                    .collect::<Vec<_>>()
-                                    .join(",");
-                                let mut scuba = ctx.scuba().clone();
-                                scuba.add("action", "create_repos_attach");
-                                scuba.add("attached_mutation_id", *mutation_id);
-                                scuba.add("repo_names", repo_names);
-                                scuba.log_with_msg(
-                                    "create_repos attached to in-flight mutation",
-                                    None,
-                                );
-                                return Ok(ReserveOutcome::AttachedToInflight {
-                                    mutation_id: *mutation_id,
-                                });
-                            }
-                            (None, _) => {
-                                // Defensive: no mutation ids collected. Unreachable
-                                // in practice — the all-Some guard above ensures
-                                // every reserved repo has a stamped id; reachable
-                                // only for an empty batch, which cannot hit the
-                                // duplicate path.
-                                return Err(scs_errors::invalid_request(format!(
-                                    "No reserved repos to attach to.\n{}",
-                                    details.join("\n")
-                                ))
-                                .into());
-                            }
-                            (Some(_), Some(_)) => {
-                                // More than one distinct in-flight mutation.
-                                return Err(scs_errors::invalid_request(format!(
-                                    "Repo creation request is not idempotent: the reserved repos \
-                                     span multiple in-flight mutations; resolve manually.\n{}",
-                                    details.join("\n")
-                                ))
-                                .into());
-                            }
+                        (Some(_), Some(_)) => {
+                            // More than one distinct in-flight mutation.
+                            return Err(scs_errors::invalid_request(format!(
+                                "Repo creation request is not idempotent: the reserved repos \
+                                 span multiple in-flight mutations; resolve manually.\n{}",
+                                details.join("\n")
+                            ))
+                            .into());
                         }
                     }
-
-                    Err(scs_errors::invalid_request(details.join("\n")).into())
-                } else {
-                    Err(scs_errors::internal_error(format!(
-                        "Failed to write row to git_repositories_source_of_truth. Details: {error_trace}"
-                    ))
-                    .into())
                 }
+
+                Err(scs_errors::invalid_request(details.join("\n")).into())
+            } else {
+                Err(scs_errors::internal_error(format!(
+                    "Failed to write row to git_repositories_source_of_truth. Details: {error_trace}"
+                ))
+                .into())
             }
         }
-    } else {
-        Err(scs_errors::internal_error(
-            "No rows in git_repositories_source_of_truth. That's unexpected",
-        )
-        .into())
     }
 }
 
