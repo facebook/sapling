@@ -1017,7 +1017,23 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .await?;
         Ok(public.contains(&self.id))
     }
+}
 
+impl<R> ChangesetContext<R>
+where
+    R: RepoPermissionCheckerRef
+        + AclRegionsRef
+        + RepoIdentityRef
+        + RestrictedPathsArc
+        + RepoBlobstoreArc
+        + RepoBlobstoreRef
+        + RepoDerivedDataArc
+        + RepoDerivedDataRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     /// Query a path within the repository. This could be a file or a
     /// directory.
     ///
@@ -1038,7 +1054,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         )
         .await
     }
+}
 
+impl<R: MononokeRepo> ChangesetContext<R> {
     /// Query a path within the repository. This could be a file or a
     /// directory.
     ///
