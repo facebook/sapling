@@ -8,6 +8,7 @@
 
 import os
 
+from eden.fs.service.eden.thrift_types import CheckoutMode, CheckOutRevisionParams
 from eden.integration.lib import hgrepo
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
@@ -48,6 +49,25 @@ class SymlinkTest(EdenHgTestCase):
         self.assertEqual("hola", self.read_file("symlink"))
         self.repo.update(self.quasi_symlink_commit)
         self.assertEqual(os.path.join("adir", "hello.txt"), self.read_file("symlink"))
+
+    async def test_update_symlink_over_untracked_directory_dry_run(self) -> None:
+        self.backing_repo.write_file("symlink/tracked", "tracked\n")
+        directory_commit = self.backing_repo.commit("Add directory")
+        self.repo.update(directory_commit)
+        self.write_file("symlink/untracked", "local\n")
+        self.repo.update(self.simple_commit)
+        self.assertEqual(["untracked"], os.listdir(self.get_path("symlink")))
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=self.symlink_commit.encode(),
+                checkoutMode=CheckoutMode.DRY_RUN,
+                params=CheckOutRevisionParams(),
+            )
+        # FIXME: Report the nonempty directory blocking the incoming symlink.
+        self.assertEqual([], conflicts)
+        self.assertEqual(self.simple_commit, self.repo.get_head_hash())
+        self.assertEqual("local\n", self.read_file("symlink/untracked"))
 
     def test_show_symlink_commit(self) -> None:
         self.repo.update(self.symlink_commit)
